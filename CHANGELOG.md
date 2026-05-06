@@ -9,8 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.37] - 2026-05-06
+
 ### Added
 - `SurfaceSpec.render: str | None` and `WorkspaceRegion.render: str | None` — optional renderer-name override resolved through the runtime renderer registry. None = framework default (Jinja). Validated at link time when `known_renderers` is supplied to `build_appspec`. (typed Fragment integration, Plan 2)
+
+### Fixed
+- **#1019** — `render_in_app_shell` now returns only the `content` block (the inner of `<main id="main-content">`) when the request is a boosted htmx swap targeting `#main-content` (`HX-Boosted: true` + `HX-Target: main-content`). Previously returned a full `<html>…</html>` document, which caused idiomorph to relocate `<main>` into its own subtree (`HierarchyRequestError`) and duplicated the `view-transition-name` on every sidebar nav. Auto-detected from request headers; full-document path unchanged for non-boosted requests.
+- **#1020** — Route override aliases that re-export a handler via `from X import handler` now resolve to distinct dispatch entries instead of silently collapsing onto the first-imported handler. Discovery wraps re-exported handlers in a per-file forwarder using `functools.wraps` so FastAPI introspection sees a unique callable per alias path while still delegating to the underlying handler. Fixes the AegisMark case where five `/app/workspaces/<name>` aliases all served the same body.
 
 ## [0.66.36] - 2026-05-04
 
