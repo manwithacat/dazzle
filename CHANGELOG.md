@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.38] - 2026-05-06
+
 ### Changed
 - **All example apps now Fragment-rendered (Plan 11).** 60 DSL-declared
   surfaces flipped across `simple_task` (12), `contact_manager` (4),
