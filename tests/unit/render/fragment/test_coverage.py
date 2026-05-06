@@ -191,18 +191,17 @@ def test_coverage_report_to_json_shape() -> None:
 
 def test_audit_flags_unsupported_field_type_via_entity_resolution() -> None:
     """A surface with a SurfaceElement pointing at an unsupported-typed
-    field on the bound entity must report unsupported_field_type. Plan
-    13 closed the audit's under-reporting gap by walking entity_ref →
-    domain.entities → FieldSpec.type.kind. Uses `uuid` because Plan 14
-    closed the `ref` gap (RefPicker primitive shipped)."""
+    field on the bound entity must report unsupported_field_type. Uses
+    `file` because Plans 14 + 15 closed the `ref`, `uuid`, and `json`
+    gaps (RefPicker primitive + UUID readonly + JSON textarea)."""
     task = EntitySpec(
         name="Task",
         fields=[
             FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
             FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
             FieldSpec(
-                name="external_uuid",
-                type=FieldType(kind=FieldTypeKind.UUID),
+                name="attachment",
+                type=FieldType(kind=FieldTypeKind.FILE),
             ),
         ],
     )
@@ -215,7 +214,7 @@ def test_audit_flags_unsupported_field_type_via_entity_resolution() -> None:
                 name="main",
                 elements=[
                     SurfaceElement(field_name="title", label="Title"),
-                    SurfaceElement(field_name="external_uuid", label="External UUID"),
+                    SurfaceElement(field_name="attachment", label="Attachment"),
                 ],
             )
         ],
@@ -229,8 +228,8 @@ def test_audit_flags_unsupported_field_type_via_entity_resolution() -> None:
     report = audit_appspec(appspec)
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_field_type" and b.detail == "uuid" for b in blockers), (
-        f"Expected uuid blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
+    assert any(b.kind.value == "unsupported_field_type" and b.detail == "file" for b in blockers), (
+        f"Expected file blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
     )
 
 
@@ -272,15 +271,14 @@ def test_audit_dedupes_same_field_type_across_elements() -> None:
     """A surface with three unsupported-typed fields produces one
     blocker per type, not three — what matters is that the type is
     unsupported, not the count per surface (cross-surface aggregation
-    handles that). Uses `uuid` because `ref` was removed from
-    _UNSUPPORTED_FIELD_TYPES in Plan 14 (RefPicker shipped)."""
+    handles that). Uses `file` because Plans 14+15 closed ref/uuid/json."""
     task = EntitySpec(
         name="Task",
         fields=[
             FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.UUID)),
-            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.UUID)),
-            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.UUID)),
+            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.FILE)),
+            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.FILE)),
+            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.FILE)),
         ],
     )
     surface = SurfaceSpec(
@@ -305,9 +303,9 @@ def test_audit_dedupes_same_field_type_across_elements() -> None:
         surfaces=[surface],
     )
     report = audit_appspec(appspec)
-    uuid_count = sum(
+    file_count = sum(
         1
         for b in report.surfaces[0].blockers
-        if b.kind.value == "unsupported_field_type" and b.detail == "uuid"
+        if b.kind.value == "unsupported_field_type" and b.detail == "file"
     )
-    assert uuid_count == 1
+    assert file_count == 1

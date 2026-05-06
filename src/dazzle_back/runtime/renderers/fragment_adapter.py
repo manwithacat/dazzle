@@ -225,6 +225,43 @@ def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPi
             )
         # No ref_api → graceful fallthrough to text Field.
 
+    if kind == "uuid":
+        # UUIDs are typically system-assigned. Render as a readonly text
+        # input so they're visible but not editable; CREATE forms get an
+        # empty placeholder, EDIT forms show the persisted value.
+        return Field(
+            name=name,
+            label=label,
+            kind="text",
+            required=required,
+            placeholder=placeholder,
+            initial_value=initial_value,
+            readonly=True,
+        )
+
+    if kind == "json":
+        # JSON fields render as a textarea. Value is str-coerced (the
+        # backend usually serialises before reaching the form ctx); if the
+        # caller passes a dict/list, stringify here as a safety net.
+        raw_value = field_dict.get("value", "")
+        if raw_value and not isinstance(raw_value, str):
+            import json as _json
+
+            try:
+                value_str = _json.dumps(raw_value, indent=2)
+            except (TypeError, ValueError):
+                value_str = str(raw_value)
+        else:
+            value_str = str(raw_value or "")
+        return Field(
+            name=name,
+            label=label,
+            kind="textarea",
+            required=required,
+            placeholder=placeholder,
+            initial_value=value_str,
+        )
+
     field_kind_map: dict[str, str] = {
         "str": "text",
         "text": "textarea",

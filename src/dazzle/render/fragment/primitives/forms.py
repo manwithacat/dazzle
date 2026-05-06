@@ -48,6 +48,7 @@ class Field:
     required: bool = False
     placeholder: str = ""
     initial_value: str = ""
+    readonly: bool = False
 
     def __post_init__(self) -> None:
         if self.kind not in _FIELD_KINDS:

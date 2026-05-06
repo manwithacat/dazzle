@@ -158,7 +158,7 @@ _UNSUPPORTED_FEATURES: tuple[str, ...] = (
 # everything, so structurally no type is blocked yet — this constant is
 # the seam for future restrictions (e.g. `ref` cells need FK-aware
 # rendering and per-row link generation).
-_UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"uuid", "json", "file"})
+_UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"file"})
 
 
 def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:

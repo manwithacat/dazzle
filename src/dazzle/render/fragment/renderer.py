@@ -477,23 +477,24 @@ class FragmentRenderer:
         placeholder = ctx.escape_attr(f.placeholder)
         initial = ctx.escape_attr(f.initial_value)
         required_attr = " required" if f.required else ""
+        readonly_attr = " readonly" if f.readonly else ""
 
         if f.kind == "textarea":
             inner = (
                 f'<textarea class="dz-field__input" name="{name}" '
-                f'placeholder="{placeholder}"{required_attr}>'
+                f'placeholder="{placeholder}"{required_attr}{readonly_attr}>'
                 f"{ctx.escape(f.initial_value)}</textarea>"
             )
         elif f.kind == "checkbox":
             checked = " checked" if f.initial_value == "true" else ""
             inner = (
                 f'<input class="dz-field__input" type="checkbox" name="{name}"'
-                f"{checked}{required_attr}>"
+                f"{checked}{required_attr}{readonly_attr}>"
             )
         else:
             inner = (
                 f'<input class="dz-field__input" type="{f.kind}" name="{name}" '
-                f'value="{initial}" placeholder="{placeholder}"{required_attr}>'
+                f'value="{initial}" placeholder="{placeholder}"{required_attr}{readonly_attr}>'
             )
         return (
             f'<label class="dz-field"><span class="dz-field__label">{label}</span>{inner}</label>'

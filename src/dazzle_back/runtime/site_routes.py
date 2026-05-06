@@ -236,7 +236,7 @@ def _render_content(raw: str, fmt: str) -> str:
     """
     if fmt in ("md", "markdown"):
         try:
-            import markdown  # type: ignore[import-untyped]
+            import markdown  # type: ignore[import-untyped,unused-ignore]
 
             return str(markdown.markdown(raw, extensions=["extra", "sane_lists"]))
         except ImportError:

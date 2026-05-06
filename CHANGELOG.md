@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.43] - 2026-05-06
+
+### Added
+- `Field.readonly: bool` — when set, the renderer emits the HTML `readonly` attribute on the input/textarea. Used by the adapter's UUID branch.
+- Adapter handles UUID and JSON field types (Plan 15). UUID → readonly text Field (system-assigned, visible-not-editable). JSON → textarea Field with str-coerced value (auto-serialises dict/list values for safety).
+
+### Changed
+- `_UNSUPPORTED_FIELD_TYPES` shrinks from `{uuid, json, file}` to `{file}`. File-upload coverage is the next adapter gap; deferred until a real consumer surfaces it.
+
 ## [0.66.42] - 2026-05-06
 
 ### Changed
