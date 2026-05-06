@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.46] - 2026-05-06
+
+### Added
+- **Page primitive (P17 P1).** `dazzle.render.fragment.Page` — frozen dataclass for typed HTML-document chrome (`<html>`/`<head>`/`<body>`). Carries title, lang, theme, css_links, js_scripts, custom meta tags, cascade-layer order, and toggleable body slots (toast container, modal slot, page announcer). The renderer emits a complete `<!DOCTYPE html>...</html>` document; the body slot composes whatever Fragment the caller supplies (typically a `Surface`). 18 unit tests pin construction invariants, escaping, and slot rendering.
+- **PageBuilder (P17 P2).** `dazzle_back.runtime.renderers.page_builder.build_page(ctx, inner_html, ...)` translates `PageContext` + an already-rendered surface body into a `Page` primitive. `dispatch_render_page` is the build+render convenience wrapper. 8 unit tests pin shape end-to-end.
+- **Fragment-chrome opt-in (P17 P3).** `_render_response` consults `app.state.fragment_chrome`; when truthy AND we're rendering a full document (not htmx partial / drawer / fragment) AND the surface produced inner_html via dispatch, the response goes through `dispatch_render_page` instead of Jinja `render_page`. **Default off** — existing deployments unchanged. 6 HTTP integration tests pin the chrome-on path end-to-end against `simple_task` (DOCTYPE, `dz-page` body class, bundled CSS/JS, inner surface composition, body slots, and the default-off backward-compat case).
+
+### Agent Guidance
+- This is the first piece of Phase 3 (page chrome on Fragment) of the Jinja-decommissioning roadmap. The Fragment substrate now reaches all the way to the document outer for opt-in apps. Next steps: (a) flip a real example app's `app.state.fragment_chrome` and exercise it manually before broadening; (b) replace the hardcoded asset URLs with proper resolution from `dazzle.toml` + asset-bundle detection; (c) build Fragment equivalents for nav/sidebar/header/footer (still Jinja today). The Phase 3 budget per the roadmap is ~8 plans; P17 covers the substrate piece (1 of 8).
+
 ## [0.66.45] - 2026-05-06
 
 ### Fixed

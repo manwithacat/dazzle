@@ -201,3 +201,94 @@ def test_simple_task_create_form_date_field_renders_as_date_input() -> None:
     resp = client.get("/task/create")
     body = resp.text
     assert 'type="date" name="due_date"' in body, "task_create due_date field is not a date input."
+
+
+# ─────────────────── Fragment chrome opt-in (P17 P3 + P4) ───────────────────
+#
+# When app.state.fragment_chrome is True, full-document responses
+# bypass Jinja base.html and emit a typed Page primitive instead.
+# This is the first non-Jinja chrome — pinned end-to-end.
+
+
+def _client_with_fragment_chrome(app_name: str) -> TestClient:
+    """Build a TestClient with `fragment_chrome` flag set on app.state.
+
+    Mirrors `_client_for` but enables the P17 P3 chrome dispatch.
+    """
+    from dazzle_back.runtime.renderers.init import register_default_renderers
+    from dazzle_back.runtime.services import RuntimeServices
+
+    appspec = load_project_appspec(_EXAMPLES / app_name)
+    fastapi_app = FastAPI()
+    services = RuntimeServices()
+    register_default_renderers(services)
+    fastapi_app.state.services = services
+    fastapi_app.state.fragment_chrome = True  # P17 P3 opt-in
+    router = create_page_routes(appspec, backend_url="http://127.0.0.1:9999")
+    fastapi_app.include_router(router)
+    return TestClient(fastapi_app)
+
+
+def test_fragment_chrome_emits_page_primitive_doctype() -> None:
+    """With the chrome flag on, the response starts with `<!DOCTYPE html>`
+    from the Page primitive — unconditional substrate, not Jinja's
+    conditional partial-mode block."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task")
+    assert resp.status_code == 200
+    assert resp.text.startswith("<!DOCTYPE html>"), (
+        f"expected Fragment-chromed page; got: {resp.text[:200]!r}"
+    )
+
+
+def test_fragment_chrome_emits_dz_page_body_class() -> None:
+    """The Page primitive emits `<body class="dz-page">` — the marker
+    that distinguishes a Fragment-chromed response from a Jinja one."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task")
+    body = resp.text
+    assert '<body class="dz-page">' in body, (
+        f"missing dz-page body class. body[:500]={body[:500]!r}"
+    )
+
+
+def test_fragment_chrome_includes_dazzle_css_and_js_bundles() -> None:
+    """The page chrome links the bundled CSS + defers the bundled JS."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task")
+    body = resp.text
+    assert '<link rel="stylesheet" href="/static/dist/dazzle.min.css">' in body
+    assert '<script defer src="/static/dist/dazzle.min.js"></script>' in body
+
+
+def test_fragment_chrome_inner_surface_still_renders() -> None:
+    """The Fragment surface body must still appear inside the chrome —
+    the chrome wraps, doesn't replace, the inner Fragment dispatch."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task")
+    body = resp.text
+    assert "dz-surface" in body
+    assert "dz-region--kind-list" in body
+
+
+def test_fragment_chrome_emits_body_announcer_slots() -> None:
+    """Page emits the toast/modal/announcer slots by default."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task")
+    body = resp.text
+    assert 'id="dz-toast"' in body
+    assert 'id="dz-modal-slot"' in body
+    assert 'id="dz-page-announcer"' in body
+
+
+def test_fragment_chrome_default_off_unchanged_behaviour() -> None:
+    """Without the flag, responses still go through Jinja base.html —
+    confirmed by absence of the `dz-page` body class. Pins backward
+    compatibility."""
+    client = _client_for("simple_task")  # no fragment_chrome flag
+    resp = client.get("/task")
+    body = resp.text
+    assert '<body class="dz-page">' not in body, (
+        f"chrome flag default-off broken; got Fragment chrome unexpectedly. "
+        f"body[:500]={body[:500]!r}"
+    )
