@@ -167,6 +167,7 @@ entity Comment "Comment":
 surface user_list "User List":
   uses entity User
   mode: list
+  render: fragment
 
   ux:
     purpose: "Browse and manage team members across the support organisation"
@@ -185,6 +186,7 @@ surface user_list "User List":
 surface user_detail "User Detail":
   uses entity User
   mode: view
+  render: fragment
 
   section main "User Details":
     field email "Email"
@@ -204,6 +206,7 @@ surface user_detail "User Detail":
 surface user_create "Create User":
   uses entity User
   mode: create
+  render: fragment
 
   section main "New User":
     field email "Email"
@@ -213,6 +216,7 @@ surface user_create "Create User":
 surface user_edit "Edit User":
   uses entity User
   mode: edit
+  render: fragment
 
   section main "Edit User":
     field email "Email"
@@ -227,6 +231,7 @@ surface user_edit "Edit User":
 surface ticket_list "Ticket List":
   uses entity Ticket
   mode: list
+  render: fragment
 
   ux:
     purpose: "Triage and resolve incoming support tickets across the queue"
@@ -247,6 +252,7 @@ surface ticket_list "Ticket List":
 surface ticket_detail "Ticket Detail":
   uses entity Ticket
   mode: view
+  render: fragment
 
   section main "Ticket Details":
     field ticket_number "Ticket #"
@@ -265,6 +271,7 @@ surface ticket_detail "Ticket Detail":
 surface ticket_create "Create Ticket":
   uses entity Ticket
   mode: create
+  render: fragment
 
   section summary "Summary":
     field title "Title"
@@ -282,6 +289,7 @@ surface ticket_create "Create Ticket":
 surface ticket_edit "Edit Ticket":
   uses entity Ticket
   mode: edit
+  render: fragment
 
   section summary "Summary":
     field title "Title"
@@ -303,6 +311,7 @@ surface ticket_edit "Edit Ticket":
 surface comment_list "Comment List":
   uses entity Comment
   mode: list
+  render: fragment
 
   ux:
     purpose: "Scan recent comment activity across all tickets for context and follow-up"
@@ -320,6 +329,7 @@ surface comment_list "Comment List":
 surface comment_detail "Comment Detail":
   uses entity Comment
   mode: view
+  render: fragment
 
   section main "Comment Details":
     field ticket "Ticket"
@@ -331,6 +341,7 @@ surface comment_detail "Comment Detail":
 surface comment_create "Create Comment":
   uses entity Comment
   mode: create
+  render: fragment
 
   section main "New Comment":
     field ticket "Ticket"
@@ -340,6 +351,7 @@ surface comment_create "Create Comment":
 surface comment_edit "Edit Comment":
   uses entity Comment
   mode: edit
+  render: fragment
 
   section main "Edit Comment":
     field content "Comment"
