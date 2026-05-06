@@ -1,4 +1,4 @@
-/* dazzle v0.66.39 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.66.40 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2511,6 +2511,24 @@ font-weight: var(--weight-medium);
 color: var(--colour-text);
 }
 .dz-combobox__select {
+padding: var(--space-sm) var(--space-md);
+font-size: var(--text-base);
+color: var(--colour-text);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-sm);
+}
+.dz-ref-picker {
+display: flex;
+flex-direction: column;
+gap: var(--space-xs);
+}
+.dz-ref-picker__label {
+font-size: var(--text-sm);
+font-weight: var(--weight-medium);
+color: var(--colour-text);
+}
+.dz-ref-picker__select {
 padding: var(--space-sm) var(--space-md);
 font-size: var(--text-base);
 color: var(--colour-text);
