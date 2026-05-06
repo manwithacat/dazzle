@@ -35,3 +35,27 @@ def test_jinja_renderer_renders_a_minimal_list_surface() -> None:
     assert "Buy milk" in html
     assert "Walk dog" in html
     assert "<table" in html
+
+
+def test_jinja_renderer_renders_a_minimal_view_surface() -> None:
+    """Plan 8 — minimal render_surface path supports VIEW mode."""
+    surface = SurfaceSpec(
+        name="task_detail",
+        title="Task Detail",
+        mode=SurfaceMode.VIEW,
+        entity_ref="Task",
+    )
+    ctx = {
+        "fields": [
+            {"key": "title", "label": "Title", "value": "Buy milk"},
+            {"key": "status", "label": "Status", "value": "open"},
+        ],
+        "region_name": "task_detail_main",
+    }
+    renderer = JinjaRenderer()
+    html = renderer.render(surface, ctx)
+    assert isinstance(html, str)
+    assert "Title" in html
+    assert "Buy milk" in html
+    assert "Status" in html
+    assert "open" in html

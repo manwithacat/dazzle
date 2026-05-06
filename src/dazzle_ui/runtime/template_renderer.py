@@ -842,11 +842,36 @@ def render_surface(surface: Any, ctx: dict[str, Any]) -> str:
     )
 
     mode = getattr(surface, "mode", None)
+    if mode == SurfaceMode.VIEW:
+        # Plan 8: minimal definition-list HTML for VIEW parity testing.
+        # Production VIEW path stays on detail_view.html.
+        from html import escape as _escape
+
+        title = getattr(surface, "title", None) or getattr(surface, "name", "") or ""
+        title = title.replace("_", " ").title() if title == getattr(surface, "name", "") else title
+        fields = ctx.get("fields") or []
+        if not fields:
+            body_html = "<p>No data.</p>"
+        else:
+            items = "".join(
+                f"<dt>{_escape(str(f.get('label', f.get('key', ''))))}</dt>"
+                f"<dd>{_escape(str(f.get('value', '')))}</dd>"
+                for f in fields
+            )
+            body_html = f"<dl class='dz-detail-list'>{items}</dl>"
+        return (
+            f'<section class="dz-surface">'
+            f'<header class="dz-surface__header"><h1>{_escape(str(title))}</h1></header>'
+            f'<div class="dz-surface__body">'
+            f'<section class="dz-region dz-region--kind-detail">{body_html}</section>'
+            f"</div></section>"
+        )
+
     if mode != SurfaceMode.LIST:
         raise NotImplementedError(
-            f"render_surface currently only supports LIST mode; "
+            f"render_surface currently only supports LIST and VIEW modes; "
             f"got {mode!r} for surface {getattr(surface, 'name', '?')!r}. "
-            "Other modes will be added as Plan 3 advances."
+            "Other modes land in Plan 9+."
         )
 
     columns_in = ctx.get("columns") or []
