@@ -32,6 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Jinja path. CSS-presence test in `tests/unit/test_fragment_primitive_css.py`
   pins the coverage; new primitives that get flipped in later plans must
   add to both the CSS file and the test's `_REQUIRED_CLASSES` tuple.
+- **Form modes (CREATE + EDIT) for FragmentSurfaceAdapter (Plan 9).**
+  Bundled closure of the audit's two largest blockers (17 surfaces each
+  across the 5 example apps, 34 in total). The adapter produces a
+  Surface with Region(kind="form") containing a FormStack of type-aware
+  Fields (str/text/email/int/decimal/bool/date/datetime/url → Field with
+  appropriate kind) and Comboboxes (enum). `simple_task.task_create`
+  and `task_edit` flipped as proving cases. CSS rules under
+  `.dz-region--kind-form` + form-primitive styling. Cumulative example
+  coverage rises from 53% to **96%** (75/78 surfaces ready). The audit's
+  capability matrix gained `create`/`edit` modes and `_UNSUPPORTED_FIELD_TYPES
+  = {ref, uuid, json, file}` for the next-priority closure (Plan 11+,
+  pending audit-side entity-field-type resolution to surface them).
 - **VIEW mode for FragmentSurfaceAdapter (Plan 8).** `mode: view`
   surfaces now flip cleanly to `render: fragment`. The adapter produces
   a Surface with a Region(kind="detail") containing a Stack of
