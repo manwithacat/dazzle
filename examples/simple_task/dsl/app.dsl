@@ -349,6 +349,7 @@ surface comment_edit "Edit Comment":
 surface task_create "Create Task":
   uses entity Task
   mode: create
+  render: fragment
 
   section details "Task Details":
     field title "Title"
@@ -376,6 +377,7 @@ surface task_create "Create Task":
 surface task_edit "Edit Task":
   uses entity Task
   mode: edit
+  render: fragment
 
   section details "Task Details":
     field title "Title"

@@ -162,3 +162,77 @@ def test_fragment_detail_path_uses_detail_region_kind() -> None:
         services=services,
     )
     assert "dz-region--kind-detail" in fragment_html
+
+
+def _form_ctx(*, value: str = "") -> dict:
+    """Deterministic form-mode context."""
+    return {
+        "fields": [
+            {
+                "name": "title",
+                "label": "Title",
+                "kind": "str",
+                "required": True,
+                "value": value,
+            },
+            {
+                "name": "status",
+                "label": "Status",
+                "kind": "enum",
+                "required": True,
+                "value": value,
+                "options": [("open", "Open"), ("done", "Done")],
+            },
+        ],
+        "action": "/api/Task" if not value else "/api/Task/42",
+        "method": "POST",
+        "submit_label": "Create" if not value else "Save",
+    }
+
+
+def test_jinja_and_fragment_both_render_create_form() -> None:
+    """Plan 9 — CREATE mode parity."""
+    services = _make_services()
+
+    jinja_surface = SurfaceSpec(
+        name="task_create",
+        title="New Task",
+        mode=SurfaceMode.CREATE,
+        entity_ref="Task",
+    )
+    fragment_surface = SurfaceSpec(
+        name="task_create",
+        title="New Task",
+        mode=SurfaceMode.CREATE,
+        entity_ref="Task",
+        render="fragment",
+    )
+
+    ctx = _form_ctx()
+    jinja_html = dispatch_render(jinja_surface, ctx=ctx, services=services)
+    fragment_html = dispatch_render(fragment_surface, ctx=ctx, services=services)
+
+    for renderer_name, html in [("jinja", jinja_html), ("fragment", fragment_html)]:
+        assert "<form" in html, f"{renderer_name}: missing <form>"
+        assert 'action="/api/Task"' in html, f"{renderer_name}: missing action"
+        assert "Title" in html, f"{renderer_name}: missing Title label"
+        assert "Status" in html, f"{renderer_name}: missing Status label"
+        assert "Create" in html, f"{renderer_name}: missing submit label"
+
+
+def test_fragment_renders_edit_form_with_values() -> None:
+    """Plan 9 — EDIT mode populates initial values."""
+    services = _make_services()
+
+    fragment_surface = SurfaceSpec(
+        name="task_edit",
+        title="Edit Task",
+        mode=SurfaceMode.EDIT,
+        entity_ref="Task",
+        render="fragment",
+    )
+    ctx = _form_ctx(value="Buy milk")
+    html = dispatch_render(fragment_surface, ctx=ctx, services=services)
+    assert "Buy milk" in html
+    assert 'action="/api/Task/42"' in html
+    assert "Save" in html

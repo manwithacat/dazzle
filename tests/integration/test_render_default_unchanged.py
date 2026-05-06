@@ -49,7 +49,7 @@ def test_simple_task_links_with_known_renderers() -> None:
     # Plan 3 flipped task_list; Plan 8 added task_detail. As more surfaces
     # flip in subsequent plans, this set grows — keep the list explicit so
     # an accidental flip elsewhere fails the test.
-    expected_flipped = {"task_list", "task_detail"}
+    expected_flipped = {"task_list", "task_detail", "task_create", "task_edit"}
     by_name = {s.name: s for s in appspec.surfaces}
     for name in expected_flipped:
         assert name in by_name, f"surface {name} missing from simple_task spec"
