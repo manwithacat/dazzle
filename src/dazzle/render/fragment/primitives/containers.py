@@ -15,7 +15,7 @@ from typing import Literal
 from dazzle.render.fragment.errors import CardSafetyError
 from dazzle.render.fragment.tokens import CardTokens
 
-_REGION_KINDS = ("list", "detail", "form", "dashboard", "kanban", "calendar", "report")
+_REGION_KINDS = ("list", "detail", "form", "dashboard", "kanban", "calendar", "report", "related")
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +54,7 @@ class Region:
     scanner.
     """
 
-    kind: Literal["list", "detail", "form", "dashboard", "kanban", "calendar", "report"]
+    kind: Literal["list", "detail", "form", "dashboard", "kanban", "calendar", "report", "related"]
     body: object
 
     def __post_init__(self) -> None:

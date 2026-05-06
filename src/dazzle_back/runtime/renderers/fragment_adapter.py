@@ -22,6 +22,7 @@ from dazzle.render.fragment import (
     Heading,
     Region,
     Row,
+    Skeleton,
     Stack,
     Submit,
     Surface,
@@ -74,21 +75,25 @@ class FragmentSurfaceAdapter:
     def _build_view(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
         """Detail surface — single record's fields as a definition-list-shaped Region.
 
-        Each field renders as a Row of (Heading-level-4 label, Text value).
-        Stack groups them. The Region carries kind="detail" so CSS can
-        target the layout (definition-list style with label + value columns).
+        Plan 8: each field renders as a Row of (Heading-level-4 label,
+        Text value). Stack groups them inside Region(kind="detail").
+        Plan 10: when ctx carries `related_groups`, additional
+        Region(kind="related") entries are appended after the detail
+        body — each emits a Heading (group title) + Skeleton placeholder
+        (the actual related-entity rows arrive via a separate htmx fetch
+        post-Plan-11).
         """
         title = surface.title or surface.name.replace("_", " ").title()
         fields: list[dict[str, Any]] = ctx.get("fields", [])
 
-        body: Fragment
+        detail_body: Fragment
         if not fields:
-            body = EmptyState(
+            detail_body = EmptyState(
                 title="No data",
                 description="This record has no displayable fields.",
             )
         else:
-            rows = tuple(
+            field_rows = tuple(
                 Row(
                     children=(
                         Heading(str(f.get("label", f.get("key", ""))), level=4),
@@ -98,11 +103,38 @@ class FragmentSurfaceAdapter:
                 )
                 for f in fields
             )
-            body = Stack(children=rows, gap="sm")
+            detail_body = Stack(children=field_rows, gap="sm")
 
+        related_groups: list[dict[str, Any]] = ctx.get("related_groups", []) or []
+        if not related_groups:
+            return Surface(
+                header=Heading(title, level=1),
+                body=Region(kind="detail", body=detail_body),
+            )
+
+        # Wrap detail + related-group regions in an outer Stack
+        related_regions: list[Fragment] = []
+        for group in related_groups:
+            group_title = str(group.get("title") or group.get("name", "Related"))
+            group_body = Stack(
+                children=(
+                    Heading(group_title, level=2),
+                    Skeleton(lines=3),
+                ),
+                gap="sm",
+            )
+            related_regions.append(Region(kind="related", body=group_body))
+
+        wrapper = Stack(
+            children=(Region(kind="detail", body=detail_body), *related_regions),
+            gap="md",
+        )
+
+        # Outer Region uses kind="detail" since the surface IS a detail
+        # surface; the inner sub-regions carry kind="related" for CSS.
         return Surface(
             header=Heading(title, level=1),
-            body=Region(kind="detail", body=body),
+            body=Region(kind="detail", body=wrapper),
         )
 
     def _build_form(

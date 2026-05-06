@@ -266,3 +266,60 @@ def test_enum_field_becomes_combobox() -> None:
     emitted = fragment.body.body.fields[0]
     assert isinstance(emitted, Combobox)
     assert emitted.options == (("open", "Open"), ("done", "Done"))
+
+
+def test_view_mode_appends_related_group_regions() -> None:
+    """Plan 10 — related_groups produce Region(kind=related) entries
+    after the detail field stack."""
+    from dazzle.render.fragment import Heading, Region, Stack
+
+    surface = SurfaceSpec(
+        name="user_detail",
+        title="User Detail",
+        mode=SurfaceMode.VIEW,
+        entity_ref="User",
+    )
+    ctx = {
+        "fields": [{"key": "email", "label": "Email", "value": "alice@x"}],
+        "region_name": "user_detail_main",
+        "related_groups": [
+            {"name": "tasks", "title": "Tasks", "display": "table"},
+            {"name": "comments", "title": "Comments", "display": "table"},
+        ],
+    }
+    fragment = FragmentSurfaceAdapter().build(surface, ctx)
+    # Outer Region(kind=detail) wraps a Stack: [detail-region, related-region * N]
+    outer = fragment.body
+    assert isinstance(outer, Region)
+    assert outer.kind == "detail"
+    wrapper = outer.body
+    assert isinstance(wrapper, Stack)
+    related_regions = [c for c in wrapper.children if isinstance(c, Region) and c.kind == "related"]
+    assert len(related_regions) == 2
+    titles: list[str] = []
+    for r in related_regions:
+        if isinstance(r.body, Stack):
+            for child in r.body.children:
+                if isinstance(child, Heading):
+                    titles.append(child.body)
+    assert "Tasks" in titles
+    assert "Comments" in titles
+
+
+def test_view_mode_no_related_groups_unchanged() -> None:
+    """Plan 10 — VIEW without related_groups still emits Region(kind=detail) directly."""
+    surface = SurfaceSpec(name="x", title="X", mode=SurfaceMode.VIEW, entity_ref="Task")
+    ctx = {
+        "fields": [{"key": "title", "label": "Title", "value": "Hello"}],
+        "region_name": "x_main",
+    }
+    fragment = FragmentSurfaceAdapter().build(surface, ctx)
+    assert fragment.body.kind == "detail"
+    # Body is the field stack directly (not a wrapper Stack)
+    from dazzle.render.fragment import Stack
+
+    assert isinstance(fragment.body.body, Stack)
+    # First child should be a Row (field), not a Region (related)
+    from dazzle.render.fragment import Row
+
+    assert isinstance(fragment.body.body.children[0], Row)
