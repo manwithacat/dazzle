@@ -17,8 +17,11 @@ from dazzle.render.fragment import (
     Fragment,
     Heading,
     Region,
+    Row,
+    Stack,
     Surface,
     Table,
+    Text,
 )
 
 
@@ -28,9 +31,11 @@ class FragmentSurfaceAdapter:
     def build(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Fragment:
         if surface.mode == SurfaceMode.LIST:
             return self._build_list(surface, ctx)
+        if surface.mode == SurfaceMode.VIEW:
+            return self._build_view(surface, ctx)
         raise NotImplementedError(
             f"FragmentSurfaceAdapter does not yet support mode {surface.mode.name!r}; "
-            f"Plan 3 covers LIST only. Detail/form/dashboard land in later plans."
+            f"Plans 3+8 cover LIST and VIEW. CREATE/EDIT/CUSTOM land in Plan 9+."
         )
 
     def _build_list(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
@@ -57,6 +62,40 @@ class FragmentSurfaceAdapter:
         return Surface(
             header=Heading(title, level=1),
             body=Region(kind="list", body=body),
+        )
+
+    def _build_view(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
+        """Detail surface — single record's fields as a definition-list-shaped Region.
+
+        Each field renders as a Row of (Heading-level-4 label, Text value).
+        Stack groups them. The Region carries kind="detail" so CSS can
+        target the layout (definition-list style with label + value columns).
+        """
+        title = surface.title or surface.name.replace("_", " ").title()
+        fields: list[dict[str, Any]] = ctx.get("fields", [])
+
+        body: Fragment
+        if not fields:
+            body = EmptyState(
+                title="No data",
+                description="This record has no displayable fields.",
+            )
+        else:
+            rows = tuple(
+                Row(
+                    children=(
+                        Heading(str(f.get("label", f.get("key", ""))), level=4),
+                        Text(_format_cell(f.get("value"), str(f.get("kind", "text")))),
+                    ),
+                    align="start",
+                )
+                for f in fields
+            )
+            body = Stack(children=rows, gap="sm")
+
+        return Surface(
+            header=Heading(title, level=1),
+            body=Region(kind="detail", body=body),
         )
 
 
