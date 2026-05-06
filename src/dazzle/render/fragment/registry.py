@@ -19,13 +19,22 @@ T = TypeVar("T", bound=type)
 class Renderer(Protocol):
     """Structural protocol for registered renderers.
 
-    Renderers exist in two shapes — Fragment-tree consumers (FragmentRenderer)
-    and IR+context consumers (JinjaRenderer, future PDF/native adapters).
-    The dispatcher (`dispatch_render` in `dazzle_back.runtime.renderers.dispatch`)
-    knows which signature each registered handler uses; the protocol stays
-    flexible to accommodate both shapes."""
+    Plan 5 unified the dispatch shape: every renderer adapter takes
+    `(surface, ctx)` and returns an HTML string. Adapters bridge to
+    underlying renderers — JinjaRenderer wraps the legacy template
+    path; FragmentSurfaceRenderer wraps the typed Fragment substrate.
+    Custom renderers (e.g. cytoscape_3d, future PDF/native targets) just
+    need to satisfy this protocol.
 
-    def render(self, *args: Any, **kwargs: Any) -> str: ...
+    The first parameter is intentionally `Any` rather than `SurfaceSpec`
+    to avoid a circular import (this module is in `dazzle.render.fragment`,
+    SurfaceSpec is in `dazzle.core.ir.surfaces`, and the latter imports
+    nothing from this module — but the dependency direction across the
+    package boundary is one we don't want to invert). The dispatcher's
+    call site uses the typed SurfaceSpec; the protocol just structurally
+    requires the right arity."""
+
+    def render(self, surface: Any, ctx: dict[str, Any]) -> str: ...
 
 
 class PrimitiveRegistry:
