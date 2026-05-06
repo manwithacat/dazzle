@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`RefPicker` Fragment primitive (Plan 14).** Frozen dataclass for REF-typed form fields, parallel in shape to `Combobox` but carrying `ref_api: URL` instead of static options. Renders as a `<select>` with `data-ref-api` + `x-init="dz.filterRefSelect($el)"`, re-using the existing client-side fetch machinery from the Jinja path. Closes the cross-app `unsupported_field_type=ref` blocker (28 surfaces).
+- Adapter `_field_to_primitive` now routes `kind="ref"` with a `ref_api` to RefPicker; the page route's `_build_dispatch_ctx` threads `ref_api` (and `initial_label` if available) from `FieldContext` into the field dict.
+
+### Changed
+- Honest example coverage rises from 50/78 to 78/78. Every example app now reports zero audit blockers — Phase 2A complete.
+- `_UNSUPPORTED_FIELD_TYPES` in `coverage.py` no longer contains `"ref"`. The remaining three (`uuid`, `json`, `file`) stay flagged; they don't appear in any audit-flippable surface across the examples (typically pk-only).
+
+### Agent Guidance
+- When the substrate gains a new primitive: (1) frozen dataclass in `primitives/<group>.py`, (2) add to `Fragment` union in `primitives/_base.py` and the package `__init__.py` exports, (3) renderer branch in `renderer.py`, (4) sample in `tests/unit/render/fragment/test_fragment_exhaustiveness.py::_sample_for`, (5) entry in `tests/unit/render/fragment/test_fragment_alias.py::expected`, (6) CSS rules + presence test entry. The pattern is mechanical; the design call is whether the new primitive is genuinely distinct from existing ones or whether an existing one should be widened. RefPicker chose distinctness because Combobox + ref_api would conflate static-options and lazy-fetch semantics.
+
 ## [0.66.40] - 2026-05-06
 
 ### Changed

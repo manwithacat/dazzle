@@ -23,35 +23,26 @@
 | 11 | Mass surface flip | ✓ Shipped | `scripts/flip_to_fragment.py` helper; 60 DSL surfaces flipped across 5 apps; per-example smoke test |
 | 12 | Production-path parity | ✓ Shipped | TestClient HTTP test for every example's primary list + simple_task VIEW/CREATE — pins Fragment chrome at the response layer |
 | 13 | Audit completeness + CI gate | ✓ Shipped | entity_ref-based field-type resolution; per-example CI step (advisory); smoke + CLI tests relaxed to match honest audit |
+| 14 | RefPicker primitive (Phase 2A) | ✓ Shipped | Typed REF-field primitive; adapter REF branch; page route ref_api threading; audit closes ref blocker — examples back to 78/78 honest |
 
-**Today's coverage of the example apps (post-Plan-13 honesty):**
+**Today's coverage of the example apps (post-Plan-14 honest 100%):**
 
-| App | Surfaces | Flipped (DSL) | Was (pre-Plan-13) | Now (honest) | Field-type blockers |
-|---|---|---|---|---|---|
-| simple_task | 17 | 12 / 12 ✓ | 17/17 | 11/17 | ref(6) |
-| contact_manager | 6 | 4 / 4 ✓ | 6/6 | 6/6 | — |
-| support_tickets | 19 | 12 / 12 ✓ | 19/19 | 12/19 | ref(7) |
-| ops_dashboard | 10 | 8 / 8 ✓ | 10/10 | 7/10 | ref(3) |
-| fieldtest_hub | 26 | 24 / 24 ✓ | 26/26 | 14/26 | ref(12) |
-| **Total** | **78** | **60 / 60 ✓** | **78/78** | **50/78** | **ref(28)** |
-
-The 28 ref-blocked surfaces still RENDER through the Fragment path — `_field_to_primitive` falls through to a plain text Field for unsupported kinds. The blocker means "the widget the user sees is wrong" (text input where a Combobox is needed), not "the page crashes." Phase 2 closes this by extending the adapter; the audit now counts honestly.
+| App | Surfaces | Flipped (DSL) | Ready | Blocked |
+|---|---|---|---|---|
+| simple_task | 17 | 12 / 12 ✓ | 17/17 | 0 |
+| contact_manager | 6 | 4 / 4 ✓ | 6/6 | 0 |
+| support_tickets | 19 | 12 / 12 ✓ | 19/19 | 0 |
+| ops_dashboard | 10 | 8 / 8 ✓ | 10/10 | 0 |
+| fieldtest_hub | 26 | 24 / 24 ✓ | 26/26 | 0 |
+| **Total** | **78** | **60 / 60 ✓** | **78/78** | **0** |
 
 DSL/audit delta: framework-injected surfaces (`feedback_*`, `_admin_*`) appear in the audit count but are not authored in DSL — they pick up Fragment rendering automatically once the renderer registry is wired.
 
-**Aggregated blockers (cross-app):** 28 surfaces blocked on `unsupported_field_type=ref` — all on the same adapter gap. No other field types surface (no UUID/JSON/FILE elements appear in section.elements across the examples).
+**Aggregated blockers (cross-app):** none. Phase 2A closed the REF gap (28 surfaces) via the typed RefPicker primitive. Remaining unsupported field types (UUID/JSON/FILE) do not appear on any audit-flippable surface across the examples — they're typically in pk position, not in section.elements.
 
 ---
 
 ## Where we're going
-
-### Phase 2A — REF field adapter coverage (next)
-
-Plan 13's honest audit exposes one cross-app gap: 28 surfaces blocked on `unsupported_field_type=ref`. Closing this is highest-leverage: brings cumulative coverage from 50/78 (64%) to 78/78 (100% honest).
-
-**Adapter work:** `_field_to_primitive` in `src/dazzle_back/runtime/renderers/fragment_adapter.py` currently routes REF fields to a plain text Field. The closure: dereference `FieldType.ref_entity`, render a Combobox seeded from the related entity's primary key + display field. Mirrors what the enum branch does (Combobox with type-aware option list), but with options sourced from a backend lookup instead of a static enum.
-
-**Cost:** ~4–6 tasks. The Combobox primitive already exists (Plan 1); the work is in (a) the adapter branch, (b) seeding options for CREATE forms (deferred lookup vs eager fetch), and (c) the LIST cell rendering (FK display field instead of UUID).
 
 ### Phase 2B — Aegismark and downstream
 
@@ -74,6 +65,12 @@ CI gate (Plan 13 will wire this): `dazzle fragment-audit examples/<app> --fail-o
 74 DSL-level surface flips across 5 apps, zero adapter regressions, zero CSS gaps, zero dispatch errors, zero parse failures. The substrate's typed-from-the-start design held under bulk migration — this is the strongest validation yet that the Fragment approach scales beyond single-surface conversions.
 
 The discovery log table the plan reserved for "issues found during the flip" remained empty. That's data: the audit-then-flip-then-verify rhythm works, and the substrate's invariants don't drift between apps.
+
+### Plan 14 — typed primitives are cheap; client integration is the load-bearing piece
+
+Adding RefPicker as a new dataclass + renderer branch + adapter branch was three small commits. The integration work was threading `ref_api` from `FieldContext` through `_build_dispatch_ctx` into the field dict — five lines of plumbing in page_routes.py. The expensive thing was the design call: extend Combobox vs. add a new primitive. New primitive won (clean separation between static-options and lazy-fetched-options semantics) — and the substrate stayed cheap to extend.
+
+Re-using existing Alpine machinery (`dz.filterRefSelect`) meant zero new client-side code. The Fragment renderer's contract was just "emit a `<select>` with the right `data-ref-api` attribute and an `x-init` hook"; the client side was already production-tested by the Jinja path.
 
 ### Plan 13 — the audit was lying
 
