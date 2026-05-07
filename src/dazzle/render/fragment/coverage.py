@@ -198,6 +198,9 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "bar_track",
         "bullet",
         "diagram",
+        "line_chart",
+        "area_chart",
+        "sparkline",
     }
 )
 

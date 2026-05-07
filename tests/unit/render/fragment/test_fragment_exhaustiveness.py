@@ -54,6 +54,7 @@ from dazzle.render.fragment import (
     TargetSelector,
     Text,
     Timeline,
+    TimeSeries,
     Toolbar,
     Topbar,
 )
@@ -149,6 +150,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is Diagram:
         return Diagram(nodes=("A", "B"), edges=(("A", "B"),))
+    if primitive_type is TimeSeries:
+        return TimeSeries(label="x", points=(("a", 1.0),))
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

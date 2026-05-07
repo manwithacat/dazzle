@@ -12,6 +12,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     Table,
     Timeline,
+    TimeSeries,
 )
 
 # === Table ===
@@ -129,3 +130,27 @@ def test_diagram_no_edges_is_valid() -> None:
     """Pure node-only diagrams are allowed (e.g. orphans-only graph)."""
     d = Diagram(nodes=("A", "B"))
     assert d.edges == ()
+
+
+# === TimeSeries ===
+
+
+def test_timeseries_requires_at_least_one_point() -> None:
+    with pytest.raises(ValueError, match="at least one point"):
+        TimeSeries(label="x", points=())
+
+
+def test_timeseries_rejects_invalid_view() -> None:
+    with pytest.raises(ValueError, match="invalid view"):
+        TimeSeries(label="x", points=(("a", 1.0),), view="pie")  # type: ignore[arg-type]
+
+
+def test_timeseries_default_view_is_line() -> None:
+    t = TimeSeries(label="x", points=(("a", 1.0),))
+    assert t.view == "line"
+
+
+def test_timeseries_accepts_all_three_views() -> None:
+    for view in ("line", "area", "sparkline"):
+        t = TimeSeries(label="x", points=(("a", 1.0),), view=view)  # type: ignore[arg-type]
+        assert t.view == view

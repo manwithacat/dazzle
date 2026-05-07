@@ -54,6 +54,7 @@ from dazzle.render.fragment.primitives import (
     Tabs,
     Text,
     Timeline,
+    TimeSeries,
     Toolbar,
     Topbar,
 )
@@ -161,6 +162,8 @@ class FragmentRenderer:
                 return self._emit_calendar_grid(fragment, ctx)
             case Diagram():
                 return self._emit_diagram(fragment, ctx)
+            case TimeSeries():
+                return self._emit_time_series(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -716,6 +719,33 @@ class FragmentRenderer:
             f'<section class="dz-diagram">'
             f'<ul class="dz-diagram__nodes">{nodes_html}</ul>'
             f'<ul class="dz-diagram__edges">{edges_html}</ul>'
+            f"</section>"
+        )
+
+    def _emit_time_series(self, t: TimeSeries, ctx: RenderContext) -> str:
+        """Render line/area/sparkline as a labelled `<ol>` of points.
+
+        Phase 4A renders points as semantic data — `<li data-x="…"
+        data-y="…">x:y</li>`. CSS hooks (`dz-timeseries--view-line`
+        etc.) carry the view distinction so styling can produce the
+        chart shape later. A future iteration can swap to inline SVG
+        or a charting library without changing the IR shape.
+        """
+        cls = f"dz-timeseries dz-timeseries--view-{t.view}"
+        items = "".join(
+            f'<li class="dz-timeseries__point" '
+            f'data-x="{ctx.escape_attr(label)}" '
+            f'data-y="{value}">'
+            f'<span class="dz-timeseries__x">{ctx.escape(label)}</span>'
+            f": "
+            f'<span class="dz-timeseries__y">{value}</span>'
+            f"</li>"
+            for label, value in t.points
+        )
+        return (
+            f'<section class="{cls}">'
+            f'<h4 class="dz-timeseries__label">{ctx.escape(t.label)}</h4>'
+            f'<ol class="dz-timeseries__points">{items}</ol>'
             f"</section>"
         )
 

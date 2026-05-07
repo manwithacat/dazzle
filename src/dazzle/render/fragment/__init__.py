@@ -51,6 +51,7 @@ from dazzle.render.fragment.primitives import (
     Tabs,
     Text,
     Timeline,
+    TimeSeries,
     Toolbar,
     Topbar,
 )
@@ -138,6 +139,7 @@ __all__ = [
     "BarChart",
     "PivotTable",
     "Diagram",
+    "TimeSeries",
     # primitives — forms
     "FormStack",
     "Field",

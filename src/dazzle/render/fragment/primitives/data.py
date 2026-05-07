@@ -18,6 +18,7 @@ from typing import Literal
 
 _TRENDS = ("up", "down", "flat")
 _CALENDAR_VIEWS = ("day", "week", "month")
+_TIMESERIES_VIEWS = ("line", "area", "sparkline")
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +103,30 @@ class CalendarGrid:
     def __post_init__(self) -> None:
         if self.view not in _CALENDAR_VIEWS:
             raise ValueError(f"invalid view {self.view!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class TimeSeries:
+    """Sequential numeric data plotted over a label axis.
+
+    One primitive covers `line_chart`, `area_chart`, and `sparkline` —
+    they differ only in chrome (axis labels, fill, size). The `view`
+    discriminator selects the rendering style.
+
+    `points` is a sequence of (label, value) pairs. The label is
+    rendered as-is (typically an iso-date string or a bucket name);
+    values are floats so callers can pass ratios as well as counts.
+    """
+
+    label: str
+    points: tuple[tuple[str, float], ...]
+    view: Literal["line", "area", "sparkline"] = "line"
+
+    def __post_init__(self) -> None:
+        if self.view not in _TIMESERIES_VIEWS:
+            raise ValueError(f"invalid view {self.view!r}")
+        if not self.points:
+            raise ValueError("TimeSeries requires at least one point")
 
 
 @dataclass(frozen=True, slots=True)

@@ -617,6 +617,49 @@ def test_detail_no_item_renders_empty_state() -> None:
 # ───────────────── Activity feed ──────────────────
 
 
+def test_line_chart_renders_time_series() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"points": [("Jan", 5), ("Feb", 8), ("Mar", 12)]}
+    fragment = adapter.build(_FakeRegion("c", display="line_chart"), ctx)
+    html = _render(fragment)
+    assert "dz-timeseries--view-line" in html
+    assert "Jan" in html and "Feb" in html and "Mar" in html
+
+
+def test_area_chart_uses_area_view() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"points": [("Q1", 100), ("Q2", 150)]}
+    fragment = adapter.build(_FakeRegion("c", display="area_chart"), ctx)
+    assert "dz-timeseries--view-area" in _render(fragment)
+
+
+def test_sparkline_uses_sparkline_view() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"points": [("a", 1), ("b", 2), ("c", 3)]}
+    fragment = adapter.build(_FakeRegion("s", display="sparkline"), ctx)
+    assert "dz-timeseries--view-sparkline" in _render(fragment)
+
+
+def test_time_series_accepts_dict_point_shape() -> None:
+    """Points can also arrive as `{label, value}` or `{x, y}` dicts."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"points": [{"x": "Jan", "y": 10}, {"label": "Feb", "value": 20}]}
+    fragment = adapter.build(_FakeRegion("c", display="line_chart"), ctx)
+    html = _render(fragment)
+    assert "Jan" in html and "Feb" in html
+
+
+def test_time_series_skips_malformed_points() -> None:
+    """Points that can't be coerced silently drop; pure garbage leaves
+    an empty point list → EmptyState."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("c", display="line_chart", empty_message="No data."),
+        {"points": [None, 42, "string"]},
+    )
+    assert "No data." in _render(fragment)
+
+
 def test_diagram_renders_nodes_and_edges() -> None:
     """`display: diagram` produces a Diagram primitive with the
     declared nodes and edges, rendered as paired UL lists."""

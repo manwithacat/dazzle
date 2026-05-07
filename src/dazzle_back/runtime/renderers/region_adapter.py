@@ -15,7 +15,7 @@ aggregated_blockers report.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from dazzle.render.fragment import (
     KPI,
@@ -36,6 +36,7 @@ from dazzle.render.fragment import (
     Tabs,
     Text,
     Timeline,
+    TimeSeries,
 )
 
 
@@ -149,6 +150,12 @@ class WorkspaceRegionAdapter:
             return self._build_bullet(region, ctx)
         if display_value == "diagram":
             return self._build_diagram(region, ctx)
+        if display_value == "line_chart":
+            return self._build_time_series(region, ctx, "line")
+        if display_value == "area_chart":
+            return self._build_time_series(region, ctx, "area")
+        if display_value == "sparkline":
+            return self._build_time_series(region, ctx, "sparkline")
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -328,6 +335,54 @@ class WorkspaceRegionAdapter:
             )
         else:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_time_series(
+        self,
+        region: Any,
+        ctx: dict[str, Any],
+        view: Literal["line", "area", "sparkline"],
+    ) -> Surface:
+        """Render a TimeSeries primitive (line / area / sparkline).
+
+        ctx shape:
+            points: list of (label, value) tuples or {label, value} /
+                {x, y} dicts — pre-aggregated by the runtime
+            chart_label: optional override
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        chart_label = str(ctx.get("chart_label") or title or view.title())
+        raw_points = ctx.get("points") or []
+        points: list[tuple[str, float]] = []
+        for entry in raw_points:
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                try:
+                    points.append((str(entry[0]), float(entry[1])))
+                except (TypeError, ValueError):
+                    continue
+            elif isinstance(entry, dict):
+                label = str(entry.get("label") or entry.get("x") or "")
+                try:
+                    val = float(entry.get("value") or entry.get("y") or 0)
+                except (TypeError, ValueError):
+                    val = 0.0
+                if label:
+                    points.append((label, val))
+
+        body: Fragment
+        if not points:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None) or "No points to plot.",
+            )
+        else:
+            body = TimeSeries(label=chart_label, points=tuple(points), view=view)
 
         return Surface(
             header=Heading(title, level=2),

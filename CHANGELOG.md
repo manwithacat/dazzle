@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.72] - 2026-05-08
+
+### Added
+- **TimeSeries primitive** — single typed Fragment covering `line_chart`, `area_chart`, and `sparkline` display modes; they differ only in chrome (axis labels, fill, size) so a `view: Literal["line", "area", "sparkline"]` discriminator is enough. `TimeSeries(label, points, view)` where `points` is a tuple of `(label, value)` pairs (label rendered as-is, value coerced to float). Strict invariant: at least one point. Renders as `<section class="dz-timeseries dz-timeseries--view-<view>">` containing a `<h4>` label and an `<ol>` of `<li data-x data-y>` points — semantic data with CSS hooks for the view distinction.
+- **Region dispatch for `line_chart`, `area_chart`, `sparkline`** — `_build_time_series(region, ctx, view)` accepts points as `(label, value)` tuples or `{label, value}` / `{x, y}` dicts. Malformed entries silently drop.
+- 4 new primitive tests (validity, view default, view variants, invalid-view rejection); 5 new adapter tests (each view's CSS class, dict shape, malformed-point handling).
+- `line_chart`, `area_chart`, `sparkline` added to `_SUPPORTED_DISPLAYS`.
+
+### Phase 4A progress
+
+| App | v0.66.71 (diagram) | v0.66.72 (timeseries) | Δ |
+|---|---|---|---|
+| simple_task | 37 ✓ | 37 ✓ | 0 |
+| contact_manager | 12 ✓ | 12 ✓ | 0 |
+| support_tickets | 36 ✓ | 36 ✓ | 0 |
+| ops_dashboard | 35 | 38 | +3 |
+| fieldtest_hub | 50 | 50 | 0 |
+| **Total** | **170/176** | **173/176** | **+3** |
+
+### Highest remaining display blockers
+- `radar` × 1 (polar/radar profile shape — needs new primitive)
+- `box_plot` × 1 (per-group quartile spread — needs new primitive)
+- `map` × 1 (geographic widget — vendor-neutral design genuinely hard, may stay deferred)
+
+### Agent Guidance
+- Multiple display modes that share a data shape can share a primitive — `TimeSeries` covers three modes via a `view` enum, the same way `CalendarGrid` does for `day`/`week`/`month`. When in doubt about whether to introduce a new primitive vs. extending an existing one, look at the IR shape: if it's a tuple of `(x, y)` points, it's TimeSeries.
+- New primitives need updating in **six** places, not four: `primitives/data.py` (define), `primitives/__init__.py` (import + `__all__`), `primitives/_base.py` (Fragment union), `render/fragment/__init__.py` (top-level re-export), `render/fragment/renderer.py` (match arm + emit method), and the **three baseline test fixtures** (`test_fragment_alias.py`, `test_fragment_exhaustiveness.py` import + sample factory). Forgetting the latter creates a CI red on first run; the failing-test list is the canonical checklist for "what file did I forget."
+
 ## [0.66.71] - 2026-05-08
 
 ### Added

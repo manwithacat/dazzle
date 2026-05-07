@@ -34,6 +34,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     Table,
     Timeline,
+    TimeSeries,
 )
 from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, RefPicker, Submit
 from dazzle.render.fragment.primitives.interactive import (
@@ -95,6 +96,7 @@ Fragment = (
     | BarChart
     | PivotTable
     | Diagram
+    | TimeSeries
     # Forms
     | FormStack
     | Field
