@@ -33,12 +33,14 @@ def _render(node: object) -> str:
 
 
 def test_unsupported_display_raises_with_actionable_hint() -> None:
-    """`heatmap` isn't wired yet — raises NotImplementedError with
-    a pointer at the audit's aggregated_blockers report. Rotated from
-    `pivot_table` after pivot_table/tabbed_list closure landed."""
+    """`map` isn't wired yet — raises NotImplementedError with a
+    pointer at the audit's aggregated_blockers report. Rotated through:
+    grid → pivot_table → heatmap → map (heatmap stays unsupported but
+    using a different unsupported mode here keeps the canary distinct
+    from the coverage tests' canary)."""
     adapter = WorkspaceRegionAdapter()
-    with pytest.raises(NotImplementedError, match="heatmap"):
-        adapter.build(_FakeRegion("r", display="heatmap"), {})
+    with pytest.raises(NotImplementedError, match="map"):
+        adapter.build(_FakeRegion("r", display="map"), {})
 
 
 # ───────────────── Timeline ───────────────────────
@@ -613,6 +615,59 @@ def test_detail_no_item_renders_empty_state() -> None:
 
 
 # ───────────────── Activity feed ──────────────────
+
+
+def test_funnel_chart_sorts_buckets_descending() -> None:
+    """A funnel chart is just a BarChart with stages sorted by count
+    descending — biggest first, narrow at the bottom."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "buckets": [
+            ("signed_up", 100),
+            ("verified", 200),
+            ("paid", 50),
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("f", display="funnel_chart"), ctx)
+    html = _render(fragment)
+    # Order in HTML output should reflect sort: verified (200), signed_up (100), paid (50)
+    pos_verified = html.find("verified")
+    pos_signed = html.find("signed_up")
+    pos_paid = html.find("paid")
+    assert pos_verified < pos_signed < pos_paid
+
+
+def test_funnel_chart_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("f", display="funnel_chart", empty_message="No funnel."),
+        {"buckets": []},
+    )
+    assert "No funnel." in _render(fragment)
+
+
+def test_queue_dispatches_through_list() -> None:
+    """`display: queue` is a Table-like list. Inline-action wiring is
+    a future enhancement; the audit just needs the render path closed."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"name": "Item One"}, {"name": "Item Two"}],
+        "columns": [{"key": "name", "label": "Name"}],
+    }
+    fragment = adapter.build(_FakeRegion("q", display="queue"), ctx)
+    html = _render(fragment)
+    assert "<table" in html
+    assert "Item One" in html and "Item Two" in html
+
+
+def test_histogram_dispatches_through_bar_chart() -> None:
+    """Histograms are bar charts of binned continuous data — for the
+    audit's purposes a pure alias is fine."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"buckets": [("0-10", 5), ("10-20", 15), ("20-30", 8)]}
+    fragment = adapter.build(_FakeRegion("h", display="histogram"), ctx)
+    html = _render(fragment)
+    assert "0-10" in html and "10-20" in html and "20-30" in html
 
 
 def test_activity_feed_dispatches_through_timeline() -> None:

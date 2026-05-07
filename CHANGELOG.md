@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.67] - 2026-05-07
+
+### Added
+- **Funnel chart, queue, histogram dispatch in `WorkspaceRegionAdapter`** — three more aliases / compositions on existing primitives. `display: funnel_chart` parses buckets the same way `bar_chart` does, then sorts them descending (biggest stage first) before delegating; `display: queue` reuses `_build_list` (inline-action wiring is a future enhancement); `display: histogram` is a pure alias for `bar_chart` (binned continuous data is just a bar chart).
+- `funnel_chart`, `queue`, `histogram` added to `_SUPPORTED_DISPLAYS`.
+- 4 new unit tests (funnel sort order, funnel empty state, queue → table dispatch, histogram → bar_chart dispatch).
+
+### Phase 4A progress
+
+| App | v0.66.66 (detail+activity_feed) | v0.66.67 (funnel+queue+histogram) | Δ |
+|---|---|---|---|
+| simple_task | 36 | 36 | 0 |
+| contact_manager | 10 | 10 | 0 |
+| support_tickets | 33 | 34 | +1 |
+| ops_dashboard | 23 | 25 | +2 |
+| fieldtest_hub | 47 | 47 | 0 |
+| **Total** | **149/176** | **152/176** | **+3** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — biggest lift, deferred)
+- `heatmap`, `progress`, `search_box`, `map`, `tree` × 1 each
+- ops_dashboard chart-family awaiting new primitives (sparkline, radar, box_plot, bullet, line_chart, area_chart, status_list × 2, action_grid, profile_card, pipeline_steps, bar_track, confirm_action_panel)
+
+### Agent Guidance
+- Aliasing patterns are the cheapest Phase 4A wins — when a new `display:` is conceptually a sorted/filtered/renamed variant of something already wired, write a thin pre-processor that re-shapes the ctx and delegates rather than copy-pasting render code. `funnel_chart` (sort desc → bar_chart), `histogram` (pure alias → bar_chart), `queue` (pure alias → list), `activity_feed` (pure alias → timeline) are the templates.
+
 ## [0.66.66] - 2026-05-07
 
 ### Added

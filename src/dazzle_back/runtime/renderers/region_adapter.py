@@ -116,6 +116,12 @@ class WorkspaceRegionAdapter:
             return self._build_timeline(region, ctx)
         if display_value == "detail":
             return self._build_detail(region, ctx)
+        if display_value == "queue":
+            return self._build_list(region, ctx)
+        if display_value == "histogram":
+            return self._build_bar_chart(region, ctx)
+        if display_value == "funnel_chart":
+            return self._build_funnel_chart(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -300,6 +306,38 @@ class WorkspaceRegionAdapter:
             header=Heading(title, level=2),
             body=Region(kind="report", body=body),
         )
+
+    def _build_funnel_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: funnel_chart` is a BarChart with buckets sorted in
+        descending order — funnels narrow from a wide top stage to a
+        narrow conversion at the bottom.
+
+        ctx shape:
+            buckets: list[(str, int)] — pre-aggregated stages
+            chart_label: optional override
+        """
+        # Reuse bar_chart's parsing, then sort descending. Caller can
+        # pre-sort if a non-monotonic visualisation is intended; the
+        # default funnel rendering is "biggest stage first".
+        raw_buckets = ctx.get("buckets") or []
+        parsed: list[tuple[str, int]] = []
+        for entry in raw_buckets:
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                try:
+                    parsed.append((str(entry[0]), int(entry[1])))
+                except (TypeError, ValueError):
+                    continue
+            elif isinstance(entry, dict):
+                key = str(entry.get("label") or entry.get("key") or "")
+                try:
+                    val = int(entry.get("value") or entry.get("count") or 0)
+                except (TypeError, ValueError):
+                    val = 0
+                if key:
+                    parsed.append((key, val))
+        parsed.sort(key=lambda kv: kv[1], reverse=True)
+        # Hand off to bar_chart's render path with the sorted buckets.
+        return self._build_bar_chart(region, {**ctx, "buckets": parsed})
 
     def _build_detail(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: detail` regions render a single item's fields as a

@@ -183,6 +183,9 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "tabbed_list",
         "activity_feed",
         "detail",
+        "queue",
+        "histogram",
+        "funnel_chart",
     }
 )
 
