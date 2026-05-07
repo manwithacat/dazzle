@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.58] - 2026-05-07
+
+### Added
+- **`unsupported_display` audit blocker (Phase 4A starter).** `coverage.py::BlockerKind` gained `UNSUPPORTED_DISPLAY`; the audit now flags `SurfaceSpec.display` values not in `_SUPPORTED_DISPLAYS = {"", "list"}`. Catches the silent-under-reporting class where a `display: kanban` surface previously rendered as a Table without complaint — same pattern Plan 13 closed for field types.
+- 3 new audit tests pin construction, the kanban-flagged case, and the `display: list` / empty-display passthrough.
+
+### Agent Guidance
+- Display modes (kanban, timeline, bar_chart, pivot_table, metrics, heatmap, funnel_chart) live primarily on `WorkspaceRegion` rather than `SurfaceSpec` in current examples — none of the 5 apps trip the new blocker. The audit honestly reflects that. Phase 4B (workspace_renderer.py port to Fragment) will extend the audit to walk regions; the blocker class is ready when those changes land.
+
 ## [0.66.57] - 2026-05-07
 
 ### Fixed

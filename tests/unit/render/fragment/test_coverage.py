@@ -37,6 +37,7 @@ def test_blocker_kind_enum_values() -> None:
         "unsupported_mode",
         "unsupported_field_type",
         "unsupported_feature",
+        "unsupported_display",
     }
     assert {k.value for k in BlockerKind} == expected
 
@@ -293,6 +294,43 @@ def test_coverage_report_to_json_includes_source_field() -> None:
     by_name = {s["name"]: s for s in payload["surfaces"]}
     assert by_name["task_list"]["source"] == "declared"
     assert by_name["_admin_health"]["source"] == "framework_injected"
+
+
+def test_audit_flags_unsupported_display_mode() -> None:
+    """Phase 4A: surfaces with `display:` set to a value the adapter
+    doesn't dispatch on are flagged. `display: kanban` on a list-mode
+    surface previously rendered as a Table silently — exactly the
+    Plan-13-class silent under-reporting."""
+    surface = SurfaceSpec(
+        name="task_board",
+        mode=SurfaceMode.LIST,
+        display="kanban",
+    )
+    appspec = _make_appspec([surface])
+    report = audit_appspec(appspec)
+    assert report.blocked_count == 1
+    blockers = report.surfaces[0].blockers
+    assert any(b.kind.value == "unsupported_display" and b.detail == "kanban" for b in blockers), (
+        f"Expected kanban blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
+    )
+
+
+def test_audit_does_not_flag_empty_display() -> None:
+    """The default — no `display:` set — uses the surface mode's
+    natural rendering (LIST → Table). No blocker."""
+    surface = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
+    appspec = _make_appspec([surface])
+    report = audit_appspec(appspec)
+    assert report.ready_count == 1
+
+
+def test_audit_does_not_flag_explicit_list_display() -> None:
+    """`display: list` is the explicit form of the default — also
+    supported."""
+    surface = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST, display="list")
+    appspec = _make_appspec([surface])
+    report = audit_appspec(appspec)
+    assert report.ready_count == 1
 
 
 def test_audit_dedupes_same_field_type_across_elements() -> None:

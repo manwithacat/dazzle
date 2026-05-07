@@ -26,6 +26,7 @@ class BlockerKind(StrEnum):
     UNSUPPORTED_MODE = "unsupported_mode"
     UNSUPPORTED_FIELD_TYPE = "unsupported_field_type"
     UNSUPPORTED_FEATURE = "unsupported_feature"
+    UNSUPPORTED_DISPLAY = "unsupported_display"
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +163,14 @@ _UNSUPPORTED_FEATURES: tuple[str, ...] = (
 # rendering and per-row link generation).
 _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"file"})
 
+# Surface-level `display:` values the adapter knows how to render.
+# Empty string / None means "use the surface mode default" (e.g.
+# `mode: list` + no display → standard Table). Specific display
+# modes — `kanban`, `timeline`, `bar_chart`, `pivot_table`, `metrics`,
+# `heatmap`, `funnel_chart` — require dedicated adapter dispatch
+# (Phase 4A scope) and are flagged until then.
+_SUPPORTED_DISPLAYS: frozenset[str] = frozenset({"", "list"})
+
 
 def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:
     """Look up `field_name` on the entity named `entity_name` in
@@ -207,6 +216,17 @@ def _audit_surface(appspec: object, surface: object) -> SurfaceCoverage:
         value = getattr(surface, feature_attr, None)
         if value:
             blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_FEATURE, detail=feature_attr))
+
+    # `display:` clause — Phase 4A. Surfaces with non-default display
+    # (kanban, timeline, bar_chart, pivot_table, metrics, heatmap,
+    # funnel_chart) need dedicated adapter dispatch the substrate
+    # doesn't yet provide. Currently the adapter's _build_list emits
+    # a Table regardless of `display:`, so a `display: kanban` surface
+    # silently renders as a table — exactly the under-reporting Plan 13
+    # closed for field types.
+    display_value = (getattr(surface, "display", None) or "").strip()
+    if display_value not in _SUPPORTED_DISPLAYS:
+        blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_DISPLAY, detail=display_value))
 
     entity_ref = getattr(surface, "entity_ref", None)
     if entity_ref:
