@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.56] - 2026-05-07
+
+### Fixed
+- **CI: UX contract checker failures on Fragment-rendered list surfaces.** The Plan 11 mass-flip put DSL surfaces on `render: fragment`, but the Fragment list adapter omitted two markers the contract checker requires: `data-dazzle-table="<entity>"` on the list region (drives `list_page:<Entity>` + htmx `closest [data-dazzle-table]` selectors) and a Create link visible on the list (drives `rbac:<Entity>:<persona>:create`). Result: `UX Contracts (support_tickets)` job has been failing on every push since 2026-05-05. The Region primitive now carries an optional `data_table: str` field which the renderer emits as `data-dazzle-table`; the FragmentSurfaceAdapter's `_build_list` populates it from `surface.entity_ref` and emits a Create link in the surface header when `create_url` is set. `_build_dispatch_ctx` threads `create_url` from the table context.
+- **CI: mypy unused-ignore on `directive_parser.py:128`.** Same `markdown` stub flicker as `site_routes.py:239` — fixed by widening the suppression to `[import-untyped,unused-ignore]`.
+- 2 new HTTP integration tests pin the contract markers (`data-dazzle-table` and Create link) so this regression class can't reappear.
+
+### Changed
+- `Region` primitive gained a `data_table: str = ""` field. Default empty for backward compat. List regions populate it.
+
 ## [0.66.55] - 2026-05-07
 
 ### Added

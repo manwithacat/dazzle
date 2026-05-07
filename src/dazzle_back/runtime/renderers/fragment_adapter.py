@@ -20,6 +20,7 @@ from dazzle.render.fragment import (
     FormStack,
     Fragment,
     Heading,
+    Link,
     RefPicker,
     Region,
     Row,
@@ -51,6 +52,8 @@ class FragmentSurfaceAdapter:
         title = surface.title or surface.name.replace("_", " ").title()
         items: list[dict[str, Any]] = ctx.get("items", [])
         columns: list[dict[str, Any]] = ctx.get("columns", [])
+        entity_name = (getattr(surface, "entity_ref", "") or "").strip()
+        create_url = str(ctx.get("create_url", "") or "").strip()
 
         body: Fragment
         if not items:
@@ -68,9 +71,29 @@ class FragmentSurfaceAdapter:
             )
             body = Table(columns=column_labels, rows=rows)
 
+        # Header carries title + optional Create link. The Create
+        # link is contractually required for the list page (UX
+        # contract `rbac:<Entity>:<persona>:create` looks for an
+        # <a href="*create*"> visible on the list).
+        header: Fragment
+        if create_url:
+            header = Row(
+                children=(
+                    Heading(title, level=1),
+                    Link(label=f"Create {entity_name or 'item'}", href=URL(create_url)),
+                ),
+                align="center",
+                gap="md",
+            )
+        else:
+            header = Heading(title, level=1)
+
         return Surface(
-            header=Heading(title, level=1),
-            body=Region(kind="list", body=body),
+            header=header,
+            # Region carries `data-dazzle-table` so the UX contract
+            # checker + htmx `closest [data-dazzle-table]` selectors
+            # find the entity container.
+            body=Region(kind="list", body=body, data_table=entity_name),
         )
 
     def _build_view(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:

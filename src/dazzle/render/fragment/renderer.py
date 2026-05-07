@@ -464,7 +464,9 @@ class FragmentRenderer:
 
     def _emit_region(self, r: Region, ctx: RenderContext) -> str:
         cls = f"dz-region dz-region--kind-{r.kind}"
-        return f'<section class="{cls}">{self._emit(r.body, ctx)}</section>'  # type: ignore[arg-type]
+        data_attr = f' data-dazzle-table="{ctx.escape_attr(r.data_table)}"' if r.data_table else ""
+        body_html = self._emit(r.body, ctx)  # type: ignore[arg-type]
+        return f'<section class="{cls}"{data_attr}>{body_html}</section>'
 
     def _emit_drawer(self, d: Drawer, ctx: RenderContext) -> str:
         cls = f"dz-drawer dz-drawer--side-{d.side}"

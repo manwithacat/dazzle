@@ -1087,6 +1087,10 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             "page_size": int(getattr(table, "page_size", 20) or 20),
             "region_name": getattr(table, "table_id", "") or "",
             "empty_message": getattr(table, "empty_message", "") or "No items found.",
+            # CI-fix: thread create_url through so the Fragment list
+            # adapter can emit a Create link required by the UX
+            # contract checker (rbac:<Entity>:<persona>:create).
+            "create_url": getattr(table, "create_url", "") or "",
         }
 
     form = getattr(render_ctx, "form", None)

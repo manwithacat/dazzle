@@ -125,7 +125,7 @@ def _render(raw: str, fmt: str) -> str:
     """Convert raw content to HTML."""
     if fmt in ("md", "markdown"):
         try:
-            import markdown  # type: ignore[import-untyped]
+            import markdown  # type: ignore[import-untyped,unused-ignore]
 
             return str(
                 markdown.markdown(raw, extensions=["extra", "sane_lists"]),

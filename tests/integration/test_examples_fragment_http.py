@@ -480,3 +480,36 @@ def test_fragment_chrome_default_off_htmx_still_uses_jinja_partial() -> None:
         f"chrome-off htmx response missing Jinja layout markers — did "
         f"P8 leak to chrome-off path? body[:500]={body[:500]!r}"
     )
+
+
+# ─────────────────── UX contract markers (CI-red fix) ───────────────────
+#
+# The Plan 11 mass-flip broke two UX contract checker assertions:
+#   - list_page:<Entity> — wants `data-dazzle-table="<Entity>"`
+#   - rbac:<Entity>:<persona>:create — wants `<a href="*create*">` on list
+# The Fragment list path now emits both. These tests pin the markers so
+# the contract regression can't reappear.
+
+
+def test_fragment_chrome_list_emits_data_dazzle_table_attribute() -> None:
+    """The list-mode region carries `data-dazzle-table="<entity>"` —
+    UX contract `list_page:<Entity>` looks for this attribute."""
+    client = _client_with_fragment_chrome("simple_task")
+    body = client.get("/task").text
+    assert 'data-dazzle-table="Task"' in body, (
+        f"list region missing data-dazzle-table; UX contract checker "
+        f"will fail. body[:1000]={body[:1000]!r}"
+    )
+
+
+def test_fragment_chrome_list_emits_create_link_when_create_url_set() -> None:
+    """List page includes `<a href="*create*">` so the
+    rbac:<Entity>:<persona>:create contract passes."""
+    import re
+
+    client = _client_with_fragment_chrome("simple_task")
+    body = client.get("/task").text
+    assert re.search(r'<a [^>]*href="[^"]*create', body), (
+        f"list page missing Create link; UX contract rbac:create will "
+        f"fail. body[:1000]={body[:1000]!r}"
+    )

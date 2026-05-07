@@ -56,6 +56,11 @@ class Region:
 
     kind: Literal["list", "detail", "form", "dashboard", "kanban", "calendar", "report", "related"]
     body: object
+    data_table: str = ""
+    """Entity name to emit as `data-dazzle-table="<entity>"` on the
+    region root. List regions need this attribute so the contract
+    checker (and htmx `closest [data-dazzle-table]` selectors in
+    search/filter fragments) can locate the entity container."""
 
     def __post_init__(self) -> None:
         if self.kind not in _REGION_KINDS:
