@@ -18,6 +18,7 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     Combobox,
+    Diagram,
     Drawer,
     EmptyState,
     ErrorPage,
@@ -136,6 +137,7 @@ __all__ = [
     "KPI",
     "BarChart",
     "PivotTable",
+    "Diagram",
     # primitives — forms
     "FormStack",
     "Field",

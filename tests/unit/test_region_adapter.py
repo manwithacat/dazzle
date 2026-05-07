@@ -617,6 +617,58 @@ def test_detail_no_item_renders_empty_state() -> None:
 # ───────────────── Activity feed ──────────────────
 
 
+def test_diagram_renders_nodes_and_edges() -> None:
+    """`display: diagram` produces a Diagram primitive with the
+    declared nodes and edges, rendered as paired UL lists."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "nodes": ["Device", "Tester", "IssueReport"],
+        "edges": [("Device", "Tester"), ("Device", "IssueReport")],
+    }
+    fragment = adapter.build(_FakeRegion("d", display="diagram"), ctx)
+    html = _render(fragment)
+    assert "dz-diagram" in html
+    assert "Device" in html and "Tester" in html and "IssueReport" in html
+    # Edge arrow rendered
+    assert "→" in html
+
+
+def test_diagram_accepts_dict_edge_shape() -> None:
+    """Edges can also arrive as `{from, to}` or `{source, target}` dicts."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "nodes": ["A", "B"],
+        "edges": [{"from": "A", "to": "B"}],
+    }
+    fragment = adapter.build(_FakeRegion("d", display="diagram"), ctx)
+    html = _render(fragment)
+    assert "A" in html and "B" in html
+
+
+def test_diagram_drops_edges_with_unknown_endpoints() -> None:
+    """Diagram's __post_init__ rejects edges whose endpoints aren't in
+    the node list; the adapter silently drops them rather than crashing."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "nodes": ["A"],
+        "edges": [("A", "ZZZ"), ("A", "A")],  # ZZZ unknown; A→A self-loop ok
+    }
+    fragment = adapter.build(_FakeRegion("d", display="diagram"), ctx)
+    html = _render(fragment)
+    assert "ZZZ" not in html
+    # Self-loop A→A still rendered
+    assert html.count("A") >= 2
+
+
+def test_diagram_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("d", display="diagram", empty_message="No diagram."),
+        {"nodes": []},
+    )
+    assert "No diagram." in _render(fragment)
+
+
 def test_heatmap_dispatches_through_pivot_table() -> None:
     """`display: heatmap` reuses the PivotTable render — both are 2D
     cell grids; richer per-cell intensity colouring is a future

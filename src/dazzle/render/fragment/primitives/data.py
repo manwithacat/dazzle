@@ -102,3 +102,28 @@ class CalendarGrid:
     def __post_init__(self) -> None:
         if self.view not in _CALENDAR_VIEWS:
             raise ValueError(f"invalid view {self.view!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class Diagram:
+    """Node-and-edge graph (e.g. an entity-relationship diagram).
+
+    The primitive captures structure only: a list of named nodes and
+    directed edges between them. Layout is the renderer's concern;
+    Phase 4A renders nodes as labelled boxes and edges as `from → to`
+    rows. A future iteration can produce SVG or wire a JS layout
+    engine without changing the IR shape.
+    """
+
+    nodes: tuple[str, ...]
+    edges: tuple[tuple[str, str], ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.nodes:
+            raise ValueError("Diagram requires at least one node")
+        node_set = set(self.nodes)
+        for f, t in self.edges:
+            if f not in node_set:
+                raise ValueError(f"edge from {f!r} not in declared nodes")
+            if t not in node_set:
+                raise ValueError(f"edge to {t!r} not in declared nodes")

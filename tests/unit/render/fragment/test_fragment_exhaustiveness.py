@@ -18,6 +18,7 @@ from dazzle.render.fragment import (
     CalendarGrid,
     Card,
     Combobox,
+    Diagram,
     Drawer,
     EmptyState,
     ErrorPage,
@@ -146,6 +147,8 @@ def _sample_for(primitive_type: type) -> object:
             columns=("c",),
             cells={("r", "c"): 0},
         )
+    if primitive_type is Diagram:
+        return Diagram(nodes=("A", "B"), edges=(("A", "B"),))
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

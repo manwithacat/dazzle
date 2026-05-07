@@ -197,6 +197,7 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "search_box",
         "bar_track",
         "bullet",
+        "diagram",
     }
 )
 

@@ -25,6 +25,7 @@ from dazzle.render.fragment.primitives.data import (
     KPI,
     BarChart,
     CalendarGrid,
+    Diagram,
     KanbanBoard,
     PivotTable,
     Table,
@@ -84,6 +85,7 @@ __all__ = [
     "KPI",
     "BarChart",
     "PivotTable",
+    "Diagram",
     # forms
     "FormStack",
     "Field",

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.71] - 2026-05-08
+
+### Added
+- **Diagram primitive** — new typed Fragment for entity-relationship style node/edge graphs. `Diagram(nodes: tuple[str, ...], edges: tuple[tuple[str, str], ...])` with strict invariants: at least one node, every edge endpoint must be in the declared node list (rejects dangling edges at construction time). Renders as paired `<ul class="dz-diagram__nodes">` and `<ul class="dz-diagram__edges">` lists with `→` separators between edge endpoints. Self-loops `(A, A)` are valid; pure node-only graphs (zero edges) are valid.
+- **Diagram region dispatch in `WorkspaceRegionAdapter`** — `display: diagram` regions now build a `Diagram` from the region ctx. Edges accept either `(from, to)` tuple or `{"from": str, "to": str}` / `{"source": str, "target": str}` dict shapes. Edges referencing unknown nodes are silently dropped (Diagram's `__post_init__` would raise, so the adapter pre-filters to keep the runtime defensive).
+- `diagram` added to `_SUPPORTED_DISPLAYS`. Closed across all 5 example apps (`_platform_admin.app_map` × 5 + `fleet_diagram` × 1 in fieldtest_hub).
+- 5 new unit tests for the primitive (validity, self-loops, no-edges, dangling-edge rejection); 4 new adapter tests (rendering, dict-edge shape, dropped-unknown handling, empty state).
+
+### Phase 4A progress
+
+| App | v0.66.70 (heatmap+...) | v0.66.71 (diagram) | Δ |
+|---|---|---|---|
+| simple_task | 36 | **37** ✓ 100% | +1 |
+| contact_manager | 11 | **12** ✓ 100% | +1 |
+| support_tickets | 35 | **36** ✓ 100% | +1 |
+| ops_dashboard | 34 | 35 | +1 |
+| fieldtest_hub | 48 | 50 | +2 |
+| **Total** | **164/176** | **170/176** | **+6** |
+
+### Highest remaining display blockers
+- `map` × 1 (needs map widget primitive)
+- chart-family awaiting new primitives: `sparkline`, `radar`, `box_plot`, `line_chart`, `area_chart` × 1 each
+
+### Agent Guidance
+- New typed primitives must be exported from **four** locations to keep mypy + the runtime happy: `primitives/data.py` (definition), `primitives/__init__.py` (import + `__all__`), `primitives/_base.py` (Fragment union), and `render/fragment/__init__.py` (top-level re-export). Forgetting `_base.py` produces a mypy error like `Incompatible types in assignment ... <38 more items>` rather than a clean ImportError. The `Fragment` union is the runtime's match dispatch contract — every primitive type must appear in it.
+- The Diagram primitive design favours **strict invariants** at construction time over runtime tolerance: it rejects edges with unknown endpoints rather than silently dropping them. The defensive filtering happens one layer up in `_build_diagram` so the IR contract stays honest. This is the same pattern as PivotTable cells / KanbanBoard columns.
+
 ## [0.66.70] - 2026-05-08
 
 ### Added

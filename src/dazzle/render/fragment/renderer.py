@@ -21,6 +21,7 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     Combobox,
+    Diagram,
     Drawer,
     EmptyState,
     ErrorPage,
@@ -158,6 +159,8 @@ class FragmentRenderer:
                 return self._emit_kanban_board(fragment, ctx)
             case CalendarGrid():
                 return self._emit_calendar_grid(fragment, ctx)
+            case Diagram():
+                return self._emit_diagram(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -687,6 +690,34 @@ class FragmentRenderer:
             for label, when in c.events
         )
         return f'<div class="{cls}"><ul>{events}</ul></div>'
+
+    def _emit_diagram(self, d: Diagram, ctx: RenderContext) -> str:
+        """Render an entity-relationship diagram as a paired
+        nodes-list + edges-list.
+
+        Phase 4A renders nodes as labelled `<li>` boxes and edges as
+        `from → to` rows. A future iteration can produce SVG or wire
+        a JS layout engine without changing the IR shape.
+        """
+        nodes_html = "".join(
+            f'<li class="dz-diagram__node" data-key="{ctx.escape_attr(name)}">'
+            f"{ctx.escape(name)}</li>"
+            for name in d.nodes
+        )
+        edges_html = "".join(
+            f'<li class="dz-diagram__edge">'
+            f'<span class="dz-diagram__edge-from">{ctx.escape(src)}</span>'
+            f'<span class="dz-diagram__edge-arrow">→</span>'
+            f'<span class="dz-diagram__edge-to">{ctx.escape(dst)}</span>'
+            f"</li>"
+            for src, dst in d.edges
+        )
+        return (
+            f'<section class="dz-diagram">'
+            f'<ul class="dz-diagram__nodes">{nodes_html}</ul>'
+            f'<ul class="dz-diagram__edges">{edges_html}</ul>'
+            f"</section>"
+        )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         action = ctx.escape_attr(str(fs.action))

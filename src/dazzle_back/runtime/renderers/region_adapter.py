@@ -22,6 +22,7 @@ from dazzle.render.fragment import (
     Badge,
     BarChart,
     Card,
+    Diagram,
     EmptyState,
     Fragment,
     Grid,
@@ -146,6 +147,8 @@ class WorkspaceRegionAdapter:
             return self._build_bar_track(region, ctx)
         if display_value == "bullet":
             return self._build_bullet(region, ctx)
+        if display_value == "diagram":
+            return self._build_diagram(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -325,6 +328,51 @@ class WorkspaceRegionAdapter:
             )
         else:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_diagram(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: diagram` renders an entity-relationship-style
+        node/edge graph via the new Diagram primitive.
+
+        ctx shape:
+            nodes: list[str] — node labels (typically entity names)
+            edges: list[(str, str)] — directed edges as (from, to) pairs
+                or list[dict{"from": str, "to": str}]
+            (legacy) `relations` is accepted as alias for `edges`
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        nodes = tuple(str(n) for n in (ctx.get("nodes") or []) if n)
+        raw_edges = ctx.get("edges") or ctx.get("relations") or []
+        edges: list[tuple[str, str]] = []
+        node_set = set(nodes)
+        for entry in raw_edges:
+            src: str = ""
+            dst: str = ""
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                src, dst = str(entry[0]), str(entry[1])
+            elif isinstance(entry, dict):
+                src = str(entry.get("from") or entry.get("source") or "")
+                dst = str(entry.get("to") or entry.get("target") or "")
+            # Drop edges that reference unknown nodes — Diagram's
+            # __post_init__ raises on these and the runtime should
+            # cope rather than crash.
+            if src and dst and src in node_set and dst in node_set:
+                edges.append((src, dst))
+
+        body: Fragment
+        if not nodes:
+            body = EmptyState(
+                title="No diagram",
+                description=getattr(region, "empty_message", None) or "No nodes to diagram.",
+            )
+        else:
+            body = Diagram(nodes=nodes, edges=tuple(edges))
 
         return Surface(
             header=Heading(title, level=2),

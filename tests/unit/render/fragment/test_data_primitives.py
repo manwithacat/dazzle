@@ -7,6 +7,7 @@ from dazzle.render.fragment.primitives.data import (
     KPI,
     BarChart,
     CalendarGrid,
+    Diagram,
     KanbanBoard,
     PivotTable,
     Table,
@@ -98,3 +99,33 @@ def test_pivot_table_cells_immutable_after_construction() -> None:
     p = PivotTable(label="x", rows=("r",), columns=("c",), cells={("r", "c"): 0})
     with pytest.raises(TypeError):
         p.cells[("r", "c")] = 99  # type: ignore[index]
+
+
+# === Diagram ===
+
+
+def test_diagram_requires_at_least_one_node() -> None:
+    with pytest.raises(ValueError, match="at least one node"):
+        Diagram(nodes=())
+
+
+def test_diagram_rejects_edge_with_unknown_from() -> None:
+    with pytest.raises(ValueError, match="edge from"):
+        Diagram(nodes=("A",), edges=(("Z", "A"),))
+
+
+def test_diagram_rejects_edge_with_unknown_to() -> None:
+    with pytest.raises(ValueError, match="edge to"):
+        Diagram(nodes=("A",), edges=(("A", "Z"),))
+
+
+def test_diagram_accepts_self_loop() -> None:
+    """An edge from a node to itself is structurally valid."""
+    d = Diagram(nodes=("A",), edges=(("A", "A"),))
+    assert d.edges == (("A", "A"),)
+
+
+def test_diagram_no_edges_is_valid() -> None:
+    """Pure node-only diagrams are allowed (e.g. orphans-only graph)."""
+    d = Diagram(nodes=("A", "B"))
+    assert d.edges == ()

@@ -51,6 +51,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "KPI",
         "BarChart",
         "PivotTable",
+        "Diagram",
         # forms
         "FormStack",
         "Field",

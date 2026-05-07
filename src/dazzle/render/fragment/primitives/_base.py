@@ -29,6 +29,7 @@ from dazzle.render.fragment.primitives.data import (
     KPI,
     BarChart,
     CalendarGrid,
+    Diagram,
     KanbanBoard,
     PivotTable,
     Table,
@@ -93,6 +94,7 @@ Fragment = (
     | KPI
     | BarChart
     | PivotTable
+    | Diagram
     # Forms
     | FormStack
     | Field
