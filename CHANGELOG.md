@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.59] - 2026-05-07
+
+### Added
+- **Audit walks workspace regions (Phase 4A).** `audit_appspec` now also walks `appspec.workspaces[*].regions[*]` and emits a `SurfaceCoverage` entry per region (named `<workspace>.<region>`, mode `"REGION"`). Each region's `display:` mode is checked against `_SUPPORTED_DISPLAYS`. Surfaces this real coverage data the previous audit silently missed.
+
+### Changed
+- **CI fragment-audit gate reverted from strict (`--fail-on-blocked`) back to advisory.** Walking workspace regions surfaced ~50 unsupported-display blockers across the 5 example apps (none new — they were always there, just invisible to the audit). The gate stays advisory while Phase 4A adapter dispatch on display modes lands; tightens back when kanban/timeline/grid/etc. are covered.
+
+### Honest coverage state — first time region-aware
+
+| App | Total | Ready | Blocked | Top blockers |
+|---|---|---|---|---|
+| simple_task | 37 | 33 | 4 | diagram, grid, kanban, timeline (1 each) |
+| contact_manager | 12 | 8 | 4 | detail, diagram, grid, search_box (1 each) |
+| support_tickets | 36 | 27 | 9 | timeline (2), kanban, grid, funnel_chart, ... |
+| ops_dashboard | 40 | 13 | 27 | metrics (3), bar_chart (2), grid (2), status_list (2), 18 others |
+| fieldtest_hub | 51 | 38 | 13 | kanban (4), timeline (3), diagram (2), grid, map, ... |
+| **Total** | **176** | **119** | **57** | (mostly chart and dashboard displays) |
+
+**Cross-app aggregated:** kanban 7, timeline 7, grid 6, diagram 5, metrics 3, bar_chart 2, others 1× each. Kanban + timeline + grid are the highest-leverage Phase 4A closures (20 of 57 blockers).
+
+### Agent Guidance
+- Phase 4A adapter work should target the high-frequency displays first: `kanban`, `timeline`, `grid`, then `metrics` / `bar_chart`. Each closure removes a row from the aggregated_blockers list and brings example coverage closer to the honest 100%. The `KanbanBoard`, `Timeline`, `KPI`, `BarChart` Fragment primitives already exist (Plan 1) — the work is wiring `WorkspaceRegion.display` → primitive selection in a yet-to-build region adapter.
+
 ## [0.66.58] - 2026-05-07
 
 ### Added

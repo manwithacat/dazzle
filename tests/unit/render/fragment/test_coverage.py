@@ -333,6 +333,94 @@ def test_audit_does_not_flag_explicit_list_display() -> None:
     assert report.ready_count == 1
 
 
+# ─────── Workspace-region walking (Phase 4A) ─────────────────────
+
+
+def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
+    """v0.66.59: the audit walks `appspec.workspaces[*].regions[*]` and
+    emits a coverage entry per region (named `<workspace>.<region>`,
+    mode='REGION'). Regions with non-default display are flagged."""
+    from dazzle.core.ir.workspaces import (
+        DisplayMode,
+        WorkspaceRegion,
+        WorkspaceSpec,
+    )
+
+    region_kanban = WorkspaceRegion(
+        name="task_board",
+        source="Task",
+        display=DisplayMode.KANBAN,
+    )
+    region_list = WorkspaceRegion(
+        name="task_list",
+        source="Task",
+        display=DisplayMode.LIST,
+    )
+    workspace = WorkspaceSpec(
+        name="my_workspace",
+        title="My Workspace",
+        regions=[region_kanban, region_list],
+    )
+    appspec = AppSpec(
+        name="t",
+        title="T",
+        domain=DomainSpec(entities=[]),
+        surfaces=[],
+        workspaces=[workspace],
+    )
+    report = audit_appspec(appspec)
+    by_name = {s.name: s for s in report.surfaces}
+    assert "my_workspace.task_board" in by_name
+    assert "my_workspace.task_list" in by_name
+    # Kanban is unsupported; flagged
+    kanban_entry = by_name["my_workspace.task_board"]
+    assert not kanban_entry.is_ready
+    assert kanban_entry.mode == "REGION"
+    assert any(
+        b.kind.value == "unsupported_display" and b.detail == "kanban"
+        for b in kanban_entry.blockers
+    )
+    # List is supported; ready
+    list_entry = by_name["my_workspace.task_list"]
+    assert list_entry.is_ready
+
+
+def test_audit_workspace_region_source_classification() -> None:
+    """Framework workspaces (_admin_* / _platform_*) flag regions as
+    framework_injected for the consumer-noise filter."""
+    from dazzle.core.ir.workspaces import (
+        DisplayMode,
+        WorkspaceRegion,
+        WorkspaceSpec,
+    )
+
+    framework_ws = WorkspaceSpec(
+        name="_platform_admin",
+        title="Platform Admin",
+        regions=[
+            WorkspaceRegion(name="r", source="X", display=DisplayMode.LIST),
+        ],
+    )
+    user_ws = WorkspaceSpec(
+        name="my_dashboard",
+        title="My Dashboard",
+        regions=[
+            WorkspaceRegion(name="r", source="X", display=DisplayMode.LIST),
+        ],
+    )
+    appspec = AppSpec(
+        name="t",
+        title="T",
+        domain=DomainSpec(entities=[]),
+        surfaces=[],
+        workspaces=[framework_ws, user_ws],
+    )
+    report = audit_appspec(appspec)
+    by_name = {s.name: s for s in report.surfaces}
+    assert by_name["_platform_admin.r"].source == "framework_injected"
+    assert by_name["my_dashboard.r"].source == "declared"
+
+
 def test_audit_dedupes_same_field_type_across_elements() -> None:
     """A surface with three unsupported-typed fields produces one
     blocker per type, not three — what matters is that the type is

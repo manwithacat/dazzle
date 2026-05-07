@@ -254,12 +254,62 @@ def _audit_surface(appspec: object, surface: object) -> SurfaceCoverage:
     )
 
 
+def _audit_workspace_region(workspace_name: str, region: object) -> SurfaceCoverage:
+    """Inspect one workspace region against the capability matrix.
+
+    Regions are a separate render target from surfaces — they have
+    their own `display:` mode (DisplayMode enum, broader than
+    SurfaceSpec.display). Each region becomes its own coverage entry
+    keyed `<workspace>.<region>` with `mode = "REGION"`.
+
+    Phase 4A scope: flag any non-default display. The adapter doesn't
+    yet have region-level dispatch; this is the seam for Phase 4B
+    (workspace_renderer.py port).
+    """
+    blockers: list[Blocker] = []
+
+    display_obj = getattr(region, "display", None)
+    display_value = ""
+    if display_obj is not None:
+        # DisplayMode is a StrEnum — both `.value` and str-coercion work
+        display_value = (
+            display_obj.value if hasattr(display_obj, "value") else str(display_obj)
+        ).strip()
+    if display_value not in _SUPPORTED_DISPLAYS:
+        blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_DISPLAY, detail=display_value))
+
+    region_name = getattr(region, "name", "<anonymous>")
+    full_name = f"{workspace_name}.{region_name}"
+    source = (
+        "framework_injected" if workspace_name.startswith(("_admin_", "_platform_")) else "declared"
+    )
+    return SurfaceCoverage(
+        name=full_name,
+        mode="REGION",
+        blockers=tuple(blockers),
+        source=source,
+    )
+
+
 def audit_appspec(appspec: object) -> CoverageReport:
-    """Walk every surface in `appspec` and report Fragment-rendering coverage.
+    """Walk every surface and workspace region in `appspec` and report
+    Fragment-rendering coverage.
 
     `appspec` must expose `.surfaces` and `.domain.entities` for the
     field-type resolution to work; both are standard AppSpec shape.
     Anything missing falls back to "no resolution" — robust to partial input.
+
+    v0.66.59: also walks `.workspaces[*].regions[*]` so display-mode
+    coverage gaps in workspace regions are visible (Phase 4A). Each
+    region becomes a coverage entry named `<workspace>.<region>` with
+    `mode = "REGION"`.
     """
-    surfaces = tuple(_audit_surface(appspec, s) for s in getattr(appspec, "surfaces", []))
-    return CoverageReport(surfaces=surfaces)
+    surface_entries = [_audit_surface(appspec, s) for s in getattr(appspec, "surfaces", [])]
+
+    region_entries: list[SurfaceCoverage] = []
+    for ws in getattr(appspec, "workspaces", []) or []:
+        ws_name = getattr(ws, "name", "<anonymous>")
+        for region in getattr(ws, "regions", []) or []:
+            region_entries.append(_audit_workspace_region(ws_name, region))
+
+    return CoverageReport(surfaces=tuple(surface_entries + region_entries))
