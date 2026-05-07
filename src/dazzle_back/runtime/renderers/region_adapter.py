@@ -7,9 +7,10 @@ determines which primitive renders the data.
 
 The integration with `workspace_renderer.py` is a separate plan; this
 module is the substrate piece that maps `(region_spec, ctx) →
-Fragment`. Currently covers `kanban`; subsequent plans add `timeline`,
-`grid`, `metrics`, `bar_chart`, etc. one at a time, driven by the
-audit's aggregated_blockers report.
+Fragment`. Currently covers `list`, `kanban`, `timeline`, `grid`,
+`metrics`/`summary`, `bar_chart`. Subsequent plans add `pivot_table`,
+`heatmap`, `funnel_chart`, `diagram` driven by the audit's
+aggregated_blockers report.
 """
 
 from __future__ import annotations
@@ -17,8 +18,12 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.render.fragment import (
+    KPI,
+    BarChart,
+    Card,
     EmptyState,
     Fragment,
+    Grid,
     Heading,
     KanbanBoard,
     Region,
@@ -45,10 +50,10 @@ def _coerce_columns(
         items = tuple(_format_card(item) for item in items_by_group.get(key, []))
         columns.append((key, items))
     leftover_items: list[object] = []
-    for key, items in items_by_group.items():
+    for key, raw_items in items_by_group.items():
         if key in seen:
             continue
-        leftover_items.extend(_format_card(item) for item in items)
+        leftover_items.extend(_format_card(item) for item in raw_items)
     if leftover_items:
         columns.append(("Other", tuple(leftover_items)))
     return tuple(columns)
@@ -83,9 +88,10 @@ class WorkspaceRegionAdapter:
         this adapter, the failure is loud, not silent.
         """
         display_obj = getattr(region, "display", None)
-        display_value = (
-            display_obj.value if hasattr(display_obj, "value") else str(display_obj or "")
-        ).strip()
+        raw_display = getattr(display_obj, "value", None)
+        if raw_display is None:
+            raw_display = "" if display_obj is None else str(display_obj)
+        display_value = raw_display.strip()
 
         if display_value in ("", "list"):
             return self._build_list(region, ctx)
@@ -93,6 +99,12 @@ class WorkspaceRegionAdapter:
             return self._build_kanban(region, ctx)
         if display_value == "timeline":
             return self._build_timeline(region, ctx)
+        if display_value == "grid":
+            return self._build_grid(region, ctx)
+        if display_value in ("metrics", "summary"):
+            return self._build_metrics(region, ctx)
+        if display_value == "bar_chart":
+            return self._build_bar_chart(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -229,6 +241,153 @@ class WorkspaceRegionAdapter:
                     description=getattr(region, "empty_message", None)
                     or "No items had a label and date.",
                 )
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: grid` regions render items as cards in an N-column
+        Grid. Columns default to 3; ctx can override via `columns`.
+
+        ctx shape:
+            items: list of dicts (rows from the source entity)
+            label_field: optional, defaults to title/name/id auto-pick
+            columns: int (default 3, max 12)
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        items: list[dict[str, Any]] = ctx.get("items", []) or []
+        columns = int(ctx.get("columns") or 3)
+        columns = max(1, min(12, columns))
+        label_field = str(ctx.get("label_field") or "")
+
+        body: Fragment
+        if not items:
+            body = EmptyState(
+                title="No items",
+                description=getattr(region, "empty_message", None) or "No data in this region.",
+            )
+        else:
+            cards: list[object] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                label = ""
+                if label_field and label_field in item:
+                    label = str(item.get(label_field) or "")
+                else:
+                    for cand in ("title", "name", "id"):
+                        if cand in item:
+                            label = str(item.get(cand) or "")
+                            break
+                cards.append(Card(body=Text(label or "(no label)")))
+            if cards:
+                body = Grid(children=tuple(cards), columns=columns)
+            else:
+                body = EmptyState(title="No items", description="No data in this region.")
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="dashboard", body=body),
+        )
+
+    def _build_metrics(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: metrics` (and `summary`) regions render a row of
+        KPI tiles — one per declared aggregate.
+
+        ctx shape:
+            metrics: list of dicts with label/value/trend/delta keys
+                — pre-computed by the runtime's aggregate evaluator
+            (legacy) aggregates: dict[name → resolved value], used as
+                fallback when metrics list isn't supplied
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        metrics_list: list[dict[str, Any]] = ctx.get("metrics", []) or []
+        if not metrics_list:
+            agg = ctx.get("aggregates") or getattr(region, "aggregates", {}) or {}
+            if isinstance(agg, dict):
+                metrics_list = [
+                    {"label": str(name).replace("_", " ").title(), "value": str(val or "—")}
+                    for name, val in agg.items()
+                ]
+
+        body: Fragment
+        if not metrics_list:
+            body = EmptyState(
+                title="No metrics",
+                description=getattr(region, "empty_message", None) or "No metrics declared.",
+            )
+        else:
+            kpis: list[object] = []
+            for m in metrics_list:
+                if not isinstance(m, dict):
+                    continue
+                trend = str(m.get("trend") or "flat")
+                if trend not in ("up", "down", "flat"):
+                    trend = "flat"
+                kpis.append(
+                    KPI(
+                        label=str(m.get("label") or m.get("name") or ""),
+                        value=str(m.get("value") or "—"),
+                        trend=trend,  # type: ignore[arg-type]
+                        delta=str(m.get("delta") or ""),
+                    )
+                )
+            if not kpis:
+                body = EmptyState(title="No metrics", description="No metric tiles produced.")
+            else:
+                cols = max(1, min(12, len(kpis)))
+                body = Grid(children=tuple(kpis), columns=cols)
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="dashboard", body=body),
+        )
+
+    def _build_bar_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: bar_chart` regions render as a BarChart primitive
+        — list of (label, count) tuples derived from the region's
+        group_by aggregation.
+
+        ctx shape:
+            buckets: list[(str, int)] — pre-aggregated by the runtime
+            (legacy) items + group_by_field as fallback
+            chart_label: optional override for the BarChart label
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        chart_label = str(ctx.get("chart_label") or title or "Chart")
+        raw_buckets = ctx.get("buckets") or []
+        buckets: list[tuple[str, int]] = []
+        for entry in raw_buckets:
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                try:
+                    buckets.append((str(entry[0]), int(entry[1])))
+                except (TypeError, ValueError):
+                    continue
+            elif isinstance(entry, dict):
+                key = str(entry.get("label") or entry.get("key") or "")
+                try:
+                    val = int(entry.get("value") or entry.get("count") or 0)
+                except (TypeError, ValueError):
+                    val = 0
+                if key:
+                    buckets.append((key, val))
+
+        body: Fragment
+        if not buckets:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None) or "No buckets to chart.",
+            )
+        else:
+            body = BarChart(label=chart_label, buckets=tuple(buckets))
 
         return Surface(
             header=Heading(title, level=2),

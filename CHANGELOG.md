@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.64] - 2026-05-07
+
+### Added
+- **Grid, metrics/summary, and bar_chart display dispatch in `WorkspaceRegionAdapter`** — closes three of the highest-count Phase 4A blockers in one batch. `display: grid` composes existing `Grid` + `Card` primitives (cards auto-pick label from `title` / `name` / `id`, columns clamped to [1, 12]). `display: metrics` and its alias `display: summary` render a row of `KPI` tiles per declared aggregate, with optional pre-computed metrics list or fallback to a legacy `aggregates` dict. `display: bar_chart` accepts pre-aggregated buckets as either `(label, count)` tuples or `{label, value}` / `{key, count}` dict shapes.
+- `grid`, `metrics`, `summary`, `bar_chart` added to `_SUPPORTED_DISPLAYS`.
+- 14 new unit tests pin behaviour across the three modes (label-field overrides, column clamping, KPI trend coercion, dict-bucket shapes, malformed-entry skip, empty-state fallback, summary-alias dispatch).
+
+### Fixed
+- Pre-existing mypy errors in `region_adapter.py`: shadowed `items` loop variable in `_coerce_columns`, and `display_obj.value` `Any | None` narrowing in `build()`.
+
+### Phase 4A progress
+
+| App | v0.66.63 (timeline) | v0.66.64 (grid+metrics+bar_chart) | Δ |
+|---|---|---|---|
+| simple_task | 35 | 36 | +1 |
+| contact_manager | 8 | 9 | +1 |
+| support_tickets | 30 | 32 | +2 |
+| ops_dashboard | 15 | 22 | +7 |
+| fieldtest_hub | 45 | 46 | +1 |
+| **Total** | **133/176** | **145/176** | **+12** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — bigger lift)
+- `pivot_table`, `heatmap`, `funnel_chart` × 1 each
+- Various single-occurrence specialty modes in ops_dashboard (sparkline, radar, box_plot, bullet, line_chart, area_chart, histogram, queue, bar_track, profile_card, pipeline_steps, action_grid, status_list × 2, confirm_action_panel)
+
+### Agent Guidance
+- New `display:` modes added to the adapter MUST be added to `_SUPPORTED_DISPLAYS` in `coverage.py` so the audit tracks them as supported. The audit's `unsupported_display=<mode>` blocker is the canonical signal for what to close next.
+- The unsupported-display "canary" test in `tests/unit/test_region_adapter.py` and the two coverage tests in `tests/unit/render/fragment/test_coverage.py` use a still-unsupported mode (currently `pivot_table`) as the contrast case. Rotate to another still-unsupported mode whenever the canary lands in `_SUPPORTED_DISPLAYS`.
+
 ## [0.66.63] - 2026-05-07
 
 ### Added

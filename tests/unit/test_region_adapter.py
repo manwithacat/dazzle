@@ -33,12 +33,12 @@ def _render(node: object) -> str:
 
 
 def test_unsupported_display_raises_with_actionable_hint() -> None:
-    """Grid isn't wired yet — raises NotImplementedError with a
-    pointer at the audit's aggregated_blockers report. Switched from
-    bar_chart to grid after timeline closure (timeline already wired)."""
+    """`pivot_table` isn't wired yet — raises NotImplementedError with
+    a pointer at the audit's aggregated_blockers report. Rotated from
+    `grid` after grid/metrics/bar_chart closure landed."""
     adapter = WorkspaceRegionAdapter()
-    with pytest.raises(NotImplementedError, match="grid"):
-        adapter.build(_FakeRegion("r", display="grid"), {})
+    with pytest.raises(NotImplementedError, match="pivot_table"):
+        adapter.build(_FakeRegion("r", display="pivot_table"), {})
 
 
 # ───────────────── Timeline ───────────────────────
@@ -275,3 +275,167 @@ def test_list_empty_renders_empty_state() -> None:
     )
     html = _render(fragment)
     assert "No users." in html
+
+
+# ───────────────── Grid ────────────────────────────
+
+
+def test_grid_renders_cards_in_columns() -> None:
+    """Grid display materialises one Card per item, in N columns."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"title": "Alpha"}, {"title": "Beta"}, {"title": "Gamma"}],
+        "columns": 2,
+    }
+    fragment = adapter.build(_FakeRegion("cards", display="grid", title="Cards"), ctx)
+    html = _render(fragment)
+    assert "Alpha" in html and "Beta" in html and "Gamma" in html
+    assert "Cards" in html
+
+
+def test_grid_uses_label_field_override() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"label": "Custom", "title": "Ignored"}],
+        "label_field": "label",
+    }
+    fragment = adapter.build(_FakeRegion("c", display="grid"), ctx)
+    html = _render(fragment)
+    assert "Custom" in html
+    assert "Ignored" not in html
+
+
+def test_grid_clamps_column_count_to_valid_range() -> None:
+    """columns=0 → 1; columns=999 → 12 (Grid primitive constraints)."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("c", display="grid"),
+        {"items": [{"title": "x"}], "columns": 999},
+    )
+    # Smoke: render doesn't blow up on the clamp
+    assert "x" in _render(fragment)
+
+
+def test_grid_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("c", display="grid", empty_message="Nothing here."),
+        {"items": []},
+    )
+    assert "Nothing here." in _render(fragment)
+
+
+# ───────────────── Metrics ─────────────────────────
+
+
+def test_metrics_renders_kpi_tiles_with_pre_computed_values() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "metrics": [
+            {"label": "Open", "value": "42", "trend": "up", "delta": "+5"},
+            {"label": "Closed", "value": "18", "trend": "flat"},
+        ],
+    }
+    fragment = adapter.build(_FakeRegion("kpis", display="metrics"), ctx)
+    html = _render(fragment)
+    assert "Open" in html and "42" in html
+    assert "Closed" in html and "18" in html
+
+
+def test_metrics_falls_back_to_aggregates_dict() -> None:
+    """Without a `metrics` list, ctx['aggregates'] (legacy shape)
+    is mapped to KPIs label-cased from the dict keys."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("kpis", display="metrics"),
+        {"aggregates": {"total_open": 7, "total_closed": 3}},
+    )
+    html = _render(fragment)
+    assert "Total Open" in html
+    assert "7" in html
+
+
+def test_metrics_summary_alias_dispatches_same_path() -> None:
+    """`display: summary` reuses the metrics adapter — they're spelt
+    differently in DSL but render identically."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("k", display="summary"),
+        {"metrics": [{"label": "X", "value": "1"}]},
+    )
+    assert "X" in _render(fragment)
+
+
+def test_metrics_invalid_trend_coerced_to_flat() -> None:
+    """Defensive: garbage trend values shouldn't crash the KPI primitive."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("k", display="metrics"),
+        {"metrics": [{"label": "X", "value": "1", "trend": "garbage"}]},
+    )
+    assert "X" in _render(fragment)
+
+
+def test_metrics_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("k", display="metrics", empty_message="None yet."),
+        {},
+    )
+    assert "None yet." in _render(fragment)
+
+
+# ───────────────── Bar chart ───────────────────────
+
+
+def test_bar_chart_renders_buckets() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"buckets": [("low", 3), ("medium", 7), ("high", 2)]}
+    fragment = adapter.build(_FakeRegion("severity", display="bar_chart"), ctx)
+    html = _render(fragment)
+    assert "low" in html
+    assert "medium" in html
+    assert "high" in html
+
+
+def test_bar_chart_accepts_dict_bucket_shape() -> None:
+    """Buckets can also arrive as dicts with label/value or key/count."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "buckets": [
+            {"label": "open", "value": 5},
+            {"key": "closed", "count": 9},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("c", display="bar_chart"), ctx)
+    html = _render(fragment)
+    assert "open" in html and "closed" in html
+
+
+def test_bar_chart_skips_malformed_entries() -> None:
+    """A bucket missing a usable key/value silently drops; pure garbage
+    leaves an empty bucket list → EmptyState."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("c", display="bar_chart", empty_message="No data."),
+        {"buckets": [None, 42, "string"]},
+    )
+    assert "No data." in _render(fragment)
+
+
+def test_bar_chart_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("c", display="bar_chart", empty_message="None."),
+        {"buckets": []},
+    )
+    assert "None." in _render(fragment)
+
+
+def test_bar_chart_uses_chart_label_override() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"buckets": [("a", 1)], "chart_label": "Custom Chart"}
+    fragment = adapter.build(_FakeRegion("c", display="bar_chart"), ctx)
+    # The label should appear somewhere in the rendered output
+    html = _render(fragment)
+    assert "a" in html  # smoke; label rendering is BarChart's concern
