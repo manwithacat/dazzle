@@ -6,10 +6,12 @@ import pytest
 from dazzle.render.fragment.primitives.data import (
     KPI,
     BarChart,
+    BoxPlot,
     CalendarGrid,
     Diagram,
     KanbanBoard,
     PivotTable,
+    Radar,
     Table,
     Timeline,
     TimeSeries,
@@ -154,3 +156,47 @@ def test_timeseries_accepts_all_three_views() -> None:
     for view in ("line", "area", "sparkline"):
         t = TimeSeries(label="x", points=(("a", 1.0),), view=view)  # type: ignore[arg-type]
         assert t.view == view
+
+
+# === Radar ===
+
+
+def test_radar_requires_at_least_one_axis() -> None:
+    with pytest.raises(ValueError, match="at least one axis"):
+        Radar(label="x", axes=())
+
+
+def test_radar_requires_at_least_three_axes_to_be_visually_a_radar() -> None:
+    """Two axes collapses to a line — reject at construction time."""
+    with pytest.raises(ValueError, match="at least 3 axes"):
+        Radar(label="x", axes=(("a", 1.0), ("b", 2.0)))
+
+
+def test_radar_three_axes_minimum() -> None:
+    r = Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
+    assert len(r.axes) == 3
+
+
+# === BoxPlot ===
+
+
+def test_box_plot_requires_at_least_one_group() -> None:
+    with pytest.raises(ValueError, match="at least one group"):
+        BoxPlot(label="x", groups=())
+
+
+def test_box_plot_rejects_non_monotonic_quartiles() -> None:
+    with pytest.raises(ValueError, match="quartiles not monotonic"):
+        BoxPlot(label="x", groups=(("g1", 5.0, 4.0, 3.0, 2.0, 1.0),))
+
+
+def test_box_plot_accepts_equal_quartiles() -> None:
+    """Degenerate distributions (all values equal) are still valid —
+    the constraint is `<=`, not strict `<`."""
+    b = BoxPlot(label="x", groups=(("g1", 0.0, 0.0, 0.0, 0.0, 0.0),))
+    assert b.groups[0] == ("g1", 0.0, 0.0, 0.0, 0.0, 0.0)
+
+
+def test_box_plot_rejects_wrong_arity_group() -> None:
+    with pytest.raises(ValueError, match="arity mismatch"):
+        BoxPlot(label="x", groups=(("g1", 1.0, 2.0, 3.0),))  # type: ignore[arg-type]

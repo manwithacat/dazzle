@@ -106,6 +106,57 @@ class CalendarGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class Radar:
+    """Polar/radar profile shape — value per named axis.
+
+    Each `axes` entry is `(axis_label, value)`. The shape is used to
+    visualise multi-dimensional comparisons where every dimension uses
+    the same scale (e.g. a skill-set radar, a feature-coverage radar).
+    """
+
+    label: str
+    axes: tuple[tuple[str, float], ...]
+
+    def __post_init__(self) -> None:
+        if not self.axes:
+            raise ValueError("Radar requires at least one axis")
+        if len(self.axes) < 3:
+            raise ValueError(
+                f"Radar requires at least 3 axes (got {len(self.axes)}); "
+                f"fewer collapses to a line and is not visually a radar"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class BoxPlot:
+    """Per-group quartile distribution — min, q1, median, q3, max.
+
+    Each `groups` entry is `(group_label, min, q1, median, q3, max)`.
+    Strict invariant: `min <= q1 <= median <= q3 <= max` per group, so
+    callers can't pass a malformed quartile spread.
+    """
+
+    label: str
+    groups: tuple[tuple[str, float, float, float, float, float], ...]
+
+    def __post_init__(self) -> None:
+        if not self.groups:
+            raise ValueError("BoxPlot requires at least one group")
+        for i, group in enumerate(self.groups):
+            if len(group) != 6:
+                raise ValueError(
+                    f"BoxPlot group {i} arity mismatch: "
+                    f"expected (label, min, q1, median, q3, max), got {group!r}"
+                )
+            _label, mn, q1, med, q3, mx = group
+            if not (mn <= q1 <= med <= q3 <= mx):
+                raise ValueError(
+                    f"BoxPlot group {i} ({_label!r}) quartiles not monotonic: "
+                    f"min={mn}, q1={q1}, median={med}, q3={q3}, max={mx}"
+                )
+
+
+@dataclass(frozen=True, slots=True)
 class TimeSeries:
     """Sequential numeric data plotted over a label axis.
 

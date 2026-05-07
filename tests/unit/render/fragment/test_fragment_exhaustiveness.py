@@ -14,6 +14,7 @@ from dazzle.render.fragment import (
     AppShell,
     Badge,
     BarChart,
+    BoxPlot,
     Button,
     CalendarGrid,
     Card,
@@ -37,6 +38,7 @@ from dazzle.render.fragment import (
     NavItem,
     Page,
     PivotTable,
+    Radar,
     RawHTML,
     RefPicker,
     Region,
@@ -152,6 +154,10 @@ def _sample_for(primitive_type: type) -> object:
         return Diagram(nodes=("A", "B"), edges=(("A", "B"),))
     if primitive_type is TimeSeries:
         return TimeSeries(label="x", points=(("a", 1.0),))
+    if primitive_type is Radar:
+        return Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
+    if primitive_type is BoxPlot:
+        return BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

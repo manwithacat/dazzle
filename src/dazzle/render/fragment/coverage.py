@@ -201,8 +201,29 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "line_chart",
         "area_chart",
         "sparkline",
+        "radar",
+        "box_plot",
     }
 )
+
+# Display modes that are intentionally NOT in `_SUPPORTED_DISPLAYS` —
+# the audit will continue to flag them so the gap stays visible. These
+# are deferred for design reasons rather than time, and adding them
+# without resolving the listed concerns will lock the framework into
+# a decision that's harder to undo than to delay.
+#
+# `map`: vendor-neutral geographic rendering is genuinely hard. Three
+#   options, each with a real cost:
+#     1. Static SVG basemap — vendor-free but zero-zoom (granularity
+#        is fixed at the embedded SVG asset).
+#     2. Bring-your-own-tile-URL via Leaflet (BSD-licensed) — keeps the
+#        framework neutral but pushes vendor choice to the deployer.
+#     3. Defer until a real user picks. We've taken option 3.
+#   The granularity question (street pin vs. region choropleth vs.
+#   density heatmap) is more painful than the vendor question — each
+#   wants a different IR shape and committing prematurely is worse
+#   than the visible gap.
+_DEFERRED_DISPLAYS: frozenset[str] = frozenset({"map"})
 
 
 def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:

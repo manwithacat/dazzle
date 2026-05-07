@@ -21,6 +21,7 @@ from dazzle.render.fragment import (
     KPI,
     Badge,
     BarChart,
+    BoxPlot,
     Card,
     Diagram,
     EmptyState,
@@ -29,6 +30,7 @@ from dazzle.render.fragment import (
     Heading,
     KanbanBoard,
     PivotTable,
+    Radar,
     Region,
     Row,
     Stack,
@@ -156,6 +158,10 @@ class WorkspaceRegionAdapter:
             return self._build_time_series(region, ctx, "area")
         if display_value == "sparkline":
             return self._build_time_series(region, ctx, "sparkline")
+        if display_value == "radar":
+            return self._build_radar(region, ctx)
+        if display_value == "box_plot":
+            return self._build_box_plot(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -335,6 +341,107 @@ class WorkspaceRegionAdapter:
             )
         else:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_radar(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: radar` regions render as a Radar polar profile.
+
+        ctx shape:
+            axes: list of (label, value) tuples or {axis, value} dicts
+            chart_label: optional override
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        chart_label = str(ctx.get("chart_label") or title or "Radar")
+        raw_axes = ctx.get("axes") or []
+        axes: list[tuple[str, float]] = []
+        for entry in raw_axes:
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                try:
+                    axes.append((str(entry[0]), float(entry[1])))
+                except (TypeError, ValueError):
+                    continue
+            elif isinstance(entry, dict):
+                label = str(entry.get("axis") or entry.get("label") or "")
+                try:
+                    val = float(entry.get("value") or 0)
+                except (TypeError, ValueError):
+                    val = 0.0
+                if label:
+                    axes.append((label, val))
+
+        body: Fragment
+        # Radar primitive requires ≥3 axes; fewer collapses to a line.
+        # Adapter degrades to EmptyState rather than crashing.
+        if len(axes) < 3:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None)
+                or "Radar requires at least 3 axes.",
+            )
+        else:
+            body = Radar(label=chart_label, axes=tuple(axes))
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_box_plot(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: box_plot` regions render as a BoxPlot quartile table.
+
+        ctx shape:
+            groups: list of dicts {"label": str, "min": float, "q1": float,
+                                   "median": float, "q3": float, "max": float}
+                or 6-tuples (label, min, q1, median, q3, max)
+            chart_label: optional override
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        chart_label = str(ctx.get("chart_label") or title or "Distribution")
+        raw_groups = ctx.get("groups") or []
+        groups: list[tuple[str, float, float, float, float, float]] = []
+        for entry in raw_groups:
+            label = ""
+            mn = q1 = med = q3 = mx = 0.0
+            if isinstance(entry, (list, tuple)) and len(entry) == 6:
+                try:
+                    label = str(entry[0])
+                    mn, q1, med, q3, mx = (float(v) for v in entry[1:6])
+                except (TypeError, ValueError):
+                    continue
+            elif isinstance(entry, dict):
+                label = str(entry.get("label") or "")
+                try:
+                    mn = float(entry.get("min") or 0)
+                    q1 = float(entry.get("q1") or 0)
+                    med = float(entry.get("median") or 0)
+                    q3 = float(entry.get("q3") or 0)
+                    mx = float(entry.get("max") or 0)
+                except (TypeError, ValueError):
+                    continue
+            else:
+                continue
+            # Drop groups with non-monotonic quartiles — BoxPlot's
+            # __post_init__ would raise; the adapter is permissive.
+            if label and mn <= q1 <= med <= q3 <= mx:
+                groups.append((label, mn, q1, med, q3, mx))
+
+        body: Fragment
+        if not groups:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None)
+                or "No box-plot groups to render.",
+            )
+        else:
+            body = BoxPlot(label=chart_label, groups=tuple(groups))
 
         return Surface(
             header=Heading(title, level=2),

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.73] - 2026-05-08
+
+### Added
+- **Radar primitive** — polar/radar profile with `axes: tuple[(label, value), ...]`. Strict invariants: at least one axis, **at least three axes** to be visually a radar (fewer collapses to a line and is rejected at construction time). Renders as `<section class="dz-radar">` containing `<h4>` label and `<ul>` of `<li data-axis data-value>` items.
+- **BoxPlot primitive** — per-group quartile distribution. `groups: tuple[(label, min, q1, median, q3, max), ...]` with strict invariant: `min <= q1 <= median <= q3 <= max` per group; arity is enforced at 6 elements per group. Renders as a semantic `<table>` of group rows with min/q1/median/q3/max columns — accessible-by-default fallback before any SVG box rendering ships.
+- **Region dispatch for `radar` and `box_plot`** — `_build_radar` accepts axes as `(label, value)` tuples or `{axis|label, value}` dicts; degrades to `EmptyState` when fewer than 3 valid axes are supplied (defensive, since Radar's `__post_init__` raises). `_build_box_plot` accepts groups as 6-tuples or dicts with `min/q1/median/q3/max` keys; silently drops groups with non-monotonic quartiles.
+- 7 new primitive tests (Radar 3-axis floor, BoxPlot quartile monotonicity, equal-quartile degenerate case, group-arity enforcement); 7 new adapter tests.
+
+### Deferred
+- **`map` display mode** — geographic rendering is intentionally NOT in `_SUPPORTED_DISPLAYS`. Documented `_DEFERRED_DISPLAYS = frozenset({"map"})` in `coverage.py` with the design rationale. Three vendor-neutral options (static SVG basemap with no zoom; bring-your-own-tile-URL via Leaflet; defer until a real user picks); we've taken the third. The granularity question (street pin vs. region choropleth vs. density heatmap) is more painful than the vendor question and committing prematurely is worse than the visible gap.
+
+### Phase 4A progress — 4 / 5 example apps at 100%
+
+| App | v0.66.72 (timeseries) | v0.66.73 (radar+box_plot) | Δ |
+|---|---|---|---|
+| simple_task | 37 ✓ | 37 ✓ 100% | 0 |
+| contact_manager | 12 ✓ | 12 ✓ 100% | 0 |
+| support_tickets | 36 ✓ | 36 ✓ 100% | 0 |
+| ops_dashboard | 38 | **40** ✓ 100% | +2 |
+| fieldtest_hub | 50 | 50 (49/50 + 1 deferred map) | 0 |
+| **Total** | **173/176** | **175/176** (1 deferred) | **+2** |
+
+### Agent Guidance
+- The framework now distinguishes "unsupported" (`_SUPPORTED_DISPLAYS`) from "deferred-by-design" (`_DEFERRED_DISPLAYS`). The audit currently still flags deferred displays as blockers — that's deliberate, so the gap stays visible. If we add deferral-aware reporting later (e.g. `--include-deferred=false`), `_DEFERRED_DISPLAYS` is the seam.
+- The Radar 3-axis-minimum is a **product** invariant, not just a structural one. Two axes is technically a valid IR but renders to something nobody would call a radar. The primitive enforces what the user actually means; the adapter degrades to EmptyState rather than passing nonsense through.
+- The BoxPlot adapter pre-filters non-monotonic groups so a single bad row doesn't take down the whole region. This is the same pattern as Diagram dropping dangling edges and PivotTable dropping cells with unknown dimensions — strict primitives, permissive adapters.
+
 ## [0.66.72] - 2026-05-08
 
 ### Added

@@ -33,11 +33,10 @@ def _render(node: object) -> str:
 
 
 def test_unsupported_display_raises_with_actionable_hint() -> None:
-    """`map` isn't wired yet — raises NotImplementedError with a
-    pointer at the audit's aggregated_blockers report. Rotated through:
-    grid → pivot_table → heatmap → map (heatmap stays unsupported but
-    using a different unsupported mode here keeps the canary distinct
-    from the coverage tests' canary)."""
+    """`map` is the canonical deferred display — vendor-neutral
+    geographic rendering is genuinely hard; see `_DEFERRED_DISPLAYS`
+    in coverage.py for the design rationale. The canary stays here
+    because we expect `map` to remain unsupported indefinitely."""
     adapter = WorkspaceRegionAdapter()
     with pytest.raises(NotImplementedError, match="map"):
         adapter.build(_FakeRegion("r", display="map"), {})
@@ -615,6 +614,97 @@ def test_detail_no_item_renders_empty_state() -> None:
 
 
 # ───────────────── Activity feed ──────────────────
+
+
+def test_radar_renders_polar_axes() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "axes": [
+            ("Python", 9),
+            ("Go", 7),
+            ("Rust", 5),
+            ("JavaScript", 6),
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("r", display="radar"), ctx)
+    html = _render(fragment)
+    assert "dz-radar" in html
+    assert "Python" in html and "Go" in html and "Rust" in html
+
+
+def test_radar_with_fewer_than_three_axes_degrades_to_empty_state() -> None:
+    """Adapter is permissive — Radar's __post_init__ raises on <3 axes;
+    the adapter returns EmptyState rather than crashing."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("r", display="radar", empty_message="Need 3+ axes."),
+        {"axes": [("A", 1), ("B", 2)]},
+    )
+    assert "Need 3+ axes." in _render(fragment)
+
+
+def test_radar_accepts_dict_axis_shape() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "axes": [
+            {"axis": "X", "value": 1},
+            {"label": "Y", "value": 2},
+            {"axis": "Z", "value": 3},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("r", display="radar"), ctx)
+    html = _render(fragment)
+    assert "X" in html and "Y" in html and "Z" in html
+
+
+def test_box_plot_renders_quartile_table() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "groups": [
+            ("p50", 0, 1, 2, 3, 4),
+            ("p99", 5, 6, 7, 8, 9),
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
+    html = _render(fragment)
+    assert "dz-box-plot" in html
+    assert "p50" in html and "p99" in html
+
+
+def test_box_plot_accepts_dict_group_shape() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "groups": [
+            {"label": "g1", "min": 0, "q1": 1, "median": 2, "q3": 3, "max": 4},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
+    assert "g1" in _render(fragment)
+
+
+def test_box_plot_silently_drops_non_monotonic_groups() -> None:
+    """The adapter pre-filters groups whose quartiles aren't monotonic
+    rather than crashing the BoxPlot primitive's invariant."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "groups": [
+            ("good", 0, 1, 2, 3, 4),
+            ("bad", 5, 4, 3, 2, 1),  # reversed
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
+    html = _render(fragment)
+    assert "good" in html
+    assert "bad" not in html
+
+
+def test_box_plot_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("b", display="box_plot", empty_message="No distribution."),
+        {"groups": []},
+    )
+    assert "No distribution." in _render(fragment)
 
 
 def test_line_chart_renders_time_series() -> None:

@@ -17,6 +17,7 @@ from dazzle.render.fragment.primitives import (
     AppShell,
     Badge,
     BarChart,
+    BoxPlot,
     Button,
     CalendarGrid,
     Card,
@@ -40,6 +41,7 @@ from dazzle.render.fragment.primitives import (
     NavItem,
     Page,
     PivotTable,
+    Radar,
     RefPicker,
     Region,
     Row,
@@ -164,6 +166,10 @@ class FragmentRenderer:
                 return self._emit_diagram(fragment, ctx)
             case TimeSeries():
                 return self._emit_time_series(fragment, ctx)
+            case Radar():
+                return self._emit_radar(fragment, ctx)
+            case BoxPlot():
+                return self._emit_box_plot(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -746,6 +752,56 @@ class FragmentRenderer:
             f'<section class="{cls}">'
             f'<h4 class="dz-timeseries__label">{ctx.escape(t.label)}</h4>'
             f'<ol class="dz-timeseries__points">{items}</ol>'
+            f"</section>"
+        )
+
+    def _emit_radar(self, r: Radar, ctx: RenderContext) -> str:
+        """Render a polar/radar profile as a labelled `<ul>` of axes.
+
+        Each axis becomes `<li data-axis="…" data-value="…">`. CSS
+        hooks (`dz-radar`) carry the shape; an SVG layout can replace
+        the renderer body without changing the IR shape.
+        """
+        items = "".join(
+            f'<li class="dz-radar__axis" '
+            f'data-axis="{ctx.escape_attr(axis)}" '
+            f'data-value="{value}">'
+            f'<span class="dz-radar__axis-label">{ctx.escape(axis)}</span>'
+            f'<span class="dz-radar__axis-value">{value}</span>'
+            f"</li>"
+            for axis, value in r.axes
+        )
+        return (
+            f'<section class="dz-radar">'
+            f'<h4 class="dz-radar__label">{ctx.escape(r.label)}</h4>'
+            f'<ul class="dz-radar__axes">{items}</ul>'
+            f"</section>"
+        )
+
+    def _emit_box_plot(self, b: BoxPlot, ctx: RenderContext) -> str:
+        """Render a box-plot as a `<table>` of group rows with a column
+        per quartile statistic.
+
+        Future iteration can render the boxes as SVG; the table is the
+        accessible-by-default fallback and carries the data semantically.
+        """
+        header = (
+            "<thead><tr>"
+            "<th>Group</th><th>Min</th><th>Q1</th>"
+            "<th>Median</th><th>Q3</th><th>Max</th>"
+            "</tr></thead>"
+        )
+        rows = "".join(
+            f"<tr>"
+            f"<td>{ctx.escape(label)}</td>"
+            f"<td>{mn}</td><td>{q1}</td><td>{med}</td><td>{q3}</td><td>{mx}</td>"
+            f"</tr>"
+            for label, mn, q1, med, q3, mx in b.groups
+        )
+        return (
+            f'<section class="dz-box-plot">'
+            f'<h4 class="dz-box-plot__label">{ctx.escape(b.label)}</h4>'
+            f'<table class="dz-box-plot__table">{header}<tbody>{rows}</tbody></table>'
             f"</section>"
         )
 

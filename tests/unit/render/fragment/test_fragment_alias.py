@@ -53,6 +53,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "PivotTable",
         "Diagram",
         "TimeSeries",
+        "Radar",
+        "BoxPlot",
         # forms
         "FormStack",
         "Field",

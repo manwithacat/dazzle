@@ -28,10 +28,12 @@ from dazzle.render.fragment.primitives.content import (
 from dazzle.render.fragment.primitives.data import (
     KPI,
     BarChart,
+    BoxPlot,
     CalendarGrid,
     Diagram,
     KanbanBoard,
     PivotTable,
+    Radar,
     Table,
     Timeline,
     TimeSeries,
@@ -97,6 +99,8 @@ Fragment = (
     | PivotTable
     | Diagram
     | TimeSeries
+    | Radar
+    | BoxPlot
     # Forms
     | FormStack
     | Field
