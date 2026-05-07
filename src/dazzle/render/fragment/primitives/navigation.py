@@ -58,6 +58,35 @@ class NavGroup:
 
 
 @dataclass(frozen=True, slots=True)
+class SkipLink:
+    """A11y skip-link — visually hidden until focused, then jumps the
+    keyboard caret directly to the main content area.
+
+    Place at the top of the page body so keyboard and screen-reader
+    users can bypass repetitive navigation. AppShell auto-emits one
+    pointing at its own `<main id="main-content">` element; callers
+    using Page without AppShell should compose this primitive
+    explicitly into their body.
+
+    The default `target="#main-content"` matches the contract AppShell
+    fulfils (its `<main>` element carries that id). If your layout
+    uses a different anchor, set `target` accordingly.
+
+    `text` is the visible label that shows when the link is focused.
+    Override for i18n.
+    """
+
+    target: str = "#main-content"
+    text: str = "Skip to main content"
+
+    def __post_init__(self) -> None:
+        if not self.target:
+            raise ValueError("SkipLink requires a non-empty target")
+        if not self.text:
+            raise ValueError("SkipLink requires non-empty text")
+
+
+@dataclass(frozen=True, slots=True)
 class Topbar:
     """Application top bar — title (text) + free leading / trailing slots.
 

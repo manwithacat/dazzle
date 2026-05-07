@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives import (
     Row,
     Sidebar,
     Skeleton,
+    SkipLink,
     Split,
     Stack,
     Submit,
@@ -117,6 +118,8 @@ class FragmentRenderer:
                 return self._emit_nav_group(fragment, ctx)
             case NavItem():
                 return self._emit_nav_item(fragment, ctx)
+            case SkipLink():
+                return self._emit_skip_link(fragment, ctx)
             # Content
             case Icon():
                 return self._emit_icon(fragment, ctx)
@@ -292,8 +295,20 @@ class FragmentRenderer:
         Slots are rendered as their primitive type dictates; the
         primitive itself is structural-only (no Alpine state, no theme
         switcher — those live inside the slot fragments the caller
-        provides)."""
+        provides).
+
+        A11y: AppShell auto-emits a SkipLink targeting its own
+        `<main id="main-content">` so keyboard users have a stable
+        bypass for the navigation. Set `skip_link_text=""` to disable
+        (rare — almost always wrong).
+        """
         parts: list[str] = ['<div class="dz-app-shell">']
+        if a.skip_link_text:
+            # Emit via the SkipLink primitive's renderer so the markup
+            # stays consistent if someone composes one explicitly
+            # elsewhere. Hardcoded target — AppShell guarantees its
+            # own #main-content id.
+            parts.append(self._emit_skip_link(SkipLink(text=a.skip_link_text), ctx))
         if a.sidebar is not None:
             parts.append(
                 f'<aside class="dz-app-sidebar">{self._emit(a.sidebar, ctx)}</aside>'  # type: ignore[arg-type]
@@ -313,6 +328,15 @@ class FragmentRenderer:
         parts.append("</div>")
         parts.append("</div>")
         return "".join(parts)
+
+    def _emit_skip_link(self, s: SkipLink, ctx: RenderContext) -> str:
+        """A11y skip-link — `<a class="dz-skip-link">` matching the
+        legacy `macros/a11y.html::skip_link` macro. CSS in
+        `components/fragments.css` keeps it visually hidden until
+        focused."""
+        target = ctx.escape_attr(s.target)
+        text = ctx.escape(s.text)
+        return f'<a href="{target}" class="dz-skip-link">{text}</a>'
 
     def _emit_topbar(self, t: Topbar, ctx: RenderContext) -> str:
         """`<div class="dz-topbar">` with leading / title / trailing.

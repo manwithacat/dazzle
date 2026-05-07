@@ -40,6 +40,7 @@ from dazzle.render.fragment.primitives import (
     Row,
     Sidebar,
     Skeleton,
+    SkipLink,
     Split,
     Stack,
     Submit,
@@ -144,4 +145,5 @@ __all__ = [
     "Topbar",
     "NavGroup",
     "NavItem",
+    "SkipLink",
 ]

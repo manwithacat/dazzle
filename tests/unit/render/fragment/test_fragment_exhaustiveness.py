@@ -41,6 +41,7 @@ from dazzle.render.fragment import (
     Row,
     Sidebar,
     Skeleton,
+    SkipLink,
     Slot,
     Split,
     Stack,
@@ -85,6 +86,8 @@ def _sample_for(primitive_type: type) -> object:
         return Sidebar()
     if primitive_type is Topbar:
         return Topbar(title="App")
+    if primitive_type is SkipLink:
+        return SkipLink()
     if primitive_type is Card:
         return Card(body=Text("body"))
     if primitive_type is Region:

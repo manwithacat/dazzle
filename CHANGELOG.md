@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.51] - 2026-05-07
+
+### Added
+- **`SkipLink` Fragment primitive (P17 Phase 9).** A11y skip-link — visually hidden until focused, jumps the keyboard caret directly to the main content area. Emits `<a href="#main-content" class="dz-skip-link">Skip to main content</a>` matching the legacy `macros/a11y.html::skip_link` macro; existing CSS in `components/fragments.css` keeps it visually hidden until focused.
+- `AppShell.skip_link_text` field (default `"Skip to main content"`) — the renderer now auto-emits a SkipLink as the first child of the AppShell root, targeting its own `<main id="main-content">`. Set to empty string to disable. Closes the a11y gap where Fragment-chromed pages had no keyboard bypass for navigation. 11 new unit tests pin construction, escaping, AppShell auto-emit, and i18n customization.
+
+### Agent Guidance
+- The Page → AppShell composition now provides accessibility-by-default: every chrome-on app gets a working skip-link with no caller intervention. For Pages NOT using AppShell (rare — typically auth/error pages), compose `SkipLink()` explicitly into Page.body.
+
 ## [0.66.50] - 2026-05-07
 
 ### Changed

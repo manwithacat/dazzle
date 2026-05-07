@@ -74,6 +74,8 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-topbar-title",
     "dz-topbar-title-text",
     "dz-topbar-trailing",
+    # P17 P9 — SkipLink (a11y)
+    "dz-skip-link",
 )
 
 

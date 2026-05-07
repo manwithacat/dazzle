@@ -37,7 +37,13 @@ from dazzle.render.fragment.primitives.interactive import (
     Link,
 )
 from dazzle.render.fragment.primitives.layout import Grid, Row, Split, Stack
-from dazzle.render.fragment.primitives.navigation import NavGroup, NavItem, Sidebar, Topbar
+from dazzle.render.fragment.primitives.navigation import (
+    NavGroup,
+    NavItem,
+    Sidebar,
+    SkipLink,
+    Topbar,
+)
 
 __all__ = [
     "Fragment",
@@ -87,4 +93,5 @@ __all__ = [
     "Topbar",
     "NavGroup",
     "NavItem",
+    "SkipLink",
 ]

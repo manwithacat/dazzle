@@ -22,6 +22,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Topbar",
         "NavGroup",
         "NavItem",
+        "SkipLink",
         "Surface",
         "Card",
         "Region",

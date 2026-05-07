@@ -181,6 +181,11 @@ class AppShell:
     sidebar: object | None = None
     header: object | None = None
     footer: object | None = None
+    skip_link_text: str = "Skip to main content"
+    """A11y skip-link label. The renderer always emits a skip-link
+    targeting the AppShell's own `<main id="main-content">` element
+    so keyboard users have a stable bypass; set to empty string to
+    disable (rare — almost always wrong)."""
 
 
 @dataclass(frozen=True, slots=True)
