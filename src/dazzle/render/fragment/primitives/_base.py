@@ -9,6 +9,7 @@ from dazzle.render.fragment.primitives.containers import (
     AppShell,
     Card,
     Drawer,
+    ErrorPage,
     Modal,
     Page,
     Region,
@@ -65,6 +66,7 @@ Fragment = (
     | Drawer
     | Modal
     | Tabs
+    | ErrorPage
     # Navigation
     | Sidebar
     | Topbar

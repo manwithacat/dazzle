@@ -76,6 +76,11 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-topbar-trailing",
     # P17 P9 — SkipLink (a11y)
     "dz-skip-link",
+    # P17 P11 — ErrorPage (404/500/auth)
+    "dz-error-page",
+    "dz-error-page__code",
+    "dz-error-page__message",
+    "dz-error-page__action",
 )
 
 

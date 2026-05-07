@@ -153,6 +153,30 @@ class Modal:
 
 
 @dataclass(frozen=True, slots=True)
+class ErrorPage:
+    """Standalone error page — 404, 500, 403, generic.
+
+    Used inside `Page.body` for routes that don't compose an AppShell
+    (auth pages, framework error responses). Renders a centred
+    `<section>` with a status code, message, and optional home link.
+
+    `code` is rendered as a large display heading. `message` is the
+    user-facing description. `home_href` produces a "Go home" link
+    when set; pass `None` to omit (e.g. error pages embedded inside
+    an existing app shell).
+    """
+
+    code: int
+    message: str
+    home_href: object | None = None  # URL | None (avoid import cycle)
+    home_label: str = "Go home"
+
+    def __post_init__(self) -> None:
+        if not self.message:
+            raise ValueError("ErrorPage requires a non-empty message")
+
+
+@dataclass(frozen=True, slots=True)
 class AppShell:
     """Multi-slot application layout — sidebar / header / body / footer.
 

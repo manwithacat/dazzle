@@ -70,6 +70,47 @@
     border-block-start: 1px solid var(--colour-border);
   }
 
+  /* ───────────────────────── ErrorPage ───────────────────────
+   * Standalone error page (404, 500, auth fallback).
+   * Centred column with large status code, message, optional
+   * home link. Used inside Page.body for routes without AppShell.
+   */
+
+  .dz-error-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    min-height: 60vh;
+    padding: var(--space-xl) var(--space-md);
+    text-align: center;
+  }
+
+  .dz-error-page__code {
+    margin: 0;
+    font-size: var(--text-4xl, 3rem);
+    font-weight: var(--weight-bold);
+    color: var(--colour-text-muted);
+    letter-spacing: -0.02em;
+  }
+
+  .dz-error-page__message {
+    margin: 0;
+    font-size: var(--text-lg);
+    color: var(--colour-text);
+    max-width: 40rem;
+  }
+
+  .dz-error-page__action {
+    margin-block-start: var(--space-md);
+    padding: var(--space-sm) var(--space-lg);
+    color: var(--colour-brand-contrast);
+    background: var(--colour-brand);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+  }
+
   /* ───────────────────────── Topbar ──────────────────────────
    * Application top bar — leading / title / trailing layout.
    * Class names match the legacy template's `dz-topbar` /

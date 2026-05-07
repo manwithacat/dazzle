@@ -20,6 +20,7 @@ from dazzle.render.fragment.primitives import (
     Combobox,
     Drawer,
     EmptyState,
+    ErrorPage,
     Field,
     FormStack,
     Fragment,
@@ -114,6 +115,7 @@ __all__ = [
     "Drawer",
     "Modal",
     "Tabs",
+    "ErrorPage",
     # primitives — content
     "Text",
     "Heading",

@@ -20,6 +20,7 @@ from dazzle.render.fragment import (
     Combobox,
     Drawer,
     EmptyState,
+    ErrorPage,
     Field,
     FormStack,
     Fragment,
@@ -100,6 +101,8 @@ def _sample_for(primitive_type: type) -> object:
         return Modal(body=Text("body"))
     if primitive_type is Tabs:
         return Tabs(tabs=(("a", Text("A")),))
+    if primitive_type is ErrorPage:
+        return ErrorPage(code=404, message="Not Found")
     if primitive_type is Text:
         return Text("hello")
     if primitive_type is Heading:

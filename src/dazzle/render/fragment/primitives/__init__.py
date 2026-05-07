@@ -5,6 +5,7 @@ from dazzle.render.fragment.primitives.containers import (
     AppShell,
     Card,
     Drawer,
+    ErrorPage,
     Modal,
     Page,
     Region,
@@ -62,6 +63,7 @@ __all__ = [
     "Drawer",
     "Modal",
     "Tabs",
+    "ErrorPage",
     # content
     "Text",
     "Heading",

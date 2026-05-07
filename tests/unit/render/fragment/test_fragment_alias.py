@@ -30,6 +30,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Drawer",
         "Modal",
         "Tabs",
+        "ErrorPage",
         # content
         "Text",
         "Heading",

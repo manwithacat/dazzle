@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.53] - 2026-05-07
+
+### Added
+- **`ErrorPage` Fragment primitive (P17 P11 — Phase 3 closure).** Standalone error/auth page with status code, message, and optional home link. Composes inside `Page.body` for routes that don't use AppShell (404/500/403, login fallbacks). Renders a centred `<section class="dz-error-page">` with `data-dz-error-code` for CSS targeting per status. 12 unit tests pin construction, escaping, defensive non-URL handling, and Page composition.
+
+### Phase 3 — Page chrome substrate complete
+- With ErrorPage shipped, all 8 Phase 3 substrate plans are closed: Page (P1), PageBuilder (P2), opt-in dispatch (P3), HTTP smoke (P4), AppShell (P5), Sidebar/NavGroup/NavItem (P6), Topbar (P7), htmx-partial mode (P8), SkipLink + a11y (P9), configurable assets (P10), ErrorPage (P11). The Fragment substrate now reaches every layer of a typical Dazzle app — chrome, layout, navigation, error pages, surface bodies, form widgets — with full opt-in via `app.state.fragment_chrome=True`.
+- Validation milestone next: actually flip an example app to chrome=on and exercise it through every route. That's the first time the substrate gets tested as a coherent system, not as discrete primitive-level units. Expected to surface integration gaps not visible in the per-primitive test suite.
+
 ## [0.66.52] - 2026-05-07
 
 ### Added

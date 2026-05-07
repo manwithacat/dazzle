@@ -23,6 +23,7 @@ from dazzle.render.fragment.primitives import (
     Combobox,
     Drawer,
     EmptyState,
+    ErrorPage,
     Field,
     FormStack,
     Fragment,
@@ -109,6 +110,8 @@ class FragmentRenderer:
                 return self._emit_modal(fragment, ctx)
             case Tabs():
                 return self._emit_tabs(fragment, ctx)
+            case ErrorPage():
+                return self._emit_error_page(fragment, ctx)
             # Navigation
             case Sidebar():
                 return self._emit_sidebar(fragment, ctx)
@@ -328,6 +331,27 @@ class FragmentRenderer:
         parts.append("</div>")
         parts.append("</div>")
         return "".join(parts)
+
+    def _emit_error_page(self, e: ErrorPage, ctx: RenderContext) -> str:
+        """Standalone error page — `<section>` with code + message +
+        optional home link. Composes inside `Page.body` for routes
+        that don't use AppShell (404, 500, auth pages)."""
+        from dazzle.render.fragment.htmx import URL
+
+        code = ctx.escape(str(e.code))
+        message = ctx.escape(e.message)
+        home_html = ""
+        if isinstance(e.home_href, URL):
+            href = ctx.escape_attr(e.home_href.value)
+            label = ctx.escape(e.home_label)
+            home_html = f'<a class="dz-error-page__action" href="{href}">{label}</a>'
+        return (
+            f'<section class="dz-error-page" data-dz-error-code="{ctx.escape_attr(str(e.code))}">'
+            f'<h1 class="dz-error-page__code">{code}</h1>'
+            f'<p class="dz-error-page__message">{message}</p>'
+            f"{home_html}"
+            f"</section>"
+        )
 
     def _emit_skip_link(self, s: SkipLink, ctx: RenderContext) -> str:
         """A11y skip-link — `<a class="dz-skip-link">` matching the
