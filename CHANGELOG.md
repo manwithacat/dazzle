@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.69] - 2026-05-07
+
+### Added
+- **Tree, pipeline_steps, action_grid, and progress display dispatch in `WorkspaceRegionAdapter`** — four more composition wins, no new primitives. `display: tree` flattens nested `children` into a `Stack` of indented `Text` rows (recursive walk; depth encoded as leading whitespace). `display: pipeline_steps` renders steps as a horizontal `Row` of `Card(Stack(Heading, Text))` per step. `display: action_grid` is a pure alias for `grid` (action wiring is a future enhancement once Button-driven cards land). `display: progress` shows a `Stack` of `Row(Text, Badge)` with the percentage as the badge label and severity-mapped variant (>=90 success, >=50 info, >=25 warning, else danger); out-of-range values are clamped to [0, 100].
+- `tree`, `pipeline_steps`, `action_grid`, `progress` added to `_SUPPORTED_DISPLAYS`.
+- 8 new unit tests pinning behaviour across the four modes.
+
+### Phase 4A progress
+
+| App | v0.66.68 (status_list+profile_card) | v0.66.69 (tree+pipeline+action_grid+progress) | Δ |
+|---|---|---|---|
+| simple_task | 36 | 36 | 0 |
+| contact_manager | 10 | 10 | 0 |
+| support_tickets | 34 | 35 | +1 |
+| ops_dashboard | 28 | 30 | +2 |
+| fieldtest_hub | 47 | 48 | +1 |
+| **Total** | **155/176** | **159/176** | **+4** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — biggest lift, deferred)
+- `heatmap`, `search_box`, `map`, `bar_track`, `bullet`, `confirm_action_panel` × 1 each
+- chart-family awaiting new primitives: `sparkline`, `radar`, `box_plot`, `line_chart`, `area_chart`
+
+### Agent Guidance
+- The `_build_tree` recursive walk uses leading-whitespace indent rather than nested `Stack` — flat trees render cleaner and don't break the audit's "every primitive has a fragment" invariant. If a real Tree primitive is added later, this can become a thin wrapper.
+- The `_build_progress` percent → badge variant mapping is a heuristic, not a spec — DSL authors who want explicit colours should set badge variants directly via `status_variants` (status_list path) once a future fork of progress accepts that override.
+
 ## [0.66.68] - 2026-05-07
 
 ### Added

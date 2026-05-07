@@ -128,6 +128,14 @@ class WorkspaceRegionAdapter:
             return self._build_status_list(region, ctx)
         if display_value == "profile_card":
             return self._build_detail(region, ctx)
+        if display_value == "action_grid":
+            return self._build_grid(region, ctx)
+        if display_value == "tree":
+            return self._build_tree(region, ctx)
+        if display_value == "pipeline_steps":
+            return self._build_pipeline_steps(region, ctx)
+        if display_value == "progress":
+            return self._build_progress(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -311,6 +319,161 @@ class WorkspaceRegionAdapter:
         return Surface(
             header=Heading(title, level=2),
             body=Region(kind="report", body=body),
+        )
+
+    def _build_tree(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: tree` regions render a hierarchical list as a Stack
+        of indented Heading rows. Indent is encoded as leading whitespace
+        in the label, so depth stays visible in plain HTML without a
+        dedicated Tree primitive.
+
+        ctx shape:
+            items: list of dicts; each may carry a `children` list with
+                the same shape (recursive tree)
+            label_field: optional, defaults to title/name/id auto-pick
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        items = ctx.get("items") or []
+        label_field = str(ctx.get("label_field") or "")
+
+        def _label_for(item: dict[str, Any]) -> str:
+            if label_field and label_field in item:
+                return str(item.get(label_field) or "")
+            for cand in ("title", "name", "id"):
+                if cand in item:
+                    return str(item.get(cand) or "")
+            return "(no label)"
+
+        rows: list[object] = []
+
+        def _walk(node_list: list[Any], depth: int) -> None:
+            for node in node_list:
+                if not isinstance(node, dict):
+                    continue
+                indent = "  " * depth
+                label = _label_for(node)
+                rows.append(Text(f"{indent}{label}"))
+                children = node.get("children") or []
+                if isinstance(children, list) and children:
+                    _walk(children, depth + 1)
+
+        if isinstance(items, list):
+            _walk(items, 0)
+
+        body: Fragment
+        if not rows:
+            body = EmptyState(
+                title="No items",
+                description=getattr(region, "empty_message", None) or "No data in this region.",
+            )
+        else:
+            body = Stack(children=tuple(rows), gap="sm")
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="list", body=body),
+        )
+
+    def _build_pipeline_steps(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: pipeline_steps` renders a sequence of steps as a
+        horizontal Row of Cards — one Card per step with a Heading and
+        descriptive Text.
+
+        ctx shape:
+            steps: list of dicts {"label": str, "description": str (optional),
+                                  "status": str (optional)}
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        steps = ctx.get("steps") or ctx.get("items") or []
+
+        cards: list[object] = []
+        if isinstance(steps, list):
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                label = str(step.get("label") or step.get("name") or step.get("title") or "")
+                description = str(step.get("description") or step.get("status") or "")
+                inner: list[object] = [Heading(label or "(no step)", level=4)]
+                if description:
+                    inner.append(Text(description))
+                cards.append(Card(body=Stack(children=tuple(inner), gap="sm")))
+
+        body: Fragment
+        if not cards:
+            body = EmptyState(
+                title="No steps",
+                description=getattr(region, "empty_message", None) or "No steps declared.",
+            )
+        else:
+            body = Row(children=tuple(cards), gap="md", align="stretch")
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="dashboard", body=body),
+        )
+
+    def _build_progress(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: progress` renders a Stack of label / percentage
+        rows. Without a dedicated ProgressBar primitive we use the
+        existing Text+Badge pair: label on the left, "<n>%" on the right.
+
+        ctx shape:
+            items: list of dicts {"label": str, "percent": int 0..100}
+                — values outside [0, 100] are clamped
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        items = ctx.get("items") or []
+
+        rows: list[object] = []
+        if isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                label = str(item.get("label") or item.get("name") or item.get("title") or "")
+                try:
+                    percent = int(item.get("percent") or item.get("value") or 0)
+                except (TypeError, ValueError):
+                    percent = 0
+                percent = max(0, min(100, percent))
+                # Map ranges to badge variants for at-a-glance reading.
+                variant: str = "info"
+                if percent >= 90:
+                    variant = "success"
+                elif percent >= 50:
+                    variant = "info"
+                elif percent >= 25:
+                    variant = "warning"
+                else:
+                    variant = "danger"
+                rows.append(
+                    Row(
+                        children=(
+                            Text(label or "(no label)"),
+                            Badge(label=f"{percent}%", variant=variant),  # type: ignore[arg-type]
+                        ),
+                        gap="md",
+                        align="center",
+                    )
+                )
+
+        body: Fragment
+        if not rows:
+            body = EmptyState(
+                title="No progress",
+                description=getattr(region, "empty_message", None) or "No data in this region.",
+            )
+        else:
+            body = Stack(children=tuple(rows), gap="sm")
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="list", body=body),
         )
 
     def _build_status_list(self, region: Any, ctx: dict[str, Any]) -> Surface:

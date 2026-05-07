@@ -617,6 +617,118 @@ def test_detail_no_item_renders_empty_state() -> None:
 # ───────────────── Activity feed ──────────────────
 
 
+def test_tree_renders_indented_labels_recursively() -> None:
+    """`display: tree` flattens nested children into a Stack of Text
+    rows, with each level of nesting prefixed by two spaces."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "name": "Root",
+                "children": [
+                    {"name": "Child1"},
+                    {"name": "Child2", "children": [{"name": "Grand"}]},
+                ],
+            }
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("t", display="tree"), ctx)
+    html = _render(fragment)
+    assert "Root" in html
+    assert "Child1" in html
+    assert "Child2" in html
+    assert "Grand" in html
+
+
+def test_tree_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("t", display="tree", empty_message="Empty tree."),
+        {"items": []},
+    )
+    assert "Empty tree." in _render(fragment)
+
+
+def test_pipeline_steps_renders_row_of_cards() -> None:
+    """Each step becomes a Card with a Heading and optional Text
+    description, arranged in a horizontal Row."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "steps": [
+            {"label": "Plan", "description": "Scope locked"},
+            {"label": "Build"},
+            {"label": "Ship", "status": "Pending"},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("p", display="pipeline_steps"), ctx)
+    html = _render(fragment)
+    assert "Plan" in html and "Build" in html and "Ship" in html
+    assert "Scope locked" in html
+    assert "Pending" in html  # status falls back if no description
+
+
+def test_pipeline_steps_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("p", display="pipeline_steps", empty_message="No steps."),
+        {"steps": []},
+    )
+    assert "No steps." in _render(fragment)
+
+
+def test_action_grid_dispatches_through_grid() -> None:
+    """`display: action_grid` reuses the grid renderer; action wiring
+    is a future enhancement once Button-driven cards land."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"title": "Reboot"}, {"title": "Backup"}, {"title": "Restore"}],
+        "columns": 3,
+    }
+    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
+    html = _render(fragment)
+    assert "Reboot" in html and "Backup" in html and "Restore" in html
+
+
+def test_progress_renders_percent_badges_with_severity() -> None:
+    """Progress rows show label + percent badge; variant maps from
+    percent ranges (>=90 success, >=50 info, >=25 warning, else danger)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {"label": "Done", "percent": 95},
+            {"label": "Halfway", "percent": 60},
+            {"label": "Slow", "percent": 30},
+            {"label": "Stuck", "percent": 5},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("p", display="progress"), ctx)
+    html = _render(fragment)
+    assert "95%" in html and "60%" in html and "30%" in html and "5%" in html
+    assert "dz-badge--variant-success" in html
+    assert "dz-badge--variant-info" in html
+    assert "dz-badge--variant-warning" in html
+    assert "dz-badge--variant-danger" in html
+
+
+def test_progress_clamps_out_of_range_percent_values() -> None:
+    """Values outside [0, 100] are clamped before rendering."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"items": [{"label": "X", "percent": 250}, {"label": "Y", "percent": -10}]}
+    fragment = adapter.build(_FakeRegion("p", display="progress"), ctx)
+    html = _render(fragment)
+    assert "100%" in html
+    assert "0%" in html
+
+
+def test_progress_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("p", display="progress", empty_message="No progress."),
+        {"items": []},
+    )
+    assert "No progress." in _render(fragment)
+
+
 def test_status_list_renders_label_badge_rows() -> None:
     """`display: status_list` renders a Stack of (Text, Badge) rows
     with optional severity colouring via status_variants."""
