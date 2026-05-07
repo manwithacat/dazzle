@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.52] - 2026-05-07
+
+### Added
+- **Configurable Fragment chrome assets (P17 P10).** The page route now reads `app.state.fragment_chrome_css_links`, `app.state.fragment_chrome_js_scripts`, and `app.state.fragment_chrome_theme` when building the Page primitive — bundled-mode defaults preserved, but apps can now override for themed builds (extra CSS for `linear-dark` etc.) or dev individual-script mode (separate htmx + alpine + dz-* JS files). Closes the immediate gap where chrome-on apps were stuck on bundled-mode-only with no theme support.
+
+### Agent Guidance
+- To use Fragment chrome with a theme: set `app.state.fragment_chrome = True`, `app.state.fragment_chrome_theme = "<theme-name>"`, and `app.state.fragment_chrome_css_links = (...,)` including the theme CSS URL after the bundle. Full `dazzle.toml`-driven asset resolution (mirroring base.html's `_app_theme_url_chain` logic) is a separate plan; this seam unblocks themed apps without that lift.
+
 ## [0.66.51] - 2026-05-07
 
 ### Added

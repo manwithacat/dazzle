@@ -1304,11 +1304,29 @@ def _render_response(prc: _PageRequestContext) -> Response:
     if use_fragment_chrome and not is_partial:
         from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
 
+        # P10: assets and theme are read from app.state with sensible
+        # bundled-mode defaults. Apps with non-default assets (themed
+        # builds, dev individual-script mode) override by setting
+        # `app.state.fragment_chrome_*` during app construction. Full
+        # dazzle.toml-driven resolution is a separate plan; this seam
+        # unblocks themed apps without reimplementing base.html's
+        # resolution logic.
+        app_state = prc.request.app.state
+        css_links = tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        )
+        js_scripts = tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        )
+        theme = getattr(app_state, "fragment_chrome_theme", None)
         html = dispatch_render_page(
             render_ctx,
             inner_html or "",
-            css_links=("/static/dist/dazzle.min.css",),
-            js_scripts=("/static/dist/dazzle.min.js",),
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
         )
     elif use_fragment_chrome and is_partial:
         # Body-only response for htmx — inner_html is the

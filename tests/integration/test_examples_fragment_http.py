@@ -341,6 +341,91 @@ def test_fragment_chrome_htmx_response_no_jinja_chrome_either() -> None:
     assert "dz-page-announcer" not in body
 
 
+def _client_with_chrome_assets(
+    app_name: str,
+    css_links: tuple[str, ...] | None = None,
+    js_scripts: tuple[str, ...] | None = None,
+    theme: str | None = None,
+) -> TestClient:
+    """Like `_client_with_fragment_chrome` but lets the test set
+    custom asset URLs / theme on app.state. For P17 P10 — proves
+    chrome assets are configurable, not hardcoded."""
+    from dazzle_back.runtime.renderers.init import register_default_renderers
+    from dazzle_back.runtime.services import RuntimeServices
+
+    appspec = load_project_appspec(_EXAMPLES / app_name)
+    fastapi_app = FastAPI()
+    services = RuntimeServices()
+    register_default_renderers(services)
+    fastapi_app.state.services = services
+    fastapi_app.state.fragment_chrome = True
+    if css_links is not None:
+        fastapi_app.state.fragment_chrome_css_links = css_links
+    if js_scripts is not None:
+        fastapi_app.state.fragment_chrome_js_scripts = js_scripts
+    if theme is not None:
+        fastapi_app.state.fragment_chrome_theme = theme
+    router = create_page_routes(appspec, backend_url="http://127.0.0.1:9999")
+    fastapi_app.include_router(router)
+    return TestClient(fastapi_app)
+
+
+# ─────────────────── Asset overrides (P17 P10) ───────────────────
+
+
+def test_fragment_chrome_default_assets_when_state_unset() -> None:
+    """Default behaviour: bundled mode CSS+JS, no theme."""
+    client = _client_with_fragment_chrome("simple_task")
+    body = client.get("/task").text
+    assert '<link rel="stylesheet" href="/static/dist/dazzle.min.css">' in body
+    assert '<script defer src="/static/dist/dazzle.min.js"></script>' in body
+    assert "data-theme=" not in body
+
+
+def test_fragment_chrome_custom_css_links_override() -> None:
+    """Multiple CSS links in declared order — order is cascade-relevant."""
+    client = _client_with_chrome_assets(
+        "simple_task",
+        css_links=(
+            "/static/dist/dazzle.min.css",
+            "/static/themes/linear-dark.css",
+        ),
+    )
+    body = client.get("/task").text
+    assert '<link rel="stylesheet" href="/static/dist/dazzle.min.css">' in body
+    assert '<link rel="stylesheet" href="/static/themes/linear-dark.css">' in body
+    a = body.index('href="/static/dist/dazzle.min.css"')
+    b = body.index('href="/static/themes/linear-dark.css"')
+    assert a < b, "cascade order must match declaration order"
+
+
+def test_fragment_chrome_custom_js_scripts_override() -> None:
+    """Individual-script mode (dev environments) — many separate JS URLs."""
+    client = _client_with_chrome_assets(
+        "simple_task",
+        js_scripts=(
+            "/static/vendor/htmx.min.js",
+            "/static/vendor/htmx-ext-json-enc.js",
+            "/static/js/dz-alpine.js",
+        ),
+    )
+    body = client.get("/task").text
+    for url in (
+        "/static/vendor/htmx.min.js",
+        "/static/vendor/htmx-ext-json-enc.js",
+        "/static/js/dz-alpine.js",
+    ):
+        assert f'<script defer src="{url}"></script>' in body
+
+
+def test_fragment_chrome_theme_override_emits_data_theme_attr() -> None:
+    """`fragment_chrome_theme` propagates to `<html data-theme="...">`,
+    matching the legacy template's theme attribute."""
+    client = _client_with_chrome_assets("simple_task", theme="linear-dark")
+    body = client.get("/task").text
+    assert '<html lang="en" data-theme="linear-dark">' in body
+
+
 def test_fragment_chrome_default_off_htmx_still_uses_jinja_partial() -> None:
     """Backward compat: chrome flag off → htmx requests still go through
     `render_page(partial=True, ...)` exactly as before. Pinned because
