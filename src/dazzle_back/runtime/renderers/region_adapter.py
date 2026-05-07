@@ -24,6 +24,7 @@ from dazzle.render.fragment import (
     Region,
     Surface,
     Text,
+    Timeline,
 )
 
 
@@ -90,6 +91,8 @@ class WorkspaceRegionAdapter:
             return self._build_list(region, ctx)
         if display_value == "kanban":
             return self._build_kanban(region, ctx)
+        if display_value == "timeline":
+            return self._build_timeline(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -168,4 +171,66 @@ class WorkspaceRegionAdapter:
         return Surface(
             header=Heading(title, level=2),
             body=Region(kind="kanban", body=body),
+        )
+
+    def _build_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: timeline` regions render as a Timeline primitive
+        — chronological list of (label, iso-date) events.
+
+        ctx shape:
+            items: list of dicts (rows from the source entity)
+            label_field: str — which field carries the event label
+                (defaults to 'title' / 'name' / 'id')
+            date_field: str — which field carries the event date
+                (typically the region's `date_field` clause; falls
+                back to `created_at` then any iso-date-shaped field)
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        items: list[dict[str, Any]] = ctx.get("items", []) or []
+        label_field = str(ctx.get("label_field") or "")
+        date_field = str(ctx.get("date_field") or getattr(region, "date_field", "") or "")
+
+        body: Fragment
+        if not items:
+            body = EmptyState(
+                title="No events",
+                description=getattr(region, "empty_message", None) or "No data in this region.",
+            )
+        else:
+            events: list[tuple[str, str]] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                label = ""
+                if label_field and label_field in item:
+                    label = str(item.get(label_field) or "")
+                else:
+                    for cand in ("title", "name", "id"):
+                        if cand in item:
+                            label = str(item.get(cand) or "")
+                            break
+                date = ""
+                if date_field and date_field in item:
+                    date = str(item.get(date_field) or "")
+                else:
+                    for cand in ("date", "created_at", "occurred_at", "timestamp"):
+                        if cand in item:
+                            date = str(item.get(cand) or "")
+                            break
+                if label and date:
+                    events.append((label, date))
+            if events:
+                body = Timeline(events=tuple(events))
+            else:
+                body = EmptyState(
+                    title="No events",
+                    description=getattr(region, "empty_message", None)
+                    or "No items had a label and date.",
+                )
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
         )

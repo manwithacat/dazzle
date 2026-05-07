@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.63] - 2026-05-07
+
+### Added
+- **Timeline display dispatch in `WorkspaceRegionAdapter`** — `display: timeline` regions now route to the typed `Timeline` primitive. Auto-detects label field (`title` / `name` / `id`) and date field (`date` / `created_at` / `occurred_at` / `timestamp`) from item shape; both can be overridden via ctx. Items missing usable label or date silently dropped (Timeline requires both).
+- 5 new unit tests pin Timeline behaviour: default field detection, explicit field override, missing-field skip, empty-state fallback, region.date_field DSL clause.
+- `timeline` added to `_SUPPORTED_DISPLAYS`.
+
+### Phase 4A progress
+
+| App | v0.66.59 | v0.66.60 (kanban) | v0.66.63 (timeline) | Δ session |
+|---|---|---|---|---|
+| simple_task | 33 | 34 | 35 | +2 |
+| contact_manager | 8 | 8 | 8 | 0 |
+| support_tickets | 27 | 28 | 30 | +3 |
+| ops_dashboard | 13 | 14 | 15 | +2 |
+| fieldtest_hub | 38 | 42 | 45 | +7 |
+| **Total** | **119/176** | **126/176** | **133/176** | **+14** |
+
+### Highest remaining display blockers
+- `grid` × 6 (no Grid-of-cards primitive yet — composes existing Grid + Card)
+- `diagram` × 5 (no Diagram primitive — bigger lift)
+- `metrics` × 3 (KPI primitive exists)
+- `bar_chart` × 2 (BarChart primitive exists)
+
 ## [0.66.62] - 2026-05-07
 
 ### 🎯 Goal milestone — all 5 examples are Jinja-free
