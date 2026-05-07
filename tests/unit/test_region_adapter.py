@@ -33,12 +33,12 @@ def _render(node: object) -> str:
 
 
 def test_unsupported_display_raises_with_actionable_hint() -> None:
-    """`pivot_table` isn't wired yet — raises NotImplementedError with
+    """`heatmap` isn't wired yet — raises NotImplementedError with
     a pointer at the audit's aggregated_blockers report. Rotated from
-    `grid` after grid/metrics/bar_chart closure landed."""
+    `pivot_table` after pivot_table/tabbed_list closure landed."""
     adapter = WorkspaceRegionAdapter()
-    with pytest.raises(NotImplementedError, match="pivot_table"):
-        adapter.build(_FakeRegion("r", display="pivot_table"), {})
+    with pytest.raises(NotImplementedError, match="heatmap"):
+        adapter.build(_FakeRegion("r", display="heatmap"), {})
 
 
 # ───────────────── Timeline ───────────────────────
@@ -439,3 +439,120 @@ def test_bar_chart_uses_chart_label_override() -> None:
     # The label should appear somewhere in the rendered output
     html = _render(fragment)
     assert "a" in html  # smoke; label rendering is BarChart's concern
+
+
+# ───────────────── Pivot table ─────────────────────
+
+
+def test_pivot_table_renders_rows_and_columns() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "rows": ["low", "high"],
+        "columns": ["open", "closed"],
+        "cells": {("low", "open"): 3, ("high", "closed"): 7},
+    }
+    fragment = adapter.build(_FakeRegion("p", display="pivot_table"), ctx)
+    html = _render(fragment)
+    assert "low" in html and "high" in html
+    assert "open" in html and "closed" in html
+    assert "3" in html and "7" in html
+
+
+def test_pivot_table_drops_cells_with_unknown_dimensions() -> None:
+    """Defensive: cells whose row or column isn't declared get
+    silently dropped (PivotTable raises if they're passed in)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "rows": ["a"],
+        "columns": ["x"],
+        "cells": {("a", "x"): 1, ("z", "x"): 99},  # ('z', 'x') is bogus
+    }
+    fragment = adapter.build(_FakeRegion("p", display="pivot_table"), ctx)
+    html = _render(fragment)
+    assert "1" in html
+    assert "99" not in html
+
+
+def test_pivot_table_empty_dimensions_render_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("p", display="pivot_table", empty_message="No data."),
+        {"rows": [], "columns": ["x"]},
+    )
+    assert "No data." in _render(fragment)
+
+
+# ───────────────── Tabbed list ─────────────────────
+
+
+def test_tabbed_list_renders_tabs_with_tables() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "tabs": [
+            {
+                "key": "open",
+                "label": "Open",
+                "items": [{"name": "Alpha"}],
+                "columns": [{"key": "name", "label": "Name"}],
+            },
+            {
+                "key": "closed",
+                "label": "Closed",
+                "items": [{"name": "Beta"}],
+                "columns": [{"key": "name", "label": "Name"}],
+            },
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("t", display="tabbed_list"), ctx)
+    html = _render(fragment)
+    assert "Alpha" in html
+    assert "Beta" in html
+
+
+def test_tabbed_list_legacy_slices_alias_works() -> None:
+    """ctx['slices'] is accepted as alias for ctx['tabs']."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "slices": [
+            {
+                "key": "k",
+                "items": [{"x": "1"}],
+                "columns": [{"key": "x", "label": "X"}],
+            }
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("t", display="tabbed_list"), ctx)
+    assert "1" in _render(fragment)
+
+
+def test_tabbed_list_dedupes_duplicate_tab_keys() -> None:
+    """Tabs primitive raises on duplicate keys; the adapter dedups
+    silently (first key wins)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "tabs": [
+            {
+                "key": "k",
+                "items": [{"x": "FirstValue"}],
+                "columns": [{"key": "x", "label": "X"}],
+            },
+            {
+                "key": "k",  # duplicate
+                "items": [{"x": "SecondValue"}],
+                "columns": [{"key": "x", "label": "X"}],
+            },
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("t", display="tabbed_list"), ctx)
+    html = _render(fragment)
+    assert "FirstValue" in html
+    assert "SecondValue" not in html
+
+
+def test_tabbed_list_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("t", display="tabbed_list", empty_message="No tabs."),
+        {},
+    )
+    assert "No tabs." in _render(fragment)

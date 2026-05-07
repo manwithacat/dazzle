@@ -26,8 +26,10 @@ from dazzle.render.fragment import (
     Grid,
     Heading,
     KanbanBoard,
+    PivotTable,
     Region,
     Surface,
+    Tabs,
     Text,
     Timeline,
 )
@@ -105,6 +107,10 @@ class WorkspaceRegionAdapter:
             return self._build_metrics(region, ctx)
         if display_value == "bar_chart":
             return self._build_bar_chart(region, ctx)
+        if display_value == "pivot_table":
+            return self._build_pivot_table(region, ctx)
+        if display_value == "tabbed_list":
+            return self._build_tabbed_list(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -245,6 +251,111 @@ class WorkspaceRegionAdapter:
         return Surface(
             header=Heading(title, level=2),
             body=Region(kind="report", body=body),
+        )
+
+    def _build_pivot_table(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: pivot_table` regions render as a PivotTable primitive
+        — a 2-D matrix indexed by row + column dimensions.
+
+        ctx shape:
+            rows: list[str] — row dimension labels (e.g. enum values)
+            columns: list[str] — column dimension labels
+            cells: dict[(row, col) → int] — pre-aggregated counts
+            chart_label: optional override
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        chart_label = str(ctx.get("chart_label") or title or "Pivot")
+        rows = tuple(str(r) for r in (ctx.get("rows") or []))
+        columns = tuple(str(c) for c in (ctx.get("columns") or []))
+        raw_cells = ctx.get("cells") or {}
+        cells: dict[tuple[str, str], int] = {}
+        if isinstance(raw_cells, dict):
+            for key, val in raw_cells.items():
+                if isinstance(key, (list, tuple)) and len(key) == 2:
+                    r, c = str(key[0]), str(key[1])
+                    if r in rows and c in columns:
+                        try:
+                            cells[(r, c)] = int(val)
+                        except (TypeError, ValueError):
+                            continue
+
+        body: Fragment
+        if not rows or not columns:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None)
+                or "No row or column dimensions to pivot.",
+            )
+        else:
+            body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_tabbed_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: tabbed_list` regions render as a Tabs container, one
+        tab per source-or-filter slice. Each tab body is a Table.
+
+        ctx shape:
+            tabs: list of dicts with shape:
+                {"key": str, "label": str (optional), "items": list[dict],
+                 "columns": list[{"key": str, "label": str}]}
+            (legacy) `slices` is accepted as alias for `tabs`
+        """
+        from dazzle.render.fragment import Table
+
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        raw_tabs = ctx.get("tabs") or ctx.get("slices") or []
+
+        body: Fragment
+        if not raw_tabs:
+            body = EmptyState(
+                title="No tabs",
+                description=getattr(region, "empty_message", None) or "No data slices declared.",
+            )
+            return Surface(
+                header=Heading(title, level=2),
+                body=Region(kind="list", body=body),
+            )
+
+        built: list[tuple[str, object]] = []
+        seen_keys: set[str] = set()
+        for tab in raw_tabs:
+            if not isinstance(tab, dict):
+                continue
+            key = str(tab.get("key") or tab.get("label") or f"tab_{len(built)}")
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            items = tab.get("items") or []
+            cols = tab.get("columns") or []
+            tab_body: Fragment
+            if not items:
+                tab_body = EmptyState(title="No items", description="")
+            elif not cols:
+                tab_body = EmptyState(title="No columns", description="")
+            else:
+                column_labels = tuple(c.get("label", c.get("key", "")) for c in cols)
+                rows_data = tuple(
+                    tuple(str(item.get(c["key"], "")) for c in cols) for item in items
+                )
+                tab_body = Table(columns=column_labels, rows=rows_data)
+            built.append((key, tab_body))
+
+        if not built:
+            body = EmptyState(title="No tabs", description="")
+        else:
+            body = Tabs(tabs=tuple(built))
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="list", body=body),
         )
 
     def _build_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:

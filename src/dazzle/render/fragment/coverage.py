@@ -170,7 +170,18 @@ _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"file"})
 # `heatmap`, `funnel_chart` — require dedicated adapter dispatch
 # (Phase 4A scope) and are flagged until then.
 _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
-    {"", "list", "kanban", "timeline", "grid", "metrics", "summary", "bar_chart"}
+    {
+        "",
+        "list",
+        "kanban",
+        "timeline",
+        "grid",
+        "metrics",
+        "summary",
+        "bar_chart",
+        "pivot_table",
+        "tabbed_list",
+    }
 )
 
 

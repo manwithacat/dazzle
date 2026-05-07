@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.65] - 2026-05-07
+
+### Added
+- **Pivot table and tabbed-list display dispatch in `WorkspaceRegionAdapter`** — both primitives already existed (PivotTable, Tabs); this just wires them. `display: pivot_table` accepts `rows`/`columns` dimension lists plus a `cells: dict[(row, col) → int]` of pre-aggregated counts (cells with unknown row/column dimensions silently dropped to keep PivotTable's strict invariant happy). `display: tabbed_list` accepts a list of tab dicts (`{key, label, items, columns}`); duplicate tab keys are deduplicated silently (Tabs raises on dupes).
+- `pivot_table` and `tabbed_list` added to `_SUPPORTED_DISPLAYS`.
+- 7 new unit tests covering the two modes (rows/columns/cells round-trip, dimension-validity dropping, slices alias, dedup behaviour, empty-state fallbacks).
+
+### Phase 4A progress
+
+| App | v0.66.64 (grid+metrics+bar_chart) | v0.66.65 (pivot+tabbed) | Δ |
+|---|---|---|---|
+| simple_task | 36 | 36 | 0 |
+| contact_manager | 9 | 9 | 0 |
+| support_tickets | 32 | 32 | 0 |
+| ops_dashboard | 22 | 23 | +1 |
+| fieldtest_hub | 46 | 47 | +1 |
+| **Total** | **145/176** | **147/176** | **+2** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — bigger lift)
+- `funnel_chart`, `heatmap`, `progress`, `activity_feed`, `detail`, `search_box`, `map`, `tree` × 1 each
+- ops_dashboard chart-family (sparkline, radar, box_plot, bullet, line_chart, area_chart, histogram, queue, bar_track, profile_card, pipeline_steps, action_grid, status_list × 2, confirm_action_panel)
+
+### Agent Guidance
+- The `_build_pivot_table` adapter silently drops cells whose row or column dimension isn't in the declared lists — this protects the PivotTable primitive's strict `__post_init__` validation. If you see "missing" cells in a pivot, check that the row/column lists carry every dimension referenced in the cells dict.
+- The `_build_tabbed_list` adapter dedupes duplicate tab keys (first wins) so the runtime can't crash the Tabs primitive's dup-key invariant. If a region appears to lose tabs, check for collisions in the `key` values.
+
 ## [0.66.64] - 2026-05-07
 
 ### Added
