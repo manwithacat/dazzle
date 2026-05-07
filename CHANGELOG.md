@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.54] - 2026-05-07
+
+### Changed
+- **Fragment chrome dispatch now wraps inner_html in a full app chrome by default (P17 P12).** Previously `dispatch_render_page` produced a bare `Page → body=RawHTML(inner_html)`; now produces `Page → AppShell(sidebar=Sidebar(...), header=Topbar(...), body=RawHTML(inner_html))`. Sidebar populates from `PageContext.nav_items` and `nav_groups`; Topbar carries `PageContext.app_name`; nav-item active state mirrors `current_route`. Chrome-on apps now get real navigation with no caller intervention beyond the flag. SkipLink auto-emit + a11y guarantee carry through.
+
+### Added
+- `build_app_chrome_page(ctx, inner_html, ...)` — typed builder that constructs the full Page → AppShell → Sidebar/Topbar composition from PageContext nav data. `build_page` (bare Page) still available for routes that don't want app chrome (auth/error pages); `dispatch_render_page` accepts `chrome=False` to opt out.
+
+### Agent Guidance
+- Chrome-on apps now produce full navigation by default. The `_safe_url` helper wraps `URL(...)` construction so the runtime's odd nav routes (synthetic surfaces, unparseable values) don't crash the render — they're skipped with no nav entry. NavGroup with zero valid children is also skipped (NavGroup invariant requires ≥1 item). For auth/error routes that want bare chrome, call `dispatch_render_page(chrome=False, ...)`.
+
 ## [0.66.53] - 2026-05-07
 
 ### Added

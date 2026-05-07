@@ -426,6 +426,46 @@ def test_fragment_chrome_theme_override_emits_data_theme_attr() -> None:
     assert '<html lang="en" data-theme="linear-dark">' in body
 
 
+def test_fragment_chrome_now_emits_full_app_shell_chrome() -> None:
+    """P12 closure: chrome dispatch now produces a full AppShell
+    with Sidebar + Topbar around the surface body (not bare Page).
+    The substrate is feature-complete enough that chrome=on apps get
+    real navigation chrome with no Jinja in the render path."""
+    client = _client_with_fragment_chrome("simple_task")
+    body = client.get("/task").text
+    # AppShell present
+    assert '<div class="dz-app-shell">' in body
+    assert '<div class="dz-app-content">' in body
+    # Sidebar nav (from PageContext.nav_items / nav_groups)
+    assert '<nav class="dz-sidebar"' in body
+    # Topbar (from PageContext.app_name)
+    assert '<div class="dz-topbar">' in body
+    # SkipLink auto-emit (a11y)
+    assert "dz-skip-link" in body
+    # Inner surface body still composes
+    assert "dz-surface" in body
+
+
+def test_fragment_chrome_topbar_carries_app_name() -> None:
+    """The Topbar's title text comes from `PageContext.app_name`."""
+    client = _client_with_fragment_chrome("simple_task")
+    body = client.get("/task").text
+    # simple_task's app_name is "Team Task Manager"
+    assert "Team Task Manager" in body
+
+
+def test_fragment_chrome_sidebar_active_state_keys_off_current_route() -> None:
+    """A NavItem whose href matches the current_route gets
+    aria-current="page" — the contract the legacy CSS keys off."""
+    client = _client_with_fragment_chrome("simple_task")
+    body = client.get("/task").text
+    # At least one active marker appears (the route we navigated to
+    # should match its own nav item)
+    assert 'aria-current="page"' in body, (
+        f"no nav item marked active; current_route propagation broken? body[:1000]={body[:1000]!r}"
+    )
+
+
 def test_fragment_chrome_default_off_htmx_still_uses_jinja_partial() -> None:
     """Backward compat: chrome flag off → htmx requests still go through
     `render_page(partial=True, ...)` exactly as before. Pinned because
