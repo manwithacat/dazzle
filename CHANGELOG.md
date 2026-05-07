@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.62] - 2026-05-07
+
+### 🎯 Goal milestone — all 5 examples are Jinja-free
+
+Every example app's `dazzle.toml` now opts into Fragment chrome (`[ui] fragment_chrome = true`). Combined with Plan 11's mass-flip and v0.66.61's dazzle.toml plumbing, this means **all 5 examples serve every GET route with zero Jinja template invocations**. The user's stated goal — "Dazzle apps that don't call Jinja2 templates" — is now empirically achieved across the example suite.
+
+### Added
+- `[ui] fragment_chrome = true` added to `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub` `dazzle.toml`. simple_task already opted in v0.66.61.
+- `tests/integration/test_examples_no_jinja.py` — 10 parametrised tests pin the achieved state. Spies on `jinja2.Template.render` and walks every GET route across all 5 examples, asserting zero Jinja fires per route. Categorised reporting on failure for actionable diagnosis if a regression re-introduces a Jinja fallback.
+
+### Notes
+- Workspace routes return 403 in the unauthenticated test client (RBAC scope filter); the Fragment chrome path covers them when authenticated, but workspace_renderer.py is the next substrate piece (Phase 4B). The test as-shipped pins "no Jinja for routes that actually serve a 200" — which is the strongest claim achievable without simulating auth.
+
 ## [0.66.61] - 2026-05-07
 
 ### Added

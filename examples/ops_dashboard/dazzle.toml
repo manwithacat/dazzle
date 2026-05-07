@@ -15,6 +15,8 @@ name = "dnr"
 # (cool slate ramp, cyan accent, dense, dark-first) for the operator
 # persona that lives in this dashboard.
 theme = "linear-dark"
+# P17 — typed Page/AppShell Fragment chrome (zero Jinja per request).
+fragment_chrome = true
 
 [auth]
 enabled = true
