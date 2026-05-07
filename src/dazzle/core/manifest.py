@@ -523,6 +523,13 @@ class ProjectManifest:
     # success, swipe, pull-to-refresh complete, confirm submit) on
     # mobile devices that support the Vibration API. Off by default so
     # adopters consciously opt in — uninvited vibration is jarring.
+    fragment_chrome: bool = False  # P17 — when True, full-document
+    # renders bypass Jinja base.html and use the typed Page/AppShell/
+    # Sidebar/Topbar Fragment substrate. Off by default so existing
+    # deployments are unchanged. Set `[ui] fragment_chrome = true` to
+    # opt in. Per Plan 17, when chrome is on AND surfaces are flipped
+    # via DSL `render: fragment` (Plan 11 covers all 60 example DSL
+    # surfaces), zero Jinja templates are invoked per request.
     environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
     extensions: ExtensionsConfig = field(default_factory=ExtensionsConfig)
     # v0.61.104 (#932): per-name `[storage.<name>]` blocks. Keyed by the
@@ -819,6 +826,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     app_theme_name = ui_data.get("theme") or ui_data.get("app_theme")
     dark_mode_toggle_enabled = bool(ui_data.get("dark_mode_toggle", True))
     haptic_enabled = bool(ui_data.get("haptic", False))
+    fragment_chrome_enabled = bool(ui_data.get("fragment_chrome", False))
     assets_mode = ui_data.get("assets", "auto")
     if assets_mode not in ("auto", "always", "never"):
         raise ValueError(f"[ui] assets must be 'auto', 'always', or 'never'; got {assets_mode!r}")
@@ -870,6 +878,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         app_theme=app_theme_name,
         dark_mode_toggle=dark_mode_toggle_enabled,
         haptic=haptic_enabled,
+        fragment_chrome=fragment_chrome_enabled,
         environments=environments,
         extensions=extensions_config,
         storage_defs=storage_defs,

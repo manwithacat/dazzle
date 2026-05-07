@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.61] - 2026-05-07
+
+### Added
+- **`[ui] fragment_chrome` config flag** — `dazzle.toml`-driven opt-in for the typed Page/AppShell Fragment chrome substrate. Plumbed through `ProjectManifest` → `DazzleBackendApp.build()` → `app.state.fragment_chrome`. Off by default; existing deployments unchanged.
+- **`simple_task` opted into Fragment chrome** via `[ui] fragment_chrome = true` in its `dazzle.toml`. With Plan 11's mass-flip of every DSL surface, simple_task now serves with **zero Jinja template invocations per request** — empirically validated by 4 new tests in `tests/integration/test_simple_task_no_jinja_when_chrome_on.py`.
+- The `test_simple_task_chrome_zero_jinja_across_every_route` test pins the Jinja-zero state across ALL response codes (200, 404, 403, 302) for every served GET route. Strongest single-test claim toward the "Jinja-free apps" goal.
+
+### Goal milestone
+- The framework's first example is now Jinja-free. To reach the goal for all 5 examples: each needs `[ui] fragment_chrome = true` plus its in-DSL surfaces flipped (Plan 11 covered DSL flipping; this commit demonstrates the dazzle.toml side). Workspace pages still use `workspace_renderer.py` (Phase 4 substrate work in progress); for examples WITHOUT workspaces (simple_task — workspaces present but RBAC-gated for unauth users), the chrome flag is sufficient.
+
 ## [0.66.60] - 2026-05-07
 
 ### Added
