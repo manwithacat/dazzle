@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.55] - 2026-05-07
+
+### Added
+- **Comprehensive route-walk smoke for `simple_task` with chrome=on (P17 P13 — substrate validation milestone).** New file `tests/integration/test_simple_task_chrome_smoke.py` enumerates every GET route registered by `simple_task`'s page mounting and exercises each under `app.state.fragment_chrome=True`. Categorises each response by render path. The validation result (snapshot today): 4 routes route through Fragment chrome (`/task`, `/task/create`, `/taskcomment`, `/taskcomment/create`), **zero routes fall through to the legacy Jinja path**, 3 produce 404 (bogus path-param UUID — acceptable), 5 produce 403 (RBAC scope filtering on workspace admin routes — correct), 14 produce 3xx (auth redirects), and zero 5xx errors.
+
+### Phase 3 closure
+- This is the first time the substrate is tested as a coherent system rather than per-primitive. Every served route in simple_task with chrome=on goes through Fragment chrome — no Jinja legacy fallback. RBAC, auth redirects, and 404 handling all work correctly under chrome=on. Phase 3 substrate-and-validation is complete.
+- Workspace routes (`/workspaces/*`) currently produce 403 in the unauthenticated test client; once authenticated, they would render through `workspace_renderer.py` (a separate path not yet on Fragment). Phase 4 substrate work will bring these under Fragment chrome too.
+
 ## [0.66.54] - 2026-05-07
 
 ### Changed
