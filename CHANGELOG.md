@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.60] - 2026-05-07
+
+### Added
+- **`WorkspaceRegionAdapter` — region-level Fragment dispatch (Phase 4A).** Parallel to `FragmentSurfaceAdapter` but for `WorkspaceRegion`. Dispatches on `region.display`: `""`/`"list"` → Region(kind=list) + Table; `"kanban"` → Region(kind=kanban) + KanbanBoard. Other display modes raise `NotImplementedError` with a pointer at the audit's aggregated_blockers report — silent fallback would re-introduce the under-reporting Plan 13 closed.
+- `kanban` removed from the audit's unsupported-display set. 7 surfaces unblocked across 4 example apps (4 in fieldtest_hub, 1 each in simple_task / support_tickets / ops_dashboard).
+- 10 unit tests pin region-adapter behaviour: dispatch, kanban grouping, unknown-key Other column, empty columns, empty-state fallback, end-to-end render with `dz-kanban` marker, list path.
+
+### Honest cross-app coverage state — Phase 4A progress
+
+| App | Total | Ready | Δ from v0.66.59 |
+|---|---|---|---|
+| simple_task | 37 | 34 | +1 |
+| contact_manager | 12 | 8 | 0 |
+| support_tickets | 36 | 28 | +1 |
+| ops_dashboard | 40 | 14 | +1 |
+| fieldtest_hub | 51 | 42 | +4 |
+| **Total** | **176** | **126** | **+7** (kanban closed) |
+
+### Agent Guidance
+- Phase 4A pattern for closing each display mode: (1) implement `WorkspaceRegionAdapter._build_<display>` returning the right Fragment primitive, (2) remove the display value from `_SUPPORTED_DISPLAYS` in `coverage.py` (or rather: ADD it to `_SUPPORTED_DISPLAYS` — currently `{"", "list", "kanban"}`), (3) add tests, (4) re-audit. Highest remaining counts: timeline (7), grid (6), diagram (5).
+
 ## [0.66.59] - 2026-05-07
 
 ### Added

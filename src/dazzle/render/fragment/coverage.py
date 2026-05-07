@@ -169,7 +169,7 @@ _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"file"})
 # modes — `kanban`, `timeline`, `bar_chart`, `pivot_table`, `metrics`,
 # `heatmap`, `funnel_chart` — require dedicated adapter dispatch
 # (Phase 4A scope) and are flagged until then.
-_SUPPORTED_DISPLAYS: frozenset[str] = frozenset({"", "list"})
+_SUPPORTED_DISPLAYS: frozenset[str] = frozenset({"", "list", "kanban"})
 
 
 def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:

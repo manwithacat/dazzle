@@ -302,17 +302,17 @@ def test_audit_flags_unsupported_display_mode() -> None:
     surface previously rendered as a Table silently — exactly the
     Plan-13-class silent under-reporting."""
     surface = SurfaceSpec(
-        name="task_board",
+        name="metrics_chart",
         mode=SurfaceMode.LIST,
-        display="kanban",
+        display="bar_chart",
     )
     appspec = _make_appspec([surface])
     report = audit_appspec(appspec)
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_display" and b.detail == "kanban" for b in blockers), (
-        f"Expected kanban blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
-    )
+    assert any(
+        b.kind.value == "unsupported_display" and b.detail == "bar_chart" for b in blockers
+    ), f"Expected bar_chart blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
 
 
 def test_audit_does_not_flag_empty_display() -> None:
@@ -346,10 +346,10 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
         WorkspaceSpec,
     )
 
-    region_kanban = WorkspaceRegion(
-        name="task_board",
-        source="Task",
-        display=DisplayMode.KANBAN,
+    region_bar = WorkspaceRegion(
+        name="metrics_chart",
+        source="Metric",
+        display=DisplayMode.BAR_CHART,
     )
     region_list = WorkspaceRegion(
         name="task_list",
@@ -359,7 +359,7 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     workspace = WorkspaceSpec(
         name="my_workspace",
         title="My Workspace",
-        regions=[region_kanban, region_list],
+        regions=[region_bar, region_list],
     )
     appspec = AppSpec(
         name="t",
@@ -370,15 +370,15 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     )
     report = audit_appspec(appspec)
     by_name = {s.name: s for s in report.surfaces}
-    assert "my_workspace.task_board" in by_name
+    assert "my_workspace.metrics_chart" in by_name
     assert "my_workspace.task_list" in by_name
-    # Kanban is unsupported; flagged
-    kanban_entry = by_name["my_workspace.task_board"]
-    assert not kanban_entry.is_ready
-    assert kanban_entry.mode == "REGION"
+    # bar_chart is unsupported; flagged
+    bar_entry = by_name["my_workspace.metrics_chart"]
+    assert not bar_entry.is_ready
+    assert bar_entry.mode == "REGION"
     assert any(
-        b.kind.value == "unsupported_display" and b.detail == "kanban"
-        for b in kanban_entry.blockers
+        b.kind.value == "unsupported_display" and b.detail == "bar_chart"
+        for b in bar_entry.blockers
     )
     # List is supported; ready
     list_entry = by_name["my_workspace.task_list"]
