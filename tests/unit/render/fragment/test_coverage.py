@@ -304,14 +304,14 @@ def test_audit_flags_unsupported_display_mode() -> None:
     surface = SurfaceSpec(
         name="metrics_chart",
         mode=SurfaceMode.LIST,
-        display="heatmap",
+        display="map",
     )
     appspec = _make_appspec([surface])
     report = audit_appspec(appspec)
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_display" and b.detail == "heatmap" for b in blockers), (
-        f"Expected heatmap blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
+    assert any(b.kind.value == "unsupported_display" and b.detail == "map" for b in blockers), (
+        f"Expected map blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
     )
 
 
@@ -349,7 +349,7 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     region_bar = WorkspaceRegion(
         name="metrics_chart",
         source="Metric",
-        display=DisplayMode.HEATMAP,
+        display=DisplayMode.MAP,
     )
     region_list = WorkspaceRegion(
         name="task_list",
@@ -372,12 +372,12 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     by_name = {s.name: s for s in report.surfaces}
     assert "my_workspace.metrics_chart" in by_name
     assert "my_workspace.task_list" in by_name
-    # heatmap is unsupported; flagged
+    # map is unsupported; flagged
     bar_entry = by_name["my_workspace.metrics_chart"]
     assert not bar_entry.is_ready
     assert bar_entry.mode == "REGION"
     assert any(
-        b.kind.value == "unsupported_display" and b.detail == "heatmap" for b in bar_entry.blockers
+        b.kind.value == "unsupported_display" and b.detail == "map" for b in bar_entry.blockers
     )
     # List is supported; ready
     list_entry = by_name["my_workspace.task_list"]

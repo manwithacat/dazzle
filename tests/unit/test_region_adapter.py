@@ -617,6 +617,93 @@ def test_detail_no_item_renders_empty_state() -> None:
 # ───────────────── Activity feed ──────────────────
 
 
+def test_heatmap_dispatches_through_pivot_table() -> None:
+    """`display: heatmap` reuses the PivotTable render — both are 2D
+    cell grids; richer per-cell intensity colouring is a future
+    enhancement."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "rows": ["mon", "tue"],
+        "columns": ["9am", "10am"],
+        "cells": {("mon", "9am"): 5, ("tue", "10am"): 3},
+    }
+    fragment = adapter.build(_FakeRegion("h", display="heatmap"), ctx)
+    html = _render(fragment)
+    assert "mon" in html and "tue" in html
+    assert "9am" in html and "10am" in html
+    assert "5" in html and "3" in html
+
+
+def test_confirm_action_panel_renders_card_with_prompt() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"prompt": "This will permanently delete 5 items.", "action_label": "Delete"}
+    fragment = adapter.build(
+        _FakeRegion("c", display="confirm_action_panel", title="Confirm Delete"), ctx
+    )
+    html = _render(fragment)
+    assert "Confirm Delete" in html
+    assert "permanently delete 5 items" in html
+    assert "[ Delete ]" in html
+
+
+def test_search_box_renders_search_field() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"placeholder": "Find tickets…"}
+    fragment = adapter.build(_FakeRegion("s", display="search_box"), ctx)
+    html = _render(fragment)
+    # Field rendered as text input with placeholder
+    assert "Search" in html
+    assert "Find tickets" in html or "placeholder" in html
+
+
+def test_bar_track_dispatches_through_progress() -> None:
+    """`bar_track` shares shape with progress; structurally identical
+    until a dedicated BarTrack primitive lands."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"items": [{"label": "CPU", "percent": 80}, {"label": "RAM", "percent": 40}]}
+    fragment = adapter.build(_FakeRegion("b", display="bar_track"), ctx)
+    html = _render(fragment)
+    assert "CPU" in html and "80%" in html
+    assert "RAM" in html and "40%" in html
+
+
+def test_bullet_renders_actual_vs_target_rows_with_severity() -> None:
+    """Each bullet row shows label, actual (severity-mapped Badge),
+    "/", target (default Badge). Variant maps from actual/target ratio:
+    >=1.0 success, <0.5 danger, else warning."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {"label": "Q1", "actual": 100, "target": 100},  # success
+            {"label": "Q2", "actual": 70, "target": 100},  # warning
+            {"label": "Q3", "actual": 30, "target": 100},  # danger
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("b", display="bullet"), ctx)
+    html = _render(fragment)
+    assert "Q1" in html and "Q2" in html and "Q3" in html
+    assert "dz-badge--variant-success" in html
+    assert "dz-badge--variant-warning" in html
+    assert "dz-badge--variant-danger" in html
+
+
+def test_bullet_handles_non_numeric_values_gracefully() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"items": [{"label": "X", "actual": "n/a", "target": "n/a"}]}
+    fragment = adapter.build(_FakeRegion("b", display="bullet"), ctx)
+    html = _render(fragment)
+    assert "n/a" in html  # rendered without crashing the variant calc
+
+
+def test_bullet_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("b", display="bullet", empty_message="No bullets."),
+        {"items": []},
+    )
+    assert "No bullets." in _render(fragment)
+
+
 def test_tree_renders_indented_labels_recursively() -> None:
     """`display: tree` flattens nested children into a Stack of Text
     rows, with each level of nesting prefixed by two spaces."""

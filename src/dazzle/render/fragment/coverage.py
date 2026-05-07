@@ -192,6 +192,11 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "tree",
         "pipeline_steps",
         "progress",
+        "heatmap",
+        "confirm_action_panel",
+        "search_box",
+        "bar_track",
+        "bullet",
     }
 )
 

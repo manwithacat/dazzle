@@ -136,6 +136,16 @@ class WorkspaceRegionAdapter:
             return self._build_pipeline_steps(region, ctx)
         if display_value == "progress":
             return self._build_progress(region, ctx)
+        if display_value == "heatmap":
+            return self._build_pivot_table(region, ctx)
+        if display_value == "confirm_action_panel":
+            return self._build_confirm_action_panel(region, ctx)
+        if display_value == "search_box":
+            return self._build_search_box(region, ctx)
+        if display_value == "bar_track":
+            return self._build_bar_track(region, ctx)
+        if display_value == "bullet":
+            return self._build_bullet(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -315,6 +325,139 @@ class WorkspaceRegionAdapter:
             )
         else:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="report", body=body),
+        )
+
+    def _build_confirm_action_panel(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: confirm_action_panel` renders a Card with the
+        action's title and a description prompt. Without a Button
+        primitive wired here, the actual confirm UI is deferred to
+        a later plan; this just closes the audit gap.
+
+        ctx shape:
+            title: optional override
+            prompt / description / message: prompt text
+            action_label: optional button text shown as plain Text below
+        """
+        heading = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        prompt = str(ctx.get("prompt") or ctx.get("description") or ctx.get("message") or "")
+        action_label = str(ctx.get("action_label") or "")
+
+        rows: list[object] = [Heading(heading or "(no title)", level=3)]
+        if prompt:
+            rows.append(Text(prompt))
+        if action_label:
+            rows.append(Text(f"[ {action_label} ]"))
+
+        body = Card(body=Stack(children=tuple(rows), gap="sm"))
+        return Surface(
+            header=Heading(heading or "Confirm", level=2),
+            body=Region(kind="dashboard", body=body),
+        )
+
+    def _build_search_box(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: search_box` renders a Card with a search Field.
+
+        ctx shape:
+            field_name: optional, defaults to 'q'
+            placeholder: optional
+            label: optional, defaults to "Search"
+        """
+        from dazzle.render.fragment import Field
+
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        field_name = str(ctx.get("field_name") or "q")
+        label = str(ctx.get("label") or "Search")
+        placeholder = str(ctx.get("placeholder") or "")
+
+        body = Card(
+            body=Field(
+                name=field_name,
+                label=label,
+                kind="text",
+                placeholder=placeholder,
+            )
+        )
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="form", body=body),
+        )
+
+    def _build_bar_track(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: bar_track` renders one labelled, filled progress
+        track per row — same shape as `progress`, structurally. Phase 4A
+        treats them as variants of each other; a richer rendering can
+        come once a dedicated BarTrack primitive ships.
+
+        ctx shape:
+            items: list of dicts {"label": str, "percent": int 0..100}
+                — values clamped to [0, 100]
+        """
+        return self._build_progress(region, ctx)
+
+    def _build_bullet(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: bullet` renders rows showing actual-vs-target.
+        Each row: label + actual Badge + "/ target" Text + target Badge.
+
+        ctx shape:
+            items: list of dicts {"label": str, "actual": int|str,
+                                  "target": int|str}
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        items = ctx.get("items") or []
+
+        rows: list[object] = []
+        if isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                label = str(item.get("label") or item.get("name") or "")
+                actual = item.get("actual", "—")
+                target = item.get("target", "—")
+                # Map "actual >= target" → success, "<half" → danger, else warning.
+                variant: str = "info"
+                try:
+                    a, t = float(actual), float(target)
+                    if t > 0:
+                        ratio = a / t
+                        if ratio >= 1.0:
+                            variant = "success"
+                        elif ratio < 0.5:
+                            variant = "danger"
+                        else:
+                            variant = "warning"
+                except (TypeError, ValueError):
+                    variant = "info"
+                rows.append(
+                    Row(
+                        children=(
+                            Text(label or "(no label)"),
+                            Badge(label=str(actual), variant=variant),  # type: ignore[arg-type]
+                            Text("/"),
+                            Badge(label=str(target), variant="default"),
+                        ),
+                        gap="sm",
+                        align="center",
+                    )
+                )
+
+        body: Fragment
+        if not rows:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None) or "No bullet rows.",
+            )
+        else:
+            body = Stack(children=tuple(rows), gap="sm")
 
         return Surface(
             header=Heading(title, level=2),

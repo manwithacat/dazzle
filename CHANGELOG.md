@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.70] - 2026-05-08
+
+### Added
+- **Heatmap, confirm_action_panel, search_box, bar_track, bullet display dispatch in `WorkspaceRegionAdapter`** — five more closures via composition, no new primitives. `display: heatmap` aliases to the PivotTable render path (both are 2D cell grids; intensity colouring deferred). `display: confirm_action_panel` is a Card with a Heading + prompt Text + bracketed action label. `display: search_box` is a Card containing a `Field(kind="text", label="Search")`. `display: bar_track` aliases the progress render. `display: bullet` shows actual-vs-target rows with a Badge whose variant is severity-mapped from the `actual / target` ratio (>=1.0 success, <0.5 danger, else warning).
+- `heatmap`, `confirm_action_panel`, `search_box`, `bar_track`, `bullet` added to `_SUPPORTED_DISPLAYS`.
+- 7 new unit tests covering the five modes (alias dispatch, prompt rendering, search field, bullet variant mapping, non-numeric handling, empty states).
+- Coverage canary rotated `heatmap → map` (heatmap is now supported).
+
+### Phase 4A progress
+
+| App | v0.66.69 (tree+...) | v0.66.70 (heatmap+confirm+search+bar_track+bullet) | Δ |
+|---|---|---|---|
+| simple_task | 36 | 36 | 0 |
+| contact_manager | 10 | 11 | +1 |
+| support_tickets | 35 | 35 | 0 |
+| ops_dashboard | 30 | 34 | +4 |
+| fieldtest_hub | 48 | 48 | 0 |
+| **Total** | **159/176** | **164/176** | **+5** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — biggest lift, deferred)
+- `map` × 1 (needs map widget primitive)
+- chart-family awaiting new primitives: `sparkline`, `radar`, `box_plot`, `line_chart`, `area_chart`
+
+### Agent Guidance
+- `Region.kind` is constrained to `('list', 'detail', 'form', 'dashboard', 'kanban', 'calendar', 'report', 'related')` — adding a `kind="search"` will throw at runtime, not at type-check time. Form is the closest fit for search-shaped regions.
+
 ## [0.66.69] - 2026-05-07
 
 ### Added
