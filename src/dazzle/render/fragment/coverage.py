@@ -181,6 +181,8 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "bar_chart",
         "pivot_table",
         "tabbed_list",
+        "activity_feed",
+        "detail",
     }
 )
 

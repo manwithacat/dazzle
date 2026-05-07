@@ -556,3 +556,76 @@ def test_tabbed_list_empty_renders_empty_state() -> None:
         {},
     )
     assert "No tabs." in _render(fragment)
+
+
+# ───────────────── Detail ─────────────────────────
+
+
+def test_detail_renders_explicit_field_list_in_declared_order() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"name": "Alice", "email": "a@b.com", "role": "admin"},
+        "fields": [
+            {"key": "name", "label": "Name"},
+            {"key": "email", "label": "Email"},
+            # role omitted — adapter should respect declared list
+        ],
+    }
+    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
+    html = _render(fragment)
+    assert "Name" in html and "Alice" in html
+    assert "Email" in html and "a@b.com" in html
+    assert "admin" not in html  # role wasn't in fields list
+
+
+def test_detail_falls_back_to_all_keys_when_no_fields() -> None:
+    """Without an explicit fields list, adapter shows every dict key
+    in declared order — useful for early-prototype DSL where the
+    field list isn't wired yet."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"item": {"name": "Bob", "city": "Paris"}}
+    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
+    html = _render(fragment)
+    assert "Bob" in html and "Paris" in html
+
+
+def test_detail_renders_em_dash_for_missing_values() -> None:
+    """Empty / None values render as em-dash placeholder so the layout
+    doesn't collapse on missing data."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"name": "Alice", "phone": None},
+        "fields": [{"key": "name"}, {"key": "phone"}],
+    }
+    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
+    html = _render(fragment)
+    assert "Alice" in html
+    assert "—" in html
+
+
+def test_detail_no_item_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("d", display="detail", empty_message="No item."),
+        {"item": None},
+    )
+    assert "No item." in _render(fragment)
+
+
+# ───────────────── Activity feed ──────────────────
+
+
+def test_activity_feed_dispatches_through_timeline() -> None:
+    """`display: activity_feed` reuses the Timeline renderer — feeds
+    are timelines spelt differently in DSL."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {"title": "Logged in", "created_at": "2026-05-07T09:00:00"},
+            {"title": "Saved record", "created_at": "2026-05-07T09:01:00"},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("feed", display="activity_feed"), ctx)
+    html = _render(fragment)
+    assert "Logged in" in html
+    assert "Saved record" in html

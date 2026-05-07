@@ -28,6 +28,7 @@ from dazzle.render.fragment import (
     KanbanBoard,
     PivotTable,
     Region,
+    Stack,
     Surface,
     Tabs,
     Text,
@@ -111,6 +112,10 @@ class WorkspaceRegionAdapter:
             return self._build_pivot_table(region, ctx)
         if display_value == "tabbed_list":
             return self._build_tabbed_list(region, ctx)
+        if display_value == "activity_feed":
+            return self._build_timeline(region, ctx)
+        if display_value == "detail":
+            return self._build_detail(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -294,6 +299,56 @@ class WorkspaceRegionAdapter:
         return Surface(
             header=Heading(title, level=2),
             body=Region(kind="report", body=body),
+        )
+
+    def _build_detail(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: detail` regions render a single item's fields as a
+        labelled Card. One Stack child per (label, value) pair.
+
+        ctx shape:
+            item: dict (single record)
+            fields: list of {"key": str, "label": str (optional)} pairs
+                — declared field order from the region's `fields:` clause
+            (legacy) `columns` is accepted as alias for `fields`
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        item = ctx.get("item")
+        fields = ctx.get("fields") or ctx.get("columns") or []
+
+        body: Fragment
+        if not isinstance(item, dict) or not item:
+            body = EmptyState(
+                title="No item",
+                description=getattr(region, "empty_message", None) or "No item to display.",
+            )
+        elif not fields:
+            # Without an explicit field list, fall back to all keys
+            # in declared dict order — preserves DSL author's choice
+            # when ctx omits the fields list (e.g. early prototypes).
+            fields = [{"key": k} for k in item.keys()]
+
+        if isinstance(item, dict) and item and fields:
+            rows: list[object] = []
+            for f in fields:
+                if not isinstance(f, dict):
+                    continue
+                key = str(f.get("key") or "")
+                if not key:
+                    continue
+                label = str(f.get("label") or key.replace("_", " ").title())
+                value = item.get(key, "")
+                rows.append(Heading(label, level=4))
+                rows.append(Text(str(value) if value not in (None, "") else "—"))
+            if rows:
+                body = Card(body=Stack(children=tuple(rows), gap="sm"))
+            else:
+                body = EmptyState(title="No fields", description="")
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="dashboard", body=body),
         )
 
     def _build_tabbed_list(self, region: Any, ctx: dict[str, Any]) -> Surface:

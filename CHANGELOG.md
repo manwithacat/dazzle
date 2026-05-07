@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.66] - 2026-05-07
+
+### Added
+- **Detail and activity_feed display dispatch in `WorkspaceRegionAdapter`** — closes two more Phase 4A blockers via composition (no new primitives). `display: detail` renders a single item as a `Card` containing a `Stack` of `Heading`/`Text` rows per declared field; missing or empty values render as em-dash so layout doesn't collapse. Without an explicit `fields:` list the adapter falls back to all dict keys in declared order. `display: activity_feed` reuses the existing Timeline path — feeds are timelines spelt differently in DSL.
+- `activity_feed` and `detail` added to `_SUPPORTED_DISPLAYS`.
+- 5 new unit tests (explicit-field-list ordering, all-keys fallback, em-dash for empty values, no-item empty state, activity_feed → Timeline dispatch).
+
+### Phase 4A progress
+
+| App | v0.66.65 (pivot+tabbed) | v0.66.66 (detail+activity_feed) | Δ |
+|---|---|---|---|
+| simple_task | 36 | 36 | 0 |
+| contact_manager | 9 | 10 | +1 |
+| support_tickets | 32 | 33 | +1 |
+| ops_dashboard | 23 | 23 | 0 |
+| fieldtest_hub | 47 | 47 | 0 |
+| **Total** | **147/176** | **149/176** | **+2** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — biggest lift, deferred)
+- `funnel_chart`, `heatmap`, `progress`, `search_box`, `map`, `tree` × 1 each
+- ops_dashboard chart-family (sparkline, radar, box_plot, bullet, line_chart, area_chart, histogram, queue, bar_track, profile_card, pipeline_steps, action_grid, status_list × 2, confirm_action_panel)
+
+### Agent Guidance
+- The `_build_detail` adapter is a composition (`Card` + `Stack` + `Heading`/`Text` rows) — no `Detail` primitive exists. If you find yourself writing per-field render logic, prefer extending this adapter rather than adding a new primitive: detail views are inherently a (label, value) sequence, which `Stack` already models.
+- `activity_feed` is a pure rename of `timeline` from the adapter's perspective. Future activity-specific affordances (e.g. avatars, action verbs) belong in a new primitive, not a new adapter branch.
+
 ## [0.66.65] - 2026-05-07
 
 ### Added
