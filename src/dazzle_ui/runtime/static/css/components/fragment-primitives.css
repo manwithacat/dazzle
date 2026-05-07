@@ -70,6 +70,82 @@
     border-block-start: 1px solid var(--colour-border);
   }
 
+  /* ───────────────────────── Sidebar / Nav ───────────────────
+   * Navigation primitives — Sidebar, NavGroup, NavItem.
+   * Mirrors the legacy template's nav-link conventions; in particular
+   * `[aria-current="page"]` styling so active state has one source of
+   * truth between the visual and accessibility layers.
+   */
+
+  .dz-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    height: 100%;
+    background: var(--colour-surface);
+    border-inline-end: 1px solid var(--colour-border);
+  }
+
+  .dz-sidebar__header {
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--colour-border);
+  }
+
+  .dz-sidebar__items,
+  .dz-nav-group__items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs, 2px);
+  }
+
+  .dz-nav-item {
+    display: block;
+  }
+
+  .dz-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--colour-text);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+
+  .dz-nav-link:hover {
+    background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
+  }
+
+  .dz-nav-link[aria-current="page"] {
+    /* Active state — visible distinction without overriding the
+       hover treatment. */
+    background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08));
+    font-weight: var(--weight-medium);
+  }
+
+  .dz-nav-group {
+    /* `<details>` element — no list-style on summary in modern browsers. */
+  }
+
+  .dz-nav-group__header {
+    cursor: pointer;
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--colour-text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    list-style: none;  /* hide the default <details> marker */
+  }
+
+  .dz-nav-group__header::-webkit-details-marker {
+    display: none;
+  }
+
   /* ───────────────────────── Surface ─────────────────────────
    * Top-level rendered surface — the typed Fragment equivalent of
    * a workspace's main page or a list/detail page wrapper.

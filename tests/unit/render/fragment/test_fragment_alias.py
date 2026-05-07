@@ -18,6 +18,9 @@ def test_fragment_alias_includes_all_primitives() -> None:
         # containers
         "Page",
         "AppShell",
+        "Sidebar",
+        "NavGroup",
+        "NavItem",
         "Surface",
         "Card",
         "Region",

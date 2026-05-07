@@ -31,11 +31,14 @@ from dazzle.render.fragment.primitives import (
     KanbanBoard,
     Link,
     Modal,
+    NavGroup,
+    NavItem,
     Page,
     PivotTable,
     RefPicker,
     Region,
     Row,
+    Sidebar,
     Skeleton,
     Split,
     Stack,
@@ -135,4 +138,8 @@ __all__ = [
     "Combobox",
     "RefPicker",
     "Submit",
+    # primitives — navigation
+    "Sidebar",
+    "NavGroup",
+    "NavItem",
 ]

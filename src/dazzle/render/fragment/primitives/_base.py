@@ -41,6 +41,7 @@ from dazzle.render.fragment.primitives.interactive import (
     Link,
 )
 from dazzle.render.fragment.primitives.layout import Grid, Row, Split, Stack
+from dazzle.render.fragment.primitives.navigation import NavGroup, NavItem, Sidebar
 
 Fragment = (
     # Layout
@@ -58,6 +59,10 @@ Fragment = (
     | Drawer
     | Modal
     | Tabs
+    # Navigation
+    | Sidebar
+    | NavGroup
+    | NavItem
     # Content
     | Text
     | Heading

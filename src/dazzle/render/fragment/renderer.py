@@ -34,11 +34,14 @@ from dazzle.render.fragment.primitives import (
     KanbanBoard,
     Link,
     Modal,
+    NavGroup,
+    NavItem,
     Page,
     PivotTable,
     RefPicker,
     Region,
     Row,
+    Sidebar,
     Skeleton,
     Split,
     Stack,
@@ -104,6 +107,13 @@ class FragmentRenderer:
                 return self._emit_modal(fragment, ctx)
             case Tabs():
                 return self._emit_tabs(fragment, ctx)
+            # Navigation
+            case Sidebar():
+                return self._emit_sidebar(fragment, ctx)
+            case NavGroup():
+                return self._emit_nav_group(fragment, ctx)
+            case NavItem():
+                return self._emit_nav_item(fragment, ctx)
             # Content
             case Icon():
                 return self._emit_icon(fragment, ctx)
@@ -299,6 +309,66 @@ class FragmentRenderer:
             )
         parts.append("</div>")
         parts.append("</div>")
+        return "".join(parts)
+
+    def _emit_nav_item(self, n: NavItem, ctx: RenderContext) -> str:
+        """`<li>` wrapping an `<a>` with `aria-current="page"` when active.
+        Mirrors the legacy template's nav-link convention so existing
+        `[aria-current="page"]` CSS keys off the same attribute."""
+        href = ctx.escape_attr(n.href.value)
+        label = ctx.escape(n.label)
+        current_attr = ' aria-current="page"' if n.active else ""
+        icon_html = ""
+        if n.icon:
+            icon_html = (
+                f'<span class="dz-nav-link__icon" '
+                f'data-dz-icon="{ctx.escape_attr(n.icon)}" '
+                f'aria-hidden="true"></span>'
+            )
+        return (
+            f'<li class="dz-nav-item">'
+            f'<a class="dz-nav-link" href="{href}"{current_attr}>'
+            f"{icon_html}"
+            f'<span class="dz-nav-link__label">{label}</span>'
+            f"</a></li>"
+        )
+
+    def _emit_nav_group(self, g: NavGroup, ctx: RenderContext) -> str:
+        """Native `<details>` so collapsed/expanded works without JS."""
+        label = ctx.escape(g.label)
+        open_attr = "" if g.collapsed else " open"
+        icon_html = ""
+        if g.icon:
+            icon_html = (
+                f'<span class="dz-nav-group__icon" '
+                f'data-dz-icon="{ctx.escape_attr(g.icon)}" '
+                f'aria-hidden="true"></span>'
+            )
+        items_html = "".join(self._emit_nav_item(item, ctx) for item in g.items)
+        return (
+            f'<details class="dz-nav-group"{open_attr}>'
+            f'<summary class="dz-nav-group__header">'
+            f"{icon_html}"
+            f'<span class="dz-nav-group__label">{label}</span>'
+            f"</summary>"
+            f'<ul class="dz-nav-group__items">{items_html}</ul>'
+            f"</details>"
+        )
+
+    def _emit_sidebar(self, s: Sidebar, ctx: RenderContext) -> str:
+        """`<nav class="dz-sidebar">` — header (free Fragment slot) +
+        flat items (`<ul>`) + groups (`<details>` blocks)."""
+        parts: list[str] = ['<nav class="dz-sidebar" aria-label="Primary">']
+        if s.header is not None:
+            parts.append(
+                f'<div class="dz-sidebar__header">{self._emit(s.header, ctx)}</div>'  # type: ignore[arg-type]
+            )
+        if s.items:
+            items_html = "".join(self._emit_nav_item(item, ctx) for item in s.items)
+            parts.append(f'<ul class="dz-sidebar__items">{items_html}</ul>')
+        for group in s.groups:
+            parts.append(self._emit_nav_group(group, ctx))
+        parts.append("</nav>")
         return "".join(parts)
 
     def _emit_surface(self, s: Surface, ctx: RenderContext) -> str:

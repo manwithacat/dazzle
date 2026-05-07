@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.48] - 2026-05-07
+
+### Added
+- **Navigation primitives — `NavItem`, `NavGroup`, `Sidebar` (P17 Phase 6).** Typed structure for application navigation. `NavItem(label, href, active, icon)` is the leaf — renders as `<li><a aria-current="page">` so the active-state CSS contract from the legacy template applies unchanged. `NavGroup(label, items, icon, collapsed)` is a collapsible section, rendered as native `<details>`/`<summary>` so open/closed state works without JavaScript. `Sidebar(items, groups, header)` is the full nav column, slotting cleanly into `AppShell.sidebar`.
+- 19 unit tests pin construction invariants, escaping, ordering (flat items before groups), and end-to-end Page → AppShell → Sidebar composition.
+- CSS hooks for `.dz-sidebar`, `.dz-sidebar__header`, `.dz-sidebar__items`, `.dz-nav-item`, `.dz-nav-link`, `.dz-nav-group`, `.dz-nav-group__header`, `.dz-nav-group__items`. Active-state styling keys off `[aria-current="page"]` — same source of truth as the legacy template.
+
+### Agent Guidance
+- Page chrome composition pattern is now: `Page(title=..., body=AppShell(sidebar=Sidebar(...), header=..., body=Surface(...)))`. Apps with `app.state.fragment_chrome=True` can build a full Fragment-rendered shell with no Jinja in the inner content path. The Topbar primitive (with theme switcher + user menu) and asset URL resolution are the next two pieces; both planned, neither shipped yet.
+
 ## [0.66.47] - 2026-05-07
 
 ### Added

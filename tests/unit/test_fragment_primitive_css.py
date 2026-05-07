@@ -59,6 +59,15 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-app-header",
     "dz-app-main",
     "dz-app-footer",
+    # P17 P6 — Sidebar / NavGroup / NavItem
+    "dz-sidebar",
+    "dz-sidebar__header",
+    "dz-sidebar__items",
+    "dz-nav-item",
+    "dz-nav-link",
+    "dz-nav-group",
+    "dz-nav-group__header",
+    "dz-nav-group__items",
 )
 
 

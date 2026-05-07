@@ -31,12 +31,15 @@ from dazzle.render.fragment import (
     KanbanBoard,
     Link,
     Modal,
+    NavGroup,
+    NavItem,
     Page,
     PivotTable,
     RawHTML,
     RefPicker,
     Region,
     Row,
+    Sidebar,
     Skeleton,
     Slot,
     Split,
@@ -73,6 +76,12 @@ def _sample_for(primitive_type: type) -> object:
         return Page(title="X", body=Text("x"))
     if primitive_type is AppShell:
         return AppShell(body=Text("body"))
+    if primitive_type is NavItem:
+        return NavItem(label="Home", href=URL("/"))
+    if primitive_type is NavGroup:
+        return NavGroup(label="Group", items=(NavItem(label="A", href=URL("/a")),))
+    if primitive_type is Sidebar:
+        return Sidebar()
     if primitive_type is Card:
         return Card(body=Text("body"))
     if primitive_type is Region:
