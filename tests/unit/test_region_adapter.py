@@ -617,6 +617,61 @@ def test_detail_no_item_renders_empty_state() -> None:
 # ───────────────── Activity feed ──────────────────
 
 
+def test_status_list_renders_label_badge_rows() -> None:
+    """`display: status_list` renders a Stack of (Text, Badge) rows
+    with optional severity colouring via status_variants."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {"name": "Service A", "status": "healthy"},
+            {"name": "Service B", "status": "failed"},
+        ],
+        "status_variants": {"healthy": "success", "failed": "danger"},
+    }
+    fragment = adapter.build(_FakeRegion("s", display="status_list"), ctx)
+    html = _render(fragment)
+    assert "Service A" in html and "Service B" in html
+    assert "healthy" in html and "failed" in html
+    # Badge variants should be reflected in CSS class
+    assert "dz-badge--variant-success" in html
+    assert "dz-badge--variant-danger" in html
+
+
+def test_status_list_drops_invalid_variant() -> None:
+    """A status_variants entry with an unknown badge variant falls
+    back to 'default' instead of crashing the Badge primitive."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"name": "X", "status": "unknown"}],
+        "status_variants": {"unknown": "purple"},  # not a real variant
+    }
+    fragment = adapter.build(_FakeRegion("s", display="status_list"), ctx)
+    html = _render(fragment)
+    assert "dz-badge" in html  # rendered with fallback variant
+
+
+def test_status_list_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("s", display="status_list", empty_message="All clear."),
+        {"items": []},
+    )
+    assert "All clear." in _render(fragment)
+
+
+def test_profile_card_dispatches_through_detail() -> None:
+    """`display: profile_card` reuses the detail render — profile
+    cards are single-item field views with the same shape."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"name": "Alice", "role": "admin"},
+        "fields": [{"key": "name", "label": "Name"}, {"key": "role", "label": "Role"}],
+    }
+    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
+    html = _render(fragment)
+    assert "Alice" in html and "admin" in html
+
+
 def test_funnel_chart_sorts_buckets_descending() -> None:
     """A funnel chart is just a BarChart with stages sorted by count
     descending — biggest first, narrow at the bottom."""

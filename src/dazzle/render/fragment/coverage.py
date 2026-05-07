@@ -186,6 +186,8 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "queue",
         "histogram",
         "funnel_chart",
+        "status_list",
+        "profile_card",
     }
 )
 

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.68] - 2026-05-07
+
+### Added
+- **Status list and profile card display dispatch in `WorkspaceRegionAdapter`** — both via composition. `display: status_list` renders a `Stack` of `Row(Text, Badge)` rows with optional severity colouring via a `status_variants` map (`{"failed": "danger"}`); auto-detects label and status fields if not explicit. `display: profile_card` is a pure alias for the detail render path — profile cards are single-item field views with the same shape.
+- `status_list` and `profile_card` added to `_SUPPORTED_DISPLAYS`.
+- 4 new unit tests (badge variants render, invalid variant fallback, empty state, profile_card → detail dispatch).
+
+### Phase 4A progress
+
+| App | v0.66.67 (funnel+queue+histogram) | v0.66.68 (status_list+profile_card) | Δ |
+|---|---|---|---|
+| simple_task | 36 | 36 | 0 |
+| contact_manager | 10 | 10 | 0 |
+| support_tickets | 34 | 34 | 0 |
+| ops_dashboard | 25 | 28 | +3 |
+| fieldtest_hub | 47 | 47 | 0 |
+| **Total** | **152/176** | **155/176** | **+3** |
+
+### Highest remaining display blockers
+- `diagram` × 5 (no Diagram primitive — biggest lift, deferred)
+- `heatmap`, `progress`, `search_box`, `map`, `tree` × 1 each
+- ops_dashboard chart-family awaiting new primitives (sparkline, radar, box_plot, bullet, line_chart, area_chart, action_grid, pipeline_steps, bar_track, confirm_action_panel)
+
+### Agent Guidance
+- Badge variant CSS class is `dz-badge--variant-<name>` (not `dz-badge--<name>`) — pin tests against the actual rendered class to avoid false-passing assertions.
+- The `_build_status_list` adapter falls back to `default` variant when an unknown variant value is supplied, instead of crashing the Badge primitive's whitelist. This is defensive: DSL authors may type `purple` and expect the framework to cope.
+
 ## [0.66.67] - 2026-05-07
 
 ### Added

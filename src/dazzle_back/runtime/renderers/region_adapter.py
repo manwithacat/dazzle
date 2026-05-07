@@ -19,6 +19,7 @@ from typing import Any
 
 from dazzle.render.fragment import (
     KPI,
+    Badge,
     BarChart,
     Card,
     EmptyState,
@@ -28,6 +29,7 @@ from dazzle.render.fragment import (
     KanbanBoard,
     PivotTable,
     Region,
+    Row,
     Stack,
     Surface,
     Tabs,
@@ -122,6 +124,10 @@ class WorkspaceRegionAdapter:
             return self._build_bar_chart(region, ctx)
         if display_value == "funnel_chart":
             return self._build_funnel_chart(region, ctx)
+        if display_value == "status_list":
+            return self._build_status_list(region, ctx)
+        if display_value == "profile_card":
+            return self._build_detail(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -305,6 +311,81 @@ class WorkspaceRegionAdapter:
         return Surface(
             header=Heading(title, level=2),
             body=Region(kind="report", body=body),
+        )
+
+    def _build_status_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: status_list` regions render as a Stack of rows
+        where each row shows a label and a status Badge.
+
+        ctx shape:
+            items: list of dicts (rows from the source entity)
+            label_field: optional, defaults to title/name/id auto-pick
+            status_field: which field carries the status value
+                (defaults to 'status' / 'state' / 'stage')
+            status_variants: optional dict[status_value → Badge.variant]
+                for severity colouring (e.g. {"failed": "danger"})
+        """
+        title = (
+            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
+        )
+        items: list[dict[str, Any]] = ctx.get("items", []) or []
+        label_field = str(ctx.get("label_field") or "")
+        status_field = str(ctx.get("status_field") or "")
+        variants = ctx.get("status_variants") or {}
+        if not isinstance(variants, dict):
+            variants = {}
+
+        body: Fragment
+        if not items:
+            body = EmptyState(
+                title="No items",
+                description=getattr(region, "empty_message", None) or "No data in this region.",
+            )
+        else:
+            rows: list[object] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                label = ""
+                if label_field and label_field in item:
+                    label = str(item.get(label_field) or "")
+                else:
+                    for cand in ("title", "name", "id"):
+                        if cand in item:
+                            label = str(item.get(cand) or "")
+                            break
+                status_val = ""
+                if status_field and status_field in item:
+                    status_val = str(item.get(status_field) or "")
+                else:
+                    for cand in ("status", "state", "stage"):
+                        if cand in item:
+                            status_val = str(item.get(cand) or "")
+                            break
+                variant_raw = str(variants.get(status_val) or "default")
+                variant = (
+                    variant_raw
+                    if variant_raw in ("default", "info", "success", "warning", "danger")
+                    else "default"
+                )
+                rows.append(
+                    Row(
+                        children=(
+                            Text(label or "(no label)"),
+                            Badge(label=status_val or "—", variant=variant),  # type: ignore[arg-type]
+                        ),
+                        gap="md",
+                        align="center",
+                    )
+                )
+            if rows:
+                body = Stack(children=tuple(rows), gap="sm")
+            else:
+                body = EmptyState(title="No items", description="No items had a label.")
+
+        return Surface(
+            header=Heading(title, level=2),
+            body=Region(kind="list", body=body),
         )
 
     def _build_funnel_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
