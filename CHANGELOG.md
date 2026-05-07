@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.57] - 2026-05-07
+
+### Fixed
+- **CI: 4 more `unused-ignore` mypy errors** in `richtext_field.py:17`, `richtext_processor.py:58+117`, `model_generator.py:24`, `compliance/renderer.py:14`. Same `markdown`/`bleach`/`dateutil` stub-flicker pattern as v0.66.56. mypy stops at first error so they were invisible until v0.66.56's first fix exposed them. All `[import-untyped]` ignores in the codebase now widened to `[import-untyped,unused-ignore]` so the pattern can't reappear.
+- **CI: pre-existing UX contract failures for AuditEntry/JobRun create actions.** `contracts.py::generate_contracts` was emitting RBAC create-contracts for entities where the framework grants CREATE permission at the IR level (auto-injected platform entities like AuditEntry and JobRun, where the worker writes through the standard service layer) but no user-facing CREATE surface exists. The contract checker scrapes rendered HTML for `<a href="*create*">` — there's nothing to find. Now: builds an `entity_modes` map from triples and skips CREATE/UPDATE contracts when no corresponding surface mode exists. LIST/DELETE contracts still emitted unconditionally (LIST surfaces auto-injected; DELETE is an action on list/edit pages, not its own mode). Closes 8 contract failures that pre-dated v0.66.56's Plan 11 fix.
+
 ## [0.66.56] - 2026-05-07
 
 ### Fixed

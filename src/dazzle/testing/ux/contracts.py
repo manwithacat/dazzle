@@ -243,6 +243,23 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
     seen_detail: set[str] = set()
     seen_rbac_entities: set[str] = set()
 
+    # Build a map of entity → modes-that-have-a-surface so the RBAC
+    # loop below can skip CREATE/UPDATE contracts for entities that
+    # have permission for that operation but no UI surface for it.
+    # Framework-injected entities (AuditEntry, JobRun) grant CREATE
+    # at the IR level (the worker writes through the standard service
+    # layer) but have no user-facing CREATE surface — without this
+    # guard, the contract checker fails with "Expected create action
+    # for AuditEntry to be present" on every CI run.
+    entity_modes: dict[str, set[str]] = {}
+    for triple in appspec.triples:
+        mode_str = (
+            str(triple.surface_mode.value)
+            if hasattr(triple.surface_mode, "value")
+            else str(triple.surface_mode)
+        )
+        entity_modes.setdefault(triple.entity, set()).add(mode_str)
+
     for triple in appspec.triples:
         entity_name = triple.entity
         surface_name = triple.surface
@@ -325,9 +342,23 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
                 )
             )
 
-        # RBACContract — one per entity × persona × operation (emitted once per entity)
+        # RBACContract — one per entity × persona × operation (emitted once per entity).
+        # Guard on whether a surface exists for the operation: the
+        # contract checker scrapes rendered HTML for action elements
+        # (Create link, Edit link, etc.); if no surface exists for
+        # the operation there's no element to find, regardless of RBAC.
+        # See entity_modes build comment above.
+        operation_to_mode = {
+            PermissionKind.CREATE: "create",
+            PermissionKind.UPDATE: "edit",
+            # LIST and DELETE have no 1:1 mode mapping — LIST surfaces
+            # may be auto-injected, and DELETE is an action attached
+            # to list/edit pages rather than its own surface mode.
+            # Keep emitting their contracts unconditionally.
+        }
         if entity_name not in seen_rbac_entities:
             seen_rbac_entities.add(entity_name)
+            available_modes = entity_modes.get(entity_name, set())
             all_persona_ids = [p.id for p in appspec.personas]
             for operation in (
                 PermissionKind.LIST,
@@ -335,6 +366,9 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
                 PermissionKind.UPDATE,
                 PermissionKind.DELETE,
             ):
+                required_mode = operation_to_mode.get(operation)
+                if required_mode and required_mode not in available_modes:
+                    continue  # no surface for this operation; skip
                 permitted = set(
                     get_permitted_personas(
                         appspec.domain.entities, appspec.personas, entity_name, operation

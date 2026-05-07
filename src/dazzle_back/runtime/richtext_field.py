@@ -14,7 +14,7 @@ string, return a sanitised string, raise `ValueError` if too long.
 
 from __future__ import annotations
 
-import bleach  # type: ignore[import-untyped]
+import bleach  # type: ignore[import-untyped,unused-ignore]
 
 from dazzle.core.ir.richtext import (
     RICH_TEXT_ALLOWED_ATTRS,

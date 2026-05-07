@@ -21,7 +21,7 @@ from dazzle_back.specs.entity import (
 
 # Try to import relativedelta for months/years arithmetic
 try:
-    from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
+    from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped,unused-ignore]
 
     HAS_DATEUTIL = True
 except ImportError:

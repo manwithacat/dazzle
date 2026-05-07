@@ -55,7 +55,7 @@ class MarkdownProcessor:
     def is_available() -> bool:
         """Check if markdown processing is available."""
         try:
-            import markdown  # type: ignore[import-untyped]  # noqa: F401
+            import markdown  # type: ignore[import-untyped,unused-ignore]  # noqa: F401
 
             return True
         except ImportError:
@@ -114,7 +114,7 @@ class MarkdownProcessor:
             Sanitized HTML
         """
         try:
-            import bleach  # type: ignore[import-untyped]
+            import bleach  # type: ignore[import-untyped,unused-ignore]
         except ImportError:
             # Fallback: basic tag stripping
             return self._basic_sanitize(html)

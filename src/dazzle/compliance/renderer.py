@@ -11,7 +11,7 @@ from typing import Any
 import yaml
 
 try:
-    import markdown  # type: ignore[import-untyped]
+    import markdown  # type: ignore[import-untyped,unused-ignore]
     import weasyprint
     from jinja2 import Template
 
