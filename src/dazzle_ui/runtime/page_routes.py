@@ -1281,21 +1281,27 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # exception: the browser needs a full document for cache misses.
     is_partial = htmx.is_htmx and not htmx.is_history_restore
 
-    # Plan 17 P3: opt-in Fragment chrome for full-document renders.
-    # When `app.state.fragment_chrome` is truthy AND we're rendering
-    # a complete document (not a partial), bypass the Jinja base.html
-    # and use the typed Page primitive instead. The chrome flag is
-    # set by app authors via `dazzle.toml` or directly on app.state;
-    # default off so existing deployments are unchanged. Partial /
-    # drawer / fragment paths stay on Jinja — Page is full-document
-    # only by design.
-    use_fragment_chrome = bool(
+    # Plan 17 P3+P8: Fragment chrome handles BOTH full-document AND
+    # htmx partial renders for chrome-on apps with a flipped surface.
+    #
+    # - Full document: wrap inner_html in a typed Page primitive
+    #   (DOCTYPE/<html>/<head>/<body>) — bypasses Jinja base.html.
+    # - htmx partial: return inner_html directly. The client extracts
+    #   <body> content anyway, so for an already-rendered Fragment
+    #   surface body, that's exactly what to send. Skipping Jinja
+    #   here means a chrome-on app's htmx flows have NO Jinja in the
+    #   render path at all.
+    #
+    # Default off — existing deployments are unchanged. wants_fragment
+    # and wants_drawer paths above already short-circuit to inner_html
+    # via `render_page(content_only=True, inner_html=...)` (line 720
+    # in template_renderer.py), so they need no chrome-flag branching.
+    chrome_flag = bool(
         getattr(getattr(prc.request, "app", None), "state", None)
         and getattr(prc.request.app.state, "fragment_chrome", False)
-        and not is_partial
-        and inner_html is not None
     )
-    if use_fragment_chrome:
+    use_fragment_chrome = chrome_flag and inner_html is not None
+    if use_fragment_chrome and not is_partial:
         from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
 
         html = dispatch_render_page(
@@ -1304,6 +1310,10 @@ def _render_response(prc: _PageRequestContext) -> Response:
             css_links=("/static/dist/dazzle.min.css",),
             js_scripts=("/static/dist/dazzle.min.js",),
         )
+    elif use_fragment_chrome and is_partial:
+        # Body-only response for htmx — inner_html is the
+        # already-rendered Fragment surface body, ready for swap.
+        html = inner_html or ""
     else:
         html = render_page(render_ctx, partial=is_partial, inner_html=inner_html)
     response_headers: dict[str, str] = {}

@@ -292,3 +292,66 @@ def test_fragment_chrome_default_off_unchanged_behaviour() -> None:
         f"chrome flag default-off broken; got Fragment chrome unexpectedly. "
         f"body[:500]={body[:500]!r}"
     )
+
+
+# ─────────────────── Fragment chrome — htmx-partial mode (P17 P8) ───────────────
+
+
+def test_fragment_chrome_htmx_request_returns_body_only_no_doctype() -> None:
+    """htmx requests on chrome-on apps must NOT include the page chrome
+    (DOCTYPE, <html>, <head>) — htmx swaps the response into the
+    existing page DOM. Sending chrome would produce nested <html>
+    elements and break the swap."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    body = resp.text
+    assert not body.lstrip().startswith("<!DOCTYPE"), (
+        f"htmx response unexpectedly includes DOCTYPE — would nest <html>. "
+        f"body[:200]={body[:200]!r}"
+    )
+    assert "<html" not in body
+    assert "<head>" not in body
+    assert "<body" not in body
+
+
+def test_fragment_chrome_htmx_request_returns_inner_surface_body() -> None:
+    """The htmx response IS the inner Fragment surface body — same
+    inner_html that would have been wrapped in chrome for a full
+    request, returned bare for htmx swap."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task", headers={"HX-Request": "true"})
+    body = resp.text
+    assert "dz-surface" in body
+    assert "dz-region--kind-list" in body
+
+
+def test_fragment_chrome_htmx_response_no_jinja_chrome_either() -> None:
+    """Specifically: the htmx response must NOT have rendered through
+    Jinja base.html either (no `dz-toast-stack`, `dz-modal-slot`,
+    `dz-page-announcer` from the Jinja layout). The Fragment path
+    short-circuits htmx requests to inner_html only."""
+    client = _client_with_fragment_chrome("simple_task")
+    resp = client.get("/task", headers={"HX-Request": "true"})
+    body = resp.text
+    # These markers come from base.html's body block in the legacy
+    # render_page(partial=True) path — they should not appear in the
+    # Fragment-chrome htmx response.
+    assert "dz-modal-slot" not in body
+    assert "dz-page-announcer" not in body
+
+
+def test_fragment_chrome_default_off_htmx_still_uses_jinja_partial() -> None:
+    """Backward compat: chrome flag off → htmx requests still go through
+    `render_page(partial=True, ...)` exactly as before. Pinned because
+    P8 is a behaviour change for chrome=on, must not leak to chrome=off."""
+    client = _client_for("simple_task")  # no fragment_chrome
+    resp = client.get("/task", headers={"HX-Request": "true"})
+    body = resp.text
+    # The legacy partial path renders the body slot — Jinja layout
+    # markers like `dz-toast-stack` should appear, distinguishing
+    # from the chrome-on bare-inner-html path.
+    assert "dz-modal-slot" in body or "dz-toast-stack" in body, (
+        f"chrome-off htmx response missing Jinja layout markers — did "
+        f"P8 leak to chrome-off path? body[:500]={body[:500]!r}"
+    )

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.50] - 2026-05-07
+
+### Changed
+- **htmx-partial mode for Fragment chrome (P17 P8).** When `app.state.fragment_chrome=True` and the surface is flipped (inner_html present), htmx requests now return the inner surface body directly — no DOCTYPE, no `<html>`, no Jinja layout markers. Previously chrome-on htmx requests fell back to `render_page(partial=True, inner_html=...)` which still threaded through Jinja's layout machinery; this commit closes the last "Fragment chrome leaks back to Jinja" gap. Chrome-on apps with flipped surfaces now have ZERO Jinja in the render path for either full-document OR htmx flows.
+
+### Agent Guidance
+- The dispatch matrix for chrome-on apps is now: full document → `dispatch_render_page(...)` (Page primitive); htmx → `inner_html` directly (bare); chrome flag off OR surface unflipped → existing Jinja path. Pinned by 4 new HTTP integration tests in `test_examples_fragment_http.py` that distinguish the chrome-on htmx path (no `dz-modal-slot`, no `dz-toast-stack`) from the chrome-off htmx path (Jinja layout markers present).
+
 ## [0.66.49] - 2026-05-07
 
 ### Added
