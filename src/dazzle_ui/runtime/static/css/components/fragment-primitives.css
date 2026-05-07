@@ -70,6 +70,44 @@
     border-block-start: 1px solid var(--colour-border);
   }
 
+  /* ───────────────────────── Topbar ──────────────────────────
+   * Application top bar — leading / title / trailing layout.
+   * Class names match the legacy template's `dz-topbar` /
+   * `dz-topbar-leading` / `dz-topbar-title` / `dz-topbar-trailing`
+   * so existing component CSS applies unchanged.
+   */
+
+  .dz-topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-block-end: 1px solid var(--colour-border);
+  }
+
+  .dz-topbar-leading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .dz-topbar-title {
+    flex: 1 1 auto;
+    min-width: 0;  /* allow truncation if title overflows */
+  }
+
+  .dz-topbar-title-text {
+    font-weight: var(--weight-semibold);
+    color: var(--colour-text);
+  }
+
+  .dz-topbar-trailing {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-inline-start: auto;
+  }
+
   /* ───────────────────────── Sidebar / Nav ───────────────────
    * Navigation primitives — Sidebar, NavGroup, NavItem.
    * Mirrors the legacy template's nav-link conventions; in particular

@@ -37,7 +37,7 @@ from dazzle.render.fragment.primitives.interactive import (
     Link,
 )
 from dazzle.render.fragment.primitives.layout import Grid, Row, Split, Stack
-from dazzle.render.fragment.primitives.navigation import NavGroup, NavItem, Sidebar
+from dazzle.render.fragment.primitives.navigation import NavGroup, NavItem, Sidebar, Topbar
 
 __all__ = [
     "Fragment",
@@ -84,6 +84,7 @@ __all__ = [
     "Submit",
     # navigation
     "Sidebar",
+    "Topbar",
     "NavGroup",
     "NavItem",
 ]

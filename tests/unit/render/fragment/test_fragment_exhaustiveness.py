@@ -52,6 +52,7 @@ from dazzle.render.fragment import (
     Text,
     Timeline,
     Toolbar,
+    Topbar,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -82,6 +83,8 @@ def _sample_for(primitive_type: type) -> object:
         return NavGroup(label="Group", items=(NavItem(label="A", href=URL("/a")),))
     if primitive_type is Sidebar:
         return Sidebar()
+    if primitive_type is Topbar:
+        return Topbar(title="App")
     if primitive_type is Card:
         return Card(body=Text("body"))
     if primitive_type is Region:

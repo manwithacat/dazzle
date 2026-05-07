@@ -58,6 +58,32 @@ class NavGroup:
 
 
 @dataclass(frozen=True, slots=True)
+class Topbar:
+    """Application top bar — title (text) + free leading / trailing slots.
+
+    Sits in `AppShell.header`. The legacy `app_shell.html` template
+    composes a fixed structure (mobile drawer button + sidebar toggle +
+    app name + user info + theme/dark toggles); this primitive
+    intentionally stays generic — a typed `title` for the most common
+    case, plus two free Fragment slots for everything else.
+
+    `leading` typically holds a sidebar-toggle Button or breadcrumb
+    Stack; `trailing` typically holds user identity Text + dark-mode
+    Button + theme Combobox. Typed UserMenu / ThemeToggle primitives
+    land in follow-ups when the patterns stabilise; for now compose
+    from existing primitives (Button, Text, Stack).
+
+    CSS class names match the legacy `dz-topbar` / `dz-topbar-leading`
+    / `dz-topbar-title` / `dz-topbar-trailing` structure so existing
+    component CSS applies without changes.
+    """
+
+    title: str = ""
+    leading: object | None = None
+    trailing: object | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Sidebar:
     """Application sidebar — flat items + optional groups + optional header.
 

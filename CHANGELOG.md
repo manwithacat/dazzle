@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.49] - 2026-05-07
+
+### Added
+- **`Topbar` Fragment primitive (P17 Phase 7).** Application top bar with `title` (text) + free leading/trailing Fragment slots. Sits in `AppShell.header`. The primitive is structural-only — typed UserMenu / ThemeToggle widgets land in follow-ups when patterns stabilise; for now compose from existing primitives (Button, Text, Stack). CSS class names match the legacy `dz-topbar` / `dz-topbar-leading` / `dz-topbar-title` / `dz-topbar-trailing` structure so existing component CSS applies unchanged.
+- 11 unit tests pin construction, slot rendering, ordering, escaping, and end-to-end Page → AppShell → Topbar composition.
+- CSS hooks for `.dz-topbar`, `.dz-topbar-leading`, `.dz-topbar-title`, `.dz-topbar-title-text`, `.dz-topbar-trailing`. All three sub-areas emit unconditionally so flex layout has stable elements to align.
+
+### Agent Guidance
+- Phase 3 page-chrome composition is now feature-complete enough to build the typical app shell entirely from typed primitives: `Page(title, body=AppShell(sidebar=Sidebar(...), header=Topbar(...), body=Surface(...)))`. Three Phase 3 pieces remain: asset URL resolution (replacing hardcoded bundle paths), htmx-partial mode for Page (body-only render for chrome-on htmx requests), and a typed Skip-link / a11y wiring primitive. None block actual flips of the example apps; they tighten the polish.
+
 ## [0.66.48] - 2026-05-07
 
 ### Added

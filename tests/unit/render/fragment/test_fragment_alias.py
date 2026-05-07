@@ -19,6 +19,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Page",
         "AppShell",
         "Sidebar",
+        "Topbar",
         "NavGroup",
         "NavItem",
         "Surface",

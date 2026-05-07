@@ -49,6 +49,7 @@ from dazzle.render.fragment.primitives import (
     Text,
     Timeline,
     Toolbar,
+    Topbar,
 )
 from dazzle.render.fragment.registry import (
     DEFAULT_REGISTRY,
@@ -140,6 +141,7 @@ __all__ = [
     "Submit",
     # primitives — navigation
     "Sidebar",
+    "Topbar",
     "NavGroup",
     "NavItem",
 ]

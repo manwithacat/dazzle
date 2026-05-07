@@ -68,6 +68,12 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
     "dz-nav-group",
     "dz-nav-group__header",
     "dz-nav-group__items",
+    # P17 P7 — Topbar
+    "dz-topbar",
+    "dz-topbar-leading",
+    "dz-topbar-title",
+    "dz-topbar-title-text",
+    "dz-topbar-trailing",
 )
 
 

@@ -52,6 +52,7 @@ from dazzle.render.fragment.primitives import (
     Text,
     Timeline,
     Toolbar,
+    Topbar,
 )
 
 
@@ -110,6 +111,8 @@ class FragmentRenderer:
             # Navigation
             case Sidebar():
                 return self._emit_sidebar(fragment, ctx)
+            case Topbar():
+                return self._emit_topbar(fragment, ctx)
             case NavGroup():
                 return self._emit_nav_group(fragment, ctx)
             case NavItem():
@@ -310,6 +313,30 @@ class FragmentRenderer:
         parts.append("</div>")
         parts.append("</div>")
         return "".join(parts)
+
+    def _emit_topbar(self, t: Topbar, ctx: RenderContext) -> str:
+        """`<div class="dz-topbar">` with leading / title / trailing.
+
+        All three sub-areas are emitted unconditionally so CSS layout
+        (flexbox `space-between` etc.) has stable elements to lay out
+        even when slots are empty. Empty slots emit empty containers,
+        not absent ones."""
+        leading_html = (
+            self._emit(t.leading, ctx) if t.leading is not None else ""  # type: ignore[arg-type]
+        )
+        trailing_html = (
+            self._emit(t.trailing, ctx) if t.trailing is not None else ""  # type: ignore[arg-type]
+        )
+        title_html = ""
+        if t.title:
+            title_html = f'<span class="dz-topbar-title-text">{ctx.escape(t.title)}</span>'
+        return (
+            f'<div class="dz-topbar">'
+            f'<div class="dz-topbar-leading">{leading_html}</div>'
+            f'<div class="dz-topbar-title">{title_html}</div>'
+            f'<div class="dz-topbar-trailing">{trailing_html}</div>'
+            f"</div>"
+        )
 
     def _emit_nav_item(self, n: NavItem, ctx: RenderContext) -> str:
         """`<li>` wrapping an `<a>` with `aria-current="page"` when active.
