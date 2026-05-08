@@ -14,6 +14,8 @@ from dazzle.render.fragment.primitives.data import (
     ConfirmCheckItem,
     ConfirmGate,
     Diagram,
+    FilterBar,
+    FilterColumn,
     KanbanBoard,
     LazyTab,
     LazyTabPanel,
@@ -589,3 +591,44 @@ def test_confirm_gate_default_copy_strings() -> None:
     assert g.secondary_label == "Save as draft"
     assert g.revoke_label == "Revoke"
     assert g.live_title == "Currently live."
+
+
+# === FilterColumn / FilterBar ===
+
+
+def test_filter_column_requires_key() -> None:
+    with pytest.raises(ValueError, match="non-empty key"):
+        FilterColumn(key="", label="X", options=())
+
+
+def test_filter_column_default_selected_empty() -> None:
+    c = FilterColumn(key="k", label="L", options=(("a", "A"),))
+    assert c.selected == ""
+
+
+def test_filter_bar_requires_region_name() -> None:
+    with pytest.raises(ValueError, match="non-empty region_name"):
+        FilterBar(
+            endpoint=URL("/x"),
+            region_name="",
+            columns=(FilterColumn(key="k", label="L", options=()),),
+        )
+
+
+def test_filter_bar_requires_at_least_one_column() -> None:
+    with pytest.raises(ValueError, match="at least one column"):
+        FilterBar(endpoint=URL("/x"), region_name="r", columns=())
+
+
+def test_filter_bar_rejects_duplicate_column_keys() -> None:
+    """Form field names must be unique — `name=filter_<key>` collides
+    when two columns share a key."""
+    with pytest.raises(ValueError, match="must be unique"):
+        FilterBar(
+            endpoint=URL("/x"),
+            region_name="r",
+            columns=(
+                FilterColumn(key="k", label="A", options=()),
+                FilterColumn(key="k", label="B", options=()),
+            ),
+        )

@@ -388,6 +388,54 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class FilterColumn:
+    """A single filter dropdown inside a FilterBar.
+
+    Not a Fragment union member. `key` is the form field name (will
+    be prefixed with `filter_` in the rendered `<select>`'s `name`
+    attribute). `options` is the discrete value set; `selected` is
+    the currently-active value (empty string = "All <label>").
+    """
+
+    key: str
+    label: str
+    options: tuple[tuple[str, str], ...]  # (value, display_label) pairs
+    selected: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.key:
+            raise ValueError("FilterColumn requires a non-empty key")
+
+
+@dataclass(frozen=True, slots=True)
+class FilterBar:
+    """Row of filter dropdowns above a list/queue region.
+
+    Each dropdown is a `FilterColumn`; the bar emits a `<form>`-less
+    flex row of `<select>` elements that re-fire the region endpoint
+    on change via HTMX `hx-include="closest .filter-bar"` so all
+    active filter values ride along.
+
+    `endpoint` is the region's data URL; `region_name` namespaces the
+    HTMX target id (`#region-<name>`) so the swap goes back into the
+    same region's body.
+    """
+
+    endpoint: URL
+    region_name: str
+    columns: tuple[FilterColumn, ...]
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("FilterBar requires a non-empty region_name")
+        if not self.columns:
+            raise ValueError("FilterBar requires at least one column")
+        keys = [c.key for c in self.columns]
+        if len(set(keys)) != len(keys):
+            raise ValueError(f"FilterBar column keys must be unique; got duplicates in {keys}")
+
+
+@dataclass(frozen=True, slots=True)
 class ConfirmCheckItem:
     """A single item in a ConfirmGate checklist.
 

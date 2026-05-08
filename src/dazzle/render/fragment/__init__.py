@@ -28,6 +28,8 @@ from dazzle.render.fragment.primitives import (
     EmptyState,
     ErrorPage,
     Field,
+    FilterBar,
+    FilterColumn,
     FormStack,
     Fragment,
     Grid,
@@ -168,6 +170,8 @@ __all__ = [
     "SearchBox",
     "ConfirmGate",
     "ConfirmCheckItem",
+    "FilterBar",
+    "FilterColumn",
     # primitives — forms
     "FormStack",
     "Field",

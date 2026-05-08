@@ -31,6 +31,8 @@ from dazzle.render.fragment.primitives.data import (
     ConfirmCheckItem,
     ConfirmGate,
     Diagram,
+    FilterBar,
+    FilterColumn,
     KanbanBoard,
     LazyTab,
     LazyTabPanel,
@@ -116,6 +118,8 @@ __all__ = [
     "SearchBox",
     "ConfirmGate",
     "ConfirmCheckItem",
+    "FilterBar",
+    "FilterColumn",
     # forms
     "FormStack",
     "Field",

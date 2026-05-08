@@ -27,6 +27,8 @@ from dazzle.render.fragment import (
     EmptyState,
     ErrorPage,
     Field,
+    FilterBar,
+    FilterColumn,
     FormStack,
     Fragment,
     Grid,
@@ -186,6 +188,12 @@ def _sample_for(primitive_type: type) -> object:
         return SearchBox(name="x", fts_endpoint=URL("/api/fts/X"))
     if primitive_type is ConfirmGate:
         return ConfirmGate(state="off")
+    if primitive_type is FilterBar:
+        return FilterBar(
+            endpoint=URL("/x"),
+            region_name="r",
+            columns=(FilterColumn(key="k", label="L", options=()),),
+        )
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

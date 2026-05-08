@@ -31,6 +31,8 @@ from dazzle.render.fragment.primitives import (
     EmptyState,
     ErrorPage,
     Field,
+    FilterBar,
+    FilterColumn,
     FormStack,
     Fragment,
     Grid,
@@ -197,6 +199,8 @@ class FragmentRenderer:
                 return self._emit_search_box(fragment, ctx)
             case ConfirmGate():
                 return self._emit_confirm_gate(fragment, ctx)
+            case FilterBar():
+                return self._emit_filter_bar(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1341,6 +1345,38 @@ class FragmentRenderer:
             f"{audit_html}"
             f"</div>"
         )
+
+    def _emit_filter_bar(self, f: FilterBar, ctx: RenderContext) -> str:
+        """Render a FilterBar matching legacy `queue.html` / `list.html`
+        filter-row markup byte-for-byte: a `.filter-bar` flex row of
+        `<select>` elements wired to the region endpoint via HTMX with
+        `hx-include="closest .filter-bar"` so all active filter values
+        ride along on each change.
+        """
+        target = f"#region-{ctx.escape_attr(f.region_name)}"
+        endpoint = ctx.escape_attr(str(f.endpoint))
+
+        def _render_column(col: FilterColumn) -> str:
+            options_html = f'<option value="">All {ctx.escape(col.label)}</option>'
+            for value, display in col.options:
+                selected_attr = " selected" if value == col.selected else ""
+                options_html += (
+                    f'<option value="{ctx.escape_attr(value)}"{selected_attr}>'
+                    f"{ctx.escape(display)}</option>"
+                )
+            return (
+                f'<select class="dz-queue-filter-select" '
+                f'hx-get="{endpoint}" '
+                f'hx-target="{target}" '
+                f'hx-swap="innerHTML" '
+                f'hx-include="closest .filter-bar" '
+                f'name="filter_{ctx.escape_attr(col.key)}">'
+                f"{options_html}"
+                f"</select>"
+            )
+
+        selects_html = "".join(_render_column(col) for col in f.columns)
+        return f'<div class="dz-queue-filters filter-bar">{selects_html}</div>'
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         action = ctx.escape_attr(str(fs.action))

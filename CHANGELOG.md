@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.88] - 2026-05-08
+
+### Added — Phase 4B.1.e — FilterBar primitive
+- **`FilterColumn` data primitive** — non-union dataclass `(key, label, options, selected)` describing a single filter dropdown. Strict invariant: non-empty `key` (used as the form-field name suffix `filter_<key>`).
+- **`FilterBar` Fragment primitive** — row of filter dropdowns above a list/queue region. Carries the region's data `endpoint`, `region_name` (for HTMX target id `#region-<name>`), and a tuple of `FilterColumn`s. Each select fires HTMX with `hx-include="closest .filter-bar"` so all active filter values ride along on every change. Strict invariants: non-empty region_name, at least one column, unique column keys.
+- HTML byte-equivalent to the legacy `queue.html` / `list.html` filter-row markup: `<div class="dz-queue-filters filter-bar">` containing `<select class="dz-queue-filter-select">` per column with "All <label>" placeholder option + per-value `<option>` (with `selected` attribute when matching `column.selected`).
+- 5 new primitive tests covering key/region_name/column-list/dup-key invariants + default selected; baselines updated.
+- Adapter wiring (`_build_list` / `_build_queue` consuming filter ctx) deferred to a follow-up — primitive ships first so the runtime ctx contract can solidify.
+
+### Phase 4B.1 — every misaligned alias closed; chrome arc started
+| Step | Display / chrome | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID, PROFILE_CARD, BAR_TRACK, PROGRESS | done | v0.66.75–80 |
+| 4B.1.a | DETAIL (type-aware), METRICS (extended deltas) | done | v0.66.77–78 |
+| 4B.1.b | Reference overlays on TimeSeries / BarChart / BarTrack / BoxPlot | done | v0.66.81–82 |
+| 4B.1.d | Button hx_put / hx_vals / hx_ext (QUEUE transitions) | done | v0.66.83 |
+| 4B.1.d | LazyTabPanel + TABBED_LIST adapter | done | v0.66.84–85 |
+| 4B.1.d | SearchBox + SEARCH_BOX adapter | done | v0.66.86 |
+| 4B.1.d | ConfirmGate + CONFIRM_ACTION_PANEL adapter | done | v0.66.87 |
+| 4B.1.e | FilterBar primitive | **done** | **v0.66.88** |
+| 4B.1.e | FilterBar wired into `_build_list` / `_build_queue` | next | — |
+| 4B.1.e | DateRangePicker, SortHeader, CsvExportButton | pending | — |
+| 4B.1.c | Multi-series chart family | pending — needs SVG-rendering arc | — |
+
+### Agent Guidance
+- `FilterColumn.options` is `tuple[tuple[str, str], ...]` — each entry is `(value, display_label)`. The `display_label` is what gets rendered (already-translated, post-humanize); `value` is the raw value posted on the wire. The runtime applies `humanize` (or any other label transform) **before** constructing the primitive — keeps the primitive deterministic.
+- `region_name` namespaces the HTMX target. If two FilterBars on one page share a region_name, their HTMX swaps target the same DOM id. The strict invariant on uniqueness is at the FilterBar level (column keys); region-name collisions are the runtime's responsibility.
+
 ## [0.66.87] - 2026-05-08
 
 ### Added — Phase 4B.1.d — ConfirmGate primitive (final misaligned alias closed)

@@ -63,6 +63,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "LazyTabPanel",
         "SearchBox",
         "ConfirmGate",
+        "FilterBar",
         # forms
         "FormStack",
         "Field",
