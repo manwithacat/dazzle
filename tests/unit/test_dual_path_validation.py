@@ -561,6 +561,47 @@ def test_tree_achieves_byte_equivalence() -> None:
     )
 
 
+def test_timeline_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — TIMELINE byte-equivalent. Timeline primitive
+    extended to carry rich `TimelineEvent` instances with title +
+    timeago-formatted date_label + per-column secondary fields.
+    Adapter consumes the production columns + display_key shape and
+    routes badge cells through `_render_status_badge_html` (matches
+    legacy `render_status_badge` macro byte-for-byte). Bullet picks
+    up the default `dz-attn-bullet dz-attn-tone-default` attention
+    class for the no-attention case."""
+    ctx = {
+        "title": "Audit",
+        "items": [
+            {
+                "name": "Created",
+                "created_at": "2026-05-08T12:00:00",
+                "severity": "low",
+            },
+            {
+                "name": "Updated",
+                "created_at": "2026-05-08T11:00:00",
+                "severity": "high",
+            },
+        ],
+        "columns": [
+            {"key": "name", "label": "Action", "type": "str"},
+            {"key": "created_at", "label": "When", "type": "date"},
+            {"key": "severity", "label": "Severity", "type": "badge"},
+        ],
+        "display_key": "name",
+        "total": 2,
+        "entity_name": "Event",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("timeline", **ctx),
+            render_via_typed("timeline", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

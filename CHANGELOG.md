@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.108] - 2026-05-09
+
+### Added — Phase 4B.4 wave 2 — TIMELINE byte-equivalent
+- **TIMELINE** — Timeline primitive extended with rich `TimelineEvent` (title + already-formatted date_label + per-column secondary fields). Renderer matches `workspace/regions/timeline.html` byte-for-byte: `<div class="dz-timeline-region">` → `<ul class="dz-timeline-list">` of `<li class="dz-timeline-item">` rows, each carrying a bullet SVG (with default `dz-attn-bullet dz-attn-tone-default` attention class), formatted date column, primary title, secondary fields. Optional overflow line "Showing N of M". Empty state renders `dz-empty-dense` fallback.
+- **`_build_timeline` rewrite** — consumes production runtime ctx (columns + display_key + items + total) directly; threads `created_at` through the legacy `timeago` filter for relative-time labels; constructs secondary fields from non-date, non-display columns via `_render_typed_value`. Replaces the prior label_field/date_field/(label, date)-tuple shape (Phase 4A workaround).
+- **Backward compatibility:** `Timeline.events` accepts both `TimelineEvent` instances (new shape) and plain `(label, iso-date)` 2-tuples (Phase 4A legacy). The renderer coerces tuples to `TimelineEvent(title=label, date_label=date)` so existing test/callers keep working through the migration.
+
+### New helper — `_render_status_badge_html`
+- **Replicates the legacy `render_status_badge` macro byte-for-byte** as a Python helper returning a string. Used by `_render_typed_value` for `type=="badge"` cells across DETAIL, TIMELINE, LIST. Mirrors the macro's empty-coalesce (None / "" / "—" → em-dash placeholder), tone resolution via `_badge_tone_filter`, label via `_humanize_filter` (or `display` override), and the literal double-space artifact from `{{ _size_class }} {{ _border_class }}` Jinja interpolation.
+- **`_render_typed_value` extended with `badge_size` + `badge_bordered` kwargs** so per-context macro args land on the typed path. DETAIL passes `badge_bordered=True`; TIMELINE passes `badge_size="sm"`; LIST defaults to size="md", bordered=False.
+
+### Phase 4B.4 wave 2 progress
+| Display | Status |
+|---|---|
+| PROGRESS, BULLET, PIPELINE_STEPS, SPARKLINE, BOX_PLOT, TREE | ✅ |
+| **TIMELINE** | ✅ **v0.66.108** |
+| LIST, GRID | next (LIST is wave 2 boss) |
+
+**13 of 32 displays byte-equivalent (41%).** Wave 2: 7 of 9 done.
+
+### Changed — `Badge` primitive no longer used by `_render_typed_value`
+- DETAIL/TIMELINE/LIST badge cells now produce `RawHTML` matching the legacy macro instead of the typed `Badge` primitive. The Badge primitive is still available for direct use (e.g. action buttons) but is no longer routed via `_render_typed_value`. This is the same pattern as v0.66.102's bool-icon: when the legacy macro produces HTML that doesn't map cleanly to the typed primitive's class scheme, replicate the macro output via `RawHTML` rather than restructuring all Badge consumers.
+
+### Agent Guidance
+- **Per-context macro args via kwargs.** When the legacy template invokes a macro with different arguments per context (DETAIL `bordered=True` vs TIMELINE `size='sm'` for `render_status_badge`), the typed adapter's helper takes those as kwargs, defaulting to the most common case. Caller passes the right value at the call site. This keeps `_render_typed_value` callable from any builder without context-sniffing.
+- **Backward-compat-via-renderer-coercion.** When extending a primitive's shape (Timeline gained `TimelineEvent`), coerce the legacy tuple shape to the new dataclass at render time rather than forcing all callers to migrate immediately. Lets the primitive evolve without a flag day. Once all callers migrate, drop the coercion in a follow-up.
+- **Click-through HTMX wiring still deferred** for TIMELINE (and ACTIVITY_FEED, LIST). The legacy templates wire `hx-get` to a detail drawer when `action_url` is in ctx; the typed primitives currently render read-only. Closing this requires extending TimelineEvent / ActivityFeed item shape with optional href attrs + renderer support. Likely a Phase 4B.4 finishing-pass ship after wave 2 completes.
+
 ## [0.66.107] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 2 — BOX_PLOT + TREE byte-equivalent

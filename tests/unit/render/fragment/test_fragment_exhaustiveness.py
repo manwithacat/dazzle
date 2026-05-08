@@ -80,6 +80,7 @@ from dazzle.render.fragment import (
     TargetSelector,
     Text,
     Timeline,
+    TimelineEvent,
     TimeSeries,
     Toolbar,
     Topbar,
@@ -164,7 +165,9 @@ def _sample_for(primitive_type: type) -> object:
     if primitive_type is CalendarGrid:
         return CalendarGrid()
     if primitive_type is Timeline:
-        return Timeline(events=(("e", "2026-01-01"),))
+        return Timeline(events=(TimelineEvent(title="e", date_label="just now"),))
+    if primitive_type is TimelineEvent:
+        return TimelineEvent(title="e", date_label="just now")
     if primitive_type is KPI:
         return KPI(label="rev", value="1")
     if primitive_type is BarChart:

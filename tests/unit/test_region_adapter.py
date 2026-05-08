@@ -45,63 +45,38 @@ def test_unsupported_display_raises_with_actionable_hint() -> None:
 # ───────────────── Timeline ───────────────────────
 
 
-def test_timeline_with_default_label_and_date_fields() -> None:
-    """Timeline auto-detects label (title/name/id) and date
-    (date/created_at/occurred_at/timestamp) when fields aren't
-    explicitly named."""
-    from dazzle.render.fragment import Timeline
+def test_timeline_renders_rich_event_shape() -> None:
+    """Phase 4B.4 wave 2 (v0.66.108): Timeline now uses rich
+    `TimelineEvent` instances with title + date_label (timeago-
+    formatted) + secondary fields. Adapter consumes columns +
+    display_key (matches production runtime ctx)."""
+    from dazzle.render.fragment import Timeline, TimelineEvent
 
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [
-            {"title": "Login", "created_at": "2026-01-01"},
-            {"title": "Signup", "created_at": "2025-12-15"},
+            {"title": "Login", "created_at": "2026-05-08T12:00:00", "actor": "Alice"},
         ],
+        "columns": [
+            {"key": "title", "label": "Action"},
+            {"key": "created_at", "label": "When", "type": "date"},
+            {"key": "actor", "label": "Actor"},
+        ],
+        "display_key": "title",
     }
     fragment = adapter.build(_FakeRegion("activity", display="timeline"), ctx)
-    assert isinstance(fragment, Surface)
-    region = fragment.body
-    assert isinstance(region, Region)
-    timeline = region.body
-    assert isinstance(timeline, Timeline)
-    assert ("Login", "2026-01-01") in timeline.events
-    assert ("Signup", "2025-12-15") in timeline.events
-
-
-def test_timeline_with_explicit_label_and_date_fields() -> None:
-    """Explicit `label_field` and `date_field` ctx keys override
-    the auto-detection."""
-    from dazzle.render.fragment import Timeline
-
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"event_name": "Test", "happened_on": "2026-02-02"}],
-        "label_field": "event_name",
-        "date_field": "happened_on",
-    }
-    fragment = adapter.build(_FakeRegion("events", display="timeline"), ctx)
-    timeline = fragment.body.body
-    assert isinstance(timeline, Timeline)
-    assert timeline.events == (("Test", "2026-02-02"),)
-
-
-def test_timeline_skips_items_missing_label_or_date() -> None:
-    """Items without a usable label or date are silently dropped —
-    Timeline requires both."""
-    from dazzle.render.fragment import Timeline
-
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"title": "Has both", "created_at": "2026-01-01"},
-            {"title": "No date"},
-            {"created_at": "2026-01-02"},  # No label
-        ],
-    }
-    fragment = adapter.build(_FakeRegion("e", display="timeline"), ctx)
     timeline = fragment.body.body
     assert isinstance(timeline, Timeline)
     assert len(timeline.events) == 1
+    evt = timeline.events[0]
+    assert isinstance(evt, TimelineEvent)
+    assert evt.title == "Login"
+    # date_label produced via timeago — non-empty (exact value
+    # depends on test execution time).
+    assert evt.date_label
+    # Actor field appears as a secondary field, date column does NOT.
+    assert any(label == "Actor" for label, _ in evt.fields)
+    assert not any(label == "When" for label, _ in evt.fields)
 
 
 def test_timeline_no_items_renders_empty_state() -> None:
@@ -113,21 +88,24 @@ def test_timeline_no_items_renders_empty_state() -> None:
     assert "No events yet." in html
 
 
-def test_timeline_uses_region_date_field_clause() -> None:
-    """`region.date_field` from the DSL is consulted when ctx
-    doesn't explicitly pass `date_field`."""
-    from dazzle.render.fragment import Timeline
-
-    region = _FakeRegion("e", display="timeline")
-    region.date_field = "due_date"  # type: ignore[attr-defined]
-    ctx = {
-        "items": [{"title": "Task", "due_date": "2026-03-01"}],
-    }
+def test_timeline_overflow_line_renders_when_total_exceeds_items() -> None:
+    """Legacy `<p class="dz-timeline-overflow">Showing N of M</p>`
+    appears when ctx total > items length."""
     adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(region, ctx)
-    timeline = fragment.body.body
-    assert isinstance(timeline, Timeline)
-    assert timeline.events == (("Task", "2026-03-01"),)
+    ctx = {
+        "items": [
+            {"title": "X", "created_at": "2026-05-08T12:00:00"},
+        ],
+        "columns": [
+            {"key": "title", "label": "T"},
+            {"key": "created_at", "label": "W", "type": "date"},
+        ],
+        "display_key": "title",
+        "total": 5,
+    }
+    html = _render(adapter.build(_FakeRegion("e", display="timeline"), ctx))
+    assert "Showing 1 of 5" in html
+    assert "dz-timeline-overflow" in html
 
 
 def test_empty_display_routes_to_list_path() -> None:
@@ -959,8 +937,13 @@ def test_detail_type_aware_badge_renders_status_tone() -> None:
     }
     fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
     html = _render(fragment)
-    assert "dz-badge--variant-success" in html  # resolved → success tone
-    assert ">resolved<" in html
+    # v0.66.108: badge cells now route through `render_status_badge`-
+    # equivalent RawHTML for byte-equivalence with the legacy macro.
+    # DETAIL passes `bordered=True`. The class scheme is `dz-badge` +
+    # `bordered` + `data-dz-tone="<tone>"`.
+    assert 'class="dz-badge  bordered"' in html
+    assert 'data-dz-tone="success"' in html  # resolved → success tone
+    assert ">Resolved<" in html  # humanize filter title-cases
 
 
 def test_detail_type_aware_bool_renders_check_or_cross() -> None:

@@ -71,6 +71,7 @@ from dazzle.render.fragment import (
     TargetSelector,
     Text,
     Timeline,
+    TimelineEvent,
     TimeSeries,
     Tree,
     TreeNode,
@@ -117,32 +118,75 @@ _BADGE_TONE_TO_VARIANT: dict[str, str] = {
 }
 
 
-def _render_typed_value(item: dict[str, Any], col: dict[str, Any]) -> Fragment:
+def _render_status_badge_html(
+    value: Any, *, size: str = "md", bordered: bool = False, display: Any = None
+) -> str:
+    """Replicate the legacy `render_status_badge` macro byte-for-byte.
+
+    Used by `_render_typed_value` for `type=="badge"` cells in DETAIL,
+    LIST, TIMELINE etc. — the typed `Badge` primitive emits a different
+    class scheme (`dz-badge--variant-X`) so for byte-equivalence with
+    the legacy macro we replicate its HTML directly via `RawHTML`.
+
+    Mirrors the macro's value-coalescing: None / "" / "—" → em-dash
+    placeholder. Otherwise tone resolved via `_badge_tone_filter`,
+    label via `_humanize_filter` (or `display` override). Note the
+    macro emits a literal double-space before `data-dz-tone` because
+    of the `{{ _size_class }} {{ _border_class }}` Jinja interpolation
+    (when both are empty); we replicate that whitespace.
+    """
+    from html import escape as _esc
+
+    from dazzle_ui.runtime.template_renderer import (
+        _badge_tone_filter,
+        _humanize_filter,
+    )
+
+    if value in (None, "", "—"):
+        return '<span class="dz-badge-empty" aria-label="No status">—</span>'
+    tone = _badge_tone_filter(value)
+    label = display if display is not None else _humanize_filter(value)
+    label_str = str(label)
+    size_class = "dz-badge-sm" if size == "sm" else ""
+    border_class = "bordered" if bordered else ""
+    return (
+        f'<span class="dz-badge {size_class} {border_class}" '
+        f'data-dz-tone="{_esc(tone, quote=True)}" '
+        f'role="status" '
+        f'aria-label="Status: {_esc(label_str, quote=True)}">'
+        f"{_esc(label_str)}</span>"
+    )
+
+
+def _render_typed_value(
+    item: dict[str, Any],
+    col: dict[str, Any],
+    *,
+    badge_size: str = "md",
+    badge_bordered: bool = False,
+) -> Fragment:
     """Render a single field value as a typed Fragment based on `col["type"]`.
 
     Mirrors the legacy `workspace/regions/detail.html` per-type dispatch:
-        - "badge"    → Badge primitive with variant from status-tone map
-        - "bool"     → Text(✓) or Text(✗)
-        - "date"     → Text formatted via the dazzle_ui date filter
-        - "currency" → Text formatted via the dazzle_ui currency filter
-        - "ref"      → Link if ref_route is set, else Text(display)
-        - default    → Text(str(value)) with em-dash for None
-
-    Filter implementations are reused from `dazzle_ui.runtime.template_renderer`
-    so the typed-Fragment path renders the same string the Jinja path
-    would have produced. Phase 4B.1.a.
+        - "badge"    → RawHTML matching the legacy `render_status_badge`
+                       macro byte-for-byte (Phase 4B.4 wave 2). Use
+                       `badge_size`/`badge_bordered` kwargs to match
+                       per-context macro args (DETAIL: bordered=True,
+                       TIMELINE/LIST: size="sm" / defaults).
+        - "bool"     → RawHTML via `bool_icon` filter (✓ / ✗ tinted)
+        - "date"     → RawHTML via `date_filter` (DETAIL "%d %b %Y")
+                       — note TIMELINE / LIST use `timeago` directly,
+                       handled by the caller before this function.
+        - "currency" → RawHTML via `currency_filter`
+        - "ref"      → Link if ref_route is set, else escaped text
+        - default    → escaped text with em-dash for None
     """
     key = str(col.get("key") or "")
     col_type = str(col.get("type") or "")
     value = item.get(key) if key else None
 
     if col_type == "badge":
-        from dazzle_ui.runtime.template_renderer import _badge_tone_filter
-
-        tone_name = _badge_tone_filter(value)
-        variant = _BADGE_TONE_TO_VARIANT.get(tone_name, "default")
-        label = "" if value is None else str(value)
-        return Badge(label=label or "—", variant=variant)  # type: ignore[arg-type]
+        return RawHTML(_render_status_badge_html(value, size=badge_size, bordered=badge_bordered))
 
     if col_type == "bool":
         from dazzle_ui.runtime.template_renderer import _bool_icon_filter
@@ -766,46 +810,79 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "kanban", body)
 
     def _build_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: timeline` regions render as a Timeline primitive
-        — chronological list of (label, iso-date) events.
+        """`display: timeline` regions render as a `Timeline` primitive
+        matching `workspace/regions/timeline.html` byte-for-byte.
+
+        Phase 4B.4 wave 2: extended to construct rich `TimelineEvent`
+        instances carrying per-event date_label (already-formatted via
+        `timeago` filter), title (from display_key), and secondary
+        fields (per-column type-aware values, omitting the date and
+        display_key columns). Click-through (`hx-get` on the content
+        div) is not yet plumbed — read-only display only.
 
         ctx shape:
             items: list of dicts (rows from the source entity)
-            label_field: str — which field carries the event label
-                (defaults to 'title' / 'name' / 'id')
-            date_field: str — which field carries the event date
-                (typically the region's `date_field` clause; falls
-                back to `created_at` then any iso-date-shaped field)
+            columns: list of `{key, label, type, ref_route}` dicts —
+                same shape as LIST/DETAIL columns
+            display_key: str — column key for the primary title
+                (defaults to 'title' / 'name' / 'id' fallback)
+            entity_name: str — fallback title when display_key value is None
+            total: int — overflow indicator denominator
+            empty_message: optional empty-state fallback
         """
+        from dazzle_ui.runtime.template_renderer import _timeago_filter
+
         title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
-        label_field = str(ctx.get("label_field") or "")
-        date_field = str(ctx.get("date_field") or getattr(region, "date_field", "") or "")
+        columns = ctx.get("columns") or []
+        display_key = str(ctx.get("display_key") or "")
+        entity_name = str(ctx.get("entity_name") or "Event")
+        try:
+            total = int(ctx.get("total") or 0)
+        except (TypeError, ValueError):
+            total = 0
 
-        body: Fragment
-        if not items:
-            body = EmptyState(
-                title="No events",
-                description=getattr(region, "empty_message", None) or "No data in this region.",
-            )
-        else:
-            events: list[tuple[str, str]] = []
-            for item in items:
-                if not isinstance(item, dict):
+        # Identify the date column (first column with type=="date").
+        date_col_key = ""
+        for col in columns:
+            if isinstance(col, dict) and col.get("type") == "date":
+                date_col_key = str(col.get("key") or "")
+                break
+
+        events: list[TimelineEvent] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            # Date — always rendered via timeago filter for legacy parity.
+            date_value = item.get(date_col_key) if date_col_key else None
+            date_label = _timeago_filter(date_value) if date_value else ""
+            # Title — display_key value, with fallback to name/entity_name.
+            primary = item.get(display_key) if display_key else None
+            if primary is None:
+                primary = item.get("name") or entity_name
+            # Secondary fields — every non-date, non-display column.
+            fields: list[tuple[str, object]] = []
+            for col in columns:
+                if not isinstance(col, dict):
                     continue
-                label = _pick_label(item, label_field)
-                date = _pick_label(item, date_field, candidates=_DATE_CANDIDATES)
-                if label and date:
-                    events.append((label, date))
-            if events:
-                body = Timeline(events=tuple(events))
-            else:
-                body = EmptyState(
-                    title="No events",
-                    description=getattr(region, "empty_message", None)
-                    or "No items had a label and date.",
+                key = str(col.get("key") or "")
+                if not key or key == display_key or col.get("type") == "date":
+                    continue
+                label = str(col.get("label") or key)
+                # TIMELINE renders badges with `size='sm'` per legacy macro call.
+                fields.append((label, _render_typed_value(item, col, badge_size="sm")))
+            events.append(
+                TimelineEvent(
+                    title=str(primary),
+                    date_label=date_label,
+                    fields=tuple(fields),
                 )
+            )
 
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No events yet."
+        )
+        body: Fragment = Timeline(events=tuple(events), total=total, empty_message=str(empty_msg))
         return _wrap_surface(title, "report", body)
 
     def _build_activity_feed(self, region: Any, ctx: dict[str, Any]) -> Surface:
@@ -1816,7 +1893,8 @@ class WorkspaceRegionAdapter:
             if not key:
                 continue
             label = str(f.get("label") or key.replace("_", " ").title())
-            rows.append((label, _render_typed_value(item, f)))
+            # DETAIL renders badges with `bordered=true` per legacy macro call.
+            rows.append((label, _render_typed_value(item, f, badge_bordered=True)))
 
         body = (
             DetailGrid(rows=tuple(rows)) if rows else EmptyState(title="No fields", description="")

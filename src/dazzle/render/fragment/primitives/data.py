@@ -148,8 +148,47 @@ class PivotTable:
 
 
 @dataclass(frozen=True, slots=True)
+class TimelineEvent:
+    """Single timeline row — title + already-formatted date + optional
+    secondary fields rendered as `<p class="dz-timeline-field">` lines.
+
+    Phase 4B.4 wave 2: extends the Phase 4A `(label, iso-date)` tuple
+    shape with a typed dataclass that carries per-event secondary
+    fields (the legacy template's per-column iteration).
+
+    `date_label` is the already-formatted relative-time string (e.g.
+    "5 hours ago" via the legacy `timeago` filter); `fields` is a
+    tuple of `(label, value)` pairs where `value` is either a plain
+    string (rendered with HTML escaping) or a Fragment (rendered via
+    the renderer's emit dispatch). Trusted markup (e.g. `RawHTML`
+    from a legacy filter) renders verbatim.
+    """
+
+    title: str
+    date_label: str = ""
+    fields: tuple[tuple[str, object], ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class Timeline:
-    events: tuple[tuple[str, str], ...]  # (label, iso-date)
+    """Vertical chronological list.
+
+    Phase 4B.4 wave 2: emits the legacy
+    `workspace/regions/timeline.html` shape — `<ul class="dz-timeline-list">`
+    of `<li class="dz-timeline-item">` rows, each carrying a bullet
+    SVG, formatted date, primary title, and optional secondary fields.
+    Optional overflow line "Showing N of M" when `total > len(events)`;
+    `empty_message` for the empty-state fallback.
+
+    Backward compatibility: when `events` is a tuple of plain
+    `(label, iso-date)` 2-tuples (Phase 4A shape), the renderer
+    coerces each to a `TimelineEvent(title=label, date_label=date)`.
+    New callers should construct `TimelineEvent` instances directly.
+    """
+
+    events: tuple[TimelineEvent | tuple[str, str], ...]
+    total: int = 0
+    empty_message: str = "No events yet."
 
 
 @dataclass(frozen=True, slots=True)

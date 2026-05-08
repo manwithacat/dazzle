@@ -79,6 +79,7 @@ from dazzle.render.fragment.primitives import (
     Tabs,
     Text,
     Timeline,
+    TimelineEvent,
     TimeSeries,
     Toolbar,
     Topbar,
@@ -818,14 +819,89 @@ class FragmentRenderer:
         )
 
     def _emit_timeline(self, t: Timeline, ctx: RenderContext) -> str:
-        events = "".join(
-            f'<li class="dz-timeline__event">'
-            f'<time datetime="{ctx.escape_attr(when)}">{ctx.escape(when)}</time>'
-            f'<span class="dz-timeline__label">{ctx.escape(label)}</span>'
-            f"</li>"
-            for label, when in t.events
+        """Render a Timeline matching legacy
+        `workspace/regions/timeline.html` byte-for-byte: outer
+        `dz-timeline-region`, `<ul class="dz-timeline-list">` of
+        `<li class="dz-timeline-item">` rows. Each row carries a bullet
+        SVG, formatted date, primary title, and optional secondary
+        fields rendered as `<p class="dz-timeline-field">` lines.
+        Optional overflow line "Showing N of M" when total exceeds
+        the events count. Empty path renders the `dz-empty-dense`
+        fallback inside the region wrapper.
+        """
+        # Coerce Phase 4A `(label, iso-date)` tuples to TimelineEvent
+        # for rendering uniformity. New callers construct TimelineEvent
+        # instances directly.
+        events_norm: list[TimelineEvent] = []
+        for evt in t.events:
+            if isinstance(evt, TimelineEvent):
+                events_norm.append(evt)
+            elif isinstance(evt, tuple) and len(evt) == 2:
+                label, when = evt
+                events_norm.append(TimelineEvent(title=str(label), date_label=str(when)))
+
+        if not events_norm:
+            return (
+                f'<div class="dz-timeline-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(t.empty_message)}</p>"
+                f"</div>"
+            )
+
+        # Legacy bullet always picks up `attention_classes(attn, 'bullet')`
+        # which defaults to `dz-attn-bullet dz-attn-tone-default` when
+        # the item has no `_attention` entry. The typed primitive
+        # doesn't track per-row attention yet (Phase 4B follow-up); for
+        # now, emit the default attention class so the no-attention
+        # case is byte-equivalent to legacy.
+        bullet_svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" '
+            'fill="currentColor" '
+            'class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-default" '
+            'aria-hidden="true">'
+            '<circle cx="10" cy="10" r="6"/>'
+            "</svg>"
         )
-        return f'<ol class="dz-timeline">{events}</ol>'
+
+        items: list[str] = []
+        for evt in events_norm:
+            fields_html = ""
+            for label, value in evt.fields:
+                if isinstance(value, str):
+                    value_html = ctx.escape(value)
+                else:
+                    value_html = self._emit(value, ctx)  # type: ignore[arg-type]
+                fields_html += (
+                    f'<p class="dz-timeline-field">'
+                    f"<span>{ctx.escape(label)}:</span> "
+                    f"{value_html}"
+                    f"</p>"
+                )
+            items.append(
+                f'<li class="dz-timeline-item">'
+                f'<span class="dz-timeline-bullet-wrap">{bullet_svg}</span>'
+                f'<div class="dz-timeline-row">'
+                f'<div class="dz-timeline-date">{ctx.escape(evt.date_label)}</div>'
+                f'<div class="dz-timeline-content">'
+                f'<p class="dz-timeline-title">{ctx.escape(evt.title)}</p>'
+                f"{fields_html}"
+                f"</div>"
+                f"</div>"
+                f"</li>"
+            )
+
+        overflow_html = ""
+        if t.total > len(events_norm):
+            overflow_html = (
+                f'<p class="dz-timeline-overflow">Showing {len(events_norm)} of {t.total}</p>'
+            )
+
+        return (
+            f'<div class="dz-timeline-region">'
+            f'<ul class="dz-timeline-list">{"".join(items)}</ul>'
+            f"{overflow_html}"
+            f"</div>"
+        )
 
     def _emit_kanban_board(self, k: KanbanBoard, ctx: RenderContext) -> str:
         cols = "".join(
