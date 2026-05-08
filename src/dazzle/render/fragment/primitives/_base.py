@@ -44,11 +44,13 @@ from dazzle.render.fragment.primitives.data import (
     LazyTabPanel,
     MetricsGrid,
     MetricTile,
+    PipelineSteps,
     PivotTable,
     ProfileCard,
     Radar,
     SearchBox,
     SortHeader,
+    Sparkline,
     StageBar,
     StatusList,
     Table,
@@ -126,6 +128,8 @@ Fragment = (
     | DetailGrid
     | ActivityFeed
     | StatusList
+    | PipelineSteps
+    | Sparkline
     | BarTrack
     | StageBar
     | LazyTabPanel

@@ -437,6 +437,57 @@ def test_bullet_achieves_byte_equivalence() -> None:
     )
 
 
+def test_pipeline_steps_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — PIPELINE_STEPS byte-equivalent. Covers
+    all branches: stages with progress + caption, stages with progress
+    only, stages with neither (None value renders as "—" + omits
+    progress block + omits connector for last stage)."""
+    ctx = {
+        "title": "Pipeline",
+        "pipeline_stage_data": [
+            {
+                "label": "Lead",
+                "value": 42,
+                "caption": "New leads",
+                "progress": 75,
+                "progress_overshoot": False,
+            },
+            {"label": "Qualified", "value": 12, "progress": 45, "progress_overshoot": False},
+            {"label": "Won", "value": None, "progress": None, "progress_overshoot": False},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("pipeline_steps", **ctx),
+            render_via_typed("pipeline_steps", ctx),
+        )
+        is None
+    )
+
+
+def test_sparkline_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — SPARKLINE byte-equivalent. Distinct from
+    LINE_CHART/AREA_CHART (180×32 viewBox, headline + tiny SVG, no
+    axis labels). Phase 4B.4 split it from the TimeSeries primitive
+    into a dedicated `Sparkline` primitive."""
+    ctx = {
+        "title": "Visits",
+        "bucketed_metrics": [
+            {"label": "Mon", "value": 10},
+            {"label": "Tue", "value": 18},
+            {"label": "Wed", "value": 15},
+            {"label": "Thu", "value": 22},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("sparkline", **ctx),
+            render_via_typed("sparkline", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

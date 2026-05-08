@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.106] - 2026-05-08
+
+### Added — Phase 4B.4 wave 2 — PIPELINE_STEPS + SPARKLINE byte-equivalent
+- **PIPELINE_STEPS** — new `PipelineSteps` + `PipelineStage` primitives matching `workspace/regions/pipeline_steps.html` byte-for-byte: `<div class="dz-pipeline-steps-region">` wrapping an `<ol class="dz-pipeline-stages">` of `<li class="dz-pipeline-stage">` rows. Each row carries kicker label + headline value (or "—" when None) + optional caption + optional progress block (track + fill + percent label, with `data-dz-progress-overshoot` attr when applicable) + per-non-last-stage connector SVGs (desktop arrow + mobile chevron). New `_build_pipeline_steps` consumes the authored `pipeline_stage_data` shape directly (replaces prior Card+Stack+Heading composition).
+- **SPARKLINE** — new dedicated `Sparkline` primitive split from the `TimeSeries` family (was a `view="sparkline"` variant). Sparkline's structure is sufficiently distinct (180×32 viewBox, no axis labels, no reference overlays, headline showing the latest bucket) to warrant its own primitive. `_build_time_series` now branches at `view == "sparkline"` and constructs a `Sparkline(points, empty_message)` rather than a `TimeSeries(view="sparkline")`. `_emit_sparkline` renders the headline + tiny SVG byte-for-byte; single-point series omit the SVG (matching legacy `{% if count > 1 %}` guard).
+
+### Phase 4B.4 progress
+| Wave | Done | Total | Status |
+|---|---|---|---|
+| 1 | 6 | 6 | ✅ complete |
+| 2 | 4 / 9 | 9 | PROGRESS, BULLET, PIPELINE_STEPS, SPARKLINE done; LIST, GRID, TIMELINE, TREE, BOX_PLOT next |
+| 3, 4 | 0 / 16 | 16 | queued |
+
+**10 of 32 displays byte-equivalent (31%).** At ~2 displays per ship the remaining wave 2 is ~3 ships; waves 3 + 4 + chrome + decommission is another ~14-16 ships.
+
+### Changed — adapter ctx contracts widened to authored shapes
+- **`_build_pipeline_steps`** — now reads `pipeline_stage_data` (matches production runtime) instead of the Phase 4A `steps` shape. Updated tests use the new shape.
+- **`_TIMESERIES_VIEWS["sparkline"]`** — still routes to `_build_time_series`, but the builder branches early when `view == "sparkline"` to construct the dedicated `Sparkline` primitive.
+
+### Agent Guidance
+- **Jinja `is not none` semantic gotcha.** Jinja treats `dict.missing_key is not none` as True (Undefined ≠ None). Python's `dict.get("key")` returns None for missing keys. When porting, check whether the runtime always sets the key (matches Python `is None`) or sometimes omits it (matches Jinja Undefined behaviour). Production ctx for `pipeline_stage_data` ALWAYS sets `progress` to None when absent, so the typed primitive's `if progress is None: omit_block` semantic matches legacy. Document this in tests; future ports should use explicit None in test ctx to match production rather than omitting keys.
+- **Sparkline split is the precedent for chart-family separation.** When two views of the same primitive (line/area vs sparkline) have structurally distinct rendering, prefer separate primitives over a `view: ...` enum on a shared primitive. Cleaner emit code, simpler typing. Apply this to AREA_CHART when its multi-series story lands (Phase 4B wave 3 follow-up).
+
 ## [0.66.105] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 2 begins — PROGRESS + BULLET byte-equivalent

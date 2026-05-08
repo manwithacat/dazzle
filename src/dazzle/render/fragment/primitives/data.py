@@ -281,6 +281,61 @@ _STATUS_LIST_STATES = ("neutral", "positive", "warning", "destructive", "accent"
 
 
 @dataclass(frozen=True, slots=True)
+class Sparkline:
+    """Compact time-series for KPI tiles — title + big-number + tiny line.
+
+    Phase 4B.4 wave 2: dedicated primitive (separate from `TimeSeries`)
+    matching the legacy `workspace/regions/sparkline.html` shape
+    byte-for-byte. Visually distinct from line/area charts: 180×32
+    viewBox, no axis labels, no reference overlays, headline showing
+    the latest bucket's label + value.
+
+    `points` is a tuple of `(label, value)` pairs — same shape as
+    TimeSeries but without view selection. Single-point series omit
+    the SVG entirely (the legacy template's `{% if count > 1 %}` guard).
+    """
+
+    points: tuple[tuple[str, float], ...]
+    empty_message: str = "—"
+
+
+@dataclass(frozen=True, slots=True)
+class PipelineStage:
+    """Single stage in a `PipelineSteps` row.
+
+    `value` is the headline aggregate (None renders as "—" matching the
+    legacy template's null-coalesce). `progress` is an optional 0-100
+    fill percentage; when None the progress bar block is omitted.
+    `progress_overshoot=True` flags values that were clamped from >100
+    so themes can surface "over capacity" via `data-dz-progress-overshoot`.
+    """
+
+    label: str
+    value: int | None = None
+    caption: str = ""
+    progress: int | None = None
+    progress_overshoot: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class PipelineSteps:
+    """Sequential-stage workflow row — one card per stage with kicker,
+    headline value, optional caption, optional progress bar, and arrow
+    connectors between stages.
+
+    Phase 4B.4 wave 2: emits the legacy
+    `workspace/regions/pipeline_steps.html` shape byte-for-byte —
+    `<ol class="dz-pipeline-stages">` of `<li class="dz-pipeline-stage">`
+    rows, with non-last stages emitting two connector SVGs (desktop
+    arrow + mobile chevron). Empty path renders the `dz-empty-dense`
+    fallback inside the region wrapper.
+    """
+
+    stages: tuple[PipelineStage, ...]
+    empty_message: str = "No pipeline data available."
+
+
+@dataclass(frozen=True, slots=True)
 class BulletRow:
     """Single row in a `Bullet` chart — Stephen Few bullet shape.
 

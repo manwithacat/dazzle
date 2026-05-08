@@ -1149,11 +1149,16 @@ def test_area_chart_uses_area_view() -> None:
     assert "dz-timeseries--view-area" in _render(fragment)
 
 
-def test_sparkline_uses_sparkline_view() -> None:
+def test_sparkline_renders_dedicated_primitive() -> None:
+    """v0.66.106: SPARKLINE split from TimeSeries into a dedicated
+    `Sparkline` primitive matching the legacy `dz-sparkline-region`
+    structure (180×32 viewBox, headline + tiny SVG)."""
     adapter = WorkspaceRegionAdapter()
     ctx = {"points": [("a", 1), ("b", 2), ("c", 3)]}
-    fragment = adapter.build(_FakeRegion("s", display="sparkline"), ctx)
-    assert "dz-timeseries--view-sparkline" in _render(fragment)
+    html = _render(adapter.build(_FakeRegion("s", display="sparkline"), ctx))
+    assert 'class="dz-sparkline-region"' in html
+    assert 'class="dz-sparkline-svg"' in html
+    assert 'viewBox="0 0 180 32"' in html
 
 
 def test_time_series_accepts_dict_point_shape() -> None:
@@ -1607,25 +1612,33 @@ def test_pipeline_steps_renders_row_of_cards() -> None:
     """Each step becomes a Card with a Heading and optional Text
     description, arranged in a horizontal Row."""
     adapter = WorkspaceRegionAdapter()
+    # v0.66.106: adapter consumes the authored `pipeline_stage_data`
+    # shape directly (matches production runtime ctx) instead of the
+    # Phase 4A `steps` shape. Caption renders alongside label + value
+    # in the legacy `dz-pipeline-stage` row.
     ctx = {
-        "steps": [
-            {"label": "Plan", "description": "Scope locked"},
-            {"label": "Build"},
-            {"label": "Ship", "status": "Pending"},
+        "pipeline_stage_data": [
+            {"label": "Plan", "value": 1, "caption": "Scope locked"},
+            {"label": "Build", "value": 2},
+            {"label": "Ship", "value": None, "caption": "Pending"},
         ]
     }
     fragment = adapter.build(_FakeRegion("p", display="pipeline_steps"), ctx)
     html = _render(fragment)
     assert "Plan" in html and "Build" in html and "Ship" in html
     assert "Scope locked" in html
-    assert "Pending" in html  # status falls back if no description
+    assert "Pending" in html
+    # Last stage with value=None renders as "—".
+    assert "—" in html
+    # 3 stages → 2 connector pairs (last omits).
+    assert html.count('class="dz-pipeline-connector"') == 2
 
 
 def test_pipeline_steps_empty_renders_empty_state() -> None:
     adapter = WorkspaceRegionAdapter()
     fragment = adapter.build(
         _FakeRegion("p", display="pipeline_steps", empty_message="No steps."),
-        {"steps": []},
+        {"pipeline_stage_data": []},
     )
     assert "No steps." in _render(fragment)
 

@@ -52,6 +52,8 @@ from dazzle.render.fragment import (
     NavGroup,
     NavItem,
     Page,
+    PipelineStage,
+    PipelineSteps,
     PivotTable,
     ProfileCard,
     Radar,
@@ -65,6 +67,7 @@ from dazzle.render.fragment import (
     SkipLink,
     Slot,
     SortHeader,
+    Sparkline,
     Split,
     Stack,
     StageBar,
@@ -183,6 +186,12 @@ def _sample_for(primitive_type: type) -> object:
         return Bullet(rows=(BulletRow(label="X", actual=50.0),), max_value=100.0)
     if primitive_type is BulletRow:
         return BulletRow(label="X", actual=50.0)
+    if primitive_type is Sparkline:
+        return Sparkline(points=(("a", 1.0), ("b", 2.0)))
+    if primitive_type is PipelineSteps:
+        return PipelineSteps(stages=(PipelineStage(label="Step"),))
+    if primitive_type is PipelineStage:
+        return PipelineStage(label="Step")
     if primitive_type is ActionCard:
         return ActionCard(label="X")
     if primitive_type is ProfileCard:

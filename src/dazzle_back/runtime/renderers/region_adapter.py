@@ -50,6 +50,8 @@ from dazzle.render.fragment import (
     Link,
     MetricsGrid,
     MetricTile,
+    PipelineStage,
+    PipelineSteps,
     PivotTable,
     ProfileCard,
     Radar,
@@ -59,6 +61,7 @@ from dazzle.render.fragment import (
     Region,
     Row,
     SearchBox,
+    Sparkline,
     Stack,
     StageBar,
     StatusList,
@@ -1164,6 +1167,16 @@ class WorkspaceRegionAdapter:
                     points.append((label, val))
 
         body: Fragment
+
+        # Sparkline is a structurally distinct shape (180×32 viewBox,
+        # headline + tiny SVG, no axis labels, no reference overlays);
+        # Phase 4B.4 wave 2 routes it to a dedicated `Sparkline`
+        # primitive rather than overloading TimeSeries' SVG output.
+        if view == "sparkline":
+            empty_msg = ctx.get("empty_message") or getattr(region, "empty_message", None) or "—"
+            body = Sparkline(points=tuple(points), empty_message=str(empty_msg))
+            return _wrap_surface(title, "report", body)
+
         if not points:
             body = EmptyState(
                 title="No data",
@@ -1526,38 +1539,63 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "list", body)
 
     def _build_pipeline_steps(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: pipeline_steps` renders a sequence of steps as a
-        horizontal Row of Cards — one Card per step with a Heading and
-        descriptive Text.
+        """`display: pipeline_steps` renders a horizontal row of stage
+        cards with arrow connectors. Phase 4B.4 wave 2: dedicated
+        `PipelineSteps` primitive replacing prior Card+Stack composition
+        for byte-equivalence with `workspace/regions/pipeline_steps.html`.
 
-        ctx shape:
-            steps: list of dicts {"label": str, "description": str (optional),
-                                  "status": str (optional)}
+        ctx shape (primary):
+            pipeline_stage_data: list of dicts {label, value, caption,
+                progress, progress_overshoot}
+            empty_message: optional empty-state fallback
         """
         title = _region_title(region)
-        steps = ctx.get("steps") or ctx.get("items") or []
+        raw_stages = ctx.get("pipeline_stage_data") or []
 
-        cards: list[object] = []
-        if isinstance(steps, list):
-            for step in steps:
-                if not isinstance(step, dict):
+        stages: list[PipelineStage] = []
+        if isinstance(raw_stages, list):
+            for entry in raw_stages:
+                if not isinstance(entry, dict):
                     continue
-                label = str(step.get("label") or step.get("name") or step.get("title") or "")
-                description = str(step.get("description") or step.get("status") or "")
-                inner: list[object] = [Heading(label or "(no step)", level=4)]
-                if description:
-                    inner.append(Text(description))
-                cards.append(Card(body=Stack(children=tuple(inner), gap="sm")))
+                label = str(entry.get("label") or entry.get("name") or "")
+                if not label:
+                    continue
+                # value: None preserved (renders as "—"); coerce to int else.
+                value: int | None
+                value_raw = entry.get("value")
+                if value_raw is None:
+                    value = None
+                else:
+                    try:
+                        value = int(value_raw)
+                    except (TypeError, ValueError):
+                        value = None
+                # progress: None preserved (omits the bar); coerce to int else.
+                progress: int | None
+                progress_raw = entry.get("progress")
+                if progress_raw is None:
+                    progress = None
+                else:
+                    try:
+                        progress = int(progress_raw)
+                    except (TypeError, ValueError):
+                        progress = None
+                stages.append(
+                    PipelineStage(
+                        label=label,
+                        value=value,
+                        caption=str(entry.get("caption") or ""),
+                        progress=progress,
+                        progress_overshoot=bool(entry.get("progress_overshoot")),
+                    )
+                )
 
-        body: Fragment
-        if not cards:
-            body = EmptyState(
-                title="No steps",
-                description=getattr(region, "empty_message", None) or "No steps declared.",
-            )
-        else:
-            body = Row(children=tuple(cards), gap="md", align="stretch")
-
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No pipeline data available."
+        )
+        body: Fragment = PipelineSteps(stages=tuple(stages), empty_message=str(empty_msg))
         return _wrap_surface(title, "dashboard", body)
 
     def _build_progress(self, region: Any, ctx: dict[str, Any]) -> Surface:

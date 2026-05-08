@@ -54,6 +54,7 @@ from dazzle.render.fragment.primitives import (
     NavGroup,
     NavItem,
     Page,
+    PipelineSteps,
     PivotTable,
     ProfileCard,
     Radar,
@@ -67,6 +68,7 @@ from dazzle.render.fragment.primitives import (
     Skeleton,
     SkipLink,
     SortHeader,
+    Sparkline,
     Split,
     Stack,
     StageBar,
@@ -193,6 +195,10 @@ class FragmentRenderer:
                 return self._emit_box_plot(fragment, ctx)
             case Bullet():
                 return self._emit_bullet(fragment, ctx)
+            case PipelineSteps():
+                return self._emit_pipeline_steps(fragment, ctx)
+            case Sparkline():
+                return self._emit_sparkline(fragment, ctx)
             case ActionCard():
                 return self._emit_action_card(fragment, ctx)
             case ProfileCard():
@@ -1234,6 +1240,153 @@ class FragmentRenderer:
             f'<p class="dz-bullet-summary">'
             f"{len(b.rows)} rows · scale 0–{_jinja_num(round(b.max_value, 1))}"
             f"</p>"
+            f"</div>"
+        )
+
+    def _emit_sparkline(self, s: Sparkline, ctx: RenderContext) -> str:
+        """Render a Sparkline matching legacy
+        `workspace/regions/sparkline.html` byte-for-byte: outer
+        `dz-sparkline-region`, headline showing the latest bucket
+        (value + label), and a tiny 180×32 SVG with area fill +
+        polyline. Single-point series omit the SVG entirely (matches
+        legacy `{% if count > 1 %}` guard). Empty series renders the
+        `dz-sparkline-empty` div with the empty message.
+        """
+        if not s.points:
+            return (
+                f'<div class="dz-sparkline-region">'
+                f'<div class="dz-sparkline-empty">{ctx.escape(s.empty_message)}</div>'
+                f"</div>"
+            )
+
+        last_label, last_value = s.points[-1]
+        # Match Jinja's `{{ value }}` rendering — int repr for whole values.
+        last_value_str = str(int(last_value)) if last_value == int(last_value) else str(last_value)
+        max_val = max(v for _, v in s.points)
+        if max_val <= 0:
+            max_val = 1
+        max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+        count = len(s.points)
+
+        headline = (
+            f'<div class="dz-sparkline-headline">'
+            f'<span class="dz-sparkline-value">{ctx.escape(last_value_str)}</span>'
+            f'<span class="dz-sparkline-bucket-label">{ctx.escape(last_label)}</span>'
+            f"</div>"
+        )
+
+        if count <= 1:
+            return f'<div class="dz-sparkline-region">{headline}</div>'
+
+        # 180×32 viewBox with 2px top/bottom padding (no left/right padding).
+        w = 180
+        h = 32
+        pt = 2
+        pb = 2
+        plot_h = h - pt - pb
+        step = w / (count - 1)
+        pts = []
+        for i, (_, v) in enumerate(s.points):
+            x = round(i * step, 2)
+            y = round(pt + plot_h - (v / max_val * plot_h), 2)
+            pts.append(f"{x},{y}")
+        pts_str = " ".join(pts)
+
+        svg = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {w} {h}" '
+            f'class="dz-sparkline-svg" role="img" '
+            f'aria-label="Sparkline — {count} points, latest '
+            f'{last_value_str}, peak {max_val_str}">'
+            f'<polygon points="0,{h} {pts_str} {w},{h}" '
+            f'fill="hsl(var(--primary))" fill-opacity="0.15" stroke="none" />'
+            f'<polyline points="{pts_str}" fill="none" '
+            f'stroke="hsl(var(--primary))" stroke-width="1.25" '
+            f'stroke-linejoin="round" stroke-linecap="round" />'
+            f"</svg>"
+        )
+        return f'<div class="dz-sparkline-region">{headline}{svg}</div>'
+
+    def _emit_pipeline_steps(self, p: PipelineSteps, ctx: RenderContext) -> str:
+        """Render a PipelineSteps row matching legacy
+        `workspace/regions/pipeline_steps.html` byte-for-byte:
+        outer `dz-pipeline-steps-region`, `<ol class="dz-pipeline-stages">`
+        of `<li class="dz-pipeline-stage">` rows with kicker label,
+        headline value (or "—"), optional caption, optional progress
+        block, and per-non-last-stage connector SVGs (desktop arrow
+        + mobile chevron).
+        """
+        if not p.stages:
+            return (
+                f'<div class="dz-pipeline-steps-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(p.empty_message)}</p>"
+                f"</div>"
+            )
+
+        last_idx = len(p.stages) - 1
+        items: list[str] = []
+        for i, stage in enumerate(p.stages):
+            value_str = str(stage.value) if stage.value is not None else "—"
+            caption_html = (
+                f'<span class="dz-pipeline-stage-caption">{ctx.escape(stage.caption)}</span>'
+                if stage.caption
+                else ""
+            )
+
+            progress_html = ""
+            if stage.progress is not None:
+                overshoot_attr = (
+                    ' data-dz-progress-overshoot="true"' if stage.progress_overshoot else ""
+                )
+                progress_html = (
+                    f'<div class="dz-pipeline-stage-progress" '
+                    f'data-dz-progress="{stage.progress}"{overshoot_attr} '
+                    f'role="progressbar" '
+                    f'aria-valuemin="0" aria-valuemax="100" '
+                    f'aria-valuenow="{stage.progress}" '
+                    f'aria-label="{ctx.escape_attr(stage.label)} progress">'
+                    f'<div class="dz-pipeline-stage-progress-track">'
+                    f'<div class="dz-pipeline-stage-progress-fill" '
+                    f'style="width: {stage.progress}%;"></div>'
+                    f"</div>"
+                    f'<span class="dz-pipeline-stage-progress-label">'
+                    f"{stage.progress}%</span>"
+                    f"</div>"
+                )
+
+            connector_html = ""
+            if i < last_idx:
+                connector_html = (
+                    '<span class="dz-pipeline-connector" aria-hidden="true">'
+                    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
+                    'xmlns="http://www.w3.org/2000/svg">'
+                    '<path d="M3 1.5L9 7l-6 5.5" stroke="currentColor" '
+                    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+                    "</svg>"
+                    "</span>"
+                    '<span class="dz-pipeline-connector-mobile" aria-hidden="true">'
+                    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
+                    'xmlns="http://www.w3.org/2000/svg">'
+                    '<path d="M1.5 3L7 9l5.5-6" stroke="currentColor" '
+                    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+                    "</svg>"
+                    "</span>"
+                )
+
+            items.append(
+                f'<li class="dz-pipeline-stage">'
+                f'<span class="dz-pipeline-stage-label">{ctx.escape(stage.label)}</span>'
+                f'<span class="dz-pipeline-stage-value">{value_str}</span>'
+                f"{caption_html}"
+                f"{progress_html}"
+                f"{connector_html}"
+                f"</li>"
+            )
+
+        return (
+            f'<div class="dz-pipeline-steps-region">'
+            f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>'
             f"</div>"
         )
 

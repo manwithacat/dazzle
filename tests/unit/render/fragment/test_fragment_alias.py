@@ -56,6 +56,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Radar",
         "BoxPlot",
         "Bullet",
+        "PipelineSteps",
+        "Sparkline",
         "ActionCard",
         "ProfileCard",
         "MetricTile",
