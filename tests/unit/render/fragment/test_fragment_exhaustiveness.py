@@ -83,6 +83,8 @@ from dazzle.render.fragment import (
     TimeSeries,
     Toolbar,
     Topbar,
+    Tree,
+    TreeNode,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -192,6 +194,10 @@ def _sample_for(primitive_type: type) -> object:
         return PipelineSteps(stages=(PipelineStage(label="Step"),))
     if primitive_type is PipelineStage:
         return PipelineStage(label="Step")
+    if primitive_type is Tree:
+        return Tree(nodes=(TreeNode(label="root"),))
+    if primitive_type is TreeNode:
+        return TreeNode(label="node")
     if primitive_type is ActionCard:
         return ActionCard(label="X")
     if primitive_type is ProfileCard:

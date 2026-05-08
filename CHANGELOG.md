@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.107] - 2026-05-08
+
+### Added — Phase 4B.4 wave 2 — BOX_PLOT + TREE byte-equivalent
+- **BOX_PLOT** — closed three divergences from v0.66.96:
+  1. **Chrome stripped.** `_emit_box_plot` no longer wraps in `<section class="dz-box-plot"><h4>` chrome — title is owned by the surrounding region_card. The `<dl class="dz-box-plot__references">` Phase 4B-only annotation block was also dropped to byte-match (no legacy counterpart).
+  2. **`samples` field added** to `BoxPlot` primitive as an optional parallel list — Phase 4B.4 widening of the v0.66.96-documented schema gap. When supplied, the renderer adds `n=N` to box tooltips and renders the legacy `{count} groups · {sum(n)} samples` summary line. Translator threads `n` through from `box_plot_stats` to the primitive.
+  3. **box_h drift fixed** — the rect height was computing `round(q1_y - q3_y, 2)` from pre-rounded `_y(q1)/`_y(q3)` outputs, accumulating a 0.01-class drift vs the legacy template's `round(box_h, 2)` of raw difference. Helper now exposes `_y_raw` for the box_h calc.
+- **`BoxPlot.__post_init__` now validates monotonicity** (`min ≤ q1 ≤ median ≤ q3 ≤ max`). Was previously delegated to the adapter; now enforced at primitive construction matching test expectations.
+- **TREE** — new `Tree` + `TreeNode` primitives matching `workspace/regions/tree.html` byte-for-byte: recursive `<details class="dz-tree-node">` with chevron SVG + label + child count, depth-0 nodes open by default. New `_build_tree` consumes both legacy `_children` and typed `children` keys for the recursive walk.
+
+### Changed — `normalise_html` widened
+- **`<tag attr="x" >` → `<tag attr="x">`** — strips Jinja `{% if %}{% endif %}` whitespace artifacts inside opening tags. Scoped via lookbehind to `["\w]` boundary so it doesn't touch `< 5` in script/SVG-path text content.
+- **`<tag />` → `<tag/>`** (v0.66.107: extracted to a named regex `_BEFORE_SELF_CLOSE`). Self-closing tag style canonicalisation; legacy emits `/>`, typed emits ` />`.
+
+### Phase 4B.4 wave 2 progress
+| Display | Status |
+|---|---|
+| PROGRESS | ✅ v0.66.105 |
+| BULLET | ✅ v0.66.105 |
+| PIPELINE_STEPS | ✅ v0.66.106 |
+| SPARKLINE | ✅ v0.66.106 |
+| **BOX_PLOT** | ✅ **v0.66.107** |
+| **TREE** | ✅ **v0.66.107** |
+| LIST, GRID, TIMELINE | next |
+
+**12 of 32 displays byte-equivalent (38%).** Wave 2: 6 of 9 done; remaining are LIST (highest complexity), GRID, TIMELINE.
+
+### Agent Guidance
+- **Pre-rounding accumulates drift in derived calcs.** When a derived quantity is used in the legacy template via Jinja `| round(2)`, do NOT compute it from already-rounded intermediate values — the order-of-operations differs by ~0.01. The pattern: keep raw float through derived calc, round once at emit time. The `_y_raw` / `_y` helper split in `box_plot_svg` is the canonical fix.
+- **`BoxPlot.samples` is the schema-extension pattern** for closing the documented Phase 4B.1.c divergences. When a legacy template emits a value the primitive didn't track (n, outlier dots, whisker fences), add an optional parallel field on the primitive rather than restructuring the core groups tuple. Backward-compatible: empty default = legacy behaviour, populated = full byte-equivalence.
+- **`<tag attr=>` whitespace artifacts are pervasive.** Jinja's `{% if cond %}attr="x"{% endif %}` inside an opening tag leaves a stray space when the conditional is False. The normaliser handles them now; primitives needn't worry. If a future emit runs into a CSS / script context where `>` legitimately follows whitespace, the regex's `["\w]` boundary may need tightening — extend rather than rework.
+
 ## [0.66.106] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 2 — PIPELINE_STEPS + SPARKLINE byte-equivalent

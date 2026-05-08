@@ -488,6 +488,79 @@ def test_sparkline_achieves_byte_equivalence() -> None:
     )
 
 
+def test_box_plot_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — BOX_PLOT byte-equivalent. BoxPlot primitive
+    extended with optional `samples` parallel list (was the documented
+    Phase 4B.1.c divergence); now threads `n` through translator →
+    adapter → primitive → renderer for the legacy `n=N` tooltip
+    suffix and the `count groups · sum(n) samples` summary line."""
+    ctx = {
+        "title": "Latency",
+        "box_plot_stats": [
+            {
+                "label": "p50",
+                "n": 100,
+                "min": 0.5,
+                "q1": 1.0,
+                "median": 2.0,
+                "q3": 3.0,
+                "max": 4.5,
+                "iqr": 2.0,
+                "whisker_low": 0.5,
+                "whisker_high": 4.5,
+                "outliers": [],
+            },
+            {
+                "label": "p99",
+                "n": 100,
+                "min": 5.0,
+                "q1": 6.0,
+                "median": 7.0,
+                "q3": 8.0,
+                "max": 9.5,
+                "iqr": 2.0,
+                "whisker_low": 5.0,
+                "whisker_high": 9.5,
+                "outliers": [],
+            },
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("box_plot", **ctx),
+            render_via_typed("box_plot", ctx),
+        )
+        is None
+    )
+
+
+def test_tree_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — TREE byte-equivalent. New Tree + TreeNode
+    primitives. Recursive `<details>` structure with chevron SVG +
+    label + child count. Top-level depth-0 nodes open by default."""
+    ctx = {
+        "title": "Hierarchy",
+        "tree_items": [
+            {
+                "name": "Root A",
+                "_children": [
+                    {"name": "A.1", "_children": []},
+                    {"name": "A.2", "_children": [{"name": "A.2.1"}]},
+                ],
+            },
+            {"name": "Root B"},
+        ],
+        "display_key": "name",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("tree", **ctx),
+            render_via_typed("tree", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

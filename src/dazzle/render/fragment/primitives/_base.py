@@ -56,6 +56,7 @@ from dazzle.render.fragment.primitives.data import (
     Table,
     Timeline,
     TimeSeries,
+    Tree,
 )
 from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, RefPicker, Submit
 from dazzle.render.fragment.primitives.interactive import (
@@ -130,6 +131,7 @@ Fragment = (
     | StatusList
     | PipelineSteps
     | Sparkline
+    | Tree
     | BarTrack
     | StageBar
     | LazyTabPanel

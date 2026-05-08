@@ -135,8 +135,11 @@ def test_box_plot_translates_box_plot_stats_to_groups() -> None:
     assert g["label"] == "p50"
     assert g["min"] == 0.5 and g["q1"] == 1.0 and g["median"] == 2.0
     assert g["q3"] == 3.0 and g["max"] == 4.5
-    # Extended fields not exposed.
-    assert "n" not in g and "outliers" not in g
+    # v0.66.107: `n` is now threaded through (BoxPlot primitive's
+    # `samples` parallel list). `iqr`, `whisker_low`, `whisker_high`,
+    # `outliers` are still dropped.
+    assert g["n"] == 100
+    assert "outliers" not in g and "iqr" not in g
 
 
 def test_bar_track_passthrough_preserves_pre_computed_rows() -> None:

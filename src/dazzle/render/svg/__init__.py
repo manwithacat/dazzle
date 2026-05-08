@@ -194,6 +194,7 @@ def box_plot_svg(
     groups: tuple[tuple[str, float, float, float, float, float], ...],
     *,
     reference_lines: tuple = (),
+    samples: tuple[int, ...] = (),
 ) -> str:
     """Produce inline SVG for a BoxPlot primitive.
 
@@ -238,8 +239,13 @@ def box_plot_svg(
     if y_range <= 0:
         y_range = 1
 
+    def _y_raw(val: float) -> float:
+        """Cartesian y for a value, NOT rounded — for derived calcs."""
+        return pt + plot_h - ((val - y_min) / y_range * plot_h)
+
     def _y(val: float) -> float:
-        return round(pt + plot_h - ((val - y_min) / y_range * plot_h), 2)
+        """Rounded cartesian y for direct emission as an SVG coord."""
+        return round(_y_raw(val), 2)
 
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" '
@@ -270,7 +276,8 @@ def box_plot_svg(
     # Per-group box.
     for i, (group_label, mn, q1, median, q3, mx) in enumerate(groups):
         col_x = round(pl + (i + 0.5) * col_w, 2)
-        q1_y = _y(q1)
+        # q1_y unused — box rect uses q3_y as `y` and box_h derived from
+        # raw values to avoid pre-rounding drift (Phase 4B.4 wave 2).
         q3_y = _y(q3)
         median_y = _y(median)
         whisker_low_y = _y(mn)
@@ -295,15 +302,24 @@ def box_plot_svg(
             f'x2="{col_x + cap_half}" y2="{whisker_high_y}" '
             f'stroke="hsl(var(--muted-foreground))" stroke-width="1" />'
         )
-        # Box body.
-        box_h = round(q1_y - q3_y, 2)
+        # Box body. Compute height from RAW (unrounded) y values to
+        # match the legacy template's order-of-operations: legacy
+        # rounds the final box_h once via Jinja `| round(2)`, while
+        # rounding intermediate q1_y/q3_y first then subtracting
+        # accumulates a 0.01-class drift. (Phase 4B.4 wave 2 fix.)
+        box_h = round(_y_raw(q1) - _y_raw(q3), 2)
+        # Per-group sample count for tooltip — appended as `n=N` when
+        # `samples` was supplied, matching the legacy template's
+        # `n={{ s.n }}` suffix.
+        n_suffix = f", n={samples[i]}" if i < len(samples) else ""
         parts.append(
             f'<rect x="{col_x - box_half}" y="{q3_y}" '
             f'width="{round(box_w, 2)}" height="{box_h}" '
             f'fill="hsl(var(--primary))" fill-opacity="0.18" '
             f'stroke="hsl(var(--primary))" stroke-width="1">'
             f"<title>{_escape(group_label)}: Q1 {round(q1, 1)}, "
-            f"median {round(median, 1)}, Q3 {round(q3, 1)}</title>"
+            f"median {round(median, 1)}, Q3 {round(q3, 1)}"
+            f"{n_suffix}</title>"
             f"</rect>"
         )
         # Median line.

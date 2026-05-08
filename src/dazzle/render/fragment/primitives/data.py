@@ -281,6 +281,34 @@ _STATUS_LIST_STATES = ("neutral", "positive", "warning", "destructive", "accent"
 
 
 @dataclass(frozen=True, slots=True)
+class TreeNode:
+    """Single node in a `Tree` — label + recursive children.
+
+    Children are themselves `TreeNode` instances, building an arbitrary-
+    depth hierarchy. Empty `children` tuple means the node is a leaf.
+    """
+
+    label: str
+    children: tuple["TreeNode", ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class Tree:
+    """Recursive `<details>`-based hierarchy display.
+
+    Phase 4B.4 wave 2: emits the legacy
+    `workspace/regions/tree.html` shape — recursive `<details
+    class="dz-tree-node">` with `<summary>` (chevron + label + optional
+    child count) and nested `<div class="dz-tree-children">` for
+    non-leaf nodes. Top-level nodes (depth 0) render with the
+    `[open]` attribute by default; deeper nodes render closed
+    (matches the legacy `{% if depth == 0 %}open{% endif %}` guard).
+    """
+
+    nodes: tuple[TreeNode, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class Sparkline:
     """Compact time-series for KPI tiles — title + big-number + tiny line.
 
@@ -577,6 +605,12 @@ class BoxPlot:
     groups: tuple[tuple[str, float, float, float, float, float], ...]
     reference_lines: tuple[ReferenceLine, ...] = ()
     reference_bands: tuple[ReferenceBand, ...] = ()
+    # Per-group sample counts — Phase 4B.4 wave 2. When supplied, the
+    # renderer adds `n=N` to the box tooltip matching the legacy
+    # template's `n={{ s.n }}` suffix. When empty (default), the suffix
+    # is omitted so existing 6-tuple-only callers keep the prior
+    # behaviour. Length must match `groups` if non-empty.
+    samples: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.groups:
@@ -587,6 +621,18 @@ class BoxPlot:
                     f"BoxPlot group {i} arity mismatch: "
                     f"expected (label, min, q1, median, q3, max), got {group!r}"
                 )
+            _label, mn, q1, med, q3, mx = group
+            if not (mn <= q1 <= med <= q3 <= mx):
+                raise ValueError(
+                    f"BoxPlot group {i} quartiles not monotonic: "
+                    f"min={mn} q1={q1} median={med} q3={q3} max={mx}; "
+                    f"required min <= q1 <= median <= q3 <= max"
+                )
+        if self.samples and len(self.samples) != len(self.groups):
+            raise ValueError(
+                f"BoxPlot samples length {len(self.samples)} must match "
+                f"groups length {len(self.groups)} (or be empty)"
+            )
             _label, mn, q1, med, q3, mx = group
             if not (mn <= q1 <= med <= q3 <= mx):
                 raise ValueError(

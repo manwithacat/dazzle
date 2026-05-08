@@ -72,6 +72,8 @@ from dazzle.render.fragment import (
     Text,
     Timeline,
     TimeSeries,
+    Tree,
+    TreeNode,
 )
 
 _log = logging.getLogger(__name__)
@@ -1084,9 +1086,16 @@ class WorkspaceRegionAdapter:
         chart_label = str(ctx.get("chart_label") or title or "Distribution")
         raw_groups = ctx.get("groups") or []
         groups: list[tuple[str, float, float, float, float, float]] = []
+        # Phase 4B.4 wave 2: thread per-group sample counts through to
+        # the primitive when supplied (legacy `box_plot_stats[i].n`),
+        # so the renderer can match the legacy `n=N` tooltip suffix.
+        samples: list[int] = []
+        any_sample = False
         for entry in raw_groups:
             label = ""
             mn = q1 = med = q3 = mx = 0.0
+            n_value = 0
+            n_present = False
             if isinstance(entry, (list, tuple)) and len(entry) == 6:
                 try:
                     label = str(entry[0])
@@ -1103,12 +1112,21 @@ class WorkspaceRegionAdapter:
                     mx = float(entry.get("max") or 0)
                 except (TypeError, ValueError):
                     continue
+                if "n" in entry:
+                    try:
+                        n_value = int(entry.get("n") or 0)
+                        n_present = True
+                    except (TypeError, ValueError):
+                        n_present = False
             else:
                 continue
             # Drop groups with non-monotonic quartiles — BoxPlot's
             # __post_init__ would raise; the adapter is permissive.
             if label and mn <= q1 <= med <= q3 <= mx:
                 groups.append((label, mn, q1, med, q3, mx))
+                samples.append(n_value if n_present else 0)
+                if n_present:
+                    any_sample = True
 
         body: Fragment
         if not groups:
@@ -1121,6 +1139,7 @@ class WorkspaceRegionAdapter:
             body = BoxPlot(
                 label=chart_label,
                 groups=tuple(groups),
+                samples=tuple(samples) if any_sample else (),
                 reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
                 reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
             )
@@ -1497,44 +1516,46 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "report", body)
 
     def _build_tree(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: tree` regions render a hierarchical list as a Stack
-        of indented Heading rows. Indent is encoded as leading whitespace
-        in the label, so depth stays visible in plain HTML without a
-        dedicated Tree primitive.
+        """`display: tree` regions render a recursive hierarchy as
+        nested `<details>` nodes. Phase 4B.4 wave 2: dedicated
+        `Tree` primitive replacing prior Stack-of-Text composition for
+        byte-equivalence with `workspace/regions/tree.html`.
 
-        ctx shape:
-            items: list of dicts; each may carry a `children` list with
-                the same shape (recursive tree)
-            label_field: optional, defaults to title/name/id auto-pick
+        ctx shape (primary):
+            tree_items: list of nested dicts with `_children` (legacy
+                key) or `children` (typed-path) lists holding child
+                nodes with the same shape; each node carries a label
+                under `display_key`, `name`, or `title`.
+            display_key: optional field name to pull label from
+                (defaults to "name"/"title" auto-pick)
+            (legacy) `items` flat list as fallback
         """
         title = _region_title(region)
-        items = ctx.get("items") or []
-        label_field = str(ctx.get("label_field") or "")
+        raw = ctx.get("tree_items") or ctx.get("items") or []
+        label_field = str(ctx.get("display_key") or ctx.get("label_field") or "")
 
-        rows: list[object] = []
-
-        def _walk(node_list: list[Any], depth: int) -> None:
+        def _walk(node_list: list[Any]) -> tuple[TreeNode, ...]:
+            out: list[TreeNode] = []
             for node in node_list:
                 if not isinstance(node, dict):
                     continue
-                indent = "  " * depth
                 label = _pick_label(node, label_field) or "(no label)"
-                rows.append(Text(f"{indent}{label}"))
-                children = node.get("children") or []
-                if isinstance(children, list) and children:
-                    _walk(children, depth + 1)
+                # Accept both legacy `_children` and typed `children`.
+                children_raw = node.get("_children") or node.get("children") or []
+                children = _walk(children_raw) if isinstance(children_raw, list) else ()
+                out.append(TreeNode(label=label, children=children))
+            return tuple(out)
 
-        if isinstance(items, list):
-            _walk(items, 0)
+        nodes = _walk(raw) if isinstance(raw, list) else ()
 
         body: Fragment
-        if not rows:
+        if not nodes:
             body = EmptyState(
                 title="No items",
                 description=getattr(region, "empty_message", None) or "No data in this region.",
             )
         else:
-            body = Stack(children=tuple(rows), gap="sm")
+            body = Tree(nodes=nodes)
 
         return _wrap_surface(title, "list", body)
 

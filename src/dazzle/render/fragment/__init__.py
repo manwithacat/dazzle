@@ -83,6 +83,8 @@ from dazzle.render.fragment.primitives import (
     TimeSeries,
     Toolbar,
     Topbar,
+    Tree,
+    TreeNode,
 )
 from dazzle.render.fragment.registry import (
     DEFAULT_REGISTRY,
@@ -184,6 +186,8 @@ __all__ = [
     "PipelineSteps",
     "PipelineStage",
     "Sparkline",
+    "Tree",
+    "TreeNode",
     "BarTrack",
     "StageBar",
     "ReferenceLine",

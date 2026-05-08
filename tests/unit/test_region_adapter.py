@@ -643,14 +643,19 @@ def test_bar_chart_carries_reference_overlays() -> None:
 
 
 def test_box_plot_carries_reference_overlays() -> None:
+    """v0.66.107: BOX_PLOT chrome stripped to byte-match legacy
+    template — the `<dl class="dz-box-plot__references">` block was
+    a Phase 4B-only addition with no legacy counterpart, dropped to
+    align. Reference lines now overlay inside the SVG (legacy parity)
+    rather than rendering as a separate dl/dt/dd block."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "groups": [("p50", 0, 1, 2, 3, 4)],
         "reference_lines": [{"value": 3.5, "label": "Threshold"}],
     }
     html = _render(adapter.build(_FakeRegion("b", display="box_plot"), ctx))
-    assert "dz-box-plot__references" in html
-    assert "Threshold" in html
+    # Reference line renders inside the SVG as a <line> with <title>.
+    assert "<title>Threshold: 3.5</title>" in html
 
 
 def test_bar_track_carries_reference_overlays() -> None:

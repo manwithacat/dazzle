@@ -171,6 +171,13 @@ def render_via_typed(
 _WHITESPACE = re.compile(r"\s+")
 _AFTER_OPEN_BRACKET = re.compile(r">\s+")
 _BEFORE_CLOSE_BRACKET = re.compile(r"\s+<")
+_BEFORE_SELF_CLOSE = re.compile(r"\s+/>")
+# Strip whitespace before `>` when preceded by an attribute boundary
+# (closing quote or word char). Catches Jinja `{% if %}…{% endif %}`
+# artifacts that leave trailing space inside the opening tag, e.g.
+# `<details class="x" >`. Scoped to attribute boundaries to avoid
+# touching `< 5` in text content (script/SVG-path).
+_BEFORE_TAG_CLOSE = re.compile(r'(["\w])\s+>')
 
 
 def normalise_html(html: str) -> str:
@@ -199,6 +206,14 @@ def normalise_html(html: str) -> str:
     """
     s = _AFTER_OPEN_BRACKET.sub(">", html)
     s = _BEFORE_CLOSE_BRACKET.sub("<", s)
+    # Canonicalize self-closing tags: `<tag />` and `<tag/>` are
+    # equivalent XML; legacy Jinja typically emits `/>` without a
+    # space, the typed renderer emits ` />`. Strip whitespace before
+    # `/>` so byte comparisons treat them as identical.
+    s = _BEFORE_SELF_CLOSE.sub("/>", s)
+    # Strip whitespace before `>` left by Jinja `{% if %}…{% endif %}`
+    # blocks inside opening tags (e.g. `<details class="x" >`).
+    s = _BEFORE_TAG_CLOSE.sub(r"\1>", s)
     s = _WHITESPACE.sub(" ", s)
     return s.strip()
 

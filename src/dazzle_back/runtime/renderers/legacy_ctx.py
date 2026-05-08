@@ -185,12 +185,14 @@ def _translate_radar(legacy: dict[str, Any]) -> dict[str, Any]:
 
 
 def _translate_box_plot(legacy: dict[str, Any]) -> dict[str, Any]:
-    """BOX_PLOT: box_plot_stats → groups.
+    """BOX_PLOT: box_plot_stats → groups + samples.
 
-    Legacy stats carry 11 fields; adapter consumes 6 (label, min,
-    q1, median, q3, max). `n`, `iqr`, `whisker_low`, `whisker_high`,
-    `outliers` are dropped — Phase 4B.4 deliverable to thread them
-    through if needed.
+    Legacy stats carry 11 fields; adapter primitive consumes 6 quartile
+    stats + optional per-group `n` (sample count) for tooltip parity.
+    Phase 4B.4 wave 2 (v0.66.107) widened to thread `n` through; `iqr`,
+    `whisker_low`, `whisker_high`, `outliers` are still dropped (typed
+    primitive substitutes min/max for whisker fences and renders no
+    outlier dots).
     """
     stats = legacy.get("box_plot_stats") or []
     groups: list[dict[str, Any]] = []
@@ -200,18 +202,22 @@ def _translate_box_plot(legacy: dict[str, Any]) -> dict[str, Any]:
             if not label:
                 continue
             try:
-                groups.append(
-                    {
-                        "label": label,
-                        "min": float(s.get("min", 0)),
-                        "q1": float(s.get("q1", 0)),
-                        "median": float(s.get("median", 0)),
-                        "q3": float(s.get("q3", 0)),
-                        "max": float(s.get("max", 0)),
-                    }
-                )
+                entry: dict[str, Any] = {
+                    "label": label,
+                    "min": float(s.get("min", 0)),
+                    "q1": float(s.get("q1", 0)),
+                    "median": float(s.get("median", 0)),
+                    "q3": float(s.get("q3", 0)),
+                    "max": float(s.get("max", 0)),
+                }
             except (TypeError, ValueError):
                 continue
+            if "n" in s:
+                try:
+                    entry["n"] = int(s.get("n") or 0)
+                except (TypeError, ValueError):
+                    pass
+            groups.append(entry)
     return {
         "groups": groups,
         "chart_label": legacy.get("title"),

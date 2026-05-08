@@ -82,6 +82,8 @@ from dazzle.render.fragment.primitives import (
     TimeSeries,
     Toolbar,
     Topbar,
+    Tree,
+    TreeNode,
 )
 
 
@@ -199,6 +201,8 @@ class FragmentRenderer:
                 return self._emit_pipeline_steps(fragment, ctx)
             case Sparkline():
                 return self._emit_sparkline(fragment, ctx)
+            case Tree():
+                return self._emit_tree(fragment, ctx)
             case ActionCard():
                 return self._emit_action_card(fragment, ctx)
             case ProfileCard():
@@ -935,27 +939,41 @@ class FragmentRenderer:
         equivalent to `workspace/regions/box_plot.html` for the common
         case (modulo the documented divergence in `box_plot_svg`).
 
-        Phase 4B.1.c (SVG arc, box variant): replaces the prior
-        `<table>` of quartile rows with the legacy SVG visual. The
-        `<dl class="dz-box-plot__references">` block (Phase 4B.1.b)
-        carries the same reference data programmatically alongside.
-        Outer `<section class="dz-box-plot">` wrapper survives so
-        existing CSS hooks keep working; `dz-box-plot-region` (the
-        legacy class) is used for the SVG-bearing inner div.
+        Phase 4B.4 wave 2: stripped the prior Phase 4B.1.c chrome
+        (`<section class="dz-box-plot">` + `<h4>` + summary line +
+        `<dl>` references block) for byte-equivalence with the legacy
+        template, which emits only `<div class="dz-box-plot-region">`
+        wrapping the SVG. The summary referenced legacy's `n` field
+        (sum of samples across groups); the typed primitive doesn't
+        carry `n`, so the summary can't be reproduced — dropped. The
+        `<dl>` references block was a Phase 4B-only addition with no
+        legacy counterpart; also dropped to match.
+
+        Empty case renders `<p class="dz-empty-dense">…</p>` inside
+        the region wrapper, matching the legacy `{% else %}` branch.
         """
         from dazzle.render.svg import box_plot_svg
 
-        svg = box_plot_svg(b.label, b.groups, reference_lines=b.reference_lines)
-        refs = self._render_references("dz-box-plot", b.reference_lines, b.reference_bands, ctx)
-        count = len(b.groups)
-        summary = f'<p class="dz-box-plot-summary">{count} groups</p>' if count else ""
-        return (
-            f'<section class="dz-box-plot">'
-            f'<h4 class="dz-box-plot__label">{ctx.escape(b.label)}</h4>'
-            f'<div class="dz-box-plot-region">{svg}{summary}</div>'
-            f"{refs}"
-            f"</section>"
+        if not b.groups:
+            empty_msg = "No data available."
+            return (
+                f'<div class="dz-box-plot-region">'
+                f'<p class="dz-empty-dense" role="status">{empty_msg}</p>'
+                f"</div>"
+            )
+
+        svg = box_plot_svg(
+            b.label,
+            b.groups,
+            reference_lines=b.reference_lines,
+            samples=b.samples,
         )
+        # Summary line — matches legacy `{{ count }} groups · {{ sum(n) }} samples`.
+        # When samples is empty, sum is 0 (legacy Jinja sum on missing
+        # attribute returns 0 too).
+        n_total = sum(b.samples) if b.samples else 0
+        summary = f'<p class="dz-box-plot-summary">{len(b.groups)} groups · {n_total} samples</p>'
+        return f'<div class="dz-box-plot-region">{svg}{summary}</div>'
 
     def _emit_action_card(self, a: ActionCard, ctx: RenderContext) -> str:
         """Render an ActionCard as the dashboard CTA card shape.
@@ -1306,6 +1324,46 @@ class FragmentRenderer:
             f"</svg>"
         )
         return f'<div class="dz-sparkline-region">{headline}{svg}</div>'
+
+    def _emit_tree(self, t: Tree, ctx: RenderContext) -> str:
+        """Render a Tree matching legacy `workspace/regions/tree.html`
+        byte-for-byte: recursive `<details class="dz-tree-node">` with
+        chevron SVG + label + optional child count, top-level depth-0
+        nodes open by default.
+        """
+        if not t.nodes:
+            return ""
+        return "".join(self._emit_tree_node(n, depth=0, ctx=ctx) for n in t.nodes)
+
+    def _emit_tree_node(self, node: TreeNode, *, depth: int, ctx: RenderContext) -> str:
+        open_attr = " open" if depth == 0 else ""
+        chevron = (
+            '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
+            'stroke="currentColor" stroke-width="2" aria-hidden="true">'
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>'
+            "</svg>"
+        )
+        count_html = (
+            f'<span class="dz-tree-count">{len(node.children)}</span>' if node.children else ""
+        )
+        summary = (
+            f'<summary class="dz-tree-summary">'
+            f"{chevron}"
+            f'<span class="dz-tree-label">{ctx.escape(node.label)}</span>'
+            f"{count_html}"
+            f"</summary>"
+        )
+        if node.children:
+            children_html = "".join(
+                self._emit_tree_node(c, depth=depth + 1, ctx=ctx) for c in node.children
+            )
+            return (
+                f'<details class="dz-tree-node"{open_attr}>'
+                f"{summary}"
+                f'<div class="dz-tree-children">{children_html}</div>'
+                f"</details>"
+            )
+        return f'<details class="dz-tree-node"{open_attr}>{summary}</details>'
 
     def _emit_pipeline_steps(self, p: PipelineSteps, ctx: RenderContext) -> str:
         """Render a PipelineSteps row matching legacy
