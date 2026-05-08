@@ -206,15 +206,19 @@ def test_detail_renames_columns_to_fields() -> None:
     assert out["fields"] == legacy["columns"]
 
 
-def test_activity_feed_picks_activity_shaped_fields() -> None:
+def test_activity_feed_passes_through_items() -> None:
+    """Phase 4B.4 wave 1 (v0.66.103): translator widened to passthrough
+    items list — the dedicated `_build_activity_feed` adapter reads
+    legacy fields (description / created_at / actor) directly."""
     legacy = {
         "items": [{"description": "X", "created_at": "2026-05-08"}],
         "action_url": "/something",  # legacy-only — drops
     }
     out = legacy_ctx_to_adapter_ctx("activity_feed", legacy)
     assert out["items"] == legacy["items"]
-    assert out["label_field"] == "description"
-    assert out["date_field"] == "created_at"
+    # No label_field / date_field reduction now — passthrough.
+    assert "label_field" not in out
+    assert "date_field" not in out
 
 
 # === Fallback ===

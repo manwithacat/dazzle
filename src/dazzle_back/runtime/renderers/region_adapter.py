@@ -23,6 +23,7 @@ from typing import Any, Literal
 from dazzle.render.fragment import (
     URL,
     ActionCard,
+    ActivityFeed,
     Badge,
     BarChart,
     BarTrack,
@@ -326,6 +327,7 @@ class WorkspaceRegionAdapter:
         "action_grid": "_build_action_grid",
         "profile_card": "_build_profile_card",
         "queue": "_build_queue",
+        "activity_feed": "_build_activity_feed",
     }
 
     # Display values that share a builder with another display value.
@@ -333,7 +335,6 @@ class WorkspaceRegionAdapter:
     # duplicating dispatch code.
     _ALIASES: dict[str, str] = {
         "summary": "metrics",
-        "activity_feed": "timeline",
         "histogram": "bar_chart",
         "heatmap": "pivot_table",
     }
@@ -795,6 +796,54 @@ class WorkspaceRegionAdapter:
                     description=getattr(region, "empty_message", None)
                     or "No items had a label and date.",
                 )
+
+        return _wrap_surface(title, "report", body)
+
+    def _build_activity_feed(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: activity_feed` regions render as an ActivityFeed
+        primitive — chronological feed with per-row dot, time line, and
+        bubble carrying actor + description.
+
+        Phase 4B.4 wave 1: dedicated builder (replaced prior alias to
+        `_build_timeline`) so the typed-Fragment output matches
+        `workspace/regions/activity_feed.html` byte-for-byte. Time
+        strings are formatted via the legacy `timeago` filter so both
+        paths produce the same relative-time labels.
+
+        ctx shape:
+            items: list of dicts with keys:
+              - description: action description (required)
+              - created_at: datetime (rendered via `timeago` filter)
+              - actor or user: optional actor name
+              - action / title: fallback description fields
+        """
+        from dazzle_ui.runtime.template_renderer import _timeago_filter
+
+        title = _region_title(region)
+        items: list[dict[str, Any]] = ctx.get("items", []) or []
+
+        body: Fragment
+        if not items:
+            empty_msg = (
+                ctx.get("empty_message")
+                or getattr(region, "empty_message", None)
+                or "No activity yet"
+            )
+            body = ActivityFeed(items=(), empty_message=str(empty_msg))
+        else:
+            rows: list[tuple[str, str, str]] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                created = item.get("created_at")
+                time_str = _timeago_filter(created) if created else ""
+                actor_raw = item.get("actor") or item.get("user") or ""
+                actor = str(actor_raw) if actor_raw else ""
+                description = str(
+                    item.get("description") or item.get("action") or item.get("title") or ""
+                )
+                rows.append((time_str, actor, description))
+            body = ActivityFeed(items=tuple(rows))
 
         return _wrap_surface(title, "report", body)
 

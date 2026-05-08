@@ -12,6 +12,7 @@ from dazzle.render.fragment.htmx import URL, HxTrigger, TargetSelector
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
+    ActivityFeed,
     AppShell,
     Badge,
     BarChart,
@@ -168,6 +169,7 @@ __all__ = [
     "MetricTile",
     "MetricsGrid",
     "DetailGrid",
+    "ActivityFeed",
     "BarTrack",
     "StageBar",
     "ReferenceLine",

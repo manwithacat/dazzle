@@ -278,6 +278,27 @@ class MetricTile:
 
 
 @dataclass(frozen=True, slots=True)
+class ActivityFeed:
+    """Activity feed list — one row per event with time + optional actor +
+    description.
+
+    Each `items` entry is `(time_str, actor, description)`. `time_str` is
+    the already-formatted relative time (e.g. "5 hours ago" via the legacy
+    `timeago` filter); `actor` is the optional person/agent who performed
+    the action (rendered as a separate span when non-empty); `description`
+    is the action description.
+
+    Phase 4B.4 wave 1: emits the legacy
+    `workspace/regions/activity_feed.html` shape byte-for-byte —
+    `<ul class="dz-activity-feed">` with per-row dot SVG, time line, and
+    bubble containing actor + description.
+    """
+
+    items: tuple[tuple[str, str, str], ...]
+    empty_message: str = "No activity yet"
+
+
+@dataclass(frozen=True, slots=True)
 class DetailGrid:
     """Container for DETAIL regions — emits the legacy
     `<div class="dz-detail-region"><dl class="dz-detail-region-grid">`

@@ -264,12 +264,19 @@ def _translate_detail(legacy: dict[str, Any]) -> dict[str, Any]:
 
 
 def _translate_activity_feed(legacy: dict[str, Any]) -> dict[str, Any]:
-    """ACTIVITY_FEED → TIMELINE: pick activity-shaped fields."""
-    return {
-        "items": legacy.get("items", []),
-        "label_field": "description",
-        "date_field": "created_at",
-    }
+    """ACTIVITY_FEED: passthrough items list + empty_message — adapter's
+    `_build_activity_feed` reads the legacy field shape directly
+    (description / created_at / actor / user / action / title) and
+    consumes ctx['empty_message'] for the empty-state fallback.
+
+    Phase 4B.4 wave 1 (v0.66.103) — earlier versions reduced to
+    label_field / date_field for the TIMELINE alias path; the
+    dedicated activity_feed builder consumes the richer shape now.
+    """
+    out: dict[str, Any] = {"items": legacy.get("items", [])}
+    if "empty_message" in legacy:
+        out["empty_message"] = legacy["empty_message"]
+    return out
 
 
 # === Dispatch ===

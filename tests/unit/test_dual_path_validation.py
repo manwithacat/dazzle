@@ -302,6 +302,45 @@ def test_detail_achieves_byte_equivalence_with_typed_fields() -> None:
     )
 
 
+def test_activity_feed_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 1 — ACTIVITY_FEED byte-equivalent. Both paths
+    use the legacy `timeago` filter for relative time strings, so
+    they share the same execution-time-dependent output."""
+    ctx = {
+        "title": "Recent Activity",
+        "items": [
+            {
+                "description": "Created task",
+                "created_at": "2026-05-08T12:00:00",
+                "actor": "Alice",
+            },
+            {
+                "description": "Updated task",
+                "created_at": "2026-05-08T11:00:00",
+            },
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("activity_feed", **ctx),
+            render_via_typed("activity_feed", ctx),
+        )
+        is None
+    )
+
+
+def test_activity_feed_empty_renders_legacy_empty_message() -> None:
+    """Empty feed renders `<div class="dz-activity-empty">{message}</div>`
+    on both paths."""
+    ctx = {"title": "Empty", "items": [], "empty_message": "Nothing yet"}
+    legacy = render_via_legacy("activity_feed", **ctx)
+    typed = render_via_typed("activity_feed", ctx)
+    assert "dz-activity-empty" in legacy
+    assert "dz-activity-empty" in typed
+    assert "Nothing yet" in legacy
+    assert "Nothing yet" in typed
+
+
 def test_metrics_achieves_byte_equivalence_with_full_delta_block() -> None:
     """Rich ctx with all delta fields + tone renders identically.
     Pins the MetricTile + MetricsGrid contract end-to-end."""

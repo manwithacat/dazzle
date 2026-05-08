@@ -60,6 +60,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "MetricTile",
         "MetricsGrid",
         "DetailGrid",
+        "ActivityFeed",
         "BarTrack",
         "StageBar",
         "LazyTabPanel",

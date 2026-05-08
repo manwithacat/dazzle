@@ -15,6 +15,7 @@ from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
+    ActivityFeed,
     AppShell,
     Badge,
     BarChart,
@@ -198,6 +199,8 @@ class FragmentRenderer:
                 return self._emit_metrics_grid(fragment, ctx)
             case DetailGrid():
                 return self._emit_detail_grid(fragment, ctx)
+            case ActivityFeed():
+                return self._emit_activity_feed(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
             case StageBar():
@@ -1100,6 +1103,42 @@ class FragmentRenderer:
         return (
             f'<div class="dz-metrics-grid" data-dz-tile-count="{len(g.tiles)}">{tiles_html}</div>'
         )
+
+    def _emit_activity_feed(self, a: ActivityFeed, ctx: RenderContext) -> str:
+        """Render an ActivityFeed matching legacy
+        `workspace/regions/activity_feed.html` byte-for-byte: outer
+        `<ul class="dz-activity-feed">`, per-row dot SVG + time + bubble.
+
+        The dot SVG is identical across rows (constant). The bubble
+        renders an optional `<span class="dz-activity-actor">` when an
+        actor is present, then the description as raw text. Click-to-
+        drawer wiring (legacy `action_url` → hx-get on the bubble) is
+        not yet plumbed through — initial port covers the read-only
+        feed shape only; clickable rows are a follow-up.
+        """
+        if not a.items:
+            return f'<div class="dz-activity-empty">{ctx.escape(a.empty_message)}</div>'
+        rows: list[str] = []
+        for time_str, actor, description in a.items:
+            actor_html = (
+                f'<span class="dz-activity-actor">{ctx.escape(actor)}</span>' if actor else ""
+            )
+            rows.append(
+                f'<li class="dz-activity-row">'
+                f'<span class="dz-activity-dot">'
+                f'<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
+                f'<circle cx="10" cy="10" r="6"/>'
+                f"</svg>"
+                f"</span>"
+                f'<div class="dz-activity-row-inner">'
+                f'<div class="dz-activity-time">{ctx.escape(time_str)}</div>'
+                f'<div class="dz-activity-bubble" >'
+                f"{actor_html}{ctx.escape(description)}"
+                f"</div>"
+                f"</div>"
+                f"</li>"
+            )
+        return f'<ul class="dz-activity-feed">{"".join(rows)}</ul>'
 
     def _emit_detail_grid(self, g: DetailGrid, ctx: RenderContext) -> str:
         """Render a DetailGrid matching legacy

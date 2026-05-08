@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.103] - 2026-05-08
+
+### Added — Phase 4B.4 wave 1 — ACTIVITY_FEED achieves byte-equivalence
+- **New `ActivityFeed` primitive** — emits the legacy `workspace/regions/activity_feed.html` shape byte-for-byte: outer `<ul class="dz-activity-feed">`, per-row `<li class="dz-activity-row">` carrying a constant dot SVG (`<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6"/></svg>`), `<div class="dz-activity-row-inner">` containing time + bubble, optional `<span class="dz-activity-actor">` when an actor is present. Empty state renders `<div class="dz-activity-empty">{empty_message}</div>` matching legacy.
+- **New `_build_activity_feed` adapter method** — replaces the prior alias to `_build_timeline`. Reads activity-shaped ctx fields directly (description, created_at, actor / user, action / title fallbacks) and threads `created_at` through the legacy `timeago` filter so both paths produce the same relative-time labels (e.g. "5 hours ago"). Removed `activity_feed` from `_ALIASES`; added to `_BUILDERS`.
+- **`_translate_activity_feed` widened to passthrough** — earlier versions reduced to `label_field` + `date_field` for the TIMELINE alias path; the dedicated builder consumes the richer shape directly. `empty_message` is preserved for the empty-state fallback.
+
+### Phase 4B progress
+| Step | Status | Ship |
+|---|---|---|
+| 4B.0–4B.3 | done | v0.66.74–100 |
+| 4B.4 wave 1 — METRICS | done | v0.66.101 |
+| 4B.4 wave 1 — SUMMARY | done (free) | v0.66.102 |
+| 4B.4 wave 1 — DETAIL | done | v0.66.102 |
+| **4B.4 wave 1 — ACTIVITY_FEED** | **done** | **v0.66.103** |
+| 4B.4 wave 1 — STATUS_LIST, SEARCH_BOX | next | — |
+| 4B.4 wave 2+ | queued | — |
+
+### Known divergences (accepted)
+- **Click-to-drawer wiring not plumbed.** Legacy `activity_feed.html` adds `hx-get="{action_url}/{id}" hx-target="#dz-detail-drawer-content"` to the bubble div when `action_url` is in ctx, making rows clickable. The typed `ActivityFeed` primitive currently emits the bubble without HTMX attrs. Closing this requires extending `ActivityFeed` to carry an optional per-row href + adapter wiring + renderer support; deferred to a follow-up.
+
+### Agent Guidance
+- **Continue the per-display port pattern.** ACTIVITY_FEED is the third display in wave 1 to follow the same template-driven pattern: (1) read the legacy template to see the target HTML, (2) build/identify a primitive that emits that shape byte-for-byte, (3) wire a dedicated adapter method (or update the existing one), (4) update the translator if needed (mostly passthrough since adapter consumes legacy ctx shape directly), (5) regression-test via `diff_summary`.
+- **Empty-state messages need careful threading.** ACTIVITY_FEED is the first display where the ctx `empty_message` kwarg matters for byte-equivalence (legacy reads `{{ empty_message or "No activity yet" }}`). The pattern: translator preserves `empty_message` if present, adapter builder prefers `ctx['empty_message']` over `region.empty_message`. Apply this pattern to remaining displays during their port.
+- **Constant SVG markup is fine inline.** The activity-feed dot SVG renders the same on every row, so it's emitted as a constant string in `_emit_activity_feed`. If multiple displays need shared SVG icons in the future, factoring out an `_ICON_DOT` constant in renderer.py would be the clean step — for now, single inline use is the simplest.
+
 ## [0.66.102] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 1 — DETAIL + SUMMARY achieve byte-equivalence

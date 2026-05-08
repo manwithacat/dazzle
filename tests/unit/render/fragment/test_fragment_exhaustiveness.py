@@ -12,6 +12,7 @@ from dazzle.render.fragment import (
     KPI,
     URL,
     ActionCard,
+    ActivityFeed,
     AppShell,
     Badge,
     BarChart,
@@ -184,6 +185,8 @@ def _sample_for(primitive_type: type) -> object:
         return MetricsGrid(tiles=(MetricTile(label="X", value="0"),))
     if primitive_type is DetailGrid:
         return DetailGrid(rows=(("Label", Text("value")),))
+    if primitive_type is ActivityFeed:
+        return ActivityFeed(items=(("now", "Alice", "did the thing"),))
     if primitive_type is BarTrack:
         return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
     if primitive_type is StageBar:
