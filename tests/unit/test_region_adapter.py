@@ -1520,32 +1520,46 @@ def test_bar_track_empty_renders_empty_state() -> None:
     assert "No tracks." in _render(fragment)
 
 
-def test_bullet_renders_actual_vs_target_rows_with_severity() -> None:
-    """Each bullet row shows label, actual (severity-mapped Badge),
-    "/", target (default Badge). Variant maps from actual/target ratio:
-    >=1.0 success, <0.5 danger, else warning."""
+def test_bullet_renders_track_with_actual_target_tick() -> None:
+    """Phase 4B.4 wave 2 (v0.66.105): adapter consumes the authored
+    `bullet_rows` shape directly with `bullet_max_value` for the
+    percentage scale. Emits the legacy `dz-bullet-region` shape with
+    per-row label + track + actual bar + target tick + value."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "items": [
-            {"label": "Q1", "actual": 100, "target": 100},  # success
-            {"label": "Q2", "actual": 70, "target": 100},  # warning
-            {"label": "Q3", "actual": 30, "target": 100},  # danger
-        ]
+        "bullet_rows": [
+            {"label": "Q1", "actual": 100, "target": 100},
+            {"label": "Q2", "actual": 70, "target": 100},
+            {"label": "Q3", "actual": 30, "target": None},
+        ],
+        "bullet_max_value": 100,
     }
     fragment = adapter.build(_FakeRegion("b", display="bullet"), ctx)
     html = _render(fragment)
     assert "Q1" in html and "Q2" in html and "Q3" in html
-    assert "dz-badge--variant-success" in html
-    assert "dz-badge--variant-warning" in html
-    assert "dz-badge--variant-danger" in html
+    assert 'class="dz-bullet-region"' in html
+    assert 'class="dz-bullet-actual"' in html
+    # Q1 + Q2 have target ticks; Q3 doesn't.
+    assert html.count('class="dz-bullet-target"') == 2
+    assert "3 rows · scale 0–100" in html
 
 
-def test_bullet_handles_non_numeric_values_gracefully() -> None:
+def test_bullet_drops_non_numeric_values() -> None:
+    """Rows with non-coercible `actual`/`target` silently drop —
+    matches the adapter's permissive parsing convention."""
     adapter = WorkspaceRegionAdapter()
-    ctx = {"items": [{"label": "X", "actual": "n/a", "target": "n/a"}]}
+    ctx = {
+        "bullet_rows": [
+            {"label": "X", "actual": "n/a", "target": "n/a"},  # drops
+            {"label": "Y", "actual": 50, "target": 100},
+        ],
+        "bullet_max_value": 100,
+    }
     fragment = adapter.build(_FakeRegion("b", display="bullet"), ctx)
     html = _render(fragment)
-    assert "n/a" in html  # rendered without crashing the variant calc
+    assert "Y" in html
+    assert "n/a" not in html
+    assert "1 rows · scale 0–100" in html
 
 
 def test_bullet_empty_renders_empty_state() -> None:
@@ -1857,7 +1871,10 @@ def test_progress_clamps_out_of_range_complete_pct() -> None:
         "complete_pct": 250,
     }
     html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
-    assert "100.0%" in html  # clamped to 100.0
+    # v0.66.105: emit narrows whole values to int repr for byte-equivalence
+    # with the legacy Jinja `{{ complete_pct }}` rendering — `100.0` becomes
+    # `100`. Fractional values still render with the trailing decimal.
+    assert "100%" in html  # clamped to 100, integer repr
     assert "250" not in html
 
 

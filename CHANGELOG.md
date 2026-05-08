@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.105] - 2026-05-08
+
+### Added — Phase 4B.4 wave 2 begins — PROGRESS + BULLET byte-equivalent
+- **PROGRESS** — `_emit_stage_bar` now wraps output in `<div class="dz-progress-region">` and renders the percent value with int-narrowing (`33` not `33.0`) to match Jinja's `{{ complete_pct }}` rendering. Two-line fix; existing `StageBar` primitive contract unchanged.
+- **BULLET** — new `Bullet` + `BulletRow` primitives matching `workspace/regions/bullet.html` byte-for-byte: outer `dz-bullet-region`, per-row label + track (reference bands behind, actual bar, optional target tick), formatted value, summary line. Replaces the prior Stack+Row+Badge composition. New `_build_bullet` consumes the authored `bullet_rows` + `bullet_max_value` shape directly. Reference bands use the same colour map (`hsl(var(--primary))`, `hsl(145, 55%, 45%)` etc.) as the chart-family SVG helpers — single source of truth via `_BAND_COLORS` import.
+
+### Numeric formatting helper
+- **`_jinja_num` in `_emit_bullet`** — local helper that narrows whole-valued floats to int repr (so `75.0` renders as `"75"`, `30.5` as `"30.5"`). Mirrors Jinja's `{{ value }}` behaviour. Pattern is reusable for any future port where the legacy template emits raw values without explicit `round()` formatting; expect to extract this into a renderer-level utility once 2-3 displays have used it.
+
+### Phase 4B.4 progress
+| Wave | Display | Status |
+|---|---|---|
+| 1 | METRICS / SUMMARY / DETAIL / ACTIVITY_FEED / STATUS_LIST / SEARCH_BOX | done |
+| 2 | **PROGRESS** | **done v0.66.105** |
+| 2 | **BULLET** | **done v0.66.105** |
+| 2 | LIST | next (highest complexity in wave 2) |
+| 2 | GRID, TIMELINE, TREE, BOX_PLOT, SPARKLINE, PIPELINE_STEPS | queued |
+| 3, 4 | (charts + interactive) | queued |
+
+### Changed — adapter `_build_bullet` and `_build_progress` ctx contracts
+- **`_build_bullet`** — now reads authored `bullet_rows` + `bullet_max_value` (matches production runtime ctx) instead of the Phase 4A items+actual+target shape. The runtime supplies these via the IR's `bullet_label` / `bullet_actual` / `bullet_target` column refs (per legacy template comment). Updated test cases use the new shape.
+
+### Agent Guidance
+- **Float-vs-int rendering is a recurring divergence class.** Jinja's `{{ value }}` renders int as "33" and float as "33.0"; Python f-strings on a typed-as-float field always produce "33.0" even when the value is whole. The `_jinja_num` helper pattern (`int(v) if v == int(v) else v`) closes this. Apply at the site where the value reaches the renderer, not in the primitive — primitives stay typed.
+- **Next display: LIST.** Highest complexity in wave 2 (rich legacy chrome: filter bar, date range, sortable headers, click-through HTMX, per-cell type rendering). Expect 1-2 ships. The Phase 4B.1.e chrome primitives (FilterBar, DateRangePicker, CsvExportButton, SortHeader) are already wired into `_build_list`; the remaining work is body equivalence (a new `ListTable` primitive likely required) plus the always-emit CSV button + region wrapper.
+- **`_BAND_COLORS` is now a cross-renderer constant.** The Bullet primitive imports it from `dazzle.render.svg`. When porting future displays that use the same `target / positive / warning / destructive / muted` palette, import this rather than duplicating the map.
+
 ## [0.66.104] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 1 COMPLETE — STATUS_LIST + SEARCH_BOX byte-equivalent

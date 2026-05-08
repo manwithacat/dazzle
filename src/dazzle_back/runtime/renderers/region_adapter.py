@@ -28,6 +28,8 @@ from dazzle.render.fragment import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Bullet,
+    BulletRow,
     Button,
     Card,
     ConfirmCheckItem,
@@ -1428,60 +1430,57 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "report", body)
 
     def _build_bullet(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: bullet` renders rows showing actual-vs-target.
-        Each row: label + actual Badge + "/ target" Text + target Badge.
+        """`display: bullet` renders Stephen Few bullet rows — label +
+        track (bands behind, actual bar, optional target tick) +
+        formatted value. Phase 4B.4 wave 2: dedicated `Bullet` primitive
+        replaces prior Stack+Row+Badge composition for byte-equivalence
+        with `workspace/regions/bullet.html`.
 
-        ctx shape:
-            items: list of dicts {"label": str, "actual": int|str,
-                                  "target": int|str}
+        ctx shape (primary):
+            bullet_rows: list of dicts {label, actual, target}
+            bullet_max_value: float — denominator for percentage scale
+            reference_bands: optional list[dict] for comparative zones
+            empty_message: optional empty-state fallback
         """
         title = _region_title(region)
-        items = ctx.get("items") or []
+        raw_rows = ctx.get("bullet_rows") or []
+        try:
+            max_value = float(ctx.get("bullet_max_value") or 0)
+        except (TypeError, ValueError):
+            max_value = 0.0
 
-        rows: list[object] = []
-        if isinstance(items, list):
-            for item in items:
-                if not isinstance(item, dict):
+        rows: list[BulletRow] = []
+        if isinstance(raw_rows, list):
+            for entry in raw_rows:
+                if not isinstance(entry, dict):
                     continue
-                label = str(item.get("label") or item.get("name") or "")
-                actual = item.get("actual", "—")
-                target = item.get("target", "—")
-                # Map "actual >= target" → success, "<half" → danger, else warning.
-                variant: str = "info"
+                label = str(entry.get("label") or entry.get("name") or "")
+                if not label:
+                    continue
                 try:
-                    a, t = float(actual), float(target)
-                    if t > 0:
-                        ratio = a / t
-                        if ratio >= 1.0:
-                            variant = "success"
-                        elif ratio < 0.5:
-                            variant = "danger"
-                        else:
-                            variant = "warning"
+                    actual = float(entry.get("actual", 0))
                 except (TypeError, ValueError):
-                    variant = "info"
-                rows.append(
-                    Row(
-                        children=(
-                            Text(label or "(no label)"),
-                            Badge(label=str(actual), variant=variant),  # type: ignore[arg-type]
-                            Text("/"),
-                            Badge(label=str(target), variant="default"),
-                        ),
-                        gap="sm",
-                        align="center",
-                    )
-                )
+                    continue
+                target_raw = entry.get("target")
+                target: float | None = None
+                if target_raw is not None:
+                    try:
+                        target = float(target_raw)
+                    except (TypeError, ValueError):
+                        target = None
+                rows.append(BulletRow(label=label, actual=actual, target=target))
 
-        body: Fragment
-        if not rows:
-            body = EmptyState(
-                title="No data",
-                description=getattr(region, "empty_message", None) or "No bullet rows.",
-            )
-        else:
-            body = Stack(children=tuple(rows), gap="sm")
-
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No data available."
+        )
+        body: Fragment = Bullet(
+            rows=tuple(rows),
+            max_value=max_value if rows else 1.0,  # invariant guard for empty
+            reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
+            empty_message=str(empty_msg),
+        )
         return _wrap_surface(title, "report", body)
 
     def _build_tree(self, region: Any, ctx: dict[str, Any]) -> Surface:

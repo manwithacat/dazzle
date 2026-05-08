@@ -18,6 +18,8 @@ from dazzle.render.fragment import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Bullet,
+    BulletRow,
     Button,
     CalendarGrid,
     Card,
@@ -177,6 +179,10 @@ def _sample_for(primitive_type: type) -> object:
         return Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
     if primitive_type is BoxPlot:
         return BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
+    if primitive_type is Bullet:
+        return Bullet(rows=(BulletRow(label="X", actual=50.0),), max_value=100.0)
+    if primitive_type is BulletRow:
+        return BulletRow(label="X", actual=50.0)
     if primitive_type is ActionCard:
         return ActionCard(label="X")
     if primitive_type is ProfileCard:

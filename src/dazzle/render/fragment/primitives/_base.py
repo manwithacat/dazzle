@@ -32,6 +32,7 @@ from dazzle.render.fragment.primitives.data import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Bullet,
     CalendarGrid,
     ConfirmGate,
     CsvExportButton,
@@ -117,6 +118,7 @@ Fragment = (
     | TimeSeries
     | Radar
     | BoxPlot
+    | Bullet
     | ActionCard
     | ProfileCard
     | MetricTile

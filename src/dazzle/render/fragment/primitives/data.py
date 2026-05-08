@@ -281,6 +281,47 @@ _STATUS_LIST_STATES = ("neutral", "positive", "warning", "destructive", "accent"
 
 
 @dataclass(frozen=True, slots=True)
+class BulletRow:
+    """Single row in a `Bullet` chart — Stephen Few bullet shape.
+
+    `actual` is the foreground bar value; `target` is the optional
+    vertical-tick goal position. Both are absolute values; the `Bullet`
+    container's `max_value` provides the percentage scale.
+    """
+
+    label: str
+    actual: float
+    target: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Bullet:
+    """Stephen Few bullet rows — actual-vs-target with comparative bands.
+
+    Phase 4B.4 wave 2: emits the legacy
+    `workspace/regions/bullet.html` shape byte-for-byte —
+    `<div class="dz-bullet-rows">` with per-row label + track (bands
+    behind, actual bar, optional target tick) + formatted value, plus
+    a summary line "N rows · scale 0–MAX".
+
+    Reference bands render as `<span class="dz-bullet-band">` overlays
+    in the track, positioned by `from_value`/`to_value` as a percentage
+    of `max_value`. Colour map matches the chart-family palette
+    (`hsl(var(--primary))`, `hsl(145,55%,45%)`, etc.) keyed off the
+    `color` field.
+    """
+
+    rows: tuple[BulletRow, ...]
+    max_value: float
+    reference_bands: tuple[ReferenceBand, ...] = ()
+    empty_message: str = "No data available."
+
+    def __post_init__(self) -> None:
+        if self.max_value <= 0 and self.rows:
+            raise ValueError("Bullet max_value must be > 0 when rows are present")
+
+
+@dataclass(frozen=True, slots=True)
 class StatusListEntry:
     """Single row in a `StatusList` — title + optional caption/icon/state.
 

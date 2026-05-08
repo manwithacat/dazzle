@@ -387,6 +387,56 @@ def test_search_box_achieves_byte_equivalence() -> None:
     )
 
 
+def test_progress_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — PROGRESS byte-equivalent. Outer
+    `dz-progress-region` wrapper now wired; integer percent values
+    render without trailing `.0` to match Jinja's `{{ value }}`."""
+    ctx = {
+        "title": "Pipeline",
+        "stage_counts": [
+            {"name": "Lead", "count": 10, "complete": True},
+            {"name": "Active", "count": 5, "complete": False},
+            {"name": "Pending", "count": 0, "complete": False},
+        ],
+        "complete_pct": 33,
+        "complete_count": 10,
+        "progress_total": 30,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("progress", **ctx),
+            render_via_typed("progress", ctx),
+        )
+        is None
+    )
+
+
+def test_bullet_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — BULLET byte-equivalent. New Bullet primitive
+    + reference-band overlay + actual/target tick + summary line."""
+    ctx = {
+        "title": "Sales",
+        "bullet_rows": [
+            {"label": "Q1", "actual": 75, "target": 100},
+            {"label": "Q2", "actual": 50, "target": 80},
+            {"label": "Q3", "actual": 30, "target": None},
+        ],
+        "bullet_max_value": 100,
+        "reference_bands": [
+            {"from": 0, "to": 30, "color": "destructive", "label": "Bad"},
+            {"from": 30, "to": 70, "color": "warning", "label": "OK"},
+            {"from": 70, "to": 100, "color": "positive", "label": "Good"},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("bullet", **ctx),
+            render_via_typed("bullet", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

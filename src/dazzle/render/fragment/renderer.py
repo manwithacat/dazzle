@@ -21,6 +21,7 @@ from dazzle.render.fragment.primitives import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Bullet,
     Button,
     CalendarGrid,
     Card,
@@ -190,6 +191,8 @@ class FragmentRenderer:
                 return self._emit_radar(fragment, ctx)
             case BoxPlot():
                 return self._emit_box_plot(fragment, ctx)
+            case Bullet():
+                return self._emit_bullet(fragment, ctx)
             case ActionCard():
                 return self._emit_action_card(fragment, ctx)
             case ProfileCard():
@@ -1143,6 +1146,97 @@ class FragmentRenderer:
             )
         return f'<ul class="dz-activity-feed">{"".join(rows)}</ul>'
 
+    def _emit_bullet(self, b: Bullet, ctx: RenderContext) -> str:
+        """Render a Bullet matching legacy
+        `workspace/regions/bullet.html` byte-for-byte: outer
+        `dz-bullet-region` wrapper, per-row label + track (bands behind,
+        actual bar, optional target tick) + formatted value, summary
+        line "N rows · scale 0–MAX".
+
+        Empty path renders the `dz-empty-dense` fallback inside the
+        region wrapper. Reference bands use the same colour map as the
+        chart-family SVG helpers (`hsl(var(--primary))` for `target`
+        etc.); `from`/`to` positions are rendered as percentage of
+        max_value.
+
+        Numeric formatting matches the legacy Jinja `{{ value }}`
+        rendering — whole-valued floats narrow to int repr (so 75.0
+        renders as "75"), fractional values keep the trailing decimal.
+        """
+        from dazzle.render.svg import _BAND_COLORS
+
+        if not b.rows or b.max_value <= 0:
+            return (
+                f'<div class="dz-bullet-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(b.empty_message)}</p>"
+                f"</div>"
+            )
+
+        # Match Jinja's `{{ value }}` rendering: whole floats render
+        # without trailing `.0`. Used for tooltip numerics where the
+        # legacy template did not apply `round()`.
+        def _jinja_num(value: float) -> str:
+            return str(int(value)) if value == int(value) else str(value)
+
+        rows_html: list[str] = []
+        for row in b.rows:
+            actual_pct = round(row.actual / b.max_value * 100, 2)
+            bands_html = ""
+            for band in b.reference_bands:
+                band_left = round(band.from_value / b.max_value * 100, 2)
+                band_width = round((band.to_value - band.from_value) / b.max_value * 100, 2)
+                colour = _BAND_COLORS.get(band.color, _BAND_COLORS["target"])
+                bands_html += (
+                    f'<span class="dz-bullet-band" '
+                    f'style="left: {band_left}%; width: {band_width}%; '
+                    f'background: {colour};" '
+                    f'title="{ctx.escape_attr(band.label)}: '
+                    f'{_jinja_num(band.from_value)}–{_jinja_num(band.to_value)}"></span>'
+                )
+
+            target_html = ""
+            # `round(1)` for value display matches `{{ value | round(1) }}`;
+            # but Jinja's round renders 75.0 as "75.0" only if the value
+            # was already non-int. For ints, round(1) gives an int so
+            # "75". Mirror that with _jinja_num after round.
+            actual_rounded = round(row.actual, 1)
+            value_html = _jinja_num(actual_rounded)
+            if row.target is not None:
+                target_pct = round(row.target / b.max_value * 100, 2)
+                target_html = (
+                    f'<span class="dz-bullet-target" '
+                    f'style="left: {target_pct}%;" '
+                    f'title="{ctx.escape_attr(row.label)} target: '
+                    f'{_jinja_num(row.target)}"></span>'
+                )
+                target_rounded = round(row.target, 1)
+                value_html += f" / {_jinja_num(target_rounded)}"
+
+            rows_html.append(
+                f'<div class="dz-bullet-row">'
+                f'<span class="dz-bullet-label">{ctx.escape(row.label)}</span>'
+                f'<div class="dz-bullet-track">'
+                f"{bands_html}"
+                f'<span class="dz-bullet-actual" '
+                f'style="width: {actual_pct}%;" '
+                f'title="{ctx.escape_attr(row.label)} actual: '
+                f'{_jinja_num(row.actual)}"></span>'
+                f"{target_html}"
+                f"</div>"
+                f'<span class="dz-bullet-value">{value_html}</span>'
+                f"</div>"
+            )
+
+        return (
+            f'<div class="dz-bullet-region">'
+            f'<div class="dz-bullet-rows">{"".join(rows_html)}</div>'
+            f'<p class="dz-bullet-summary">'
+            f"{len(b.rows)} rows · scale 0–{_jinja_num(round(b.max_value, 1))}"
+            f"</p>"
+            f"</div>"
+        )
+
     def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:
         """Render a StatusList matching legacy
         `workspace/regions/status_list.html` byte-for-byte: outer
@@ -1272,10 +1366,19 @@ class FragmentRenderer:
 
     def _emit_stage_bar(self, s: StageBar, ctx: RenderContext) -> str:
         """Render a StageBar matching legacy
-        `workspace/regions/progress.html`: header `<progress>` + percent
-        readout + chip list of stages with per-chip tone (complete /
+        `workspace/regions/progress.html` byte-for-byte: outer
+        `dz-progress-region` wrapper, header `<progress>` + percent
+        readout, chip list of stages with per-chip tone (complete /
         active / empty), and an optional "N of M complete" summary.
         """
+        # Match Jinja's `{{ complete_pct }}` rendering: int values
+        # render without trailing `.0`, floats render as-is. The
+        # adapter coerces to float for type safety; the renderer
+        # narrows back to int when the value is whole so byte-
+        # equivalence holds for the common round-percentage case.
+        pct = s.complete_pct
+        pct_str = str(int(pct)) if pct == int(pct) else str(pct)
+
         chips_html = "".join(
             f'<span class="dz-progress-chip" '
             f'data-dz-stage-tone="{("complete" if complete else ("active" if count > 0 else "empty"))}">'
@@ -1289,12 +1392,14 @@ class FragmentRenderer:
             else ""
         )
         return (
+            f'<div class="dz-progress-region">'
             f'<div class="dz-progress-header">'
-            f'<progress data-dz-progress value="{s.complete_pct}" max="100"></progress>'
-            f"<span>{s.complete_pct}%</span>"
+            f'<progress data-dz-progress value="{pct_str}" max="100"></progress>'
+            f"<span>{pct_str}%</span>"
             f"</div>"
             f'<div class="dz-progress-stages">{chips_html}</div>'
             f"{summary_html}"
+            f"</div>"
         )
 
     def _emit_lazy_tab_panel(self, p: LazyTabPanel, ctx: RenderContext) -> str:
