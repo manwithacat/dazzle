@@ -20,6 +20,9 @@ _TRENDS = ("up", "down", "flat")
 _CALENDAR_VIEWS = ("day", "week", "month")
 _TIMESERIES_VIEWS = ("line", "area", "sparkline")
 _ACTION_CARD_TONES = ("neutral", "positive", "warning", "destructive", "accent")
+_METRIC_TILE_TONES = ("", "positive", "warning", "destructive", "accent", "neutral")
+_METRIC_DELTA_DIRECTIONS = ("", "up", "down", "flat")
+_METRIC_DELTA_SENTIMENTS = ("", "positive_up", "positive_down")
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +107,49 @@ class CalendarGrid:
     def __post_init__(self) -> None:
         if self.view not in _CALENDAR_VIEWS:
             raise ValueError(f"invalid view {self.view!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class MetricTile:
+    """Richer metric-tile primitive for the METRICS / SUMMARY display.
+
+    Replaces simple `KPI` for legacy parity. Beyond label + value (which
+    KPI already had), `MetricTile` carries:
+      - tone: per-tile tint (e.g. positive/warning/destructive/accent)
+      - delta block: direction (up/down/flat), sentiment (positive_up
+        means "up = good", positive_down means "up = bad"), the delta
+        value as a string, optional delta_pct (rendered as `(N%)` when
+        non-zero), period label (rendered as `vs <label>`)
+
+    `value` is expected to be already-formatted (the runtime applies
+    `metric_number` before passing — adapter ctx-translation does this
+    in `_build_metrics`). KPI remains for simple cases without deltas.
+    """
+
+    label: str
+    value: str
+    tone: Literal["", "positive", "warning", "destructive", "accent", "neutral"] = ""
+    delta_direction: Literal["", "up", "down", "flat"] = ""
+    delta_sentiment: Literal["", "positive_up", "positive_down"] = ""
+    delta_value: str = ""
+    delta_pct: float = 0.0
+    delta_period_label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.label:
+            raise ValueError("MetricTile requires a non-empty label")
+        if self.tone not in _METRIC_TILE_TONES:
+            raise ValueError(f"invalid tone {self.tone!r}; must be one of {_METRIC_TILE_TONES}")
+        if self.delta_direction not in _METRIC_DELTA_DIRECTIONS:
+            raise ValueError(
+                f"invalid delta_direction {self.delta_direction!r}; "
+                f"must be one of {_METRIC_DELTA_DIRECTIONS}"
+            )
+        if self.delta_sentiment not in _METRIC_DELTA_SENTIMENTS:
+            raise ValueError(
+                f"invalid delta_sentiment {self.delta_sentiment!r}; "
+                f"must be one of {_METRIC_DELTA_SENTIMENTS}"
+            )
 
 
 @dataclass(frozen=True, slots=True)

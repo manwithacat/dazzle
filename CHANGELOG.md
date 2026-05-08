@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.78] - 2026-05-08
+
+### Added — Phase 4B.1.a — METRICS extended deltas
+- **`MetricTile` Fragment primitive** — richer than KPI: carries `tone`, `delta_direction` (up/down/flat), `delta_sentiment` (positive_up = "up is good", positive_down = "up is bad"), `delta_value` string, `delta_pct` float, `delta_period_label`. Renders to match the legacy `workspace/regions/metrics.html` HTML byte-for-byte: `dz-metric-tile` wrapper with snake-cased `data-dz-metric-key`, optional `data-dz-tone`, label + already-formatted value, and conditional delta block with `data-dz-delta-tone` (positive/destructive/neutral) computed from `(direction, sentiment)`, arrow (↑/↓/→), sign (+/empty), pct chunk, "vs <period>" label.
+- **`_build_metrics` extended to produce MetricTile** — values pass through `_metric_number_filter` from `dazzle_ui.runtime.template_renderer` so the typed-Fragment path produces the same K/M-suffixed string the Jinja path produces (1234 → "1,234", True → "Yes", None → "0"). Tone, direction, and sentiment values that don't match the primitive's whitelist silently fall back to defaults (defensive — strict primitive would raise).
+- 6 new primitive tests + 5 new adapter tests; baselines updated.
+- KPI primitive remains in the public API for non-METRICS use cases (typed dashboards that want a simple label + value + trend); `_build_metrics` no longer dispatches to it.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID | done — ActionCard primitive | v0.66.75 |
+| 4B.1.b | PROFILE_CARD | done — ProfileCard primitive | v0.66.76 |
+| 4B.1.a | DETAIL (type-aware) | done | v0.66.77 |
+| 4B.1.a | METRICS (extended deltas) | **done — MetricTile primitive** | **v0.66.78** |
+| 4B.1.b | ProgressTrack, Avatar, ReferenceLine, ReferenceBand | next | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending | — |
+| 4B.1.d | TransitionButton, ConfirmGate, SearchBox, LazyTabPanel | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+
+### Agent Guidance
+- The **delta-tone computation** (positive/destructive/neutral from direction × sentiment) lives in `_emit_metric_tile` in the renderer, not in the primitive's `__post_init__`. Rationale: it's a presentation concern (which CSS class to emit), not an IR invariant. The primitive holds the raw direction + sentiment so consumers that don't render to HTML can re-derive whatever they need.
+- `value` on `MetricTile` is **expected to be already-formatted**. The runtime applies `_metric_number_filter` in the adapter before constructing the primitive. Don't pass raw integers/floats — the primitive renders the string verbatim.
+
 ## [0.66.77] - 2026-05-08
 
 ### Added — Phase 4B.1.a — type-aware DETAIL rendering

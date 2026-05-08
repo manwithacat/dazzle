@@ -34,6 +34,7 @@ from dazzle.render.fragment import (
     Interactive,
     KanbanBoard,
     Link,
+    MetricTile,
     Modal,
     NavGroup,
     NavItem,
@@ -164,6 +165,8 @@ def _sample_for(primitive_type: type) -> object:
         return ActionCard(label="X")
     if primitive_type is ProfileCard:
         return ProfileCard(primary="Alice")
+    if primitive_type is MetricTile:
+        return MetricTile(label="X", value="0")
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

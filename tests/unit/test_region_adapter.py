@@ -367,14 +367,16 @@ def test_metrics_summary_alias_dispatches_same_path() -> None:
     assert "X" in _render(fragment)
 
 
-def test_metrics_invalid_trend_coerced_to_flat() -> None:
-    """Defensive: garbage trend values shouldn't crash the KPI primitive."""
+def test_metrics_invalid_tone_coerced_to_default() -> None:
+    """Defensive: garbage tone values shouldn't crash the MetricTile primitive."""
     adapter = WorkspaceRegionAdapter()
     fragment = adapter.build(
         _FakeRegion("k", display="metrics"),
-        {"metrics": [{"label": "X", "value": "1", "trend": "garbage"}]},
+        {"metrics": [{"label": "X", "value": "1", "tone": "garbage"}]},
     )
-    assert "X" in _render(fragment)
+    html = _render(fragment)
+    assert "X" in html
+    assert 'data-dz-tone="garbage"' not in html  # garbage stripped
 
 
 def test_metrics_empty_renders_empty_state() -> None:
@@ -384,6 +386,79 @@ def test_metrics_empty_renders_empty_state() -> None:
         {},
     )
     assert "None yet." in _render(fragment)
+
+
+def test_metrics_extended_deltas_render_full_block() -> None:
+    """Phase 4B.1.a: `_build_metrics` now produces MetricTile primitives
+    so the legacy delta block (delta_pct, delta_period_label,
+    delta_sentiment, delta_direction, sign, arrow) is preserved."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "metrics": [
+            {
+                "label": "Open Tickets",
+                "value": 1234,
+                "tone": "warning",
+                "delta_direction": "up",
+                "delta_sentiment": "positive_down",  # up = bad
+                "delta": "42",
+                "delta_pct": 12.5,
+                "delta_period_label": "last week",
+            }
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
+    assert 'data-dz-metric-key="open_tickets"' in html
+    assert 'data-dz-tone="warning"' in html
+    assert 'data-dz-delta-tone="destructive"' in html  # up + positive_down = bad
+    assert "1,234" in html  # metric_number applied (thousands separator)
+    assert "↑" in html and "+42" in html
+    assert "(12.5%)" in html
+    assert "vs last week" in html
+
+
+def test_metrics_delta_sentiment_positive_up_renders_good() -> None:
+    """`up` direction + `positive_up` sentiment = good = positive tone."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "metrics": [
+            {
+                "label": "Revenue",
+                "value": 50000,
+                "delta_direction": "up",
+                "delta_sentiment": "positive_up",
+                "delta": "5000",
+                "delta_period_label": "last month",
+            }
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
+    assert 'data-dz-delta-tone="positive"' in html
+
+
+def test_metrics_no_delta_omits_delta_block() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"metrics": [{"label": "Total", "value": 42}]}
+    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
+    assert "dz-metric-delta" not in html
+    assert ">42<" in html  # plain value with no thousands separator
+
+
+def test_metrics_value_passes_through_metric_number_filter() -> None:
+    """Integers get thousands separators; bools become Yes/No;
+    None becomes "0"."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "metrics": [
+            {"label": "Big", "value": 1500000},
+            {"label": "Bool", "value": True},
+            {"label": "Null", "value": None},
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
+    assert "1,500,000" in html
+    assert ">Yes<" in html
+    assert ">0<" in html  # None → "0"
 
 
 # ───────────────── Bar chart ───────────────────────

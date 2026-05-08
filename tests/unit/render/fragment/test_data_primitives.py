@@ -11,6 +11,7 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     Diagram,
     KanbanBoard,
+    MetricTile,
     PivotTable,
     ProfileCard,
     Radar,
@@ -273,3 +274,49 @@ def test_profile_card_holds_stats_and_facts_immutably() -> None:
     )
     assert p.stats == (("Cases", "5"), ("Open", "2"))
     assert p.facts == ("Lead", "Mentor")
+
+
+# === MetricTile ===
+
+
+def test_metric_tile_requires_label() -> None:
+    with pytest.raises(ValueError, match="non-empty label"):
+        MetricTile(label="", value="0")
+
+
+def test_metric_tile_rejects_unknown_tone() -> None:
+    with pytest.raises(ValueError, match="invalid tone"):
+        MetricTile(label="X", value="0", tone="purple")  # type: ignore[arg-type]
+
+
+def test_metric_tile_rejects_unknown_delta_direction() -> None:
+    with pytest.raises(ValueError, match="invalid delta_direction"):
+        MetricTile(label="X", value="0", delta_direction="sideways")  # type: ignore[arg-type]
+
+
+def test_metric_tile_rejects_unknown_delta_sentiment() -> None:
+    with pytest.raises(ValueError, match="invalid delta_sentiment"):
+        MetricTile(label="X", value="0", delta_sentiment="ambiguous")  # type: ignore[arg-type]
+
+
+def test_metric_tile_minimal_no_delta() -> None:
+    m = MetricTile(label="Total", value="42")
+    assert m.label == "Total"
+    assert m.value == "42"
+    assert m.tone == ""
+    assert m.delta_direction == ""
+
+
+def test_metric_tile_full_delta_block() -> None:
+    m = MetricTile(
+        label="Sales",
+        value="1,234",
+        tone="warning",
+        delta_direction="up",
+        delta_sentiment="positive_up",
+        delta_value="42",
+        delta_pct=3.5,
+        delta_period_label="last month",
+    )
+    assert m.delta_pct == 3.5
+    assert m.delta_period_label == "last month"

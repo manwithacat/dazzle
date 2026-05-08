@@ -34,6 +34,7 @@ from dazzle.render.fragment.primitives import (
     Interactive,
     KanbanBoard,
     Link,
+    MetricTile,
     Modal,
     NavGroup,
     NavItem,
@@ -148,6 +149,7 @@ __all__ = [
     "BoxPlot",
     "ActionCard",
     "ProfileCard",
+    "MetricTile",
     # primitives — forms
     "FormStack",
     "Field",

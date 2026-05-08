@@ -33,6 +33,7 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     Diagram,
     KanbanBoard,
+    MetricTile,
     PivotTable,
     ProfileCard,
     Radar,
@@ -105,6 +106,7 @@ Fragment = (
     | BoxPlot
     | ActionCard
     | ProfileCard
+    | MetricTile
     # Forms
     | FormStack
     | Field

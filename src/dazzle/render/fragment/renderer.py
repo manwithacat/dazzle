@@ -37,6 +37,7 @@ from dazzle.render.fragment.primitives import (
     Interactive,
     KanbanBoard,
     Link,
+    MetricTile,
     Modal,
     NavGroup,
     NavItem,
@@ -176,6 +177,8 @@ class FragmentRenderer:
                 return self._emit_action_card(fragment, ctx)
             case ProfileCard():
                 return self._emit_profile_card(fragment, ctx)
+            case MetricTile():
+                return self._emit_metric_tile(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -899,6 +902,65 @@ class FragmentRenderer:
             facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
 
         return f'<div class="dz-profile-card">{identity_html}{stats_html}{facts_html}</div>'
+
+    def _emit_metric_tile(self, m: MetricTile, ctx: RenderContext) -> str:
+        """Render a MetricTile matching the legacy
+        `workspace/regions/metrics.html` HTML shape: dz-metric-tile
+        wrapper with snake-cased data-dz-metric-key, optional data-dz-tone,
+        label + already-formatted value, and a delta block when
+        delta_direction is set.
+
+        The delta tone is computed from (direction, sentiment):
+            - up + positive_up   = good (positive)
+            - down + positive_down = good (positive)
+            - down + positive_up = bad (destructive)
+            - up + positive_down = bad (destructive)
+            - flat or anything else = neutral
+        """
+        key_attr = m.label.lower().replace(" ", "_")
+        tone_attr = f' data-dz-tone="{ctx.escape_attr(m.tone)}"' if m.tone else ""
+
+        delta_html = ""
+        if m.delta_direction:
+            is_good = (m.delta_direction == "up" and m.delta_sentiment == "positive_up") or (
+                m.delta_direction == "down" and m.delta_sentiment == "positive_down"
+            )
+            is_bad = (m.delta_direction == "down" and m.delta_sentiment == "positive_up") or (
+                m.delta_direction == "up" and m.delta_sentiment == "positive_down"
+            )
+            delta_tone = "positive" if is_good else ("destructive" if is_bad else "neutral")
+            arrow = (
+                "↑" if m.delta_direction == "up" else ("↓" if m.delta_direction == "down" else "→")
+            )
+            sign = "+" if m.delta_direction == "up" else ""
+            pct_html = (
+                f'<span class="dz-metric-delta-pct">({m.delta_pct}%)</span>' if m.delta_pct else ""
+            )
+            period_html = (
+                f'<span class="dz-metric-delta-period">vs {ctx.escape(m.delta_period_label)}</span>'
+                if m.delta_period_label
+                else ""
+            )
+            delta_html = (
+                f'<div class="dz-metric-delta" '
+                f'data-dz-delta-tone="{delta_tone}" '
+                f'data-dz-delta-direction="{ctx.escape_attr(m.delta_direction)}" '
+                f'data-dz-delta-sentiment="{ctx.escape_attr(m.delta_sentiment)}">'
+                f'<span aria-hidden="true">{arrow}</span>'
+                f'<span class="dz-metric-delta-value">{sign}{ctx.escape(m.delta_value)}</span>'
+                f"{pct_html}"
+                f"{period_html}"
+                f"</div>"
+            )
+
+        return (
+            f'<div class="dz-metric-tile" '
+            f'data-dz-metric-key="{ctx.escape_attr(key_attr)}"{tone_attr}>'
+            f'<div class="dz-metric-label">{ctx.escape(m.label)}</div>'
+            f'<div class="dz-metric-value">{ctx.escape(m.value)}</div>'
+            f"{delta_html}"
+            f"</div>"
+        )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         action = ctx.escape_attr(str(fs.action))

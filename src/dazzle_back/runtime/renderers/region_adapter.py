@@ -20,7 +20,6 @@ from collections.abc import Callable
 from typing import Any, Literal
 
 from dazzle.render.fragment import (
-    KPI,
     URL,
     ActionCard,
     Badge,
@@ -34,6 +33,7 @@ from dazzle.render.fragment import (
     Heading,
     KanbanBoard,
     Link,
+    MetricTile,
     PivotTable,
     ProfileCard,
     Radar,
@@ -1230,21 +1230,37 @@ class WorkspaceRegionAdapter:
 
     def _build_metrics(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: metrics` (and `summary`) regions render a row of
-        KPI tiles — one per declared aggregate.
+        MetricTile primitives — one per declared aggregate. Phase 4B.1.a
+        replaced KPI with MetricTile so the legacy template's extended
+        delta block (delta_pct, delta_period_label, delta_sentiment,
+        per-tile tone) is preserved on the typed-Fragment path.
+
+        Values are passed through `_metric_number_filter` (K/M-suffix
+        formatting) before reaching the primitive — same string the
+        Jinja path produces.
 
         ctx shape:
-            metrics: list of dicts with label/value/trend/delta keys
-                — pre-computed by the runtime's aggregate evaluator
+            metrics: list of dicts with keys:
+              - label, value (required)
+              - tone: one of "", "positive", "warning", "destructive",
+                "accent", "neutral"
+              - delta_direction: "" | "up" | "down" | "flat"
+              - delta_sentiment: "" | "positive_up" | "positive_down"
+              - delta: stringified delta value
+              - delta_pct: float (rendered as `(N%)` when non-zero)
+              - delta_period_label: rendered as `vs <label>`
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
+        from dazzle_ui.runtime.template_renderer import _metric_number_filter
+
         title = _region_title(region)
         metrics_list: list[dict[str, Any]] = ctx.get("metrics", []) or []
         if not metrics_list:
             agg = ctx.get("aggregates") or getattr(region, "aggregates", {}) or {}
             if isinstance(agg, dict):
                 metrics_list = [
-                    {"label": str(name).replace("_", " ").title(), "value": str(val or "—")}
+                    {"label": str(name).replace("_", " ").title(), "value": val}
                     for name, val in agg.items()
                 ]
 
@@ -1254,27 +1270,58 @@ class WorkspaceRegionAdapter:
                 title="No metrics",
                 description=getattr(region, "empty_message", None) or "No metrics declared.",
             )
-        else:
-            kpis: list[object] = []
-            for m in metrics_list:
-                if not isinstance(m, dict):
-                    continue
-                trend = str(m.get("trend") or "flat")
-                if trend not in ("up", "down", "flat"):
-                    trend = "flat"
-                kpis.append(
-                    KPI(
-                        label=str(m.get("label") or m.get("name") or ""),
-                        value=str(m.get("value") or "—"),
-                        trend=trend,  # type: ignore[arg-type]
-                        delta=str(m.get("delta") or ""),
-                    )
+            return _wrap_surface(title, "dashboard", body)
+
+        tiles: list[object] = []
+        for m in metrics_list:
+            if not isinstance(m, dict):
+                continue
+            label = str(m.get("label") or m.get("name") or "")
+            if not label:
+                continue
+            value_str = _metric_number_filter(m.get("value"))
+
+            tone_raw = str(m.get("tone") or "")
+            tone: Literal["", "positive", "warning", "destructive", "accent", "neutral"] = (
+                tone_raw  # type: ignore[assignment]
+                if tone_raw in ("", "positive", "warning", "destructive", "accent", "neutral")
+                else ""
+            )
+            direction_raw = str(m.get("delta_direction") or "")
+            direction: Literal["", "up", "down", "flat"] = (
+                direction_raw  # type: ignore[assignment]
+                if direction_raw in ("", "up", "down", "flat")
+                else ""
+            )
+            sentiment_raw = str(m.get("delta_sentiment") or "")
+            sentiment: Literal["", "positive_up", "positive_down"] = (
+                sentiment_raw  # type: ignore[assignment]
+                if sentiment_raw in ("", "positive_up", "positive_down")
+                else ""
+            )
+            try:
+                delta_pct = float(m.get("delta_pct") or 0)
+            except (TypeError, ValueError):
+                delta_pct = 0.0
+
+            tiles.append(
+                MetricTile(
+                    label=label,
+                    value=value_str,
+                    tone=tone,
+                    delta_direction=direction,
+                    delta_sentiment=sentiment,
+                    delta_value=str(m.get("delta") or ""),
+                    delta_pct=delta_pct,
+                    delta_period_label=str(m.get("delta_period_label") or ""),
                 )
-            if not kpis:
-                body = EmptyState(title="No metrics", description="No metric tiles produced.")
-            else:
-                cols = max(1, min(12, len(kpis)))
-                body = Grid(children=tuple(kpis), columns=cols)
+            )
+
+        if not tiles:
+            body = EmptyState(title="No metrics", description="No metric tiles produced.")
+        else:
+            cols = max(1, min(12, len(tiles)))
+            body = Grid(children=tuple(tiles), columns=cols)
 
         return _wrap_surface(title, "dashboard", body)
 

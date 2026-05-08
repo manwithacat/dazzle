@@ -57,6 +57,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "BoxPlot",
         "ActionCard",
         "ProfileCard",
+        "MetricTile",
         # forms
         "FormStack",
         "Field",
