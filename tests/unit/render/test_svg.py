@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from dazzle.render.svg import time_series_svg
+from dazzle.render.svg import box_plot_svg, time_series_svg
 
 
 @dataclass
@@ -89,3 +89,61 @@ def test_polyline_points_use_padding_left() -> None:
     svg = time_series_svg("x", (("a", 1.0), ("b", 2.0)))
     assert 'points="8,' in svg
     assert " 392.0," in svg
+
+
+# === box_plot_svg ===
+
+
+def test_box_plot_empty_groups_renders_nothing() -> None:
+    assert box_plot_svg("x", ()) == ""
+
+
+def test_box_plot_emits_svg_with_box_and_whiskers() -> None:
+    svg = box_plot_svg(
+        "Latency",
+        (("p50", 0.0, 1.0, 2.0, 3.0, 4.0), ("p99", 5.0, 6.0, 7.0, 8.0, 9.0)),
+    )
+    assert svg.startswith("<svg ")
+    assert "<rect " in svg  # box bodies
+    # 2 boxes → 6 whisker lines (stem + 2 caps each), 2 medians, 2 baselines, 2 ticks
+    assert svg.count("<line ") >= 8
+    # Group labels
+    assert ">p50<" in svg and ">p99<" in svg
+    # Median tooltip carries quartile data
+    assert "<title>p50: Q1 1.0, median 2.0, Q3 3.0</title>" in svg
+    assert svg.endswith("</svg>")
+
+
+def test_box_plot_width_caps_at_460() -> None:
+    """Many groups → width caps at 460 (legacy contract)."""
+    groups = tuple((f"g{i}", 0.0, 1.0, 2.0, 3.0, 4.0) for i in range(20))
+    svg = box_plot_svg("x", groups)
+    assert 'viewBox="0 0 460 200"' in svg
+
+
+def test_box_plot_width_scales_below_cap() -> None:
+    """Few groups → 56*count + 64 px wide."""
+    svg = box_plot_svg("x", (("a", 0.0, 1.0, 2.0, 3.0, 4.0),))
+    assert 'viewBox="0 0 120 200"' in svg  # 56*1 + 64 = 120
+
+
+def test_box_plot_aria_label_includes_range() -> None:
+    svg = box_plot_svg(
+        "Latency",
+        (("p50", 0.0, 1.0, 2.0, 3.0, 4.0), ("p99", 5.0, 6.0, 7.0, 8.0, 9.0)),
+    )
+    assert 'aria-label="Latency box plot — 2 groups, range 0.0–9.0"' in svg
+
+
+def test_box_plot_reference_line_clipped_to_y_range() -> None:
+    """Reference lines outside [y_min, y_max] are dropped (legacy behaviour)."""
+    svg = box_plot_svg(
+        "x",
+        (("a", 0.0, 1.0, 2.0, 3.0, 4.0),),
+        reference_lines=(
+            _Ref("InRange", 2.5, style="dashed"),
+            _Ref("OutOfRange", 100.0, style="solid"),
+        ),
+    )
+    assert "InRange" in svg
+    assert "OutOfRange" not in svg

@@ -908,30 +908,28 @@ class FragmentRenderer:
         )
 
     def _emit_box_plot(self, b: BoxPlot, ctx: RenderContext) -> str:
-        """Render a box-plot as a `<table>` of group rows with a column
-        per quartile statistic.
+        """Render a box-plot as inline SVG box+whisker glyphs — byte-
+        equivalent to `workspace/regions/box_plot.html` for the common
+        case (modulo the documented divergence in `box_plot_svg`).
 
-        Future iteration can render the boxes as SVG; the table is the
-        accessible-by-default fallback and carries the data semantically.
+        Phase 4B.1.c (SVG arc, box variant): replaces the prior
+        `<table>` of quartile rows with the legacy SVG visual. The
+        `<dl class="dz-box-plot__references">` block (Phase 4B.1.b)
+        carries the same reference data programmatically alongside.
+        Outer `<section class="dz-box-plot">` wrapper survives so
+        existing CSS hooks keep working; `dz-box-plot-region` (the
+        legacy class) is used for the SVG-bearing inner div.
         """
-        header = (
-            "<thead><tr>"
-            "<th>Group</th><th>Min</th><th>Q1</th>"
-            "<th>Median</th><th>Q3</th><th>Max</th>"
-            "</tr></thead>"
-        )
-        rows = "".join(
-            f"<tr>"
-            f"<td>{ctx.escape(label)}</td>"
-            f"<td>{mn}</td><td>{q1}</td><td>{med}</td><td>{q3}</td><td>{mx}</td>"
-            f"</tr>"
-            for label, mn, q1, med, q3, mx in b.groups
-        )
+        from dazzle.render.svg import box_plot_svg
+
+        svg = box_plot_svg(b.label, b.groups, reference_lines=b.reference_lines)
         refs = self._render_references("dz-box-plot", b.reference_lines, b.reference_bands, ctx)
+        count = len(b.groups)
+        summary = f'<p class="dz-box-plot-summary">{count} groups</p>' if count else ""
         return (
             f'<section class="dz-box-plot">'
             f'<h4 class="dz-box-plot__label">{ctx.escape(b.label)}</h4>'
-            f'<table class="dz-box-plot__table">{header}<tbody>{rows}</tbody></table>'
+            f'<div class="dz-box-plot-region">{svg}{summary}</div>'
             f"{refs}"
             f"</section>"
         )

@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.96] - 2026-05-08
+
+### Added — Phase 4B.1.c — `dazzle.render.svg.box_plot_svg` helper
+- **New helper `box_plot_svg(label, groups, *, reference_lines)`** in `dazzle.render.svg`. Produces inline SVG matching the legacy `workspace/regions/box_plot.html` template structure: vertical box+whisker glyphs per group, shared y-axis range across all boxes, width scales 56px-per-box capped at 460px, height fixed at 200px, padding 8/8/32/32 (top/right/bottom/left for x-axis tick labels + group labels).
+- **Per-group glyph rendering** — whisker stem + caps in `hsl(var(--muted-foreground))`, Q1–Q3 box body with `fill-opacity="0.18"` + `hsl(var(--primary))` fill/stroke, median line at 1.5px stroke, `<title>` tooltip carrying Q1/median/Q3 numerics, group label below the axis in monospace.
+- **Y-axis tick labels** — bottom-left shows `y_min` (rounded 1dp), top-left shows `y_max`. Reference lines inside `[y_min, y_max]` render as horizontal `<line>` overlays with the same `solid / dashed / dotted` dasharray map as `time_series_svg`; out-of-range refs silently drop (matches legacy behaviour).
+
+### Changed — `_emit_box_plot` ported to SVG
+- **Replaced `<table>` of quartile rows with the inline SVG**. Outer `<section class="dz-box-plot">` + `<h4 class="dz-box-plot__label">` survives so existing CSS hooks keep working; the SVG sits in a new `<div class="dz-box-plot-region">` (the legacy class) along with a `<p class="dz-box-plot-summary">{N} groups</p>` summary line.
+- The v0.66.81 `<dl class="dz-box-plot__references">` programmatic-data layer continues to ride along (BEM convention preserved — Phase 4B-only addition with no legacy template equivalent).
+
+### Known divergence from legacy template (accepted)
+- The current `BoxPlot` primitive carries 6 stats per group `(label, min, q1, median, q3, max)`. The legacy template renders 11 fields per stat (adds `n`, `whisker_low`, `whisker_high`, `outliers` computed by the runtime's `_compute_box_plot_stats`). The SVG helper substitutes:
+  - `min` → whisker_low, `max` → whisker_high (no Tukey 1.5×IQR fence — outliers always render inside whiskers, not as separate dots)
+  - No `n` in tooltips (drops the `n=N` suffix)
+  - No outlier dots (the `<circle>` glyphs the legacy template renders for points beyond the fences)
+- Phase 4B.3's dual-path validation gate will surface this as a known structural divergence. Closing it requires extending the BoxPlot primitive's group schema — likely a Phase 4B.4 deliverable when the runtime threads the full stats payload through ctx.
+
+### Phase 4B.1 progress
+| Step | Status | Ship |
+|---|---|---|
+| TimeSeries → SVG | done | v0.66.94 |
+| BarChart → legacy CSS-bars structure | done | v0.66.95 |
+| BoxPlot → SVG box+whiskers | **done** | **v0.66.96** |
+| Radar → SVG polar | next | — |
+| BarTrack → legacy CSS-bars structure | queued | — |
+
+### Agent Guidance
+- The reference-line clipping convention (`if ref.value < y_min or ref.value > y_max: continue`) matches legacy behaviour: out-of-range markers silently drop rather than rendering off-canvas. The TimeSeries helper takes a different approach (extends y-range to include reference values). Different defaults are intentional — TimeSeries shows trends so refs anchor the trajectory; BoxPlot shows distributions so refs only make sense inside the observed range.
+- When extending other chart helpers (Radar next), reuse the `_LINE_DASHARRAY` and `_BAND_COLORS` module constants. They are the canonical token mapping for chart overlays — keep all chart families consistent.
+
 ## [0.66.95] - 2026-05-08
 
 ### Changed — Phase 4B.1.c — `_emit_bar_chart` ported to legacy CSS-bar structure
