@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.95] - 2026-05-08
+
+### Changed — Phase 4B.1.c — `_emit_bar_chart` ported to legacy CSS-bar structure
+- **`_emit_bar_chart` rewritten** to match the legacy `workspace/regions/bar_chart.html` template byte-for-byte: outer `<div class="dz-bar-chart-region">` (single-dash, replacing prior BEM `dz-bar-chart`), per-bucket `<div class="dz-bar-chart-row">` rows with `<span class="dz-bar-chart-label">` + `<div class="dz-bar-chart-track"><div class="dz-bar-chart-fill" style="width: N%"></div></div>` + `<span class="dz-bar-chart-value">`, plus a `<p class="dz-bar-chart-summary">{total} total</p>` summary line.
+- **Width percentage** computed from each bucket's count divided by the max bucket value, rounded to int (matches legacy `(value / max_val * 100) | int`). Zero-max input is guarded — produces 0%-wide fills rather than a divide-by-zero.
+- **`aria-label` on the region wrapper** preserves the BarChart's `label` field for screen readers when the primitive is rendered standalone (without the surface `Heading` chrome supplied by `_wrap_surface`).
+- **Reference annotations stay BEM** — the v0.66.81 `<dl class="dz-bar-chart__references">` programmatic-data layer keeps `__references` since it has no legacy template equivalent (it's a Phase 4B addition, not a port). Belt + suspenders with the visible CSS-bar layer.
+
+### Why CSS bars, not SVG, for BarChart
+- **Legacy `bar_chart.html` is CSS-based**, not SVG: `<div>` tracks with percentage-width fills. Porting to SVG would diverge from the dual-path validation gate's source of truth. SVG remains the right tool for chart families with continuous geometry (TimeSeries, Radar, BoxPlot whiskers); for discrete bar values, CSS bars are simpler, more accessible, and natively responsive.
+- **Outcome:** the SVG arc has two distinct rendering strategies. Time-series and polar charts use `dazzle.render.svg` helpers; categorical bar charts use the CSS-track structure (no helper module needed — the structure is small enough to inline in the renderer).
+
+### Phase 4B.1 progress
+| Step | Status | Ship |
+|---|---|---|
+| TimeSeries → SVG | done | v0.66.94 |
+| BarChart → legacy CSS-bars structure | **done** | **v0.66.95** |
+| BoxPlot → SVG box+whiskers | next | — |
+| Radar → SVG polar | queued | — |
+| BarTrack → legacy CSS-bars structure | queued | — |
+
+### Agent Guidance
+- **Chart family rendering strategy is now bifurcated** — continuous-geometry charts (line/area/sparkline today; radar/boxplot next) use `dazzle.render.svg.*` helpers for byte-equivalence with their SVG legacy templates. Discrete categorical charts (bar_chart, bar_track) use CSS-track structure inline in the renderer for byte-equivalence with their CSS-bar legacy templates. When porting a new chart, **read the legacy template first** to determine which strategy applies — don't default to SVG.
+- The reference annotation block convention (`{block_class}__references` with BEM) is shared across all chart families regardless of visible-rendering strategy. It's the v0.66.81 programmatic-data layer; legacy templates predate it.
+
 ## [0.66.94] - 2026-05-08
 
 ### Added — Phase 4B.1.c — `dazzle.render.svg` time-series helper (SVG arc start)

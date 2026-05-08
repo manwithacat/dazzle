@@ -50,6 +50,33 @@ def test_render_bar_chart() -> None:
     assert "3" in out
 
 
+def test_render_bar_chart_emits_legacy_track_and_fill_structure() -> None:
+    """Phase 4B.1.c — bar chart structure matches the legacy
+    `bar_chart.html` template (single-dash classes, track/fill divs,
+    width-percent fill, summary line)."""
+    r = FragmentRenderer()
+    out = r.render(BarChart(label="By status", buckets=(("open", 3), ("done", 9))))
+    assert 'class="dz-bar-chart-region"' in out
+    assert 'class="dz-bar-chart-bars"' in out
+    assert out.count('class="dz-bar-chart-row"') == 2
+    assert 'class="dz-bar-chart-track"' in out
+    # 3/9 = 33%, 9/9 = 100%
+    assert 'style="width: 33%"' in out
+    assert 'style="width: 100%"' in out
+    # Summary line: total = 12
+    assert 'class="dz-bar-chart-summary">12 total</p>' in out
+    # aria-label preserves the chart label for screen readers
+    assert 'aria-label="By status"' in out
+
+
+def test_render_bar_chart_handles_zero_max_value() -> None:
+    """All-zero buckets should not divide-by-zero — fills go to 0%."""
+    r = FragmentRenderer()
+    out = r.render(BarChart(label="x", buckets=(("a", 0), ("b", 0))))
+    assert 'style="width: 0%"' in out
+    assert "0 total" in out
+
+
 def test_render_pivot_table() -> None:
     r = FragmentRenderer()
     p = PivotTable(

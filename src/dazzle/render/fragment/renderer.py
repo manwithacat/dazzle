@@ -737,18 +737,40 @@ class FragmentRenderer:
         return f'<dl class="{block_class}__references">{line_items}{band_items}</dl>'
 
     def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
-        bars = "".join(
-            f'<div class="dz-bar-chart__bar" data-label="{ctx.escape_attr(label)}">'
-            f'<span class="dz-bar-chart__label">{ctx.escape(label)}</span>'
-            f'<span class="dz-bar-chart__value">{count}</span>'
+        """Render a bar chart as label/track/fill/value rows — byte-equivalent
+        to the legacy `workspace/regions/bar_chart.html` template.
+
+        Phase 4B.1.c (SVG arc, bar variant): replaces the prior BEM
+        emit with the legacy single-dash CSS-bar structure (track div +
+        fill div with `width: N%`). The `dz-bar-chart-references`
+        annotation block is the v0.66.81 programmatic-data layer and
+        keeps its BEM `__references` form (net-new from Phase 4B —
+        no legacy template equivalent to match).
+        """
+        if not b.buckets:
+            return (
+                f'<div class="dz-bar-chart-region" aria-label="{ctx.escape_attr(b.label)}"></div>'
+            )
+
+        max_val = max((c for _, c in b.buckets), default=1) or 1
+        total = sum(c for _, c in b.buckets)
+        rows = "".join(
+            f'<div class="dz-bar-chart-row">'
+            f'<span class="dz-bar-chart-label">{ctx.escape(label)}</span>'
+            f'<div class="dz-bar-chart-track">'
+            f'<div class="dz-bar-chart-fill" '
+            f'style="width: {int(count / max_val * 100)}%"></div>'
+            f"</div>"
+            f'<span class="dz-bar-chart-value">{count}</span>'
             f"</div>"
             for label, count in b.buckets
         )
         refs = self._render_references("dz-bar-chart", b.reference_lines, b.reference_bands, ctx)
         return (
-            f'<div class="dz-bar-chart">'
-            f'<div class="dz-bar-chart__title">{ctx.escape(b.label)}</div>'
-            f'<div class="dz-bar-chart__bars">{bars}</div>'
+            f'<div class="dz-bar-chart-region" '
+            f'aria-label="{ctx.escape_attr(b.label)}">'
+            f'<div class="dz-bar-chart-bars">{rows}</div>'
+            f'<p class="dz-bar-chart-summary">{total} total</p>'
             f"{refs}"
             f"</div>"
         )
