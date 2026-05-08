@@ -1949,18 +1949,116 @@ def test_funnel_chart_empty_renders_empty_state() -> None:
     assert "No funnel." in _render(fragment)
 
 
-def test_queue_dispatches_through_list() -> None:
-    """`display: queue` is a Table-like list. Inline-action wiring is
-    a future enhancement; the audit just needs the render path closed."""
+def test_queue_renders_minimal_items() -> None:
+    """Phase 4B.1.d/e: `display: queue` now produces a dedicated
+    `_build_queue` (replaced the prior alias to `_build_list`).
+    Without transitions, items render as Card rows with their label."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "items": [{"name": "Item One"}, {"name": "Item Two"}],
-        "columns": [{"key": "name", "label": "Name"}],
+        "items": [
+            {"id": 1, "title": "Item One", "status": "open"},
+            {"id": 2, "title": "Item Two", "status": "open"},
+        ],
+        "columns": [{"key": "title", "label": "Title"}],
     }
     fragment = adapter.build(_FakeRegion("q", display="queue"), ctx)
     html = _render(fragment)
-    assert "<table" in html
     assert "Item One" in html and "Item Two" in html
+
+
+def test_queue_renders_transition_buttons_when_supplied() -> None:
+    """Phase 4B.1.d: queue_transitions + status_field + api_endpoint
+    produce per-row Button primitives with hx_put + hx_vals + hx_ext.
+    Buttons matching the item's current state are skipped."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {"id": 42, "title": "Bug A", "status": "open"},
+        ],
+        "endpoint": "/api/regions/tickets",
+        "region_name": "tickets",
+        "queue_transitions": [
+            {"label": "Resolve", "to_state": "resolved"},
+            {"label": "Close", "to_state": "closed"},
+            {"label": "Reopen", "to_state": "open"},  # matches current — should skip
+        ],
+        "queue_status_field": "status",
+        "queue_api_endpoint": "/api/tickets",
+    }
+    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
+    assert 'hx-put="/api/tickets/42"' in html
+    assert "Resolve" in html
+    assert "Close" in html
+    assert "Reopen" not in html  # skipped — current state already 'open'
+    assert 'hx-ext="json-enc"' in html
+
+
+def test_queue_chrome_composition_filter_metrics_csv_overflow() -> None:
+    """Queue inherits the list's chrome contract (FilterBar, CsvExportButton)
+    plus queue-specific bits (count badge, metric tiles, overflow text)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"id": 1, "title": "X", "status": "open"}],
+        "metrics": [{"label": "Open", "value": 12}, {"label": "Closed", "value": 88}],
+        "endpoint": "/api/regions/r",
+        "region_name": "r",
+        "filter_columns": [{"key": "priority", "label": "Priority", "options": [("high", "High")]}],
+        "csv_export": True,
+        "total": 100,
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="queue"), ctx))
+    assert "filter-bar" in html
+    assert "dz-list-csv-button" in html
+    assert "dz-metric-tile" in html
+    assert "Showing 1 of 100" in html
+
+
+def test_queue_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("q", display="queue", empty_message="Queue is empty."),
+        {"items": []},
+    )
+    assert "Queue is empty." in _render(fragment)
+
+
+def test_queue_skips_transitions_when_required_ctx_keys_missing() -> None:
+    """Transition rendering requires queue_status_field + queue_api_endpoint
+    + an item.id. Missing any of these silently skips transition
+    buttons rather than crashing — the items still render as plain
+    Card rows."""
+    adapter = WorkspaceRegionAdapter()
+    # Missing queue_api_endpoint
+    ctx = {
+        "items": [{"id": 1, "title": "X", "status": "open"}],
+        "queue_transitions": [{"label": "Close", "to_state": "closed"}],
+        "queue_status_field": "status",
+        # queue_api_endpoint deliberately missing
+    }
+    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
+    assert "hx-put" not in html
+    assert "X" in html  # item still renders
+
+
+def test_queue_transition_to_current_state_silently_skipped() -> None:
+    """A transition whose to_state matches the item's current value
+    is filtered out — preserves the legacy 'don't offer transition
+    to your current state' UX."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"id": 1, "title": "X", "status": "open"}],
+        "endpoint": "/api/r",
+        "region_name": "r",
+        "queue_transitions": [
+            {"label": "Reopen", "to_state": "open"},  # matches current — skip
+            {"label": "Close", "to_state": "closed"},  # different — render
+        ],
+        "queue_status_field": "status",
+        "queue_api_endpoint": "/api/items",
+    }
+    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
+    assert "Close" in html
+    assert "Reopen" not in html
 
 
 def test_histogram_dispatches_through_bar_chart() -> None:

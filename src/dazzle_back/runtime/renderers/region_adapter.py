@@ -26,6 +26,7 @@ from dazzle.render.fragment import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Button,
     Card,
     ConfirmCheckItem,
     ConfirmGate,
@@ -55,6 +56,7 @@ from dazzle.render.fragment import (
     StageBar,
     Surface,
     Tabs,
+    TargetSelector,
     Text,
     Timeline,
     TimeSeries,
@@ -312,6 +314,7 @@ class WorkspaceRegionAdapter:
         "box_plot": "_build_box_plot",
         "action_grid": "_build_action_grid",
         "profile_card": "_build_profile_card",
+        "queue": "_build_queue",
     }
 
     # Display values that share a builder with another display value.
@@ -320,7 +323,6 @@ class WorkspaceRegionAdapter:
     _ALIASES: dict[str, str] = {
         "summary": "metrics",
         "activity_feed": "timeline",
-        "queue": "list",
         "histogram": "bar_chart",
         "heatmap": "pivot_table",
     }
@@ -495,6 +497,212 @@ class WorkspaceRegionAdapter:
         # the chrome row(s). Otherwise emit the plain body for backward compat.
         if chrome_parts:
             body = Stack(children=(*chrome_parts, body), gap="md")
+
+        return _wrap_surface(title, "list", body)
+
+    def _build_queue(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: queue` regions render as a review queue with inline
+        state-transition action buttons.
+
+        Phase 4B.1.d/e — replaces the prior alias to `_build_list`.
+        Composes a Stack of:
+          1. Total count badge (when total > 0)
+          2. Metrics summary tiles (when `metrics` ctx is supplied)
+          3. FilterBar / DateRangePicker / CsvExportButton chrome (same
+             contract as `_build_list`)
+          4. Per-item rows: each item is a Card with main content + a
+             Row of transition Buttons (using the extended Button shape
+             from v0.66.83 — hx_put + hx_vals + hx_ext)
+          5. Overflow text (when `total > len(items)`)
+
+        Note: this is structurally equivalent to the legacy
+        `queue.html` but not byte-for-byte (the legacy template uses
+        a custom `dz-queue-row` flex layout that the typed-Fragment
+        substrate doesn't replicate today). The Phase 4B.3 dual-path
+        validation gate will surface this as an accepted divergence
+        — the chrome is byte-equivalent, the row interior is not.
+
+        ctx shape (Phase 4B preferred):
+            items, columns: same as list
+            total: int — full row count for the count badge + overflow
+            metrics: list of metric dicts (label, value, etc.)
+            endpoint, region_name: HTMX wiring (chrome + transitions)
+            filter_columns, active_filters, date_range, csv_export: chrome
+            queue_transitions: list of {label, to_state}
+            queue_status_field: str — field name carrying current state
+            queue_api_endpoint: str URL — base URL for transitions
+                (transitions PUT to f"{queue_api_endpoint}/{item.id}")
+        """
+        title = _region_title(region)
+        items = ctx.get("items", []) or []
+        total = int(ctx.get("total") or 0)
+
+        endpoint = ctx.get("endpoint")
+        region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "queue")
+        queue_transitions = ctx.get("queue_transitions") or []
+        queue_status_field = str(ctx.get("queue_status_field") or "")
+        queue_api_endpoint = str(ctx.get("queue_api_endpoint") or "")
+
+        chrome_parts: list[Fragment] = []
+
+        # Count badge (when total > 0)
+        if total > 0:
+            chrome_parts.append(
+                Stack(
+                    children=(Badge(label=str(total), variant="info"),),
+                    gap="none",
+                )
+            )
+
+        # Metrics summary tiles
+        metrics_raw = ctx.get("metrics") or []
+        if isinstance(metrics_raw, list) and metrics_raw:
+            from dazzle_ui.runtime.template_renderer import _metric_number_filter
+
+            tiles: list[Fragment] = []
+            for m in metrics_raw:
+                if not isinstance(m, dict):
+                    continue
+                label = str(m.get("label") or m.get("name") or "")
+                if not label:
+                    continue
+                tiles.append(
+                    MetricTile(label=label, value=str(_metric_number_filter(m.get("value"))))
+                )
+            if tiles:
+                chrome_parts.append(Stack(children=tuple(tiles), gap="md"))
+
+        # Filter / date / csv chrome — same as _build_list
+        filter_columns_raw = ctx.get("filter_columns") or []
+        active_filters = ctx.get("active_filters") or {}
+        if endpoint and isinstance(filter_columns_raw, list) and filter_columns_raw:
+            cols: list[FilterColumn] = []
+            seen: set[str] = set()
+            for fc in filter_columns_raw:
+                if not isinstance(fc, dict):
+                    continue
+                key = str(fc.get("key") or "")
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                raw_options = fc.get("options") or []
+                opts: list[tuple[str, str]] = []
+                for opt in raw_options:
+                    if isinstance(opt, tuple) and len(opt) == 2:
+                        opts.append((str(opt[0]), str(opt[1])))
+                    elif isinstance(opt, dict):
+                        opts.append((str(opt.get("value") or ""), str(opt.get("label") or "")))
+                    else:
+                        opts.append((str(opt), str(opt)))
+                selected = str(
+                    fc.get("selected")
+                    or (active_filters.get(key) if isinstance(active_filters, dict) else "")
+                    or ""
+                )
+                cols.append(
+                    FilterColumn(
+                        key=key,
+                        label=str(fc.get("label") or key),
+                        options=tuple(opts),
+                        selected=selected,
+                    )
+                )
+            if cols:
+                chrome_parts.append(
+                    FilterBar(
+                        endpoint=URL(str(endpoint)),
+                        region_name=region_name,
+                        columns=tuple(cols),
+                    )
+                )
+
+        if endpoint and ctx.get("date_range"):
+            chrome_parts.append(
+                DateRangePicker(
+                    endpoint=URL(str(endpoint)),
+                    region_name=region_name,
+                    date_from=str(ctx.get("date_from") or ""),
+                    date_to=str(ctx.get("date_to") or ""),
+                )
+            )
+
+        if endpoint and ctx.get("csv_export"):
+            chrome_parts.append(
+                CsvExportButton(
+                    endpoint=URL(str(endpoint)),
+                    filename=str(ctx.get("csv_filename") or f"{region_name}.csv"),
+                )
+            )
+
+        # Body: rows with transition buttons OR EmptyState
+        body: Fragment
+        if not items:
+            body = EmptyState(
+                title="Empty",
+                description=getattr(region, "empty_message", None) or "Queue is empty.",
+            )
+        else:
+            row_cards: list[Fragment] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+
+                # Item display: pick label from common fields
+                display_key = str(ctx.get("display_key") or "")
+                label = _pick_label(item, display_key) or str(item.get("id") or "")
+
+                # Build inline transition buttons (when transitions
+                # supplied + item has an id). Buttons that match the
+                # current state are skipped (legacy behaviour: don't
+                # offer a transition to the state you're already in).
+                buttons: list[object] = [Text(label)]
+                if (
+                    queue_transitions
+                    and queue_status_field
+                    and queue_api_endpoint
+                    and isinstance(queue_transitions, list)
+                ):
+                    item_id = item.get("id")
+                    current_state = item.get(queue_status_field)
+                    if item_id is not None:
+                        for tr in queue_transitions:
+                            if not isinstance(tr, dict):
+                                continue
+                            to_state = tr.get("to_state")
+                            if not to_state or to_state == current_state:
+                                continue
+                            tr_label = str(tr.get("label") or to_state)
+                            buttons.append(
+                                Button(
+                                    label=tr_label,
+                                    variant="secondary",
+                                    hx_put=URL(f"{queue_api_endpoint}/{item_id}"),
+                                    hx_target=TargetSelector(f"#region-{region_name}"),
+                                    hx_swap="innerHTML",
+                                    hx_vals=f'{{"{queue_status_field}": "{to_state}"}}',
+                                    hx_ext=("json-enc",),
+                                )
+                            )
+                row_cards.append(Card(body=Row(children=tuple(buttons), gap="md", align="center")))
+            if row_cards:
+                body = Stack(children=tuple(row_cards), gap="sm")
+            else:
+                body = EmptyState(
+                    title="Empty",
+                    description=getattr(region, "empty_message", None) or "Queue is empty.",
+                )
+
+        # Overflow: "Showing N of M"
+        if total > len(items) > 0:
+            chrome_parts.append(Text(f"Showing {len(items)} of {total}"))
+
+        if chrome_parts:
+            body = Stack(
+                children=(*chrome_parts[:-1], body, *chrome_parts[-1:])
+                if chrome_parts and isinstance(chrome_parts[-1], Text)
+                else (*chrome_parts, body),
+                gap="md",
+            )
 
         return _wrap_surface(title, "list", body)
 

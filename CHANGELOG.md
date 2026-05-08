@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.93] - 2026-05-08
+
+### Added — Phase 4B.1.d/e — `_build_queue` dedicated builder
+- **`_build_queue` adapter method** — replaces the prior alias to `_build_list`. QUEUE display is now a dedicated builder that composes:
+  1. Total count Badge (when `total > 0`)
+  2. MetricTile row (when `metrics` ctx is supplied) — values pass through `_metric_number_filter`
+  3. FilterBar / DateRangePicker / CsvExportButton chrome (same contract as `_build_list`)
+  4. Per-item rows: each item is a `Card` with a `Row` of label + transition `Button`s using the v0.66.83 extended Button (hx_put + hx_vals + hx_ext + json-enc extension)
+  5. "Showing N of M" overflow text when `total > len(items)`
+- **Transition button skipping** — buttons whose `to_state` matches the item's current value (read via `queue_status_field`) are silently dropped. Preserves the legacy 'don't offer transition to your current state' UX.
+- **Defensive degradation** — transitions skip silently when any of `queue_status_field`, `queue_api_endpoint`, or `item.id` is missing; the items still render as plain Card rows. The chrome composition contract is identical to `_build_list` (endpoint-required, malformed entries dropped).
+- 5 new adapter tests covering minimal queue, transitions, chrome+overflow, empty state, and missing-ctx skip behaviour.
+- `queue` removed from `_ALIASES` and added to `_BUILDERS` pointing at `_build_queue`.
+
+### Phase 4B.1 — chrome arc complete + adapter wiring
+| Step | Status | Ship |
+|---|---|---|
+| Chrome primitives (FilterBar, SortHeader, CsvExportButton, DateRangePicker) | done | v0.66.88–91 |
+| `_build_list` chrome composition | done | v0.66.92 |
+| `_build_queue` dedicated builder | **done** | **v0.66.93** |
+| `_build_queue` chrome arrangement matching legacy queue.html exactly | partial — structurally equivalent, not byte-for-byte | — |
+
+### Known divergence (accepted)
+- The queue row interior is **structurally equivalent but not byte-equivalent** to the legacy `queue.html`. The legacy template uses a custom `dz-queue-row` flex layout with attention accents, clickable main content (`hx-get` to detail drawer), and date columns inline. The typed-Fragment substrate produces a `Card` per item with a flat label + transition button row. Phase 4B.3's dual-path validation gate will surface this as an accepted divergence in the diff report; closing it requires a `QueueRow` primitive that's likely a Phase 4B.4 (workspace chrome port) deliverable.
+
+### Agent Guidance
+- The transition Button shape uses `hx_vals=f'{{"<status_field>": "<to_state>"}}'` — the runtime serialises the JSON payload as a string at primitive-construction time. The Button renderer wraps in single quotes so internal JSON double quotes don't need escaping. If you need richer JSON in `hx_vals`, build it with `json.dumps()` and pass the resulting string.
+- The `Stack` ordering in `_build_queue` puts the overflow Text **after** the body when present, while chrome (filters, csv) goes **before**. The renderer just emits children in order — the ordering happens in the build method via the `chrome_parts` list.
+
 ## [0.66.92] - 2026-05-08
 
 ### Added — Phase 4B.1.e — `_build_list` chrome composition
