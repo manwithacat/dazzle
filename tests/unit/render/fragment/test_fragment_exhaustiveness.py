@@ -21,6 +21,7 @@ from dazzle.render.fragment import (
     CalendarGrid,
     Card,
     Combobox,
+    ConfirmGate,
     Diagram,
     Drawer,
     EmptyState,
@@ -183,6 +184,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is SearchBox:
         return SearchBox(name="x", fts_endpoint=URL("/api/fts/X"))
+    if primitive_type is ConfirmGate:
+        return ConfirmGate(state="off")
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

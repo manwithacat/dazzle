@@ -27,6 +27,8 @@ from dazzle.render.fragment import (
     BarTrack,
     BoxPlot,
     Card,
+    ConfirmCheckItem,
+    ConfirmGate,
     Diagram,
     EmptyState,
     Fragment,
@@ -838,28 +840,82 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "report", body)
 
     def _build_confirm_action_panel(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: confirm_action_panel` renders a Card with the
-        action's title and a description prompt. Without a Button
-        primitive wired here, the actual confirm UI is deferred to
-        a later plan; this just closes the audit gap.
+        """`display: confirm_action_panel` renders a `ConfirmGate`
+        primitive — three-state consent panel matching the legacy
+        `workspace/regions/confirm_action_panel.html` byte-for-byte.
 
-        ctx shape:
-            title: optional override
-            prompt / description / message: prompt text
-            action_label: optional button text shown as plain Text below
+        Phase 4B.1.d — replaces the prior placeholder rendering (Card
+        + Heading + bracketed action label). The ConfirmGate primitive
+        carries the full state machine (off/pending/draft, live,
+        revoked) plus the checklist with Alpine `dzConfirmGate`
+        gating + dual button + audit footer.
+
+        ctx shape (Phase 4B preferred):
+            state_value: str — entity field value (resolved at request
+                time); branches to live / revoked / off rendering
+            confirmations: list of dicts {title, caption?, required?}
+            primary_action_url: str (commit / re-enable URL)
+            secondary_action_url: str ("Save as draft" URL)
+            revoke_url: str (live-state revoke URL)
+            audit_enabled: bool (entity has `audit:` block)
+
+        ctx shape (Phase 4A fallback):
+            prompt / description / message + action_label — produces
+            a minimal ConfirmGate with `state="off"` and the prompt
+            text wired into a synthetic single-item checklist. Mainly
+            for tests; runtime should use the preferred shape.
         """
-        heading = _region_title(region)
-        prompt = str(ctx.get("prompt") or ctx.get("description") or ctx.get("message") or "")
-        action_label = str(ctx.get("action_label") or "")
+        title = _region_title(region)
 
-        rows: list[object] = [Heading(heading or "(no title)", level=3)]
-        if prompt:
-            rows.append(Text(prompt))
-        if action_label:
-            rows.append(Text(f"[ {action_label} ]"))
+        # Phase 4B preferred: full state machine
+        state = str(ctx.get("state_value") or "off")
+        primary_url = str(ctx.get("primary_action_url") or "")
+        secondary_url = str(ctx.get("secondary_action_url") or "")
+        revoke_url = str(ctx.get("revoke_url") or "")
+        audit_enabled = bool(ctx.get("audit_enabled"))
 
-        body: Fragment = Card(body=Stack(children=tuple(rows), gap="sm"))
-        return _wrap_surface(heading or "Confirm", "dashboard", body)
+        confirmations: list[ConfirmCheckItem] = []
+        for entry in ctx.get("confirmations") or []:
+            if not isinstance(entry, dict):
+                continue
+            entry_title = str(entry.get("title") or "")
+            if not entry_title:
+                continue
+            confirmations.append(
+                ConfirmCheckItem(
+                    title=entry_title,
+                    caption=str(entry.get("caption") or ""),
+                    required=bool(entry.get("required")),
+                )
+            )
+
+        # Phase 4A fallback: synthesise from prompt + action_label
+        if (
+            not confirmations
+            and not primary_url
+            and not revoke_url
+            and (ctx.get("prompt") or ctx.get("description") or ctx.get("message"))
+        ):
+            prompt = str(ctx.get("prompt") or ctx.get("description") or ctx.get("message") or "")
+            action_label = str(ctx.get("action_label") or "")
+            if prompt:
+                confirmations.append(ConfirmCheckItem(title=prompt, required=False))
+            if action_label:
+                # Encode the action label as a synthetic primary URL hint —
+                # keeps the rendered panel non-empty without a real action.
+                primary_url = primary_url or "#"
+
+        body: Fragment = ConfirmGate(
+            state=state,
+            confirmations=tuple(confirmations),
+            primary_action_url=primary_url,
+            secondary_action_url=secondary_url,
+            revoke_url=revoke_url,
+            audit_enabled=audit_enabled,
+            primary_label=str(ctx.get("primary_label") or "Confirm and enable"),
+            secondary_label=str(ctx.get("secondary_label") or "Save as draft"),
+        )
+        return _wrap_surface(title or "Confirm", "dashboard", body)
 
     def _build_search_box(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: search_box` renders a `SearchBox` primitive — HTMX

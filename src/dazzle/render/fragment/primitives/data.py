@@ -388,6 +388,65 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class ConfirmCheckItem:
+    """A single item in a ConfirmGate checklist.
+
+    Not a Fragment union member. `required=True` items must be ticked
+    before the gate's primary button enables (Alpine logic outside the
+    primitive). `caption` is optional explanatory text.
+    """
+
+    title: str
+    caption: str = ""
+    required: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.title:
+            raise ValueError("ConfirmCheckItem requires a non-empty title")
+
+
+@dataclass(frozen=True, slots=True)
+class ConfirmGate:
+    """Multi-state consent panel for irreversible actions.
+
+    Renders one of three branches based on `state`:
+      - off / pending / draft / unknown / "" → checklist (when
+        `confirmations` is non-empty) + dual button (secondary
+        "Save as draft" + primary "Confirm and enable" gated on
+        Alpine `dzConfirmGate(count)` checking required checkboxes)
+      - live / active / on / enabled → "Currently live" summary +
+        optional revoke link
+      - revoked / disabled / off-revoked → audit summary + optional
+        re-enable link
+
+    Audit footer auto-renders when `audit_enabled = True` regardless
+    of state. The Alpine component `dzConfirmGate(n)` is expected to
+    be registered globally — the primitive references it but doesn't
+    define it.
+
+    All copy strings have sensible defaults so a minimal ConfirmGate
+    just needs `state` and `primary_action_url`. DSL authors override
+    via the legacy `confirmations:` block + URL fields; runtime
+    threads them into ctx.
+    """
+
+    state: str = "off"
+    confirmations: tuple[ConfirmCheckItem, ...] = ()
+    primary_action_url: str = ""
+    secondary_action_url: str = ""
+    revoke_url: str = ""
+    audit_enabled: bool = False
+    primary_label: str = "Confirm and enable"
+    secondary_label: str = "Save as draft"
+    revoke_label: str = "Revoke"
+    re_enable_label: str = "Re-enable"
+    live_title: str = "Currently live."
+    live_body: str = "Action recorded; further changes require a new authorisation."
+    revoked_title: str = "Authorisation revoked."
+    revoked_body: str = "Re-authorise to enable the integration again."
+
+
+@dataclass(frozen=True, slots=True)
 class SearchBox:
     """HTMX-driven full-text search input + lazy-loaded results panel.
 

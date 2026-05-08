@@ -24,6 +24,8 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     Combobox,
+    ConfirmCheckItem,
+    ConfirmGate,
     Diagram,
     Drawer,
     EmptyState,
@@ -193,6 +195,8 @@ class FragmentRenderer:
                 return self._emit_lazy_tab_panel(fragment, ctx)
             case SearchBox():
                 return self._emit_search_box(fragment, ctx)
+            case ConfirmGate():
+                return self._emit_confirm_gate(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1201,6 +1205,140 @@ class FragmentRenderer:
             f"{coaching}"
             f"</div>"
             f"</div>"
+            f"</div>"
+        )
+
+    def _emit_confirm_gate(self, c: ConfirmGate, ctx: RenderContext) -> str:
+        """Render a ConfirmGate matching legacy
+        `workspace/regions/confirm_action_panel.html` byte-for-byte.
+
+        Three state branches:
+          - live / active / on / enabled → "Currently live" summary
+          - revoked / disabled / off-revoked → audit summary
+          - everything else → checklist (when supplied) + dual button
+
+        Audit footer renders in all branches when `audit_enabled`.
+        """
+        state_lower = (c.state or "off").lower()
+        is_live = state_lower in ("live", "active", "on", "enabled")
+        is_revoked = state_lower in ("revoked", "disabled", "off-revoked")
+        state_attr = ctx.escape_attr(c.state or "off")
+
+        # ── State branches ──────────────────────────────────────
+        if is_live:
+            inner = (
+                f'<div class="dz-confirm-summary" data-dz-confirm-tone="success">'
+                f'<div class="dz-confirm-summary-title">{ctx.escape(c.live_title)}</div>'
+                f'<div class="dz-confirm-summary-body">{ctx.escape(c.live_body)}</div>'
+                f"</div>"
+            )
+            if c.revoke_url:
+                inner += (
+                    f'<div class="dz-confirm-actions">'
+                    f'<a href="{ctx.escape_attr(c.revoke_url)}" class="dz-confirm-revoke">'
+                    f"{ctx.escape(c.revoke_label)}</a>"
+                    f"</div>"
+                )
+        elif is_revoked:
+            inner = (
+                f'<div class="dz-confirm-summary" data-dz-confirm-tone="muted">'
+                f'<div class="dz-confirm-summary-title">{ctx.escape(c.revoked_title)}</div>'
+                f'<div class="dz-confirm-summary-body">{ctx.escape(c.revoked_body)}</div>'
+                f"</div>"
+            )
+            if c.primary_action_url:
+                inner += (
+                    f'<div class="dz-confirm-actions">'
+                    f'<a href="{ctx.escape_attr(c.primary_action_url)}" '
+                    f'class="dz-confirm-primary">{ctx.escape(c.re_enable_label)}</a>'
+                    f"</div>"
+                )
+        elif c.confirmations:
+            # Off/pending/draft with checklist
+            required_count = sum(1 for item in c.confirmations if item.required)
+
+            def _render_check_item(i: int, item: ConfirmCheckItem) -> str:
+                required_str = "true" if item.required else "false"
+                # Required items get @change Alpine binding + data attribute.
+                # Note: emit literal `"` quotes — these are HTML attributes,
+                # not nested inside an outer-quoted attribute.
+                required_attrs = (
+                    '@change="onToggle($event)" data-dz-required="true" ' if item.required else ""
+                )
+                caption_html = (
+                    f'<div class="dz-confirm-caption">{ctx.escape(item.caption)}</div>'
+                    if item.caption
+                    else ""
+                )
+                return (
+                    f'<li class="dz-confirm-row" data-dz-required="{required_str}">'
+                    f'<input type="checkbox" class="dz-confirm-checkbox" '
+                    f"{required_attrs}"
+                    f'id="dz-confirm-{i}">'
+                    f'<label for="dz-confirm-{i}" class="dz-confirm-row-label">'
+                    f'<div class="dz-confirm-title">{ctx.escape(item.title)}</div>'
+                    f"{caption_html}"
+                    f"</label>"
+                    f"</li>"
+                )
+
+            checklist_items = "".join(
+                _render_check_item(i, item) for i, item in enumerate(c.confirmations, start=1)
+            )
+            # Dual-button row (still inside the <ul> per legacy template)
+            actions_inner = ""
+            if c.secondary_action_url:
+                actions_inner += (
+                    f'<a href="{ctx.escape_attr(c.secondary_action_url)}" '
+                    f'class="dz-confirm-secondary">{ctx.escape(c.secondary_label)}</a>'
+                )
+            if c.primary_action_url:
+                # Alpine bindings: enabled is provided by dzConfirmGate(count)
+                actions_inner += (
+                    f"<a :href=\"enabled ? '{ctx.escape_attr(c.primary_action_url)}' : null\" "
+                    f':aria-disabled="!enabled" '
+                    f":class=\"{{ 'is-disabled': !enabled }}\" "
+                    f'class="dz-confirm-primary">'
+                    f"{ctx.escape(c.primary_label)}</a>"
+                )
+            inner = (
+                f'<ul x-data="dzConfirmGate({len(c.confirmations)})" '
+                f'class="dz-confirm-checklist" '
+                f'data-dz-required-count="{required_count}">'
+                f"{checklist_items}"
+                f'<li class="dz-confirm-actions">{actions_inner}</li>'
+                f"</ul>"
+            )
+        else:
+            # Off/pending/draft, no checklist — dual button alone
+            actions_inner = ""
+            if c.secondary_action_url:
+                actions_inner += (
+                    f'<a href="{ctx.escape_attr(c.secondary_action_url)}" '
+                    f'class="dz-confirm-secondary">{ctx.escape(c.secondary_label)}</a>'
+                )
+            if c.primary_action_url:
+                actions_inner += (
+                    f'<a href="{ctx.escape_attr(c.primary_action_url)}" '
+                    f'class="dz-confirm-primary">'
+                    f"{ctx.escape('Confirm')}</a>"
+                )
+            inner = f'<div class="dz-confirm-actions">{actions_inner}</div>'
+
+        # ── Audit footer ────────────────────────────────────────
+        audit_html = (
+            '<p class="dz-confirm-audit">'
+            "This action is recorded in the audit log with your account, "
+            "IP address, and timestamp."
+            "</p>"
+            if c.audit_enabled
+            else ""
+        )
+
+        return (
+            f'<div class="dz-confirm-panel" data-dz-state-value="{state_attr}">'
+            f"{inner}"
+            f"{audit_html}"
             f"</div>"
         )
 

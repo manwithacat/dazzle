@@ -21,6 +21,8 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     Combobox,
+    ConfirmCheckItem,
+    ConfirmGate,
     Diagram,
     Drawer,
     EmptyState,
@@ -164,6 +166,8 @@ __all__ = [
     "LazyTab",
     "LazyTabPanel",
     "SearchBox",
+    "ConfirmGate",
+    "ConfirmCheckItem",
     # primitives — forms
     "FormStack",
     "Field",

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.87] - 2026-05-08
+
+### Added — Phase 4B.1.d — ConfirmGate primitive (final misaligned alias closed)
+- **`ConfirmCheckItem` data primitive** — non-union dataclass `(title, caption, required)` with strict invariant: non-empty title.
+- **`ConfirmGate` Fragment primitive** — multi-state consent panel matching the legacy `workspace/regions/confirm_action_panel.html` byte-for-byte. State-driven branching: `live`/`active`/`on`/`enabled` shows "Currently live" summary + revoke link; `revoked`/`disabled`/`off-revoked` shows audit summary + optional re-enable; everything else shows the checklist (when supplied) with Alpine `dzConfirmGate(N)` gating + dual button (secondary "Save as draft" + primary "Confirm and enable" with `:href`/`:aria-disabled`/`:class` Alpine bindings). Audit footer auto-renders when `audit_enabled=True` regardless of state. All copy strings have sensible defaults.
+- **`_build_confirm_action_panel` rewritten to produce ConfirmGate** — replaces the prior placeholder rendering (Card + Heading + bracketed action label). Phase 4B preferred ctx: `state_value`, `confirmations`, `primary_action_url`, `secondary_action_url`, `revoke_url`, `audit_enabled`. Phase 4A fallback (`prompt` + `action_label`) is converted into a synthetic single-item ConfirmGate so existing tests don't crash; runtime should always use the preferred shape.
+- 5 new primitive tests + 5 new adapter tests (legacy fallback, off state with checklist, live state, revoked state, malformed-confirmation drops); baselines updated.
+
+### Phase 4B.1 — every misaligned alias closed
+| Alias | Replaced by | Ship |
+|---|---|---|
+| `action_grid → grid` | `_build_action_grid` + ActionCard | v0.66.75 |
+| `profile_card → detail` | `_build_profile_card` + ProfileCard | v0.66.76 |
+| `bar_track → progress` | `_build_bar_track` + BarTrack | v0.66.79 |
+| (placeholder confirm panel) | `_build_confirm_action_panel` + ConfirmGate | **v0.66.87** |
+| `tabbed_list → eager Tabs` | `_build_tabbed_list` + LazyTabPanel | v0.66.85 |
+| (plain Field search) | `_build_search_box` + SearchBox | v0.66.86 |
+
+### Remaining Phase 4B.1 work (each needs design input)
+- **4B.1.e** — list chrome: FilterBar, DateRangePicker, SortHeader, CsvExportButton. Mechanical but touches every list/queue region's HTML structure.
+- **4B.1.c** — multi-series chart family: StackedArea, MultiSeriesLine, MultiSeriesRadar. Needs an SVG-rendering arc decision before primitive design is final.
+- **DIAGRAM Mermaid** — vendor decision for keeping mermaid.js CDN-loaded vs vendoring.
+
+### Agent Guidance
+- The Alpine `dzConfirmGate(N)` JS component lives outside the typed-Fragment substrate — the primitive references it by name but doesn't define or own it. The component must already be registered globally (existing dazzle.min.js bundle). If you're adding a primitive that depends on Alpine helpers, document the JS contract as a comment in the primitive's docstring; don't try to ship the JS through Fragment.
+- The legacy template's checklist used Jinja `selectattr('required', 'equalto', true) | list | length` to count required items. The primitive computes this in Python (`sum(1 for item in c.confirmations if item.required)`) — the `data-dz-required-count` attribute is what the Alpine `dzConfirmGate(N)` component reads at hydration time.
+- ConfirmGate's three-state branching is **the single most complex primitive in the substrate** (~120 lines in the renderer alone). Future similar state-driven primitives should follow the same pattern: branch in the emit method, not in the primitive's `__post_init__` — the primitive holds state as a string field, the renderer decides what to draw.
+
 ## [0.66.86] - 2026-05-08
 
 ### Added — Phase 4B.1.d — SearchBox primitive

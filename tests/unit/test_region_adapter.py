@@ -1180,7 +1180,12 @@ def test_heatmap_dispatches_through_pivot_table() -> None:
     assert "5" in html and "3" in html
 
 
-def test_confirm_action_panel_renders_card_with_prompt() -> None:
+def test_confirm_action_panel_legacy_prompt_ctx_renders_synthetic_checklist() -> None:
+    """Phase 4A fallback: ctx with `prompt` + `action_label` (the
+    pre-Phase-4B.1.d shape) is converted into a synthetic single-item
+    ConfirmGate. The prompt becomes the checklist title; the panel
+    renders in the off state. Mainly for tests; runtime should use
+    state_value + confirmations."""
     adapter = WorkspaceRegionAdapter()
     ctx = {"prompt": "This will permanently delete 5 items.", "action_label": "Delete"}
     fragment = adapter.build(
@@ -1189,7 +1194,86 @@ def test_confirm_action_panel_renders_card_with_prompt() -> None:
     html = _render(fragment)
     assert "Confirm Delete" in html
     assert "permanently delete 5 items" in html
-    assert "[ Delete ]" in html
+    # No more bracketed-text placeholder — replaced by the typed ConfirmGate
+    assert "dz-confirm-panel" in html
+    assert "&quot;" not in html  # No broken HTML escapes
+
+
+def test_confirm_action_panel_off_state_renders_alpine_gated_checklist() -> None:
+    """Phase 4B preferred: state_value=off + confirmations[] produces
+    an Alpine `dzConfirmGate(N)` checklist with `data-dz-required-count`
+    matching the count of `required: true` items, plus dual-button
+    primary (Alpine-gated) + secondary (always enabled)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "state_value": "off",
+        "confirmations": [
+            {
+                "title": "I have reviewed the data",
+                "caption": "All records will be synced",
+                "required": True,
+            },
+            {"title": "I have legal authority", "required": True},
+            {"title": "Optional: notify the team"},
+        ],
+        "primary_action_url": "/admin/sync/confirm",
+        "secondary_action_url": "/admin/sync/draft",
+        "audit_enabled": True,
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
+    assert 'data-dz-state-value="off"' in html
+    assert 'x-data="dzConfirmGate(3)"' in html
+    assert 'data-dz-required-count="2"' in html
+    assert "I have reviewed the data" in html
+    assert "All records will be synced" in html
+    assert "/admin/sync/confirm" in html
+    assert "/admin/sync/draft" in html
+    assert "is-disabled" in html  # Alpine class binding
+    assert "dz-confirm-audit" in html
+
+
+def test_confirm_action_panel_live_state_renders_summary_and_revoke() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "state_value": "live",
+        "revoke_url": "/admin/sync/revoke",
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
+    assert "Currently live" in html
+    assert "/admin/sync/revoke" in html
+    assert "dz-confirm-revoke" in html
+    assert "dz-confirm-checklist" not in html  # no checklist in live state
+
+
+def test_confirm_action_panel_revoked_state_offers_re_enable() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "state_value": "revoked",
+        "primary_action_url": "/admin/sync/reenable",
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
+    assert "revoked" in html.lower()
+    assert "Re-enable" in html
+    assert "/admin/sync/reenable" in html
+
+
+def test_confirm_action_panel_drops_malformed_confirmations() -> None:
+    """Confirmations with empty titles or non-dict entries silently drop."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "state_value": "off",
+        "confirmations": [
+            None,
+            42,
+            {"title": ""},  # empty title
+            {"title": "Valid item", "required": True},
+        ],
+        "primary_action_url": "/x",
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
+    assert "Valid item" in html
+    assert 'data-dz-required-count="1"' in html
+    assert 'x-data="dzConfirmGate(1)"' in html  # only valid items count
 
 
 def test_search_box_renders_typed_search_box_primitive() -> None:

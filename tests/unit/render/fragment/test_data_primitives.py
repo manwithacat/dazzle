@@ -11,6 +11,8 @@ from dazzle.render.fragment.primitives.data import (
     BarTrack,
     BoxPlot,
     CalendarGrid,
+    ConfirmCheckItem,
+    ConfirmGate,
     Diagram,
     KanbanBoard,
     LazyTab,
@@ -542,3 +544,48 @@ def test_search_box_default_strings() -> None:
     assert s.placeholder == "Search…"
     assert s.coaching_message == "Type to search"
     assert s.label == ""
+
+
+# === ConfirmCheckItem / ConfirmGate ===
+
+
+def test_confirm_check_item_requires_title() -> None:
+    with pytest.raises(ValueError, match="non-empty title"):
+        ConfirmCheckItem(title="")
+
+
+def test_confirm_check_item_default_required_is_false() -> None:
+    item = ConfirmCheckItem(title="X")
+    assert item.required is False
+    assert item.caption == ""
+
+
+def test_confirm_gate_minimal() -> None:
+    """Empty ConfirmGate is valid — defaults to off state, no
+    confirmations, no urls. Renders to a minimal `<div>` with the
+    bare wrapper."""
+    g = ConfirmGate()
+    assert g.state == "off"
+    assert g.confirmations == ()
+    assert g.audit_enabled is False
+
+
+def test_confirm_gate_holds_confirmations_immutably() -> None:
+    g = ConfirmGate(
+        state="off",
+        confirmations=(
+            ConfirmCheckItem(title="A", required=True),
+            ConfirmCheckItem(title="B"),
+        ),
+    )
+    assert len(g.confirmations) == 2
+    assert g.confirmations[0].required is True
+    assert g.confirmations[1].required is False
+
+
+def test_confirm_gate_default_copy_strings() -> None:
+    g = ConfirmGate()
+    assert g.primary_label == "Confirm and enable"
+    assert g.secondary_label == "Save as draft"
+    assert g.revoke_label == "Revoke"
+    assert g.live_title == "Currently live."

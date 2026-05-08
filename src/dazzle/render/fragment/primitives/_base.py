@@ -32,6 +32,7 @@ from dazzle.render.fragment.primitives.data import (
     BarTrack,
     BoxPlot,
     CalendarGrid,
+    ConfirmGate,
     Diagram,
     KanbanBoard,
     LazyTabPanel,
@@ -115,6 +116,7 @@ Fragment = (
     | StageBar
     | LazyTabPanel
     | SearchBox
+    | ConfirmGate
     # Forms
     | FormStack
     | Field
