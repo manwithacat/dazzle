@@ -42,6 +42,7 @@ from dazzle.render.fragment.primitives import (
     NavItem,
     Page,
     PivotTable,
+    ProfileCard,
     Radar,
     RefPicker,
     Region,
@@ -173,6 +174,8 @@ class FragmentRenderer:
                 return self._emit_box_plot(fragment, ctx)
             case ActionCard():
                 return self._emit_action_card(fragment, ctx)
+            case ProfileCard():
+                return self._emit_profile_card(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -837,6 +840,65 @@ class FragmentRenderer:
             href = ctx.escape_attr(a.url)
             return f'<a href="{href}" class="dz-action-card" data-dz-tone="{tone}">{body}</a>'
         return f'<div class="dz-action-card" data-dz-tone="{tone}">{body}</div>'
+
+    def _emit_profile_card(self, p: ProfileCard, ctx: RenderContext) -> str:
+        """Render a ProfileCard matching the legacy
+        `workspace/regions/profile_card.html` HTML shape: identity row
+        (avatar or initials + name + meta), optional 3-up stats grid,
+        optional bulleted facts list.
+        """
+        # Identity row: avatar wins over initials
+        if p.avatar_url:
+            avatar_html = (
+                f'<img src="{ctx.escape_attr(p.avatar_url)}" '
+                f'alt="{ctx.escape_attr(p.primary)}" '
+                f'class="dz-profile-avatar" />'
+            )
+        elif p.initials:
+            avatar_html = (
+                f'<span class="dz-profile-initials" aria-hidden="true">'
+                f"{ctx.escape(p.initials)}</span>"
+            )
+        else:
+            avatar_html = ""
+
+        text_inner = ""
+        if p.primary:
+            text_inner += f'<h3 class="dz-profile-primary">{ctx.escape(p.primary)}</h3>'
+        if p.secondary:
+            text_inner += f'<p class="dz-profile-secondary">{ctx.escape(p.secondary)}</p>'
+        identity_html = (
+            f'<div class="dz-profile-identity">'
+            f"{avatar_html}"
+            f'<div class="dz-profile-text">{text_inner}</div>'
+            f"</div>"
+        )
+
+        # Stats grid — em-dash for empty values (matches legacy `stat.value or "—"`)
+        stats_html = ""
+        if p.stats:
+            stat_rows = "".join(
+                f'<div class="dz-profile-stat">'
+                f'<dt class="dz-profile-stat-label">{ctx.escape(label)}</dt>'
+                f'<dd class="dz-profile-stat-value">{ctx.escape(value) if value else "—"}</dd>'
+                f"</div>"
+                for label, value in p.stats
+            )
+            stats_html = f'<dl class="dz-profile-stats">{stat_rows}</dl>'
+
+        # Facts list — bullet decoration via CSS, not literal text
+        facts_html = ""
+        if p.facts:
+            fact_items = "".join(
+                f'<li class="dz-profile-fact">'
+                f'<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
+                f'<span class="dz-profile-fact-text">{ctx.escape(fact)}</span>'
+                f"</li>"
+                for fact in p.facts
+            )
+            facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
+
+        return f'<div class="dz-profile-card">{identity_html}{stats_html}{facts_html}</div>'
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         action = ctx.escape_attr(str(fs.action))

@@ -30,6 +30,7 @@ from dazzle.render.fragment.primitives.data import (
     Diagram,
     KanbanBoard,
     PivotTable,
+    ProfileCard,
     Radar,
     Table,
     Timeline,
@@ -94,6 +95,7 @@ __all__ = [
     "Radar",
     "BoxPlot",
     "ActionCard",
+    "ProfileCard",
     # forms
     "FormStack",
     "Field",

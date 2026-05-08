@@ -107,6 +107,36 @@ class CalendarGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class ProfileCard:
+    """Single-record identity panel: avatar/initials + name + meta line +
+    optional 3-up stats grid + optional bulleted facts list.
+
+    Used by `display: profile_card` regions for showing one focused
+    record (typically a person — `id = current_context`). The region's
+    `filter:` is expected to narrow to a single row.
+
+    `stats` is a tuple of `(label, value)` pairs; empty values render as
+    em-dash. `facts` is a tuple of free-text strings rendered as a
+    bulleted list. The card requires at least one identity element so
+    we don't render an empty shell — the adapter degrades to EmptyState
+    on missing data rather than letting this through.
+    """
+
+    primary: str = ""
+    secondary: str = ""
+    avatar_url: str = ""
+    initials: str = ""
+    stats: tuple[tuple[str, str], ...] = ()
+    facts: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not (self.primary or self.avatar_url or self.initials):
+            raise ValueError(
+                "ProfileCard requires at least one of primary, avatar_url, or initials"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class ActionCard:
     """Tone-tinted CTA card with optional Lucide icon, count badge, and URL.
 

@@ -1039,6 +1039,88 @@ def test_action_grid_empty_renders_empty_state() -> None:
     assert "No quick actions." in _render(fragment)
 
 
+def test_profile_card_renders_full_identity_panel() -> None:
+    """`display: profile_card` builds a typed ProfileCard with
+    avatar/initials + name + meta + stats grid + facts list. Phase
+    4B.1.b replaced the prior `_build_detail` alias with a dedicated
+    builder so the legacy `profile_card_data` shape lands intact."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "profile_card_data": {
+            "primary": "Alice Adams",
+            "secondary": "Senior Engineer",
+            "avatar_url": "/avatars/alice.png",
+            "stats": [
+                {"label": "Tickets", "value": 23},
+                {"label": "Closed", "value": 18},
+                {"label": "SLA", "value": None},
+            ],
+            "facts": ["Joined 2024", "Lead reviewer"],
+        }
+    }
+    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
+    html = _render(fragment)
+    assert "dz-profile-card" in html
+    assert "Alice Adams" in html and "Senior Engineer" in html
+    assert "Tickets" in html and "23" in html
+    assert "Joined 2024" in html and "Lead reviewer" in html
+    assert "—" in html  # empty SLA stat falls back to em-dash
+    assert "/avatars/alice.png" in html
+
+
+def test_profile_card_initials_when_no_avatar() -> None:
+    """Initials path is used when avatar_url is empty."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "profile_card_data": {
+            "primary": "Bob Brown",
+            "initials": "BB",
+        }
+    }
+    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
+    html = _render(fragment)
+    assert "dz-profile-initials" in html
+    assert ">BB<" in html
+
+
+def test_profile_card_drops_malformed_stats_and_facts() -> None:
+    """Stats with missing labels and non-string facts are silently
+    dropped to keep the strict ProfileCard primitive happy."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "profile_card_data": {
+            "primary": "X",
+            "stats": [
+                None,  # not a dict
+                {"value": 5},  # missing label
+                {"label": "OK", "value": 9},
+            ],
+            "facts": [None, "", "real fact"],
+        }
+    }
+    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
+    html = _render(fragment)
+    assert "OK" in html and "9" in html
+    assert "real fact" in html
+
+
+def test_profile_card_empty_data_renders_empty_state() -> None:
+    """When none of primary/avatar_url/initials are populated the
+    adapter degrades to EmptyState rather than raising ValueError."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("p", display="profile_card", empty_message="No profile."),
+        {"profile_card_data": {"secondary": "just meta"}},
+    )
+    assert "No profile." in _render(fragment)
+
+
+def test_profile_card_no_data_uses_default_empty_message() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(_FakeRegion("p", display="profile_card"), {})
+    assert "No profile data available." in _render(fragment)
+
+
 def test_progress_renders_percent_badges_with_severity() -> None:
     """Progress rows show label + percent badge; variant maps from
     percent ranges (>=90 success, >=50 info, >=25 warning, else danger)."""
@@ -1119,19 +1201,6 @@ def test_status_list_empty_renders_empty_state() -> None:
         {"items": []},
     )
     assert "All clear." in _render(fragment)
-
-
-def test_profile_card_dispatches_through_detail() -> None:
-    """`display: profile_card` reuses the detail render — profile
-    cards are single-item field views with the same shape."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"name": "Alice", "role": "admin"},
-        "fields": [{"key": "name", "label": "Name"}, {"key": "role", "label": "Role"}],
-    }
-    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
-    html = _render(fragment)
-    assert "Alice" in html and "admin" in html
 
 
 def test_funnel_chart_sorts_buckets_descending() -> None:

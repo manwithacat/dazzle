@@ -33,6 +33,7 @@ from dazzle.render.fragment import (
     Heading,
     KanbanBoard,
     PivotTable,
+    ProfileCard,
     Radar,
     Region,
     Row,
@@ -173,6 +174,7 @@ class WorkspaceRegionAdapter:
         "radar": "_build_radar",
         "box_plot": "_build_box_plot",
         "action_grid": "_build_action_grid",
+        "profile_card": "_build_profile_card",
     }
 
     # Display values that share a builder with another display value.
@@ -183,7 +185,6 @@ class WorkspaceRegionAdapter:
         "activity_feed": "timeline",
         "queue": "list",
         "histogram": "bar_chart",
-        "profile_card": "detail",
         "heatmap": "pivot_table",
     }
 
@@ -370,6 +371,78 @@ class WorkspaceRegionAdapter:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
 
         return _wrap_surface(title, "report", body)
+
+    def _build_profile_card(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: profile_card` regions render single-record identity
+        panels.
+
+        Phase 4B.1.b — replaces the prior alias to `_build_detail`, which
+        rendered a generic key/value Card. The legacy template uses a
+        pre-assembled `profile_card_data` dict with avatar/initials/
+        primary/secondary/stats/facts; this builder consumes the same
+        shape and produces the typed `ProfileCard` primitive.
+
+        ctx shape:
+            profile_card_data: dict {
+                primary: str (name)
+                secondary: str (meta line)
+                avatar_url: str
+                initials: str
+                stats: list[{label, value}]
+                facts: list[str]
+            }
+
+        Degrades to EmptyState when none of primary/avatar_url/initials
+        are populated — matches the legacy template's else branch and
+        avoids tripping the strict ProfileCard primitive's invariant.
+        """
+        title = _region_title(region)
+        data = ctx.get("profile_card_data") or {}
+        if not isinstance(data, dict):
+            data = {}
+
+        primary = str(data.get("primary") or "")
+        secondary = str(data.get("secondary") or "")
+        avatar_url = str(data.get("avatar_url") or "")
+        initials = str(data.get("initials") or "")
+
+        body: Fragment
+        if not (primary or avatar_url or initials):
+            body = EmptyState(
+                title="No profile data",
+                description=getattr(region, "empty_message", None) or "No profile data available.",
+            )
+            return _wrap_surface(title, "dashboard", body)
+
+        # Stats: each entry should be a dict with label + value;
+        # silently drop malformed entries so a single bad row doesn't
+        # take down the whole panel.
+        stats: list[tuple[str, str]] = []
+        for entry in data.get("stats") or []:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("label") or "")
+            value = entry.get("value")
+            value_str = "" if value is None else str(value)
+            if label:
+                stats.append((label, value_str))
+
+        # Facts: each entry should be a string.
+        facts: list[str] = []
+        for entry in data.get("facts") or []:
+            text = str(entry or "")
+            if text:
+                facts.append(text)
+
+        body = ProfileCard(
+            primary=primary,
+            secondary=secondary,
+            avatar_url=avatar_url,
+            initials=initials,
+            stats=tuple(stats),
+            facts=tuple(facts),
+        )
+        return _wrap_surface(title, "dashboard", body)
 
     def _build_action_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: action_grid` regions render dashboard CTA cards.

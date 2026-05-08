@@ -12,6 +12,7 @@ from dazzle.render.fragment.primitives.data import (
     Diagram,
     KanbanBoard,
     PivotTable,
+    ProfileCard,
     Radar,
     Table,
     Timeline,
@@ -232,3 +233,43 @@ def test_action_card_all_tones_accepted() -> None:
     for tone in ("neutral", "positive", "warning", "destructive", "accent"):
         c = ActionCard(label="X", tone=tone)  # type: ignore[arg-type]
         assert c.tone == tone
+
+
+# === ProfileCard ===
+
+
+def test_profile_card_requires_at_least_one_identity_element() -> None:
+    """The card needs primary, avatar_url, or initials — anything else
+    would render an empty shell. The adapter degrades to EmptyState
+    rather than letting an invalid card through."""
+    with pytest.raises(ValueError, match="at least one of primary"):
+        ProfileCard()
+    with pytest.raises(ValueError, match="at least one of primary"):
+        ProfileCard(secondary="Just a meta line, no name")
+
+
+def test_profile_card_primary_alone_is_valid() -> None:
+    p = ProfileCard(primary="Alice")
+    assert p.primary == "Alice"
+
+
+def test_profile_card_avatar_alone_is_valid() -> None:
+    p = ProfileCard(avatar_url="/avatars/x.png")
+    assert p.avatar_url == "/avatars/x.png"
+
+
+def test_profile_card_initials_alone_is_valid() -> None:
+    p = ProfileCard(initials="AB")
+    assert p.initials == "AB"
+
+
+def test_profile_card_holds_stats_and_facts_immutably() -> None:
+    """`stats` is tuple[tuple[str, str], ...] and `facts` is
+    tuple[str, ...] so the dataclass stays frozen."""
+    p = ProfileCard(
+        primary="X",
+        stats=(("Cases", "5"), ("Open", "2")),
+        facts=("Lead", "Mentor"),
+    )
+    assert p.stats == (("Cases", "5"), ("Open", "2"))
+    assert p.facts == ("Lead", "Mentor")

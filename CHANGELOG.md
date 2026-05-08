@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.76] - 2026-05-08
+
+### Added — Phase 4B.1.b second primitive
+- **`ProfileCard` Fragment primitive** — single-record identity panel with optional avatar/initials, primary name, secondary meta line, 3-up stats grid, and bulleted facts list. `ProfileCard(primary, secondary, avatar_url, initials, stats, facts)` requires at least one of `primary`, `avatar_url`, or `initials` (otherwise the card would render as an empty shell). HTML matches the legacy `workspace/regions/profile_card.html` byte-for-byte: `dz-profile-card` wrapper, `dz-profile-identity` row with avatar OR initials fallback, `dz-profile-stats` `<dl>` grid (em-dash for empty values), `dz-profile-facts` `<ul>` with bullet `·`.
+- **`_build_profile_card` adapter method** — replaces the prior `profile_card → detail` alias which silently rendered a generic key/value Card with no avatar / stats grid / facts list. The new builder consumes `ctx["profile_card_data"]` (the same shape the legacy runtime computes) and produces a typed ProfileCard. Empty-data input (no primary, avatar_url, or initials) degrades to EmptyState rather than tripping the strict primitive's invariant.
+- 5 new primitive tests + 5 new adapter tests; baselines updated.
+- Removed obsolete test `test_profile_card_dispatches_through_detail` (the alias it pinned no longer exists).
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID | done — ActionCard primitive | v0.66.75 |
+| 4B.1.b | PROFILE_CARD | **done — ProfileCard primitive** | **v0.66.76** |
+| 4B.1.a | DETAIL (type-aware) | next | — |
+| 4B.1.a | METRICS (extended deltas) | next | — |
+| 4B.1.b | ProgressTrack, Avatar, ReferenceLine, ReferenceBand | pending | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending | — |
+| 4B.1.d | TransitionButton, ConfirmGate, SearchBox, LazyTabPanel | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+
+### Agent Guidance
+- Adapters that aliased to a structurally-wrong builder (`ACTION_GRID → grid`, `PROFILE_CARD → detail`) are gradually being replaced with dedicated builders backed by typed primitives. Each replacement closes one of the 4B.0 discovery's `adapter-incomplete` rows and unblocks that display for the eventual cutover. The pattern: typed primitive in `data.py` → `_emit_<primitive>` in renderer → `_build_<display>` in adapter → remove the wrong alias from `_ALIASES`.
+- ProfileCard's "at least one of primary/avatar_url/initials" invariant is a product constraint, not a structural one — but it's enforced at the primitive layer so empty cards can't render. The adapter's permissive degradation to EmptyState (instead of letting the ValueError propagate) is the standard Phase 4 pattern: strict primitives, permissive adapters.
+
 ## [0.66.75] - 2026-05-08
 
 ### Added — Phase 4B.1.b first primitive

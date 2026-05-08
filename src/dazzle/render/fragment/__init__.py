@@ -39,6 +39,7 @@ from dazzle.render.fragment.primitives import (
     NavItem,
     Page,
     PivotTable,
+    ProfileCard,
     Radar,
     RefPicker,
     Region,
@@ -146,6 +147,7 @@ __all__ = [
     "Radar",
     "BoxPlot",
     "ActionCard",
+    "ProfileCard",
     # primitives — forms
     "FormStack",
     "Field",

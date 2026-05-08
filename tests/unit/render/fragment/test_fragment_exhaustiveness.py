@@ -39,6 +39,7 @@ from dazzle.render.fragment import (
     NavItem,
     Page,
     PivotTable,
+    ProfileCard,
     Radar,
     RawHTML,
     RefPicker,
@@ -161,6 +162,8 @@ def _sample_for(primitive_type: type) -> object:
         return BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
     if primitive_type is ActionCard:
         return ActionCard(label="X")
+    if primitive_type is ProfileCard:
+        return ProfileCard(primary="Alice")
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:
