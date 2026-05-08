@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.94] - 2026-05-08
+
+### Added — Phase 4B.1.c — `dazzle.render.svg` time-series helper (SVG arc start)
+- **New module `src/dazzle/render/svg/`** — pure-Python SVG rendering helpers for chart primitives. No vendored library, no JS runtime, deterministic output. Built our own thin SVG layer (Option C from the design vote) over vendoring D3/Chart.js or going Canvas/JS — gives byte-equivalent output against the legacy Jinja chart templates and zero transitive dependency churn.
+- **`time_series_svg(label, points, *, view, reference_lines, reference_bands)`** — first helper in the module. Produces an inline SVG matching the legacy `workspace/regions/line_chart.html` template:
+  - 400×120 viewBox with 8/8/28/8 padding (top/right/bottom/left); the bottom band reserves space for monospace x-axis tick labels.
+  - Y-axis range floors at 0 (or below if reference bands extend negative) and includes reference values so all overlays stay in the plot area.
+  - Renders in z-order: baseline grid → reference bands (`<rect fill-opacity="0.12">`) → reference lines (`<line>` with style→dasharray map: solid="" / dashed="4,3" / dotted="1,3") → area polygon (closes back to baseline) → polyline (stroke-width 1.5, linejoin/linecap round) → data circles (r=2.5 with `<title>` tooltips) → x-axis labels (font-size 9, ui-monospace, show-every-Nth heuristic for >5 buckets).
+  - Token-driven palette: `hsl(var(--primary))` for line/area/circles, `hsl(var(--border))` for baseline, `hsl(var(--muted-foreground))` for reference lines and tick labels. Reference-band colour map (`target / positive / warning / destructive / muted`) matches the legacy template exactly.
+- **`_emit_time_series` rewritten to call the new helper** — the prior Phase 4A semantic `<ol class="dz-timeseries__points">` of point items is replaced with the inline SVG. The outer `<section class="dz-timeseries dz-timeseries--view-line">` + `<h4 class="dz-timeseries__label">` wrapper survives, and the v0.66.81 `<dl class="dz-timeseries__references">` programmatic-data layer continues to ride along behind the SVG (data-style/data-color attributes preserved for tests + screen readers; the SVG carries the same data via `<title>` tooltips for visual accessibility).
+
+### Phase 4B.1 progress
+| Step | Status | Ship |
+|---|---|---|
+| Chart-family SVG arc start (TimeSeries → SVG) | **done** | **v0.66.94** |
+| BarChart → SVG bars | next | — |
+| BoxPlot → SVG box+whiskers | queued | — |
+| Radar → SVG polar | queued | — |
+| BarTrack → SVG progress tracks | queued | — |
+
+### Why a pure-Python SVG layer
+- **No transitive dependencies.** Vendoring D3 (~270kb) or Chart.js would pull in a JS runtime, a build pipeline change, and a permanent supply-chain surface. None of our chart needs justify it; the templates are simple enough that hand-rolled SVG is shorter than a config wrapper around D3.
+- **Byte-equivalent dual-path validation.** Phase 4B.3's gate compares typed-Fragment output vs legacy Jinja output. A pure-Python helper that mirrors the template's structure exactly produces identical strings; a vendored library would diverge on every release.
+- **Deterministic output.** Same primitive → same SVG, every time. No platform / JS-engine / browser-API drift.
+
+### Agent Guidance
+- New chart helpers go in `src/dazzle/render/svg/__init__.py` next to `time_series_svg`. Keep them token-driven (`hsl(var(--primary))` etc.) and structurally close to the matching legacy template — Phase 4B.3's diff gate is the source of truth for "byte-equivalent".
+- The `<dl class="dz-timeseries__references">` block is intentionally retained alongside the SVG. The SVG carries reference data in `<title>` tooltips (for screen readers + hover tooltips); the `<dl>` carries the same data with `data-style` / `data-color` attributes for programmatic access (tests, downstream consumers). Removing it would break the v0.66.81 accessibility contract.
+- The `view` parameter on `time_series_svg` is currently informational — line / area / sparkline all share the same geometry. A future ship can specialise sparkline to a smaller viewBox without axis labels (and add `dz-timeseries--view-sparkline` styling differences). Don't branch on view inside the helper until that ship.
+- When porting BarChart → SVG next, follow the same pattern: helper in `dazzle.render.svg`, geometry constants matching the legacy `bar_chart.html` viewBox, palette via `hsl(var(--primary))` tokens, `<title>` tooltips per bar.
+
 ## [0.66.93] - 2026-05-08
 
 ### Added — Phase 4B.1.d/e — `_build_queue` dedicated builder

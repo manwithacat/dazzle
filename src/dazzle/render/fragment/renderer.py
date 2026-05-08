@@ -829,27 +829,26 @@ class FragmentRenderer:
         )
 
     def _emit_time_series(self, t: TimeSeries, ctx: RenderContext) -> str:
-        """Render line/area/sparkline as a labelled `<ol>` of points,
-        plus optional `<dl>` annotation lists for reference lines and
-        reference bands.
+        """Render line/area/sparkline as inline SVG plus optional `<dl>`
+        annotation lists for reference lines and reference bands.
 
-        Phase 4A rendered points as semantic data with CSS hooks
-        (`dz-timeseries--view-<view>`). Phase 4B.1.b extends with
-        `<dl class="dz-timeseries__references">` after the points,
-        carrying reference_lines and reference_bands as accessible
-        annotations. A future SVG-rendering ship will overlay them
-        on the visual chart; until then the data flows through.
+        Phase 4B.1.c replaced the semantic `<ol>` of points with an
+        inline SVG produced by `dazzle.render.svg.time_series_svg` —
+        byte-equivalent to the legacy `line_chart.html` template. The
+        `<dl class="dz-timeseries__references">` block remains as the
+        programmatic-data layer for screen-readers and tests; the SVG
+        already carries the same data via `<title>` tooltips and is
+        the visual layer.
         """
+        from dazzle.render.svg import time_series_svg
+
         cls = f"dz-timeseries dz-timeseries--view-{t.view}"
-        items = "".join(
-            f'<li class="dz-timeseries__point" '
-            f'data-x="{ctx.escape_attr(label)}" '
-            f'data-y="{value}">'
-            f'<span class="dz-timeseries__x">{ctx.escape(label)}</span>'
-            f": "
-            f'<span class="dz-timeseries__y">{value}</span>'
-            f"</li>"
-            for label, value in t.points
+        svg = time_series_svg(
+            t.label,
+            t.points,
+            view=t.view,
+            reference_lines=t.reference_lines,
+            reference_bands=t.reference_bands,
         )
         references_html = self._render_references(
             "dz-timeseries", t.reference_lines, t.reference_bands, ctx
@@ -858,7 +857,7 @@ class FragmentRenderer:
         return (
             f'<section class="{cls}">'
             f'<h4 class="dz-timeseries__label">{ctx.escape(t.label)}</h4>'
-            f'<ol class="dz-timeseries__points">{items}</ol>'
+            f"{svg}"
             f"{references_html}"
             f"</section>"
         )
