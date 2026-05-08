@@ -147,6 +147,64 @@ def _render_typed_value(item: dict[str, Any], col: dict[str, Any]) -> Fragment:
     return Text(str(value))
 
 
+def _parse_reference_lines(raw: Any) -> tuple[ReferenceLine, ...]:
+    """Defensive parser — turn ctx['reference_lines'] into a tuple of
+    typed ReferenceLine primitives. Unknown styles fall back to solid;
+    non-numeric values silently drop."""
+    if not isinstance(raw, list):
+        return ()
+    out: list[ReferenceLine] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            value = float(entry.get("value") or 0)
+        except (TypeError, ValueError):
+            continue
+        style_raw = str(entry.get("style") or "solid")
+        style: Literal["solid", "dashed", "dotted"] = (
+            style_raw  # type: ignore[assignment]
+            if style_raw in ("solid", "dashed", "dotted")
+            else "solid"
+        )
+        out.append(ReferenceLine(value=value, label=str(entry.get("label") or ""), style=style))
+    return tuple(out)
+
+
+def _parse_reference_bands(raw: Any) -> tuple[ReferenceBand, ...]:
+    """Defensive parser — accepts both `from`/`to` and `from_value`/
+    `to_value` key shapes; bands with from > to silently drop;
+    unknown colors fall back to target."""
+    if not isinstance(raw, list):
+        return ()
+    out: list[ReferenceBand] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            from_val = float(entry.get("from") or entry.get("from_value") or 0)
+            to_val = float(entry.get("to") or entry.get("to_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        if from_val > to_val:
+            continue
+        color_raw = str(entry.get("color") or "target")
+        color: Literal["target", "positive", "warning", "destructive", "muted"] = (
+            color_raw  # type: ignore[assignment]
+            if color_raw in ("target", "positive", "warning", "destructive", "muted")
+            else "target"
+        )
+        out.append(
+            ReferenceBand(
+                from_value=from_val,
+                to_value=to_val,
+                label=str(entry.get("label") or ""),
+                color=color,
+            )
+        )
+    return tuple(out)
+
+
 def _pick_label(
     item: dict[str, Any],
     field_hint: str = "",
@@ -668,7 +726,12 @@ class WorkspaceRegionAdapter:
                 or "No box-plot groups to render.",
             )
         else:
-            body = BoxPlot(label=chart_label, groups=tuple(groups))
+            body = BoxPlot(
+                label=chart_label,
+                groups=tuple(groups),
+                reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
+                reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
+            )
 
         return _wrap_surface(title, "report", body)
 
@@ -719,58 +782,15 @@ class WorkspaceRegionAdapter:
             )
             return _wrap_surface(title, "report", body)
 
-        # Reference lines — defensive parsing; unknown styles fall back.
-        ref_lines: list[ReferenceLine] = []
-        for entry in ctx.get("reference_lines") or []:
-            if not isinstance(entry, dict):
-                continue
-            try:
-                value = float(entry.get("value") or 0)
-            except (TypeError, ValueError):
-                continue
-            style_raw = str(entry.get("style") or "solid")
-            style: Literal["solid", "dashed", "dotted"] = (
-                style_raw  # type: ignore[assignment]
-                if style_raw in ("solid", "dashed", "dotted")
-                else "solid"
-            )
-            ref_lines.append(
-                ReferenceLine(value=value, label=str(entry.get("label") or ""), style=style)
-            )
-
-        # Reference bands — handle Python keyword `from` via subscript.
-        ref_bands: list[ReferenceBand] = []
-        for entry in ctx.get("reference_bands") or []:
-            if not isinstance(entry, dict):
-                continue
-            try:
-                from_val = float(entry.get("from") or entry.get("from_value") or 0)
-                to_val = float(entry.get("to") or entry.get("to_value") or 0)
-            except (TypeError, ValueError):
-                continue
-            if from_val > to_val:
-                continue
-            color_raw = str(entry.get("color") or "target")
-            color: Literal["target", "positive", "warning", "destructive", "muted"] = (
-                color_raw  # type: ignore[assignment]
-                if color_raw in ("target", "positive", "warning", "destructive", "muted")
-                else "target"
-            )
-            ref_bands.append(
-                ReferenceBand(
-                    from_value=from_val,
-                    to_value=to_val,
-                    label=str(entry.get("label") or ""),
-                    color=color,
-                )
-            )
+        ref_lines = _parse_reference_lines(ctx.get("reference_lines"))
+        ref_bands = _parse_reference_bands(ctx.get("reference_bands"))
 
         body = TimeSeries(
             label=chart_label,
             points=tuple(points),
             view=view,
-            reference_lines=tuple(ref_lines),
-            reference_bands=tuple(ref_bands),
+            reference_lines=ref_lines,
+            reference_bands=ref_bands,
         )
         return _wrap_surface(title, "report", body)
 
@@ -935,7 +955,12 @@ class WorkspaceRegionAdapter:
                 description=getattr(region, "empty_message", None) or "No data available.",
             )
         else:
-            body = BarTrack(rows=tuple(rows), max_value=max_value)
+            body = BarTrack(
+                rows=tuple(rows),
+                max_value=max_value,
+                reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
+                reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
+            )
 
         return _wrap_surface(title, "report", body)
 
@@ -1513,6 +1538,11 @@ class WorkspaceRegionAdapter:
                 description=getattr(region, "empty_message", None) or "No buckets to chart.",
             )
         else:
-            body = BarChart(label=chart_label, buckets=tuple(buckets))
+            body = BarChart(
+                label=chart_label,
+                buckets=tuple(buckets),
+                reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
+                reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
+            )
 
         return _wrap_surface(title, "report", body)

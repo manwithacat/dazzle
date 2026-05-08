@@ -21,6 +21,62 @@ _CALENDAR_VIEWS = ("day", "week", "month")
 _TIMESERIES_VIEWS = ("line", "area", "sparkline")
 _REFERENCE_LINE_STYLES = ("solid", "dashed", "dotted")
 _REFERENCE_BAND_COLORS = ("target", "positive", "warning", "destructive", "muted")
+
+
+# ─── Reference overlay data primitives (used by chart primitives) ────
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceLine:
+    """Horizontal annotation on a chart axis at `value` (e.g. a target,
+    SLA threshold, or grade boundary).
+
+    Not a Fragment union member — held inside chart primitives like
+    `TimeSeries`, `BarChart`, `BarTrack`, `BoxPlot`. Renders as a
+    `<dt>/<dd>` annotation in the chart's references list (Phase
+    4B.1.b initial). A future ship will wire inline SVG layout so
+    reference lines appear over the chart body.
+    """
+
+    value: float
+    label: str = ""
+    style: Literal["solid", "dashed", "dotted"] = "solid"
+
+    def __post_init__(self) -> None:
+        if self.style not in _REFERENCE_LINE_STYLES:
+            raise ValueError(
+                f"invalid style {self.style!r}; must be one of {_REFERENCE_LINE_STYLES}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceBand:
+    """Horizontal range annotation on a chart axis from `from_value` to
+    `to_value` (e.g. an acceptable range, SLA band, or quartile zone).
+
+    Not a Fragment union member. Held inside chart primitives. `color`
+    is a named token from the design palette (target/positive/warning/
+    destructive/muted). The `from_` / `to` distinction renames the
+    legacy template's `from`/`to` keys (Python keyword conflict).
+    Strict invariant: from_value <= to_value.
+    """
+
+    from_value: float
+    to_value: float
+    label: str = ""
+    color: Literal["target", "positive", "warning", "destructive", "muted"] = "target"
+
+    def __post_init__(self) -> None:
+        if self.color not in _REFERENCE_BAND_COLORS:
+            raise ValueError(
+                f"invalid color {self.color!r}; must be one of {_REFERENCE_BAND_COLORS}"
+            )
+        if self.from_value > self.to_value:
+            raise ValueError(
+                f"ReferenceBand from_value={self.from_value} > to_value={self.to_value}"
+            )
+
+
 _ACTION_CARD_TONES = ("neutral", "positive", "warning", "destructive", "accent")
 _METRIC_TILE_TONES = ("", "positive", "warning", "destructive", "accent", "neutral")
 _METRIC_DELTA_DIRECTIONS = ("", "up", "down", "flat")
@@ -59,6 +115,8 @@ class KPI:
 class BarChart:
     label: str
     buckets: tuple[tuple[str, int], ...]
+    reference_lines: tuple[ReferenceLine, ...] = ()
+    reference_bands: tuple[ReferenceBand, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.buckets:
@@ -157,6 +215,8 @@ class BarTrack:
 
     rows: tuple[tuple[str, float, str, float], ...]
     max_value: float
+    reference_lines: tuple[ReferenceLine, ...] = ()
+    reference_bands: tuple[ReferenceBand, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.rows:
@@ -305,6 +365,8 @@ class BoxPlot:
 
     label: str
     groups: tuple[tuple[str, float, float, float, float, float], ...]
+    reference_lines: tuple[ReferenceLine, ...] = ()
+    reference_bands: tuple[ReferenceBand, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.groups:
@@ -321,56 +383,6 @@ class BoxPlot:
                     f"BoxPlot group {i} ({_label!r}) quartiles not monotonic: "
                     f"min={mn}, q1={q1}, median={med}, q3={q3}, max={mx}"
                 )
-
-
-@dataclass(frozen=True, slots=True)
-class ReferenceLine:
-    """Horizontal annotation on a chart axis at `value` (e.g. a target,
-    SLA threshold, or grade boundary).
-
-    Not a Fragment union member — held inside chart primitives like
-    `TimeSeries`. Renders as a `<dt>/<dd>` annotation in the chart's
-    references list (Phase 4B.1.b initial). A future ship will wire
-    inline SVG layout so reference lines appear over the chart body.
-    """
-
-    value: float
-    label: str = ""
-    style: Literal["solid", "dashed", "dotted"] = "solid"
-
-    def __post_init__(self) -> None:
-        if self.style not in _REFERENCE_LINE_STYLES:
-            raise ValueError(
-                f"invalid style {self.style!r}; must be one of {_REFERENCE_LINE_STYLES}"
-            )
-
-
-@dataclass(frozen=True, slots=True)
-class ReferenceBand:
-    """Horizontal range annotation on a chart axis from `from_value` to
-    `to_value` (e.g. an acceptable range, SLA band, or quartile zone).
-
-    Not a Fragment union member. Held inside chart primitives. `color`
-    is a named token from the design palette (target/positive/warning/
-    destructive/muted). The `from_` / `to` distinction renames the
-    legacy template's `from`/`to` keys (Python keyword conflict).
-    Strict invariant: from_value <= to_value.
-    """
-
-    from_value: float
-    to_value: float
-    label: str = ""
-    color: Literal["target", "positive", "warning", "destructive", "muted"] = "target"
-
-    def __post_init__(self) -> None:
-        if self.color not in _REFERENCE_BAND_COLORS:
-            raise ValueError(
-                f"invalid color {self.color!r}; must be one of {_REFERENCE_BAND_COLORS}"
-            )
-        if self.from_value > self.to_value:
-            raise ValueError(
-                f"ReferenceBand from_value={self.from_value} > to_value={self.to_value}"
-            )
 
 
 @dataclass(frozen=True, slots=True)

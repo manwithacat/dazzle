@@ -46,6 +46,8 @@ from dazzle.render.fragment.primitives import (
     PivotTable,
     ProfileCard,
     Radar,
+    ReferenceBand,
+    ReferenceLine,
     RefPicker,
     Region,
     Row,
@@ -653,6 +655,44 @@ class FragmentRenderer:
             f"</div>"
         )
 
+    def _render_references(
+        self,
+        block_class: str,
+        reference_lines: tuple[ReferenceLine, ...],
+        reference_bands: tuple[ReferenceBand, ...],
+        ctx: RenderContext,
+    ) -> str:
+        """Shared helper — emit a `<dl class="<block>__references">` annotation
+        list when a chart primitive carries reference_lines or reference_bands.
+        Returns empty string when both tuples are empty.
+
+        Used by TimeSeries, BarChart, BarTrack, BoxPlot. Future SVG-rendering
+        ship will overlay references on the visual chart instead.
+        """
+        if not reference_lines and not reference_bands:
+            return ""
+        line_items = "".join(
+            f'<div class="{block_class}__ref-line" '
+            f'data-style="{ctx.escape_attr(line.style)}" '
+            f'data-value="{line.value}">'
+            f'<dt class="{block_class}__ref-label">{ctx.escape(line.label) or "ref"}</dt>'
+            f'<dd class="{block_class}__ref-value">{line.value}</dd>'
+            f"</div>"
+            for line in reference_lines
+        )
+        band_items = "".join(
+            f'<div class="{block_class}__ref-band" '
+            f'data-color="{ctx.escape_attr(band.color)}" '
+            f'data-from="{band.from_value}" '
+            f'data-to="{band.to_value}">'
+            f'<dt class="{block_class}__ref-label">{ctx.escape(band.label) or "band"}</dt>'
+            f'<dd class="{block_class}__ref-range">'
+            f"{band.from_value}–{band.to_value}</dd>"
+            f"</div>"
+            for band in reference_bands
+        )
+        return f'<dl class="{block_class}__references">{line_items}{band_items}</dl>'
+
     def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
         bars = "".join(
             f'<div class="dz-bar-chart__bar" data-label="{ctx.escape_attr(label)}">'
@@ -661,10 +701,12 @@ class FragmentRenderer:
             f"</div>"
             for label, count in b.buckets
         )
+        refs = self._render_references("dz-bar-chart", b.reference_lines, b.reference_bands, ctx)
         return (
             f'<div class="dz-bar-chart">'
             f'<div class="dz-bar-chart__title">{ctx.escape(b.label)}</div>'
             f'<div class="dz-bar-chart__bars">{bars}</div>'
+            f"{refs}"
             f"</div>"
         )
 
@@ -766,30 +808,9 @@ class FragmentRenderer:
             f"</li>"
             for label, value in t.points
         )
-
-        references_html = ""
-        if t.reference_lines or t.reference_bands:
-            line_items = "".join(
-                f'<div class="dz-timeseries__ref-line" '
-                f'data-style="{ctx.escape_attr(line.style)}" '
-                f'data-value="{line.value}">'
-                f'<dt class="dz-timeseries__ref-label">{ctx.escape(line.label) or "ref"}</dt>'
-                f'<dd class="dz-timeseries__ref-value">{line.value}</dd>'
-                f"</div>"
-                for line in t.reference_lines
-            )
-            band_items = "".join(
-                f'<div class="dz-timeseries__ref-band" '
-                f'data-color="{ctx.escape_attr(band.color)}" '
-                f'data-from="{band.from_value}" '
-                f'data-to="{band.to_value}">'
-                f'<dt class="dz-timeseries__ref-label">{ctx.escape(band.label) or "band"}</dt>'
-                f'<dd class="dz-timeseries__ref-range">'
-                f"{band.from_value}–{band.to_value}</dd>"
-                f"</div>"
-                for band in t.reference_bands
-            )
-            references_html = f'<dl class="dz-timeseries__references">{line_items}{band_items}</dl>'
+        references_html = self._render_references(
+            "dz-timeseries", t.reference_lines, t.reference_bands, ctx
+        )
 
         return (
             f'<section class="{cls}">'
@@ -842,10 +863,12 @@ class FragmentRenderer:
             f"</tr>"
             for label, mn, q1, med, q3, mx in b.groups
         )
+        refs = self._render_references("dz-box-plot", b.reference_lines, b.reference_bands, ctx)
         return (
             f'<section class="dz-box-plot">'
             f'<h4 class="dz-box-plot__label">{ctx.escape(b.label)}</h4>'
             f'<table class="dz-box-plot__table">{header}<tbody>{rows}</tbody></table>'
+            f"{refs}"
             f"</section>"
         )
 
@@ -1018,11 +1041,13 @@ class FragmentRenderer:
             f"</div>"
             for label, value, formatted, fill_pct in b.rows
         )
+        refs = self._render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
         return (
             f'<div class="dz-bar-track-rows">{rows_html}</div>'
             f'<p class="dz-bar-track-summary">'
             f"{len(b.rows)} rows · scale 0–{round(b.max_value, 2)}"
             f"</p>"
+            f"{refs}"
         )
 
     def _emit_stage_bar(self, s: StageBar, ctx: RenderContext) -> str:

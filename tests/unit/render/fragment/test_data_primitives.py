@@ -438,3 +438,45 @@ def test_time_series_default_references_empty() -> None:
     ts = TimeSeries(label="x", points=(("a", 1.0),))
     assert ts.reference_lines == ()
     assert ts.reference_bands == ()
+
+
+def test_bar_chart_carries_optional_references() -> None:
+    """Phase 4B.1.b extension — BarChart gained reference_lines + bands."""
+    bc = BarChart(
+        label="x",
+        buckets=(("a", 1),),
+        reference_lines=(ReferenceLine(value=5, label="ref"),),
+        reference_bands=(ReferenceBand(from_value=0, to_value=2, label="zone"),),
+    )
+    assert len(bc.reference_lines) == 1
+    assert len(bc.reference_bands) == 1
+
+
+def test_bar_track_carries_optional_references() -> None:
+    bt = BarTrack(
+        rows=(("X", 1.0, "1", 50.0),),
+        max_value=100.0,
+        reference_lines=(ReferenceLine(value=80, label="critical"),),
+    )
+    assert len(bt.reference_lines) == 1
+    assert bt.reference_bands == ()
+
+
+def test_box_plot_carries_optional_references() -> None:
+    bp = BoxPlot(
+        label="x",
+        groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),),
+        reference_bands=(ReferenceBand(from_value=1, to_value=3, label="iqr"),),
+    )
+    assert len(bp.reference_bands) == 1
+
+
+def test_chart_primitives_default_references_empty() -> None:
+    """Backward compat — pre-Phase-4B.1.b primitives without references
+    keep the empty-tuple default."""
+    bc = BarChart(label="x", buckets=(("a", 1),))
+    bt = BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
+    bp = BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
+    assert bc.reference_lines == () and bc.reference_bands == ()
+    assert bt.reference_lines == () and bt.reference_bands == ()
+    assert bp.reference_lines == () and bp.reference_bands == ()

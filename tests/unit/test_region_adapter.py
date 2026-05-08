@@ -517,6 +517,45 @@ def test_bar_chart_uses_chart_label_override() -> None:
     assert "a" in html  # smoke; label rendering is BarChart's concern
 
 
+def test_bar_chart_carries_reference_overlays() -> None:
+    """Phase 4B.1.b: BarChart now accepts reference_lines + reference_bands
+    via ctx; renderer emits them as a `<dl class=dz-bar-chart__references>`
+    block after the bars."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "buckets": [("low", 3), ("high", 9)],
+        "reference_lines": [{"value": 10, "label": "SLA", "style": "dashed"}],
+        "reference_bands": [{"from": 0, "to": 5, "label": "Healthy", "color": "positive"}],
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="bar_chart"), ctx))
+    assert "dz-bar-chart__references" in html
+    assert 'data-style="dashed"' in html
+    assert 'data-color="positive"' in html
+
+
+def test_box_plot_carries_reference_overlays() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "groups": [("p50", 0, 1, 2, 3, 4)],
+        "reference_lines": [{"value": 3.5, "label": "Threshold"}],
+    }
+    html = _render(adapter.build(_FakeRegion("b", display="box_plot"), ctx))
+    assert "dz-box-plot__references" in html
+    assert "Threshold" in html
+
+
+def test_bar_track_carries_reference_overlays() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "bar_track_rows": [{"label": "CPU", "value": 80, "formatted_value": "80%", "fill_pct": 80}],
+        "bar_track_max": 100,
+        "reference_lines": [{"value": 90, "label": "Critical", "style": "dotted"}],
+    }
+    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
+    assert "dz-bar-track__references" in html
+    assert 'data-style="dotted"' in html
+
+
 # ───────────────── Pivot table ─────────────────────
 
 

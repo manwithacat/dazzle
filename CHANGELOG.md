@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.82] - 2026-05-08
+
+### Added — Phase 4B.1.b — Reference overlays on BarChart, BarTrack, BoxPlot
+- **`BarChart`, `BarTrack`, `BoxPlot` extended** with optional `reference_lines` and `reference_bands` tuple fields, mirroring the Phase 4B.1.b extension landed on `TimeSeries` in v0.66.81. Backward compatible — defaults to empty tuples.
+- **Renderer extracted shared `_render_references` helper** — a single private method on `FragmentRenderer` produces the `<dl class="<block>__references">` annotation list for any chart primitive. Eliminated ~30 lines of near-duplicate emission code from `_emit_time_series` and applied uniformly to BarChart/BarTrack/BoxPlot. Block-class parameter (`dz-bar-chart` / `dz-bar-track` / etc.) keeps each chart's CSS namespace distinct.
+- **Adapter shared parsers** — `_parse_reference_lines(raw)` and `_parse_reference_bands(raw)` extracted at module level. The same defensive parsing (unknown styles → solid, unknown colors → target, from > to silently drops, both `from`/`to` and `from_value`/`to_value` key shapes accepted) now applies uniformly across the four chart adapters that consume references.
+- 4 new primitive tests + 3 new adapter tests; backward-compat tests confirming default empty tuples on all extended primitives.
+
+### Refactored
+- **`ReferenceLine` / `ReferenceBand` definitions moved** to the top of `primitives/data.py` (right after the constants block) so chart primitives that use them can reference them as field types without forward-reference gymnastics. Pure declaration order — no behaviour change.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID | done | v0.66.75 |
+| 4B.1.b | PROFILE_CARD | done | v0.66.76 |
+| 4B.1.a | DETAIL (type-aware) | done | v0.66.77 |
+| 4B.1.a | METRICS (extended deltas) | done | v0.66.78 |
+| 4B.1.b | BAR_TRACK | done | v0.66.79 |
+| 4B.1.b | PROGRESS | done | v0.66.80 |
+| 4B.1.b | TimeSeries reference overlays | done | v0.66.81 |
+| 4B.1.b | BarChart/BarTrack/BoxPlot reference overlays | **done** | **v0.66.82** |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending — needs SVG-rendering arc | — |
+| 4B.1.d | TransitionButton, ConfirmGate, SearchBox, LazyTabPanel | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+
+### Agent Guidance
+- Reference overlays are now consistently shaped across four chart primitives (TimeSeries, BarChart, BarTrack, BoxPlot). When adding a new chart primitive that supports overlays, add `reference_lines` and `reference_bands` as optional tuple fields with `()` defaults, then call `_render_references(<block>, lines, bands, ctx)` in the emitter — no per-primitive duplication.
+- The extracted `_parse_reference_lines` / `_parse_reference_bands` helpers are the canonical place to add new style or color values. Don't re-implement the defensive parsing inline in adapter methods.
+
 ## [0.66.81] - 2026-05-08
 
 ### Added — Phase 4B.1.b — Chart reference overlays
