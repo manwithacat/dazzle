@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from html import escape as _html_escape
 from typing import Any, Literal
 
 from dazzle.render.fragment import (
@@ -32,6 +33,7 @@ from dazzle.render.fragment import (
     ConfirmGate,
     CsvExportButton,
     DateRangePicker,
+    DetailGrid,
     Diagram,
     EmptyState,
     FilterBar,
@@ -48,6 +50,7 @@ from dazzle.render.fragment import (
     PivotTable,
     ProfileCard,
     Radar,
+    RawHTML,
     ReferenceBand,
     ReferenceLine,
     Region,
@@ -132,20 +135,27 @@ def _render_typed_value(item: dict[str, Any], col: dict[str, Any]) -> Fragment:
         return Badge(label=label or "—", variant=variant)  # type: ignore[arg-type]
 
     if col_type == "bool":
-        return Text("✓" if value else "✗")
+        from dazzle_ui.runtime.template_renderer import _bool_icon_filter
+
+        # Use the legacy bool_icon filter directly so the typed-Fragment
+        # output is byte-equivalent: True → success-tinted ✓ check, False
+        # → muted ✗ cross. Wrapped in RawHtml since the filter returns
+        # a `Markup` HTML string with class attrs that don't map to a
+        # general primitive (Phase 4B.4 wave 1).
+        return RawHTML(str(_bool_icon_filter(value)))
 
     if value is None or value == "":
-        return Text("—")
+        return RawHTML("—")
 
     if col_type == "date":
         from dazzle_ui.runtime.template_renderer import _date_filter
 
-        return Text(_date_filter(value))
+        return RawHTML(_date_filter(value))
 
     if col_type == "currency":
         from dazzle_ui.runtime.template_renderer import _currency_filter
 
-        return Text(_currency_filter(value))
+        return RawHTML(_currency_filter(value))
 
     if col_type == "ref":
         ref_route = str(col.get("ref_route") or "")
@@ -154,9 +164,9 @@ def _render_typed_value(item: dict[str, Any], col: dict[str, Any]) -> Fragment:
         if ref_route:
             url = f"{ref_route}/{value}" if not ref_route.endswith("/") else f"{ref_route}{value}"
             return Link(label=display_str, href=URL(url))
-        return Text(display_str)
+        return RawHTML(_html_escape(display_str))
 
-    return Text(str(value))
+    return RawHTML(_html_escape(str(value)))
 
 
 def _parse_reference_lines(raw: Any) -> tuple[ReferenceLine, ...]:
@@ -1700,7 +1710,7 @@ class WorkspaceRegionAdapter:
         # `fields` is materialised once: explicit list, legacy `columns`,
         # or fallback to all keys of the item in declared order (no type info).
         fields = ctx.get("fields") or ctx.get("columns") or [{"key": k} for k in item.keys()]
-        rows: list[object] = []
+        rows: list[tuple[str, object]] = []
         for f in fields:
             if not isinstance(f, dict):
                 continue
@@ -1708,13 +1718,10 @@ class WorkspaceRegionAdapter:
             if not key:
                 continue
             label = str(f.get("label") or key.replace("_", " ").title())
-            rows.append(Heading(label, level=4))
-            rows.append(_render_typed_value(item, f))
+            rows.append((label, _render_typed_value(item, f)))
 
         body = (
-            Card(body=Stack(children=tuple(rows), gap="sm"))
-            if rows
-            else EmptyState(title="No fields", description="")
+            DetailGrid(rows=tuple(rows)) if rows else EmptyState(title="No fields", description="")
         )
         return _wrap_surface(title, "dashboard", body)
 

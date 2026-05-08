@@ -28,6 +28,7 @@ from dazzle.render.fragment.primitives import (
     ConfirmGate,
     CsvExportButton,
     DateRangePicker,
+    DetailGrid,
     Diagram,
     Drawer,
     EmptyState,
@@ -195,6 +196,8 @@ class FragmentRenderer:
                 return self._emit_metric_tile(fragment, ctx)
             case MetricsGrid():
                 return self._emit_metrics_grid(fragment, ctx)
+            case DetailGrid():
+                return self._emit_detail_grid(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
             case StageBar():
@@ -1096,6 +1099,29 @@ class FragmentRenderer:
         tiles_html = "".join(self._emit(t, ctx) for t in g.tiles)  # type: ignore[arg-type]
         return (
             f'<div class="dz-metrics-grid" data-dz-tile-count="{len(g.tiles)}">{tiles_html}</div>'
+        )
+
+    def _emit_detail_grid(self, g: DetailGrid, ctx: RenderContext) -> str:
+        """Render a DetailGrid matching legacy
+        `workspace/regions/detail.html`: outer `dz-detail-region`
+        wrapper, `dz-detail-region-grid` definition list, and per-row
+        `<dt class="dz-detail-label">` / `<dd class="dz-detail-value">`
+        pairs.
+
+        The value fragment renders inline inside the `<dd>` — Badge,
+        Text, Link, etc. Per-type rendering (badge / bool / date /
+        currency / ref) is the adapter's responsibility — this
+        primitive just lays out the dt/dd grid structure.
+        """
+        rows_html = "".join(
+            f'<dt class="dz-detail-label">{ctx.escape(label)}</dt>'
+            f'<dd class="dz-detail-value">{self._emit(value, ctx)}</dd>'  # type: ignore[arg-type]
+            for label, value in g.rows
+        )
+        return (
+            f'<div class="dz-detail-region">'
+            f'<dl class="dz-detail-region-grid">{rows_html}</dl>'
+            f"</div>"
         )
 
     def _emit_bar_track(self, b: BarTrack, ctx: RenderContext) -> str:

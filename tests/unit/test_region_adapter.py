@@ -969,8 +969,11 @@ def test_detail_type_aware_bool_renders_check_or_cross() -> None:
         ],
     }
     html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "✓" in html
-    assert "✗" in html  # both False and None render as cross
+    # v0.66.102: bool now uses the legacy `bool_icon` filter directly
+    # (HTML entities + tinted span) for byte-equivalence with the
+    # legacy template. Check for the entity codes.
+    assert "&#10003;" in html  # ✓ (true)
+    assert "&#10005;" in html  # ✗ (false)
 
 
 def test_detail_type_aware_date_uses_dateformat_filter() -> None:

@@ -278,6 +278,35 @@ class MetricTile:
 
 
 @dataclass(frozen=True, slots=True)
+class DetailGrid:
+    """Container for DETAIL regions — emits the legacy
+    `<div class="dz-detail-region"><dl class="dz-detail-region-grid">`
+    two-column label/value definition list.
+
+    Phase 4B.4 wave 1 introduced this primitive (replacing
+    Card+Stack+Heading composition for detail regions) so the typed-
+    Fragment output is byte-equivalent to
+    `workspace/regions/detail.html`. Each row is a (label, value
+    fragment) pair: the label renders as `<dt class="dz-detail-label">`,
+    the value renders as `<dd class="dz-detail-value">{value_html}</dd>`
+    where `value_html` is whatever the value Fragment produces (Badge,
+    Text, Link, …).
+    """
+
+    rows: tuple[tuple[str, object], ...]
+
+    def __post_init__(self) -> None:
+        if not self.rows:
+            raise ValueError("DetailGrid requires at least one row")
+        for i, row in enumerate(self.rows):
+            if len(row) != 2:
+                raise ValueError(
+                    f"DetailGrid row {i} arity mismatch: "
+                    f"expected (label, value_fragment), got {row!r}"
+                )
+
+
+@dataclass(frozen=True, slots=True)
 class MetricsGrid:
     """Container for METRICS / SUMMARY tiles — emits the legacy
     `<div class="dz-metrics-grid" data-dz-tile-count="N">` wrapper.

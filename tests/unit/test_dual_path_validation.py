@@ -233,6 +233,75 @@ def test_metrics_achieves_byte_equivalence_simple() -> None:
     )
 
 
+def test_summary_inherits_metrics_byte_equivalence() -> None:
+    """SUMMARY shares the METRICS template + builder, so the equivalence
+    achieved for METRICS should propagate for free."""
+    ctx = {
+        "title": "Dashboard",
+        "metrics": [
+            {"label": "Total", "value": 99},
+            {"label": "Active", "value": 42},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("summary", **ctx),
+            render_via_typed("summary", ctx),
+        )
+        is None
+    )
+
+
+def test_detail_achieves_byte_equivalence_simple() -> None:
+    """Phase 4B.4 wave 1 — DETAIL byte-equivalent for the simple case
+    (string + bool field types)."""
+    ctx = {
+        "title": "User",
+        "item": {"name": "Alpha", "active": True},
+        "columns": [
+            {"key": "name", "label": "Name"},
+            {"key": "active", "label": "Active", "type": "bool"},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("detail", **ctx),
+            render_via_typed("detail", ctx),
+        )
+        is None
+    )
+
+
+def test_detail_achieves_byte_equivalence_with_typed_fields() -> None:
+    """Rich field types (currency, date, bool, missing) all match."""
+    from datetime import date
+
+    ctx = {
+        "title": "Order",
+        "item": {
+            "name": "Alpha",
+            "amount": 1234.5,
+            "when": date(2026, 5, 8),
+            "inactive": False,
+            "missing": None,
+        },
+        "columns": [
+            {"key": "name", "label": "Name"},
+            {"key": "amount", "label": "Amount", "type": "currency"},
+            {"key": "when", "label": "When", "type": "date"},
+            {"key": "inactive", "label": "Inactive", "type": "bool"},
+            {"key": "missing", "label": "Missing"},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("detail", **ctx),
+            render_via_typed("detail", ctx),
+        )
+        is None
+    )
+
+
 def test_metrics_achieves_byte_equivalence_with_full_delta_block() -> None:
     """Rich ctx with all delta fields + tone renders identically.
     Pins the MetricTile + MetricsGrid contract end-to-end."""

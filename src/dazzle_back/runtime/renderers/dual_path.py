@@ -161,23 +161,36 @@ def render_via_typed(
 
 
 _WHITESPACE = re.compile(r"\s+")
-_BETWEEN_TAGS = re.compile(r">\s+<")
+_AFTER_OPEN_BRACKET = re.compile(r">\s+")
+_BEFORE_CLOSE_BRACKET = re.compile(r"\s+<")
 
 
 def normalise_html(html: str) -> str:
     """Collapse insignificant whitespace for byte-equivalence comparison.
 
     Steps:
-      1. Strip whitespace between tags (`>   <` → `><`).
-      2. Collapse internal whitespace runs to a single space.
-      3. Trim leading/trailing whitespace.
+      1. Strip whitespace immediately after every `>` (handles both
+         inter-tag gaps and leading whitespace inside text content
+         that follows a tag).
+      2. Strip whitespace immediately before every `<` (handles both
+         inter-tag gaps and trailing whitespace before a closing tag).
+      3. Collapse internal whitespace runs to a single space (handles
+         intra-text-content whitespace).
+      4. Trim leading/trailing whitespace.
+
+    Does NOT preserve `<pre>` whitespace — the harness compares
+    workspace regions where pre-formatted content doesn't appear, and
+    aggressive normalisation makes Jinja-template indentation
+    whitespace (around `{{ value }}` expressions) match the typed
+    renderer's compact output.
 
     Does NOT reorder attributes — Phase 4B.4 may need an
     `attribute-order-insensitive` mode if real-world diffs surface
     flaky orderings. The current FragmentRenderer + Jinja both emit
     deterministic order, so this hasn't been a problem yet.
     """
-    s = _BETWEEN_TAGS.sub("><", html)
+    s = _AFTER_OPEN_BRACKET.sub(">", html)
+    s = _BEFORE_CLOSE_BRACKET.sub("<", s)
     s = _WHITESPACE.sub(" ", s)
     return s.strip()
 

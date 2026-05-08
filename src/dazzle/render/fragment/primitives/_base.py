@@ -35,6 +35,7 @@ from dazzle.render.fragment.primitives.data import (
     ConfirmGate,
     CsvExportButton,
     DateRangePicker,
+    DetailGrid,
     Diagram,
     FilterBar,
     KanbanBoard,
@@ -118,6 +119,7 @@ Fragment = (
     | ProfileCard
     | MetricTile
     | MetricsGrid
+    | DetailGrid
     | BarTrack
     | StageBar
     | LazyTabPanel

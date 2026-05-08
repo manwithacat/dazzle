@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.102] - 2026-05-08
+
+### Added — Phase 4B.4 wave 1 — DETAIL + SUMMARY achieve byte-equivalence
+- **DETAIL byte-equivalent** for the typed-Fragment vs legacy Jinja paths. Three changes:
+  1. **New `DetailGrid` primitive** — emits the legacy `<div class="dz-detail-region"><dl class="dz-detail-region-grid">` two-column label/value definition list. Replaces the prior `Card + Stack + Heading + Text` composition in `_build_detail`. Each row is a `(label, value_fragment)` pair: label renders as `<dt class="dz-detail-label">`, value renders inline inside `<dd class="dz-detail-value">`.
+  2. **`_render_typed_value` now returns `RawHTML`** for primitive types (string, date, currency, ref-without-route) instead of `Text` — Text always wraps in `<span class="dz-text dz-text--tone-default">` chrome that doesn't match the legacy `<dd>{value}</dd>` shape. `RawHTML` already existed in `dazzle/render/fragment/escape.py` as the trusted-markup escape hatch; the adapter caller pre-escapes string values via `html.escape`.
+  3. **Bool case routes through the legacy `bool_icon` filter** — emits `<span class="text-[hsl(var(--success))]">&#10003;</span>` for True and `<span class="text-[hsl(var(--muted-foreground)/0.3)]">&#10005;</span>` for False, byte-for-byte. Prior typed behaviour emitted `Text("✓")` / `Text("✗")` which produced different markup.
+- **SUMMARY byte-equivalent for free** — shares the METRICS template + builder (Phase 4B.4 wave 1's previous ship), so v0.66.101's METRICS port carries over with no additional work. Pinned by `test_summary_inherits_metrics_byte_equivalence`.
+
+### Changed — `normalise_html` widened
+- **More aggressive whitespace stripping** for byte-equivalence comparison: now strips whitespace immediately after `>` AND immediately before `<` (handles inter-tag gaps + leading/trailing whitespace inside text content). Previously only stripped between adjacent tags. Driven by Jinja's `{% if val is none %}—{% else %}{{ val }}{% endif %}` blocks producing `<dd> Alpha </dd>`-style output that needed normalisation to match the typed renderer's compact emission.
+
+### Phase 4B progress
+| Step | Status | Ship |
+|---|---|---|
+| 4B.0–4B.3 | done | v0.66.74–100 |
+| 4B.4 wave 1 — METRICS | done | v0.66.101 |
+| **4B.4 wave 1 — SUMMARY** | **done (free)** | **v0.66.102** |
+| **4B.4 wave 1 — DETAIL** | **done** | **v0.66.102** |
+| 4B.4 wave 1 — ACTIVITY_FEED | next | — |
+| 4B.4 wave 1 — STATUS_LIST, SEARCH_BOX | queued | — |
+| 4B.4 wave 2+ | queued | — |
+
+### Agent Guidance
+- **`RawHTML` is the canonical trusted-markup escape hatch** — already exists in `escape.py` with security caveats documented. When porting a display whose legacy template uses Jinja filters that produce HTML (`bool_icon`, `metric_number`, `dateformat`, `currency`, etc.), wrap the filter call's string output in `RawHTML(filter(value))` rather than introducing a new typed primitive. The string's "trusted" status is enforced by code review — only filter output, never user input.
+- **The display-grid primitive pattern is reusable.** `MetricsGrid` (v0.66.101) and `DetailGrid` (v0.66.102) both follow the same shape: a thin container primitive emitting a single legacy CSS class wrapper (`dz-metrics-grid` / `dz-detail-region-grid`) holding a tuple of typed children. When the next display family needs a CSS-class wrapper distinct from `Grid`/`Stack`, follow this pattern — small primitive, small renderer emit, single-line adapter swap.
+- The `normalise_html` widening was needed for displays whose legacy templates emit text content with Jinja indentation whitespace (`{% block %}{{ val }}{% endblock %}`). Future displays may surface other normalisation gaps (e.g. attribute-order divergence) — extend the harness in `dual_path.py` rather than working around it per-test.
+
 ## [0.66.101] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 1 — METRICS is the first display to achieve byte-equivalence
