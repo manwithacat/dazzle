@@ -7,14 +7,16 @@ determines which primitive renders the data.
 
 The integration with `workspace_renderer.py` is a separate plan; this
 module is the substrate piece that maps `(region_spec, ctx) →
-Fragment`. Currently covers `list`, `kanban`, `timeline`, `grid`,
-`metrics`/`summary`, `bar_chart`. Subsequent plans add `pivot_table`,
-`heatmap`, `funnel_chart`, `diagram` driven by the audit's
-aggregated_blockers report.
+Fragment`. Coverage is driven by `_BUILDERS` (direct dispatches) and
+`_ALIASES` (display modes that share a builder). The audit's
+`_SUPPORTED_DISPLAYS` derives from these, so adding a new display is
+a single dict edit instead of two synced lists across two files.
 """
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Callable
 from typing import Any, Literal
 
 from dazzle.render.fragment import (
@@ -40,6 +42,56 @@ from dazzle.render.fragment import (
     Timeline,
     TimeSeries,
 )
+
+_log = logging.getLogger(__name__)
+
+_LABEL_CANDIDATES: tuple[str, ...] = ("title", "name", "id")
+_DATE_CANDIDATES: tuple[str, ...] = ("date", "created_at", "occurred_at", "timestamp")
+
+
+def _region_title(region: Any) -> str:
+    """Extract a region's display title.
+
+    Prefers the explicit `title` attribute, falls back to the snake-cased
+    `name` attribute. Used by every `_build_*` method — consolidating it
+    here removes ~19 verbatim copies of the same expression.
+    """
+    title = getattr(region, "title", None)
+    if title:
+        return str(title)
+    return getattr(region, "name", "").replace("_", " ").title()
+
+
+def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:
+    """Wrap a body fragment in the standard region Surface chrome.
+
+    Every `_build_*` method ends with `Surface(header=Heading(title,
+    level=2), body=Region(kind=..., body=body))` — the only variation
+    is `kind`. This helper consolidates the wrapping.
+    """
+    return Surface(
+        header=Heading(title, level=2),
+        body=Region(kind=kind, body=body),  # type: ignore[arg-type]
+    )
+
+
+def _pick_label(
+    item: dict[str, Any],
+    field_hint: str = "",
+    candidates: tuple[str, ...] = _LABEL_CANDIDATES,
+) -> str:
+    """Pick a display label from a dict item.
+
+    `field_hint` wins if provided and present; otherwise the first
+    matching candidate field is returned. Used by every list-style
+    builder; consolidating it here removes 5 copies of the same loop.
+    """
+    if field_hint and field_hint in item:
+        return str(item.get(field_hint) or "")
+    for cand in candidates:
+        if cand in item:
+            return str(item.get(cand) or "")
+    return ""
 
 
 def _coerce_columns(
@@ -86,15 +138,69 @@ def _format_card(item: Any) -> object:
 
 
 class WorkspaceRegionAdapter:
-    """Translate a WorkspaceRegion + ctx into a Fragment tree."""
+    """Translate a WorkspaceRegion + ctx into a Fragment tree.
+
+    Dispatch is table-driven: `_BUILDERS` maps display values to
+    methods, `_ALIASES` redirects shared shapes (e.g. `histogram`
+    renders the same as `bar_chart`). `_TIMESERIES_VIEWS` is the
+    one special case — line/area/sparkline share `_build_time_series`
+    but pass a `view` argument that the others don't.
+    """
+
+    # Direct dispatches — display value → bound method name.
+    _BUILDERS: dict[str, str] = {
+        "": "_build_list",  # default for missing display
+        "list": "_build_list",
+        "kanban": "_build_kanban",
+        "timeline": "_build_timeline",
+        "grid": "_build_grid",
+        "metrics": "_build_metrics",
+        "bar_chart": "_build_bar_chart",
+        "pivot_table": "_build_pivot_table",
+        "tabbed_list": "_build_tabbed_list",
+        "detail": "_build_detail",
+        "funnel_chart": "_build_funnel_chart",
+        "status_list": "_build_status_list",
+        "tree": "_build_tree",
+        "pipeline_steps": "_build_pipeline_steps",
+        "progress": "_build_progress",
+        "confirm_action_panel": "_build_confirm_action_panel",
+        "search_box": "_build_search_box",
+        "bar_track": "_build_bar_track",
+        "bullet": "_build_bullet",
+        "diagram": "_build_diagram",
+        "radar": "_build_radar",
+        "box_plot": "_build_box_plot",
+    }
+
+    # Display values that share a builder with another display value.
+    # Resolved before _BUILDERS lookup; lets us add an alias without
+    # duplicating dispatch code.
+    _ALIASES: dict[str, str] = {
+        "summary": "metrics",
+        "activity_feed": "timeline",
+        "queue": "list",
+        "histogram": "bar_chart",
+        "profile_card": "detail",
+        "action_grid": "grid",
+        "heatmap": "pivot_table",
+    }
+
+    # TimeSeries variants — share `_build_time_series` but each passes
+    # a different `view` argument. Kept separate from `_BUILDERS` so
+    # the table-lookup signature stays uniform.
+    _TIMESERIES_VIEWS: dict[str, Literal["line", "area", "sparkline"]] = {
+        "line_chart": "line",
+        "area_chart": "area",
+        "sparkline": "sparkline",
+    }
 
     def build(self, region: Any, ctx: dict[str, Any]) -> Fragment:
         """Dispatch on `region.display` to the right primitive.
 
-        Phase 4A starter — only `kanban` is wired. Other displays
-        raise NotImplementedError so the audit's flag stays honest:
-        if the runtime tries to render an unsupported display through
-        this adapter, the failure is loud, not silent.
+        Resolves aliases first, then looks up the canonical builder.
+        Adding a new display value is one entry in `_BUILDERS` (or
+        `_ALIASES` for a redirect) — no if-chain edits required.
         """
         display_obj = getattr(region, "display", None)
         raw_display = getattr(display_obj, "value", None)
@@ -102,66 +208,17 @@ class WorkspaceRegionAdapter:
             raw_display = "" if display_obj is None else str(display_obj)
         display_value = raw_display.strip()
 
-        if display_value in ("", "list"):
-            return self._build_list(region, ctx)
-        if display_value == "kanban":
-            return self._build_kanban(region, ctx)
-        if display_value == "timeline":
-            return self._build_timeline(region, ctx)
-        if display_value == "grid":
-            return self._build_grid(region, ctx)
-        if display_value in ("metrics", "summary"):
-            return self._build_metrics(region, ctx)
-        if display_value == "bar_chart":
-            return self._build_bar_chart(region, ctx)
-        if display_value == "pivot_table":
-            return self._build_pivot_table(region, ctx)
-        if display_value == "tabbed_list":
-            return self._build_tabbed_list(region, ctx)
-        if display_value == "activity_feed":
-            return self._build_timeline(region, ctx)
-        if display_value == "detail":
-            return self._build_detail(region, ctx)
-        if display_value == "queue":
-            return self._build_list(region, ctx)
-        if display_value == "histogram":
-            return self._build_bar_chart(region, ctx)
-        if display_value == "funnel_chart":
-            return self._build_funnel_chart(region, ctx)
-        if display_value == "status_list":
-            return self._build_status_list(region, ctx)
-        if display_value == "profile_card":
-            return self._build_detail(region, ctx)
-        if display_value == "action_grid":
-            return self._build_grid(region, ctx)
-        if display_value == "tree":
-            return self._build_tree(region, ctx)
-        if display_value == "pipeline_steps":
-            return self._build_pipeline_steps(region, ctx)
-        if display_value == "progress":
-            return self._build_progress(region, ctx)
-        if display_value == "heatmap":
-            return self._build_pivot_table(region, ctx)
-        if display_value == "confirm_action_panel":
-            return self._build_confirm_action_panel(region, ctx)
-        if display_value == "search_box":
-            return self._build_search_box(region, ctx)
-        if display_value == "bar_track":
-            return self._build_bar_track(region, ctx)
-        if display_value == "bullet":
-            return self._build_bullet(region, ctx)
-        if display_value == "diagram":
-            return self._build_diagram(region, ctx)
-        if display_value == "line_chart":
-            return self._build_time_series(region, ctx, "line")
-        if display_value == "area_chart":
-            return self._build_time_series(region, ctx, "area")
-        if display_value == "sparkline":
-            return self._build_time_series(region, ctx, "sparkline")
-        if display_value == "radar":
-            return self._build_radar(region, ctx)
-        if display_value == "box_plot":
-            return self._build_box_plot(region, ctx)
+        # TimeSeries family — same builder, different view argument.
+        view = self._TIMESERIES_VIEWS.get(display_value)
+        if view is not None:
+            return self._build_time_series(region, ctx, view)
+
+        # Resolve any alias to its canonical display value.
+        canonical = self._ALIASES.get(display_value, display_value)
+        method_name = self._BUILDERS.get(canonical)
+        if method_name is not None:
+            builder: Callable[[Any, dict[str, Any]], Fragment] = getattr(self, method_name)
+            return builder(region, ctx)
 
         raise NotImplementedError(
             f"WorkspaceRegionAdapter does not yet support display={display_value!r}; "
@@ -177,9 +234,7 @@ class WorkspaceRegionAdapter:
         be lifted out of FragmentSurfaceAdapter for shared use later."""
         from dazzle.render.fragment import Table
 
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items = ctx.get("items", []) or []
         columns = ctx.get("columns", []) or []
 
@@ -194,10 +249,7 @@ class WorkspaceRegionAdapter:
             rows = tuple(tuple(str(item.get(col["key"], "")) for col in columns) for item in items)
             body = Table(columns=column_labels, rows=rows)
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="list", body=body),
-        )
+        return _wrap_surface(title, "list", body)
 
     def _build_kanban(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: kanban` regions render as a KanbanBoard.
@@ -209,9 +261,7 @@ class WorkspaceRegionAdapter:
             group_by_field: str — the field name to bucket items by
                 (the region's `group_by` clause)
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
         group_keys: list[str] = list(ctx.get("group_keys") or [])
         group_by_field: str = str(ctx.get("group_by_field") or "")
@@ -237,10 +287,7 @@ class WorkspaceRegionAdapter:
                 columns = (("All", ()),)
             body = KanbanBoard(columns=columns)
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="kanban", body=body),
-        )
+        return _wrap_surface(title, "kanban", body)
 
     def _build_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: timeline` regions render as a Timeline primitive
@@ -254,9 +301,7 @@ class WorkspaceRegionAdapter:
                 (typically the region's `date_field` clause; falls
                 back to `created_at` then any iso-date-shaped field)
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
         label_field = str(ctx.get("label_field") or "")
         date_field = str(ctx.get("date_field") or getattr(region, "date_field", "") or "")
@@ -272,22 +317,8 @@ class WorkspaceRegionAdapter:
             for item in items:
                 if not isinstance(item, dict):
                     continue
-                label = ""
-                if label_field and label_field in item:
-                    label = str(item.get(label_field) or "")
-                else:
-                    for cand in ("title", "name", "id"):
-                        if cand in item:
-                            label = str(item.get(cand) or "")
-                            break
-                date = ""
-                if date_field and date_field in item:
-                    date = str(item.get(date_field) or "")
-                else:
-                    for cand in ("date", "created_at", "occurred_at", "timestamp"):
-                        if cand in item:
-                            date = str(item.get(cand) or "")
-                            break
+                label = _pick_label(item, label_field)
+                date = _pick_label(item, date_field, candidates=_DATE_CANDIDATES)
                 if label and date:
                     events.append((label, date))
             if events:
@@ -299,10 +330,7 @@ class WorkspaceRegionAdapter:
                     or "No items had a label and date.",
                 )
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_pivot_table(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: pivot_table` regions render as a PivotTable primitive
@@ -314,9 +342,7 @@ class WorkspaceRegionAdapter:
             cells: dict[(row, col) → int] — pre-aggregated counts
             chart_label: optional override
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or "Pivot")
         rows = tuple(str(r) for r in (ctx.get("rows") or []))
         columns = tuple(str(c) for c in (ctx.get("columns") or []))
@@ -342,10 +368,7 @@ class WorkspaceRegionAdapter:
         else:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_radar(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: radar` regions render as a Radar polar profile.
@@ -354,9 +377,7 @@ class WorkspaceRegionAdapter:
             axes: list of (label, value) tuples or {axis, value} dicts
             chart_label: optional override
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or "Radar")
         raw_axes = ctx.get("axes") or []
         axes: list[tuple[str, float]] = []
@@ -387,10 +408,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Radar(label=chart_label, axes=tuple(axes))
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_box_plot(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: box_plot` regions render as a BoxPlot quartile table.
@@ -401,9 +419,7 @@ class WorkspaceRegionAdapter:
                 or 6-tuples (label, min, q1, median, q3, max)
             chart_label: optional override
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or "Distribution")
         raw_groups = ctx.get("groups") or []
         groups: list[tuple[str, float, float, float, float, float]] = []
@@ -443,10 +459,7 @@ class WorkspaceRegionAdapter:
         else:
             body = BoxPlot(label=chart_label, groups=tuple(groups))
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_time_series(
         self,
@@ -461,9 +474,7 @@ class WorkspaceRegionAdapter:
                 {x, y} dicts — pre-aggregated by the runtime
             chart_label: optional override
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or view.title())
         raw_points = ctx.get("points") or []
         points: list[tuple[str, float]] = []
@@ -491,10 +502,7 @@ class WorkspaceRegionAdapter:
         else:
             body = TimeSeries(label=chart_label, points=tuple(points), view=view)
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_diagram(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: diagram` renders an entity-relationship-style
@@ -506,9 +514,7 @@ class WorkspaceRegionAdapter:
                 or list[dict{"from": str, "to": str}]
             (legacy) `relations` is accepted as alias for `edges`
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         nodes = tuple(str(n) for n in (ctx.get("nodes") or []) if n)
         raw_edges = ctx.get("edges") or ctx.get("relations") or []
         edges: list[tuple[str, str]] = []
@@ -536,10 +542,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Diagram(nodes=nodes, edges=tuple(edges))
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_confirm_action_panel(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: confirm_action_panel` renders a Card with the
@@ -552,9 +555,7 @@ class WorkspaceRegionAdapter:
             prompt / description / message: prompt text
             action_label: optional button text shown as plain Text below
         """
-        heading = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        heading = _region_title(region)
         prompt = str(ctx.get("prompt") or ctx.get("description") or ctx.get("message") or "")
         action_label = str(ctx.get("action_label") or "")
 
@@ -564,11 +565,8 @@ class WorkspaceRegionAdapter:
         if action_label:
             rows.append(Text(f"[ {action_label} ]"))
 
-        body = Card(body=Stack(children=tuple(rows), gap="sm"))
-        return Surface(
-            header=Heading(heading or "Confirm", level=2),
-            body=Region(kind="dashboard", body=body),
-        )
+        body: Fragment = Card(body=Stack(children=tuple(rows), gap="sm"))
+        return _wrap_surface(heading or "Confirm", "dashboard", body)
 
     def _build_search_box(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: search_box` renders a Card with a search Field.
@@ -580,9 +578,7 @@ class WorkspaceRegionAdapter:
         """
         from dazzle.render.fragment import Field
 
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         field_name = str(ctx.get("field_name") or "q")
         label = str(ctx.get("label") or "Search")
         placeholder = str(ctx.get("placeholder") or "")
@@ -595,10 +591,7 @@ class WorkspaceRegionAdapter:
                 placeholder=placeholder,
             )
         )
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="form", body=body),
-        )
+        return _wrap_surface(title, "form", body)
 
     def _build_bar_track(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: bar_track` renders one labelled, filled progress
@@ -620,9 +613,7 @@ class WorkspaceRegionAdapter:
             items: list of dicts {"label": str, "actual": int|str,
                                   "target": int|str}
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items = ctx.get("items") or []
 
         rows: list[object] = []
@@ -669,10 +660,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Stack(children=tuple(rows), gap="sm")
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)
 
     def _build_tree(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: tree` regions render a hierarchical list as a Stack
@@ -685,19 +673,9 @@ class WorkspaceRegionAdapter:
                 the same shape (recursive tree)
             label_field: optional, defaults to title/name/id auto-pick
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items = ctx.get("items") or []
         label_field = str(ctx.get("label_field") or "")
-
-        def _label_for(item: dict[str, Any]) -> str:
-            if label_field and label_field in item:
-                return str(item.get(label_field) or "")
-            for cand in ("title", "name", "id"):
-                if cand in item:
-                    return str(item.get(cand) or "")
-            return "(no label)"
 
         rows: list[object] = []
 
@@ -706,7 +684,7 @@ class WorkspaceRegionAdapter:
                 if not isinstance(node, dict):
                     continue
                 indent = "  " * depth
-                label = _label_for(node)
+                label = _pick_label(node, label_field) or "(no label)"
                 rows.append(Text(f"{indent}{label}"))
                 children = node.get("children") or []
                 if isinstance(children, list) and children:
@@ -724,10 +702,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Stack(children=tuple(rows), gap="sm")
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="list", body=body),
-        )
+        return _wrap_surface(title, "list", body)
 
     def _build_pipeline_steps(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: pipeline_steps` renders a sequence of steps as a
@@ -738,9 +713,7 @@ class WorkspaceRegionAdapter:
             steps: list of dicts {"label": str, "description": str (optional),
                                   "status": str (optional)}
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         steps = ctx.get("steps") or ctx.get("items") or []
 
         cards: list[object] = []
@@ -764,10 +737,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Row(children=tuple(cards), gap="md", align="stretch")
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="dashboard", body=body),
-        )
+        return _wrap_surface(title, "dashboard", body)
 
     def _build_progress(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: progress` renders a Stack of label / percentage
@@ -778,9 +748,7 @@ class WorkspaceRegionAdapter:
             items: list of dicts {"label": str, "percent": int 0..100}
                 — values outside [0, 100] are clamped
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items = ctx.get("items") or []
 
         rows: list[object] = []
@@ -824,10 +792,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Stack(children=tuple(rows), gap="sm")
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="list", body=body),
-        )
+        return _wrap_surface(title, "list", body)
 
     def _build_status_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: status_list` regions render as a Stack of rows
@@ -841,9 +806,7 @@ class WorkspaceRegionAdapter:
             status_variants: optional dict[status_value → Badge.variant]
                 for severity colouring (e.g. {"failed": "danger"})
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
         label_field = str(ctx.get("label_field") or "")
         status_field = str(ctx.get("status_field") or "")
@@ -862,22 +825,10 @@ class WorkspaceRegionAdapter:
             for item in items:
                 if not isinstance(item, dict):
                     continue
-                label = ""
-                if label_field and label_field in item:
-                    label = str(item.get(label_field) or "")
-                else:
-                    for cand in ("title", "name", "id"):
-                        if cand in item:
-                            label = str(item.get(cand) or "")
-                            break
-                status_val = ""
-                if status_field and status_field in item:
-                    status_val = str(item.get(status_field) or "")
-                else:
-                    for cand in ("status", "state", "stage"):
-                        if cand in item:
-                            status_val = str(item.get(cand) or "")
-                            break
+                label = _pick_label(item, label_field)
+                status_val = _pick_label(
+                    item, status_field, candidates=("status", "state", "stage")
+                )
                 variant_raw = str(variants.get(status_val) or "default")
                 variant = (
                     variant_raw
@@ -899,10 +850,7 @@ class WorkspaceRegionAdapter:
             else:
                 body = EmptyState(title="No items", description="No items had a label.")
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="list", body=body),
-        )
+        return _wrap_surface(title, "list", body)
 
     def _build_funnel_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: funnel_chart` is a BarChart with buckets sorted in
@@ -946,45 +894,38 @@ class WorkspaceRegionAdapter:
                 — declared field order from the region's `fields:` clause
             (legacy) `columns` is accepted as alias for `fields`
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         item = ctx.get("item")
-        fields = ctx.get("fields") or ctx.get("columns") or []
 
-        body: Fragment
+        # Single linear path — no conditional reassignment of `fields`.
         if not isinstance(item, dict) or not item:
-            body = EmptyState(
+            body: Fragment = EmptyState(
                 title="No item",
                 description=getattr(region, "empty_message", None) or "No item to display.",
             )
-        elif not fields:
-            # Without an explicit field list, fall back to all keys
-            # in declared dict order — preserves DSL author's choice
-            # when ctx omits the fields list (e.g. early prototypes).
-            fields = [{"key": k} for k in item.keys()]
+            return _wrap_surface(title, "dashboard", body)
 
-        if isinstance(item, dict) and item and fields:
-            rows: list[object] = []
-            for f in fields:
-                if not isinstance(f, dict):
-                    continue
-                key = str(f.get("key") or "")
-                if not key:
-                    continue
-                label = str(f.get("label") or key.replace("_", " ").title())
-                value = item.get(key, "")
-                rows.append(Heading(label, level=4))
-                rows.append(Text(str(value) if value not in (None, "") else "—"))
-            if rows:
-                body = Card(body=Stack(children=tuple(rows), gap="sm"))
-            else:
-                body = EmptyState(title="No fields", description="")
+        # `fields` is materialised once: explicit list, legacy `columns`,
+        # or fallback to all keys of the item in declared order.
+        fields = ctx.get("fields") or ctx.get("columns") or [{"key": k} for k in item.keys()]
+        rows: list[object] = []
+        for f in fields:
+            if not isinstance(f, dict):
+                continue
+            key = str(f.get("key") or "")
+            if not key:
+                continue
+            label = str(f.get("label") or key.replace("_", " ").title())
+            value = item.get(key, "")
+            rows.append(Heading(label, level=4))
+            rows.append(Text(str(value) if value not in (None, "") else "—"))
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="dashboard", body=body),
+        body = (
+            Card(body=Stack(children=tuple(rows), gap="sm"))
+            if rows
+            else EmptyState(title="No fields", description="")
         )
+        return _wrap_surface(title, "dashboard", body)
 
     def _build_tabbed_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: tabbed_list` regions render as a Tabs container, one
@@ -998,9 +939,7 @@ class WorkspaceRegionAdapter:
         """
         from dazzle.render.fragment import Table
 
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         raw_tabs = ctx.get("tabs") or ctx.get("slices") or []
 
         body: Fragment
@@ -1009,10 +948,7 @@ class WorkspaceRegionAdapter:
                 title="No tabs",
                 description=getattr(region, "empty_message", None) or "No data slices declared.",
             )
-            return Surface(
-                header=Heading(title, level=2),
-                body=Region(kind="list", body=body),
-            )
+            return _wrap_surface(title, "list", body)
 
         built: list[tuple[str, object]] = []
         seen_keys: set[str] = set()
@@ -1043,10 +979,7 @@ class WorkspaceRegionAdapter:
         else:
             body = Tabs(tabs=tuple(built))
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="list", body=body),
-        )
+        return _wrap_surface(title, "list", body)
 
     def _build_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: grid` regions render items as cards in an N-column
@@ -1057,9 +990,7 @@ class WorkspaceRegionAdapter:
             label_field: optional, defaults to title/name/id auto-pick
             columns: int (default 3, max 12)
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
         columns = int(ctx.get("columns") or 3)
         columns = max(1, min(12, columns))
@@ -1076,24 +1007,14 @@ class WorkspaceRegionAdapter:
             for item in items:
                 if not isinstance(item, dict):
                     continue
-                label = ""
-                if label_field and label_field in item:
-                    label = str(item.get(label_field) or "")
-                else:
-                    for cand in ("title", "name", "id"):
-                        if cand in item:
-                            label = str(item.get(cand) or "")
-                            break
+                label = _pick_label(item, label_field)
                 cards.append(Card(body=Text(label or "(no label)")))
             if cards:
                 body = Grid(children=tuple(cards), columns=columns)
             else:
                 body = EmptyState(title="No items", description="No data in this region.")
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="dashboard", body=body),
-        )
+        return _wrap_surface(title, "dashboard", body)
 
     def _build_metrics(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: metrics` (and `summary`) regions render a row of
@@ -1105,9 +1026,7 @@ class WorkspaceRegionAdapter:
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         metrics_list: list[dict[str, Any]] = ctx.get("metrics", []) or []
         if not metrics_list:
             agg = ctx.get("aggregates") or getattr(region, "aggregates", {}) or {}
@@ -1145,10 +1064,7 @@ class WorkspaceRegionAdapter:
                 cols = max(1, min(12, len(kpis)))
                 body = Grid(children=tuple(kpis), columns=cols)
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="dashboard", body=body),
-        )
+        return _wrap_surface(title, "dashboard", body)
 
     def _build_bar_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: bar_chart` regions render as a BarChart primitive
@@ -1160,9 +1076,7 @@ class WorkspaceRegionAdapter:
             (legacy) items + group_by_field as fallback
             chart_label: optional override for the BarChart label
         """
-        title = (
-            getattr(region, "title", None) or getattr(region, "name", "").replace("_", " ").title()
-        )
+        title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or "Chart")
         raw_buckets = ctx.get("buckets") or []
         buckets: list[tuple[str, int]] = []
@@ -1190,7 +1104,4 @@ class WorkspaceRegionAdapter:
         else:
             body = BarChart(label=chart_label, buckets=tuple(buckets))
 
-        return Surface(
-            header=Heading(title, level=2),
-            body=Region(kind="report", body=body),
-        )
+        return _wrap_surface(title, "report", body)

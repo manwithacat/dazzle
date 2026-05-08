@@ -165,10 +165,13 @@ _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"file"})
 
 # Surface-level `display:` values the adapter knows how to render.
 # Empty string / None means "use the surface mode default" (e.g.
-# `mode: list` + no display → standard Table). Specific display
-# modes — `kanban`, `timeline`, `bar_chart`, `pivot_table`, `metrics`,
-# `heatmap`, `funnel_chart` — require dedicated adapter dispatch
-# (Phase 4A scope) and are flagged until then.
+# `mode: list` + no display → standard Table).
+#
+# Mirrored against `WorkspaceRegionAdapter._BUILDERS | _ALIASES |
+# _TIMESERIES_VIEWS` in src/dazzle_back/runtime/renderers/region_adapter.py.
+# We can't import the backend from core (layering rule) so the two
+# lists must stay in sync. The drift is enforced by
+# `tests/unit/render/fragment/test_coverage.py::test_supported_displays_match_adapter`.
 _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
     {
         "",

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.74] - 2026-05-08
+
+### Refactored
+- **`WorkspaceRegionAdapter` dispatch table** — replaced the 29-branch `if/elif` chain in `build()` with three class-level dicts: `_BUILDERS` (direct dispatches), `_ALIASES` (display modes that share a builder, e.g. `histogram → bar_chart`), `_TIMESERIES_VIEWS` (line/area/sparkline → `_build_time_series` with a `view` argument). Adding a new display mode is now one dict entry instead of an if-branch + a manual sync against `_SUPPORTED_DISPLAYS`. The `build()` body went from 64 lines to 13.
+- **Module-level helpers extracted** — `_region_title(region)` consolidates 19 verbatim copies of the title-resolution boilerplate; `_wrap_surface(title, kind, body)` consolidates 20 copies of the `Surface(header=Heading(title, level=2), body=Region(kind=..., body=body))` triple; `_pick_label(item, field_hint, candidates)` replaces 5 copies of the candidate-field fallback loop. Net: file shrunk from 1,196 → 1,094 lines (-9%) with no behaviour change.
+- **`_build_detail` mutable-`fields` reassignment untangled** — the prior implementation reassigned `fields` inside an `elif` branch and then re-tested it in a separate `if`, creating a latent reasoning trap (logically correct today, fragile under refactor). Now a single linear path: empty-item → return EmptyState; otherwise materialise `fields` once, build rows, wrap.
+
+### Added
+- **Drift gate `test_supported_displays_match_adapter`** — asserts `coverage._SUPPORTED_DISPLAYS` equals `WorkspaceRegionAdapter._BUILDERS | _ALIASES | _TIMESERIES_VIEWS`. The two lists live in different layers (`core` ↔ `back`) and can't be derived from each other directly without breaking the import boundary; the drift gate is the next-best enforcement and runs in <1s. Adding a display in either file without the other gets caught at CI time.
+
+### Smells review (2026-05-08, paired with this release)
+- Ran the `/smells` four-subagent review against the fragment substrate. Verdict: no god classes, no harmful coupling, no mutable globals, no swallowed exceptions. The patterns this release closes were the top-3 priorities surfaced by the review.
+- Remaining finding documented but **not** fixed: parallel display dispatch in `src/dazzle_back/runtime/workspace_rendering.py` (1,138-line function, uppercase enum strings) operates alongside `WorkspaceRegionAdapter` rather than delegating to it. That's Phase 4B work — a port, not a hotfix.
+
+### Agent Guidance
+- Adding a new region display mode now means: (1) add an entry to `_BUILDERS` in `region_adapter.py`, (2) add the same string to `_SUPPORTED_DISPLAYS` in `coverage.py`, (3) implement `_build_<name>`. The drift gate fails fast if you forget step 2. The dispatch table also makes the legal display set visible at a glance — no scrolling through an `if/elif` chain to see what's supported.
+- Use `_region_title(region)`, `_wrap_surface(title, kind, body)`, and `_pick_label(item, field_hint)` rather than re-implementing the title/wrap/label-fallback boilerplate. The CHANGELOG history shows what happens when these aren't shared: 19 copies of the same 80-character expression accrue across 9 ships.
+
 ## [0.66.73] - 2026-05-08
 
 ### Added

@@ -462,3 +462,32 @@ def test_audit_dedupes_same_field_type_across_elements() -> None:
         if b.kind.value == "unsupported_field_type" and b.detail == "file"
     )
     assert file_count == 1
+
+
+# ─────── Adapter ↔ coverage drift gate ─────────────────────
+
+
+def test_supported_displays_match_adapter() -> None:
+    """coverage._SUPPORTED_DISPLAYS must equal the union of every
+    display value the adapter dispatches on. Drift between the two
+    files is the recurring class of bug the dispatch refactor fixed.
+
+    Adding a display in either file without the other gets caught here.
+    """
+    from dazzle.render.fragment.coverage import _SUPPORTED_DISPLAYS
+    from dazzle_back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+
+    adapter_displays = (
+        set(WorkspaceRegionAdapter._BUILDERS.keys())
+        | set(WorkspaceRegionAdapter._ALIASES.keys())
+        | set(WorkspaceRegionAdapter._TIMESERIES_VIEWS.keys())
+    )
+    audit_displays = set(_SUPPORTED_DISPLAYS)
+
+    only_in_audit = audit_displays - adapter_displays
+    only_in_adapter = adapter_displays - audit_displays
+    assert not only_in_audit and not only_in_adapter, (
+        "Drift between coverage._SUPPORTED_DISPLAYS and adapter dispatch: "
+        f"only_in_audit={sorted(only_in_audit)}, "
+        f"only_in_adapter={sorted(only_in_adapter)}"
+    )
