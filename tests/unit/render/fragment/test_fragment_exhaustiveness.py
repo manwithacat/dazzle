@@ -15,6 +15,7 @@ from dazzle.render.fragment import (
     AppShell,
     Badge,
     BarChart,
+    BarTrack,
     BoxPlot,
     Button,
     CalendarGrid,
@@ -167,6 +168,8 @@ def _sample_for(primitive_type: type) -> object:
         return ProfileCard(primary="Alice")
     if primitive_type is MetricTile:
         return MetricTile(label="X", value="0")
+    if primitive_type is BarTrack:
+        return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

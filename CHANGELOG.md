@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.79] - 2026-05-08
+
+### Added — Phase 4B.1.b — BarTrack primitive
+- **`BarTrack` Fragment primitive** — compact horizontal value-bar list with one row per bucket. Each row is `(label, value, formatted_value, fill_pct)`; the primitive renders ARIA-progressbar-semantic markup matching the legacy `workspace/regions/bar_track.html` byte-for-byte (including the "N rows · scale 0–MAX" summary line). Strict invariants: at least one row, fill_pct in [0, 100] inclusive (boundaries valid), correct row arity.
+- **`_build_bar_track` adapter rewritten** — replaces the prior alias to `_build_progress`. Primary path consumes `bar_track_rows` + `bar_track_max` (the runtime's pre-computed shape with author-supplied `track_format` already applied). Legacy fallback path accepts the older `{items: [{label, percent}]}` ctx shape (Phase 4A) so the runtime can keep using either until the Phase 4B.2 translator switches it.
+- Adapter clamps fill_pct to [0, 100] before constructing the primitive (so out-of-range values from the runtime don't trip the strict invariant); malformed entries silently drop.
+- 5 new primitive tests + 5 new adapter tests; baselines updated.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID | done | v0.66.75 |
+| 4B.1.b | PROFILE_CARD | done | v0.66.76 |
+| 4B.1.a | DETAIL (type-aware) | done | v0.66.77 |
+| 4B.1.a | METRICS (extended deltas) | done | v0.66.78 |
+| 4B.1.b | BAR_TRACK | **done — BarTrack primitive** | **v0.66.79** |
+| 4B.1.b | PROGRESS (`<progress>` + chips) | next | — |
+| 4B.1.b | Avatar (extracted from ProfileCard internals), ReferenceLine, ReferenceBand | pending | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending | — |
+
+### Agent Guidance
+- BarTrack carries `(label, value, formatted_value, fill_pct)` per row — `value` is for ARIA, `formatted_value` is the visible string (so DSL authors can write `track_format: "{:.0%}"` and have ratios render as percentages without filter chains in templates), `fill_pct` is the bar width. Don't conflate them; the renderer needs all four.
+- The primitive is strict on `fill_pct ∈ [0, 100]`; the adapter clamps before constructing. This is the same defensive-pre-filter pattern as Diagram/PivotTable/BoxPlot/MetricTile/ActionCard. Strict primitives, permissive adapters.
+
 ## [0.66.78] - 2026-05-08
 
 ### Added — Phase 4B.1.a — METRICS extended deltas

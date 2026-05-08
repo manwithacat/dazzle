@@ -7,6 +7,7 @@ from dazzle.render.fragment.primitives.data import (
     KPI,
     ActionCard,
     BarChart,
+    BarTrack,
     BoxPlot,
     CalendarGrid,
     Diagram,
@@ -320,3 +321,35 @@ def test_metric_tile_full_delta_block() -> None:
     )
     assert m.delta_pct == 3.5
     assert m.delta_period_label == "last month"
+
+
+# === BarTrack ===
+
+
+def test_bar_track_requires_at_least_one_row() -> None:
+    with pytest.raises(ValueError, match="at least one row"):
+        BarTrack(rows=(), max_value=100.0)
+
+
+def test_bar_track_rejects_wrong_arity_row() -> None:
+    with pytest.raises(ValueError, match="arity mismatch"):
+        BarTrack(rows=(("X", 1.0, "1"),), max_value=100.0)  # type: ignore[arg-type]
+
+
+def test_bar_track_rejects_fill_pct_above_100() -> None:
+    with pytest.raises(ValueError, match=r"fill_pct=200"):
+        BarTrack(rows=(("X", 1.0, "1", 200.0),), max_value=100.0)
+
+
+def test_bar_track_rejects_negative_fill_pct() -> None:
+    with pytest.raises(ValueError, match=r"fill_pct=-5"):
+        BarTrack(rows=(("X", 1.0, "1", -5.0),), max_value=100.0)
+
+
+def test_bar_track_accepts_zero_and_hundred_fill_pct() -> None:
+    """Boundaries are inclusive — 0 and 100 are valid fill values."""
+    b = BarTrack(
+        rows=(("Empty", 0.0, "0", 0.0), ("Full", 100.0, "100", 100.0)),
+        max_value=100.0,
+    )
+    assert len(b.rows) == 2

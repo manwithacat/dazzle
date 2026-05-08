@@ -15,6 +15,7 @@ from dazzle.render.fragment.primitives import (
     AppShell,
     Badge,
     BarChart,
+    BarTrack,
     BoxPlot,
     Button,
     CalendarGrid,
@@ -150,6 +151,7 @@ __all__ = [
     "ActionCard",
     "ProfileCard",
     "MetricTile",
+    "BarTrack",
     # primitives — forms
     "FormStack",
     "Field",

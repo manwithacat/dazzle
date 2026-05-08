@@ -18,6 +18,7 @@ from dazzle.render.fragment.primitives import (
     AppShell,
     Badge,
     BarChart,
+    BarTrack,
     BoxPlot,
     Button,
     CalendarGrid,
@@ -179,6 +180,8 @@ class FragmentRenderer:
                 return self._emit_profile_card(fragment, ctx)
             case MetricTile():
                 return self._emit_metric_tile(fragment, ctx)
+            case BarTrack():
+                return self._emit_bar_track(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -960,6 +963,34 @@ class FragmentRenderer:
             f'<div class="dz-metric-value">{ctx.escape(m.value)}</div>'
             f"{delta_html}"
             f"</div>"
+        )
+
+    def _emit_bar_track(self, b: BarTrack, ctx: RenderContext) -> str:
+        """Render a BarTrack matching legacy `workspace/regions/bar_track.html`:
+        per-row track with ARIA progressbar semantics + a summary line.
+        """
+        rows_html = "".join(
+            f'<div class="dz-bar-track-row">'
+            f'<span class="dz-bar-track-label" title="{ctx.escape_attr(label)}">'
+            f"{ctx.escape(label)}</span>"
+            f'<div class="dz-bar-track" role="progressbar" '
+            f'aria-valuemin="0" '
+            f'aria-valuemax="{b.max_value}" '
+            f'aria-valuenow="{value}" '
+            f'aria-label="{ctx.escape_attr(label)}: {ctx.escape_attr(formatted)}">'
+            f'<span class="dz-bar-track-fill" '
+            f'style="width: {round(fill_pct, 2)}%;" '
+            f'title="{ctx.escape_attr(label)}: {ctx.escape_attr(formatted)}"></span>'
+            f"</div>"
+            f'<span class="dz-bar-track-value">{ctx.escape(formatted)}</span>'
+            f"</div>"
+            for label, value, formatted, fill_pct in b.rows
+        )
+        return (
+            f'<div class="dz-bar-track-rows">{rows_html}</div>'
+            f'<p class="dz-bar-track-summary">'
+            f"{len(b.rows)} rows · scale 0–{round(b.max_value, 2)}"
+            f"</p>"
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:

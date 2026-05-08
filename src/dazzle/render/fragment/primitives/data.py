@@ -110,6 +110,39 @@ class CalendarGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class BarTrack:
+    """Compact horizontal value-bar list — one row per bucket.
+
+    Used by `display: bar_track` regions. Each row carries a label,
+    raw value (for aria-valuenow), pre-formatted value string (the
+    DSL author may have specified a Python format spec like ``{:.0%}``
+    via `track_format:`), and fill percentage already computed from
+    `value / max_value`. The primitive renders the track HTML with
+    ARIA progressbar semantics + a summary line.
+
+    `rows` is a tuple of `(label, value, formatted_value, fill_pct)`
+    tuples. Strict invariants: at least one row; `fill_pct` clamped
+    to [0, 100] at construction.
+    """
+
+    rows: tuple[tuple[str, float, str, float], ...]
+    max_value: float
+
+    def __post_init__(self) -> None:
+        if not self.rows:
+            raise ValueError("BarTrack requires at least one row")
+        for i, row in enumerate(self.rows):
+            if len(row) != 4:
+                raise ValueError(
+                    f"BarTrack row {i} arity mismatch: expected "
+                    f"(label, value, formatted_value, fill_pct), got {row!r}"
+                )
+            _label, _value, _formatted, fill_pct = row
+            if not (0.0 <= fill_pct <= 100.0):
+                raise ValueError(f"BarTrack row {i} fill_pct={fill_pct} outside [0, 100]")
+
+
+@dataclass(frozen=True, slots=True)
 class MetricTile:
     """Richer metric-tile primitive for the METRICS / SUMMARY display.
 

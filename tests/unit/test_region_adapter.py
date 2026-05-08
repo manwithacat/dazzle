@@ -1009,15 +1009,79 @@ def test_search_box_renders_search_field() -> None:
     assert "Find tickets" in html or "placeholder" in html
 
 
-def test_bar_track_dispatches_through_progress() -> None:
-    """`bar_track` shares shape with progress; structurally identical
-    until a dedicated BarTrack primitive lands."""
+def test_bar_track_renders_typed_primitive_with_aria() -> None:
+    """Phase 4B.1.b — `bar_track` now produces the typed BarTrack
+    primitive directly (replaced the prior alias to _build_progress).
+    HTML matches the legacy bar_track.html template: aria-progressbar
+    semantics, fill width, summary line."""
     adapter = WorkspaceRegionAdapter()
-    ctx = {"items": [{"label": "CPU", "percent": 80}, {"label": "RAM", "percent": 40}]}
-    fragment = adapter.build(_FakeRegion("b", display="bar_track"), ctx)
-    html = _render(fragment)
-    assert "CPU" in html and "80%" in html
-    assert "RAM" in html and "40%" in html
+    ctx = {
+        "bar_track_rows": [
+            {"label": "CPU", "value": 80, "formatted_value": "80%", "fill_pct": 80},
+            {"label": "RAM", "value": 45, "formatted_value": "45%", "fill_pct": 45},
+        ],
+        "bar_track_max": 100,
+    }
+    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
+    assert "dz-bar-track-rows" in html
+    assert 'role="progressbar"' in html
+    assert 'aria-valuemax="100.0"' in html
+    assert 'aria-valuenow="80.0"' in html
+    assert "width: 80.0%" in html
+    assert "2 rows · scale 0–100.0" in html
+
+
+def test_bar_track_legacy_items_fallback() -> None:
+    """Pre-Phase-4B.1.b ctx shape `{items: [{label, percent}]}` is still
+    accepted — the runtime currently still passes this shape, and the
+    Phase 4B.2 translator will switch it to bar_track_rows. Until then
+    the adapter handles both."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"items": [{"label": "X", "percent": 25}, {"label": "Y", "percent": 75}]}
+    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
+    assert "X" in html and "25%" in html
+    assert "Y" in html and "75%" in html
+
+
+def test_bar_track_clamps_out_of_range_fill_pct() -> None:
+    """fill_pct > 100 or < 0 is silently clamped to [0, 100] before
+    construction so the strict BarTrack invariant doesn't reject."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "bar_track_rows": [
+            {"label": "Over", "value": 999, "formatted_value": "999", "fill_pct": 250},
+            {"label": "Under", "value": -10, "formatted_value": "-10", "fill_pct": -50},
+        ],
+        "bar_track_max": 100,
+    }
+    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
+    assert "width: 100" in html  # clamped to 100
+    assert "width: 0" in html  # clamped to 0
+
+
+def test_bar_track_drops_malformed_rows() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "bar_track_rows": [
+            None,
+            42,
+            {"label": ""},  # empty label
+            {"label": "OK", "value": "bad", "fill_pct": 50},  # bad value
+            {"label": "Good", "value": 50, "formatted_value": "50", "fill_pct": 50},
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
+    assert "Good" in html
+    assert "OK" not in html  # bad value caused drop
+
+
+def test_bar_track_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("b", display="bar_track", empty_message="No tracks."),
+        {"bar_track_rows": []},
+    )
+    assert "No tracks." in _render(fragment)
 
 
 def test_bullet_renders_actual_vs_target_rows_with_severity() -> None:

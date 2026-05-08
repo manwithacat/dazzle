@@ -24,6 +24,7 @@ from dazzle.render.fragment import (
     ActionCard,
     Badge,
     BarChart,
+    BarTrack,
     BoxPlot,
     Card,
     Diagram,
@@ -801,16 +802,80 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "form", body)
 
     def _build_bar_track(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: bar_track` renders one labelled, filled progress
-        track per row — same shape as `progress`, structurally. Phase 4A
-        treats them as variants of each other; a richer rendering can
-        come once a dedicated BarTrack primitive ships.
+        """`display: bar_track` renders one labelled, filled track per
+        row with ARIA progressbar semantics + a summary line. Phase
+        4B.1.b — uses the typed `BarTrack` primitive (replaced the
+        prior alias to `_build_progress` which produced the simpler
+        Stack-of-Row(Text, Badge) shape).
 
         ctx shape:
-            items: list of dicts {"label": str, "percent": int 0..100}
-                — values clamped to [0, 100]
+            bar_track_rows: list of dicts {"label": str, "value": float,
+                "formatted_value": str, "fill_pct": float (0..100)}
+                — pre-computed by the runtime per `track_format` Python
+                format spec
+            bar_track_max: float — scale endpoint for aria-valuemax
+                + summary line
+            (legacy fallback) `items` with `{label, percent}` shape from
+                Phase 4A is still accepted; `formatted_value` is filled
+                in as `"<percent>%"`, `value` mirrors `percent`,
+                `bar_track_max` defaults to 100.
+
+        Empty rows degrade to EmptyState; rows with malformed shapes or
+        out-of-range fill_pct silently drop rather than tripping the
+        BarTrack primitive's invariants.
         """
-        return self._build_progress(region, ctx)
+        title = _region_title(region)
+        raw_rows = ctx.get("bar_track_rows") or []
+        max_value: float
+        try:
+            max_value = float(ctx.get("bar_track_max") or 100.0)
+        except (TypeError, ValueError):
+            max_value = 100.0
+        if max_value <= 0:
+            max_value = 100.0
+
+        rows: list[tuple[str, float, str, float]] = []
+        # Primary path — pre-computed bar_track_rows from the runtime
+        for entry in raw_rows:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("label") or "")
+            if not label:
+                continue
+            try:
+                value = float(entry.get("value") or 0)
+                fill_pct = float(entry.get("fill_pct") or 0)
+            except (TypeError, ValueError):
+                continue
+            fill_pct = max(0.0, min(100.0, fill_pct))
+            formatted = str(entry.get("formatted_value") or value)
+            rows.append((label, value, formatted, fill_pct))
+
+        # Legacy fallback — Phase 4A `items` with `{label, percent}` shape
+        if not rows:
+            for entry in ctx.get("items") or []:
+                if not isinstance(entry, dict):
+                    continue
+                label = str(entry.get("label") or entry.get("name") or "")
+                if not label:
+                    continue
+                try:
+                    percent = float(entry.get("percent") or entry.get("value") or 0)
+                except (TypeError, ValueError):
+                    percent = 0.0
+                percent = max(0.0, min(100.0, percent))
+                rows.append((label, percent, f"{percent:g}%", percent))
+
+        body: Fragment
+        if not rows:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None) or "No data available.",
+            )
+        else:
+            body = BarTrack(rows=tuple(rows), max_value=max_value)
+
+        return _wrap_surface(title, "report", body)
 
     def _build_bullet(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: bullet` renders rows showing actual-vs-target.

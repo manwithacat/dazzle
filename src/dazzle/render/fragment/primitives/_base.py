@@ -29,6 +29,7 @@ from dazzle.render.fragment.primitives.data import (
     KPI,
     ActionCard,
     BarChart,
+    BarTrack,
     BoxPlot,
     CalendarGrid,
     Diagram,
@@ -107,6 +108,7 @@ Fragment = (
     | ActionCard
     | ProfileCard
     | MetricTile
+    | BarTrack
     # Forms
     | FormStack
     | Field
