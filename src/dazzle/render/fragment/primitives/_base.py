@@ -42,6 +42,7 @@ from dazzle.render.fragment.primitives.data import (
     ProfileCard,
     Radar,
     SearchBox,
+    SortHeader,
     StageBar,
     Table,
     Timeline,
@@ -119,6 +120,7 @@ Fragment = (
     | SearchBox
     | ConfirmGate
     | FilterBar
+    | SortHeader
     # Forms
     | FormStack
     | Field

@@ -57,6 +57,7 @@ from dazzle.render.fragment import (
     Skeleton,
     SkipLink,
     Slot,
+    SortHeader,
     Split,
     Stack,
     StageBar,
@@ -194,6 +195,8 @@ def _sample_for(primitive_type: type) -> object:
             region_name="r",
             columns=(FilterColumn(key="k", label="L", options=()),),
         )
+    if primitive_type is SortHeader:
+        return SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

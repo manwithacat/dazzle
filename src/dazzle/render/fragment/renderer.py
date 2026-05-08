@@ -60,6 +60,7 @@ from dazzle.render.fragment.primitives import (
     Sidebar,
     Skeleton,
     SkipLink,
+    SortHeader,
     Split,
     Stack,
     StageBar,
@@ -201,6 +202,8 @@ class FragmentRenderer:
                 return self._emit_confirm_gate(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
+            case SortHeader():
+                return self._emit_sort_header(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1377,6 +1380,40 @@ class FragmentRenderer:
 
         selects_html = "".join(_render_column(col) for col in f.columns)
         return f'<div class="dz-queue-filters filter-bar">{selects_html}</div>'
+
+    def _emit_sort_header(self, s: SortHeader, ctx: RenderContext) -> str:
+        """Render a SortHeader as an HTMX-driven column-header link.
+
+        Matches the legacy `list.html` sort-link markup byte-for-byte:
+        when this column is currently the active sort, append a
+        ▲ (asc) or ▼ (desc) indicator and emit a link that flips the
+        direction. Other columns always sort ascending on first click.
+        Uses `&amp;` for the URL parameter separator (matches the
+        legacy template's `hx-get` value with HTML-encoded ampersand).
+        """
+        is_active = s.current_sort == s.column_key
+        # Next direction: flip if active, otherwise asc
+        if is_active:
+            next_dir = "desc" if s.current_direction == "asc" else "asc"
+        else:
+            next_dir = "asc"
+        endpoint = ctx.escape_attr(str(s.endpoint))
+        target = f"#region-{ctx.escape_attr(s.region_name)}"
+        column_key = ctx.escape_attr(s.column_key)
+        # Use &amp; for the URL param separator inside the attribute value
+        href = f"{endpoint}?sort={column_key}&amp;dir={next_dir}"
+        indicator = ""
+        if is_active:
+            indicator = f"<span>{'▼' if s.current_direction == 'desc' else '▲'}</span>"
+        return (
+            f'<a hx-get="{href}" '
+            f'hx-target="{target}" '
+            f'hx-swap="innerHTML" '
+            f'class="dz-list-sort-link">'
+            f"{ctx.escape(s.label)}"
+            f"{indicator}"
+            f"</a>"
+        )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         action = ctx.escape_attr(str(fs.action))

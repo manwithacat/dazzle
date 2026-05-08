@@ -388,6 +388,39 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class SortHeader:
+    """Column-header link with click-to-sort + direction indicator.
+
+    Used in list/queue table headers. Renders as an `<a>` that sends
+    an HTMX request with `?sort=<column_key>&dir=<next>` to the
+    region's endpoint. When `current_sort` matches this column's
+    key, a ▲ (asc) or ▼ (desc) indicator appears beside the label
+    and the link's direction flips on next click. Other columns
+    always sort ascending on first click.
+
+    `current_direction` is the direction *currently* active for the
+    region (only meaningful when `current_sort == column_key`).
+    """
+
+    label: str
+    column_key: str
+    endpoint: URL
+    region_name: str
+    current_sort: str = ""
+    current_direction: Literal["asc", "desc"] = "asc"
+
+    def __post_init__(self) -> None:
+        if not self.column_key:
+            raise ValueError("SortHeader requires a non-empty column_key")
+        if not self.region_name:
+            raise ValueError("SortHeader requires a non-empty region_name")
+        if self.current_direction not in ("asc", "desc"):
+            raise ValueError(
+                f"invalid current_direction {self.current_direction!r}; must be 'asc' or 'desc'"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class FilterColumn:
     """A single filter dropdown inside a FilterBar.
 

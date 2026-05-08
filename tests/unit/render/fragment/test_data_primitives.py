@@ -26,6 +26,7 @@ from dazzle.render.fragment.primitives.data import (
     ReferenceBand,
     ReferenceLine,
     SearchBox,
+    SortHeader,
     StageBar,
     Table,
     Timeline,
@@ -632,3 +633,33 @@ def test_filter_bar_rejects_duplicate_column_keys() -> None:
                 FilterColumn(key="k", label="B", options=()),
             ),
         )
+
+
+# === SortHeader ===
+
+
+def test_sort_header_requires_column_key() -> None:
+    with pytest.raises(ValueError, match="non-empty column_key"):
+        SortHeader(label="L", column_key="", endpoint=URL("/x"), region_name="r")
+
+
+def test_sort_header_requires_region_name() -> None:
+    with pytest.raises(ValueError, match="non-empty region_name"):
+        SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="")
+
+
+def test_sort_header_rejects_invalid_direction() -> None:
+    with pytest.raises(ValueError, match="invalid current_direction"):
+        SortHeader(
+            label="L",
+            column_key="k",
+            endpoint=URL("/x"),
+            region_name="r",
+            current_direction="random",  # type: ignore[arg-type]
+        )
+
+
+def test_sort_header_default_direction_is_asc() -> None:
+    s = SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
+    assert s.current_direction == "asc"
+    assert s.current_sort == ""

@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives.data import (
     ReferenceBand,
     ReferenceLine,
     SearchBox,
+    SortHeader,
     StageBar,
     Table,
     Timeline,
@@ -120,6 +121,7 @@ __all__ = [
     "ConfirmCheckItem",
     "FilterBar",
     "FilterColumn",
+    "SortHeader",
     # forms
     "FormStack",
     "Field",

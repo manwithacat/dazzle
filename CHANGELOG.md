@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.89] - 2026-05-08
+
+### Added — Phase 4B.1.e — SortHeader primitive
+- **`SortHeader` Fragment primitive** — column-header link with click-to-sort + direction indicator. `SortHeader(label, column_key, endpoint, region_name, current_sort, current_direction)`. When `current_sort == column_key` the link emits `?sort=<key>&dir=<flipped>` and shows ▲/▼ indicator; other columns always sort ascending on first click and show no indicator. URL parameter separator is HTML-encoded as `&amp;` to match the legacy template's `hx-get` value byte-for-byte. Strict invariants: non-empty `column_key` + `region_name`; `current_direction` ∈ `{asc, desc}`.
+- 4 new primitive tests; baselines updated.
+
+### Phase 4B.1.e progress
+| Primitive | Status | Ship |
+|---|---|---|
+| FilterBar + FilterColumn | done | v0.66.88 |
+| SortHeader | **done** | **v0.66.89** |
+| DateRangePicker | next | — |
+| CsvExportButton | next | — |
+| `_build_list` / `_build_queue` adapter wiring | pending — depends on full chrome set | — |
+
+### Agent Guidance
+- `SortHeader.current_direction` is only meaningful when `current_sort == column_key`. The renderer ignores it for inactive columns. Inert in that case ≠ wrong — it just stays at the default. Don't overload it to mean "this column's preferred direction"; that would be a different primitive.
+- The `&amp;` separator inside the `hx-get` attribute value is **deliberate** — HTML5 allows raw `&` in attribute values but byte-equivalence with the legacy Jinja template (which used `&amp;` for safety) requires the encoded form. The dual-path validation gate in Phase 4B.3 will diverge if you switch to a literal `&`.
+
 ## [0.66.88] - 2026-05-08
 
 ### Added — Phase 4B.1.e — FilterBar primitive

@@ -58,6 +58,7 @@ from dazzle.render.fragment.primitives import (
     Sidebar,
     Skeleton,
     SkipLink,
+    SortHeader,
     Split,
     Stack,
     StageBar,
@@ -172,6 +173,7 @@ __all__ = [
     "ConfirmCheckItem",
     "FilterBar",
     "FilterColumn",
+    "SortHeader",
     # primitives — forms
     "FormStack",
     "Field",

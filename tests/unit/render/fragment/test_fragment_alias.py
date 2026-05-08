@@ -64,6 +64,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "SearchBox",
         "ConfirmGate",
         "FilterBar",
+        "SortHeader",
         # forms
         "FormStack",
         "Field",
