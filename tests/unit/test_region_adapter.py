@@ -948,17 +948,95 @@ def test_pipeline_steps_empty_renders_empty_state() -> None:
     assert "No steps." in _render(fragment)
 
 
-def test_action_grid_dispatches_through_grid() -> None:
-    """`display: action_grid` reuses the grid renderer; action wiring
-    is a future enhancement once Button-driven cards land."""
+def test_action_grid_renders_cta_cards_with_tone_and_count() -> None:
+    """`display: action_grid` builds typed ActionCard primitives — tone
+    tinting, optional Lucide icon, optional count badge, optional URL.
+    Phase 4B.1.b replaced the prior `_build_grid` alias with a dedicated
+    builder."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "items": [{"title": "Reboot"}, {"title": "Backup"}, {"title": "Restore"}],
+        "action_cards": [
+            {
+                "label": "Open tickets",
+                "icon": "ticket",
+                "count": 12,
+                "tone": "warning",
+                "url": "/tickets",
+            },
+            {"label": "New issue", "icon": "plus", "tone": "accent", "url": "/issues/new"},
+            {"label": "Static", "tone": "neutral"},
+        ],
         "columns": 3,
     }
     fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
     html = _render(fragment)
-    assert "Reboot" in html and "Backup" in html and "Restore" in html
+    assert "dz-action-card" in html
+    assert "Open tickets" in html and "New issue" in html and "Static" in html
+    assert 'data-dz-tone="warning"' in html
+    assert 'data-dz-tone="accent"' in html
+    assert 'data-lucide="ticket"' in html
+    assert "/tickets" in html
+    assert ">12<" in html  # count badge
+
+
+def test_action_grid_accepts_legacy_action_card_data_alias() -> None:
+    """ctx['action_card_data'] is accepted as alias for ctx['action_cards']
+    so the legacy ctx shape from workspace_rendering.py works during
+    Phase 4B.2's translator wiring without two ctx payloads."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "action_card_data": [
+            {"label": "Restart", "tone": "destructive", "url": "/admin/restart"},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
+    html = _render(fragment)
+    assert "Restart" in html
+    assert 'data-dz-tone="destructive"' in html
+
+
+def test_action_grid_drops_invalid_entries() -> None:
+    """Cards with empty labels, non-dict entries, or unknown tones are
+    silently dropped — the strict ActionCard primitive would raise."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "action_cards": [
+            None,
+            42,
+            {"label": ""},  # empty label
+            {"label": "OK", "tone": "purple"},  # unknown tone falls back to neutral
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
+    html = _render(fragment)
+    assert "OK" in html
+    assert 'data-dz-tone="neutral"' in html  # purple fell back
+
+
+def test_action_grid_count_zero_renders_badge() -> None:
+    """`count = 0` renders a badge with "0"; `count = None` (or omitted)
+    renders no badge."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "action_cards": [
+            {"label": "Zero", "count": 0, "tone": "positive"},
+            {"label": "None", "tone": "neutral"},
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
+    html = _render(fragment)
+    assert ">0<" in html  # zero badge rendered
+    # The "None" card has no count badge — verify by checking only one badge appears
+    assert html.count("dz-action-card-count") == 1
+
+
+def test_action_grid_empty_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("a", display="action_grid", empty_message="No quick actions."),
+        {"action_cards": []},
+    )
+    assert "No quick actions." in _render(fragment)
 
 
 def test_progress_renders_percent_badges_with_severity() -> None:

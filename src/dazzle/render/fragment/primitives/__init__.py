@@ -23,6 +23,7 @@ from dazzle.render.fragment.primitives.content import (
 )
 from dazzle.render.fragment.primitives.data import (
     KPI,
+    ActionCard,
     BarChart,
     BoxPlot,
     CalendarGrid,
@@ -92,6 +93,7 @@ __all__ = [
     "TimeSeries",
     "Radar",
     "BoxPlot",
+    "ActionCard",
     # forms
     "FormStack",
     "Field",

@@ -21,6 +21,7 @@ from typing import Any, Literal
 
 from dazzle.render.fragment import (
     KPI,
+    ActionCard,
     Badge,
     BarChart,
     BoxPlot,
@@ -171,6 +172,7 @@ class WorkspaceRegionAdapter:
         "diagram": "_build_diagram",
         "radar": "_build_radar",
         "box_plot": "_build_box_plot",
+        "action_grid": "_build_action_grid",
     }
 
     # Display values that share a builder with another display value.
@@ -182,7 +184,6 @@ class WorkspaceRegionAdapter:
         "queue": "list",
         "histogram": "bar_chart",
         "profile_card": "detail",
-        "action_grid": "grid",
         "heatmap": "pivot_table",
     }
 
@@ -369,6 +370,73 @@ class WorkspaceRegionAdapter:
             body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
 
         return _wrap_surface(title, "report", body)
+
+    def _build_action_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: action_grid` regions render dashboard CTA cards.
+
+        Phase 4B.1.b — replaces the prior alias to `_build_grid`, which
+        rendered plain Card(Text(label)) tiles with no icons, counts,
+        tones, or URLs. This builder uses the typed `ActionCard`
+        primitive so each card carries the full design contract from the
+        legacy template.
+
+        ctx shape:
+            action_cards: list of dicts {"label": str, "icon": str (optional),
+                "count": int | None, "tone": str (default "neutral"),
+                "url": str (optional)}
+            (legacy alias: `action_card_data` accepted as alias)
+            columns: int (default 3, max 12) for the surrounding Grid
+
+        Cards with empty labels or unknown tones silently drop rather
+        than crashing the strict ActionCard primitive.
+        """
+        title = _region_title(region)
+        raw_cards = ctx.get("action_cards") or ctx.get("action_card_data") or []
+        columns = int(ctx.get("columns") or 3)
+        columns = max(1, min(12, columns))
+
+        cards: list[object] = []
+        for entry in raw_cards:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("label") or "")
+            if not label:
+                continue
+            tone_raw = str(entry.get("tone") or "neutral")
+            tone: Literal["neutral", "positive", "warning", "destructive", "accent"] = (
+                tone_raw  # type: ignore[assignment]
+                if tone_raw in ("neutral", "positive", "warning", "destructive", "accent")
+                else "neutral"
+            )
+            count_raw = entry.get("count")
+            count: int | None
+            if count_raw is None:
+                count = None
+            else:
+                try:
+                    count = int(count_raw)
+                except (TypeError, ValueError):
+                    count = None
+            cards.append(
+                ActionCard(
+                    label=label,
+                    icon=str(entry.get("icon") or ""),
+                    count=count,
+                    tone=tone,
+                    url=str(entry.get("url") or ""),
+                )
+            )
+
+        body: Fragment
+        if not cards:
+            body = EmptyState(
+                title="No actions",
+                description=getattr(region, "empty_message", None) or "No actions available.",
+            )
+        else:
+            body = Grid(children=tuple(cards), columns=columns)
+
+        return _wrap_surface(title, "dashboard", body)
 
     def _build_radar(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: radar` regions render as a Radar polar profile.

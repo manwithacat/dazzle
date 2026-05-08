@@ -14,6 +14,7 @@ from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
     KPI,
+    ActionCard,
     AppShell,
     Badge,
     BarChart,
@@ -170,6 +171,8 @@ class FragmentRenderer:
                 return self._emit_radar(fragment, ctx)
             case BoxPlot():
                 return self._emit_box_plot(fragment, ctx)
+            case ActionCard():
+                return self._emit_action_card(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -804,6 +807,36 @@ class FragmentRenderer:
             f'<table class="dz-box-plot__table">{header}<tbody>{rows}</tbody></table>'
             f"</section>"
         )
+
+    def _emit_action_card(self, a: ActionCard, ctx: RenderContext) -> str:
+        """Render an ActionCard as the dashboard CTA card shape.
+
+        Mirrors the legacy `workspace/regions/action_grid.html` rendering
+        so dual-path validation (Phase 4B.3) compares clean: anchor wrapper
+        when `url` is set, plain `<div>` otherwise; tone tint via
+        `data-dz-tone`; optional icon (Lucide) and count badge.
+        """
+        tone = ctx.escape_attr(a.tone)
+        label = ctx.escape(a.label)
+        icon_html = (
+            f'<span class="dz-action-card-icon" data-lucide="{ctx.escape_attr(a.icon)}" '
+            f'aria-hidden="true"></span>'
+            if a.icon
+            else '<span class="dz-action-card-icon-spacer"></span>'
+        )
+        count_html = (
+            f'<span class="dz-action-card-count" data-dz-tone-badge="{tone}">{a.count}</span>'
+            if a.count is not None
+            else ""
+        )
+        body = (
+            f'<div class="dz-action-card-row">{icon_html}{count_html}</div>'
+            f'<span class="dz-action-card-label">{label}</span>'
+        )
+        if a.url:
+            href = ctx.escape_attr(a.url)
+            return f'<a href="{href}" class="dz-action-card" data-dz-tone="{tone}">{body}</a>'
+        return f'<div class="dz-action-card" data-dz-tone="{tone}">{body}</div>'
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         action = ctx.escape_attr(str(fs.action))

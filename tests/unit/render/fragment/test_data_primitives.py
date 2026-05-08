@@ -5,6 +5,7 @@ import pytest
 
 from dazzle.render.fragment.primitives.data import (
     KPI,
+    ActionCard,
     BarChart,
     BoxPlot,
     CalendarGrid,
@@ -200,3 +201,34 @@ def test_box_plot_accepts_equal_quartiles() -> None:
 def test_box_plot_rejects_wrong_arity_group() -> None:
     with pytest.raises(ValueError, match="arity mismatch"):
         BoxPlot(label="x", groups=(("g1", 1.0, 2.0, 3.0),))  # type: ignore[arg-type]
+
+
+# === ActionCard ===
+
+
+def test_action_card_requires_label() -> None:
+    with pytest.raises(ValueError, match="non-empty label"):
+        ActionCard(label="")
+
+
+def test_action_card_rejects_unknown_tone() -> None:
+    with pytest.raises(ValueError, match="invalid tone"):
+        ActionCard(label="X", tone="purple")  # type: ignore[arg-type]
+
+
+def test_action_card_count_zero_distinct_from_none() -> None:
+    """`count = 0` should render a badge with "0"; `count = None` is no badge."""
+    a = ActionCard(label="Zero", count=0)
+    b = ActionCard(label="Empty")
+    assert a.count == 0 and b.count is None
+
+
+def test_action_card_static_when_url_empty() -> None:
+    a = ActionCard(label="X", url="")
+    assert a.url == ""
+
+
+def test_action_card_all_tones_accepted() -> None:
+    for tone in ("neutral", "positive", "warning", "destructive", "accent"):
+        c = ActionCard(label="X", tone=tone)  # type: ignore[arg-type]
+        assert c.tone == tone

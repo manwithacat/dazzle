@@ -11,6 +11,7 @@ from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.htmx import URL, HxTrigger, TargetSelector
 from dazzle.render.fragment.primitives import (
     KPI,
+    ActionCard,
     AppShell,
     Badge,
     BarChart,
@@ -144,6 +145,7 @@ __all__ = [
     "TimeSeries",
     "Radar",
     "BoxPlot",
+    "ActionCard",
     # primitives — forms
     "FormStack",
     "Field",

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.75] - 2026-05-08
+
+### Added — Phase 4B.1.b first primitive
+- **`ActionCard` Fragment primitive** — tone-tinted CTA card with optional Lucide icon, count badge, and URL. `ActionCard(label, icon, count, tone, url)` with strict invariants: non-empty label, tone in `{neutral, positive, warning, destructive, accent}`. Renders to match the legacy `workspace/regions/action_grid.html` HTML byte-for-byte (anchor wrapper when `url` is set, plain `<div>` otherwise; `data-dz-tone` for tinting; `data-lucide` for icon; count rendered when not `None` — `count = 0` distinct from `count = None`).
+- **`_build_action_grid` adapter method** — replaces the prior `action_grid → grid` alias which silently produced plain `Card(Text(label))` tiles with no icons / counts / tones / URLs. The new builder accepts `ctx["action_cards"]` (or legacy alias `action_card_data`) and produces typed `ActionCard` primitives in a Grid. Cards with empty labels, non-dict entries, or unknown tones silently drop (defensive — strict primitive would raise).
+- 5 new primitive tests + 5 new adapter tests; baselines (`test_fragment_alias.py`, `test_fragment_exhaustiveness.py`) updated.
+
+### Phase 4B planning (2026-05-08)
+- Phase 4A complete at v0.66.74. Phase 4B kicked off with the discovery + plan docs:
+  - `dev_docs/2026-05-08-phase-4b-plan.md` — full arc spec
+  - `dev_docs/2026-05-08-phase-4b-ctx-mapping.md` — per-display ctx-mapping table for all 32 modes
+- **Option B chosen**: build the missing primitives + chrome features (sort/filter UI, multi-series charts, reference lines/bands, FTS, consent gates, lazy tabs) FIRST, then port. Avoids regressions during cutover but expands scope to ~25–30 ships (~4–6 weeks at current cadence).
+- This release is the first of the 4B.1.b primitive arc. Next: ProfileCard + extended detail rendering.
+
+### Agent Guidance
+- The ActionCard primitive demonstrates the **strict-primitives + permissive-adapter** pattern at full reach: the primitive's `__post_init__` rejects empty labels and unknown tones; the `_build_action_grid` adapter pre-filters malformed entries so a single bad card doesn't take down the whole region. This is the same pattern used by Diagram (drops dangling edges), PivotTable (drops cells with unknown dimensions), BoxPlot (drops non-monotonic groups).
+- The `_BUILDERS` dispatch table now has a real entry for `action_grid` instead of an alias to `grid`. The corresponding `_ALIASES` row was deleted in this release. The drift gate (`test_supported_displays_match_adapter`) automatically catches if `coverage._SUPPORTED_DISPLAYS` falls out of sync with the adapter's actual dispatch.
+
 ## [0.66.74] - 2026-05-08
 
 ### Refactored

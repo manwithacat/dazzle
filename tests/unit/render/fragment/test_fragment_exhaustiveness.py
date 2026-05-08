@@ -11,6 +11,7 @@ import pytest
 from dazzle.render.fragment import (
     KPI,
     URL,
+    ActionCard,
     AppShell,
     Badge,
     BarChart,
@@ -158,6 +159,8 @@ def _sample_for(primitive_type: type) -> object:
         return Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
     if primitive_type is BoxPlot:
         return BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
+    if primitive_type is ActionCard:
+        return ActionCard(label="X")
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

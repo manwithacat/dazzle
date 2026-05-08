@@ -19,6 +19,7 @@ from typing import Literal
 _TRENDS = ("up", "down", "flat")
 _CALENDAR_VIEWS = ("day", "week", "month")
 _TIMESERIES_VIEWS = ("line", "area", "sparkline")
+_ACTION_CARD_TONES = ("neutral", "positive", "warning", "destructive", "accent")
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +104,33 @@ class CalendarGrid:
     def __post_init__(self) -> None:
         if self.view not in _CALENDAR_VIEWS:
             raise ValueError(f"invalid view {self.view!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class ActionCard:
+    """Tone-tinted CTA card with optional Lucide icon, count badge, and URL.
+
+    Used by `display: action_grid` regions on dashboards. Each card has a
+    label and a tone that maps to the design palette (positive → success
+    surface, warning → warning surface, destructive → destructive surface,
+    accent → primary tint, neutral → muted/default).
+
+    `count = None` means "no badge"; `count = 0` renders a badge with "0".
+    `url = ""` makes a static `<div>` card; a non-empty url wraps the card
+    in an anchor.
+    """
+
+    label: str
+    icon: str = ""
+    count: int | None = None
+    tone: Literal["neutral", "positive", "warning", "destructive", "accent"] = "neutral"
+    url: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.label:
+            raise ValueError("ActionCard requires a non-empty label")
+        if self.tone not in _ACTION_CARD_TONES:
+            raise ValueError(f"invalid tone {self.tone!r}; must be one of {_ACTION_CARD_TONES}")
 
 
 @dataclass(frozen=True, slots=True)
