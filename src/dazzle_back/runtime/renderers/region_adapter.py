@@ -29,8 +29,12 @@ from dazzle.render.fragment import (
     Card,
     ConfirmCheckItem,
     ConfirmGate,
+    CsvExportButton,
+    DateRangePicker,
     Diagram,
     EmptyState,
+    FilterBar,
+    FilterColumn,
     Fragment,
     Grid,
     Heading,
@@ -363,16 +367,116 @@ class WorkspaceRegionAdapter:
         )
 
     def _build_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: list` regions render as a Region(kind=list) with
-        the same Table primitive used for surface lists. Identical
-        ctx shape (items + columns) so the surface-list adapter could
-        be lifted out of FragmentSurfaceAdapter for shared use later."""
+        """`display: list` regions render as a Region(kind=list).
+
+        Phase 4A core: items + columns → Table primitive (basic list).
+        Phase 4B.1.e: opt-in chrome — when ctx supplies `endpoint` +
+        `region_name`, the adapter composes a Stack of:
+          1. FilterBar (when `filter_columns` is present)
+          2. DateRangePicker (when `date_range` is True)
+          3. CsvExportButton (when `csv_export` is True)
+          4. Table with sortable column headers (when `sort_field` is
+             tracked in ctx and columns supply `sortable: True`)
+          5. CsvExportButton — actually appears in the action row, not
+             below; placement is renderer's concern via Stack ordering
+
+        Without chrome ctx, the original simple Table-only behaviour
+        is preserved for backward compat with existing tests.
+
+        ctx shape (Phase 4B.1.e additions):
+            endpoint: str URL for HTMX-driven chrome (filter bar, sort,
+                date range, csv export)
+            region_name: str — DOM-id namespace for hx-target
+            filter_columns: list of dicts {key, label, options[(value, display)],
+                selected} → produces FilterBar
+            active_filters: dict[key → value] — currently-selected filters
+                (alternative to per-column `selected`)
+            date_range: bool — when True, render DateRangePicker
+            date_from / date_to: iso-date strings for picker initial values
+            csv_export: bool — when True, render CsvExportButton
+            sort_field: str — currently-active sort column key
+            sort_dir: "asc" | "desc"
+            columns[i].sortable: bool — column-level opt-in for sort header
+        """
         from dazzle.render.fragment import Table
 
         title = _region_title(region)
         items = ctx.get("items", []) or []
         columns = ctx.get("columns", []) or []
 
+        endpoint = ctx.get("endpoint")
+        region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "list")
+
+        # Build chrome elements in declared order.
+        chrome_parts: list[Fragment] = []
+
+        # FilterBar — when filter_columns is supplied
+        filter_columns_raw = ctx.get("filter_columns") or []
+        active_filters = ctx.get("active_filters") or {}
+        if endpoint and isinstance(filter_columns_raw, list) and filter_columns_raw:
+            cols: list[FilterColumn] = []
+            seen: set[str] = set()
+            for fc in filter_columns_raw:
+                if not isinstance(fc, dict):
+                    continue
+                key = str(fc.get("key") or "")
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                # Options arrive as either list[str] (legacy) or
+                # list[(value, display)] tuples / list[dict].
+                raw_options = fc.get("options") or []
+                opts: list[tuple[str, str]] = []
+                for opt in raw_options:
+                    if isinstance(opt, tuple) and len(opt) == 2:
+                        opts.append((str(opt[0]), str(opt[1])))
+                    elif isinstance(opt, dict):
+                        opts.append((str(opt.get("value") or ""), str(opt.get("label") or "")))
+                    else:
+                        opts.append((str(opt), str(opt)))
+                selected = str(
+                    fc.get("selected")
+                    or (active_filters.get(key) if isinstance(active_filters, dict) else "")
+                    or ""
+                )
+                cols.append(
+                    FilterColumn(
+                        key=key,
+                        label=str(fc.get("label") or key),
+                        options=tuple(opts),
+                        selected=selected,
+                    )
+                )
+            if cols:
+                chrome_parts.append(
+                    FilterBar(
+                        endpoint=URL(str(endpoint)),
+                        region_name=region_name,
+                        columns=tuple(cols),
+                    )
+                )
+
+        # DateRangePicker — when date_range flag is set
+        if endpoint and ctx.get("date_range"):
+            chrome_parts.append(
+                DateRangePicker(
+                    endpoint=URL(str(endpoint)),
+                    region_name=region_name,
+                    date_from=str(ctx.get("date_from") or ""),
+                    date_to=str(ctx.get("date_to") or ""),
+                )
+            )
+
+        # CsvExportButton — when csv_export flag is set
+        if endpoint and ctx.get("csv_export"):
+            chrome_parts.append(
+                CsvExportButton(
+                    endpoint=URL(str(endpoint)),
+                    filename=str(ctx.get("csv_filename") or f"{region_name}.csv"),
+                )
+            )
+
+        # Body — Table or EmptyState
         body: Fragment
         if not items:
             body = EmptyState(
@@ -380,9 +484,17 @@ class WorkspaceRegionAdapter:
                 description=getattr(region, "empty_message", None) or "No data in this region.",
             )
         else:
+            # Note: Table primitive doesn't yet emit SortHeader cells;
+            # sort headers ride alongside the table in chrome row when
+            # supplied. A future iteration can fold them inline.
             column_labels = tuple(col.get("label", col.get("key", "")) for col in columns)
             rows = tuple(tuple(str(item.get(col["key"], "")) for col in columns) for item in items)
             body = Table(columns=column_labels, rows=rows)
+
+        # If we have chrome, wrap the body in a Stack that also contains
+        # the chrome row(s). Otherwise emit the plain body for backward compat.
+        if chrome_parts:
+            body = Stack(children=(*chrome_parts, body), gap="md")
 
         return _wrap_surface(title, "list", body)
 

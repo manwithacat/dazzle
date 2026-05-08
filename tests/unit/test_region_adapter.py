@@ -278,6 +278,115 @@ def test_list_empty_renders_empty_state() -> None:
     assert "No users." in html
 
 
+def test_list_with_filter_columns_renders_filter_bar() -> None:
+    """Phase 4B.1.e: when ctx supplies `endpoint` + `filter_columns`,
+    the adapter composes a FilterBar above the table."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"name": "X"}],
+        "columns": [{"key": "name", "label": "Name"}],
+        "endpoint": "/api/regions/r",
+        "region_name": "r",
+        "filter_columns": [
+            {
+                "key": "status",
+                "label": "Status",
+                "options": [("open", "Open"), ("closed", "Closed")],
+            },
+        ],
+        "active_filters": {"status": "open"},
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
+    assert "filter-bar" in html
+    assert 'name="filter_status"' in html
+    assert 'value="open" selected>' in html
+    assert "<table" in html
+
+
+def test_list_with_date_range_renders_picker() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [],
+        "endpoint": "/api/x",
+        "region_name": "r",
+        "date_range": True,
+        "date_from": "2026-01-01",
+        "date_to": "2026-12-31",
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
+    assert "date-range-bar" in html
+    assert 'value="2026-01-01"' in html
+    assert 'value="2026-12-31"' in html
+
+
+def test_list_with_csv_export_renders_button() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"name": "X"}],
+        "columns": [{"key": "name", "label": "Name"}],
+        "endpoint": "/api/x",
+        "region_name": "tickets",
+        "csv_export": True,
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
+    assert "dz-list-csv-button" in html
+    assert 'data-dz-csv-filename="tickets.csv"' in html  # default = region_name + ".csv"
+
+
+def test_list_csv_export_filename_override() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [],
+        "endpoint": "/api/x",
+        "region_name": "r",
+        "csv_export": True,
+        "csv_filename": "custom-export.csv",
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
+    assert 'data-dz-csv-filename="custom-export.csv"' in html
+
+
+def test_list_without_endpoint_skips_chrome() -> None:
+    """Without `endpoint` ctx key, chrome rendering is skipped — even
+    if filter_columns / csv_export / date_range are supplied. The
+    chrome primitives all need an endpoint URL for HTMX wiring."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"name": "X"}],
+        "columns": [{"key": "name", "label": "Name"}],
+        "filter_columns": [{"key": "k", "label": "K", "options": []}],
+        "csv_export": True,
+        "date_range": True,
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
+    assert "filter-bar" not in html
+    assert "date-range-bar" not in html
+    assert "dz-list-csv-button" not in html
+    assert "<table" in html  # body still renders
+
+
+def test_list_drops_malformed_filter_columns() -> None:
+    """Filter columns missing key, non-dict entries, and duplicates
+    silently drop rather than crashing FilterBar's strict invariants."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [],
+        "endpoint": "/api/x",
+        "region_name": "r",
+        "filter_columns": [
+            None,
+            42,
+            {"label": "no key"},
+            {"key": "valid", "label": "Valid", "options": []},
+            {"key": "valid", "label": "Dup"},  # duplicate
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
+    assert "filter-bar" in html
+    assert ">All Valid<" in html
+    assert "Dup" not in html
+
+
 # ───────────────── Grid ────────────────────────────
 
 

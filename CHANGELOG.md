@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.92] - 2026-05-08
+
+### Added — Phase 4B.1.e — `_build_list` chrome composition
+- **`_build_list` now consumes 4B.1.e chrome primitives** when ctx supplies the wiring. Optional ctx keys: `endpoint`, `region_name`, `filter_columns`, `active_filters`, `date_range` + `date_from` / `date_to`, `csv_export` + `csv_filename`. When any are present, the adapter composes a `Stack` of FilterBar / DateRangePicker / CsvExportButton above the Table body. Without any chrome ctx, the original simple Table-only render is preserved (no behavioural regression for existing tests).
+- Defensive parsing: filter_columns missing keys, non-dict entries, and duplicate keys silently drop. Endpoint required for any chrome (chrome primitives need an HTMX URL); without endpoint, all chrome is skipped even if other flags are set.
+- 6 new adapter tests covering each chrome path + skip-without-endpoint + malformed-entry drops + filename-override.
+
+### Phase 4B.1 progress
+- All chrome primitives shipped (v0.66.88–91).
+- `_build_list` chrome composition wired (this ship).
+- `_build_queue` chrome composition pending — needs additional bits beyond list (queue_transitions, queue_status_field, queue_api_endpoint, count badge, metrics summary).
+
+### Agent Guidance
+- Chrome composition is **opt-in via ctx keys**. The old "list of items + columns" ctx still produces the plain Table-only render. This means downstream call sites can adopt chrome incrementally — no breaking change for existing tests or runtime callers that don't supply the chrome ctx.
+- The chrome `Stack` ordering is `[FilterBar, DateRangePicker, CsvExportButton, Table]` (when all are present). The legacy template's queue.html intersperses them differently (count → metrics → filters → rows → overflow). The list.html order is closer to this Stack — when `_build_queue` lands, expect a different chrome arrangement.
+
 ## [0.66.91] - 2026-05-08
 
 ### Added — Phase 4B.1.e — DateRangePicker primitive (chrome arc complete)
