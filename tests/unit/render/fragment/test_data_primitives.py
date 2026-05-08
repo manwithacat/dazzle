@@ -16,6 +16,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     ProfileCard,
     Radar,
+    StageBar,
     Table,
     Timeline,
     TimeSeries,
@@ -353,3 +354,37 @@ def test_bar_track_accepts_zero_and_hundred_fill_pct() -> None:
         max_value=100.0,
     )
     assert len(b.rows) == 2
+
+
+# === StageBar ===
+
+
+def test_stage_bar_requires_at_least_one_stage() -> None:
+    with pytest.raises(ValueError, match="at least one stage"):
+        StageBar(stages=())
+
+
+def test_stage_bar_rejects_complete_pct_above_100() -> None:
+    with pytest.raises(ValueError, match=r"complete_pct=150"):
+        StageBar(stages=(("X", 1, False),), complete_pct=150)
+
+
+def test_stage_bar_rejects_negative_complete_pct() -> None:
+    with pytest.raises(ValueError, match=r"complete_pct=-1"):
+        StageBar(stages=(("X", 1, False),), complete_pct=-1)
+
+
+def test_stage_bar_minimal() -> None:
+    s = StageBar(stages=(("Backlog", 5, False),))
+    assert s.complete_pct == 0.0
+    assert s.total == 0
+
+
+def test_stage_bar_full_progress_state() -> None:
+    s = StageBar(
+        stages=(("Done", 10, True),),
+        complete_pct=100.0,
+        complete_count=10,
+        total=10,
+    )
+    assert s.complete_pct == 100.0

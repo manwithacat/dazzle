@@ -1353,42 +1353,95 @@ def test_profile_card_no_data_uses_default_empty_message() -> None:
     assert "No profile data available." in _render(fragment)
 
 
-def test_progress_renders_percent_badges_with_severity() -> None:
-    """Progress rows show label + percent badge; variant maps from
-    percent ranges (>=90 success, >=50 info, >=25 warning, else danger)."""
+def test_progress_renders_typed_stage_bar_with_progress_element() -> None:
+    """Phase 4B.1.b: `_build_progress` produces the typed StageBar
+    primitive — `<progress>` header + chip list + summary line.
+    Replaced the prior Stack-of-Row(Text, Badge) shape."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "stage_counts": [
+            {"name": "Backlog", "count": 12, "complete": False},
+            {"name": "In Progress", "count": 5, "complete": False},
+            {"name": "Done", "count": 23, "complete": True},
+        ],
+        "complete_pct": 57.5,
+        "complete_count": 23,
+        "progress_total": 40,
+    }
+    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
+    assert "dz-progress-header" in html
+    assert "<progress data-dz-progress" in html
+    assert "57.5%" in html
+    assert "Backlog (12)" in html
+    assert 'data-dz-stage-tone="complete"' in html
+    assert "23 of 40 complete" in html
+
+
+def test_progress_chip_tone_maps_from_complete_and_count() -> None:
+    """tone: complete > active (count>0) > empty (count==0)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "stage_counts": [
+            {"name": "Empty", "count": 0, "complete": False},  # empty
+            {"name": "Active", "count": 5, "complete": False},  # active
+            {"name": "Complete", "count": 8, "complete": True},  # complete
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
+    assert 'data-dz-stage-tone="empty"' in html
+    assert 'data-dz-stage-tone="active"' in html
+    assert 'data-dz-stage-tone="complete"' in html
+
+
+def test_progress_legacy_items_fallback_treats_100_pct_as_complete() -> None:
+    """Pre-Phase-4B.1.b ctx shape `{items: [{label, percent}]}` is still
+    accepted — each row becomes a synthetic stage with `complete=True`
+    when percent==100. The Phase 4B.2 translator will switch the
+    runtime to stage_counts."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [
-            {"label": "Done", "percent": 95},
-            {"label": "Halfway", "percent": 60},
-            {"label": "Slow", "percent": 30},
-            {"label": "Stuck", "percent": 5},
+            {"label": "Build", "percent": 75},
+            {"label": "Test", "percent": 100},
         ]
     }
-    fragment = adapter.build(_FakeRegion("p", display="progress"), ctx)
-    html = _render(fragment)
-    assert "95%" in html and "60%" in html and "30%" in html and "5%" in html
-    assert "dz-badge--variant-success" in html
-    assert "dz-badge--variant-info" in html
-    assert "dz-badge--variant-warning" in html
-    assert "dz-badge--variant-danger" in html
+    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
+    assert "Build (75%)" in html
+    assert "Test (100%)" in html
+    # Test stage at 100% is marked complete
+    assert 'data-dz-stage-tone="complete"' in html
 
 
-def test_progress_clamps_out_of_range_percent_values() -> None:
-    """Values outside [0, 100] are clamped before rendering."""
+def test_progress_clamps_out_of_range_complete_pct() -> None:
+    """complete_pct outside [0, 100] is clamped before constructing
+    the StageBar (which would raise)."""
     adapter = WorkspaceRegionAdapter()
-    ctx = {"items": [{"label": "X", "percent": 250}, {"label": "Y", "percent": -10}]}
-    fragment = adapter.build(_FakeRegion("p", display="progress"), ctx)
-    html = _render(fragment)
-    assert "100%" in html
-    assert "0%" in html
+    ctx = {
+        "stage_counts": [{"name": "X", "count": 1, "complete": False}],
+        "complete_pct": 250,
+    }
+    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
+    assert "100.0%" in html  # clamped to 100.0
+    assert "250" not in html
+
+
+def test_progress_omits_summary_when_total_is_zero() -> None:
+    """The 'N of M complete' summary only renders when progress_total > 0."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "stage_counts": [{"name": "X", "count": 1, "complete": False}],
+        "complete_count": 0,
+        "progress_total": 0,
+    }
+    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
+    assert "dz-progress-summary" not in html
 
 
 def test_progress_empty_renders_empty_state() -> None:
     adapter = WorkspaceRegionAdapter()
     fragment = adapter.build(
         _FakeRegion("p", display="progress", empty_message="No progress."),
-        {"items": []},
+        {"stage_counts": []},
     )
     assert "No progress." in _render(fragment)
 

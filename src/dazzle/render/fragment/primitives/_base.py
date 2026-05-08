@@ -38,6 +38,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     ProfileCard,
     Radar,
+    StageBar,
     Table,
     Timeline,
     TimeSeries,
@@ -109,6 +110,7 @@ Fragment = (
     | ProfileCard
     | MetricTile
     | BarTrack
+    | StageBar
     # Forms
     | FormStack
     | Field

@@ -59,6 +59,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "ProfileCard",
         "MetricTile",
         "BarTrack",
+        "StageBar",
         # forms
         "FormStack",
         "Field",

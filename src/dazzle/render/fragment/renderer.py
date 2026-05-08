@@ -54,6 +54,7 @@ from dazzle.render.fragment.primitives import (
     SkipLink,
     Split,
     Stack,
+    StageBar,
     Submit,
     Surface,
     Table,
@@ -182,6 +183,8 @@ class FragmentRenderer:
                 return self._emit_metric_tile(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
+            case StageBar():
+                return self._emit_stage_bar(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -991,6 +994,33 @@ class FragmentRenderer:
             f'<p class="dz-bar-track-summary">'
             f"{len(b.rows)} rows · scale 0–{round(b.max_value, 2)}"
             f"</p>"
+        )
+
+    def _emit_stage_bar(self, s: StageBar, ctx: RenderContext) -> str:
+        """Render a StageBar matching legacy
+        `workspace/regions/progress.html`: header `<progress>` + percent
+        readout + chip list of stages with per-chip tone (complete /
+        active / empty), and an optional "N of M complete" summary.
+        """
+        chips_html = "".join(
+            f'<span class="dz-progress-chip" '
+            f'data-dz-stage-tone="{("complete" if complete else ("active" if count > 0 else "empty"))}">'
+            f"{ctx.escape(name)} ({count})"
+            f"</span>"
+            for name, count, complete in s.stages
+        )
+        summary_html = (
+            f'<p class="dz-progress-summary">{s.complete_count} of {s.total} complete</p>'
+            if s.total > 0
+            else ""
+        )
+        return (
+            f'<div class="dz-progress-header">'
+            f'<progress data-dz-progress value="{s.complete_pct}" max="100"></progress>'
+            f"<span>{s.complete_pct}%</span>"
+            f"</div>"
+            f'<div class="dz-progress-stages">{chips_html}</div>'
+            f"{summary_html}"
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:

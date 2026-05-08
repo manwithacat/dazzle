@@ -41,6 +41,7 @@ from dazzle.render.fragment import (
     Region,
     Row,
     Stack,
+    StageBar,
     Surface,
     Tabs,
     Text,
@@ -1012,58 +1013,83 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "dashboard", body)
 
     def _build_progress(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: progress` renders a Stack of label / percentage
-        rows. Without a dedicated ProgressBar primitive we use the
-        existing Text+Badge pair: label on the left, "<n>%" on the right.
+        """`display: progress` renders a `<progress>` header + chip list
+        of stages. Phase 4B.1.b uses the typed StageBar primitive
+        matching the legacy `workspace/regions/progress.html` shape.
 
-        ctx shape:
+        ctx shape (primary):
+            stage_counts: list of dicts {"name": str, "count": int,
+                "complete": bool} — pre-computed per-stage rollups
+            complete_pct: float (0..100) — percentage for the header bar
+            complete_count: int — for the "N of M complete" summary
+            progress_total: int — denominator for the summary; 0 omits it
+
+        ctx shape (legacy fallback, Phase 4A):
             items: list of dicts {"label": str, "percent": int 0..100}
-                — values outside [0, 100] are clamped
+                — fallback-rendered as one synthetic stage per row with
+                `complete = (percent == 100)`. The Phase 4B.2 translator
+                will replace this with the primary path.
         """
         title = _region_title(region)
-        items = ctx.get("items") or []
+        stage_counts = ctx.get("stage_counts") or []
 
-        rows: list[object] = []
-        if isinstance(items, list):
-            for item in items:
-                if not isinstance(item, dict):
+        stages: list[tuple[str, int, bool]] = []
+        for entry in stage_counts:
+            if not isinstance(entry, dict):
+                continue
+            name = str(entry.get("name") or entry.get("label") or "")
+            if not name:
+                continue
+            try:
+                count = int(entry.get("count") or 0)
+            except (TypeError, ValueError):
+                count = 0
+            complete = bool(entry.get("complete"))
+            stages.append((name, count, complete))
+
+        # Legacy fallback — items: [{label, percent}]
+        if not stages:
+            for entry in ctx.get("items") or []:
+                if not isinstance(entry, dict):
                     continue
-                label = str(item.get("label") or item.get("name") or item.get("title") or "")
+                name = str(entry.get("label") or entry.get("name") or "")
+                if not name:
+                    continue
                 try:
-                    percent = int(item.get("percent") or item.get("value") or 0)
+                    percent = int(entry.get("percent") or entry.get("value") or 0)
                 except (TypeError, ValueError):
                     percent = 0
                 percent = max(0, min(100, percent))
-                # Map ranges to badge variants for at-a-glance reading.
-                variant: str = "info"
-                if percent >= 90:
-                    variant = "success"
-                elif percent >= 50:
-                    variant = "info"
-                elif percent >= 25:
-                    variant = "warning"
-                else:
-                    variant = "danger"
-                rows.append(
-                    Row(
-                        children=(
-                            Text(label or "(no label)"),
-                            Badge(label=f"{percent}%", variant=variant),  # type: ignore[arg-type]
-                        ),
-                        gap="md",
-                        align="center",
-                    )
-                )
+                stages.append((f"{name} ({percent}%)", percent, percent == 100))
 
         body: Fragment
-        if not rows:
+        if not stages:
             body = EmptyState(
                 title="No progress",
                 description=getattr(region, "empty_message", None) or "No data in this region.",
             )
-        else:
-            body = Stack(children=tuple(rows), gap="sm")
+            return _wrap_surface(title, "list", body)
 
+        try:
+            complete_pct = float(ctx.get("complete_pct") or 0)
+        except (TypeError, ValueError):
+            complete_pct = 0.0
+        complete_pct = max(0.0, min(100.0, complete_pct))
+        try:
+            complete_count = int(ctx.get("complete_count") or 0)
+        except (TypeError, ValueError):
+            complete_count = 0
+        try:
+            total = int(ctx.get("progress_total") or 0)
+        except (TypeError, ValueError):
+            total = 0
+
+        body = StageBar(
+            stages=tuple(stages),
+            complete_pct=complete_pct,
+            complete_count=complete_count,
+            total=total,
+        )
         return _wrap_surface(title, "list", body)
 
     def _build_status_list(self, region: Any, ctx: dict[str, Any]) -> Surface:

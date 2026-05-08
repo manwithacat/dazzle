@@ -51,6 +51,7 @@ from dazzle.render.fragment.primitives import (
     SkipLink,
     Split,
     Stack,
+    StageBar,
     Submit,
     Surface,
     Table,
@@ -152,6 +153,7 @@ __all__ = [
     "ProfileCard",
     "MetricTile",
     "BarTrack",
+    "StageBar",
     # primitives — forms
     "FormStack",
     "Field",

@@ -110,6 +110,34 @@ class CalendarGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class StageBar:
+    """Workflow progress: header `<progress>` element + chip list of stages.
+
+    Used by `display: progress` regions for an at-a-glance "X of Y
+    complete" + per-stage tone (complete/active/empty). Each stage is
+    `(name, count, complete)` where `complete: bool` flags the stage
+    as already past (chip rendered with the "complete" tone), `count
+    > 0` makes it "active", and `count == 0 and not complete` makes
+    it "empty".
+
+    `complete_pct` is rendered numerically next to the `<progress>`
+    bar; `complete_count + total` produce the "N of M complete"
+    summary when `total > 0`.
+    """
+
+    stages: tuple[tuple[str, int, bool], ...]
+    complete_pct: float = 0.0
+    complete_count: int = 0
+    total: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.stages:
+            raise ValueError("StageBar requires at least one stage")
+        if not (0.0 <= self.complete_pct <= 100.0):
+            raise ValueError(f"StageBar complete_pct={self.complete_pct} outside [0, 100]")
+
+
+@dataclass(frozen=True, slots=True)
 class BarTrack:
     """Compact horizontal value-bar list — one row per bucket.
 

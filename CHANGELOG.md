@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.80] - 2026-05-08
+
+### Added — Phase 4B.1.b — StageBar primitive
+- **`StageBar` Fragment primitive** — workflow progress: header `<progress>` element + chip list of stages with per-chip tone (complete / active / empty) + optional "N of M complete" summary. `StageBar(stages, complete_pct, complete_count, total)` where `stages` is a tuple of `(name, count, complete)` triples. Strict invariants: at least one stage; complete_pct in [0, 100].
+- **`_build_progress` rewritten to produce StageBar** — replaces the prior Stack-of-Row(Text, Badge) shape. Primary path consumes `stage_counts` + `complete_pct` + `complete_count` + `progress_total` (the runtime's pre-computed shape). Legacy fallback accepts the older `{items: [{label, percent}]}` ctx shape from Phase 4A; each row becomes a synthetic stage with `complete=True` when `percent==100`.
+- HTML byte-equivalent to legacy `workspace/regions/progress.html`.
+- 5 new primitive tests + 6 new adapter tests; baselines updated.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID | done | v0.66.75 |
+| 4B.1.b | PROFILE_CARD | done | v0.66.76 |
+| 4B.1.a | DETAIL (type-aware) | done | v0.66.77 |
+| 4B.1.a | METRICS (extended deltas) | done | v0.66.78 |
+| 4B.1.b | BAR_TRACK | done | v0.66.79 |
+| 4B.1.b | PROGRESS | **done — StageBar primitive** | **v0.66.80** |
+| 4B.1.b | ReferenceLine, ReferenceBand | next (chart overlays) | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending | — |
+| 4B.1.d | TransitionButton, ConfirmGate, SearchBox, LazyTabPanel | pending | — |
+
+### Agent Guidance
+- StageBar's per-chip tone is computed by the renderer from `(complete, count)` — NOT carried as a primitive field. The decision lives where the HTML is emitted, not in the IR. This keeps the primitive's IR minimal: a stage is just `(name, count, complete)`.
+- `stage_counts[i].complete` is the authoritative "this stage is past" flag — the runtime sets it to True for stages already crossed in the workflow. Don't infer completion from `count > 0` alone; in-progress stages have `count > 0 and complete = False`.
+
 ## [0.66.79] - 2026-05-08
 
 ### Added — Phase 4B.1.b — BarTrack primitive
