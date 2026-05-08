@@ -104,3 +104,71 @@ def test_render_toolbar_with_actions() -> None:
     )
     assert "dz-toolbar" in out
     assert "New" in out
+
+
+# === Phase 4B.1.d — Button hx_put / hx_vals / hx_ext rendering ===
+
+
+def test_render_button_with_hx_put_emits_attribute() -> None:
+    r = FragmentRenderer()
+    out = r.render(
+        Button(
+            label="Approve",
+            hx_put=URL("/api/items/42"),
+            hx_target=TargetSelector("#region-queue"),
+        )
+    )
+    assert 'hx-put="/api/items/42"' in out
+
+
+def test_render_button_with_hx_vals_emits_single_quoted_attribute() -> None:
+    """hx-vals is wrapped in single quotes so internal JSON double
+    quotes don't need escaping."""
+    r = FragmentRenderer()
+    out = r.render(
+        Button(
+            label="Set",
+            hx_post=URL("/x"),
+            hx_target=TargetSelector("#t"),
+            hx_vals='{"status": "approved"}',
+        )
+    )
+    assert 'hx-vals=\'{"status": "approved"}\'' in out
+
+
+def test_render_button_with_hx_ext_emits_comma_joined_extensions() -> None:
+    """Multiple HTMX extensions are joined with commas in the rendered
+    `hx-ext` attribute."""
+    r = FragmentRenderer()
+    out = r.render(
+        Button(
+            label="X",
+            hx_post=URL("/x"),
+            hx_target=TargetSelector("#t"),
+            hx_ext=("json-enc", "morph"),
+        )
+    )
+    assert 'hx-ext="json-enc,morph"' in out
+
+
+def test_render_button_queue_transition_shape() -> None:
+    """The full queue transition button shape: PUT + JSON payload +
+    json-enc extension + target swap. Mirrors the legacy queue.html
+    template's inline action button."""
+    r = FragmentRenderer()
+    out = r.render(
+        Button(
+            label="Mark resolved",
+            hx_put=URL("/api/queue/42"),
+            hx_target=TargetSelector("#region-tickets"),
+            hx_swap="innerHTML",
+            hx_vals='{"status": "resolved"}',
+            hx_ext=("json-enc",),
+        )
+    )
+    assert 'hx-put="/api/queue/42"' in out
+    assert 'hx-target="#region-tickets"' in out
+    assert 'hx-swap="innerHTML"' in out
+    assert 'hx-ext="json-enc"' in out
+    assert "hx-vals=" in out
+    assert "Mark resolved" in out

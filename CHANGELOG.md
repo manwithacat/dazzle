@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.83] - 2026-05-08
+
+### Added — Phase 4B.1.d — Button HTMX extensions for state transitions
+- **`Button.hx_put`** — third HTTP-method attribute (alongside the existing `hx_get` / `hx_post`). Used by `display: queue` for inline state-transition action buttons that PUT to the item endpoint with the target state. The "at most one method" invariant generalised to all three; error message updated from "cannot have both hx_get and hx_post" to "cannot have more than one of hx_get/hx_post/hx_put".
+- **`Button.hx_vals: str`** — JSON payload string (default empty) sent with the request. Renderer wraps in single quotes so internal JSON double quotes don't need escaping; internal single quotes get HTML-encoded to `&#39;`.
+- **`Button.hx_ext: tuple[str, ...]`** — HTMX extension names (default empty), comma-joined in the rendered `hx-ext` attribute. Required for queue transitions which use `json-enc` to serialise hx-vals as application/json.
+- 6 new primitive tests + 4 new renderer tests covering the queue-transition shape end-to-end. Existing `test_button_rejects_both_get_and_post` updated to match the generalised error message ("more than one").
+- All HTMX-class drift gates pass (htmx_preload_silence, htmx_undefined_guards, idiomorph_alpine_patch, etc.).
+
+### Design — why extend Button rather than introduce TransitionButton
+Queue transition buttons differ from regular buttons only in HTMX wiring (PUT method, JSON payload, hx-ext extension). A `TransitionButton` specialisation would duplicate Button's variant/visibility/tokens/etc. fields. Extending Button keeps it the single canonical interactive primitive — the IR remains general, the wiring is data.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID, PROFILE_CARD, BAR_TRACK, PROGRESS | done | v0.66.75–80 |
+| 4B.1.a | DETAIL (type-aware), METRICS (extended deltas) | done | v0.66.77–78 |
+| 4B.1.b | Reference overlays on TimeSeries / BarChart / BarTrack / BoxPlot | done | v0.66.81–82 |
+| 4B.1.d | Button hx_put / hx_vals / hx_ext (QUEUE transitions) | **done** | **v0.66.83** |
+| 4B.1.d | QUEUE adapter rewrite (`_build_queue` w/ filter bar + transitions) | pending — needs 4B.1.e | — |
+| 4B.1.d | ConfirmGate, SearchBox (HTMX FTS), LazyTabPanel | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending — needs SVG-rendering arc | — |
+
+### Agent Guidance
+- The `_validate_htmx_pair` helper now accepts `hx_put` as an optional fourth keyword. New HTTP-method attributes (e.g. `hx_delete`, `hx_patch`) plug in here; the "at most one" invariant generalises naturally — append the new field to the `fetchers` list.
+- `hx_vals` is a **string**, not a dict, on the primitive. The runtime is responsible for JSON-encoding before construction. This keeps the primitive frozen-friendly and avoids re-implementing `json.dumps` in the renderer.
+- The single-quote wrapper on `hx-vals` is deliberate — it lets the JSON value contain unescaped double quotes, matching the legacy `queue.html` template's quoting style. Don't switch to double-quote wrapping without re-rendering the dual-path validation gate.
+
 ## [0.66.82] - 2026-05-08
 
 ### Added — Phase 4B.1.b — Reference overlays on BarChart, BarTrack, BoxPlot

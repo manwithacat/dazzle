@@ -553,18 +553,27 @@ class FragmentRenderer:
         hx_trigger: object | None = None,
         hx_indicator: object | None = None,
         hx_confirm: object | None = None,
+        hx_put: object | None = None,
+        hx_vals: str = "",
+        hx_ext: tuple[str, ...] = (),
     ) -> str:
         """Build the htmx attribute string for an interactive primitive.
 
         All values are escaped for attribute context. Wrapper types (URL,
         TargetSelector, HxTrigger) are validated at construction; this
         escape pass converts characters like `&` in query strings to their
-        HTML entity form so the output is valid HTML5."""
+        HTML entity form so the output is valid HTML5.
+
+        Phase 4B.1.d added hx_put + hx_vals + hx_ext (queue transitions,
+        JSON payloads, hx-ext extension list).
+        """
         parts: list[str] = []
         if hx_get is not None:
             parts.append(f'hx-get="{_escape(str(hx_get), quote=True)}"')
         if hx_post is not None:
             parts.append(f'hx-post="{_escape(str(hx_post), quote=True)}"')
+        if hx_put is not None:
+            parts.append(f'hx-put="{_escape(str(hx_put), quote=True)}"')
         if hx_target is not None:
             parts.append(f'hx-target="{_escape(str(hx_target), quote=True)}"')
         if hx_swap is not None:
@@ -575,6 +584,14 @@ class FragmentRenderer:
             parts.append(f'hx-indicator="{_escape(str(hx_indicator), quote=True)}"')
         if hx_confirm is not None:
             parts.append(f'hx-confirm="{_escape(str(hx_confirm), quote=True)}"')
+        if hx_vals:
+            # Use single quotes around the JSON value so internal double
+            # quotes (a JSON dict's quoted keys) don't need escaping.
+            # Single quotes inside the value are escaped to &#39;.
+            escaped_vals = hx_vals.replace("'", "&#39;")
+            parts.append(f"hx-vals='{escaped_vals}'")
+        if hx_ext:
+            parts.append(f'hx-ext="{_escape(",".join(hx_ext), quote=True)}"')
         return " ".join(parts)
 
     def _emit_button(self, b: Button, ctx: RenderContext) -> str:
@@ -589,11 +606,14 @@ class FragmentRenderer:
         attrs = self._hx_attrs(
             hx_get=b.hx_get,
             hx_post=b.hx_post,
+            hx_put=b.hx_put,
             hx_target=b.hx_target,
             hx_swap=b.hx_swap,
             hx_trigger=b.hx_trigger,
             hx_indicator=b.hx_indicator,
             hx_confirm=b.hx_confirm,
+            hx_vals=b.hx_vals,
+            hx_ext=b.hx_ext,
         )
         attr_str = f" {attrs}" if attrs else ""
         disabled = ' disabled="disabled"' if b.visibility == "disabled" else ""

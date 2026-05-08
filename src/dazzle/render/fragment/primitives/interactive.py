@@ -29,11 +29,15 @@ def _validate_htmx_pair(
     hx_post: URL | None,
     hx_target: TargetSelector | None,
     primitive_name: str,
+    hx_put: URL | None = None,
 ) -> None:
-    if hx_get is not None and hx_post is not None:
-        raise HtmxBindingError(f"{primitive_name} cannot have both hx_get and hx_post")
-    if (hx_get is not None or hx_post is not None) and hx_target is None:
-        raise HtmxBindingError(f"{primitive_name} with hx_get/hx_post needs hx_target")
+    fetchers = [v for v in (hx_get, hx_post, hx_put) if v is not None]
+    if len(fetchers) > 1:
+        raise HtmxBindingError(
+            f"{primitive_name} cannot have more than one of hx_get/hx_post/hx_put"
+        )
+    if fetchers and hx_target is None:
+        raise HtmxBindingError(f"{primitive_name} with hx_get/hx_post/hx_put needs hx_target")
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,10 +45,16 @@ class Button:
     """A clickable button with typed htmx attributes.
 
     Invariants enforced at construction:
-    - Cannot have both hx_get and hx_post.
-    - If hx_get or hx_post is set, hx_target MUST be set.
+    - Can have at most one of hx_get / hx_post / hx_put.
+    - If any HTTP-method attribute is set, hx_target MUST be set.
     - variant must be one of primary/secondary/danger/ghost.
     - visibility must be one of visible/hidden/disabled.
+
+    Phase 4B.1.d added `hx_put` (state transitions, e.g. queue actions),
+    `hx_vals` (JSON payload string for hx-vals), and `hx_ext` (HTMX
+    extensions tuple). These extend the existing Button rather than
+    introducing a TransitionButton specialisation — queue transitions
+    are just Buttons with the right wiring.
     """
 
     label: str
@@ -53,6 +63,7 @@ class Button:
 
     hx_get: URL | None = None
     hx_post: URL | None = None
+    hx_put: URL | None = None
     hx_target: TargetSelector | None = None
     hx_swap: (
         Literal["innerHTML", "outerHTML", "beforebegin", "afterend", "delete", "none"] | None
@@ -60,6 +71,8 @@ class Button:
     hx_trigger: HxTrigger | None = None
     hx_indicator: TargetSelector | None = None
     hx_confirm: str | None = None
+    hx_vals: str = ""
+    hx_ext: tuple[str, ...] = ()
 
     tokens: ButtonTokens | None = None
 
@@ -73,6 +86,7 @@ class Button:
         _validate_htmx_pair(
             hx_get=self.hx_get,
             hx_post=self.hx_post,
+            hx_put=self.hx_put,
             hx_target=self.hx_target,
             primitive_name="Button",
         )
