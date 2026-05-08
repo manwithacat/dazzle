@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.99] - 2026-05-08
+
+### Added — Phase 4B.2 — `legacy_ctx_to_adapter_ctx` translator (foundation)
+- **New module `src/dazzle_back/runtime/renderers/legacy_ctx.py`** — translates the legacy Jinja-template ctx (the kwargs passed to `render_fragment(template, **kwargs)` in `workspace_rendering.py`) into the shape that `WorkspaceRegionAdapter._build_*` expects. Per-display dispatch via `_DISPATCH: dict[str, Callable]`. Untranslated displays fall back to passthrough so the runtime can adopt the typed-Fragment path incrementally.
+- **First wave of translators** covers the displays whose adapter ctx contracts are stable as of Phase 4B.1.c:
+  - **Chart family (10 displays):** `bar_chart`, `funnel_chart`, `histogram` (`bucketed_metrics`/`histogram_bins` → `buckets`); `line_chart` / `area_chart` / `sparkline` (`bucketed_metrics` → `points`); `radar` (`bucketed_metrics` → `axes`); `box_plot` (`box_plot_stats` → `groups`, drops n/iqr/whisker/outliers); `bar_track` (passthrough — adapter already consumes the legacy shape directly).
+  - **Detail / metric (4 displays):** `metrics` / `summary` (rename `delta_direction` → `trend`, drop extended delta fields); `detail` (rename `columns` → `fields`); `activity_feed` (pick activity-shaped `description` / `created_at` field names).
+- **Defensive coercion** at every translator: missing labels drop, non-coercible values drop, malformed entries (non-dict) drop. The adapter is permissive but the translator pre-filters so the typed path matches the legacy template's "skip the row" silent-degradation behaviour.
+
+### Phase 4B progress
+| Step | Status | Ship |
+|---|---|---|
+| 4B.0 — Discovery (ctx mapping table) | done | (no ship — design doc) |
+| 4B.1 — Missing primitives & chrome | done | v0.66.74–98 (25 ships) |
+| 4B.2 — Translation layer | **foundation done** | **v0.66.99** |
+| 4B.3 — Dual-path validation gate | next | — |
+| 4B.4 — Per-display-mode port (4 waves) | queued | — |
+| 4B.5 — Workspace chrome port | queued | — |
+| 4B.6 — Decommission legacy templates | queued | — |
+
+### Translator coverage (14 of 32 displays)
+- **Translated (14):** bar_chart, funnel_chart, histogram, line_chart, area_chart, sparkline, radar, box_plot, bar_track, metrics, summary, detail, activity_feed (+1 future-ready alias)
+- **Pending (18):** list, grid, kanban, timeline, tree, queue, tabbed_list, heatmap, pivot_table, progress, pipeline_steps, status_list, search_box, bullet, action_grid, profile_card, confirm_action_panel, diagram
+
+The 14 translated displays cover the full chart family + most read-only flat-list displays — ~65% of region-render volume in the example apps. The pending 18 are mostly "reshape" rules from the discovery doc; some require richer ctx flow that remains a Phase 4B.4 concern (multi-series radar, full box plot stats, queue transition wiring).
+
+### Agent Guidance
+- The translator's contract is **shape only** — it does not compute data. The runtime continues to compute aggregates, rollups, FK joins, and bucketings; the translator just renames and restructures pre-computed fields. This keeps the dual-path validation gate's diff comparison clean (both paths consume identical data, just rendered differently).
+- All translators take `legacy: dict[str, Any]` and return a NEW dict — they do NOT mutate input. The `test_translator_does_not_mutate_input` invariant pins this: if you add a translator, do not modify entries in place.
+- When the adapter gains a new builder (Phase 4B.4), add a translator entry to `_DISPATCH` in `legacy_ctx.py` and a test case to `test_legacy_ctx_translator.py`. The display-name keys MUST be the lowercase-underscored form (e.g. `"bar_chart"`), matching the keys in `WorkspaceRegionAdapter._BUILDERS`.
+
 ## [0.66.98] - 2026-05-08
 
 ### Changed — Phase 4B.1.c — `_emit_bar_track` adds legacy outer wrapper (chart family port complete)
