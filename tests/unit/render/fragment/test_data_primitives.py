@@ -3,6 +3,7 @@ KanbanBoard, CalendarGrid."""
 
 import pytest
 
+from dazzle.render.fragment.htmx import URL
 from dazzle.render.fragment.primitives.data import (
     KPI,
     ActionCard,
@@ -12,6 +13,8 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     Diagram,
     KanbanBoard,
+    LazyTab,
+    LazyTabPanel,
     MetricTile,
     PivotTable,
     ProfileCard,
@@ -480,3 +483,44 @@ def test_chart_primitives_default_references_empty() -> None:
     assert bc.reference_lines == () and bc.reference_bands == ()
     assert bt.reference_lines == () and bt.reference_bands == ()
     assert bp.reference_lines == () and bp.reference_bands == ()
+
+
+# === LazyTab / LazyTabPanel ===
+
+
+def test_lazy_tab_requires_key_and_label() -> None:
+    with pytest.raises(ValueError, match="non-empty key"):
+        LazyTab(key="", label="X", endpoint=URL("/x"))
+    with pytest.raises(ValueError, match="non-empty label"):
+        LazyTab(key="x", label="", endpoint=URL("/x"))
+
+
+def test_lazy_tab_panel_requires_at_least_one_tab() -> None:
+    with pytest.raises(ValueError, match="at least one tab"):
+        LazyTabPanel(region_name="r", tabs=())
+
+
+def test_lazy_tab_panel_requires_region_name() -> None:
+    with pytest.raises(ValueError, match="non-empty region_name"):
+        LazyTabPanel(
+            region_name="",
+            tabs=(LazyTab(key="x", label="X", endpoint=URL("/x")),),
+        )
+
+
+def test_lazy_tab_panel_rejects_duplicate_keys() -> None:
+    """DOM ids would collide if two tabs share a key — strict invariant."""
+    dup = (
+        LazyTab(key="x", label="A", endpoint=URL("/a")),
+        LazyTab(key="x", label="B", endpoint=URL("/b")),
+    )
+    with pytest.raises(ValueError, match="must be unique"):
+        LazyTabPanel(region_name="r", tabs=dup)
+
+
+def test_lazy_tab_panel_default_eager_is_false() -> None:
+    """First tab convention is set by the renderer (always eager-loads
+    panel index 0). The `eager` flag explicitly overrides for non-first
+    tabs that must also fire on load."""
+    t = LazyTab(key="x", label="X", endpoint=URL("/x"))
+    assert t.eager is False

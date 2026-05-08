@@ -34,6 +34,8 @@ from dazzle.render.fragment import (
     InlineEdit,
     Interactive,
     KanbanBoard,
+    LazyTab,
+    LazyTabPanel,
     Link,
     MetricTile,
     Modal,
@@ -173,6 +175,11 @@ def _sample_for(primitive_type: type) -> object:
         return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
     if primitive_type is StageBar:
         return StageBar(stages=(("X", 1, False),))
+    if primitive_type is LazyTabPanel:
+        return LazyTabPanel(
+            region_name="t",
+            tabs=(LazyTab(key="a", label="A", endpoint=URL("/a")),),
+        )
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

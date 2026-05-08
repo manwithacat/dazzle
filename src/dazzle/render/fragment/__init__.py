@@ -34,6 +34,8 @@ from dazzle.render.fragment.primitives import (
     InlineEdit,
     Interactive,
     KanbanBoard,
+    LazyTab,
+    LazyTabPanel,
     Link,
     MetricTile,
     Modal,
@@ -158,6 +160,8 @@ __all__ = [
     "StageBar",
     "ReferenceLine",
     "ReferenceBand",
+    "LazyTab",
+    "LazyTabPanel",
     # primitives — forms
     "FormStack",
     "Field",

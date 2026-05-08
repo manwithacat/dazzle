@@ -16,6 +16,8 @@ import typing
 from dataclasses import dataclass, field
 from typing import Literal
 
+from dazzle.render.fragment.htmx import URL
+
 _TRENDS = ("up", "down", "flat")
 _CALENDAR_VIEWS = ("day", "week", "month")
 _TIMESERIES_VIEWS = ("line", "area", "sparkline")
@@ -383,6 +385,62 @@ class BoxPlot:
                     f"BoxPlot group {i} ({_label!r}) quartiles not monotonic: "
                     f"min={mn}, q1={q1}, median={med}, q3={q3}, max={mx}"
                 )
+
+
+@dataclass(frozen=True, slots=True)
+class LazyTab:
+    """A single tab inside a LazyTabPanel — key + label + endpoint
+    + eager-load flag.
+
+    Not a Fragment union member. `key` becomes part of DOM ids
+    (`tab-<region>-<key>`), so it should be a slug (typically a
+    snake-cased entity name). `eager=True` makes the panel fetch on
+    page load (first tab); `eager=False` defers to intersect-once
+    (subsequent tabs).
+    """
+
+    key: str
+    label: str
+    endpoint: URL
+    eager: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.key:
+            raise ValueError("LazyTab requires a non-empty key")
+        if not self.label:
+            raise ValueError("LazyTab requires a non-empty label")
+
+
+@dataclass(frozen=True, slots=True)
+class LazyTabPanel:
+    """Tabbed container with per-panel HTMX lazy loading.
+
+    Used by `display: tabbed_list` regions. Each tab becomes a button
+    in the tab list + a panel `<div>` that fetches its own content
+    via `hx-get` on first activation. The first tab fires `load`;
+    subsequent tabs fire on `intersect once`. A vanilla-JS click
+    handler toggles the `is-active` class and shows/hides panels.
+
+    `region_name` namespaces the DOM ids — `tabs-<region_name>` and
+    `tab-<region_name>-<tab.key>` — so multiple LazyTabPanels can
+    coexist on one page.
+
+    Strict invariants: at least one tab; tab keys unique; exactly
+    one tab marked eager (the first by convention).
+    """
+
+    region_name: str
+    tabs: tuple[LazyTab, ...]
+    empty_message: str = "No data available."
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("LazyTabPanel requires a non-empty region_name")
+        if not self.tabs:
+            raise ValueError("LazyTabPanel requires at least one tab")
+        keys = [t.key for t in self.tabs]
+        if len(set(keys)) != len(keys):
+            raise ValueError(f"LazyTabPanel tab keys must be unique; got duplicates in {keys}")
 
 
 @dataclass(frozen=True, slots=True)

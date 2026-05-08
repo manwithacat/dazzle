@@ -37,6 +37,7 @@ from dazzle.render.fragment.primitives import (
     InlineEdit,
     Interactive,
     KanbanBoard,
+    LazyTabPanel,
     Link,
     MetricTile,
     Modal,
@@ -187,6 +188,8 @@ class FragmentRenderer:
                 return self._emit_bar_track(fragment, ctx)
             case StageBar():
                 return self._emit_stage_bar(fragment, ctx)
+            case LazyTabPanel():
+                return self._emit_lazy_tab_panel(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1095,6 +1098,70 @@ class FragmentRenderer:
             f"</div>"
             f'<div class="dz-progress-stages">{chips_html}</div>'
             f"{summary_html}"
+        )
+
+    def _emit_lazy_tab_panel(self, p: LazyTabPanel, ctx: RenderContext) -> str:
+        """Render a LazyTabPanel matching legacy
+        `workspace/regions/tabbed_list.html` byte-for-byte.
+
+        Each tab becomes:
+          - a `<a role="tab">` button with an inline `onclick` JS
+            handler that toggles `is-active` and shows/hides panels
+          - a `<div class="tab-panel">` shell that fetches its own
+            content via `hx-get` on first activation
+
+        The first tab fires `load`; subsequent tabs fire on
+        `intersect once`. The first panel is visible by default
+        (no `hidden` class); other panels start hidden.
+
+        DOM ids: `tabs-<region>` for the tablist, `tab-<region>-<key>`
+        for each panel.
+        """
+        rname = ctx.escape_attr(p.region_name)
+        # Inline-JS click handler: vanilla JS toggles is-active +
+        # shows/hides panels. Mirrors the legacy template verbatim
+        # so dual-path validation stays byte-equivalent.
+        click_js = (
+            f"document.querySelectorAll('#tabs-{p.region_name} [role=tab]')"
+            f".forEach(t =&gt; t.classList.remove('is-active')); "
+            f"this.classList.add('is-active'); "
+            f"document.querySelectorAll('#panels-{p.region_name} .tab-panel')"
+            f".forEach(p =&gt; p.classList.add('hidden')); "
+            f"document.getElementById(this.dataset.tabTarget).classList.remove('hidden');"
+        )
+
+        tab_buttons = "".join(
+            f'<a role="tab" '
+            f'class="dz-tabbed-list-tab{" is-active" if i == 0 else ""}" '
+            f'data-tab-target="tab-{rname}-{ctx.escape_attr(tab.key)}" '
+            f'onclick="{click_js}">'
+            f"{ctx.escape(tab.label)}</a>"
+            for i, tab in enumerate(p.tabs)
+        )
+
+        panels = "".join(
+            f'<div id="tab-{rname}-{ctx.escape_attr(tab.key)}" '
+            f'class="tab-panel{"" if i == 0 else " hidden"}" '
+            f'hx-get="{ctx.escape_attr(str(tab.endpoint))}" '
+            f'hx-trigger="{"load" if (tab.eager or i == 0) else "intersect once"}" '
+            f'hx-swap="innerHTML">'
+            f'<div class="dz-tabbed-list-panel-loading">'
+            f'<svg fill="none" viewBox="0 0 24 24" aria-hidden="true">'
+            f'<circle class="opacity-25" cx="12" cy="12" r="10" '
+            f'stroke="currentColor" stroke-width="4"></circle>'
+            f'<path class="opacity-75" fill="currentColor" '
+            f'd="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>'
+            f"</svg>"
+            f"</div>"
+            f"</div>"
+            for i, tab in enumerate(p.tabs)
+        )
+
+        return (
+            f'<div role="tablist" class="dz-tabbed-list-tabs" id="tabs-{rname}">'
+            f"{tab_buttons}"
+            f"</div>"
+            f'<div id="panels-{rname}">{panels}</div>'
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:

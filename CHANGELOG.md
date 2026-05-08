@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.84] - 2026-05-08
+
+### Added — Phase 4B.1.d — LazyTabPanel primitive
+- **`LazyTab` data primitive** — single-tab descriptor (`key`, `label`, `endpoint`, `eager` flag). Not a Fragment union member; held inside `LazyTabPanel`. Strict invariants: non-empty key + label.
+- **`LazyTabPanel` Fragment primitive** — tabbed container with per-panel HTMX lazy loading, matching the legacy `workspace/regions/tabbed_list.html` byte-for-byte. Each tab becomes a `<a role="tab">` button with an inline-JS click handler (vanilla JS toggles `is-active` + shows/hides panels) plus a `<div class="tab-panel">` shell that fetches its own content via `hx-get` on first activation. The first tab fires `load`; subsequent tabs fire on `intersect once` (or `load` if `tab.eager=True`). Strict invariants: non-empty `region_name` (used to namespace DOM ids `tabs-<region>` and `tab-<region>-<key>`); at least one tab; tab keys must be unique to avoid DOM-id collisions.
+- 5 new primitive tests; baselines (`test_fragment_alias`, `test_fragment_exhaustiveness`) updated.
+- Adapter `_build_tabbed_list` rewrite deferred to a follow-up — the existing builder uses an eager-loaded `Tabs` primitive; switching it to LazyTabPanel requires updating the ctx contract and the runtime (currently the runtime returns pre-loaded panels for `Tabs`, but should switch to passing endpoints for `LazyTabPanel`). One ship per concern.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID, PROFILE_CARD, BAR_TRACK, PROGRESS | done | v0.66.75–80 |
+| 4B.1.a | DETAIL (type-aware), METRICS (extended deltas) | done | v0.66.77–78 |
+| 4B.1.b | Reference overlays on TimeSeries / BarChart / BarTrack / BoxPlot | done | v0.66.81–82 |
+| 4B.1.d | Button hx_put / hx_vals / hx_ext (QUEUE transitions) | done | v0.66.83 |
+| 4B.1.d | LazyTabPanel primitive (TABBED_LIST lazy loading) | **done** | **v0.66.84** |
+| 4B.1.d | `_build_tabbed_list` rewrite to use LazyTabPanel | next | — |
+| 4B.1.d | ConfirmGate, SearchBox (HTMX FTS) | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending — needs SVG-rendering arc | — |
+
+### Agent Guidance
+- The inline-JS click handler in `_emit_lazy_tab_panel` is intentionally embedded as a string — mirrors the legacy `tabbed_list.html` template verbatim so dual-path validation stays byte-equivalent. Long-term it should be extracted to a `dz-tab-switcher` JS component, but doing so during the port would break the comparator gate.
+- `LazyTab.eager` is normally `False` — the renderer always treats panel index 0 as eager (fires `hx-trigger="load"`). The `eager` flag is for unusual cases where multiple tabs need to load on initial render (e.g. for sidebar navigation that pre-fetches both panes).
+
 ## [0.66.83] - 2026-05-08
 
 ### Added — Phase 4B.1.d — Button HTMX extensions for state transitions

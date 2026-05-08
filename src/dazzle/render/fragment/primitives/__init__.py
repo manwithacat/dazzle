@@ -30,6 +30,8 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     Diagram,
     KanbanBoard,
+    LazyTab,
+    LazyTabPanel,
     MetricTile,
     PivotTable,
     ProfileCard,
@@ -106,6 +108,8 @@ __all__ = [
     "StageBar",
     "ReferenceLine",
     "ReferenceBand",
+    "LazyTab",
+    "LazyTabPanel",
     # forms
     "FormStack",
     "Field",
