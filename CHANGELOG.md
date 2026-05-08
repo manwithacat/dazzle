@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.81] - 2026-05-08
+
+### Added — Phase 4B.1.b — Chart reference overlays
+- **`ReferenceLine` and `ReferenceBand` data primitives** — auxiliary frozen dataclasses (NOT Fragment union members) held inside chart primitives to carry chart overlays. `ReferenceLine(value, label, style)` for single-value horizontal annotations (style ∈ solid/dashed/dotted). `ReferenceBand(from_value, to_value, label, color)` for shaded ranges (color ∈ target/positive/warning/destructive/muted). Strict invariants: known styles/colors, from_value <= to_value (zero-width point bands valid).
+- **`TimeSeries` extended** with optional `reference_lines` and `reference_bands` tuple fields. Backward compatible — defaults to empty tuples; pre-Phase-4B.1.b TimeSeries instances continue to render exactly as before.
+- **Renderer extension** — when references are present, `_emit_time_series` appends a semantic `<dl class="dz-timeseries__references">` block after the chart points with `<div data-style/data-color>` annotations carrying the reference data. A future SVG-rendering ship will overlay the references on the visual chart; until then the data flows through losslessly.
+- **`_build_time_series` adapter extended** to consume `ctx["reference_lines"]` and `ctx["reference_bands"]`. Defensive parsing: unknown styles fall back to `solid`, unknown colors fall back to `target`, bands with `from > to` silently drop, both `from`/`to` and `from_value`/`to_value` ctx key shapes are accepted.
+- 7 new primitive tests (style/color/range invariants, default empties, primitive carry-through) + 3 new adapter tests (lines, bands with alt key shapes, no-references backward compat).
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID | done | v0.66.75 |
+| 4B.1.b | PROFILE_CARD | done | v0.66.76 |
+| 4B.1.a | DETAIL (type-aware) | done | v0.66.77 |
+| 4B.1.a | METRICS (extended deltas) | done | v0.66.78 |
+| 4B.1.b | BAR_TRACK | done | v0.66.79 |
+| 4B.1.b | PROGRESS | done | v0.66.80 |
+| 4B.1.b | ReferenceLine, ReferenceBand on TimeSeries | **done** | **v0.66.81** |
+| 4B.1.b | Reference overlays on BoxPlot, BarChart, BarTrack | next | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending — needs SVG-rendering arc | — |
+| 4B.1.d | TransitionButton, ConfirmGate, SearchBox, LazyTabPanel | pending | — |
+
+### Agent Guidance
+- **References are auxiliary data classes, not Fragment union members.** They're held inside chart primitives (currently TimeSeries; next BoxPlot, BarChart) rather than rendered standalone. They don't have a renderer match arm or appear in `test_fragment_alias.py` / `test_fragment_exhaustiveness.py`. The pattern: a chart primitive's `__post_init__` does NOT recursively validate references — it just holds the tuple. The reference's own `__post_init__` enforces its invariants.
+- **The references render shape is intentionally semantic-list, not SVG.** The Phase 4B port can ship without SVG support and the data is preserved on the typed-Fragment path. When the SVG-rendering arc starts (likely as Phase 4D or a chart-engine subarc), the existing primitives don't need IR changes — only the renderer changes.
+
 ## [0.66.80] - 2026-05-08
 
 ### Added — Phase 4B.1.b — StageBar primitive

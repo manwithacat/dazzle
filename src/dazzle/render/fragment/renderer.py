@@ -744,13 +744,16 @@ class FragmentRenderer:
         )
 
     def _emit_time_series(self, t: TimeSeries, ctx: RenderContext) -> str:
-        """Render line/area/sparkline as a labelled `<ol>` of points.
+        """Render line/area/sparkline as a labelled `<ol>` of points,
+        plus optional `<dl>` annotation lists for reference lines and
+        reference bands.
 
-        Phase 4A renders points as semantic data — `<li data-x="…"
-        data-y="…">x:y</li>`. CSS hooks (`dz-timeseries--view-line`
-        etc.) carry the view distinction so styling can produce the
-        chart shape later. A future iteration can swap to inline SVG
-        or a charting library without changing the IR shape.
+        Phase 4A rendered points as semantic data with CSS hooks
+        (`dz-timeseries--view-<view>`). Phase 4B.1.b extends with
+        `<dl class="dz-timeseries__references">` after the points,
+        carrying reference_lines and reference_bands as accessible
+        annotations. A future SVG-rendering ship will overlay them
+        on the visual chart; until then the data flows through.
         """
         cls = f"dz-timeseries dz-timeseries--view-{t.view}"
         items = "".join(
@@ -763,10 +766,36 @@ class FragmentRenderer:
             f"</li>"
             for label, value in t.points
         )
+
+        references_html = ""
+        if t.reference_lines or t.reference_bands:
+            line_items = "".join(
+                f'<div class="dz-timeseries__ref-line" '
+                f'data-style="{ctx.escape_attr(line.style)}" '
+                f'data-value="{line.value}">'
+                f'<dt class="dz-timeseries__ref-label">{ctx.escape(line.label) or "ref"}</dt>'
+                f'<dd class="dz-timeseries__ref-value">{line.value}</dd>'
+                f"</div>"
+                for line in t.reference_lines
+            )
+            band_items = "".join(
+                f'<div class="dz-timeseries__ref-band" '
+                f'data-color="{ctx.escape_attr(band.color)}" '
+                f'data-from="{band.from_value}" '
+                f'data-to="{band.to_value}">'
+                f'<dt class="dz-timeseries__ref-label">{ctx.escape(band.label) or "band"}</dt>'
+                f'<dd class="dz-timeseries__ref-range">'
+                f"{band.from_value}–{band.to_value}</dd>"
+                f"</div>"
+                for band in t.reference_bands
+            )
+            references_html = f'<dl class="dz-timeseries__references">{line_items}{band_items}</dl>'
+
         return (
             f'<section class="{cls}">'
             f'<h4 class="dz-timeseries__label">{ctx.escape(t.label)}</h4>'
             f'<ol class="dz-timeseries__points">{items}</ol>'
+            f"{references_html}"
             f"</section>"
         )
 

@@ -38,6 +38,8 @@ from dazzle.render.fragment import (
     PivotTable,
     ProfileCard,
     Radar,
+    ReferenceBand,
+    ReferenceLine,
     Region,
     Row,
     Stack,
@@ -682,6 +684,13 @@ class WorkspaceRegionAdapter:
             points: list of (label, value) tuples or {label, value} /
                 {x, y} dicts — pre-aggregated by the runtime
             chart_label: optional override
+            reference_lines: list of dicts {value, label, style} — Phase
+                4B.1.b. Style is one of solid/dashed/dotted; unknown
+                styles fall back to solid.
+            reference_bands: list of dicts {from, to, label, color}.
+                `color` is one of target/positive/warning/destructive/
+                muted; unknown colors fall back to target. Bands with
+                from > to silently drop.
         """
         title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or view.title())
@@ -708,9 +717,61 @@ class WorkspaceRegionAdapter:
                 title="No data",
                 description=getattr(region, "empty_message", None) or "No points to plot.",
             )
-        else:
-            body = TimeSeries(label=chart_label, points=tuple(points), view=view)
+            return _wrap_surface(title, "report", body)
 
+        # Reference lines — defensive parsing; unknown styles fall back.
+        ref_lines: list[ReferenceLine] = []
+        for entry in ctx.get("reference_lines") or []:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                value = float(entry.get("value") or 0)
+            except (TypeError, ValueError):
+                continue
+            style_raw = str(entry.get("style") or "solid")
+            style: Literal["solid", "dashed", "dotted"] = (
+                style_raw  # type: ignore[assignment]
+                if style_raw in ("solid", "dashed", "dotted")
+                else "solid"
+            )
+            ref_lines.append(
+                ReferenceLine(value=value, label=str(entry.get("label") or ""), style=style)
+            )
+
+        # Reference bands — handle Python keyword `from` via subscript.
+        ref_bands: list[ReferenceBand] = []
+        for entry in ctx.get("reference_bands") or []:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                from_val = float(entry.get("from") or entry.get("from_value") or 0)
+                to_val = float(entry.get("to") or entry.get("to_value") or 0)
+            except (TypeError, ValueError):
+                continue
+            if from_val > to_val:
+                continue
+            color_raw = str(entry.get("color") or "target")
+            color: Literal["target", "positive", "warning", "destructive", "muted"] = (
+                color_raw  # type: ignore[assignment]
+                if color_raw in ("target", "positive", "warning", "destructive", "muted")
+                else "target"
+            )
+            ref_bands.append(
+                ReferenceBand(
+                    from_value=from_val,
+                    to_value=to_val,
+                    label=str(entry.get("label") or ""),
+                    color=color,
+                )
+            )
+
+        body = TimeSeries(
+            label=chart_label,
+            points=tuple(points),
+            view=view,
+            reference_lines=tuple(ref_lines),
+            reference_bands=tuple(ref_bands),
+        )
         return _wrap_surface(title, "report", body)
 
     def _build_diagram(self, region: Any, ctx: dict[str, Any]) -> Surface:

@@ -34,6 +34,8 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     ProfileCard,
     Radar,
+    ReferenceBand,
+    ReferenceLine,
     StageBar,
     Table,
     Timeline,
@@ -102,6 +104,8 @@ __all__ = [
     "MetricTile",
     "BarTrack",
     "StageBar",
+    "ReferenceLine",
+    "ReferenceBand",
     # forms
     "FormStack",
     "Field",

@@ -16,6 +16,8 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     ProfileCard,
     Radar,
+    ReferenceBand,
+    ReferenceLine,
     StageBar,
     Table,
     Timeline,
@@ -388,3 +390,51 @@ def test_stage_bar_full_progress_state() -> None:
         total=10,
     )
     assert s.complete_pct == 100.0
+
+
+# === ReferenceLine / ReferenceBand ===
+
+
+def test_reference_line_default_style() -> None:
+    r = ReferenceLine(value=100.0, label="Target")
+    assert r.style == "solid"
+
+
+def test_reference_line_rejects_unknown_style() -> None:
+    with pytest.raises(ValueError, match="invalid style"):
+        ReferenceLine(value=1, style="wavy")  # type: ignore[arg-type]
+
+
+def test_reference_band_rejects_inverted_range() -> None:
+    with pytest.raises(ValueError, match="from_value=10"):
+        ReferenceBand(from_value=10, to_value=5)
+
+
+def test_reference_band_accepts_zero_width_range() -> None:
+    """from == to is structurally valid (point band)."""
+    b = ReferenceBand(from_value=5, to_value=5, label="threshold")
+    assert b.from_value == b.to_value == 5
+
+
+def test_reference_band_rejects_unknown_color() -> None:
+    with pytest.raises(ValueError, match="invalid color"):
+        ReferenceBand(from_value=0, to_value=1, color="magenta")  # type: ignore[arg-type]
+
+
+def test_time_series_carries_optional_references() -> None:
+    """Phase 4B.1.b: TimeSeries gained `reference_lines` and
+    `reference_bands` tuple fields (default empty)."""
+    ts = TimeSeries(
+        label="x",
+        points=(("a", 1.0),),
+        reference_lines=(ReferenceLine(value=10, label="ref"),),
+        reference_bands=(ReferenceBand(from_value=0, to_value=5, label="low", color="muted"),),
+    )
+    assert len(ts.reference_lines) == 1
+    assert len(ts.reference_bands) == 1
+
+
+def test_time_series_default_references_empty() -> None:
+    ts = TimeSeries(label="x", points=(("a", 1.0),))
+    assert ts.reference_lines == ()
+    assert ts.reference_bands == ()

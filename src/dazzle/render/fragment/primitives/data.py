@@ -19,6 +19,8 @@ from typing import Literal
 _TRENDS = ("up", "down", "flat")
 _CALENDAR_VIEWS = ("day", "week", "month")
 _TIMESERIES_VIEWS = ("line", "area", "sparkline")
+_REFERENCE_LINE_STYLES = ("solid", "dashed", "dotted")
+_REFERENCE_BAND_COLORS = ("target", "positive", "warning", "destructive", "muted")
 _ACTION_CARD_TONES = ("neutral", "positive", "warning", "destructive", "accent")
 _METRIC_TILE_TONES = ("", "positive", "warning", "destructive", "accent", "neutral")
 _METRIC_DELTA_DIRECTIONS = ("", "up", "down", "flat")
@@ -322,6 +324,56 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class ReferenceLine:
+    """Horizontal annotation on a chart axis at `value` (e.g. a target,
+    SLA threshold, or grade boundary).
+
+    Not a Fragment union member — held inside chart primitives like
+    `TimeSeries`. Renders as a `<dt>/<dd>` annotation in the chart's
+    references list (Phase 4B.1.b initial). A future ship will wire
+    inline SVG layout so reference lines appear over the chart body.
+    """
+
+    value: float
+    label: str = ""
+    style: Literal["solid", "dashed", "dotted"] = "solid"
+
+    def __post_init__(self) -> None:
+        if self.style not in _REFERENCE_LINE_STYLES:
+            raise ValueError(
+                f"invalid style {self.style!r}; must be one of {_REFERENCE_LINE_STYLES}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceBand:
+    """Horizontal range annotation on a chart axis from `from_value` to
+    `to_value` (e.g. an acceptable range, SLA band, or quartile zone).
+
+    Not a Fragment union member. Held inside chart primitives. `color`
+    is a named token from the design palette (target/positive/warning/
+    destructive/muted). The `from_` / `to` distinction renames the
+    legacy template's `from`/`to` keys (Python keyword conflict).
+    Strict invariant: from_value <= to_value.
+    """
+
+    from_value: float
+    to_value: float
+    label: str = ""
+    color: Literal["target", "positive", "warning", "destructive", "muted"] = "target"
+
+    def __post_init__(self) -> None:
+        if self.color not in _REFERENCE_BAND_COLORS:
+            raise ValueError(
+                f"invalid color {self.color!r}; must be one of {_REFERENCE_BAND_COLORS}"
+            )
+        if self.from_value > self.to_value:
+            raise ValueError(
+                f"ReferenceBand from_value={self.from_value} > to_value={self.to_value}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class TimeSeries:
     """Sequential numeric data plotted over a label axis.
 
@@ -332,11 +384,19 @@ class TimeSeries:
     `points` is a sequence of (label, value) pairs. The label is
     rendered as-is (typically an iso-date string or a bucket name);
     values are floats so callers can pass ratios as well as counts.
+
+    Optional `reference_lines` and `reference_bands` carry chart
+    overlays — single-value horizontal annotations and shaded ranges
+    respectively. Phase 4B.1.b emits them as semantic `<dl>` data
+    after the chart points; future SVG-rendering ship will overlay
+    them on the visual chart.
     """
 
     label: str
     points: tuple[tuple[str, float], ...]
     view: Literal["line", "area", "sparkline"] = "line"
+    reference_lines: tuple[ReferenceLine, ...] = ()
+    reference_bands: tuple[ReferenceBand, ...] = ()
 
     def __post_init__(self) -> None:
         if self.view not in _TIMESERIES_VIEWS:

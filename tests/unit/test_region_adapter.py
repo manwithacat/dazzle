@@ -918,6 +918,53 @@ def test_time_series_skips_malformed_points() -> None:
     assert "No data." in _render(fragment)
 
 
+def test_time_series_carries_reference_lines() -> None:
+    """Phase 4B.1.b: ctx['reference_lines'] flows through to the
+    TimeSeries primitive and renders as semantic `<dl>` annotations."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "points": [("Jan", 50), ("Feb", 75)],
+        "reference_lines": [
+            {"value": 100, "label": "Target", "style": "dashed"},
+            {"value": 50, "label": "Min", "style": "wavy"},  # unknown → solid
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
+    assert 'data-style="dashed"' in html
+    assert 'data-style="solid"' in html  # 'wavy' fell back
+    assert "Target" in html and "Min" in html
+
+
+def test_time_series_carries_reference_bands_with_alt_keys() -> None:
+    """Adapter accepts both `from`/`to` and `from_value`/`to_value`
+    key shapes; bands with from > to silently drop."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "points": [("a", 1), ("b", 2)],
+        "reference_bands": [
+            {"from": 80, "to": 120, "label": "Healthy", "color": "positive"},
+            {"from": 200, "to": 100, "label": "Bad order"},  # drop
+            {"from_value": 0, "to_value": 30, "label": "Danger", "color": "destructive"},
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
+    assert "Healthy" in html
+    assert 'data-color="positive"' in html
+    assert "Danger" in html
+    assert 'data-color="destructive"' in html
+    assert "Bad order" not in html
+
+
+def test_time_series_no_references_omits_block() -> None:
+    """When neither reference_lines nor reference_bands are supplied,
+    the renderer omits the `<dl class=\"dz-timeseries__references\">`
+    wrapper entirely (backward compat with Phase 4A renders)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"points": [("a", 1)]}
+    html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
+    assert "dz-timeseries__references" not in html
+
+
 def test_diagram_renders_nodes_and_edges() -> None:
     """`display: diagram` produces a Diagram primitive with the
     declared nodes and edges, rendered as paired UL lists."""

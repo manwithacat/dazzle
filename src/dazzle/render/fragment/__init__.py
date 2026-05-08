@@ -43,6 +43,8 @@ from dazzle.render.fragment.primitives import (
     PivotTable,
     ProfileCard,
     Radar,
+    ReferenceBand,
+    ReferenceLine,
     RefPicker,
     Region,
     Row,
@@ -154,6 +156,8 @@ __all__ = [
     "MetricTile",
     "BarTrack",
     "StageBar",
+    "ReferenceLine",
+    "ReferenceBand",
     # primitives — forms
     "FormStack",
     "Field",
