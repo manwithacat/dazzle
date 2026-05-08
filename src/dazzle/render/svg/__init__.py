@@ -11,6 +11,7 @@ a string of inline SVG markup. The geometry constants match the legacy
 templates' viewBox dimensions, padding, and colour tokens.
 """
 
+import math
 from html import escape as _escape
 
 # Geometry — matches legacy `line_chart.html` exactly so dual-path
@@ -339,4 +340,126 @@ def box_plot_svg(
     return "".join(parts)
 
 
-__all__ = ["box_plot_svg", "time_series_svg"]
+def _radar_polar_xy(
+    index: int, count: int, ratio: float, cx: float, cy: float, r_max: float
+) -> tuple[float, float]:
+    """Polar → cartesian for radar spokes. Spoke 0 at 12 o'clock,
+    going clockwise. `ratio` is the value as a fraction of r_max
+    (0.0 = centre, 1.0 = spoke endpoint).
+
+    Mirrors the `radar_polar_xy` Jinja global registered in
+    `template_renderer.py` so the typed-Fragment radar matches the
+    legacy template's vertex distribution exactly (#929 fix).
+    """
+    theta = -math.pi / 2 + 2 * math.pi * index / count
+    return (
+        round(cx + ratio * r_max * math.cos(theta), 2),
+        round(cy + ratio * r_max * math.sin(theta), 2),
+    )
+
+
+def radar_svg(
+    label: str,
+    axes: tuple[tuple[str, float], ...],
+) -> str:
+    """Produce inline SVG for a Radar primitive.
+
+    Single-series polar profile. Centre + radius leave 32px padding
+    for spoke labels around the edge. Geometry: 320×320 viewBox,
+    cx=cy=160, r_max=128. 4 concentric grid rings (25/50/75/100% of
+    r_max) drawn as N-vertex polygons. N spoke axis lines from centre
+    to spoke endpoints. Single data polygon with vertices at the
+    value/max_val ratio along each spoke, plus circle markers at
+    each vertex carrying `<title>` tooltips.
+
+    Output matches `workspace/regions/radar.html` for the single-
+    series case. Multi-series overlay (legacy supports up to 5
+    palette colours) is deferred until the Radar primitive's `axes`
+    schema gains a per-series dimension — currently single-series.
+    """
+    count = len(axes)
+    if count < 3:
+        return ""
+
+    side = 320
+    cx = side / 2
+    cy = side / 2
+    r_max = (side / 2) - 32
+
+    values = [v for _, v in axes]
+    max_val = max(values)
+    if max_val <= 0:
+        max_val = 1
+
+    parts: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'viewBox="0 0 {side} {side}" '
+        f'class="dz-radar-svg dz-chart-svg" role="img" '
+        f'aria-label="{_escape(label, quote=True)} radar — '
+        f'{count} spokes, peak {max_val}">'
+    ]
+
+    # Concentric polar grid rings.
+    for ring_pct in (0.25, 0.5, 0.75, 1.0):
+        ring_pts = " ".join(
+            f"{x},{y}"
+            for x, y in (_radar_polar_xy(i, count, ring_pct, cx, cy, r_max) for i in range(count))
+        )
+        parts.append(
+            f'<polygon points="{ring_pts}" '
+            f'fill="none" stroke="hsl(var(--border))" '
+            f'stroke-width="0.5" stroke-opacity="0.6" />'
+        )
+
+    # Spoke axis lines.
+    for i in range(count):
+        ax_x, ax_y = _radar_polar_xy(i, count, 1.0, cx, cy, r_max)
+        parts.append(
+            f'<line x1="{cx}" y1="{cy}" '
+            f'x2="{ax_x}" y2="{ax_y}" '
+            f'stroke="hsl(var(--border))" '
+            f'stroke-width="0.5" stroke-opacity="0.7" />'
+        )
+
+    # Data polygon — vertices at value/max_val ratio.
+    poly_pts = []
+    vertices: list[tuple[float, float, str, float]] = []
+    for i, (axis_label, value) in enumerate(axes):
+        ratio = value / max_val
+        vx, vy = _radar_polar_xy(i, count, ratio, cx, cy, r_max)
+        poly_pts.append(f"{vx},{vy}")
+        vertices.append((vx, vy, axis_label, value))
+    parts.append(
+        f'<polygon points="{" ".join(poly_pts)}" '
+        f'fill="hsl(var(--primary))" fill-opacity="0.15" '
+        f'stroke="hsl(var(--primary))" stroke-width="1.5" '
+        f'stroke-linejoin="round" />'
+    )
+
+    # Vertex markers.
+    for vx, vy, axis_label, value in vertices:
+        parts.append(
+            f'<circle cx="{vx}" cy="{vy}" r="3" '
+            f'fill="hsl(var(--primary))" stroke="hsl(var(--card))" '
+            f'stroke-width="1">'
+            f"<title>{_escape(axis_label)}: {value}</title>"
+            f"</circle>"
+        )
+
+    # Spoke labels — placed slightly outside r_max so they don't
+    # collide with the outermost ring.
+    for i, (axis_label, _) in enumerate(axes):
+        lx, ly = _radar_polar_xy(i, count, 1.0, cx, cy, r_max + 14)
+        parts.append(
+            f'<text x="{lx}" y="{ly}" '
+            f'text-anchor="middle" dominant-baseline="middle" '
+            f'font-size="10" fill="hsl(var(--foreground))" '
+            f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
+            f"{_escape(axis_label)}</text>"
+        )
+
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+__all__ = ["box_plot_svg", "radar_svg", "time_series_svg"]

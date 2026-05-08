@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.97] - 2026-05-08
+
+### Added — Phase 4B.1.c — `dazzle.render.svg.radar_svg` helper
+- **New helper `radar_svg(label, axes)`** in `dazzle.render.svg`. Produces inline SVG matching the legacy `workspace/regions/radar.html` template structure for the single-series case: 320×320 square viewBox, cx=cy=160, r_max=128 (32px padding for spoke labels around the edge). Spoke 0 at 12 o'clock, going clockwise (matches legacy reading order).
+- **Polar geometry helper `_radar_polar_xy(index, count, ratio, cx, cy, r_max)`** mirrors the `radar_polar_xy` Jinja global registered in `template_renderer.py` so the typed-Fragment radar matches the legacy template's vertex distribution exactly. Both versions exist because Jinja can't call cos/sin directly — the Python global was added in #929 to fix the silent-broken vertex distribution; the SVG helper now hosts the same logic for the typed-Fragment substrate.
+- **Render order:** 4 concentric polar grid rings (25/50/75/100% of r_max) as N-vertex polygons with `stroke-opacity="0.6"` → N spoke axis lines from centre to spoke endpoints with `stroke-opacity="0.7"` → single data polygon at value/max_val ratio (`fill-opacity="0.15"`, `stroke-width="1.5"`, `stroke-linejoin="round"`) → N vertex circles (`r="3"`) with `<title>` tooltips → spoke labels at r_max + 14 (text outside the outermost ring, no rotation — kept upright per #879's user-testing finding).
+- **Degenerate fallback:** axes count < 3 returns empty string. The `Radar` primitive's `__post_init__` already rejects fewer than 3 axes, so this only matters if a future schema change relaxes the invariant; matches legacy template's "Radar needs ≥ 3 spokes" branch.
+
+### Changed — `_emit_radar` ported to SVG
+- **Replaced `<ul class="dz-radar__axes">` of axis items with the inline SVG**. Outer `<section class="dz-radar">` + `<h4 class="dz-radar__label">` survives so existing CSS hooks keep working; the SVG sits in a new `<div class="dz-radar-region">` (the legacy class) along with a `<p class="dz-chart-summary">{N} spokes · peak {max_val}</p>` summary line matching the legacy template's footer text.
+
+### Known divergence from legacy template (accepted)
+- The current `Radar` primitive carries `axes: tuple[(str, float), ...]` — single-series only. The legacy template renders multi-series via `bucketed_metrics[i].metrics` dict (up to 5 palette colours, optional series legend). Routing multi-series through the typed primitive is a Phase 4B.4 deliverable when the runtime threads `_compute_bucketed_aggregates`'s full per-series payload into ctx. Until then, the SVG renders a single primary-tinted polygon — visually consistent but missing overlay comparisons.
+
+### Phase 4B.1 progress
+| Step | Status | Ship |
+|---|---|---|
+| TimeSeries → SVG | done | v0.66.94 |
+| BarChart → legacy CSS-bars structure | done | v0.66.95 |
+| BoxPlot → SVG box+whiskers | done | v0.66.96 |
+| Radar → SVG polar | **done** | **v0.66.97** |
+| BarTrack → legacy CSS-bars structure | next | — |
+
+### Agent Guidance
+- The `_radar_polar_xy` helper deliberately mirrors the Jinja `radar_polar_xy` global rather than reimplementing the maths — keeps the two paths in lockstep for Phase 4B.3's dual-path validation. If you need to fix a polar-geometry bug, fix it in BOTH places (or unify the implementations in a single shared module — likely the better long-term move once the typed substrate is the primary path).
+- Spoke 0 starts at -π/2 (12 o'clock) and rotates clockwise (positive angles) — matches the natural reading order of the labels. SVG y-axis is inverted vs. mathematical convention, so `sin(theta)` gives the correct downward direction without explicit negation.
+- The data polygon is rendered AFTER the grid rings + spoke axes so it visually sits on top of them. Reordering breaks the layered radar look.
+
 ## [0.66.96] - 2026-05-08
 
 ### Added — Phase 4B.1.c — `dazzle.render.svg.box_plot_svg` helper

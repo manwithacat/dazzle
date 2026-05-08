@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from dazzle.render.svg import box_plot_svg, time_series_svg
+from dazzle.render.svg import box_plot_svg, radar_svg, time_series_svg
 
 
 @dataclass
@@ -133,6 +133,46 @@ def test_box_plot_aria_label_includes_range() -> None:
         (("p50", 0.0, 1.0, 2.0, 3.0, 4.0), ("p99", 5.0, 6.0, 7.0, 8.0, 9.0)),
     )
     assert 'aria-label="Latency box plot — 2 groups, range 0.0–9.0"' in svg
+
+
+# === radar_svg ===
+
+
+def test_radar_under_three_axes_renders_nothing() -> None:
+    """Radar with <3 axes is degenerate (legacy falls back to a list)."""
+    assert radar_svg("x", (("a", 1.0), ("b", 2.0))) == ""
+
+
+def test_radar_emits_svg_with_grid_polygon_and_data_polygon() -> None:
+    svg = radar_svg(
+        "Skills",
+        (("Python", 9.0), ("Go", 7.0), ("Rust", 5.0), ("JavaScript", 6.0)),
+    )
+    assert svg.startswith("<svg ")
+    assert 'viewBox="0 0 320 320"' in svg
+    # 4 grid rings + 1 data polygon = 5 polygons total
+    assert svg.count("<polygon ") == 5
+    # 4 spoke axis lines
+    assert svg.count("<line ") == 4
+    # 4 vertex circles
+    assert svg.count("<circle ") == 4
+    # Spoke labels in <text>
+    assert ">Python<" in svg and ">Go<" in svg
+    assert "<title>Python: 9.0</title>" in svg
+    assert svg.endswith("</svg>")
+
+
+def test_radar_aria_label_includes_count_and_peak() -> None:
+    svg = radar_svg("x", (("a", 3.0), ("b", 5.0), ("c", 1.0)))
+    assert 'aria-label="x radar — 3 spokes, peak 5.0"' in svg
+
+
+def test_radar_first_spoke_at_top_clockwise() -> None:
+    """Spoke 0 should be at 12 o'clock (cx=160, cy=160-r_max=32)."""
+    svg = radar_svg("x", (("top", 1.0), ("right", 1.0), ("bottom", 1.0), ("left", 1.0)))
+    # Spoke 0 (top) endpoint: cx=160, cy = 160 - 128 = 32. The full-ring
+    # 100% polygon should contain "160.0,32.0" as its first vertex.
+    assert "160.0,32.0" in svg
 
 
 def test_box_plot_reference_line_clipped_to_y_range() -> None:

@@ -885,25 +885,27 @@ class FragmentRenderer:
         )
 
     def _emit_radar(self, r: Radar, ctx: RenderContext) -> str:
-        """Render a polar/radar profile as a labelled `<ul>` of axes.
+        """Render a polar/radar profile as inline SVG with concentric
+        grid rings, spoke axis lines, data polygon, and spoke labels —
+        byte-equivalent to `workspace/regions/radar.html` for the
+        single-series case.
 
-        Each axis becomes `<li data-axis="…" data-value="…">`. CSS
-        hooks (`dz-radar`) carry the shape; an SVG layout can replace
-        the renderer body without changing the IR shape.
+        Phase 4B.1.c (SVG arc, radar variant): replaces the prior
+        `<ul>` of axes with the SVG produced by
+        `dazzle.render.svg.radar_svg`. Outer `<section class="dz-radar">`
+        + `<h4 class="dz-radar__label">` wrapper survives so existing
+        CSS hooks keep working; the SVG sits in a new
+        `<div class="dz-radar-region">` (the legacy class).
         """
-        items = "".join(
-            f'<li class="dz-radar__axis" '
-            f'data-axis="{ctx.escape_attr(axis)}" '
-            f'data-value="{value}">'
-            f'<span class="dz-radar__axis-label">{ctx.escape(axis)}</span>'
-            f'<span class="dz-radar__axis-value">{value}</span>'
-            f"</li>"
-            for axis, value in r.axes
-        )
+        from dazzle.render.svg import radar_svg
+
+        svg = radar_svg(r.label, r.axes)
+        max_val = max((v for _, v in r.axes), default=1) or 1
+        summary = f'<p class="dz-chart-summary">{len(r.axes)} spokes · peak {max_val}</p>'
         return (
             f'<section class="dz-radar">'
             f'<h4 class="dz-radar__label">{ctx.escape(r.label)}</h4>'
-            f'<ul class="dz-radar__axes">{items}</ul>'
+            f'<div class="dz-radar-region">{svg}{summary}</div>'
             f"</section>"
         )
 
