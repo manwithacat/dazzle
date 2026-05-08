@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.98] - 2026-05-08
+
+### Changed — Phase 4B.1.c — `_emit_bar_track` adds legacy outer wrapper (chart family port complete)
+- **`_emit_bar_track` now wraps its output in `<div class="dz-bar-track-region">`** to match the legacy `workspace/regions/bar_track.html` template structure byte-for-byte. The interior was already byte-equivalent (per-row `dz-bar-track-row` with `role="progressbar"` ARIA semantics + `dz-bar-track-fill` width-percent + summary line); this ship just adds the missing outer wrapper so structural diffs against the legacy template are clean.
+- Reference annotations (BEM `dz-bar-track__references`) continue to render OUTSIDE the region wrapper, consistent with the convention established for TimeSeries / BoxPlot / BarChart — references are a Phase 4B-only programmatic-data layer with no legacy template equivalent.
+
+### Phase 4B.1 — chart family port complete
+| Step | Status | Ship |
+|---|---|---|
+| TimeSeries → SVG (line/area/sparkline) | done | v0.66.94 |
+| BarChart → legacy CSS-bars structure | done | v0.66.95 |
+| BoxPlot → SVG box+whiskers | done | v0.66.96 |
+| Radar → SVG polar | done | v0.66.97 |
+| BarTrack → legacy CSS-bars structure | **done** | **v0.66.98** |
+
+All five chart families now match their legacy templates structurally for the common single-series case. Net new: `dazzle.render.svg` module with three helpers (`time_series_svg`, `box_plot_svg`, `radar_svg`) plus the polar geometry helper `_radar_polar_xy`. Documented divergences (multi-series radar, full box plot stats) are deferred to Phase 4B.4 when the runtime threads richer ctx through.
+
+### Agent Guidance
+- The chart-family rendering convention is now stable: continuous-geometry charts (TimeSeries, BoxPlot, Radar) use `dazzle.render.svg.*` helpers; discrete categorical charts (BarChart, BarTrack) use CSS-track structure inline. References ride along as a BEM `__references` block outside the visible region wrapper. Any future chart-family addition should follow this same split — pick the strategy by reading the matching legacy template.
+- Phase 4B.1.c is **complete**. The next arc is Phase 4B.2 (`_legacy_ctx_to_adapter_ctx` translator) — now unblocked since adapter ctx contracts are stable across all five chart families.
+
 ## [0.66.97] - 2026-05-08
 
 ### Added — Phase 4B.1.c — `dazzle.render.svg.radar_svg` helper

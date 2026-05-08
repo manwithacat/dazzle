@@ -1085,8 +1085,18 @@ class FragmentRenderer:
         )
 
     def _emit_bar_track(self, b: BarTrack, ctx: RenderContext) -> str:
-        """Render a BarTrack matching legacy `workspace/regions/bar_track.html`:
-        per-row track with ARIA progressbar semantics + a summary line.
+        """Render a BarTrack matching legacy `workspace/regions/bar_track.html`
+        byte-for-byte: outer `dz-bar-track-region` wrapper, per-row track
+        with ARIA progressbar semantics, summary line, and optional
+        reference annotations.
+
+        Phase 4B.1.c (bar-track variant): added the outer
+        `<div class="dz-bar-track-region">` wrapper so the emit matches
+        the legacy template structurally — completes the chart family
+        port. The references block (BEM `__references`) rides along
+        outside the region wrapper, consistent with TimeSeries / BoxPlot
+        / BarChart — references are a Phase 4B-only programmatic-data
+        layer with no legacy template equivalent.
         """
         rows_html = "".join(
             f'<div class="dz-bar-track-row">'
@@ -1107,10 +1117,12 @@ class FragmentRenderer:
         )
         refs = self._render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
         return (
+            f'<div class="dz-bar-track-region">'
             f'<div class="dz-bar-track-rows">{rows_html}</div>'
             f'<p class="dz-bar-track-summary">'
             f"{len(b.rows)} rows · scale 0–{round(b.max_value, 2)}"
             f"</p>"
+            f"</div>"
             f"{refs}"
         )
 

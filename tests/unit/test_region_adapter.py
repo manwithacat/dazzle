@@ -1455,6 +1455,7 @@ def test_bar_track_renders_typed_primitive_with_aria() -> None:
         "bar_track_max": 100,
     }
     html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
+    assert 'class="dz-bar-track-region"' in html  # v0.66.98 — legacy outer wrapper
     assert "dz-bar-track-rows" in html
     assert 'role="progressbar"' in html
     assert 'aria-valuemax="100.0"' in html
