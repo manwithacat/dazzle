@@ -388,6 +388,30 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class DateRangePicker:
+    """Two-input from/to date range filter for list/queue regions.
+
+    Renders a `<div class="dz-date-range-picker date-range-bar">` with
+    paired `<input type="date">` elements wired to HTMX with
+    `hx-include="closest .date-range-bar"` so both values ride along
+    on every change. `date_from` and `date_to` are pre-formatted
+    iso-date strings (`YYYY-MM-DD`); empty string = no date set.
+
+    `region_name` namespaces the input ids (`date-from-<region>`,
+    `date-to-<region>`) so multiple pickers can coexist on one page.
+    """
+
+    endpoint: URL
+    region_name: str
+    date_from: str = ""
+    date_to: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("DateRangePicker requires a non-empty region_name")
+
+
+@dataclass(frozen=True, slots=True)
 class CsvExportButton:
     """Download-CSV button — fetch → Blob → click flow via `dz.downloadCsv`.
 

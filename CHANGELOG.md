@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.91] - 2026-05-08
+
+### Added — Phase 4B.1.e — DateRangePicker primitive (chrome arc complete)
+- **`DateRangePicker` Fragment primitive** — paired From/To date filter for list/queue regions. `DateRangePicker(endpoint, region_name, date_from, date_to)`. Renders the legacy `fragments/date_range_picker.html` byte-for-byte: `<div class="dz-date-range-picker date-range-bar">` containing two `<input type="date">` elements with HTMX `hx-include="closest .date-range-bar"` so both values ride along on every change. Strict invariant: non-empty `region_name` (used to namespace input ids).
+- 2 new primitive tests; baselines updated.
+
+### Phase 4B.1.e complete
+| Primitive | Status | Ship |
+|---|---|---|
+| FilterBar + FilterColumn | done | v0.66.88 |
+| SortHeader | done | v0.66.89 |
+| CsvExportButton | done | v0.66.90 |
+| DateRangePicker | **done** | **v0.66.91** |
+| `_build_list` / `_build_queue` adapter wiring | next — chrome set complete | — |
+
+### Agent Guidance
+- HTML5 void elements (`<input>`, `<br>`, `<img>`, etc.) **must not** use the XHTML self-closing syntax (`<input ... />`) — the html5 validity gate rejects it. Use `<input ... >` instead. The legacy Jinja templates use `/>` because they were XHTML-style in some places, but the typed-Fragment renderer should emit valid HTML5.
+
 ## [0.66.90] - 2026-05-08
 
 ### Added — Phase 4B.1.e — CsvExportButton primitive

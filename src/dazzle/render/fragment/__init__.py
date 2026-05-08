@@ -24,6 +24,7 @@ from dazzle.render.fragment.primitives import (
     ConfirmCheckItem,
     ConfirmGate,
     CsvExportButton,
+    DateRangePicker,
     Diagram,
     Drawer,
     EmptyState,
@@ -176,6 +177,7 @@ __all__ = [
     "FilterColumn",
     "SortHeader",
     "CsvExportButton",
+    "DateRangePicker",
     # primitives — forms
     "FormStack",
     "Field",

@@ -14,6 +14,7 @@ from dazzle.render.fragment.primitives.data import (
     ConfirmCheckItem,
     ConfirmGate,
     CsvExportButton,
+    DateRangePicker,
     Diagram,
     FilterBar,
     FilterColumn,
@@ -678,3 +679,17 @@ def test_csv_export_button_defaults() -> None:
     c = CsvExportButton(endpoint=URL("/api/x"))
     assert c.filename == "export.csv"
     assert c.label == "Export CSV"
+
+
+# === DateRangePicker ===
+
+
+def test_date_range_picker_requires_region_name() -> None:
+    with pytest.raises(ValueError, match="non-empty region_name"):
+        DateRangePicker(endpoint=URL("/x"), region_name="")
+
+
+def test_date_range_picker_defaults_empty() -> None:
+    d = DateRangePicker(endpoint=URL("/x"), region_name="r")
+    assert d.date_from == ""
+    assert d.date_to == ""

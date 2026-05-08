@@ -66,6 +66,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "FilterBar",
         "SortHeader",
         "CsvExportButton",
+        "DateRangePicker",
         # forms
         "FormStack",
         "Field",

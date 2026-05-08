@@ -27,6 +27,7 @@ from dazzle.render.fragment.primitives import (
     ConfirmCheckItem,
     ConfirmGate,
     CsvExportButton,
+    DateRangePicker,
     Diagram,
     Drawer,
     EmptyState,
@@ -207,6 +208,8 @@ class FragmentRenderer:
                 return self._emit_sort_header(fragment, ctx)
             case CsvExportButton():
                 return self._emit_csv_export_button(fragment, ctx)
+            case DateRangePicker():
+                return self._emit_date_range_picker(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1441,6 +1444,33 @@ class FragmentRenderer:
             f'01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'
             f"</svg>"
             f"</button>"
+        )
+
+    def _emit_date_range_picker(self, d: DateRangePicker, ctx: RenderContext) -> str:
+        """Render a DateRangePicker matching the legacy
+        `fragments/date_range_picker.html` byte-for-byte: paired
+        From/To `<input type="date">` elements with HTMX
+        `hx-include="closest .date-range-bar"` so both values ride
+        along on every change.
+        """
+        rname = ctx.escape_attr(d.region_name)
+        endpoint = ctx.escape_attr(str(d.endpoint))
+        target = f"#region-{rname}"
+        date_from = ctx.escape_attr(d.date_from)
+        date_to = ctx.escape_attr(d.date_to)
+        return (
+            f'<div class="dz-date-range-picker date-range-bar">'
+            f'<label class="dz-date-range-label" for="date-from-{rname}">From</label>'
+            f'<input type="date" id="date-from-{rname}" name="date_from" '
+            f'value="{date_from}" class="dz-date-range-input" '
+            f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
+            f'hx-include="closest .date-range-bar">'
+            f'<label class="dz-date-range-label" for="date-to-{rname}">To</label>'
+            f'<input type="date" id="date-to-{rname}" name="date_to" '
+            f'value="{date_to}" class="dz-date-range-input" '
+            f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
+            f'hx-include="closest .date-range-bar">'
+            f"</div>"
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
