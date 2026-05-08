@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.109] - 2026-05-09
+
+### Added — Phase 4B.4 wave 2 COMPLETE — GRID + LIST byte-equivalent
+- **GRID** — new `GridRegion` + `GridCell` primitives matching `workspace/regions/grid.html` byte-for-byte. Outer `dz-grid-region` wrapping `dz-grid-list` of `dz-grid-cell` items, each with title `<h4>` + per-column secondary fields. New `_build_grid` reads production runtime ctx (columns + display_key + items + entity_name), routes per-cell type rendering through `_render_typed_value`. Empty path matches the legacy `fragments/empty_state.html` SVG icon + message shape.
+- **LIST** — new `ListRegion` + `ListColumn` primitives matching `workspace/regions/list.html` byte-for-byte for the basic case: outer `dz-list-region`, action row with always-emitted CSV button (legacy unconditionally renders the SVG icon button regardless of endpoint), `dz-list-scroll` of `dz-list-table` with thead + tbody, optional overflow line. Per-cell rendering via `_render_typed_value`. Empty state matches the legacy fragment.
+- Both primitives preserve the trailing `class="...-cell "` / `class="...-row "` Jinja-interpolation whitespace artifact for byte-equivalence.
+
+### Phase 4B.4 — wave 2 closeout
+| Wave 2 display | Status | Ship |
+|---|---|---|
+| PROGRESS | ✅ | v0.66.105 |
+| BULLET | ✅ | v0.66.105 |
+| PIPELINE_STEPS | ✅ | v0.66.106 |
+| SPARKLINE | ✅ | v0.66.106 |
+| BOX_PLOT | ✅ | v0.66.107 |
+| TREE | ✅ | v0.66.107 |
+| TIMELINE | ✅ | v0.66.108 |
+| **GRID** | ✅ | **v0.66.109** |
+| **LIST** | ✅ | **v0.66.109** |
+
+**Wave 2 done — 9 displays in 5 ships.** Pattern-velocity holding at ~2 displays per ship even through the most complex display in the wave.
+
+**15 of 32 displays byte-equivalent (47%).** Remaining: wave 3 (chart family — substrate built so verify-only) + wave 4 (interactive — QUEUE, ACTION_GRID, PROFILE_CARD, CONFIRM_ACTION_PANEL, TABBED_LIST, DIAGRAM, plus AREA_CHART, FUNNEL_CHART, HISTOGRAM, KANBAN, HEATMAP, PIVOT_TABLE, RADAR, BAR_CHART, BAR_TRACK).
+
+### Known divergences accepted (LIST + GRID)
+- **Filter chrome** (FilterBar, DateRangePicker, SortHeader) — legacy injects these inside the `dz-list-region` wrapper conditionally; the typed `ListRegion` primitive doesn't yet thread them through. The Phase 4B.1.e chrome primitives still wrap as a Stack outside ListRegion when ctx supplies them — works structurally but doesn't match legacy template position. Closing this requires extending ListRegion with optional filter/date/sort sub-fields. Likely a wave-3 finishing-pass ship.
+- **Click-through HTMX wiring** (LIST + TIMELINE + ACTIVITY_FEED + GRID) — legacy adds `is-clickable` class + `hx-get` to `#dz-detail-drawer-content` on rows when `action_url` ctx is set. Typed primitives currently render read-only. Same finishing-pass ship.
+- **Sortable column headers** — legacy wraps sortable `<th>` in `<a hx-get="...?sort=...">`. Typed `ListRegion` emits plain `<th>` headers. Defer.
+- **Per-row attention accents** — legacy applies `attention_classes(attn, 'tint')` for LIST and `'border'` for GRID. Typed primitives don't track per-row attention. Defer.
+
+### Agent Guidance
+- **Wave 2 is done.** Wave 3 is mostly chart-family verify (substrate already built in Phase 4B.1.c — TimeSeries, BarChart, BoxPlot, Radar, BarTrack, etc.). Expect many of those to byte-match by simply running `diff_summary` and tightening the few divergences. AREA_CHART (multi-series stacked) and HEATMAP / PIVOT_TABLE (matrix shapes) are the wave 3 unknowns.
+- **Trailing-space-in-class-attr is a recurring legacy artifact.** When porting a display whose legacy template has `class="dz-X {{ y }}{% if z %} ...{% endif %}"` with potentially-empty interpolations, expect a literal trailing space inside the class attr. Mirror it explicitly in the typed emit; the normaliser collapses some but not all (the inside-attribute case requires explicit emit-side handling).
+- **Click-through wiring is the consolidated follow-up.** It blocks 4+ displays' full byte-equivalence. The clean fix: extend the relevant primitives (`ListRegion`, `TimelineEvent`, `ActivityFeed`, `GridCell`) with optional `href` / `hx_*` fields, and add a renderer convention for emitting clickable wrappers. Single ship can close the gap across all four.
+
 ## [0.66.108] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 2 — TIMELINE byte-equivalent

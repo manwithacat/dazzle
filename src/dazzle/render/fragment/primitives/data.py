@@ -320,6 +320,76 @@ _STATUS_LIST_STATES = ("neutral", "positive", "warning", "destructive", "accent"
 
 
 @dataclass(frozen=True, slots=True)
+class ListColumn:
+    """Column definition for a `ListRegion` table."""
+
+    key: str
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
+class ListRegion:
+    """Tabular list region — `<div class="dz-list-region">` with action
+    row (CSV export), `<div class="dz-list-scroll">` of `<table class="dz-list-table">`,
+    and optional overflow line.
+
+    Phase 4B.4 wave 2: dedicated primitive (replaces generic `Table`
+    for workspace list regions) emitting the legacy
+    `workspace/regions/list.html` shape byte-for-byte for the basic
+    case. Each row is a tuple of cell Fragments aligned to `columns`;
+    the adapter pre-renders cells via `_render_typed_value`. Filter
+    chrome (filter bar, date range, sortable headers, click-through)
+    is deferred to a follow-up — basic table + CSV button + overflow
+    only.
+    """
+
+    columns: tuple[ListColumn, ...]
+    rows: tuple[tuple[object, ...], ...]
+    csv_endpoint: str = ""
+    csv_filename: str = "export.csv"
+    total: int = 0
+    empty_message: str = ""
+
+    def __post_init__(self) -> None:
+        for i, row in enumerate(self.rows):
+            if len(row) != len(self.columns):
+                raise ValueError(
+                    f"ListRegion row {i} arity mismatch: "
+                    f"row has {len(row)} cells, expected {len(self.columns)}"
+                )
+
+
+@dataclass(frozen=True, slots=True)
+class GridCell:
+    """Single cell in a `GridRegion` — title + optional secondary fields.
+
+    Mirrors the legacy `workspace/regions/grid.html` per-cell structure:
+    a primary title (display_key value) and zero-or-more secondary
+    fields rendered as `<p class="dz-grid-cell-field">` lines under
+    the title.
+    """
+
+    title: str
+    fields: tuple[tuple[str, object], ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class GridRegion:
+    """Card-grid region — `<div class="dz-grid-list">` of
+    `<div class="dz-grid-cell">` items.
+
+    Phase 4B.4 wave 2: dedicated primitive (replaces generic `Grid` for
+    workspace grid regions) emitting the legacy
+    `workspace/regions/grid.html` shape byte-for-byte. The CSS-driven
+    responsive grid layout is owned by `dz-grid-list` rules; cells
+    don't carry an explicit column count.
+    """
+
+    cells: tuple[GridCell, ...]
+    empty_message: str = "No items found."
+
+
+@dataclass(frozen=True, slots=True)
 class TreeNode:
     """Single node in a `Tree` — label + recursive children.
 

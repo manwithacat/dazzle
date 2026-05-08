@@ -41,6 +41,7 @@ from dazzle.render.fragment.primitives import (
     FormStack,
     Fragment,
     Grid,
+    GridRegion,
     Heading,
     Icon,
     InlineEdit,
@@ -48,6 +49,7 @@ from dazzle.render.fragment.primitives import (
     KanbanBoard,
     LazyTabPanel,
     Link,
+    ListRegion,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -214,6 +216,10 @@ class FragmentRenderer:
                 return self._emit_metrics_grid(fragment, ctx)
             case DetailGrid():
                 return self._emit_detail_grid(fragment, ctx)
+            case GridRegion():
+                return self._emit_grid_region(fragment, ctx)
+            case ListRegion():
+                return self._emit_list_region(fragment, ctx)
             case ActivityFeed():
                 return self._emit_activity_feed(fragment, ctx)
             case StatusList():
@@ -1521,6 +1527,143 @@ class FragmentRenderer:
         return (
             f'<div class="dz-pipeline-steps-region">'
             f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>'
+            f"</div>"
+        )
+
+    def _emit_list_region(self, lst: "ListRegion", ctx: RenderContext) -> str:
+        """Render a ListRegion matching legacy
+        `workspace/regions/list.html` byte-for-byte: outer
+        `dz-list-region`, action row with always-emitted CSV button,
+        `<div class="dz-list-scroll">` of `<table class="dz-list-table">`,
+        optional overflow line. Filter chrome / sortable headers /
+        click-through wiring deferred to follow-up — read-only basic
+        case here.
+        """
+        # Action row — CSV button always rendered (legacy behaviour).
+        csv_button = (
+            f'<button type="button" '
+            f'data-dz-csv-endpoint="{ctx.escape_attr(lst.csv_endpoint)}" '
+            f'data-dz-csv-filename="{ctx.escape_attr(lst.csv_filename)}" '
+            f'onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)" '
+            f'class="dz-list-csv-button" title="Export CSV" aria-label="Export CSV">'
+            f'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">'
+            f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" '
+            f'd="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'
+            f"</svg>"
+            f"</button>"
+        )
+        actions_row = (
+            f'<div class="dz-list-actions">'
+            f'<div class="dz-list-action-group">{csv_button}</div>'
+            f"</div>"
+        )
+
+        if not lst.rows:
+            # Legacy empty state via fragments/empty_state.html — match
+            # the read-only shape with the fixed icon + message.
+            label = lst.empty_message or "No items found."
+            empty_html = (
+                f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
+                f'<svg class="dz-empty-state-icon" fill="none" stroke="currentColor" '
+                f'viewBox="0 0 24 24" aria-hidden="true">'
+                f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" '
+                f'd="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>'
+                f"</svg>"
+                f'<p class="dz-empty-state-message">{ctx.escape(label)}</p>'
+                f"</div>"
+            )
+            return f'<div class="dz-list-region">{actions_row}{empty_html}</div>'
+
+        thead = (
+            "<thead><tr>"
+            + "".join(f"<th>{ctx.escape(c.label)}</th>" for c in lst.columns)
+            + "</tr></thead>"
+        )
+
+        tbody_rows: list[str] = []
+        for row in lst.rows:
+            cells_html = ""
+            for cell in row:
+                if isinstance(cell, str):
+                    cells_html += f"<td>{ctx.escape(cell)}</td>"
+                else:
+                    cells_html += f"<td>{self._emit(cell, ctx)}</td>"  # type: ignore[arg-type]
+            # Trailing space on `class="dz-list-row "` mirrors legacy
+            # `class="dz-list-row {{ attention_classes(...) }}{% if action_url %} is-clickable{% endif %}"`
+            # for the no-attention, no-action_url case.
+            tbody_rows.append(f'<tr class="dz-list-row ">{cells_html}</tr>')
+        tbody = f"<tbody>{''.join(tbody_rows)}</tbody>"
+
+        table = (
+            f'<div class="dz-list-scroll"><table class="dz-list-table">{thead}{tbody}</table></div>'
+        )
+
+        overflow_html = ""
+        if lst.total > len(lst.rows):
+            overflow_html = (
+                f'<p class="dz-list-overflow">Showing {len(lst.rows)} of {lst.total}</p>'
+            )
+
+        return f'<div class="dz-list-region">{actions_row}{table}{overflow_html}</div>'
+
+    def _emit_grid_region(self, g: "GridRegion", ctx: RenderContext) -> str:
+        """Render a GridRegion matching legacy
+        `workspace/regions/grid.html` byte-for-byte: outer
+        `dz-grid-region`, `<div class="dz-grid-list">` with per-cell
+        `<div class="dz-grid-cell">` containing `<h4>` title +
+        per-field `<p class="dz-grid-cell-field">` lines. Empty path
+        renders the legacy empty-state fragment shape.
+        """
+        if not g.cells:
+            # Empty state matches `fragments/empty_state.html` —
+            # SVG icon + message + optional CTA. The CTA needs an
+            # entity_name + create_url which the primitive doesn't
+            # carry yet; for now emit the read-only empty state with
+            # the message only. CTA support is a follow-up when the
+            # primitive gains the appropriate fields.
+            label = g.empty_message or "No items found."
+            return (
+                f'<div class="dz-grid-region">'
+                f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
+                f'<svg class="dz-empty-state-icon" fill="none" stroke="currentColor" '
+                f'viewBox="0 0 24 24" aria-hidden="true">'
+                f'<path stroke-linecap="round" stroke-linejoin="round" '
+                f'stroke-width="1.5" '
+                f'd="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>'
+                f"</svg>"
+                f'<p class="dz-empty-state-message">{ctx.escape(label)}</p>'
+                f"</div>"
+                f"</div>"
+            )
+
+        cells_html: list[str] = []
+        for cell in g.cells:
+            fields_html = ""
+            for label, value in cell.fields:
+                if isinstance(value, str):
+                    value_html = ctx.escape(value)
+                else:
+                    value_html = self._emit(value, ctx)  # type: ignore[arg-type]
+                fields_html += (
+                    f'<p class="dz-grid-cell-field">'
+                    f'<span class="dz-grid-cell-field-label">{ctx.escape(label)}:</span> '
+                    f"{value_html}"
+                    f"</p>"
+                )
+            # Trailing space inside `class="dz-grid-cell "` matches the
+            # legacy `class="dz-grid-cell {{ attention_classes(...) }}"`
+            # rendering when attention is empty — Jinja interpolates ""
+            # leaving the space. Preserve it for byte-equivalence.
+            cells_html.append(
+                f'<div class="dz-grid-cell ">'
+                f'<h4 class="dz-grid-cell-title">{ctx.escape(cell.title)}</h4>'
+                f"{fields_html}"
+                f"</div>"
+            )
+
+        return (
+            f'<div class="dz-grid-region">'
+            f'<div class="dz-grid-list">{"".join(cells_html)}</div>'
             f"</div>"
         )
 

@@ -602,6 +602,86 @@ def test_timeline_achieves_byte_equivalence() -> None:
     )
 
 
+def test_grid_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — GRID byte-equivalent. New GridRegion +
+    GridCell primitives matching workspace/regions/grid.html — outer
+    `dz-grid-region`, `dz-grid-list` of `dz-grid-cell` items with
+    title + per-column secondary fields. The trailing space inside
+    `class="dz-grid-cell "` mirrors the legacy Jinja interpolation
+    artifact for byte-equivalence."""
+    ctx = {
+        "title": "Tasks",
+        "items": [
+            {"name": "Task A", "priority": "high", "completed": False},
+            {"name": "Task B", "priority": "low", "completed": True},
+        ],
+        "columns": [
+            {"key": "name", "label": "Name", "type": "str"},
+            {"key": "priority", "label": "Priority", "type": "badge"},
+            {"key": "completed", "label": "Done", "type": "bool"},
+        ],
+        "display_key": "name",
+        "entity_name": "Task",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("grid", **ctx),
+            render_via_typed("grid", ctx),
+        )
+        is None
+    )
+
+
+def test_list_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 2 — LIST byte-equivalent. New ListRegion +
+    ListColumn primitives matching workspace/regions/list.html — outer
+    `dz-list-region`, action row with always-emitted CSV button,
+    `dz-list-scroll` of `dz-list-table`, optional overflow line.
+    Per-cell type-aware rendering via _render_typed_value. Filter
+    chrome / sortable headers / click-through deferred to follow-up."""
+    ctx = {
+        "title": "Tasks",
+        "items": [
+            {"name": "Task A", "completed": False},
+            {"name": "Task B", "completed": True},
+        ],
+        "columns": [
+            {"key": "name", "label": "Name", "type": "str"},
+            {"key": "completed", "label": "Done", "type": "bool"},
+        ],
+        "endpoint": "/api/tasks",
+        "region_name": "tasks",
+        "total": 2,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("list", **ctx),
+            render_via_typed("list", ctx),
+        )
+        is None
+    )
+
+
+def test_list_overflow_line_renders_when_total_exceeds_items() -> None:
+    """Legacy `<p class="dz-list-overflow">Showing N of M</p>` appears
+    when ctx total > items length."""
+    ctx = {
+        "title": "Tasks",
+        "items": [{"name": "Only one"}],
+        "columns": [{"key": "name", "label": "Name", "type": "str"}],
+        "endpoint": "/api/x",
+        "region_name": "x",
+        "total": 5,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("list", **ctx),
+            render_via_typed("list", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

@@ -38,6 +38,8 @@ from dazzle.render.fragment import (
     FormStack,
     Fragment,
     Grid,
+    GridCell,
+    GridRegion,
     Heading,
     Icon,
     InlineEdit,
@@ -46,6 +48,8 @@ from dazzle.render.fragment import (
     LazyTab,
     LazyTabPanel,
     Link,
+    ListColumn,
+    ListRegion,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -211,6 +215,17 @@ def _sample_for(primitive_type: type) -> object:
         return MetricsGrid(tiles=(MetricTile(label="X", value="0"),))
     if primitive_type is DetailGrid:
         return DetailGrid(rows=(("Label", Text("value")),))
+    if primitive_type is GridRegion:
+        return GridRegion(cells=(GridCell(title="A"),))
+    if primitive_type is GridCell:
+        return GridCell(title="A")
+    if primitive_type is ListRegion:
+        return ListRegion(
+            columns=(ListColumn(key="k", label="K"),),
+            rows=(("v",),),
+        )
+    if primitive_type is ListColumn:
+        return ListColumn(key="k", label="K")
     if primitive_type is ActivityFeed:
         return ActivityFeed(items=(("now", "Alice", "did the thing"),))
     if primitive_type is StatusList:

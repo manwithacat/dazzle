@@ -324,10 +324,12 @@ def test_list_csv_export_filename_override() -> None:
     assert 'data-dz-csv-filename="custom-export.csv"' in html
 
 
-def test_list_without_endpoint_skips_chrome() -> None:
-    """Without `endpoint` ctx key, chrome rendering is skipped — even
-    if filter_columns / csv_export / date_range are supplied. The
-    chrome primitives all need an endpoint URL for HTMX wiring."""
+def test_list_without_endpoint_skips_filter_chrome() -> None:
+    """Without `endpoint` ctx key, FilterBar / DateRangePicker chrome
+    rendering is skipped — they all need an endpoint URL for HTMX
+    wiring. v0.66.109: The CSV button is now always emitted (legacy
+    behaviour) inside the dz-list-region wrapper, so we no longer
+    assert its absence."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [{"name": "X"}],
@@ -339,8 +341,11 @@ def test_list_without_endpoint_skips_chrome() -> None:
     html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
     assert "filter-bar" not in html
     assert "date-range-bar" not in html
-    assert "dz-list-csv-button" not in html
     assert "<table" in html  # body still renders
+    # CSV button is always emitted (legacy behaviour); check that the
+    # endpoint attr is empty when no endpoint was supplied.
+    assert "dz-list-csv-button" in html
+    assert 'data-dz-csv-endpoint=""' in html
 
 
 def test_list_drops_malformed_filter_columns() -> None:

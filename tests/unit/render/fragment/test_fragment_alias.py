@@ -64,6 +64,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "MetricTile",
         "MetricsGrid",
         "DetailGrid",
+        "GridRegion",
+        "ListRegion",
         "ActivityFeed",
         "StatusList",
         "BarTrack",

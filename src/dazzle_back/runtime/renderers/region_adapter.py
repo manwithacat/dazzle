@@ -43,11 +43,15 @@ from dazzle.render.fragment import (
     FilterColumn,
     Fragment,
     Grid,
+    GridCell,
+    GridRegion,
     Heading,
     KanbanBoard,
     LazyTab,
     LazyTabPanel,
     Link,
+    ListColumn,
+    ListRegion,
     MetricsGrid,
     MetricTile,
     PipelineStage,
@@ -465,7 +469,6 @@ class WorkspaceRegionAdapter:
             sort_dir: "asc" | "desc"
             columns[i].sortable: bool — column-level opt-in for sort header
         """
-        from dazzle.render.fragment import Table
 
         title = _region_title(region)
         items = ctx.get("items", []) or []
@@ -543,23 +546,54 @@ class WorkspaceRegionAdapter:
                 )
             )
 
-        # Body — Table or EmptyState
-        body: Fragment
-        if not items:
-            body = EmptyState(
-                title="No items",
-                description=getattr(region, "empty_message", None) or "No data in this region.",
+        # Body — ListRegion primitive matching legacy
+        # `workspace/regions/list.html` byte-for-byte (Phase 4B.4 wave 2).
+        list_columns: list[ListColumn] = []
+        list_rows: list[tuple[object, ...]] = []
+        for col in columns:
+            if not isinstance(col, dict):
+                continue
+            list_columns.append(
+                ListColumn(
+                    key=str(col.get("key") or ""),
+                    label=str(col.get("label") or col.get("key") or ""),
+                )
             )
-        else:
-            # Note: Table primitive doesn't yet emit SortHeader cells;
-            # sort headers ride alongside the table in chrome row when
-            # supplied. A future iteration can fold them inline.
-            column_labels = tuple(col.get("label", col.get("key", "")) for col in columns)
-            rows = tuple(tuple(str(item.get(col["key"], "")) for col in columns) for item in items)
-            body = Table(columns=column_labels, rows=rows)
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_cells: list[object] = []
+            for col in columns:
+                if not isinstance(col, dict):
+                    continue
+                # Per-cell type-aware rendering via the same helper used
+                # by DETAIL/TIMELINE/GRID. LIST passes default badge args
+                # (size="md", bordered=False).
+                row_cells.append(_render_typed_value(item, col))
+            list_rows.append(tuple(row_cells))
+
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No items found."
+        )
+        try:
+            total = int(ctx.get("total") or len(list_rows))
+        except (TypeError, ValueError):
+            total = len(list_rows)
+
+        body: Fragment = ListRegion(
+            columns=tuple(list_columns),
+            rows=tuple(list_rows),
+            csv_endpoint=str(endpoint or ""),
+            csv_filename=f"{region_name}.csv",
+            total=total,
+            empty_message=str(empty_msg),
+        )
 
         # If we have chrome, wrap the body in a Stack that also contains
-        # the chrome row(s). Otherwise emit the plain body for backward compat.
+        # the chrome row(s). The legacy template injects chrome INSIDE
+        # the dz-list-region wrapper, so once chrome flows through the
+        # ListRegion primitive (follow-up), this Stack wrap can drop.
         if chrome_parts:
             body = Stack(children=(*chrome_parts, body), gap="md")
 
@@ -2012,38 +2046,53 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "list", body)
 
     def _build_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: grid` regions render items as cards in an N-column
-        Grid. Columns default to 3; ctx can override via `columns`.
+        """`display: grid` regions render items as cards in a CSS-driven
+        responsive grid layout. Phase 4B.4 wave 2: dedicated `GridRegion`
+        primitive replacing prior generic `Grid` composition for byte-
+        equivalence with `workspace/regions/grid.html`.
 
-        ctx shape:
+        ctx shape (production runtime):
             items: list of dicts (rows from the source entity)
-            label_field: optional, defaults to title/name/id auto-pick
-            columns: int (default 3, max 12)
+            columns: list of `{key, label, type}` dicts — same shape
+                as LIST/DETAIL columns
+            display_key: str — column key for the primary cell title
+            entity_name: str — fallback title when display_key value is None
+            empty_message: optional empty-state fallback
         """
         title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
-        columns = int(ctx.get("columns") or 3)
-        columns = max(1, min(12, columns))
-        label_field = str(ctx.get("label_field") or "")
+        # `columns` is the production runtime list-of-dicts shape;
+        # earlier Phase 4A tests passed an int (column count) as
+        # `columns`. Defend against both.
+        columns_raw = ctx.get("columns") or []
+        columns: list[dict[str, Any]] = columns_raw if isinstance(columns_raw, list) else []
+        display_key = str(ctx.get("display_key") or ctx.get("label_field") or "")
+        entity_name = str(ctx.get("entity_name") or "Item")
 
-        body: Fragment
-        if not items:
-            body = EmptyState(
-                title="No items",
-                description=getattr(region, "empty_message", None) or "No data in this region.",
-            )
-        else:
-            cards: list[object] = []
-            for item in items:
-                if not isinstance(item, dict):
+        cells: list[GridCell] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            primary = item.get(display_key) if display_key else None
+            if primary is None:
+                primary = item.get("name") or item.get("title") or entity_name
+            fields: list[tuple[str, object]] = []
+            for col in columns:
+                if not isinstance(col, dict):
                     continue
-                label = _pick_label(item, label_field)
-                cards.append(Card(body=Text(label or "(no label)")))
-            if cards:
-                body = Grid(children=tuple(cards), columns=columns)
-            else:
-                body = EmptyState(title="No items", description="No data in this region.")
+                key = str(col.get("key") or "")
+                if not key or key == display_key:
+                    continue
+                label = str(col.get("label") or key)
+                # GRID renders badges with default size (md, no border)
+                # per legacy macro call (no kwargs).
+                fields.append((label, _render_typed_value(item, col)))
+            cells.append(GridCell(title=str(primary), fields=tuple(fields)))
 
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No items found."
+        )
+        body: Fragment = GridRegion(cells=tuple(cells), empty_message=str(empty_msg))
         return _wrap_surface(title, "dashboard", body)
 
     def _build_metrics(self, region: Any, ctx: dict[str, Any]) -> Surface:
