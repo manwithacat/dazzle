@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.100] - 2026-05-08
+
+### Added — Phase 4B.3 — dual-path validation harness (foundation)
+- **New module `src/dazzle_back/runtime/renderers/dual_path.py`** — primitives for rendering a workspace region via both paths (legacy Jinja vs typed-Fragment adapter) and comparing the outputs. Threads through Phase 4B.2's translator so both paths consume the same legacy ctx; the diff captures only rendering-strategy differences, not ctx-shape gymnastics.
+- **Public API:**
+  - `render_via_legacy(display, **legacy_ctx) -> str` — invokes the matching Jinja template via `render_fragment`. Lazy import of `dazzle_ui.runtime.template_renderer` so harness consumers that only need the typed path don't pay the Jinja env cost.
+  - `render_via_typed(display, legacy_ctx, *, region_name="r") -> str` — runs `legacy_ctx_to_adapter_ctx` → `WorkspaceRegionAdapter.build` → `FragmentRenderer.render`. Returns the full Surface output (chrome + body), matching what gets emitted on-page.
+  - `normalise_html(html) -> str` — collapses inter-tag whitespace + multi-space runs to a canonical form for byte-equivalence comparison. Does NOT reorder attributes (FragmentRenderer + Jinja both emit deterministic order today).
+  - `diff_summary(legacy_html, typed_html) -> str | None` — returns None when normalised outputs match, else a short string locating the first divergence with surrounding context.
+- **Display→template map** mirrors `dazzle_ui.runtime.workspace_renderer.DISPLAY_TEMPLATE_MAP` but keyed by the lowercase form the adapter / translator use, so the harness drives off the same display-name vocabulary as the rest of Phase 4B.
+
+### Why a foundation ship vs full validation gate
+- The discovery doc envisions Phase 4B.3 as "render every region of every example app". That requires standing up a workspace handler harness with seeded DB state — significantly larger scope than a single ship. This foundation ship delivers the primitives needed for that gate, plus smoke coverage of the chart family with synthetic ctx, so Phase 4B.4's per-display port can adopt the harness incrementally as displays come online.
+- The `test_chrome_differs_between_paths_documented` test pins the current observed gap: legacy region_card emits `<div data-dz-region>` chrome; typed Surface emits `<header>` + `<section>` chrome. The first display port (Phase 4B.4) will close one of these gaps; the assertion flips at that point.
+
+### Phase 4B progress
+| Step | Status | Ship |
+|---|---|---|
+| 4B.0 — Discovery | done | (no ship) |
+| 4B.1 — Missing primitives & chrome | done | v0.66.74–98 |
+| 4B.2 — Translation layer | foundation done | v0.66.99 |
+| 4B.3 — Dual-path validation harness | **foundation done** | **v0.66.100** |
+| 4B.4 — Per-display-mode port (4 waves) | next | — |
+| 4B.5 — Workspace chrome port | queued | — |
+| 4B.6 — Decommission | queued | — |
+
+### Agent Guidance
+- The harness is **synthetic-ctx friendly** — pass any `legacy_ctx` dict to `render_via_legacy` / `render_via_typed` and inspect both outputs. No DB, no example app required. This makes it easy to write targeted "what does this legacy ctx produce?" exploratory tests during Phase 4B.4 ports.
+- When porting a display, the right rhythm is: (1) capture a real example-app ctx (eyeball or via `print` from a workspace handler), (2) feed it into the harness, (3) read `diff_summary` output, (4) tighten the translator + adapter until diff_summary returns None for that ctx, (5) commit a regression test asserting `assert diff_summary(...) is None`.
+- The `<div data-dz-region>` chrome divergence is the **first thing to close** in Phase 4B.4. The typed-Fragment substrate's Surface wrapper currently emits different chrome from the legacy `region_card` macro; until they converge, byte-equivalence is impossible regardless of body match. Likely solution: extend `WorkspaceRegionAdapter` to wrap its output in a `<div data-dz-region>` shell directly, or extract just the inner body from both paths before diffing (depends on what the dashboard slot does with the output downstream).
+- The `_LEGACY_TEMPLATE` map duplicates `DISPLAY_TEMPLATE_MAP` with lowercase keys. If a new display lands, add to BOTH maps (or refactor to a single source of truth — likely worth doing in a follow-up once `workspace_renderer` is touched again).
+
 ## [0.66.99] - 2026-05-08
 
 ### Added — Phase 4B.2 — `legacy_ctx_to_adapter_ctx` translator (foundation)
