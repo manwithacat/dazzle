@@ -59,6 +59,8 @@ from dazzle.render.fragment import (
     SearchBox,
     Stack,
     StageBar,
+    StatusList,
+    StatusListEntry,
     Surface,
     Tabs,
     TargetSelector,
@@ -1640,61 +1642,50 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "list", body)
 
     def _build_status_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: status_list` regions render as a Stack of rows
-        where each row shows a label and a status Badge.
+        """`display: status_list` regions render as a `StatusList`
+        primitive — vertical list of icon + title + caption + state-pill
+        rows. Phase 4B.4 wave 1: dedicated primitive replacing the prior
+        Stack+Row+Badge composition for byte-equivalence with
+        `workspace/regions/status_list.html`.
 
         ctx shape:
-            items: list of dicts (rows from the source entity)
-            label_field: optional, defaults to title/name/id auto-pick
-            status_field: which field carries the status value
-                (defaults to 'status' / 'state' / 'stage')
-            status_variants: optional dict[status_value → Badge.variant]
-                for severity colouring (e.g. {"failed": "danger"})
+            status_entries: list of dicts with keys
+                title (required), state, caption, icon
+            empty_message: optional override for the empty-state line
+            (legacy items + label_field + status_field shape is no
+             longer the primary path — the runtime supplies authored
+             `status_entries` per the v0.61.69 design)
         """
         title = _region_title(region)
-        items: list[dict[str, Any]] = ctx.get("items", []) or []
-        label_field = str(ctx.get("label_field") or "")
-        status_field = str(ctx.get("status_field") or "")
-        variants = ctx.get("status_variants") or {}
-        if not isinstance(variants, dict):
-            variants = {}
-
-        body: Fragment
-        if not items:
-            body = EmptyState(
-                title="No items",
-                description=getattr(region, "empty_message", None) or "No data in this region.",
+        raw_entries = ctx.get("status_entries") or []
+        entries: list[StatusListEntry] = []
+        for raw in raw_entries:
+            if not isinstance(raw, dict):
+                continue
+            entry_title = str(raw.get("title") or "")
+            if not entry_title:
+                continue
+            state_raw = str(raw.get("state") or "neutral") or "neutral"
+            state: Literal["neutral", "positive", "warning", "destructive", "accent"] = (
+                state_raw  # type: ignore[assignment]
+                if state_raw in ("neutral", "positive", "warning", "destructive", "accent")
+                else "neutral"
             )
-        else:
-            rows: list[object] = []
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                label = _pick_label(item, label_field)
-                status_val = _pick_label(
-                    item, status_field, candidates=("status", "state", "stage")
+            entries.append(
+                StatusListEntry(
+                    title=entry_title,
+                    state=state,
+                    caption=str(raw.get("caption") or ""),
+                    icon=str(raw.get("icon") or ""),
                 )
-                variant_raw = str(variants.get(status_val) or "default")
-                variant = (
-                    variant_raw
-                    if variant_raw in ("default", "info", "success", "warning", "danger")
-                    else "default"
-                )
-                rows.append(
-                    Row(
-                        children=(
-                            Text(label or "(no label)"),
-                            Badge(label=status_val or "—", variant=variant),  # type: ignore[arg-type]
-                        ),
-                        gap="md",
-                        align="center",
-                    )
-                )
-            if rows:
-                body = Stack(children=tuple(rows), gap="sm")
-            else:
-                body = EmptyState(title="No items", description="No items had a label.")
+            )
 
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No status entries."
+        )
+        body: Fragment = StatusList(entries=tuple(entries), empty_message=str(empty_msg))
         return _wrap_surface(title, "list", body)
 
     def _build_funnel_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:

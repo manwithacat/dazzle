@@ -1882,37 +1882,47 @@ def test_progress_empty_renders_empty_state() -> None:
     assert "No progress." in _render(fragment)
 
 
-def test_status_list_renders_label_badge_rows() -> None:
-    """`display: status_list` renders a Stack of (Text, Badge) rows
-    with optional severity colouring via status_variants."""
+def test_status_list_renders_authored_entries() -> None:
+    """Phase 4B.4 wave 1 (v0.66.104): adapter consumes `status_entries`
+    (authored shape) directly and emits the legacy `dz-status-list`
+    structure byte-for-byte. The prior items+status_variants shape was
+    a Phase 4A workaround that didn't match production ctx; runtime
+    now supplies authored entries per v0.61.69's design."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "items": [
-            {"name": "Service A", "status": "healthy"},
-            {"name": "Service B", "status": "failed"},
+        "status_entries": [
+            {
+                "title": "Service A",
+                "state": "positive",
+                "caption": "All systems normal",
+            },
+            {"title": "Service B", "state": "destructive", "icon": "alert-triangle"},
         ],
-        "status_variants": {"healthy": "success", "failed": "danger"},
     }
     fragment = adapter.build(_FakeRegion("s", display="status_list"), ctx)
     html = _render(fragment)
     assert "Service A" in html and "Service B" in html
-    assert "healthy" in html and "failed" in html
-    # Badge variants should be reflected in CSS class
-    assert "dz-badge--variant-success" in html
-    assert "dz-badge--variant-danger" in html
+    assert 'data-dz-state="positive"' in html
+    assert 'data-dz-state="destructive"' in html
+    assert "All systems normal" in html
+    assert 'data-lucide="alert-triangle"' in html
 
 
-def test_status_list_drops_invalid_variant() -> None:
-    """A status_variants entry with an unknown badge variant falls
-    back to 'default' instead of crashing the Badge primitive."""
+def test_status_list_unknown_state_falls_back_to_neutral() -> None:
+    """A `state` value outside the allowed set silently coerces to
+    'neutral' (matching the legacy template's `state | default('neutral')`)
+    rather than crashing the StatusListEntry primitive's invariant."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "items": [{"name": "X", "status": "unknown"}],
-        "status_variants": {"unknown": "purple"},  # not a real variant
+        "status_entries": [
+            {"title": "Mystery", "state": "purple"},  # not a real state
+        ],
     }
     fragment = adapter.build(_FakeRegion("s", display="status_list"), ctx)
     html = _render(fragment)
-    assert "dz-badge" in html  # rendered with fallback variant
+    # Coerced to neutral → no pill, spacer icon column.
+    assert 'data-dz-state="neutral"' in html
+    assert "dz-status-list-pill" not in html
 
 
 def test_status_list_empty_renders_empty_state() -> None:

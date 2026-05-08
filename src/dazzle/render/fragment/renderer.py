@@ -69,6 +69,7 @@ from dazzle.render.fragment.primitives import (
     Split,
     Stack,
     StageBar,
+    StatusList,
     Submit,
     Surface,
     Table,
@@ -201,6 +202,8 @@ class FragmentRenderer:
                 return self._emit_detail_grid(fragment, ctx)
             case ActivityFeed():
                 return self._emit_activity_feed(fragment, ctx)
+            case StatusList():
+                return self._emit_status_list(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
             case StageBar():
@@ -1139,6 +1142,68 @@ class FragmentRenderer:
                 f"</li>"
             )
         return f'<ul class="dz-activity-feed">{"".join(rows)}</ul>'
+
+    def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:
+        """Render a StatusList matching legacy
+        `workspace/regions/status_list.html` byte-for-byte: outer
+        `dz-status-list-region` wrapper, `<ul class="dz-status-list"
+        data-dz-entry-count="N">` with per-row `data-dz-state` attr,
+        icon column (or spacer), title + optional caption, pill for
+        non-neutral states.
+
+        Empty state renders the `dz-empty-dense` paragraph inside the
+        region wrapper, matching the legacy template's else branch.
+        """
+        if not s.entries:
+            return (
+                f'<div class="dz-status-list-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(s.empty_message)}</p>"
+                f"</div>"
+            )
+
+        rows: list[str] = []
+        for entry in s.entries:
+            if entry.icon:
+                icon_html = (
+                    f'<span class="dz-status-list-icon" '
+                    f'data-lucide="{ctx.escape_attr(entry.icon)}" '
+                    f'aria-hidden="true"></span>'
+                )
+            else:
+                icon_html = '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
+
+            caption_html = (
+                f'<div class="dz-status-list-caption">{ctx.escape(entry.caption)}</div>'
+                if entry.caption
+                else ""
+            )
+
+            pill_html = (
+                f'<span class="dz-status-list-pill">{ctx.escape(entry.state)}</span>'
+                if entry.state != "neutral"
+                else ""
+            )
+
+            rows.append(
+                f'<li class="dz-status-list-entry" '
+                f'data-dz-state="{ctx.escape_attr(entry.state)}">'
+                f"{icon_html}"
+                f'<div class="dz-status-list-text">'
+                f'<div class="dz-status-list-title">{ctx.escape(entry.title)}</div>'
+                f"{caption_html}"
+                f"</div>"
+                f"{pill_html}"
+                f"</li>"
+            )
+
+        return (
+            f'<div class="dz-status-list-region">'
+            f'<ul class="dz-status-list" data-dz-entry-count="{len(s.entries)}">'
+            f"{''.join(rows)}"
+            f"</ul>"
+            f"</div>"
+        )
 
     def _emit_detail_grid(self, g: DetailGrid, ctx: RenderContext) -> str:
         """Render a DetailGrid matching legacy

@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.104] - 2026-05-08
+
+### Added — Phase 4B.4 wave 1 COMPLETE — STATUS_LIST + SEARCH_BOX byte-equivalent
+- **STATUS_LIST byte-equivalent.** New `StatusList` + `StatusListEntry` primitives emitting `workspace/regions/status_list.html` byte-for-byte: outer `dz-status-list-region` wrapper, `<ul class="dz-status-list" data-dz-entry-count="N">` with per-row `data-dz-state` attribute driving tone tinting via `dz-tones.css`, icon column reserved by spacer when entries lack an icon, pill rendered only for non-neutral states. New `_build_status_list` (replaces prior Stack+Row+Badge composition) consumes the authored `status_entries` shape directly. Unknown `state` values silently coerce to `neutral` (matches legacy `state | default('neutral')`).
+- **SEARCH_BOX byte-equivalent.** No new primitive needed — the existing `SearchBox` primitive already emitted the right shape; the divergence was a label-fallback chain that picked up `region.title` instead of ctx['title']. Closed via the dual-path harness now threading `ctx['title']` into the StubRegion (mirrors production where the runtime sets both `region.title` and the template `title` kwarg from the same RegionContext source).
+
+### Phase 4B progress — wave 1 done
+| Wave 1 display | Status | Ship |
+|---|---|---|
+| METRICS | done | v0.66.101 |
+| SUMMARY | done (free) | v0.66.102 |
+| DETAIL | done | v0.66.102 |
+| ACTIVITY_FEED | done | v0.66.103 |
+| **STATUS_LIST** | **done** | **v0.66.104** |
+| **SEARCH_BOX** | **done** | **v0.66.104** |
+
+**Wave 1 closeout — 6 displays in 4 ships.** Pattern is now mechanical: read template → diff_summary → close at right layer (primitive/adapter/translator) → regression-test. Each display takes ~½ ship at this rate. Wave 2 (LIST, GRID, TIMELINE, TREE, BULLET, BOX_PLOT, SPARKLINE, PIPELINE_STEPS, PROGRESS) is the next 9 displays — many are already adapter-aligned thanks to Phase 4B.1's chrome arc, so the per-display cost should remain ~½ ship.
+
+### Changed — `_StubRegion.title` threaded from ctx
+- The dual-path harness's `_StubRegion` now carries a `title` field populated from `ctx['title']` in `render_via_typed`. Previously `region.title` defaulted to "" while ctx['title'] was passed to the legacy Jinja template, causing the typed path's `_region_title(region)` to fall back to capitalised region.name. The harness mirrors what the production runtime does (sets both fields from the same RegionContext source). One-line change with significant downstream impact: any display whose adapter reads `_region_title(region)` for chrome decisions now picks up the same title the legacy template renders.
+
+### Agent Guidance
+- **Wave 1 establishes the rhythm for Wave 2+.** The pattern: (1) read legacy template, (2) `diff_summary` + identify divergences, (3) close at the lowest layer that gives byte-equivalence (often: new primitive matching legacy CSS class scheme + dedicated adapter method + translator passthrough), (4) regression-test the byte-equivalence + ad-hoc edge cases, (5) ship. Wave 2 displays should follow the same shape; expect ~1 ship per 2 displays.
+- **Authored vs source-bound shapes.** STATUS_LIST surfaced the discovery that some displays have an authored ctx shape (`status_entries`) that differs from the items-shape the Phase 4A adapter assumed. When porting a display, check the legacy template's actual ctx keys (which the runtime supplies) — that's the contract to match, not whatever the adapter happened to expect during Phase 4A's primitive-shape exploration.
+- **Aux dataclasses go in primitive __init__ but NOT the Fragment union.** `StatusListEntry` and `LazyTab` etc. are configuration data carried inside a renderable Fragment, not Fragments themselves. Don't add them to `Fragment` union or to `test_fragment_alias`'s expected names — they're internal data shapes. The renderer never sees them as top-level render targets.
+
 ## [0.66.103] - 2026-05-08
 
 ### Added — Phase 4B.4 wave 1 — ACTIVITY_FEED achieves byte-equivalence

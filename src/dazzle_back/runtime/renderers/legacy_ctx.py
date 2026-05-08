@@ -300,6 +300,7 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "summary": _translate_metrics,  # SUMMARY shares METRICS template.
     "detail": _translate_detail,
     "activity_feed": _translate_activity_feed,
+    "status_list": _passthrough,  # adapter consumes status_entries directly
 }
 
 

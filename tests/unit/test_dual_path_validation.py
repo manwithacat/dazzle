@@ -341,6 +341,68 @@ def test_activity_feed_empty_renders_legacy_empty_message() -> None:
     assert "Nothing yet" in typed
 
 
+def test_status_list_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 1 — STATUS_LIST byte-equivalent. Covers all
+    branches: iconned + caption, no icon (spacer column), neutral
+    (no pill), and a state pill for non-neutral entries."""
+    ctx = {
+        "title": "Health",
+        "status_entries": [
+            {
+                "title": "API healthy",
+                "state": "positive",
+                "caption": "All systems normal",
+                "icon": "check-circle",
+            },
+            {"title": "Disk usage", "state": "warning", "caption": "78% full"},
+            {"title": "Last sync"},  # neutral default — no pill, spacer icon
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("status_list", **ctx),
+            render_via_typed("status_list", ctx),
+        )
+        is None
+    )
+
+
+def test_search_box_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 1 — SEARCH_BOX byte-equivalent. Covers HTMX
+    wiring (hx-get to /api/fts, hx-target the results panel),
+    Alpine `x-data` + `x-model` for input state, and the coaching
+    message in the initial empty results panel."""
+    ctx = {
+        "title": "Search Manuscripts",
+        "source_entity": "Manuscript",
+        "placeholder": "Search manuscripts...",
+        "name": "mss-search",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("search_box", **ctx),
+            render_via_typed("search_box", ctx),
+        )
+        is None
+    )
+
+
+def test_status_list_empty_renders_legacy_empty_message() -> None:
+    """Empty status_entries renders the dz-empty-dense paragraph in
+    both paths, with the supplied empty_message."""
+    ctx = {
+        "title": "Empty",
+        "status_entries": [],
+        "empty_message": "Nothing to report.",
+    }
+    legacy = render_via_legacy("status_list", **ctx)
+    typed = render_via_typed("status_list", ctx)
+    assert "dz-empty-dense" in legacy
+    assert "dz-empty-dense" in typed
+    assert "Nothing to report." in legacy
+    assert "Nothing to report." in typed
+
+
 def test_metrics_achieves_byte_equivalence_with_full_delta_block() -> None:
     """Rich ctx with all delta fields + tone renders identically.
     Pins the MetricTile + MetricsGrid contract end-to-end."""

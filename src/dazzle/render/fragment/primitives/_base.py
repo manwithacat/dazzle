@@ -49,6 +49,7 @@ from dazzle.render.fragment.primitives.data import (
     SearchBox,
     SortHeader,
     StageBar,
+    StatusList,
     Table,
     Timeline,
     TimeSeries,
@@ -122,6 +123,7 @@ Fragment = (
     | MetricsGrid
     | DetailGrid
     | ActivityFeed
+    | StatusList
     | BarTrack
     | StageBar
     | LazyTabPanel

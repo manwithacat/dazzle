@@ -277,6 +277,48 @@ class MetricTile:
             )
 
 
+_STATUS_LIST_STATES = ("neutral", "positive", "warning", "destructive", "accent")
+
+
+@dataclass(frozen=True, slots=True)
+class StatusListEntry:
+    """Single row in a `StatusList` — title + optional caption/icon/state.
+
+    `state` drives the per-row tone tinting via `data-dz-state` attr
+    (CSS in `dz-tones.css`). Neutral entries omit the pill — they read
+    as plain info rather than a status row. `icon` is a Lucide name
+    (e.g. "check-circle"); empty string means render the spacer column
+    so titles align with iconned entries.
+    """
+
+    title: str
+    state: Literal["neutral", "positive", "warning", "destructive", "accent"] = "neutral"
+    caption: str = ""
+    icon: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.title:
+            raise ValueError("StatusListEntry requires a non-empty title")
+        if self.state not in _STATUS_LIST_STATES:
+            raise ValueError(f"invalid state {self.state!r}; must be one of {_STATUS_LIST_STATES}")
+
+
+@dataclass(frozen=True, slots=True)
+class StatusList:
+    """Vertical list of icon + title + caption + state-pill rows.
+
+    Phase 4B.4 wave 1: emits the legacy
+    `workspace/regions/status_list.html` shape byte-for-byte —
+    `<ul class="dz-status-list" data-dz-entry-count="N">` with per-row
+    `data-dz-state` attribute driving tone tinting via `dz-tones.css`,
+    icon column reserved by spacer when entries lack an icon, pill
+    rendered only for non-neutral states.
+    """
+
+    entries: tuple[StatusListEntry, ...]
+    empty_message: str = "No status entries."
+
+
 @dataclass(frozen=True, slots=True)
 class ActivityFeed:
     """Activity feed list — one row per event with time + optional actor +

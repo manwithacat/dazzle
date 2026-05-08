@@ -66,6 +66,8 @@ from dazzle.render.fragment import (
     Split,
     Stack,
     StageBar,
+    StatusList,
+    StatusListEntry,
     Submit,
     Surface,
     Table,
@@ -187,6 +189,10 @@ def _sample_for(primitive_type: type) -> object:
         return DetailGrid(rows=(("Label", Text("value")),))
     if primitive_type is ActivityFeed:
         return ActivityFeed(items=(("now", "Alice", "did the thing"),))
+    if primitive_type is StatusList:
+        return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
+    if primitive_type is StatusListEntry:
+        return StatusListEntry(title="OK")
     if primitive_type is BarTrack:
         return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
     if primitive_type is StageBar:

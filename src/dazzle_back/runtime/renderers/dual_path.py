@@ -75,13 +75,17 @@ class _StubRegion:
 
     Real workspace regions carry the full RegionContext spec; the
     harness only needs the fields the adapter's `_build_*` methods
-    read (name, display, empty_message). All other attributes get
-    AttributeError-via-getattr-default treatment in the adapter, so
-    keeping the stub lean is fine.
+    read (name, display, title, empty_message). The `title` is
+    populated from ctx['title'] in `render_via_typed` because in
+    production the runtime sets both `region.title` and the
+    template kwarg `title` from the same RegionContext source —
+    keeping them mirrored on the typed path is what makes byte-
+    equivalence achievable.
     """
 
     name: str
     display: str
+    title: str = ""
     empty_message: str = "No data."
 
 
@@ -132,7 +136,11 @@ def render_via_typed(
     so emitting the Surface header would always diverge.
     """
     adapter_ctx = legacy_ctx_to_adapter_ctx(display, legacy_ctx)
-    region = _StubRegion(name=region_name, display=display)
+    region = _StubRegion(
+        name=region_name,
+        display=display,
+        title=str(legacy_ctx.get("title") or ""),
+    )
     adapter = WorkspaceRegionAdapter()
     surface = adapter.build(region, adapter_ctx)
 
