@@ -388,6 +388,40 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class SearchBox:
+    """HTMX-driven full-text search input + lazy-loaded results panel.
+
+    Used by `display: search_box` regions. Emits:
+      - A search `<input type="search">` with HTMX wiring that hits
+        the FTS endpoint on every keystroke (250ms debounce) and
+        swaps the result list under the input.
+      - A results `<div role="region" aria-live="polite">` that's
+        empty initially with a coaching message shown via Alpine
+        `x-show="!q"` (hidden once the user starts typing).
+
+    The endpoint authoritatively applies scope predicates so the
+    user sees only RBAC-filtered results. The result-row rendering
+    is the endpoint's responsibility, not the primitive's — the
+    primitive just establishes the input + swap target.
+
+    `name` is used as the results-div id slug (`dz-search-results-<name>`)
+    so multiple SearchBoxes can coexist on one page. `coaching_message`
+    is the already-translated string (i18n is applied by the runtime
+    before primitive construction).
+    """
+
+    name: str
+    fts_endpoint: URL
+    placeholder: str = "Search…"
+    coaching_message: str = "Type to search"
+    label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("SearchBox requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
 class LazyTab:
     """A single tab inside a LazyTabPanel — key + label + endpoint
     + eager-load flag.

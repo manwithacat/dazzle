@@ -49,6 +49,7 @@ from dazzle.render.fragment import (
     RefPicker,
     Region,
     Row,
+    SearchBox,
     Sidebar,
     Skeleton,
     SkipLink,
@@ -180,6 +181,8 @@ def _sample_for(primitive_type: type) -> object:
             region_name="t",
             tabs=(LazyTab(key="a", label="A", endpoint=URL("/a")),),
         )
+    if primitive_type is SearchBox:
+        return SearchBox(name="x", fts_endpoint=URL("/api/fts/X"))
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

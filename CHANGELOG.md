@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.86] - 2026-05-08
+
+### Added — Phase 4B.1.d — SearchBox primitive
+- **`SearchBox` Fragment primitive** — HTMX-driven full-text search input + lazy-loaded results panel + Alpine coaching toggle. Matches the legacy `workspace/regions/search_box.html` byte-for-byte: outer `<div class="dz-search-box-region" x-data="{ q: '' }">`, accessible label, search input wired to FTS endpoint with 250ms debounce, results panel with `aria-live="polite"`, coaching message hidden via `x-show="!q"` once the user types. `SearchBox(name, fts_endpoint, placeholder, coaching_message, label)` — strict invariant: non-empty `name` (used for unique results-panel DOM ids).
+- **`_build_search_box` rewritten to produce SearchBox** — replaces the prior plain-`Field` rendering, which had no HTMX wiring, no result panel, and no coaching message. Phase 4B path: `ctx["source_entity"]` produces `/api/fts/<entity>?html=1` endpoint; Phase 4A fallback uses `region.name` for the entity hint so existing tests don't crash.
+- 2 new primitive tests + 4 new adapter tests; baselines updated.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID, PROFILE_CARD, BAR_TRACK, PROGRESS | done | v0.66.75–80 |
+| 4B.1.a | DETAIL (type-aware), METRICS (extended deltas) | done | v0.66.77–78 |
+| 4B.1.b | Reference overlays on TimeSeries / BarChart / BarTrack / BoxPlot | done | v0.66.81–82 |
+| 4B.1.d | Button hx_put / hx_vals / hx_ext (QUEUE transitions) | done | v0.66.83 |
+| 4B.1.d | LazyTabPanel + TABBED_LIST adapter | done | v0.66.84–85 |
+| 4B.1.d | SearchBox primitive + SEARCH_BOX adapter | **done** | **v0.66.86** |
+| 4B.1.d | ConfirmGate (Alpine state machine) | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending — needs SVG-rendering arc | — |
+
+### Agent Guidance
+- The `_("Type to search")` i18n call from the legacy template is **resolved at the runtime / ctx-build layer**, not in the primitive. The adapter receives a pre-translated `coaching_message` string. This keeps the primitive deterministic — same input always renders the same HTML — and avoids dragging the i18n machinery into core.
+- The fallback `/api/fts/<region.name>?html=1` URL is **mainly for tests**. The runtime always supplies `source_entity` because the entity reference comes from the DSL's `source:` clause. If you see `/api/fts/<region_name>` rather than the entity name in production, that's a runtime-side bug — the source_entity ctx key isn't being threaded through.
+
 ## [0.66.85] - 2026-05-08
 
 ### Added — Phase 4B.1.d — `_build_tabbed_list` lazy-load path

@@ -50,6 +50,7 @@ from dazzle.render.fragment.primitives import (
     RefPicker,
     Region,
     Row,
+    SearchBox,
     Sidebar,
     Skeleton,
     SkipLink,
@@ -162,6 +163,7 @@ __all__ = [
     "ReferenceBand",
     "LazyTab",
     "LazyTabPanel",
+    "SearchBox",
     # primitives — forms
     "FormStack",
     "Field",

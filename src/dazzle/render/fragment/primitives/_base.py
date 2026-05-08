@@ -39,6 +39,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     ProfileCard,
     Radar,
+    SearchBox,
     StageBar,
     Table,
     Timeline,
@@ -113,6 +114,7 @@ Fragment = (
     | BarTrack
     | StageBar
     | LazyTabPanel
+    | SearchBox
     # Forms
     | FormStack
     | Field

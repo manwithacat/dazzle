@@ -1192,14 +1192,60 @@ def test_confirm_action_panel_renders_card_with_prompt() -> None:
     assert "[ Delete ]" in html
 
 
-def test_search_box_renders_search_field() -> None:
+def test_search_box_renders_typed_search_box_primitive() -> None:
+    """Phase 4B.1.d: `_build_search_box` now produces the typed
+    `SearchBox` primitive — HTMX FTS input + lazy result panel +
+    Alpine coaching toggle. Replaced the prior plain-Field rendering."""
     adapter = WorkspaceRegionAdapter()
-    ctx = {"placeholder": "Find tickets…"}
-    fragment = adapter.build(_FakeRegion("s", display="search_box"), ctx)
+    ctx = {
+        "source_entity": "Manuscript",
+        "placeholder": "Find a manuscript",
+        "coaching_message": "Type a title or keyword",
+    }
+    fragment = adapter.build(_FakeRegion("manuscript_search", display="search_box"), ctx)
     html = _render(fragment)
-    # Field rendered as text input with placeholder
-    assert "Search" in html
-    assert "Find tickets" in html or "placeholder" in html
+    assert "dz-search-box-region" in html
+    assert 'hx-get="/api/fts/Manuscript?html=1"' in html
+    assert 'hx-trigger="input changed delay:250ms, search"' in html
+    assert 'aria-live="polite"' in html
+    assert 'x-show="!q"' in html
+    assert "Type a title or keyword" in html
+
+
+def test_search_box_uses_region_name_as_endpoint_fallback() -> None:
+    """When `source_entity` is missing from ctx, the adapter falls
+    back to `/api/fts/<region.name>?html=1`. Mainly for tests; the
+    runtime always supplies source_entity."""
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("ticket_search", display="search_box"),
+        {"placeholder": "Find tickets…"},
+    )
+    html = _render(fragment)
+    assert 'hx-get="/api/fts/ticket_search?html=1"' in html
+    assert "Find tickets" in html
+
+
+def test_search_box_default_coaching_message() -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(
+        _FakeRegion("s", display="search_box"),
+        {"source_entity": "Item"},
+    )
+    assert "Type to search" in _render(fragment)
+
+
+def test_search_box_results_div_uses_unique_dom_id_per_region() -> None:
+    """Multiple SearchBoxes on one page must have distinct results
+    panels. The panel id is derived from the `name` ctx key (or the
+    region name as fallback)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx_a = {"source_entity": "A", "name": "search_a"}
+    ctx_b = {"source_entity": "B", "name": "search_b"}
+    html_a = _render(adapter.build(_FakeRegion("r", display="search_box"), ctx_a))
+    html_b = _render(adapter.build(_FakeRegion("r", display="search_box"), ctx_b))
+    assert "dz-search-results-search_a" in html_a
+    assert "dz-search-results-search_b" in html_b
 
 
 def test_bar_track_renders_typed_primitive_with_aria() -> None:

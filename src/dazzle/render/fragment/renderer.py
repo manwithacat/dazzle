@@ -52,6 +52,7 @@ from dazzle.render.fragment.primitives import (
     RefPicker,
     Region,
     Row,
+    SearchBox,
     Sidebar,
     Skeleton,
     SkipLink,
@@ -190,6 +191,8 @@ class FragmentRenderer:
                 return self._emit_stage_bar(fragment, ctx)
             case LazyTabPanel():
                 return self._emit_lazy_tab_panel(fragment, ctx)
+            case SearchBox():
+                return self._emit_search_box(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1162,6 +1165,43 @@ class FragmentRenderer:
             f"{tab_buttons}"
             f"</div>"
             f'<div id="panels-{rname}">{panels}</div>'
+        )
+
+    def _emit_search_box(self, s: SearchBox, ctx: RenderContext) -> str:
+        """Render a SearchBox matching legacy
+        `workspace/regions/search_box.html` byte-for-byte: an Alpine
+        `x-data="{ q: '' }"` outer div, accessible label + search
+        input wired to HTMX with 250ms debounce, results panel with
+        `aria-live="polite"`, coaching message hidden via `x-show`
+        once the user types.
+        """
+        results_id = f"dz-search-results-{ctx.escape_attr(s.name)}"
+        endpoint = ctx.escape_attr(str(s.fts_endpoint))
+        placeholder = ctx.escape_attr(s.placeholder)
+        coaching = ctx.escape(s.coaching_message)
+        # Label uses placeholder as fallback when no explicit label is
+        # supplied — matches the legacy template's `title or _placeholder`.
+        label_text = ctx.escape(s.label or s.placeholder)
+        return (
+            f'<div class="dz-search-box-region" x-data="{{ q: \'\' }}">'
+            f'<div class="dz-search-box-input-row">'
+            f'<label for="{results_id}-input" class="visually-hidden">{label_text}</label>'
+            f'<input id="{results_id}-input" type="search" name="q" '
+            f'class="dz-search-box-input" placeholder="{placeholder}" '
+            f'autocomplete="off" '
+            f'hx-get="{endpoint}" '
+            f'hx-trigger="input changed delay:250ms, search" '
+            f'hx-target="#{results_id}" '
+            f'hx-swap="innerHTML" '
+            f'x-model="q">'
+            f"</div>"
+            f'<div id="{results_id}" class="dz-search-box-results" '
+            f'role="region" aria-live="polite">'
+            f'<div class="dz-search-box-empty" x-show="!q">'
+            f"{coaching}"
+            f"</div>"
+            f"</div>"
+            f"</div>"
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:

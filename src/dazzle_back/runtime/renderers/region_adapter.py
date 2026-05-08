@@ -44,6 +44,7 @@ from dazzle.render.fragment import (
     ReferenceLine,
     Region,
     Row,
+    SearchBox,
     Stack,
     StageBar,
     Surface,
@@ -861,27 +862,49 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(heading or "Confirm", "dashboard", body)
 
     def _build_search_box(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: search_box` renders a Card with a search Field.
+        """`display: search_box` renders a `SearchBox` primitive — HTMX
+        FTS input + lazy-loaded results panel + Alpine coaching toggle.
 
-        ctx shape:
-            field_name: optional, defaults to 'q'
-            placeholder: optional
-            label: optional, defaults to "Search"
+        Phase 4B.1.d — replaces the prior plain-`Field` rendering, which
+        had no HTMX wiring, no result panel, and no coaching message.
+        Now byte-equivalent to the legacy `workspace/regions/search_box.html`.
+
+        ctx shape (Phase 4B preferred):
+            source_entity: str — entity name for the FTS endpoint URL
+                (e.g. "Manuscript" → /api/fts/Manuscript?html=1)
+            name: optional results-id slug; defaults to region.name
+            placeholder: optional input placeholder
+            display_field: optional (for documentation; the endpoint owns
+                result-row rendering)
+            coaching_message: optional pre-translated string shown until
+                the user types (default "Type to search")
+
+        ctx shape (Phase 4A fallback):
+            placeholder + label only — produces a SearchBox with a
+            self-referential endpoint (`/api/fts/{region.name}?html=1`)
+            so existing tests don't crash. The runtime should always
+            supply `source_entity` ahead of the Phase 4B.2 translator.
         """
-        from dazzle.render.fragment import Field
-
         title = _region_title(region)
-        field_name = str(ctx.get("field_name") or "q")
-        label = str(ctx.get("label") or "Search")
-        placeholder = str(ctx.get("placeholder") or "")
+        source_entity = str(ctx.get("source_entity") or "")
+        name = str(ctx.get("name") or getattr(region, "name", "") or "searchbox")
+        placeholder = str(ctx.get("placeholder") or "Search…")
+        coaching = str(ctx.get("coaching_message") or "Type to search")
+        label = str(ctx.get("label") or title or placeholder)
 
-        body = Card(
-            body=Field(
-                name=field_name,
-                label=label,
-                kind="text",
-                placeholder=placeholder,
-            )
+        if source_entity:
+            endpoint = URL(f"/api/fts/{source_entity}?html=1")
+        else:
+            # Fallback: use the region's own name as the entity hint.
+            # Mainly for tests; runtime will supply source_entity.
+            endpoint = URL(f"/api/fts/{name}?html=1")
+
+        body: Fragment = SearchBox(
+            name=name,
+            fts_endpoint=endpoint,
+            placeholder=placeholder,
+            coaching_message=coaching,
+            label=label,
         )
         return _wrap_surface(title, "form", body)
 

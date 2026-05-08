@@ -38,6 +38,7 @@ from dazzle.render.fragment.primitives.data import (
     Radar,
     ReferenceBand,
     ReferenceLine,
+    SearchBox,
     StageBar,
     Table,
     Timeline,
@@ -110,6 +111,7 @@ __all__ = [
     "ReferenceBand",
     "LazyTab",
     "LazyTabPanel",
+    "SearchBox",
     # forms
     "FormStack",
     "Field",
