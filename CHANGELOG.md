@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.90] - 2026-05-08
+
+### Added — Phase 4B.1.e — CsvExportButton primitive
+- **`CsvExportButton` Fragment primitive** — download-CSV trigger for list/queue regions. `CsvExportButton(endpoint, filename, label)`. Renders the legacy `list.html` markup byte-for-byte: a `<button>` with `data-dz-csv-endpoint`, `data-dz-csv-filename` attrs and an inline `onclick` that defers to the global `window.dz.downloadCsv` helper. Inline SVG download icon. Strict invariant: non-empty filename. The `dz.downloadCsv` JS helper handles Safari's same-origin text/csv quirk (#862) — fetch → Blob → synthetic click.
+- 2 new primitive tests; baselines updated.
+
+### Phase 4B.1.e progress
+| Primitive | Status | Ship |
+|---|---|---|
+| FilterBar + FilterColumn | done | v0.66.88 |
+| SortHeader | done | v0.66.89 |
+| CsvExportButton | **done** | **v0.66.90** |
+| DateRangePicker | next | — |
+| `_build_list` / `_build_queue` adapter wiring | pending — depends on full chrome set | — |
+
+### Agent Guidance
+- The inline `onclick="window.dz.downloadCsv(...)"` is **deliberate** — mirrors the legacy template verbatim so dual-path validation stays byte-equivalent. The helper lives in the existing dazzle.min.js bundle. Long-term it's a candidate for Alpine extraction, but not during the port.
+
 ## [0.66.89] - 2026-05-08
 
 ### Added — Phase 4B.1.e — SortHeader primitive

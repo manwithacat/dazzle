@@ -65,6 +65,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "ConfirmGate",
         "FilterBar",
         "SortHeader",
+        "CsvExportButton",
         # forms
         "FormStack",
         "Field",

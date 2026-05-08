@@ -30,6 +30,7 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     ConfirmCheckItem,
     ConfirmGate,
+    CsvExportButton,
     Diagram,
     FilterBar,
     FilterColumn,
@@ -122,6 +123,7 @@ __all__ = [
     "FilterBar",
     "FilterColumn",
     "SortHeader",
+    "CsvExportButton",
     # forms
     "FormStack",
     "Field",

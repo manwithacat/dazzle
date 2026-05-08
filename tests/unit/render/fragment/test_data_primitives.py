@@ -13,6 +13,7 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     ConfirmCheckItem,
     ConfirmGate,
+    CsvExportButton,
     Diagram,
     FilterBar,
     FilterColumn,
@@ -663,3 +664,17 @@ def test_sort_header_default_direction_is_asc() -> None:
     s = SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
     assert s.current_direction == "asc"
     assert s.current_sort == ""
+
+
+# === CsvExportButton ===
+
+
+def test_csv_export_button_requires_filename() -> None:
+    with pytest.raises(ValueError, match="non-empty filename"):
+        CsvExportButton(endpoint=URL("/x"), filename="")
+
+
+def test_csv_export_button_defaults() -> None:
+    c = CsvExportButton(endpoint=URL("/api/x"))
+    assert c.filename == "export.csv"
+    assert c.label == "Export CSV"

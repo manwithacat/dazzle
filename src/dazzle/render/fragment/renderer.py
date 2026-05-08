@@ -26,6 +26,7 @@ from dazzle.render.fragment.primitives import (
     Combobox,
     ConfirmCheckItem,
     ConfirmGate,
+    CsvExportButton,
     Diagram,
     Drawer,
     EmptyState,
@@ -204,6 +205,8 @@ class FragmentRenderer:
                 return self._emit_filter_bar(fragment, ctx)
             case SortHeader():
                 return self._emit_sort_header(fragment, ctx)
+            case CsvExportButton():
+                return self._emit_csv_export_button(fragment, ctx)
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
@@ -1413,6 +1416,31 @@ class FragmentRenderer:
             f"{ctx.escape(s.label)}"
             f"{indicator}"
             f"</a>"
+        )
+
+    def _emit_csv_export_button(self, c: CsvExportButton, ctx: RenderContext) -> str:
+        """Render a CsvExportButton matching the legacy `list.html`
+        export-button markup. The inline `onclick` defers to the
+        global `dz.downloadCsv` helper so Safari's same-origin
+        text/csv quirk is bypassed (#862)."""
+        endpoint = ctx.escape_attr(str(c.endpoint))
+        filename = ctx.escape_attr(c.filename)
+        label = ctx.escape_attr(c.label)
+        return (
+            f'<button type="button" '
+            f'data-dz-csv-endpoint="{endpoint}" '
+            f'data-dz-csv-filename="{filename}" '
+            f'onclick="window.dz.downloadCsv('
+            f"this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename"
+            f')" '
+            f'class="dz-list-csv-button" '
+            f'title="{label}" aria-label="{label}">'
+            f'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">'
+            f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" '
+            f'd="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 '
+            f'01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'
+            f"</svg>"
+            f"</button>"
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:

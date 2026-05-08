@@ -22,6 +22,7 @@ from dazzle.render.fragment import (
     Card,
     Combobox,
     ConfirmGate,
+    CsvExportButton,
     Diagram,
     Drawer,
     EmptyState,
@@ -197,6 +198,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is SortHeader:
         return SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
+    if primitive_type is CsvExportButton:
+        return CsvExportButton(endpoint=URL("/x"))
     if primitive_type is FormStack:
         return FormStack(action=URL("/x"), fields=(Field(name="t", label="T"),))
     if primitive_type is Field:

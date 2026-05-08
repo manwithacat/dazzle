@@ -33,6 +33,7 @@ from dazzle.render.fragment.primitives.data import (
     BoxPlot,
     CalendarGrid,
     ConfirmGate,
+    CsvExportButton,
     Diagram,
     FilterBar,
     KanbanBoard,
@@ -121,6 +122,7 @@ Fragment = (
     | ConfirmGate
     | FilterBar
     | SortHeader
+    | CsvExportButton
     # Forms
     | FormStack
     | Field

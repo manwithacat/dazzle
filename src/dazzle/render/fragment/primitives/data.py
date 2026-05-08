@@ -388,6 +388,31 @@ class BoxPlot:
 
 
 @dataclass(frozen=True, slots=True)
+class CsvExportButton:
+    """Download-CSV button — fetch → Blob → click flow via `dz.downloadCsv`.
+
+    `<a download>` is ignored by Safari for same-origin text/csv
+    responses (#862), so the click handler defers to a global JS
+    helper that forces a fetch + Blob + synthetic click flow. The
+    primitive renders the button shell + `data-dz-csv-*` attrs the
+    helper reads at click time. The downloadCsv JS function is
+    expected to be registered globally (existing dazzle.min.js).
+
+    `filename` is the suggested download name (e.g. `tickets.csv`);
+    no extension enforcement here — the runtime author writes whatever
+    makes sense.
+    """
+
+    endpoint: URL
+    filename: str = "export.csv"
+    label: str = "Export CSV"
+
+    def __post_init__(self) -> None:
+        if not self.filename:
+            raise ValueError("CsvExportButton requires a non-empty filename")
+
+
+@dataclass(frozen=True, slots=True)
 class SortHeader:
     """Column-header link with click-to-sort + direction indicator.
 
