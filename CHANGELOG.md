@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.77] - 2026-05-08
+
+### Added — Phase 4B.1.a — type-aware DETAIL rendering
+- **`_render_typed_value(item, col)` helper** in `region_adapter.py` dispatches per-field on `col["type"]` to produce the right Fragment:
+  - `badge` → Badge primitive with variant from the status-tone map (mirrors `render_status_badge` macro)
+  - `bool` → Text(✓) for truthy, Text(✗) for falsy/None
+  - `date` → Text formatted via `_date_filter` (default `%d %b %Y`)
+  - `currency` → Text formatted via `_currency_filter` (GBP, minor units default)
+  - `ref` → Link(`{ref_route}/{value}`) with display name; falls back to plain Text when `ref_route` is empty
+  - default → Text(str(value)) with em-dash for None / empty string
+- **`_build_detail` extended to use the helper** — replaces the prior `Text(str(value))` for every field. Type info from the legacy `columns` ctx now flows into the typed-Fragment path losslessly.
+- Reuses existing `_currency_filter`, `_date_filter`, `_badge_tone_filter` from `dazzle_ui.runtime.template_renderer` so Jinja and adapter paths produce byte-equivalent strings (cross-package import; same precedent as `static_files.py` etc.).
+- 7 new adapter tests covering each type's render path + the no-ref-route fallback + the em-dash default.
+
+### Phase 4B.1 progress
+- ACTION_GRID, PROFILE_CARD, DETAIL (type-aware) are now lossless on the typed-Fragment path.
+- Remaining 4B.1.a: METRICS extended deltas (delta_pct, delta_period_label, delta_sentiment) — needs a new MetricTile primitive richer than KPI.
+
+### Agent Guidance
+- The `_render_typed_value` helper is the canonical place to extend type-aware rendering. New column types (e.g. `markdown`, `relative_time`, `link_array`) plug in here, not in each adapter method that consumes columns.
+- Cross-package import from `dazzle_back` to `dazzle_ui.runtime.template_renderer` is **acceptable for filter functions** (pure value→string conversion). It avoids duplicating formatting logic and keeps the Jinja and Fragment paths consistent. If/when those filters are extracted to `dazzle.render.formatters` (core), update both call sites in lockstep.
+
 ## [0.66.76] - 2026-05-08
 
 ### Added — Phase 4B.1.b second primitive

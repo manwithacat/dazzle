@@ -21,6 +21,7 @@ from typing import Any, Literal
 
 from dazzle.render.fragment import (
     KPI,
+    URL,
     ActionCard,
     Badge,
     BarChart,
@@ -32,6 +33,7 @@ from dazzle.render.fragment import (
     Grid,
     Heading,
     KanbanBoard,
+    Link,
     PivotTable,
     ProfileCard,
     Radar,
@@ -75,6 +77,70 @@ def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:
         header=Heading(title, level=2),
         body=Region(kind=kind, body=body),  # type: ignore[arg-type]
     )
+
+
+_BADGE_TONE_TO_VARIANT: dict[str, str] = {
+    "success": "success",
+    "warning": "warning",
+    "info": "info",
+    "destructive": "danger",
+    "neutral": "default",
+}
+
+
+def _render_typed_value(item: dict[str, Any], col: dict[str, Any]) -> Fragment:
+    """Render a single field value as a typed Fragment based on `col["type"]`.
+
+    Mirrors the legacy `workspace/regions/detail.html` per-type dispatch:
+        - "badge"    → Badge primitive with variant from status-tone map
+        - "bool"     → Text(✓) or Text(✗)
+        - "date"     → Text formatted via the dazzle_ui date filter
+        - "currency" → Text formatted via the dazzle_ui currency filter
+        - "ref"      → Link if ref_route is set, else Text(display)
+        - default    → Text(str(value)) with em-dash for None
+
+    Filter implementations are reused from `dazzle_ui.runtime.template_renderer`
+    so the typed-Fragment path renders the same string the Jinja path
+    would have produced. Phase 4B.1.a.
+    """
+    key = str(col.get("key") or "")
+    col_type = str(col.get("type") or "")
+    value = item.get(key) if key else None
+
+    if col_type == "badge":
+        from dazzle_ui.runtime.template_renderer import _badge_tone_filter
+
+        tone_name = _badge_tone_filter(value)
+        variant = _BADGE_TONE_TO_VARIANT.get(tone_name, "default")
+        label = "" if value is None else str(value)
+        return Badge(label=label or "—", variant=variant)  # type: ignore[arg-type]
+
+    if col_type == "bool":
+        return Text("✓" if value else "✗")
+
+    if value is None or value == "":
+        return Text("—")
+
+    if col_type == "date":
+        from dazzle_ui.runtime.template_renderer import _date_filter
+
+        return Text(_date_filter(value))
+
+    if col_type == "currency":
+        from dazzle_ui.runtime.template_renderer import _currency_filter
+
+        return Text(_currency_filter(value))
+
+    if col_type == "ref":
+        ref_route = str(col.get("ref_route") or "")
+        display = item.get(f"{key}_display") or value
+        display_str = str(display)
+        if ref_route:
+            url = f"{ref_route}/{value}" if not ref_route.endswith("/") else f"{ref_route}{value}"
+            return Link(label=display_str, href=URL(url))
+        return Text(display_str)
+
+    return Text(str(value))
 
 
 def _pick_label(
@@ -1027,11 +1093,17 @@ class WorkspaceRegionAdapter:
 
     def _build_detail(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: detail` regions render a single item's fields as a
-        labelled Card. One Stack child per (label, value) pair.
+        labelled Card. One Stack child per (label, value) pair, with
+        type-aware value rendering matching the legacy template:
+        Badge for `type=badge`, ✓/✗ for `type=bool`, formatted strings
+        for `type=date`/`type=currency`, Link for `type=ref` (when
+        `ref_route` is supplied), Text otherwise.
 
         ctx shape:
             item: dict (single record)
-            fields: list of {"key": str, "label": str (optional)} pairs
+            fields: list of {"key": str, "label": str (optional),
+                "type": str (optional — one of "badge"/"bool"/"date"/
+                "currency"/"ref"), "ref_route": str (optional, for ref)}
                 — declared field order from the region's `fields:` clause
             (legacy) `columns` is accepted as alias for `fields`
         """
@@ -1047,7 +1119,7 @@ class WorkspaceRegionAdapter:
             return _wrap_surface(title, "dashboard", body)
 
         # `fields` is materialised once: explicit list, legacy `columns`,
-        # or fallback to all keys of the item in declared order.
+        # or fallback to all keys of the item in declared order (no type info).
         fields = ctx.get("fields") or ctx.get("columns") or [{"key": k} for k in item.keys()]
         rows: list[object] = []
         for f in fields:
@@ -1057,9 +1129,8 @@ class WorkspaceRegionAdapter:
             if not key:
                 continue
             label = str(f.get("label") or key.replace("_", " ").title())
-            value = item.get(key, "")
             rows.append(Heading(label, level=4))
-            rows.append(Text(str(value) if value not in (None, "") else "—"))
+            rows.append(_render_typed_value(item, f))
 
         body = (
             Card(body=Stack(children=tuple(rows), gap="sm"))

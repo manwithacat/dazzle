@@ -613,6 +613,99 @@ def test_detail_no_item_renders_empty_state() -> None:
     assert "No item." in _render(fragment)
 
 
+def test_detail_type_aware_badge_renders_status_tone() -> None:
+    """Phase 4B.1.a: `type: badge` columns use the Badge primitive with
+    a variant computed from `_badge_tone_filter` (mirrors the legacy
+    `render_status_badge` macro behaviour)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"status": "resolved"},
+        "fields": [{"key": "status", "label": "Status", "type": "badge"}],
+    }
+    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
+    html = _render(fragment)
+    assert "dz-badge--variant-success" in html  # resolved → success tone
+    assert ">resolved<" in html
+
+
+def test_detail_type_aware_bool_renders_check_or_cross() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"a": True, "b": False, "c": None},
+        "fields": [
+            {"key": "a", "type": "bool"},
+            {"key": "b", "type": "bool"},
+            {"key": "c", "type": "bool"},
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "✓" in html
+    assert "✗" in html  # both False and None render as cross
+
+
+def test_detail_type_aware_date_uses_dateformat_filter() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"created": "2026-05-01T12:00:00"},
+        "fields": [{"key": "created", "type": "date"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    # _date_filter default format is "%d %b %Y"
+    assert "01 May 2026" in html
+
+
+def test_detail_type_aware_currency_formats_minor_units() -> None:
+    """`type: currency` uses _currency_filter with `minor=True` default
+    — so 12345 GBP minor → £123.45."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345},
+        "fields": [{"key": "price", "type": "currency"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "£123.45" in html
+
+
+def test_detail_type_aware_ref_renders_link_with_display() -> None:
+    """`type: ref` columns produce a Link primitive when ref_route is
+    set; the link text uses `<key>_display` from the item dict."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"team_id": 7, "team_id_display": "Engineering"},
+        "fields": [{"key": "team_id", "type": "ref", "ref_route": "/teams"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert 'href="/teams/7"' in html
+    assert "Engineering" in html
+
+
+def test_detail_type_aware_ref_without_route_falls_back_to_text() -> None:
+    """When `ref_route` is empty, the ref renders as plain Text using
+    the display value — no broken link."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"team_id": 7, "team_id_display": "Engineering"},
+        "fields": [{"key": "team_id", "type": "ref"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "Engineering" in html
+    assert "dz-link" not in html
+
+
+def test_detail_default_type_renders_em_dash_for_none() -> None:
+    """Untyped columns with None values fall back to em-dash (not the
+    string 'None')."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"x": None, "y": "OK"},
+        "fields": [{"key": "x"}, {"key": "y"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "—" in html
+    assert "OK" in html
+    assert "None" not in html
+
+
 # ───────────────── Activity feed ──────────────────
 
 
