@@ -33,6 +33,8 @@ from dazzle.render.fragment import (
     Grid,
     Heading,
     KanbanBoard,
+    LazyTab,
+    LazyTabPanel,
     Link,
     MetricTile,
     PivotTable,
@@ -1317,21 +1319,77 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "dashboard", body)
 
     def _build_tabbed_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: tabbed_list` regions render as a Tabs container, one
-        tab per source-or-filter slice. Each tab body is a Table.
+        """`display: tabbed_list` regions render as a tabbed container.
 
-        ctx shape:
-            tabs: list of dicts with shape:
-                {"key": str, "label": str (optional), "items": list[dict],
-                 "columns": list[{"key": str, "label": str}]}
-            (legacy) `slices` is accepted as alias for `tabs`
+        Phase 4B.1.d preferred path — the runtime supplies `source_tabs`
+        with HTMX endpoints, producing a `LazyTabPanel` that lazy-loads
+        each tab's content (matches the legacy `workspace/regions/
+        tabbed_list.html` HTMX-driven shape byte-for-byte).
+
+        Phase 4A fallback path — the test/migration ctx supplies `tabs`
+        with pre-loaded `items` + `columns`, producing the simpler
+        eager `Tabs` primitive. This is retained so existing call sites
+        and tests don't regress; the runtime should migrate to
+        `source_tabs` ahead of the Phase 4B.2 translator.
+
+        ctx shape (Phase 4B preferred):
+            region_name: str — DOM-id namespace; required for LazyTabPanel
+            source_tabs: list[dict] each with:
+              - key: str (slug for tab id)
+              - label: str
+              - endpoint: str (URL; HTMX hx-get target)
+              - eager: bool (optional; first tab is always eager)
+
+        ctx shape (Phase 4A fallback):
+            tabs / slices: list[dict] each with:
+              - key, label, items, columns (pre-loaded shape)
         """
         from dazzle.render.fragment import Table
 
         title = _region_title(region)
-        raw_tabs = ctx.get("tabs") or ctx.get("slices") or []
 
-        body: Fragment
+        # Phase 4B preferred: lazy-loaded tabs via HTMX endpoints
+        source_tabs = ctx.get("source_tabs") or []
+        if source_tabs:
+            region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "tabbed")
+            built_lazy: list[LazyTab] = []
+            seen_keys: set[str] = set()
+            for st in source_tabs:
+                if not isinstance(st, dict):
+                    continue
+                key = str(st.get("key") or "")
+                label = str(st.get("label") or key)
+                endpoint = str(st.get("endpoint") or "")
+                if not key or not endpoint:
+                    continue
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                built_lazy.append(
+                    LazyTab(
+                        key=key,
+                        label=label,
+                        endpoint=URL(endpoint),
+                        eager=bool(st.get("eager")),
+                    )
+                )
+            body: Fragment
+            if not built_lazy:
+                body = EmptyState(
+                    title="No tabs",
+                    description=getattr(region, "empty_message", None)
+                    or "No data slices declared.",
+                )
+            else:
+                body = LazyTabPanel(
+                    region_name=region_name,
+                    tabs=tuple(built_lazy),
+                    empty_message=getattr(region, "empty_message", None) or "No data available.",
+                )
+            return _wrap_surface(title, "list", body)
+
+        # Phase 4A fallback: pre-loaded tabs via eager Tabs primitive
+        raw_tabs = ctx.get("tabs") or ctx.get("slices") or []
         if not raw_tabs:
             body = EmptyState(
                 title="No tabs",
@@ -1340,7 +1398,7 @@ class WorkspaceRegionAdapter:
             return _wrap_surface(title, "list", body)
 
         built: list[tuple[str, object]] = []
-        seen_keys: set[str] = set()
+        seen_keys = set()
         for tab in raw_tabs:
             if not isinstance(tab, dict):
                 continue

@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.85] - 2026-05-08
+
+### Added — Phase 4B.1.d — `_build_tabbed_list` lazy-load path
+- **`_build_tabbed_list` accepts the new `source_tabs` ctx shape** to produce a `LazyTabPanel`. When `ctx["source_tabs"]` is supplied (each entry: `key`, `label`, `endpoint`, optional `eager`), the adapter constructs a LazyTabPanel that lazy-loads each tab via HTMX `hx-get` — matching the legacy `workspace/regions/tabbed_list.html` byte-for-byte.
+- **Phase 4A `tabs` fallback retained** — when only the older pre-loaded `{tabs: [{key, label, items, columns}]}` shape is supplied (existing test ctx), the adapter still produces the eager `Tabs` primitive. The runtime will migrate to `source_tabs` ahead of the Phase 4B.2 translator; both paths coexist until then.
+- Adapter pre-filters: tabs missing `key` or `endpoint` silently drop; duplicate keys silently drop (LazyTabPanel's strict invariant would raise). `region_name` defaults to the region's `name` attribute when not explicitly supplied.
+- 5 new adapter tests covering the lazy path, fallback path, malformed-entry drops, region-name defaulting, eager-flag override.
+
+### Phase 4B.1 progress
+| Step | Display | Status | Ship |
+|---|---|---|---|
+| 4B.1.b | ACTION_GRID, PROFILE_CARD, BAR_TRACK, PROGRESS | done | v0.66.75–80 |
+| 4B.1.a | DETAIL (type-aware), METRICS (extended deltas) | done | v0.66.77–78 |
+| 4B.1.b | Reference overlays on TimeSeries / BarChart / BarTrack / BoxPlot | done | v0.66.81–82 |
+| 4B.1.d | Button hx_put / hx_vals / hx_ext (QUEUE transitions) | done | v0.66.83 |
+| 4B.1.d | LazyTabPanel primitive | done | v0.66.84 |
+| 4B.1.d | TABBED_LIST adapter switched to LazyTabPanel | **done** | **v0.66.85** |
+| 4B.1.d | ConfirmGate, SearchBox (HTMX FTS) | pending | — |
+| 4B.1.e | FilterBar, DateRangePicker, SortHeader, CsvExportButton | pending | — |
+| 4B.1.c | StackedArea, MultiSeriesLine, MultiSeriesRadar | pending — needs SVG-rendering arc | — |
+
+### Agent Guidance
+- The adapter's two-shape acceptance pattern (`source_tabs` for the Phase 4B path, `tabs` for legacy) is **intentional during migration** — both paths coexist until the Phase 4B.2 translator switches the runtime to the new shape. Do NOT delete the legacy fallback before the runtime side migrates; the dual-path validation gate (Phase 4B.3) needs both paths to be green during cutover.
+- When `region_name` is omitted from ctx, the adapter falls back to the region's `name` attribute. This is the same defensive fallback pattern used by `_region_title` — keeps the adapter usable for tests and ad-hoc invocations that don't pre-populate every ctx field.
+
 ## [0.66.84] - 2026-05-08
 
 ### Added — Phase 4B.1.d — LazyTabPanel primitive

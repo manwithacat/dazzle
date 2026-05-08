@@ -673,6 +673,113 @@ def test_tabbed_list_empty_renders_empty_state() -> None:
     assert "No tabs." in _render(fragment)
 
 
+def test_tabbed_list_source_tabs_produces_lazy_tab_panel() -> None:
+    """Phase 4B.1.d: when ctx supplies `source_tabs` with HTMX endpoints,
+    the adapter builds a LazyTabPanel that lazy-loads each tab via
+    hx-get. Matches the legacy `tabbed_list.html` runtime shape."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "region_name": "ticket_tabs",
+        "source_tabs": [
+            {
+                "key": "github",
+                "label": "GitHub",
+                "endpoint": "/api/workspaces/admin/regions/ticket_tabs/github",
+            },
+            {
+                "key": "slack",
+                "label": "Slack",
+                "endpoint": "/api/workspaces/admin/regions/ticket_tabs/slack",
+            },
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
+    assert 'role="tablist"' in html
+    assert 'id="tabs-ticket_tabs"' in html
+    assert 'data-tab-target="tab-ticket_tabs-github"' in html
+    assert 'hx-get="/api/workspaces/admin/regions/ticket_tabs/github"' in html
+    # First tab eager (load), second tab lazy (intersect once)
+    assert 'hx-trigger="load"' in html
+    assert 'hx-trigger="intersect once"' in html
+
+
+def test_tabbed_list_falls_back_to_eager_tabs_when_no_source_tabs() -> None:
+    """Pre-Phase-4B.1.d ctx shape `{tabs: [{key, label, items, columns}]}`
+    is still accepted — produces the eager Tabs primitive. The runtime
+    will switch to source_tabs ahead of the Phase 4B.2 translator."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "tabs": [
+            {
+                "key": "a",
+                "label": "Alpha",
+                "items": [{"name": "Item One"}],
+                "columns": [{"key": "name", "label": "Name"}],
+            }
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
+    assert "dz-tabs" in html
+    assert "Item One" in html
+    assert 'role="tablist"' not in html  # not the lazy shape
+
+
+def test_tabbed_list_source_tabs_drops_malformed_entries() -> None:
+    """Tabs missing key or endpoint silently drop; duplicate keys
+    silently drop too (LazyTabPanel rejects dupes)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "region_name": "r",
+        "source_tabs": [
+            None,
+            {"key": "valid", "label": "Valid", "endpoint": "/api/valid"},
+            {"label": "Missing key", "endpoint": "/api/x"},  # no key
+            {"key": "missing-endpoint"},  # no endpoint
+            {
+                "key": "valid",  # duplicate
+                "label": "Dup",
+                "endpoint": "/api/other",
+            },
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
+    assert ">Valid<" in html
+    assert "Missing key" not in html
+    assert "Dup" not in html
+
+
+def test_tabbed_list_source_tabs_uses_region_name_for_dom_ids() -> None:
+    """`region_name` ctx key namespaces the DOM ids; falls back to the
+    region's `name` attribute when absent."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "source_tabs": [
+            {"key": "x", "label": "X", "endpoint": "/api/x"},
+        ]
+    }
+    # No region_name in ctx; the _FakeRegion's name attribute should be used
+    html = _render(adapter.build(_FakeRegion("my_region", display="tabbed_list"), ctx))
+    assert "tabs-my_region" in html
+
+
+def test_tabbed_list_eager_flag_overrides_position_default() -> None:
+    """When tab.eager is True, the panel fires hx-trigger=load even if
+    it isn't the first tab. Default behaviour: only first is eager."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "region_name": "r",
+        "source_tabs": [
+            {"key": "a", "label": "A", "endpoint": "/a"},
+            {"key": "b", "label": "B", "endpoint": "/b", "eager": True},
+            {"key": "c", "label": "C", "endpoint": "/c"},
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
+    # Both first and explicit-eager tab fire load
+    assert html.count('hx-trigger="load"') >= 2
+    assert 'hx-trigger="intersect once"' in html  # third tab
+
+
 # ───────────────── Detail ─────────────────────────
 
 
