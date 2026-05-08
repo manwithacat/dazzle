@@ -196,18 +196,73 @@ def test_unknown_display_raises_for_legacy_path() -> None:
 # === Diff observation (documentation tests) ===
 
 
-def test_chrome_differs_between_paths_documented() -> None:
-    """The legacy region_card macro emits `<div data-dz-region>` chrome;
-    the typed Surface emits a `<header>` + `<section>` wrapper. Without
-    body-only extraction these will not byte-equal — this test pins
-    that observation so a future Phase 4B.4 ship that closes the gap
-    flips the assertion to `is None`.
-    """
+def test_chrome_aligns_via_body_extraction() -> None:
+    """Phase 4B.4 wave 1 (v0.66.101): `render_via_typed` now extracts
+    the inner body fragment from the Surface and wraps it in
+    `<div data-dz-region>` chrome to match the legacy `region_card`
+    macro. The body equivalence is per-display work; the chrome layer
+    is now uniform."""
     ctx = {
         "title": "Daily",
-        "bucketed_metrics": [{"label": "Mon", "value": 10}, {"label": "Tue", "value": 12}],
+        "bucketed_metrics": [
+            {"label": "Mon", "value": 10},
+            {"label": "Tue", "value": 12},
+        ],
     }
     legacy_html = render_via_legacy("line_chart", **ctx)
     typed_html = render_via_typed("line_chart", ctx)
-    # Today: chrome differs → diff is non-None. Phase 4B.4 will flip this.
-    assert diff_summary(legacy_html, typed_html) is not None
+    # Both wrap in `<div data-dz-region>...</div>` chrome.
+    assert legacy_html.lstrip().startswith("<div data-dz-region")
+    assert typed_html.startswith("<div data-dz-region")
+
+
+def test_metrics_achieves_byte_equivalence_simple() -> None:
+    """Phase 4B.4 wave 1 — METRICS is the first display achieving
+    byte-equivalence. Simple ctx (no delta) renders identically on
+    both paths."""
+    ctx = {
+        "title": "Sales",
+        "metrics": [{"label": "Revenue", "value": 10000}],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("metrics", **ctx),
+            render_via_typed("metrics", ctx),
+        )
+        is None
+    )
+
+
+def test_metrics_achieves_byte_equivalence_with_full_delta_block() -> None:
+    """Rich ctx with all delta fields + tone renders identically.
+    Pins the MetricTile + MetricsGrid contract end-to-end."""
+    ctx = {
+        "title": "Sales",
+        "metrics": [
+            {
+                "label": "Revenue",
+                "value": 42000,
+                "delta": 5000,
+                "delta_direction": "up",
+                "delta_sentiment": "positive_up",
+                "delta_pct": 13.5,
+                "delta_period_label": "last month",
+                "tone": "positive",
+            },
+            {
+                "label": "Churn",
+                "value": 0.05,
+                "delta": 0.01,
+                "delta_direction": "down",
+                "delta_sentiment": "positive_down",
+                "tone": "warning",
+            },
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("metrics", **ctx),
+            render_via_typed("metrics", ctx),
+        )
+        is None
+    )

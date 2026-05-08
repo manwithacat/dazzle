@@ -42,6 +42,7 @@ from dazzle.render.fragment import (
     LazyTab,
     LazyTabPanel,
     Link,
+    MetricsGrid,
     MetricTile,
     Modal,
     NavGroup,
@@ -178,6 +179,8 @@ def _sample_for(primitive_type: type) -> object:
         return ProfileCard(primary="Alice")
     if primitive_type is MetricTile:
         return MetricTile(label="X", value="0")
+    if primitive_type is MetricsGrid:
+        return MetricsGrid(tiles=(MetricTile(label="X", value="0"),))
     if primitive_type is BarTrack:
         return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
     if primitive_type is StageBar:

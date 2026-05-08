@@ -154,7 +154,13 @@ def test_bar_track_passthrough_preserves_pre_computed_rows() -> None:
 # === Detail / metric ===
 
 
-def test_metrics_renames_delta_direction_to_trend() -> None:
+def test_metrics_passes_through_full_legacy_field_set() -> None:
+    """Phase 4B.4 wave 1 (v0.66.101): the metrics translator widened
+    from a 4-field KPI shape to passthrough so the adapter's
+    MetricTile primitive receives the full legacy ctx (delta_direction,
+    delta_sentiment, delta_pct, delta_period_label, tone). Earlier
+    versions narrowed `delta_direction` → `trend`; the typed-Fragment
+    adapter now reads `delta_direction` natively, so no rename."""
     legacy = {
         "metrics": [
             {
@@ -162,21 +168,23 @@ def test_metrics_renames_delta_direction_to_trend() -> None:
                 "value": "$42k",
                 "delta": "+$5k",
                 "delta_direction": "up",
-                "delta_sentiment": "positive",
+                "delta_sentiment": "positive_up",
                 "delta_pct": 13.5,
-                "delta_period_label": "vs last month",
+                "delta_period_label": "last month",
+                "tone": "positive",
             },
         ],
     }
     out = legacy_ctx_to_adapter_ctx("metrics", legacy)
-    kpi = out["metrics"][0]
-    assert kpi["label"] == "Revenue"
-    assert kpi["value"] == "$42k"
-    assert kpi["trend"] == "up"
-    assert kpi["delta"] == "+$5k"
-    # Extended delta fields drop.
-    assert "delta_sentiment" not in kpi
-    assert "delta_pct" not in kpi
+    tile = out["metrics"][0]
+    assert tile["label"] == "Revenue"
+    assert tile["value"] == "$42k"
+    assert tile["delta"] == "+$5k"
+    assert tile["delta_direction"] == "up"
+    assert tile["delta_sentiment"] == "positive_up"
+    assert tile["delta_pct"] == 13.5
+    assert tile["delta_period_label"] == "last month"
+    assert tile["tone"] == "positive"
 
 
 def test_summary_uses_same_translator_as_metrics() -> None:

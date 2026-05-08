@@ -39,6 +39,7 @@ from dazzle.render.fragment.primitives.data import (
     FilterBar,
     KanbanBoard,
     LazyTabPanel,
+    MetricsGrid,
     MetricTile,
     PivotTable,
     ProfileCard,
@@ -116,6 +117,7 @@ Fragment = (
     | ActionCard
     | ProfileCard
     | MetricTile
+    | MetricsGrid
     | BarTrack
     | StageBar
     | LazyTabPanel

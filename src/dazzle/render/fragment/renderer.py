@@ -45,6 +45,7 @@ from dazzle.render.fragment.primitives import (
     KanbanBoard,
     LazyTabPanel,
     Link,
+    MetricsGrid,
     MetricTile,
     Modal,
     NavGroup,
@@ -192,6 +193,8 @@ class FragmentRenderer:
                 return self._emit_profile_card(fragment, ctx)
             case MetricTile():
                 return self._emit_metric_tile(fragment, ctx)
+            case MetricsGrid():
+                return self._emit_metrics_grid(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
             case StageBar():
@@ -1058,10 +1061,10 @@ class FragmentRenderer:
             pct_html = (
                 f'<span class="dz-metric-delta-pct">({m.delta_pct}%)</span>' if m.delta_pct else ""
             )
+            # Legacy always emits the period span when delta_direction
+            # is set, even with an empty label (rendered as "vs ").
             period_html = (
                 f'<span class="dz-metric-delta-period">vs {ctx.escape(m.delta_period_label)}</span>'
-                if m.delta_period_label
-                else ""
             )
             delta_html = (
                 f'<div class="dz-metric-delta" '
@@ -1082,6 +1085,17 @@ class FragmentRenderer:
             f'<div class="dz-metric-value">{ctx.escape(m.value)}</div>'
             f"{delta_html}"
             f"</div>"
+        )
+
+    def _emit_metrics_grid(self, g: MetricsGrid, ctx: RenderContext) -> str:
+        """Render a MetricsGrid matching legacy
+        `workspace/regions/metrics.html`: outer `dz-metrics-grid`
+        wrapper with `data-dz-tile-count="N"` driving the responsive
+        1/2/4 column layout via CSS, then the tile children inline.
+        """
+        tiles_html = "".join(self._emit(t, ctx) for t in g.tiles)  # type: ignore[arg-type]
+        return (
+            f'<div class="dz-metrics-grid" data-dz-tile-count="{len(g.tiles)}">{tiles_html}</div>'
         )
 
     def _emit_bar_track(self, b: BarTrack, ctx: RenderContext) -> str:

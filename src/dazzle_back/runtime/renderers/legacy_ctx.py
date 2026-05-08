@@ -236,30 +236,22 @@ def _translate_bar_track(legacy: dict[str, Any]) -> dict[str, Any]:
 
 
 def _translate_metrics(legacy: dict[str, Any]) -> dict[str, Any]:
-    """METRICS / SUMMARY: rename delta_direction → trend, keep KPI fields.
+    """METRICS / SUMMARY: passthrough — adapter MetricTile primitive
+    consumes the full legacy field set directly.
 
-    Legacy delta dict carries `delta, delta_direction, delta_sentiment,
-    delta_pct, delta_period_label`. Adapter KPI primitive consumes
-    `label, value, trend, delta`. Extended delta fields are dropped.
+    Phase 4B.1.a replaced KPI with MetricTile so the adapter could
+    render extended delta blocks (delta_pct, delta_period_label,
+    delta_sentiment, per-tile tone). MetricTile reads
+    `delta_direction` natively, so no rename is needed. Earlier
+    versions of this translator narrowed to a 4-field KPI shape;
+    Phase 4B.4 wave 1 (v0.66.101) widened it back to passthrough
+    so the adapter receives the rich ctx the legacy template did.
     """
     metrics = legacy.get("metrics") or []
     out: list[dict[str, Any]] = []
     for m in metrics:
-        if not isinstance(m, dict):
-            continue
-        kpi: dict[str, Any] = {
-            "label": m.get("label"),
-            "value": m.get("value"),
-        }
-        # delta_direction is the legacy-only "up/down/flat" hint; the
-        # KPI primitive accepts a `trend` field of the same shape.
-        if "delta_direction" in m:
-            kpi["trend"] = m["delta_direction"]
-        elif "trend" in m:
-            kpi["trend"] = m["trend"]
-        if "delta" in m:
-            kpi["delta"] = m["delta"]
-        out.append(kpi)
+        if isinstance(m, dict):
+            out.append(dict(m))
     return {"metrics": out}
 
 

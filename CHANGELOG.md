@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.101] - 2026-05-08
+
+### Added — Phase 4B.4 wave 1 — METRICS is the first display to achieve byte-equivalence
+- **Inner-body extraction in `render_via_typed`**: the dual-path harness now extracts the inner body fragment from the typed-Fragment Surface and wraps it in `<div data-dz-region>` chrome to match the legacy `region_card` macro. Closes the chrome divergence pinned in v0.66.100's `test_chrome_differs_between_paths_documented`. The Surface header is intentionally dropped — the legacy macro is contentless (the dashboard slot owns the title), so emitting a Surface heading would always diverge.
+- **`render_via_legacy` accepts `region_name`** keyword arg, threaded into the template kwargs so the `region_card` macro's `region_name is defined` guard can pick up data-dz-region-name + id chrome attrs when applicable. Note: in production no template currently passes a `name` arg to the macro, and macros are imported without `with context`, so the attrs are typically NOT emitted — `render_via_typed` defaults to matching this (plain `<div data-dz-region>`) with an opt-in `emit_region_attrs=True` parameter for callers that want the rich form.
+
+### New primitive — `MetricsGrid`
+- **`MetricsGrid(tiles)`** — container primitive emitting the legacy `<div class="dz-metrics-grid" data-dz-tile-count="N">` wrapper byte-for-byte. Replaces the generic `Grid(columns=N)` primitive in `_build_metrics`. The legacy template's responsive 1/2/4 column layout is driven by the `dz-metrics-grid` CSS rule keyed off `data-dz-tile-count`, not by an explicit grid-columns CSS — so the generic `Grid` primitive's `dz-grid--columns-N` class wouldn't trigger the right layout.
+- Registered in the Fragment union, primitives `__all__`, top-level fragment `__all__`, and `FragmentRenderer._emit` dispatch.
+
+### Changed — `_emit_metric_tile` always emits the period span
+- **Period span now always emits when `delta_direction` is set**, even when `delta_period_label` is empty (rendered as `vs `). Matches the legacy template's unconditional period span emission. Prior typed behaviour skipped the span when label was empty, causing a tail-of-tile divergence.
+
+### Changed — `_translate_metrics` widened to passthrough
+- **The metrics translator is now passthrough** — the adapter's `MetricTile` primitive (Phase 4B.1.a) consumes the full legacy field set (`delta_direction`, `delta_sentiment`, `delta_pct`, `delta_period_label`, `tone`) directly, so the translator no longer narrows to a 4-field KPI shape. Earlier versions renamed `delta_direction` → `trend` for the older KPI primitive contract; that rename is no longer needed.
+
+### Phase 4B progress
+| Step | Status | Ship |
+|---|---|---|
+| 4B.0–4B.3 | done | v0.66.74–100 |
+| **4B.4 wave 1 — METRICS byte-equivalent** | **done** | **v0.66.101** |
+| 4B.4 wave 1 — SUMMARY (shares METRICS template) | likely free | — |
+| 4B.4 wave 1 — DETAIL, ACTIVITY_FEED, STATUS_LIST, SEARCH_BOX | next | — |
+| 4B.4 wave 2 (LIST, GRID, KANBAN, …) | queued | — |
+| 4B.5 — Workspace chrome port | queued | — |
+| 4B.6 — Decommission | queued | — |
+
+### Known divergence — METRICS empty-state
+- The empty-metrics path still diverges: legacy emits `<p class="dz-empty-dense" role="status">{message}</p>`, typed emits the generic `EmptyState` primitive's full chrome (`<div class="dz-empty-state"><h3 class="dz-empty-state__title">…`). Closing this requires either adding a "dense" mode to the EmptyState primitive or extending the adapter's metrics builder to emit a custom empty-state shape. Punted to a follow-up sub-ship in wave 1.
+
+### Agent Guidance
+- **First byte-equivalent display achieved.** The pattern that worked: (1) read the legacy template, (2) inspect what the typed adapter currently emits via `render_via_typed`, (3) `diff_summary` → identify the structural divergences, (4) close them at the right layer (primitive, adapter, translator), (5) re-test. Repeat per-display.
+- The chrome unification in `render_via_typed` (extract `surface.body.body`, wrap in `<div data-dz-region>`) is **the canonical pattern for all displays** — keep it, don't reinvent. Per-display work is now just body-equivalence.
+- When porting the next display, the rhythm should be ~1 ship per display family (related displays often share primitives — SUMMARY uses METRICS' template + builder, so porting METRICS likely got SUMMARY for free; verify with `diff_summary` before declaring).
+- The `MetricsGrid` primitive pattern is **the canonical replacement for generic Grid** when a display has a CSS-class contract distinct from `dz-grid`. Other displays that emit specialised wrappers (kanban grid, action grid, etc.) should follow the same pattern when porting — add a thin display-specific primitive rather than overloading `Grid`.
+
 ## [0.66.100] - 2026-05-08
 
 ### Added — Phase 4B.3 — dual-path validation harness (foundation)

@@ -58,6 +58,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "ActionCard",
         "ProfileCard",
         "MetricTile",
+        "MetricsGrid",
         "BarTrack",
         "StageBar",
         "LazyTabPanel",

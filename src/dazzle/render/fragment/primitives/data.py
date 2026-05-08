@@ -278,6 +278,26 @@ class MetricTile:
 
 
 @dataclass(frozen=True, slots=True)
+class MetricsGrid:
+    """Container for METRICS / SUMMARY tiles — emits the legacy
+    `<div class="dz-metrics-grid" data-dz-tile-count="N">` wrapper.
+
+    Phase 4B.4 wave 1 introduced this primitive (replacing the
+    generic `Grid` for metric regions) so the typed-Fragment output
+    is byte-equivalent to `workspace/regions/metrics.html`. The
+    legacy template's responsive 1/2/4 column layout is driven by
+    the `dz-metrics-grid` CSS rule keyed off `data-dz-tile-count`,
+    not by an explicit column count.
+    """
+
+    tiles: tuple[object, ...]
+
+    def __post_init__(self) -> None:
+        if not self.tiles:
+            raise ValueError("MetricsGrid requires at least one tile")
+
+
+@dataclass(frozen=True, slots=True)
 class ProfileCard:
     """Single-record identity panel: avatar/initials + name + meta line +
     optional 3-up stats grid + optional bulleted facts list.

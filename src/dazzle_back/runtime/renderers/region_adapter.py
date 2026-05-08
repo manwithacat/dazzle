@@ -43,6 +43,7 @@ from dazzle.render.fragment import (
     LazyTab,
     LazyTabPanel,
     Link,
+    MetricsGrid,
     MetricTile,
     PivotTable,
     ProfileCard,
@@ -1954,8 +1955,7 @@ class WorkspaceRegionAdapter:
         if not tiles:
             body = EmptyState(title="No metrics", description="No metric tiles produced.")
         else:
-            cols = max(1, min(12, len(tiles)))
-            body = Grid(children=tuple(tiles), columns=cols)
+            body = MetricsGrid(tiles=tuple(tiles))
 
         return _wrap_surface(title, "dashboard", body)
 
