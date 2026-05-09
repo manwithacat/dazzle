@@ -973,6 +973,51 @@ def test_pivot_table_achieves_byte_equivalence() -> None:
     )
 
 
+def test_queue_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.117): QUEUE byte-equivalent. New
+    QueueRegion family of primitives matching workspace/regions/
+    queue.html — count row, metrics row, queue rows with attention
+    accents, badges, date secondaries, and inline transition action
+    buttons (HTMX PUT)."""
+    ctx = {
+        "title": "Q",
+        "items": [
+            {
+                "id": 1,
+                "name": "A",
+                "state": "pending",
+                "severity": "high",
+            },
+            {
+                "id": 2,
+                "name": "B",
+                "state": "approved",
+                "severity": "low",
+            },
+        ],
+        "columns": [
+            {"key": "name", "label": "Name"},
+            {"key": "severity", "label": "Severity", "type": "badge"},
+        ],
+        "queue_status_field": "state",
+        "queue_api_endpoint": "/api/q",
+        "queue_transitions": [
+            {"label": "Approve", "to_state": "approved"},
+            {"label": "Reject", "to_state": "rejected"},
+        ],
+        "total": 2,
+        "metrics": [{"label": "Pending", "value": 1}],
+        "display_key": "name",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("queue", region_name="q", **ctx),
+            render_via_typed("queue", ctx, region_name="q"),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

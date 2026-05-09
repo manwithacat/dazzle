@@ -55,6 +55,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     PivotTableRegion,
     ProfileCard,
+    QueueRegion,
     Radar,
     SearchBox,
     SortHeader,
@@ -142,6 +143,7 @@ Fragment = (
     | Funnel
     | KanbanRegion
     | PivotTableRegion
+    | QueueRegion
     | ActionGrid
     | ActivityFeed
     | StatusList

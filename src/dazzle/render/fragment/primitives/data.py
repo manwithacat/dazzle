@@ -503,6 +503,87 @@ class Funnel:
 
 
 @dataclass(frozen=True, slots=True)
+class QueueMetric:
+    """Single metric tile in a `QueueRegion` summary row."""
+
+    label: str
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
+class QueueTransition:
+    """Inline state-transition action button on a `QueueRow`.
+
+    `to_state` is the target state (compared against the row's
+    current `queue_status_field` value to decide whether to render
+    the button). HTMX wiring is `hx-put="{endpoint}/{id}"` with
+    `hx-vals='{"<status_field>": "<to_state>"}'` + `json-enc` ext.
+    """
+
+    label: str
+    to_state: str
+
+
+@dataclass(frozen=True, slots=True)
+class QueueBadgeColumn:
+    """A column-keyed badge to render alongside the row headline title."""
+
+    key: str
+    value: object  # any value the legacy render_status_badge accepts
+
+
+@dataclass(frozen=True, slots=True)
+class QueueDateColumn:
+    """A column-keyed date label to render as a secondary info line."""
+
+    label: str
+    timeago_str: str
+
+
+@dataclass(frozen=True, slots=True)
+class QueueRow:
+    """Single row in a `QueueRegion`.
+
+    Layout per legacy template:
+      - row_id is the item id used for transition button URL interpolation
+      - title is the resolved display label (display_key + _display fallback)
+      - badges are the per-row badge columns (rendered next to title)
+      - attention_level/message drive the optional attention accent + line
+      - date_columns render below as `Label: timeago_str` secondaries
+      - transitions are evaluated against current_status to decide which buttons render
+    """
+
+    row_id: str
+    title: str
+    current_status: str = ""
+    badges: tuple[QueueBadgeColumn, ...] = ()
+    date_columns: tuple[QueueDateColumn, ...] = ()
+    attention_level: str = ""
+    attention_message: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class QueueRegion:
+    """Review-queue display matching `workspace/regions/queue.html`.
+
+    Phase 4B.4 wave 4: dedicated primitive family (replaces prior
+    Card+Stack composition in `_build_queue`). Optional count row +
+    metrics row + filter bar + queue rows + overflow line. Transitions
+    are inline state-change action buttons; each row renders only the
+    transitions whose `to_state != current_status`.
+    """
+
+    rows: tuple[QueueRow, ...]
+    total: int = 0
+    metrics: tuple[QueueMetric, ...] = ()
+    transitions: tuple[QueueTransition, ...] = ()
+    queue_status_field: str = ""
+    queue_api_endpoint: str = ""
+    region_name: str = ""
+    empty_message: str = "Queue is empty."
+
+
+@dataclass(frozen=True, slots=True)
 class PivotDimSpec:
     """Dimension column spec for `PivotTableRegion` — name + label +
     FK indicator. Mirrors legacy `pivot_dim_specs` entries."""

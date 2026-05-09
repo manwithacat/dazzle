@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.117] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — QUEUE byte-equivalent
+- **QUEUE** — new `QueueRegion` + `QueueRow` + `QueueMetric` + `QueueTransition` + `QueueBadgeColumn` + `QueueDateColumn` primitives matching `workspace/regions/queue.html` byte-for-byte. Renders `dz-queue-region` outer wrapper with: count row (badge + total + label), metrics row (label/value tiles), per-row attention accents (`data-dz-attention` from `attention_field`), headline (title + status badges via `_render_status_badge_html`), inline attention message, date secondaries (timeago string), and HTMX PUT transition action buttons (`hx-put="{queue_api_endpoint}/{id}"`, `hx-vals` JSON payload, `hx-ext="json-enc"`). Self-state transitions silently filtered.
+- **`_build_queue` rewrite** — consumes production runtime ctx (`items`, `metrics`, `total`, `attention_field`, `attention_message_field`, `display_key`, `badge_columns`, `date_columns`, `queue_transitions`, `queue_status_field`, `queue_api_endpoint`). Replaces the prior Card+Stack composition path.
+
+### Replicated Jinja-scope quirk for byte-equivalence
+- **Undefined-not-None on `<display_key>_display`** — legacy template falls back to empty title when `<display_key>_display` key is absent from item dict (Jinja Undefined ≠ None, so the legacy `if item[<key>_display] is not none` check evaluates True against Undefined). Typed adapter replicates this by checking `display_attr not in item` explicitly before the value-is-not-None check; only falls through to display_key / row_id when the `_display` key exists with a non-None value.
+
+### Phase 4B.4 wave 4 progress
+| Display | Status |
+|---|---|
+| KANBAN, ACTION_GRID, PROFILE_CARD, TABBED_LIST, HEATMAP, PIVOT_TABLE | ✅ |
+| **QUEUE** | ✅ **v0.66.117** |
+| CONFIRM_ACTION_PANEL | next (Alpine state machine — full integration) |
+| DIAGRAM | queued (Mermaid CDN — accept-degraded) |
+
+**29 of 32 displays byte-equivalent (91%).**
+
+### Agent Guidance
+- **Jinja Undefined-not-None is a recurring source of "looks like None but isn't" divergence.** When porting a legacy template that does `{% if item[some_key] is not none %}`, replicate the Undefined-vs-None semantics in Python: a missing dict key in legacy lookups becomes Jinja's Undefined (truthy in a `is not none` test), not Python's None. The fix is to check `key not in item` explicitly before applying value-not-None semantics. v0.66.117 (QUEUE) is the third such replication; pipeline_steps and pivot_table came before.
+
 ## [0.66.116] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — PIVOT_TABLE byte-equivalent

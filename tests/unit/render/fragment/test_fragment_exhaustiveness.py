@@ -72,6 +72,12 @@ from dazzle.render.fragment import (
     PivotTable,
     PivotTableRegion,
     ProfileCard,
+    QueueBadgeColumn,
+    QueueDateColumn,
+    QueueMetric,
+    QueueRegion,
+    QueueRow,
+    QueueTransition,
     Radar,
     RawHTML,
     RefPicker,
@@ -262,6 +268,18 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is PivotDimSpec:
         return PivotDimSpec(name="x", label="X")
+    if primitive_type is QueueRegion:
+        return QueueRegion(rows=(QueueRow(row_id="1", title="A"),))
+    if primitive_type is QueueRow:
+        return QueueRow(row_id="1", title="A")
+    if primitive_type is QueueMetric:
+        return QueueMetric(label="L", value="1")
+    if primitive_type is QueueTransition:
+        return QueueTransition(label="Approve", to_state="approved")
+    if primitive_type is QueueBadgeColumn:
+        return QueueBadgeColumn(key="severity", value="high")
+    if primitive_type is QueueDateColumn:
+        return QueueDateColumn(label="Due", timeago_str="just now")
     if primitive_type is Funnel:
         return Funnel(stages=(FunnelStage(label="lead", count=10),))
     if primitive_type is FunnelStage:

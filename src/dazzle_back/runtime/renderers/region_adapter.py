@@ -25,14 +25,11 @@ from dazzle.render.fragment import (
     ActionCard,
     ActionGrid,
     ActivityFeed,
-    Badge,
     BarChart,
     BarTrack,
     BoxPlot,
     Bullet,
     BulletRow,
-    Button,
-    Card,
     ConfirmCheckItem,
     ConfirmGate,
     CsvExportButton,
@@ -68,12 +65,17 @@ from dazzle.render.fragment import (
     PivotTable,
     PivotTableRegion,
     ProfileCard,
+    QueueBadgeColumn,
+    QueueDateColumn,
+    QueueMetric,
+    QueueRegion,
+    QueueRow,
+    QueueTransition,
     Radar,
     RawHTML,
     ReferenceBand,
     ReferenceLine,
     Region,
-    Row,
     SearchBox,
     Sparkline,
     Stack,
@@ -82,7 +84,6 @@ from dazzle.render.fragment import (
     StatusListEntry,
     Surface,
     Tabs,
-    TargetSelector,
     Text,
     Timeline,
     TimelineEvent,
@@ -642,177 +643,142 @@ class WorkspaceRegionAdapter:
             queue_api_endpoint: str URL — base URL for transitions
                 (transitions PUT to f"{queue_api_endpoint}/{item.id}")
         """
+        from dazzle_ui.runtime.template_renderer import (
+            _metric_number_filter,
+            _timeago_filter,
+        )
+
         title = _region_title(region)
         items = ctx.get("items", []) or []
-        total = int(ctx.get("total") or 0)
-
-        endpoint = ctx.get("endpoint")
+        try:
+            total = int(ctx.get("total") or 0)
+        except (TypeError, ValueError):
+            total = 0
         region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "queue")
-        queue_transitions = ctx.get("queue_transitions") or []
         queue_status_field = str(ctx.get("queue_status_field") or "")
         queue_api_endpoint = str(ctx.get("queue_api_endpoint") or "")
+        display_key = str(ctx.get("display_key") or "")
+        columns = ctx.get("columns") or []
 
-        chrome_parts: list[Fragment] = []
-
-        # Count badge (when total > 0)
-        if total > 0:
-            chrome_parts.append(
-                Stack(
-                    children=(Badge(label=str(total), variant="info"),),
-                    gap="none",
+        # Metrics row.
+        metrics: list[QueueMetric] = []
+        for m in ctx.get("metrics") or []:
+            if not isinstance(m, dict):
+                continue
+            label = str(m.get("label") or m.get("name") or "")
+            if not label:
+                continue
+            metrics.append(
+                QueueMetric(
+                    label=label,
+                    value=str(_metric_number_filter(m.get("value"))),
                 )
             )
 
-        # Metrics summary tiles
-        metrics_raw = ctx.get("metrics") or []
-        if isinstance(metrics_raw, list) and metrics_raw:
-            from dazzle_ui.runtime.template_renderer import _metric_number_filter
-
-            tiles: list[Fragment] = []
-            for m in metrics_raw:
-                if not isinstance(m, dict):
-                    continue
-                label = str(m.get("label") or m.get("name") or "")
-                if not label:
-                    continue
-                tiles.append(
-                    MetricTile(label=label, value=str(_metric_number_filter(m.get("value"))))
-                )
-            if tiles:
-                chrome_parts.append(Stack(children=tuple(tiles), gap="md"))
-
-        # Filter / date / csv chrome — same as _build_list
-        filter_columns_raw = ctx.get("filter_columns") or []
-        active_filters = ctx.get("active_filters") or {}
-        if endpoint and isinstance(filter_columns_raw, list) and filter_columns_raw:
-            cols: list[FilterColumn] = []
-            seen: set[str] = set()
-            for fc in filter_columns_raw:
-                if not isinstance(fc, dict):
-                    continue
-                key = str(fc.get("key") or "")
-                if not key or key in seen:
-                    continue
-                seen.add(key)
-                raw_options = fc.get("options") or []
-                opts: list[tuple[str, str]] = []
-                for opt in raw_options:
-                    if isinstance(opt, tuple) and len(opt) == 2:
-                        opts.append((str(opt[0]), str(opt[1])))
-                    elif isinstance(opt, dict):
-                        opts.append((str(opt.get("value") or ""), str(opt.get("label") or "")))
-                    else:
-                        opts.append((str(opt), str(opt)))
-                selected = str(
-                    fc.get("selected")
-                    or (active_filters.get(key) if isinstance(active_filters, dict) else "")
-                    or ""
-                )
-                cols.append(
-                    FilterColumn(
-                        key=key,
-                        label=str(fc.get("label") or key),
-                        options=tuple(opts),
-                        selected=selected,
-                    )
-                )
-            if cols:
-                chrome_parts.append(
-                    FilterBar(
-                        endpoint=URL(str(endpoint)),
-                        region_name=region_name,
-                        columns=tuple(cols),
-                    )
-                )
-
-        if endpoint and ctx.get("date_range"):
-            chrome_parts.append(
-                DateRangePicker(
-                    endpoint=URL(str(endpoint)),
-                    region_name=region_name,
-                    date_from=str(ctx.get("date_from") or ""),
-                    date_to=str(ctx.get("date_to") or ""),
+        # Transition definitions (per-region).
+        transitions: list[QueueTransition] = []
+        for tr in ctx.get("queue_transitions") or []:
+            if not isinstance(tr, dict):
+                continue
+            to_state = str(tr.get("to_state") or "")
+            if not to_state:
+                continue
+            transitions.append(
+                QueueTransition(
+                    label=str(tr.get("label") or to_state),
+                    to_state=to_state,
                 )
             )
 
-        if endpoint and ctx.get("csv_export"):
-            chrome_parts.append(
-                CsvExportButton(
-                    endpoint=URL(str(endpoint)),
-                    filename=str(ctx.get("csv_filename") or f"{region_name}.csv"),
-                )
-            )
-
-        # Body: rows with transition buttons OR EmptyState
-        body: Fragment
-        if not items:
-            body = EmptyState(
-                title="Empty",
-                description=getattr(region, "empty_message", None) or "Queue is empty.",
-            )
-        else:
-            row_cards: list[Fragment] = []
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-
-                # Item display: pick label from common fields
-                display_key = str(ctx.get("display_key") or "")
-                label = _pick_label(item, display_key) or str(item.get("id") or "")
-
-                # Build inline transition buttons (when transitions
-                # supplied + item has an id). Buttons that match the
-                # current state are skipped (legacy behaviour: don't
-                # offer a transition to the state you're already in).
-                buttons: list[object] = [Text(label)]
-                if (
-                    queue_transitions
-                    and queue_status_field
-                    and queue_api_endpoint
-                    and isinstance(queue_transitions, list)
-                ):
-                    item_id = item.get("id")
-                    current_state = item.get(queue_status_field)
-                    if item_id is not None:
-                        for tr in queue_transitions:
-                            if not isinstance(tr, dict):
-                                continue
-                            to_state = tr.get("to_state")
-                            if not to_state or to_state == current_state:
-                                continue
-                            tr_label = str(tr.get("label") or to_state)
-                            buttons.append(
-                                Button(
-                                    label=tr_label,
-                                    variant="secondary",
-                                    hx_put=URL(f"{queue_api_endpoint}/{item_id}"),
-                                    hx_target=TargetSelector(f"#region-{region_name}"),
-                                    hx_swap="innerHTML",
-                                    hx_vals=f'{{"{queue_status_field}": "{to_state}"}}',
-                                    hx_ext=("json-enc",),
-                                )
-                            )
-                row_cards.append(Card(body=Row(children=tuple(buttons), gap="md", align="center")))
-            if row_cards:
-                body = Stack(children=tuple(row_cards), gap="sm")
+        # Per-row construction.
+        rows: list[QueueRow] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_id = str(item.get("id") or "")
+            # Title fallback chain mirroring the legacy Jinja:
+            #   {% set _display = item[display_key ~ "_display"] %}
+            #   {% set _primary = item[display_key] %}
+            #   {% if _display is not none %}{{ _display }}{% elif _primary is not none %}{{ _primary }}{% else %}{{ item.id }}{% endif %}
+            # Jinja's `dict[missing_key]` returns Undefined (not None);
+            # `Undefined is not none` is True and `{{ Undefined }}` renders
+            # as empty string. So a MISSING `<display_key>_display` key
+            # produces empty title (Undefined-not-None quirk). Present-None
+            # falls through to primary; primary missing/None falls to id.
+            display_attr = f"{display_key}_display" if display_key else ""
+            if display_attr and display_attr not in item:
+                row_title = ""
+            elif display_attr and item.get(display_attr) is not None:
+                row_title = str(item[display_attr])
+            elif display_key and item.get(display_key) is not None:
+                row_title = str(item[display_key])
             else:
-                body = EmptyState(
-                    title="Empty",
-                    description=getattr(region, "empty_message", None) or "Queue is empty.",
+                row_title = row_id
+
+            # Badges = columns with type=="badge" and key != display_key.
+            badges: list[QueueBadgeColumn] = []
+            for col in columns:
+                if not isinstance(col, dict):
+                    continue
+                key = str(col.get("key") or "")
+                if not key or key == display_key:
+                    continue
+                if col.get("type") == "badge":
+                    badges.append(QueueBadgeColumn(key=key, value=item.get(key)))
+
+            # Date secondaries = columns with type=="date" and a non-empty value.
+            date_columns: list[QueueDateColumn] = []
+            for col in columns:
+                if not isinstance(col, dict):
+                    continue
+                if col.get("type") != "date":
+                    continue
+                key = str(col.get("key") or "")
+                val = item.get(key)
+                if not val:
+                    continue
+                date_columns.append(
+                    QueueDateColumn(
+                        label=str(col.get("label") or key),
+                        timeago_str=_timeago_filter(val),
+                    )
                 )
 
-        # Overflow: "Showing N of M"
-        if total > len(items) > 0:
-            chrome_parts.append(Text(f"Showing {len(items)} of {total}"))
+            # Attention.
+            attn_raw = item.get("_attention") if hasattr(item, "get") else None
+            attn_level = ""
+            attn_message = ""
+            if isinstance(attn_raw, dict):
+                attn_level = str(attn_raw.get("level") or "")
+                attn_message = str(attn_raw.get("message") or "")
 
-        if chrome_parts:
-            body = Stack(
-                children=(*chrome_parts[:-1], body, *chrome_parts[-1:])
-                if chrome_parts and isinstance(chrome_parts[-1], Text)
-                else (*chrome_parts, body),
-                gap="md",
+            current_status = str(item.get(queue_status_field) or "") if queue_status_field else ""
+
+            rows.append(
+                QueueRow(
+                    row_id=row_id,
+                    title=row_title,
+                    current_status=current_status,
+                    badges=tuple(badges),
+                    date_columns=tuple(date_columns),
+                    attention_level=attn_level,
+                    attention_message=attn_message,
+                )
             )
 
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "Queue is empty."
+        )
+        body: Fragment = QueueRegion(
+            rows=tuple(rows),
+            total=total,
+            metrics=tuple(metrics),
+            transitions=tuple(transitions),
+            queue_status_field=queue_status_field,
+            queue_api_endpoint=queue_api_endpoint,
+            region_name=region_name,
+            empty_message=str(empty_msg),
+        )
         return _wrap_surface(title, "list", body)
 
     def _build_kanban(self, region: Any, ctx: dict[str, Any]) -> Surface:

@@ -65,6 +65,7 @@ from dazzle.render.fragment.primitives import (
     PivotTable,
     PivotTableRegion,
     ProfileCard,
+    QueueRegion,
     Radar,
     ReferenceBand,
     ReferenceLine,
@@ -234,6 +235,8 @@ class FragmentRenderer:
                 return self._emit_heatmap(fragment, ctx)
             case PivotTableRegion():
                 return self._emit_pivot_table_region(fragment, ctx)
+            case QueueRegion():
+                return self._emit_queue_region(fragment, ctx)
             case Funnel():
                 return self._emit_funnel(fragment, ctx)
             case KanbanRegion():
@@ -1714,6 +1717,129 @@ class FragmentRenderer:
             f'<div class="dz-funnel-chart-region">'
             f'<div class="dz-funnel-stages">{"".join(items)}</div>'
             f'<p class="dz-funnel-summary">{f.total} total</p>'
+            f"</div>"
+        )
+
+    def _emit_queue_region(self, q: "QueueRegion", ctx: RenderContext) -> str:
+        """Render a QueueRegion matching legacy
+        `workspace/regions/queue.html` byte-for-byte: outer
+        `dz-queue-region`, optional count row + metrics row, then
+        the queue items list with per-row attention accent +
+        headline (title + badges) + optional attn message + date
+        secondaries + transition action buttons.
+
+        Empty path renders `<p class="dz-empty-dense dz-queue-empty">`
+        — note the legacy template uses BOTH classes.
+        """
+        from dazzle_back.runtime.renderers.region_adapter import (
+            _render_status_badge_html,
+        )
+
+        if not q.rows:
+            return (
+                f'<div class="dz-queue-region">'
+                f'<p class="dz-empty-dense dz-queue-empty" role="status">'
+                f"{ctx.escape(q.empty_message)}</p>"
+                f"</div>"
+            )
+
+        count_row = ""
+        if q.total > 0:
+            count_row = (
+                f'<div class="dz-queue-count-row">'
+                f'<span class="dz-queue-count">{q.total}</span>'
+                f"</div>"
+            )
+
+        metrics_row = ""
+        if q.metrics:
+            metric_items = "".join(
+                f'<div class="dz-queue-metric">'
+                f'<div class="dz-queue-metric-value">{ctx.escape(m.value)}</div>'
+                f'<div class="dz-queue-metric-label">{ctx.escape(m.label)}</div>'
+                f"</div>"
+                for m in q.metrics
+            )
+            metrics_row = f'<div class="dz-queue-metrics">{metric_items}</div>'
+
+        rows_html: list[str] = []
+        for row in q.rows:
+            attn_class = ""
+            attn_data_attr = ""
+            attn_message_html = ""
+            if row.attention_level:
+                attn_class = f"dz-attn-both dz-attn-tone-{row.attention_level}"
+                attn_data_attr = f' data-dz-attn="{ctx.escape_attr(row.attention_level)}"'
+                attn_message_html = (
+                    f'<p class="dz-queue-row-attn">{ctx.escape(row.attention_message)}</p>'
+                )
+
+            badges_html = "".join(_render_status_badge_html(b.value) for b in row.badges)
+            headline_html = (
+                f'<div class="dz-queue-row-headline">'
+                f'<span class="dz-queue-row-title">{ctx.escape(row.title)}</span>'
+                f"{badges_html}"
+                f"</div>"
+            )
+
+            date_html = "".join(
+                f'<span class="dz-queue-row-date">'
+                f"{ctx.escape(d.label)}: {ctx.escape(d.timeago_str)}"
+                f"</span>"
+                for d in row.date_columns
+            )
+
+            actions_html = ""
+            applicable = [t for t in q.transitions if t.to_state != row.current_status]
+            if applicable and q.queue_status_field and q.queue_api_endpoint:
+                buttons = "".join(
+                    f'<button type="button" '
+                    f'class="dz-queue-action" '
+                    f'hx-put="{ctx.escape_attr(q.queue_api_endpoint)}/'
+                    f'{ctx.escape_attr(row.row_id)}" '
+                    f'hx-vals=\'{{"{q.queue_status_field}": '
+                    f'"{t.to_state}"}}\' '
+                    f'hx-ext="json-enc" '
+                    f'hx-target="#region-{ctx.escape_attr(q.region_name)}" '
+                    f'hx-swap="innerHTML">'
+                    f"{ctx.escape(t.label)}"
+                    f"</button>"
+                    for t in applicable
+                )
+                actions_html = (
+                    f'<div class="dz-queue-row-actions" '
+                    f'onclick="event.stopPropagation()">'
+                    f"{buttons}"
+                    f"</div>"
+                )
+
+            # Trailing space inside `class="dz-queue-row "` mirrors
+            # legacy Jinja interpolation when no attn is present.
+            row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
+            # Same artifact for `class="dz-queue-row-main "`.
+            rows_html.append(
+                f'<div class="{row_open_class}"{attn_data_attr}>'
+                f'<div class="dz-queue-row-main ">'
+                f"{headline_html}"
+                f"{attn_message_html}"
+                f"{date_html}"
+                f"</div>"
+                f"{actions_html}"
+                f"</div>"
+            )
+
+        rows_block = f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
+
+        overflow_html = ""
+        if q.total > len(q.rows):
+            overflow_html = f'<p class="dz-queue-overflow">Showing {len(q.rows)} of {q.total}</p>'
+
+        return (
+            f'<div class="dz-queue-region">'
+            f"{count_row}"
+            f"{metrics_row}"
+            f"{rows_block}"
+            f"{overflow_html}"
             f"</div>"
         )
 

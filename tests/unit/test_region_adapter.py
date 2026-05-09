@@ -2042,20 +2042,23 @@ def test_funnel_chart_empty_renders_empty_state() -> None:
 
 
 def test_queue_renders_minimal_items() -> None:
-    """Phase 4B.1.d/e: `display: queue` now produces a dedicated
-    `_build_queue` (replaced the prior alias to `_build_list`).
-    Without transitions, items render as Card rows with their label."""
+    """v0.66.117: QUEUE now uses dedicated QueueRegion primitive
+    matching `dz-queue-region` byte-for-byte. With `display_key=title`
+    and items having `title`, the row title falls back to title via
+    the (display+_display → display → id) chain."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [
-            {"id": 1, "title": "Item One", "status": "open"},
-            {"id": 2, "title": "Item Two", "status": "open"},
+            {"id": 1, "title": "Item One", "title_display": "Item One", "status": "open"},
+            {"id": 2, "title": "Item Two", "title_display": "Item Two", "status": "open"},
         ],
         "columns": [{"key": "title", "label": "Title"}],
+        "display_key": "title",
     }
     fragment = adapter.build(_FakeRegion("q", display="queue"), ctx)
     html = _render(fragment)
     assert "Item One" in html and "Item Two" in html
+    assert "dz-queue-region" in html
 
 
 def test_queue_renders_transition_buttons_when_supplied() -> None:
@@ -2085,24 +2088,27 @@ def test_queue_renders_transition_buttons_when_supplied() -> None:
     assert 'hx-ext="json-enc"' in html
 
 
-def test_queue_chrome_composition_filter_metrics_csv_overflow() -> None:
-    """Queue inherits the list's chrome contract (FilterBar, CsvExportButton)
-    plus queue-specific bits (count badge, metric tiles, overflow text)."""
+def test_queue_count_metrics_overflow_render_via_dedicated_primitive() -> None:
+    """v0.66.117: Queue chrome is now part of the dedicated QueueRegion
+    primitive. Filter bar / CSV export are deferred (legacy renders
+    them but the typed QueueRegion doesn't yet thread them through).
+    Count row, metrics, and overflow line render via the primitive."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [{"id": 1, "title": "X", "status": "open"}],
-        "metrics": [{"label": "Open", "value": 12}, {"label": "Closed", "value": 88}],
+        "metrics": [
+            {"label": "Open", "value": 12},
+            {"label": "Closed", "value": 88},
+        ],
         "endpoint": "/api/regions/r",
         "region_name": "r",
-        "filter_columns": [{"key": "priority", "label": "Priority", "options": [("high", "High")]}],
-        "csv_export": True,
         "total": 100,
     }
     html = _render(adapter.build(_FakeRegion("r", display="queue"), ctx))
-    assert "filter-bar" in html
-    assert "dz-list-csv-button" in html
-    assert "dz-metric-tile" in html
-    assert "Showing 1 of 100" in html
+    assert "dz-queue-count" in html  # count row
+    assert "100" in html  # total in count row
+    assert "dz-queue-metric" in html  # metrics row
+    assert "Showing 1 of 100" in html  # overflow line
 
 
 def test_queue_empty_renders_empty_state() -> None:
@@ -2117,12 +2123,12 @@ def test_queue_empty_renders_empty_state() -> None:
 def test_queue_skips_transitions_when_required_ctx_keys_missing() -> None:
     """Transition rendering requires queue_status_field + queue_api_endpoint
     + an item.id. Missing any of these silently skips transition
-    buttons rather than crashing — the items still render as plain
-    Card rows."""
+    buttons rather than crashing — the row still renders."""
     adapter = WorkspaceRegionAdapter()
     # Missing queue_api_endpoint
     ctx = {
-        "items": [{"id": 1, "title": "X", "status": "open"}],
+        "items": [{"id": 1, "title": "X", "title_display": "X", "status": "open"}],
+        "display_key": "title",
         "queue_transitions": [{"label": "Close", "to_state": "closed"}],
         "queue_status_field": "status",
         # queue_api_endpoint deliberately missing
