@@ -1134,19 +1134,26 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
 
     detail = getattr(render_ctx, "detail", None)
     if detail is not None:
+        # Issue #1028: DetailContext is a flat list of FieldContext + a
+        # parallel `item: dict` of values keyed by field.name. The
+        # pre-fix nested loop iterated `detail.sections` (which doesn't
+        # exist) and read `f.value` (also doesn't exist) — yielding
+        # zero fields with empty values, so the fragment adapter
+        # always rendered EmptyState. Match the legacy template's
+        # `detail.item.get(field.name, "")` value source.
+        item = getattr(detail, "item", {}) or {}
         fields_out: list[dict[str, Any]] = []
-        for section in getattr(detail, "sections", []) or []:
-            for f in getattr(section, "fields", []) or []:
-                fields_out.append(
-                    {
-                        "key": getattr(f, "key", "") or getattr(f, "name", ""),
-                        "label": getattr(f, "label", "")
-                        or getattr(f, "key", "")
-                        or getattr(f, "name", ""),
-                        "value": getattr(f, "value", "") or "",
-                        "kind": getattr(f, "type", "text") or "text",
-                    }
-                )
+        for f in getattr(detail, "fields", []) or []:
+            field_name = getattr(f, "name", "") or getattr(f, "key", "")
+            value = item.get(field_name, "") if isinstance(item, dict) else ""
+            fields_out.append(
+                {
+                    "key": field_name,
+                    "label": getattr(f, "label", "") or field_name,
+                    "value": "" if value is None else value,
+                    "kind": getattr(f, "type", "text") or "text",
+                }
+            )
         # Plan 10: thread surface.related_groups (IR-level) into the ctx
         related_groups_out: list[dict[str, Any]] = []
         for rg in getattr(surface, "related_groups", []) or []:

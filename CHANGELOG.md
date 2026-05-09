@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.128] - 2026-05-09
+
+### Fixed
+
+- **#1028 — Fragment detail (VIEW) surfaces always rendered EmptyState.** `_build_dispatch_ctx` in `src/dazzle_ui/runtime/page_routes.py` iterated `getattr(detail, "sections", [])` (which doesn't exist on `DetailContext`) and read `getattr(f, "value", "")` (which doesn't exist on `FieldContext`) — `fields_out` was always empty, so the fragment adapter rendered EmptyState on every detail surface. Fix iterates the flat `detail.fields` list and pulls values from `detail.item` keyed by field.name, matching the legacy `detail_view.html` template's `detail.item.get(field.name, "")` pattern. Six regression tests at `tests/unit/test_dispatch_ctx_detail_view.py` pin the contract: flat-fields iteration, item-dict value source, label fallback, missing/None values → empty string, related_groups thread.
+
+### Agent Guidance
+
+- **`DetailContext` is flat, not sectioned.** When porting detail surfaces to typed primitives, iterate `detail.fields: list[FieldContext]` directly. Values live on the parallel `detail.item: dict` keyed by `field.name`. The legacy template pattern is `detail.item.get(field.name, "")` — the typed adapter must match.
+- **Pin runtime ctx assumptions with focused unit tests.** The pre-fix code looked at attributes that don't exist (`detail.sections`, `f.value`) — neither mypy nor any test caught the silent empty-fields output. Adding a focused unit test against the production `DetailContext` Pydantic model would have caught the bug at PR time. Pattern: build the production model with realistic data, call the dispatch fn, assert the output dict has the expected keys + values.
+
 ## [0.66.127] - 2026-05-09
 
 ### Fixed
