@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.129] - 2026-05-09
+
+### Fixed
+
+- **#1027 — RefPicker `data-selected-value` carried serialised record dict instead of FK UUID in EDIT mode.** The form loader eagerly expands ref fields into the full related-record dict (e.g. `{"id": "<uuid>", "name": "...", "email": "..."}`); `_build_dispatch_ctx` uniformly forwarded `initial_values.get(fname)` as `entry["value"]`, so the adapter's REF branch put the dict into `RefPicker.initial_value` and `str()` of that dict landed in the rendered attribute. Fix: at the ctx-build boundary, when `ref_api` is set on the field, coerce dict → `id` and lift a sensible display field (`__display__` / `name` / `title` / `label` / `email` / `code`) into `initial_label` so the dropdown reads something while the lazy fetch resolves. Five regression tests at `tests/unit/test_dispatch_ctx_ref_field_coercion.py` pin the contract: dict coercion, display-field lifting, scalar passthrough, non-ref-field exemption, id-only dict (no label lifted).
+
+### Agent Guidance
+
+- **Coerce dict → id at the ctx-build boundary, not the adapter.** When the form loader returns expanded related records, the dispatch ctx is the right place to extract the FK scalar — the adapter shouldn't need to know about loader internals. Same lift-then-fall-through pattern works for any future field-type whose loader returns a richer payload than the bare scalar (e.g., file fields with metadata, computed display values).
+
 ## [0.66.128] - 2026-05-09
 
 ### Fixed

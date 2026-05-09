@@ -1100,12 +1100,13 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
         for field in getattr(form, "fields", []) or []:
             fname = getattr(field, "name", "")
             kind = getattr(field, "type", None) or "str"
+            raw_value = initial_values.get(fname, "")
             entry = {
                 "name": fname,
                 "label": getattr(field, "label", "") or fname,
                 "kind": str(kind).lower(),
                 "required": bool(getattr(field, "required", False)),
-                "value": initial_values.get(fname, "") or "",
+                "value": raw_value or "",
                 "placeholder": getattr(field, "placeholder", "") or "",
             }
             options = getattr(field, "options", None)
@@ -1123,6 +1124,25 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             initial_label_value = str(getattr(field, "initial_label", "") or "")
             if initial_label_value:
                 entry["initial_label"] = initial_label_value
+            # Issue #1027: ref-typed fields in EDIT mode receive an
+            # eagerly-expanded related-record dict from the loader,
+            # not the bare FK UUID. Coerce to the FK scalar and lift
+            # a sensible display value into `initial_label` so the
+            # dropdown reads something while the lazy fetch resolves.
+            if ref_api and isinstance(raw_value, dict):
+                entry["value"] = str(raw_value.get("id", "") or "")
+                if not entry.get("initial_label"):
+                    for label_key in (
+                        "__display__",
+                        "name",
+                        "title",
+                        "label",
+                        "email",
+                        "code",
+                    ):
+                        if raw_value.get(label_key):
+                            entry["initial_label"] = str(raw_value[label_key])
+                            break
             fields_out.append(entry)
         is_edit = str(getattr(form, "mode", "create")).lower() == "edit"
         return {
