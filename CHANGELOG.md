@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-05-09
+
+Minor bump rolling up the cyfuture pilot completion arc (8 issues closed since v0.66.126: #1032, #1028, #1027, #1021, #1031, #1030, #1029, #1033) plus this release's CI-green fix for FormStack's RBAC contract attribute. With v0.67.0, the typed-Fragment substrate is now feature-complete vs the legacy Jinja templates across all of: 32/32 region displays, full workspace chrome (`_content.html` byte-equivalent), all surface modes (LIST/VIEW/CREATE/EDIT) with the full DSL UX-feature set, and every cyfuture pilot blocker resolved.
+
+### Fixed — CI green
+
+- **`UX Contracts (support_tickets)` job** — failing on every recent main commit because the Fragment LIST adapter's `FormStack` emitted plain `action="..." method="POST"` form submission, but the RBAC contract checker (`_check_create_form` in `testing/ux/contract_checker.py`) requires `hx-post` on the `<form>` element. Three contracts (`create_form:User`, `create_form:Ticket`, `create_form:Comment`) were failing.
+
+### Changed — FormStack now emits htmx-driven form submission
+
+- **`FormStack` renderer**: POST/PUT methods emit `hx-post`/`hx-put` + `hx-target="body"` + `hx-swap="innerHTML"` + `hx-ext="json-enc"` matching the legacy `components/form.html` contract. GET keeps the legacy `action`/`method` shape (rare; search forms etc.). The plain `action="..." method="POST"` shape is gone for POST/PUT — htmx submission is now the contract.
+- **`FormStack.method`** widened to `Literal["GET", "POST", "PUT"]` (was `Literal["GET", "POST"]`). EDIT-mode forms can now declare `method="PUT"` to emit `hx-put`, matching the legacy template's `hx-{{ "put" if form.method == "put" else "post" }}` branching.
+- **`FormStack.entity_name` + `mode` fields** carry the RBAC contract attrs (`data-dazzle-form="<entity>"`, `data-dazzle-form-mode="<create|edit>"`). Adapter threads these from `surface.entity_ref` + `SurfaceMode` automatically.
+- **Adapter** maps the dispatch ctx method (lowercase per `FormContext`) to the FormStack typed method — `"put"` ctx → `"PUT"` primitive.
+
+### Changed — tests
+
+- `tests/unit/render/fragment/test_renderer_forms.py` reshaped to assert htmx attrs (`hx-post`, `hx-target`, `hx-swap`, `hx-ext`) on POST/PUT forms; existing GET assertion retained for the search-form path; new tests pin `data-dazzle-form` + `data-dazzle-form-mode` threading.
+- `tests/integration/test_simple_task_render_fragment.py` loosened the form-endpoint assertion to accept either `action="..."`, `hx-post="..."`, or `hx-put="..."` — both Jinja and Fragment paths point at the right endpoint, but via different attribute names per the new contract.
+
+### Migration notes
+
+If downstream code constructs `FormStack` directly and asserts `action="..."` in the rendered output, switch to asserting `hx-post="..."` (or `hx-put` for EDIT). The plain action attribute only appears on `method="GET"` forms now. The Surface-level adapter (`_build_form` in `fragment_adapter.py`) does this automatically — no DSL or runtime ctx changes needed.
+
+### Agent Guidance
+
+- **The `<form>` shape was the last legacy-template contract drift.** With v0.67.0, the typed adapter's form output now matches the legacy template's htmx submission shape down to the data-attrs. Future form-related work (validation errors, multi-step forms, autosave) should extend FormStack rather than introducing parallel form primitives.
+- **Minor-version bumps mark contract-affecting changes.** Versions 0.66.x were patch-level fixes within the same FormStack/LIST adapter contracts. 0.67.0 changes the FormStack output shape — that's the threshold for a minor bump per semver. Downstream consumers reading rendered HTML need to know.
+
 ## [0.66.140] - 2026-05-09
 
 ### Added — FileUpload primitive — closes #1033

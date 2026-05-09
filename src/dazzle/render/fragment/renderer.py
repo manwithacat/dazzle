@@ -3331,11 +3331,29 @@ class FragmentRenderer:
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
+        """Render `<form>` with htmx-driven submission per legacy
+        `components/form.html` contract — `hx-post` / `hx-put` (by
+        `fs.method`), `hx-target="body"`, `hx-swap="innerHTML"`,
+        `hx-ext="json-enc"` for JSON payload encoding. The RBAC
+        contract checker requires `hx-post` on the form element."""
         action = ctx.escape_attr(str(fs.action))
         fields_html = "".join(self._emit(f, ctx) for f in fs.fields)  # type: ignore[arg-type]
         submit_html = self._emit(fs.submit, ctx) if fs.submit is not None else ""
+        if fs.method == "GET":
+            method_attrs = f'action="{action}" method="GET"'
+        else:
+            hx_verb = "hx-put" if fs.method == "PUT" else "hx-post"
+            method_attrs = (
+                f'{hx_verb}="{action}" hx-target="body" hx-swap="innerHTML" hx-ext="json-enc"'
+            )
+        data_parts: list[str] = []
+        if fs.entity_name:
+            data_parts.append(f'data-dazzle-form="{ctx.escape_attr(fs.entity_name)}"')
+        if fs.mode:
+            data_parts.append(f'data-dazzle-form-mode="{ctx.escape_attr(fs.mode)}"')
+        data_attrs = (" " + " ".join(data_parts)) if data_parts else ""
         return (
-            f'<form class="dz-form-stack" action="{action}" method="{fs.method}">'
+            f'<form class="dz-form-stack" {method_attrs}{data_attrs}>'
             f"{fields_html}{submit_html}"
             f"</form>"
         )

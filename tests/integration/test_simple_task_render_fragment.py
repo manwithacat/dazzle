@@ -214,7 +214,15 @@ def test_jinja_and_fragment_both_render_create_form() -> None:
 
     for renderer_name, html in [("jinja", jinja_html), ("fragment", fragment_html)]:
         assert "<form" in html, f"{renderer_name}: missing <form>"
-        assert 'action="/api/Task"' in html, f"{renderer_name}: missing action"
+        # v0.66.141: fragment forms emit `hx-post` per the RBAC contract;
+        # jinja forms emit `hx-post` too. Both reference the same endpoint
+        # — accept either attribute since the form-submission shape isn't
+        # the test's contract (parity of rendered field labels is).
+        assert (
+            'action="/api/Task"' in html
+            or 'hx-post="/api/Task"' in html
+            or 'hx-put="/api/Task"' in html
+        ), f"{renderer_name}: missing form endpoint reference"
         assert "Title" in html, f"{renderer_name}: missing Title label"
         assert "Status" in html, f"{renderer_name}: missing Status label"
         assert "Create" in html, f"{renderer_name}: missing submit label"
@@ -234,5 +242,11 @@ def test_fragment_renders_edit_form_with_values() -> None:
     ctx = _form_ctx(value="Buy milk")
     html = dispatch_render(fragment_surface, ctx=ctx, services=services)
     assert "Buy milk" in html
-    assert 'action="/api/Task/42"' in html
+    # v0.66.141: EDIT-mode forms emit `hx-put` (or `hx-post` if the
+    # dispatch ctx didn't override the method). Either is contract-correct.
+    assert (
+        'action="/api/Task/42"' in html
+        or 'hx-put="/api/Task/42"' in html
+        or 'hx-post="/api/Task/42"' in html
+    )
     assert "Save" in html

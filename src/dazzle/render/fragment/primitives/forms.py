@@ -24,7 +24,7 @@ _FIELD_KINDS = (
     "url",
     "tel",
 )
-_METHODS = ("GET", "POST")
+_METHODS = ("GET", "POST", "PUT")
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,10 +162,22 @@ class FormSection:
 
 @dataclass(frozen=True, slots=True)
 class FormStack:
+    """The `<form>` container — emits htmx-driven submission per the
+    legacy `components/form.html` contract: `hx-post`/`hx-put` (chosen
+    by `method`), `hx-target="body"`, `hx-swap="innerHTML"`,
+    `hx-ext="json-enc"` so the controller receives a JSON payload.
+
+    `entity_name` + `mode` thread `data-dazzle-form="<entity>"` and
+    `data-dazzle-form-mode="<create|edit>"` onto the `<form>` —
+    contract attrs the RBAC checker (`_check_create_form` in
+    `testing/ux/contract_checker.py`) keys off."""
+
     action: URL
     fields: tuple[object, ...]  # Field | Combobox | FormSection
-    method: Literal["GET", "POST"] = "POST"
+    method: Literal["GET", "POST", "PUT"] = "POST"
     submit: Submit | None = None
+    entity_name: str = ""
+    mode: Literal["", "create", "edit"] = ""
 
     def __post_init__(self) -> None:
         if not self.fields:

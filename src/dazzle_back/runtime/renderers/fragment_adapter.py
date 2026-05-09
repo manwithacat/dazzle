@@ -425,7 +425,14 @@ class FragmentSurfaceAdapter:
         )
 
         body: Fragment
-        method_lit = method if method in ("GET", "POST") else "POST"
+        # v0.67.0: map dispatch ctx method (lowercase per FormContext) to
+        # the FormStack typed method. PUT support added so EDIT-mode
+        # forms emit hx-put per the legacy form contract.
+        method_upper = str(method).upper() if method else "POST"
+        method_lit = method_upper if method_upper in ("GET", "POST", "PUT") else "POST"
+        # RBAC contract attrs threaded onto the <form>.
+        form_entity_name = (getattr(surface, "entity_ref", "") or "").strip()
+        form_mode = "edit" if mode == SurfaceMode.EDIT else "create"
         sections_in: list[dict[str, Any]] = ctx.get("sections", []) or []
         if not fields_in:
             body = EmptyState(
@@ -455,6 +462,8 @@ class FragmentSurfaceAdapter:
                 fields=tuple(section_primitives),
                 method=method_lit,  # type: ignore[arg-type]
                 submit=Submit(label=submit_label),
+                entity_name=form_entity_name,
+                mode=form_mode,  # type: ignore[arg-type]
             )
         else:
             primitives = tuple(_field_to_primitive(f) for f in fields_in)
@@ -463,6 +472,8 @@ class FragmentSurfaceAdapter:
                 fields=primitives,
                 method=method_lit,  # type: ignore[arg-type]
                 submit=Submit(label=submit_label),
+                entity_name=form_entity_name,
+                mode=form_mode,  # type: ignore[arg-type]
             )
 
         return Surface(
