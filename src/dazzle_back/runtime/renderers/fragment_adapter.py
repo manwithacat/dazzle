@@ -57,6 +57,8 @@ class FragmentSurfaceAdapter:
         columns: list[dict[str, Any]] = ctx.get("columns", [])
         entity_name = (getattr(surface, "entity_ref", "") or "").strip()
         create_url = str(ctx.get("create_url", "") or "").strip()
+        # Issue #1029 phase 1: per-row drill-down URL.
+        detail_url_template = str(ctx.get("detail_url_template", "") or "").strip()
 
         body: Fragment
         if not items:
@@ -72,7 +74,10 @@ class FragmentSurfaceAdapter:
                 )
                 for item in items
             )
-            body = Table(columns=column_labels, rows=rows)
+            row_links = (
+                _resolve_row_links(items, detail_url_template) if detail_url_template else ()
+            )
+            body = Table(columns=column_labels, rows=rows, row_links=row_links)
 
         # Header carries title + optional Create link. The Create
         # link is contractually required for the list page (UX
@@ -400,6 +405,34 @@ def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPi
         placeholder=placeholder,
         initial_value=initial_value,
     )
+
+
+def _resolve_row_links(
+    items: list[dict[str, Any]], detail_url_template: str
+) -> tuple[str | None, ...]:
+    """Issue #1029 phase 1: per-row drill-down URL resolution.
+
+    `detail_url_template` is a Python format string carrying named
+    placeholders (typically `{id}`, but DSL authors may use `{slug}`,
+    `{code}`, etc.). For each item, substitute `{key}` with `item[key]`
+    and emit the resolved URL. Items missing a required key get `None`
+    (no row link) — defensive for partial records or rows that aren't
+    really drillable (e.g., summary rows).
+
+    Empty template → empty tuple (caller short-circuits before
+    reaching here, but defensive)."""
+    if not detail_url_template:
+        return ()
+    out: list[str | None] = []
+    for item in items:
+        try:
+            out.append(detail_url_template.format(**item))
+        except (KeyError, IndexError, ValueError):
+            # Template referenced a key that's not on this row, or the
+            # template has malformed placeholders. Skip the link
+            # rather than crash the whole list render.
+            out.append(None)
+    return tuple(out)
 
 
 def _format_cell(value: Any, kind: str) -> str:

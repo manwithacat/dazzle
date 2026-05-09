@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.133] - 2026-05-09
+
+### Added — #1029 Phase 1 — LIST adapter row-click drill-down
+
+- **`Table.row_links` field** — optional parallel tuple aligned to `rows`. When set, each row becomes an htmx-driven `<tr hx-get="…" hx-target="body" hx-swap="innerHTML" hx-push-url="true" tabindex="0">` carrying a `dz-table__row--linked` class for CSS hover/focus styling. Length must match `rows`; backwards-compatible default `()`.
+- **`detail_url_template` threaded into dispatch ctx** for LIST surfaces — `_build_dispatch_ctx` table branch now exposes the template alongside the existing `items` / `columns` / `endpoint` / `total` / `page` keys.
+- **`_resolve_row_links(items, template)` adapter helper** — substitutes named placeholders (`{id}`, `{slug}`, `{code}`, etc.) from each item dict. Defensive: a row missing the referenced key gets `None` (plain `<tr>`) rather than crashing the whole list render.
+- **`FragmentSurfaceAdapter._build_list`** now passes resolved `row_links` to the `Table` primitive when the template is configured.
+- **Twelve regression tests** at `tests/unit/test_dispatch_ctx_list_row_links.py` pin: ctx threading, helper substitution + non-id placeholders + missing-key defensive None + empty template, Table arity validation, plain-row fallback, ctx-key preservation across phases.
+
+### Phase plan reminder
+
+This is Phase 1 of 7 for issue #1029. See `dev_docs/2026-05-09-issue-1029-list-adapter-plan.md` for the full sequencing — the next ships are Pagination (Phase 2), `action_primary` button (Phase 3), custom empty messages (Phase 4), search+filter (Phase 5), sort headers (Phase 6), bulk actions (Phase 7). Issue stays open until Phase 7.
+
+### Agent Guidance
+
+- **Row-click is wrapper-driven, not cell-driven.** Wrapping each `<td>` in an `<a>` breaks `<td>` nesting; wrapping the `<tr>` is the htmx-idiomatic shape. The `<tr hx-get="…">` pattern is what htmx natively supports for clickable rows. When extending other table-shaped primitives (PivotTableRegion, ListRegion, KanbanRegion) with similar drill-down, follow the same shape.
+- **Defensive substitution prevents listing crashes.** `detail_url_template.format(**item)` raises `KeyError` if the template references a key the row doesn't have. Catch `(KeyError, IndexError, ValueError)` and emit `None` rather than letting one bad row break the whole list. Same pattern works for any future format-string-driven adapter.
+
 ## [0.66.132] - 2026-05-09
 
 ### Added — detail VIEW action toolbar + `Button.hx_delete`

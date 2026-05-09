@@ -87,8 +87,18 @@ _METRIC_DELTA_SENTIMENTS = ("", "positive_up", "positive_down")
 
 @dataclass(frozen=True, slots=True)
 class Table:
+    """Plain tabular data primitive.
+
+    `row_links` (issue #1029 phase 1) is an optional parallel tuple
+    aligned to `rows`: when set, each row's first cell is wrapped in
+    an `<a href="...">` so clicking the row navigates to that URL.
+    Length must match `rows`. Use `None` for rows that should NOT be
+    clickable (e.g. summary rows). Backwards-compatible — pass `()` /
+    omit to keep the legacy plain-table render."""
+
     columns: tuple[str, ...]
     rows: tuple[tuple[str, ...], ...]
+    row_links: tuple[str | None, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.columns:
@@ -99,6 +109,10 @@ class Table:
                     f"row arity mismatch at index {i}: row has {len(row)} cells, "
                     f"columns has {len(self.columns)}"
                 )
+        if self.row_links and len(self.row_links) != len(self.rows):
+            raise ValueError(
+                f"row_links length {len(self.row_links)} != rows length {len(self.rows)}"
+            )
 
 
 @dataclass(frozen=True, slots=True)

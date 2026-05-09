@@ -1091,6 +1091,11 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             # adapter can emit a Create link required by the UX
             # contract checker (rbac:<Entity>:<persona>:create).
             "create_url": getattr(table, "create_url", "") or "",
+            # Issue #1029 phase 1: detail_url_template threads through
+            # so the adapter can wrap each <tr> in an hx-get drill-down
+            # to the detail surface. Template usually contains "{id}"
+            # which the adapter substitutes per row.
+            "detail_url_template": getattr(table, "detail_url_template", "") or "",
         }
 
     form = getattr(render_ctx, "form", None)

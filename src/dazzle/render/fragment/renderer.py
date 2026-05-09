@@ -861,10 +861,26 @@ class FragmentRenderer:
 
     def _emit_table(self, t: Table, ctx: RenderContext) -> str:
         head_cells = "".join(f"<th>{ctx.escape(c)}</th>" for c in t.columns)
-        body_rows = "".join(
-            "<tr>" + "".join(f"<td>{ctx.escape(cell)}</td>" for cell in row) + "</tr>"
-            for row in t.rows
-        )
+        # Issue #1029 phase 1: row_links — when set, each row carries
+        # an hx-get on the <tr> so clicking navigates to the detail
+        # URL via htmx (full-page swap into <body>). Wrapping each
+        # cell in an <a> would break <td> nesting; wrapping the <tr>
+        # is the htmx-idiomatic shape for clickable rows.
+        body_parts: list[str] = []
+        for i, row in enumerate(t.rows):
+            cells_html = "".join(f"<td>{ctx.escape(cell)}</td>" for cell in row)
+            url = t.row_links[i] if t.row_links else None
+            if url:
+                url_attr = ctx.escape_attr(url)
+                body_parts.append(
+                    f'<tr class="dz-table__row dz-table__row--linked" '
+                    f'hx-get="{url_attr}" hx-target="body" hx-swap="innerHTML" '
+                    f'hx-push-url="true" tabindex="0">'
+                    f"{cells_html}</tr>"
+                )
+            else:
+                body_parts.append(f"<tr>{cells_html}</tr>")
+        body_rows = "".join(body_parts)
         return (
             f'<table class="dz-table">'
             f"<thead><tr>{head_cells}</tr></thead>"
