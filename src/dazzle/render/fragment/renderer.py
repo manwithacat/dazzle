@@ -17,6 +17,7 @@ from dazzle.render.fragment.primitives import (
     ActionCard,
     ActionGrid,
     ActivityFeed,
+    AddCardRow,
     AppShell,
     Badge,
     BarChart,
@@ -339,6 +340,8 @@ class FragmentRenderer:
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
                 return self._emit_dashboard_card(fragment, ctx)
+            case AddCardRow():
+                return self._emit_add_card_row(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
             case SortHeader():
@@ -2686,6 +2689,32 @@ class FragmentRenderer:
         # `data-card-catalog` is opaque JSON the adapter has already
         # serialised. Single-quoted to permit embedded `"` chars.
         return f"<div data-card-catalog='{p.catalog_json}' class=\"dz-card-picker\">{body}</div>"
+
+    def _emit_add_card_row(self, r: AddCardRow, ctx: RenderContext) -> str:
+        """Render an AddCardRow matching legacy `_content.html` add-card
+        section byte-for-byte (Phase 4B.5.b.2.iii).
+
+        `<div class="dz-add-card-row">` with a `+` button toggling
+        `showPicker` on the parent `dzDashboardBuilder()` x-data
+        (`@click="showPicker = !showPicker"`), then the embedded
+        CardPicker — visibility CSS-driven per #982 via
+        `[data-show-picker="1"]` on the workspace ancestor."""
+        picker_html = self._emit(r.picker, ctx)  # type: ignore[arg-type]
+        return (
+            f'<div class="dz-add-card-row">'
+            f'<button @click="showPicker = !showPicker" '
+            f'data-test-id="dz-add-card-trigger" '
+            f'class="dz-add-card-button">'
+            f'<svg width="16" height="16" fill="none" stroke="currentColor" '
+            f'viewBox="0 0 24 24">'
+            f'<path stroke-linecap="round" stroke-linejoin="round" '
+            f'stroke-width="2" d="M12 4v16m8-8H4"/>'
+            f"</svg>"
+            f"Add Card"
+            f"</button>"
+            f"{picker_html}"
+            f"</div>"
+        )
 
     def _emit_dashboard_grid(self, g: DashboardGrid, ctx: RenderContext) -> str:
         """Render a DashboardGrid matching legacy `_content.html` card-grid

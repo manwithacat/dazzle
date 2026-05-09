@@ -14,6 +14,7 @@ from dazzle.render.fragment import (
     ActionCard,
     ActionGrid,
     ActivityFeed,
+    AddCardRow,
     AppShell,
     Badge,
     BarChart,
@@ -337,6 +338,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is DashboardNotice:
         return DashboardNotice(title="N")
+    if primitive_type is AddCardRow:
+        return AddCardRow(picker=CardPicker(entries=(), catalog_json="[]"))
     if primitive_type is CardPicker:
         return CardPicker(
             entries=(CardPickerEntry(name="t", title="Tasks", entity="Task", display="list"),),

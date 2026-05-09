@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.123] - 2026-05-09
+
+### Added — Phase 4B.5.b.2.iii — AddCardRow
+
+- **AddCardRow primitive** matching legacy `_content.html` add-card section byte-for-byte. `<div class="dz-add-card-row">` wrapper carrying the `+ Add Card` button (`@click="showPicker = !showPicker"` toggling parent `dzDashboardBuilder()` x-data, `data-test-id="dz-add-card-trigger"` harness anchor, 16×16 plus-icon SVG) and the embedded `CardPicker` primitive (visibility CSS-driven via `[data-show-picker="1"]` on the workspace ancestor per #982 — picker emits no x-show / x-cloak).
+- **Six byte-equivalence + structural tests** at `tests/unit/render/fragment/test_add_card_row_primitive.py` — populated picker, empty picker, trigger test-id, Alpine showPicker toggle binding, plus-icon SVG path, picker-embedded-inside-row composition.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | ✅ v0.66.120 |
+| 4B.5.b.2.i — WorkspaceToolbar | ✅ v0.66.121 |
+| 4B.5.b.2.ii — DashboardGrid + DashboardCard | ✅ v0.66.122 |
+| **4B.5.b.2.iii — AddCardRow** | ✅ **v0.66.123** |
+| 4B.5.b.3 — context selector + drawer + edit chrome | next |
+| 4B.5.c — Layout shell port | queued |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | queued |
+
+### Agent Guidance
+- **Composition primitives are useful for organising chrome.** AddCardRow is a thin composition — button + picker — but worth being its own primitive because it pins the spatial relationship (button before picker, both inside the same wrapper) and the harness anchor (`data-test-id="dz-add-card-trigger"`) at the IR layer rather than relying on every caller to assemble them correctly. When porting future chrome that has a stable composition contract (e.g., heading + breadcrumbs row, footer + action bar), prefer a composition primitive over leaving the composition to the adapter.
+- **Visibility on chrome popovers is CSS-driven, not Alpine.** The CardPicker emits no `x-show`/`x-cloak`/`x-cloak`; visibility is gated by `[data-show-picker="1"]` on the workspace ancestor (via `dzDashboardBuilder()` x-data's `$watch` on showPicker). Same pattern was deliberate in #982 to keep Alpine bindings off morphable child elements (idiomorph would otherwise trip on them during workspace nav). When porting future chrome popovers, follow the CSS-attribute-selector pattern rather than reaching for `x-show`.
+
 ## [0.66.122] - 2026-05-09
 
 ### Added — Phase 4B.5.b.2.ii — DashboardGrid + DashboardCard

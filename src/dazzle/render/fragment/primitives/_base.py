@@ -30,6 +30,7 @@ from dazzle.render.fragment.primitives.data import (
     ActionCard,
     ActionGrid,
     ActivityFeed,
+    AddCardRow,
     BarChart,
     BarTrack,
     BoxPlot,
@@ -165,6 +166,7 @@ Fragment = (
     | WorkspaceToolbar
     | DashboardGrid
     | DashboardCard
+    | AddCardRow
     | FilterBar
     | SortHeader
     | CsvExportButton

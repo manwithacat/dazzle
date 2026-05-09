@@ -1455,6 +1455,22 @@ class DashboardGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class AddCardRow:
+    """The "Add Card" row that anchors the picker popover (Phase 4B.5.b.2.iii).
+
+    Emits `<div class="dz-add-card-row">` with a `+` button toggling
+    `showPicker` on the parent `dzDashboardBuilder()` x-data, plus the
+    embedded CardPicker. Visibility of the picker is CSS-driven via
+    `[data-show-picker="1"]` on the workspace ancestor (#982); this
+    primitive doesn't manage that — it just composes the row + picker.
+
+    `data-test-id="dz-add-card-trigger"` is the harness anchor for the
+    + button click."""
+
+    picker: "CardPicker"
+
+
+@dataclass(frozen=True, slots=True)
 class WorkspaceToolbar:
     """Workspace toolbar row — Reset + Save buttons (Phase 4B.5.b.2.i).
 

@@ -85,6 +85,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "WorkspaceToolbar",
         "DashboardGrid",
         "DashboardCard",
+        "AddCardRow",
         "FilterBar",
         "SortHeader",
         "CsvExportButton",
