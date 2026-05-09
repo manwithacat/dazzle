@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.121] - 2026-05-09
+
+### Added — Phase 4B.5.b.2.i — WorkspaceToolbar (save-state machine)
+
+- **WorkspaceToolbar primitive** — fixed-shape singleton matching the legacy `_content.html` toolbar block byte-for-byte. Reset button (`@click="resetLayout()"`) + Save button (`@click="save()"`) with full Alpine state binding contract (`:disabled` for clean/saving/saved, `:data-dz-save-state="saveState"` for CSS keying, `:title` from `_saveError` on error). Five `x-cloak`+`x-show` saveState spans (clean / dirty / saving / saved / error) with the two busy states (saving + saved) carrying their own SVG icons (24×24 spinner + 20×20 checkmark) inlined verbatim from the legacy template.
+- **Seven dual-path + structural tests** at `tests/unit/render/fragment/test_workspace_toolbar_primitive.py` — byte-equivalence pin via `diff_summary` against the literal legacy block, plus structural assertions on the outer class, Reset button binding, Save button full state contract, all five x-cloak/x-show spans, both busy-state SVG icons, and the user-facing copy strings.
+- **`_WORKSPACE_TOOLBAR_HTML` constant** in `renderer.py` — emitted as a single literal string (matches the `_DIAGRAM_MERMAID_SCRIPT` pattern from v0.66.118). Singleton primitives with no parameterization are simpler as constants than as f-string compositions.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | ✅ v0.66.120 |
+| **4B.5.b.2.i — WorkspaceToolbar** | ✅ **v0.66.121** |
+| 4B.5.b.2.ii — DashboardGrid + DashboardCard | next |
+| 4B.5.b.2.iii — AddCardRow | queued |
+| 4B.5.b.3 — context selector + drawer + edit chrome | queued |
+| 4B.5.c — Layout shell port | queued |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | queued |
+
+### Agent Guidance
+- **Singleton primitives are simpler as constants than f-strings.** WorkspaceToolbar has no parameterization — the Alpine state machine on the parent `dzDashboardBuilder()` x-data drives all dynamic behaviour. The renderer emits a single string constant. Same pattern as `_DIAGRAM_MERMAID_SCRIPT` (v0.66.118). When porting future fixed-shape chrome elements (drawer skeleton, add-card button, etc.), reach for the constant pattern first; only build f-string composition when there's actual ctx-driven variation.
+- **`x-cloak` is mandatory on every `x-show` span in chrome.** The legacy template uses `x-cloak` on every `x-show` span as a defence against degraded Alpine state (#866 — alpine:init failing on HTMX morph race or layout-JSON parse error). The browser's default `display: inline` would otherwise stack every status label simultaneously while Alpine is mid-evaluation. Any future chrome primitive with conditional `x-show` rendering MUST also carry `x-cloak`.
+
 ## [0.66.120] - 2026-05-09
 
 ### Added — Phase 4B.5.b.1 — WorkspaceShell wrapper + heading

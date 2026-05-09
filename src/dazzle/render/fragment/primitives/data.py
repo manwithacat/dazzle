@@ -1378,6 +1378,24 @@ class CardPickerEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkspaceToolbar:
+    """Workspace toolbar row — Reset + Save buttons (Phase 4B.5.b.2.i).
+
+    Fixed shape singleton matching the legacy `_content.html` toolbar
+    section. The Alpine state machine `dzDashboardBuilder()`
+    parent owns `saveState`, `resetLayout()`, `save()`, `_saveError`;
+    this primitive emits the markup that binds to those.
+
+    Save button has five `x-cloak`+`x-show` spans for the saveState
+    states: clean / dirty / saving / saved / error. `x-cloak` gates
+    visibility until Alpine evaluates `x-show` — protects against
+    degraded state (#866) where alpine:init fails to fire (HTMX morph
+    race, layout-JSON parse error, etc.) and the browser's default
+    `display: inline` would otherwise stack every status label
+    simultaneously."""
+
+
+@dataclass(frozen=True, slots=True)
 class WorkspacePrimaryAction:
     """One link in the workspace heading's primary-actions row.
 

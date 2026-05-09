@@ -96,6 +96,7 @@ from dazzle.render.fragment.primitives import (
     Tree,
     TreeNode,
     WorkspaceShell,
+    WorkspaceToolbar,
 )
 
 # Mermaid CDN loader script — emitted byte-for-byte by `_emit_diagram`
@@ -104,6 +105,48 @@ from dazzle.render.fragment.primitives import (
 # `workspace/regions/diagram.html` template; bumping the pinned
 # Mermaid version means updating BOTH this string and the legacy
 # template (the dual-path test will catch any drift).
+# Workspace toolbar — emitted byte-for-byte by `_emit_workspace_toolbar`
+# (Phase 4B.5.b.2.i). Fixed shape: Reset button + Save button with
+# five x-cloak+x-show saveState spans (clean/dirty/saving/saved/error).
+# Spinner SVG (24×24) + checkmark SVG (20×20) are inlined verbatim
+# from the legacy `_content.html` template.
+_WORKSPACE_TOOLBAR_HTML = (
+    '<div class="dz-workspace-toolbar">'
+    '<div class="dz-workspace-toolbar-spacer"></div>'
+    '<button @click="resetLayout()" class="dz-workspace-reset">Reset</button>'
+    '<button @click="save()" '
+    ":disabled=\"saveState === 'clean' || saveState === 'saving' || "
+    "saveState === 'saved'\" "
+    ':data-dz-save-state="saveState" '
+    ":title=\"saveState === 'error' ? _saveError : ''\" "
+    'class="dz-workspace-save">'
+    "<span x-cloak x-show=\"saveState === 'clean'\">Saved</span>"
+    "<span x-cloak x-show=\"saveState === 'dirty'\">Save layout</span>"
+    "<span x-cloak x-show=\"saveState === 'saving'\" "
+    'class="dz-workspace-save-busy">'
+    '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none">'
+    '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" '
+    'stroke-width="4"/>'
+    '<path class="opacity-75" fill="currentColor" '
+    'd="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>'
+    "</svg>"
+    "Saving"
+    "</span>"
+    "<span x-cloak x-show=\"saveState === 'saved'\" "
+    'class="dz-workspace-save-busy">'
+    '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 20 20" fill="currentColor">'
+    '<path fill-rule="evenodd" '
+    'd="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 '
+    '011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>'
+    "</svg>"
+    "Saved"
+    "</span>"
+    "<span x-cloak x-show=\"saveState === 'error'\">Retry</span>"
+    "</button>"
+    "</div>"
+)
+
+
 _DIAGRAM_MERMAID_SCRIPT = (
     "<script>\n"
     '    if (typeof mermaid === "undefined") {\n'
@@ -288,6 +331,8 @@ class FragmentRenderer:
                 return self._emit_card_picker(fragment, ctx)
             case WorkspaceShell():
                 return self._emit_workspace_shell(fragment, ctx)
+            case WorkspaceToolbar():
+                return self._emit_workspace_toolbar(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
             case SortHeader():
@@ -2635,6 +2680,21 @@ class FragmentRenderer:
         # `data-card-catalog` is opaque JSON the adapter has already
         # serialised. Single-quoted to permit embedded `"` chars.
         return f"<div data-card-catalog='{p.catalog_json}' class=\"dz-card-picker\">{body}</div>"
+
+    def _emit_workspace_toolbar(self, _t: WorkspaceToolbar, _ctx: RenderContext) -> str:
+        """Render a WorkspaceToolbar matching legacy `_content.html`
+        toolbar section byte-for-byte (Phase 4B.5.b.2.i).
+
+        Fixed shape singleton — no parameters. The Alpine state machine
+        (`saveState`, `resetLayout()`, `save()`, `_saveError`) is owned
+        by the parent `dzDashboardBuilder()` x-data; this primitive
+        emits the markup that binds to it.
+
+        Five `x-cloak`+`x-show` spans cover the saveState states:
+        clean / dirty / saving / saved / error. The two busy states
+        (`saving`, `saved`) carry their own SVG icons (spinner +
+        checkmark respectively)."""
+        return _WORKSPACE_TOOLBAR_HTML
 
     def _emit_workspace_shell(self, w: WorkspaceShell, ctx: RenderContext) -> str:
         """Render a WorkspaceShell matching legacy `workspace/_content.html`

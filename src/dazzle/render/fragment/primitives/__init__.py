@@ -89,6 +89,7 @@ from dazzle.render.fragment.primitives.data import (
     TreeNode,
     WorkspacePrimaryAction,
     WorkspaceShell,
+    WorkspaceToolbar,
 )
 from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, RefPicker, Submit
 from dazzle.render.fragment.primitives.interactive import (
@@ -199,6 +200,7 @@ __all__ = [
     "CardPickerEntry",
     "WorkspaceShell",
     "WorkspacePrimaryAction",
+    "WorkspaceToolbar",
     "FilterBar",
     "FilterColumn",
     "SortHeader",

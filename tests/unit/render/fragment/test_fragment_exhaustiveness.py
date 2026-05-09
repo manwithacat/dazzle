@@ -112,6 +112,7 @@ from dazzle.render.fragment import (
     TreeNode,
     WorkspacePrimaryAction,
     WorkspaceShell,
+    WorkspaceToolbar,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -317,6 +318,8 @@ def _sample_for(primitive_type: type) -> object:
         return WorkspaceShell(workspace_name="ws", title="W", body=Text("body"))
     if primitive_type is WorkspacePrimaryAction:
         return WorkspacePrimaryAction(label="L", route="/x")
+    if primitive_type is WorkspaceToolbar:
+        return WorkspaceToolbar()
     if primitive_type is CardPicker:
         return CardPicker(
             entries=(CardPickerEntry(name="t", title="Tasks", entity="Task", display="list"),),

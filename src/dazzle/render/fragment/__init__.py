@@ -112,6 +112,7 @@ from dazzle.render.fragment.primitives import (
     TreeNode,
     WorkspacePrimaryAction,
     WorkspaceShell,
+    WorkspaceToolbar,
 )
 from dazzle.render.fragment.registry import (
     DEFAULT_REGISTRY,
@@ -251,6 +252,7 @@ __all__ = [
     "CardPickerEntry",
     "WorkspaceShell",
     "WorkspacePrimaryAction",
+    "WorkspaceToolbar",
     "FilterBar",
     "FilterColumn",
     "SortHeader",
