@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.137] - 2026-05-09
+
+### Added — #1029 Phase 5 — LIST adapter SearchBox + FilterBar toolbar
+
+- **`_build_dispatch_ctx` table branch threads search + filter state**: `search_enabled`, `search_fields`, `filter_values` from `TableContext`; per-column `filter_options` (flattened from `list[dict]` to `list[tuple[str, str]]`) on each `ColumnContext`. Pre-fix the toolbar primitives existed but had no ctx to read from.
+- **`FragmentSurfaceAdapter._build_list_toolbar` helper** — composes the toolbar primitives from ctx. SearchBox emitted when `search_enabled` AND `search_fields` non-empty AND `entity_name` available (FTS endpoint built from entity name). FilterBar emitted when at least one column carries `filterable=True` AND endpoint + region_name configured. Returns ordered tuple — empty when neither configured.
+- **`_build_list`** prepends the toolbar primitives to the body via a Stack when configured. SearchBox first, then FilterBar (matches legacy template's visual order).
+- **Ten regression tests** at `tests/unit/test_dispatch_ctx_list_search_filter.py` pin: ctx threading + filter-options shape, SearchBox emission gates (enabled + fields + entity), FilterBar emission gates (any column filterable + endpoint + region_name), pre-selected filter values round-trip, search+filter coexistence ordering, defensive omit when endpoint missing.
+
+### Phase plan
+
+This is Phase 5 of 7 for issue #1029. Remaining: sort headers (Phase 6), bulk actions (Phase 7).
+
+### Agent Guidance
+
+- **Toolbar composition is gated by configuration intent.** Each primitive in the toolbar emits only when the ctx says it should — SearchBox needs both `search_enabled=True` AND non-empty `search_fields`; FilterBar needs at least one `filterable=True` column AND endpoint + region_name. This avoids cluttered empty shells. Same gate-on-intent pattern works for any future toolbar element (CSV export, view-mode toggle, etc.).
+
 ## [0.66.136] - 2026-05-09
 
 ### Added — #1029 Phase 4 — LIST adapter typed empty messages (#807)

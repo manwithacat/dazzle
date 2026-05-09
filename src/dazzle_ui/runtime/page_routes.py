@@ -1076,6 +1076,12 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
                     "sortable": getattr(col, "sortable", False),
                     "filterable": getattr(col, "filterable", False),
                     "hidden": getattr(col, "hidden", False),
+                    # Issue #1029 phase 5: filter options for select-typed
+                    # filterable columns. Each option is {"value", "label"}.
+                    "filter_options": [
+                        (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
+                        for o in (getattr(col, "filter_options", []) or [])
+                    ],
                 }
             )
         return {
@@ -1102,6 +1108,10 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             # to the detail surface. Template usually contains "{id}"
             # which the adapter substitutes per row.
             "detail_url_template": getattr(table, "detail_url_template", "") or "",
+            # Issue #1029 phase 5: search + filter state.
+            "search_enabled": bool(getattr(table, "search_enabled", False)),
+            "search_fields": list(getattr(table, "search_fields", []) or []),
+            "filter_values": dict(getattr(table, "filter_values", {}) or {}),
         }
 
     form = getattr(render_ctx, "form", None)

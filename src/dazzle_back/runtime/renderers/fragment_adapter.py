@@ -19,6 +19,8 @@ from dazzle.render.fragment import (
     CreateButton,
     EmptyState,
     Field,
+    FilterBar,
+    FilterColumn,
     FormSection,
     FormStack,
     Fragment,
@@ -28,6 +30,7 @@ from dazzle.render.fragment import (
     RefPicker,
     Region,
     Row,
+    SearchBox,
     Skeleton,
     Stack,
     Submit,
@@ -67,6 +70,19 @@ class FragmentSurfaceAdapter:
         page_size = int(ctx.get("page_size", 20) or 20)
         endpoint = str(ctx.get("endpoint", "") or "").strip()
         region_name = str(ctx.get("region_name", "") or "").strip()
+        # Issue #1029 phase 5: search + filter toolbar.
+        search_enabled = bool(ctx.get("search_enabled", False))
+        search_fields = list(ctx.get("search_fields", []) or [])
+        filter_values = dict(ctx.get("filter_values", {}) or {})
+        toolbar_children = self._build_list_toolbar(
+            search_enabled=search_enabled,
+            search_fields=search_fields,
+            filter_values=filter_values,
+            columns=columns,
+            entity_name=entity_name,
+            endpoint=endpoint,
+            region_name=region_name,
+        )
 
         body: Fragment
         if not items:
@@ -102,6 +118,12 @@ class FragmentSurfaceAdapter:
                 body = Stack(children=(table, pagination), gap="sm")
             else:
                 body = table
+
+        # Prepend the search/filter toolbar (Phase 5) to the body when
+        # any toolbar primitive is configured. Empty otherwise — the
+        # body remains untouched.
+        if toolbar_children:
+            body = Stack(children=(*toolbar_children, body), gap="sm")
 
         # Header carries title + optional CreateButton. The Create
         # button is contractually required for the list page (UX
@@ -214,6 +236,56 @@ class FragmentSurfaceAdapter:
             header=Heading(title, level=1),
             body=Region(kind="detail", body=wrapper),
         )
+
+    def _build_list_toolbar(
+        self,
+        *,
+        search_enabled: bool,
+        search_fields: list[str],
+        filter_values: dict[str, str],
+        columns: list[dict[str, Any]],
+        entity_name: str,
+        endpoint: str,
+        region_name: str,
+    ) -> tuple[Fragment, ...]:
+        """Issue #1029 phase 5: compose the search box + filter bar
+        for the list region toolbar.
+
+        SearchBox emitted when `search_enabled` AND `search_fields`
+        non-empty AND we have an entity_name to derive the FTS
+        endpoint. FilterBar emitted when at least one column carries
+        `filterable=True`. Returns the ordered tuple of toolbar
+        primitives — empty when neither is configured."""
+        toolbar: list[Fragment] = []
+
+        if search_enabled and search_fields and entity_name:
+            toolbar.append(
+                SearchBox(
+                    name=f"{region_name or entity_name}_search",
+                    fts_endpoint=URL(f"/api/fts/{entity_name}?html=1"),
+                )
+            )
+
+        filter_columns = tuple(
+            FilterColumn(
+                key=col["key"],
+                label=str(col.get("label", col["key"])),
+                options=tuple(col.get("filter_options", []) or ()),
+                selected=str(filter_values.get(col["key"], "")),
+            )
+            for col in columns
+            if col.get("filterable")
+        )
+        if filter_columns and endpoint and region_name:
+            toolbar.append(
+                FilterBar(
+                    endpoint=URL(endpoint),
+                    region_name=region_name,
+                    columns=filter_columns,
+                )
+            )
+
+        return tuple(toolbar)
 
     def _build_detail_actions(self, ctx: dict[str, Any]) -> tuple[Fragment, ...]:
         """Issue #1030: build the per-record action row from ctx.
