@@ -46,24 +46,26 @@ def test_bar_chart_drops_malformed_buckets() -> None:
     assert out["buckets"] == [("OK", 5)]
 
 
-def test_funnel_chart_counts_items_per_stage_in_order() -> None:
+def test_funnel_chart_passes_through_kanban_columns_and_items() -> None:
+    """v0.66.111: funnel_chart translator widened to passthrough —
+    dedicated `_build_funnel_chart` does the per-stage counting itself,
+    preserving declared `kanban_columns` order."""
     legacy = {
         "kanban_columns": ["lead", "qualified", "won"],
         "group_by": "status",
-        "items": [
-            {"status": "lead"},
-            {"status": "lead"},
-            {"status": "qualified"},
-            {"status": "won"},
-            {"status": "ignored"},  # outside the kanban_columns set — drops
-        ],
+        "items": [{"status": "lead"}, {"status": "qualified"}],
+        "total": 2,
     }
     out = legacy_ctx_to_adapter_ctx("funnel_chart", legacy)
-    # Order matches kanban_columns; counts are per-stage.
-    assert out["buckets"] == [("lead", 2), ("qualified", 1), ("won", 1)]
+    assert out["kanban_columns"] == ["lead", "qualified", "won"]
+    assert out["group_by"] == "status"
+    assert out["items"] == legacy["items"]
+    assert out["total"] == 2
 
 
-def test_histogram_translates_histogram_bins_to_buckets() -> None:
+def test_histogram_translates_histogram_bins_passthrough() -> None:
+    """v0.66.111: histogram translator widened to passthrough —
+    dedicated `_build_histogram` consumes the full bins list."""
     legacy = {
         "histogram_bins": [
             {"label": "0–10", "count": 4, "low": 0, "high": 10},
@@ -71,7 +73,7 @@ def test_histogram_translates_histogram_bins_to_buckets() -> None:
         ],
     }
     out = legacy_ctx_to_adapter_ctx("histogram", legacy)
-    assert out["buckets"] == [("0–10", 4), ("10–20", 8)]
+    assert out["histogram_bins"] == legacy["histogram_bins"]
 
 
 def test_line_chart_translates_bucketed_metrics_to_points() -> None:

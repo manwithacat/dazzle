@@ -496,4 +496,123 @@ def radar_svg(
     return "".join(parts)
 
 
-__all__ = ["box_plot_svg", "radar_svg", "time_series_svg"]
+def histogram_svg(
+    label: str,
+    bins: tuple[tuple[str, int, float, float], ...],
+    *,
+    reference_lines: tuple = (),
+) -> str:
+    """Produce inline SVG for a Histogram primitive.
+
+    Continuous-axis bar chart matching the legacy
+    `workspace/regions/histogram.html` template byte-for-byte. 400×140
+    viewBox with 8/8/28/8 padding (top/right/bottom/left for x-axis
+    tick labels). Bars are equal-width with a 1px gap between adjacent
+    bins; vertical reference lines overlay at their x-position with a
+    label hugging the top of the chart.
+
+    Each `bins` entry is `(label, count, low, high)` — count drives
+    bar height (relative to max_count), low/high define the continuous
+    x-axis position. show_every heuristic for x-axis tick labels:
+    every Nth bin where N = ceil(count/5), plus first + last always.
+    """
+    if not bins:
+        return ""
+
+    count = len(bins)
+    max_count = max(b[1] for b in bins)
+    if max_count <= 0:
+        max_count = 1
+    total = sum(b[1] for b in bins)
+    x_min = bins[0][2]
+    x_max = bins[-1][3]
+    x_range = x_max - x_min
+    if x_range <= 0:
+        x_range = 1
+
+    w = 400
+    h = 140
+    pt = 8
+    pr = 8
+    pb = 28
+    pl = 8
+    plot_w = w - pl - pr
+    plot_h = h - pt - pb
+    bar_w = plot_w / count
+
+    parts: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'viewBox="0 0 {w} {h}" '
+        f'class="dz-histogram-svg" role="img" '
+        f'aria-label="{_escape(label, quote=True)} histogram — '
+        f'{count} bins, {total} samples, peak {max_count}">',
+        # Baseline.
+        f'<line x1="{pl}" y1="{pt + plot_h}" '
+        f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
+        f'stroke="hsl(var(--border))" stroke-width="1" />',
+    ]
+
+    # Bars.
+    for i, (_lbl, cnt, _low, _high) in enumerate(bins):
+        x = round(pl + i * bar_w, 2)
+        bar_h = round(cnt / max_count * plot_h, 2)
+        y = round(pt + plot_h - bar_h, 2)
+        parts.append(
+            f'<rect x="{x}" y="{y}" '
+            f'width="{round(bar_w - 1, 2)}" height="{bar_h}" '
+            f'fill="hsl(var(--primary))" fill-opacity="0.6">'
+            f"<title>{_escape(bins[i][0])}: {cnt}</title>"
+            f"</rect>"
+        )
+
+    # Reference lines (clipped to x range).
+    for ref in reference_lines:
+        if ref.value < x_min or ref.value > x_max:
+            continue
+        ref_x = round(pl + (ref.value - x_min) / x_range * plot_w, 2)
+        dasharray = _LINE_DASHARRAY.get(ref.style, "")
+        # Match Jinja `{{ ref.value }}` — int-narrow whole values.
+        ref_value_str = str(int(ref.value)) if ref.value == int(ref.value) else str(ref.value)
+        parts.append(
+            f'<line x1="{ref_x}" y1="{pt}" '
+            f'x2="{ref_x}" y2="{pt + plot_h}" '
+            f'stroke="hsl(var(--muted-foreground))" '
+            f'stroke-width="1" stroke-dasharray="{dasharray}">'
+            f"<title>{_escape(ref.label)}: {ref_value_str}</title>"
+            f"</line>"
+        )
+        parts.append(
+            f'<text x="{ref_x}" y="{pt + 8}" '
+            f'text-anchor="middle" font-size="9" '
+            f'fill="hsl(var(--muted-foreground))" '
+            f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
+            f"{_escape(ref.label)}</text>"
+        )
+
+    # X-axis tick labels — first, last, and every Nth.
+    if count <= 5:
+        show_every = 1
+    else:
+        # Match Jinja `(count / 5) | round(0, 'ceil') | int` — ceil division.
+        show_every = -(-count // 5)
+    for i, (_lbl, _cnt, low, _high) in enumerate(bins):
+        if i == 0 or i == count - 1 or i % show_every == 0:
+            lx = round(pl + i * bar_w + bar_w / 2, 2)
+            low_str = (
+                str(int(round(low, 1)))
+                if round(low, 1) == int(round(low, 1))
+                else str(round(low, 1))
+            )
+            parts.append(
+                f'<text x="{lx}" y="{h - 8}" '
+                f'text-anchor="middle" font-size="9" '
+                f'fill="hsl(var(--muted-foreground))" '
+                f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
+                f"{low_str}</text>"
+            )
+
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+__all__ = ["box_plot_svg", "histogram_svg", "radar_svg", "time_series_svg"]

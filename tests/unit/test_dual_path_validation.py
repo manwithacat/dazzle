@@ -752,6 +752,54 @@ def test_wave3_charts_byte_equivalent_smoke() -> None:
         assert diff is None, f"{display}: {diff}"
 
 
+def test_histogram_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 3 (v0.66.111): HISTOGRAM byte-equivalent. New
+    Histogram + HistogramBin primitives + histogram_svg helper +
+    dedicated _build_histogram (was alias to bar_chart)."""
+    ctx = {
+        "title": "Latency",
+        "histogram_bins": [
+            {"label": "0-10", "count": 4, "low": 0, "high": 10},
+            {"label": "10-20", "count": 8, "low": 10, "high": 20},
+            {"label": "20-30", "count": 6, "low": 20, "high": 30},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("histogram", **ctx),
+            render_via_typed("histogram", ctx),
+        )
+        is None
+    )
+
+
+def test_funnel_chart_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 3 (v0.66.111): FUNNEL_CHART byte-equivalent.
+    New Funnel + FunnelStage primitives + dedicated _build_funnel_chart
+    (was bucket-rollup routing through bar_chart)."""
+    ctx = {
+        "title": "Conversion",
+        "kanban_columns": ["lead", "qualified", "won"],
+        "group_by": "status",
+        "items": [
+            {"status": "lead"},
+            {"status": "lead"},
+            {"status": "lead"},
+            {"status": "qualified"},
+            {"status": "qualified"},
+            {"status": "won"},
+        ],
+        "total": 6,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("funnel_chart", **ctx),
+            render_via_typed("funnel_chart", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

@@ -42,10 +42,14 @@ from dazzle.render.fragment import (
     FilterBar,
     FilterColumn,
     Fragment,
+    Funnel,
+    FunnelStage,
     Grid,
     GridCell,
     GridRegion,
     Heading,
+    Histogram,
+    HistogramBin,
     KanbanBoard,
     LazyTab,
     LazyTabPanel,
@@ -385,6 +389,7 @@ class WorkspaceRegionAdapter:
         "profile_card": "_build_profile_card",
         "queue": "_build_queue",
         "activity_feed": "_build_activity_feed",
+        "histogram": "_build_histogram",
     }
 
     # Display values that share a builder with another display value.
@@ -392,7 +397,6 @@ class WorkspaceRegionAdapter:
     # duplicating dispatch code.
     _ALIASES: dict[str, str] = {
         "summary": "metrics",
-        "histogram": "bar_chart",
         "heatmap": "pivot_table",
     }
 
@@ -1858,36 +1862,122 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "list", body)
 
     def _build_funnel_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: funnel_chart` is a BarChart with buckets sorted in
-        descending order — funnels narrow from a wide top stage to a
-        narrow conversion at the bottom.
+        """`display: funnel_chart` regions render as a `Funnel` primitive.
+
+        Phase 4B.4 wave 3: dedicated builder (replaces prior bar_chart
+        routing) for byte-equivalence with `workspace/regions/funnel_chart.html`.
+        Width is calculated relative to the FIRST stage's count (not max),
+        and clamped to a 20% minimum. Stages are ordered as supplied —
+        funnel rendering preserves the declared kanban_columns order.
+
+        ctx shape (production runtime):
+            kanban_columns: ordered list of stage keys
+            items: source rows (counted per stage via group_by)
+            group_by: field name on each item carrying the stage value
+            total: pre-computed total item count
+            (legacy alt) buckets: pre-sorted [(label, count)] tuples
+            (legacy alt) metrics: list[{label, value}] fallback
+            empty_message: optional empty-state fallback
+        """
+        title = _region_title(region)
+        items = ctx.get("items") or []
+        kanban_columns = ctx.get("kanban_columns") or []
+        group_by = ctx.get("group_by")
+        try:
+            total = int(ctx.get("total") or 0)
+        except (TypeError, ValueError):
+            total = 0
+
+        stages: list[FunnelStage] = []
+        if kanban_columns and items and group_by:
+            counts: dict[str, int] = {str(s): 0 for s in kanban_columns}
+            for item in items:
+                if isinstance(item, dict):
+                    key = str(item.get(group_by) or "Unknown")
+                    if key in counts:
+                        counts[key] += 1
+            for stage in kanban_columns:
+                key = str(stage)
+                stages.append(FunnelStage(label=key, count=counts.get(key, 0)))
+        else:
+            # Legacy fallbacks: pre-sorted buckets, or metrics list.
+            for entry in ctx.get("buckets") or []:
+                if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                    try:
+                        stages.append(FunnelStage(label=str(entry[0]), count=int(entry[1])))
+                    except (TypeError, ValueError):
+                        continue
+            if not stages:
+                for m in ctx.get("metrics") or []:
+                    if isinstance(m, dict):
+                        try:
+                            stages.append(
+                                FunnelStage(
+                                    label=str(m.get("label") or ""),
+                                    count=int(m.get("value") or 0),
+                                )
+                            )
+                        except (TypeError, ValueError):
+                            continue
+
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No data available."
+        )
+        body: Fragment = Funnel(
+            stages=tuple(stages),
+            total=total,
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "report", body)
+
+    def _build_histogram(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: histogram` regions render as a `Histogram` primitive
+        — continuous-axis SVG bar chart with optional vertical reference
+        lines. Phase 4B.4 wave 3: dedicated builder (replaces prior alias
+        to `_build_bar_chart`) for byte-equivalence with
+        `workspace/regions/histogram.html`.
 
         ctx shape:
-            buckets: list[(str, int)] — pre-aggregated stages
-            chart_label: optional override
+            histogram_bins: list of `{label, count, low, high}` dicts —
+                pre-computed by the runtime's `_compute_histogram_bins`
+                from the already-fetched items
+            reference_lines: optional list of `{value, label, style}`
+                dicts (vertical overlays at x-position)
+            empty_message: optional empty-state fallback
         """
-        # Reuse bar_chart's parsing, then sort descending. Caller can
-        # pre-sort if a non-monotonic visualisation is intended; the
-        # default funnel rendering is "biggest stage first".
-        raw_buckets = ctx.get("buckets") or []
-        parsed: list[tuple[str, int]] = []
-        for entry in raw_buckets:
-            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
-                try:
-                    parsed.append((str(entry[0]), int(entry[1])))
-                except (TypeError, ValueError):
-                    continue
-            elif isinstance(entry, dict):
-                key = str(entry.get("label") or entry.get("key") or "")
-                try:
-                    val = int(entry.get("value") or entry.get("count") or 0)
-                except (TypeError, ValueError):
-                    val = 0
-                if key:
-                    parsed.append((key, val))
-        parsed.sort(key=lambda kv: kv[1], reverse=True)
-        # Hand off to bar_chart's render path with the sorted buckets.
-        return self._build_bar_chart(region, {**ctx, "buckets": parsed})
+        title = _region_title(region)
+        chart_label = str(ctx.get("chart_label") or title or "Histogram")
+        raw_bins = ctx.get("histogram_bins") or []
+
+        bins: list[HistogramBin] = []
+        for entry in raw_bins:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("label") or "")
+            if not label:
+                continue
+            try:
+                count = int(entry.get("count") or 0)
+                low = float(entry.get("low", 0))
+                high = float(entry.get("high", 0))
+            except (TypeError, ValueError):
+                continue
+            bins.append(HistogramBin(label=label, count=count, low=low, high=high))
+
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No data available."
+        )
+        body: Fragment = Histogram(
+            label=chart_label,
+            bins=tuple(bins),
+            reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "report", body)
 
     def _build_detail(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: detail` regions render a single item's fields as a

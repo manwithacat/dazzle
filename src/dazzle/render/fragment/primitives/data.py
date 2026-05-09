@@ -418,6 +418,58 @@ class Tree:
 
 
 @dataclass(frozen=True, slots=True)
+class FunnelStage:
+    """Single stage in a `Funnel` chart — label + count."""
+
+    label: str
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class Funnel:
+    """Stacked proportional bars rendering conversion through ordered stages.
+
+    Phase 4B.4 wave 3: dedicated primitive (replaces alias to BarChart)
+    matching `workspace/regions/funnel_chart.html` byte-for-byte. Width
+    is calculated relative to the FIRST stage's count (not max), and
+    clamped to a 20% minimum so tiny conversion stages stay legible.
+    `data-dz-funnel-step` carries the stage index (capped at 7) for
+    per-stage opacity fade via CSS.
+    """
+
+    stages: tuple[FunnelStage, ...]
+    total: int = 0
+    empty_message: str = "No data available."
+
+
+@dataclass(frozen=True, slots=True)
+class HistogramBin:
+    """Single bin in a `Histogram` — label + count + continuous range."""
+
+    label: str
+    count: int
+    low: float
+    high: float
+
+
+@dataclass(frozen=True, slots=True)
+class Histogram:
+    """Continuous-axis histogram chart.
+
+    Phase 4B.4 wave 3: dedicated primitive (separate from BarChart)
+    matching the legacy `workspace/regions/histogram.html` shape
+    byte-for-byte. Bars are equal-width with a 1px gap; vertical
+    reference lines overlay at their x-position with a label
+    hugging the top.
+    """
+
+    label: str
+    bins: tuple[HistogramBin, ...]
+    reference_lines: tuple[ReferenceLine, ...] = ()
+    empty_message: str = "No data available."
+
+
+@dataclass(frozen=True, slots=True)
 class Sparkline:
     """Compact time-series for KPI tiles — title + big-number + tiny line.
 

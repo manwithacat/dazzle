@@ -37,10 +37,14 @@ from dazzle.render.fragment import (
     FilterColumn,
     FormStack,
     Fragment,
+    Funnel,
+    FunnelStage,
     Grid,
     GridCell,
     GridRegion,
     Heading,
+    Histogram,
+    HistogramBin,
     Icon,
     InlineEdit,
     Interactive,
@@ -226,6 +230,17 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is ListColumn:
         return ListColumn(key="k", label="K")
+    if primitive_type is Histogram:
+        return Histogram(
+            label="x",
+            bins=(HistogramBin(label="0-10", count=4, low=0.0, high=10.0),),
+        )
+    if primitive_type is HistogramBin:
+        return HistogramBin(label="0-10", count=4, low=0.0, high=10.0)
+    if primitive_type is Funnel:
+        return Funnel(stages=(FunnelStage(label="lead", count=10),))
+    if primitive_type is FunnelStage:
+        return FunnelStage(label="lead", count=10)
     if primitive_type is ActivityFeed:
         return ActivityFeed(items=(("now", "Alice", "did the thing"),))
     if primitive_type is StatusList:

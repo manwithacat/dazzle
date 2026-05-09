@@ -66,6 +66,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "DetailGrid",
         "GridRegion",
         "ListRegion",
+        "Histogram",
+        "Funnel",
         "ActivityFeed",
         "StatusList",
         "BarTrack",

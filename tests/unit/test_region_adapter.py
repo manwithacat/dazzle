@@ -1972,27 +1972,35 @@ def test_status_list_empty_renders_empty_state() -> None:
     assert "All clear." in _render(fragment)
 
 
-def test_funnel_chart_sorts_buckets_descending() -> None:
-    """A funnel chart is just a BarChart with stages sorted by count
-    descending — biggest first, narrow at the bottom."""
+def test_funnel_chart_renders_dedicated_primitive() -> None:
+    """v0.66.111: FUNNEL_CHART now uses a dedicated `Funnel` primitive
+    matching `dz-funnel-chart-region` byte-for-byte. Stages render in
+    declared order (kanban_columns), with width relative to the first
+    stage's count and a 20% minimum."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "buckets": [
-            ("signed_up", 100),
-            ("verified", 200),
-            ("paid", 50),
-        ]
+        "kanban_columns": ["signed_up", "verified", "paid"],
+        "group_by": "status",
+        "items": (
+            [{"status": "signed_up"}] * 100
+            + [{"status": "verified"}] * 50
+            + [{"status": "paid"}] * 25
+        ),
+        "total": 175,
     }
     fragment = adapter.build(_FakeRegion("f", display="funnel_chart"), ctx)
     html = _render(fragment)
-    # v0.66.110: bucket labels go through humanize filter via
-    # render_status_badge — "signed_up" → "Signed Up", etc.
-    # Order should reflect sort: Verified (200), Signed Up (100), Paid (50).
-    pos_verified = html.find("Verified")
-    pos_signed = html.find("Signed Up")
-    pos_paid = html.find("Paid")
-    assert pos_verified != -1 and pos_signed != -1 and pos_paid != -1
-    assert pos_verified < pos_signed < pos_paid
+    assert "dz-funnel-chart-region" in html
+    # Stages preserved in declared order: signed_up (100), verified (50), paid (25).
+    pos_signed = html.find("signed_up")
+    pos_verified = html.find("verified")
+    pos_paid = html.find("paid")
+    assert pos_signed < pos_verified < pos_paid
+    # Width relative to first stage: 100% / 50% / 25%.
+    assert "width: 100%" in html
+    assert "width: 50%" in html
+    # 25% < 20% min → clamped to 20%.
+    assert "width: 25%" in html or "width: 20%" in html
 
 
 def test_funnel_chart_empty_renders_empty_state() -> None:
@@ -2116,14 +2124,24 @@ def test_queue_transition_to_current_state_silently_skipped() -> None:
     assert "Reopen" not in html
 
 
-def test_histogram_dispatches_through_bar_chart() -> None:
-    """Histograms are bar charts of binned continuous data — for the
-    audit's purposes a pure alias is fine."""
+def test_histogram_renders_dedicated_primitive() -> None:
+    """v0.66.111: HISTOGRAM now uses a dedicated `Histogram` primitive
+    + `histogram_svg` helper matching `dz-histogram-region` byte-for-
+    byte. Bins carry `low`/`high` for continuous-axis positioning."""
     adapter = WorkspaceRegionAdapter()
-    ctx = {"buckets": [("0-10", 5), ("10-20", 15), ("20-30", 8)]}
+    ctx = {
+        "histogram_bins": [
+            {"label": "0-10", "count": 5, "low": 0, "high": 10},
+            {"label": "10-20", "count": 15, "low": 10, "high": 20},
+            {"label": "20-30", "count": 8, "low": 20, "high": 30},
+        ]
+    }
     fragment = adapter.build(_FakeRegion("h", display="histogram"), ctx)
     html = _render(fragment)
-    assert "0-10" in html and "10-20" in html and "20-30" in html
+    assert "dz-histogram-region" in html
+    assert "dz-histogram-svg" in html
+    assert "<title>0-10: 5</title>" in html
+    assert "3 bins · 28 samples · peak 15" in html
 
 
 def test_activity_feed_dispatches_through_timeline() -> None:

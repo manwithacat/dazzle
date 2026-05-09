@@ -40,9 +40,11 @@ from dazzle.render.fragment.primitives import (
     FilterColumn,
     FormStack,
     Fragment,
+    Funnel,
     Grid,
     GridRegion,
     Heading,
+    Histogram,
     Icon,
     InlineEdit,
     Interactive,
@@ -220,6 +222,10 @@ class FragmentRenderer:
                 return self._emit_grid_region(fragment, ctx)
             case ListRegion():
                 return self._emit_list_region(fragment, ctx)
+            case Histogram():
+                return self._emit_histogram(fragment, ctx)
+            case Funnel():
+                return self._emit_funnel(fragment, ctx)
             case ActivityFeed():
                 return self._emit_activity_feed(fragment, ctx)
             case StatusList():
@@ -1538,6 +1544,75 @@ class FragmentRenderer:
             f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>'
             f"</div>"
         )
+
+    def _emit_funnel(self, f: "Funnel", ctx: RenderContext) -> str:
+        """Render a Funnel matching legacy
+        `workspace/regions/funnel_chart.html` byte-for-byte: outer
+        `dz-funnel-chart-region`, `dz-funnel-stages` of `dz-funnel-stage-row`
+        items. Width is calculated from the first stage's count and
+        clamped to a 20% minimum. `data-dz-funnel-step` is the stage
+        index capped at 7.
+        """
+        if not f.stages:
+            return (
+                f'<div class="dz-funnel-chart-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(f.empty_message)}</p>"
+                f"</div>"
+            )
+
+        base = f.stages[0].count if f.stages[0].count > 0 else 1
+        items: list[str] = []
+        for i, stage in enumerate(f.stages):
+            pct = int(stage.count / base * 100)
+            width = pct if pct >= 20 else 20
+            step = i if i < 8 else 7
+            items.append(
+                f'<div class="dz-funnel-stage-row">'
+                f'<div class="dz-funnel-stage" '
+                f'data-dz-funnel-step="{step}" '
+                f'style="width: {width}%;">'
+                f'<span class="dz-funnel-stage-label">{ctx.escape(stage.label)}</span> '
+                f'<span class="dz-funnel-stage-count">({stage.count})</span>'
+                f"</div>"
+                f"</div>"
+            )
+
+        return (
+            f'<div class="dz-funnel-chart-region">'
+            f'<div class="dz-funnel-stages">{"".join(items)}</div>'
+            f'<p class="dz-funnel-summary">{f.total} total</p>'
+            f"</div>"
+        )
+
+    def _emit_histogram(self, h: "Histogram", ctx: RenderContext) -> str:
+        """Render a Histogram matching legacy
+        `workspace/regions/histogram.html` byte-for-byte: outer
+        `dz-histogram-region` wrapping the SVG (via `histogram_svg`)
+        and a `dz-histogram-summary` line "{count} bins · {total}
+        samples · peak {max_count}". Empty path renders the
+        `dz-empty-dense` fallback inside the region wrapper.
+        """
+        from dazzle.render.svg import histogram_svg
+
+        if not h.bins:
+            return (
+                f'<div class="dz-histogram-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(h.empty_message)}</p>"
+                f"</div>"
+            )
+
+        svg_bins = tuple((b.label, b.count, b.low, b.high) for b in h.bins)
+        svg = histogram_svg(h.label, svg_bins, reference_lines=h.reference_lines)
+        total = sum(b.count for b in h.bins)
+        max_count = max(b.count for b in h.bins) or 1
+        summary = (
+            f'<p class="dz-histogram-summary">'
+            f"{len(h.bins)} bins · {total} samples · peak {max_count}"
+            f"</p>"
+        )
+        return f'<div class="dz-histogram-region">{svg}{summary}</div>'
 
     def _emit_list_region(self, lst: "ListRegion", ctx: RenderContext) -> str:
         """Render a ListRegion matching legacy

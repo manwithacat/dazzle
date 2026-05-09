@@ -87,51 +87,44 @@ def _translate_bar_chart(legacy: dict[str, Any]) -> dict[str, Any]:
 
 
 def _translate_funnel_chart(legacy: dict[str, Any]) -> dict[str, Any]:
-    """FUNNEL_CHART: stages from `kanban_columns` + counts from
-    in-template iteration of `items`.
+    """FUNNEL_CHART: pass kanban_columns + items + group_by through.
 
-    The adapter wants pre-computed `buckets`. We emit them in the
-    declared `kanban_columns` order so the funnel reads top-down.
+    Phase 4B.4 wave 3 (v0.66.111): widened from the bucket-rollup
+    shape (which routed through bar_chart) to a passthrough since
+    the dedicated `_build_funnel_chart` adapter does the per-stage
+    counting itself, preserving the declared kanban_columns order
+    needed for the legacy funnel rendering.
     """
-    items = legacy.get("items") or []
-    stages = legacy.get("kanban_columns") or []
-    group_by = legacy.get("group_by")
-    counts: dict[str, int] = dict.fromkeys(stages, 0)
-    if group_by:
-        for it in items:
-            if isinstance(it, dict):
-                key = it.get(group_by)
-                if key in counts:
-                    counts[key] += 1
-    buckets = [(s, counts[s]) for s in stages] if stages else _bucketed_to_buckets(legacy)
-    return {
-        "buckets": buckets,
-        "chart_label": legacy.get("title"),
+    out: dict[str, Any] = {
+        "kanban_columns": legacy.get("kanban_columns", []),
+        "items": legacy.get("items", []),
+        "group_by": legacy.get("group_by"),
+        "total": legacy.get("total", 0),
     }
+    if "metrics" in legacy:
+        out["metrics"] = legacy["metrics"]
+    if "empty_message" in legacy:
+        out["empty_message"] = legacy["empty_message"]
+    return out
 
 
 def _translate_histogram(legacy: dict[str, Any]) -> dict[str, Any]:
-    """HISTOGRAM: histogram_bins → buckets.
+    """HISTOGRAM: pass histogram_bins through with reference_lines.
 
-    Bins carry `{label, count, low, high}`; we only consume label +
-    count. low/high (continuous-axis labels) and reference_lines
-    (vertical grade boundaries) are legacy-only.
+    Phase 4B.4 wave 3 (v0.66.111): widened from the old `buckets`
+    reduction (which routed through bar_chart) to a passthrough since
+    the dedicated `_build_histogram` adapter consumes the full
+    `histogram_bins` list including low/high range and reference_lines
+    overlays.
     """
-    bins = legacy.get("histogram_bins") or []
-    buckets: list[tuple[str, int]] = []
-    for b in bins:
-        if isinstance(b, dict):
-            label = str(b.get("label", ""))
-            try:
-                count = int(b.get("count", 0))
-            except (TypeError, ValueError):
-                continue
-            if label:
-                buckets.append((label, count))
-    return {
-        "buckets": buckets,
+    out: dict[str, Any] = {
+        "histogram_bins": legacy.get("histogram_bins", []),
         "chart_label": legacy.get("title"),
+        "reference_lines": legacy.get("reference_lines", []),
     }
+    if "empty_message" in legacy:
+        out["empty_message"] = legacy["empty_message"]
+    return out
 
 
 def _bucketed_to_points(legacy: dict[str, Any]) -> list[tuple[str, float]]:

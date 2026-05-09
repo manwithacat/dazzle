@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.111] - 2026-05-09
+
+### Added — Phase 4B.4 wave 3 COMPLETE — HISTOGRAM + FUNNEL_CHART byte-equivalent
+- **HISTOGRAM** — new `Histogram` + `HistogramBin` primitives + `histogram_svg` helper. Continuous-axis bar chart matching `workspace/regions/histogram.html` byte-for-byte: 400×140 viewBox, equal-width bars with 1px gap, vertical reference line overlays at x-position with label hugging the top, x-axis tick labels (every Nth bin via show_every heuristic + first/last always). Summary line "{count} bins · {total} samples · peak {max_count}". New `_build_histogram` adapter method (replaces alias to bar_chart).
+- **FUNNEL_CHART** — new `Funnel` + `FunnelStage` primitives matching `workspace/regions/funnel_chart.html` byte-for-byte. Width relative to FIRST stage's count (not max), clamped to a 20% minimum so tiny conversion stages stay legible. `data-dz-funnel-step` carries the stage index (capped at 7) for per-stage opacity fade via CSS. Stages preserved in declared `kanban_columns` order. New `_build_funnel_chart` adapter method (replaces bucket-rollup routing through bar_chart).
+
+### Phase 4B.4 — wave 3 closeout
+| Display | Status | Ship |
+|---|---|---|
+| BAR_CHART | ✅ | v0.66.110 |
+| LINE_CHART | ✅ | v0.66.110 |
+| AREA_CHART | ✅ (single-series) | v0.66.110 |
+| RADAR | ✅ (single-series) | v0.66.110 |
+| BAR_TRACK | ✅ | v0.66.110 |
+| BOX_PLOT | ✅ | v0.66.107 |
+| SPARKLINE | ✅ | v0.66.106 |
+| **HISTOGRAM** | ✅ | **v0.66.111** |
+| **FUNNEL_CHART** | ✅ | **v0.66.111** |
+| KANBAN, HEATMAP, PIVOT_TABLE | wave 4 | — |
+
+**22 of 32 displays byte-equivalent (69%).** Wave 3 done — 10 of 10 displays in 5 ships from v0.66.105 onwards. Remaining: wave 4 (KANBAN, HEATMAP, PIVOT_TABLE, QUEUE, ACTION_GRID, PROFILE_CARD, CONFIRM_ACTION_PANEL, TABBED_LIST, DIAGRAM) — 10 displays.
+
+### Translator updates
+- **`_translate_histogram`** widened to passthrough (`histogram_bins` + `reference_lines` + `empty_message`); was reducing to `buckets` for bar_chart routing.
+- **`_translate_funnel_chart`** widened to passthrough (`kanban_columns` + `items` + `group_by` + `total`); was doing per-stage rollup that the dedicated builder now handles directly.
+
+### Agent Guidance
+- **Wave 3 done.** Wave 4 has the highest-risk specialty modes — interactive (QUEUE, CONFIRM_ACTION_PANEL with Alpine state machine), complex matrix shapes (PIVOT_TABLE, HEATMAP), and DIAGRAM (Mermaid CDN-loaded — likely needs deferral). KANBAN is moderate complexity (column-grouped items).
+- **Pattern is now mechanical for chart-family ports.** Each new primitive follows: (1) data class for cells/items/stages, (2) container primitive with optional fields like reference_lines + empty_message, (3) renderer dispatch, (4) emit method matching legacy structure byte-for-byte, (5) adapter method consuming production ctx, (6) translator passthrough, (7) regression test in dual_path. Histogram + Funnel together took ~½ ship at established cadence.
+
 ## [0.66.110] - 2026-05-09
 
 ### Changed — Phase 4B.4 wave 3 — chart family alignment ship
