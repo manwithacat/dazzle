@@ -14,6 +14,7 @@ from typing import Any
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.render.fragment import (
     URL,
+    Button,
     Combobox,
     EmptyState,
     Field,
@@ -30,6 +31,7 @@ from dazzle.render.fragment import (
     Submit,
     Surface,
     Table,
+    TargetSelector,
     Text,
 )
 
@@ -98,15 +100,20 @@ class FragmentSurfaceAdapter:
         )
 
     def _build_view(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
-        """Detail surface — single record's fields as a definition-list-shaped Region.
+        """Detail surface — fields + action toolbar + related groups.
 
         Plan 8: each field renders as a Row of (Heading-level-4 label,
         Text value). Stack groups them inside Region(kind="detail").
         Plan 10: when ctx carries `related_groups`, additional
         Region(kind="related") entries are appended after the detail
-        body — each emits a Heading (group title) + Skeleton placeholder
-        (the actual related-entity rows arrive via a separate htmx fetch
-        post-Plan-11).
+        body — each emits a Heading (group title) + Skeleton placeholder.
+
+        Issue #1030: the action toolbar (Edit Link, Delete Button,
+        state-machine transition Buttons, integration-action Buttons,
+        external-link Links) renders as a Row prepended to the detail
+        body. The legacy template emits these in the surface header;
+        Region(kind="detail") body keeps them adjacent to the fields
+        they act on.
         """
         title = surface.title or surface.name.replace("_", " ").title()
         fields: list[dict[str, Any]] = ctx.get("fields", [])
@@ -129,6 +136,16 @@ class FragmentSurfaceAdapter:
                 for f in fields
             )
             detail_body = Stack(children=field_rows, gap="sm")
+
+        # Issue #1030: action toolbar — Edit / Delete / transitions /
+        # integration / external-link actions. Each action checks its
+        # ctx key and emits the corresponding primitive when present.
+        actions = self._build_detail_actions(ctx)
+        if actions:
+            detail_body = Stack(
+                children=(Row(children=actions, align="start"), detail_body),
+                gap="md",
+            )
 
         related_groups: list[dict[str, Any]] = ctx.get("related_groups", []) or []
         if not related_groups:
@@ -161,6 +178,75 @@ class FragmentSurfaceAdapter:
             header=Heading(title, level=1),
             body=Region(kind="detail", body=wrapper),
         )
+
+    def _build_detail_actions(self, ctx: dict[str, Any]) -> tuple[Fragment, ...]:
+        """Issue #1030: build the per-record action row from ctx.
+
+        Order: Edit Link (primary) → state-machine transitions →
+        integration actions → external links → Delete Button (danger,
+        confirm-gated). Empty tuple when no actions are configured."""
+        actions: list[Fragment] = []
+        edit_url = ctx.get("edit_url") or ""
+        delete_url = ctx.get("delete_url") or ""
+        entity_name = ctx.get("entity_name") or "record"
+        transitions = ctx.get("transitions") or []
+        integration_actions = ctx.get("integration_actions") or []
+        external_links = ctx.get("external_link_actions") or []
+
+        if edit_url:
+            actions.append(Link(label="Edit", href=URL(str(edit_url))))
+
+        for t in transitions:
+            api_url = t.get("api_url") or ""
+            label = t.get("label") or ""
+            if not api_url or not label:
+                continue
+            actions.append(
+                Button(
+                    label=str(label),
+                    variant="secondary",
+                    hx_post=URL(str(api_url)),
+                    hx_target=TargetSelector("body"),
+                    hx_swap="innerHTML",
+                )
+            )
+
+        for a in integration_actions:
+            api_url = a.get("api_url") or ""
+            label = a.get("label") or ""
+            if not api_url or not label:
+                continue
+            actions.append(
+                Button(
+                    label=str(label),
+                    variant="secondary",
+                    hx_post=URL(str(api_url)),
+                    hx_target=TargetSelector("body"),
+                    hx_swap="innerHTML",
+                )
+            )
+
+        for link in external_links:
+            label = link.get("label") or ""
+            url = link.get("url") or ""
+            if not label or not url:
+                continue
+            # External links use Link primitive (no htmx — full nav).
+            actions.append(Link(label=str(label), href=URL(str(url))))
+
+        if delete_url:
+            actions.append(
+                Button(
+                    label="Delete",
+                    variant="danger",
+                    hx_delete=URL(str(delete_url)),
+                    hx_target=TargetSelector("body"),
+                    hx_swap="innerHTML",
+                    hx_confirm=f"Delete this {str(entity_name).lower()}?",
+                )
+            )
+
+        return tuple(actions)
 
     def _build_form(
         self,

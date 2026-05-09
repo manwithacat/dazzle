@@ -1214,10 +1214,46 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
                     else str(display or "table"),
                 }
             )
+        # Issue #1030: thread action-bearing fields from DetailContext
+        # so the adapter can render Edit / Delete / Back / state-machine
+        # transitions / integration / external-link action buttons.
+        # Pre-fix the detail branch only forwarded fields + related
+        # groups, so the legacy Toolbar contract (entity_action buttons
+        # in the surface header) had no Fragment-side equivalent.
+        transitions_out = [
+            {
+                "to_state": getattr(t, "to_state", "") or "",
+                "label": getattr(t, "label", "") or "",
+                "api_url": getattr(t, "api_url", "") or "",
+            }
+            for t in (getattr(detail, "transitions", []) or [])
+        ]
+        integration_actions_out = [
+            {
+                "label": getattr(a, "label", "") or "",
+                "api_url": getattr(a, "api_url", "") or "",
+            }
+            for a in (getattr(detail, "integration_actions", []) or [])
+        ]
+        external_links_out = [
+            {
+                "label": getattr(a, "label", "") or "",
+                "url": getattr(a, "url", "") or "",
+                "new_tab": bool(getattr(a, "new_tab", True)),
+            }
+            for a in (getattr(detail, "external_link_actions", []) or [])
+        ]
         return {
             "fields": fields_out,
             "region_name": getattr(detail, "entity_name", "") + "_detail",
             "related_groups": related_groups_out,
+            "edit_url": getattr(detail, "edit_url", None) or "",
+            "delete_url": getattr(detail, "delete_url", None) or "",
+            "back_url": getattr(detail, "back_url", "/") or "/",
+            "entity_name": getattr(detail, "entity_name", "") or "",
+            "transitions": transitions_out,
+            "integration_actions": integration_actions_out,
+            "external_link_actions": external_links_out,
         }
 
     return {}

@@ -758,6 +758,7 @@ class FragmentRenderer:
         hx_indicator: object | None = None,
         hx_confirm: object | None = None,
         hx_put: object | None = None,
+        hx_delete: object | None = None,
         hx_vals: str = "",
         hx_ext: tuple[str, ...] = (),
     ) -> str:
@@ -778,6 +779,8 @@ class FragmentRenderer:
             parts.append(f'hx-post="{_escape(str(hx_post), quote=True)}"')
         if hx_put is not None:
             parts.append(f'hx-put="{_escape(str(hx_put), quote=True)}"')
+        if hx_delete is not None:
+            parts.append(f'hx-delete="{_escape(str(hx_delete), quote=True)}"')
         if hx_target is not None:
             parts.append(f'hx-target="{_escape(str(hx_target), quote=True)}"')
         if hx_swap is not None:
@@ -811,6 +814,7 @@ class FragmentRenderer:
             hx_get=b.hx_get,
             hx_post=b.hx_post,
             hx_put=b.hx_put,
+            hx_delete=b.hx_delete,
             hx_target=b.hx_target,
             hx_swap=b.hx_swap,
             hx_trigger=b.hx_trigger,

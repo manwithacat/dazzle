@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.132] - 2026-05-09
+
+### Added — detail VIEW action toolbar + `Button.hx_delete`
+
+- **`Button.hx_delete`** — DELETE method support on the Button primitive, joining the existing `hx_get` / `hx_post` / `hx_put`. Same mutual-exclusion invariant: a Button can have at most one HTTP-method attribute. Renderer emits `hx-delete="<url>"`.
+- **`TargetSelector` accepts bare HTML tag selectors** (`body`, `main`, etc.) — htmx supports them as full-page swap targets. Same allowlist as the keyword forms — single word, alpha-only, no attributes/combinators.
+- **`_build_dispatch_ctx` detail branch threads action-bearing fields**: `edit_url`, `delete_url`, `back_url`, `entity_name`, `transitions` (each as `{to_state, label, api_url}`), `integration_actions` (`{label, api_url}`), `external_link_actions` (`{label, url, new_tab}`).
+- **`FragmentSurfaceAdapter._build_view`** now composes a Row of action primitives prepended to the detail body: Edit Link → state-machine transition Buttons → integration-action Buttons → external-link Links → Delete Button (danger variant, entity-name-aware confirm prompt).
+
+### Fixed
+
+- **#1030 — Fragment detail (VIEW) surfaces emitted no edit/delete actions or state-machine transition buttons.** The pre-fix dispatch ctx silently dropped all action-bearing fields from `DetailContext`, and the adapter's `_build_view` never composed any action primitives. Ten regression tests at `tests/unit/test_dispatch_ctx_detail_actions.py` pin the contract: dispatch ctx threads all action fields, view renders Edit Link, Delete Button with `hx-delete` + entity-aware confirm, transition Buttons with `hx-post`, integration action Buttons, external-link anchors, no-actions fallback, plus low-level `Button.hx_delete` + multi-method-rejection invariants.
+
+### Agent Guidance
+
+- **Add new HTTP methods to Button at the validation layer first.** When extending Button with a new htmx method (DELETE, PATCH, etc.), add it to `_validate_htmx_pair` AND the renderer's `_hx_attrs` AND the Button dataclass — all three or the runtime invariant (mutually exclusive HTTP methods, target required) drifts. Keep the validation set in one place.
+
 ## [0.66.131] - 2026-05-09
 
 ### Added — Phase 4B follow-on — Fragment form section grouping

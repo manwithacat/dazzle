@@ -30,14 +30,17 @@ def _validate_htmx_pair(
     hx_target: TargetSelector | None,
     primitive_name: str,
     hx_put: URL | None = None,
+    hx_delete: URL | None = None,
 ) -> None:
-    fetchers = [v for v in (hx_get, hx_post, hx_put) if v is not None]
+    fetchers = [v for v in (hx_get, hx_post, hx_put, hx_delete) if v is not None]
     if len(fetchers) > 1:
         raise HtmxBindingError(
-            f"{primitive_name} cannot have more than one of hx_get/hx_post/hx_put"
+            f"{primitive_name} cannot have more than one of hx_get/hx_post/hx_put/hx_delete"
         )
     if fetchers and hx_target is None:
-        raise HtmxBindingError(f"{primitive_name} with hx_get/hx_post/hx_put needs hx_target")
+        raise HtmxBindingError(
+            f"{primitive_name} with hx_get/hx_post/hx_put/hx_delete needs hx_target"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +67,7 @@ class Button:
     hx_get: URL | None = None
     hx_post: URL | None = None
     hx_put: URL | None = None
+    hx_delete: URL | None = None
     hx_target: TargetSelector | None = None
     hx_swap: (
         Literal["innerHTML", "outerHTML", "beforebegin", "afterend", "delete", "none"] | None
@@ -87,6 +91,7 @@ class Button:
             hx_get=self.hx_get,
             hx_post=self.hx_post,
             hx_put=self.hx_put,
+            hx_delete=self.hx_delete,
             hx_target=self.hx_target,
             primitive_name="Button",
         )

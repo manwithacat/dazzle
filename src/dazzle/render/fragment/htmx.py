@@ -19,6 +19,10 @@ _TARGET_KEYWORD = re.compile(
 )
 _TARGET_ID = re.compile(r"^#[A-Za-z][A-Za-z0-9_-]*$")
 _TARGET_CLASS = re.compile(r"^\.[A-Za-z][A-Za-z0-9_-]*$")
+# Bare HTML tag selectors (e.g. `body`, `main`) — htmx supports these
+# directly as full-page swap targets. Same allowlist as the keyword
+# forms — single word, alpha-only, no attributes/combinators.
+_TARGET_TAG = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +68,7 @@ class TargetSelector:
             _TARGET_KEYWORD.match(self.value)
             or _TARGET_ID.match(self.value)
             or _TARGET_CLASS.match(self.value)
+            or _TARGET_TAG.match(self.value)
         ):
             raise ValueError(f"invalid target selector {self.value!r}")
 
