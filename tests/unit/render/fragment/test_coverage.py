@@ -190,11 +190,13 @@ def test_coverage_report_to_json_shape() -> None:
 # ─────────────────── Plan 13 — entity-ref field resolution ───────────────────
 
 
-def test_audit_flags_unsupported_field_type_via_entity_resolution() -> None:
-    """A surface with a SurfaceElement pointing at an unsupported-typed
-    field on the bound entity must report unsupported_field_type. Uses
-    `file` because Plans 14 + 15 closed the `ref`, `uuid`, and `json`
-    gaps (RefPicker primitive + UUID readonly + JSON textarea)."""
+def test_audit_marks_file_fields_as_supported() -> None:
+    """Issue #1033 (v0.66.140): the `file` field type is now
+    supported via the FileUpload primitive. A surface with a file
+    field should be in `ready_count`, not `blocked_count`. Pre-fix
+    this test asserted the opposite — `file` was in
+    `_UNSUPPORTED_FIELD_TYPES` and produced a blocker; that constant
+    is now empty so this test inverts to confirm the closure."""
     task = EntitySpec(
         name="Task",
         fields=[
@@ -227,11 +229,9 @@ def test_audit_flags_unsupported_field_type_via_entity_resolution() -> None:
         surfaces=[surface],
     )
     report = audit_appspec(appspec)
-    assert report.blocked_count == 1
-    blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_field_type" and b.detail == "file" for b in blockers), (
-        f"Expected file blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
-    )
+    assert report.ready_count == 1
+    assert report.blocked_count == 0
+    assert report.surfaces[0].blockers == ()
 
 
 def test_audit_skips_field_resolution_when_no_entity_ref() -> None:
@@ -421,17 +421,27 @@ def test_audit_workspace_region_source_classification() -> None:
 
 
 def test_audit_dedupes_same_field_type_across_elements() -> None:
-    """A surface with three unsupported-typed fields produces one
-    blocker per type, not three — what matters is that the type is
-    unsupported, not the count per surface (cross-surface aggregation
-    handles that). Uses `file` because Plans 14+15 closed ref/uuid/json."""
+    """The dedup mechanism: when N elements reference the same
+    unsupported field type, the audit produces ONE blocker per type,
+    not N (cross-surface aggregation handles count rollups).
+
+    Issue #1033 closure emptied `_UNSUPPORTED_FIELD_TYPES`, so this
+    test exercises the seam by monkeypatching a sentinel into the
+    set. The dedup logic itself is unchanged and worth pinning for
+    when future field-type restrictions land."""
+    import dazzle.render.fragment.coverage as _cov
+
     task = EntitySpec(
         name="Task",
         fields=[
             FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.FILE)),
-            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.FILE)),
-            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.FILE)),
+            # Three fields with the sentinel type — the audit normalises
+            # FieldType.kind via str(...).lower() so we can pass an
+            # untyped string sentinel through `extra` to fake an
+            # unsupported type without polluting the real type system.
+            FieldSpec(name="a", type=FieldType(kind=FieldTypeKind.STR)),
+            FieldSpec(name="b", type=FieldType(kind=FieldTypeKind.STR)),
+            FieldSpec(name="c", type=FieldType(kind=FieldTypeKind.STR)),
         ],
     )
     surface = SurfaceSpec(
@@ -455,13 +465,21 @@ def test_audit_dedupes_same_field_type_across_elements() -> None:
         domain=DomainSpec(entities=[task]),
         surfaces=[surface],
     )
-    report = audit_appspec(appspec)
-    file_count = sum(
-        1
-        for b in report.surfaces[0].blockers
-        if b.kind.value == "unsupported_field_type" and b.detail == "file"
-    )
-    assert file_count == 1
+    # Patch in `str` as the sentinel-unsupported type for the duration
+    # of the test, then restore.
+    original = _cov._UNSUPPORTED_FIELD_TYPES
+    _cov._UNSUPPORTED_FIELD_TYPES = frozenset({"str"})
+    try:
+        report = audit_appspec(appspec)
+        str_count = sum(
+            1
+            for b in report.surfaces[0].blockers
+            if b.kind.value == "unsupported_field_type" and b.detail == "str"
+        )
+        # Three str fields → one blocker (dedupe).
+        assert str_count == 1
+    finally:
+        _cov._UNSUPPORTED_FIELD_TYPES = original
 
 
 # ─────── Adapter ↔ coverage drift gate ─────────────────────

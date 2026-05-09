@@ -19,6 +19,7 @@ from dazzle.render.fragment import (
     CreateButton,
     EmptyState,
     Field,
+    FileUpload,
     FilterBar,
     FilterColumn,
     FormSection,
@@ -470,7 +471,9 @@ class FragmentSurfaceAdapter:
         )
 
 
-def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPicker":
+def _field_to_primitive(
+    field_dict: dict[str, Any],
+) -> "Field | Combobox | RefPicker | FileUpload":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -494,6 +497,21 @@ def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPi
     placeholder = str(field_dict.get("placeholder", ""))
     initial_value = str(field_dict.get("value", "") or "")
     kind = str(field_dict.get("kind", "text")).lower()
+
+    # FILE: issue #1033 — distinguished by widget kind "file". Returns
+    # a FileUpload primitive carrying the multipart upload endpoint
+    # (defaults to /uploads when the dispatch ctx didn't supply one).
+    if kind == "file":
+        return FileUpload(
+            name=name,
+            label=label,
+            upload_url=URL(str(field_dict.get("upload_url", "") or "/uploads")),
+            required=required,
+            accept=str(field_dict.get("accept", "") or ""),
+            max_size_bytes=int(field_dict.get("max_size_bytes", 0) or 0),
+            initial_value=initial_value,
+            initial_label=str(field_dict.get("initial_label", "") or ""),
+        )
 
     # REF: distinguished by presence of a non-empty ref_api in field_dict.
     ref_api = str(field_dict.get("ref_api", "") or "").strip()

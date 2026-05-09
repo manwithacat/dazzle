@@ -161,7 +161,11 @@ _UNSUPPORTED_FEATURES: tuple[str, ...] = (
 # everything, so structurally no type is blocked yet — this constant is
 # the seam for future restrictions (e.g. `ref` cells need FK-aware
 # rendering and per-row link generation).
-_UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset({"file"})
+#
+# Issue #1033 (v0.66.140): `file` removed — the FileUpload primitive
+# now handles file fields. The set is currently empty; the constant
+# remains as the audit's blocker-list seam.
+_UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset()
 
 # Surface-level `display:` values the adapter knows how to render.
 # Empty string / None means "use the surface mode default" (e.g.

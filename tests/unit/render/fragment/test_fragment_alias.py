@@ -102,6 +102,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Field",
         "Combobox",
         "RefPicker",
+        "FileUpload",
         "Submit",
         # escape
         "RawHTML",

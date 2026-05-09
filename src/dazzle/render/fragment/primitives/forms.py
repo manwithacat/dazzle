@@ -98,6 +98,40 @@ class RefPicker:
 
 
 @dataclass(frozen=True, slots=True)
+class FileUpload:
+    """File-upload widget for `field type: file` (issue #1033).
+
+    Renders as a `<div data-dz-widget="file-upload">` carrying a
+    hidden `<input>` that holds the FK to a stored Document (or any
+    file-resource entity) once upload completes. The drop-zone UI
+    + multipart POST to `upload_url` is wired by Alpine
+    (`dz.fileUpload` in `dz-alpine.js`); this primitive emits the
+    DOM contract the legacy Jinja path already produces.
+
+    `initial_value` carries the persisted file URL/key in EDIT mode
+    so the widget can show the existing filename. `initial_label` is
+    the human-readable display text (typically the original
+    filename); when present, displays alongside the drop-zone."""
+
+    name: str
+    label: str
+    upload_url: URL
+    required: bool = False
+    accept: str = ""  # comma-separated MIME types or extensions
+    max_size_bytes: int = 0  # 0 = no client-side limit
+    initial_value: str = ""
+    initial_label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("FileUpload requires a non-empty name")
+        if not self.label:
+            raise ValueError("FileUpload requires a non-empty label")
+        if self.max_size_bytes < 0:
+            raise ValueError("max_size_bytes must be >= 0")
+
+
+@dataclass(frozen=True, slots=True)
 class Submit:
     label: str
     variant: Literal["primary", "secondary", "danger"] = "primary"

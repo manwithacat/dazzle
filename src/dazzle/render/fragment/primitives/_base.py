@@ -82,6 +82,7 @@ from dazzle.render.fragment.primitives.data import (
 from dazzle.render.fragment.primitives.forms import (
     Combobox,
     Field,
+    FileUpload,
     FormSection,
     FormStack,
     RefPicker,
@@ -196,6 +197,7 @@ Fragment = (
     | Field
     | Combobox
     | RefPicker
+    | FileUpload
     | Submit
     # Escape hatches
     | RawHTML

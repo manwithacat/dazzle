@@ -42,6 +42,7 @@ from dazzle.render.fragment import (
     EmptyState,
     ErrorPage,
     Field,
+    FileUpload,
     FilterBar,
     FilterColumn,
     FormSection,
@@ -396,6 +397,8 @@ def _sample_for(primitive_type: type) -> object:
         return Combobox(name="s", label="S", options=(("a", "A"),))
     if primitive_type is RefPicker:
         return RefPicker(name="r", label="R", ref_api=URL("/x"))
+    if primitive_type is FileUpload:
+        return FileUpload(name="f", label="F", upload_url=URL("/uploads"))
     if primitive_type is Submit:
         return Submit(label="Save")
     if primitive_type is RawHTML:

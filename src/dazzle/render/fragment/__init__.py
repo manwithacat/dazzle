@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives import (
     EmptyState,
     ErrorPage,
     Field,
+    FileUpload,
     FilterBar,
     FilterColumn,
     FormSection,
@@ -285,6 +286,7 @@ __all__ = [
     "Field",
     "Combobox",
     "RefPicker",
+    "FileUpload",
     "Submit",
     # primitives — navigation
     "Sidebar",

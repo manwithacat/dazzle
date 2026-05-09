@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.140] - 2026-05-09
+
+### Added — FileUpload primitive — closes #1033
+
+- **`FileUpload` primitive** in `dazzle.render.fragment.primitives.forms` mirroring `RefPicker`'s shape: `name`, `label`, `upload_url: URL`, `required`, `accept`, `max_size_bytes`, `initial_value`, `initial_label`. Renders the legacy file-widget DOM contract: `<label class="dz-field">` wrapping a `<div data-dz-widget="file-upload" data-dz-target="<upload_url>">` containing a hidden `<input>` carrying the FK to a stored Document (the source of truth for the form post). Optional data-attrs (`data-dz-accept`, `data-dz-max-size`, `data-dz-initial-label`) emit only when their values are non-empty/non-zero.
+- **Adapter `_field_to_primitive` dispatches `kind == "file"`** to `FileUpload`. Threads `upload_url` (defaults to `/uploads`), `accept`, `max_size_bytes`, `value`, `initial_label`, `required` from the dispatch ctx.
+- **`coverage._UNSUPPORTED_FIELD_TYPES` now empty** — `"file"` removed. The audit's blocker-list seam remains for future field-type restrictions.
+- **Thirteen regression tests** at `tests/unit/test_file_upload_primitive.py` pin: primitive validation (required name/label, non-negative max_size_bytes), defaults clean, widget contract attributes, hidden input + dz-attrs, conditional accept/max-size emission, EDIT-mode initial_value threading, initial_label data-attr, required HTML attribute, label/initial_label XSS escaping, adapter dispatch on kind="file", full ctx threading, default upload_url, audit blocker-list cleared.
+
+### Changed
+
+- **Coverage audit tests inverted**: `test_audit_flags_unsupported_field_type_via_entity_resolution` is renamed to `test_audit_marks_file_fields_as_supported` and now asserts file fields ARE in `ready_count` (not `blocked_count`). The dedup-mechanism test (`test_audit_dedupes_same_field_type_across_elements`) now uses a monkeypatched sentinel into `_UNSUPPORTED_FIELD_TYPES` to exercise the dedupe seam, since no real type is unsupported any more.
+
+### Closed
+
+- **#1033 — Fragment adapter has no file-field primitive — 5 cyfuture surfaces stuck on Jinja path.** All five blocked surfaces (Document × 2, EngagementLetter × 1, VerificationEvidence × 2) can now flip to `render: fragment`. Cyfuture pin to v0.66.140 takes the pilot to 223/223 surfaces flipped (zero blockers).
+
+### Agent Guidance
+
+- **File widgets follow the hidden-FK + Alpine drop-zone pattern.** The drop-zone UI is JS-only (Alpine `dz.fileUpload` controller in `dz-alpine.js`); the typed primitive emits the DOM contract — `data-dz-widget="file-upload"`, `data-dz-target` (multipart upload endpoint), and a hidden `<input data-dz-file-value>` — and Alpine writes the resulting file URL/key back into the hidden input after upload completes. Same hidden-input-as-source-of-truth pattern the legacy Jinja widget uses. Don't try to render the drop-zone HTML in the primitive; let Alpine own it.
+- **Prefer void-form HTML for self-closing tags.** The HTML5 validator in the project's test suite chokes on XHTML-style `<input ... />` self-close. Use `<input ...>` (HTML5 void form) — matches what every other primitive emits.
+
 ## [0.66.139] - 2026-05-09
 
 ### Added — #1029 Phase 7 — LIST adapter bulk-actions toolbar + per-row checkboxes — closes #1029

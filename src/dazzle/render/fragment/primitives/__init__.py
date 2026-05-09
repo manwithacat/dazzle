@@ -104,6 +104,7 @@ from dazzle.render.fragment.primitives.data import (
 from dazzle.render.fragment.primitives.forms import (
     Combobox,
     Field,
+    FileUpload,
     FormSection,
     FormStack,
     RefPicker,
@@ -239,6 +240,7 @@ __all__ = [
     "Field",
     "Combobox",
     "RefPicker",
+    "FileUpload",
     "Submit",
     # navigation
     "Sidebar",

@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives import (
     EmptyState,
     ErrorPage,
     Field,
+    FileUpload,
     FilterBar,
     FilterColumn,
     FormSection,
@@ -438,6 +439,8 @@ class FragmentRenderer:
                 return self._emit_combobox(fragment, ctx)
             case RefPicker():
                 return self._emit_ref_picker(fragment, ctx)
+            case FileUpload():
+                return self._emit_file_upload(fragment, ctx)
             case Submit():
                 return self._emit_submit(fragment, ctx)
             # Defensive fallback — exhaustiveness is verified by
@@ -3382,6 +3385,37 @@ class FragmentRenderer:
             f'<label class="dz-combobox">'
             f'<span class="dz-combobox__label">{label}</span>'
             f'<select class="dz-combobox__select" name="{name}"{required_attr}>{options}</select>'
+            f"</label>"
+        )
+
+    def _emit_file_upload(self, f: FileUpload, ctx: RenderContext) -> str:
+        """Render a FileUpload matching legacy file-widget shape (#1033).
+
+        `<div data-dz-widget="file-upload">` carries a hidden FK input
+        (the source of truth for the form post) plus the data-attrs
+        the Alpine `dz.fileUpload` controller reads to wire up the
+        drop-zone and POST to the multipart upload endpoint."""
+        name = ctx.escape_attr(f.name)
+        label = ctx.escape(f.label)
+        upload_attr = ctx.escape_attr(str(f.upload_url))
+        accept_attr = f' data-dz-accept="{ctx.escape_attr(f.accept)}"' if f.accept else ""
+        max_attr = f' data-dz-max-size="{f.max_size_bytes}"' if f.max_size_bytes > 0 else ""
+        required_attr = " required" if f.required else ""
+        value_attr = ctx.escape_attr(f.initial_value)
+        initial_label_attr = (
+            f' data-dz-initial-label="{ctx.escape_attr(f.initial_label)}"'
+            if f.initial_label
+            else ""
+        )
+        return (
+            f'<label class="dz-field"><span class="dz-field__label">{label}</span>'
+            f'<div data-dz-widget="file-upload" '
+            f'data-dz-target="{upload_attr}"'
+            f"{accept_attr}{max_attr}{initial_label_attr}>"
+            f'<input type="hidden" name="{name}" id="field-{name}" '
+            f'data-dazzle-field="{name}" data-dz-file-value '
+            f'value="{value_attr}"{required_attr}>'
+            f"</div>"
             f"</label>"
         )
 
