@@ -23,6 +23,7 @@ from dazzle.render.fragment import (
     Fragment,
     Heading,
     Link,
+    Pagination,
     RefPicker,
     Region,
     Row,
@@ -59,6 +60,12 @@ class FragmentSurfaceAdapter:
         create_url = str(ctx.get("create_url", "") or "").strip()
         # Issue #1029 phase 1: per-row drill-down URL.
         detail_url_template = str(ctx.get("detail_url_template", "") or "").strip()
+        # Issue #1029 phase 2: pagination footer when total > page_size.
+        total = int(ctx.get("total", 0) or 0)
+        page = int(ctx.get("page", 1) or 1)
+        page_size = int(ctx.get("page_size", 20) or 20)
+        endpoint = str(ctx.get("endpoint", "") or "").strip()
+        region_name = str(ctx.get("region_name", "") or "").strip()
 
         body: Fragment
         if not items:
@@ -77,7 +84,21 @@ class FragmentSurfaceAdapter:
             row_links = (
                 _resolve_row_links(items, detail_url_template) if detail_url_template else ()
             )
-            body = Table(columns=column_labels, rows=rows, row_links=row_links)
+            table = Table(columns=column_labels, rows=rows, row_links=row_links)
+            # Append Pagination when total exceeds the current page slice.
+            # Region wrapping uses Stack (matches legacy template's parent
+            # `<div>` shape; an extra wrapping div is fine here).
+            if total > page_size and endpoint and region_name:
+                pagination = Pagination(
+                    region_name=region_name,
+                    endpoint=URL(endpoint),
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                )
+                body = Stack(children=(table, pagination), gap="sm")
+            else:
+                body = table
 
         # Header carries title + optional Create link. The Create
         # link is contractually required for the list page (UX

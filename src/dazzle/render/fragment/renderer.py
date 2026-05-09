@@ -66,6 +66,7 @@ from dazzle.render.fragment.primitives import (
     NavGroup,
     NavItem,
     Page,
+    Pagination,
     PipelineSteps,
     PivotTable,
     PivotTableRegion,
@@ -375,6 +376,8 @@ class FragmentRenderer:
                     self._emit(child, ctx)  # type: ignore[arg-type]
                     for child in fragment.children
                 )
+            case Pagination():
+                return self._emit_pagination(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -858,6 +861,80 @@ class FragmentRenderer:
         actions_html = "".join(self._emit(a, ctx) for a in t.actions)  # type: ignore[arg-type]
         label = ctx.escape_attr(t.label)
         return f'<div class="dz-toolbar" aria-label="{label}">{actions_html}</div>'
+
+    @staticmethod
+    def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
+        """Mirror of `dazzle_ui.runtime.template_renderer._pagination_pages`
+        (#984). Returns a bounded ellipsis-collapsed page list.
+
+        Examples (window=2):
+            current=1,  total=5    → [1, 2, 3, 4, 5]
+            current=7,  total=120  → [1, None, 5, 6, 7, 8, 9, None, 120]"""
+        if total <= 0:
+            return []
+        if total == 1:
+            return [1]
+        explicit_count = 2 * window + 3
+        if total <= explicit_count + 2:
+            return list(range(1, total + 1))
+        pages: list[int | None] = [1]
+        win_start = max(2, current - window)
+        win_end = min(total - 1, current + window)
+        if win_start > 2:
+            pages.append(None)
+        pages.extend(range(win_start, win_end + 1))
+        if win_end < total - 1:
+            pages.append(None)
+        pages.append(total)
+        return pages
+
+    def _emit_pagination(self, p: Pagination, ctx: RenderContext) -> str:
+        """Render a Pagination matching legacy `table_pagination.html`
+        byte-equivalent shape (Phase 2 of #1029).
+
+        Wraps the LIST adapter's table when total > page_size; emits
+        the row-summary on the left and bounded page-button row on
+        the right. Each button is htmx-driven; sort/filter/search
+        state preserved via the opaque `extra_query` carried on the
+        primitive."""
+        if p.total <= p.page_size:
+            return ""
+        total_pages = (p.total + p.page_size - 1) // p.page_size
+        endpoint_str = ctx.escape_attr(str(p.endpoint))
+        target = ctx.escape_attr(f"#{p.region_name}-body")
+        extra = ctx.escape_attr(p.extra_query) if p.extra_query else ""
+        pages = self._pagination_pages(p.page, total_pages)
+        page_html_parts: list[str] = []
+        for entry in pages:
+            if entry is None:
+                page_html_parts.append(
+                    '<span class="dz-pagination-ellipsis" aria-hidden="true">…</span>'
+                )
+                continue
+            is_current = entry == p.page
+            cls = "dz-pagination-page is-current" if is_current else "dz-pagination-page"
+            current_attr = ' aria-current="page"' if is_current else ""
+            page_html_parts.append(
+                f'<button class="{cls}"{current_attr} '
+                f'hx-get="{endpoint_str}?page={entry}&page_size={p.page_size}{extra}" '
+                f'hx-target="{target}" hx-swap="morph:innerHTML" '
+                f'hx-headers=\'{{"Accept": "text/html"}}\' '
+                f'hx-indicator="#{ctx.escape_attr(p.region_name)}-loading">'
+                f"{entry}"
+                f"</button>"
+            )
+        rows_label = "row" if p.total == 1 else "rows"
+        return (
+            f'<div class="dz-pagination">'
+            f'<span class="dz-pagination-summary">'
+            f'<span class="dz-bulk-summary-selected">'
+            f"<span data-dz-bulk-count-target>0</span> of {p.total} selected"
+            f"</span>"
+            f'<span class="dz-bulk-summary-rows">{p.total} {rows_label}</span>'
+            f"</span>"
+            f'<div class="dz-pagination-pages">{"".join(page_html_parts)}</div>'
+            f"</div>"
+        )
 
     def _emit_table(self, t: Table, ctx: RenderContext) -> str:
         head_cells = "".join(f"<th>{ctx.escape(c)}</th>" for c in t.columns)

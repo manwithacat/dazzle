@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.134] - 2026-05-09
+
+### Added — #1029 Phase 2 — LIST adapter Pagination footer
+
+- **`Pagination` primitive** (`dazzle.render.fragment.Pagination`) — page-by-page footer matching legacy `table_pagination.html` byte-equivalent shape: left summary (`<total> rows`) + right page-button row with bounded-width ellipsis (max ~9 entries via the `_pagination_pages` helper, see #984). Each button carries `hx-get="{endpoint}?page=N&page_size=M[&extra_query]"` + `hx-target="#{region_name}-body"` + `hx-swap="morph:innerHTML"`. Active page gets `is-current` class + `aria-current="page"`. Constructor validates `region_name` non-empty, `page >= 1`, `page_size >= 1`, `total >= 0`.
+- **`extra_query` field** on `Pagination` — opaque pre-encoded query string (e.g. `"&sort=name&dir=asc"`) appended to every page link. Phases 5 (search/filter) and 6 (sort) will populate this so page hops preserve the active sort/filter/search state.
+- **`FragmentSurfaceAdapter._build_list`** appends a `Pagination` after the `Table` (wrapped in a `Stack`) when `total > page_size` AND endpoint + region_name are configured. No-op on small datasets — single-page lists stay clean.
+- **`FragmentRenderer._pagination_pages` static helper** — mirrors `dazzle_ui.runtime.template_renderer._pagination_pages`. Bounded ellipsis-collapsed page list keeps the rendered row width constant regardless of total page count.
+- **Twelve regression tests** at `tests/unit/test_dispatch_ctx_list_pagination.py` pin: list-with-pagination shape, total ≤ page_size omits, missing-endpoint omits, active-page accessibility, hx-get with page params, first/last page always shown, ellipsis when total pages large, primitive validation, empty render below threshold, extra_query threading, helper bounded-output + small-total no-ellipsis.
+
+### Phase plan
+
+This is Phase 2 of 7 for issue #1029. Remaining ships: `action_primary` button (Phase 3), custom empty messages (Phase 4), search+filter (Phase 5), sort headers (Phase 6), bulk actions (Phase 7). Issue stays open until Phase 7.
+
+### Agent Guidance
+
+- **`extra_query` is the threading channel for stateful URLs.** When a list surface has active sort/filter/search, the page hops must preserve that state — otherwise paginating reverts to defaults. The opaque `extra_query` string lets the adapter (which knows about all the active params) compose the full URL once and hand it to Pagination as a single field. Any future "stateful" UI primitive that builds links should follow the same pattern: encode upstream, opaque-thread through.
+
 ## [0.66.133] - 2026-05-09
 
 ### Added — #1029 Phase 1 — LIST adapter row-click drill-down

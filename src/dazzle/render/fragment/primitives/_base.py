@@ -55,6 +55,7 @@ from dazzle.render.fragment.primitives.data import (
     ListRegion,
     MetricsGrid,
     MetricTile,
+    Pagination,
     PipelineSteps,
     PivotTable,
     PivotTableRegion,
@@ -177,6 +178,7 @@ Fragment = (
     | WorkspaceDrawer
     | WorkspaceContextSelector
     | Sequence
+    | Pagination
     | DashboardGrid
     | DashboardCard
     | AddCardRow

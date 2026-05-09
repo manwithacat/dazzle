@@ -73,6 +73,7 @@ from dazzle.render.fragment import (
     NavGroup,
     NavItem,
     Page,
+    Pagination,
     PipelineStage,
     PipelineSteps,
     PivotDimSpec,
@@ -332,6 +333,14 @@ def _sample_for(primitive_type: type) -> object:
         return WorkspaceDrawer()
     if primitive_type is Sequence:
         return Sequence(children=(Text("a"), Text("b")))
+    if primitive_type is Pagination:
+        return Pagination(
+            region_name="t",
+            endpoint=URL("/api/x"),
+            total=100,
+            page=3,
+            page_size=10,
+        )
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

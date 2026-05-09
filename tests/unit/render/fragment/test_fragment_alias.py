@@ -86,6 +86,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "WorkspaceDrawer",
         "WorkspaceContextSelector",
         "Sequence",
+        "Pagination",
         "DashboardGrid",
         "DashboardCard",
         "AddCardRow",

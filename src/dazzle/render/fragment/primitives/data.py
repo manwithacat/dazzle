@@ -1469,6 +1469,43 @@ class DashboardGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class Pagination:
+    """Page-by-page pagination controls for a table.
+
+    Issue #1029 phase 2 — appended below the LIST adapter's Table when
+    `total > page_size`. Renders the legacy `_table_pagination.html`
+    contract: a left summary (`<total> rows`) + right page-button row
+    with bounded width via ellipsis (`pagination_pages` helper, max
+    ~9 entries regardless of total page count, see #984).
+
+    Each page button carries `hx-get="{endpoint}?page=N&page_size=M..."`
+    + `hx-target="#{region_name}-body"` + `hx-swap="morph:innerHTML"`
+    so clicks fetch the next slice without a full page reload.
+    Active page gets `is-current` + `aria-current="page"`.
+
+    `extra_query` is an opaque pre-encoded string (e.g. `"&sort=name&dir=asc"`)
+    appended to every page link — used by Phase 5+6 to preserve sort,
+    filter, and search state across page hops. Empty string when none."""
+
+    region_name: str
+    endpoint: object  # URL — typed object to keep the union simple
+    total: int
+    page: int
+    page_size: int
+    extra_query: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("Pagination requires a non-empty region_name")
+        if self.page < 1:
+            raise ValueError(f"page must be >= 1, got {self.page}")
+        if self.page_size < 1:
+            raise ValueError(f"page_size must be >= 1, got {self.page_size}")
+        if self.total < 0:
+            raise ValueError(f"total must be >= 0, got {self.total}")
+
+
+@dataclass(frozen=True, slots=True)
 class Sequence:
     """Transparent multi-child container — emits children concatenated
     with no surrounding markup.
