@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.2] - 2026-05-10
+
+### Added
+
+- **#1018 — `class_strip` region primitive (architectural pilot for #1015–#1018).** First of four AegisMark Day-One demo region primitives establishing the discriminated `region_config` IR pattern: each new region kind gets its own typed pydantic config slot on `WorkspaceRegion` (alongside the existing `kpi_config`, `bar_chart_config`, etc.), plus a frozen-dataclass primitive in `render/fragment/primitives/data.py` and a dispatch case in `FragmentRenderer`. `class_strip` renders a horizontal pupil row with optional lens tabs (HTMX hx-get to `?lens=<id>`, hx-target the region body, hx-swap innerHTML), per-cell halos with year/form metadata, tone-tinted primary values (`data-dz-tone`), and an optional `drill_url` anchor wrapping each cell.
+- **`DisplayMode` enum** gains `CLASS_STRIP`, `DAY_TIMELINE`, `TASK_INBOX`, `PUPIL_CARD` — IR stubs registered ahead of CSS rules; the four new modes are content-driven and intentionally fall through to the default 280px reservation (allow-listed in `test_workspace_cls_reservation.py` with rationale).
+- **`ClassStripConfig` + `ClassStripLens`** pydantic models on `dazzle.core.ir.workspaces` — `pupil_via` (entity ref), `lenses` (list of `ClassStripLens(id, label, primary, threshold)`), `default_lens`. Wired as `class_strip_config: ClassStripConfig | None` field on `WorkspaceRegion`.
+- **`ClassStripCell`, `ClassStripLensTab`, `ClassStripRegion`** frozen dataclass primitives + `_emit_class_strip_region` renderer method. Lens tab rendering enforces exactly-one-active and full a11y (role=tab/tablist, aria-selected, aria-controls).
+- **26 unit tests** at `tests/unit/test_class_strip_primitive.py` covering IR construction, primitive validation invariants, renderer output (HTMX wiring, tone tinting, drill anchor wrap, year/form conditional, empty-region path, escape safety).
+
+### Agent Guidance
+
+- **Adding a new region kind?** Follow the `class_strip` template: (1) add `DisplayMode` enum value (allow-list in `test_workspace_cls_reservation.py` with rationale if content-driven), (2) define `<Kind>Config` BaseModel in `ir/workspaces.py`, add `<kind>_config: <Kind>Config | None = None` field on `WorkspaceRegion`, (3) define frozen-dataclass primitive(s) in `render/fragment/primitives/data.py` and add to the `Fragment` union in `_base.py`, (4) wire renderer dispatch case + `_emit_<kind>_region` method, (5) update both `inspect-api ir-types` baseline + golden snapshot, (6) add the new IR config fields to `tests/unit/fixtures/ir_reader_baseline.json` until the runtime adapter ship that consumes them lands.
+- **Pre-ship gates after IR-shape changes:** `dazzle inspect-api ir-types --write` regenerates `docs/api-surface/ir-types.txt`; `pytest tests/integration/test_golden_master.py --snapshot-update` updates the simple-DSL→IR snapshot. Both must accompany IR enum/field additions or CI goes red on `test_api_surface_drift` + `test_simple_dsl_to_ir_snapshot`.
+
 ## [0.67.1] - 2026-05-09
 
 ### Fixed

@@ -84,6 +84,14 @@ class DisplayMode(StrEnum):
         "confirm_action_panel"  # v0.61.72 (#6): irreversible-action consent panel
     )
     SEARCH_BOX = "search_box"  # #954 cycle 4: htmx search input + ranked results
+    # AegisMark Day-One demo region primitives (#1015–#1018).
+    # Currently driven by `class_strip_config` / `task_inbox_config` /
+    # `day_timeline_config` / `pupil_card_config` typed config blocks
+    # on WorkspaceRegion — discriminated by the `display` value here.
+    CLASS_STRIP = "class_strip"  # #1018: cohort-skim with lens toggle
+    DAY_TIMELINE = "day_timeline"  # #1016: chronological MIS landing
+    TASK_INBOX = "task_inbox"  # #1015: workflow-led landing surface
+    PUPIL_CARD = "pupil_card"  # #1017: 360-degree pupil drill-down
 
 
 class BucketRef(BaseModel):
@@ -387,6 +395,57 @@ class NoticeSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ClassStripLens(BaseModel):
+    """One lens in a `class_strip` region's lens toggle (#1018).
+
+    The teacher / HoD picks a lens; the strip re-renders keeping the
+    pupil row stable but rotating the visual primary. Each lens names
+    the field on the source-FK target (typically StudentProfile or a
+    derived view) that supplies the primary value.
+
+    Attributes:
+        id: Stable identifier used in the lens-swap URL parameter
+            (`?lens=<id>`) and in the active-lens highlight contract.
+        label: Human-readable text on the lens-toggle button.
+        primary: Field on the resolved pupil record that supplies the
+            value rendered as the visual primary.
+        threshold: Optional RAG threshold. When set, the renderer tints
+            the primary value relative to it. Polarity (above-good vs
+            below-good) is encoded in the adapter's tone-mapping helper.
+    """
+
+    id: str
+    label: str
+    primary: str
+    threshold: float | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ClassStripConfig(BaseModel):
+    """Per-region config for `display: class_strip` (#1018).
+
+    Discriminated config block — only populated when
+    `WorkspaceRegion.display == DisplayMode.CLASS_STRIP`. Establishes
+    the typed-config pattern for #1015 / #1016 / #1017 follow-ons.
+
+    Attributes:
+        pupil_via: Field on the source entity whose FK resolves to a
+            StudentProfile (or any entity carrying name + photo +
+            year/form). The halo renders from that record.
+        lenses: Ordered list of available lenses; first is the default
+            unless `default_lens` overrides.
+        default_lens: Lens id to render when no `?lens=` query param is
+            present. Must match one of `lenses[*].id`.
+    """
+
+    pupil_via: str
+    lenses: list[ClassStripLens]
+    default_lens: str = ""
+
+    model_config = ConfigDict(frozen=True)
+
+
 class WorkspaceRegion(BaseModel):
     """
     Named region within a workspace.
@@ -504,6 +563,12 @@ class WorkspaceRegion(BaseModel):
     # presentation; no impact on data or semantics. See
     # `dev_docs/2026-04-27-aegismark-ux-patterns.md` item #1.
     eyebrow: str | None = None
+    # AegisMark Day-One demo region primitives — discriminated typed
+    # config blocks (#1015–#1018). Only one config is populated per
+    # region, matched against `display`. Establishes the pattern for
+    # subsequent primitives' configs to land alongside without
+    # bloating the flat field set with mutually-exclusive options.
+    class_strip_config: ClassStripConfig | None = None  # #1018 (v0.67.2)
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

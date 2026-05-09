@@ -28,6 +28,9 @@ from dazzle.render.fragment import (
     Card,
     CardPicker,
     CardPickerEntry,
+    ClassStripCell,
+    ClassStripLensTab,
+    ClassStripRegion,
     Combobox,
     ConfirmGate,
     CreateButton,
@@ -348,6 +351,17 @@ def _sample_for(primitive_type: type) -> object:
         return CreateButton(href=URL("/x"), entity_name="Item")
     if primitive_type is BulkActionToolbar:
         return BulkActionToolbar()
+    if primitive_type is ClassStripRegion:
+        return ClassStripRegion(
+            region_name="cohort",
+            endpoint=URL("/api/cohort"),
+            lenses=(ClassStripLensTab(id="x", label="X", is_active=True),),
+            cells=(),
+        )
+    if primitive_type is ClassStripLensTab:
+        return ClassStripLensTab(id="x", label="X", is_active=True)
+    if primitive_type is ClassStripCell:
+        return ClassStripCell(pupil_id="p1", pupil_name="A", primary_value="0")
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

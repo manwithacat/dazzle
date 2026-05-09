@@ -1726,3 +1726,72 @@ class CardPicker:
 
     entries: tuple[CardPickerEntry, ...]
     catalog_json: str = "[]"
+
+
+@dataclass(frozen=True, slots=True)
+class ClassStripCell:
+    """One pupil cell in a `ClassStripRegion` (#1018).
+
+    Carries the pupil halo (initials/avatar, name, year/form) plus
+    the active lens's primary value with optional RAG tone. The
+    adapter resolves these from the source row + the resolved
+    pupil_via FK target; the primitive renders the typed shape."""
+
+    pupil_id: str
+    pupil_name: str
+    primary_value: str
+    year_form: str = ""
+    avatar_initials: str = ""
+    tone: str = "neutral"  # neutral | good | warn | bad — RAG tint
+    drill_url: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.pupil_id:
+            raise ValueError("ClassStripCell requires a non-empty pupil_id")
+
+
+@dataclass(frozen=True, slots=True)
+class ClassStripLensTab:
+    """One tab in a `ClassStripRegion`'s lens toggle. The active tab
+    gets the `is-active` class + `aria-pressed="true"`; clicks fire
+    an HTMX swap to the same region endpoint with `?lens=<id>`."""
+
+    id: str
+    label: str
+    is_active: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("ClassStripLensTab requires a non-empty id")
+
+
+@dataclass(frozen=True, slots=True)
+class ClassStripRegion:
+    """Horizontal cohort-skim strip with lens toggle (#1018).
+
+    The teacher / HoD picks a lens (attainment, attendance, behaviour,
+    AO breakdown); the strip re-renders keeping the pupil row stable
+    but rotating the visual primary. Lens-toggle clicks fire an HTMX
+    swap to the region endpoint with `?lens=<id>`; the runtime
+    re-resolves the data and the primitive re-renders.
+
+    `region_name` is the region's stable id used in the swap target
+    (`#region-{name}-body`). `endpoint` is the region data URL.
+    `cells` is the resolved row of pupils for the active lens."""
+
+    region_name: str
+    endpoint: object  # URL — typed object to keep the union simple
+    lenses: tuple[ClassStripLensTab, ...]
+    cells: tuple[ClassStripCell, ...]
+    empty_message: str = "No pupils in this view."
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("ClassStripRegion requires a non-empty region_name")
+        if not self.lenses:
+            raise ValueError("ClassStripRegion requires at least one lens")
+        active_count = sum(1 for lens in self.lenses if lens.is_active)
+        if active_count != 1:
+            raise ValueError(
+                f"ClassStripRegion requires exactly one active lens, got {active_count}"
+            )

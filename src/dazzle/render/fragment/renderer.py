@@ -29,6 +29,7 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     CardPicker,
+    ClassStripRegion,
     Combobox,
     ConfirmCheckItem,
     ConfirmGate,
@@ -414,6 +415,8 @@ class FragmentRenderer:
                 return self._emit_create_button(fragment, ctx)
             case BulkActionToolbar():
                 return _BULK_ACTION_TOOLBAR_HTML
+            case ClassStripRegion():
+                return self._emit_class_strip_region(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -3125,6 +3128,93 @@ class FragmentRenderer:
         on every workspace nav swap, but the listeners are only added
         on the first emission."""
         return _WORKSPACE_DRAWER_HTML
+
+    def _emit_class_strip_region(self, c: ClassStripRegion, ctx: RenderContext) -> str:
+        """Render a ClassStripRegion (#1018).
+
+        Outer wrapper carries `data-dz-region-name` so the lens-toggle
+        HTMX swap can target it. Lens toggle is a `<div role="tablist">`
+        of buttons; each button fires an `hx-get` to the same region
+        endpoint with `?lens=<id>` and swaps the body. Cells row is a
+        horizontal-scroll flex strip on wide widths, wraps on narrow.
+
+        Cells with non-empty `drill_url` wrap in an `<a>` for keyboard-
+        navigable drill-down to the pupil_card surface (#1017)."""
+        endpoint_str = ctx.escape_attr(str(c.endpoint))
+        region_name_attr = ctx.escape_attr(c.region_name)
+        lens_buttons: list[str] = []
+        for lens in c.lenses:
+            cls = "dz-class-strip-lens"
+            if lens.is_active:
+                cls += " is-active"
+            active_attr = ' aria-pressed="true"' if lens.is_active else ' aria-pressed="false"'
+            lens_buttons.append(
+                f'<button type="button" role="tab" class="{cls}"{active_attr} '
+                f'data-lens-id="{ctx.escape_attr(lens.id)}" '
+                f'hx-get="{endpoint_str}?lens={ctx.escape_attr(lens.id)}" '
+                f'hx-target="#region-{region_name_attr}-body" '
+                f'hx-swap="innerHTML">'
+                f"{ctx.escape(lens.label)}"
+                f"</button>"
+            )
+        lens_bar = (
+            f'<div class="dz-class-strip-lenses" role="tablist" '
+            f'aria-label="Lens toggle">'
+            f"{''.join(lens_buttons)}"
+            f"</div>"
+        )
+
+        if not c.cells:
+            cells_html = f'<p class="dz-class-strip-empty">{ctx.escape(c.empty_message)}</p>'
+        else:
+            cell_parts: list[str] = []
+            for cell in c.cells:
+                tone = cell.tone if cell.tone in ("good", "warn", "bad") else "neutral"
+                initials = (
+                    ctx.escape(cell.avatar_initials)
+                    if cell.avatar_initials
+                    else ctx.escape(cell.pupil_name[:2].upper())
+                )
+                year_html = (
+                    f'<div class="dz-class-strip-cell-year">{ctx.escape(cell.year_form)}</div>'
+                    if cell.year_form
+                    else ""
+                )
+                inner = (
+                    f'<div class="dz-class-strip-cell-halo">{initials}</div>'
+                    f'<div class="dz-class-strip-cell-name">{ctx.escape(cell.pupil_name)}</div>'
+                    f"{year_html}"
+                    f'<div class="dz-class-strip-cell-primary" '
+                    f'data-dz-tone="{ctx.escape_attr(tone)}">'
+                    f"{ctx.escape(cell.primary_value)}"
+                    f"</div>"
+                )
+                if cell.drill_url:
+                    cell_parts.append(
+                        f'<a class="dz-class-strip-cell" '
+                        f'href="{ctx.escape_attr(cell.drill_url)}" '
+                        f'data-pupil-id="{ctx.escape_attr(cell.pupil_id)}">'
+                        f"{inner}"
+                        f"</a>"
+                    )
+                else:
+                    cell_parts.append(
+                        f'<div class="dz-class-strip-cell" '
+                        f'data-pupil-id="{ctx.escape_attr(cell.pupil_id)}">'
+                        f"{inner}"
+                        f"</div>"
+                    )
+            cells_html = f'<div class="dz-class-strip-cells">{"".join(cell_parts)}</div>'
+
+        return (
+            f'<div class="dz-class-strip-region" '
+            f'data-dz-region-name="{region_name_attr}">'
+            f"{lens_bar}"
+            f'<div class="dz-class-strip-body" id="region-{region_name_attr}-body">'
+            f"{cells_html}"
+            f"</div>"
+            f"</div>"
+        )
 
     def _emit_workspace_toolbar(self, _t: WorkspaceToolbar, _ctx: RenderContext) -> str:
         """Render a WorkspaceToolbar matching legacy `_content.html`

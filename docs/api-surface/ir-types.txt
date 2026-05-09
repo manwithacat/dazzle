@@ -3013,6 +3013,7 @@ ir_class: WorkspaceRegion
     - bullet_actual: str | None = None
     - bullet_label: str | None = None
     - bullet_target: str | None = None
+    - class_strip_config: ClassStripConfig | None = None
     - confirmations: list[ConfirmationItemSpec] = []
     - css_class: str | None = None
     - date_field: str | None = None
@@ -3330,7 +3331,9 @@ enum: DisplayMode
     - BAR_TRACK = 'bar_track'
     - BOX_PLOT = 'box_plot'
     - BULLET = 'bullet'
+    - CLASS_STRIP = 'class_strip'
     - CONFIRM_ACTION_PANEL = 'confirm_action_panel'
+    - DAY_TIMELINE = 'day_timeline'
     - DETAIL = 'detail'
     - DIAGRAM = 'diagram'
     - FUNNEL_CHART = 'funnel_chart'
@@ -3346,6 +3349,7 @@ enum: DisplayMode
     - PIVOT_TABLE = 'pivot_table'
     - PROFILE_CARD = 'profile_card'
     - PROGRESS = 'progress'
+    - PUPIL_CARD = 'pupil_card'
     - QUEUE = 'queue'
     - RADAR = 'radar'
     - SEARCH_BOX = 'search_box'
@@ -3353,6 +3357,7 @@ enum: DisplayMode
     - STATUS_LIST = 'status_list'
     - SUMMARY = 'summary'
     - TABBED_LIST = 'tabbed_list'
+    - TASK_INBOX = 'task_inbox'
     - TIMELINE = 'timeline'
     - TREE = 'tree'
 

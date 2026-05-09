@@ -97,6 +97,15 @@ class TestCssReservesMinHeight:
             "area_chart",  # chart-shaped, 280px is right
             "confirm_action_panel",  # rare modal-style content
             "search_box",  # #954 cycle 4 — input + result list, content-driven height
+            # AegisMark Day-One demo region primitives (#1015–#1018).
+            # IR-stub registered ahead of CSS — first ship lands the
+            # primitive + tests; project CSS fits its content shape
+            # naturally (horizontal strip / timeline scroll / composite
+            # cards), no fixed min-height needed.
+            "class_strip",  # #1018: horizontal pupil row, content-driven height
+            "day_timeline",  # #1016: chronological scroll, content-driven
+            "pupil_card",  # #1017: composite, content-driven
+            "task_inbox",  # #1015: action list, content-driven
         }
 
         missing: list[str] = []

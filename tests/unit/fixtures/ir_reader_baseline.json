@@ -182,5 +182,8 @@
   "views.ViewSpec.filter_condition",
   "views.ViewSpec.time_bucket",
   "webhooks.WebhookAuthSpec.secret_ref",
-  "webhooks.WebhookPayloadSpec.include_fields"
+  "webhooks.WebhookPayloadSpec.include_fields",
+  "workspaces.ClassStripConfig.default_lens",
+  "workspaces.ClassStripConfig.pupil_via",
+  "workspaces.WorkspaceRegion.class_strip_config"
 ]
