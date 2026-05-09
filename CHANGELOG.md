@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.126] - 2026-05-09
+
+### Added — Phase 4B.5.c follow-on — opt-in typed render in workspace handler + 17-app real-world sweep
+
+- **`render_workspace_content_typed(workspace, catalog, fold_count, primary_actions)`** — production-shape adapter in `dazzle_ui/runtime/workspace_renderer.py` that consumes a real `WorkspaceContext` and returns the same HTML the legacy `render_fragment("workspace/_content.html", ...)` produces. Maps `RegionContext` → `DashboardCard` (incl. notice band, eyebrow, css_class, eager/lazy fold-count split, SSE flag), `catalog` → `CardPicker` entries, `primary_actions` dicts → `WorkspacePrimaryAction` tuples, and threads the optional context selector when `workspace.context_options_url` is set.
+- **`DAZZLE_TYPED_RENDER=1` env-var toggle** in `page_routes.py` (`/app/workspace/<name>` HTMX-fragment branch). When set, the handler renders via the typed substrate; otherwise the legacy Jinja path runs. Lets a deployment flip the renderer with no code change once byte-equivalence holds for its corpus.
+- **17-app real-world sweep test** at `tests/unit/render/fragment/test_workspace_content_real_apps.py` parameterizes over every workspace in every example app (`simple_task`, `ops_dashboard`, `support_tickets`, `contact_manager`, `fieldtest_hub`) — 17 workspaces, 0 to 22 regions each, mixed display modes. The typed render is byte-equivalent against the legacy Jinja render for **every single one**, including the 22-region `command_center` and the 17-region `engineering_dashboard`.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | ✅ v0.66.120 |
+| 4B.5.b.2.i — WorkspaceToolbar | ✅ v0.66.121 |
+| 4B.5.b.2.ii — DashboardGrid + DashboardCard | ✅ v0.66.122 |
+| 4B.5.b.2.iii — AddCardRow | ✅ v0.66.123 |
+| 4B.5.b.3 — WorkspaceDrawer + WorkspaceContextSelector | ✅ v0.66.124 |
+| 4B.5.c — Full `_content.html` assembly + byte-equivalence test | ✅ v0.66.125 |
+| **4B.5.c follow-on — typed render hook + 17-app real-world sweep** | ✅ **v0.66.126** |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | next (UNBLOCKED) |
+
+### Agent Guidance
+- **`DAZZLE_TYPED_RENDER=1` is the live toggle for the typed substrate.** Set it in any environment to flip the workspace HTMX-fragment branch from Jinja to the typed-Fragment renderer. Output is byte-equivalent across all 17 example workspaces — fall-back to legacy via unsetting the var if any production app surfaces a divergence. The flag is HTMX-fragment-only; full-page workspace requests still go through Jinja's `workspace/workspace.html` (which extends `layouts/app_shell.html`) since the outer page shell hasn't been ported yet (4B.5.c outer shell is queued separately from this opt-in).
+- **Real-world sweeps belong as parametrized pytest cases.** The `test_workspace_content_real_apps.py` pattern walks `examples/*/dsl`, parses each app, builds every workspace's production `WorkspaceContext`, and asserts the typed render matches Jinja byte-for-byte. When extending the chrome port to other shapes (sidebar, topbar, layout shell), mirror this pattern: synthetic fixture tests pin the contract attributes, then a real-world sweep proves the production shapes also round-trip cleanly. The discovery-failed-silently guard (`test_at_least_one_workspace_was_discovered`) is the canary — without it, parametrize would happily pass with zero cases and you'd never notice.
+
 ## [0.66.125] - 2026-05-09
 
 ### Added — Phase 4B.5.c — full `_content.html` byte-equivalence assembly

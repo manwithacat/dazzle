@@ -827,6 +827,125 @@ def build_catalog(ctx: WorkspaceContext) -> list[dict[str, str]]:
     ]
 
 
+def render_workspace_content_typed(
+    workspace: WorkspaceContext,
+    catalog: list[dict[str, str]],
+    fold_count: int,
+    primary_actions: list[dict[str, str]],
+) -> str:
+    """Render the workspace content via the typed-Fragment substrate.
+
+    Mirror of `render_fragment("workspace/_content.html", workspace=...,
+    catalog=..., fold_count=..., primary_actions=...)`. Composes
+    WorkspaceShell wrapping `Sequence(WorkspaceContextSelector?,
+    WorkspaceToolbar, DashboardGrid, AddCardRow)` with a sibling
+    WorkspaceDrawer, then renders via FragmentRenderer.
+
+    Phase 4B.5.c shipped byte-equivalence vs the legacy template
+    against fixture workspaces; this function applies that mapping to
+    real production WorkspaceContext / RegionContext shapes."""
+    import json
+
+    from dazzle.render.fragment import (
+        AddCardRow,
+        CardPicker,
+        CardPickerEntry,
+        DashboardCard,
+        DashboardGrid,
+        DashboardNotice,
+        FragmentRenderer,
+        Sequence,
+        WorkspaceContextSelector,
+        WorkspaceDrawer,
+        WorkspacePrimaryAction,
+        WorkspaceShell,
+        WorkspaceToolbar,
+    )
+
+    ws_title = workspace.title or workspace.name.replace("_", " ").title()
+
+    # ── DashboardCard list ──────────────────────────────────────────
+    cards: list[DashboardCard] = []
+    for index, r in enumerate(workspace.regions):
+        card_id = f"card-{index}"
+        eager = index < (fold_count or 0)
+        notice_dict = r.notice or {}
+        notice = (
+            DashboardNotice(
+                title=notice_dict.get("title", ""),
+                body=notice_dict.get("body", ""),
+                tone=notice_dict.get("tone") or "neutral",
+            )
+            if notice_dict.get("title")
+            else None
+        )
+        cards.append(
+            DashboardCard(
+                card_id=card_id,
+                name=r.name,
+                title=r.title or r.name.replace("_", " ").title(),
+                display=r.display,
+                col_span=r.col_span,
+                row_order=index,
+                hx_endpoint=f"/api/workspaces/{workspace.name}/regions/{r.name}",
+                eager=eager,
+                sse_enabled=bool(workspace.sse_url),
+                eyebrow=r.eyebrow,
+                css_class=getattr(r, "css_class", "") or "",
+                notice=notice,
+            )
+        )
+
+    # ── CardPicker ───────────────────────────────────────────────────
+    picker_entries = tuple(
+        CardPickerEntry(
+            name=c["name"],
+            title=c["title"],
+            entity=c.get("entity", ""),
+            display=c.get("display", ""),
+        )
+        for c in catalog
+    )
+    picker = CardPicker(
+        entries=picker_entries,
+        catalog_json=json.dumps(catalog, sort_keys=True),
+    )
+
+    # ── WorkspacePrimaryAction list ─────────────────────────────────
+    typed_actions = tuple(
+        WorkspacePrimaryAction(label=a["label"], route=a["route"]) for a in primary_actions
+    )
+
+    # ── Optional context selector ───────────────────────────────────
+    inner_pieces: list[object] = []
+    if workspace.context_options_url:
+        label = workspace.context_selector_label or workspace.context_selector_entity.replace(
+            "_", " "
+        )
+        inner_pieces.append(
+            WorkspaceContextSelector(
+                workspace_name=workspace.name,
+                options_url=workspace.context_options_url,
+                label=label,
+            )
+        )
+
+    inner_pieces.append(WorkspaceToolbar())
+    inner_pieces.append(DashboardGrid(cards=tuple(cards), sse_url=workspace.sse_url or ""))
+    inner_pieces.append(AddCardRow(picker=picker))
+
+    shell = WorkspaceShell(
+        workspace_name=workspace.name,
+        title=ws_title,
+        primary_actions=typed_actions,
+        fold_count=fold_count if fold_count is not None else 0,
+        body=Sequence(children=tuple(inner_pieces)),
+    )
+
+    r = FragmentRenderer()
+    return r.render(shell) + r.render(WorkspaceDrawer())
+
+
 def _resolve_fk_field(
     source_entity: str,
     target_entity: str,

@@ -1603,14 +1603,34 @@ async def _workspace_handler(
 
     # Fragment targeting: return only the workspace content
     if htmx.wants_fragment:
-        html = render_fragment(
-            "workspace/_content.html",
-            workspace=render_ws_ctx,
-            user_preferences=user_preferences,
-            catalog=catalog,
-            fold_count=fold_count,
-            primary_actions=primary_actions,
-        )
+        # Phase 4B.5.c — opt-in typed-Fragment substrate via env var.
+        # When DAZZLE_TYPED_RENDER=1 is set, render `_content.html`
+        # equivalent through the typed primitives (WorkspaceShell +
+        # inner pieces + sibling WorkspaceDrawer). Byte-equivalence
+        # validated against 17/17 example workspaces. Toggle off to
+        # fall back to the legacy Jinja path.
+        import os
+
+        if os.environ.get("DAZZLE_TYPED_RENDER") == "1":
+            from dazzle_ui.runtime.workspace_renderer import (
+                render_workspace_content_typed,
+            )
+
+            html = render_workspace_content_typed(
+                workspace=render_ws_ctx,
+                catalog=catalog,
+                fold_count=fold_count,
+                primary_actions=primary_actions,
+            )
+        else:
+            html = render_fragment(
+                "workspace/_content.html",
+                workspace=render_ws_ctx,
+                user_preferences=user_preferences,
+                catalog=catalog,
+                fold_count=fold_count,
+                primary_actions=primary_actions,
+            )
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=html, headers=headers)  # nosemgrep
 
