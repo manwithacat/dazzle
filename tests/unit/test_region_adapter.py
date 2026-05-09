@@ -557,13 +557,15 @@ def test_metrics_value_passes_through_metric_number_filter() -> None:
 
 
 def test_bar_chart_renders_buckets() -> None:
+    """v0.66.110: bucket labels go through `render_status_badge` macro
+    via humanize filter — "low" → "Low", etc."""
     adapter = WorkspaceRegionAdapter()
     ctx = {"buckets": [("low", 3), ("medium", 7), ("high", 2)]}
     fragment = adapter.build(_FakeRegion("severity", display="bar_chart"), ctx)
     html = _render(fragment)
-    assert "low" in html
-    assert "medium" in html
-    assert "high" in html
+    assert "Low" in html
+    assert "Medium" in html
+    assert "High" in html
 
 
 def test_bar_chart_accepts_dict_bucket_shape() -> None:
@@ -577,7 +579,8 @@ def test_bar_chart_accepts_dict_bucket_shape() -> None:
     }
     fragment = adapter.build(_FakeRegion("c", display="bar_chart"), ctx)
     html = _render(fragment)
-    assert "open" in html and "closed" in html
+    # v0.66.110: humanized via render_status_badge.
+    assert "Open" in html and "Closed" in html
 
 
 def test_bar_chart_skips_malformed_entries() -> None:
@@ -609,10 +612,12 @@ def test_bar_chart_uses_chart_label_override() -> None:
     assert "a" in html  # smoke; label rendering is BarChart's concern
 
 
-def test_bar_chart_carries_reference_overlays() -> None:
-    """Phase 4B.1.b: BarChart now accepts reference_lines + reference_bands
-    via ctx; renderer emits them as a `<dl class=dz-bar-chart__references>`
-    block after the bars."""
+def test_bar_chart_renders_with_reference_overlays_supplied() -> None:
+    """v0.66.110: BAR_CHART chrome stripped — the Phase 4B-only
+    `<dl class="dz-bar-chart__references">` annotation block has no
+    legacy counterpart and was dropped. Reference overlays are silently
+    ignored in the bar chart body (legacy doesn't render them either
+    in the bucketed_metrics primary branch)."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "buckets": [("low", 3), ("high", 9)],
@@ -620,9 +625,9 @@ def test_bar_chart_carries_reference_overlays() -> None:
         "reference_bands": [{"from": 0, "to": 5, "label": "Healthy", "color": "positive"}],
     }
     html = _render(adapter.build(_FakeRegion("c", display="bar_chart"), ctx))
-    assert "dz-bar-chart__references" in html
-    assert 'data-style="dashed"' in html
-    assert 'data-color="positive"' in html
+    # Bars still render; reference overlays no longer carry to the typed output.
+    assert "Low" in html and "High" in html
+    assert "dz-bar-chart-region" in html
 
 
 def test_box_plot_carries_reference_overlays() -> None:
@@ -1127,19 +1132,23 @@ def test_box_plot_empty_renders_empty_state() -> None:
 
 
 def test_line_chart_renders_time_series() -> None:
+    """v0.66.110: legacy region wrapper class is `dz-line-chart-region`
+    (chrome stripping)."""
     adapter = WorkspaceRegionAdapter()
     ctx = {"points": [("Jan", 5), ("Feb", 8), ("Mar", 12)]}
     fragment = adapter.build(_FakeRegion("c", display="line_chart"), ctx)
     html = _render(fragment)
-    assert "dz-timeseries--view-line" in html
+    assert "dz-line-chart-region" in html
     assert "Jan" in html and "Feb" in html and "Mar" in html
 
 
-def test_area_chart_uses_area_view() -> None:
+def test_area_chart_uses_area_region_wrapper() -> None:
+    """v0.66.110: AREA_CHART wrapper is `dz-area-chart-region`
+    (legacy class scheme — was BEM `dz-timeseries--view-area`)."""
     adapter = WorkspaceRegionAdapter()
     ctx = {"points": [("Q1", 100), ("Q2", 150)]}
     fragment = adapter.build(_FakeRegion("c", display="area_chart"), ctx)
-    assert "dz-timeseries--view-area" in _render(fragment)
+    assert "dz-area-chart-region" in _render(fragment)
 
 
 def test_sparkline_renders_dedicated_primitive() -> None:
@@ -1175,8 +1184,10 @@ def test_time_series_skips_malformed_points() -> None:
 
 
 def test_time_series_carries_reference_lines() -> None:
-    """Phase 4B.1.b: ctx['reference_lines'] flows through to the
-    TimeSeries primitive and renders as semantic `<dl>` annotations."""
+    """v0.66.110: ctx['reference_lines'] flows through to the
+    TimeSeries primitive and renders as `<line>` overlays inside
+    the SVG (legacy parity). Phase 4B-only `<dl>` annotation block
+    was dropped to byte-match."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "points": [("Jan", 50), ("Feb", 75)],
@@ -1186,13 +1197,15 @@ def test_time_series_carries_reference_lines() -> None:
         ],
     }
     html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
-    assert 'data-style="dashed"' in html
-    assert 'data-style="solid"' in html  # 'wavy' fell back
-    assert "Target" in html and "Min" in html
+    # Reference lines render inside the SVG with stroke-dasharray.
+    assert 'stroke-dasharray="4,3"' in html  # dashed
+    assert "<title>Target: 100" in html
+    assert "<title>Min: 50" in html
 
 
 def test_time_series_carries_reference_bands_with_alt_keys() -> None:
-    """Adapter accepts both `from`/`to` and `from_value`/`to_value`
+    """v0.66.110: bands render inside the SVG as `<rect>` overlays.
+    Adapter accepts both `from`/`to` and `from_value`/`to_value`
     key shapes; bands with from > to silently drop."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
@@ -1204,10 +1217,10 @@ def test_time_series_carries_reference_bands_with_alt_keys() -> None:
         ],
     }
     html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
-    assert "Healthy" in html
-    assert 'data-color="positive"' in html
-    assert "Danger" in html
-    assert 'data-color="destructive"' in html
+    assert "<title>Healthy:" in html
+    assert "hsl(145, 55%, 45%)" in html  # positive colour
+    assert "<title>Danger:" in html
+    assert "hsl(var(--destructive))" in html
     assert "Bad order" not in html
 
 
@@ -1459,10 +1472,12 @@ def test_bar_track_renders_typed_primitive_with_aria() -> None:
     assert 'class="dz-bar-track-region"' in html  # v0.66.98 — legacy outer wrapper
     assert "dz-bar-track-rows" in html
     assert 'role="progressbar"' in html
-    assert 'aria-valuemax="100.0"' in html
-    assert 'aria-valuenow="80.0"' in html
-    assert "width: 80.0%" in html
-    assert "2 rows · scale 0–100.0" in html
+    # v0.66.110: int-narrowing — whole-valued floats render without `.0`
+    # to match Jinja's `{{ value }}` rendering.
+    assert 'aria-valuemax="100"' in html
+    assert 'aria-valuenow="80"' in html
+    assert "width: 80%" in html
+    assert "2 rows · scale 0–100" in html
 
 
 def test_bar_track_legacy_items_fallback() -> None:
@@ -1970,10 +1985,13 @@ def test_funnel_chart_sorts_buckets_descending() -> None:
     }
     fragment = adapter.build(_FakeRegion("f", display="funnel_chart"), ctx)
     html = _render(fragment)
-    # Order in HTML output should reflect sort: verified (200), signed_up (100), paid (50)
-    pos_verified = html.find("verified")
-    pos_signed = html.find("signed_up")
-    pos_paid = html.find("paid")
+    # v0.66.110: bucket labels go through humanize filter via
+    # render_status_badge — "signed_up" → "Signed Up", etc.
+    # Order should reflect sort: Verified (200), Signed Up (100), Paid (50).
+    pos_verified = html.find("Verified")
+    pos_signed = html.find("Signed Up")
+    pos_paid = html.find("Paid")
+    assert pos_verified != -1 and pos_signed != -1 and pos_paid != -1
     assert pos_verified < pos_signed < pos_paid
 
 

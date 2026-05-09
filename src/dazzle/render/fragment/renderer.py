@@ -770,25 +770,35 @@ class FragmentRenderer:
 
     def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
         """Render a bar chart as label/track/fill/value rows — byte-equivalent
-        to the legacy `workspace/regions/bar_chart.html` template.
+        to the legacy `workspace/regions/bar_chart.html` template's
+        `bucketed_metrics` primary branch.
 
-        Phase 4B.1.c (SVG arc, bar variant): replaces the prior BEM
-        emit with the legacy single-dash CSS-bar structure (track div +
-        fill div with `width: N%`). The `dz-bar-chart-references`
-        annotation block is the v0.66.81 programmatic-data layer and
-        keeps its BEM `__references` form (net-new from Phase 4B —
-        no legacy template equivalent to match).
+        Phase 4B.4 wave 3: aligned with legacy template:
+          - Outer `dz-bar-chart-region` carries no aria-label (label is
+            owned by the surrounding region_card chrome)
+          - Bucket label wrapped in `render_status_badge(value, size='sm')`
+            via `_render_status_badge_html`
+          - No summary line (legacy summary appears in the items+group_by
+            branch, not the bucketed_metrics branch)
+          - No `<dl>` references block (Phase 4B-only addition with no
+            legacy equivalent in this branch)
         """
         if not b.buckets:
-            return (
-                f'<div class="dz-bar-chart-region" aria-label="{ctx.escape_attr(b.label)}"></div>'
-            )
+            return '<div class="dz-bar-chart-region"></div>'
+
+        # Late import to avoid circular dependency between renderer and
+        # workspace adapter (the helper lives in adapter for now; could
+        # be promoted to a shared module if more renderers need it).
+        from dazzle_back.runtime.renderers.region_adapter import (
+            _render_status_badge_html,
+        )
 
         max_val = max((c for _, c in b.buckets), default=1) or 1
-        total = sum(c for _, c in b.buckets)
         rows = "".join(
             f'<div class="dz-bar-chart-row">'
-            f'<span class="dz-bar-chart-label">{ctx.escape(label)}</span>'
+            f'<span class="dz-bar-chart-label">'
+            f"{_render_status_badge_html(label, size='sm')}"
+            f"</span>"
             f'<div class="dz-bar-chart-track">'
             f'<div class="dz-bar-chart-fill" '
             f'style="width: {int(count / max_val * 100)}%"></div>'
@@ -797,15 +807,7 @@ class FragmentRenderer:
             f"</div>"
             for label, count in b.buckets
         )
-        refs = self._render_references("dz-bar-chart", b.reference_lines, b.reference_bands, ctx)
-        return (
-            f'<div class="dz-bar-chart-region" '
-            f'aria-label="{ctx.escape_attr(b.label)}">'
-            f'<div class="dz-bar-chart-bars">{rows}</div>'
-            f'<p class="dz-bar-chart-summary">{total} total</p>'
-            f"{refs}"
-            f"</div>"
-        )
+        return f'<div class="dz-bar-chart-region"><div class="dz-bar-chart-bars">{rows}</div></div>'
 
     def _emit_pivot_table(self, p: PivotTable, ctx: RenderContext) -> str:
         head = "".join(f"<th>{ctx.escape(c)}</th>" for c in p.columns)
@@ -971,7 +973,19 @@ class FragmentRenderer:
         """
         from dazzle.render.svg import time_series_svg
 
-        cls = f"dz-timeseries dz-timeseries--view-{t.view}"
+        # Phase 4B.4 wave 3: aligned with legacy template — strip the
+        # `<section class="dz-timeseries">` chrome + `<h4>` + Phase 4B-
+        # only `<dl>` references block. Wrapper class is per-view
+        # (`dz-line-chart-region` for line, `dz-area-chart-region` for
+        # area). Summary line emits `{count} buckets · peak {max_val}`.
+        wrapper_class = "dz-area-chart-region" if t.view == "area" else "dz-line-chart-region"
+
+        if not t.points:
+            return f'<div class="{wrapper_class}"></div>'
+
+        max_val = max((v for _, v in t.points), default=1) or 1
+        max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+
         svg = time_series_svg(
             t.label,
             t.points,
@@ -979,17 +993,8 @@ class FragmentRenderer:
             reference_lines=t.reference_lines,
             reference_bands=t.reference_bands,
         )
-        references_html = self._render_references(
-            "dz-timeseries", t.reference_lines, t.reference_bands, ctx
-        )
-
-        return (
-            f'<section class="{cls}">'
-            f'<h4 class="dz-timeseries__label">{ctx.escape(t.label)}</h4>'
-            f"{svg}"
-            f"{references_html}"
-            f"</section>"
-        )
+        summary = f'<p class="dz-chart-summary">{len(t.points)} buckets · peak {max_val_str}</p>'
+        return f'<div class="{wrapper_class}">{svg}{summary}</div>'
 
     def _emit_radar(self, r: Radar, ctx: RenderContext) -> str:
         """Render a polar/radar profile as inline SVG with concentric
@@ -1005,16 +1010,20 @@ class FragmentRenderer:
         `<div class="dz-radar-region">` (the legacy class).
         """
         from dazzle.render.svg import radar_svg
+        from dazzle_ui.runtime.template_renderer import _metric_number_filter
 
+        # Phase 4B.4 wave 3: aligned with legacy template — strip the
+        # `<section class="dz-radar">` + `<h4>` chrome. Summary uses
+        # the legacy "N spokes · 1 series · peak {metric_number}" format
+        # (single-series — multi-series Radar is a deferred primitive).
         svg = radar_svg(r.label, r.axes)
         max_val = max((v for _, v in r.axes), default=1) or 1
-        summary = f'<p class="dz-chart-summary">{len(r.axes)} spokes · peak {max_val}</p>'
-        return (
-            f'<section class="dz-radar">'
-            f'<h4 class="dz-radar__label">{ctx.escape(r.label)}</h4>'
-            f'<div class="dz-radar-region">{svg}{summary}</div>'
-            f"</section>"
+        max_for_filter = int(max_val) if max_val == int(max_val) else max_val
+        max_val_str = _metric_number_filter(max_for_filter)
+        summary = (
+            f'<p class="dz-chart-summary">{len(r.axes)} spokes · 1 series · peak {max_val_str}</p>'
         )
+        return f'<div class="dz-radar-region">{svg}{summary}</div>'
 
     def _emit_box_plot(self, b: BoxPlot, ctx: RenderContext) -> str:
         """Render a box-plot as inline SVG box+whisker glyphs — byte-
@@ -1766,17 +1775,23 @@ class FragmentRenderer:
         / BarChart — references are a Phase 4B-only programmatic-data
         layer with no legacy template equivalent.
         """
+
+        # Match Jinja's `{{ value }}` rendering — int repr for whole values.
+        def _num(v: float) -> str:
+            return str(int(v)) if v == int(v) else str(v)
+
+        max_str = _num(b.max_value)
         rows_html = "".join(
             f'<div class="dz-bar-track-row">'
             f'<span class="dz-bar-track-label" title="{ctx.escape_attr(label)}">'
             f"{ctx.escape(label)}</span>"
             f'<div class="dz-bar-track" role="progressbar" '
             f'aria-valuemin="0" '
-            f'aria-valuemax="{b.max_value}" '
-            f'aria-valuenow="{value}" '
+            f'aria-valuemax="{max_str}" '
+            f'aria-valuenow="{_num(value)}" '
             f'aria-label="{ctx.escape_attr(label)}: {ctx.escape_attr(formatted)}">'
             f'<span class="dz-bar-track-fill" '
-            f'style="width: {round(fill_pct, 2)}%;" '
+            f'style="width: {_num(round(fill_pct, 2))}%;" '
             f'title="{ctx.escape_attr(label)}: {ctx.escape_attr(formatted)}"></span>'
             f"</div>"
             f'<span class="dz-bar-track-value">{ctx.escape(formatted)}</span>'
@@ -1784,11 +1799,13 @@ class FragmentRenderer:
             for label, value, formatted, fill_pct in b.rows
         )
         refs = self._render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
+        max_rounded = round(b.max_value, 2)
+        max_summary = str(int(max_rounded)) if max_rounded == int(max_rounded) else str(max_rounded)
         return (
             f'<div class="dz-bar-track-region">'
             f'<div class="dz-bar-track-rows">{rows_html}</div>'
             f'<p class="dz-bar-track-summary">'
-            f"{len(b.rows)} rows · scale 0–{round(b.max_value, 2)}"
+            f"{len(b.rows)} rows · scale 0–{max_summary}"
             f"</p>"
             f"</div>"
             f"{refs}"

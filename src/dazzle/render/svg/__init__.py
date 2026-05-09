@@ -95,12 +95,15 @@ def time_series_svg(
     def _y(val: float) -> float:
         return round(pt + plot_h - ((val - min_val) / value_range * plot_h), 2)
 
+    # Int-narrowing for aria-label so whole-valued floats render without
+    # the trailing `.0` (matches Jinja's `{{ max_val }}` behaviour).
+    max_val_label = str(int(max_val)) if max_val == int(max_val) else str(max_val)
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {width} {height}" '
         f'class="dz-line-chart-svg dz-chart-svg" role="img" '
         f'aria-label="{_escape(label, quote=True)} time series — '
-        f'{count} buckets, peak {max_val}">',
+        f'{count} buckets, peak {max_val_label}">',
         # Baseline grid — single line at the bottom of the plot area.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
@@ -164,11 +167,13 @@ def time_series_svg(
     for i, (lbl, val) in enumerate(points):
         px = round(pl + i * step, 2)
         py = _y(val)
+        # Match Jinja `{{ b.value }}` — int repr for whole values.
+        val_label = str(int(val)) if val == int(val) else str(val)
         parts.append(
             f'<circle cx="{px}" cy="{py}" r="2.5" '
             f'fill="hsl(var(--primary))" stroke="hsl(var(--card))" '
             f'stroke-width="1">'
-            f"<title>{_escape(lbl)}: {val}</title>"
+            f"<title>{_escape(lbl)}: {val_label}</title>"
             f"</circle>"
         )
 
@@ -364,13 +369,14 @@ def _radar_polar_xy(
     (0.0 = centre, 1.0 = spoke endpoint).
 
     Mirrors the `radar_polar_xy` Jinja global registered in
-    `template_renderer.py` so the typed-Fragment radar matches the
-    legacy template's vertex distribution exactly (#929 fix).
+    `template_renderer.py` byte-for-byte — returns full-precision
+    floats, NOT rounded. Jinja's `{{ v.x }}` emits the full repr;
+    rounding here causes byte-equivalence drift on every vertex.
     """
     theta = -math.pi / 2 + 2 * math.pi * index / count
     return (
-        round(cx + ratio * r_max * math.cos(theta), 2),
-        round(cy + ratio * r_max * math.sin(theta), 2),
+        cx + ratio * r_max * math.cos(theta),
+        cy + ratio * r_max * math.sin(theta),
     )
 
 
@@ -407,12 +413,20 @@ def radar_svg(
     if max_val <= 0:
         max_val = 1
 
+    # Match Jinja's `{{ max_val | metric_number }}` rendering — K/M
+    # suffixes for large values, plain int repr otherwise. Late import
+    # to avoid the SVG module pulling dazzle_ui at module load.
+    # Pre-narrow to int when whole so the filter renders "9" not "9.0".
+    from dazzle_ui.runtime.template_renderer import _metric_number_filter
+
+    max_for_label = int(max_val) if max_val == int(max_val) else max_val
+    max_val_label = _metric_number_filter(max_for_label)
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {side} {side}" '
         f'class="dz-radar-svg dz-chart-svg" role="img" '
         f'aria-label="{_escape(label, quote=True)} radar — '
-        f'{count} spokes, peak {max_val}">'
+        f'{count} spokes, peak {max_val_label}">'
     ]
 
     # Concentric polar grid rings.
@@ -452,13 +466,17 @@ def radar_svg(
         f'stroke-linejoin="round" />'
     )
 
-    # Vertex markers.
+    # Vertex markers. Tooltip format matches legacy
+    # `{{ v.label }} {{ series_name }}: {{ v.value | metric_number }}`
+    # — for single-series default, series_name = "value".
     for vx, vy, axis_label, value in vertices:
+        val_for_label = int(value) if value == int(value) else value
+        val_label = _metric_number_filter(val_for_label)
         parts.append(
             f'<circle cx="{vx}" cy="{vy}" r="3" '
             f'fill="hsl(var(--primary))" stroke="hsl(var(--card))" '
             f'stroke-width="1">'
-            f"<title>{_escape(axis_label)}: {value}</title>"
+            f"<title>{_escape(axis_label)} value: {val_label}</title>"
             f"</circle>"
         )
 

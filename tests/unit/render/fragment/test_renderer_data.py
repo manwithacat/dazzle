@@ -44,16 +44,19 @@ def test_render_kpi() -> None:
 
 
 def test_render_bar_chart() -> None:
+    """v0.66.110: bucket labels go through `render_status_badge`
+    (humanize filter) — "open" → "Open"."""
     r = FragmentRenderer()
     out = r.render(BarChart(label="By status", buckets=(("open", 3), ("done", 7))))
-    assert "open" in out
+    assert "Open" in out
     assert "3" in out
 
 
 def test_render_bar_chart_emits_legacy_track_and_fill_structure() -> None:
-    """Phase 4B.1.c — bar chart structure matches the legacy
-    `bar_chart.html` template (single-dash classes, track/fill divs,
-    width-percent fill, summary line)."""
+    """v0.66.110: bar chart structure matches the legacy
+    `bar_chart.html` bucketed_metrics branch — single-dash classes,
+    track/fill divs with width-percent, no summary line, no
+    aria-label on the region (chrome owned by region_card outside)."""
     r = FragmentRenderer()
     out = r.render(BarChart(label="By status", buckets=(("open", 3), ("done", 9))))
     assert 'class="dz-bar-chart-region"' in out
@@ -63,10 +66,11 @@ def test_render_bar_chart_emits_legacy_track_and_fill_structure() -> None:
     # 3/9 = 33%, 9/9 = 100%
     assert 'style="width: 33%"' in out
     assert 'style="width: 100%"' in out
-    # Summary line: total = 12
-    assert 'class="dz-bar-chart-summary">12 total</p>' in out
-    # aria-label preserves the chart label for screen readers
-    assert 'aria-label="By status"' in out
+    # Bucket labels routed through render_status_badge → humanized.
+    assert ">Open<" in out and ">Done<" in out
+    # No summary line in bucketed_metrics branch — that's the
+    # items+group_by branch only (legacy template structure).
+    assert "dz-bar-chart-summary" not in out
 
 
 def test_render_bar_chart_handles_zero_max_value() -> None:
@@ -74,7 +78,6 @@ def test_render_bar_chart_handles_zero_max_value() -> None:
     r = FragmentRenderer()
     out = r.render(BarChart(label="x", buckets=(("a", 0), ("b", 0))))
     assert 'style="width: 0%"' in out
-    assert "0 total" in out
 
 
 def test_render_pivot_table() -> None:

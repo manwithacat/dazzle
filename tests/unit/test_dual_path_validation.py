@@ -682,6 +682,76 @@ def test_list_overflow_line_renders_when_total_exceeds_items() -> None:
     )
 
 
+def test_wave3_charts_byte_equivalent_smoke() -> None:
+    """Phase 4B.4 wave 3 — chart family verification ship.
+
+    Each chart's substrate was built in Phase 4B.1.c; this ship aligned
+    them with the legacy templates (chrome stripping, int-narrowing on
+    aria-labels, bucket-label routing through render_status_badge,
+    Jinja-style numeric rendering). Smoke-tests one ctx per display."""
+    cases = [
+        (
+            "bar_chart",
+            {
+                "title": "Status",
+                "bucketed_metrics": [
+                    {"label": "Open", "value": 5},
+                    {"label": "Closed", "value": 12},
+                ],
+            },
+        ),
+        (
+            "line_chart",
+            {
+                "title": "Daily",
+                "bucketed_metrics": [
+                    {"label": "Mon", "value": 10},
+                    {"label": "Tue", "value": 12},
+                    {"label": "Wed", "value": 8},
+                ],
+            },
+        ),
+        (
+            "radar",
+            {
+                "title": "Skills",
+                "bucketed_metrics": [
+                    {"label": "Speed", "value": 8},
+                    {"label": "Power", "value": 6},
+                    {"label": "Range", "value": 9},
+                ],
+            },
+        ),
+        (
+            "bar_track",
+            {
+                "title": "Bars",
+                "bar_track_rows": [
+                    {
+                        "label": "CPU",
+                        "value": 80,
+                        "formatted_value": "80%",
+                        "fill_pct": 80,
+                    },
+                    {
+                        "label": "RAM",
+                        "value": 45,
+                        "formatted_value": "45%",
+                        "fill_pct": 45,
+                    },
+                ],
+                "bar_track_max": 100,
+            },
+        ),
+    ]
+    for display, ctx in cases:
+        diff = diff_summary(
+            render_via_legacy(display, **ctx),
+            render_via_typed(display, ctx),
+        )
+        assert diff is None, f"{display}: {diff}"
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

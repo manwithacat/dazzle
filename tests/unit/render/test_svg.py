@@ -80,8 +80,10 @@ def test_unknown_reference_line_style_falls_back_to_empty_dasharray() -> None:
 
 
 def test_aria_label_includes_count_and_peak() -> None:
+    """v0.66.110: int-narrowing in aria-label so whole-valued floats
+    render as "5" not "5.0" (matches Jinja's `{{ max_val }}`)."""
     svg = time_series_svg("Tickets", (("a", 1.0), ("b", 5.0), ("c", 3.0)))
-    assert 'aria-label="Tickets time series — 3 buckets, peak 5.0"' in svg
+    assert 'aria-label="Tickets time series — 3 buckets, peak 5"' in svg
 
 
 def test_polyline_points_use_padding_left() -> None:
@@ -158,13 +160,19 @@ def test_radar_emits_svg_with_grid_polygon_and_data_polygon() -> None:
     assert svg.count("<circle ") == 4
     # Spoke labels in <text>
     assert ">Python<" in svg and ">Go<" in svg
-    assert "<title>Python: 9.0</title>" in svg
+    # v0.66.110: tooltip format aligned with legacy macro
+    # `{{ label }} {{ series_name }}: {{ value | metric_number }}` —
+    # for single-series default series_name="value", and whole-valued
+    # floats render via int-narrow.
+    assert "<title>Python value: 9</title>" in svg
     assert svg.endswith("</svg>")
 
 
 def test_radar_aria_label_includes_count_and_peak() -> None:
+    """v0.66.110: peak goes through metric_number filter with int-narrow
+    so whole-valued floats render as "5" not "5.0"."""
     svg = radar_svg("x", (("a", 3.0), ("b", 5.0), ("c", 1.0)))
-    assert 'aria-label="x radar — 3 spokes, peak 5.0"' in svg
+    assert 'aria-label="x radar — 3 spokes, peak 5"' in svg
 
 
 def test_radar_first_spoke_at_top_clockwise() -> None:

@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.110] - 2026-05-09
+
+### Changed — Phase 4B.4 wave 3 — chart family alignment ship
+- **BAR_CHART, LINE_CHART, AREA_CHART, RADAR, BAR_TRACK** all now byte-equivalent (or close — see known-divergence notes). Wave 3 is mostly a chrome-alignment ship since Phase 4B.1.c built the substrate.
+- **Chrome stripped from BAR_CHART** — removed Phase 4B-only `aria-label` on `dz-bar-chart-region` and the `<dl class="dz-bar-chart__references">` annotation block. Added bucket-label routing through `_render_status_badge_html(label, size='sm')` to match legacy `render_status_badge(value=bucket.label, size='sm')`.
+- **Chrome stripped from LINE_CHART/AREA_CHART** — removed `<section class="dz-timeseries">` + `<h4>` chrome and the `<dl class="dz-timeseries__references">` block. Wrapper class now per-view (`dz-line-chart-region` for line, `dz-area-chart-region` for area) matching legacy. Summary line renders `{count} buckets · peak {max_val}`.
+- **Chrome stripped from RADAR** — removed `<section class="dz-radar">` + `<h4>` chrome. Summary now renders `{count} spokes · 1 series · peak {metric_number(max_val)}` matching legacy. Tooltip format aligned to `{label} value: {metric_number(value)}` (single-series default series_name is "value").
+- **`_radar_polar_xy` now returns full-precision floats** (was rounding to 2 decimals). Mirrors the Jinja `radar_polar_xy` global byte-for-byte for vertex distribution.
+- **Int-narrowing in aria-labels and SVG values** — `time_series_svg` and `radar_svg` now narrow whole-valued floats to int repr (so `peak 9` not `peak 9.0`) matching Jinja's `{{ value }}` and `{{ value | metric_number }}` rendering. Same fix applied to `_emit_bar_track` aria-valuemax / aria-valuenow / fill_pct width / summary scale.
+
+### Phase 4B.4 — wave 3 progress
+| Display | Status |
+|---|---|
+| BAR_CHART | ✅ |
+| LINE_CHART | ✅ |
+| AREA_CHART | ✅ (single-series; multi-series stacked deferred) |
+| RADAR | ✅ (single-series; multi-series deferred) |
+| BAR_TRACK | ✅ |
+| BOX_PLOT | ✅ (v0.66.107) |
+| SPARKLINE | ✅ (v0.66.106) |
+| HISTOGRAM | next — needs dedicated builder (legacy template differs from bar_chart) |
+| FUNNEL_CHART | next — needs dedicated builder |
+| KANBAN | wave 4 |
+| HEATMAP | wave 4 |
+| PIVOT_TABLE | wave 4 |
+
+**20 of 32 displays byte-equivalent (63%).** Wave 3: 7 of 10 done. Remaining: HISTOGRAM, FUNNEL_CHART (need dedicated templates beyond bar_chart aliasing), plus a handful of wave 4 specialty modes.
+
+### Known divergences accepted
+- **AREA_CHART multi-series** — legacy template handles multi-series stacked area via `pivot_buckets` + `pivot_dim_specs`. Typed path treats it as single-series TimeSeries with `view='area'`. Production ctx that supplies `pivot_buckets` (not `bucketed_metrics`) won't match. Closing requires a new multi-series Area primitive — Phase 4B finishing-pass.
+- **RADAR multi-series** — same story; legacy supports `bucketed_metrics[i].metrics` multi-series, typed primitive is single-series. `1 series` in summary is hard-coded for now; multi-series follow-up extends.
+
+### Agent Guidance
+- **Float-precision drift is the wave 3 recurring issue.** Three flavours: (a) Jinja's `{{ value }}` int-narrows whole floats while Python f-string keeps `.0` — fix via `_jinja_num`-style narrowing at emit; (b) intermediate `round(_, 2)` accumulates drift when computing derived quantities — keep raw through the calc, round once at emit (the `_y_raw` / `_y` split in box_plot_svg); (c) Python `_metric_number_filter(9.0)` returns "9.0" not "9" — pre-narrow before passing to the filter. Apply consistently across remaining chart ports.
+- **`render_status_badge` macro is the bucket-label shape.** When porting a legacy chart whose label is `<span class="dz-X-label">{{ render_status_badge(value=label, size='sm') }}</span>`, route through `_render_status_badge_html(label, size='sm')` rather than escaping the label as plain text. Multiple wave 3 charts share this — bar_chart, funnel_chart (when ported), histogram (when ported).
+
 ## [0.66.109] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 2 COMPLETE — GRID + LIST byte-equivalent
