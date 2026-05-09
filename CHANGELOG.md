@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.113] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — ACTION_GRID + PROFILE_CARD byte-equivalent
+- **ACTION_GRID** — new `ActionGrid` container primitive emitting the legacy `<div class="dz-action-grid-region"><div class="dz-action-grid">` wrapper around `ActionCard` children. Replaces generic `Grid(columns=N)` (which emitted `dz-grid--columns-N` rather than the legacy two-tier wrapper). Empty path renders `dz-empty-dense` fallback inside the region.
+- **PROFILE_CARD** — added the outer `<div class="dz-profile-card-region">` wrapper to `_emit_profile_card`. Pure chrome alignment; the inner `dz-profile-card` body was already byte-equivalent.
+
+### Phase 4B.4 wave 4 progress
+| Display | Status |
+|---|---|
+| KANBAN | ✅ v0.66.112 |
+| **ACTION_GRID** | ✅ **v0.66.113** |
+| **PROFILE_CARD** | ✅ **v0.66.113** |
+| HEATMAP | next |
+| PIVOT_TABLE | queued |
+| QUEUE | queued |
+| TABBED_LIST | queued |
+| CONFIRM_ACTION_PANEL | queued |
+| DIAGRAM | queued |
+
+**25 of 32 displays byte-equivalent (78%).** Wave 4: 3 of 9 done.
+
+### Agent Guidance
+- **Container-vs-card primitive split.** `ActionGrid` (container) wraps `ActionCard` (item) — clean separation. Apply this pattern when porting future grid/list region families that have both a region wrapper and per-item primitive.
+- **Pure-chrome alignment ships.** PROFILE_CARD took 1 line of code to close — when a display's body was already byte-equivalent and only the outer wrapper differs, prefer the targeted patch over reorganising the primitive.
+
 ## [0.66.112] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — KANBAN byte-equivalent

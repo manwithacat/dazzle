@@ -418,6 +418,22 @@ class Tree:
 
 
 @dataclass(frozen=True, slots=True)
+class ActionGrid:
+    """Container for ACTION_GRID region — emits the legacy
+    `<div class="dz-action-grid-region"><div class="dz-action-grid">`
+    structure wrapping a list of `ActionCard` primitives.
+
+    Phase 4B.4 wave 4: dedicated container primitive (replaces generic
+    `Grid` in `_build_action_grid`) for byte-equivalence with
+    `workspace/regions/action_grid.html`. Empty state renders the
+    `dz-empty-dense` fallback inside the region wrapper.
+    """
+
+    cards: tuple[object, ...]
+    empty_message: str = "No actions available."
+
+
+@dataclass(frozen=True, slots=True)
 class KanbanCard:
     """Single card in a `KanbanRegion` — title + secondary fields + attention.
 

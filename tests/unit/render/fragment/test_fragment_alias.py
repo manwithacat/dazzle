@@ -60,6 +60,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Sparkline",
         "Tree",
         "ActionCard",
+        "ActionGrid",
         "ProfileCard",
         "MetricTile",
         "MetricsGrid",

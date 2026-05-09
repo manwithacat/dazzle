@@ -12,6 +12,7 @@ from dazzle.render.fragment.htmx import URL, HxTrigger, TargetSelector
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
+    ActionGrid,
     ActivityFeed,
     AppShell,
     Badge,
@@ -189,6 +190,7 @@ __all__ = [
     "Bullet",
     "BulletRow",
     "ActionCard",
+    "ActionGrid",
     "ProfileCard",
     "MetricTile",
     "MetricsGrid",

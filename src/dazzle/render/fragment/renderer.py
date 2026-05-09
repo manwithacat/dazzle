@@ -15,6 +15,7 @@ from dazzle.render.fragment.escape import RawHTML, Slot
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
+    ActionGrid,
     ActivityFeed,
     AppShell,
     Badge,
@@ -211,6 +212,8 @@ class FragmentRenderer:
                 return self._emit_tree(fragment, ctx)
             case ActionCard():
                 return self._emit_action_card(fragment, ctx)
+            case ActionGrid():
+                return self._emit_action_grid(fragment, ctx)
             case ProfileCard():
                 return self._emit_profile_card(fragment, ctx)
             case MetricTile():
@@ -1162,7 +1165,13 @@ class FragmentRenderer:
             )
             facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
 
-        return f'<div class="dz-profile-card">{identity_html}{stats_html}{facts_html}</div>'
+        # Phase 4B.4 wave 4: outer dz-profile-card-region wrapper
+        # for byte-equivalence with the legacy template.
+        return (
+            f'<div class="dz-profile-card-region">'
+            f'<div class="dz-profile-card">{identity_html}{stats_html}{facts_html}</div>'
+            f"</div>"
+        )
 
     def _emit_metric_tile(self, m: MetricTile, ctx: RenderContext) -> str:
         """Render a MetricTile matching the legacy
@@ -1545,6 +1554,27 @@ class FragmentRenderer:
         return (
             f'<div class="dz-pipeline-steps-region">'
             f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>'
+            f"</div>"
+        )
+
+    def _emit_action_grid(self, g: "ActionGrid", ctx: RenderContext) -> str:
+        """Render an ActionGrid matching legacy
+        `workspace/regions/action_grid.html` byte-for-byte: outer
+        `dz-action-grid-region` + `dz-action-grid` wrapper. Empty
+        path renders the `dz-empty-dense` fallback inside the region
+        wrapper.
+        """
+        if not g.cards:
+            return (
+                f'<div class="dz-action-grid-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(g.empty_message)}</p>"
+                f"</div>"
+            )
+        cards_html = "".join(self._emit(c, ctx) for c in g.cards)  # type: ignore[arg-type]
+        return (
+            f'<div class="dz-action-grid-region">'
+            f'<div class="dz-action-grid">{cards_html}</div>'
             f"</div>"
         )
 

@@ -837,6 +837,50 @@ def test_kanban_achieves_byte_equivalence() -> None:
     )
 
 
+def test_action_grid_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.113): ACTION_GRID byte-equivalent.
+    New ActionGrid container primitive replaces generic Grid for the
+    workspace dz-action-grid-region structure."""
+    ctx = {
+        "title": "Actions",
+        "action_card_data": [
+            {"label": "Create", "icon": "plus", "url": "/new", "tone": "positive", "count": 0},
+            {"label": "Review", "icon": "check", "url": "/review", "tone": "warning", "count": 5},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("action_grid", **ctx),
+            render_via_typed("action_grid", ctx),
+        )
+        is None
+    )
+
+
+def test_profile_card_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.113): PROFILE_CARD byte-equivalent.
+    Added the outer dz-profile-card-region wrapper that the legacy
+    template emits."""
+    ctx = {
+        "title": "User",
+        "profile_card_data": {
+            "primary": "Alice Smith",
+            "secondary": "Engineer",
+            "avatar_url": "",
+            "initials": "AS",
+            "stats": [{"label": "PRs", "value": 42}],
+            "facts": ["Ships fast", "Reviews thoughtfully"],
+        },
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("profile_card", **ctx),
+            render_via_typed("profile_card", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

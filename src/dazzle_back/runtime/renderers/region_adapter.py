@@ -23,6 +23,7 @@ from typing import Any, Literal
 from dazzle.render.fragment import (
     URL,
     ActionCard,
+    ActionGrid,
     ActivityFeed,
     Badge,
     BarChart,
@@ -44,7 +45,6 @@ from dazzle.render.fragment import (
     Fragment,
     Funnel,
     FunnelStage,
-    Grid,
     GridCell,
     GridRegion,
     Heading,
@@ -1236,15 +1236,8 @@ class WorkspaceRegionAdapter:
                 )
             )
 
-        body: Fragment
-        if not cards:
-            body = EmptyState(
-                title="No actions",
-                description=getattr(region, "empty_message", None) or "No actions available.",
-            )
-        else:
-            body = Grid(children=tuple(cards), columns=columns)
-
+        empty_msg = getattr(region, "empty_message", None) or "No actions available."
+        body: Fragment = ActionGrid(cards=tuple(cards), empty_message=str(empty_msg))
         return _wrap_surface(title, "dashboard", body)
 
     def _build_radar(self, region: Any, ctx: dict[str, Any]) -> Surface:

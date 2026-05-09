@@ -24,6 +24,7 @@ from dazzle.render.fragment.primitives.content import (
 from dazzle.render.fragment.primitives.data import (
     KPI,
     ActionCard,
+    ActionGrid,
     ActivityFeed,
     BarChart,
     BarTrack,
@@ -137,6 +138,7 @@ __all__ = [
     "Bullet",
     "BulletRow",
     "ActionCard",
+    "ActionGrid",
     "ProfileCard",
     "MetricTile",
     "MetricsGrid",

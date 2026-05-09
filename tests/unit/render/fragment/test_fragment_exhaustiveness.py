@@ -12,6 +12,7 @@ from dazzle.render.fragment import (
     KPI,
     URL,
     ActionCard,
+    ActionGrid,
     ActivityFeed,
     AppShell,
     Badge,
@@ -214,6 +215,8 @@ def _sample_for(primitive_type: type) -> object:
         return TreeNode(label="node")
     if primitive_type is ActionCard:
         return ActionCard(label="X")
+    if primitive_type is ActionGrid:
+        return ActionGrid(cards=(ActionCard(label="X"),))
     if primitive_type is ProfileCard:
         return ProfileCard(primary="Alice")
     if primitive_type is MetricTile:
