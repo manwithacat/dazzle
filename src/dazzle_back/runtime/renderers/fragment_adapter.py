@@ -17,6 +17,7 @@ from dazzle.render.fragment import (
     Combobox,
     EmptyState,
     Field,
+    FormSection,
     FormStack,
     Fragment,
     Heading,
@@ -186,14 +187,39 @@ class FragmentSurfaceAdapter:
         )
 
         body: Fragment
+        method_lit = method if method in ("GET", "POST") else "POST"
+        sections_in: list[dict[str, Any]] = ctx.get("sections", []) or []
         if not fields_in:
             body = EmptyState(
                 title="No fields",
                 description="This form has no inputs.",
             )
+        elif sections_in:
+            # Issue #1031: multi-section forms wrap each section's
+            # fields in a FormSection inside the outer FormStack —
+            # one `<form>` element with `<section>` groupings, single
+            # Submit at the bottom commits all fields together. Falls
+            # back to the flat FormStack path for single-section forms.
+            section_primitives: list[FormSection] = []
+            for s in sections_in:
+                section_fields = s.get("fields", []) or []
+                if not section_fields:
+                    continue
+                section_primitives.append(
+                    FormSection(
+                        title=str(s.get("title") or s.get("name", "")),
+                        fields=tuple(_field_to_primitive(f) for f in section_fields),
+                        note=str(s.get("note") or ""),
+                    )
+                )
+            body = FormStack(
+                action=URL(action),
+                fields=tuple(section_primitives),
+                method=method_lit,  # type: ignore[arg-type]
+                submit=Submit(label=submit_label),
+            )
         else:
             primitives = tuple(_field_to_primitive(f) for f in fields_in)
-            method_lit = method if method in ("GET", "POST") else "POST"
             body = FormStack(
                 action=URL(action),
                 fields=primitives,

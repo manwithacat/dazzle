@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives import (
     Field,
     FilterBar,
     FilterColumn,
+    FormSection,
     FormStack,
     Fragment,
     Funnel,
@@ -391,6 +392,8 @@ class FragmentRenderer:
             # Forms
             case FormStack():
                 return self._emit_form_stack(fragment, ctx)
+            case FormSection():
+                return self._emit_form_section(fragment, ctx)
             case Field():
                 return self._emit_field(fragment, ctx)
             case Combobox():
@@ -3113,6 +3116,20 @@ class FragmentRenderer:
             f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
             f'hx-include="closest .date-range-bar">'
             f"</div>"
+        )
+
+    def _emit_form_section(self, s: FormSection, ctx: RenderContext) -> str:
+        """Render a FormSection inside a FormStack — `<section
+        class="dz-form-section">` with a `<h3>` title and an optional
+        muted-note paragraph (matches `components/form.html`)."""
+        note_html = f'<p class="dz-form-section-note">{ctx.escape(s.note)}</p>' if s.note else ""
+        fields_html = "".join(self._emit(f, ctx) for f in s.fields)  # type: ignore[arg-type]
+        return (
+            f'<section class="dz-form-section">'
+            f'<h3 class="dz-form-section-title">{ctx.escape(s.title)}</h3>'
+            f"{note_html}"
+            f"{fields_html}"
+            f"</section>"
         )
 
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:

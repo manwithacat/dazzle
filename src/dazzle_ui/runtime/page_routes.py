@@ -1145,12 +1145,39 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
                             break
             fields_out.append(entry)
         is_edit = str(getattr(form, "mode", "create")).lower() == "edit"
-        return {
+        # Issue #1031: thread `form.sections` into the ctx alongside the
+        # flat fields. The adapter prefers sections when populated;
+        # falls back to the flat list for single-section / no-section
+        # forms (backwards-compat — won't grow a redundant heading on
+        # forms declaring just `section main`).
+        form_sections = getattr(form, "sections", []) or []
+        sections_out: list[dict[str, Any]] = []
+        if len(form_sections) >= 2:
+            field_index = {entry["name"]: entry for entry in fields_out}
+            for section in form_sections:
+                section_fields = []
+                for sf in getattr(section, "fields", []) or []:
+                    sf_name = getattr(sf, "name", "")
+                    matched = field_index.get(sf_name)
+                    if matched is not None:
+                        section_fields.append(matched)
+                sections_out.append(
+                    {
+                        "name": getattr(section, "name", ""),
+                        "title": getattr(section, "title", "") or getattr(section, "name", ""),
+                        "fields": section_fields,
+                        "note": getattr(section, "note", "") or "",
+                    }
+                )
+        ctx_out: dict[str, Any] = {
             "fields": fields_out,
             "action": getattr(form, "action_url", "") or "",
             "method": str(getattr(form, "method", "POST") or "POST").upper(),
             "submit_label": "Save" if is_edit else "Create",
         }
+        if sections_out:
+            ctx_out["sections"] = sections_out
+        return ctx_out
 
     detail = getattr(render_ctx, "detail", None)
     if detail is not None:

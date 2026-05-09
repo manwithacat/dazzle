@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives import (
     Field,
     FilterBar,
     FilterColumn,
+    FormSection,
     FormStack,
     Fragment,
     Funnel,
@@ -274,6 +275,7 @@ __all__ = [
     "DateRangePicker",
     # primitives — forms
     "FormStack",
+    "FormSection",
     "Field",
     "Combobox",
     "RefPicker",

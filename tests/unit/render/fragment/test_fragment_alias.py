@@ -95,6 +95,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "DateRangePicker",
         # forms
         "FormStack",
+        "FormSection",
         "Field",
         "Combobox",
         "RefPicker",

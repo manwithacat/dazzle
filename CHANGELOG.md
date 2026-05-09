@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.131] - 2026-05-09
+
+### Added — Phase 4B follow-on — Fragment form section grouping
+
+- **`FormSection` primitive** (`dazzle.render.fragment.FormSection`) — wraps a tuple of fields in a `<section class="dz-form-section">` block with a `<h3 class="dz-form-section-title">` and an optional muted-note paragraph. Lives INSIDE a `FormStack.fields` tuple so the whole multi-section form renders as one `<form>` element with N section groupings — single Submit at the bottom commits all fields together.
+- **`_build_dispatch_ctx` form branch** now threads `form.sections` into the dispatch ctx alongside the flat `fields_out` list. Sections key omitted entirely when there are < 2 sections (single-`section main` forms fall back to the flat FormStack path; no redundant heading).
+- **`FragmentSurfaceAdapter._build_form`** consumes `ctx["sections"]` when present and wraps each section's fields in a `FormSection` inside the outer `FormStack`. Falls back to the flat path otherwise.
+- **Seven regression tests** at `tests/unit/test_dispatch_ctx_form_sections.py` pin: dispatch ctx threads sections, single-section forms omit the key, adapter emits per-section markup, single `<form>` wraps all sections + single Submit, note paragraph renders, FormSection validates non-empty fields, end-to-end FormStack(FormSection,...) renders cleanly.
+
+### Fixed
+
+- **#1031 — Fragment form adapter ignored DSL section grouping.** Multi-section forms (cyfuture has 42, including `company_create` with `lookup`/`details` sections) rendered as one flat list with no group headings. Now they render with `<section class="dz-form-section">` blocks matching the legacy `components/form.html` template's contract.
+
+### Agent Guidance
+
+- **Sections inside a single form, not separate forms.** When porting wrapper structures with grouped children, prefer a sub-primitive that lives INSIDE the parent's children tuple (FormSection inside FormStack.fields) over multiple parents (multiple FormStack instances) — the latter creates multiple `<form>` elements with separate submission targets, breaking single-button-commits-whole-form. Same shape as React's `<fieldset>` or HTML's `<details>`/`<summary>` grouping pattern: visual grouping, structural unity.
+
 ## [0.66.130] - 2026-05-09
 
 ### Fixed

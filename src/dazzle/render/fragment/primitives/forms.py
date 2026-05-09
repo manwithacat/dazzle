@@ -104,9 +104,32 @@ class Submit:
 
 
 @dataclass(frozen=True, slots=True)
+class FormSection:
+    """A labelled group of form fields rendered inside a FormStack.
+
+    Issue #1031: multi-section forms previously rendered as one flat
+    FormStack with no group headings. This primitive wraps a section's
+    fields in a `<section class="dz-form-section">` block carrying a
+    `<h3 class="dz-form-section-title">` and an optional muted-note
+    paragraph (matches `components/form.html` byte-for-byte).
+
+    The whole form remains one `<form>` — sections live INSIDE the
+    FormStack, not as separate forms — so a single Submit at the
+    bottom commits all fields together."""
+
+    title: str
+    fields: tuple[object, ...]
+    note: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.fields:
+            raise ValueError("FormSection requires at least one field")
+
+
+@dataclass(frozen=True, slots=True)
 class FormStack:
     action: URL
-    fields: tuple[object, ...]  # Field | Combobox
+    fields: tuple[object, ...]  # Field | Combobox | FormSection
     method: Literal["GET", "POST"] = "POST"
     submit: Submit | None = None
 
