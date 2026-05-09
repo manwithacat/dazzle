@@ -29,6 +29,7 @@ from dazzle.render.fragment import (
     CardPickerEntry,
     Combobox,
     ConfirmGate,
+    CreateButton,
     CsvExportButton,
     DashboardCard,
     DashboardGrid,
@@ -341,6 +342,8 @@ def _sample_for(primitive_type: type) -> object:
             page=3,
             page_size=10,
         )
+    if primitive_type is CreateButton:
+        return CreateButton(href=URL("/x"), entity_name="Item")
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

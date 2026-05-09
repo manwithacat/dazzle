@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.135] - 2026-05-09
+
+### Added — #1029 Phase 3 — LIST adapter CreateButton with full RBAC contract
+
+- **`CreateButton` primitive** — list-surface header create-link matching legacy `filterable_table.html` byte-for-byte: `<a href="…" data-dazzle-action="<Entity>.create" class="dz-button-primary">` + 12×12 plus-icon SVG + "New {entity_name}" label (or caller's custom override). The `data-dazzle-action` attribute is the RBAC contract checker's anchor — distinct from a plain `Link` because of the structural label/icon/data-attribute trio.
+- **`FragmentSurfaceAdapter._build_list`** swapped from `Link(label="Create X")` to `CreateButton(href=URL(create_url), entity_name=entity_name)`. Adds the missing `data-dazzle-action` attribute, gives the button the contract-correct "New X" label, and emits the legacy `+` icon SVG.
+- **Custom label override** — `CreateButton.label` non-empty value is used verbatim; default falls back to `New {entity_name with _ replaced by ' '}`. Lets future DSL surfaces declare a custom action label without needing a separate primitive.
+- **Ten regression tests** at `tests/unit/test_dispatch_ctx_list_create_button.py` pin: legacy contract attributes (href + data-dazzle-action + class), 12×12 plus-icon SVG path, default "New X" label + underscore replacement, no-button when create_url missing, custom-label override, primitive validation, label/href escape safety.
+
+### Phase plan
+
+This is Phase 3 of 7 for issue #1029. Remaining: custom empty messages (Phase 4), search+filter (Phase 5), sort headers (Phase 6), bulk actions (Phase 7).
+
+### Agent Guidance
+
+- **`data-dazzle-action` is the RBAC contract — round-trip verbatim.** The contract checker grep for `data-dazzle-action="<Entity>.create"` to verify the create button is visible on every list page. If the typed adapter swallows or rewrites this attribute, the RBAC test fails silently. When porting any future entity-action affordance (edit, delete, transition), follow the same `data-dazzle-action="<Entity>.<verb>"` pattern.
+- **Specialised primitives over over-loaded `Link`s.** When a link carries 3+ structural extras (icon SVG, data-attribute, specific class), reach for a dedicated primitive instead of bloating `Link`. Keeps the IR semantically meaningful — a `CreateButton` declares intent, a `Link` declares mere navigation.
+
 ## [0.66.134] - 2026-05-09
 
 ### Added — #1029 Phase 2 — LIST adapter Pagination footer

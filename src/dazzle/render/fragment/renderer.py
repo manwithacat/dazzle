@@ -31,6 +31,7 @@ from dazzle.render.fragment.primitives import (
     Combobox,
     ConfirmCheckItem,
     ConfirmGate,
+    CreateButton,
     CsvExportButton,
     DashboardCard,
     DashboardGrid,
@@ -378,6 +379,8 @@ class FragmentRenderer:
                 )
             case Pagination():
                 return self._emit_pagination(fragment, ctx)
+            case CreateButton():
+                return self._emit_create_button(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -887,6 +890,29 @@ class FragmentRenderer:
             pages.append(None)
         pages.append(total)
         return pages
+
+    def _emit_create_button(self, b: CreateButton, ctx: RenderContext) -> str:
+        """Render a CreateButton matching legacy `filterable_table.html`
+        create-button shape (Phase 3 of #1029).
+
+        Carries `data-dazzle-action="{entity_name}.create"` — the RBAC
+        contract checker's anchor — plus the 12×12 `+` icon SVG and a
+        "New {entity_name}" label (or caller's custom label)."""
+        href_attr = ctx.escape_attr(str(b.href))
+        action_attr = ctx.escape_attr(f"{b.entity_name}.create")
+        label = b.label or f"New {b.entity_name.replace('_', ' ')}"
+        return (
+            f'<a href="{href_attr}" '
+            f'data-dazzle-action="{action_attr}" '
+            f'class="dz-button-primary">'
+            f'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" '
+            f'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+            f'<path d="M6 1v10M1 6h10" stroke="currentColor" '
+            f'stroke-width="1.5" stroke-linecap="round"/>'
+            f"</svg>"
+            f"{ctx.escape(label)}"
+            f"</a>"
+        )
 
     def _emit_pagination(self, p: Pagination, ctx: RenderContext) -> str:
         """Render a Pagination matching legacy `table_pagination.html`

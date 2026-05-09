@@ -38,6 +38,7 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     CardPicker,
     ConfirmGate,
+    CreateButton,
     CsvExportButton,
     DashboardCard,
     DashboardGrid,
@@ -179,6 +180,7 @@ Fragment = (
     | WorkspaceContextSelector
     | Sequence
     | Pagination
+    | CreateButton
     | DashboardGrid
     | DashboardCard
     | AddCardRow

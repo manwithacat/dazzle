@@ -1469,6 +1469,34 @@ class DashboardGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class CreateButton:
+    """The "New <Entity>" link in a list-surface header.
+
+    Issue #1029 phase 3 — matches the legacy `filterable_table.html`
+    create-button shape byte-for-byte: `<a href="{href}"
+    data-dazzle-action="{entity_name}.create" class="dz-button-primary">`
+    + 12×12 plus-icon SVG + "New {entity_name with _ replaced by ' '}"
+    label.
+
+    `data-dazzle-action` is the RBAC contract checker's anchor — the
+    typed primitive must round-trip it exactly. Distinct from a plain
+    `Link` because of the structural label/icon/data-attribute trio.
+
+    Custom label override: when `label` is non-empty, used verbatim
+    (e.g., DSL declares `action_primary` with a custom label like
+    "Add Contact"). Default label is `New {entity_name}` with
+    underscores replaced by spaces."""
+
+    href: object  # URL — typed object to keep the union simple
+    entity_name: str
+    label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.entity_name:
+            raise ValueError("CreateButton requires a non-empty entity_name")
+
+
+@dataclass(frozen=True, slots=True)
 class Pagination:
     """Page-by-page pagination controls for a table.
 

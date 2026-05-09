@@ -16,6 +16,7 @@ from dazzle.render.fragment import (
     URL,
     Button,
     Combobox,
+    CreateButton,
     EmptyState,
     Field,
     FormSection,
@@ -100,16 +101,23 @@ class FragmentSurfaceAdapter:
             else:
                 body = table
 
-        # Header carries title + optional Create link. The Create
-        # link is contractually required for the list page (UX
+        # Header carries title + optional CreateButton. The Create
+        # button is contractually required for the list page (UX
         # contract `rbac:<Entity>:<persona>:create` looks for an
-        # <a href="*create*"> visible on the list).
+        # `<a href="*create*" data-dazzle-action="<Entity>.create">`
+        # visible on the list). Issue #1029 phase 3: switched from a
+        # plain Link to CreateButton — adds the data-dazzle-action
+        # attribute the RBAC checker keys off plus the 12x12 `+` icon,
+        # matching the legacy `filterable_table.html` shape.
         header: Fragment
-        if create_url:
+        if create_url and entity_name:
             header = Row(
                 children=(
                     Heading(title, level=1),
-                    Link(label=f"Create {entity_name or 'item'}", href=URL(create_url)),
+                    CreateButton(
+                        href=URL(create_url),
+                        entity_name=entity_name,
+                    ),
                 ),
                 align="center",
                 gap="md",
