@@ -49,6 +49,9 @@ from dazzle.render.fragment import (
     InlineEdit,
     Interactive,
     KanbanBoard,
+    KanbanCard,
+    KanbanColumn,
+    KanbanRegion,
     LazyTab,
     LazyTabPanel,
     Link,
@@ -241,6 +244,12 @@ def _sample_for(primitive_type: type) -> object:
         return Funnel(stages=(FunnelStage(label="lead", count=10),))
     if primitive_type is FunnelStage:
         return FunnelStage(label="lead", count=10)
+    if primitive_type is KanbanRegion:
+        return KanbanRegion(columns=(KanbanColumn(label="todo", cards=()),))
+    if primitive_type is KanbanColumn:
+        return KanbanColumn(label="todo", cards=())
+    if primitive_type is KanbanCard:
+        return KanbanCard(title="Task")
     if primitive_type is ActivityFeed:
         return ActivityFeed(items=(("now", "Alice", "did the thing"),))
     if primitive_type is StatusList:

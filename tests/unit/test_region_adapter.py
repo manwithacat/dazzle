@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.render.fragment import KanbanBoard, Region, Surface
+from dazzle.render.fragment import Region, Surface
 from dazzle.render.fragment.renderer import FragmentRenderer
 from dazzle_back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
 
@@ -135,8 +135,11 @@ def test_explicit_list_display_routes_to_list_path() -> None:
 
 
 def test_kanban_with_items_grouped_into_columns() -> None:
-    """Items bucket by `group_by_field`; declared `group_keys` set the
-    column order."""
+    """v0.66.112: KANBAN now uses KanbanRegion (workspace-shape) with
+    KanbanColumn instances. Items bucket by `group_by`; declared
+    `kanban_columns` set the column order."""
+    from dazzle.render.fragment import KanbanRegion
+
     adapter = WorkspaceRegionAdapter()
     region = _FakeRegion("task_board", display="kanban", title="Task Board")
     ctx = {
@@ -146,57 +149,63 @@ def test_kanban_with_items_grouped_into_columns() -> None:
             {"id": "3", "title": "Read book", "status": "todo"},
             {"id": "4", "title": "Stretch", "status": "done"},
         ],
-        "group_keys": ["todo", "doing", "done"],
-        "group_by_field": "status",
+        "kanban_columns": ["todo", "doing", "done"],
+        "group_by": "status",
+        "display_key": "title",
     }
     fragment = adapter.build(region, ctx)
     assert isinstance(fragment, Surface)
     assert isinstance(fragment.body, Region)
     assert fragment.body.kind == "kanban"
     board = fragment.body.body
-    assert isinstance(board, KanbanBoard)
-    by_key = dict(board.columns)
-    assert list(by_key.keys()) == ["todo", "doing", "done"]
-    assert len(by_key["todo"]) == 2
-    assert len(by_key["doing"]) == 1
-    assert len(by_key["done"]) == 1
+    assert isinstance(board, KanbanRegion)
+    labels = [c.label for c in board.columns]
+    assert labels == ["todo", "doing", "done"]
+    by_label = {c.label: c for c in board.columns}
+    assert len(by_label["todo"].cards) == 2
+    assert len(by_label["doing"].cards) == 1
+    assert len(by_label["done"].cards) == 1
 
 
-def test_kanban_unknown_group_keys_go_to_other_column() -> None:
-    """Items grouped under a key not in `group_keys` collect under
-    a synthetic 'Other' column at the end."""
+def test_kanban_unknown_group_keys_drop() -> None:
+    """v0.66.112: items grouped under a key not in `kanban_columns` are
+    silently dropped (the legacy template uses `selectattr equalto`
+    which excludes off-board items rather than synthesising an Other
+    column)."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [
             {"id": "1", "title": "X", "status": "blocked"},  # not in keys
             {"id": "2", "title": "Y", "status": "todo"},
         ],
-        "group_keys": ["todo", "doing"],
-        "group_by_field": "status",
+        "kanban_columns": ["todo", "doing"],
+        "group_by": "status",
+        "display_key": "title",
     }
     fragment = adapter.build(_FakeRegion("b", display="kanban"), ctx)
     board = fragment.body.body
-    by_key = dict(board.columns)
-    assert "Other" in by_key
-    assert len(by_key["Other"]) == 1
-    assert len(by_key["todo"]) == 1
+    by_label = {c.label: c for c in board.columns}
+    # "blocked" doesn't appear in kanban_columns → dropped from the board.
+    assert set(by_label.keys()) == {"todo", "doing"}
+    assert len(by_label["todo"].cards) == 1
+    assert len(by_label["doing"].cards) == 0
 
 
 def test_kanban_empty_columns_still_render() -> None:
-    """A column with declared group_key but zero items still renders
-    as an empty column — important UX so authors can see all states
-    even when none have items today."""
+    """A column with declared key but zero items still renders as an
+    empty column — important UX so authors see all states."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [{"id": "1", "title": "X", "status": "todo"}],
-        "group_keys": ["todo", "doing", "done"],
-        "group_by_field": "status",
+        "kanban_columns": ["todo", "doing", "done"],
+        "group_by": "status",
+        "display_key": "title",
     }
     fragment = adapter.build(_FakeRegion("b", display="kanban"), ctx)
     board = fragment.body.body
-    by_key = dict(board.columns)
-    assert by_key["doing"] == ()
-    assert by_key["done"] == ()
+    by_label = {c.label: c for c in board.columns}
+    assert by_label["doing"].cards == ()
+    assert by_label["done"].cards == ()
 
 
 def test_kanban_no_items_renders_empty_state_or_minimal_board() -> None:

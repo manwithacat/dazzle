@@ -44,6 +44,7 @@ from dazzle.render.fragment.primitives.data import (
     GridRegion,
     Histogram,
     KanbanBoard,
+    KanbanRegion,
     LazyTabPanel,
     ListRegion,
     MetricsGrid,
@@ -135,6 +136,7 @@ Fragment = (
     | ListRegion
     | Histogram
     | Funnel
+    | KanbanRegion
     | ActivityFeed
     | StatusList
     | PipelineSteps

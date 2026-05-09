@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.112] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — KANBAN byte-equivalent
+- **KANBAN** — new `KanbanRegion` + `KanbanColumn` + `KanbanCard` primitives matching `workspace/regions/kanban.html` byte-for-byte. Outer `dz-kanban-board` wrapping per-column `dz-kanban-column` (head with status badge + count) + `dz-kanban-stack` of `dz-kanban-card` items. Each card carries title + per-column secondary fields + optional attention tag (`data-dz-attn` for level + message). Empty columns render `<p class="dz-kanban-empty">No items</p>`.
+- **`_build_kanban` rewrite** — replaces the simpler `KanbanBoard` (generic columns→fragment-list shape) with the workspace-shaped `KanbanRegion`. Reads production runtime ctx (kanban_columns + group_by + columns + display_key + entity_name + total + endpoint). Title fallback chain mirrors the legacy template (title → name → company_name → first_name+last_name → label → email → display_key → entity_name). Per-cell secondary-field rendering goes through `_render_typed_value` with `badge_size='sm'` for KANBAN.
+- **Items off-board drop silently** — items whose `group_by` value isn't in `kanban_columns` are excluded (matches legacy `selectattr equalto`), not synthesised into a fallback "Other" column.
+
+### Phase 4B.4 wave 4 progress
+| Display | Status |
+|---|---|
+| **KANBAN** | ✅ **v0.66.112** |
+| HEATMAP | next |
+| PIVOT_TABLE | queued |
+| QUEUE | queued (already had Phase 4B.1.d builder; verify equivalence) |
+| ACTION_GRID | queued |
+| PROFILE_CARD | queued |
+| TABBED_LIST | queued (already had Phase 4B.1.d builder) |
+| CONFIRM_ACTION_PANEL | queued — Alpine state machine |
+| DIAGRAM | queued — Mermaid CDN, likely deferral |
+
+**23 of 32 displays byte-equivalent (72%).**
+
+### Agent Guidance
+- **Two-tier kanban primitives.** `KanbanBoard` (generic) and `KanbanRegion` (workspace-shape) coexist. Use `KanbanBoard` for ad-hoc kanban-like layouts where you supply pre-rendered fragments per column; use `KanbanRegion` for the workspace `display: kanban` shape with title + fields + attention. The byte-equivalence harness only exercises `KanbanRegion`.
+- **Title fallback chain replication.** The legacy template's chained `or` for the card title is verbose Jinja but maps cleanly to a Python helper. When porting future displays with similar fallback chains (PROFILE_CARD likely has one), replicate the order exactly — title producers in production rely on it for backward-compat with mixed-shape entities.
+
 ## [0.66.111] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 3 COMPLETE — HISTOGRAM + FUNNEL_CHART byte-equivalent

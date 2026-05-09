@@ -800,6 +800,43 @@ def test_funnel_chart_achieves_byte_equivalence() -> None:
     )
 
 
+def test_kanban_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.112): KANBAN byte-equivalent. New
+    KanbanRegion + KanbanColumn + KanbanCard primitives matching
+    the legacy workspace/regions/kanban.html structure (column head
+    with badge + count, card stack with title + secondary fields)."""
+    ctx = {
+        "title": "Tasks",
+        "kanban_columns": ["todo", "in_progress", "done"],
+        "group_by": "status",
+        "items": [
+            {"id": "1", "title": "Task A", "status": "todo", "priority": "high"},
+            {
+                "id": "2",
+                "title": "Task B",
+                "status": "in_progress",
+                "priority": "low",
+            },
+            {"id": "3", "title": "Task C", "status": "done", "priority": "low"},
+        ],
+        "columns": [
+            {"key": "title", "label": "Title"},
+            {"key": "status", "label": "Status"},
+            {"key": "priority", "label": "Priority", "type": "badge"},
+        ],
+        "display_key": "title",
+        "entity_name": "Task",
+        "total": 3,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("kanban", **ctx),
+            render_via_typed("kanban", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

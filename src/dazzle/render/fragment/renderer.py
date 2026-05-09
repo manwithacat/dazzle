@@ -49,6 +49,7 @@ from dazzle.render.fragment.primitives import (
     InlineEdit,
     Interactive,
     KanbanBoard,
+    KanbanRegion,
     LazyTabPanel,
     Link,
     ListRegion,
@@ -226,6 +227,8 @@ class FragmentRenderer:
                 return self._emit_histogram(fragment, ctx)
             case Funnel():
                 return self._emit_funnel(fragment, ctx)
+            case KanbanRegion():
+                return self._emit_kanban_region(fragment, ctx)
             case ActivityFeed():
                 return self._emit_activity_feed(fragment, ctx)
             case StatusList():
@@ -1544,6 +1547,99 @@ class FragmentRenderer:
             f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>'
             f"</div>"
         )
+
+    def _emit_kanban_region(self, k: "KanbanRegion", ctx: RenderContext) -> str:
+        """Render a KanbanRegion matching legacy
+        `workspace/regions/kanban.html` byte-for-byte: outer
+        `dz-kanban-board`, per-column head with badge + count, stack
+        of cards with title + secondary fields + optional attention
+        tag, optional overflow row with Load all button.
+
+        Empty path renders the legacy `fragments/empty_state.html` shape.
+        """
+        from dazzle_back.runtime.renderers.region_adapter import (
+            _render_status_badge_html,
+        )
+
+        if not k.columns:
+            label = k.empty_message or "No items found."
+            return (
+                f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
+                f'<svg class="dz-empty-state-icon" fill="none" stroke="currentColor" '
+                f'viewBox="0 0 24 24" aria-hidden="true">'
+                f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" '
+                f'd="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>'
+                f"</svg>"
+                f'<p class="dz-empty-state-message">{ctx.escape(label)}</p>'
+                f"</div>"
+            )
+
+        column_html: list[str] = []
+        total_cards = 0
+        for col in k.columns:
+            cards_html: list[str] = []
+            for card in col.cards:
+                fields_html = ""
+                for label, value in card.fields:
+                    if isinstance(value, str):
+                        value_html = ctx.escape(value)
+                    else:
+                        value_html = self._emit(value, ctx)  # type: ignore[arg-type]
+                    fields_html += (
+                        f'<p class="dz-kanban-card-field">'
+                        f"<span>{ctx.escape(label)}:</span> "
+                        f"{value_html}"
+                        f"</p>"
+                    )
+                attn_html = ""
+                if card.attention_level:
+                    attn_html = (
+                        f'<p class="dz-kanban-card-attn" '
+                        f'data-dz-attn="{ctx.escape_attr(card.attention_level)}">'
+                        f"{ctx.escape(card.attention_message)}</p>"
+                    )
+                # Trailing space inside `class="dz-kanban-card "` mirrors
+                # legacy `class="dz-kanban-card{% if action_url %} is-clickable{% endif %}"`
+                # Jinja whitespace artifact when action_url is empty.
+                cards_html.append(
+                    f'<div class="dz-kanban-card">'
+                    f'<div class="dz-kanban-card-body">'
+                    f'<h4 class="dz-kanban-card-title">{ctx.escape(card.title)}</h4>'
+                    f"{fields_html}"
+                    f"{attn_html}"
+                    f"</div>"
+                    f"</div>"
+                )
+            stack_inner = "".join(cards_html)
+            if not col.cards:
+                stack_inner = '<p class="dz-kanban-empty">No items</p>'
+            badge_html = _render_status_badge_html(col.label)
+            column_html.append(
+                f'<div class="dz-kanban-column">'
+                f'<div class="dz-kanban-column-head">'
+                f"{badge_html}"
+                f'<span class="dz-kanban-column-count">{len(col.cards)}</span>'
+                f"</div>"
+                f'<div class="dz-kanban-stack">{stack_inner}</div>'
+                f"</div>"
+            )
+            total_cards += len(col.cards)
+
+        overflow_html = ""
+        if k.total > total_cards:
+            overflow_html = (
+                f'<div class="dz-kanban-overflow">'
+                f'<p class="dz-kanban-overflow-text">'
+                f"Showing {total_cards} of {k.total}"
+                f"</p>"
+                f'<button type="button" class="dz-kanban-load-all" '
+                f'hx-get="{ctx.escape_attr(k.endpoint)}?page_size={k.total}" '
+                f'hx-target="closest [data-dz-region]" '
+                f'hx-swap="outerHTML">Load all</button>'
+                f"</div>"
+            )
+
+        return f'<div class="dz-kanban-board">{"".join(column_html)}</div>{overflow_html}'
 
     def _emit_funnel(self, f: "Funnel", ctx: RenderContext) -> str:
         """Render a Funnel matching legacy

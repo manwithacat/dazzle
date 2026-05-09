@@ -418,6 +418,50 @@ class Tree:
 
 
 @dataclass(frozen=True, slots=True)
+class KanbanCard:
+    """Single card in a `KanbanRegion` — title + secondary fields + attention.
+
+    `fields` is a tuple of `(label, value_fragment)` pairs; values are
+    typically `RawHTML` from `_render_typed_value` (badge / bool /
+    date / currency / ref / default). `attention_level` is one of
+    "" (no attention), "critical", "warning", "notice".
+    """
+
+    title: str
+    fields: tuple[tuple[str, object], ...] = ()
+    attention_level: str = ""
+    attention_message: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class KanbanColumn:
+    """Single column in a `KanbanRegion` — label + ordered cards."""
+
+    label: str
+    cards: tuple[KanbanCard, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class KanbanRegion:
+    """Workspace-shaped Kanban board — columns of cards with titles +
+    secondary fields + per-card attention tags.
+
+    Phase 4B.4 wave 4: dedicated primitive matching `workspace/regions/
+    kanban.html` byte-for-byte. Distinct from the simpler `KanbanBoard`
+    primitive (generic column → fragment-list shape) — `KanbanRegion`
+    carries the workspace card shape (title, fields, attention).
+
+    `total` + `endpoint` drive the optional "Load all" button when
+    the rendered items represent a paginated subset.
+    """
+
+    columns: tuple[KanbanColumn, ...]
+    total: int = 0
+    endpoint: str = ""
+    empty_message: str = "No items found."
+
+
+@dataclass(frozen=True, slots=True)
 class FunnelStage:
     """Single stage in a `Funnel` chart — label + count."""
 

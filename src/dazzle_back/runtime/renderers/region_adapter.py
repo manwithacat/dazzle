@@ -50,7 +50,9 @@ from dazzle.render.fragment import (
     Heading,
     Histogram,
     HistogramBin,
-    KanbanBoard,
+    KanbanCard,
+    KanbanColumn,
+    KanbanRegion,
     LazyTab,
     LazyTabPanel,
     Link,
@@ -810,41 +812,138 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "list", body)
 
     def _build_kanban(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: kanban` regions render as a KanbanBoard.
+        """`display: kanban` regions render as a `KanbanRegion` primitive
+        matching `workspace/regions/kanban.html` byte-for-byte.
 
-        ctx shape:
+        Phase 4B.4 wave 4: replaced the simpler `KanbanBoard` primitive
+        with the workspace-shaped `KanbanRegion` carrying full per-card
+        title + secondary fields + attention tag.
+
+        ctx shape (production runtime):
             items: list of dicts (rows from the source entity)
-            group_keys: list[str] — declared status/state values in
-                order (typically from an enum field's enum_values)
-            group_by_field: str — the field name to bucket items by
-                (the region's `group_by` clause)
+            kanban_columns: ordered status values (legacy key)
+                (alt) group_keys for Phase 4A back-compat
+            group_by: str — field name to bucket items by
+                (alt) group_by_field for Phase 4A back-compat
+            columns: list of column dicts {key, label, type, ref_route}
+                — secondary fields rendered per-card (excludes
+                display_key and group_by)
+            display_key: str — field name for the card title
+            entity_name: str — fallback title when display_key is None
+            total: int — overflow indicator denominator
+            empty_message: optional empty-state fallback
         """
+        from dazzle_ui.runtime.template_renderer import _timeago_filter
+
         title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
-        group_keys: list[str] = list(ctx.get("group_keys") or [])
-        group_by_field: str = str(ctx.get("group_by_field") or "")
+        # Accept both legacy `kanban_columns`/`group_by` and Phase 4A
+        # `group_keys`/`group_by_field` shapes.
+        column_keys: list[str] = list(ctx.get("kanban_columns") or ctx.get("group_keys") or [])
+        group_by: str = str(ctx.get("group_by") or ctx.get("group_by_field") or "")
+        columns_meta = ctx.get("columns") or []
+        display_key = str(ctx.get("display_key") or "")
+        entity_name = str(ctx.get("entity_name") or "Item")
+        try:
+            total = int(ctx.get("total") or 0)
+        except (TypeError, ValueError):
+            total = 0
+        endpoint = str(ctx.get("endpoint") or "")
 
-        body: Fragment
-        if not items and not group_keys:
-            body = EmptyState(
-                title="No items",
-                description=getattr(region, "empty_message", None) or "No data in this region.",
+        # Build the per-card secondary-field list once — the same set
+        # of meta columns applies to every card.
+        meta_columns: list[dict[str, Any]] = []
+        for col in columns_meta:
+            if not isinstance(col, dict):
+                continue
+            key = str(col.get("key") or "")
+            if not key or key == display_key or key == group_by:
+                continue
+            meta_columns.append(col)
+
+        def _card_title(item: dict[str, Any]) -> str:
+            """Mirror the legacy fallback chain for the card heading."""
+            for fallback in ("title", "name", "company_name"):
+                v = item.get(fallback)
+                if v:
+                    return str(v)
+            first = str(item.get("first_name", "") or "")
+            last = str(item.get("last_name", "") or "")
+            joined = f"{first} {last}".strip()
+            if joined:
+                return joined
+            for fallback in ("label", "email"):
+                v = item.get(fallback)
+                if v:
+                    return str(v)
+            dk_val = item.get(display_key) if display_key else None
+            if dk_val:
+                return str(dk_val)
+            return entity_name
+
+        kanban_cols: list[KanbanColumn] = []
+        if not items and not column_keys:
+            body: Fragment = KanbanRegion(
+                columns=(),
+                empty_message=str(
+                    ctx.get("empty_message")
+                    or getattr(region, "empty_message", None)
+                    or "No items found."
+                ),
             )
-        else:
-            # Bucket items by group_by_field
-            buckets: dict[str, list[Any]] = {k: [] for k in group_keys}
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                key = str(item.get(group_by_field, "") or "")
-                buckets.setdefault(key, []).append(item)
-            columns = _coerce_columns(group_keys, buckets)
-            if not columns:
-                # KanbanBoard requires at least one column — synthesize
-                # an empty placeholder if we have neither items nor keys.
-                columns = (("All", ()),)
-            body = KanbanBoard(columns=columns)
+            return _wrap_surface(title, "kanban", body)
 
+        # Group items by column key.
+        buckets: dict[str, list[dict[str, Any]]] = {k: [] for k in column_keys}
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get(group_by, "") or "")
+            buckets.setdefault(key, []).append(item)
+
+        for col_key in column_keys:
+            cards: list[KanbanCard] = []
+            for item in buckets.get(col_key, []):
+                # Per-cell type-aware rendering for secondary fields.
+                fields: list[tuple[str, object]] = []
+                for col in meta_columns:
+                    label = str(col.get("label") or col.get("key") or "")
+                    col_type = str(col.get("type") or "")
+                    if col_type == "date":
+                        # Legacy template does timeago directly on date columns.
+                        date_val = item.get(str(col.get("key") or ""))
+                        date_str = _timeago_filter(date_val) if date_val else ""
+                        from dazzle.render.fragment import RawHTML as _RH
+
+                        fields.append((label, _RH(date_str)))
+                    else:
+                        # KANBAN renders badges with size='sm' per legacy.
+                        fields.append((label, _render_typed_value(item, col, badge_size="sm")))
+                attn_raw = item.get("_attention") if hasattr(item, "get") else None
+                attn_level = ""
+                attn_message = ""
+                if isinstance(attn_raw, dict):
+                    attn_level = str(attn_raw.get("level") or "")
+                    attn_message = str(attn_raw.get("message") or "")
+                cards.append(
+                    KanbanCard(
+                        title=_card_title(item),
+                        fields=tuple(fields),
+                        attention_level=attn_level,
+                        attention_message=attn_message,
+                    )
+                )
+            kanban_cols.append(KanbanColumn(label=col_key, cards=tuple(cards)))
+
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No items found."
+        )
+        body = KanbanRegion(
+            columns=tuple(kanban_cols),
+            total=total,
+            endpoint=endpoint,
+            empty_message=str(empty_msg),
+        )
         return _wrap_surface(title, "kanban", body)
 
     def _build_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
