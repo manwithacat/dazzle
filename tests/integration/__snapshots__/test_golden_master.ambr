@@ -1574,6 +1574,7 @@
             'state_field': None,
             'status_entries': list([
             ]),
+            'task_inbox_config': None,
             'title': None,
             'tones': dict({
             }),
@@ -1646,6 +1647,7 @@
             'state_field': None,
             'status_entries': list([
             ]),
+            'task_inbox_config': None,
             'title': None,
             'tones': dict({
             }),
@@ -1718,6 +1720,7 @@
             'state_field': None,
             'status_entries': list([
             ]),
+            'task_inbox_config': None,
             'title': None,
             'tones': dict({
             }),

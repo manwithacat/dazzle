@@ -1846,3 +1846,62 @@ class DayTimelineRegion:
             raise ValueError(
                 f"DayTimelineRegion permits at most one active slot, got {active_count}"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class TaskInboxItem:
+    """One typed task in a `TaskInboxRegion` (#1015).
+
+    Resolved-and-rendered shape: the adapter has already applied the
+    `as_task` template against a source row, mapped the icon token,
+    classified the urgency, and resolved any drill_url. The primitive
+    just renders the typed item."""
+
+    item_id: str
+    icon: str  # token resolved to icon class on the renderer side
+    title: str
+    meta: str = ""
+    urgency: Literal["overdue", "due", "soon", "later"] = "later"
+    drill_url: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.item_id:
+            raise ValueError("TaskInboxItem requires a non-empty item_id")
+
+
+@dataclass(frozen=True, slots=True)
+class TaskInboxSummaryChip:
+    """Collapsed-summary chip for a `count_as` source in a
+    `TaskInboxRegion` (#1015). Renders one chip with the count + the
+    source's `count_as` noun phrase, shown above the items list."""
+
+    chip_id: str
+    count: int
+    label: str  # the resolved count_as phrase
+    drill_url: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.chip_id:
+            raise ValueError("TaskInboxSummaryChip requires a non-empty chip_id")
+        if self.count < 0:
+            raise ValueError(f"TaskInboxSummaryChip count must be >= 0, got {self.count}")
+
+
+@dataclass(frozen=True, slots=True)
+class TaskInboxRegion:
+    """Workflow-led task inbox — prioritised list of due actions
+    drawn from heterogeneous entity states (#1015).
+
+    `items` are per-row tasks (one per matching source row).
+    `summary_chips` are collapsed-summary indicators for sources
+    declared with `count_as`. The empty-state path fires only when
+    BOTH lists are empty."""
+
+    region_name: str
+    items: tuple[TaskInboxItem, ...]
+    summary_chips: tuple[TaskInboxSummaryChip, ...] = ()
+    empty_message: str = "All caught up."
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("TaskInboxRegion requires a non-empty region_name")

@@ -446,6 +446,88 @@ class ClassStripConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class TaskSourceTemplate(BaseModel):
+    """Per-source `as_task` template (#1015).
+
+    Defines how one row from a `TaskSource` renders as a typed task
+    item. Title and meta are template strings with `{field}`
+    placeholders resolved against the source row at runtime by the
+    adapter (this IR carries the unresolved templates).
+
+    Attributes:
+        icon: Named icon token (`register`, `pupil`, `message`,
+            etc.) — adapter maps to the framework's icon vocabulary.
+        title: Template string for the task's primary line.
+            Placeholders reference fields on the source row or
+            FK-resolved targets.
+        meta: Template string for the secondary copy (period,
+            deadline, age). Optional.
+    """
+
+    icon: str
+    title: str
+    meta: str = ""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class TaskSource(BaseModel):
+    """One source feeding a `task_inbox` region (#1015).
+
+    Each source resolves to 0..N rows on the source entity scoped by
+    `filter`. Either `as_task` (per-row task item) or `count_as`
+    (collapsed summary chip) must be set — they are mutually
+    exclusive: an `as_task` source emits one task per row, a
+    `count_as` source emits one summary chip with the row count
+    regardless of cardinality.
+
+    Attributes:
+        source: Entity name (the source's row type).
+        filter: Optional scope/predicate evaluated against the
+            source rows. None = match all (within RBAC scope).
+        as_task: Per-row task template. Mutually exclusive with
+            `count_as`.
+        count_as: Singular noun phrase for the collapsed-summary
+            chip (e.g. ``"manuscripts ready to review"``). Mutually
+            exclusive with `as_task`.
+    """
+
+    source: str
+    filter: ConditionExpr | None = None
+    as_task: TaskSourceTemplate | None = None
+    count_as: str = ""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class TaskInboxConfig(BaseModel):
+    """Per-region config for `display: task_inbox` (#1015).
+
+    Discriminated config block — only populated when
+    `WorkspaceRegion.display == DisplayMode.TASK_INBOX`. Models the
+    workflow-led "due actions" landing pattern: heterogeneous entity
+    states gathered into one prioritised inbox, framed as
+    tasks-of-actions rather than entity-of-records.
+
+    Attributes:
+        sources: Ordered list of contributing sources. Each is
+            either an `as_task` row template or a `count_as`
+            summary chip; the runtime adapter resolves both.
+        order: Ordered list of sort keys evaluated left-to-right
+            against the merged task list. ``urgency`` is the
+            built-in priority bucket; other keys reference
+            temporal fields on the source rows.
+        empty_state: Message rendered when zero tasks AND zero
+            summary chips resolve.
+    """
+
+    sources: list[TaskSource]
+    order: list[str] = Field(default_factory=lambda: ["urgency", "deadline"])
+    empty_state: str = "All caught up."
+
+    model_config = ConfigDict(frozen=True)
+
+
 class DayTimelineConfig(BaseModel):
     """Per-region config for `display: day_timeline` (#1016).
 
@@ -599,6 +681,7 @@ class WorkspaceRegion(BaseModel):
     # bloating the flat field set with mutually-exclusive options.
     class_strip_config: ClassStripConfig | None = None  # #1018 (v0.67.2)
     day_timeline_config: DayTimelineConfig | None = None  # #1016 (v0.67.3)
+    task_inbox_config: TaskInboxConfig | None = None  # #1015 (v0.67.4)
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

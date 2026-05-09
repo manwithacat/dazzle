@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.4] - 2026-05-10
+
+### Added
+
+- **#1015 — `task_inbox` region primitive (third of #1015–#1018).** Workflow-led MIS landing pattern: a prioritised list of due actions drawn from heterogeneous entity states (assessments due, manuscripts awaiting review, behaviour follow-ups, parent messages awaiting reply). Frames the day as tasks-of-actions rather than entity-of-records. Follows the discriminated `region_config` IR pattern from #1018.
+- **`TaskSourceTemplate` + `TaskSource` + `TaskInboxConfig`** pydantic models on `dazzle.core.ir.workspaces`. Each `TaskSource` is either a per-row task template (`as_task: TaskSourceTemplate(icon, title, meta)` with `{field}` placeholder strings the runtime adapter resolves) or a collapsed-summary chip (`count_as: <noun phrase>`). `TaskInboxConfig.order` defaults to `["urgency", "deadline"]`; `empty_state` defaults to `"All caught up."`.
+- **`TaskInboxItem` + `TaskInboxSummaryChip` + `TaskInboxRegion`** frozen dataclass primitives. Item urgency tints the row via `data-dz-urgency` (overdue / due / soon / later); summary chips render above the items list with count + label and optional drill anchor; the empty-state path fires only when BOTH lists are empty (a chips-only region renders just the chip row).
+- **29 unit tests** at `tests/unit/test_task_inbox_primitive.py` covering IR construction + defaults, primitive validation invariants (non-empty ids, non-negative counts, zero-count permitted), renderer wiring (chips above items ordering, urgency tone, drill anchors, optional meta), unknown-urgency fall-through to `later`, and escape safety.
+
+### Agent Guidance
+
+- **Three of four #1015–#1018 region primitives now live as IR + primitive + renderer pilots.** #1017 (pupil_card composite) is the remaining one. The runtime adapter ship that consumes `class_strip_config` / `day_timeline_config` / `task_inbox_config` is the natural follow-on; the IR fields stay baselined as orphans in `tests/unit/fixtures/ir_reader_baseline.json` until that adapter ship lands.
+- **`task_inbox` mutex contract:** Each `TaskSource` MUST set exactly one of `as_task` (per-row task template) and `count_as` (singular noun phrase). The IR does not enforce this today — the runtime adapter that resolves sources should reject ambiguous shapes at link time. Empty `count_as` + missing `as_task` is a schema error the parser-level validator should catch.
+
 ## [0.67.3] - 2026-05-10
 
 ### Added

@@ -98,6 +98,7 @@ from dazzle.render.fragment.primitives import (
     Surface,
     Table,
     Tabs,
+    TaskInboxRegion,
     Text,
     Timeline,
     TimelineEvent,
@@ -420,6 +421,8 @@ class FragmentRenderer:
                 return self._emit_class_strip_region(fragment, ctx)
             case DayTimelineRegion():
                 return self._emit_day_timeline_region(fragment, ctx)
+            case TaskInboxRegion():
+                return self._emit_task_inbox_region(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -3265,6 +3268,96 @@ class FragmentRenderer:
 
         return (
             f'<div class="dz-day-timeline-region" '
+            f'data-dz-region-name="{region_name_attr}">'
+            f"{body}"
+            f"</div>"
+        )
+
+    def _emit_task_inbox_region(self, t: TaskInboxRegion, ctx: RenderContext) -> str:
+        """Render a TaskInboxRegion (#1015).
+
+        The summary-chip row sits above the items list when any
+        `count_as` source resolves a non-zero count. Each chip
+        renders as a single pill with the count + label, optionally
+        wrapped in an `<a>` for drill-down to the source surface.
+
+        Items render as a `<ul>` of typed task rows: icon + title +
+        meta + urgency-tone tint via `data-dz-urgency`. When there
+        are zero items AND zero summary chips, the empty-state path
+        emits a single paragraph in place of both."""
+        region_name_attr = ctx.escape_attr(t.region_name)
+
+        chip_parts: list[str] = []
+        for chip in t.summary_chips:
+            inner = (
+                f'<span class="dz-task-inbox-chip-count">{chip.count}</span>'
+                f'<span class="dz-task-inbox-chip-label">{ctx.escape(chip.label)}</span>'
+            )
+            if chip.drill_url:
+                chip_parts.append(
+                    f'<a class="dz-task-inbox-chip" '
+                    f'href="{ctx.escape_attr(chip.drill_url)}" '
+                    f'data-chip-id="{ctx.escape_attr(chip.chip_id)}">'
+                    f"{inner}"
+                    f"</a>"
+                )
+            else:
+                chip_parts.append(
+                    f'<div class="dz-task-inbox-chip" '
+                    f'data-chip-id="{ctx.escape_attr(chip.chip_id)}">'
+                    f"{inner}"
+                    f"</div>"
+                )
+        chips_html = (
+            f'<div class="dz-task-inbox-chips">{"".join(chip_parts)}</div>' if chip_parts else ""
+        )
+
+        item_parts: list[str] = []
+        for item in t.items:
+            urgency = (
+                item.urgency if item.urgency in ("overdue", "due", "soon", "later") else "later"
+            )
+            meta_html = (
+                f'<div class="dz-task-inbox-item-meta">{ctx.escape(item.meta)}</div>'
+                if item.meta
+                else ""
+            )
+            inner = (
+                f'<div class="dz-task-inbox-item-icon" '
+                f'data-icon="{ctx.escape_attr(item.icon)}"></div>'
+                f'<div class="dz-task-inbox-item-body">'
+                f'<div class="dz-task-inbox-item-title">{ctx.escape(item.title)}</div>'
+                f"{meta_html}"
+                f"</div>"
+            )
+            if item.drill_url:
+                item_parts.append(
+                    f'<li class="dz-task-inbox-item" '
+                    f'data-dz-urgency="{ctx.escape_attr(urgency)}" '
+                    f'data-item-id="{ctx.escape_attr(item.item_id)}">'
+                    f'<a class="dz-task-inbox-item-link" '
+                    f'href="{ctx.escape_attr(item.drill_url)}">'
+                    f"{inner}"
+                    f"</a></li>"
+                )
+            else:
+                item_parts.append(
+                    f'<li class="dz-task-inbox-item" '
+                    f'data-dz-urgency="{ctx.escape_attr(urgency)}" '
+                    f'data-item-id="{ctx.escape_attr(item.item_id)}">'
+                    f"{inner}"
+                    f"</li>"
+                )
+
+        if not t.items and not t.summary_chips:
+            body = f'<p class="dz-task-inbox-empty">{ctx.escape(t.empty_message)}</p>'
+        elif not t.items:
+            body = chips_html  # chips only — no items list
+        else:
+            body = f'{chips_html}<ul class="dz-task-inbox-items">{"".join(item_parts)}</ul>'
+
+        return (
+            f'<div class="dz-task-inbox-region" '
             f'data-dz-region-name="{region_name_attr}">'
             f"{body}"
             f"</div>"

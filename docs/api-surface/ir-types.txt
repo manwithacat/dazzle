@@ -3053,6 +3053,7 @@ ir_class: WorkspaceRegion
     - sources: list[str] = []
     - state_field: str | None = None
     - status_entries: list[StatusListEntrySpec] = []
+    - task_inbox_config: TaskInboxConfig | None = None
     - title: str | None = None
     - tones: dict[str, str] = {}
     - track_format: str | None = None

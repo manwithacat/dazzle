@@ -73,6 +73,7 @@ from dazzle.render.fragment.primitives.data import (
     StageBar,
     StatusList,
     Table,
+    TaskInboxRegion,
     Timeline,
     TimeSeries,
     Tree,
@@ -188,6 +189,7 @@ Fragment = (
     | BulkActionToolbar
     | ClassStripRegion
     | DayTimelineRegion
+    | TaskInboxRegion
     | DashboardGrid
     | DashboardCard
     | AddCardRow
