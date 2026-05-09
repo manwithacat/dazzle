@@ -330,20 +330,27 @@ def render_in_app_shell(
 
 
 def _is_boosted_main_content_swap(request: Any) -> bool:
-    """Detect the htmx-boosted nav-into-#main-content combo (#1019).
+    """Detect htmx swaps into the main shell slot (#1019, #1021).
 
-    True when:
-      - ``HX-Boosted: true`` (sidebar nav with hx-boost), AND
-      - ``HX-Target`` resolves to the main shell slot
-        (``main-content`` or ``#main-content``).
+    True when ``HX-Target`` resolves to the main shell slot
+    (``main-content`` or ``#main-content``) — regardless of whether
+    the request also carries ``HX-Boosted``.
 
-    Anything else — non-boosted requests, boosted requests targeting a
-    drawer / OOB region, or requests without htmx headers — falls
-    through to the full-document path."""
+    The original gate (#1019) required ``HX-Boosted: true`` AND the
+    target match, but sidebar nav links with explicit ``hx-target``
+    never send ``HX-Boosted``. The partial path was skipped, the
+    framework returned a full document into the ``#main-content``
+    swap target, and idiomorph crashed with ``HierarchyRequestError``
+    + duplicate view-transition-name (#1021).
+
+    The ``HX-Target`` check alone is the right gate — it mirrors the
+    correct ``HtmxDetails.wants_fragment`` property in ``htmx.py``
+    that's used by the surface-rendering path.
+
+    Anything else — non-htmx requests, htmx requests targeting a
+    drawer / OOB region — falls through to the full-document path."""
     headers = getattr(request, "headers", None)
     if headers is None:
-        return False
-    if headers.get("hx-boosted") != "true":
         return False
     target = headers.get("hx-target") or ""
     return target in ("main-content", "#main-content")

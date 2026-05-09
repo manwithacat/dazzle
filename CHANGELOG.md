@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.130] - 2026-05-09
+
+### Fixed
+
+- **#1021 — sidebar nav links crashed idiomorph because `_is_boosted_main_content_swap` required `HX-Boosted` AND target match.** Sidebar nav links use explicit `hx-target="#main-content"` but never send `HX-Boosted: true`, so the partial path was skipped and the framework returned a full document into the swap target. Idiomorph then crashed with `HierarchyRequestError` and duplicate `view-transition-name` errors. Fix loosens the guard to gate on `HX-Target == main-content` alone, mirroring the already-correct `HtmxDetails.wants_fragment` property in `htmx.py` used by the surface-rendering path. Two regression tests at `tests/unit/runtime/test_render_in_app_shell_boost.py` pin the no-`HX-Boosted` paths (with and without leading hash on the target).
+
+### Agent Guidance
+
+- **`HX-Target` alone is the right gate for partial responses targeting `#main-content`.** `HX-Boosted` is set by `hx-boost`-attribute clicks (typically anchor tags inside boosted containers) but NOT by explicit `hx-target` clicks (typically sidebar nav with declarative routing). Both paths land on the same swap target, so both need the partial response. The two checks were conflated in #1019 — the fix mirrors `HtmxDetails.wants_fragment` which has been correct all along.
+
 ## [0.66.129] - 2026-05-09
 
 ### Fixed

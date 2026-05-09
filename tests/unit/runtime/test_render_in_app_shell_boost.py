@@ -157,3 +157,46 @@ def test_full_document_when_boosted_but_target_is_other(
     body = response.body.decode()
     # Not the boosted+main-content combo, so we keep the full document path.
     assert "<html" in body.lower()
+
+
+def test_partial_when_target_main_content_without_hx_boosted(
+    stub_template: Any,
+) -> None:
+    """Issue #1021: sidebar nav links use explicit `hx-target="#main-content"`
+    but never send `HX-Boosted: true`. The pre-fix `_is_boosted_main_content_swap`
+    required both, so the partial path was skipped, the framework returned
+    a full document into the swap target, and idiomorph crashed with
+    `HierarchyRequestError` + duplicate view-transition-name. After the fix,
+    `HX-Target` alone gates the partial path."""
+    from dazzle_back.runtime.shell import render_in_app_shell
+
+    request = _make_request({"HX-Target": "main-content"})  # no HX-Boosted
+    response = render_in_app_shell(
+        request,
+        template="_test_boost_page.html",
+    )
+    body = response.body.decode()
+    # Inner content only — outer chrome must not appear.
+    assert "<html" not in body.lower()
+    assert "<main" not in body.lower()
+    assert "shell-chrome" not in body
+    # Inner content is present.
+    assert "page-body" in body
+
+
+def test_partial_when_target_hash_main_content_without_hx_boosted(
+    stub_template: Any,
+) -> None:
+    """Same as the previous test but with the leading-hash form
+    `HX-Target=#main-content` — should be treated identically."""
+    from dazzle_back.runtime.shell import render_in_app_shell
+
+    request = _make_request({"HX-Target": "#main-content"})  # no HX-Boosted
+    response = render_in_app_shell(
+        request,
+        template="_test_boost_page.html",
+    )
+    body = response.body.decode()
+    assert "<html" not in body.lower()
+    assert "<main" not in body.lower()
+    assert "page-body" in body
