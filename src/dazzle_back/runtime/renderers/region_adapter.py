@@ -64,7 +64,9 @@ from dazzle.render.fragment import (
     MetricTile,
     PipelineStage,
     PipelineSteps,
+    PivotDimSpec,
     PivotTable,
+    PivotTableRegion,
     ProfileCard,
     Radar,
     RawHTML,
@@ -1073,41 +1075,103 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "report", body)
 
     def _build_pivot_table(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: pivot_table` regions render as a PivotTable primitive
-        — a 2-D matrix indexed by row + column dimensions.
+        """`display: pivot_table` regions render as a `PivotTableRegion`
+        primitive matching `workspace/regions/pivot_table.html`
+        byte-for-byte. Phase 4B.4 wave 4: replaced the simpler
+        2-dim PivotTable primitive with the workspace-shape that
+        consumes `pivot_buckets` + `pivot_dim_specs` directly.
 
-        ctx shape:
-            rows: list[str] — row dimension labels (e.g. enum values)
-            columns: list[str] — column dimension labels
-            cells: dict[(row, col) → int] — pre-aggregated counts
-            chart_label: optional override
+        ctx shape (production runtime):
+            pivot_buckets: list[dict] — one row per dim combination
+            pivot_dim_specs: list[{name, label, is_fk}] — dimension columns
+            empty_message: optional empty-state fallback
+            (legacy alt) rows + columns + cells: 2-dim matrix shape;
+              not the production runtime ctx, but kept on a fallback
+              path until callers migrate.
         """
         title = _region_title(region)
-        chart_label = str(ctx.get("chart_label") or title or "Pivot")
-        rows = tuple(str(r) for r in (ctx.get("rows") or []))
-        columns = tuple(str(c) for c in (ctx.get("columns") or []))
-        raw_cells = ctx.get("cells") or {}
-        cells: dict[tuple[str, str], int] = {}
-        if isinstance(raw_cells, dict):
-            for key, val in raw_cells.items():
-                if isinstance(key, (list, tuple)) and len(key) == 2:
-                    r, c = str(key[0]), str(key[1])
-                    if r in rows and c in columns:
-                        try:
-                            cells[(r, c)] = int(val)
-                        except (TypeError, ValueError):
-                            continue
+        raw_buckets = ctx.get("pivot_buckets") or []
+        raw_specs = ctx.get("pivot_dim_specs") or []
 
-        body: Fragment
-        if not rows or not columns:
-            body = EmptyState(
-                title="No data",
-                description=getattr(region, "empty_message", None)
-                or "No row or column dimensions to pivot.",
+        # Phase 4A 2-dim fallback: rows + columns + cells.
+        if not raw_buckets and (ctx.get("rows") or ctx.get("columns")):
+            rows_2d = tuple(str(r) for r in (ctx.get("rows") or []))
+            cols_2d = tuple(str(c) for c in (ctx.get("columns") or []))
+            raw_cells = ctx.get("cells") or {}
+            cells: dict[tuple[str, str], int] = {}
+            if isinstance(raw_cells, dict):
+                for key, val in raw_cells.items():
+                    if isinstance(key, (list, tuple)) and len(key) == 2:
+                        r, c = str(key[0]), str(key[1])
+                        if r in rows_2d and c in cols_2d:
+                            try:
+                                cells[(r, c)] = int(val)
+                            except (TypeError, ValueError):
+                                continue
+            chart_label = str(ctx.get("chart_label") or title or "Pivot")
+            if rows_2d and cols_2d:
+                body: Fragment = PivotTable(
+                    label=chart_label,
+                    rows=rows_2d,
+                    columns=cols_2d,
+                    cells=cells,
+                )
+            else:
+                body = EmptyState(
+                    title="No data",
+                    description=getattr(region, "empty_message", None)
+                    or "No row or column dimensions to pivot.",
+                )
+            return _wrap_surface(title, "report", body)
+
+        # Production path: pivot_buckets + pivot_dim_specs.
+        dim_specs: list[PivotDimSpec] = []
+        dim_field_names: set[str] = set()
+        for spec in raw_specs:
+            if not isinstance(spec, dict):
+                continue
+            name = str(spec.get("name") or "")
+            if not name:
+                continue
+            dim_specs.append(
+                PivotDimSpec(
+                    name=name,
+                    label=str(spec.get("label") or name),
+                    is_fk=bool(spec.get("is_fk")),
+                )
             )
-        else:
-            body = PivotTable(label=chart_label, rows=rows, columns=columns, cells=cells)
+            dim_field_names.add(name)
+            dim_field_names.add(f"{name}_label")
 
+        # Measure keys = ALL first-row keys, NOT filtered. The legacy
+        # template intends to filter out dimension fields via an inner
+        # `{% set is_dim_field = true %}` mutation inside a nested
+        # `{% for spec in pivot_dim_specs %}` loop, but Jinja's set
+        # scoping doesn't propagate the mutation out of the inner block,
+        # so the filter never applies and EVERY row key (including
+        # dim fields like `status`/`severity` and FK label fields like
+        # `status_label`) ends up as a measure column. Phase 4B.4 wave
+        # 4 (v0.66.116) replicates this scoping bug exactly for
+        # byte-equivalence — Jinja-scope quirks of the kind we
+        # accumulated in v0.66.106 (pipeline_steps progress) and
+        # v0.66.111 (radar tooltip).
+        measure_keys: list[str] = []
+        if raw_buckets and isinstance(raw_buckets[0], dict):
+            measure_keys = [str(k) for k in raw_buckets[0].keys()]
+
+        rows_norm = tuple(b for b in raw_buckets if isinstance(b, dict))
+
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No data to pivot."
+        )
+        body = PivotTableRegion(
+            dim_specs=tuple(dim_specs),
+            measure_keys=tuple(measure_keys),
+            rows=rows_norm,
+            empty_message=str(empty_msg),
+        )
         return _wrap_surface(title, "report", body)
 
     def _build_profile_card(self, region: Any, ctx: dict[str, Any]) -> Surface:

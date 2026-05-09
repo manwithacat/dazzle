@@ -503,6 +503,41 @@ class Funnel:
 
 
 @dataclass(frozen=True, slots=True)
+class PivotDimSpec:
+    """Dimension column spec for `PivotTableRegion` — name + label +
+    FK indicator. Mirrors legacy `pivot_dim_specs` entries."""
+
+    name: str
+    label: str
+    is_fk: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class PivotTableRegion:
+    """N-dimension cross-tab matching `workspace/regions/pivot_table.html`
+    byte-for-byte. Columns = N dimensions (from `dim_specs`) + M
+    measures (from `measure_keys`). Per-row cells: dim cells render
+    FK-label fallback for `is_fk=True`, status_badge for non-FK,
+    em-dash placeholder for None. Measure cells render raw values
+    with `.is-measure` modifier.
+
+    `rows` is a tuple of dicts (the legacy `pivot_buckets` shape)
+    — the renderer looks up keys per spec rather than pre-computing
+    cell tuples, since the legacy template's per-cell logic is
+    sensitive to the FK label key naming convention (`<name>_label`).
+
+    Phase 4B.4 wave 4: replaces the simpler `PivotTable` primitive
+    (rows/columns/cells matrix) for byte-equivalence with the
+    workspace shape.
+    """
+
+    dim_specs: tuple[PivotDimSpec, ...]
+    measure_keys: tuple[str, ...]
+    rows: tuple[dict, ...]
+    empty_message: str = "No data to pivot."
+
+
+@dataclass(frozen=True, slots=True)
 class HeatmapRow:
     """Single row in a `Heatmap` — label + ordered cell values.
 

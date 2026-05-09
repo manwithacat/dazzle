@@ -53,6 +53,7 @@ from dazzle.render.fragment.primitives.data import (
     MetricTile,
     PipelineSteps,
     PivotTable,
+    PivotTableRegion,
     ProfileCard,
     Radar,
     SearchBox,
@@ -140,6 +141,7 @@ Fragment = (
     | Heatmap
     | Funnel
     | KanbanRegion
+    | PivotTableRegion
     | ActionGrid
     | ActivityFeed
     | StatusList

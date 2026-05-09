@@ -68,7 +68,9 @@ from dazzle.render.fragment import (
     Page,
     PipelineStage,
     PipelineSteps,
+    PivotDimSpec,
     PivotTable,
+    PivotTableRegion,
     ProfileCard,
     Radar,
     RawHTML,
@@ -252,6 +254,14 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is HeatmapRow:
         return HeatmapRow(label="A", cells=(1.0,))
+    if primitive_type is PivotTableRegion:
+        return PivotTableRegion(
+            dim_specs=(PivotDimSpec(name="x", label="X"),),
+            measure_keys=("count",),
+            rows=({"x": "a", "count": 1},),
+        )
+    if primitive_type is PivotDimSpec:
+        return PivotDimSpec(name="x", label="X")
     if primitive_type is Funnel:
         return Funnel(stages=(FunnelStage(label="lead", count=10),))
     if primitive_type is FunnelStage:

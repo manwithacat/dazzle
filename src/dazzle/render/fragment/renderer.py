@@ -63,6 +63,7 @@ from dazzle.render.fragment.primitives import (
     Page,
     PipelineSteps,
     PivotTable,
+    PivotTableRegion,
     ProfileCard,
     Radar,
     ReferenceBand,
@@ -231,6 +232,8 @@ class FragmentRenderer:
                 return self._emit_histogram(fragment, ctx)
             case Heatmap():
                 return self._emit_heatmap(fragment, ctx)
+            case PivotTableRegion():
+                return self._emit_pivot_table_region(fragment, ctx)
             case Funnel():
                 return self._emit_funnel(fragment, ctx)
             case KanbanRegion():
@@ -1711,6 +1714,74 @@ class FragmentRenderer:
             f'<div class="dz-funnel-chart-region">'
             f'<div class="dz-funnel-stages">{"".join(items)}</div>'
             f'<p class="dz-funnel-summary">{f.total} total</p>'
+            f"</div>"
+        )
+
+    def _emit_pivot_table_region(self, p: "PivotTableRegion", ctx: RenderContext) -> str:
+        """Render a PivotTableRegion matching legacy
+        `workspace/regions/pivot_table.html` byte-for-byte: outer
+        `dz-pivot-region`, `dz-pivot-scroll` + `<table class="dz-pivot-grid">`.
+        Header has N dimension `<th>` cells + M measure `<th class="is-measure">`
+        cells (humanized from measure_keys). Per-row dimension cells
+        use FK label fallback for `is_fk=True` specs and status_badge
+        rendering for non-FK specs (em-dash placeholder for None).
+        Measure cells render raw values with `.is-measure` class.
+        Summary line "{N} row(s)".
+        """
+        from dazzle_back.runtime.renderers.region_adapter import (
+            _render_status_badge_html,
+        )
+
+        if not p.rows:
+            return (
+                f'<div class="dz-pivot-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(p.empty_message)}</p>"
+                f"</div>"
+            )
+
+        # Header — dim columns then measure columns.
+        head_dim = "".join(f"<th>{ctx.escape(s.label)}</th>" for s in p.dim_specs)
+        head_measure = "".join(
+            f'<th class="is-measure">{ctx.escape(k.replace("_", " ").title())}</th>'
+            for k in p.measure_keys
+        )
+        thead = f"<thead><tr>{head_dim}{head_measure}</tr></thead>"
+
+        body_rows: list[str] = []
+        for row in p.rows:
+            cells_html = ""
+            for spec in p.dim_specs:
+                if spec.is_fk:
+                    fk_label = row.get(f"{spec.name}_label")
+                    if fk_label is None:
+                        # Fallback: raw spec.name value, em-dash if also None.
+                        sval = row.get(spec.name)
+                        cells_html += f"<td>{ctx.escape(str(sval)) if sval else '—'}</td>"
+                    else:
+                        cells_html += f"<td>{ctx.escape(str(fk_label))}</td>"
+                else:
+                    sval = row.get(spec.name)
+                    if sval is None:
+                        cells_html += '<td><span class="dz-pivot-null">—</span></td>'
+                    else:
+                        cells_html += f"<td>{_render_status_badge_html(sval, size='sm')}</td>"
+            for k in p.measure_keys:
+                v = row.get(k)
+                cells_html += f'<td class="is-measure">{ctx.escape(str(v))}</td>'
+            body_rows.append(f"<tr>{cells_html}</tr>")
+        tbody = f"<tbody>{''.join(body_rows)}</tbody>"
+
+        n = len(p.rows)
+        suffix = "" if n == 1 else "s"
+        summary = f'<p class="dz-pivot-summary">{n} row{suffix}</p>'
+
+        return (
+            f'<div class="dz-pivot-region">'
+            f'<div class="dz-pivot-scroll">'
+            f'<table class="dz-pivot-grid">{thead}{tbody}</table>'
+            f"</div>"
+            f"{summary}"
             f"</div>"
         )
 

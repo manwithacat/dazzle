@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.116] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — PIVOT_TABLE byte-equivalent
+- **PIVOT_TABLE** — new `PivotTableRegion` + `PivotDimSpec` primitives matching `workspace/regions/pivot_table.html` byte-for-byte. N dimension columns + M measure columns; dim cells use FK label fallback for `is_fk=True` specs and status_badge rendering otherwise (em-dash placeholder for None); measure cells render raw values with `.is-measure` class. Summary line "{N} row(s)".
+- **`_build_pivot_table` rewrite** — consumes production `pivot_buckets` + `pivot_dim_specs` shape directly. Phase 4A 2-dim `rows + columns + cells` shape kept on a fallback path so existing 2-dim test callers don't regress.
+
+### Replicated Jinja-scope bug for byte-equivalence
+- Legacy template intends to filter dimension fields out of measure columns via inner-loop `{% set is_dim_field = true %}`, but Jinja's `{% set %}` scoping doesn't propagate the mutation out of nested `{% for %}` blocks. Result: every row key (including `<spec.name>` dim values and `<spec.name>_label` FK labels) renders as a measure column. v0.66.116 replicates this exactly — the typed adapter populates `measure_keys` from ALL of `pivot_buckets[0].keys()`, not the filtered subset. Documented in adapter comment.
+
+### Phase 4B.4 wave 4 progress
+| Display | Status |
+|---|---|
+| KANBAN, ACTION_GRID, PROFILE_CARD, TABBED_LIST, HEATMAP | ✅ |
+| **PIVOT_TABLE** | ✅ **v0.66.116** |
+| QUEUE | next (substantial — needs QueueRegion + QueueRow primitives) |
+| CONFIRM_ACTION_PANEL | needs design check-in (Alpine state machine) |
+| DIAGRAM | needs design check-in (Mermaid CDN — accept-degraded?) |
+
+**28 of 32 displays byte-equivalent (88%).**
+
+### Agent Guidance
+- **Replicate legacy bugs for byte-equivalence.** When the legacy Jinja template has buggy behaviour (scoping, off-by-one, whitespace artifact), the typed primitive should match — the goal is identical output, not a "correct" alternate. Document the replicated bug clearly so a future ship can fix BOTH paths together. Three such replications now: pipeline_steps progress (Jinja `is not none` for missing keys), bullet trailing space, pivot_table dim-field-filter scoping.
+
 ## [0.66.115] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — HEATMAP byte-equivalent

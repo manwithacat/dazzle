@@ -943,6 +943,36 @@ def test_heatmap_achieves_byte_equivalence() -> None:
     )
 
 
+def test_pivot_table_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.116): PIVOT_TABLE byte-equivalent.
+    New PivotTableRegion + PivotDimSpec primitives + dedicated
+    builder consume `pivot_buckets` + `pivot_dim_specs` shape.
+
+    Note: replicates the legacy template's Jinja-scope bug where
+    `is_dim_field` mutation inside an inner `{% for %}` doesn't
+    propagate, causing all row keys to render as measure columns
+    (including dim fields). Required for byte-equivalence."""
+    ctx = {
+        "title": "Pivot",
+        "pivot_buckets": [
+            {"status": "open", "severity": "high", "count": 5},
+            {"status": "open", "severity": "low", "count": 3},
+            {"status": "closed", "severity": "high", "count": 1},
+        ],
+        "pivot_dim_specs": [
+            {"name": "status", "label": "Status", "is_fk": False},
+            {"name": "severity", "label": "Severity", "is_fk": False},
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("pivot_table", **ctx),
+            render_via_typed("pivot_table", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""
