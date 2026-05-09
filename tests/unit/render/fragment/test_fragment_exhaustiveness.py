@@ -24,6 +24,8 @@ from dazzle.render.fragment import (
     Button,
     CalendarGrid,
     Card,
+    CardPicker,
+    CardPickerEntry,
     Combobox,
     ConfirmGate,
     CsvExportButton,
@@ -309,6 +311,13 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is SearchBox:
         return SearchBox(name="x", fts_endpoint=URL("/api/fts/X"))
+    if primitive_type is CardPicker:
+        return CardPicker(
+            entries=(CardPickerEntry(name="t", title="Tasks", entity="Task", display="list"),),
+            catalog_json="[]",
+        )
+    if primitive_type is CardPickerEntry:
+        return CardPickerEntry(name="t", title="Tasks", entity="Task", display="list")
     if primitive_type is ConfirmGate:
         return ConfirmGate(state="off")
     if primitive_type is FilterBar:

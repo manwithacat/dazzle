@@ -26,6 +26,7 @@ from dazzle.render.fragment.primitives import (
     Button,
     CalendarGrid,
     Card,
+    CardPicker,
     Combobox,
     ConfirmCheckItem,
     ConfirmGate,
@@ -282,6 +283,8 @@ class FragmentRenderer:
                 return self._emit_search_box(fragment, ctx)
             case ConfirmGate():
                 return self._emit_confirm_gate(fragment, ctx)
+            case CardPicker():
+                return self._emit_card_picker(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
             case SortHeader():
@@ -2592,6 +2595,43 @@ class FragmentRenderer:
             f"{audit_html}"
             f"</div>"
         )
+
+    def _emit_card_picker(self, p: CardPicker, ctx: RenderContext) -> str:
+        """Render a CardPicker matching legacy `workspace/_card_picker.html`
+        byte-for-byte (Phase 4B.5.a).
+
+        Single-quoted `data-card-catalog` attribute carries the
+        opaque JSON blob the JS reads on `addCard()` (matches legacy
+        #963 — Markup from `tojson` bypasses autoescape, so embedded
+        `"` chars would terminate a double-quoted attribute mid-value).
+
+        `@click='addCard("name")'` per entry — also single-quoted for
+        the same reason. The legacy template uses Jinja's `tojson` to
+        emit the name argument; we replicate that with `json.dumps`."""
+        from json import dumps as _json_dumps
+
+        title = '<h4 class="dz-card-picker-title">Add a card</h4>'
+
+        if p.entries:
+            entries_html = "".join(
+                f"<button @click='addCard({_json_dumps(e.name)})' "
+                f'data-test-id="dz-card-picker-entry" '
+                f'data-test-region="{ctx.escape_attr(e.name)}" '
+                f'class="dz-card-picker-entry">'
+                f'<span class="dz-card-picker-display-tag">'
+                f"{ctx.escape((e.display or '').lower())}</span>"
+                f'<span class="dz-card-picker-title-text">{ctx.escape(e.title)}</span>'
+                f'<span class="dz-card-picker-entity">{ctx.escape(e.entity)}</span>'
+                f"</button>"
+                for e in p.entries
+            )
+            body = title + entries_html
+        else:
+            body = title + '<div class="dz-card-picker-empty">No widgets available.</div>'
+
+        # `data-card-catalog` is opaque JSON the adapter has already
+        # serialised. Single-quoted to permit embedded `"` chars.
+        return f"<div data-card-catalog='{p.catalog_json}' class=\"dz-card-picker\">{body}</div>"
 
     def _emit_filter_bar(self, f: FilterBar, ctx: RenderContext) -> str:
         """Render a FilterBar matching legacy `queue.html` / `list.html`

@@ -1358,3 +1358,46 @@ class Diagram:
                     raise ValueError(f"edge from {f!r} not in declared nodes")
                 if t not in node_set:
                     raise ValueError(f"edge to {t!r} not in declared nodes")
+
+
+@dataclass(frozen=True, slots=True)
+class CardPickerEntry:
+    """One row in a CardPicker — represents a region the user can add
+    to a workspace dashboard. Maps to one Jinja `<button>` in
+    `_card_picker.html`.
+
+    `name` is the catalog key (also the value passed to `addCard()`).
+    `display` is the lowercase region display tag (e.g. `list`, `kanban`)
+    shown as a small chip; legacy template `lower`s it, we do the same
+    in the renderer."""
+
+    name: str
+    title: str
+    entity: str
+    display: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class CardPicker:
+    """The "Add a card" popover used by the workspace dashboard builder
+    (Phase 4B.5.a port of `workspace/_card_picker.html`).
+
+    Renders the full `<div class="dz-card-picker">` shell:
+      - The `data-card-catalog` JSON blob the JS reads when the user
+        picks an entry. The string is opaque to the primitive — the
+        adapter stringifies the catalog ahead of time. We single-quote
+        the attribute (matching legacy `#963` convention) so embedded
+        `"` chars from `tojson` don't terminate the attribute mid-value.
+      - A `dz-card-picker-title` heading.
+      - One `<button class="dz-card-picker-entry" @click='addCard(...)'>`
+        per entry, with `data-test-id` + `data-test-region` for the
+        Playwright harness.
+      - A `dz-card-picker-empty` fallback when entries is empty.
+
+    Visibility is CSS-driven via `[data-show-picker="1"]` on the
+    ancestor `.dz-workspace`; this primitive emits no `x-show` /
+    `x-cloak` (matches legacy `#982` move that removed Alpine bindings
+    from this morphable child element)."""
+
+    entries: tuple[CardPickerEntry, ...]
+    catalog_json: str = "[]"

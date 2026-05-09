@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.119] - 2026-05-09
+
+### Added — Phase 4B.5.a — CardPicker primitive (first chrome port)
+
+- **CardPicker + CardPickerEntry primitives** matching legacy `workspace/_card_picker.html` byte-for-byte. Full markup including `<div data-card-catalog='...' class="dz-card-picker">` shell, `dz-card-picker-title` heading, per-entry `<button>` rows with single-quoted `@click='addCard("name")'` (matches legacy #949 fix — inner `"` chars from JSON-encoded names would terminate a double-quoted attribute mid-value), `data-test-id` + `data-test-region` for the Playwright harness, lowercased display tag chip, and the `dz-card-picker-empty` fallback when entries is empty. The `catalog_json` is opaque to the primitive — the adapter stringifies the catalog upstream.
+- **Six dual-path tests** under `tests/unit/render/fragment/test_card_picker_primitive.py` pin populated, empty, single-entry, attribute-quoting, harness-attributes, and display-tag-lowercasing behaviour against `render_fragment("workspace/_card_picker.html", ...)`.
+- **Phase 4B.5 strategy** documented in `dev_docs/2026-05-09-phase-4b-5-chrome-port-strategy.md`. Decomposes the chrome port into 4B.5.a (card picker — this ship), 4B.5.b (workspace shell, three sub-ships), 4B.5.c (layout shell). Then 4B.6 decommission.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| **4B.5.a — CardPicker** | ✅ **v0.66.119** |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | next |
+| 4B.5.b.2 — slot grid + region children | queued |
+| 4B.5.b.3 — context selector + drawer + edit chrome | queued |
+| 4B.5.c — Layout shell port | queued |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | queued |
+
+### Agent Guidance
+- **Single-quote Alpine attributes carrying `tojson`-encoded values.** The CardPicker emits `@click='addCard({json_str})'` with `_json_dumps(name)` — JSON-encoded strings carry inner `"` chars that would terminate a double-quoted attribute. This is the canonical pattern for Alpine bindings on framework primitives that embed JSON. Same pattern already used by toasts, pdf-viewer panels, dz-table directives. When porting future chrome pieces with similar bindings, single-quote the attribute and JSON-encode the argument.
+- **Chrome primitives keep `data-test-*` attributes verbatim.** Playwright tests, the contract checker, the convergence harness, and the card-safety scanners all key off these attributes. Any chrome-port primitive MUST round-trip `data-test-id`, `data-test-region`, `data-dz-region`, `data-dz-state-value`, etc. exactly. Add a focused unit test asserting their presence (`test_card_picker_emits_test_harness_attributes` is the template).
+
 ## [0.66.118] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — CONFIRM_ACTION_PANEL + DIAGRAM byte-equivalent (wave 4 complete, 32/32)

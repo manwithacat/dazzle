@@ -35,6 +35,7 @@ from dazzle.render.fragment.primitives.data import (
     BoxPlot,
     Bullet,
     CalendarGrid,
+    CardPicker,
     ConfirmGate,
     CsvExportButton,
     DateRangePicker,
@@ -155,6 +156,7 @@ Fragment = (
     | LazyTabPanel
     | SearchBox
     | ConfirmGate
+    | CardPicker
     | FilterBar
     | SortHeader
     | CsvExportButton

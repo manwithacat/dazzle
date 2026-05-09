@@ -80,6 +80,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "LazyTabPanel",
         "SearchBox",
         "ConfirmGate",
+        "CardPicker",
         "FilterBar",
         "SortHeader",
         "CsvExportButton",
