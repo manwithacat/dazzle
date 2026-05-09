@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.114] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — TABBED_LIST byte-equivalent
+- **TABBED_LIST** — closed two divergences:
+  1. **`_emit_lazy_tab_panel` onclick attribute** — emit raw `>` in arrow function syntax (`=> t.classList...`) matching legacy template, not `&gt;`. The legacy template is technically not strictly spec-valid HTML attribute escaping but browsers parse it fine and the dual-path harness compares byte-for-byte.
+  2. **`_build_tabbed_list` adapter** — derives `key` from `entity_name` (production runtime ctx) when explicit `key` is absent; the legacy template uses `entity_name | lower` for the tab id slug.
+
+### Phase 4B.4 wave 4 progress
+| Display | Status |
+|---|---|
+| KANBAN, ACTION_GRID, PROFILE_CARD | ✅ |
+| **TABBED_LIST** | ✅ **v0.66.114** |
+| HEATMAP, PIVOT_TABLE | next |
+| QUEUE, CONFIRM_ACTION_PANEL | queued (substantial rewrites — bigger primitives) |
+| DIAGRAM | queued (Mermaid CDN — likely accept-degraded) |
+
+**26 of 32 displays byte-equivalent (81%).**
+
+### Known divergence path (QUEUE)
+- QUEUE typed path currently emits generic Stack+Card composition; legacy uses dedicated `dz-queue-region` + `dz-queue-rows` + per-row dedicated structure. Needs a `QueueRegion` / `QueueRow` / `QueueTransitionButton` primitive family. Substantial — will land as its own ship.
+
+### Agent Guidance
+- **HTML attribute escaping is a divergence vector.** Jinja autoescape only applies to interpolated values; literals like `=>` in attribute strings stay raw. Python f-strings emitting `&gt;` for literals diverge. When porting a legacy template that has JS / arrow functions / `<` `>` operators in attributes, mirror the literal characters (the renderer's emit is responsible for the bytes that come out, not the safety of attribute escaping in the abstract).
+- **`entity_name` is the production-ctx tab-id source.** When porting tabbed/list display families, expect `entity_name` to be the canonical key source even if `key` is the typed-primitive field name. Translator passes through; adapter derives the slug.
+
 ## [0.66.113] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — ACTION_GRID + PROFILE_CARD byte-equivalent

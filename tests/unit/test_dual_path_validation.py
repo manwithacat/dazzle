@@ -881,6 +881,35 @@ def test_profile_card_achieves_byte_equivalence() -> None:
     )
 
 
+def test_tabbed_list_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.114): TABBED_LIST byte-equivalent.
+    Adapter accepts entity_name (production runtime) in addition to
+    explicit `key`; renderer emits raw `>` in onclick attr matching
+    legacy template (not `&gt;`)."""
+    ctx = {
+        "title": "Tabs",
+        "source_tabs": [
+            {
+                "entity_name": "Task",
+                "label": "Tasks",
+                "endpoint": "/api/tasks",
+            },
+            {
+                "entity_name": "User",
+                "label": "Users",
+                "endpoint": "/api/users",
+            },
+        ],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("tabbed_list", region_name="tabbed", **ctx),
+            render_via_typed("tabbed_list", ctx, region_name="tabbed"),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

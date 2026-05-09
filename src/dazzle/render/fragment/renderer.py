@@ -2071,12 +2071,16 @@ class FragmentRenderer:
         # Inline-JS click handler: vanilla JS toggles is-active +
         # shows/hides panels. Mirrors the legacy template verbatim
         # so dual-path validation stays byte-equivalent.
+        # Legacy template emits raw `>` in the onclick attribute, not
+        # `&gt;`. Match that. Note this is technically not strictly
+        # spec-valid HTML attr escaping, but browsers parse it fine
+        # and the dual-path harness compares byte-for-byte.
         click_js = (
             f"document.querySelectorAll('#tabs-{p.region_name} [role=tab]')"
-            f".forEach(t =&gt; t.classList.remove('is-active')); "
+            f".forEach(t => t.classList.remove('is-active')); "
             f"this.classList.add('is-active'); "
             f"document.querySelectorAll('#panels-{p.region_name} .tab-panel')"
-            f".forEach(p =&gt; p.classList.add('hidden')); "
+            f".forEach(p => p.classList.add('hidden')); "
             f"document.getElementById(this.dataset.tabTarget).classList.remove('hidden');"
         )
 

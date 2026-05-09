@@ -2156,7 +2156,11 @@ class WorkspaceRegionAdapter:
             for st in source_tabs:
                 if not isinstance(st, dict):
                     continue
-                key = str(st.get("key") or "")
+                # Legacy template uses `entity_name | lower` for the
+                # tab id slug; accept both `key` (Phase 4B preferred)
+                # and `entity_name` (production runtime ctx).
+                entity_name = str(st.get("entity_name") or "")
+                key = str(st.get("key") or entity_name.lower())
                 label = str(st.get("label") or key)
                 endpoint = str(st.get("endpoint") or "")
                 if not key or not endpoint:
