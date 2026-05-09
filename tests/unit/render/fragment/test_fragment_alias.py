@@ -90,6 +90,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "CreateButton",
         "BulkActionToolbar",
         "ClassStripRegion",
+        "DayTimelineRegion",
         "DashboardGrid",
         "DashboardCard",
         "AddCardRow",

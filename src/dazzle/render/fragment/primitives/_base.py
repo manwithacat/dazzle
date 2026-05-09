@@ -45,6 +45,7 @@ from dazzle.render.fragment.primitives.data import (
     DashboardCard,
     DashboardGrid,
     DateRangePicker,
+    DayTimelineRegion,
     DetailGrid,
     Diagram,
     FilterBar,
@@ -186,6 +187,7 @@ Fragment = (
     | CreateButton
     | BulkActionToolbar
     | ClassStripRegion
+    | DayTimelineRegion
     | DashboardGrid
     | DashboardCard
     | AddCardRow

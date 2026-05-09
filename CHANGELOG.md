@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.3] - 2026-05-10
+
+### Added
+
+- **#1016 — `day_timeline` region primitive (second of #1015–#1018).** Vertical chronological scroll of slot cards — the day-spine pattern for MIS landings ("what am I teaching, when?"). Follows the discriminated `region_config` IR pattern landed by #1018: `DayTimelineConfig(starts_at, ends_at, card)` BaseModel + `day_timeline_config: DayTimelineConfig | None` field on `WorkspaceRegion`. Renderer emits `<ol class="dz-day-timeline-slots">` with one slot per card; the active slot (at most one) carries `data-dz-position="active"` for project CSS targeting; `before` / `after` positions encode the collapsed-summary / previewable progression. Optional `drill_url` wraps each slot in an `<a>` for keyboard-navigable drill-down.
+- **`DayTimelineSlot` + `DayTimelineRegion`** frozen dataclass primitives. Slot bodies are pre-rendered HTML (adapter owns escape responsibility); the primitive does not double-escape, matching the composite-card pattern from the spec. Primitive enforces at-most-one-active-slot and non-empty `slot_id` invariants.
+- **25 unit tests** at `tests/unit/test_day_timeline_primitive.py` covering IR construction, primitive validation, renderer wiring (position class + data attr, drill anchor wrap, ordered-list shape), escape safety on label/region_name/empty_message/drill_url, and unknown-position fall-through to `after`.
+
+### Agent Guidance
+
+- **Two of four #1015–#1018 region primitives now live as IR + primitive + renderer pilots.** Adapter ship that consumes `class_strip_config` and `day_timeline_config` is the natural follow-on — the IR fields are baselined as orphans in `tests/unit/fixtures/ir_reader_baseline.json` until that ship lands and removes them.
+- **Slot body escape contract:** `DayTimelineSlot.body` is pre-rendered HTML and is NOT escaped by the renderer. The runtime adapter that builds slots from `TimetableSlot` rows owns escape responsibility for that field. This matches the composite-card primitive pattern (#1017 will follow the same shape). All other slot fields (label, drill_url, slot_id) ARE escaped.
+
 ## [0.67.2] - 2026-05-10
 
 ### Added

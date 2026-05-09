@@ -39,6 +39,8 @@ from dazzle.render.fragment import (
     DashboardGrid,
     DashboardNotice,
     DateRangePicker,
+    DayTimelineRegion,
+    DayTimelineSlot,
     DetailGrid,
     Diagram,
     Drawer,
@@ -362,6 +364,10 @@ def _sample_for(primitive_type: type) -> object:
         return ClassStripLensTab(id="x", label="X", is_active=True)
     if primitive_type is ClassStripCell:
         return ClassStripCell(pupil_id="p1", pupil_name="A", primary_value="0")
+    if primitive_type is DayTimelineRegion:
+        return DayTimelineRegion(region_name="day", slots=())
+    if primitive_type is DayTimelineSlot:
+        return DayTimelineSlot(slot_id="s1", label="P1")
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

@@ -3018,6 +3018,7 @@ ir_class: WorkspaceRegion
     - css_class: str | None = None
     - date_field: str | None = None
     - date_range: bool = False
+    - day_timeline_config: DayTimelineConfig | None = None
     - delta: DeltaSpec | None = None
     - display: DisplayMode = <DisplayMode.LIST: 'list'>
     - empty_message: str | None = None

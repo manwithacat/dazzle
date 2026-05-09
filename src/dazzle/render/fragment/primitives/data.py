@@ -1795,3 +1795,54 @@ class ClassStripRegion:
             raise ValueError(
                 f"ClassStripRegion requires exactly one active lens, got {active_count}"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class DayTimelineSlot:
+    """One chronological slot in a `DayTimelineRegion` (#1016).
+
+    Models a single calendar entry — typically a `TimetableSlot` — in
+    the day spine. The adapter resolves `position` from the runtime
+    clock against the IR's `starts_at`/`ends_at` fields: exactly one
+    slot in a non-empty timeline is `"active"`; earlier slots are
+    `"before"` (collapsed-summary), later slots are `"after"`
+    (previewable, slightly de-emphasised)."""
+
+    slot_id: str
+    label: str  # e.g. "Period 3 — 11:30–12:25"
+    position: Literal["before", "active", "after"] = "after"
+    body: str = ""  # pre-rendered card body (escape responsibility on adapter)
+    drill_url: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.slot_id:
+            raise ValueError("DayTimelineSlot requires a non-empty slot_id")
+
+
+@dataclass(frozen=True, slots=True)
+class DayTimelineRegion:
+    """Vertical chronological scroll of slots — the day spine (#1016).
+
+    Renders one card per slot in chronological order (the adapter is
+    responsible for sorting). The slot whose [starts_at, ends_at]
+    window contains `now` is rendered with the active highlight; at
+    most one such slot exists per timeline. When the day has no
+    active slot (before-school / after-school / weekend), all slots
+    render in their pre/post position relative to `now`.
+
+    `region_name` matches the region's stable id; the active card's
+    container carries `data-dz-position="active"` so project CSS can
+    target it without DOM-walking."""
+
+    region_name: str
+    slots: tuple[DayTimelineSlot, ...]
+    empty_message: str = "No scheduled slots today."
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("DayTimelineRegion requires a non-empty region_name")
+        active_count = sum(1 for slot in self.slots if slot.position == "active")
+        if active_count > 1:
+            raise ValueError(
+                f"DayTimelineRegion permits at most one active slot, got {active_count}"
+            )

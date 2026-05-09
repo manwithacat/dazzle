@@ -185,5 +185,8 @@
   "webhooks.WebhookPayloadSpec.include_fields",
   "workspaces.ClassStripConfig.default_lens",
   "workspaces.ClassStripConfig.pupil_via",
-  "workspaces.WorkspaceRegion.class_strip_config"
+  "workspaces.DayTimelineConfig.ends_at",
+  "workspaces.DayTimelineConfig.starts_at",
+  "workspaces.WorkspaceRegion.class_strip_config",
+  "workspaces.WorkspaceRegion.day_timeline_config"
 ]

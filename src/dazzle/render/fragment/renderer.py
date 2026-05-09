@@ -38,6 +38,7 @@ from dazzle.render.fragment.primitives import (
     DashboardCard,
     DashboardGrid,
     DateRangePicker,
+    DayTimelineRegion,
     DetailGrid,
     Diagram,
     Drawer,
@@ -417,6 +418,8 @@ class FragmentRenderer:
                 return _BULK_ACTION_TOOLBAR_HTML
             case ClassStripRegion():
                 return self._emit_class_strip_region(fragment, ctx)
+            case DayTimelineRegion():
+                return self._emit_day_timeline_region(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -3213,6 +3216,57 @@ class FragmentRenderer:
             f'<div class="dz-class-strip-body" id="region-{region_name_attr}-body">'
             f"{cells_html}"
             f"</div>"
+            f"</div>"
+        )
+
+    def _emit_day_timeline_region(self, t: DayTimelineRegion, ctx: RenderContext) -> str:
+        """Render a DayTimelineRegion (#1016).
+
+        Vertical chronological scroll of slot cards. The active slot
+        (at most one) carries `data-dz-position="active"` so project
+        CSS can highlight it without DOM-walking. Slots before the
+        active one render in `position="before"` (collapsed-summary);
+        slots after render in `position="after"` (previewable).
+
+        Each slot's body is treated as a pre-rendered HTML fragment
+        produced by the runtime adapter — this primitive does not
+        re-escape it. Empty timelines emit a single empty-state
+        paragraph."""
+        region_name_attr = ctx.escape_attr(t.region_name)
+        if not t.slots:
+            body = f'<p class="dz-day-timeline-empty">{ctx.escape(t.empty_message)}</p>'
+        else:
+            slot_parts: list[str] = []
+            for slot in t.slots:
+                pos = slot.position if slot.position in ("before", "active", "after") else "after"
+                cls = f"dz-day-timeline-slot is-{pos}"
+                inner = (
+                    f'<div class="dz-day-timeline-slot-label">{ctx.escape(slot.label)}</div>'
+                    f'<div class="dz-day-timeline-slot-body">{slot.body}</div>'
+                )
+                if slot.drill_url:
+                    slot_parts.append(
+                        f'<a class="{cls}" '
+                        f'data-dz-position="{ctx.escape_attr(pos)}" '
+                        f'data-slot-id="{ctx.escape_attr(slot.slot_id)}" '
+                        f'href="{ctx.escape_attr(slot.drill_url)}">'
+                        f"{inner}"
+                        f"</a>"
+                    )
+                else:
+                    slot_parts.append(
+                        f'<div class="{cls}" '
+                        f'data-dz-position="{ctx.escape_attr(pos)}" '
+                        f'data-slot-id="{ctx.escape_attr(slot.slot_id)}">'
+                        f"{inner}"
+                        f"</div>"
+                    )
+            body = f'<ol class="dz-day-timeline-slots">{"".join(slot_parts)}</ol>'
+
+        return (
+            f'<div class="dz-day-timeline-region" '
+            f'data-dz-region-name="{region_name_attr}">'
+            f"{body}"
             f"</div>"
         )
 

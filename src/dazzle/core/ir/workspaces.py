@@ -446,6 +446,35 @@ class ClassStripConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class DayTimelineConfig(BaseModel):
+    """Per-region config for `display: day_timeline` (#1016).
+
+    Discriminated config block — only populated when
+    `WorkspaceRegion.display == DisplayMode.DAY_TIMELINE`. Models a
+    chronological scroll of slots (typically `TimetableSlot`) where
+    one slot is "active now" (rendered highlighted), prior slots
+    collapse, and following slots preview at lower contrast.
+
+    Attributes:
+        starts_at: Field on the source entity holding the slot's
+            start timestamp. The runtime adapter compares ``now``
+            against the [starts_at, ends_at] window to determine the
+            active slot.
+        ends_at: Field on the source entity holding the slot's end
+            timestamp.
+        card: Name of the composite card template that renders each
+            slot's body. Resolved by the renderer at adapt time. When
+            empty, slots render with a minimal default body
+            (start/end label only).
+    """
+
+    starts_at: str
+    ends_at: str
+    card: str = ""
+
+    model_config = ConfigDict(frozen=True)
+
+
 class WorkspaceRegion(BaseModel):
     """
     Named region within a workspace.
@@ -569,6 +598,7 @@ class WorkspaceRegion(BaseModel):
     # subsequent primitives' configs to land alongside without
     # bloating the flat field set with mutually-exclusive options.
     class_strip_config: ClassStripConfig | None = None  # #1018 (v0.67.2)
+    day_timeline_config: DayTimelineConfig | None = None  # #1016 (v0.67.3)
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime
