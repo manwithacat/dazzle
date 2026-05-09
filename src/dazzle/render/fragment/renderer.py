@@ -963,7 +963,17 @@ class FragmentRenderer:
         )
 
     def _emit_table(self, t: Table, ctx: RenderContext) -> str:
-        head_cells = "".join(f"<th>{ctx.escape(c)}</th>" for c in t.columns)
+        # Issue #1029 phase 6: columns can be plain strings (legacy
+        # static labels) or SortHeader primitives (clickable column
+        # headers with aria-sort + hx-get). Per-cell dispatch keeps
+        # the legacy string-column shape backwards-compatible.
+        head_cells_parts: list[str] = []
+        for c in t.columns:
+            if isinstance(c, SortHeader):
+                head_cells_parts.append(f"<th>{self._emit(c, ctx)}</th>")
+            else:
+                head_cells_parts.append(f"<th>{ctx.escape(str(c))}</th>")
+        head_cells = "".join(head_cells_parts)
         # Issue #1029 phase 1: row_links — when set, each row carries
         # an hx-get on the <tr> so clicking navigates to the detail
         # URL via htmx (full-page swap into <body>). Wrapping each

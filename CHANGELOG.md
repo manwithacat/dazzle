@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.138] - 2026-05-09
+
+### Added — #1029 Phase 6 — LIST adapter SortHeader column wiring
+
+- **`Table.columns` widened to `tuple[str | SortHeader, ...]`** — backwards-compatible with the legacy str-only shape (existing callers continue to work). The renderer dispatches per-cell: SortHeader items get wrapped in `<th>{...}</th>` with the SortHeader's emit output (clickable column header with `aria-sort` + `hx-get` direction-flip URL); plain string items emit a static `<th>{label}</th>`.
+- **`_build_dispatch_ctx` threads `sort_field` + `sort_dir`** for LIST surfaces — previously dropped. The adapter reads them so the active sort column shows its current direction (▲/▼) and its next-click URL flips the direction.
+- **`_build_column_header(col, endpoint, region_name, current_sort, current_direction)` adapter helper** — returns a `SortHeader` primitive when `col["sortable"]` is True AND endpoint + region_name are configured; falls back to the plain string label otherwise. Called per-column in `_build_list`.
+- **Eleven regression tests** at `tests/unit/test_dispatch_ctx_list_sort_headers.py` pin: dispatch ctx threading + default direction, helper returns SortHeader for sortable col + plain string for non-sortable + defensive fallback when endpoint missing, helper threads current sort state, Table accepts SortHeader in columns tuple, renderer wraps SortHeader in `<th>`, end-to-end render with active sort direction flip + all-non-sortable plain header path.
+
+### Phase plan
+
+This is Phase 6 of 7 for issue #1029. Remaining: bulk actions (Phase 7).
+
+### Agent Guidance
+
+- **Mixed-shape column tuples are a useful idiom for flexible list rendering.** `Table.columns: tuple[str | SortHeader, ...]` lets callers mix sortable and static columns without a separate primitive variant. The renderer dispatches per-cell; new column-cell shapes (e.g., a future `BulkSelectColumn` for Phase 7) plug in by adding a `case` branch in `_emit_table`. Same pattern would work for `<td>` cells if we ever need richer cell-level interactivity.
+
 ## [0.66.137] - 2026-05-09
 
 ### Added — #1029 Phase 5 — LIST adapter SearchBox + FilterBar toolbar

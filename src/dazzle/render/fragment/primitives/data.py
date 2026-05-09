@@ -96,7 +96,7 @@ class Table:
     clickable (e.g. summary rows). Backwards-compatible — pass `()` /
     omit to keep the legacy plain-table render."""
 
-    columns: tuple[str, ...]
+    columns: tuple[object, ...]  # str | SortHeader
     rows: tuple[tuple[str, ...], ...]
     row_links: tuple[str | None, ...] = ()
 

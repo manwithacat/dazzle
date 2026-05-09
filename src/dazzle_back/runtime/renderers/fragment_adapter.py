@@ -32,6 +32,7 @@ from dazzle.render.fragment import (
     Row,
     SearchBox,
     Skeleton,
+    SortHeader,
     Stack,
     Submit,
     Surface,
@@ -93,7 +94,25 @@ class FragmentSurfaceAdapter:
             empty_title, empty_description = _pick_empty_state(ctx)
             body = EmptyState(title=empty_title, description=empty_description)
         else:
-            column_labels = tuple(col.get("label", col.get("key", "")) for col in columns)
+            # Issue #1029 phase 6: sortable columns become SortHeader
+            # primitives; non-sortable stay as plain strings. The
+            # adapter reads the active `sort_field` / `sort_dir` from
+            # ctx so the right column shows its current direction
+            # (▲/▼) and its next-click flips, while others always
+            # default to ascending.
+            sort_field = str(ctx.get("sort_field", "") or "")
+            sort_dir_raw = str(ctx.get("sort_dir", "asc") or "asc").lower()
+            sort_dir: str = "desc" if sort_dir_raw == "desc" else "asc"
+            column_labels = tuple(
+                _build_column_header(
+                    col=col,
+                    endpoint=endpoint,
+                    region_name=region_name,
+                    current_sort=sort_field,
+                    current_direction=sort_dir,
+                )
+                for col in columns
+            )
             rows = tuple(
                 tuple(
                     _format_cell(item.get(col["key"]), col.get("type", "text")) for col in columns
@@ -507,6 +526,37 @@ def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPi
         required=required,
         placeholder=placeholder,
         initial_value=initial_value,
+    )
+
+
+def _build_column_header(
+    *,
+    col: dict[str, Any],
+    endpoint: str,
+    region_name: str,
+    current_sort: str,
+    current_direction: str,
+) -> object:
+    """Issue #1029 phase 6: per-column header builder.
+
+    Returns a `SortHeader` primitive when the column is `sortable=True`
+    AND endpoint + region_name are configured; falls back to the plain
+    string label otherwise. The Table primitive's column tuple is
+    `tuple[str | SortHeader, ...]` and the renderer dispatches per cell."""
+    label = str(col.get("label", col.get("key", "")))
+    if not col.get("sortable") or not endpoint or not region_name:
+        return label
+    column_key = str(col.get("key", "") or "")
+    if not column_key:
+        return label
+    direction: str = "desc" if current_direction == "desc" else "asc"
+    return SortHeader(
+        label=label,
+        column_key=column_key,
+        endpoint=URL(endpoint),
+        region_name=region_name,
+        current_sort=current_sort,
+        current_direction=direction,  # type: ignore[arg-type]
     )
 
 

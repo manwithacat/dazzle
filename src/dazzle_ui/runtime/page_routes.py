@@ -1112,6 +1112,10 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             "search_enabled": bool(getattr(table, "search_enabled", False)),
             "search_fields": list(getattr(table, "search_fields", []) or []),
             "filter_values": dict(getattr(table, "filter_values", {}) or {}),
+            # Issue #1029 phase 6: active sort state for SortHeader
+            # current-direction wiring.
+            "sort_field": str(getattr(table, "sort_field", "") or ""),
+            "sort_dir": str(getattr(table, "sort_dir", "asc") or "asc"),
         }
 
     form = getattr(render_ctx, "form", None)
