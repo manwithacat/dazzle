@@ -31,6 +31,8 @@ from dazzle.render.fragment.primitives import (
     ConfirmCheckItem,
     ConfirmGate,
     CsvExportButton,
+    DashboardCard,
+    DashboardGrid,
     DateRangePicker,
     DetailGrid,
     Diagram,
@@ -333,6 +335,10 @@ class FragmentRenderer:
                 return self._emit_workspace_shell(fragment, ctx)
             case WorkspaceToolbar():
                 return self._emit_workspace_toolbar(fragment, ctx)
+            case DashboardGrid():
+                return self._emit_dashboard_grid(fragment, ctx)
+            case DashboardCard():
+                return self._emit_dashboard_card(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
             case SortHeader():
@@ -2680,6 +2686,134 @@ class FragmentRenderer:
         # `data-card-catalog` is opaque JSON the adapter has already
         # serialised. Single-quoted to permit embedded `"` chars.
         return f"<div data-card-catalog='{p.catalog_json}' class=\"dz-card-picker\">{body}</div>"
+
+    def _emit_dashboard_grid(self, g: DashboardGrid, ctx: RenderContext) -> str:
+        """Render a DashboardGrid matching legacy `_content.html` card-grid
+        block byte-for-byte (Phase 4B.5.b.2.ii).
+
+        Outer wrapper carries `data-grid-container` (the JS grid handler
+        keys off it), `role="application"` + `aria-label` for a11y, and
+        optional `hx-ext="sse" sse-connect="..."` when the workspace
+        declared an `sse_url`. Cards inside are rendered as
+        DashboardCard primitives."""
+        sse_attrs = ""
+        if g.sse_url:
+            sse_attrs = f' hx-ext="sse" sse-connect="{ctx.escape_attr(g.sse_url)}"'
+        cards_html = "".join(self._emit(c, ctx) for c in g.cards)  # type: ignore[arg-type]
+        return (
+            f'<div class="dz-dashboard-grid" '
+            f"data-grid-container "
+            f'role="application" '
+            f'aria-label="Dashboard card grid"'
+            f"{sse_attrs}>"
+            f"{cards_html}"
+            f"</div>"
+        )
+
+    def _emit_dashboard_card(self, c: DashboardCard, ctx: RenderContext) -> str:
+        """Render a DashboardCard matching legacy `_content.html` per-card
+        block byte-for-byte (Phase 4B.5.b.2.ii).
+
+        Three layers of chrome:
+          1. Outer `<div class="dz-card-wrapper">` carrying drag/resize
+             contract attrs (`data-card-id`, `data-card-region`,
+             `data-card-col-span`, `data-card-row-order`,
+             `style="grid-column: span N / span N"`, `tabindex="0"`,
+             optional `is-animating` + caller-supplied `css_class`).
+          2. `<article class="dz-card">` with header (drag handle +
+             titles + remove button), optional notice band, and body
+             (skeleton + lazy/eager HTMX trigger).
+          3. `<div class="dz-card-resize">` aria-hidden trailing handle.
+
+        Trigger is `'load'` when `eager=True` (above-the-fold; #864) and
+        `'intersect once'` when lazy. SSE adds three entity events to
+        the trigger when the workspace's grid carries `sse_url`."""
+        wrapper_class = (
+            f"dz-card-wrapper {c.css_class} is-animating"
+            if c.css_class
+            else "dz-card-wrapper is-animating"
+        )
+
+        # ── Header: drag handle, titles (eyebrow + h3), remove button
+        eyebrow_html = (
+            f'<span class="dz-card-eyebrow">{ctx.escape(c.eyebrow)}</span>' if c.eyebrow else ""
+        )
+        header_html = (
+            f'<div class="dz-card-header" data-test-id="dz-card-drag-handle">'
+            f'<div class="dz-card-titles">'
+            f"{eyebrow_html}"
+            f'<h3 id="card-title-{ctx.escape_attr(c.card_id)}" '
+            f'class="dz-card-title">{ctx.escape(c.title)}</h3>'
+            f"</div>"
+            f'<div class="dz-card-actions">'
+            f'<button data-test-id="dz-card-remove" '
+            f'class="dz-card-action-button" aria-label="Remove card">'
+            f'<svg width="14" height="14" fill="none" stroke="currentColor" '
+            f'viewBox="0 0 24 24" aria-hidden="true">'
+            f'<path stroke-linecap="round" stroke-linejoin="round" '
+            f'stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
+            f"</svg>"
+            f'<span class="visually-hidden">Remove card</span>'
+            f"</button>"
+            f"</div>"
+            f"</div>"
+        )
+
+        # ── Optional notice band (#906)
+        notice_html = ""
+        if c.notice and c.notice.title:
+            tone = c.notice.tone or "neutral"
+            body_html = (
+                f'<div class="dz-card-notice-body">{ctx.escape(c.notice.body)}</div>'
+                if c.notice.body
+                else ""
+            )
+            notice_html = (
+                f'<div class="dz-notice-band dz-card-notice" '
+                f'data-dz-notice-tone="{ctx.escape_attr(tone)}" role="note">'
+                f'<div class="dz-card-notice-title">{ctx.escape(c.notice.title)}</div>'
+                f"{body_html}"
+                f"</div>"
+            )
+
+        # ── HTMX trigger: 'load' (eager) or 'intersect once' (lazy),
+        #    plus three SSE entity events when sse_enabled.
+        trigger = "load" if c.eager else "intersect once"
+        if c.sse_enabled:
+            trigger += ", sse:entity.created, sse:entity.updated, sse:entity.deleted"
+
+        body_html = (
+            f'<div class="dz-card-body" '
+            f'id="region-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
+            f'data-display="{ctx.escape_attr(c.display.lower())}" '
+            f'hx-get="{ctx.escape_attr(c.hx_endpoint)}" '
+            f'hx-trigger="{ctx.escape_attr(trigger)}" '
+            f'hx-swap="innerHTML">'
+            f'<div class="dz-card-skeleton">'
+            f'<div class="dz-card-skeleton-line w-3-4"></div>'
+            f'<div class="dz-card-skeleton-line is-thin"></div>'
+            f'<div class="dz-card-skeleton-line is-thin w-5-6"></div>'
+            f"</div>"
+            f"</div>"
+        )
+
+        return (
+            f'<div data-card-id="{ctx.escape_attr(c.card_id)}" '
+            f'data-card-region="{ctx.escape_attr(c.name)}" '
+            f'data-card-col-span="{c.col_span}" '
+            f'data-card-row-order="{c.row_order}" '
+            f'class="{ctx.escape_attr(wrapper_class)}" '
+            f'style="grid-column: span {c.col_span} / span {c.col_span};" '
+            f'tabindex="0">'
+            f'<article class="dz-card" role="article" '
+            f'aria-labelledby="card-title-{ctx.escape_attr(c.card_id)}">'
+            f"{header_html}"
+            f"{notice_html}"
+            f"{body_html}"
+            f"</article>"
+            f'<div class="dz-card-resize" aria-hidden="true"></div>'
+            f"</div>"
+        )
 
     def _emit_workspace_toolbar(self, _t: WorkspaceToolbar, _ctx: RenderContext) -> str:
         """Render a WorkspaceToolbar matching legacy `_content.html`

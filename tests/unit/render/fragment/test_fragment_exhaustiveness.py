@@ -29,6 +29,9 @@ from dazzle.render.fragment import (
     Combobox,
     ConfirmGate,
     CsvExportButton,
+    DashboardCard,
+    DashboardGrid,
+    DashboardNotice,
     DateRangePicker,
     DetailGrid,
     Diagram,
@@ -320,6 +323,20 @@ def _sample_for(primitive_type: type) -> object:
         return WorkspacePrimaryAction(label="L", route="/x")
     if primitive_type is WorkspaceToolbar:
         return WorkspaceToolbar()
+    if primitive_type is DashboardGrid:
+        return DashboardGrid(cards=())
+    if primitive_type is DashboardCard:
+        return DashboardCard(
+            card_id="card-0",
+            name="r",
+            title="R",
+            display="LIST",
+            col_span=6,
+            row_order=0,
+            hx_endpoint="/x",
+        )
+    if primitive_type is DashboardNotice:
+        return DashboardNotice(title="N")
     if primitive_type is CardPicker:
         return CardPicker(
             entries=(CardPickerEntry(name="t", title="Tasks", entity="Task", display="list"),),

@@ -38,6 +38,8 @@ from dazzle.render.fragment.primitives.data import (
     CardPicker,
     ConfirmGate,
     CsvExportButton,
+    DashboardCard,
+    DashboardGrid,
     DateRangePicker,
     DetailGrid,
     Diagram,
@@ -161,6 +163,8 @@ Fragment = (
     | CardPicker
     | WorkspaceShell
     | WorkspaceToolbar
+    | DashboardGrid
+    | DashboardCard
     | FilterBar
     | SortHeader
     | CsvExportButton

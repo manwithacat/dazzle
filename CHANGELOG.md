@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.122] - 2026-05-09
+
+### Added — Phase 4B.5.b.2.ii — DashboardGrid + DashboardCard
+
+- **DashboardGrid + DashboardCard + DashboardNotice primitives** matching the legacy `_content.html` card-grid block byte-for-byte. The grid wraps `<div class="dz-dashboard-grid" data-grid-container role="application" aria-label="Dashboard card grid">` with optional `hx-ext="sse" sse-connect="..."` attrs when the workspace declared an `sse_url`. Each card carries the full chrome contract: `data-card-id` / `data-card-region` / `data-card-col-span` / `data-card-row-order` data-attrs, `style="grid-column: span N / span N"` inline span, `tabindex="0"` for keyboard nav, optional caller `css_class` + `is-animating` baseline, drag handle (`data-test-id="dz-card-drag-handle"`), title row with optional eyebrow chip, remove button (`data-test-id="dz-card-remove"` + close-icon SVG), optional notice band (`data-dz-notice-tone` keyed off dz-tones.css per #906), body (HTMX-triggered region fetch with `data-display` keying for the contract checker, `intersect once` lazy or `load` eager trigger per #864, plus three SSE entity events when sse_enabled), and a trailing `aria-hidden` resize handle.
+- **Five byte-equivalence dual-path tests** at `tests/unit/render/fragment/test_dashboard_grid_primitive.py` pin the contract against the legacy template (basic two-card / SSE-enabled / empty grid / notice-without-body / css_class). Eight structural unit tests pin the individual contract attributes the dashboard JS, idiomorph, contract checker, and harness all key off (drag handle test-id, aria-labelledby anchor, eager vs lazy hx-trigger, resize handle aria-hidden, notice tone data-attr, validation of required fields).
+- **`DashboardCard.__post_init__`** validates required fields: empty `card_id` / `name` / `col_span < 1` all raise. Catches malformed cards at construction time rather than producing broken markup.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | ✅ v0.66.120 |
+| 4B.5.b.2.i — WorkspaceToolbar | ✅ v0.66.121 |
+| **4B.5.b.2.ii — DashboardGrid + DashboardCard** | ✅ **v0.66.122** |
+| 4B.5.b.2.iii — AddCardRow | next |
+| 4B.5.b.3 — context selector + drawer + edit chrome | queued |
+| 4B.5.c — Layout shell port | queued |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | queued |
+
+### Agent Guidance
+- **Card chrome contract attrs are load-bearing — never let them drift.** The dashboard JS (`dashboard-builder.js`) keys off `data-card-id` / `data-card-region` / `data-card-col-span` / `data-card-row-order` for drag/resize/save mechanics; `data-test-id="dz-card-drag-handle"` anchors the INTERACTION_WALK harness (#948); `data-display` lets the contract checker dispatch per-display assertions; `data-dz-notice-tone` (#906) keys the dz-tones.css band colours; `aria-labelledby="card-title-{card_id}"` is the screen-reader contract. When porting future card-shaped chrome, replicate these attribute names verbatim — drift breaks all four downstream consumers silently.
+- **HTMX trigger is `'load'` for eager and `'intersect once'` for lazy.** Eager cards (above-the-fold per #864) fetch immediately; lazy cards defer until the user scrolls them into view. The fold count is workspace-level (`fold_count` ctx kwarg in legacy, `eager: bool` per-card in typed) — adapter computes `eager = (row_order < fold_count)`. SSE-enabled workspaces append `, sse:entity.created, sse:entity.updated, sse:entity.deleted` to the trigger so cards refresh on push events. Don't emit the SSE suffix when `sse_url` is absent — the events fire client-side regardless of the connection state and produce noisy refetches.
+
 ## [0.66.121] - 2026-05-09
 
 ### Added — Phase 4B.5.b.2.i — WorkspaceToolbar (save-state machine)
