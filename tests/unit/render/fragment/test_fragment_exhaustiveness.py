@@ -90,6 +90,7 @@ from dazzle.render.fragment import (
     Region,
     Row,
     SearchBox,
+    Sequence,
     Sidebar,
     Skeleton,
     SkipLink,
@@ -328,6 +329,8 @@ def _sample_for(primitive_type: type) -> object:
         return WorkspaceToolbar()
     if primitive_type is WorkspaceDrawer:
         return WorkspaceDrawer()
+    if primitive_type is Sequence:
+        return Sequence(children=(Text("a"), Text("b")))
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

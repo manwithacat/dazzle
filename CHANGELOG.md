@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.125] - 2026-05-09
+
+### Added — Phase 4B.5.c — full `_content.html` byte-equivalence assembly
+
+- **`Sequence` primitive** — transparent multi-child container that emits children concatenated with no surrounding markup. Distinct from Stack/Row/Grid which all wrap in a `<div>` with their own classes. Needed for chrome composition where multiple Fragments need to be siblings inside a caller-provided wrapper (e.g., the inner pieces of `_content.html` that live inside the `.dz-workspace` div).
+- **Full `_content.html` byte-equivalence test** at `tests/unit/render/fragment/test_workspace_content_full_assembly.py` — composes WorkspaceShell wrapping `Sequence(WorkspaceContextSelector?, WorkspaceToolbar, DashboardGrid, AddCardRow)` with a sibling WorkspaceDrawer, renders via FragmentRenderer, and asserts byte-equivalence vs rendering `_content.html` via Jinja with the same workspace ctx. Three fixture branches: basic two-card with primary actions / context-selector + SSE-enabled grid / empty workspace.
+- **This is the gate test for the typed-Fragment chrome port.** With it green, 4B.6 (decommission `DISPLAY_TEMPLATE_MAP` + 32 Jinja region templates + `_content.html`) is unblocked. The typed-Fragment substrate IS the canonical Dazzle rendering method for workspace dashboards.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | ✅ v0.66.120 |
+| 4B.5.b.2.i — WorkspaceToolbar | ✅ v0.66.121 |
+| 4B.5.b.2.ii — DashboardGrid + DashboardCard | ✅ v0.66.122 |
+| 4B.5.b.2.iii — AddCardRow | ✅ v0.66.123 |
+| 4B.5.b.3 — WorkspaceDrawer + WorkspaceContextSelector | ✅ v0.66.124 |
+| **4B.5.c — Full `_content.html` assembly + byte-equivalence test** | ✅ **v0.66.125** |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | next (UNBLOCKED) |
+
+### Agent Guidance
+- **`Sequence` is the right tool when you need siblings without a wrapper.** When composing chrome where the caller's outer markup already provides the structural container (e.g., `<div class="dz-workspace">...children...</div>`), Stack/Row/Grid would inject an unwanted intermediate `<div>`. Sequence concatenates children verbatim. Don't reach for it for layout — it has no flex/gap/grid semantics — but it's the canonical answer for chrome composition. Same shape as React's `<>...</>` fragment.
+- **Workspace runtime hookup is now a separate ship from primitive design.** All 4B.5.b.* sub-ships built typed primitives + structural tests against the legacy template; 4B.5.c proves they assemble byte-equivalent. The actual workspace handler still calls Jinja (`render_fragment("workspace/_content.html", ...)`) — the cutover is 4B.6's job. This separation lets the chrome port iterate without runtime risk; only the final cutover commit changes production behaviour.
+
 ## [0.66.124] - 2026-05-09
 
 ### Added — Phase 4B.5.b.3 — WorkspaceDrawer + WorkspaceContextSelector

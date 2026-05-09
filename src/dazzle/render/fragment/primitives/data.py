@@ -1455,6 +1455,21 @@ class DashboardGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class Sequence:
+    """Transparent multi-child container — emits children concatenated
+    with no surrounding markup.
+
+    Stack/Row/Grid all wrap their children in a `<div>` with their
+    own classes; Sequence does NOT — useful when you need multiple
+    sibling Fragments where the caller's markup already provides the
+    structural wrapper (e.g., chrome composition inside a
+    WorkspaceShell body where the `.dz-workspace` div is the wrapper
+    and the inner pieces are siblings, not stack-children)."""
+
+    children: tuple[object, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class WorkspaceContextSelector:
     """The optional context selector that filters workspace regions
     by an entity FK (Phase 4B.5.b.3).

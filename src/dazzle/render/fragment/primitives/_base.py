@@ -62,6 +62,7 @@ from dazzle.render.fragment.primitives.data import (
     QueueRegion,
     Radar,
     SearchBox,
+    Sequence,
     SortHeader,
     Sparkline,
     StageBar,
@@ -168,6 +169,7 @@ Fragment = (
     | WorkspaceToolbar
     | WorkspaceDrawer
     | WorkspaceContextSelector
+    | Sequence
     | DashboardGrid
     | DashboardCard
     | AddCardRow

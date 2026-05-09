@@ -77,6 +77,7 @@ from dazzle.render.fragment.primitives import (
     Region,
     Row,
     SearchBox,
+    Sequence,
     Sidebar,
     Skeleton,
     SkipLink,
@@ -368,6 +369,11 @@ class FragmentRenderer:
                 return self._emit_workspace_drawer(fragment, ctx)
             case WorkspaceContextSelector():
                 return self._emit_workspace_context_selector(fragment, ctx)
+            case Sequence():
+                return "".join(
+                    self._emit(child, ctx)  # type: ignore[arg-type]
+                    for child in fragment.children
+                )
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
