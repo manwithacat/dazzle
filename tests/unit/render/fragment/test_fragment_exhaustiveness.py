@@ -114,6 +114,8 @@ from dazzle.render.fragment import (
     Topbar,
     Tree,
     TreeNode,
+    WorkspaceContextSelector,
+    WorkspaceDrawer,
     WorkspacePrimaryAction,
     WorkspaceShell,
     WorkspaceToolbar,
@@ -324,6 +326,10 @@ def _sample_for(primitive_type: type) -> object:
         return WorkspacePrimaryAction(label="L", route="/x")
     if primitive_type is WorkspaceToolbar:
         return WorkspaceToolbar()
+    if primitive_type is WorkspaceDrawer:
+        return WorkspaceDrawer()
+    if primitive_type is WorkspaceContextSelector:
+        return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:
         return DashboardGrid(cards=())
     if primitive_type is DashboardCard:

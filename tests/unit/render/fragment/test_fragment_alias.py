@@ -83,6 +83,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "CardPicker",
         "WorkspaceShell",
         "WorkspaceToolbar",
+        "WorkspaceDrawer",
+        "WorkspaceContextSelector",
         "DashboardGrid",
         "DashboardCard",
         "AddCardRow",

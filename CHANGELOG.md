@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.124] - 2026-05-09
+
+### Added — Phase 4B.5.b.3 — WorkspaceDrawer + WorkspaceContextSelector
+
+- **WorkspaceDrawer primitive** — fixed-shape singleton matching the legacy `_content.html` drawer block byte-for-byte. Backdrop div + aside container + header (close button + optional expand link) + content slot, plus the IIFE that wires `window.dzDrawer.open()` / `.close()`, body click delegation, escape keydown, custom `dz:drawerOpen` event listener, and the htmx:afterSettle defensive close (#934). Install-once guard via `window.__dzDrawerInit` prevents N stacked listeners after N workspace nav swaps.
+- **WorkspaceContextSelector primitive** — optional context-filter dropdown (`<div class="dz-workspace-context">` + label + select + IIFE). The IIFE fetches options, restores dzPrefs-saved selection (or defaults to first real option per #870), and on change updates every `[id^="region-"][hx-get]` URL with `context_id={selected}` then re-triggers htmx (#980 round 2 guards against htmx not yet loaded). `workspace_name` and `options_url` get JSON-encoded into the script body (matches Jinja `tojson` behaviour).
+- **`render/fragment/static/` package data** — large literal HTML+JS blobs (drawer markup + IIFE, context-selector script template) now live as text assets loaded via `importlib.resources.files` at module-import time. Cleaner than inlining 100+ lines of mixed HTML/JS as a Python f-string. New `dazzle.render.fragment.static` entry in `[tool.setuptools.package-data]`.
+- **`_load_static(name)` module helper** in `renderer.py` for reading these assets. Pattern works for any future chrome primitive whose markup is too large to inline.
+- **17 byte-equivalence + structural tests** at `tests/unit/render/fragment/test_workspace_drawer_primitive.py` (7 tests) + `test_workspace_context_selector_primitive.py` (10 tests) pin the contract against the legacy `_content.html` blocks plus all the safety nets (init guard, defensive close, dzPrefs key shape, htmx-undefined fallback, JSON-encoded script substitution).
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| 4B.5.b.1 — WorkspaceShell wrapper + heading | ✅ v0.66.120 |
+| 4B.5.b.2.i — WorkspaceToolbar | ✅ v0.66.121 |
+| 4B.5.b.2.ii — DashboardGrid + DashboardCard | ✅ v0.66.122 |
+| 4B.5.b.2.iii — AddCardRow | ✅ v0.66.123 |
+| **4B.5.b.3 — WorkspaceDrawer + WorkspaceContextSelector** | ✅ **v0.66.124** |
+| 4B.5.c — Layout shell port | next (full `_content.html` byte-equivalence test gate becomes possible here) |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | queued |
+
+All inner pieces of `_content.html` are now typed primitives with byte-equivalent renderers. 4B.5.c assembles them via a `WorkspaceShell` body composing `[WorkspaceContextSelector?, WorkspaceToolbar, DashboardGrid, AddCardRow]` and then verifies full-template byte-equivalence against `_content.html`.
+
+### Agent Guidance
+- **Large literal HTML+JS blobs belong under `render/fragment/static/`.** The `_load_static(name)` helper in `renderer.py` reads them at module-import time via `importlib.resources.files()`. Use this pattern when the blob is over ~30 lines or has heavy quote-density (mixed HTML attribute quotes + JS string quotes); inlining as a Python f-string is painful past that scale. The setuptools `package-data` entry for `dazzle.render.fragment.static = ["*.html"]` already covers the directory — just drop new `.html` files in.
+- **`{PLACEHOLDER}`-style substitution is good enough for static script templates.** WorkspaceContextSelector's script carries `{WS_NAME_JSON}` and `{OPTIONS_URL_JSON}` placeholders the renderer fills via `_json_dumps()`. Keep the placeholders simple-string (UPPER_SNAKE) and unique enough not to collide with the actual content. Don't reach for f-strings or jinja for this — the simpler `.replace()` chain is easier to reason about.
+
 ## [0.66.123] - 2026-05-09
 
 ### Added — Phase 4B.5.b.2.iii — AddCardRow

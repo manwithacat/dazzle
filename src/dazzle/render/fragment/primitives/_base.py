@@ -70,6 +70,8 @@ from dazzle.render.fragment.primitives.data import (
     Timeline,
     TimeSeries,
     Tree,
+    WorkspaceContextSelector,
+    WorkspaceDrawer,
     WorkspaceShell,
     WorkspaceToolbar,
 )
@@ -164,6 +166,8 @@ Fragment = (
     | CardPicker
     | WorkspaceShell
     | WorkspaceToolbar
+    | WorkspaceDrawer
+    | WorkspaceContextSelector
     | DashboardGrid
     | DashboardCard
     | AddCardRow

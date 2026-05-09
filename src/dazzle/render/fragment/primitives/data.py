@@ -1455,6 +1455,56 @@ class DashboardGrid:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkspaceContextSelector:
+    """The optional context selector that filters workspace regions
+    by an entity FK (Phase 4B.5.b.3).
+
+    Renders `<div class="dz-workspace-context">` with a `<label>` +
+    `<select id="dz-context-selector">` carrying the default `All`
+    option, plus an inline IIFE that:
+      1. Fetches options from `options_url` and populates the select.
+      2. Restores any `dzPrefs`-saved selection or defaults to the
+         first real option (the legacy "All" landing-page-empty fix
+         per #870).
+      3. Updates every `[id^="region-"][hx-get]` element's hx-get to
+         carry `context_id={selected}` and re-triggers the htmx fetch
+         (#980 round 2 guards against htmx not yet loaded).
+
+    `workspace_name` keys the dzPrefs storage (`workspace.X.context`).
+    `label` is the resolved display string (adapter applies the
+    `context_selector_label or entity.replace('_', ' ')` fallback)."""
+
+    workspace_name: str
+    options_url: str
+    label: str
+
+    def __post_init__(self) -> None:
+        if not self.workspace_name:
+            raise ValueError("WorkspaceContextSelector requires a workspace_name")
+        if not self.options_url:
+            raise ValueError("WorkspaceContextSelector requires an options_url")
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceDrawer:
+    """Detail-drawer singleton (Phase 4B.5.b.3).
+
+    The drawer is a fixed shape: backdrop div + aside container +
+    header (close button + optional expand link) + content slot, plus
+    the IIFE that wires `window.dzDrawer.open()` / `.close()` and the
+    document-level htmx:afterSettle defensive close (#934).
+
+    The IIFE installs an init guard (`window.__dzDrawerInit`) so the
+    listeners are registered exactly once across the session — the
+    drawer markup gets re-emitted on every workspace nav swap, but
+    the listeners are only added on the first emission.
+
+    No parameters — the entire markup + script is emitted verbatim
+    from the canonical static asset (`render/fragment/static/
+    workspace_drawer.html`)."""
+
+
+@dataclass(frozen=True, slots=True)
 class AddCardRow:
     """The "Add Card" row that anchors the picker popover (Phase 4B.5.b.2.iii).
 

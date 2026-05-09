@@ -98,9 +98,12 @@ from dazzle.render.fragment.primitives import (
     Topbar,
     Tree,
     TreeNode,
+    WorkspaceContextSelector,
+    WorkspaceDrawer,
     WorkspaceShell,
     WorkspaceToolbar,
 )
+
 
 # Mermaid CDN loader script — emitted byte-for-byte by `_emit_diagram`
 # when a `Diagram(mermaid_source=...)` is rendered. Keeps the version
@@ -108,6 +111,31 @@ from dazzle.render.fragment.primitives import (
 # `workspace/regions/diagram.html` template; bumping the pinned
 # Mermaid version means updating BOTH this string and the legacy
 # template (the dual-path test will catch any drift).
+def _load_static(name: str) -> str:
+    """Read a literal HTML/JS asset bundled under
+    `src/dazzle/render/fragment/static/`.
+
+    Used by chrome primitives that emit large, fixed-shape blobs (the
+    WorkspaceDrawer markup + IIFE, future context-selector script).
+    Cached at module-import time — the file content is read once."""
+    from importlib.resources import files
+
+    return (files("dazzle.render.fragment.static") / name).read_text()
+
+
+# Workspace drawer — backdrop + aside + IIFE that wires `dzDrawer.open()` /
+# `.close()` and the document-level htmx:afterSettle defensive close
+# (#934). Loaded from the static asset because the IIFE is ~120 lines
+# of mixed HTML + JS with quote-density that's painful to inline as a
+# Python f-string. Read once at module-import time, then cached.
+_WORKSPACE_DRAWER_HTML = _load_static("workspace_drawer.html")
+
+# Workspace context selector — `<script>` body with `{WS_NAME_JSON}` and
+# `{OPTIONS_URL_JSON}` placeholders the renderer fills in via
+# `json.dumps()`. Same loading pattern as the drawer.
+_WORKSPACE_CONTEXT_SCRIPT_TEMPLATE = _load_static("workspace_context_script.html")
+
+
 # Workspace toolbar — emitted byte-for-byte by `_emit_workspace_toolbar`
 # (Phase 4B.5.b.2.i). Fixed shape: Reset button + Save button with
 # five x-cloak+x-show saveState spans (clean/dirty/saving/saved/error).
@@ -336,6 +364,10 @@ class FragmentRenderer:
                 return self._emit_workspace_shell(fragment, ctx)
             case WorkspaceToolbar():
                 return self._emit_workspace_toolbar(fragment, ctx)
+            case WorkspaceDrawer():
+                return self._emit_workspace_drawer(fragment, ctx)
+            case WorkspaceContextSelector():
+                return self._emit_workspace_context_selector(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -2843,6 +2875,49 @@ class FragmentRenderer:
             f'<div class="dz-card-resize" aria-hidden="true"></div>'
             f"</div>"
         )
+
+    def _emit_workspace_context_selector(
+        self, c: WorkspaceContextSelector, ctx: RenderContext
+    ) -> str:
+        """Render a WorkspaceContextSelector matching legacy `_content.html`
+        context-selector block byte-for-byte (Phase 4B.5.b.3).
+
+        Two parts: the `<div class="dz-workspace-context">` markup
+        (label + select with default `All` option), and the IIFE that
+        fetches the options, restores dzPrefs, and updates region
+        hx-get URLs on change. The IIFE template carries `WS_NAME_JSON`
+        and `OPTIONS_URL_JSON` placeholders that we fill via
+        `json.dumps` to match legacy Jinja `tojson` behaviour."""
+        from json import dumps as _json_dumps
+
+        markup = (
+            f'<div class="dz-workspace-context">'
+            f'<label class="dz-workspace-context-label" for="dz-context-selector">'
+            f"{ctx.escape(c.label)}:</label>"
+            f'<select id="dz-context-selector" class="dz-workspace-context-select">'
+            f'<option value="">All</option>'
+            f"</select>"
+            f"</div>"
+        )
+        script = _WORKSPACE_CONTEXT_SCRIPT_TEMPLATE.replace(
+            "{WS_NAME_JSON}", _json_dumps(c.workspace_name)
+        ).replace("{OPTIONS_URL_JSON}", _json_dumps(c.options_url))
+        return markup + script
+
+    def _emit_workspace_drawer(self, _d: WorkspaceDrawer, _ctx: RenderContext) -> str:
+        """Render a WorkspaceDrawer matching legacy `_content.html`
+        drawer block byte-for-byte (Phase 4B.5.b.3).
+
+        Fixed-shape singleton — no parameters. Markup + IIFE loaded
+        from the canonical static asset
+        (`render/fragment/static/workspace_drawer.html`). The IIFE
+        installs an init guard so the document-level listeners
+        (`dz:drawerOpen`, body click delegation, escape keydown,
+        htmx:afterSettle defensive close) are registered exactly
+        once across the session — the drawer markup gets re-emitted
+        on every workspace nav swap, but the listeners are only added
+        on the first emission."""
+        return _WORKSPACE_DRAWER_HTML
 
     def _emit_workspace_toolbar(self, _t: WorkspaceToolbar, _ctx: RenderContext) -> str:
         """Render a WorkspaceToolbar matching legacy `_content.html`

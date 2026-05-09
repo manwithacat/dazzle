@@ -1,0 +1,51 @@
+<script>
+  (function() {
+    var sel = document.getElementById('dz-context-selector');
+    if (!sel) return;
+    var wsName = {WS_NAME_JSON};
+    var prefKey = 'workspace.' + wsName + '.context';
+    fetch({OPTIONS_URL_JSON})
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        (data.options || []).forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt.id;
+          o.textContent = opt.label;
+          sel.appendChild(o);
+        });
+        var saved = window.dzPrefs ? window.dzPrefs.get(prefKey) : null;
+        if (saved) {
+          sel.value = saved;
+        } else if (sel.options.length > 1) {
+          // No saved preference: default to the first real option. The
+          // hard-coded "All" entry produces an empty landing page on
+          // workspaces whose regions filter by current_context (#870).
+          sel.value = sel.options[1].value;
+        }
+        sel.dispatchEvent(new Event('change'));
+      });
+    sel.addEventListener('change', function() {
+      var val = sel.value;
+      if (window.dzPrefs) { if (val) window.dzPrefs.set(prefKey, val); else window.dzPrefs.del(prefKey); }
+      document.querySelectorAll('[id^="region-"][hx-get]').forEach(function(el) {
+        var url = el.getAttribute('hx-get');
+        var base = url.split('?')[0];
+        var params = new URLSearchParams(url.split('?')[1] || '');
+        if (val) params.set('context_id', val); else params.delete('context_id');
+        var qs = params.toString();
+        var newUrl = base + (qs ? '?' + qs : '');
+        el.setAttribute('hx-get', newUrl);
+        // #980 round 2: guard against htmx not yet loaded. The initial
+        // sel.dispatchEvent(new Event('change')) fires synchronously
+        // when this inline script runs, BEFORE the deferred htmx.min.js
+        // has executed. On post-login first nav this raced 100% of the
+        // time. Skip the manual triggers when htmx is missing — the
+        // updated hx-get attribute will still be honoured by htmx once
+        // it loads and processes the page.
+        if (typeof htmx === 'undefined') return;
+        htmx.process(el);
+        htmx.ajax('GET', newUrl, {target: '#' + el.id, swap: 'innerHTML'});
+      });
+    });
+  })();
+  </script>
