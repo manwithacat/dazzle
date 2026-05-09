@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.127] - 2026-05-09
+
+### Fixed
+
+- **#1032 — packaged-wheel boot crash on `dazzle.render.fragment.static` ModuleNotFoundError.** v0.66.124 added the `_load_static()` helper + two HTML asset files (`workspace_drawer.html`, `workspace_context_script.html`) that the renderer reads at module-import time via `importlib.resources.files("dazzle.render.fragment.static")`. The package-data entry was declared in `pyproject.toml`, but the directory had no `__init__.py`. With `[tool.setuptools.packages.find]` configured `namespaces = false`, setuptools' `find_packages` excluded the directory from the wheel — `importlib.resources` then raised `ModuleNotFoundError` on every packaged install (cyfuture-staging crashed at boot, rolled back to v0.66.45). Editable installs (`pip install -e .`) bypassed the bug by resolving the path on disk regardless. Fix is the missing `__init__.py`.
+- **Regression test added** at `tests/unit/test_fragment_static_assets_packaging.py` — pins (1) the `__init__.py` exists, (2) the `pyproject.toml` package-data entry is present, (3) both static assets load via `_load_static`, (4) the renderer module imports cleanly with both module-level constants populated. Catches future drift before packaged installs see it.
+- **Verified** by building a wheel from the repo, installing it into a fresh venv, and importing `WorkspaceDrawer` + `WorkspaceContextSelector` end-to-end — both render their full markup (5,331b drawer, 2,502b selector).
+
+### Agent Guidance
+
+- **`importlib.resources.files("X")` requires `X` to be an importable package, not just a directory inside one.** With `namespaces = false` (the project's setuptools config), `__init__.py` is mandatory for any directory you want to load assets from. Drop an `__init__.py` in alongside the assets, declare the package in `[tool.setuptools.package-data]`, and pin both with a regression test. The bug is invisible in editable installs — only packaged-wheel installs surface it.
+
 ## [0.66.126] - 2026-05-09
 
 ### Added — Phase 4B.5.c follow-on — opt-in typed render in workspace handler + 17-app real-world sweep
