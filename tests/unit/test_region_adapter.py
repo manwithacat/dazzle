@@ -1286,13 +1286,20 @@ def test_diagram_drops_edges_with_unknown_endpoints() -> None:
     assert html.count("A") >= 2
 
 
-def test_diagram_empty_renders_empty_state() -> None:
+def test_diagram_empty_renders_legacy_hardcoded_message() -> None:
+    """v0.66.118: empty diagram emits `<p class="dz-diagram-empty">…</p>`
+    matching the legacy template's hardcoded copy. region.empty_message
+    is no longer threaded through — the legacy template hardcodes the
+    string and we match it for byte-equivalence."""
     adapter = WorkspaceRegionAdapter()
     fragment = adapter.build(
-        _FakeRegion("d", display="diagram", empty_message="No diagram."),
+        _FakeRegion("d", display="diagram", empty_message="ignored"),
         {"nodes": []},
     )
-    assert "No diagram." in _render(fragment)
+    html = _render(fragment)
+    assert "dz-diagram-empty" in html
+    assert "No entity relationships to display." in html
+    assert "ignored" not in html  # region.empty_message is intentionally ignored
 
 
 def test_heatmap_renders_dedicated_primitive() -> None:

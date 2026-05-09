@@ -1455,17 +1455,38 @@ class WorkspaceRegionAdapter:
         return _wrap_surface(title, "report", body)
 
     def _build_diagram(self, region: Any, ctx: dict[str, Any]) -> Surface:
-        """`display: diagram` renders an entity-relationship-style
-        node/edge graph via the new Diagram primitive.
+        """`display: diagram` renders an entity-relationship diagram via
+        the Diagram primitive.
 
-        ctx shape:
-            nodes: list[str] — node labels (typically entity names)
-            edges: list[(str, str)] — directed edges as (from, to) pairs
-                or list[dict{"from": str, "to": str}]
-            (legacy) `relations` is accepted as alias for `edges`
+        Phase 4B preferred: `ctx['diagram_data']` carries Mermaid syntax
+        produced by `_build_diagram_data` in the workspace renderer; we
+        forward it as `Diagram.mermaid_source` and the renderer emits
+        a `<pre class="mermaid">` + Mermaid CDN loader script matching
+        the legacy `workspace/regions/diagram.html` byte-for-byte.
+
+        Phase 4A fallback (no `diagram_data`): construct a structural
+        node/edge list from `ctx['nodes']` + `ctx['edges']`. Used by
+        tests + any consumer that hasn't built a Mermaid source.
         """
         title = _region_title(region)
+        mermaid_source = str(ctx.get("diagram_data") or "")
+        # Legacy template hardcodes the empty-state copy — match it
+        # verbatim for byte-equivalence rather than reading
+        # region.empty_message.
+        empty_message = "No entity relationships to display."
+
+        if mermaid_source:
+            body: Fragment = Diagram(mermaid_source=mermaid_source)
+            return _wrap_surface(title, "report", body)
+
         nodes = tuple(str(n) for n in (ctx.get("nodes") or []) if n)
+        if not nodes:
+            # Empty branch matches the legacy template's literal markup
+            # (`<p class="dz-diagram-empty">…</p>`) for byte-equivalence;
+            # the generic dz-empty-state primitive emits different chrome.
+            empty_html = f'<p class="dz-diagram-empty">{_html_escape(empty_message)}</p>'
+            return _wrap_surface(title, "report", RawHTML(empty_html))
+
         raw_edges = ctx.get("edges") or ctx.get("relations") or []
         edges: list[tuple[str, str]] = []
         node_set = set(nodes)
@@ -1477,22 +1498,10 @@ class WorkspaceRegionAdapter:
             elif isinstance(entry, dict):
                 src = str(entry.get("from") or entry.get("source") or "")
                 dst = str(entry.get("to") or entry.get("target") or "")
-            # Drop edges that reference unknown nodes — Diagram's
-            # __post_init__ raises on these and the runtime should
-            # cope rather than crash.
             if src and dst and src in node_set and dst in node_set:
                 edges.append((src, dst))
 
-        body: Fragment
-        if not nodes:
-            body = EmptyState(
-                title="No diagram",
-                description=getattr(region, "empty_message", None) or "No nodes to diagram.",
-            )
-        else:
-            body = Diagram(nodes=nodes, edges=tuple(edges))
-
-        return _wrap_surface(title, "report", body)
+        return _wrap_surface(title, "report", Diagram(nodes=nodes, edges=tuple(edges)))
 
     def _build_confirm_action_panel(self, region: Any, ctx: dict[str, Any]) -> Surface:
         """`display: confirm_action_panel` renders a `ConfirmGate`

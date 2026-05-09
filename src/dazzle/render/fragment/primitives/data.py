@@ -1330,22 +1330,31 @@ class TimeSeries:
 class Diagram:
     """Node-and-edge graph (e.g. an entity-relationship diagram).
 
-    The primitive captures structure only: a list of named nodes and
-    directed edges between them. Layout is the renderer's concern;
-    Phase 4A renders nodes as labelled boxes and edges as `from → to`
-    rows. A future iteration can produce SVG or wire a JS layout
-    engine without changing the IR shape.
+    Two rendering modes:
+      - `mermaid_source` non-empty: emit `<pre class="mermaid">` carrying
+        the raw Mermaid syntax + the Mermaid CDN loader script. Matches
+        the legacy `workspace/regions/diagram.html` byte-for-byte. This
+        is the preferred runtime path (production runtime computes a
+        Mermaid `erDiagram` source via `_build_diagram_data`).
+      - `mermaid_source` empty + nodes non-empty: emit a structural
+        node/edge list (Phase 4A fallback). Useful for tests and any
+        consumer that hasn't built a Mermaid source.
+
+    The empty-state path (no nodes, no source) is the adapter's
+    responsibility — produce an `EmptyState` instead of a `Diagram`.
     """
 
-    nodes: tuple[str, ...]
+    nodes: tuple[str, ...] = ()
     edges: tuple[tuple[str, str], ...] = ()
+    mermaid_source: str = ""
 
     def __post_init__(self) -> None:
-        if not self.nodes:
-            raise ValueError("Diagram requires at least one node")
-        node_set = set(self.nodes)
-        for f, t in self.edges:
-            if f not in node_set:
-                raise ValueError(f"edge from {f!r} not in declared nodes")
-            if t not in node_set:
-                raise ValueError(f"edge to {t!r} not in declared nodes")
+        if not self.nodes and not self.mermaid_source:
+            raise ValueError("Diagram requires nodes OR a mermaid_source")
+        if self.nodes:
+            node_set = set(self.nodes)
+            for f, t in self.edges:
+                if f not in node_set:
+                    raise ValueError(f"edge from {f!r} not in declared nodes")
+                if t not in node_set:
+                    raise ValueError(f"edge to {t!r} not in declared nodes")

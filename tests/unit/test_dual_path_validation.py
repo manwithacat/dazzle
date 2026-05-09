@@ -1018,6 +1018,122 @@ def test_queue_achieves_byte_equivalence() -> None:
     )
 
 
+def test_confirm_action_panel_off_checklist_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.118): CONFIRM_ACTION_PANEL byte-equivalent.
+    Off-state path: checklist with required + optional confirmations,
+    `dzConfirmGate(N)` Alpine wiring, dual button (secondary + primary
+    with `:href`/`:aria-disabled`/`:class` Alpine bindings), and the
+    audit footer. Three branches verified — see follow-on tests."""
+    ctx = {
+        "title": "Authorise sync",
+        "state_value": "off",
+        "confirmations": [
+            {
+                "title": "I understand this is irreversible",
+                "caption": "No undo.",
+                "required": True,
+            },
+            {"title": "I have checked the data", "required": True},
+            {"title": "Optional ack"},
+        ],
+        "primary_action_url": "/api/commit",
+        "secondary_action_url": "/api/draft",
+        "audit_enabled": True,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("confirm_action_panel", region_name="c", **ctx),
+            render_via_typed("confirm_action_panel", ctx, region_name="c"),
+        )
+        is None
+    )
+
+
+def test_confirm_action_panel_live_state_byte_equivalence() -> None:
+    """Live-state path: `Currently live` summary tile + revoke action."""
+    ctx = {
+        "title": "Sync",
+        "state_value": "live",
+        "revoke_url": "/api/revoke",
+        "audit_enabled": True,
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("confirm_action_panel", region_name="c", **ctx),
+            render_via_typed("confirm_action_panel", ctx, region_name="c"),
+        )
+        is None
+    )
+
+
+def test_confirm_action_panel_revoked_state_byte_equivalence() -> None:
+    """Revoked-state path: muted summary tile + re-enable action."""
+    ctx = {
+        "title": "Sync",
+        "state_value": "revoked",
+        "primary_action_url": "/api/reenable",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("confirm_action_panel", region_name="c", **ctx),
+            render_via_typed("confirm_action_panel", ctx, region_name="c"),
+        )
+        is None
+    )
+
+
+def test_confirm_action_panel_low_friction_no_checklist_byte_equivalence() -> None:
+    """Off-state with no checklist: dual button alone (primary `Confirm`
+    label, no Alpine gating since there's no gate to satisfy)."""
+    ctx = {
+        "title": "Sync",
+        "state_value": "off",
+        "primary_action_url": "/api/go",
+        "secondary_action_url": "/api/draft",
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("confirm_action_panel", region_name="c", **ctx),
+            render_via_typed("confirm_action_panel", ctx, region_name="c"),
+        )
+        is None
+    )
+
+
+def test_diagram_mermaid_source_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.118): DIAGRAM byte-equivalent. With
+    `diagram_data` (Mermaid `erDiagram` source) the typed Diagram emits
+    `<pre class="mermaid">` + CDN loader script matching the legacy
+    `workspace/regions/diagram.html` byte-for-byte."""
+    src = (
+        "erDiagram\n"
+        "    Manuscript {\n        str title\n    }\n"
+        "    Manuscript }o--|| Author : author\n"
+        "    Author {\n        str name\n    }"
+    )
+    ctx = {"title": "ER", "diagram_data": src}
+    assert (
+        diff_summary(
+            render_via_legacy("diagram", region_name="d", **ctx),
+            render_via_typed("diagram", ctx, region_name="d"),
+        )
+        is None
+    )
+
+
+def test_diagram_empty_byte_equivalence() -> None:
+    """No `diagram_data` → both paths emit
+    `<p class="dz-diagram-empty">No entity relationships to display.</p>`."""
+    ctx: dict[str, object] = {"title": "ER"}
+    assert (
+        diff_summary(
+            render_via_legacy("diagram", region_name="d", **ctx),
+            render_via_typed("diagram", ctx, region_name="d"),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

@@ -96,6 +96,33 @@ from dazzle.render.fragment.primitives import (
     TreeNode,
 )
 
+# Mermaid CDN loader script — emitted byte-for-byte by `_emit_diagram`
+# when a `Diagram(mermaid_source=...)` is rendered. Keeps the version
+# pin + SRI hash + comments aligned with the legacy
+# `workspace/regions/diagram.html` template; bumping the pinned
+# Mermaid version means updating BOTH this string and the legacy
+# template (the dual-path test will catch any drift).
+_DIAGRAM_MERMAID_SCRIPT = (
+    "<script>\n"
+    '    if (typeof mermaid === "undefined") {\n'
+    '      var s = document.createElement("script");\n'
+    "      // Pinned version + SRI hash (#830 Phase 1 of external-resource hardening).\n"
+    "      // Hash regenerated when the pinned version is bumped — `curl -sL <url> |\n"
+    "      // openssl dgst -sha384 -binary | openssl base64 -A`.\n"
+    '      s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.min.js";\n'
+    '      s.integrity = "sha384-1CMXl090wj8Dd6YfnzSQUOgWbE6suWCaenYG7pox5AX7apTpY3PmJMeS2oPql4Gk";\n'
+    '      s.crossOrigin = "anonymous";\n'
+    "      s.onload = function () {\n"
+    '        mermaid.initialize({ startOnLoad: true, theme: "neutral" });\n'
+    "        mermaid.run();\n"
+    "      };\n"
+    "      document.head.appendChild(s);\n"
+    "    } else {\n"
+    "      mermaid.run();\n"
+    "    }\n"
+    "  </script>"
+)
+
 
 class FragmentRenderer:
     """Emit HTML from a Fragment tree.
@@ -953,13 +980,28 @@ class FragmentRenderer:
         return f'<div class="{cls}"><ul>{events}</ul></div>'
 
     def _emit_diagram(self, d: Diagram, ctx: RenderContext) -> str:
-        """Render an entity-relationship diagram as a paired
-        nodes-list + edges-list.
+        """Render an entity-relationship diagram.
 
-        Phase 4A renders nodes as labelled `<li>` boxes and edges as
-        `from → to` rows. A future iteration can produce SVG or wire
-        a JS layout engine without changing the IR shape.
+        Phase 4B.4 wave 4 (v0.66.118) — two modes:
+
+        Mermaid mode (`mermaid_source` non-empty): emit `<pre class="mermaid">`
+        carrying the raw Mermaid syntax + the legacy Mermaid CDN loader
+        script. Byte-equivalent to the legacy `diagram.html` template.
+
+        Structural mode (`mermaid_source` empty): nodes as labelled `<li>`
+        boxes and edges as `from → to` rows (Phase 4A fallback,
+        retained for tests and any consumer that hasn't built Mermaid
+        source).
         """
+        if d.mermaid_source:
+            return (
+                f'<div class="dz-diagram-scroll">'
+                f'<pre class="mermaid dz-diagram-source">'
+                f"{ctx.escape(d.mermaid_source)}"
+                f"</pre>"
+                f"</div>"
+                f"{_DIAGRAM_MERMAID_SCRIPT}"
+            )
         nodes_html = "".join(
             f'<li class="dz-diagram__node" data-key="{ctx.escape_attr(name)}">'
             f"{ctx.escape(name)}</li>"

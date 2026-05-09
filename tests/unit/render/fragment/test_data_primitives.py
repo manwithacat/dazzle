@@ -125,9 +125,19 @@ def test_pivot_table_cells_immutable_after_construction() -> None:
 # === Diagram ===
 
 
-def test_diagram_requires_at_least_one_node() -> None:
-    with pytest.raises(ValueError, match="at least one node"):
+def test_diagram_requires_nodes_or_mermaid_source() -> None:
+    """v0.66.118: Diagram now accepts EITHER `nodes` OR `mermaid_source`.
+    The empty case (neither set) still rejects."""
+    with pytest.raises(ValueError, match="nodes OR a mermaid_source"):
         Diagram(nodes=())
+
+
+def test_diagram_accepts_mermaid_source_without_nodes() -> None:
+    """A Mermaid-source-only Diagram is valid; the renderer emits the
+    `<pre class="mermaid">` + CDN script form instead of node/edge lists."""
+    d = Diagram(mermaid_source="erDiagram\n    A {\n        str x\n    }")
+    assert d.nodes == ()
+    assert d.mermaid_source.startswith("erDiagram")
 
 
 def test_diagram_rejects_edge_with_unknown_from() -> None:

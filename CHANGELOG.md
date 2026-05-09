@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.118] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — CONFIRM_ACTION_PANEL + DIAGRAM byte-equivalent (wave 4 complete, 32/32)
+
+- **CONFIRM_ACTION_PANEL** — verified byte-equivalent across all four state branches via four new dual-path tests (off+checklist+audit, live+revoke, revoked+re-enable, low-friction-no-checklist). The renderer + adapter were already complete in earlier wave 4 work; this release adds the verification gate so any regression is caught at CI time.
+- **DIAGRAM** — extended the `Diagram` primitive with an optional `mermaid_source: str` field. When set, the renderer emits `<div class="dz-diagram-scroll"><pre class="mermaid dz-diagram-source">{source}</pre></div>` followed by the Mermaid CDN loader script (pinned to `mermaid@11.14.0` with the legacy SRI hash). Adapter forwards `ctx['diagram_data']` straight through. The empty branch matches the legacy template's literal `<p class="dz-diagram-empty">No entity relationships to display.</p>` (the typed adapter no longer reads `region.empty_message` for this display — the legacy hardcodes the copy).
+- **`Diagram.__post_init__`** — relaxed: now accepts EITHER `nodes` non-empty OR `mermaid_source` non-empty. Empty-empty still rejects. Preserves the structural node/edge list path for tests + any consumer that hasn't built a Mermaid source.
+
+### Phase 4B.4 wave 4 — COMPLETE
+
+| Display | Status |
+|---|---|
+| KANBAN, ACTION_GRID, PROFILE_CARD, TABBED_LIST, HEATMAP, PIVOT_TABLE, QUEUE | ✅ |
+| **CONFIRM_ACTION_PANEL** | ✅ **v0.66.118** |
+| **DIAGRAM** | ✅ **v0.66.118** |
+
+**32 of 32 displays byte-equivalent (100%).** Wave 4 complete. Next: Phase 4B.5 — workspace chrome port (page shell, sidebar, topbar, dashboard slot, filter bar around regions). Then Phase 4B.6 — decommission `DISPLAY_TEMPLATE_MAP` and delete the 32 Jinja region templates.
+
+### Agent Guidance
+- **`Diagram.mermaid_source` is the canonical runtime path.** The structural node/edge list rendering remains for unit tests and any consumer that holds the IR shape directly, but the production runtime computes Mermaid `erDiagram` syntax via `_build_diagram_data` in `src/dazzle_ui/runtime/workspace_renderer.py` and passes it as `ctx['diagram_data']` — adapter forwards as `Diagram.mermaid_source`. When bumping the pinned Mermaid version (currently `11.14.0`), update BOTH the legacy `workspace/regions/diagram.html` template AND the `_DIAGRAM_MERMAID_SCRIPT` constant in `src/dazzle/render/fragment/renderer.py`. The dual-path test `test_diagram_mermaid_source_byte_equivalence` will catch any drift.
+- **Wave 4 is closed; the `_BUILDERS` table is now feature-complete.** Going into Phase 4B.5, every display value from `DISPLAY_TEMPLATE_MAP` resolves to a typed adapter producing byte-equivalent HTML against its Jinja sibling. The remaining work to ship the typed-Fragment substrate as the canonical renderer is workspace chrome (Phase 4B.5) and decommissioning the Jinja templates (Phase 4B.6).
+
 ## [0.66.117] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — QUEUE byte-equivalent

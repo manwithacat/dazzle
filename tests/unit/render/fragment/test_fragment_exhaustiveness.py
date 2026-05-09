@@ -202,6 +202,8 @@ def _sample_for(primitive_type: type) -> object:
             cells={("r", "c"): 0},
         )
     if primitive_type is Diagram:
+        # v0.66.118: Diagram now accepts mermaid_source as an alternative
+        # to nodes; node/edge form remains valid and is what we exercise here.
         return Diagram(nodes=("A", "B"), edges=(("A", "B"),))
     if primitive_type is TimeSeries:
         return TimeSeries(label="x", points=(("a", 1.0),))
