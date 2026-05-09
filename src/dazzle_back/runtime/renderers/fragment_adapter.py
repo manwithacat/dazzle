@@ -70,10 +70,12 @@ class FragmentSurfaceAdapter:
 
         body: Fragment
         if not items:
-            body = EmptyState(
-                title="No items yet",
-                description="Items will appear here when they are added.",
-            )
+            # Issue #1029 phase 4: pick the right empty-state message
+            # based on `empty_kind` (#807). Priority: typed variant
+            # (collection / filtered / forbidden) → generic
+            # `empty_message` → framework default.
+            empty_title, empty_description = _pick_empty_state(ctx)
+            body = EmptyState(title=empty_title, description=empty_description)
         else:
             column_labels = tuple(col.get("label", col.get("key", "")) for col in columns)
             rows = tuple(
@@ -434,6 +436,33 @@ def _field_to_primitive(field_dict: dict[str, Any]) -> "Field | Combobox | RefPi
         placeholder=placeholder,
         initial_value=initial_value,
     )
+
+
+def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
+    """Issue #1029 phase 4: choose the empty-state title + description
+    based on `empty_kind` and the typed empty variants (#807).
+
+    Priority within each kind:
+      1. The kind-specific message (`empty_collection` / `empty_filtered`
+         / `empty_forbidden`) when set.
+      2. The generic `empty_message` field.
+      3. A framework default.
+
+    Returns `(title, description)`. The legacy template puts the
+    message in the description slot and synthesises a short title
+    from the kind (e.g. "No matches" for filtered); we mirror that
+    contract here."""
+    kind = str(ctx.get("empty_kind", "") or "collection").lower()
+    typed_keys = {
+        "collection": ("empty_collection", "No items yet"),
+        "filtered": ("empty_filtered", "No matches"),
+        "forbidden": ("empty_forbidden", "Not available"),
+    }
+    typed_key, default_title = typed_keys.get(kind, ("empty_collection", "No items yet"))
+    typed_value = str(ctx.get(typed_key, "") or "").strip()
+    generic_message = str(ctx.get("empty_message", "") or "").strip()
+    description = typed_value or generic_message or "Items will appear here when they are added."
+    return default_title, description
 
 
 def _resolve_row_links(

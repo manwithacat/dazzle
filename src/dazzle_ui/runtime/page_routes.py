@@ -1087,6 +1087,12 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             "page_size": int(getattr(table, "page_size", 20) or 20),
             "region_name": getattr(table, "table_id", "") or "",
             "empty_message": getattr(table, "empty_message", "") or "No items found.",
+            # Issue #1029 phase 4: typed empty-state variants (#807).
+            # Adapter picks the right one based on `empty_kind`.
+            "empty_collection": getattr(table, "empty_collection", "") or "",
+            "empty_filtered": getattr(table, "empty_filtered", "") or "",
+            "empty_forbidden": getattr(table, "empty_forbidden", "") or "",
+            "empty_kind": getattr(table, "empty_kind", "") or "collection",
             # CI-fix: thread create_url through so the Fragment list
             # adapter can emit a Create link required by the UX
             # contract checker (rbac:<Entity>:<persona>:create).

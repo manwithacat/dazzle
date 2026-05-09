@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.136] - 2026-05-09
+
+### Added — #1029 Phase 4 — LIST adapter typed empty messages (#807)
+
+- **Typed empty-state variants threaded through dispatch ctx** for LIST surfaces — `_build_dispatch_ctx` now exposes `empty_collection`, `empty_filtered`, `empty_forbidden`, and `empty_kind` alongside the existing `empty_message`. Pre-fix only `empty_message` was forwarded; the typed variants from DSL `empty:` blocks were silently dropped.
+- **`_pick_empty_state(ctx)` adapter helper** — picks the right empty-state copy based on `empty_kind` (`"collection"` / `"filtered"` / `"forbidden"`). Priority: kind-specific variant → generic `empty_message` → framework default. Each kind also synthesises an appropriate title ("No items yet" / "No matches" / "Not available") matching legacy template behaviour.
+- **`FragmentSurfaceAdapter._build_list`** empty branch now calls `_pick_empty_state(ctx)` instead of hardcoding `"No items yet"` + `"Items will appear here when they are added."`. DSL authors writing custom `empty:` copy now see it surface on the rendered list.
+- **Twelve regression tests** at `tests/unit/test_dispatch_ctx_list_empty_state.py` pin: dispatch ctx threading + default kind, helper priority across all three kinds + fallback chain + unknown-kind defensive handling, end-to-end render of all variants + the dispatch-default fallback.
+
+### Phase plan
+
+This is Phase 4 of 7 for issue #1029. Remaining: search+filter (Phase 5), sort headers (Phase 6), bulk actions (Phase 7).
+
+### Agent Guidance
+
+- **Empty-state messages have three kinds, pick by intent.** `collection` (genuinely empty — DSL author's onboarding copy applies, "Add your first X"), `filtered` (filters returned no rows — "No matches, try a different search"), `forbidden` (RBAC denies access — "You don't have permission"). Each kind has its own title in the legacy template; the typed adapter mirrors that. When porting future per-state copy fields (loading, error, etc.), follow the same `kind`-keyed dispatch pattern.
+
 ## [0.66.135] - 2026-05-09
 
 ### Added — #1029 Phase 3 — LIST adapter CreateButton with full RBAC contract
