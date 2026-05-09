@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.115] - 2026-05-09
+
+### Added — Phase 4B.4 wave 4 — HEATMAP byte-equivalent
+- **HEATMAP** — new `Heatmap` + `HeatmapRow` primitives + dedicated `_build_heatmap` (replaces alias to pivot_table). Outer `dz-heatmap-region` wrapping `dz-heatmap-scroll` + `<table class="dz-heatmap-grid">`. Threshold-banded cell tones via `data-dz-heatmap-tone="bad"` / `"warn"` / `"good"` based on `heatmap_thresholds`. Cell values formatted as `%.1f`. Optional overflow line.
+
+### Phase 4B.4 wave 4 progress
+| Display | Status |
+|---|---|
+| KANBAN, ACTION_GRID, PROFILE_CARD, TABBED_LIST | ✅ |
+| **HEATMAP** | ✅ **v0.66.115** |
+| PIVOT_TABLE | next (substantial rewrite — pivot_buckets+dim_specs shape) |
+| QUEUE | queued (substantial rewrite) |
+| CONFIRM_ACTION_PANEL | queued (Alpine state machine) |
+| DIAGRAM | queued (Mermaid CDN) |
+
+**27 of 32 displays byte-equivalent (84%).**
+
+### Agent Guidance
+- **Threshold-banded `data-dz-*-tone` is a recurring pattern.** Heatmap, status_list, action_grid, etc. — they all use a small enum (bad/warn/good or critical/warning/notice) keyed off a `data-dz-*-tone` attribute, with CSS `dz-tones.css` doing the actual colouring. When porting future displays with similar tone systems, mirror the attribute name from the legacy template exactly — the CSS rules key off it.
+
 ## [0.66.114] - 2026-05-09
 
 ### Added — Phase 4B.4 wave 4 — TABBED_LIST byte-equivalent

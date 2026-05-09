@@ -910,6 +910,39 @@ def test_tabbed_list_achieves_byte_equivalence() -> None:
     )
 
 
+def test_heatmap_achieves_byte_equivalence() -> None:
+    """Phase 4B.4 wave 4 (v0.66.115): HEATMAP byte-equivalent. New
+    Heatmap + HeatmapRow primitives + dedicated _build_heatmap (was
+    alias to pivot_table). Threshold-banded cell tones via
+    data-dz-heatmap-tone (bad/warn/good)."""
+    ctx = {
+        "title": "Heat",
+        "heatmap_matrix": [
+            {
+                "row": "A",
+                "row_id": "1",
+                "cells": [{"col": "X", "value": 1.5}, {"col": "Y", "value": 5.0}],
+            },
+            {
+                "row": "B",
+                "row_id": "2",
+                "cells": [{"col": "X", "value": 8.0}, {"col": "Y", "value": 3.0}],
+            },
+        ],
+        "heatmap_col_values": ["X", "Y"],
+        "heatmap_thresholds": [3.0, 6.0],
+        "total": 2,
+        "items": [{}, {}],
+    }
+    assert (
+        diff_summary(
+            render_via_legacy("heatmap", **ctx),
+            render_via_typed("heatmap", ctx),
+        )
+        is None
+    )
+
+
 def test_status_list_empty_renders_legacy_empty_message() -> None:
     """Empty status_entries renders the dz-empty-dense paragraph in
     both paths, with the supplied empty_message."""

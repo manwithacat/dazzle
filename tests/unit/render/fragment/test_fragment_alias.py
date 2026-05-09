@@ -68,6 +68,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "GridRegion",
         "ListRegion",
         "Histogram",
+        "Heatmap",
         "Funnel",
         "KanbanRegion",
         "ActivityFeed",

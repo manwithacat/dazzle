@@ -503,6 +503,43 @@ class Funnel:
 
 
 @dataclass(frozen=True, slots=True)
+class HeatmapRow:
+    """Single row in a `Heatmap` — label + ordered cell values.
+
+    `cells` length must match the parent Heatmap's column count.
+    `row_id` is optional for click-through to detail (legacy template
+    threads it into the row's hx-get URL).
+    """
+
+    label: str
+    cells: tuple[float, ...]
+    row_id: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Heatmap:
+    """Threshold-tinted matrix display with row labels + column headers.
+
+    Phase 4B.4 wave 4: dedicated primitive matching `workspace/regions/
+    heatmap.html` byte-for-byte. Threshold-banded cell tints route
+    through `data-dz-heatmap-tone` (bad / warn / good) attribute
+    selectors. Cell values formatted as `%.1f`. Overflow line when
+    `total > rows count`.
+
+    `thresholds` carries 1 or 2 ascending values:
+      - 0 thresholds: cells render with no tone attr
+      - 1 threshold: <T0 → bad, ≥T0 → good
+      - 2 thresholds: <T0 → bad, <T1 → warn, ≥T1 → good
+    """
+
+    columns: tuple[str, ...]
+    rows: tuple[HeatmapRow, ...]
+    thresholds: tuple[float, ...] = ()
+    total: int = 0
+    empty_message: str = "No data available."
+
+
+@dataclass(frozen=True, slots=True)
 class HistogramBin:
     """Single bin in a `Histogram` — label + count + continuous range."""
 

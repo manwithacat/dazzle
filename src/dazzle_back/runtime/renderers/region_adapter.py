@@ -48,6 +48,8 @@ from dazzle.render.fragment import (
     GridCell,
     GridRegion,
     Heading,
+    Heatmap,
+    HeatmapRow,
     Histogram,
     HistogramBin,
     KanbanCard,
@@ -392,6 +394,7 @@ class WorkspaceRegionAdapter:
         "queue": "_build_queue",
         "activity_feed": "_build_activity_feed",
         "histogram": "_build_histogram",
+        "heatmap": "_build_heatmap",
     }
 
     # Display values that share a builder with another display value.
@@ -399,7 +402,6 @@ class WorkspaceRegionAdapter:
     # duplicating dispatch code.
     _ALIASES: dict[str, str] = {
         "summary": "metrics",
-        "heatmap": "pivot_table",
     }
 
     # TimeSeries variants — share `_build_time_series` but each passes
@@ -2067,6 +2069,76 @@ class WorkspaceRegionAdapter:
             label=chart_label,
             bins=tuple(bins),
             reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "report", body)
+
+    def _build_heatmap(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: heatmap` regions render as a `Heatmap` primitive
+        — threshold-tinted matrix matching `workspace/regions/heatmap.html`
+        byte-for-byte. Phase 4B.4 wave 4: dedicated builder (replaces
+        alias to pivot_table).
+
+        ctx shape (production runtime):
+            heatmap_matrix: list of dicts {row, row_id, cells:[{col, value}]}
+            heatmap_col_values: ordered list of column labels
+            heatmap_thresholds: 0/1/2 ascending floats for tone bands
+            total: int — overflow indicator denominator
+            items: list — for total > items.length overflow check
+            empty_message: optional empty-state fallback
+        """
+        title = _region_title(region)
+        matrix = ctx.get("heatmap_matrix") or []
+        col_values = ctx.get("heatmap_col_values") or []
+        thresholds_raw = ctx.get("heatmap_thresholds") or []
+        try:
+            total = int(ctx.get("total") or 0)
+        except (TypeError, ValueError):
+            total = 0
+        # Legacy template's overflow check is `total > items|length`,
+        # not `total > rows|length` — but typically items==rows count.
+        items = ctx.get("items") or []
+        if total < len(items):
+            total = len(items)
+
+        thresholds: list[float] = []
+        for t in thresholds_raw:
+            try:
+                thresholds.append(float(t))
+            except (TypeError, ValueError):
+                continue
+
+        rows: list[HeatmapRow] = []
+        for row_dict in matrix:
+            if not isinstance(row_dict, dict):
+                continue
+            row_label = str(row_dict.get("row") or "")
+            cells_raw = row_dict.get("cells") or []
+            cell_values: list[float] = []
+            for cell in cells_raw:
+                if isinstance(cell, dict):
+                    try:
+                        cell_values.append(float(cell.get("value") or 0))
+                    except (TypeError, ValueError):
+                        cell_values.append(0.0)
+            rows.append(
+                HeatmapRow(
+                    label=row_label,
+                    cells=tuple(cell_values),
+                    row_id=str(row_dict.get("row_id") or ""),
+                )
+            )
+
+        empty_msg = (
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No data available."
+        )
+        body: Fragment = Heatmap(
+            columns=tuple(str(c) for c in col_values),
+            rows=tuple(rows),
+            thresholds=tuple(thresholds),
+            total=total,
             empty_message=str(empty_msg),
         )
         return _wrap_surface(title, "report", body)

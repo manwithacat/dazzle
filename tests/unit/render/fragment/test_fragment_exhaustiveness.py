@@ -44,6 +44,8 @@ from dazzle.render.fragment import (
     GridCell,
     GridRegion,
     Heading,
+    Heatmap,
+    HeatmapRow,
     Histogram,
     HistogramBin,
     Icon,
@@ -243,6 +245,13 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is HistogramBin:
         return HistogramBin(label="0-10", count=4, low=0.0, high=10.0)
+    if primitive_type is Heatmap:
+        return Heatmap(
+            columns=("X",),
+            rows=(HeatmapRow(label="A", cells=(1.0,)),),
+        )
+    if primitive_type is HeatmapRow:
+        return HeatmapRow(label="A", cells=(1.0,))
     if primitive_type is Funnel:
         return Funnel(stages=(FunnelStage(label="lead", count=10),))
     if primitive_type is FunnelStage:

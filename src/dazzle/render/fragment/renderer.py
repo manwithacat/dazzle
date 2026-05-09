@@ -45,6 +45,7 @@ from dazzle.render.fragment.primitives import (
     Grid,
     GridRegion,
     Heading,
+    Heatmap,
     Histogram,
     Icon,
     InlineEdit,
@@ -228,6 +229,8 @@ class FragmentRenderer:
                 return self._emit_list_region(fragment, ctx)
             case Histogram():
                 return self._emit_histogram(fragment, ctx)
+            case Heatmap():
+                return self._emit_heatmap(fragment, ctx)
             case Funnel():
                 return self._emit_funnel(fragment, ctx)
             case KanbanRegion():
@@ -1708,6 +1711,68 @@ class FragmentRenderer:
             f'<div class="dz-funnel-chart-region">'
             f'<div class="dz-funnel-stages">{"".join(items)}</div>'
             f'<p class="dz-funnel-summary">{f.total} total</p>'
+            f"</div>"
+        )
+
+    def _emit_heatmap(self, h: "Heatmap", ctx: RenderContext) -> str:
+        """Render a Heatmap matching legacy
+        `workspace/regions/heatmap.html` byte-for-byte: outer
+        `dz-heatmap-region` wrapping a `dz-heatmap-scroll` with a
+        `<table class="dz-heatmap-grid">`. Headers row has an empty
+        leading `<th></th>` followed by column labels. Each row carries
+        a label `<td class="dz-heatmap-row-label">` then per-cell
+        `<td class="dz-heatmap-cell">` with `data-dz-heatmap-tone`
+        threshold-banded tone (bad / warn / good). Values formatted
+        as `%.1f`. Optional overflow line.
+        """
+        if not h.rows:
+            return (
+                f'<div class="dz-heatmap-region">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(h.empty_message)}</p>"
+                f"</div>"
+            )
+
+        head_cols = "".join(f"<th>{ctx.escape(c)}</th>" for c in h.columns)
+        thead = f"<thead><tr><th></th>{head_cols}</tr></thead>"
+
+        def _tone_attr(value: float) -> str:
+            n = len(h.thresholds)
+            if n >= 2:
+                if value < h.thresholds[0]:
+                    return ' data-dz-heatmap-tone="bad"'
+                if value < h.thresholds[1]:
+                    return ' data-dz-heatmap-tone="warn"'
+                return ' data-dz-heatmap-tone="good"'
+            if n == 1:
+                if value < h.thresholds[0]:
+                    return ' data-dz-heatmap-tone="bad"'
+                return ' data-dz-heatmap-tone="good"'
+            return ""
+
+        body_rows: list[str] = []
+        for row in h.rows:
+            cells_html = ""
+            for cell in row.cells:
+                cells_html += f'<td class="dz-heatmap-cell"{_tone_attr(cell)}> {cell:.1f} </td>'
+            body_rows.append(
+                f"<tr>"
+                f'<td class="dz-heatmap-row-label">{ctx.escape(row.label)}</td>'
+                f"{cells_html}"
+                f"</tr>"
+            )
+        tbody = f"<tbody>{''.join(body_rows)}</tbody>"
+
+        overflow_html = ""
+        if h.total > len(h.rows):
+            overflow_html = f'<p class="dz-heatmap-overflow">Showing {len(h.rows)} of {h.total}</p>'
+
+        return (
+            f'<div class="dz-heatmap-region">'
+            f'<div class="dz-heatmap-scroll">'
+            f'<table class="dz-heatmap-grid">{thead}{tbody}</table>'
+            f"</div>"
+            f"{overflow_html}"
             f"</div>"
         )
 

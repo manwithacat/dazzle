@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives.data import (
     FilterBar,
     Funnel,
     GridRegion,
+    Heatmap,
     Histogram,
     KanbanBoard,
     KanbanRegion,
@@ -136,6 +137,7 @@ Fragment = (
     | GridRegion
     | ListRegion
     | Histogram
+    | Heatmap
     | Funnel
     | KanbanRegion
     | ActionGrid

@@ -1295,21 +1295,41 @@ def test_diagram_empty_renders_empty_state() -> None:
     assert "No diagram." in _render(fragment)
 
 
-def test_heatmap_dispatches_through_pivot_table() -> None:
-    """`display: heatmap` reuses the PivotTable render — both are 2D
-    cell grids; richer per-cell intensity colouring is a future
-    enhancement."""
+def test_heatmap_renders_dedicated_primitive() -> None:
+    """v0.66.115: HEATMAP now uses dedicated `Heatmap` primitive
+    matching `dz-heatmap-region` byte-for-byte. Threshold-banded
+    cell tones via data-dz-heatmap-tone."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
-        "rows": ["mon", "tue"],
-        "columns": ["9am", "10am"],
-        "cells": {("mon", "9am"): 5, ("tue", "10am"): 3},
+        "heatmap_matrix": [
+            {
+                "row": "mon",
+                "row_id": "1",
+                "cells": [
+                    {"col": "9am", "value": 5.0},
+                    {"col": "10am", "value": 0.0},
+                ],
+            },
+            {
+                "row": "tue",
+                "row_id": "2",
+                "cells": [
+                    {"col": "9am", "value": 0.0},
+                    {"col": "10am", "value": 3.0},
+                ],
+            },
+        ],
+        "heatmap_col_values": ["9am", "10am"],
+        "heatmap_thresholds": [2.0, 4.0],
     }
     fragment = adapter.build(_FakeRegion("h", display="heatmap"), ctx)
     html = _render(fragment)
+    assert "dz-heatmap-region" in html
     assert "mon" in html and "tue" in html
     assert "9am" in html and "10am" in html
-    assert "5" in html and "3" in html
+    assert "5.0" in html and "3.0" in html
+    assert 'data-dz-heatmap-tone="good"' in html  # 5.0 > 4.0
+    assert 'data-dz-heatmap-tone="bad"' in html  # 0.0 < 2.0
 
 
 def test_confirm_action_panel_legacy_prompt_ctx_renders_synthetic_checklist() -> None:
