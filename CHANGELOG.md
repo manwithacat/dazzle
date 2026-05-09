@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.139] - 2026-05-09
+
+### Added — #1029 Phase 7 — LIST adapter bulk-actions toolbar + per-row checkboxes — closes #1029
+
+- **`BulkActionToolbar` primitive** matching legacy `bulk_actions.html` byte-for-byte: Delete + Clear-selection buttons, trash-icon SVG inline, Alpine `@click="bulkDelete()"` / `@click="clearSelection()"` bindings, `data-dz-bulk-count-target` count mirror per #978/ADR-0022 (visibility CSS-driven, no Alpine bindings on children that idiomorph could re-evaluate).
+- **`Table.bulk_select` flag + `row_ids` parallel tuple** — when `bulk_select=True`, the renderer prepends a select-all `<th>` checkbox header and a per-row `<td>` checkbox + `data-dz-row-id` attribute on each `<tr>`. Constructor validates `row_ids` arity matches `rows` (defensive — without ids the per-row checkbox can't bind to Alpine `selected.has(id)`).
+- **`_build_dispatch_ctx` table branch** threads `bulk_actions: bool` from `TableContext`. **`FragmentSurfaceAdapter._build_list`** wires `bulk_select=True` + per-row `row_ids` from `item["id"]` when ctx flag is on AND items is non-empty (no toolbar on empty lists), and prepends a `BulkActionToolbar` to the list region body via Stack.
+- **Twelve regression tests** at `tests/unit/test_dispatch_ctx_list_bulk_actions.py` pin: dispatch ctx threading + default off, BulkActionToolbar's Delete/Clear/Trash-icon contract, Table arity validation + backwards-compat default, end-to-end render with checkboxes + row ids + select-all, bulk_actions=False omits everything, empty list omits toolbar.
+
+### Closed
+
+- **#1029 — Fragment LIST adapter ignores most DSL UX features.** All 7 phases shipped: row-click drill-down (Phase 1) → Pagination footer (Phase 2) → CreateButton with RBAC contract (Phase 3) → typed empty messages (Phase 4) → SearchBox + FilterBar toolbar (Phase 5) → SortHeader columns (Phase 6) → bulk-actions toolbar + per-row checkboxes (this phase). The Fragment LIST adapter now mirrors the legacy `filterable_table.html` UX-feature set: search, filter, sort, pagination, drill-down, create, custom empty, bulk actions. Outstanding: outer `x-data="dzTable()"` Alpine wrapper for surface-level lists is the natural follow-on if/when bulk actions need to fire client-side without a workspace `dzDashboardBuilder()` ancestor.
+
+### Agent Guidance
+
+- **Singleton primitives matching legacy markup are simpler as constants.** Both `WorkspaceToolbar` (Phase 4B.5.b.2.i, v0.66.121) and `BulkActionToolbar` (this ship) are fixed-shape singletons — the renderer emits a single literal HTML string constant. No parameterization, no f-string composition. Same shape works for any other "fixed Alpine-driven toolbar" pattern.
+- **Per-row state needs explicit per-row ids.** When extending `Table` with bulk-select, sort, drill-down, or any other per-row affordance, the parallel-tuple-of-ids pattern (`row_ids: tuple[str, ...]` aligned to `rows`) keeps the IR shape clean and the validation explicit (arity matches). Avoids hidden coupling between row index and Alpine state.
+
 ## [0.66.138] - 2026-05-09
 
 ### Added — #1029 Phase 6 — LIST adapter SortHeader column wiring

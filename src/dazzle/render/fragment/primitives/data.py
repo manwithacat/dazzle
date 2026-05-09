@@ -99,6 +99,15 @@ class Table:
     columns: tuple[object, ...]  # str | SortHeader
     rows: tuple[tuple[str, ...], ...]
     row_links: tuple[str | None, ...] = ()
+    # Issue #1029 phase 7: bulk-selection support.
+    # When `bulk_select=True`, the renderer prepends a checkbox column
+    # to the header + each row. `row_ids` (parallel to `rows`) provides
+    # the per-row id used in `data-dz-row-id` + Alpine `toggleRow('{id}')`
+    # bindings. The dzTable Alpine controller (see legacy
+    # `static/js/dz_table.js`) owns the `selected` Set and exposes
+    # `toggleRow`, `toggleSelectAll`, `bulkDelete`, `clearSelection`.
+    bulk_select: bool = False
+    row_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.columns:
@@ -112,6 +121,11 @@ class Table:
         if self.row_links and len(self.row_links) != len(self.rows):
             raise ValueError(
                 f"row_links length {len(self.row_links)} != rows length {len(self.rows)}"
+            )
+        if self.bulk_select and self.rows and len(self.row_ids) != len(self.rows):
+            raise ValueError(
+                f"row_ids length {len(self.row_ids)} != rows length {len(self.rows)} "
+                "(bulk_select requires a per-row id for the checkbox/Alpine binding)"
             )
 
 
@@ -1466,6 +1480,23 @@ class DashboardGrid:
 
     cards: tuple[DashboardCard, ...] = ()
     sse_url: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class BulkActionToolbar:
+    """Bulk-selection toolbar for list surfaces (Phase 7 of #1029).
+
+    Fixed shape singleton matching legacy `bulk_actions.html` byte-
+    for-byte: Delete + Clear-selection buttons. Visibility CSS-driven
+    via `[data-dz-bulk-count]` on the outer `.dz-table` wrapper (set
+    by dzTable's `$watch` on bulkCount); the count text is mirrored
+    to `[data-dz-bulk-count-target]` descendants imperatively per
+    ADR-0022 (no Alpine bindings on children that idiomorph could
+    re-evaluate before scope rebinds).
+
+    Alpine state lives on the dzTable controller — `selected` Set,
+    `bulkDelete()`, `clearSelection()` — already shipped in
+    `static/js/dz_table.js`. This primitive emits the matching DOM."""
 
 
 @dataclass(frozen=True, slots=True)

@@ -84,6 +84,8 @@ class FragmentSurfaceAdapter:
             endpoint=endpoint,
             region_name=region_name,
         )
+        # Issue #1029 phase 7: bulk-actions toolbar + per-row checkboxes.
+        bulk_actions_enabled = bool(ctx.get("bulk_actions", False)) and bool(items)
 
         body: Fragment
         if not items:
@@ -122,7 +124,21 @@ class FragmentSurfaceAdapter:
             row_links = (
                 _resolve_row_links(items, detail_url_template) if detail_url_template else ()
             )
-            table = Table(columns=column_labels, rows=rows, row_links=row_links)
+            # Phase 7: pass per-row ids for bulk-select checkboxes
+            # when bulk_actions enabled. Falls back to empty tuple
+            # otherwise.
+            row_ids = (
+                tuple(str(item.get("id", "") or "") for item in items)
+                if bulk_actions_enabled
+                else ()
+            )
+            table = Table(
+                columns=column_labels,
+                rows=rows,
+                row_links=row_links,
+                bulk_select=bulk_actions_enabled,
+                row_ids=row_ids,
+            )
             # Append Pagination when total exceeds the current page slice.
             # Region wrapping uses Stack (matches legacy template's parent
             # `<div>` shape; an extra wrapping div is fine here).
@@ -143,6 +159,14 @@ class FragmentSurfaceAdapter:
         # body remains untouched.
         if toolbar_children:
             body = Stack(children=(*toolbar_children, body), gap="sm")
+
+        # Phase 7: prepend the BulkActionToolbar when bulk_actions is
+        # on. Visibility is CSS-driven (`[data-dz-bulk-count]`) so
+        # the toolbar only shows when at least one row is selected.
+        if bulk_actions_enabled:
+            from dazzle.render.fragment import BulkActionToolbar
+
+            body = Stack(children=(BulkActionToolbar(), body), gap="sm")
 
         # Header carries title + optional CreateButton. The Create
         # button is contractually required for the list page (UX

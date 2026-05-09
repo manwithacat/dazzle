@@ -20,6 +20,7 @@ from dazzle.render.fragment import (
     BarChart,
     BarTrack,
     BoxPlot,
+    BulkActionToolbar,
     Bullet,
     BulletRow,
     Button,
@@ -344,6 +345,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is CreateButton:
         return CreateButton(href=URL("/x"), entity_name="Item")
+    if primitive_type is BulkActionToolbar:
+        return BulkActionToolbar()
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

@@ -88,6 +88,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Sequence",
         "Pagination",
         "CreateButton",
+        "BulkActionToolbar",
         "DashboardGrid",
         "DashboardCard",
         "AddCardRow",

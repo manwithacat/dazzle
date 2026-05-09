@@ -23,6 +23,7 @@ from dazzle.render.fragment.primitives import (
     BarChart,
     BarTrack,
     BoxPlot,
+    BulkActionToolbar,
     Bullet,
     Button,
     CalendarGrid,
@@ -138,6 +139,35 @@ _WORKSPACE_DRAWER_HTML = _load_static("workspace_drawer.html")
 # `{OPTIONS_URL_JSON}` placeholders the renderer fills in via
 # `json.dumps()`. Same loading pattern as the drawer.
 _WORKSPACE_CONTEXT_SCRIPT_TEMPLATE = _load_static("workspace_context_script.html")
+
+
+# Bulk-action toolbar — emitted byte-for-byte by the BulkActionToolbar
+# primitive (Phase 7 of #1029). Singleton — Delete + Clear-selection
+# buttons. Visibility CSS-driven via `[data-dz-bulk-count]` on the
+# outer .dz-table wrapper (set by dzTable's `$watch` on bulkCount per
+# #978 / ADR-0022). Count text mirrored to `[data-dz-bulk-count-target]`
+# imperatively — no Alpine bindings on children that idiomorph could
+# re-evaluate before scope rebinds.
+_BULK_ACTION_TOOLBAR_HTML = (
+    '<div class="dz-bulk-actions">'
+    '<button @click="bulkDelete()" type="button" class="dz-bulk-delete">'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" '
+    'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<polyline points="3 6 5 6 21 6"></polyline>'
+    '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>'
+    '<path d="M10 11v6"></path>'
+    '<path d="M14 11v6"></path>'
+    '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>'
+    "</svg>"
+    "<span>Delete <span data-dz-bulk-count-target>0</span> "
+    'item<span class="dz-bulk-plural">s</span></span>'
+    "</button>"
+    '<button @click="clearSelection()" type="button" class="dz-bulk-clear">'
+    "Clear selection"
+    "</button>"
+    "</div>"
+)
 
 
 # Workspace toolbar — emitted byte-for-byte by `_emit_workspace_toolbar`
@@ -381,6 +411,8 @@ class FragmentRenderer:
                 return self._emit_pagination(fragment, ctx)
             case CreateButton():
                 return self._emit_create_button(fragment, ctx)
+            case BulkActionToolbar():
+                return _BULK_ACTION_TOOLBAR_HTML
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -968,6 +1000,17 @@ class FragmentRenderer:
         # headers with aria-sort + hx-get). Per-cell dispatch keeps
         # the legacy string-column shape backwards-compatible.
         head_cells_parts: list[str] = []
+        # Issue #1029 phase 7: bulk_select prepends a select-all
+        # checkbox header cell. Alpine `dzTable` controller owns
+        # bulkCount + toggleSelectAll.
+        if t.bulk_select:
+            head_cells_parts.append(
+                '<th scope="col" class="dz-table-th-select">'
+                '<input type="checkbox" class="dz-table-col-menu-checkbox" '
+                '@change="toggleSelectAll($event.target.checked)" '
+                'aria-label="Select all rows" />'
+                "</th>"
+            )
         for c in t.columns:
             if isinstance(c, SortHeader):
                 head_cells_parts.append(f"<th>{self._emit(c, ctx)}</th>")
@@ -981,18 +1024,37 @@ class FragmentRenderer:
         # is the htmx-idiomatic shape for clickable rows.
         body_parts: list[str] = []
         for i, row in enumerate(t.rows):
-            cells_html = "".join(f"<td>{ctx.escape(cell)}</td>" for cell in row)
+            row_cells: list[str] = []
+            # Phase 7: per-row checkbox cell when bulk_select is on.
+            if t.bulk_select:
+                row_id = ctx.escape_attr(t.row_ids[i]) if t.row_ids else ""
+                row_cells.append(
+                    f'<td class="dz-tr-checkbox-cell" '
+                    f'onclick="event.stopPropagation()">'
+                    f'<input type="checkbox" class="dz-tr-checkbox" '
+                    f"@change=\"toggleRow('{row_id}')\" "
+                    f":checked=\"selected.has('{row_id}')\" "
+                    f'aria-label="Select row" />'
+                    f"</td>"
+                )
+            row_cells.extend(f"<td>{ctx.escape(cell)}</td>" for cell in row)
+            cells_html = "".join(row_cells)
             url = t.row_links[i] if t.row_links else None
+            row_id_attr = (
+                f' data-dz-row-id="{ctx.escape_attr(t.row_ids[i])}"'
+                if t.bulk_select and t.row_ids
+                else ""
+            )
             if url:
                 url_attr = ctx.escape_attr(url)
                 body_parts.append(
                     f'<tr class="dz-table__row dz-table__row--linked" '
                     f'hx-get="{url_attr}" hx-target="body" hx-swap="innerHTML" '
-                    f'hx-push-url="true" tabindex="0">'
+                    f'hx-push-url="true" tabindex="0"{row_id_attr}>'
                     f"{cells_html}</tr>"
                 )
             else:
-                body_parts.append(f"<tr>{cells_html}</tr>")
+                body_parts.append(f"<tr{row_id_attr}>{cells_html}</tr>")
         body_rows = "".join(body_parts)
         return (
             f'<table class="dz-table">'

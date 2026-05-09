@@ -1116,6 +1116,8 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             # current-direction wiring.
             "sort_field": str(getattr(table, "sort_field", "") or ""),
             "sort_dir": str(getattr(table, "sort_dir", "asc") or "asc"),
+            # Issue #1029 phase 7: bulk-actions flag + per-row ids.
+            "bulk_actions": bool(getattr(table, "bulk_actions", False)),
         }
 
     form = getattr(render_ctx, "form", None)

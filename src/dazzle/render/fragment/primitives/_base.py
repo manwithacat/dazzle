@@ -34,6 +34,7 @@ from dazzle.render.fragment.primitives.data import (
     BarChart,
     BarTrack,
     BoxPlot,
+    BulkActionToolbar,
     Bullet,
     CalendarGrid,
     CardPicker,
@@ -181,6 +182,7 @@ Fragment = (
     | Sequence
     | Pagination
     | CreateButton
+    | BulkActionToolbar
     | DashboardGrid
     | DashboardCard
     | AddCardRow
