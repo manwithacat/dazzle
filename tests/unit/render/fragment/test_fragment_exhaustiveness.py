@@ -110,6 +110,8 @@ from dazzle.render.fragment import (
     Topbar,
     Tree,
     TreeNode,
+    WorkspacePrimaryAction,
+    WorkspaceShell,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -311,6 +313,10 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is SearchBox:
         return SearchBox(name="x", fts_endpoint=URL("/api/fts/X"))
+    if primitive_type is WorkspaceShell:
+        return WorkspaceShell(workspace_name="ws", title="W", body=Text("body"))
+    if primitive_type is WorkspacePrimaryAction:
+        return WorkspacePrimaryAction(label="L", route="/x")
     if primitive_type is CardPicker:
         return CardPicker(
             entries=(CardPickerEntry(name="t", title="Tasks", entity="Task", display="list"),),

@@ -95,6 +95,7 @@ from dazzle.render.fragment.primitives import (
     Topbar,
     Tree,
     TreeNode,
+    WorkspaceShell,
 )
 
 # Mermaid CDN loader script — emitted byte-for-byte by `_emit_diagram`
@@ -285,6 +286,8 @@ class FragmentRenderer:
                 return self._emit_confirm_gate(fragment, ctx)
             case CardPicker():
                 return self._emit_card_picker(fragment, ctx)
+            case WorkspaceShell():
+                return self._emit_workspace_shell(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
             case SortHeader():
@@ -2632,6 +2635,63 @@ class FragmentRenderer:
         # `data-card-catalog` is opaque JSON the adapter has already
         # serialised. Single-quoted to permit embedded `"` chars.
         return f"<div data-card-catalog='{p.catalog_json}' class=\"dz-card-picker\">{body}</div>"
+
+    def _emit_workspace_shell(self, w: WorkspaceShell, ctx: RenderContext) -> str:
+        """Render a WorkspaceShell matching legacy `workspace/_content.html`
+        outer wrapper + heading section byte-for-byte (Phase 4B.5.b.1).
+
+        Emits:
+          - `<div class="dz-workspace" x-data="dzDashboardBuilder()" ...>`
+            with `data-workspace-name` (always) and optional
+            `data-fold-count`.
+          - `<div class="dz-workspace-heading">` carrying the title `<h2>`
+            and an optional primary-actions row (each action is an
+            `<a class="dz-workspace-action" hx-boost="true">` with a
+            leading `+` SVG icon).
+          - The body slot rendered after the heading; the closing
+            `</div>` of the outer wrapper.
+
+        4B.5.b.2 will fill the body slot with the slot grid; 4B.5.b.3
+        will add the context selector + drawer + picker. Until those
+        ships land, this primitive is consumed standalone for unit
+        tests; the runtime workspace handler still uses the legacy
+        Jinja path."""
+        primary_actions_html = ""
+        if w.primary_actions:
+            actions_inner = "".join(
+                f'<a href="{ctx.escape_attr(a.route)}" hx-boost="true" '
+                f'class="dz-workspace-action">'
+                f'<svg width="14" height="14" fill="none" stroke="currentColor" '
+                f'viewBox="0 0 24 24" aria-hidden="true">'
+                f'<path stroke-linecap="round" stroke-linejoin="round" '
+                f'stroke-width="2" d="M12 4v16m8-8H4"/>'
+                f"</svg>"
+                f"{ctx.escape(a.label)}"
+                f"</a>"
+                for a in w.primary_actions
+            )
+            primary_actions_html = (
+                f'<div class="dz-workspace-primary-actions" '
+                f'data-test-id="dz-workspace-primary-actions">'
+                f"{actions_inner}"
+                f"</div>"
+            )
+
+        fold_attr = f' data-fold-count="{w.fold_count}"' if w.fold_count is not None else ""
+        body_html = self._emit(w.body, ctx)  # type: ignore[arg-type]
+
+        return (
+            f'<div class="dz-workspace" '
+            f'x-data="dzDashboardBuilder()" '
+            f'data-workspace-name="{ctx.escape_attr(w.workspace_name)}"'
+            f"{fold_attr}>"
+            f'<div class="dz-workspace-heading">'
+            f'<h2 class="dz-workspace-title">{ctx.escape(w.title)}</h2>'
+            f"{primary_actions_html}"
+            f"</div>"
+            f"{body_html}"
+            f"</div>"
+        )
 
     def _emit_filter_bar(self, f: FilterBar, ctx: RenderContext) -> str:
         """Render a FilterBar matching legacy `queue.html` / `list.html`

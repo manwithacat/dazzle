@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.120] - 2026-05-09
+
+### Added — Phase 4B.5.b.1 — WorkspaceShell wrapper + heading
+
+- **WorkspaceShell + WorkspacePrimaryAction primitives** carrying the outer `<div class="dz-workspace" x-data="dzDashboardBuilder()" data-workspace-name="...">` wrapper, optional `data-fold-count` attribute, the `<div class="dz-workspace-heading">` row with `<h2 class="dz-workspace-title">`, and the optional `<div class="dz-workspace-primary-actions" data-test-id="dz-workspace-primary-actions">` row carrying `<a class="dz-workspace-action" hx-boost="true">` anchors with the framework's `+` SVG icon. Body slot rendered inside the wrapper after the heading.
+- **Eleven structural unit tests** at `tests/unit/render/fragment/test_workspace_shell_primitive.py` pin the contract attributes (Alpine `x-data`, `data-workspace-name`, `data-fold-count`, `data-test-id`, `hx-boost`, `aria-hidden`, the `+` SVG path), title HTML escaping, action route attribute escaping, and the conditional behaviour around primary actions / fold count.
+
+### Phase 4B.5 progress
+| Component | Status |
+|---|---|
+| 4B.5.a — CardPicker | ✅ v0.66.119 |
+| **4B.5.b.1 — WorkspaceShell wrapper + heading** | ✅ **v0.66.120** |
+| 4B.5.b.2 — slot grid + region children | next |
+| 4B.5.b.3 — context selector + drawer + edit chrome | queued |
+| 4B.5.c — Layout shell port | queued |
+| 4B.6 — Decommission DISPLAY_TEMPLATE_MAP + 32 Jinja templates | queued |
+
+### Agent Guidance
+- **Byte-equivalence vs full `_content.html` is gated to 4B.5.b.3.** The legacy template emits the wrapper, heading, context selector, slot grid, drawer, and picker as one unit — incremental ports can't dual-path-test against the whole until all chrome pieces are typed. 4B.5.b.1 + 4B.5.b.2 ship structural unit tests pinning the contract attributes; 4B.5.b.3 will add the byte-equivalence test against `_content.html` once all the inner pieces are also typed primitives. This is intentional — pin the structural contract early, byte-equivalence at the end of the sub-arc.
+- **Body slot is `object`-typed by primitive convention.** Other framework primitives with body slots (Card, Region, Drawer, Modal, Tabs, AppShell, Surface) all use `body: object` rather than `body: Fragment`. The reason: `Fragment` is a Union defined in `_base.py` that itself depends on the primitive modules — circular if you type body fields with it. The runtime check is the FragmentRenderer's match-dispatch, not the dataclass type. Follow this convention for any future chrome primitive with a body slot.
+
 ## [0.66.119] - 2026-05-09
 
 ### Added — Phase 4B.5.a — CardPicker primitive (first chrome port)

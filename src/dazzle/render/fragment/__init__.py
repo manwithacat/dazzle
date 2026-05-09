@@ -110,6 +110,8 @@ from dazzle.render.fragment.primitives import (
     Topbar,
     Tree,
     TreeNode,
+    WorkspacePrimaryAction,
+    WorkspaceShell,
 )
 from dazzle.render.fragment.registry import (
     DEFAULT_REGISTRY,
@@ -247,6 +249,8 @@ __all__ = [
     "ConfirmCheckItem",
     "CardPicker",
     "CardPickerEntry",
+    "WorkspaceShell",
+    "WorkspacePrimaryAction",
     "FilterBar",
     "FilterColumn",
     "SortHeader",

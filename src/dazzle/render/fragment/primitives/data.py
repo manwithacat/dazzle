@@ -1378,6 +1378,45 @@ class CardPickerEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkspacePrimaryAction:
+    """One link in the workspace heading's primary-actions row.
+
+    Framework-inferred from region entities that expose CREATE
+    surfaces and for which the current persona has create permission
+    (#827). Renders as a `<a class="dz-workspace-action" hx-boost="true">`
+    with a leading `+` SVG icon and the label text."""
+
+    label: str
+    route: str
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceShell:
+    """The outer `.dz-workspace` wrapper (Phase 4B.5.b.1).
+
+    Emits the dashboard chrome shell:
+      - Outer `<div class="dz-workspace" x-data="dzDashboardBuilder()" ...>`
+        with `data-workspace-name` (always) and optional `data-fold-count`.
+      - Heading row: `<h2 class="dz-workspace-title">` + optional
+        primary-actions row (`<div class="dz-workspace-primary-actions">`
+        with `data-test-id="dz-workspace-primary-actions"`).
+      - The `body` slot — a Fragment carrying the rest of the chrome
+        (slot grid, drawer, picker). Filled incrementally across
+        Phase 4B.5.b.2 (slot grid) and 4B.5.b.3 (drawer + picker +
+        context selector).
+
+    Card safety: the workspace owns title chrome (the `h2`); regions
+    inside `body` are contentless wrappers (the dashboard slot owns
+    region title chrome via region_card invariant)."""
+
+    workspace_name: str
+    title: str
+    body: object  # Fragment — typed as object per primitive convention
+    primary_actions: tuple[WorkspacePrimaryAction, ...] = ()
+    fold_count: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class CardPicker:
     """The "Add a card" popover used by the workspace dashboard builder
     (Phase 4B.5.a port of `workspace/_card_picker.html`).

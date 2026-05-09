@@ -67,6 +67,7 @@ from dazzle.render.fragment.primitives.data import (
     Timeline,
     TimeSeries,
     Tree,
+    WorkspaceShell,
 )
 from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, RefPicker, Submit
 from dazzle.render.fragment.primitives.interactive import (
@@ -157,6 +158,7 @@ Fragment = (
     | SearchBox
     | ConfirmGate
     | CardPicker
+    | WorkspaceShell
     | FilterBar
     | SortHeader
     | CsvExportButton
