@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.1] - 2026-05-09
+
+### Fixed
+
+- **#1034 — `/app/workspaces/{name}` returned HTTP 422 on every request.** `functools.partial(_workspace_handler, ...)` (and `partial(_page_handler, ...)`) strips type annotations from `inspect.signature`. FastAPI then saw `request` as an un-annotated parameter, defaulted it to `Query(...)`, and on pydantic >= 2.13 the `TypeAdapter` build hard-failed with a `PydanticUserError` for the `'Request'` forward-ref. Earlier pydantic/fastapi versions silently treated the un-annotated parameter as `str`, masking the bug; pydantic 2.13.3 + FastAPI 0.121.1 (current resolutions) surface it as a 422. Fix: replace both `partial(...)` call sites with closure factories (`_make_page_handler`, new `_make_workspace_handler`) that wrap the inner handler in an `async def handler(request: Request)` so the annotation survives signature introspection.
+- **Five regression tests** at `tests/unit/test_workspace_handler_signature.py` pin: `Request` annotation preserved on both factories, only `request` exposed in the outer signature (per-route state captured in the closure), both factories return `async def` callables. Catches any future regression that re-introduces a `partial`-stripped annotation.
+
+### Impact
+
+- AegisMark + cyfuture pilots (the latter on v0.67.0 already) can deploy v0.67.1 without the workspace-route 422. Every `pilot:*` consumer that pulled v0.66.140+ was affected by this regression.
+- Persona `default_workspace` post-login redirects now resolve correctly.
+
+### Agent Guidance
+
+- **Don't use `functools.partial` to bind FastAPI handler parameters.** `partial` strips `__annotations__` from `inspect.signature`, which FastAPI uses for dependency-resolution + parameter-type coercion. Use a closure factory: `def make_handler(...): async def handler(request: Request) -> Response: return await inner(...); return handler`. Same shape works for any framework that introspects handler signatures (Starlette routes, Strawberry GraphQL field resolvers, etc.). The annotation-survival check is a one-line `inspect.signature(handler).parameters["request"].annotation is Request` — pin it as a regression test the moment you add a closure-bound handler.
+
 ## [0.67.0] - 2026-05-09
 
 Minor bump rolling up the cyfuture pilot completion arc (8 issues closed since v0.66.126: #1032, #1028, #1027, #1021, #1031, #1030, #1029, #1033) plus this release's CI-green fix for FormStack's RBAC contract attribute. With v0.67.0, the typed-Fragment substrate is now feature-complete vs the legacy Jinja templates across all of: 32/32 region displays, full workspace chrome (`_content.html` byte-equivalent), all surface modes (LIST/VIEW/CREATE/EDIT) with the full DSL UX-feature set, and every cyfuture pilot blocker resolved.

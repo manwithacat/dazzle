@@ -1537,8 +1537,53 @@ async def _page_handler(
 def _make_page_handler(
     deps: _PageDeps, route_path: str, ctx: Any, view_name: str | None = None
 ) -> Any:
-    """Create a partial-bound handler for a specific page route."""
-    return partial(_page_handler, deps, route_path, ctx, view_name)
+    """Create a closure handler for a specific page route.
+
+    Issue #1034: `functools.partial` strips type annotations from
+    `inspect.signature`, so FastAPI sees `request` as an un-annotated
+    parameter, defaults it to `Query(...)`, then on pydantic >= 2.13
+    fails to build a TypeAdapter for the `Request` forward-ref. Wrap
+    in an `async def` closure that preserves the annotation."""
+
+    async def handler(request: Request) -> Response:
+        return await _page_handler(deps, route_path, ctx, view_name, request)
+
+    return handler
+
+
+def _make_workspace_handler(
+    *,
+    deps: _PageDeps,
+    ws_ctx: Any,
+    ws_route: str,
+    ws_allowed_personas: list[str],
+    ws_nav_items: list[dict[str, Any]],
+    ws_entity_items: list[dict[str, Any]],
+    ws_nav_groups: list[dict[str, Any]],
+    ws_app_name: str,
+    primary_action_candidates: list[dict[str, str]],
+) -> Any:
+    """Closure factory for `/app/workspaces/{name}` routes — same
+    rationale as `_make_page_handler` (issue #1034). Pre-fix this
+    used `functools.partial(_workspace_handler, ...)` which stripped
+    the `request: Request` annotation; FastAPI then 422'd every
+    workspace landing on pydantic 2.13.3."""
+
+    async def handler(request: Request) -> Response:
+        return await _workspace_handler(
+            deps,
+            ws_ctx,
+            ws_route,
+            ws_allowed_personas,
+            ws_nav_items,
+            ws_entity_items,
+            ws_nav_groups,
+            ws_app_name,
+            primary_action_candidates,
+            request,
+        )
+
+    return handler
 
 
 def _build_workspace_primary_action_candidates(
@@ -2138,17 +2183,24 @@ def create_page_routes(
             _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
             _ws_primary = ws_primary_actions.get(workspace.name, [])
 
-            handler = partial(
-                _workspace_handler,
-                deps,
-                ws_ctx,
-                _ws_route,
-                _ws_allowed,
-                ws_nav_items,
-                _ws_entity_items,
-                _ws_nav_groups,
-                ws_app_name,
-                _ws_primary,
+            # Issue #1034: closure factory instead of `functools.partial`
+            # so FastAPI sees the `Request` annotation on the handler.
+            # `partial` strips annotations from `inspect.signature`,
+            # which on pydantic >= 2.13 causes a 422 (FastAPI defaults
+            # the un-annotated `request` to Query(...) and the
+            # forward-ref TypeAdapter build fails). The closure binds
+            # the per-workspace state and exposes a clean
+            # `(request: Request)` signature.
+            handler = _make_workspace_handler(
+                deps=deps,
+                ws_ctx=ws_ctx,
+                ws_route=_ws_route,
+                ws_allowed_personas=_ws_allowed,
+                ws_nav_items=ws_nav_items,
+                ws_entity_items=_ws_entity_items,
+                ws_nav_groups=_ws_nav_groups,
+                ws_app_name=ws_app_name,
+                primary_action_candidates=_ws_primary,
             )
             router.get(f"/workspaces/{workspace.name}", response_class=HTMLResponse)(handler)
 
