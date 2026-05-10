@@ -399,3 +399,171 @@ def test_mini_bars_all_zero_values_renders_zero_width_bars() -> None:
     assert "dz-mini-bar-fill" in body
     # Both bars at 0%.
     assert body.count("width: 0.0%") == 2
+
+
+# ───────────────── stamps mode (#1017 v0.67.19) ─────────
+
+
+def test_stamps_renders_chronological_event_list() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="recent",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["triggered_at", "message"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "e1",
+            "triggered_at": "2026-05-10T09:00:00+00:00",
+            "message": "First event",
+        },
+        {
+            "id": "e2",
+            "triggered_at": "2026-05-10T11:00:00+00:00",
+            "message": "Latest event",
+        },
+        {
+            "id": "e3",
+            "triggered_at": "2026-05-10T10:00:00+00:00",
+            "message": "Middle event",
+        },
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-entity-card-stamps" in body
+    assert body.count("dz-stamp") >= 3
+    latest_pos = body.index("Latest event")
+    middle_pos = body.index("Middle event")
+    first_pos = body.index("First event")
+    assert latest_pos < middle_pos < first_pos
+
+
+def test_stamps_renders_time_element_with_iso_datetime() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts", "label"],
+            ),
+        ]
+    )
+    rows = [{"id": "1", "ts": "2026-05-10T09:00:00+00:00", "label": "Login"}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert '<time class="dz-stamp-time"' in body
+    assert 'datetime="2026-05-10T09:00:00+00:00"' in body
+    assert ">2026-05-10 09:00<" in body
+
+
+def test_stamps_renders_optional_detail_field() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts", "label", "actor"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "1",
+            "ts": "2026-05-10T09:00:00+00:00",
+            "label": "Login",
+            "actor": "alice",
+        }
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-stamp-detail" in body
+    assert ">alice<" in body
+
+
+def test_stamps_omits_section_when_no_rows() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts", "label"],
+            ),
+        ]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: []})
+    assert out[0]["is_omitted"] is True
+
+
+def test_stamps_omits_section_when_no_timestamp_field() -> None:
+    cfg = _config(sections=[_section(name="x", mode=EntityCardSectionMode.STAMPS)])
+    out = _build_entity_card_sections(
+        items=[{"id": "p1"}], config=cfg, rows_per_section={0: [{"label": "x"}]}
+    )
+    assert out[0]["is_omitted"] is True
+
+
+def test_stamps_handles_unparseable_timestamps_gracefully() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts", "label"],
+            ),
+        ]
+    )
+    rows = [
+        {"id": "1", "ts": "not-a-date", "label": "Bad"},
+        {"id": "2", "ts": "2026-05-10T09:00:00+00:00", "label": "Good"},
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "Good" in body
+    assert "Bad" in body
+    assert body.index("Good") < body.index("Bad")
+
+
+def test_stamps_html_escapes_label_and_detail() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts", "label", "detail"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "1",
+            "ts": "2026-05-10T09:00:00+00:00",
+            "label": "<script>alert(1)</script>",
+            "detail": "<img src=x>",
+        }
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "<script>" not in body
+    assert "<img" not in body
+    assert "&lt;script&gt;" in body
+    assert "&lt;img" in body
+
+
+def test_stamps_omits_label_span_when_label_field_unconfigured() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts"],
+            ),
+        ]
+    )
+    rows = [{"id": "1", "ts": "2026-05-10T09:00:00+00:00"}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-stamp-time" in body
+    assert "dz-stamp-label" not in body

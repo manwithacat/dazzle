@@ -261,6 +261,93 @@ def _build_day_timeline_slots(
     return slots
 
 
+def _render_stamps_body(
+    *,
+    rows: list[dict[str, Any]],
+    timestamp_field: str,
+    label_field: str,
+    detail_field: str,
+) -> str:
+    """Render the body of an `entity_card` `stamps` section
+    (#1017, v0.67.19).
+
+    Chronological event list — most recent first. Each row produces
+    one `<li class="dz-stamp">` carrying:
+      - a `<time datetime="<iso>">` with the parsed timestamp (or
+        the raw value if it doesn't parse — defensive)
+      - a `<span class="dz-stamp-label">` with the resolved label
+      - an optional `<span class="dz-stamp-detail">` with the
+        secondary field when configured
+
+    Empty / no-timestamp-field returns empty string; caller flags
+    the section omitted. The timestamp parser reuses the same
+    coercion shape as `_build_day_timeline_slots` (datetime objects
+    pass through; ISO strings parse; bare values fall through as
+    "before any other parsable value").
+
+    Sort is descending so the freshest event is at the top — the
+    typical shape for activity-log render."""
+    if not rows or not timestamp_field:
+        return ""
+
+    def _to_dt(value: Any) -> _dt.datetime | None:
+        if isinstance(value, _dt.datetime):
+            return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
+        if isinstance(value, str) and value:
+            try:
+                stripped = value.rstrip("Z")
+                if stripped.endswith("+00:00") or "T" in stripped or " " in stripped:
+                    parsed = _dt.datetime.fromisoformat(stripped)
+                    return parsed if parsed.tzinfo else parsed.replace(tzinfo=_dt.UTC)
+            except ValueError:
+                return None
+        return None
+
+    # Build (timestamp, row, raw_ts) tuples; sort descending.
+    parsed: list[tuple[_dt.datetime | None, dict[str, Any], Any]] = []
+    for row in rows:
+        raw_ts = row.get(timestamp_field)
+        parsed.append((_to_dt(raw_ts), row, raw_ts))
+    # Place rows with parseable timestamps first (sorted desc); then
+    # rows whose timestamp didn't parse (in their original order).
+    parsed.sort(
+        key=lambda triple: (triple[0] is None, -(triple[0].timestamp() if triple[0] else 0))
+    )
+
+    parts: list[str] = []
+    for parsed_ts, row, raw_ts in parsed:
+        # Time element: prefer ISO-8601 in the datetime= attr; visible
+        # text is a humanised short form (`YYYY-MM-DD HH:MM` for
+        # parseable values, raw stringified value otherwise).
+        if parsed_ts is not None:
+            iso = parsed_ts.isoformat()
+            visible = parsed_ts.strftime("%Y-%m-%d %H:%M")
+        else:
+            iso = str(raw_ts or "")
+            visible = iso
+        time_html = (
+            f'<time class="dz-stamp-time" datetime="{_dazzle_html_escape(iso)}">'
+            f"{_dazzle_html_escape(visible)}"
+            f"</time>"
+        )
+
+        label_value = str(row.get(label_field, "") or "") if label_field else ""
+        label_html = (
+            f'<span class="dz-stamp-label">{_dazzle_html_escape(label_value)}</span>'
+            if label_value
+            else ""
+        )
+        detail_value = str(row.get(detail_field, "") or "") if detail_field else ""
+        detail_html = (
+            f'<span class="dz-stamp-detail">{_dazzle_html_escape(detail_value)}</span>'
+            if detail_value
+            else ""
+        )
+        parts.append(f'<li class="dz-stamp">{time_html}{label_html}{detail_html}</li>')
+
+    return f'<ol class="dz-entity-card-stamps">{"".join(parts)}</ol>'
+
+
 def _render_mini_bars_body(
     *,
     rows: list[dict[str, Any]],
@@ -852,6 +939,25 @@ def _build_entity_card_sections(
                 rows=section_rows,
                 value_field=value_field,
                 label_field=label_field,
+            )
+            if not body_html:
+                is_omitted = True
+        elif mode == "stamps":
+            # stamps renders a chronological event list from rows
+            # pre-fetched by the per-section fan-out (#1017 v0.67.19).
+            # `fields[0]` is the timestamp column; `fields[1]` is the
+            # label column; `fields[2]` (optional) is a secondary
+            # detail (e.g. actor / category). Sort descending by
+            # timestamp — most recent event first. Section omits
+            # when there are no rows.
+            timestamp_field = fields[0] if fields else ""
+            label_field = fields[1] if len(fields) > 1 else ""
+            detail_field = fields[2] if len(fields) > 2 else ""
+            body_html = _render_stamps_body(
+                rows=section_rows,
+                timestamp_field=timestamp_field,
+                label_field=label_field,
+                detail_field=detail_field,
             )
             if not body_html:
                 is_omitted = True

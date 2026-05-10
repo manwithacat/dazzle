@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.19] - 2026-05-10
+
+### Added
+
+- **#1017 — `entity_card` `stamps` mode body renderer.** Third of the four entity_card per-mode renderers (after halo/flags MVP, quick_actions v0.67.17, mini_bars v0.67.18). Reuses the per-section source fan-out shape established in v0.67.18; adds only a body builder + an `elif` branch.
+- **`_render_stamps_body(rows, timestamp_field, label_field, detail_field)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Renders a chronological event list as `<ol class="dz-entity-card-stamps">` with one `<li class="dz-stamp">` per row. Each `<li>` carries:
+  - a `<time class="dz-stamp-time" datetime="<iso>">` element with the parsed ISO-8601 timestamp + a humanised visible date (`YYYY-MM-DD HH:MM`)
+  - an optional `<span class="dz-stamp-label">` with the label field value
+  - an optional `<span class="dz-stamp-detail">` with the secondary field value
+  - Sort: descending by timestamp (most-recent first); rows with unparseable timestamps land at the end in original order so they're still visible.
+- **Field convention:** `fields[0]` = timestamp column (required for the section to render), `fields[1]` = label column (optional), `fields[2]` = detail column (optional). Section omits when there are no rows or no timestamp field is configured.
+- **8 stamps tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 34 tests total): chronological sort with mixed-order input, time element with ISO datetime + humanised visible text, optional detail field, omits when no rows or no timestamp field, defensive handling of unparseable timestamps, HTML escape across all three text fields, optional label-span when label field unconfigured.
+- **Timestamp coercion** mirrors `_build_day_timeline_slots` — datetime instances pass through, ISO-8601 strings parse, naive datetimes coerce to UTC. Unparseable values render with the raw string in the `datetime=` attribute and the visible text, sorting last in original order.
+
+### Agent Guidance
+
+- **Three of four entity_card section modes now have body renderers; only `thread_summary` remains.** The pattern is templated: `thread_summary` will be the most opinionated of the four (it renders a single most-recent message + a snippet of conversation, as opposed to a list shape) but mechanically follows the same shape: `_render_thread_summary_body(rows, fields)` + `elif mode == "thread_summary"` + dedicated test block. Per-section fan-out is already wired by v0.67.18 — no upstream changes needed.
+
 ## [0.67.18] - 2026-05-10
 
 ### Added
