@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.27] - 2026-05-10
+
+### Added
+
+- **#1037 follow-on — 7 medium-shape sitespec sections migrated to typed-Fragment.** `stats`, `steps`, `comparison`, `split_content`, `card_grid`, `team`, `testimonials` all now produce HTML via dedicated builders in `site_section_builder.py`. Combined with v0.67.25 hero + v0.67.26 simple six, **14 of 19 section types are now typed (74%)**. Five remain on Jinja partials (features, pricing, faq, qa_personas, plus the implicit fallback for any sitespec author's custom types).
+- **`_section_media(section)` helper** — minimal port of the `section_media` Jinja macro from `_helpers.html`. Emits `<div class="dz-section-media"><img loading="lazy">` when section has `media: {kind: image, src: ...}`. Used by `card_grid` (consistent with the Jinja partial that calls `section_media(section)`).
+- **7 new builder methods**:
+  - `_build_stats_section`: DaisyUI `stats` row of value/label cells.
+  - `_build_steps_section`: numbered `<ol>` of step items with `is-not-last` modifier + connector divs between non-last steps.
+  - `_build_comparison_section`: feature-matrix `<table>` with optional `highlighted` column class on both header `<th>` and body `<td>` cells.
+  - `_build_split_content_section`: text + media side-by-side; `alignment: right` adds `dz-split--reversed` modifier; primary CTA only (no secondary).
+  - `_build_card_grid_section`: icon+title+body+optional-CTA cards; supports section-level header AND section-level media (banner above the grid).
+  - `_build_team_section`: avatar (image OR initials fallback derived from first letter of first two words) + name + optional role/bio + links list with type→lucide-icon mapping (linkedin/email→mail/twitter/github/everything-else→globe).
+  - `_build_testimonials_section`: quote `<blockquote>` + author name + optional role.
+- **38 unit tests** at `tests/unit/test_site_section_medium_builders.py`: per-section shape coverage (class names, conditional blocks, item iteration, alignment swaps, fallbacks), HTML escape paths, lucide icon mapping, security attrs (`target="_blank" rel="noopener"`), edge cases (empty items lists, single-item connector handling, missing fields, more cells than columns).
+
+### Agent Guidance
+
+- **Section migration progress: 14/19 (74%) typed. 5 remaining.** The bulk shape-work is done. Remaining types per CHANGELOG sequencing: `features` (slightly larger), `pricing` (most variable across sitespec authors), `faq` (likely accordion-shaped), `qa_personas` (dev-only — only renders when QA personas are provisioned, lower priority). Per-builder cost is now ~50 lines of code + ~6-8 tests; the tooling around dispatch, escape conventions, and helper macros (`_section_id_attr`, `_section_header`, `_section_media`) is shared across all builders. cyfuture's "zero Jinja under chrome=on" stop condition closes once the remaining 5 are migrated; the runway is 1-2 more ships of similar size.
+
 ## [0.67.26] - 2026-05-10
 
 ### Added
