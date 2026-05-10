@@ -6558,48 +6558,10 @@ class TestAuth2FAFlow:
         return (root / relpath).read_text()
 
     # --- Challenge surface ---------------------------------------------------
-
-    def test_challenge_extends_site_base_and_uses_auth_page_card(self) -> None:
-        src = self._read("site/auth/2fa_challenge.html")
-        assert '{% extends "site/site_base.html" %}' in src
-        assert "{% call auth_page_card(" in src
-
-    def test_challenge_has_canonical_totp_input_attributes(self) -> None:
-        src = self._read("site/auth/2fa_challenge.html")
-        # All 5 required attributes on the code input — pinned as gate 2
-        for attr in (
-            'autocomplete="one-time-code"',
-            'inputmode="numeric"',
-            'pattern="[0-9]*"',
-            'maxlength="6"',
-            'placeholder="000000"',
-        ):
-            assert attr in src, f"missing required TOTP attribute: {attr}"
-
-    def test_challenge_has_hidden_session_token_and_method(self) -> None:
-        src = self._read("site/auth/2fa_challenge.html")
-        assert 'id="session_token"' in src
-        assert 'id="method"' in src
-        # Both must be hidden inputs
-        import re
-
-        assert re.search(r'<input type="hidden"[^>]*id="session_token"', src)
-        assert re.search(r'<input type="hidden"[^>]*id="method"', src)
-
-    def test_challenge_sets_hx_history_false(self) -> None:
-        src = self._read("site/auth/2fa_challenge.html")
-        assert 'hx-history="false"' in src
-
-    def test_challenge_email_otp_conditional(self) -> None:
-        """Send-code-to-email button is gated on `email_otp in methods`."""
-        src = self._read("site/auth/2fa_challenge.html")
-        # The conditional must be a defensive `if` around the button
-        assert '{% if "email_otp" in methods %}' in src
-        assert 'id="dz-send-otp"' in src
-
-    def test_challenge_has_use_recovery_link(self) -> None:
-        src = self._read("site/auth/2fa_challenge.html")
-        assert 'id="dz-use-recovery"' in src
+    # The 2fa_challenge.html template was retired in Phase 1.D.1
+    # (v0.67.35). Coverage for the challenge surface now lives in
+    # tests/unit/test_two_factor_views.py (typed-Fragment view) and
+    # the form-encoded /auth/2fa/verify/submit endpoint tests.
 
     # --- Setup surface -------------------------------------------------------
 
@@ -6640,10 +6602,13 @@ class TestAuth2FAFlow:
 
     # --- Cross-surface gates -------------------------------------------------
 
-    def test_all_three_surfaces_have_iife_script(self) -> None:
-        """Each template has a scripts_extra block with an IIFE pattern."""
+    def test_remaining_surfaces_have_iife_script(self) -> None:
+        """Setup + settings templates still ship an IIFE wrapper.
+
+        Phase 1.D.1 (v0.67.35) retired 2fa_challenge.html; setup +
+        settings stay on Jinja until their typed-Fragment views land.
+        """
         for path in (
-            "site/auth/2fa_challenge.html",
             "site/auth/2fa_setup.html",
             "site/auth/2fa_settings.html",
         ):
@@ -6653,28 +6618,26 @@ class TestAuth2FAFlow:
             assert "})()" in src or "})();" in src
 
     def test_no_alpine_or_htmx_directives(self) -> None:
-        """All three surfaces are plain-JS — no Alpine, no HTMX."""
+        """Setup + settings surfaces are plain-JS — no Alpine, no HTMX."""
         import re
 
         for path in (
-            "site/auth/2fa_challenge.html",
             "site/auth/2fa_setup.html",
             "site/auth/2fa_settings.html",
         ):
             src = self._read(path)
             for banned in ("x-data", "x-show", "@click"):
                 assert banned not in src, f"Alpine directive {banned} in {path}"
-            # HTMX directives (but allow hx-history on challenge — intentional)
             hx_attrs = re.findall(r"\bhx-[a-z-]+", src)
             for attr in hx_attrs:
                 assert attr == "hx-history", (
                     f"unexpected HTMX directive {attr} in {path} — 2FA uses plain fetch()"
                 )
 
-    def test_all_three_surfaces_have_contract_pointer(self) -> None:
-        """Cycle 298 added Contract: pointer headers to all 3 templates."""
+    def test_remaining_surfaces_have_contract_pointer(self) -> None:
+        """Cycle 298 added Contract: pointer headers; the two
+        surviving 2FA templates still carry them."""
         for path in (
-            "site/auth/2fa_challenge.html",
             "site/auth/2fa_setup.html",
             "site/auth/2fa_settings.html",
         ):

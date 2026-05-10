@@ -81,6 +81,17 @@ class AuthSubsystem:
         password_login_router = create_password_login_routes()
         ctx.app.include_router(password_login_router)
 
+        # Form-encoded 2FA challenge submit routes (Phase 1.D.1,
+        # v0.67.35) — the typed challenge view posts here instead of
+        # the JSON `/auth/2fa/verify` endpoint, so the form works
+        # without JS.
+        from dazzle_back.runtime.auth.two_factor_form_routes import (
+            create_two_factor_form_routes,
+        )
+
+        two_factor_form_router = create_two_factor_form_routes()
+        ctx.app.include_router(two_factor_form_router)
+
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
         # time (#838). When no SecurityConfig is present on the AppSpec, the

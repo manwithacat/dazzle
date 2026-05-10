@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.35] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 1.D.1 — typed 2FA challenge view + form-encoded verify endpoint.** The mid-login 2FA challenge page (where a user lands after submitting login when their account has TOTP / email-OTP / recovery codes enabled) is now rendered via the typed-Fragment substrate. No JS — the form submits natively.
+- **`build_2fa_challenge_view`** in `src/dazzle_back/runtime/auth/two_factor_views.py`. Supports three modes (`totp`, `email_otp`, `recovery`); mode switching happens via plain links to `/2fa/challenge?session=<token>&mode=<other>` rather than client-side toggles. When mode=`email_otp` and the code hasn't been sent yet, renders a "Send code to email" form-button that posts to `/auth/2fa/email-otp-send/submit`; after delivery, the view re-renders with the verify form.
+- **`src/dazzle_back/runtime/auth/two_factor_form_routes.py`** — two form-encoded endpoints:
+  1. `POST /auth/2fa/verify/submit` — accepts session_token + method + code, reuses the validation primitives backing the JSON `_verify_2fa` (TOTP via `dazzle_back.runtime.totp.verify_totp`, email-OTP and recovery via the optional `otp_store` / `recovery_store` on the auth store). On success: consume pending session, create full session (7-day default lifetime), set `dazzle_session` cookie, 303 to safe `?next=` or `/app`. On failure: 303 to `/2fa/challenge?session=...&method=...&error=invalid_code`.
+  2. `POST /auth/2fa/email-otp-send/submit` — triggers `otp_store.send_otp(user_id, method="email_otp")` for the pending login session, 303s to `/2fa/challenge?session=...&mode=email_otp&sent=1` so the verify form renders.
+- **18 view-builder unit tests** at `tests/unit/test_two_factor_views.py` covering all three modes (totp/email_otp/recovery), the email-OTP send-vs-verify toggle, error rendering, mode-switch link visibility, and escape safety on user-supplied input.
+- **AuthSubsystem wiring**: `AuthSubsystem.start` now includes `create_two_factor_form_routes()` alongside the other form-encoded route modules so the new endpoints are mounted on every Dazzle app.
+
+### Removed
+
+- **`src/dazzle_ui/templates/site/auth/2fa_challenge.html`** — replaced by the typed-Fragment view. The inline `<script>` block (4 fetch-driven event handlers) is gone; the same behaviors now go through native form posts + server-side mode switching.
+- **6 cross-source tests** in `tests/unit/test_workspace_routes.py::TestAuth2FAFlow` that read `2fa_challenge.html` directly (one per assertion target). The remaining two "cross-surface" gate tests (`*_have_iife_script`, `no_alpine_or_htmx_directives`, `*_have_contract_pointer`) now iterate only over the surviving `2fa_setup.html` and `2fa_settings.html` templates.
+
+### Changed
+
+- **`/2fa/challenge` GET handler** in `src/dazzle_back/runtime/site_routes.py` renders `build_2fa_challenge_view` instead of the Jinja template. The legacy `method=` query parameter is still accepted (as an alias for `mode=`) so links from older bookmarks keep working. `?sent=1` flag from the email-OTP send endpoint flips the view from send-button to verify-form mode.
+- **`tests/unit/test_2fa_page_routes.py::test_challenge_context_carries_session_token`** flipped from testing the deleted `build_site_auth_context("2fa_challenge", ...)` dispatcher to testing the new typed view directly.
+
+### Agent Guidance
+
+- **2FA setup and settings stay on Jinja for now** — `2fa_setup.html` and `2fa_settings.html` involve heavier client-side interaction (QR code generation, dynamic recovery-code reveal, async status loading) that doesn't fit cleanly into the "native form post + redirect" pattern the Phase 1 ships have used. Migrating those is Phase 1.D.2; it likely requires moving the JS to an external static file referenced via `Page.js_scripts` rather than keeping it inline.
+- **`auth_page_wrapper.html` macro stays for now** — still consumed by `2fa_setup.html` and `2fa_settings.html`. Delete only when those templates also migrate (Phase 1.D.2).
+- **Email-OTP mode switches the form twice on the user** — first they see the "Send code to email" button; clicking it 303s back with `?sent=1` and the form swaps to the code-input shape. This is intentional and matches the legacy JS flow; the difference is that everything happens server-side via redirects rather than via JS state machine.
+
 ## [0.67.34] - 2026-05-11
 
 ### Added

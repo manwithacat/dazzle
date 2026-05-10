@@ -959,25 +959,49 @@ def create_auth_page_routes(
 
     @router.get("/2fa/challenge", response_class=HTMLResponse, include_in_schema=False)
     async def two_factor_challenge_page(
+        request: Request,
         session: str = "",
-        method: str = "totp",
+        method: str = "",
+        mode: str = "",
+        sent: str = "",
+        error: str = "",
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
         """Serve the mid-login 2FA challenge page.
 
-        Public route — the pre-login session_token is the sole credential the
-        subsequent POST /auth/2fa/verify call relies on. The token is passed in
-        as ``?session=<token>`` from the login flow when the backend returns
-        ``status: "2fa_required"``.
+        Phase 1.D.1 (v0.67.35): typed-Fragment is the only path —
+        `site/auth/2fa_challenge.html` was deleted. The view posts to
+        the form-encoded `/auth/2fa/verify/submit` endpoint and does
+        mode switching via plain links rather than JS.
+
+        Public route — the pre-login session_token is the sole
+        credential the verify endpoint relies on. The token threads
+        through as ``?session=<token>`` from the login flow.
         """
-        ctx = build_site_auth_context(
-            sitespec,
-            "2fa_challenge",
-            custom_css=has_custom_css,
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.two_factor_views import build_2fa_challenge_view
+
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        # `mode` is the canonical query name; accept legacy `method=`
+        # too so links from older bookmarks still work.
+        chosen_mode = mode or method or "totp"
+        if chosen_mode not in ("totp", "email_otp", "recovery"):
+            chosen_mode = "totp"
+        error_message = ""
+        if error == "invalid_code":
+            error_message = "That code didn't match. Try again."
+        page = build_2fa_challenge_view(
+            product_name=product_name,
             session_token=session,
-            default_method=method,
-            methods=["totp", "email_otp"],
+            mode=chosen_mode,  # type: ignore[arg-type]
+            email_otp_enabled=True,
+            code_sent=bool(sent),
+            error_message=error_message,
+            css_links=css_links,
+            js_scripts=js_scripts,
         )
-        return render_site_page("site/auth/2fa_challenge.html", ctx)
+        return FragmentRenderer().render(page)
 
     return router

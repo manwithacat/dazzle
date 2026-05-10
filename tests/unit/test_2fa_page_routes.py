@@ -38,23 +38,26 @@ class TestTwoFactorPageContextBuilder:
         html = render_site_page("site/auth/2fa_settings.html", ctx)
         assert "2FA Settings" in html
 
-    def test_challenge_context_carries_session_token(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        ctx = build_site_auth_context(
-            SITESPEC,
-            "2fa_challenge",
-            session_token="abc-123",
-            default_method="totp",
-            methods=["totp", "email_otp"],
+    def test_challenge_view_carries_session_token(self) -> None:
+        """Phase 1.D.1 (v0.67.35): challenge surface is now a typed-
+        Fragment view, not a Jinja template. The token threads
+        through `build_2fa_challenge_view` rather than the legacy
+        SiteAuthContext."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.two_factor_views import (
+            build_2fa_challenge_view,
         )
-        assert ctx.session_token == "abc-123"
-        assert ctx.default_method == "totp"
-        html = render_site_page("site/auth/2fa_challenge.html", ctx)
+
+        page = build_2fa_challenge_view(
+            product_name="TestApp",
+            session_token="abc-123",
+            mode="totp",
+            email_otp_enabled=True,
+        )
+        html = FragmentRenderer().render(page)
         assert "abc-123" in html
-        # email_otp affordance is conditional on the methods list
-        assert "Send code to email" in html
+        # Mode-switch link to email-otp is rendered when that method is enabled.
+        assert "mode=email_otp" in html
 
 
 class TestTwoFactorRoutesWithoutAuth:

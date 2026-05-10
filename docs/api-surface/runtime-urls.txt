@@ -100,7 +100,7 @@ module: site_routes
   GET | /
     handler: serve_root_page(request: Request, r: str = page_route, sitespec: dict[str, Any] = sitespec_data) -> Response
   GET | /2fa/challenge
-    handler: two_factor_challenge_page(session: str = '', method: str = 'totp', sitespec: dict[str, Any] = sitespec_data) -> str
+    handler: two_factor_challenge_page(request: Request, session: str = '', method: str = '', mode: str = '', sent: str = '', error: str = '', sitespec: dict[str, Any] = sitespec_data) -> str
   GET | /2fa/settings
     handler: two_factor_settings_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> Response
   GET | /2fa/setup
