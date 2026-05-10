@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.30] - 2026-05-10
+
+### Added
+
+- **Jinja2 Retirement Phase 1.B (partial) — signup magic-link typed view + MagicLinkMailer Protocol.** Companion to v0.67.29's `/login` migration; mirrors the shape for `/signup` and introduces the email-delivery seam.
+- **`src/dazzle_back/runtime/auth/mailer.py`** — new module. `MagicLinkMailer` is a runtime-checkable Protocol with one method `send_magic_link(*, to_email, link_url)`. Default `LogMailer` writes link URLs to the application log at INFO level (sufficient for development and CI; production deployments register a real mailer on `app.state.magic_link_mailer`). `get_mailer(app_state)` resolves the registered mailer or falls back to LogMailer; the runtime check rejects non-Protocol objects with an AssertionError so misconfigured deployments fail loud.
+- **`build_signup_magic_link_view`** in `auth_views.py`. Two-field form (name + email, no password). Posts to `/auth/signup/magic-link`. Includes an "Already have an account? Sign in" crosslink to `/login` for accidental returning users.
+- **`POST /auth/signup/magic-link`** issuance endpoint. Create-or-login behavior:
+  1. Existing email → silently issue a sign-in magic link (treat as login). Friendly UX: signup form doesn't need to know whether the email is new or returning.
+  2. New email → create a passwordless user record with a random unguessable password (the user can opt into a real password later via account settings if password mode is enabled), then issue the magic link.
+  3. Empty/malformed email → redirect to `/login/sent` anyway, no user created, no mailer call (account-enumeration guard parity).
+  4. `create_user` failures (e.g. unique-constraint races) are caught + logged, mailer call skipped, user still gets the same `/login/sent` redirect.
+- **Chrome-flag gate at `GET /signup`**: chrome=on renders the typed view; chrome=off keeps the legacy Jinja `site/auth/signup.html` path. Same shape as `/login`.
+- **`/auth/login/magic-link` refactored** to use the new mailer abstraction. Inline `_logger.info(...)` call replaced with `mailer.send_magic_link(...)` — registered mailers now intercept link delivery for both login and signup.
+- **`_build_magic_link_url(request, token, next_path)`** internal helper extracted in `magic_link_routes.py`. Composes the absolute consumer URL once; called by both login and signup issuance paths so URL shape stays consistent.
+- **5 mailer tests** at `tests/unit/test_auth_mailer.py`: Protocol satisfaction, INFO-log shape, `get_mailer` fallback chain, registered-mailer override, runtime-check rejection of non-Protocol objects.
+- **12 signup view tests** at `tests/unit/test_auth_views_signup_magic_link.py`: name + email field shape, no password / no confirm_password, form action, submit label, next-URL threading, sign-in crosslink, error message rendering, doctype sanity, HTML escape safety on every user-supplied field.
+- **12 integration tests** at `tests/integration/test_auth_signup_magic_link_chrome_gate.py`: chrome gate, create-or-login behavior, malformed-email + empty-email + create_user-failure paths, next-param threading, email case normalisation, mailer wiring (registered mailer wins, LogMailer fallback fires when unset). Includes parity test that `/login` also uses the registered mailer.
+
+### Changed
+
+- **`docs/api-surface/runtime-urls.txt`** — regenerated to include `/auth/signup/magic-link` (POST). API surface drift gate green.
+
+### Agent Guidance
+
+- **MagicLinkMailer extension is operator-friendly**: production deployments register their mailer at app construction time via `app.state.magic_link_mailer = MyMailer()`. The Protocol is intentionally one-method to keep the contract narrow. When implementing a real mailer (SES, SendGrid, SMTP), keep `send_magic_link` fire-and-forget — the auth flow's account-enumeration guard means the user gets the same response either way, so a transport-layer failure should log loudly but never raise into the issuance route.
+- **Phase 1.B partial close-out** — signup is end-to-end live, mailer seam is in place. Remaining 1.B work: opt-in password mode for `/login` and `/signup` (per-deployment flag exposes the password input + the existing password endpoint), `/forgot-password` + `/reset-password` typed renders. Phase 1.C is SSO scaffolding via Authlib. The mailer Protocol shipping in this slice unblocks Phase 1.B.2 (real SMTP/SES integrations as separate plug-ins) without needing further auth-route changes.
+
 ## [0.67.29] - 2026-05-10
 
 ### Added

@@ -122,7 +122,7 @@ module: site_routes
   GET | /reset-password
     handler: reset_password_page(sitespec: dict[str, Any] = sitespec_data) -> str
   GET | /signup
-    handler: signup_page(sitespec: dict[str, Any] = sitespec_data) -> str
+    handler: signup_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/') -> str
   GET | /site.js
     handler: serve_site_js() -> Response
   GET | /styles/dazzle.css

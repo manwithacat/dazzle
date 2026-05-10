@@ -21,8 +21,20 @@ from dazzle_back.runtime.auth.magic_link import (
     create_magic_link,
     validate_magic_link,
 )
+from dazzle_back.runtime.auth.mailer import get_mailer
 
 _logger = logging.getLogger(__name__)
+
+
+def _build_magic_link_url(*, request: Request, token: str, next_path: str) -> str:
+    """Compose the absolute consumer URL for a magic-link token.
+
+    Format: `<base_url>/auth/magic/<token>[?next=<next_path>]`.
+    Used by both the login + signup issuance paths so the URL
+    shape stays consistent."""
+    base = str(request.base_url).rstrip("/")
+    next_param = f"?next={next_path}" if next_path and next_path != "/" else ""
+    return f"{base}/auth/magic/{token}{next_param}"
 
 
 def _is_safe_redirect_path(value: str) -> bool:
@@ -149,6 +161,7 @@ def create_magic_link_routes() -> APIRouter:
         to prevent enumeration via timing or volume.
         """
         auth_store = request.app.state.auth_store
+        mailer = get_mailer(request.app.state)
         normalized_email = email.strip().lower()
         if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)
@@ -159,19 +172,8 @@ def create_magic_link_routes() -> APIRouter:
                     ttl_seconds=900,  # 15 minutes
                     created_by="login_form",
                 )
-                # In the absence of a configured mailer, log the
-                # link so dev environments can complete the flow
-                # via copy-paste from the server log. Replaced by
-                # a real email send in Phase 1.B's mailer wiring.
-                base = str(request.base_url).rstrip("/")
-                next_param = f"?next={next}" if next and next != "/" else ""
-                _logger.info(
-                    "Magic-link issued for %s: %s/auth/magic/%s%s",
-                    normalized_email,
-                    base,
-                    token,
-                    next_param,
-                )
+                link_url = _build_magic_link_url(request=request, token=token, next_path=next)
+                mailer.send_magic_link(to_email=normalized_email, link_url=link_url)
             else:
                 _logger.info(
                     "Magic-link request for unknown email %s — "
@@ -180,6 +182,84 @@ def create_magic_link_routes() -> APIRouter:
                 )
         # Same response regardless of whether email matched a user
         # — defensive against account enumeration.
+        sent_url = "/login/sent"
+        if next and _is_safe_redirect_path(next) and next != "/":
+            sent_url = f"/login/sent?next={next}"
+        return RedirectResponse(url=sent_url, status_code=303)
+
+    @router.post("/auth/signup/magic-link")
+    async def signup_with_magic_link(
+        request: Request,
+        email: Annotated[str, Form()] = "",
+        name: Annotated[str, Form()] = "",
+        next: Annotated[str, Query()] = "/",
+    ) -> RedirectResponse:
+        """Issue a magic-link for signup (#1037 Phase 1.B, v0.67.30).
+
+        Behaviour:
+        1. Look up user by email.
+        2. If user exists: silently issue a sign-in link (treat as
+           a login attempt — the user already has an account).
+           This is the friendly UX: signup form doesn't need to
+           know whether the email is new or returning.
+        3. If user doesn't exist AND email is well-formed: create
+           a passwordless user record (random unguessable hash —
+           the user can opt into a password later via account
+           settings) and issue a magic link.
+        4. Empty / malformed email: log + redirect to /login/sent
+           anyway (account-enumeration guard parity with login).
+
+        SECURITY: same rate-limit considerations as the login
+        endpoint apply. The create-or-login branch means a
+        determined attacker could observe whether an email was
+        registered by timing the response — a real production
+        deployment should add timing equalisation if that's a
+        concern.
+        """
+        auth_store = request.app.state.auth_store
+        mailer = get_mailer(request.app.state)
+        normalized_email = email.strip().lower()
+        normalized_name = name.strip()
+
+        if normalized_email and "@" in normalized_email:
+            user = auth_store.get_user_by_email(normalized_email)
+            if user is None:
+                # Create passwordless user. Random password fills
+                # the column; the user can set a real password
+                # later via account settings if they want password-
+                # mode login enabled.
+                import secrets
+
+                random_password = secrets.token_urlsafe(48)
+                try:
+                    user = auth_store.create_user(
+                        email=normalized_email,
+                        password=random_password,
+                        username=normalized_name or None,
+                    )
+                except Exception as exc:  # noqa: BLE001 — surface in logs
+                    _logger.warning(
+                        "Signup magic-link: create_user failed for %s: %s",
+                        normalized_email,
+                        exc,
+                    )
+                    user = None
+            if user is not None:
+                token = create_magic_link(
+                    auth_store,
+                    user_id=user.id,
+                    ttl_seconds=900,
+                    created_by="signup_form",
+                )
+                link_url = _build_magic_link_url(request=request, token=token, next_path=next)
+                mailer.send_magic_link(to_email=normalized_email, link_url=link_url)
+        else:
+            _logger.info(
+                "Signup magic-link: malformed/empty email %r — "
+                "no user created (account-enumeration guard)",
+                normalized_email,
+            )
+
         sent_url = "/login/sent"
         if next and _is_safe_redirect_path(next) and next != "/":
             sent_url = f"/login/sent?next={next}"

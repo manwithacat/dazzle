@@ -93,6 +93,71 @@ def build_login_magic_link_view(
     )
 
 
+def build_signup_magic_link_view(
+    *,
+    page_title: str,
+    product_name: str,
+    next_url: str = "/",
+    error_message: str = "",
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the signup page (email + name only — magic-link mode).
+
+    POSTs to `/auth/signup/magic-link`, which is create-or-login:
+    if the email already has an account, treat as login;
+    otherwise, create a passwordless user record and issue the
+    magic link. Either way the user lands on `/login/sent` with
+    the same confirmation page (no leakage about account state).
+
+    `name` is captured for the new-user path; existing users get
+    a sign-in link regardless of whether they supply a name.
+    """
+    form_action = "/auth/signup/magic-link"
+    if next_url and next_url != "/":
+        form_action = f"{form_action}?next={next_url}"
+
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body=page_title, level=1),
+    ]
+    if error_message:
+        body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.append(
+        FormStack(
+            action=URL(form_action),
+            method="POST",
+            fields=(
+                Field(
+                    name="name",
+                    label="Full name",
+                    kind="text",
+                    required=True,
+                    placeholder="Alice Wong",
+                ),
+                Field(
+                    name="email",
+                    label="Email",
+                    kind="email",
+                    required=True,
+                    placeholder="you@example.com",
+                ),
+            ),
+            submit=Submit(label="Send sign-up link", variant="primary"),
+        )
+    )
+    body_children.append(Text(body="Already have an account? ", tone="muted"))
+    body_children.append(Link(label="Sign in", href=URL("/login")))
+
+    return Page(
+        title=f"{page_title} — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
 def build_login_sent_view(
     *,
     product_name: str,

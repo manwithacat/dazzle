@@ -827,8 +827,45 @@ def create_auth_page_routes(
         )
 
     @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
-    async def signup_page(sitespec: dict[str, Any] = sitespec_data) -> str:
-        """Serve the signup page."""
+    async def signup_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+        next: str = "/",
+    ) -> str:
+        """Serve the signup page.
+
+        Phase 1.B (v0.67.30): chrome=on renders the typed-Fragment
+        magic-link signup view (name + email, no password); chrome=off
+        keeps the legacy Jinja `site/auth/signup.html` path. Removed
+        in Phase 4.C.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import (
+                build_signup_magic_link_view,
+            )
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            page = build_signup_magic_link_view(
+                page_title="Create your account",
+                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+                next_url=next,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
         ctx = build_site_auth_context(sitespec, "signup", custom_css=has_custom_css)
         return render_site_page("site/auth/signup.html", ctx)
 
