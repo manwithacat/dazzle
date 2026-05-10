@@ -617,20 +617,11 @@ class SiteAuthContext(BaseModel):
     default_method: str = "totp"
     methods: list[str] = Field(default_factory=lambda: ["totp"])
 
-
-class Site404Context(BaseModel):
-    """Context for 404 error page template."""
-
-    product_name: str = "My App"
-    nav_items: list[SiteNavItem] = Field(default_factory=list)
-    nav_cta: SiteCTAContext | None = None
-    footer_columns: list[SiteFooterColumn] = Field(default_factory=list)
-    copyright_text: str = ""
-    custom_css: bool = False
-
-
-class SiteErrorContext(Site404Context):
-    """Context for generic error page templates (403, 500, etc.)."""
+    # Site404Context and SiteErrorContext were retired in Phase 2.A
+    # (v0.67.34) alongside the deletion of `site/404.html` and
+    # `site/403.html`. Marketing-site error pages now render via the
+    # typed-Fragment views `build_site_404_view` and `build_site_403_view`
+    # in `dazzle_back.runtime.error_views`.
 
     message: str = ""
 

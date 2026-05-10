@@ -202,14 +202,9 @@ class TestBuildSiteAuthContext:
         assert ctx.title == "2FA Settings"
 
 
-class TestBuildSite404Context:
-    """Tests for build_site_404_context()."""
-
-    def test_basic_404(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_404_context
-
-        ctx = build_site_404_context({"brand": {"product_name": "App"}, "layout": {}})
-        assert ctx.product_name == "App"
+# TestBuildSite404Context removed in Phase 2.A (v0.67.34) —
+# `build_site_404_context` is gone. Marketing-site 404 coverage now
+# lives in `tests/unit/test_error_views.py`.
 
 
 # =========================================================================
@@ -571,24 +566,8 @@ class TestSitePageTemplate:
         assert "BS" in html  # Bob Smith initials
 
 
-# =========================================================================
-# 404 Template Tests
-# =========================================================================
-
-
-class TestSite404Template:
-    """Tests for site/404.html template."""
-
-    def test_404_renders(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_404_context
-
-        ctx = build_site_404_context({"brand": {"product_name": "TestApp"}, "layout": {}})
-        html = _render("site/404.html", ctx)
-
-        assert "404" in html
-        assert "TestApp" in html
-        assert "Go Home" in html
-        assert "dz-404-headline" in html
+# Site 404 template retired in Phase 2.A (v0.67.34) — coverage moved
+# to `tests/unit/test_error_views.py`.
 
 
 # =========================================================================

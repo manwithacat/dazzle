@@ -320,7 +320,14 @@ class TestErrorHandlerDispatch:
 
     @pytest.mark.asyncio
     async def test_404_on_marketing_path_renders_site(self, handler: Any) -> None:
-        """404 under public paths should render the marketing-site 404."""
+        """404 under public paths should render the marketing-site 404.
+
+        Phase 2.A (v0.67.34): the marketing site 404 is now a typed-
+        Fragment Page (no longer the `dz-404-*` Jinja template). The
+        typed view uses `dz-empty-state` for the headline + description
+        and `dz-stack` for the page-level layout — both characteristic
+        markers we can pin against here.
+        """
         from starlette.exceptions import HTTPException
 
         req = self._make_request("/about/bad")
@@ -330,8 +337,13 @@ class TestErrorHandlerDispatch:
 
         assert response.status_code == 404
         body = response.body.decode()
-        # Marketing site 404 uses the dz-404 classes
-        assert "dz-404" in body
+        # Typed-view markers (Phase 2.A).
+        assert "dz-empty-state" in body
+        assert "dz-stack" in body
+        # No marketing-site Jinja chrome — only the typed view's
+        # minimal Page output.
+        assert "site/includes/nav.html" not in body
+        assert "404" in body
 
     @pytest.mark.asyncio
     async def test_403_on_app_path_renders_app_shell(self, handler: Any) -> None:

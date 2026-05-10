@@ -220,43 +220,17 @@ class TestCustomCssOverride:
         html = get_shared_head_html("Test Page")
         assert "/static/css/custom.css" not in html
 
-    # auth_login / auth_forgot_password / auth_reset_password params
-    # removed in Phase 1.E (v0.67.33) — those templates were deleted.
-    # The typed-Fragment auth views already accept custom CSS via
-    # `css_links=` and are covered by the test_auth_views_* suites.
-    @pytest.mark.parametrize(
-        "context_builder,template",
-        [
-            ("site_page", "site/page.html"),
-            ("site_404", "site/404.html"),
-        ],
-        ids=[
-            "test_render_site_page_passes_custom_css",
-            "test_render_404_page_passes_custom_css",
-        ],
-    )
-    def test_render_page_passes_custom_css(self, context_builder: str, template: str) -> None:
-        """Each page-rendering helper propagates custom_css=True to head."""
+    # site_404 + auth_* params retired in Phase 1.E/2.A — those templates
+    # were deleted. Only `site/page.html` still exercises custom_css via
+    # build_site_page_context.
+    def test_render_site_page_passes_custom_css(self) -> None:
+        """build_site_page_context propagates custom_css=True to head."""
+        from dazzle_ui.runtime.site_context import build_site_page_context
         from dazzle_ui.runtime.template_renderer import render_site_page
 
-        sitespec_with_layout: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
-        sitespec_no_layout: dict = {"brand": {"product_name": "TestApp"}}
-
-        if context_builder == "site_page":
-            from dazzle_ui.runtime.site_context import build_site_page_context
-
-            ctx = build_site_page_context(sitespec_with_layout, "/", custom_css=True)
-        elif context_builder == "site_404":
-            from dazzle_ui.runtime.site_context import build_site_404_context
-
-            ctx = build_site_404_context(sitespec_with_layout, custom_css=True)
-        else:
-            from dazzle_ui.runtime.site_context import build_site_auth_context
-
-            auth_kind = context_builder.split("_", 1)[1]  # e.g. "login", "forgot_password"
-            ctx = build_site_auth_context(sitespec_no_layout, auth_kind, custom_css=True)
-
-        html = render_site_page(template, ctx)
+        sitespec: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
+        ctx = build_site_page_context(sitespec, "/", custom_css=True)
+        html = render_site_page("site/page.html", ctx)
         assert "/static/css/custom.css" in html
 
     def test_create_site_page_routes_detects_custom_css(self, tmp_path: Path) -> None:

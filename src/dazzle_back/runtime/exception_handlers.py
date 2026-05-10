@@ -232,6 +232,24 @@ def _compute_back_affordance(path: str) -> tuple[str, str] | None:
     return (f"/app/{surface}", "Back to List")
 
 
+def _typed_error_assets(request: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Resolve the CSS+JS asset tuples for typed-Fragment error pages.
+
+    Mirrors `_typed_chrome_assets` in `site_routes.py` — per-deployment
+    overrides live on `app.state.fragment_chrome_css_links` and
+    `app.state.fragment_chrome_js_scripts`, falling back to the
+    framework-default minified bundles.
+    """
+    app_state = getattr(getattr(request, "app", None), "state", None)
+    css = tuple(
+        getattr(app_state, "fragment_chrome_css_links", None) or ("/static/dist/dazzle.min.css",)
+    )
+    js = tuple(
+        getattr(app_state, "fragment_chrome_js_scripts", None) or ("/static/dist/dazzle.min.js",)
+    )
+    return css, js
+
+
 def _render_app_shell_error(
     *,
     template_name: str,
@@ -321,13 +339,30 @@ def register_site_error_handlers(
     """
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
-    from dazzle_ui.runtime.site_context import build_site_404_context, build_site_error_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    has_custom_css = bool(
-        project_root and (project_root / "static" / "css" / "custom.css").is_file()
+    from dazzle.render.fragment.renderer import FragmentRenderer
+    from dazzle_back.runtime.error_views import (
+        build_site_403_view,
+        build_site_404_view,
     )
-    app_name = sitespec_data.get("product_name") or sitespec_data.get("name") or "Dazzle"
+
+    # Phase 2.A (v0.67.34): marketing-site error pages render via
+    # typed-Fragment views that pull CSS/JS from `app.state` overrides
+    # (same shape as the auth views in Phase 1). `project_root` is no
+    # longer consulted here; the per-deployment override lives on
+    # `app.state.fragment_chrome_css_links` instead.
+    _ = project_root
+    # Phase 2.A: brand-nested lookup matches the auth views' convention
+    # (`sitespec.brand.product_name`). The pre-2.A code path read a
+    # flat top-level `product_name` / `name`; sitespecs use the nested
+    # `brand` key, so the marketing 403/404 used to fall back to
+    # "Dazzle" in nearly every deployment.
+    _brand = sitespec_data.get("brand") or {}
+    app_name = (
+        _brand.get("product_name")
+        or sitespec_data.get("product_name")
+        or sitespec_data.get("name")
+        or "Dazzle"
+    )
 
     # Precompute known slugs once; the 404 handler closes over these
     # to suggest plausible alternatives when a path misses (#811).
@@ -384,11 +419,16 @@ def register_site_error_handlers(
                     # denied, rather than the bare page they were on.
                     resp.headers["HX-Push-Url"] = str(request.url.path)
                 return resp
-            ctx = build_site_error_context(
-                sitespec_data, message=message, custom_css=has_custom_css
+            css_links, js_scripts = _typed_error_assets(request)
+            page = build_site_403_view(
+                product_name=app_name,
+                message=message,
+                forbidden_detail=forbidden_detail,
+                css_links=css_links,
+                js_scripts=js_scripts,
             )
             return HTMLResponse(
-                content=render_site_page("site/403.html", ctx),
+                content=FragmentRenderer().render(page),
                 status_code=403,
             )
 
@@ -405,9 +445,14 @@ def register_site_error_handlers(
                     app_name=app_name,
                     suggestions=path_suggestions or None,
                 )
-            ctx_404 = build_site_404_context(sitespec_data, custom_css=has_custom_css)
+            css_links, js_scripts = _typed_error_assets(request)
+            page = build_site_404_view(
+                product_name=app_name,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
             return HTMLResponse(
-                content=render_site_page("site/404.html", ctx_404),
+                content=FragmentRenderer().render(page),
                 status_code=404,
             )
 

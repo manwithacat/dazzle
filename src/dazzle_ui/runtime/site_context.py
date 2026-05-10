@@ -9,10 +9,8 @@ from typing import Any
 
 from dazzle_ui.runtime.template_context import (
     QAPersonaCardContext,
-    Site404Context,
     SiteAuthContext,
     SiteCTAContext,
-    SiteErrorContext,
     SiteFooterColumn,
     SiteFooterLink,
     SiteNavItem,
@@ -281,66 +279,7 @@ def build_site_auth_context(
     )
 
 
-def build_site_404_context(
-    sitespec_data: dict[str, Any],
-    *,
-    custom_css: bool = False,
-) -> Site404Context:
-    """Build a Site404Context for 404 error page template.
-
-    Args:
-        sitespec_data: Site specification data.
-        custom_css: Include project-level custom CSS.
-
-    Returns:
-        Site404Context ready for template rendering.
-    """
-    brand = sitespec_data.get("brand", {})
-    product_name = brand.get("product_name", "My App")
-    layout = sitespec_data.get("layout", {})
-    nav = layout.get("nav", {})
-    auth_config = layout.get("auth") or {}
-    footer = layout.get("footer", {})
-
-    return Site404Context(
-        product_name=product_name,
-        nav_items=_extract_nav_items(nav),
-        nav_cta=_extract_nav_cta(nav, auth_config),
-        footer_columns=_extract_footer_columns(footer),
-        copyright_text=_build_copyright_text(footer, brand),
-        custom_css=custom_css,
-    )
-
-
-def build_site_error_context(
-    sitespec_data: dict[str, Any],
-    *,
-    message: str = "",
-    custom_css: bool = False,
-) -> SiteErrorContext:
-    """Build a SiteErrorContext for error page templates (403, 500, etc.).
-
-    Args:
-        sitespec_data: Site specification data.
-        message: Error message to display.
-        custom_css: Include project-level custom CSS.
-
-    Returns:
-        SiteErrorContext ready for template rendering.
-    """
-    brand = sitespec_data.get("brand", {})
-    product_name = brand.get("product_name", "My App")
-    layout = sitespec_data.get("layout", {})
-    nav = layout.get("nav", {})
-    auth_config = layout.get("auth") or {}
-    footer = layout.get("footer", {})
-
-    return SiteErrorContext(
-        product_name=product_name,
-        nav_items=_extract_nav_items(nav),
-        nav_cta=_extract_nav_cta(nav, auth_config),
-        footer_columns=_extract_footer_columns(footer),
-        copyright_text=_build_copyright_text(footer, brand),
-        custom_css=custom_css,
-        message=message,
-    )
+# build_site_404_context and build_site_error_context were retired in
+# Phase 2.A (v0.67.34) — see template_context.py for the matching
+# Site404Context / SiteErrorContext removal notes. Marketing-site
+# errors render via `dazzle_back.runtime.error_views.build_site_*_view`.

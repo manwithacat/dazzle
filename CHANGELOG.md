@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.34] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 2.A — marketing-site error pages on typed-Fragment.** `build_site_404_view` and `build_site_403_view` in `src/dazzle_back/runtime/error_views.py` replace the now-deleted `site/404.html` and `site/403.html` templates. Same composition shape as the Phase 1 auth views (Stack of Link, Heading, Text, EmptyState — no template inheritance).
+- **`_typed_error_assets(request)` helper** in `exception_handlers.py` mirrors the `_typed_chrome_assets` helper from `site_routes.py` — pulls CSS/JS from `app.state.fragment_chrome_css_links` and `app.state.fragment_chrome_js_scripts` overrides, falling back to the framework-default minified bundles.
+- **15 view-builder unit tests** at `tests/unit/test_error_views.py`: shape, default vs custom message rendering, CTA-link targets, escape safety, and the no-op `forbidden_detail` kwarg on the marketing 403 (persona disclosure lives in the app-shell `app/403.html` variant only).
+- **11 integration tests** at `tests/integration/test_site_error_handler.py`: marketing 404/403 typed rendering, JSON branch still returns JSON, app-shell branch still renders Jinja `app/404.html` / `app/403.html` (out of scope until that migration), per-deployment CSS override threading.
+
+### Removed
+
+- **`src/dazzle_ui/templates/site/404.html`** and **`src/dazzle_ui/templates/site/403.html`** — replaced by typed-Fragment views.
+- **`build_site_404_context`** and **`build_site_error_context`** in `src/dazzle_ui/runtime/site_context.py` — no longer called by any framework code path.
+- **`Site404Context`** and **`SiteErrorContext`** Pydantic models in `src/dazzle_ui/runtime/template_context.py` — both dataclasses backed the now-deleted templates.
+- **`TestBuildSite404Context`** + **`TestSite404Template`** classes in `tests/unit/test_site_templates.py`, and the `site_404` param from `TestCustomCssOverride.test_render_page_passes_custom_css` in `tests/unit/test_auth_password_reset.py` — all directly rendered the deleted templates.
+
+### Changed
+
+- **`register_site_error_handlers`** in `src/dazzle_back/runtime/exception_handlers.py`: the marketing-site branches (non-`/app/*` paths) now render typed `Page` Fragments via `FragmentRenderer`. The app-shell branches (`/app/*` paths) still render `app/404.html` / `app/403.html` Jinja templates — that migration depends on the broader `layouts/app_shell.html` typed-Fragment work and is out of scope for this ship.
+- **`app_name` lookup** in `register_site_error_handlers` now prefers `sitespec.brand.product_name` (the canonical key used everywhere else in the framework) over the legacy flat `product_name` / `name` top-level keys. Pre-2.A code path fell back to `"Dazzle"` in nearly every deployment because the sitespec stores the product name under `brand.product_name`, not at top level.
+- **`tests/unit/test_exception_handlers.py::test_404_on_marketing_path_renders_site`** now pins typed-view markers (`dz-empty-state`, `dz-stack`) instead of the legacy `dz-404-*` class family that was specific to the Jinja template.
+
+### Agent Guidance
+
+- **`app/403.html` and `app/404.html` stay on Jinja for now** — they extend `layouts/app_shell.html` which still drives the authenticated app shell (sidebar, persona badge, navbar). A standalone Phase 2.B (post-Phase 1.D) will lift those into typed-Fragment views once the app-shell layout migration lands.
+- **Marketing 403 doesn't render `forbidden_detail`** — the kwarg is accepted for handler call-site symmetry but ignored. Persona-disclosure UX (`#808`) only makes sense inside the authenticated app shell where the user is logged in; in the marketing surface they aren't.
+- **500 handler is still framework-default** — Starlette returns plain-text "Internal Server Error" for unhandled exceptions. A typed `build_site_500_view` is a candidate for Phase 2.B alongside the app-shell migration.
+
 ## [0.67.33] - 2026-05-11
 
 ### Removed
