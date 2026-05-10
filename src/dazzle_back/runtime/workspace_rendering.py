@@ -261,6 +261,37 @@ def _build_day_timeline_slots(
     return slots
 
 
+def _render_quick_actions_body(actions: list[str]) -> str:
+    """Render the body of an `entity_card` `quick_actions` section
+    (#1017, v0.67.17).
+
+    Each action id renders as a `<button class="dz-quick-action"
+    data-dz-action="<id>">` carrying the humanised action label as
+    visible text. Project JS hooks `[data-dz-action]` to open the
+    matching surface as a modal flow (the surface lookup happens
+    client-side via the existing surface-modal machinery).
+
+    Empty list returns an empty string — the caller flags the
+    section omitted to avoid rendering an empty button row."""
+    if not actions:
+        return ""
+    parts: list[str] = []
+    for action_id in actions:
+        action_str = str(action_id)
+        if not action_str:
+            continue
+        label = action_str.replace("_", " ").title()
+        parts.append(
+            f'<button type="button" class="dz-quick-action" '
+            f'data-dz-action="{_dazzle_html_escape(action_str)}">'
+            f"{_dazzle_html_escape(label)}"
+            f"</button>"
+        )
+    if not parts:
+        return ""
+    return f'<div class="dz-entity-card-quick-actions">{"".join(parts)}</div>'
+
+
 def _dazzle_html_escape(value: str) -> str:
     """Lightweight HTML attribute/text escape used by the typed-
     primitive data resolution helpers. The composed body strings
@@ -623,6 +654,18 @@ def _build_entity_card_sections(
                 is_omitted = True
         elif mode == "halo" and record is None:
             is_omitted = True
+        elif mode == "quick_actions":
+            # quick_actions sections render a button row from the IR's
+            # `actions: [...]` list. No DB query — pure config-to-HTML.
+            # Each action is an action id (typically a surface name);
+            # the runtime adapter wires it as `data-dz-action="<id>"`
+            # so project JS can hook open-modal behavior. When the
+            # action list is empty the section omits entirely.
+            actions = list(getattr(section, "actions", []) or [])
+            if actions:
+                body_html = _render_quick_actions_body(actions)
+            else:
+                is_omitted = True
 
         section_label = name.replace("_", " ").title()
         out.append(

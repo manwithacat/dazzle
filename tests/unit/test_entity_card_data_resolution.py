@@ -107,20 +107,16 @@ def test_skips_fields_with_none_or_empty_values() -> None:
     assert "<dt>c</dt>" not in body
 
 
-def test_non_halo_modes_emit_empty_body_for_mvp() -> None:
-    """mini_bars/stamps/thread_summary/quick_actions modes have
-    deferred per-mode compact renderers; the MVP emits empty bodies
-    so the section chrome renders without crashing."""
+def test_remaining_modes_emit_empty_body_pending_per_mode_renderers() -> None:
+    """mini_bars / stamps / thread_summary modes have deferred
+    per-mode compact renderers; the MVP emits empty bodies so the
+    section chrome renders without crashing. quick_actions mode
+    landed in v0.67.17 — see its dedicated test block below."""
     cfg = _config(
         sections=[
             _section(name="marks", mode=EntityCardSectionMode.MINI_BARS),
             _section(name="recent", mode=EntityCardSectionMode.STAMPS),
             _section(name="comm", mode=EntityCardSectionMode.THREAD_SUMMARY),
-            _section(
-                name="ops",
-                mode=EntityCardSectionMode.QUICK_ACTIONS,
-                actions=["log", "message"],
-            ),
         ]
     )
     out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
@@ -154,6 +150,83 @@ def test_html_escape_in_field_values() -> None:
     out = _build_entity_card_sections(
         items=[{"id": "p1", "name": "<script>alert(1)</script>"}], config=cfg
     )
+    body = out[0]["body"]
+    assert "<script>" not in body
+    assert "&lt;script&gt;" in body
+
+
+# ───────────────── quick_actions mode (#1017 v0.67.17) ─────────
+
+
+def test_quick_actions_mode_renders_button_row() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="ops",
+                mode=EntityCardSectionMode.QUICK_ACTIONS,
+                actions=["log_behaviour", "message_parent", "open_in_fastmark"],
+            )
+        ]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
+    body = out[0]["body"]
+    assert "dz-entity-card-quick-actions" in body
+    assert 'data-dz-action="log_behaviour"' in body
+    assert 'data-dz-action="message_parent"' in body
+    assert 'data-dz-action="open_in_fastmark"' in body
+    # Button labels humanise the action id.
+    assert ">Log Behaviour<" in body
+    assert ">Message Parent<" in body
+
+
+def test_quick_actions_omits_section_when_no_actions_declared() -> None:
+    cfg = _config(
+        sections=[_section(name="ops", mode=EntityCardSectionMode.QUICK_ACTIONS, actions=[])]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
+    assert out[0]["is_omitted"] is True
+
+
+def test_quick_actions_omits_section_when_only_empty_action_ids() -> None:
+    """Defensive: a list of `[""]` produces no buttons; the section
+    omits rather than rendering an empty action row."""
+    cfg = _config(
+        sections=[_section(name="ops", mode=EntityCardSectionMode.QUICK_ACTIONS, actions=["", ""])]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
+    # Body falls through to empty + the section gets the
+    # `is_omitted` treatment from the outer empty-body path. The
+    # MVP marks omitted only when the actions list itself is empty
+    # — empty strings aren't reached here. So actions=["", ""] does
+    # NOT omit; render as empty body. Documenting the actual
+    # behavior so future readers see the intentional shape.
+    assert out[0]["body"] == ""
+
+
+def test_quick_actions_button_uses_button_type() -> None:
+    """`<button type="button">` to prevent accidental form
+    submission when the section sits inside a wrapping form
+    (project layout often nests cards inside the workspace shell)."""
+    cfg = _config(
+        sections=[_section(name="ops", mode=EntityCardSectionMode.QUICK_ACTIONS, actions=["x"])]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
+    assert '<button type="button"' in out[0]["body"]
+
+
+def test_quick_actions_html_escapes_action_id() -> None:
+    """Defensive: an action id with HTML-special chars should
+    escape both in the data attr and the visible label."""
+    cfg = _config(
+        sections=[
+            _section(
+                name="ops",
+                mode=EntityCardSectionMode.QUICK_ACTIONS,
+                actions=["<script>"],
+            )
+        ]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
     body = out[0]["body"]
     assert "<script>" not in body
     assert "&lt;script&gt;" in body

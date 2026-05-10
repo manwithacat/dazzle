@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.17] - 2026-05-10
+
+### Added
+
+- **#1017 — `entity_card` `quick_actions` mode body renderer.** First of the four entity_card per-mode compact renderers to land. The data-resolution helper now produces real HTML for `quick_actions` sections instead of an empty body. Each declared action id renders as a `<button type="button" class="dz-quick-action" data-dz-action="<id>">` with the humanised action label as visible text. Project JS hooks `[data-dz-action]` to open the matching surface as a modal flow via the existing surface-modal machinery.
+- **`_render_quick_actions_body(actions)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Pure config-to-HTML — no DB query, no per-section fan-out. Each action id gets HTML-escaped in both the `data-dz-action` attribute and the visible label so DSL-supplied action ids can't inject into the rendered markup. Empty list returns empty string and the caller flags `is_omitted=True` so the section drops entirely (rather than rendering an empty button row).
+- **5 quick_actions tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 17 tests total): renders button row with all action ids + humanised labels, omits section when actions list is empty, button-type="button" prevents accidental form submission, html-escapes action ids defensively against injection.
+
+### Changed
+
+- **Stale "all four modes emit empty bodies" test renamed and scoped down** — `test_non_halo_modes_emit_empty_body_for_mvp` → `test_remaining_modes_emit_empty_body_pending_per_mode_renderers`, now asserting only `mini_bars` / `stamps` / `thread_summary` emit empty bodies. quick_actions has its own dedicated test block.
+
+### Agent Guidance
+
+- **Per-mode renderer pattern is templated for the cheap modes.** `quick_actions` is the simplest case — it lives entirely in the IR config (the `actions: [...]` list is intrinsic to the section, no source query needed). The remaining three modes (`mini_bars`, `stamps`, `thread_summary`) all need per-section source fan-out: each section declares its own `source:` + `filter:` and the section body renders rows from THAT entity's query. The fan-out shape is identical to v0.67.16's task_inbox pattern — `dataclasses.replace(ctx, source=..., cedar_access_spec=entity_access_specs[...])` then `_apply_workspace_scope_filters` then `_safe_fetch`. Reuse the existing helpers; don't reinvent the per-entity scope path.
+
 ## [0.67.16] - 2026-05-10
 
 ### Added
