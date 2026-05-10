@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.31] - 2026-05-10
+
+### Added
+
+- **Jinja2 Retirement Phase 1.B.2 — forgot/reset typed views + form-encoded submit endpoints.** Brings the password-recovery flow onto the typed-Fragment substrate. Sets up `site/auth/forgot_password.html` and `site/auth/reset_password.html` for removal in Phase 1.E.
+- **`build_forgot_password_view`** in `auth_views.py`. Single email field, posts to `/auth/forgot-password/submit`, optional error block, "Back to sign in" link to `/login`.
+- **`build_forgot_password_sent_view`** — account-enumeration-safe confirmation page ("If an account exists for that address…"). Used by `/forgot-password/sent`.
+- **`build_reset_password_view`** — two password fields + readonly hidden token field. Posts to `/auth/reset-password/submit`. Renders friendly error messages for `?error=mismatch` and `?error=invalid` query params.
+- **`build_reset_password_done_view`** — post-success page with a direct `/login` link.
+- **`src/dazzle_back/runtime/auth/password_reset_routes.py`** — new module with form-encoded endpoints:
+  1. `POST /auth/forgot-password/submit` — issues a reset token for known/active emails via `auth_store.create_password_reset_token`, dispatches the reset URL through the `MagicLinkMailer` protocol (reused — the contract is identical). Account-enumeration safe: same `303 → /forgot-password/sent` redirect for unknown/inactive/empty emails.
+  2. `POST /auth/reset-password/submit` — server-side equality check on new_password vs confirm_password (no JS in the typed form), validates the token via the auth store, updates the password, consumes the token, deletes existing sessions, redirects to `/reset-password/done`. Mismatched passwords → `/reset-password?token=…&error=mismatch`. Invalid/expired token → `/reset-password?error=invalid`.
+- **Four new chrome-flag gates in `site_routes.py`**: `GET /forgot-password`, `GET /forgot-password/sent`, `GET /reset-password`, `GET /reset-password/done`. Chrome=on renders the typed views; chrome=off keeps the legacy Jinja path (or a minimal HTML shell for the new `/sent` + `/done` endpoints, which have no Jinja templates). All four chrome=off branches removed in Phase 1.E.
+- **Auth subsystem wires the new router**: `AuthSubsystem.start` now includes `create_password_reset_routes()` alongside `create_magic_link_routes()` so the new endpoints are mounted on every Dazzle app.
+- **21 view-builder unit tests** at `tests/unit/test_auth_views_password_reset.py`: form shape (email-only vs token+two-password), action URL targeting, hidden+readonly token field, error block rendering, escape safety on user-supplied token and error messages.
+- **20 integration tests** at `tests/integration/test_auth_password_reset_chrome_gate.py`: chrome gate at all four new routes, token-issuance on known emails, account-enumeration guard for unknown/inactive emails, password mismatch / invalid token redirect paths, password update + session deletion on success, log-based dev pickup of reset URLs.
+
+### Changed
+
+- **`docs/api-surface/runtime-urls.txt`** — regenerated to include `/forgot-password/sent` and `/reset-password/done`. The two new POST submit endpoints live in `src/dazzle_back/runtime/auth/password_reset_routes.py` (nested under `auth/`); the runtime-urls inspector currently walks only top-level `*_routes.py`, so they're not in the baseline yet — same scanner limitation that already exists for the `/auth/login/magic-link` and `/auth/signup/magic-link` POSTs shipped in Phase 1.A/B.
+
+### Agent Guidance
+
+- **Reuse the magic-link mailer for password-reset notifications**: `password_reset_routes.py` calls `mailer.send_magic_link(...)` exactly like `magic_link_routes.py` does — the contract is "one-shot link by email" regardless of whether the link is a sign-in or a password reset. Production deployments wiring up SES/SendGrid/SMTP only need to implement the single Protocol method to cover both flows.
+- **Server-side mismatch check is load-bearing**: the typed reset-password form has no JS, so the server is the source of truth for new_password == confirm_password. Don't push that check client-side — the form deliberately submits natively (no `<script>` block) to satisfy the Jinja-retirement goal.
+- **Phase 1.B.2 close-out** — forgot/reset are now end-to-end live on the typed substrate. Remaining 1.B work: opt-in password mode for `/login` and `/signup` (per-deployment flag exposes the password input + existing password endpoint), then 1.E removes the now-unused `site/auth/forgot_password.html`, `reset_password.html`, `_forgot_password_script.html`, `_reset_password_script.html`, and `_auth_form_script.html` templates.
+
 ## [0.67.30] - 2026-05-10
 
 ### Added

@@ -870,16 +870,175 @@ def create_auth_page_routes(
         return render_site_page("site/auth/signup.html", ctx)
 
     @router.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
-    async def forgot_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
-        """Serve the forgot-password page."""
+    async def forgot_password_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+    ) -> str:
+        """Serve the forgot-password page.
+
+        Phase 1.B.2 (v0.67.31): chrome=on renders the typed-Fragment
+        `build_forgot_password_view`; chrome=off keeps the legacy
+        Jinja `site/auth/forgot_password.html` path. Removed in
+        Phase 4.C / Phase 1.E of the Jinja2 retirement plan.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import build_forgot_password_view
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            page = build_forgot_password_view(
+                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
         ctx = build_site_auth_context(sitespec, "forgot_password", custom_css=has_custom_css)
         return render_site_page("site/auth/forgot_password.html", ctx)
 
+    @router.get("/forgot-password/sent", response_class=HTMLResponse, include_in_schema=False)
+    async def forgot_password_sent_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+    ) -> str:
+        """Post-forgot-password confirmation page (Phase 1.B.2).
+
+        Chrome=on renders the typed "check your inbox" page;
+        chrome=off serves a minimal HTML fallback so the redirect
+        target from `/auth/forgot-password/submit` doesn't 404.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import (
+                build_forgot_password_sent_view,
+            )
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            page = build_forgot_password_sent_view(
+                product_name=product_name,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
+        return (
+            f"<!DOCTYPE html><html><head><title>Check your inbox — "
+            f"{product_name}</title></head><body>"
+            f"<h1>Check your inbox</h1>"
+            f"<p>If an account exists for that address, we've sent a "
+            f'password-reset link.</p><p><a href="/forgot-password">Try a '
+            f"different email</a></p></body></html>"
+        )
+
     @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
-    async def reset_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
-        """Serve the reset-password page."""
+    async def reset_password_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+        token: str = "",
+        error: str = "",
+    ) -> str:
+        """Serve the reset-password page.
+
+        Phase 1.B.2 (v0.67.31): chrome=on renders the typed-Fragment
+        `build_reset_password_view` (form posts to
+        `/auth/reset-password/submit`); chrome=off keeps the legacy
+        Jinja path. Removed in Phase 1.E.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import build_reset_password_view
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            error_message = ""
+            if error == "mismatch":
+                error_message = "The two password fields didn't match. Try again."
+            elif error == "invalid":
+                error_message = "That reset link is invalid or expired. Request a new one."
+            page = build_reset_password_view(
+                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+                token=token,
+                error_message=error_message,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
         ctx = build_site_auth_context(sitespec, "reset_password", custom_css=has_custom_css)
         return render_site_page("site/auth/reset_password.html", ctx)
+
+    @router.get("/reset-password/done", response_class=HTMLResponse, include_in_schema=False)
+    async def reset_password_done_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+    ) -> str:
+        """Post-reset confirmation page (Phase 1.B.2)."""
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import (
+                build_reset_password_done_view,
+            )
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            page = build_reset_password_done_view(
+                product_name=product_name,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
+        return (
+            f"<!DOCTYPE html><html><head><title>Password updated — "
+            f"{product_name}</title></head><body>"
+            f"<h1>Password updated</h1>"
+            f"<p>Your password has been changed.</p>"
+            f'<p><a href="/login">Sign in</a></p></body></html>'
+        )
 
     @router.get("/2fa/setup", include_in_schema=False)
     async def two_factor_setup_page(

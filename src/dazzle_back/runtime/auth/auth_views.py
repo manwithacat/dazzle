@@ -158,6 +158,187 @@ def build_signup_magic_link_view(
     )
 
 
+def build_forgot_password_view(
+    *,
+    product_name: str,
+    page_title: str = "Reset your password",
+    error_message: str = "",
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the forgot-password request page (Phase 1.B.2, v0.67.31).
+
+    Single email field + "Send reset link" submit. POSTs to
+    `/auth/forgot-password/submit`, which (defensive against account
+    enumeration) ALWAYS redirects to `/forgot-password/sent`
+    regardless of whether the email matched a real user.
+    """
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body=page_title, level=1),
+        Text(
+            body="Enter the email you signed up with — we'll send you a link to set a new password.",
+            tone="muted",
+        ),
+    ]
+    if error_message:
+        body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.append(
+        FormStack(
+            action=URL("/auth/forgot-password/submit"),
+            method="POST",
+            fields=(
+                Field(
+                    name="email",
+                    label="Email",
+                    kind="email",
+                    required=True,
+                    placeholder="you@example.com",
+                ),
+            ),
+            submit=Submit(label="Send reset link", variant="primary"),
+        )
+    )
+    body_children.append(Text(body="Remembered it? ", tone="muted"))
+    body_children.append(Link(label="Back to sign in", href=URL("/login")))
+
+    return Page(
+        title=f"{page_title} — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
+def build_forgot_password_sent_view(
+    *,
+    product_name: str,
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the post-forgot-password confirmation page.
+
+    Account-enumeration safe — the same page is shown whether the
+    email matched a real user or not. The user reaches this page
+    only by POSTing the forgot-password form; the GET route is
+    not exposed externally.
+    """
+    title = "Check your inbox"
+    description = (
+        "If an account exists for that address, we've sent a "
+        "password-reset link. Open it from the same device to continue."
+    )
+    return Page(
+        title=f"{title} — {product_name}",
+        body=Stack(
+            children=(
+                Link(label=product_name, href=URL("/")),
+                EmptyState(
+                    title=title,
+                    description=description,
+                ),
+                Text(body="Didn't get it? Check your spam folder, or "),
+                Link(label="try a different email", href=URL("/forgot-password")),
+            )
+        ),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
+def build_reset_password_view(
+    *,
+    product_name: str,
+    token: str,
+    page_title: str = "Set a new password",
+    error_message: str = "",
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the reset-password form (Phase 1.B.2, v0.67.31).
+
+    Hidden `token` field carries the validated reset token to
+    `/auth/reset-password/submit`. New password + confirmation are
+    server-side equality-checked; a mismatch redirects back here
+    with an error message in the query.
+    """
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body=page_title, level=1),
+    ]
+    if error_message:
+        body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.append(
+        FormStack(
+            action=URL("/auth/reset-password/submit"),
+            method="POST",
+            fields=(
+                Field(
+                    name="token",
+                    label="Reset token",
+                    kind="text",
+                    required=True,
+                    initial_value=token,
+                    readonly=True,
+                ),
+                Field(
+                    name="new_password",
+                    label="New password",
+                    kind="password",
+                    required=True,
+                ),
+                Field(
+                    name="confirm_password",
+                    label="Confirm new password",
+                    kind="password",
+                    required=True,
+                ),
+            ),
+            submit=Submit(label="Save new password", variant="primary"),
+        )
+    )
+
+    return Page(
+        title=f"{page_title} — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
+def build_reset_password_done_view(
+    *,
+    product_name: str,
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the post-reset confirmation page.
+
+    Shown after `/auth/reset-password/submit` succeeds. Includes a
+    direct link to `/login` so the user can sign in with the new
+    password immediately.
+    """
+    title = "Password updated"
+    description = "Your password has been changed. You can now sign in with your new credentials."
+    return Page(
+        title=f"{title} — {product_name}",
+        body=Stack(
+            children=(
+                Link(label=product_name, href=URL("/")),
+                EmptyState(
+                    title=title,
+                    description=description,
+                ),
+                Link(label="Sign in", href=URL("/login")),
+            )
+        ),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
 def build_login_sent_view(
     *,
     product_name: str,

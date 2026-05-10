@@ -58,6 +58,16 @@ class AuthSubsystem:
         magic_link_router = create_magic_link_routes()
         ctx.app.include_router(magic_link_router)
 
+        # Form-encoded password-reset routes (Phase 1.B.2, v0.67.31) —
+        # typed-Fragment views in `auth_views.py` post to these endpoints
+        # rather than the JSON ones in `routes.py`.
+        from dazzle_back.runtime.auth.password_reset_routes import (
+            create_password_reset_routes,
+        )
+
+        password_reset_router = create_password_reset_routes()
+        ctx.app.include_router(password_reset_router)
+
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
         # time (#838). When no SecurityConfig is present on the AppSpec, the
