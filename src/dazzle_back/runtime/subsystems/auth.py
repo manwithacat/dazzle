@@ -68,6 +68,19 @@ class AuthSubsystem:
         password_reset_router = create_password_reset_routes()
         ctx.app.include_router(password_reset_router)
 
+        # Form-encoded password-mode login/signup routes (Phase 1.B.3,
+        # v0.67.32). Mounted unconditionally — the typed-Fragment views
+        # are only RENDERED when `app.state.auth_password_mode_enabled`
+        # is True, but the endpoints themselves are safe to mount in
+        # either mode (they just won't get traffic in magic-link-only
+        # deployments).
+        from dazzle_back.runtime.auth.password_login_routes import (
+            create_password_login_routes,
+        )
+
+        password_login_router = create_password_login_routes()
+        ctx.app.include_router(password_login_router)
+
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
         # time (#838). When no SecurityConfig is present on the AppSpec, the

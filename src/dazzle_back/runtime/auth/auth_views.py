@@ -93,6 +93,150 @@ def build_login_magic_link_view(
     )
 
 
+def build_login_password_view(
+    *,
+    page_title: str,
+    product_name: str,
+    next_url: str = "/",
+    error_message: str = "",
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the email+password login page (Phase 1.B.3, v0.67.32).
+
+    Two-field form (email + password). POSTs to `/auth/login/password`,
+    which authenticates the credentials, creates a session, sets the
+    `dazzle_session` cookie, and redirects to `next_url` (or `/app` if
+    missing). Failed authentication redirects back here with
+    `?error=invalid_credentials`.
+
+    A "Forgot password?" link to `/forgot-password` is included for the
+    password-mode flow; a "Use sign-in link instead" link to `/login`
+    is NOT included because in password mode the magic-link route is
+    off — flipping deployments choose one mode at startup.
+    """
+    form_action = "/auth/login/password"
+    if next_url and next_url != "/":
+        form_action = f"{form_action}?next={next_url}"
+
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body=page_title, level=1),
+    ]
+    if error_message:
+        body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.append(
+        FormStack(
+            action=URL(form_action),
+            method="POST",
+            fields=(
+                Field(
+                    name="email",
+                    label="Email",
+                    kind="email",
+                    required=True,
+                    placeholder="you@example.com",
+                ),
+                Field(
+                    name="password",
+                    label="Password",
+                    kind="password",
+                    required=True,
+                ),
+            ),
+            submit=Submit(label="Sign in", variant="primary"),
+        )
+    )
+    body_children.append(Link(label="Forgot password?", href=URL("/forgot-password")))
+    body_children.append(Text(body="New here? ", tone="muted"))
+    body_children.append(Link(label="Create an account", href=URL("/signup")))
+
+    return Page(
+        title=f"{page_title} — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
+def build_signup_password_view(
+    *,
+    page_title: str,
+    product_name: str,
+    next_url: str = "/",
+    error_message: str = "",
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """Render the password-mode signup page (Phase 1.B.3, v0.67.32).
+
+    Four fields: full name, email, password, confirm password. POSTs
+    to `/auth/signup/password`, which:
+      1. Checks new_password == confirm_password (server-side, no JS).
+      2. Creates the user via `auth_store.create_user(email, password)`.
+      3. Creates a session + sets the `dazzle_session` cookie.
+      4. Redirects to `next_url` (or `/app`).
+    Failure paths redirect back here with `?error=mismatch` /
+    `?error=already_registered` / `?error=create_failed`.
+    """
+    form_action = "/auth/signup/password"
+    if next_url and next_url != "/":
+        form_action = f"{form_action}?next={next_url}"
+
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body=page_title, level=1),
+    ]
+    if error_message:
+        body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.append(
+        FormStack(
+            action=URL(form_action),
+            method="POST",
+            fields=(
+                Field(
+                    name="name",
+                    label="Full name",
+                    kind="text",
+                    required=True,
+                    placeholder="Alice Wong",
+                ),
+                Field(
+                    name="email",
+                    label="Email",
+                    kind="email",
+                    required=True,
+                    placeholder="you@example.com",
+                ),
+                Field(
+                    name="password",
+                    label="Password",
+                    kind="password",
+                    required=True,
+                ),
+                Field(
+                    name="confirm_password",
+                    label="Confirm password",
+                    kind="password",
+                    required=True,
+                ),
+            ),
+            submit=Submit(label="Create account", variant="primary"),
+        )
+    )
+    body_children.append(Text(body="Already have an account? ", tone="muted"))
+    body_children.append(Link(label="Sign in", href=URL("/login")))
+
+    return Page(
+        title=f"{page_title} — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
 def build_signup_magic_link_view(
     *,
     page_title: str,

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.32] - 2026-05-10
+
+### Added
+
+- **Jinja2 Retirement Phase 1.B.3 — opt-in password mode for `/login` and `/signup`.** Closes Phase 1.B. Deployments that prefer email+password authentication over passwordless magic-links can now flip a single startup flag and get the typed-Fragment password forms.
+- **`build_login_password_view`** in `auth_views.py`: email + password fields, posts to `/auth/login/password`. "Forgot password?" link to `/forgot-password` + "Create an account" crosslink to `/signup`. Threads `?next=` through the form action so the post-login redirect lands the user on the originally-requested page.
+- **`build_signup_password_view`**: name + email + password + confirm_password (4 fields). Posts to `/auth/signup/password`. "Already have an account? Sign in" crosslink to `/login`.
+- **`src/dazzle_back/runtime/auth/password_login_routes.py`** — new module with form-encoded endpoints:
+  1. `POST /auth/login/password` — authenticates credentials, creates a session, sets the `dazzle_session` cookie, redirects to safe `?next=` (or `/app`). 2FA-enabled accounts redirect to `/2fa/challenge?session=<pending_id>` with the pending session created. Failures redirect back to `/login?error=invalid_credentials` (preserving safe `?next=`).
+  2. `POST /auth/signup/password` — server-side `password == confirm_password` check (no JS in the typed form), validates email shape, rejects already-registered emails, creates the user via `auth_store.create_user`, creates a session, redirects to `?next=` (or `/app`). Failure paths: `?error=mismatch`, `?error=invalid_email`, `?error=already_registered`, `?error=create_failed`.
+  3. Both endpoints reject unsafe `?next=` values (scheme/netloc/backslash) via the same `_is_safe_redirect_path` helper used in `magic_link_routes.py`.
+- **Per-deployment flag `app.state.auth_password_mode_enabled`**: default False (magic-link is the framework default per the Phase 1 plan). When True, `/login` and `/signup` under chrome=on render the password-mode views instead of magic-link views. The flag is consulted at request time, so apps that build their own auth UX can swap modes at any point without restart.
+- **Auth subsystem wires the new router unconditionally**: `AuthSubsystem.start` includes `create_password_login_routes()` alongside `create_magic_link_routes()` and `create_password_reset_routes()`. The endpoints are safe to mount in either mode — they simply receive no traffic in magic-link-only deployments.
+- **16 view-builder unit tests** at `tests/unit/test_auth_views_password_mode.py`.
+- **25 integration tests** at `tests/integration/test_auth_password_mode_chrome_gate.py` covering the GET flag matrix (chrome × password_mode), POST credentials happy path + every failure branch, 2FA branching, next-URL threading + unsafe-redirect filtering, error-message rendering, and the create_user-failure isolation pattern.
+
+### Changed
+
+- **`/login` and `/signup` chrome=on gates in `site_routes.py`** consult `app.state.auth_password_mode_enabled` to pick magic-link vs password view. Magic-link remains the default (False).
+- **`docs/api-surface/runtime-urls.txt`** — regenerated to capture the `error: str = ''` parameter added to the `/signup` handler signature.
+
+### Agent Guidance
+
+- **Password mode is a startup decision, not a per-user choice**: a single Dazzle deployment renders one mode at `/login` and `/signup`. The flag `app.state.auth_password_mode_enabled` should be set at app construction time (typically in the same place the auth_store is wired). Flipping the flag at runtime is supported but offers no UX value — users shouldn't see the form shape change between requests.
+- **Account-enumeration vs friendly errors is a deliberate trade-off**: password-mode signup returns a clear `already_registered` error (the user knows the email is taken), which leaks email existence. Magic-link signup is account-enumeration-safe (always `/login/sent` regardless of whether the email matched). Deployments that need stricter privacy should stay on magic-link mode.
+- **Phase 1.B complete** — login/signup/forgot/reset all end-to-end on the typed-Fragment substrate, in both magic-link and password modes. Next phases: 1.C (SSO via Authlib), 1.D (TOTP MFA via pyotp), 1.E (delete the now-unused `site/auth/*.html` templates + `auth_page_wrapper.html` macro + `_auth_form_script.html` / `_forgot_password_script.html` / `_reset_password_script.html` includes).
+
 ## [0.67.31] - 2026-05-10
 
 ### Added

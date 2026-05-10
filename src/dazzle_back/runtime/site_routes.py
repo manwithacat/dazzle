@@ -750,6 +750,7 @@ def create_auth_page_routes(
             from dazzle.render.fragment.renderer import FragmentRenderer
             from dazzle_back.runtime.auth.auth_views import (
                 build_login_magic_link_view,
+                build_login_password_view,
             )
 
             app_state = request.app.state
@@ -761,17 +762,31 @@ def create_auth_page_routes(
                 getattr(app_state, "fragment_chrome_js_scripts", None)
                 or ("/static/dist/dazzle.min.js",)
             )
+            product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+            password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
             error_message = ""
             if error == "invalid_magic_link":
                 error_message = "That sign-in link is invalid or expired. Request a new one below."
-            page = build_login_magic_link_view(
-                page_title="Sign in",
-                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-                next_url=next,
-                error_message=error_message,
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
+            elif error == "invalid_credentials":
+                error_message = "That email and password didn't match. Try again."
+            if password_mode:
+                page = build_login_password_view(
+                    page_title="Sign in",
+                    product_name=product_name,
+                    next_url=next,
+                    error_message=error_message,
+                    css_links=css_links,
+                    js_scripts=js_scripts,
+                )
+            else:
+                page = build_login_magic_link_view(
+                    page_title="Sign in",
+                    product_name=product_name,
+                    next_url=next,
+                    error_message=error_message,
+                    css_links=css_links,
+                    js_scripts=js_scripts,
+                )
             return FragmentRenderer().render(page)
         ctx = build_site_auth_context(sitespec, "login", custom_css=has_custom_css)
         return render_site_page("site/auth/login.html", ctx)
@@ -831,13 +846,17 @@ def create_auth_page_routes(
         request: Request,
         sitespec: dict[str, Any] = sitespec_data,
         next: str = "/",
+        error: str = "",
     ) -> str:
         """Serve the signup page.
 
         Phase 1.B (v0.67.30): chrome=on renders the typed-Fragment
-        magic-link signup view (name + email, no password); chrome=off
-        keeps the legacy Jinja `site/auth/signup.html` path. Removed
-        in Phase 4.C.
+        magic-link signup view; chrome=off keeps the legacy Jinja path.
+
+        Phase 1.B.3 (v0.67.32): when `app.state.auth_password_mode_enabled`
+        is True under chrome=on, the password-mode view (name + email
+        + password + confirm) is rendered instead. The flag is set by
+        downstream Dazzle apps that opt into password mode at startup.
         """
         chrome_flag = bool(
             getattr(getattr(request, "app", None), "state", None)
@@ -847,6 +866,7 @@ def create_auth_page_routes(
             from dazzle.render.fragment.renderer import FragmentRenderer
             from dazzle_back.runtime.auth.auth_views import (
                 build_signup_magic_link_view,
+                build_signup_password_view,
             )
 
             app_state = request.app.state
@@ -858,13 +878,35 @@ def create_auth_page_routes(
                 getattr(app_state, "fragment_chrome_js_scripts", None)
                 or ("/static/dist/dazzle.min.js",)
             )
-            page = build_signup_magic_link_view(
-                page_title="Create your account",
-                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-                next_url=next,
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
+            product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+            password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
+            error_message = ""
+            if error == "mismatch":
+                error_message = "The two password fields didn't match. Try again."
+            elif error == "already_registered":
+                error_message = "An account with that email already exists. Try signing in instead."
+            elif error == "create_failed":
+                error_message = "We couldn't create that account. Please try again."
+            elif error == "invalid_email":
+                error_message = "That email address doesn't look right."
+            if password_mode:
+                page = build_signup_password_view(
+                    page_title="Create your account",
+                    product_name=product_name,
+                    next_url=next,
+                    error_message=error_message,
+                    css_links=css_links,
+                    js_scripts=js_scripts,
+                )
+            else:
+                page = build_signup_magic_link_view(
+                    page_title="Create your account",
+                    product_name=product_name,
+                    next_url=next,
+                    error_message=error_message,
+                    css_links=css_links,
+                    js_scripts=js_scripts,
+                )
             return FragmentRenderer().render(page)
         ctx = build_site_auth_context(sitespec, "signup", custom_css=has_custom_css)
         return render_site_page("site/auth/signup.html", ctx)
