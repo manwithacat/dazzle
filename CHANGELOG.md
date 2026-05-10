@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.10] - 2026-05-10
+
+### Added
+
+- **#1015–#1018 typed-primitive render path live in production.** The four AegisMark Day-One demo region primitives (`cohort_strip`, `day_timeline`, `task_inbox`, `entity_card`) now render via the typed-Fragment substrate end-to-end instead of falling through to `list.html`. Mechanism: a new shared Jinja shim template `workspace/regions/_typed_primitive.html` emits `{{ typed_primitive_html | safe }}` inside `region_card` chrome; `_workspace_region_handler` pre-renders the typed primitive via `WorkspaceRegionAdapter.build()` + `FragmentRenderer.render()` upstream and threads the HTML through as the `typed_primitive_html` kwarg.
+- **`DISPLAY_TEMPLATE_MAP`** entries for `COHORT_STRIP` / `DAY_TIMELINE` / `TASK_INBOX` / `ENTITY_CARD` all route to the same shim template — kind-specific Jinja markup isn't needed because the typed renderer is the source of truth for these primitives' HTML.
+- **Defensive render path:** if the adapter raises (misconfigured IR, primitive invariant violation), the handler logs the exception with region context and emits an inline empty-state placeholder rather than 500'ing the whole workspace request. Preserves the rest of the dashboard's regions on failure.
+- **7 render-path tests** at `tests/unit/test_typed_primitive_render_path.py` covering DISPLAY_TEMPLATE_MAP routing for the four new modes (and a sanity check that legacy displays still route to their own templates), plus shim render with both populated and empty `typed_primitive_html` kwargs.
+
+### Agent Guidance
+
+- **Adapter ↔ template wiring contract:** New typed-primitive region kinds need three things to be production-live: (1) `_BUILDERS` entry in `region_adapter.py` (renderer dispatch), (2) `DISPLAY_TEMPLATE_MAP` entry pointing at `_typed_primitive.html` (workspace routing), (3) `_workspace_region_handler` recognising the display value and pre-rendering via the adapter. The shim template is shared — kind-specific Jinja is not needed unless a region has substantial Jinja-only behaviour. Until DSL parser support for the typed config blocks lands, regions render their adapter's empty/unconfigured state — the wiring is end-to-end live, the data is hollow. The next ship adds parser support so `cohort_strip_config: ...` in DSL populates the IR and the adapters resolve real cells/slots/items/sections.
+
 ## [0.67.9] - 2026-05-10
 
 ### Fixed

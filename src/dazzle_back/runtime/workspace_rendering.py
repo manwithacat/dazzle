@@ -1604,6 +1604,53 @@ async def _workspace_region_handler(
 
         tree_items = [_build_subtree(r) for r in roots]
 
+    # #1015–#1018 region primitives — typed-Fragment-only render path
+    # (v0.67.10). When display is one of the four AegisMark Day-One
+    # demo region kinds, we bypass the legacy Jinja body for that
+    # region: build the typed primitive via the adapter, render it
+    # via FragmentRenderer, hand the HTML to the shared shim template
+    # as `typed_primitive_html`. Until DSL parser support for the
+    # typed config blocks lands, the cells/slots/items/sections lists
+    # are empty and the adapter renders an empty/unconfigured state —
+    # but the dispatch is end-to-end live, not a list.html fallback.
+    typed_primitive_html: str = ""
+    if display_upper in ("COHORT_STRIP", "DAY_TIMELINE", "TASK_INBOX", "ENTITY_CARD"):
+        from dazzle.render.fragment import FragmentRenderer
+        from dazzle_back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+
+        # Adapter wants the lowercase display value (its _BUILDERS
+        # keys) on `region.display`, plus the IR config slots. Use
+        # the IR region directly — it carries the typed configs.
+        ir_region = ctx.ir_region or ctx.ctx_region
+        # Force a lowercase display value if the IR carries the
+        # uppercase enum (defensive — most callers already lowercase).
+        _display_obj = getattr(ir_region, "display", None)
+        _display_val = getattr(_display_obj, "value", None) or str(_display_obj or "")
+        if _display_val and _display_val.upper() == display_upper:
+            # Build a thin adapter ctx from the empty-state defaults.
+            # Real data resolution lands once the parser supports the
+            # typed config blocks.
+            adapter_ctx: dict[str, Any] = {
+                "region_url": getattr(ctx.ctx_region, "endpoint", "") or "",
+            }
+            try:
+                surface = WorkspaceRegionAdapter().build(ir_region, adapter_ctx)
+                inner = getattr(getattr(surface, "body", None), "body", None)
+                fragment_to_render = inner if inner is not None else surface
+                typed_primitive_html = FragmentRenderer().render(fragment_to_render)
+            except Exception as exc:  # noqa: BLE001 — surface to operator log
+                logger.error(
+                    "typed-primitive render failed for %s region %s: %s",
+                    display_upper,
+                    getattr(ctx.ctx_region, "name", "?"),
+                    exc,
+                )
+                typed_primitive_html = (
+                    '<p class="dz-empty-dense" role="status">'
+                    "Typed primitive render failed; check server logs."
+                    "</p>"
+                )
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
@@ -1695,6 +1742,10 @@ async def _workspace_region_handler(
         secondary_action_url=getattr(ctx.ctx_region, "secondary_action_url", ""),
         revoke_url=getattr(ctx.ctx_region, "revoke_url", ""),
         audit_enabled=getattr(ctx.ctx_region, "audit_enabled", False),
+        # #1015–#1018 (v0.67.10) — pre-rendered typed primitive HTML
+        # for the four region kinds whose body is owned by the
+        # typed-Fragment substrate. Empty for legacy displays.
+        typed_primitive_html=typed_primitive_html,
     )
     return HTMLResponse(content=html)
 

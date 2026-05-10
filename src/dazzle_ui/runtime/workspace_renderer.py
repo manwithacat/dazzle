@@ -365,6 +365,13 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "STATUS_LIST": "workspace/regions/status_list.html",  # #3, v0.61.69
     "CONFIRM_ACTION_PANEL": "workspace/regions/confirm_action_panel.html",  # #6, v0.61.72
     "SEARCH_BOX": "workspace/regions/search_box.html",  # #954 cycle 4
+    # #1015–#1018 region primitives — typed-Fragment-only render path.
+    # The handler pre-renders via WorkspaceRegionAdapter and passes
+    # the HTML to the shared shim template as `typed_primitive_html`.
+    "COHORT_STRIP": "workspace/regions/_typed_primitive.html",  # #1018 (v0.67.10)
+    "DAY_TIMELINE": "workspace/regions/_typed_primitive.html",  # #1016 (v0.67.10)
+    "TASK_INBOX": "workspace/regions/_typed_primitive.html",  # #1015 (v0.67.10)
+    "ENTITY_CARD": "workspace/regions/_typed_primitive.html",  # #1017 (v0.67.10)
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
