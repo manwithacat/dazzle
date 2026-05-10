@@ -65,7 +65,7 @@ CATEGORY_MAP: dict[str, str] = {
     "build": "Code Generation",
     "build-ui": "Code Generation",
     "build-api": "Code Generation",
-    "build-css": "Code Generation",
+    "build-css": "Compat",  # #1038: no-op shim, re-introduced in v0.67.21
     "info": "Runtime",
     "stop": "Runtime",
     "rebuild": "Runtime",

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.22] - 2026-05-10
+
+### Added
+
+- **#1038 — `dazzle build-css` re-introduced as a no-op CLI command.** The build implementation was removed in v0.62 (Phase 4 teardown — Tailwind JIT bundle no longer needed) but downstream `bin/post_compile` deploy hooks (e.g. cyfuture's) had been silently failing with typer's "No such command" since then. The pre-built CSS bundle ships in the wheel at `src/dazzle_ui/runtime/static/dist/dazzle.min.css`, so the post-compile is genuinely obsolete; the no-op lets deploy hooks keep invoking `dazzle build-css` until they're cleaned up.
+  - Invocation prints a one-shot migration note pointing at the new asset path + exits 0.
+  - The build behaviour itself remains removed — this is purely an invocation-ergonomics change, not a backward-compat re-shim of the build pipeline.
+- **`build_css_command`** in `src/dazzle/cli/runtime_impl/build.py` (~25 lines), exported from `runtime_impl.__init__`, registered under `name="build-css"` in `cli/__init__.py`. Tombstone comment that previously sat where the command used to be is replaced by the new function.
+- **`src/dazzle/mcp/cli_help.py`** — `"build-css"` entry re-categorised from `"Code Generation"` to `"Compat"` so MCP help output reflects the no-op nature.
+- **4 tests** at `tests/unit/test_build_css_compat_shim.py`: invocation exits 0, prints expected migration note text, no typer error chrome on stdout, command registered in `--help`.
+
+### Agent Guidance
+
+- **Comment-marker note for the `test_no_shims.py` gate**: ADR-0003 forbids the word "shim" anywhere in `src/dazzle*` source files, including comments. When re-introducing a removed-then-needed CLI surface, describe it as a "no-op" / "compat re-introduction" / "alias" — never "shim". The CSS build pipeline removal is final; this CLI entry is invocation ergonomics only, and the codebase's vocabulary discipline keeps that distinction visible.
+
 ## [0.67.21] - 2026-05-10
 
 ### Fixed

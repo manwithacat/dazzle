@@ -222,6 +222,7 @@ def search_command(
 from dazzle.cli.runtime_impl import (  # noqa: E402
     build_api_command,
     build_command,
+    build_css_command,
     build_ui_command,
     check_command,
     info_command,
@@ -238,7 +239,13 @@ app.command(name="serve")(serve_command)
 app.command(name="build")(build_command)
 app.command(name="build-ui")(build_ui_command)
 app.command(name="build-api")(build_api_command)
-# `dazzle build-css` removed in v0.62 (Phase 4 teardown of build_css.py).
+# v0.67.21 (#1038): `dazzle build-css` re-introduced as a no-op CLI
+# command so downstream deploy hooks (e.g. cyfuture's bin/post_compile)
+# stop failing silently with typer's "No such command". Prints a one-
+# shot migration note + exits 0. The implementation was removed in
+# v0.62 (Phase 4 teardown); this entry is purely for invocation
+# ergonomics, not backward-compat of the build behaviour itself.
+app.command(name="build-css")(build_css_command)
 app.command(name="info")(info_command)
 app.command(name="stop")(stop_command)
 app.command(name="rebuild")(rebuild_command)
