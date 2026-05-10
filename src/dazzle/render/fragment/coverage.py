@@ -210,6 +210,7 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "sparkline",
         "radar",
         "box_plot",
+        "cohort_strip",  # #1018 (v0.67.7) — adapter live; data resolution pending
     }
 )
 

@@ -30,6 +30,9 @@ from dazzle.render.fragment import (
     BoxPlot,
     Bullet,
     BulletRow,
+    CohortStripCell,
+    CohortStripLensTab,
+    CohortStripRegion,
     ConfirmCheckItem,
     ConfirmGate,
     CsvExportButton,
@@ -398,6 +401,7 @@ class WorkspaceRegionAdapter:
         "activity_feed": "_build_activity_feed",
         "histogram": "_build_histogram",
         "heatmap": "_build_heatmap",
+        "cohort_strip": "_build_cohort_strip",  # #1018 (v0.67.7)
     }
 
     # Display values that share a builder with another display value.
@@ -1270,6 +1274,108 @@ class WorkspaceRegionAdapter:
 
         empty_msg = getattr(region, "empty_message", None) or "No actions available."
         body: Fragment = ActionGrid(cards=tuple(cards), empty_message=str(empty_msg))
+        return _wrap_surface(title, "dashboard", body)
+
+    def _build_cohort_strip(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: cohort_strip` regions render as a horizontal
+        member-skim strip with lens toggle (#1018, v0.67.7).
+
+        Reads `region.cohort_strip_config` for the lens definitions
+        and active-lens default, plus `ctx` for the data resolution
+        upstream (member rows + active lens id + endpoint URL). Pure
+        config-to-primitive translation — the row resolution + FK
+        join + lens-primary extraction live one layer up in
+        `workspace_rendering.py`, which populates the ctx dict.
+
+        ctx shape:
+            cohort_cells: list of dicts {"member_id": str, "member_name":
+                str, "primary_value": str, "subtitle": str (default ""),
+                "avatar_initials": str (default ""), "tone": str
+                (default "neutral"), "drill_url": str (default "")}
+            cohort_active_lens: id of the lens to mark active. Falls
+                back to config.default_lens, then config.lenses[0].id.
+            cohort_endpoint: str — the URL the lens-toggle hx-get
+                targets. Falls back to ctx["region_url"] then "".
+        """
+        title = _region_title(region)
+        cfg = getattr(region, "cohort_strip_config", None)
+        region_name = str(getattr(region, "name", "") or "cohort")
+
+        # Pull config-defined lenses; if no config, render an
+        # empty-state surface (defensive: parser should reject this).
+        config_lenses = list(getattr(cfg, "lenses", None) or []) if cfg is not None else []
+        if not config_lenses:
+            return _wrap_surface(
+                title,
+                "dashboard",
+                EmptyState(
+                    title="Cohort strip not configured",
+                    description="No lenses declared on this region.",
+                ),
+            )
+
+        # Resolve active lens: explicit ctx → config default → first lens.
+        default_lens_id = str(getattr(cfg, "default_lens", "") or "") if cfg is not None else ""
+        first_lens_id = str(getattr(config_lenses[0], "id", "") or "")
+        active_lens_id = str(ctx.get("cohort_active_lens") or default_lens_id or first_lens_id)
+        # If the requested lens isn't in the config, fall back to the
+        # first declared lens — defensive against stale URL params.
+        known_lens_ids = {str(getattr(lens, "id", "") or "") for lens in config_lenses}
+        if active_lens_id not in known_lens_ids:
+            active_lens_id = first_lens_id
+
+        lens_tabs: list[CohortStripLensTab] = []
+        for lens in config_lenses:
+            lens_id = str(getattr(lens, "id", "") or "")
+            if not lens_id:
+                continue
+            lens_tabs.append(
+                CohortStripLensTab(
+                    id=lens_id,
+                    label=str(getattr(lens, "label", "") or lens_id),
+                    is_active=(lens_id == active_lens_id),
+                )
+            )
+
+        # Constructor invariant: exactly one active lens. If our
+        # active-id selection produced zero (e.g. all ids empty),
+        # promote the first tab.
+        if lens_tabs and not any(tab.is_active for tab in lens_tabs):
+            head = lens_tabs[0]
+            lens_tabs[0] = CohortStripLensTab(id=head.id, label=head.label, is_active=True)
+
+        valid_tones = ("neutral", "good", "warn", "bad")
+        cells: list[CohortStripCell] = []
+        for entry in ctx.get("cohort_cells") or []:
+            if not isinstance(entry, dict):
+                continue
+            member_id = str(entry.get("member_id") or "")
+            if not member_id:
+                continue  # primitive's __post_init__ would reject empty id
+            tone_raw = str(entry.get("tone") or "neutral")
+            tone = tone_raw if tone_raw in valid_tones else "neutral"
+            cells.append(
+                CohortStripCell(
+                    member_id=member_id,
+                    member_name=str(entry.get("member_name") or ""),
+                    primary_value=str(entry.get("primary_value") or ""),
+                    subtitle=str(entry.get("subtitle") or ""),
+                    avatar_initials=str(entry.get("avatar_initials") or ""),
+                    tone=tone,
+                    drill_url=str(entry.get("drill_url") or ""),
+                )
+            )
+
+        endpoint_str = str(ctx.get("cohort_endpoint") or ctx.get("region_url") or "")
+        empty_msg = getattr(region, "empty_message", None) or "No members in this view."
+
+        body: Fragment = CohortStripRegion(
+            region_name=region_name,
+            endpoint=URL(endpoint_str),
+            lenses=tuple(lens_tabs),
+            cells=tuple(cells),
+            empty_message=str(empty_msg),
+        )
         return _wrap_surface(title, "dashboard", body)
 
     def _build_radar(self, region: Any, ctx: dict[str, Any]) -> Surface:

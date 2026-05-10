@@ -2200,3 +2200,218 @@ def test_activity_feed_dispatches_through_timeline() -> None:
     html = _render(fragment)
     assert "Logged in" in html
     assert "Saved record" in html
+
+
+# ───────────────── CohortStrip (#1018, v0.67.7) ───────────────────
+
+
+def _cohort_region(
+    *,
+    member_via: str = "profile",
+    lenses: list[dict] | None = None,
+    default_lens: str = "",
+) -> object:
+    """Build a region object exposing a CohortStripConfig — duck-
+    typed so the unit test doesn't need a full WorkspaceRegion."""
+    from dazzle.core.ir.workspaces import CohortStripConfig, CohortStripLens
+
+    lens_data = lenses or [
+        {"id": "attainment", "label": "Attainment", "primary": "score"},
+        {"id": "attendance", "label": "Attendance", "primary": "att_pct"},
+    ]
+    cfg = CohortStripConfig(
+        member_via=member_via,
+        lenses=[CohortStripLens(**spec) for spec in lens_data],
+        default_lens=default_lens,
+    )
+
+    class _Region:
+        name = "cohort"
+        title = None
+        display = "cohort_strip"
+        empty_message = None
+        cohort_strip_config = cfg
+
+    return _Region()
+
+
+def test_cohort_strip_dispatches_to_builder() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region()
+    surface = adapter.build(region, {"cohort_cells": [], "cohort_endpoint": "/r/cohort"})
+    assert isinstance(surface, Surface)
+    html = _render(surface)
+    assert 'class="dz-cohort-strip-region"' in html
+
+
+def test_cohort_strip_emits_lens_toggle_with_active_from_default() -> None:
+    """When ctx omits `cohort_active_lens`, the config's
+    default_lens drives the active highlight."""
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region(default_lens="attendance")
+    surface = adapter.build(region, {"cohort_cells": [], "cohort_endpoint": "/r/cohort"})
+    html = _render(surface)
+    # Two tabs, one active.
+    assert html.count('aria-pressed="true"') == 1
+    assert html.count('aria-pressed="false"') == 1
+    # The active one is "Attendance" (matches default_lens).
+    import re
+
+    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
+    assert match is not None
+    assert "Attendance" in match.group(1)
+
+
+def test_cohort_strip_active_lens_from_ctx_wins_over_default() -> None:
+    """Explicit `cohort_active_lens` in ctx overrides the config
+    default — supports the `?lens=<id>` URL-param flow."""
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region(default_lens="attendance")
+    surface = adapter.build(
+        region,
+        {
+            "cohort_cells": [],
+            "cohort_endpoint": "/r/cohort",
+            "cohort_active_lens": "attainment",
+        },
+    )
+    html = _render(surface)
+    import re
+
+    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
+    assert match is not None
+    assert "Attainment" in match.group(1)
+
+
+def test_cohort_strip_unknown_active_lens_falls_back_to_first() -> None:
+    """A stale URL param like `?lens=ghost` should not crash; the
+    adapter coerces to the first declared lens."""
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region()  # default unset
+    surface = adapter.build(
+        region,
+        {
+            "cohort_cells": [],
+            "cohort_endpoint": "/r/cohort",
+            "cohort_active_lens": "ghost-lens",
+        },
+    )
+    html = _render(surface)
+    # Active is the first config lens (attainment).
+    import re
+
+    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
+    assert match is not None
+    assert "Attainment" in match.group(1)
+
+
+def test_cohort_strip_empty_cells_renders_empty_state() -> None:
+    """With zero ctx cells, the strip renders the configured
+    empty_message — lens toggle still present so the user can swap."""
+
+    class _Region:
+        name = "cohort"
+        title = None
+        display = "cohort_strip"
+        empty_message = "Nobody here yet."
+        cohort_strip_config = _cohort_region().cohort_strip_config
+
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(_Region(), {"cohort_endpoint": "/r/cohort"})
+    html = _render(surface)
+    assert "Nobody here yet." in html
+    assert 'class="dz-cohort-strip-empty"' in html
+    assert 'role="tablist"' in html  # toggle still rendered
+
+
+def test_cohort_strip_builds_cells_from_ctx_dicts() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region()
+    cells_data = [
+        {
+            "member_id": "p1",
+            "member_name": "Alice",
+            "primary_value": "78",
+            "subtitle": "9G",
+            "tone": "good",
+            "drill_url": "/m/p1",
+        },
+        {
+            "member_id": "p2",
+            "member_name": "Bob",
+            "primary_value": "62",
+            "subtitle": "9G",
+            "tone": "warn",
+        },
+    ]
+    surface = adapter.build(region, {"cohort_cells": cells_data, "cohort_endpoint": "/r/cohort"})
+    html = _render(surface)
+    assert 'data-member-id="p1"' in html
+    assert 'data-member-id="p2"' in html
+    assert "Alice" in html
+    assert "Bob" in html
+    assert 'data-dz-tone="good"' in html
+    assert 'data-dz-tone="warn"' in html
+
+
+def test_cohort_strip_skips_cells_with_missing_member_id() -> None:
+    """Defensive: an upstream resolver that produces a row with no
+    member_id (FK miss?) shouldn't crash the primitive."""
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region()
+    cells_data = [
+        {"member_id": "p1", "member_name": "OK", "primary_value": "1"},
+        {"member_id": "", "member_name": "Bad", "primary_value": "?"},
+        {"member_name": "Missing key", "primary_value": "?"},
+    ]
+    surface = adapter.build(region, {"cohort_cells": cells_data, "cohort_endpoint": "/r/cohort"})
+    html = _render(surface)
+    assert 'data-member-id="p1"' in html
+    assert "Bad" not in html
+    assert "Missing key" not in html
+
+
+def test_cohort_strip_no_lenses_renders_empty_state_surface() -> None:
+    """A misconfigured region with zero lenses degrades to an
+    EmptyState rather than crashing the primitive's at-least-one-
+    lens invariant."""
+    from dazzle.core.ir.workspaces import CohortStripConfig
+
+    class _Region:
+        name = "cohort"
+        title = None
+        display = "cohort_strip"
+        empty_message = None
+        cohort_strip_config = CohortStripConfig(member_via="x", lenses=[])
+
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(_Region(), {})
+    html = _render(surface)
+    assert "Cohort strip not configured" in html
+
+
+def test_cohort_strip_unknown_tone_coerces_to_neutral() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region()
+    surface = adapter.build(
+        region,
+        {
+            "cohort_cells": [
+                {"member_id": "p1", "member_name": "A", "primary_value": "1", "tone": "rainbow"},
+            ],
+            "cohort_endpoint": "/r/cohort",
+        },
+    )
+    html = _render(surface)
+    assert 'data-dz-tone="neutral"' in html
+    assert "rainbow" not in html
+
+
+def test_cohort_strip_endpoint_falls_back_to_region_url() -> None:
+    """If `cohort_endpoint` isn't supplied, ctx['region_url'] is used —
+    matches the convention for hx-target endpoints in this codebase."""
+    adapter = WorkspaceRegionAdapter()
+    region = _cohort_region()
+    surface = adapter.build(region, {"cohort_cells": [], "region_url": "/api/regions/cohort"})
+    html = _render(surface)
+    assert 'hx-get="/api/regions/cohort?lens=' in html

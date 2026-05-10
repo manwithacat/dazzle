@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.7] - 2026-05-10
+
+### Added
+
+- **#1018 — `cohort_strip` runtime adapter (first of four).** First of the four #1015–#1018 region-primitive adapters. `WorkspaceRegionAdapter` now dispatches `display: cohort_strip` to a new `_build_cohort_strip` builder that reads `region.cohort_strip_config` (lens definitions + default) plus a typed ctx dict (resolved cohort cells + active lens id + endpoint URL) and produces a `Surface(CohortStripRegion)`. Pure config-to-primitive translation — the row resolution + FK join + lens-primary extraction live one layer up in `workspace_rendering.py` and are deferred to a follow-on ship that wires real DB queries.
+- **Active-lens fallback chain:** explicit `ctx["cohort_active_lens"]` → `config.default_lens` → first declared lens. Stale URL params (`?lens=ghost`) coerce safely to the first lens rather than crashing the primitive's exactly-one-active-lens invariant.
+- **Defensive degradation paths:** misconfigured regions (zero lenses) render an `EmptyState("Cohort strip not configured")` surface rather than triggering the primitive's at-least-one-lens invariant; cells with empty/missing `member_id` are silently skipped (FK-resolution miss path); unknown tone strings coerce to `"neutral"`.
+- **Coverage map updated:** `cohort_strip` added to `_SUPPORTED_DISPLAYS` in `src/dazzle/render/fragment/coverage.py` so `dazzle coverage --fail-on-uncovered` accepts the display value once a project consumes it.
+- **10 adapter tests** at `tests/unit/test_region_adapter.py` (appended) covering dispatch, lens-toggle markup, active-lens fallback chain, empty-cell empty-state path, ctx→cell translation, defensive skips, no-lens degradation, unknown-tone coercion, endpoint fallback to `region_url`.
+
+### Changed
+
+- **`tests/unit/fixtures/ir_reader_baseline.json`** — removed `workspaces.CohortStripConfig.default_lens` and `workspaces.WorkspaceRegion.cohort_strip_config` from the orphan baseline. Both fields now have a reader (the new adapter), so the parity gate flagged them as "resolved orphan".
+
+### Agent Guidance
+
+- **Primitive adapter dispatch pattern:** New region primitives need three wiring touch-points before they're "live": (1) `_BUILDERS` entry in `src/dazzle_back/runtime/renderers/region_adapter.py`, (2) builder method on the same class, (3) entry in `_SUPPORTED_DISPLAYS` in `src/dazzle/render/fragment/coverage.py`. The IR fields the builder reads come off the orphan baseline at the same time. The data-resolution layer (`workspace_rendering.py`) is a separate ship: the adapter consumes pre-resolved ctx dicts so the primitive layer stays unit-testable without a database. Same split as the existing `_build_action_grid` / `action_card_data` pair.
+
 ## [0.67.6] - 2026-05-10
 
 ### Changed
