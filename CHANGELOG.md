@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.16] - 2026-05-10
+
+### Added
+
+- **#1015 — `task_inbox` upstream fan-out wiring.** Closes the gap from v0.67.15. The `_workspace_region_handler` now fans out one query per declared source, scopes each against its own entity-level access spec, and gathers results in parallel via `asyncio.gather`. Each source's results land in `items_per_source[idx]` which the helper API (v0.67.15) consumes to produce typed items + real chip counts.
+- **`_fetch_task_inbox_items_per_source`** async helper at `src/dazzle_back/runtime/workspace_rendering.py`. Per-source resolution:
+  - Look up the source entity's repository (`ctx.repositories[src.source]`) and access spec (`ctx.entity_access_specs[src.source]`).
+  - Synthesize a per-source `WorkspaceRegionContext` via `dataclasses.replace` so `_apply_workspace_scope_filters` evaluates RBAC against the source entity's own scope rules, not the region's primary entity.
+  - Convert the source's `filter:` ConditionExpr to a repo filter dict via the existing `_extract_condition_filters` from `route_generator`.
+  - Merge scope filters + source filter, fan out via `asyncio.gather` with bounded `page_size=50` per source.
+  - Default-deny: scope-denied sources map to empty lists; failed queries (transient repo errors) are caught, logged at warning level, and treated as empty so one source's failure doesn't block the rest of the inbox.
+- **`WorkspaceRegionContext.entity_access_specs: dict[str, Any]`** — new field carrying the per-entity access-spec lookup. Populated once at app boot in `workspace_route_builder.py` from `appspec.entities`, threaded through to every region context. Single-source paths ignore it (default empty dict, zero cost); multi-source task_inbox uses it.
+- **`_safe_fetch` + `_empty_list_coro`** helper coroutines used by the gather shape — keeps per-source failure handling localised so one bad source's exception doesn't crash the whole inbox.
+- **8 fan-out tests** at `tests/unit/test_task_inbox_fan_out.py`: per-source independent fetch, missing-repository skip, exploding-repo isolation, source-filter conversion to repo filters, empty-source-name defensive skip, list-shape and dict-shape repo response handling.
+
+### Security
+
+- **Per-entity RBAC scope evaluated per source** — the source entity's `cedar_access_spec` (not the region's primary spec) drives `_apply_workspace_scope_filters` for that source's query. This matches the security contract every other display mode uses for its single source: each entity enforces its own scope rules at fetch time. A workspace region can compose tasks from any entity the user can see, but never bypasses any entity's scope rules.
+- **Default-deny** when `_apply_workspace_scope_filters` returns `denied=True` for a source — that source contributes zero rows / zero chip count, just like the existing single-source path.
+
+### Agent Guidance
+
+- **Multi-entity workspace fan-out pattern is now templated.** The `_dataclasses.replace(ctx, source=..., cedar_access_spec=...)` shape lets you reuse `_apply_workspace_scope_filters` against any entity in the appspec without threading a separate context object. Future workspace regions that need to compose data across entities (e.g. cross-entity activity feeds, multi-source dashboards) can use this shape directly. The `entity_access_specs` field on `WorkspaceRegionContext` is the lookup table — populated once at boot, available everywhere.
+- **Per-source failure isolation is intentional.** When a single source's query fails (transient DB error, schema drift, missing entity), the helper logs and returns an empty list for that source rather than propagating. This is the right blast radius for an inbox: zero items from one source is a recoverable display state; a 500 takes the whole dashboard down. Don't reduce the failure-isolation when adapting this pattern elsewhere.
+
 ## [0.67.15] - 2026-05-10
 
 ### Added

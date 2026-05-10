@@ -76,6 +76,15 @@ class WorkspaceRouteBuilder:
             auth_middleware = self._auth_middleware
             entity_auto_includes = self._entity_auto_includes
 
+            # #1015 (v0.67.16) — per-entity access spec lookup, used
+            # by multi-source task_inbox fan-out so each source's
+            # rows are scoped against its own entity-level RBAC. Built
+            # once per app boot; constant for the request lifetime.
+            entity_access_specs: dict[str, Any] = {
+                getattr(_e, "name", ""): getattr(_e, "access", None) for _e in entities
+            }
+            entity_access_specs.pop("", None)  # drop missing-name fallback
+
             require_auth = self._enable_auth and not self._enable_test_mode
 
             # Build entity → list surface lookup for column projection (#357, #359)
@@ -146,6 +155,7 @@ class WorkspaceRouteBuilder:
                                 cedar_access_spec=getattr(_src_entity_spec, "access", None),
                                 fk_graph=self._fk_graph,
                                 user_entity_name=self._user_entity_name,
+                                entity_access_specs=entity_access_specs,
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -249,6 +259,7 @@ class WorkspaceRouteBuilder:
                         cedar_access_spec=getattr(_entity_spec, "access", None),
                         fk_graph=self._fk_graph,
                         user_entity_name=self._user_entity_name,
+                        entity_access_specs=entity_access_specs,
                     )
                     _ws_region_ctxs.append(_region_ctx)
 

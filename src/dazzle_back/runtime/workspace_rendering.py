@@ -376,6 +376,148 @@ def _items_from_template(
     return out
 
 
+async def _fetch_task_inbox_items_per_source(
+    *,
+    config: Any,
+    ctx: Any,
+    request: Any,
+    auth_context: Any,
+    user_id: str | None,
+) -> dict[int, list[dict[str, Any]]]:
+    """Fan out per-source queries for a task_inbox region (#1015).
+
+    For each source declared in the config:
+      1. Look up the source entity's repository (`ctx.repositories`).
+      2. Look up the source entity's access spec (`ctx.entity_access_specs`).
+      3. Convert the source's `filter:` ConditionExpr (if any) to a
+         repo-filter dict via the existing `_extract_condition_filters`.
+      4. Apply per-entity scope filters via `_apply_workspace_scope_filters`
+         using a synthesized per-source context.
+      5. Fetch rows in parallel via `asyncio.gather`.
+
+    Returns a dict mapping source index → list of fetched row dicts.
+    A scope-denied source (no matching scope rule) maps to an empty
+    list (default-deny). Failed queries also map to empty lists with
+    an operator-visible warning log — one source's failure must not
+    block the rest of the inbox from rendering.
+
+    The returned dict keys ONLY appear for as_task or count_as
+    sources that successfully fetched rows; missing keys signal
+    "treat as empty" downstream (matches the helper's defensive
+    behaviour at `_resolve_task_inbox_multi_source`).
+    """
+    import asyncio
+    from contextlib import suppress
+    from dataclasses import replace as _dc_replace
+
+    sources = list(getattr(config, "sources", []) or [])
+    if not sources:
+        return {}
+    repositories = getattr(ctx, "repositories", None) or {}
+    entity_access_specs = getattr(ctx, "entity_access_specs", None) or {}
+    if not repositories:
+        return {}
+
+    # Gather per-source fetch coroutines along with their indices.
+    coros: list[Any] = []
+    indices: list[int] = []
+    for idx, src in enumerate(sources):
+        source_entity = str(getattr(src, "source", "") or "")
+        if not source_entity:
+            continue
+        repo = repositories.get(source_entity)
+        if repo is None:
+            continue
+
+        # Build per-source ctx for scope evaluation. Cedar access
+        # spec comes from the source entity, NOT the region's own
+        # primary entity.
+        per_source_ctx = _dc_replace(
+            ctx,
+            source=source_entity,
+            cedar_access_spec=entity_access_specs.get(source_entity),
+        )
+        scope_filters, scope_denied = _apply_workspace_scope_filters(
+            per_source_ctx, auth_context, user_id, None
+        )
+        if scope_denied:
+            # Default-deny when no scope rule matched.
+            indices.append(idx)
+            coros.append(_empty_list_coro())
+            continue
+
+        # Convert source.filter (ConditionExpr) to repo filter dict.
+        merged_filters: dict[str, Any] = {}
+        if scope_filters:
+            merged_filters.update(scope_filters)
+        source_filter = getattr(src, "filter", None)
+        if source_filter is not None:
+            from dazzle_back.runtime.route_generator import _extract_condition_filters
+
+            with suppress(Exception):
+                _extract_condition_filters(
+                    source_filter,
+                    user_id or "",
+                    merged_filters,
+                    logger,
+                    auth_context,
+                    None,
+                    None,
+                )
+
+        # Per-source row cap is intentionally small — the inbox
+        # composes typed task items, not paginated lists. 50 per
+        # source is generous and keeps fan-out cost bounded.
+        coros.append(_safe_fetch(repo, filters=merged_filters, page_size=50, label=source_entity))
+        indices.append(idx)
+
+    if not coros:
+        return {}
+
+    results = await asyncio.gather(*coros, return_exceptions=True)
+    items_per_source: dict[int, list[dict[str, Any]]] = {}
+    for idx, result in zip(indices, results, strict=True):
+        if isinstance(result, BaseException):
+            logger.warning("task_inbox source %d fetch failed: %s — treating as empty", idx, result)
+            items_per_source[idx] = []
+        else:
+            items_per_source[idx] = list(result or [])
+    return items_per_source
+
+
+async def _empty_list_coro() -> list[dict[str, Any]]:
+    """Awaitable that resolves to an empty list. Used by the
+    fan-out helper to keep the gather shape uniform when a source
+    is scope-denied."""
+    return []
+
+
+async def _safe_fetch(
+    repo: Any, *, filters: dict[str, Any], page_size: int, label: str
+) -> list[dict[str, Any]]:
+    """Wrap a repo.list call so per-source failures don't propagate.
+
+    Returns the items list on success, an empty list on any
+    exception (logged at warning level so operators can audit)."""
+    try:
+        result = await repo.list(
+            page=1,
+            page_size=page_size,
+            filters=filters,
+            sort=None,
+            include=None,
+            fk_display_only=True,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface to ops log
+        logger.warning("task_inbox source %s fetch raised %s", label, exc)
+        return []
+    if isinstance(result, dict):
+        return list(result.get("items", []) or [])
+    if isinstance(result, list):
+        return list(result)
+    return []
+
+
 def _resolve_task_inbox_multi_source(
     sources: list[Any],
     items_per_source: dict[int, list[dict[str, Any]]],
@@ -869,6 +1011,11 @@ class WorkspaceRegionContext:
     fk_graph: Any = None
     # DSL user entity name for current_user resolution (#588)
     user_entity_name: str = "User"
+    # #1015 (v0.67.16) — per-entity access specs for multi-source
+    # task_inbox fan-out. Maps entity name → access spec so each
+    # source can apply its own scope rules at fetch time. Default
+    # empty dict keeps single-source paths cost-free.
+    entity_access_specs: dict[str, Any] = field(default_factory=dict)
 
 
 def _resolve_display_name(value: Any) -> str:
@@ -2093,9 +2240,23 @@ async def _workspace_region_handler(
             elif display_upper == "TASK_INBOX":
                 _inbox_cfg = getattr(ir_region, "task_inbox_config", None)
                 if _inbox_cfg is not None:
+                    # #1015 (v0.67.16) — fan out per-source queries in
+                    # parallel, scope each against its own entity's
+                    # access spec, pass the items_per_source dict to
+                    # the helper. Falls through to single-source MVP
+                    # when the fan-out produces an empty dict (e.g.
+                    # repositories not yet wired in test contexts).
+                    _items_per_source = await _fetch_task_inbox_items_per_source(
+                        config=_inbox_cfg,
+                        ctx=ctx,
+                        request=request,
+                        auth_context=_auth_ctx_for_filters,
+                        user_id=_current_user_id,
+                    )
                     inbox_items, inbox_chips = _build_task_inbox_payload(
                         items=items,
                         config=_inbox_cfg,
+                        items_per_source=_items_per_source,
                     )
                     adapter_ctx["task_inbox_items"] = inbox_items
                     adapter_ctx["task_inbox_chips"] = inbox_chips
