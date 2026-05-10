@@ -2415,3 +2415,408 @@ def test_cohort_strip_endpoint_falls_back_to_region_url() -> None:
     surface = adapter.build(region, {"cohort_cells": [], "region_url": "/api/regions/cohort"})
     html = _render(surface)
     assert 'hx-get="/api/regions/cohort?lens=' in html
+
+
+# ───────────────── DayTimeline (#1016, v0.67.8) ───────────────────
+
+
+def _day_timeline_region(
+    *,
+    starts_at: str = "period_start",
+    ends_at: str = "period_end",
+    card: str = "lesson_card",
+    empty_message: str | None = None,
+) -> object:
+    """Build a region object exposing a DayTimelineConfig — duck-
+    typed so the unit test doesn't need a full WorkspaceRegion."""
+    from dazzle.core.ir.workspaces import DayTimelineConfig
+
+    cfg = DayTimelineConfig(starts_at=starts_at, ends_at=ends_at, card=card)
+
+    class _Region:
+        name = "today"
+        title = None
+        display = "day_timeline"
+        cohort_strip_config = None
+
+    r = _Region()
+    r.empty_message = empty_message  # type: ignore[attr-defined]
+    r.day_timeline_config = cfg  # type: ignore[attr-defined]
+    return r
+
+
+def test_day_timeline_dispatches_to_builder() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    surface = adapter.build(region, {})
+    assert isinstance(surface, Surface)
+    html = _render(surface)
+    assert 'class="dz-day-timeline-region"' in html
+
+
+def test_day_timeline_empty_slots_renders_empty_state() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region(empty_message="No periods today.")
+    surface = adapter.build(region, {"day_timeline_slots": []})
+    html = _render(surface)
+    assert 'class="dz-day-timeline-empty"' in html
+    assert "No periods today." in html
+
+
+def test_day_timeline_builds_slots_with_positions() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    slots_data = [
+        {"slot_id": "p1", "label": "Period 1 — 09:00", "position": "before"},
+        {"slot_id": "p2", "label": "Period 2 — 10:00", "position": "active"},
+        {"slot_id": "p3", "label": "Period 3 — 11:00", "position": "after"},
+    ]
+    surface = adapter.build(region, {"day_timeline_slots": slots_data})
+    html = _render(surface)
+    assert 'data-slot-id="p1"' in html
+    assert "is-before" in html
+    assert "is-active" in html
+    assert "is-after" in html
+    assert html.count('data-dz-position="active"') == 1
+
+
+def test_day_timeline_unknown_position_falls_through_to_after() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    surface = adapter.build(
+        region,
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "P1", "position": "weird"},
+            ],
+        },
+    )
+    html = _render(surface)
+    assert "is-after" in html
+
+
+def test_day_timeline_collapses_multiple_active_slots() -> None:
+    """Defensive: if the resolver mis-classifies two slots as active
+    (clock-edge race? overlapping windows?) the adapter keeps the
+    first and downgrades the rest rather than crashing the
+    at-most-one-active invariant."""
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    surface = adapter.build(
+        region,
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "P1", "position": "active"},
+                {"slot_id": "p2", "label": "P2", "position": "active"},
+                {"slot_id": "p3", "label": "P3", "position": "active"},
+            ],
+        },
+    )
+    html = _render(surface)
+    assert html.count('data-dz-position="active"') == 1
+
+
+def test_day_timeline_skips_slots_with_missing_id() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    surface = adapter.build(
+        region,
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "OK"},
+                {"slot_id": "", "label": "Bad"},
+                {"label": "Missing key"},
+            ],
+        },
+    )
+    html = _render(surface)
+    assert 'data-slot-id="p1"' in html
+    assert "Bad" not in html
+    assert "Missing key" not in html
+
+
+def test_day_timeline_drill_url_wraps_slot_in_anchor() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    surface = adapter.build(
+        region,
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "P1", "drill_url": "/lessons/123"},
+            ],
+        },
+    )
+    html = _render(surface)
+    assert 'href="/lessons/123"' in html
+
+
+def test_day_timeline_passes_through_pre_rendered_body() -> None:
+    """`body` is pre-rendered HTML from the data resolution layer;
+    the adapter passes it through and the primitive renders it as-is
+    (escape responsibility lives with whoever produced the body)."""
+    adapter = WorkspaceRegionAdapter()
+    region = _day_timeline_region()
+    body_html = '<span class="lesson-card">Year 8 Maths — Room B12</span>'
+    surface = adapter.build(
+        region,
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "P1", "body": body_html},
+            ],
+        },
+    )
+    html = _render(surface)
+    assert body_html in html
+
+
+# ───────────────── TaskInbox (#1015, v0.67.8) ───────────────────
+
+
+def _task_inbox_region(*, empty_state: str = "All caught up.") -> object:
+    """Build a region object exposing a TaskInboxConfig — duck-typed."""
+    from dazzle.core.ir.workspaces import TaskInboxConfig
+
+    cfg = TaskInboxConfig(sources=[], empty_state=empty_state)
+
+    class _Region:
+        name = "today"
+        title = None
+        display = "task_inbox"
+        empty_message = None
+
+    r = _Region()
+    r.task_inbox_config = cfg  # type: ignore[attr-defined]
+    return r
+
+
+def test_task_inbox_dispatches_to_builder() -> None:
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(_task_inbox_region(), {})
+    assert isinstance(surface, Surface)
+    html = _render(surface)
+    assert 'class="dz-task-inbox-region"' in html
+
+
+def test_task_inbox_uses_config_empty_state_when_region_empty() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region(empty_state="Nothing to do.")
+    surface = adapter.build(region, {})
+    html = _render(surface)
+    assert "Nothing to do." in html
+
+
+def test_task_inbox_builds_items_with_urgency() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region()
+    items = [
+        {
+            "item_id": "i1",
+            "icon": "register",
+            "title": "Register 8X",
+            "meta": "Period 1",
+            "urgency": "due",
+            "drill_url": "/r/i1",
+        },
+        {
+            "item_id": "i2",
+            "icon": "message",
+            "title": "Reply",
+            "urgency": "overdue",
+        },
+    ]
+    surface = adapter.build(region, {"task_inbox_items": items})
+    html = _render(surface)
+    assert 'data-item-id="i1"' in html
+    assert 'data-dz-urgency="due"' in html
+    assert 'data-dz-urgency="overdue"' in html
+    assert 'data-icon="register"' in html
+    assert 'href="/r/i1"' in html
+
+
+def test_task_inbox_builds_summary_chips() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region()
+    chips = [
+        {"chip_id": "c1", "count": 7, "label": "manuscripts ready", "drill_url": "/m"},
+        {"chip_id": "c2", "count": 3, "label": "drafts in review"},
+    ]
+    surface = adapter.build(region, {"task_inbox_chips": chips})
+    html = _render(surface)
+    assert 'class="dz-task-inbox-chips"' in html
+    assert ">7<" in html
+    assert "manuscripts ready" in html
+    assert 'href="/m"' in html
+
+
+def test_task_inbox_skips_items_with_missing_id() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region()
+    items = [
+        {"item_id": "i1", "icon": "x", "title": "ok"},
+        {"item_id": "", "icon": "x", "title": "bad"},
+    ]
+    surface = adapter.build(region, {"task_inbox_items": items})
+    html = _render(surface)
+    assert 'data-item-id="i1"' in html
+    assert "bad" not in html
+
+
+def test_task_inbox_unknown_urgency_falls_through_to_later() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region()
+    surface = adapter.build(
+        region,
+        {"task_inbox_items": [{"item_id": "i", "icon": "x", "title": "t", "urgency": "weird"}]},
+    )
+    html = _render(surface)
+    assert 'data-dz-urgency="later"' in html
+
+
+def test_task_inbox_negative_chip_count_coerces_to_zero() -> None:
+    """Defensive: a buggy resolver producing count=-1 would trip the
+    primitive's invariant. The adapter clamps to 0."""
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region()
+    surface = adapter.build(
+        region, {"task_inbox_chips": [{"chip_id": "c", "count": -5, "label": "x"}]}
+    )
+    html = _render(surface)
+    assert ">0<" in html
+
+
+def test_task_inbox_non_int_chip_count_coerces_to_zero() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _task_inbox_region()
+    surface = adapter.build(
+        region, {"task_inbox_chips": [{"chip_id": "c", "count": "??", "label": "x"}]}
+    )
+    html = _render(surface)
+    assert ">0<" in html
+
+
+# ───────────────── EntityCard (#1017, v0.67.8) ───────────────────
+
+
+def _entity_card_region() -> object:
+    """Build a region object exposing an EntityCardConfig — duck-typed."""
+    from dazzle.core.ir.workspaces import EntityCardConfig
+
+    cfg = EntityCardConfig(sections=[])
+
+    class _Region:
+        name = "card"
+        title = None
+        display = "entity_card"
+        empty_message = None
+
+    r = _Region()
+    r.entity_card_config = cfg  # type: ignore[attr-defined]
+    return r
+
+
+def test_entity_card_dispatches_to_builder() -> None:
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(_entity_card_region(), {})
+    assert isinstance(surface, Surface)
+    html = _render(surface)
+    assert 'class="dz-entity-card-region"' in html
+
+
+def test_entity_card_renders_record_label_when_set() -> None:
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(
+        _entity_card_region(),
+        {
+            "entity_card_record_label": "Alice Wong · Year 9",
+            "entity_card_sections": [
+                {"section_id": "s", "label": "Halo", "body": "<p>x</p>"},
+            ],
+        },
+    )
+    html = _render(surface)
+    assert "Alice Wong" in html
+
+
+def test_entity_card_omits_record_label_heading_when_empty() -> None:
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(
+        _entity_card_region(),
+        {"entity_card_sections": [{"section_id": "s", "label": "L"}]},
+    )
+    html = _render(surface)
+    assert "dz-entity-card-heading" not in html
+
+
+def test_entity_card_builds_sections_with_modes() -> None:
+    adapter = WorkspaceRegionAdapter()
+    sections_data = [
+        {
+            "section_id": "halo",
+            "label": "Halo",
+            "mode": "halo",
+            "column": "main",
+            "body": "<div>halo body</div>",
+        },
+        {
+            "section_id": "flags",
+            "label": "Flags",
+            "mode": "flags",
+            "column": "sidebar",
+        },
+        {
+            "section_id": "marks",
+            "label": "Marks",
+            "mode": "mini_bars",
+            "column": "main",
+        },
+    ]
+    surface = adapter.build(_entity_card_region(), {"entity_card_sections": sections_data})
+    html = _render(surface)
+    assert 'data-section-id="halo"' in html
+    assert 'data-dz-mode="flags"' in html
+    assert 'data-dz-mode="mini_bars"' in html
+    assert 'data-dz-column="sidebar"' in html
+
+
+def test_entity_card_skips_omitted_sections() -> None:
+    adapter = WorkspaceRegionAdapter()
+    sections_data = [
+        {"section_id": "shown", "label": "Shown"},
+        {"section_id": "hidden", "label": "Hidden", "is_omitted": True},
+    ]
+    surface = adapter.build(_entity_card_region(), {"entity_card_sections": sections_data})
+    html = _render(surface)
+    assert 'data-section-id="shown"' in html
+    assert 'data-section-id="hidden"' not in html
+
+
+def test_entity_card_unknown_mode_falls_through_to_halo() -> None:
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(
+        _entity_card_region(),
+        {"entity_card_sections": [{"section_id": "s", "label": "L", "mode": "weird"}]},
+    )
+    html = _render(surface)
+    assert 'data-dz-mode="halo"' in html
+
+
+def test_entity_card_unknown_column_falls_through_to_main() -> None:
+    adapter = WorkspaceRegionAdapter()
+    surface = adapter.build(
+        _entity_card_region(),
+        {"entity_card_sections": [{"section_id": "s", "label": "L", "column": "weird"}]},
+    )
+    html = _render(surface)
+    assert 'data-dz-column="main"' in html
+
+
+def test_entity_card_skips_sections_with_missing_id() -> None:
+    adapter = WorkspaceRegionAdapter()
+    sections_data = [
+        {"section_id": "ok", "label": "OK"},
+        {"section_id": "", "label": "Bad"},
+    ]
+    surface = adapter.build(_entity_card_region(), {"entity_card_sections": sections_data})
+    html = _render(surface)
+    assert 'data-section-id="ok"' in html
+    assert "Bad" not in html

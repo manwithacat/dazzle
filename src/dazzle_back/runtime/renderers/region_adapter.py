@@ -37,9 +37,13 @@ from dazzle.render.fragment import (
     ConfirmGate,
     CsvExportButton,
     DateRangePicker,
+    DayTimelineRegion,
+    DayTimelineSlot,
     DetailGrid,
     Diagram,
     EmptyState,
+    EntityCardRegion,
+    EntityCardSection,
     FilterBar,
     FilterColumn,
     Fragment,
@@ -87,6 +91,9 @@ from dazzle.render.fragment import (
     StatusListEntry,
     Surface,
     Tabs,
+    TaskInboxItem,
+    TaskInboxRegion,
+    TaskInboxSummaryChip,
     Text,
     Timeline,
     TimelineEvent,
@@ -402,6 +409,9 @@ class WorkspaceRegionAdapter:
         "histogram": "_build_histogram",
         "heatmap": "_build_heatmap",
         "cohort_strip": "_build_cohort_strip",  # #1018 (v0.67.7)
+        "day_timeline": "_build_day_timeline",  # #1016 (v0.67.8)
+        "task_inbox": "_build_task_inbox",  # #1015 (v0.67.8)
+        "entity_card": "_build_entity_card",  # #1017 (v0.67.8)
     }
 
     # Display values that share a builder with another display value.
@@ -1375,6 +1385,209 @@ class WorkspaceRegionAdapter:
             lenses=tuple(lens_tabs),
             cells=tuple(cells),
             empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "dashboard", body)
+
+    def _build_day_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: day_timeline` regions render as a vertical
+        chronological scroll of slot cards (#1016, v0.67.8).
+
+        Reads `region.day_timeline_config` for the starts_at/ends_at
+        field names + composite-card name, plus `ctx` for the resolved
+        slots. The data resolution layer compares the now-window
+        against each row's [starts_at, ends_at] range to set
+        `position` on each slot.
+
+        ctx shape:
+            day_timeline_slots: list of dicts {"slot_id": str,
+                "label": str, "position": "before"|"active"|"after"
+                (default "after"), "body": str (pre-rendered HTML —
+                adapter owns escape responsibility), "drill_url":
+                str (default "")}.
+
+        At most one slot may carry `position="active"` — the
+        primitive enforces this. If the data resolution accidentally
+        marks two active, the adapter's _build keeps the first and
+        downgrades the rest to "after" rather than crashing.
+        """
+        title = _region_title(region)
+        region_name = str(getattr(region, "name", "") or "day_timeline")
+        empty_msg = getattr(region, "empty_message", None) or "No scheduled slots today."
+
+        valid_positions = ("before", "active", "after")
+        slots: list[DayTimelineSlot] = []
+        active_seen = False
+        for entry in ctx.get("day_timeline_slots") or []:
+            if not isinstance(entry, dict):
+                continue
+            slot_id = str(entry.get("slot_id") or "")
+            if not slot_id:
+                continue
+            label = str(entry.get("label") or "")
+            position_raw = str(entry.get("position") or "after")
+            position = position_raw if position_raw in valid_positions else "after"
+            # Defensive: collapse extra "active" rows after the first
+            # to "after" so we don't trip the primitive's at-most-one
+            # invariant from a buggy upstream resolver.
+            if position == "active":
+                if active_seen:
+                    position = "after"
+                else:
+                    active_seen = True
+            slots.append(
+                DayTimelineSlot(
+                    slot_id=slot_id,
+                    label=label,
+                    position=position,  # type: ignore[arg-type]
+                    body=str(entry.get("body") or ""),
+                    drill_url=str(entry.get("drill_url") or ""),
+                )
+            )
+
+        body: Fragment = DayTimelineRegion(
+            region_name=region_name,
+            slots=tuple(slots),
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "dashboard", body)
+
+    def _build_task_inbox(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: task_inbox` regions render as a workflow-led
+        prioritised list of due actions (#1015, v0.67.8).
+
+        ctx shape:
+            task_inbox_items: list of dicts {"item_id": str, "icon":
+                str, "title": str, "meta": str (default ""),
+                "urgency": "overdue"|"due"|"soon"|"later" (default
+                "later"), "drill_url": str (default "")}.
+            task_inbox_chips: list of dicts {"chip_id": str, "count":
+                int, "label": str, "drill_url": str (default "")} —
+                collapsed-summary chips for `count_as` sources.
+
+        The data resolution layer is responsible for resolving
+        `as_task` template strings against source rows AND for
+        sorting items by the IR's `order` keys (urgency + deadline).
+        This adapter just renders the resolved + sorted shape.
+        """
+        title = _region_title(region)
+        region_name = str(getattr(region, "name", "") or "task_inbox")
+        empty_msg = getattr(region, "empty_message", None)
+        cfg = getattr(region, "task_inbox_config", None)
+        # Empty-state copy comes from the IR config when set;
+        # region.empty_message overrides if present.
+        if empty_msg is None and cfg is not None:
+            empty_msg = getattr(cfg, "empty_state", None)
+        empty_msg = str(empty_msg or "All caught up.")
+
+        valid_urgencies = ("overdue", "due", "soon", "later")
+        items: list[TaskInboxItem] = []
+        for entry in ctx.get("task_inbox_items") or []:
+            if not isinstance(entry, dict):
+                continue
+            item_id = str(entry.get("item_id") or "")
+            if not item_id:
+                continue
+            urgency_raw = str(entry.get("urgency") or "later")
+            urgency = urgency_raw if urgency_raw in valid_urgencies else "later"
+            items.append(
+                TaskInboxItem(
+                    item_id=item_id,
+                    icon=str(entry.get("icon") or ""),
+                    title=str(entry.get("title") or ""),
+                    meta=str(entry.get("meta") or ""),
+                    urgency=urgency,  # type: ignore[arg-type]
+                    drill_url=str(entry.get("drill_url") or ""),
+                )
+            )
+
+        chips: list[TaskInboxSummaryChip] = []
+        for entry in ctx.get("task_inbox_chips") or []:
+            if not isinstance(entry, dict):
+                continue
+            chip_id = str(entry.get("chip_id") or "")
+            if not chip_id:
+                continue
+            try:
+                count = int(entry.get("count") or 0)
+            except (TypeError, ValueError):
+                count = 0
+            if count < 0:
+                count = 0  # primitive rejects negative; defensive coercion
+            chips.append(
+                TaskInboxSummaryChip(
+                    chip_id=chip_id,
+                    count=count,
+                    label=str(entry.get("label") or ""),
+                    drill_url=str(entry.get("drill_url") or ""),
+                )
+            )
+
+        body: Fragment = TaskInboxRegion(
+            region_name=region_name,
+            items=tuple(items),
+            summary_chips=tuple(chips),
+            empty_message=empty_msg,
+        )
+        return _wrap_surface(title, "dashboard", body)
+
+    def _build_entity_card(self, region: Any, ctx: dict[str, Any]) -> Surface:
+        """`display: entity_card` regions render as a composite 360°
+        single-entity drill-down (#1017, v0.67.8). Domain-agnostic:
+        pupil-360 in MIS, customer-360 in CRM, etc.
+
+        ctx shape:
+            entity_card_sections: list of dicts {"section_id": str,
+                "label": str, "mode": str (default "halo"), "body":
+                str (pre-rendered HTML — adapter owns escape),
+                "column": "main"|"sidebar" (default "main"),
+                "is_omitted": bool (default False)}.
+            entity_card_record_label: optional str for the region's
+                heading. Empty string omits the heading.
+
+        The data resolution layer queries each section's source
+        independently, applies the mode-specific compact renderer to
+        produce `body`, and decides per-section whether to mark
+        `is_omitted=True` (optional sections that resolved zero rows).
+        """
+        title = _region_title(region)
+        region_name = str(getattr(region, "name", "") or "entity_card")
+        record_label = str(ctx.get("entity_card_record_label") or "")
+
+        valid_modes = (
+            "halo",
+            "flags",
+            "mini_bars",
+            "stamps",
+            "thread_summary",
+            "quick_actions",
+        )
+        valid_columns = ("main", "sidebar")
+        sections: list[EntityCardSection] = []
+        for entry in ctx.get("entity_card_sections") or []:
+            if not isinstance(entry, dict):
+                continue
+            section_id = str(entry.get("section_id") or "")
+            if not section_id:
+                continue
+            mode_raw = str(entry.get("mode") or "halo")
+            mode = mode_raw if mode_raw in valid_modes else "halo"
+            column_raw = str(entry.get("column") or "main")
+            column = column_raw if column_raw in valid_columns else "main"
+            sections.append(
+                EntityCardSection(
+                    section_id=section_id,
+                    label=str(entry.get("label") or ""),
+                    mode=mode,  # type: ignore[arg-type]
+                    body=str(entry.get("body") or ""),
+                    column=column,  # type: ignore[arg-type]
+                    is_omitted=bool(entry.get("is_omitted") or False),
+                )
+            )
+
+        body: Fragment = EntityCardRegion(
+            region_name=region_name,
+            sections=tuple(sections),
+            record_label=record_label,
         )
         return _wrap_surface(title, "dashboard", body)
 

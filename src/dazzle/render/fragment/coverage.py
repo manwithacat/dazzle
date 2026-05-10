@@ -211,6 +211,9 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "radar",
         "box_plot",
         "cohort_strip",  # #1018 (v0.67.7) — adapter live; data resolution pending
+        "day_timeline",  # #1016 (v0.67.8) — adapter live; data resolution pending
+        "task_inbox",  # #1015 (v0.67.8) — adapter live; data resolution pending
+        "entity_card",  # #1017 (v0.67.8) — adapter live; data resolution pending
     }
 )
 

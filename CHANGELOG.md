@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.8] - 2026-05-10
+
+### Added
+
+- **#1015–#1017 — `day_timeline` + `task_inbox` + `entity_card` runtime adapters (three of four).** Companion ship to v0.67.7's cohort_strip adapter; fills in the remaining three primitives' adapter dispatch. `WorkspaceRegionAdapter` now routes all four #1015–#1018 region primitives via `_BUILDERS`, each builder a pure config-to-primitive translator that consumes a typed ctx dict (the data resolution layer in `workspace_rendering.py` populates the dicts; that wiring is the next ship).
+- **`_build_day_timeline`** reads `region.day_timeline_config` + `ctx["day_timeline_slots"]`. Defensive: extra `position="active"` rows after the first downgrade to `"after"` so a buggy upstream resolver doesn't trip the primitive's at-most-one-active-slot invariant; unknown positions fall through to `"after"`; slots with empty `slot_id` are skipped.
+- **`_build_task_inbox`** reads `region.task_inbox_config` + `ctx["task_inbox_items"]` + `ctx["task_inbox_chips"]`. Empty-state copy precedence: `region.empty_message` → `config.empty_state` → `"All caught up."`. Defensive: unknown urgency strings coerce to `"later"`; negative or non-int chip counts coerce to 0 (primitive rejects negative, would crash otherwise); items/chips with missing ids are skipped.
+- **`_build_entity_card`** reads `region.entity_card_config` + `ctx["entity_card_sections"]` + `ctx["entity_card_record_label"]`. Sections marked `is_omitted=True` upstream are dropped before primitive construction so the primitive's section list only contains renderable sections. Defensive: unknown mode strings → `"halo"`, unknown column strings → `"main"`, sections with missing ids skipped.
+- **Coverage map updated:** `day_timeline`, `task_inbox`, `entity_card` added to `_SUPPORTED_DISPLAYS`. All four #1015–#1018 primitives now pass `dazzle coverage --fail-on-uncovered` once a project consumes them.
+- **24 adapter tests** (8 per primitive, total 34 across the four primitives) covering dispatch, primitive-construction round-trip, all defensive coercion paths.
+
+### Changed
+
+- **`tests/unit/fixtures/ir_reader_baseline.json`** — removed `workspaces.TaskInboxConfig.empty_state` and `workspaces.WorkspaceRegion.task_inbox_config` from the orphan baseline (now read by the adapter). The remaining orphaned fields (`day_timeline_config.starts_at` etc., `entity_card_config.scope_param` etc.) stay baselined until the data-resolution ship — those fields are read by the row-resolution layer, not the adapter.
+
+### Agent Guidance
+
+- **Adapter / data-resolution split is intentional and load-bearing.** The adapter consumes pre-resolved ctx dicts so it stays unit-testable without a database. The data resolution layer (`workspace_rendering.py`) is responsible for: (1) querying source rows scoped to the current user, (2) FK-resolving config-named relationships (`member_via`, `pupil_via`-style), (3) applying mode-specific compact renderers (`mini_bars`, `stamps`, `thread_summary` for `entity_card` sections), (4) applying time-window comparisons (`day_timeline`'s `now ∈ [starts_at, ends_at]` for active-slot detection), (5) merging heterogeneous sources for `task_inbox`. Same split as the existing `_build_action_grid` / `action_card_data` pair. Don't break this split when wiring data resolution — keep the adapter dumb.
+
 ## [0.67.7] - 2026-05-10
 
 ### Added
