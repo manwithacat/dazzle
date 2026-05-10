@@ -464,8 +464,8 @@ workspace command_center "Command Center":
           filter: status = active
           as_task:
             icon: "alert-triangle"
-            title: "{message}"
-            meta: "{severity}"
+            title: "{{ message }}"
+            meta: "{{ severity }}"
         - source: Alert
           filter: status = acknowledged
           count_as: "alerts being worked"

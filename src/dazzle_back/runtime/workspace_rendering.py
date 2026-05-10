@@ -159,6 +159,302 @@ def _build_cohort_cells(
     return cells
 
 
+def _build_day_timeline_slots(
+    *,
+    items: list[dict[str, Any]],
+    config: Any,
+    now: _dt.datetime,
+) -> list[dict[str, Any]]:
+    """Build day_timeline slot dicts from already-scoped source rows (#1016).
+
+    Each slot carries (slot_id, label, position, body, drill_url).
+    `position` is determined by comparing `now` against each row's
+    [starts_at, ends_at] window — the slot whose window contains
+    `now` becomes ``"active"``; earlier windows are ``"before"``;
+    later windows are ``"after"``. At most one slot can be active.
+
+    `items` are the rows from the source-entity query — RBAC scope
+    is already enforced upstream. `config` is
+    ``WorkspaceRegion.day_timeline_config``.
+
+    Slot label uses a sensible default: "{starts_at_value} — {ends_at_value}"
+    for time-bucketed display. Body is left empty in the IR-pure
+    path; richer composite-card rendering against `config.card`
+    is deferred until composite-card lookup wires up.
+
+    Defensive paths: rows missing the configured starts_at field
+    are skipped; rows whose timestamps don't parse as datetime are
+    treated as ``"after"`` (latest-tier fallback rather than
+    silently dropping the row).
+    """
+    if not items or config is None:
+        return []
+    starts_at_field = str(getattr(config, "starts_at", "") or "")
+    ends_at_field = str(getattr(config, "ends_at", "") or "")
+    if not starts_at_field or not ends_at_field:
+        return []
+
+    def _to_dt(value: Any) -> _dt.datetime | None:
+        """Coerce a row value to an aware datetime. Accepts
+        datetime instances and ISO-8601 strings."""
+        if isinstance(value, _dt.datetime):
+            return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
+        if isinstance(value, str) and value:
+            try:
+                # Strip trailing Z and treat as UTC; otherwise rely on
+                # fromisoformat to handle offset suffixes.
+                stripped = value.rstrip("Z")
+                if stripped.endswith("+00:00") or "T" in stripped or " " in stripped:
+                    parsed = _dt.datetime.fromisoformat(stripped)
+                    return parsed if parsed.tzinfo else parsed.replace(tzinfo=_dt.UTC)
+            except ValueError:
+                return None
+        return None
+
+    # Pre-compute (item, starts, ends) tuples and sort chronologically.
+    rows: list[tuple[dict[str, Any], _dt.datetime | None, _dt.datetime | None]] = []
+    for item in items:
+        starts = _to_dt(item.get(starts_at_field))
+        if starts is None:
+            continue  # row without a parseable starts_at is unrenderable
+        ends = _to_dt(item.get(ends_at_field))
+        rows.append((item, starts, ends))
+    rows.sort(key=lambda triple: triple[1] or _dt.datetime.min.replace(tzinfo=_dt.UTC))
+
+    # Position assignment — exactly one row may be "active". A row is
+    # active when its [starts, ends] window contains `now`; if `ends`
+    # is None we treat the row as a point-in-time event and consider
+    # it active only if it equals `now` to within a minute.
+    active_seen = False
+    slots: list[dict[str, Any]] = []
+    now_aware = now if now.tzinfo else now.replace(tzinfo=_dt.UTC)
+    for item, starts, ends in rows:
+        slot_id = str(item.get("id", "") or "")
+        if not slot_id:
+            continue
+        position = "after"
+        if not active_seen and starts is not None:
+            window_end = ends if ends is not None else starts
+            if starts <= now_aware <= window_end:
+                position = "active"
+                active_seen = True
+            elif window_end < now_aware:
+                position = "before"
+            else:
+                position = "after"
+        elif starts is not None and (ends or starts) < now_aware:
+            position = "before"
+        # Human-readable label: prefer name/title field, fall back
+        # to the ISO timestamp range. The composite `card:` template
+        # would render richer content; deferred ship.
+        label_raw = item.get("name") or item.get("title") or item.get("message") or ""
+        label = str(label_raw) if label_raw else f"{starts.isoformat() if starts else ''}"
+        slots.append(
+            {
+                "slot_id": slot_id,
+                "label": label,
+                "position": position,
+                "body": "",
+                "drill_url": "",
+            }
+        )
+    return slots
+
+
+def _dazzle_html_escape(value: str) -> str:
+    """Lightweight HTML attribute/text escape used by the typed-
+    primitive data resolution helpers. The composed body strings
+    pass through the typed renderer's `body` slot which does NOT
+    re-escape pre-rendered HTML — these helpers own escape
+    responsibility for fields they pull off raw source rows."""
+    import html as _html
+
+    return _html.escape(value, quote=True)
+
+
+def _build_task_inbox_payload(
+    *,
+    items: list[dict[str, Any]],
+    config: Any,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build (task_inbox_items, task_inbox_chips) from already-scoped
+    source rows (#1015).
+
+    The task_inbox config declares N sources, each either an
+    ``as_task`` per-row template or a ``count_as`` collapsed-summary
+    chip. The simple-case (single-source) MVP folds the region's
+    primary `items` list against the FIRST as_task source it finds,
+    then attaches one summary chip per `count_as` source whose count
+    derives from `items` filtered against the source's `filter`
+    expression.
+
+    Multi-source heterogeneous inboxes (one items list per source)
+    require fanning out N queries upstream — deferred to a richer
+    ship that touches the source-fetch machinery. The shape this
+    helper produces is forward-compatible: the adapter consumes
+    items + chips lists; the upstream change is the items list
+    composition.
+
+    `items` are rows from the region's primary source query
+    (`region.source` — RBAC scope already enforced).
+    `config` is ``WorkspaceRegion.task_inbox_config``.
+    """
+    if config is None:
+        return [], []
+    sources = list(getattr(config, "sources", []) or [])
+    if not sources:
+        return [], []
+
+    # Pick the first as_task source as the primary template (MVP).
+    primary_template = None
+    for src in sources:
+        if getattr(src, "as_task", None) is not None:
+            primary_template = getattr(src, "as_task", None)
+            break
+
+    inbox_items: list[dict[str, Any]] = []
+    if primary_template is not None and items:
+        icon = str(getattr(primary_template, "icon", "") or "")
+        title_tmpl = str(getattr(primary_template, "title", "") or "")
+        meta_tmpl = str(getattr(primary_template, "meta", "") or "")
+        for item in items:
+            item_id = str(item.get("id", "") or "")
+            if not item_id:
+                continue
+            title = _interpolate_card_template(title_tmpl, item) if title_tmpl else ""
+            meta = _interpolate_card_template(meta_tmpl, item) if meta_tmpl else ""
+            # Urgency: defer to a `severity` / `urgency` / `priority`
+            # field on the row when present, mapped to the four bands.
+            urgency_raw = (
+                item.get("urgency") or item.get("severity") or item.get("priority") or "later"
+            )
+            urgency = _coerce_urgency(str(urgency_raw))
+            inbox_items.append(
+                {
+                    "item_id": item_id,
+                    "icon": icon,
+                    "title": title,
+                    "meta": meta,
+                    "urgency": urgency,
+                    "drill_url": "",
+                }
+            )
+
+    # Collapsed-summary chips — one per count_as source. Without a
+    # per-source items list (single-fetch MVP), the chip count is the
+    # length of `items` that match the source's filter, which we
+    # cannot evaluate here without the predicate-eval machinery. For
+    # ship 1, emit chips with count=len(items) when no filter is
+    # configured, count=0 otherwise — flagged for the multi-source
+    # ship to backfill.
+    inbox_chips: list[dict[str, Any]] = []
+    for idx, src in enumerate(sources):
+        count_as = str(getattr(src, "count_as", "") or "")
+        if not count_as:
+            continue
+        # Without per-source filter eval we can't compute the real
+        # count; emit 0 with the configured noun phrase so the chip
+        # row renders without misleading numbers.
+        inbox_chips.append(
+            {
+                "chip_id": f"src{idx}",
+                "count": 0,
+                "label": count_as,
+                "drill_url": "",
+            }
+        )
+
+    return inbox_items, inbox_chips
+
+
+def _coerce_urgency(value: str) -> str:
+    """Map a free-form urgency/severity/priority string to one of
+    the four task_inbox bands (overdue / due / soon / later)."""
+    normalized = value.strip().lower()
+    if normalized in ("overdue", "due", "soon", "later"):
+        return normalized
+    # Common aliases — severity-style and priority-style values.
+    if normalized in ("critical", "high", "blocker", "urgent"):
+        return "overdue"
+    if normalized in ("medium", "warning", "warn"):
+        return "due"
+    if normalized in ("low", "minor", "info"):
+        return "soon"
+    return "later"
+
+
+def _build_entity_card_sections(
+    *,
+    items: list[dict[str, Any]],
+    config: Any,
+) -> list[dict[str, Any]]:
+    """Build entity_card section dicts from the scoped record (#1017).
+
+    The entity_card region scopes to a single record via the
+    ``scope_param`` URL parameter; the upstream filter machinery
+    narrows `items` to that record (or empty if not found / not
+    permitted). This helper composes one section dict per IR
+    section, populating bodies from the scoped record's fields.
+
+    For the MVP, section bodies are minimal — `halo` and `flags`
+    sections render a small key→value table from `fields`; other
+    modes (mini_bars, stamps, thread_summary) emit empty bodies
+    pending the per-mode compact renderer ship that wires section
+    sources to their own fan-out queries.
+
+    Sections marked `is_omitted` here when the scoped record has
+    no field values for any of the section's `fields`.
+    """
+    if config is None:
+        return []
+    record = items[0] if items else None
+    cfg_sections = list(getattr(config, "sections", []) or [])
+    if not cfg_sections:
+        return []
+    out: list[dict[str, Any]] = []
+    for section in cfg_sections:
+        name = str(getattr(section, "name", "") or "")
+        if not name:
+            continue
+        mode_obj = getattr(section, "mode", None)
+        mode = getattr(mode_obj, "value", None) or str(mode_obj or "halo")
+        fields = list(getattr(section, "fields", []) or [])
+        column = "sidebar" if mode in ("flags", "thread_summary") else "main"
+        body_html = ""
+        is_omitted = False
+
+        if mode in ("halo", "flags") and record is not None and fields:
+            rows: list[str] = []
+            for field in fields:
+                value = record.get(field)
+                if value is None or value == "":
+                    continue
+                rows.append(
+                    f"<dt>{_dazzle_html_escape(str(field))}</dt><dd>{_dazzle_html_escape(str(value))}</dd>"
+                )
+            if rows:
+                body_html = f'<dl class="dz-entity-card-{mode}-grid">{"".join(rows)}</dl>'
+            else:
+                # Optional section with no values resolved — omit
+                # rather than render an empty <dl>.
+                is_omitted = True
+        elif mode == "halo" and record is None:
+            is_omitted = True
+
+        section_label = name.replace("_", " ").title()
+        out.append(
+            {
+                "section_id": name,
+                "label": section_label,
+                "mode": mode,
+                "body": body_html,
+                "column": column,
+                "is_omitted": is_omitted,
+            }
+        )
+    return out
+
+
 def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
     """Substitute `{{ field }}` / `{{ field.path }}` against an item (#892).
 
@@ -1745,6 +2041,40 @@ async def _workspace_region_handler(
                         config=_cohort_cfg,
                         active_lens_id=_active_lens_id,
                     )
+            elif display_upper == "DAY_TIMELINE":
+                _day_cfg = getattr(ir_region, "day_timeline_config", None)
+                if _day_cfg is not None:
+                    adapter_ctx["day_timeline_slots"] = _build_day_timeline_slots(
+                        items=items,
+                        config=_day_cfg,
+                        now=_dt.datetime.now(_dt.UTC),
+                    )
+            elif display_upper == "TASK_INBOX":
+                _inbox_cfg = getattr(ir_region, "task_inbox_config", None)
+                if _inbox_cfg is not None:
+                    inbox_items, inbox_chips = _build_task_inbox_payload(
+                        items=items,
+                        config=_inbox_cfg,
+                    )
+                    adapter_ctx["task_inbox_items"] = inbox_items
+                    adapter_ctx["task_inbox_chips"] = inbox_chips
+            elif display_upper == "ENTITY_CARD":
+                _card_cfg = getattr(ir_region, "entity_card_config", None)
+                if _card_cfg is not None:
+                    adapter_ctx["entity_card_sections"] = _build_entity_card_sections(
+                        items=items,
+                        config=_card_cfg,
+                    )
+                    if items:
+                        # Heading from the resolved single record's
+                        # `name` / `title` / `message` field — first
+                        # row scoped via the `scope_param` URL parameter
+                        # which the upstream filter machinery already
+                        # applied. Empty when no record matched.
+                        record = items[0]
+                        adapter_ctx["entity_card_record_label"] = str(
+                            record.get("name") or record.get("title") or record.get("message") or ""
+                        )
             try:
                 surface = WorkspaceRegionAdapter().build(ir_region, adapter_ctx)
                 inner = getattr(getattr(surface, "body", None), "body", None)

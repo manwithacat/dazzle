@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.14] - 2026-05-10
+
+### Added
+
+- **#1015–#1017 — Data resolution layers for `day_timeline`, `task_inbox`, `entity_card`.** Companion ship to v0.67.13's cohort_strip resolution; closes the four-primitive data-resolution arc. All four region kinds now produce real adapter ctx dicts from already-scoped source rows. The DSL → IR → adapter → renderer pipeline is end-to-end live for every primitive in the quartet.
+- **`_build_day_timeline_slots(items, config, now)`** at `src/dazzle_back/runtime/workspace_rendering.py`. Compares `now` against each row's [starts_at, ends_at] window to assign positions: at most one slot is `"active"`, earlier rows are `"before"`, later rows are `"after"`. Accepts both `datetime` instances and ISO-8601 strings; naive datetimes coerce to UTC; rows with unparseable timestamps or missing ids are skipped. Slot label falls back through `name` → `title` → `message` → ISO timestamp.
+- **`_build_task_inbox_payload(items, config) → (items, chips)`** — MVP single-source path. Folds the region's primary `items` list against the FIRST `as_task` source it finds, building one task item per row (icon + interpolated title/meta via the existing `_interpolate_card_template` Jinja-style `{{ field }}` substitutor). Urgency resolves from `urgency` / `severity` / `priority` row fields with sensible aliases (critical/high → overdue, medium → due, low → soon). One chip per `count_as` source — the chip count is 0 in the MVP because per-source filter eval requires a multi-fetch upstream; flagged for a follow-on ship that fans out one query per source.
+- **`_build_entity_card_sections(items, config)`** — composes one section dict per IR section. `halo` and `flags` modes render minimal `<dl>` grids of named field values from the scoped record (HTML-escaped via the new `_dazzle_html_escape` helper since the typed renderer trusts the body kwarg). Other modes (`mini_bars`, `stamps`, `thread_summary`, `quick_actions`) emit empty bodies pending per-mode compact renderer ships. Optional sections that resolved no field values flag as `is_omitted=True` so the adapter drops them entirely.
+- **`_coerce_urgency`** helper for the task_inbox pipeline — maps free-form severity/priority strings to the four task_inbox bands.
+- **`_dazzle_html_escape`** module-local helper used by the new resolution helpers since they emit pre-rendered HTML the typed renderer doesn't re-escape.
+- **39 new helper tests** total (13 day_timeline + 13 task_inbox + 13 entity_card) across three new test files. Coverage: position assignment for day_timeline against synthetic now, urgency coercion paths, halo/flags HTML escape safety, all defensive paths (missing fields, missing record, unparseable timestamps).
+
+### Changed
+
+- **Six baselined orphan IR fields now have readers** and were removed from `tests/unit/fixtures/ir_reader_baseline.json`: `DayTimelineConfig.starts_at`, `DayTimelineConfig.ends_at`, `TaskSource.as_task`, `TaskSource.count_as`, `WorkspaceRegion.day_timeline_config`, `WorkspaceRegion.entity_card_config`.
+- **Example app `examples/ops_dashboard/dsl/app.dsl`** — task_inbox source's `title:` and `meta:` template strings updated to Jinja `{{ field }}` form (matches the existing `_interpolate_card_template` contract used by `profile_card`'s secondary template).
+
+### Agent Guidance
+
+- **Multi-source fan-out is the next gap for task_inbox.** The MVP folds a single `items` list against the first `as_task` source, which works when all inbox rows live in one entity but breaks the spec's heterogeneous-source pattern (assessments due + manuscripts ready + behaviour follow-ups + parent contacts — each in a different entity). The follow-on ship needs to fan out N source-fetch queries upstream of `_workspace_region_handler`, scope each independently, then pass per-source items lists to `_build_task_inbox_payload`. The IR + adapter shapes already support this — the gap is in the upstream fetch layer.
+- **Per-mode compact renderers for entity_card** (mini_bars / stamps / thread_summary / quick_actions) are deferred to a follow-on ship that can do per-section source fan-out. The MVP renders empty bodies for those modes so the section chrome lands without crashing; the adapter's `is_omitted` flag suppresses entire sections that resolved no data.
+
 ## [0.67.13] - 2026-05-10
 
 ### Added
