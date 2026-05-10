@@ -175,3 +175,49 @@ def test_chrome_on_response_contains_typed_page_chrome() -> None:
     assert resp.status_code == 200
     body = resp.text
     assert "<!DOCTYPE html>" in body or "<!doctype html>" in body
+
+
+# ───────────────── Hero section migration (#1037 v0.67.25) ────────
+
+
+def test_chrome_on_renders_hero_via_typed_builder_not_jinja_partial() -> None:
+    """v0.67.25 (first section migration): hero sections under
+    chrome=on render via `_build_hero_section` instead of
+    `site/sections/hero.html`. The Jinja partial should NOT fire
+    for the hero section."""
+    client = _build_app(chrome=True)
+    with _JinjaSpy() as spy:
+        resp = client.get("/")
+    assert resp.status_code == 200
+    # Hero partial must NOT fire under chrome=on.
+    assert "site/sections/hero.html" not in spy.calls
+    # inner_only.html still fires (it dispatches based on _typed marker).
+    assert "site/inner_only.html" in spy.calls
+
+
+def test_chrome_off_still_renders_hero_via_jinja() -> None:
+    """Sanity: chrome=off path keeps using the legacy Jinja chain
+    (page.html → site_base.html → sections/hero.html). The section
+    builder typed path is gated on the flag, not always-on. Jinja
+    `{% include %}` calls aren't visible to the spy; we assert on
+    entry-template difference instead."""
+    client = _build_app(chrome=False)
+    with _JinjaSpy() as spy:
+        resp = client.get("/")
+    assert resp.status_code == 200
+    assert "site/page.html" in spy.calls
+    assert "site/inner_only.html" not in spy.calls
+
+
+def test_chrome_on_response_carries_typed_hero_class_names() -> None:
+    """The typed builder emits the same `dz-section-hero` /
+    `dz-hero-text` class names as the Jinja partial — visual parity
+    is the contract for byte-equivalent migration."""
+    client = _build_app(chrome=True)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "dz-section-hero" in body
+    assert "dz-hero-text" in body
+    # Headline from _MIN_SITESPEC.
+    assert ">Hello<" in body

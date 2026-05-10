@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.25] - 2026-05-10
+
+### Added
+
+- **#1037 follow-on — typed `hero` sitespec section.** First section migrated to the typed-Fragment substrate. The `chrome=on` sitespec render path now produces hero-section HTML via the new `_build_hero_section` builder instead of routing through `site/sections/hero.html`. Visual parity with the Jinja partial: same class names (`dz-section-hero`, `dz-hero-text`, `dz-cta-group`, `dz-button-primary`, `dz-button-outline`, `dz-hero-with-media`, `dz-hero-media`, `dz-hero-image`), same conditional blocks (subhead, primary/secondary CTAs, media), same id-attr derivation (explicit `id` → slugified headline → omitted).
+- **`src/dazzle_back/runtime/renderers/site_section_builder.py`** — new module that holds typed-section builders. `TYPED_SECTION_TYPES: frozenset[str]` exposes the migrated set; `render_typed_section(section)` dispatches to the right builder. The wiring in `_render_site_page_chromed` walks `ctx.sections`, replaces migrated dicts with `{"type": "_typed", "_typed_html": "..."}` markers, and `inner_only.html` emits the `_typed_html` raw via `| safe`.
+- **`_slugify` / `_section_id_attr`** internal helpers in the builder module — minimal port of the `slugify` Jinja filter + `section_id_attr` macro from `_helpers.html` so id-attr output matches.
+- **24 unit tests** at `tests/unit/test_site_section_hero_builder.py`: full shape coverage (section wrapper, headline, subhead conditional, CTA group conditional, primary/secondary CTA defaults, media block conditional, id-attr fallback chain), all HTML escape paths (headline, subhead, CTA label/href injection, media src/alt injection, explicit id injection), dispatch entrypoint behaviour.
+- **3 integration tests** added to `tests/integration/test_sitespec_chrome_gate_flip.py`: chrome=on dispatches via `inner_only.html`, chrome=off uses the legacy chain, response under chrome=on carries the `dz-section-hero` / `dz-hero-text` class names + the headline text from the sitespec.
+
+### Changed
+
+- **`site/inner_only.html`** — added a `_typed` dispatch branch at the top of the section loop. When a section dict has `type == "_typed"`, the template emits its `_typed_html` raw via `| safe` (the typed builder owns escape responsibility for user-supplied fields). Unmigrated section types fall through to their existing Jinja `{% include %}` partials. The `_typed` branch is the seam future section migrations slot into without further template edits.
+
+### Agent Guidance
+
+- **Section migration shape is now templated.** Each new section type follows the v0.67.25 hero pattern: (1) add `_build_<type>_section(section_dict) -> str` to `site_section_builder.py`, (2) add an `elif section_type == "<type>":` branch in `render_typed_section`'s dispatch, (3) add the type to `TYPED_SECTION_TYPES`, (4) add a unit-test block mirroring the hero file's shape (one assertion per visible class name, escape coverage for every user-supplied field). The wiring in `_render_site_page_chromed` and `inner_only.html`'s `_typed` branch don't change. Sequencing per the v0.67.24 follow-on plan: footer next (simplest after hero), then features / cta / generic, then pricing-table + faq (largest, defer until last).
+
 ## [0.67.24] - 2026-05-10
 
 ### Added

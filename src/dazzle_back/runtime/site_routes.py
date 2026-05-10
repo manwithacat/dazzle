@@ -303,14 +303,20 @@ def create_site_page_routes(
     def _render_site_page_chromed(request: Request, ctx: Any) -> str:
         """Render a sitespec page either via the typed-Fragment chrome
         path (when `app.state.fragment_chrome=True`) or the legacy
-        Jinja `site/page.html` path (#1037, v0.67.24).
+        Jinja `site/page.html` path (#1037, v0.67.24+).
 
-        The gate flip — sections inside the body still render via
-        their Jinja partials in this ship; the typed path wraps that
-        inner HTML in a typed `Page` primitive (visible `data-dz-page`
-        markers land) so the chrome layer matches entity surface
-        routes and workspace routes. Section-by-section migration is
-        a follow-on multi-cycle ship — see #1037 investigation.
+        Typed-path body composition:
+          1. Walk `ctx.sections`; for each section whose `type` is in
+             `TYPED_SECTION_TYPES`, render via `site_section_builder`
+             into HTML and replace the section dict with a marker
+             (`{"type": "_typed", "_typed_html": "..."}`) so
+             `inner_only.html` emits the pre-rendered HTML directly.
+          2. Sections with unmigrated types are left as-is — Jinja
+             includes their existing partials.
+          3. The resulting inner HTML wraps in a typed `Page`
+             primitive so the document chrome lands on the typed
+             substrate. cyfuture's "zero Jinja" stop condition is
+             progressively closer with each section migration.
         """
         chrome_flag = bool(
             getattr(getattr(request, "app", None), "state", None)
@@ -319,12 +325,37 @@ def create_site_page_routes(
         if not chrome_flag:
             return render_site_page("site/page.html", ctx)
 
-        # Typed path — render the section body via the existing Jinja
-        # partial (no per-section migration in this ship), then wrap
-        # in a typed Page so the chrome attrs land on the document.
+        # Typed path — pre-render migrated sections, leave unmigrated
+        # types for Jinja partials, then wrap the merged inner body in
+        # a typed Page primitive.
         from dazzle.render.fragment.renderer import FragmentRenderer
         from dazzle_back.runtime.renderers.page_builder import build_page
+        from dazzle_back.runtime.renderers.site_section_builder import (
+            TYPED_SECTION_TYPES,
+            render_typed_section,
+        )
         from dazzle_ui.runtime.template_context import PageContext
+
+        sections = list(getattr(ctx, "sections", None) or [])
+        if sections:
+            replaced: list[Any] = []
+            for section in sections:
+                if not isinstance(section, dict):
+                    replaced.append(section)
+                    continue
+                section_type = str(section.get("type", "") or "")
+                if section_type in TYPED_SECTION_TYPES:
+                    replaced.append(
+                        {
+                            "type": "_typed",
+                            "_typed_html": render_typed_section(section),
+                        }
+                    )
+                else:
+                    replaced.append(section)
+            ctx = (
+                ctx.model_copy(update={"sections": replaced}) if hasattr(ctx, "model_copy") else ctx
+            )
 
         inner_html = render_site_page("site/inner_only.html", ctx)
         page_ctx = PageContext(
