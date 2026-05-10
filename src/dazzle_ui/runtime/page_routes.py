@@ -1763,17 +1763,22 @@ async def _workspace_handler(
                 }
             )
 
+    # #1036 (v0.67.23): unify the typed-Fragment switch on
+    # `app.state.fragment_chrome` (the same flag every entity surface
+    # route uses) instead of the legacy `DAZZLE_TYPED_RENDER=1` env
+    # var. When fragment_chrome is on, both the htmx partial path AND
+    # the full-page path render through the typed substrate; when off,
+    # both fall back to the legacy Jinja templates. Closes the last
+    # page-level Jinja render for chrome=on apps so cyfuture and other
+    # downstream pilots can complete Jinja retirement.
+    chrome_flag = bool(
+        getattr(getattr(request, "app", None), "state", None)
+        and getattr(request.app.state, "fragment_chrome", False)
+    )
+
     # Fragment targeting: return only the workspace content
     if htmx.wants_fragment:
-        # Phase 4B.5.c — opt-in typed-Fragment substrate via env var.
-        # When DAZZLE_TYPED_RENDER=1 is set, render `_content.html`
-        # equivalent through the typed primitives (WorkspaceShell +
-        # inner pieces + sibling WorkspaceDrawer). Byte-equivalence
-        # validated against 17/17 example workspaces. Toggle off to
-        # fall back to the legacy Jinja path.
-        import os
-
-        if os.environ.get("DAZZLE_TYPED_RENDER") == "1":
+        if chrome_flag:
             from dazzle_ui.runtime.workspace_renderer import (
                 render_workspace_content_typed,
             )
@@ -1796,23 +1801,65 @@ async def _workspace_handler(
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=html, headers=headers)  # nosemgrep
 
-    html = render_fragment(
-        "workspace/workspace.html",
-        workspace=render_ws_ctx,
-        nav_items=visible_nav,
-        nav_groups=ws_groups,
-        app_name=ws_app_name,
-        page_title=ws_title,
-        current_route=effective_route,
-        is_authenticated=is_authenticated,
-        user_email=user_email,
-        user_name=user_name,
-        user_preferences=user_preferences,
-        catalog=catalog,
-        fold_count=fold_count,
-        primary_actions=primary_actions,
-        _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
-    )
+    if chrome_flag:
+        # Typed-Fragment full-page render — produce the workspace
+        # content via the typed substrate, then wrap in the typed
+        # AppShell/Sidebar/Topbar chrome via dispatch_render_page.
+        # Mirrors the entity-surface pattern (page_routes.py:1420).
+        from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
+        from dazzle_ui.runtime.template_context import NavItemContext, PageContext
+        from dazzle_ui.runtime.workspace_renderer import (
+            render_workspace_content_typed,
+        )
+
+        inner_html = render_workspace_content_typed(
+            workspace=render_ws_ctx,
+            catalog=catalog,
+            fold_count=fold_count,
+            primary_actions=primary_actions,
+        )
+        page_ctx = PageContext(
+            page_title=ws_title,
+            app_name=ws_app_name,
+            nav_items=[NavItemContext(label=n["label"], route=n["route"]) for n in visible_nav],
+            nav_groups=ws_groups,
+            current_route=effective_route,
+        )
+        app_state = request.app.state
+        css_links = tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        )
+        js_scripts = tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        )
+        theme = getattr(app_state, "fragment_chrome_theme", None)
+        html = dispatch_render_page(
+            page_ctx,
+            inner_html,
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
+        )
+    else:
+        html = render_fragment(
+            "workspace/workspace.html",
+            workspace=render_ws_ctx,
+            nav_items=visible_nav,
+            nav_groups=ws_groups,
+            app_name=ws_app_name,
+            page_title=ws_title,
+            current_route=effective_route,
+            is_authenticated=is_authenticated,
+            user_email=user_email,
+            user_name=user_name,
+            user_preferences=user_preferences,
+            catalog=catalog,
+            fold_count=fold_count,
+            primary_actions=primary_actions,
+            _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
+        )
     return HTMLResponse(content=html)  # nosemgrep
 
 

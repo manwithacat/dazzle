@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.23] - 2026-05-10
+
+### Added
+
+- **#1036 — Workspace shell renders via typed-Fragment substrate when `app.state.fragment_chrome=True`.** Pre-fix the workspace full-page handler at `_workspace_handler` unconditionally called `render_fragment("workspace/workspace.html", ...)` even with chrome=on, blocking Jinja retirement for chrome=on apps. The handler now checks `request.app.state.fragment_chrome` and:
+  - **chrome=on, full page**: builds the workspace inner HTML via `render_workspace_content_typed` (already shipped at v0.67.0), constructs a `PageContext` with workspace nav/title/groups, calls `dispatch_render_page` for the AppShell/Sidebar/Topbar chrome — same shape entity surface routes use at line 1420+.
+  - **chrome=on, htmx partial**: returns just the typed inner content (mirrors the pre-existing partial path).
+  - **chrome=off (default)**: unchanged — falls through to the legacy Jinja `workspace/workspace.html` render so deployments not yet flipped don't change behaviour.
+- **Unified the typed-render switch** on `app.state.fragment_chrome` for both the partial and full-page workspace paths. Previously the partial path was gated on `DAZZLE_TYPED_RENDER=1` env var (Phase 4B.5.c opt-in); now both paths use the same flag every entity surface route uses.
+- **3 regression tests** at `tests/integration/test_cyfuture_workspaces_zero_jinja_when_chrome_on.py`: full-page workspace render produces zero Jinja `Template.render()` calls under chrome=on, htmx-partial workspace request produces zero Jinja calls under chrome=on, source-level seam check that the chrome=on branch references `dispatch_render_page` and the chrome=off fallback references `workspace/workspace.html` (catches regressions that remove either branch).
+
+### Agent Guidance
+
+- **Workspace chrome unification closes the page-level Jinja gap for chrome=on apps.** Combined with v0.67.10's typed-primitive render path for region bodies, every page-level surface in a chrome=on Dazzle deployment now renders through the typed-Fragment substrate. The remaining Jinja-render path is sitespec/marketing pages (#1037), which is a separate ship — workspace shell + entity surface routes + region primitives are all now Jinja-free under chrome=on.
+
 ## [0.67.22] - 2026-05-10
 
 ### Added
