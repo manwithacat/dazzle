@@ -198,3 +198,107 @@ def test_site_403_default_css_when_no_override() -> None:
     resp = client.get("/raises-403", headers={"accept": "text/html"})
     assert resp.status_code == 403
     assert "/static/dist/dazzle.min.css" in resp.text
+
+
+# ───────────────── 500 handler (Phase 2.B partial) ─────────────────
+
+
+def _build_500_app() -> TestClient:
+    """Build an app that has a route which raises an unhandled exception.
+
+    `debug=False` is required so the framework's typed 500 handler
+    fires instead of re-raising into the test client.
+    """
+    app = FastAPI(debug=False)
+    register_site_error_handlers(app, _SITESPEC)
+
+    @app.get("/boom")
+    def _boom() -> None:
+        raise RuntimeError("internal db connection lost")
+
+    @app.get("/app/boom")
+    def _app_boom() -> None:
+        raise RuntimeError("internal db connection lost")
+
+    @app.get("/raises-500-http")
+    def _raises_500_http() -> None:
+        raise HTTPException(status_code=500, detail="explicit 500 raise")
+
+    return TestClient(app, follow_redirects=False, raise_server_exceptions=False)
+
+
+def test_site_500_unhandled_exception_renders_typed_view() -> None:
+    """An uncaught exception in a route handler should render the
+    typed 500 page for browser callers."""
+    client = _build_500_app()
+    with _JinjaSpy() as spy:
+        resp = client.get("/boom", headers={"accept": "text/html"})
+    assert resp.status_code == 500
+    body = resp.text
+    assert "500" in body
+    assert "TestApp" in body
+    assert "Try again" in body
+    # Typed view, not Jinja.
+    assert spy.calls == []
+
+
+def test_site_500_does_not_leak_exception_details_to_browser() -> None:
+    """CWE-209: the exception's str() / repr / traceback must NOT
+    surface in the HTML response body."""
+    client = _build_500_app()
+    resp = client.get("/boom", headers={"accept": "text/html"})
+    assert resp.status_code == 500
+    assert "internal db connection lost" not in resp.text
+    assert "RuntimeError" not in resp.text
+    assert "Traceback" not in resp.text
+
+
+def test_site_500_json_for_api_callers() -> None:
+    """API callers (no text/html accept) get a generic JSON 500."""
+    client = _build_500_app()
+    resp = client.get("/boom", headers={"accept": "application/json"})
+    assert resp.status_code == 500
+    # The framework returns a generic detail, NOT the original exception text.
+    body = resp.json()
+    assert body == {"detail": "Internal Server Error"}
+
+
+def test_site_500_explicit_httpexception_renders_typed_view() -> None:
+    """An HTTPException(500) (not just an uncaught raise) also
+    routes through the typed view via the StarletteHTTPException
+    handler branch."""
+    client = _build_500_app()
+    resp = client.get("/raises-500-http", headers={"accept": "text/html"})
+    assert resp.status_code == 500
+    body = resp.text
+    assert "500" in body
+    assert "Try again" in body
+
+
+def test_site_500_app_path_falls_through_to_starlette_default() -> None:
+    """Phase 2.B partial: only the marketing path gets the typed
+    view. App-shell 500 stays on Starlette's plain-text default
+    until the app-shell migration lands."""
+    client = _build_500_app()
+    resp = client.get("/app/boom", headers={"accept": "text/html"})
+    assert resp.status_code == 500
+    # The typed view should NOT be the response body — it carries
+    # the typed-Fragment "Try again" CTA and the product name.
+    assert "Try again" not in resp.text
+
+
+def test_site_500_uses_app_state_css_override() -> None:
+    """Per-deployment CSS override threads through to the 500 page too."""
+    app = FastAPI(debug=False)
+    app.state.fragment_chrome_css_links = ("/my-tenant/custom.css",)
+    register_site_error_handlers(app, _SITESPEC)
+
+    @app.get("/boom")
+    def _boom() -> None:
+        raise RuntimeError("x")
+
+    client = TestClient(app, follow_redirects=False, raise_server_exceptions=False)
+    resp = client.get("/boom", headers={"accept": "text/html"})
+    assert resp.status_code == 500
+    assert "/my-tenant/custom.css" in resp.text
+    assert "/static/dist/dazzle.min.css" not in resp.text

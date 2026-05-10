@@ -343,6 +343,7 @@ def register_site_error_handlers(
     from dazzle_back.runtime.error_views import (
         build_site_403_view,
         build_site_404_view,
+        build_site_500_view,
     )
 
     # Phase 2.A (v0.67.34): marketing-site error pages render via
@@ -456,12 +457,79 @@ def register_site_error_handlers(
                 status_code=404,
             )
 
+        if exc.status_code == 500 and is_browser:
+            # Marketing-site 500: render the typed view. The app-shell
+            # 500 path (under /app/*) still falls through to the JSON
+            # branch below because we haven't migrated the app shell to
+            # typed-Fragment yet. Browsers under /app/* will see the
+            # default Starlette plain-text response until then.
+            if not _is_app_path(str(request.url.path)):
+                css_links, js_scripts = _typed_error_assets(request)
+                page = build_site_500_view(
+                    product_name=app_name,
+                    css_links=css_links,
+                    js_scripts=js_scripts,
+                )
+                return HTMLResponse(
+                    content=FragmentRenderer().render(page),
+                    status_code=500,
+                )
+
         # For API requests or other status codes, return JSON
         from fastapi.responses import JSONResponse
 
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Any, exc: Exception) -> Any:
+        """Phase 2.B partial (v0.67.36): convert unhandled exceptions
+        to a typed-Fragment 500 page for browsers (or JSON for API
+        callers). Pre-2.B the framework relied on Starlette's
+        plain-text default, which leaked nothing useful and skipped
+        the framework's CSS chrome.
+
+        The exception is re-raised in test mode (when the FastAPI
+        ``debug`` flag is set), so test failures still surface the
+        traceback. In production, the exception is swallowed at this
+        layer; upstream logging middleware is responsible for the
+        traceback record.
+        """
+        import logging
+
+        from fastapi.responses import HTMLResponse, JSONResponse
+
+        # In debug mode (tests + local development), re-raise so the
+        # traceback isn't hidden behind a friendly page.
+        if getattr(app, "debug", False):
+            raise exc
+
+        logging.getLogger("dazzle.errors").exception(
+            "Unhandled exception on %s %s",
+            getattr(request, "method", "?"),
+            getattr(getattr(request, "url", None), "path", "?"),
+        )
+
+        accept = request.headers.get("accept", "") if hasattr(request, "headers") else ""
+        is_browser = "text/html" in accept
+
+        if is_browser and not _is_app_path(str(getattr(request.url, "path", "/"))):
+            css_links, js_scripts = _typed_error_assets(request)
+            page = build_site_500_view(
+                product_name=app_name,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return HTMLResponse(
+                content=FragmentRenderer().render(page),
+                status_code=500,
+            )
+
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error"},
         )
 
 

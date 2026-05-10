@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.36] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 2.B partial — typed 500 view + global exception handler.** Pre-2.B the framework relied on Starlette's plain-text "Internal Server Error" response for unhandled exceptions, which leaked nothing useful and skipped the framework's CSS chrome entirely. This ship adds a typed-Fragment 500 page and a global handler that catches unhandled exceptions and dispatches to it.
+- **`build_site_500_view`** in `src/dazzle_back/runtime/error_views.py`. Same composition shape as the Phase 2.A 404/403 views — Stack of Link, Heading, Text, plus two CTAs ("Try again" and "Go Home"). Accepts a `message=` kwarg for forward symmetry with the 403 signature but deliberately does NOT render it into the page body — surfacing exception details leaks internals (CWE-209) and the call-site message is usually a raw `str(exc)` that exposes implementation strings.
+- **Global `Exception` handler in `register_site_error_handlers`** catches uncaught exceptions, logs them via `dazzle.errors`, and renders the typed 500 page for browser requests on marketing paths. In debug mode (when `app.debug=True`), the exception is re-raised so test failures still surface tracebacks.
+- **`StarletteHTTPException(500)` branch** in the existing `custom_http_error_handler` for handlers that explicitly `raise HTTPException(500, ...)` — same typed render, same path-prefix routing.
+- **7 view-builder unit tests** at `tests/unit/test_error_views.py`: shape, CTA links, generic-apology copy, no-form rendering, escape safety on `product_name`, and the deliberate non-leak of `message=` payload into the body.
+- **6 integration tests** at `tests/integration/test_site_error_handler.py`: unhandled-exception 500 rendering, leak prevention (no exception class names / repr / traceback strings in browser response), JSON branch for API callers, explicit `HTTPException(500)` routing, app-shell-path fall-through to Starlette default (until Phase 2.B full), and per-deployment CSS override threading.
+
+### Changed
+
+- **`register_site_error_handlers`** now registers TWO handlers: the existing `StarletteHTTPException` handler (covers raised HTTPExceptions including explicit 500s) PLUS a new `Exception` handler (covers uncaught exceptions). The `Exception` handler is the new piece — the framework now has end-to-end control over the unhandled-exception response shape for marketing-path browser requests.
+
+### Agent Guidance
+
+- **App-shell 500 still falls through to Starlette default** — under `/app/*` the typed handler intentionally skips both the explicit and global branches because the app-shell layout migration hasn't landed yet. Browsers under `/app/*` hitting an uncaught exception will see Starlette's plain text response until the broader Phase 2.B work completes. The typed view itself is path-agnostic, but the handler dispatch deliberately gates it to the marketing path.
+- **Don't pass user-supplied `message=` to `build_site_500_view`** — the kwarg is accepted for handler call-site symmetry with the 403 signature but is a CWE-209 trap if it ever rendered. Future maintainers: if you wire it up, do so behind an explicit "this is a safe-to-display string" gate, not the raw exception text.
+- **Test client tip**: integration tests that exercise unhandled exceptions need `raise_server_exceptions=False` on `TestClient(...)` AND `debug=False` on `FastAPI(...)` — without both, the framework re-raises and the test never sees the typed 500 response.
+
 ## [0.67.35] - 2026-05-11
 
 ### Added

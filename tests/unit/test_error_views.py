@@ -11,6 +11,7 @@ from dazzle.render.fragment.renderer import FragmentRenderer
 from dazzle_back.runtime.error_views import (
     build_site_403_view,
     build_site_404_view,
+    build_site_500_view,
 )
 
 
@@ -145,3 +146,56 @@ def test_403_view_renders_no_form() -> None:
     page = build_site_403_view(product_name="Acme")
     html = _render(page)
     assert "<form" not in html
+
+
+# ───────────────── build_site_500_view ─────────────────
+
+
+def test_500_view_announces_500() -> None:
+    page = build_site_500_view(product_name="Acme")
+    html = _render(page)
+    assert "500" in html
+
+
+def test_500_view_renders_product_name() -> None:
+    page = build_site_500_view(product_name="Acme")
+    html = _render(page)
+    assert "Acme" in html
+
+
+def test_500_view_offers_two_ctas() -> None:
+    page = build_site_500_view(product_name="Acme")
+    html = _render(page)
+    assert "Try again" in html
+    assert "Go Home" in html
+
+
+def test_500_view_does_not_leak_exception_message() -> None:
+    """Surfacing exception details to the user leaks internals
+    (CWE-209). The `message=` kwarg is accepted for forward
+    symmetry but must NOT render into the page body."""
+    page = build_site_500_view(
+        product_name="Acme",
+        message="<KeyError: 'totally_secret_internal_key'>",
+    )
+    html = _render(page)
+    assert "totally_secret_internal_key" not in html
+    assert "KeyError" not in html
+
+
+def test_500_view_renders_generic_apology_copy() -> None:
+    page = build_site_500_view(product_name="Acme")
+    html = _render(page)
+    assert "Something went wrong" in html or "try again" in html
+
+
+def test_500_view_renders_no_form() -> None:
+    page = build_site_500_view(product_name="Acme")
+    html = _render(page)
+    assert "<form" not in html
+
+
+def test_500_view_escapes_product_name() -> None:
+    page = build_site_500_view(product_name="<script>alert(1)</script>")
+    html = _render(page)
+    assert "<script>alert(1)</script>" not in html
