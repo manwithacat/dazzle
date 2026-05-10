@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.11] - 2026-05-10
+
+### Added
+
+- **#1018 — DSL parser support for `cohort_strip_config:` block.** First of four typed-config-block parsers landing for the #1015–#1018 region primitives. DSL authors can now declare:
+
+  ```dsl
+  systems_strip:
+    source: System
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      default_lens: status
+      lenses:
+        - id: status
+          label: Status
+          primary: status
+        - id: response_time
+          label: "Response time"
+          primary: response_time_ms
+          threshold: 500
+  ```
+
+  The parser populates `WorkspaceRegion.cohort_strip_config` with a typed `CohortStripConfig(member_via, lenses, default_lens)` IR object — the adapter (v0.67.7) reads this directly. Domain-neutral by construction (works unchanged for sales teams, customer cohorts, field crews, etc. — see v0.67.6 rename ship for the rationale).
+- **`_parse_cohort_strip_config_block`** + **`_parse_cohort_strip_lenses_block`** parser methods on `dazzle.core.dsl_parser_impl.workspace`. Mirrors the IDENT-value-match pattern used for `title:` (no dedicated TokenType — domain identifiers don't need to crowd the token enum). Establishes the syntax shape the other three config blocks (#1015 task_inbox, #1016 day_timeline, #1017 entity_card) will mirror.
+- **Required-field + cross-field validation:** `member_via` required, `lenses` non-empty, `default_lens` (when set) must reference a declared lens id, each lens entry needs both `label:` and `primary:`. Schema errors surface at parse time as `ParseError` with line/column context, not at runtime as a 500.
+- **Real config landed in `examples/ops_dashboard`:** the `systems_strip` region (already present from v0.67.9 for the coverage gate) now declares two real lenses (`status` + `response_time` with RAG threshold). First end-to-end exercise of the full DSL → IR → adapter → renderer pipeline against real source rows.
+- **`CohortStripConfig` + `CohortStripLens`** added to `dazzle.core.ir.__all__` so downstream tooling (typings, KG, ad-hoc consumers) can import them without reaching into `.workspaces`. API surface baseline regenerated.
+- **14 parser tests** at `tests/unit/test_cohort_strip_config_parser.py` covering minimal/full configs, label-quoting forms, integer threshold parsing, all required-field errors, cross-field default-lens validation, unknown-key errors, and dash-list shape errors.
+
+### Agent Guidance
+
+- **Parser-block pattern for typed config blocks:** Each #1015–#1018 follow-on (task_inbox_config, day_timeline_config, entity_card_config) follows this shape: (1) declare `<name>_config: ir.<Name>Config | None = None` in the region attribute parser's local-var block, (2) add an IDENT-value-match branch (`elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "<name>_config":`) before `else: break`, (3) implement `_parse_<name>_config_block()` returning the IR config, (4) thread the var into the `ir.WorkspaceRegion(...)` constructor call at function end. No new TokenType values needed — the IDENT pattern keeps the token enum lean. Required fields and cross-field validation should fail at parse time with `make_parse_error`, not at runtime.
+
 ## [0.67.10] - 2026-05-10
 
 ### Added

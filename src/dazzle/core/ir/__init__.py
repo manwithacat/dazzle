@@ -787,6 +787,8 @@ from .webhooks import (
 from .workspaces import (
     ActionCardSpec,
     BucketRef,
+    CohortStripConfig,
+    CohortStripLens,
     ConfirmationItemSpec,
     ContextSelectorSpec,
     DeltaSpec,
@@ -901,6 +903,8 @@ __all__ = [
     "WorkspaceAccessSpec",
     "DeltaSpec",
     "ActionCardSpec",
+    "CohortStripConfig",
+    "CohortStripLens",
     "ConfirmationItemSpec",
     "NoticeSpec",
     "OverlaySeriesSpec",

@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 332 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
+# Counts: 334 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -383,6 +383,21 @@ ir_class: ClassificationSpec
   optional:
     - notes: str | None = None
     - retention: RetentionPolicy = <RetentionPolicy.MEDIUM: 'medium'>
+
+ir_class: CohortStripConfig
+  required:
+    - lenses: list[CohortStripLens]
+    - member_via: str
+  optional:
+    - default_lens: str = ''
+
+ir_class: CohortStripLens
+  required:
+    - id: str
+    - label: str
+    - primary: str
+  optional:
+    - threshold: float | None = None
 
 ir_class: ColumnCheck
   required:

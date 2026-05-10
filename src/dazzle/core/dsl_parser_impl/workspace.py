@@ -732,6 +732,196 @@ class WorkspaceParserMixin:
             )
         return cards
 
+    def _parse_cohort_strip_config_block(self) -> ir.CohortStripConfig:
+        """Parse the indented body of a ``cohort_strip_config:`` block (#1018).
+
+        Syntax::
+
+            cohort_strip_config:
+              member_via: profile
+              default_lens: status
+              lenses:
+                - id: status
+                  label: Status
+                  primary: status
+                - id: response
+                  label: "Response time"
+                  primary: response_time_ms
+                  threshold: 500
+
+        ``member_via`` and ``lenses`` are required (the empty case is a
+        config error — runtime degrades to "not configured" but we
+        catch it here so the IR shape is honest). ``default_lens`` is
+        optional; runtime defaults to the first declared lens id.
+        """
+        member_via_str: str | None = None
+        default_lens_str: str = ""
+        lenses: list[ir.CohortStripLens] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+
+            if key == "member_via":
+                # Field on source resolving to the member's profile entity.
+                member_via_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            elif key == "default_lens":
+                default_lens_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            elif key == "lenses":
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                lenses = self._parse_cohort_strip_lenses_block()
+                self.expect(TokenType.DEDENT)
+
+            else:
+                raise make_parse_error(
+                    f"Unknown cohort_strip_config key {key!r}. "
+                    "Expected one of: member_via, default_lens, lenses.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+        if member_via_str is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                "cohort_strip_config requires `member_via:` (field on source "
+                "resolving to the member's profile entity).",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        if not lenses:
+            tok = self.current_token()
+            raise make_parse_error(
+                "cohort_strip_config requires at least one lens. Add a "
+                "`lenses:` block with one or more dash-list entries.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        # Validate default_lens (when set) refers to a declared lens.
+        if default_lens_str:
+            declared_ids = {lens.id for lens in lenses}
+            if default_lens_str not in declared_ids:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"cohort_strip_config default_lens={default_lens_str!r} "
+                    f"is not one of the declared lens ids "
+                    f"({sorted(declared_ids)}).",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+        return ir.CohortStripConfig(
+            member_via=member_via_str,
+            lenses=lenses,
+            default_lens=default_lens_str,
+        )
+
+    def _parse_cohort_strip_lenses_block(self) -> list[ir.CohortStripLens]:
+        """Parse the indented dash-list body of a ``lenses:`` block (#1018).
+
+        Each entry must lead with ``- id:`` (the stable lens identifier
+        used in URL params). The remaining keys land in the entry's
+        INDENT block. ``label`` and ``primary`` are required;
+        ``threshold`` is optional.
+        """
+        lenses: list[ir.CohortStripLens] = []
+        _VALID_KEYS = {"id", "label", "primary", "threshold"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "lenses entries must start with `- id: <lens-id>`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            id_kw = self.expect_identifier_or_keyword().value
+            if id_kw != "id":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"lenses entry must start with `id:`, got {id_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            id_str = self.expect_identifier_or_keyword().value
+            self.skip_newlines()
+
+            label_str: str | None = None
+            primary_str: str | None = None
+            threshold_val: float | None = None
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "label":
+                        # Quoted-string preferred (handles spaces, punctuation);
+                        # bare identifier accepted for single-word labels.
+                        if self.match(TokenType.STRING):
+                            label_str = self.advance().value
+                        else:
+                            label_str = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    elif key == "primary":
+                        primary_str = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    elif key == "threshold":
+                        threshold_val = float(self.expect(TokenType.NUMBER).value)
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown lenses key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            if label_str is None or primary_str is None:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"lens {id_str!r} requires both `label:` and `primary:`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            lenses.append(
+                ir.CohortStripLens(
+                    id=id_str,
+                    label=label_str,
+                    primary=primary_str,
+                    threshold=threshold_val,
+                )
+            )
+
+        return lenses
+
     def _parse_status_entries_block(self) -> list[ir.StatusListEntrySpec]:
         """Parse the indented body of a status_list ``entries:`` block (#3).
 
@@ -1370,6 +1560,11 @@ class WorkspaceParserMixin:
         profile_stats: list[ir.ProfileCardStatSpec] = []  # profile_card stats (#892)
         facts: list[str] = []  # profile_card key-facts list (#892)
         pipeline_stages: list[ir.PipelineStageSpec] = []  # pipeline_steps (#890)
+        # #1015–#1018 region primitives (v0.67.2–v0.67.10) — discriminated
+        # typed config blocks. Only one is populated per region, matched
+        # against `display`. Parser support for `cohort_strip_config:`
+        # lands in v0.67.11; the other three follow on the same shape.
+        cohort_strip_config: ir.CohortStripConfig | None = None  # #1018
         render: str | None = None  # Plan 2: opt-in renderer name (typed-fragment integration)
 
         while not self.match(TokenType.DEDENT):
@@ -2003,6 +2198,22 @@ class WorkspaceParserMixin:
                     bin_count = None  # auto via Sturges
                 self.skip_newlines()
 
+            # cohort_strip_config: indented block — typed config for
+            # #1018 cohort_strip region (v0.67.11). Mirrors the IDENT-
+            # value-match pattern used for `title:` above (no dedicated
+            # TokenType — `cohort_strip_config` is a domain identifier
+            # that doesn't need to crowd the token enum).
+            elif (
+                self.match(TokenType.IDENTIFIER)
+                and self.current_token().value == "cohort_strip_config"
+            ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                cohort_strip_config = self._parse_cohort_strip_config_block()
+                self.expect(TokenType.DEDENT)
+
             else:
                 break
 
@@ -2103,4 +2314,5 @@ class WorkspaceParserMixin:
             primary_action=primary_action,
             secondary_action=secondary_action,
             render=render,
+            cohort_strip_config=cohort_strip_config,  # #1018 (v0.67.11)
         )

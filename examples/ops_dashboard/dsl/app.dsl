@@ -434,6 +434,17 @@ workspace command_center "Command Center":
   systems_strip:
     source: System
     display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      default_lens: status
+      lenses:
+        - id: status
+          label: Status
+          primary: status
+        - id: response_time
+          label: "Response time"
+          primary: response_time_ms
+          threshold: 500
 
   ops_today:
     source: Alert
