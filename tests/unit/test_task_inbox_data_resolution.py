@@ -151,3 +151,189 @@ def test_coerce_urgency_uppercase_normalizes() -> None:
 
 def test_coerce_urgency_unknown_falls_through_to_later() -> None:
     assert _coerce_urgency("rainbow") == "later"
+
+
+# ───────────────── Multi-source fan-out (#1015 v0.67.15) ────────
+
+
+def test_multi_source_fan_out_emits_one_set_of_items_per_source() -> None:
+    """When `items_per_source` is supplied, each as_task source
+    contributes its own per-row task items."""
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="Alpha",
+                as_task=TaskSourceTemplate(icon="alpha", title="A {{ name }}"),
+            ),
+            TaskSource(
+                source="Beta",
+                as_task=TaskSourceTemplate(icon="beta", title="B {{ name }}"),
+            ),
+        ]
+    )
+    items, chips = _build_task_inbox_payload(
+        items=[],
+        config=cfg,
+        items_per_source={
+            0: [{"id": "a1", "name": "Alice"}, {"id": "a2", "name": "Bob"}],
+            1: [{"id": "b1", "name": "Carol"}],
+        },
+    )
+    assert len(items) == 3
+    assert chips == []
+    titles = [i["title"] for i in items]
+    assert "A Alice" in titles
+    assert "A Bob" in titles
+    assert "B Carol" in titles
+    # icons routed per-source.
+    icons_by_title = {i["title"]: i["icon"] for i in items}
+    assert icons_by_title["A Alice"] == "alpha"
+    assert icons_by_title["B Carol"] == "beta"
+
+
+def test_multi_source_namespaces_item_ids_to_avoid_collision() -> None:
+    """Two sources can have rows with identical ids (each lives in
+    its own entity); the helper namespaces them with a source prefix."""
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="A",
+                as_task=TaskSourceTemplate(icon="x", title="{{ name }}"),
+            ),
+            TaskSource(
+                source="B",
+                as_task=TaskSourceTemplate(icon="x", title="{{ name }}"),
+            ),
+        ]
+    )
+    items, _ = _build_task_inbox_payload(
+        items=[],
+        config=cfg,
+        items_per_source={
+            0: [{"id": "shared", "name": "FromA"}],
+            1: [{"id": "shared", "name": "FromB"}],
+        },
+    )
+    ids = [i["item_id"] for i in items]
+    assert ids == ["src0-shared", "src1-shared"]
+
+
+def test_multi_source_count_as_chip_uses_real_row_count() -> None:
+    """Multi-source path counts rows directly per source, replacing
+    the MVP single-source path's count=0 placeholder."""
+    cfg = _config(
+        sources=[
+            TaskSource(source="A", count_as="manuscripts ready"),
+            TaskSource(source="B", count_as="alerts active"),
+        ]
+    )
+    _, chips = _build_task_inbox_payload(
+        items=[],
+        config=cfg,
+        items_per_source={
+            0: [{"id": "m1"}, {"id": "m2"}, {"id": "m3"}],  # 3 rows
+            1: [{"id": "a1"}],  # 1 row
+        },
+    )
+    assert chips[0]["label"] == "manuscripts ready"
+    assert chips[0]["count"] == 3
+    assert chips[1]["label"] == "alerts active"
+    assert chips[1]["count"] == 1
+
+
+def test_multi_source_mixed_as_task_and_count_as() -> None:
+    """The spec's heterogeneous shape: some sources contribute
+    typed items, others contribute summary chips."""
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="A",
+                as_task=TaskSourceTemplate(icon="x", title="{{ name }}"),
+            ),
+            TaskSource(source="B", count_as="manuscripts ready"),
+            TaskSource(
+                source="C",
+                as_task=TaskSourceTemplate(icon="y", title="C {{ name }}"),
+            ),
+        ]
+    )
+    items, chips = _build_task_inbox_payload(
+        items=[],
+        config=cfg,
+        items_per_source={
+            0: [{"id": "a1", "name": "Alpha"}],
+            1: [{"id": "b1"}, {"id": "b2"}],  # 2 → chip count
+            2: [{"id": "c1", "name": "Gamma"}],
+        },
+    )
+    assert len(items) == 2  # only as_task sources contribute items
+    assert len(chips) == 1
+    assert chips[0]["count"] == 2
+
+
+def test_multi_source_missing_source_index_treated_as_empty() -> None:
+    """Defensive: if upstream fetched only some of the configured
+    sources, the helper treats missing indices as empty rather than
+    crashing."""
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="A",
+                as_task=TaskSourceTemplate(icon="x", title="{{ name }}"),
+            ),
+            TaskSource(source="B", count_as="ready"),
+        ]
+    )
+    items, chips = _build_task_inbox_payload(
+        items=[],
+        config=cfg,
+        items_per_source={
+            0: [{"id": "a1", "name": "A"}],
+            # source 1 missing
+        },
+    )
+    assert len(items) == 1
+    assert chips[0]["count"] == 0
+
+
+def test_multi_source_overrides_single_source_fallback() -> None:
+    """When items_per_source is provided, it wins over the
+    fallback `items` list — the single-source path is bypassed
+    entirely so callers don't accidentally double-count."""
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="A",
+                as_task=TaskSourceTemplate(icon="x", title="{{ name }}"),
+            ),
+        ]
+    )
+    items, _ = _build_task_inbox_payload(
+        items=[{"id": "fallback", "name": "Should-not-appear"}],
+        config=cfg,
+        items_per_source={0: [{"id": "real", "name": "From-fan-out"}]},
+    )
+    assert len(items) == 1
+    assert items[0]["title"] == "From-fan-out"
+
+
+def test_multi_source_empty_dict_falls_through_to_single_source() -> None:
+    """An empty dict (truthy → False, len 0 → falsy) falls through
+    to the MVP single-source path. This lets callers signal "no
+    fan-out attempted" without a separate flag."""
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="A",
+                as_task=TaskSourceTemplate(icon="x", title="{{ name }}"),
+            ),
+        ]
+    )
+    items, _ = _build_task_inbox_payload(
+        items=[{"id": "fb", "name": "Fallback"}],
+        config=cfg,
+        items_per_source={},
+    )
+    assert items[0]["title"] == "Fallback"
+    # Single-source MVP doesn't namespace the id.
+    assert items[0]["item_id"] == "fb"

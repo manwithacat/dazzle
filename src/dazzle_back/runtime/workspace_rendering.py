@@ -276,28 +276,31 @@ def _build_task_inbox_payload(
     *,
     items: list[dict[str, Any]],
     config: Any,
+    items_per_source: dict[int, list[dict[str, Any]]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Build (task_inbox_items, task_inbox_chips) from already-scoped
     source rows (#1015).
 
     The task_inbox config declares N sources, each either an
     ``as_task`` per-row template or a ``count_as`` collapsed-summary
-    chip. The simple-case (single-source) MVP folds the region's
-    primary `items` list against the FIRST as_task source it finds,
-    then attaches one summary chip per `count_as` source whose count
-    derives from `items` filtered against the source's `filter`
-    expression.
+    chip. Two resolution paths:
 
-    Multi-source heterogeneous inboxes (one items list per source)
-    require fanning out N queries upstream — deferred to a richer
-    ship that touches the source-fetch machinery. The shape this
-    helper produces is forward-compatible: the adapter consumes
-    items + chips lists; the upstream change is the items list
-    composition.
+    * **Multi-source (preferred when available)** — `items_per_source`
+      maps each source index to its already-scoped row list (one
+      query per source, scoped via the source's own entity-level
+      RBAC). Each source contributes its own typed items (for
+      `as_task` sources) or chip count (for `count_as` sources).
+      The upstream fan-out that builds this dict scopes per-entity
+      and applies each source's `filter:` expression.
+    * **Single-source MVP fallback** — when `items_per_source` is
+      None or empty, falls through to the prior behavior: folds the
+      region's primary `items` list against the FIRST `as_task`
+      source, emits chips with count=0 for `count_as` sources. Used
+      when the upstream fan-out hasn't been wired (or the
+      task_inbox sits over a single homogeneous entity).
 
-    `items` are rows from the region's primary source query
-    (`region.source` — RBAC scope already enforced).
-    `config` is ``WorkspaceRegion.task_inbox_config``.
+    `items` is the region's primary source query result (used by the
+    fallback path). `config` is ``WorkspaceRegion.task_inbox_config``.
     """
     if config is None:
         return [], []
@@ -305,7 +308,11 @@ def _build_task_inbox_payload(
     if not sources:
         return [], []
 
-    # Pick the first as_task source as the primary template (MVP).
+    if items_per_source:
+        return _resolve_task_inbox_multi_source(sources, items_per_source)
+
+    # Single-source MVP fallback — used when the upstream fan-out
+    # hasn't been wired yet.
     primary_template = None
     for src in sources:
         if getattr(src, "as_task", None) is not None:
@@ -314,47 +321,14 @@ def _build_task_inbox_payload(
 
     inbox_items: list[dict[str, Any]] = []
     if primary_template is not None and items:
-        icon = str(getattr(primary_template, "icon", "") or "")
-        title_tmpl = str(getattr(primary_template, "title", "") or "")
-        meta_tmpl = str(getattr(primary_template, "meta", "") or "")
-        for item in items:
-            item_id = str(item.get("id", "") or "")
-            if not item_id:
-                continue
-            title = _interpolate_card_template(title_tmpl, item) if title_tmpl else ""
-            meta = _interpolate_card_template(meta_tmpl, item) if meta_tmpl else ""
-            # Urgency: defer to a `severity` / `urgency` / `priority`
-            # field on the row when present, mapped to the four bands.
-            urgency_raw = (
-                item.get("urgency") or item.get("severity") or item.get("priority") or "later"
-            )
-            urgency = _coerce_urgency(str(urgency_raw))
-            inbox_items.append(
-                {
-                    "item_id": item_id,
-                    "icon": icon,
-                    "title": title,
-                    "meta": meta,
-                    "urgency": urgency,
-                    "drill_url": "",
-                }
-            )
+        for entry in _items_from_template(items, primary_template, prefix=""):
+            inbox_items.append(entry)
 
-    # Collapsed-summary chips — one per count_as source. Without a
-    # per-source items list (single-fetch MVP), the chip count is the
-    # length of `items` that match the source's filter, which we
-    # cannot evaluate here without the predicate-eval machinery. For
-    # ship 1, emit chips with count=len(items) when no filter is
-    # configured, count=0 otherwise — flagged for the multi-source
-    # ship to backfill.
     inbox_chips: list[dict[str, Any]] = []
     for idx, src in enumerate(sources):
         count_as = str(getattr(src, "count_as", "") or "")
         if not count_as:
             continue
-        # Without per-source filter eval we can't compute the real
-        # count; emit 0 with the configured noun phrase so the chip
-        # row renders without misleading numbers.
         inbox_chips.append(
             {
                 "chip_id": f"src{idx}",
@@ -364,6 +338,73 @@ def _build_task_inbox_payload(
             }
         )
 
+    return inbox_items, inbox_chips
+
+
+def _items_from_template(
+    items: list[dict[str, Any]], template: Any, *, prefix: str
+) -> list[dict[str, Any]]:
+    """Materialise typed task items from an `as_task` template +
+    pre-scoped row list. Shared by single- and multi-source paths.
+
+    `prefix` namespaces the resulting `item_id` so multiple sources
+    can produce items with the same row-level id without collision
+    (e.g. source 0's row "i1" → item_id "src0-i1")."""
+    icon = str(getattr(template, "icon", "") or "")
+    title_tmpl = str(getattr(template, "title", "") or "")
+    meta_tmpl = str(getattr(template, "meta", "") or "")
+    out: list[dict[str, Any]] = []
+    for item in items:
+        row_id = str(item.get("id", "") or "")
+        if not row_id:
+            continue
+        item_id = f"{prefix}{row_id}" if prefix else row_id
+        title = _interpolate_card_template(title_tmpl, item) if title_tmpl else ""
+        meta = _interpolate_card_template(meta_tmpl, item) if meta_tmpl else ""
+        urgency_raw = item.get("urgency") or item.get("severity") or item.get("priority") or "later"
+        urgency = _coerce_urgency(str(urgency_raw))
+        out.append(
+            {
+                "item_id": item_id,
+                "icon": icon,
+                "title": title,
+                "meta": meta,
+                "urgency": urgency,
+                "drill_url": "",
+            }
+        )
+    return out
+
+
+def _resolve_task_inbox_multi_source(
+    sources: list[Any],
+    items_per_source: dict[int, list[dict[str, Any]]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Fan-out resolution: each source's pre-scoped row list maps to
+    typed items (as_task) or a count chip (count_as).
+
+    Order discipline: items are emitted in source-declaration order
+    so the `urgency`-then-`deadline` sort downstream sees a stable
+    base ordering. Chips emit in the same source order as the IR
+    declares them.
+    """
+    inbox_items: list[dict[str, Any]] = []
+    inbox_chips: list[dict[str, Any]] = []
+    for idx, src in enumerate(sources):
+        rows = items_per_source.get(idx, []) or []
+        as_task = getattr(src, "as_task", None)
+        count_as = str(getattr(src, "count_as", "") or "")
+        if as_task is not None:
+            inbox_items.extend(_items_from_template(rows, as_task, prefix=f"src{idx}-"))
+        elif count_as:
+            inbox_chips.append(
+                {
+                    "chip_id": f"src{idx}",
+                    "count": len(rows),
+                    "label": count_as,
+                    "drill_url": "",
+                }
+            )
     return inbox_items, inbox_chips
 
 

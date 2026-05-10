@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.15] - 2026-05-10
+
+### Added
+
+- **#1015 — `task_inbox` multi-source fan-out helper API.** `_build_task_inbox_payload` now accepts an optional `items_per_source: dict[int, list[dict]] | None` keyword argument keyed by source index. When provided, each source's pre-scoped row list maps to typed items (for `as_task` sources) or a real count chip (for `count_as` sources, replacing the MVP's count=0 placeholder). When omitted/empty, the helper falls through to the prior single-source MVP behavior so existing callers don't change.
+- **`_resolve_task_inbox_multi_source`** internal helper that fans out the per-source row lists into typed items + chips. Item ids are namespaced with a `src{idx}-` prefix so two sources with rows sharing the same row-level id (each lives in its own entity, so collision is normal) don't produce duplicate `data-item-id` attributes downstream.
+- **`_items_from_template`** internal helper extracted from the per-row template materialisation logic; shared by both single- and multi-source paths so behavior stays consistent.
+- **7 multi-source tests** appended to `tests/unit/test_task_inbox_data_resolution.py` (now 20 tests total): per-source items + icons, item-id namespacing prevents collisions, real `count_as` row counts, mixed `as_task` + `count_as` sources, defensive missing-source-index handling, multi-source overrides single-source fallback, empty-dict fallback to MVP path.
+
+### Agent Guidance
+
+- **Helper API is shape-ready; upstream fan-out is the remaining gap.** The `_build_task_inbox_payload` contract now supports the heterogeneous-source pattern from the spec — what's missing is the `_workspace_region_handler` change that fetches one row list per source (each scoped against its own entity's RBAC rules and filtered by the source's `filter:` expression). Implementing that requires per-entity scope evaluation: get the source entity's `cedar_access_spec`, run `_apply_workspace_scope_filters` against it, then `repositories[src.source].list(filters=..., ...)`. The fan-out is asyncio.gather'able for parallelism. The follow-on ship that wires this is bounded — touches only `_workspace_region_handler` and a parallel function for the JSON path. Helper tests already cover the shape; the new ship just needs to plumb the dict.
+
 ## [0.67.14] - 2026-05-10
 
 ### Added
