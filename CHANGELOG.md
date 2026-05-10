@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.26] - 2026-05-10
+
+### Added
+
+- **#1037 follow-on — six more sitespec section types migrated to typed-Fragment.** `cta`, `generic`, `trust_bar`, `value_highlight`, `logo_cloud`, `markdown` all now produce HTML via dedicated builders in `site_section_builder.py` instead of routing through their Jinja partials. Combined with the v0.67.25 hero migration, **7 of 19 section types are now typed (37%)**. Pricing-table, faq, features, comparison, steps, testimonials, team, stats, qa_personas, card_grid, split_content remain on Jinja partials and continue to fall through via `inner_only.html`'s default branch.
+- **`_section_header(section)` helper** in `site_section_builder.py` — minimal port of the `section_header` Jinja macro from `_helpers.html`. Emits `<div class="dz-section-header">` with optional headline `<h2>` and subhead `<p>` when either field is present; empty string otherwise. Used by `generic`, `trust_bar`, `logo_cloud` builders so the per-section code stays compact.
+- **6 new builder methods**:
+  - `_build_cta_section`: subset of hero (no media, single content block); same CTA composition; same class names + button modifiers.
+  - `_build_generic_section`: section class derives from the section's actual `type` value (with `_` → `-` for dz-section-{slug} parity); content rendered raw via `| safe` parity (sitespec authors own trust contract).
+  - `_build_trust_bar_section`: horizontal strip of icon + text items; lucide icon names go in `data-lucide` attr; missing icon emits text-only item.
+  - `_build_value_highlight_section`: single highlight block with `dz-value-headline` h2, optional subhead/body paragraphs, primary CTA only (no secondary — deliberate vs hero/cta).
+  - `_build_logo_cloud_section`: clickable grid of logos; each item gets href + name (used in both `title` and `alt`) + src.
+  - `_build_markdown_section`: section wrapper around pre-rendered Markdown HTML (content rendered raw).
+- **27 unit tests** at `tests/unit/test_site_section_simple_builders.py`: per-section shape coverage (class names, conditional blocks, optional fields, item-list iteration), HTML escape paths for every user-supplied string field, dispatch sanity for all six new types in `render_typed_section`.
+
+### Agent Guidance
+
+- **Section migration progress: 7/19 (37%) typed.** Remaining 12 sections sized roughly: stats, steps, comparison (medium), card_grid, split_content, team, testimonials, qa_personas (medium-large), features, pricing, faq (large). The wiring infrastructure (`_render_site_page_chromed` swap, `inner_only.html` `_typed` dispatch branch) doesn't change for further sections — each is a body-builder + dispatch branch + test block. Sequencing for the remaining ships: (a) `stats`, `steps`, `comparison`, `split_content`, `card_grid`, `team`, `testimonials` — medium shape, batch-shippable; (b) `features` — slightly larger; (c) `pricing`, `faq`, `qa_personas` — largest, deferred until last because their data shapes are more variable across sitespec authors. cyfuture's "zero Jinja under chrome=on" stop condition closes when all 19 are migrated.
+
 ## [0.67.25] - 2026-05-10
 
 ### Added
