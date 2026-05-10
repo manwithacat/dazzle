@@ -29,7 +29,7 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     CardPicker,
-    ClassStripRegion,
+    CohortStripRegion,
     Combobox,
     ConfirmCheckItem,
     ConfirmGate,
@@ -418,8 +418,8 @@ class FragmentRenderer:
                 return self._emit_create_button(fragment, ctx)
             case BulkActionToolbar():
                 return _BULK_ACTION_TOOLBAR_HTML
-            case ClassStripRegion():
-                return self._emit_class_strip_region(fragment, ctx)
+            case CohortStripRegion():
+                return self._emit_cohort_strip_region(fragment, ctx)
             case DayTimelineRegion():
                 return self._emit_day_timeline_region(fragment, ctx)
             case TaskInboxRegion():
@@ -3138,8 +3138,8 @@ class FragmentRenderer:
         on the first emission."""
         return _WORKSPACE_DRAWER_HTML
 
-    def _emit_class_strip_region(self, c: ClassStripRegion, ctx: RenderContext) -> str:
-        """Render a ClassStripRegion (#1018).
+    def _emit_cohort_strip_region(self, c: CohortStripRegion, ctx: RenderContext) -> str:
+        """Render a CohortStripRegion (#1018).
 
         Outer wrapper carries `data-dz-region-name` so the lens-toggle
         HTMX swap can target it. Lens toggle is a `<div role="tablist">`
@@ -3148,12 +3148,12 @@ class FragmentRenderer:
         horizontal-scroll flex strip on wide widths, wraps on narrow.
 
         Cells with non-empty `drill_url` wrap in an `<a>` for keyboard-
-        navigable drill-down to the pupil_card surface (#1017)."""
+        navigable drill-down to the entity_card surface (#1017)."""
         endpoint_str = ctx.escape_attr(str(c.endpoint))
         region_name_attr = ctx.escape_attr(c.region_name)
         lens_buttons: list[str] = []
         for lens in c.lenses:
-            cls = "dz-class-strip-lens"
+            cls = "dz-cohort-strip-lens"
             if lens.is_active:
                 cls += " is-active"
             active_attr = ' aria-pressed="true"' if lens.is_active else ' aria-pressed="false"'
@@ -3167,14 +3167,14 @@ class FragmentRenderer:
                 f"</button>"
             )
         lens_bar = (
-            f'<div class="dz-class-strip-lenses" role="tablist" '
+            f'<div class="dz-cohort-strip-lenses" role="tablist" '
             f'aria-label="Lens toggle">'
             f"{''.join(lens_buttons)}"
             f"</div>"
         )
 
         if not c.cells:
-            cells_html = f'<p class="dz-class-strip-empty">{ctx.escape(c.empty_message)}</p>'
+            cells_html = f'<p class="dz-cohort-strip-empty">{ctx.escape(c.empty_message)}</p>'
         else:
             cell_parts: list[str] = []
             for cell in c.cells:
@@ -3182,44 +3182,44 @@ class FragmentRenderer:
                 initials = (
                     ctx.escape(cell.avatar_initials)
                     if cell.avatar_initials
-                    else ctx.escape(cell.pupil_name[:2].upper())
+                    else ctx.escape(cell.member_name[:2].upper())
                 )
                 year_html = (
-                    f'<div class="dz-class-strip-cell-year">{ctx.escape(cell.year_form)}</div>'
-                    if cell.year_form
+                    f'<div class="dz-cohort-strip-cell-subtitle">{ctx.escape(cell.subtitle)}</div>'
+                    if cell.subtitle
                     else ""
                 )
                 inner = (
-                    f'<div class="dz-class-strip-cell-halo">{initials}</div>'
-                    f'<div class="dz-class-strip-cell-name">{ctx.escape(cell.pupil_name)}</div>'
+                    f'<div class="dz-cohort-strip-cell-halo">{initials}</div>'
+                    f'<div class="dz-cohort-strip-cell-name">{ctx.escape(cell.member_name)}</div>'
                     f"{year_html}"
-                    f'<div class="dz-class-strip-cell-primary" '
+                    f'<div class="dz-cohort-strip-cell-primary" '
                     f'data-dz-tone="{ctx.escape_attr(tone)}">'
                     f"{ctx.escape(cell.primary_value)}"
                     f"</div>"
                 )
                 if cell.drill_url:
                     cell_parts.append(
-                        f'<a class="dz-class-strip-cell" '
+                        f'<a class="dz-cohort-strip-cell" '
                         f'href="{ctx.escape_attr(cell.drill_url)}" '
-                        f'data-pupil-id="{ctx.escape_attr(cell.pupil_id)}">'
+                        f'data-member-id="{ctx.escape_attr(cell.member_id)}">'
                         f"{inner}"
                         f"</a>"
                     )
                 else:
                     cell_parts.append(
-                        f'<div class="dz-class-strip-cell" '
-                        f'data-pupil-id="{ctx.escape_attr(cell.pupil_id)}">'
+                        f'<div class="dz-cohort-strip-cell" '
+                        f'data-member-id="{ctx.escape_attr(cell.member_id)}">'
                         f"{inner}"
                         f"</div>"
                     )
-            cells_html = f'<div class="dz-class-strip-cells">{"".join(cell_parts)}</div>'
+            cells_html = f'<div class="dz-cohort-strip-cells">{"".join(cell_parts)}</div>'
 
         return (
-            f'<div class="dz-class-strip-region" '
+            f'<div class="dz-cohort-strip-region" '
             f'data-dz-region-name="{region_name_attr}">'
             f"{lens_bar}"
-            f'<div class="dz-class-strip-body" id="region-{region_name_attr}-body">'
+            f'<div class="dz-cohort-strip-body" id="region-{region_name_attr}-body">'
             f"{cells_html}"
             f"</div>"
             f"</div>"

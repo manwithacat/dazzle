@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.6] - 2026-05-10
+
+### Changed
+
+- **#1018 — `class_strip` region primitive renamed to `cohort_strip` and field-generalised.** "Class" baked the school domain into the DSL vocabulary; the primitive itself is just "horizontal scrollable row of avatared entities with a lens toggle to swap which metric shows as the primary value" — that shape works unchanged for sales teams, engineering teams, customer cohorts, field crews, etc. Symmetrical to the `entity_card` rename in v0.67.5. Clean break per the no-shims policy (CLAUDE.md "no backward compat shims").
+
+  | Was | Now |
+  | --- | --- |
+  | `DisplayMode.CLASS_STRIP = "class_strip"` | `DisplayMode.COHORT_STRIP = "cohort_strip"` |
+  | `ClassStripConfig` / `ClassStripLens` (IR) | `CohortStripConfig` / `CohortStripLens` |
+  | `ClassStripCell` / `ClassStripLensTab` / `ClassStripRegion` (primitive) | `CohortStripCell` / `CohortStripLensTab` / `CohortStripRegion` |
+  | `WorkspaceRegion.class_strip_config` field | `WorkspaceRegion.cohort_strip_config` |
+  | `CohortStripConfig.pupil_via` | `CohortStripConfig.member_via` |
+  | `CohortStripCell.pupil_id` | `CohortStripCell.member_id` |
+  | `CohortStripCell.pupil_name` | `CohortStripCell.member_name` |
+  | `CohortStripCell.year_form` | `CohortStripCell.subtitle` |
+  | CSS class prefix `dz-class-strip-*` | `dz-cohort-strip-*` |
+  | `data-pupil-id` HTML attr | `data-member-id` |
+  | Default empty message "No pupils in this view." | "No members in this view." |
+  | Test file `tests/unit/test_class_strip_primitive.py` | `tests/unit/test_cohort_strip_primitive.py` |
+
+- All four #1015–#1018 region primitives are now domain-neutral. Lens internals (`id`, `label`, `primary`, `threshold`) and cell visuals (`avatar_initials`, `primary_value`, `tone`, `drill_url`) were already generic and are unchanged.
+
+### Agent Guidance
+
+- **DSL keyword discipline reinforced:** When proposing or implementing a new region primitive, scan field names for domain leakage as well as the region keyword. Pattern recognition: if a field name carries domain semantics (`pupil_id`, `customer_id`, `patient_id`, `ticket_id`), the primitive is too coupled to one use case. Generic alternatives — `member_id` / `record_id` / `item_id` / `subject_id` / a literal `id` field — keep the framework's anti-Turing immune system intact (see ROADMAP.md "The Anti-Turing Constraint"). Domain-specific values still get expressed at the *adapter* layer (e.g. `member_via: "student_profile"`), never at the *primitive* layer.
+
 ## [0.67.5] - 2026-05-10
 
 ### Added

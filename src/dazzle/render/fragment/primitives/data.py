@@ -1729,30 +1729,34 @@ class CardPicker:
 
 
 @dataclass(frozen=True, slots=True)
-class ClassStripCell:
-    """One pupil cell in a `ClassStripRegion` (#1018).
+class CohortStripCell:
+    """One member cell in a `CohortStripRegion` (#1018).
 
-    Carries the pupil halo (initials/avatar, name, year/form) plus
-    the active lens's primary value with optional RAG tone. The
-    adapter resolves these from the source row + the resolved
-    pupil_via FK target; the primitive renders the typed shape."""
+    Carries the member halo (initials/avatar, name, optional
+    subtitle) plus the active lens's primary value with optional RAG
+    tone. The adapter resolves these from the source row + the
+    resolved `member_via` FK target; the primitive renders the typed
+    shape. Domain-agnostic: pupils with year/form, sales reps with
+    region/quarter, engineers with team/level, customers with plan
+    tier — anything that fits 'avatar + identifier + secondary
+    metadata + a swappable metric'."""
 
-    pupil_id: str
-    pupil_name: str
+    member_id: str
+    member_name: str
     primary_value: str
-    year_form: str = ""
+    subtitle: str = ""  # secondary identifier (year/form, region, plan tier, etc.)
     avatar_initials: str = ""
     tone: str = "neutral"  # neutral | good | warn | bad — RAG tint
     drill_url: str = ""
 
     def __post_init__(self) -> None:
-        if not self.pupil_id:
-            raise ValueError("ClassStripCell requires a non-empty pupil_id")
+        if not self.member_id:
+            raise ValueError("CohortStripCell requires a non-empty member_id")
 
 
 @dataclass(frozen=True, slots=True)
-class ClassStripLensTab:
-    """One tab in a `ClassStripRegion`'s lens toggle. The active tab
+class CohortStripLensTab:
+    """One tab in a `CohortStripRegion`'s lens toggle. The active tab
     gets the `is-active` class + `aria-pressed="true"`; clicks fire
     an HTMX swap to the same region endpoint with `?lens=<id>`."""
 
@@ -1762,38 +1766,37 @@ class ClassStripLensTab:
 
     def __post_init__(self) -> None:
         if not self.id:
-            raise ValueError("ClassStripLensTab requires a non-empty id")
+            raise ValueError("CohortStripLensTab requires a non-empty id")
 
 
 @dataclass(frozen=True, slots=True)
-class ClassStripRegion:
+class CohortStripRegion:
     """Horizontal cohort-skim strip with lens toggle (#1018).
 
-    The teacher / HoD picks a lens (attainment, attendance, behaviour,
-    AO breakdown); the strip re-renders keeping the pupil row stable
-    but rotating the visual primary. Lens-toggle clicks fire an HTMX
-    swap to the region endpoint with `?lens=<id>`; the runtime
-    re-resolves the data and the primitive re-renders.
+    The viewer picks a lens; the strip re-renders keeping the member
+    row stable but rotating the visual primary. Lens-toggle clicks
+    fire an HTMX swap to the region endpoint with `?lens=<id>`; the
+    runtime re-resolves the data and the primitive re-renders.
 
     `region_name` is the region's stable id used in the swap target
     (`#region-{name}-body`). `endpoint` is the region data URL.
-    `cells` is the resolved row of pupils for the active lens."""
+    `cells` is the resolved row of members for the active lens."""
 
     region_name: str
     endpoint: object  # URL — typed object to keep the union simple
-    lenses: tuple[ClassStripLensTab, ...]
-    cells: tuple[ClassStripCell, ...]
-    empty_message: str = "No pupils in this view."
+    lenses: tuple[CohortStripLensTab, ...]
+    cells: tuple[CohortStripCell, ...]
+    empty_message: str = "No members in this view."
 
     def __post_init__(self) -> None:
         if not self.region_name:
-            raise ValueError("ClassStripRegion requires a non-empty region_name")
+            raise ValueError("CohortStripRegion requires a non-empty region_name")
         if not self.lenses:
-            raise ValueError("ClassStripRegion requires at least one lens")
+            raise ValueError("CohortStripRegion requires at least one lens")
         active_count = sum(1 for lens in self.lenses if lens.is_active)
         if active_count != 1:
             raise ValueError(
-                f"ClassStripRegion requires exactly one active lens, got {active_count}"
+                f"CohortStripRegion requires exactly one active lens, got {active_count}"
             )
 
 

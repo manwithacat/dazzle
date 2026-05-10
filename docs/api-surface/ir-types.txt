@@ -3013,7 +3013,7 @@ ir_class: WorkspaceRegion
     - bullet_actual: str | None = None
     - bullet_label: str | None = None
     - bullet_target: str | None = None
-    - class_strip_config: ClassStripConfig | None = None
+    - cohort_strip_config: CohortStripConfig | None = None
     - confirmations: list[ConfirmationItemSpec] = []
     - css_class: str | None = None
     - date_field: str | None = None
@@ -3334,7 +3334,7 @@ enum: DisplayMode
     - BAR_TRACK = 'bar_track'
     - BOX_PLOT = 'box_plot'
     - BULLET = 'bullet'
-    - CLASS_STRIP = 'class_strip'
+    - COHORT_STRIP = 'cohort_strip'
     - CONFIRM_ACTION_PANEL = 'confirm_action_panel'
     - DAY_TIMELINE = 'day_timeline'
     - DETAIL = 'detail'

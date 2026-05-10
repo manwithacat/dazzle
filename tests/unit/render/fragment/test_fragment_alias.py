@@ -89,7 +89,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Pagination",
         "CreateButton",
         "BulkActionToolbar",
-        "ClassStripRegion",
+        "CohortStripRegion",
         "DayTimelineRegion",
         "TaskInboxRegion",
         "EntityCardRegion",

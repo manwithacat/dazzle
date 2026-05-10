@@ -1520,7 +1520,7 @@
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
-            'class_strip_config': None,
+            'cohort_strip_config': None,
             'confirmations': list([
             ]),
             'css_class': None,
@@ -1594,7 +1594,7 @@
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
-            'class_strip_config': None,
+            'cohort_strip_config': None,
             'confirmations': list([
             ]),
             'css_class': None,
@@ -1668,7 +1668,7 @@
             'bullet_actual': None,
             'bullet_label': None,
             'bullet_target': None,
-            'class_strip_config': None,
+            'cohort_strip_config': None,
             'confirmations': list([
             ]),
             'css_class': None,

@@ -38,7 +38,7 @@ from dazzle.render.fragment.primitives.data import (
     Bullet,
     CalendarGrid,
     CardPicker,
-    ClassStripRegion,
+    CohortStripRegion,
     ConfirmGate,
     CreateButton,
     CsvExportButton,
@@ -188,7 +188,7 @@ Fragment = (
     | Pagination
     | CreateButton
     | BulkActionToolbar
-    | ClassStripRegion
+    | CohortStripRegion
     | DayTimelineRegion
     | TaskInboxRegion
     | EntityCardRegion

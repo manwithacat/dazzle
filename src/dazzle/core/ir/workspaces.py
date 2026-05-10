@@ -85,10 +85,10 @@ class DisplayMode(StrEnum):
     )
     SEARCH_BOX = "search_box"  # #954 cycle 4: htmx search input + ranked results
     # AegisMark Day-One demo region primitives (#1015–#1018).
-    # Currently driven by `class_strip_config` / `task_inbox_config` /
+    # Currently driven by `cohort_strip_config` / `task_inbox_config` /
     # `day_timeline_config` / `entity_card_config` typed config blocks
     # on WorkspaceRegion — discriminated by the `display` value here.
-    CLASS_STRIP = "class_strip"  # #1018: cohort-skim with lens toggle
+    COHORT_STRIP = "cohort_strip"  # #1018: cohort-skim with lens toggle
     DAY_TIMELINE = "day_timeline"  # #1016: chronological MIS landing
     TASK_INBOX = "task_inbox"  # #1015: workflow-led landing surface
     ENTITY_CARD = "entity_card"  # #1017: 360° single-entity drill-down composite
@@ -395,20 +395,21 @@ class NoticeSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ClassStripLens(BaseModel):
-    """One lens in a `class_strip` region's lens toggle (#1018).
+class CohortStripLens(BaseModel):
+    """One lens in a `cohort_strip` region's lens toggle (#1018).
 
-    The teacher / HoD picks a lens; the strip re-renders keeping the
-    pupil row stable but rotating the visual primary. Each lens names
-    the field on the source-FK target (typically StudentProfile or a
-    derived view) that supplies the primary value.
+    The viewer picks a lens; the strip re-renders keeping the member
+    row stable but rotating the visual primary. Each lens names the
+    field on the source-FK target (typically a profile entity
+    carrying name + avatar + secondary metadata) that supplies the
+    primary value.
 
     Attributes:
         id: Stable identifier used in the lens-swap URL parameter
             (`?lens=<id>`) and in the active-lens highlight contract.
         label: Human-readable text on the lens-toggle button.
-        primary: Field on the resolved pupil record that supplies the
-            value rendered as the visual primary.
+        primary: Field on the resolved member record that supplies
+            the value rendered as the visual primary.
         threshold: Optional RAG threshold. When set, the renderer tints
             the primary value relative to it. Polarity (above-good vs
             below-good) is encoded in the adapter's tone-mapping helper.
@@ -422,25 +423,30 @@ class ClassStripLens(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ClassStripConfig(BaseModel):
-    """Per-region config for `display: class_strip` (#1018).
+class CohortStripConfig(BaseModel):
+    """Per-region config for `display: cohort_strip` (#1018).
 
     Discriminated config block — only populated when
-    `WorkspaceRegion.display == DisplayMode.CLASS_STRIP`. Establishes
-    the typed-config pattern for #1015 / #1016 / #1017 follow-ons.
+    `WorkspaceRegion.display == DisplayMode.COHORT_STRIP`. Domain-
+    agnostic: school class (pupils + grades), sales team (reps +
+    quota), engineering team (engineers + commits), customer cohort
+    (customers + MRR), field crew (technicians + SLA) all reuse the
+    same shape. Establishes the typed-config pattern for the rest of
+    the #1015–#1017 region-primitive quartet.
 
     Attributes:
-        pupil_via: Field on the source entity whose FK resolves to a
-            StudentProfile (or any entity carrying name + photo +
-            year/form). The halo renders from that record.
+        member_via: Field on the source entity whose FK resolves to
+            the member's profile entity (any record carrying name +
+            avatar + a secondary identifier). The halo renders from
+            that record.
         lenses: Ordered list of available lenses; first is the default
             unless `default_lens` overrides.
         default_lens: Lens id to render when no `?lens=` query param is
             present. Must match one of `lenses[*].id`.
     """
 
-    pupil_via: str
-    lenses: list[ClassStripLens]
+    member_via: str
+    lenses: list[CohortStripLens]
     default_lens: str = ""
 
     model_config = ConfigDict(frozen=True)
@@ -765,7 +771,7 @@ class WorkspaceRegion(BaseModel):
     # region, matched against `display`. Establishes the pattern for
     # subsequent primitives' configs to land alongside without
     # bloating the flat field set with mutually-exclusive options.
-    class_strip_config: ClassStripConfig | None = None  # #1018 (v0.67.2)
+    cohort_strip_config: CohortStripConfig | None = None  # #1018 (v0.67.2)
     day_timeline_config: DayTimelineConfig | None = None  # #1016 (v0.67.3)
     task_inbox_config: TaskInboxConfig | None = None  # #1015 (v0.67.4)
     entity_card_config: EntityCardConfig | None = None  # #1017 (v0.67.5)

@@ -87,7 +87,7 @@ def test_workspace_region_typed_config_slot() -> None:
     region = WorkspaceRegion(name="today", display=DisplayMode.TASK_INBOX, task_inbox_config=cfg)
     assert region.task_inbox_config is cfg
     assert region.day_timeline_config is None
-    assert region.class_strip_config is None
+    assert region.cohort_strip_config is None
 
 
 def test_workspace_region_typed_config_slot_defaults_to_none() -> None:

@@ -55,7 +55,7 @@ def test_workspace_region_carries_typed_config_slot() -> None:
         day_timeline_config=cfg,
     )
     assert region.day_timeline_config is cfg
-    assert region.class_strip_config is None
+    assert region.cohort_strip_config is None
 
 
 def test_workspace_region_typed_config_slot_defaults_to_none() -> None:
