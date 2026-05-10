@@ -1530,6 +1530,7 @@
             'delta': None,
             'display': <DisplayMode.GRID: 'grid'>,
             'empty_message': None,
+            'entity_card_config': None,
             'eyebrow': None,
             'facts': list([
             ]),
@@ -1603,6 +1604,7 @@
             'delta': None,
             'display': <DisplayMode.LIST: 'list'>,
             'empty_message': None,
+            'entity_card_config': None,
             'eyebrow': None,
             'facts': list([
             ]),
@@ -1676,6 +1678,7 @@
             'delta': None,
             'display': <DisplayMode.DIAGRAM: 'diagram'>,
             'empty_message': None,
+            'entity_card_config': None,
             'eyebrow': None,
             'facts': list([
             ]),

@@ -3022,6 +3022,7 @@ ir_class: WorkspaceRegion
     - delta: DeltaSpec | None = None
     - display: DisplayMode = <DisplayMode.LIST: 'list'>
     - empty_message: str | None = None
+    - entity_card_config: EntityCardConfig | None = None
     - eyebrow: str | None = None
     - facts: list[str] = []
     - filter: ConditionExpr | None = None
@@ -3338,6 +3339,7 @@ enum: DisplayMode
     - DAY_TIMELINE = 'day_timeline'
     - DETAIL = 'detail'
     - DIAGRAM = 'diagram'
+    - ENTITY_CARD = 'entity_card'
     - FUNNEL_CHART = 'funnel_chart'
     - GRID = 'grid'
     - HEATMAP = 'heatmap'
@@ -3351,7 +3353,6 @@ enum: DisplayMode
     - PIVOT_TABLE = 'pivot_table'
     - PROFILE_CARD = 'profile_card'
     - PROGRESS = 'progress'
-    - PUPIL_CARD = 'pupil_card'
     - QUEUE = 'queue'
     - RADAR = 'radar'
     - SEARCH_BOX = 'search_box'

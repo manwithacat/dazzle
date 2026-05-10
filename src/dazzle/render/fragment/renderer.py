@@ -43,6 +43,7 @@ from dazzle.render.fragment.primitives import (
     Diagram,
     Drawer,
     EmptyState,
+    EntityCardRegion,
     ErrorPage,
     Field,
     FileUpload,
@@ -423,6 +424,8 @@ class FragmentRenderer:
                 return self._emit_day_timeline_region(fragment, ctx)
             case TaskInboxRegion():
                 return self._emit_task_inbox_region(fragment, ctx)
+            case EntityCardRegion():
+                return self._emit_entity_card_region(fragment, ctx)
             case DashboardGrid():
                 return self._emit_dashboard_grid(fragment, ctx)
             case DashboardCard():
@@ -3269,6 +3272,60 @@ class FragmentRenderer:
         return (
             f'<div class="dz-day-timeline-region" '
             f'data-dz-region-name="{region_name_attr}">'
+            f"{body}"
+            f"</div>"
+        )
+
+    def _emit_entity_card_region(self, p: EntityCardRegion, ctx: RenderContext) -> str:
+        """Render an EntityCardRegion (#1017).
+
+        Domain-agnostic 360° single-entity composite — two-column
+        responsive layout. Sections marked `is_omitted=True` are
+        skipped entirely (used for optional sections that resolved
+        zero rows). Each section's body is pre-rendered HTML produced
+        by the runtime adapter — the primitive does not double-escape
+        it.
+
+        Sections carry `data-dz-mode` and `data-dz-column` so
+        project CSS owns the breakpoint layout and per-mode density
+        styling. The wrapper carries `data-dz-region-name` and an
+        optional heading derived from `record_label`."""
+        region_name_attr = ctx.escape_attr(p.region_name)
+        heading_html = (
+            f'<h3 class="dz-entity-card-heading">{ctx.escape(p.record_label)}</h3>'
+            if p.record_label
+            else ""
+        )
+
+        valid_modes = {"halo", "flags", "mini_bars", "stamps", "thread_summary", "quick_actions"}
+        section_parts: list[str] = []
+        for section in p.sections:
+            if section.is_omitted:
+                continue
+            mode = section.mode if section.mode in valid_modes else "halo"
+            column = section.column if section.column in ("main", "sidebar") else "main"
+            section_parts.append(
+                f'<section class="dz-entity-card-section" '
+                f'data-section-id="{ctx.escape_attr(section.section_id)}" '
+                f'data-dz-mode="{ctx.escape_attr(mode)}" '
+                f'data-dz-column="{ctx.escape_attr(column)}">'
+                f'<header class="dz-entity-card-section-label">'
+                f"{ctx.escape(section.label)}"
+                f"</header>"
+                f'<div class="dz-entity-card-section-body">{section.body}</div>'
+                f"</section>"
+            )
+
+        body = (
+            f'<div class="dz-entity-card-sections">{"".join(section_parts)}</div>'
+            if section_parts
+            else '<p class="dz-entity-card-empty">No record context available.</p>'
+        )
+
+        return (
+            f'<div class="dz-entity-card-region" '
+            f'data-dz-region-name="{region_name_attr}">'
+            f"{heading_html}"
             f"{body}"
             f"</div>"
         )

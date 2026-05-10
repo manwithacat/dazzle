@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.5] - 2026-05-10
+
+### Added
+
+- **#1017 — `entity_card` region primitive (fourth and final of #1015–#1018).** Composite 360° single-entity drill-down at calibrated density. Domain-agnostic: pupil-360 in MIS, customer-360 in CRM, asset-360 in field-ops, patient-360 in healthcare all reuse the same shape. The AegisMark spec called it `pupil_card`; generalised before ship per review feedback so the DSL vocabulary stays domain-neutral (per the convergence-hypothesis discipline in ROADMAP.md).
+- **`EntityCardSectionMode` enum + `EntityCardSection` + `EntityCardConfig`** pydantic models on `dazzle.core.ir.workspaces`. Sections combine any of `halo` / `flags` / `mini_bars` / `stamps` / `thread_summary` / `quick_actions` modes — these mode names are deliberately generic UI patterns (compact-renderer per mode lives in the runtime adapter).
+- **`EntityCardSection` + `EntityCardRegion`** frozen dataclass primitives. Two-column responsive layout via `data-dz-column="main|sidebar"`; per-mode density styling via `data-dz-mode="<mode>"`; sections marked `is_omitted=True` are not emitted at all (used for optional sections that resolved zero rows). Section bodies are pre-rendered HTML (adapter owns escape responsibility); the primitive does not double-escape.
+- **24 unit tests** at `tests/unit/test_entity_card_primitive.py` covering IR construction + defaults, primitive validation, renderer wiring (mode/column data attrs, omitted-section skip, optional record_label heading), unknown-mode/column fall-through, and escape safety.
+
+### Agent Guidance
+
+- **All four #1015–#1018 region primitives are now live as IR + primitive + renderer pilots.** The runtime adapter ship that consumes `class_strip_config` / `day_timeline_config` / `task_inbox_config` / `entity_card_config` is the natural follow-on; until it lands these IR config fields stay baselined as orphans in `tests/unit/fixtures/ir_reader_baseline.json`.
+- **Domain-neutral DSL vocabulary discipline:** When proposing a new region primitive, default to a generic noun (`entity_card`, `task_inbox`) over a domain-specific one (`pupil_card`, `assignment_inbox`) — the framework's anti-Turing immune system depends on the DSL staying composable across domains. AegisMark inspired the spec; CRM, field-ops, healthcare reuse the same shape unchanged. See ROADMAP.md "The Anti-Turing Constraint" + "The Convergence Hypothesis" for the underlying rationale.
+
 ## [0.67.4] - 2026-05-10
 
 ### Added

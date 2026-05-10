@@ -48,6 +48,7 @@ from dazzle.render.fragment.primitives.data import (
     DayTimelineRegion,
     DetailGrid,
     Diagram,
+    EntityCardRegion,
     FilterBar,
     Funnel,
     GridRegion,
@@ -190,6 +191,7 @@ Fragment = (
     | ClassStripRegion
     | DayTimelineRegion
     | TaskInboxRegion
+    | EntityCardRegion
     | DashboardGrid
     | DashboardCard
     | AddCardRow

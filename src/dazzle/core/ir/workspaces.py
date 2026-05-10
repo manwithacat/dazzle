@@ -86,12 +86,12 @@ class DisplayMode(StrEnum):
     SEARCH_BOX = "search_box"  # #954 cycle 4: htmx search input + ranked results
     # AegisMark Day-One demo region primitives (#1015–#1018).
     # Currently driven by `class_strip_config` / `task_inbox_config` /
-    # `day_timeline_config` / `pupil_card_config` typed config blocks
+    # `day_timeline_config` / `entity_card_config` typed config blocks
     # on WorkspaceRegion — discriminated by the `display` value here.
     CLASS_STRIP = "class_strip"  # #1018: cohort-skim with lens toggle
     DAY_TIMELINE = "day_timeline"  # #1016: chronological MIS landing
     TASK_INBOX = "task_inbox"  # #1015: workflow-led landing surface
-    PUPIL_CARD = "pupil_card"  # #1017: 360-degree pupil drill-down
+    ENTITY_CARD = "entity_card"  # #1017: 360° single-entity drill-down composite
 
 
 class BucketRef(BaseModel):
@@ -446,6 +446,92 @@ class ClassStripConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class EntityCardSectionMode(StrEnum):
+    """Density-tuned section renderer modes for `entity_card` (#1017).
+
+    An `entity_card` section's `mode` selects which compact renderer
+    the runtime adapter will use, instead of the default list /
+    detail layout (which fights for dominance and produces low-
+    density wallpaper when stacked). The mode names are deliberately
+    domain-agnostic — `entity_card` works for pupil-360 in MIS,
+    customer-360 in CRM, asset-360 in field-ops, etc.
+    """
+
+    HALO = "halo"
+    FLAGS = "flags"
+    MINI_BARS = "mini_bars"
+    STAMPS = "stamps"
+    THREAD_SUMMARY = "thread_summary"
+    QUICK_ACTIONS = "quick_actions"
+
+
+class EntityCardSection(BaseModel):
+    """One section in an `entity_card` composite (#1017).
+
+    Each section is independently sourced + scoped + empty-state-
+    aware. The IR carries the unresolved filter; the runtime adapter
+    queries the source, applies the mode-specific compact renderer,
+    and decides whether to emit the section at all (sections that
+    resolve to zero rows AND are flagged optional are omitted
+    entirely; required sections render their empty placeholder).
+
+    Attributes:
+        name: Section identifier — stable id used for CSS targeting
+            and the `quick_actions` reference list (when mode is
+            QUICK_ACTIONS this is a virtual section with no source).
+        mode: Density-tuned renderer (halo / flags / mini_bars /
+            stamps / thread_summary / quick_actions).
+        source: Entity name. None for the `quick_actions` section.
+        filter: Optional scope/predicate. None = match all rows
+            within RBAC scope.
+        limit: Optional row cap (e.g. ``recent_marks`` limit 5).
+        fields: For halo / flags modes, the ordered list of field
+            names to surface. Other modes ignore this and resolve
+            their own field set per the mode contract.
+        actions: For QUICK_ACTIONS mode, the ordered list of action
+            ids referencing surface entries (each opens a modal
+            flow). Empty for non-actions modes.
+    """
+
+    name: str
+    mode: EntityCardSectionMode
+    source: str | None = None
+    filter: ConditionExpr | None = None
+    limit: int | None = Field(None, ge=1, le=100)
+    fields: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class EntityCardConfig(BaseModel):
+    """Per-region config for `display: entity_card` (#1017).
+
+    Discriminated config block — only populated when
+    `WorkspaceRegion.display == DisplayMode.ENTITY_CARD`. Models a
+    composite 360° single-entity view at calibrated density: any
+    combination of halo / flags / mini_bars / stamps / thread_summary
+    / quick_actions sections, sourced from arbitrary related entities.
+    Use cases include pupil-360 in MIS, customer-360 in CRM,
+    asset-360 in field-ops, patient-360 in healthcare, etc.
+
+    Attributes:
+        scope_param: Name of the surface route parameter that scopes
+            the card to a single entity instance (e.g. ``"id"``,
+            ``"pupil_id"``, ``"customer_id"``). The adapter resolves
+            the value at request time and applies it as a filter on
+            the primary source.
+        sections: Ordered list of sections; the renderer composes
+            them into a two-column responsive layout (main +
+            sidebar) per the spec.
+    """
+
+    scope_param: str = "id"
+    sections: list[EntityCardSection]
+
+    model_config = ConfigDict(frozen=True)
+
+
 class TaskSourceTemplate(BaseModel):
     """Per-source `as_task` template (#1015).
 
@@ -682,6 +768,7 @@ class WorkspaceRegion(BaseModel):
     class_strip_config: ClassStripConfig | None = None  # #1018 (v0.67.2)
     day_timeline_config: DayTimelineConfig | None = None  # #1016 (v0.67.3)
     task_inbox_config: TaskInboxConfig | None = None  # #1015 (v0.67.4)
+    entity_card_config: EntityCardConfig | None = None  # #1017 (v0.67.5)
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

@@ -187,10 +187,12 @@
   "workspaces.ClassStripConfig.pupil_via",
   "workspaces.DayTimelineConfig.ends_at",
   "workspaces.DayTimelineConfig.starts_at",
+  "workspaces.EntityCardConfig.scope_param",
   "workspaces.TaskInboxConfig.empty_state",
   "workspaces.TaskSource.as_task",
   "workspaces.TaskSource.count_as",
   "workspaces.WorkspaceRegion.class_strip_config",
   "workspaces.WorkspaceRegion.day_timeline_config",
+  "workspaces.WorkspaceRegion.entity_card_config",
   "workspaces.WorkspaceRegion.task_inbox_config"
 ]

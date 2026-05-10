@@ -45,6 +45,8 @@ from dazzle.render.fragment import (
     Diagram,
     Drawer,
     EmptyState,
+    EntityCardRegion,
+    EntityCardSection,
     ErrorPage,
     Field,
     FileUpload,
@@ -377,6 +379,10 @@ def _sample_for(primitive_type: type) -> object:
         return TaskInboxItem(item_id="i1", icon="register", title="x")
     if primitive_type is TaskInboxSummaryChip:
         return TaskInboxSummaryChip(chip_id="c1", count=0, label="x")
+    if primitive_type is EntityCardRegion:
+        return EntityCardRegion(region_name="card", sections=())
+    if primitive_type is EntityCardSection:
+        return EntityCardSection(section_id="s", label="L")
     if primitive_type is WorkspaceContextSelector:
         return WorkspaceContextSelector(workspace_name="d", options_url="/x", label="L")
     if primitive_type is DashboardGrid:

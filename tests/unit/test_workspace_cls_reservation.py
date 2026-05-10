@@ -104,7 +104,7 @@ class TestCssReservesMinHeight:
             # cards), no fixed min-height needed.
             "class_strip",  # #1018: horizontal pupil row, content-driven height
             "day_timeline",  # #1016: chronological scroll, content-driven
-            "pupil_card",  # #1017: composite, content-driven
+            "entity_card",  # #1017: composite 360° drill-down, content-driven
             "task_inbox",  # #1015: action list, content-driven
         }
 

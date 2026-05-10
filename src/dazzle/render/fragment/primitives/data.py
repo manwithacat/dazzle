@@ -1905,3 +1905,51 @@ class TaskInboxRegion:
     def __post_init__(self) -> None:
         if not self.region_name:
             raise ValueError("TaskInboxRegion requires a non-empty region_name")
+
+
+@dataclass(frozen=True, slots=True)
+class EntityCardSection:
+    """One resolved section in a `EntityCardRegion` (#1017).
+
+    The runtime adapter has already queried the source, applied the
+    mode-specific compact renderer, and produced the section's body
+    HTML. The primitive just composes sections into the two-column
+    layout — sections with `is_omitted=True` are not emitted at all
+    (used when an optional section resolves zero rows)."""
+
+    section_id: str
+    label: str
+    mode: Literal["halo", "flags", "mini_bars", "stamps", "thread_summary", "quick_actions"] = (
+        "halo"
+    )
+    body: str = ""  # pre-rendered HTML — adapter owns escape responsibility
+    column: Literal["main", "sidebar"] = "main"
+    is_omitted: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.section_id:
+            raise ValueError("EntityCardSection requires a non-empty section_id")
+
+
+@dataclass(frozen=True, slots=True)
+class EntityCardRegion:
+    """Composite 360° single-entity view — calibrated-density region
+    primitive (#1017). Domain-agnostic: pupil-360 in MIS,
+    customer-360 in CRM, asset-360 in field-ops, patient-360 in
+    healthcare etc. The runtime adapter resolves the entity
+    instance; this primitive composes the resolved sections.
+
+    Two-column responsive layout (main + sidebar via project CSS).
+    On narrow widths the layout collapses to a single column; the
+    primitive emits stable column markers so project CSS owns the
+    breakpoint. Sections with `is_omitted=True` are skipped — the
+    adapter sets that flag on optional sections that resolved zero
+    rows (e.g. no recent activity stream entries)."""
+
+    region_name: str
+    sections: tuple[EntityCardSection, ...]
+    record_label: str = ""  # for the region's heading; "" = adapter omits
+
+    def __post_init__(self) -> None:
+        if not self.region_name:
+            raise ValueError("EntityCardRegion requires a non-empty region_name")
