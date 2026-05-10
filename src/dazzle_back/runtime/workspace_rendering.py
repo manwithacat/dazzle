@@ -261,6 +261,68 @@ def _build_day_timeline_slots(
     return slots
 
 
+def _render_mini_bars_body(
+    *,
+    rows: list[dict[str, Any]],
+    value_field: str,
+    label_field: str,
+) -> str:
+    """Render the body of an `entity_card` `mini_bars` section
+    (#1017, v0.67.18).
+
+    Compact horizontal bar row, one bar per row in the input list.
+    Bars normalise against the max numeric value seen in `value_field`
+    so the widest bar fills 100% and others scale relative to it.
+    Non-numeric values render as a 0-width bar (defensive — adapter
+    rather than crashing on a None / string value).
+
+    Returns empty string when there are no rows or when `value_field`
+    is unset; the caller flags the section omitted in that case."""
+    if not rows or not value_field:
+        return ""
+    # Extract numeric values; track max for normalisation.
+    parsed: list[tuple[float, str]] = []  # (value, label)
+    max_value = 0.0
+    for row in rows:
+        raw = row.get(value_field)
+        try:
+            num = float(raw) if raw is not None else 0.0
+        except (TypeError, ValueError):
+            num = 0.0
+        if num > max_value:
+            max_value = num
+        label_raw = ""
+        if label_field:
+            label_raw = str(row.get(label_field, "") or "")
+        parsed.append((num, label_raw))
+    if not parsed:
+        return ""
+    if max_value <= 0:
+        # All zero / negative — emit zero-width bars rather than divide-by-zero.
+        max_value = 1.0
+    bars: list[str] = []
+    for value, label in parsed:
+        pct = max(0.0, min(100.0, (value / max_value) * 100.0))
+        # Inline width % is the only style — project CSS owns the rest
+        # via the `dz-mini-bar` class.
+        label_html = (
+            f'<span class="dz-mini-bar-label">{_dazzle_html_escape(label)}</span>' if label else ""
+        )
+        # Format the value: int when whole, else 1 decimal.
+        if value == int(value):
+            value_str = str(int(value))
+        else:
+            value_str = f"{value:.1f}"
+        bars.append(
+            f'<li class="dz-mini-bar" data-dz-value="{_dazzle_html_escape(value_str)}">'
+            f'<span class="dz-mini-bar-fill" style="width: {pct:.1f}%"></span>'
+            f"{label_html}"
+            f'<span class="dz-mini-bar-value">{_dazzle_html_escape(value_str)}</span>'
+            f"</li>"
+        )
+    return f'<ul class="dz-entity-card-mini-bars">{"".join(bars)}</ul>'
+
+
 def _render_quick_actions_body(actions: list[str]) -> str:
     """Render the body of an `entity_card` `quick_actions` section
     (#1017, v0.67.17).
@@ -405,6 +467,114 @@ def _items_from_template(
             }
         )
     return out
+
+
+async def _fetch_entity_card_section_rows(
+    *,
+    config: Any,
+    ctx: Any,
+    request: Any,
+    auth_context: Any,
+    user_id: str | None,
+) -> dict[int, list[dict[str, Any]]]:
+    """Fan out per-section queries for an entity_card region (#1017).
+
+    For each section that declares its own `source:` (the modes that
+    pull from related entities — `mini_bars`, `stamps`,
+    `thread_summary`):
+      1. Look up the section entity's repository + access spec.
+      2. Synthesize a per-section context via `dataclasses.replace`
+         so `_apply_workspace_scope_filters` evaluates RBAC against
+         the section entity's own scope rules.
+      3. Convert the section's `filter:` ConditionExpr to a
+         repo-filter dict.
+      4. Fetch rows in parallel via `asyncio.gather`, capped by
+         `section.limit` (when set, else 20).
+
+    Returns a dict mapping section index → list of fetched row dicts.
+    Sections without their own `source:` (halo / flags / quick_actions)
+    have no entry in the returned dict — those modes don't need
+    per-section rows.
+
+    Per-section failure isolation: same as task_inbox — one bad
+    query logs at warning level and yields an empty list rather
+    than crashing the whole entity_card render.
+    """
+    import asyncio
+    from contextlib import suppress
+    from dataclasses import replace as _dc_replace
+
+    cfg_sections = list(getattr(config, "sections", []) or [])
+    if not cfg_sections:
+        return {}
+    repositories = getattr(ctx, "repositories", None) or {}
+    entity_access_specs = getattr(ctx, "entity_access_specs", None) or {}
+    if not repositories:
+        return {}
+
+    coros: list[Any] = []
+    indices: list[int] = []
+    for idx, section in enumerate(cfg_sections):
+        section_source = str(getattr(section, "source", "") or "")
+        if not section_source:
+            continue  # halo / flags / quick_actions live on the scoped record
+        repo = repositories.get(section_source)
+        if repo is None:
+            continue
+
+        per_section_ctx = _dc_replace(
+            ctx,
+            source=section_source,
+            cedar_access_spec=entity_access_specs.get(section_source),
+        )
+        scope_filters, scope_denied = _apply_workspace_scope_filters(
+            per_section_ctx, auth_context, user_id, None
+        )
+        if scope_denied:
+            indices.append(idx)
+            coros.append(_empty_list_coro())
+            continue
+
+        merged_filters: dict[str, Any] = {}
+        if scope_filters:
+            merged_filters.update(scope_filters)
+        section_filter = getattr(section, "filter", None)
+        if section_filter is not None:
+            from dazzle_back.runtime.route_generator import _extract_condition_filters
+
+            with suppress(Exception):
+                _extract_condition_filters(
+                    section_filter,
+                    user_id or "",
+                    merged_filters,
+                    logger,
+                    auth_context,
+                    None,
+                    None,
+                )
+
+        section_limit = getattr(section, "limit", None)
+        page_size = section_limit if section_limit and section_limit > 0 else 20
+        coros.append(
+            _safe_fetch(repo, filters=merged_filters, page_size=page_size, label=section_source)
+        )
+        indices.append(idx)
+
+    if not coros:
+        return {}
+    results = await asyncio.gather(*coros, return_exceptions=True)
+    rows_per_section: dict[int, list[dict[str, Any]]] = {}
+    for idx, result in zip(indices, results, strict=True):
+        if isinstance(result, BaseException):
+            logger.warning(
+                "entity_card section %d fetch failed: %s — treating as empty",
+                idx,
+                result,
+            )
+            rows_per_section[idx] = []
+        else:
+            rows_per_section[idx] = list(result or [])
+    return rows_per_section
 
 
 async def _fetch_task_inbox_items_per_source(
@@ -601,6 +771,7 @@ def _build_entity_card_sections(
     *,
     items: list[dict[str, Any]],
     config: Any,
+    rows_per_section: dict[int, list[dict[str, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
     """Build entity_card section dicts from the scoped record (#1017).
 
@@ -626,7 +797,8 @@ def _build_entity_card_sections(
     if not cfg_sections:
         return []
     out: list[dict[str, Any]] = []
-    for section in cfg_sections:
+    rps = rows_per_section or {}
+    for section_idx, section in enumerate(cfg_sections):
         name = str(getattr(section, "name", "") or "")
         if not name:
             continue
@@ -636,6 +808,7 @@ def _build_entity_card_sections(
         column = "sidebar" if mode in ("flags", "thread_summary") else "main"
         body_html = ""
         is_omitted = False
+        section_rows = rps.get(section_idx, [])
 
         if mode in ("halo", "flags") and record is not None and fields:
             rows: list[str] = []
@@ -665,6 +838,22 @@ def _build_entity_card_sections(
             if actions:
                 body_html = _render_quick_actions_body(actions)
             else:
+                is_omitted = True
+        elif mode == "mini_bars":
+            # mini_bars renders a compact horizontal bar row from
+            # rows pre-fetched by the per-section fan-out (#1017
+            # v0.67.18). `fields[0]` is the value column; `fields[1]`
+            # (optional) is the label column. Bars are normalised
+            # against the max value in the row set so each bar's
+            # width is relative.
+            value_field = fields[0] if fields else ""
+            label_field = fields[1] if len(fields) > 1 else ""
+            body_html = _render_mini_bars_body(
+                rows=section_rows,
+                value_field=value_field,
+                label_field=label_field,
+            )
+            if not body_html:
                 is_omitted = True
 
         section_label = name.replace("_", " ").title()
@@ -2306,9 +2495,22 @@ async def _workspace_region_handler(
             elif display_upper == "ENTITY_CARD":
                 _card_cfg = getattr(ir_region, "entity_card_config", None)
                 if _card_cfg is not None:
+                    # #1017 (v0.67.18) — per-section fan-out for modes
+                    # that pull from related entities (mini_bars, stamps,
+                    # thread_summary). Sections without their own
+                    # `source:` (halo / flags / quick_actions) skip the
+                    # fan-out and read from the scoped record directly.
+                    _rows_per_section = await _fetch_entity_card_section_rows(
+                        config=_card_cfg,
+                        ctx=ctx,
+                        request=request,
+                        auth_context=_auth_ctx_for_filters,
+                        user_id=_current_user_id,
+                    )
                     adapter_ctx["entity_card_sections"] = _build_entity_card_sections(
                         items=items,
                         config=_card_cfg,
+                        rows_per_section=_rows_per_section,
                     )
                     if items:
                         # Heading from the resolved single record's

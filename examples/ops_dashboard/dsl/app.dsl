@@ -482,10 +482,18 @@ workspace command_center "Command Center":
         - name: meta
           mode: flags
           fields: [status, acknowledged_by]
+        - name: recent_alerts
+          mode: mini_bars
+          source: Alert
+          fields: [hours_open, message]
+          limit: 5
         - name: history
           mode: stamps
           source: Alert
           limit: 5
+        - name: ops
+          mode: quick_actions
+          actions: [alert_create, alert_list]
 
   ux:
     as ops_engineer:

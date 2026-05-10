@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.18] - 2026-05-10
+
+### Added
+
+- **#1017 — `entity_card` `mini_bars` mode + per-section source fan-out.** Second of the four entity_card per-mode renderers; first one to use the per-section fan-out shape. Sections that declare their own `source:` now have their rows pre-fetched in parallel via the same `dataclasses.replace + _apply_workspace_scope_filters + _safe_fetch + asyncio.gather` pattern v0.67.16 established for task_inbox heterogeneous sources.
+- **`_fetch_entity_card_section_rows`** async helper at `src/dazzle_back/runtime/workspace_rendering.py`. For each section with a `source:` (mini_bars / stamps / thread_summary), looks up the section entity's repository + access spec, synthesizes a per-section context, evaluates RBAC scope against the section entity's own rules, applies the section's `filter:` ConditionExpr, and fetches up to `section.limit` rows. Sections without `source:` (halo / flags / quick_actions) skip the fan-out — those modes operate on the scoped record directly.
+- **`_render_mini_bars_body(rows, value_field, label_field)`** helper. Compact horizontal bar row with value normalisation: each bar's width is relative to the max value seen in the row set so the widest bar fills 100%. Non-numeric values render as 0-width bars (defensive), all-zero data renders zero-width bars (no divide-by-zero), section omits when there are no rows or no `value_field` is configured. Values render as int when whole, otherwise 1 decimal place.
+- **`_build_entity_card_sections` gains `rows_per_section: dict[int, list[dict]] | None = None` kwarg** — same shape as task_inbox's `items_per_source`. Plumbed through from the handler when fan-out runs; tests pass it directly to exercise the multi-source path without a database.
+- **9 mini_bars tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 26 total): bar row rendering with normalised widths, optional label field, value formatting (int/float), defensive paths (non-numeric values, missing fields, empty rows, all-zero data, no value field), HTML escaping in labels.
+- **Real config in `examples/ops_dashboard`:** `alert_360` entity_card now declares a `recent_alerts` mini_bars section + a `history` stamps section + an `ops` quick_actions section, exercising three of the four per-mode renderers in a single example.
+
+### Security
+
+- **Per-section RBAC scope** — same shape as task_inbox: each section's query scoped against the SECTION entity's own `cedar_access_spec`, not the region's primary spec. Composing entity_card sections from related entities preserves every entity's row-level RBAC rules.
+- **Per-section failure isolation** — one bad query logs at warning level + section gets empty rows + section omits if its mode requires rows. Other sections continue rendering. Same blast-radius contract as task_inbox.
+
+### Agent Guidance
+
+- **Per-section fan-out is now templated for the remaining two modes.** `stamps` and `thread_summary` implementations should:
+  1. Reuse `_fetch_entity_card_section_rows` (already invoked from the handler) — no upstream-fetch changes needed.
+  2. Add a body-builder helper following `_render_mini_bars_body`'s shape — pure function, takes the pre-fetched rows + section's `fields` + the IR config, returns HTML string. Empty/no-data path must omit the section.
+  3. Add a per-mode test block to `test_entity_card_data_resolution.py` mirroring the mini_bars block — pass `rows_per_section={idx: rows}` directly, no DB needed.
+
+  The fan-out helper accepts any section that declares `source:`; it doesn't care about the mode. Adding a new related-entity mode is just a body-builder helper + an `elif mode == "<name>":` branch in `_build_entity_card_sections`.
+
 ## [0.67.17] - 2026-05-10
 
 ### Added

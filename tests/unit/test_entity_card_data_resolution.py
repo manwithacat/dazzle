@@ -230,3 +230,172 @@ def test_quick_actions_html_escapes_action_id() -> None:
     body = out[0]["body"]
     assert "<script>" not in body
     assert "&lt;script&gt;" in body
+
+
+# ───────────────── mini_bars mode (#1017 v0.67.18) ─────────
+
+
+def test_mini_bars_renders_compact_bar_row_from_pre_fetched_rows() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="recent_marks",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score", "title"],
+            ),
+        ]
+    )
+    rows = [
+        {"id": "m1", "score": 78, "title": "Quiz 1"},
+        {"id": "m2", "score": 82, "title": "Quiz 2"},
+        {"id": "m3", "score": 65, "title": "Quiz 3"},
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-entity-card-mini-bars" in body
+    assert body.count("dz-mini-bar") >= 3  # one entry per row
+    assert "Quiz 1" in body
+    # Width is normalised — the max value (82) takes 100%.
+    assert "width: 100.0%" in body
+    # The 78 bar is roughly 95% of max.
+    assert "width: 95." in body
+
+
+def test_mini_bars_omits_section_when_no_rows() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="recent_marks",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],
+            ),
+        ]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: []})
+    assert out[0]["is_omitted"] is True
+
+
+def test_mini_bars_omits_section_when_no_value_field() -> None:
+    """Misconfigured section (no `fields:` declared) can't render
+    bars — section omits rather than crashing."""
+    cfg = _config(
+        sections=[
+            _section(name="x", mode=EntityCardSectionMode.MINI_BARS),
+        ]
+    )
+    out = _build_entity_card_sections(
+        items=[{"id": "p1"}], config=cfg, rows_per_section={0: [{"score": 50}]}
+    )
+    assert out[0]["is_omitted"] is True
+
+
+def test_mini_bars_handles_non_numeric_values_as_zero() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],
+            ),
+        ]
+    )
+    rows = [
+        {"id": "1", "score": "active"},
+        {"id": "2", "score": 50},
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    # Non-numeric → 0 width bar; numeric → 100% (it's the max).
+    assert "width: 0.0%" in body
+    assert "width: 100.0%" in body
+
+
+def test_mini_bars_handles_missing_value_field_in_some_rows() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],
+            ),
+        ]
+    )
+    rows = [
+        {"id": "1"},  # no score field
+        {"id": "2", "score": 50},
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    # Missing value treated as 0 → 0% bar; 50 wins as max.
+    assert "width: 0.0%" in body
+
+
+def test_mini_bars_label_field_optional() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],  # no label field
+            ),
+        ]
+    )
+    rows = [{"id": "1", "score": 50}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-mini-bar-label" not in body
+    assert "dz-mini-bar-fill" in body
+
+
+def test_mini_bars_value_render_int_when_whole() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],
+            ),
+        ]
+    )
+    rows = [{"id": "1", "score": 50}, {"id": "2", "score": 50.5}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert ">50<" in body
+    assert ">50.5<" in body
+
+
+def test_mini_bars_html_escapes_label_values() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score", "title"],
+            ),
+        ]
+    )
+    rows = [{"id": "1", "score": 50, "title": "<script>alert(1)</script>"}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "<script>" not in body
+    assert "&lt;script&gt;" in body
+
+
+def test_mini_bars_all_zero_values_renders_zero_width_bars() -> None:
+    """Defensive: max=0 would divide-by-zero; the helper coerces
+    to width=0% rather than crashing."""
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],
+            ),
+        ]
+    )
+    rows = [{"id": "1", "score": 0}, {"id": "2", "score": 0}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-mini-bar-fill" in body
+    # Both bars at 0%.
+    assert body.count("width: 0.0%") == 2
