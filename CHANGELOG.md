@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.13] - 2026-05-10
+
+### Added
+
+- **#1018 — `cohort_strip` data resolution layer.** First of the four data-resolution ships. The `_workspace_region_handler` now reads `WorkspaceRegion.cohort_strip_config`, resolves the active lens (URL `?lens=` query param → `config.default_lens` → first declared lens), shapes already-scoped source rows into the typed cell-dict shape the adapter consumes, and threads them through to the typed-Fragment substrate. The cohort_strip primitive is now end-to-end live with real data, not the empty/unconfigured state.
+- **`_build_cohort_cells(items, config, active_lens_id)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Per-row resolution:
+  - **Member name**: FK display dict's `__display__` → `<member_via>_display` sibling key → `<member_via>` scalar → row's own `name` field → empty.
+  - **Primary value**: `_resolve_path(item, lens.primary)` — supports nested-FK field paths (e.g. `profile.attendance_pct`).
+  - **Tone derivation**: when the active lens declares a numeric `threshold`, the cell tints relative to it — `>= threshold` → `"good"`, `>= threshold × 0.9` → `"warn"`, below that → `"bad"`. Above-good polarity (suits completion %, attendance %, SLA score). Reversing for below-good metrics is deferred until a real consumer needs it.
+  - **Avatar initials**: synthesised from the resolved member name.
+  - **Defensive paths**: rows with empty `id` are skipped; non-numeric primaries with a configured threshold fall through to `"neutral"` rather than crashing the float comparison; missing primary fields render as empty string.
+- **RBAC scope contract preserved:** the helper consumes `items` already produced by the source-entity query, which enforces user-scoped filters via the existing `_apply_workspace_scope_filters` machinery. The data-resolution layer just shapes — it does not query directly. This keeps cohort_strip's RBAC story identical to every other display mode in the framework.
+- **16 helper tests** at `tests/unit/test_cohort_strip_data_resolution.py` covering all member-name resolution paths, lens fallback when active id is unknown, threshold-driven tone derivation across the good/warn/bad bands, defensive coercion (non-numeric primaries, missing fields, empty ids), and avatar-initial synthesis.
+
+### Changed
+
+- **`tests/unit/fixtures/ir_reader_baseline.json`** — removed `workspaces.CohortStripConfig.member_via` from the orphan baseline; the new helper reads it.
+
+### Agent Guidance
+
+- **Data-resolution helper pattern is templated:** the remaining three primitives' resolution layers (`_build_day_timeline_slots`, `_build_task_inbox_items_and_chips`, `_build_entity_card_sections`) follow the same shape: pure-function helper that takes `items` (or per-source items lists) + the typed config + any request-derived state (active lens id, current timestamp), returns the dict shape the adapter consumes. Don't query directly from the helper — accept already-scoped rows as input. RBAC stays at the existing query layer; helpers stay testable without a database.
+
 ## [0.67.12] - 2026-05-10
 
 ### Added

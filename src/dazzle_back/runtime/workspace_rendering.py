@@ -63,6 +63,102 @@ def _initials_from(name: str) -> str:
     return "".join(w[0].upper() for w in words if w)
 
 
+def _build_cohort_cells(
+    *,
+    items: list[dict[str, Any]],
+    config: Any,
+    active_lens_id: str,
+) -> list[dict[str, Any]]:
+    """Build cohort_strip cell dicts from already-scoped source rows (#1018).
+
+    Each cell carries the member halo (id/name/subtitle/initials) plus
+    the active lens's primary value with optional RAG tone. The
+    active lens determines which field on the row supplies the
+    primary value; the threshold (when set) determines the tone tint.
+
+    `items` are the rows from the source-entity query — RBAC scope is
+    already enforced by that query, the data-resolution layer just
+    shapes results. `config` is `WorkspaceRegion.cohort_strip_config`.
+    `active_lens_id` is the resolved active lens (already falling
+    through ?lens param → config.default_lens → first lens upstream).
+
+    Member name resolution priority:
+      1. The `member_via` FK target's `__display__` (resolved by
+         _inject_display_names upstream)
+      2. `<member_via>_display` sibling key
+      3. The member_via field's scalar value (id-shaped fallback)
+      4. The row's own `name` field
+      5. Empty string
+
+    Tone derivation: when the active lens declares a numeric
+    `threshold`, the renderer compares the primary value:
+      - >= threshold → "good"
+      - < threshold but within 10% of it → "warn"
+      - < 90% of threshold → "bad"
+    Polarity is above-good (typical for completion %, attendance %,
+    SLA score). Reversing for below-good metrics is deferred until
+    a real consumer needs it (encoded as a per-lens flag).
+    """
+    if not items or config is None:
+        return []
+    member_via = str(getattr(config, "member_via", "") or "")
+    lenses = list(getattr(config, "lenses", []) or [])
+    if not lenses or not member_via:
+        return []
+    # Resolve the active lens object (caller may have passed an id
+    # that already fell back to the first lens).
+    active_lens = next(
+        (lens for lens in lenses if str(getattr(lens, "id", "")) == active_lens_id),
+        lenses[0],
+    )
+    primary_field = str(getattr(active_lens, "primary", "") or "")
+    threshold = getattr(active_lens, "threshold", None)
+
+    cells: list[dict[str, Any]] = []
+    for item in items:
+        member_id = str(item.get("id", "") or "")
+        if not member_id:
+            continue  # row missing id is unrenderable; skip
+        # Member name resolution (FK display name first, scalar fallback last).
+        fk_value = item.get(member_via)
+        if isinstance(fk_value, dict):
+            member_name = _resolve_display_name(fk_value)
+        else:
+            member_name = str(item.get(f"{member_via}_display", "") or "")
+            if not member_name:
+                member_name = str(fk_value or "") or str(item.get("name", "") or "")
+        # Primary value extraction.
+        primary_raw = _resolve_path(item, primary_field) if primary_field else None
+        primary_value = "" if primary_raw is None else str(primary_raw)
+        # Tone derivation when threshold is configured.
+        tone = "neutral"
+        if threshold is not None and primary_raw is not None:
+            try:
+                primary_num = float(primary_raw)
+                threshold_num = float(threshold)
+            except (TypeError, ValueError):
+                pass
+            else:
+                if primary_num >= threshold_num:
+                    tone = "good"
+                elif primary_num >= threshold_num * 0.9:
+                    tone = "warn"
+                else:
+                    tone = "bad"
+        cells.append(
+            {
+                "member_id": member_id,
+                "member_name": member_name,
+                "primary_value": primary_value,
+                "subtitle": "",  # secondary metadata — populated by adapters that have it
+                "avatar_initials": _initials_from(member_name),
+                "tone": tone,
+                "drill_url": "",  # entity_card drill-down lands once that ship adds the route
+            }
+        )
+    return cells
+
+
 def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
     """Substitute `{{ field }}` / `{{ field.path }}` against an item (#892).
 
@@ -1605,14 +1701,14 @@ async def _workspace_region_handler(
         tree_items = [_build_subtree(r) for r in roots]
 
     # #1015–#1018 region primitives — typed-Fragment-only render path
-    # (v0.67.10). When display is one of the four AegisMark Day-One
-    # demo region kinds, we bypass the legacy Jinja body for that
-    # region: build the typed primitive via the adapter, render it
-    # via FragmentRenderer, hand the HTML to the shared shim template
-    # as `typed_primitive_html`. Until DSL parser support for the
-    # typed config blocks lands, the cells/slots/items/sections lists
-    # are empty and the adapter renders an empty/unconfigured state —
-    # but the dispatch is end-to-end live, not a list.html fallback.
+    # (v0.67.10, data resolution v0.67.13). The four AegisMark Day-One
+    # demo region kinds bypass the legacy Jinja body: build the typed
+    # primitive via the adapter, render it via FragmentRenderer, hand
+    # the HTML to the shared shim template as `typed_primitive_html`.
+    # Data resolution layers (cells / slots / items / sections) are
+    # built per-display from the typed config blocks and the already-
+    # scoped `items` list — RBAC scope is enforced upstream by the
+    # source-row query, the data-resolution layer just shapes results.
     typed_primitive_html: str = ""
     if display_upper in ("COHORT_STRIP", "DAY_TIMELINE", "TASK_INBOX", "ENTITY_CARD"):
         from dazzle.render.fragment import FragmentRenderer
@@ -1627,12 +1723,28 @@ async def _workspace_region_handler(
         _display_obj = getattr(ir_region, "display", None)
         _display_val = getattr(_display_obj, "value", None) or str(_display_obj or "")
         if _display_val and _display_val.upper() == display_upper:
-            # Build a thin adapter ctx from the empty-state defaults.
-            # Real data resolution lands once the parser supports the
-            # typed config blocks.
             adapter_ctx: dict[str, Any] = {
                 "region_url": getattr(ctx.ctx_region, "endpoint", "") or "",
             }
+            # Per-display data resolution. Each branch reads its own
+            # typed config off the IR region and shapes `items` (or
+            # other already-scoped data) into the dict shape the
+            # adapter consumes. Empty config = empty/unconfigured state
+            # in the primitive (handled by the adapter).
+            if display_upper == "COHORT_STRIP":
+                _cohort_cfg = getattr(ir_region, "cohort_strip_config", None)
+                if _cohort_cfg is not None:
+                    _active_lens_id = (
+                        request.query_params.get("lens")
+                        or getattr(_cohort_cfg, "default_lens", "")
+                        or (getattr(_cohort_cfg.lenses[0], "id", "") if _cohort_cfg.lenses else "")
+                    )
+                    adapter_ctx["cohort_active_lens"] = _active_lens_id
+                    adapter_ctx["cohort_cells"] = _build_cohort_cells(
+                        items=items,
+                        config=_cohort_cfg,
+                        active_lens_id=_active_lens_id,
+                    )
             try:
                 surface = WorkspaceRegionAdapter().build(ir_region, adapter_ctx)
                 inner = getattr(getattr(surface, "body", None), "body", None)

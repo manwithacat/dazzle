@@ -183,7 +183,6 @@
   "views.ViewSpec.time_bucket",
   "webhooks.WebhookAuthSpec.secret_ref",
   "webhooks.WebhookPayloadSpec.include_fields",
-  "workspaces.CohortStripConfig.member_via",
   "workspaces.DayTimelineConfig.ends_at",
   "workspaces.DayTimelineConfig.starts_at",
   "workspaces.EntityCardConfig.scope_param",
