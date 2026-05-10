@@ -120,15 +120,16 @@ def test_get_login_chrome_on_renders_typed_view_no_jinja() -> None:
     assert "<h1" in body and ">Sign in</h1>" in body
 
 
-def test_get_login_chrome_off_keeps_legacy_jinja_template() -> None:
-    """Non-flipped deployments keep getting the Jinja path during
-    Phase 1 of the migration. The chrome=off branch removes in
-    Phase 4.C."""
+def test_get_login_chrome_off_now_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): `/login` is typed-Fragment ONLY — the
+    chrome flag is no longer consulted. This test guards against
+    accidental re-introduction of a Jinja fallback."""
     client, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/login")
     assert resp.status_code == 200
-    assert "site/auth/login.html" in spy.calls
+    assert spy.calls == []  # No Jinja templates fired regardless of chrome flag
+    assert "/auth/login/magic-link" in resp.text
 
 
 def test_get_login_threads_next_param() -> None:
@@ -257,13 +258,16 @@ def test_get_login_sent_chrome_on_renders_typed_view() -> None:
     assert 'href="/login"' in body
 
 
-def test_get_login_sent_chrome_off_serves_minimal_html() -> None:
-    """chrome=off doesn't have a Jinja template for /login/sent —
-    a minimal HTML shell satisfies the route. Phase 4.C drops this
-    fallback when chrome=off goes away entirely."""
+def test_get_login_sent_chrome_off_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): the minimal HTML fallback is gone —
+    the typed view is the only path."""
     client, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/login/sent")
     assert resp.status_code == 200
-    assert spy.calls == []  # no Jinja templates fired
-    assert "Check your inbox" in resp.text
+    assert spy.calls == []
+    body = resp.text
+    assert "Check your inbox" in body
+    # Typed-view markers absent from the old minimal-HTML fallback.
+    assert "<!DOCTYPE html>" in body
+    assert 'href="/login"' in body

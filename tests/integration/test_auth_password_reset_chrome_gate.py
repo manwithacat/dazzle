@@ -160,12 +160,15 @@ def test_get_forgot_password_chrome_on_renders_typed_view() -> None:
     assert 'type="password"' not in body  # account-recovery, not login
 
 
-def test_get_forgot_password_chrome_off_keeps_legacy_jinja() -> None:
+def test_get_forgot_password_chrome_off_now_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): typed-only — chrome flag no longer
+    consulted at /forgot-password."""
     client, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/forgot-password")
     assert resp.status_code == 200
-    assert "site/auth/forgot_password.html" in spy.calls
+    assert spy.calls == []
+    assert "/auth/forgot-password/submit" in resp.text
 
 
 # ───────────────── POST /auth/forgot-password/submit ────────────────────
@@ -271,12 +274,15 @@ def test_get_reset_password_renders_invalid_token_error() -> None:
     assert "invalid or expired" in resp.text
 
 
-def test_get_reset_password_chrome_off_keeps_legacy_jinja() -> None:
+def test_get_reset_password_chrome_off_now_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): typed-only — chrome flag no longer
+    consulted at /reset-password."""
     client, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/reset-password")
     assert resp.status_code == 200
-    assert "site/auth/reset_password.html" in spy.calls
+    assert spy.calls == []
+    assert "/auth/reset-password/submit" in resp.text
 
 
 # ───────────────── POST /auth/reset-password/submit ────────────────────
@@ -366,13 +372,17 @@ def test_get_forgot_password_sent_chrome_on_renders_typed_view() -> None:
     assert "If an account exists" in body  # account-enumeration safe
 
 
-def test_get_forgot_password_sent_chrome_off_minimal_html() -> None:
+def test_get_forgot_password_sent_chrome_off_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): minimal HTML fallback gone — typed view
+    is the only path."""
     client, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/forgot-password/sent")
     assert resp.status_code == 200
     assert spy.calls == []
-    assert "Check your inbox" in resp.text
+    body = resp.text
+    assert "Check your inbox" in body
+    assert "<!DOCTYPE html>" in body
 
 
 def test_get_reset_password_done_chrome_on_renders_typed_view() -> None:
@@ -386,10 +396,14 @@ def test_get_reset_password_done_chrome_on_renders_typed_view() -> None:
     assert 'href="/login"' in body
 
 
-def test_get_reset_password_done_chrome_off_minimal_html() -> None:
+def test_get_reset_password_done_chrome_off_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): minimal HTML fallback gone — typed view
+    is the only path."""
     client, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/reset-password/done")
     assert resp.status_code == 200
     assert spy.calls == []
-    assert "Password updated" in resp.text
+    body = resp.text
+    assert "Password updated" in body
+    assert "<!DOCTYPE html>" in body

@@ -16,11 +16,19 @@ SITESPEC: dict = {"brand": {"product_name": "TestApp"}}
 
 
 def _render_login() -> str:
+    """Render a page that uses the auth_page_wrapper macro.
+
+    Phase 1.E (v0.67.33): login.html was retired in favour of typed-
+    Fragment views. The macro itself is still consumed by the 2FA
+    templates (2fa_setup.html, 2fa_settings.html, 2fa_challenge.html);
+    we render 2fa_setup here to exercise the same code path the #842
+    regression originally targeted.
+    """
     from dazzle_ui.runtime.site_context import build_site_auth_context
     from dazzle_ui.runtime.template_renderer import render_site_page
 
-    ctx = build_site_auth_context(SITESPEC, "login")
-    return render_site_page("site/auth/login.html", ctx)
+    ctx = build_site_auth_context(SITESPEC, "2fa_setup")
+    return render_site_page("site/auth/2fa_setup.html", ctx)
 
 
 class TestAuthPageWrapper:

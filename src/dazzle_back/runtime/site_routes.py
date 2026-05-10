@@ -727,6 +727,23 @@ def create_auth_page_routes(
             logger.debug("Auth check failed, redirecting to login", exc_info=True)
         return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
 
+    def _typed_chrome_assets(app_state: object) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        """Resolve the CSS+JS asset tuples for typed-Fragment auth pages.
+
+        Phase 1.E (v0.67.33): the auth GET handlers always render typed
+        views (the chrome=off Jinja fallback is gone). This helper
+        centralises the per-deployment override lookup that all seven
+        handlers share."""
+        css = tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        )
+        js = tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        )
+        return css, js
+
     @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
     async def login_page(
         request: Request,
@@ -736,60 +753,36 @@ def create_auth_page_routes(
     ) -> str:
         """Serve the login page.
 
-        Phase 1.A (v0.67.29): chrome=on renders the typed-Fragment
-        magic-link login view via `auth_views.build_login_magic_link_view`;
-        chrome=off keeps the legacy Jinja `site/auth/login.html`
-        path so non-flipped deployments don't change behaviour.
-        Removed in Phase 4.C of the Jinja2 retirement plan.
+        Phase 1.E (v0.67.33): typed-Fragment is the only path —
+        `site/auth/login.html` was deleted alongside the chrome=off
+        branch. `app.state.auth_password_mode_enabled` still selects
+        between magic-link and password views.
         """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import (
+            build_login_magic_link_view,
+            build_login_password_view,
         )
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import (
-                build_login_magic_link_view,
-                build_login_password_view,
-            )
 
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
-            password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
-            error_message = ""
-            if error == "invalid_magic_link":
-                error_message = "That sign-in link is invalid or expired. Request a new one below."
-            elif error == "invalid_credentials":
-                error_message = "That email and password didn't match. Try again."
-            if password_mode:
-                page = build_login_password_view(
-                    page_title="Sign in",
-                    product_name=product_name,
-                    next_url=next,
-                    error_message=error_message,
-                    css_links=css_links,
-                    js_scripts=js_scripts,
-                )
-            else:
-                page = build_login_magic_link_view(
-                    page_title="Sign in",
-                    product_name=product_name,
-                    next_url=next,
-                    error_message=error_message,
-                    css_links=css_links,
-                    js_scripts=js_scripts,
-                )
-            return FragmentRenderer().render(page)
-        ctx = build_site_auth_context(sitespec, "login", custom_css=has_custom_css)
-        return render_site_page("site/auth/login.html", ctx)
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
+        error_message = ""
+        if error == "invalid_magic_link":
+            error_message = "That sign-in link is invalid or expired. Request a new one below."
+        elif error == "invalid_credentials":
+            error_message = "That email and password didn't match. Try again."
+        builder = build_login_password_view if password_mode else build_login_magic_link_view
+        page = builder(
+            page_title="Sign in",
+            product_name=product_name,
+            next_url=next,
+            error_message=error_message,
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+        return FragmentRenderer().render(page)
 
     @router.get("/login/sent", response_class=HTMLResponse, include_in_schema=False)
     async def login_sent_page(
@@ -797,49 +790,22 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
         email: str = "",
     ) -> str:
-        """Post-magic-link confirmation page (chrome=on only).
+        """Post-magic-link confirmation page (Phase 1.E: typed-only)."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import build_login_sent_view
 
-        Phase 1.A (v0.67.29): renders the "check your inbox"
-        message after `/auth/login/magic-link` issuance. Under
-        chrome=off the route still serves a minimal HTML shell
-        so links from the magic-link form don't 404.
-        """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
-        )
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import build_login_sent_view
-
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            page = build_login_sent_view(
-                product_name=product_name,
-                # email is intentionally NOT echoed back — defensive
-                # against account-enumeration via reflected input.
-                email="",
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
-            return FragmentRenderer().render(page)
-        # chrome=off minimal fallback. Phase 4.C deletes this branch.
-        return (
-            f"<!DOCTYPE html><html><head><title>Check your inbox — "
-            f"{product_name}</title></head><body>"
-            f"<h1>Check your inbox</h1>"
-            f"<p>If an account exists for that address, we've sent a "
-            f'sign-in link.</p><p><a href="/login">Try a different '
-            f"email</a></p></body></html>"
+        page = build_login_sent_view(
+            product_name=product_name,
+            # email NOT echoed back — defensive against account-
+            # enumeration via reflected input.
+            email="",
+            css_links=css_links,
+            js_scripts=js_scripts,
         )
+        return FragmentRenderer().render(page)
 
     @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
     async def signup_page(
@@ -850,150 +816,76 @@ def create_auth_page_routes(
     ) -> str:
         """Serve the signup page.
 
-        Phase 1.B (v0.67.30): chrome=on renders the typed-Fragment
-        magic-link signup view; chrome=off keeps the legacy Jinja path.
-
-        Phase 1.B.3 (v0.67.32): when `app.state.auth_password_mode_enabled`
-        is True under chrome=on, the password-mode view (name + email
-        + password + confirm) is rendered instead. The flag is set by
-        downstream Dazzle apps that opt into password mode at startup.
+        Phase 1.E (v0.67.33): typed-Fragment is the only path —
+        `site/auth/signup.html` was deleted. `auth_password_mode_enabled`
+        still selects between magic-link and password views.
         """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import (
+            build_signup_magic_link_view,
+            build_signup_password_view,
         )
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import (
-                build_signup_magic_link_view,
-                build_signup_password_view,
-            )
 
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
-            password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
-            error_message = ""
-            if error == "mismatch":
-                error_message = "The two password fields didn't match. Try again."
-            elif error == "already_registered":
-                error_message = "An account with that email already exists. Try signing in instead."
-            elif error == "create_failed":
-                error_message = "We couldn't create that account. Please try again."
-            elif error == "invalid_email":
-                error_message = "That email address doesn't look right."
-            if password_mode:
-                page = build_signup_password_view(
-                    page_title="Create your account",
-                    product_name=product_name,
-                    next_url=next,
-                    error_message=error_message,
-                    css_links=css_links,
-                    js_scripts=js_scripts,
-                )
-            else:
-                page = build_signup_magic_link_view(
-                    page_title="Create your account",
-                    product_name=product_name,
-                    next_url=next,
-                    error_message=error_message,
-                    css_links=css_links,
-                    js_scripts=js_scripts,
-                )
-            return FragmentRenderer().render(page)
-        ctx = build_site_auth_context(sitespec, "signup", custom_css=has_custom_css)
-        return render_site_page("site/auth/signup.html", ctx)
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
+        error_message = ""
+        if error == "mismatch":
+            error_message = "The two password fields didn't match. Try again."
+        elif error == "already_registered":
+            error_message = "An account with that email already exists. Try signing in instead."
+        elif error == "create_failed":
+            error_message = "We couldn't create that account. Please try again."
+        elif error == "invalid_email":
+            error_message = "That email address doesn't look right."
+        builder = build_signup_password_view if password_mode else build_signup_magic_link_view
+        page = builder(
+            page_title="Create your account",
+            product_name=product_name,
+            next_url=next,
+            error_message=error_message,
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+        return FragmentRenderer().render(page)
 
     @router.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
     async def forgot_password_page(
         request: Request,
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
-        """Serve the forgot-password page.
+        """Serve the forgot-password page (Phase 1.E: typed-only)."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import build_forgot_password_view
 
-        Phase 1.B.2 (v0.67.31): chrome=on renders the typed-Fragment
-        `build_forgot_password_view`; chrome=off keeps the legacy
-        Jinja `site/auth/forgot_password.html` path. Removed in
-        Phase 4.C / Phase 1.E of the Jinja2 retirement plan.
-        """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        page = build_forgot_password_view(
+            product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+            css_links=css_links,
+            js_scripts=js_scripts,
         )
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import build_forgot_password_view
-
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            page = build_forgot_password_view(
-                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
-            return FragmentRenderer().render(page)
-        ctx = build_site_auth_context(sitespec, "forgot_password", custom_css=has_custom_css)
-        return render_site_page("site/auth/forgot_password.html", ctx)
+        return FragmentRenderer().render(page)
 
     @router.get("/forgot-password/sent", response_class=HTMLResponse, include_in_schema=False)
     async def forgot_password_sent_page(
         request: Request,
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
-        """Post-forgot-password confirmation page (Phase 1.B.2).
+        """Post-forgot-password confirmation page (Phase 1.E: typed-only)."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import build_forgot_password_sent_view
 
-        Chrome=on renders the typed "check your inbox" page;
-        chrome=off serves a minimal HTML fallback so the redirect
-        target from `/auth/forgot-password/submit` doesn't 404.
-        """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
-        )
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import (
-                build_forgot_password_sent_view,
-            )
-
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            page = build_forgot_password_sent_view(
-                product_name=product_name,
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
-            return FragmentRenderer().render(page)
-        return (
-            f"<!DOCTYPE html><html><head><title>Check your inbox — "
-            f"{product_name}</title></head><body>"
-            f"<h1>Check your inbox</h1>"
-            f"<p>If an account exists for that address, we've sent a "
-            f'password-reset link.</p><p><a href="/forgot-password">Try a '
-            f"different email</a></p></body></html>"
+        page = build_forgot_password_sent_view(
+            product_name=product_name,
+            css_links=css_links,
+            js_scripts=js_scripts,
         )
+        return FragmentRenderer().render(page)
 
     @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_page(
@@ -1002,85 +894,44 @@ def create_auth_page_routes(
         token: str = "",
         error: str = "",
     ) -> str:
-        """Serve the reset-password page.
+        """Serve the reset-password page (Phase 1.E: typed-only)."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import build_reset_password_view
 
-        Phase 1.B.2 (v0.67.31): chrome=on renders the typed-Fragment
-        `build_reset_password_view` (form posts to
-        `/auth/reset-password/submit`); chrome=off keeps the legacy
-        Jinja path. Removed in Phase 1.E.
-        """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        error_message = ""
+        if error == "mismatch":
+            error_message = "The two password fields didn't match. Try again."
+        elif error == "invalid":
+            error_message = "That reset link is invalid or expired. Request a new one."
+        page = build_reset_password_view(
+            product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+            token=token,
+            error_message=error_message,
+            css_links=css_links,
+            js_scripts=js_scripts,
         )
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import build_reset_password_view
-
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            error_message = ""
-            if error == "mismatch":
-                error_message = "The two password fields didn't match. Try again."
-            elif error == "invalid":
-                error_message = "That reset link is invalid or expired. Request a new one."
-            page = build_reset_password_view(
-                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-                token=token,
-                error_message=error_message,
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
-            return FragmentRenderer().render(page)
-        ctx = build_site_auth_context(sitespec, "reset_password", custom_css=has_custom_css)
-        return render_site_page("site/auth/reset_password.html", ctx)
+        return FragmentRenderer().render(page)
 
     @router.get("/reset-password/done", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_done_page(
         request: Request,
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
-        """Post-reset confirmation page (Phase 1.B.2)."""
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
-        )
-        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
-        if chrome_flag:
-            from dazzle.render.fragment.renderer import FragmentRenderer
-            from dazzle_back.runtime.auth.auth_views import (
-                build_reset_password_done_view,
-            )
+        """Post-reset confirmation page (Phase 1.E: typed-only)."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.auth_views import build_reset_password_done_view
 
-            app_state = request.app.state
-            css_links = tuple(
-                getattr(app_state, "fragment_chrome_css_links", None)
-                or ("/static/dist/dazzle.min.css",)
-            )
-            js_scripts = tuple(
-                getattr(app_state, "fragment_chrome_js_scripts", None)
-                or ("/static/dist/dazzle.min.js",)
-            )
-            page = build_reset_password_done_view(
-                product_name=product_name,
-                css_links=css_links,
-                js_scripts=js_scripts,
-            )
-            return FragmentRenderer().render(page)
-        return (
-            f"<!DOCTYPE html><html><head><title>Password updated — "
-            f"{product_name}</title></head><body>"
-            f"<h1>Password updated</h1>"
-            f"<p>Your password has been changed.</p>"
-            f'<p><a href="/login">Sign in</a></p></body></html>'
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        page = build_reset_password_done_view(
+            product_name=product_name,
+            css_links=css_links,
+            js_scripts=js_scripts,
         )
+        return FragmentRenderer().render(page)
 
     @router.get("/2fa/setup", include_in_schema=False)
     async def two_factor_setup_page(

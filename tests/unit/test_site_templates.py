@@ -185,38 +185,21 @@ class TestBuildSitePageContext:
 
 
 class TestBuildSiteAuthContext:
-    """Tests for build_site_auth_context()."""
+    """Tests for build_site_auth_context() — login/signup/forgot/reset
+    page_types retired in Phase 1.E (v0.67.33); only 2FA contexts remain."""
 
-    def test_login_context(self) -> None:
+    def test_2fa_setup_context(self) -> None:
         from dazzle_ui.runtime.site_context import build_site_auth_context
 
-        ctx = build_site_auth_context({"brand": {"product_name": "App"}}, "login")
-        assert ctx.title == "Sign In"
-        assert ctx.action_url == "/auth/login"
-        assert ctx.is_login is True
-        assert ctx.show_forgot_password is True
+        ctx = build_site_auth_context({"brand": {"product_name": "App"}}, "2fa_setup")
+        assert ctx.title == "Set Up 2FA"
+        assert ctx.action_url == "/auth/2fa/setup/totp"
 
-    def test_signup_context(self) -> None:
+    def test_2fa_settings_context(self) -> None:
         from dazzle_ui.runtime.site_context import build_site_auth_context
 
-        ctx = build_site_auth_context({"brand": {"product_name": "App"}}, "signup")
-        assert ctx.title == "Create Account"
-        assert ctx.show_name_field is True
-        assert ctx.show_confirm_password is True
-
-    def test_forgot_password_context(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {}}, "forgot_password")
-        assert ctx.title == "Reset Password"
-        assert ctx.show_success_alert is True
-
-    def test_reset_password_context(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {}}, "reset_password")
-        assert ctx.title == "Set New Password"
-        assert ctx.show_confirm_password is True
+        ctx = build_site_auth_context({"brand": {}}, "2fa_settings")
+        assert ctx.title == "2FA Settings"
 
 
 class TestBuildSite404Context:
@@ -613,50 +596,7 @@ class TestSite404Template:
 # =========================================================================
 
 
-class TestAuthTemplates:
-    """Tests for auth page templates."""
-
-    def test_login_page(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {"product_name": "TestApp"}}, "login")
-        html = _render("site/auth/login.html", ctx)
-
-        assert "Sign In" in html
-        assert "TestApp" in html
-        assert "/auth/login" in html
-        assert "Forgot password?" in html
-        assert "Create an account" in html
-
-    def test_signup_page(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {"product_name": "TestApp"}}, "signup")
-        html = _render("site/auth/signup.html", ctx)
-
-        assert "Create Account" in html
-        assert "Full Name" in html
-        assert "Confirm Password" in html
-        assert "Sign in instead" in html
-        assert "Forgot password?" not in html
-
-    def test_forgot_password_page(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {"product_name": "TestApp"}}, "forgot_password")
-        html = _render("site/auth/forgot_password.html", ctx)
-
-        assert "Reset Password" in html
-        assert "/auth/forgot-password" in html
-        assert "Back to sign in" in html
-
-    def test_reset_password_page(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {"product_name": "TestApp"}}, "reset_password")
-        html = _render("site/auth/reset_password.html", ctx)
-
-        assert "Set New Password" in html
-        assert "/auth/reset-password" in html
-        assert "new_password" in html
-        assert "confirm_password" in html
+# Auth page templates deleted in Phase 1.E (v0.67.33) — login, signup,
+# forgot_password, and reset_password are now typed-Fragment views.
+# Coverage moved to tests/unit/test_auth_views_*.py and
+# tests/integration/test_auth_*_chrome_gate.py.

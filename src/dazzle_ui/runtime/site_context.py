@@ -208,8 +208,8 @@ def build_site_auth_context(
 
     Args:
         sitespec_data: Site specification data.
-        page_type: One of "login", "signup", "forgot_password", "reset_password",
-            "2fa_setup", "2fa_settings", "2fa_challenge".
+        page_type: One of "2fa_setup", "2fa_settings", "2fa_challenge".
+            (login/signup/forgot_password/reset_password retired in Phase 1.E.)
         custom_css: Include project-level custom CSS.
         session_token: Pre-login session token for 2FA challenge (#831).
         default_method: Default 2FA method to challenge ("totp" or "email_otp").
@@ -222,59 +222,11 @@ def build_site_auth_context(
     brand = sitespec_data.get("brand", {})
     product_name = brand.get("product_name", "My App")
 
+    # Phase 1.E (v0.67.33): login / signup / forgot_password /
+    # reset_password are now typed-Fragment views \u2014 their config
+    # blocks were removed when the Jinja templates were deleted.
+    # Only the 2FA page types remain in this dispatcher.
     configs: dict[str, dict[str, Any]] = {
-        "login": {
-            "title": "Sign In",
-            "action_url": "/auth/login",
-            "button_text": "Sign In",
-            "is_login": True,
-            "other_page": "/signup",
-            "other_link_text": "Create an account",
-            "show_forgot_password": True,
-            "show_name_field": False,
-            "show_confirm_password": False,
-            "show_success_alert": False,
-            "subtitle": "",
-        },
-        "signup": {
-            "title": "Create Account",
-            "action_url": "/auth/register",
-            "button_text": "Sign Up",
-            "is_login": False,
-            "other_page": "/login",
-            "other_link_text": "Sign in instead",
-            "show_forgot_password": False,
-            "show_name_field": True,
-            "show_confirm_password": True,
-            "show_success_alert": False,
-            "subtitle": "",
-        },
-        "forgot_password": {
-            "title": "Reset Password",
-            "action_url": "/auth/forgot-password",
-            "button_text": "Send Reset Link",
-            "is_login": False,
-            "other_page": "/login",
-            "other_link_text": "Back to sign in",
-            "show_forgot_password": False,
-            "show_name_field": False,
-            "show_confirm_password": False,
-            "show_success_alert": True,
-            "subtitle": "Enter your email and we\u2019ll send you a link to reset your password.",
-        },
-        "reset_password": {
-            "title": "Set New Password",
-            "action_url": "/auth/reset-password",
-            "button_text": "Reset Password",
-            "is_login": False,
-            "other_page": "/login",
-            "other_link_text": "Back to sign in",
-            "show_forgot_password": False,
-            "show_name_field": False,
-            "show_confirm_password": True,
-            "show_success_alert": False,
-            "subtitle": "",
-        },
         "2fa_setup": {
             "title": "Set Up 2FA",
             "action_url": "/auth/2fa/setup/totp",
@@ -316,7 +268,7 @@ def build_site_auth_context(
         },
     }
 
-    cfg = configs.get(page_type, configs["login"])
+    cfg = configs.get(page_type, configs["2fa_setup"])
 
     return SiteAuthContext(
         product_name=product_name,

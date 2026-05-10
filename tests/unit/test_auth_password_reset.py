@@ -188,59 +188,15 @@ class TestOGMetaTags:
         assert "og:type" in html
 
 
-class TestAuthPageRenderers:
-    """Test auth page renderers (forgot-password, reset-password)."""
-
-    def test_forgot_password_page(self) -> None:
-        """Test forgot-password page renders correctly."""
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {"brand": {"product_name": "TestApp"}}
-        ctx = build_site_auth_context(sitespec, "forgot_password")
-        html = render_site_page("site/auth/forgot_password.html", ctx)
-
-        assert "Reset Password" in html
-        assert "/auth/forgot-password" in html
-        assert "TestApp" in html
-        assert "Back to sign in" in html
-
-    def test_reset_password_page(self) -> None:
-        """Test reset-password page renders correctly."""
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {"brand": {"product_name": "TestApp"}}
-        ctx = build_site_auth_context(sitespec, "reset_password")
-        html = render_site_page("site/auth/reset_password.html", ctx)
-
-        assert "Set New Password" in html
-        assert "/auth/reset-password" in html
-        assert "new_password" in html
-        assert "confirm_password" in html
-
-    def test_login_page_has_forgot_password_link(self) -> None:
-        """Test that login page includes forgot-password link."""
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {"brand": {"product_name": "TestApp"}}
-        ctx = build_site_auth_context(sitespec, "login")
-        html = render_site_page("site/auth/login.html", ctx)
-
-        assert "Forgot password?" in html
-        assert "/forgot-password" in html
-
-    def test_signup_page_no_forgot_password_link(self) -> None:
-        """Test that signup page does NOT show forgot-password link."""
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {"brand": {"product_name": "TestApp"}}
-        ctx = build_site_auth_context(sitespec, "signup")
-        html = render_site_page("site/auth/signup.html", ctx)
-
-        assert "Forgot password?" not in html
+# Auth page Jinja renderers retired in Phase 1.E (v0.67.33).
+# login / signup / forgot_password / reset_password now render as
+# typed-Fragment Pages. Equivalent coverage lives in:
+#   tests/unit/test_auth_views_login_magic_link.py
+#   tests/unit/test_auth_views_signup_magic_link.py
+#   tests/unit/test_auth_views_password_mode.py
+#   tests/unit/test_auth_views_password_reset.py
+# and the corresponding tests/integration/test_auth_*_chrome_gate.py
+# integration suites.
 
 
 class TestCustomCssOverride:
@@ -264,21 +220,19 @@ class TestCustomCssOverride:
         html = get_shared_head_html("Test Page")
         assert "/static/css/custom.css" not in html
 
+    # auth_login / auth_forgot_password / auth_reset_password params
+    # removed in Phase 1.E (v0.67.33) — those templates were deleted.
+    # The typed-Fragment auth views already accept custom CSS via
+    # `css_links=` and are covered by the test_auth_views_* suites.
     @pytest.mark.parametrize(
         "context_builder,template",
         [
             ("site_page", "site/page.html"),
-            ("auth_login", "site/auth/login.html"),
             ("site_404", "site/404.html"),
-            ("auth_forgot_password", "site/auth/forgot_password.html"),
-            ("auth_reset_password", "site/auth/reset_password.html"),
         ],
         ids=[
             "test_render_site_page_passes_custom_css",
-            "test_render_auth_page_passes_custom_css",
             "test_render_404_page_passes_custom_css",
-            "test_render_forgot_password_passes_custom_css",
-            "test_render_reset_password_passes_custom_css",
         ],
     )
     def test_render_page_passes_custom_css(self, context_builder: str, template: str) -> None:

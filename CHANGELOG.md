@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.33] - 2026-05-11
+
+### Removed
+
+- **Jinja2 Retirement Phase 1.E — legacy auth templates deleted.** With the typed-Fragment login / signup / forgot-password / reset-password views now end-to-end live (Phases 1.A–1.B.3), the Jinja path that backed those four surfaces is gone.
+- `src/dazzle_ui/templates/site/auth/login.html`
+- `src/dazzle_ui/templates/site/auth/signup.html`
+- `src/dazzle_ui/templates/site/auth/forgot_password.html`
+- `src/dazzle_ui/templates/site/auth/reset_password.html`
+- `src/dazzle_ui/templates/site/auth/_auth_form_script.html`
+- `src/dazzle_ui/templates/site/auth/_forgot_password_script.html`
+- `src/dazzle_ui/templates/site/auth/_reset_password_script.html`
+- `TestAuthTemplates` class in `tests/unit/test_site_templates.py`, `TestAuthPageRenderers` class in `tests/unit/test_auth_password_reset.py`, and the `auth_login` / `auth_forgot_password` / `auth_reset_password` param IDs in `TestCustomCssOverride.test_render_page_passes_custom_css` — all of which directly rendered the now-deleted templates.
+
+### Changed
+
+- **`build_site_auth_context`** in `src/dazzle_ui/runtime/site_context.py`: the `login` / `signup` / `forgot_password` / `reset_password` config blocks are removed. The function still dispatches on `2fa_setup` / `2fa_settings` / `2fa_challenge` for the 2FA pages (Phase 1.D will migrate those onto the typed substrate). The default fallback is now `2fa_setup` instead of `login`.
+- **7 auth GET handlers in `src/dazzle_back/runtime/site_routes.py`** (`/login`, `/login/sent`, `/signup`, `/forgot-password`, `/forgot-password/sent`, `/reset-password`, `/reset-password/done`) no longer consult the `fragment_chrome` flag — they unconditionally render the typed view. A small helper `_typed_chrome_assets(app_state)` centralises the per-deployment CSS/JS override lookup that every handler shares.
+- **7 chrome=off integration tests** flipped to assert "chrome=off also renders the typed view" (was: "chrome=off keeps legacy Jinja"). Same coverage shape, opposite assertion direction — these now guard against accidental re-introduction of a Jinja fallback rather than against accidental loss of one.
+- **`tests/unit/test_auth_page_wrapper.py`** now exercises `2fa_setup.html` (which still uses the `auth_page_wrapper` macro) instead of the deleted `login.html`. The macro's contract (no nested min-h-screen wrapper, .dz-auth-card on the inner div) hasn't changed; only the host template did.
+
+### Agent Guidance
+
+- **`auth_page_wrapper.html` macro stays** — still consumed by `2fa_setup.html`, `2fa_settings.html`, `2fa_challenge.html`. Delete only when those templates also migrate to typed-Fragment (Phase 1.D).
+- **`fragment_chrome` flag is still meaningful elsewhere** — only the four auth GET handlers stopped consulting it in this ship. Other surfaces (page renderer, error pages, fragments-vs-chrome=off branching for the dashboard layer) still gate behavior on the flag. Phase 4.C deletes the flag entirely.
+- **`build_site_auth_context` is now 2FA-only** — calling it with `"login"` / `"signup"` / `"forgot_password"` / `"reset_password"` falls back to the `2fa_setup` config (defensive default; downstream code that used those page_types should switch to the typed-Fragment view builders in `auth_views.py`).
+
 ## [0.67.32] - 2026-05-10
 
 ### Added

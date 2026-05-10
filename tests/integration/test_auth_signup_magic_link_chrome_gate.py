@@ -156,12 +156,15 @@ def test_get_signup_chrome_on_renders_typed_view_no_jinja() -> None:
     assert ">Sign in</a>" in body  # crosslink to /login
 
 
-def test_get_signup_chrome_off_keeps_legacy_jinja() -> None:
+def test_get_signup_chrome_off_now_also_renders_typed_view() -> None:
+    """Phase 1.E (v0.67.33): /signup is typed-only — chrome flag
+    no longer gates the render."""
     client, _, _ = _build_app(chrome=False)
     with _JinjaSpy() as spy:
         resp = client.get("/signup")
     assert resp.status_code == 200
-    assert "site/auth/signup.html" in spy.calls
+    assert spy.calls == []
+    assert "/auth/signup/magic-link" in resp.text
 
 
 def test_get_signup_threads_next_param() -> None:
