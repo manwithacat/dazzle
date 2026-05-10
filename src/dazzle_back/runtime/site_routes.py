@@ -728,10 +728,103 @@ def create_auth_page_routes(
         return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
 
     @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
-    async def login_page(sitespec: dict[str, Any] = sitespec_data) -> str:
-        """Serve the login page."""
+    async def login_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+        next: str = "/",
+        error: str = "",
+    ) -> str:
+        """Serve the login page.
+
+        Phase 1.A (v0.67.29): chrome=on renders the typed-Fragment
+        magic-link login view via `auth_views.build_login_magic_link_view`;
+        chrome=off keeps the legacy Jinja `site/auth/login.html`
+        path so non-flipped deployments don't change behaviour.
+        Removed in Phase 4.C of the Jinja2 retirement plan.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import (
+                build_login_magic_link_view,
+            )
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            error_message = ""
+            if error == "invalid_magic_link":
+                error_message = "That sign-in link is invalid or expired. Request a new one below."
+            page = build_login_magic_link_view(
+                page_title="Sign in",
+                product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+                next_url=next,
+                error_message=error_message,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
         ctx = build_site_auth_context(sitespec, "login", custom_css=has_custom_css)
         return render_site_page("site/auth/login.html", ctx)
+
+    @router.get("/login/sent", response_class=HTMLResponse, include_in_schema=False)
+    async def login_sent_page(
+        request: Request,
+        sitespec: dict[str, Any] = sitespec_data,
+        email: str = "",
+    ) -> str:
+        """Post-magic-link confirmation page (chrome=on only).
+
+        Phase 1.A (v0.67.29): renders the "check your inbox"
+        message after `/auth/login/magic-link` issuance. Under
+        chrome=off the route still serves a minimal HTML shell
+        so links from the magic-link form don't 404.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        if chrome_flag:
+            from dazzle.render.fragment.renderer import FragmentRenderer
+            from dazzle_back.runtime.auth.auth_views import build_login_sent_view
+
+            app_state = request.app.state
+            css_links = tuple(
+                getattr(app_state, "fragment_chrome_css_links", None)
+                or ("/static/dist/dazzle.min.css",)
+            )
+            js_scripts = tuple(
+                getattr(app_state, "fragment_chrome_js_scripts", None)
+                or ("/static/dist/dazzle.min.js",)
+            )
+            page = build_login_sent_view(
+                product_name=product_name,
+                # email is intentionally NOT echoed back — defensive
+                # against account-enumeration via reflected input.
+                email="",
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return FragmentRenderer().render(page)
+        # chrome=off minimal fallback. Phase 4.C deletes this branch.
+        return (
+            f"<!DOCTYPE html><html><head><title>Check your inbox — "
+            f"{product_name}</title></head><body>"
+            f"<h1>Check your inbox</h1>"
+            f"<p>If an account exists for that address, we've sent a "
+            f'sign-in link.</p><p><a href="/login">Try a different '
+            f"email</a></p></body></html>"
+        )
 
     @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
     async def signup_page(sitespec: dict[str, Any] = sitespec_data) -> str:

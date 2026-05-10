@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.29] - 2026-05-10
+
+### Added
+
+- **Jinja2 Retirement Phase 1.A — `/login` magic-link typed view + issuance endpoint.** First module of the auth-surface migration to typed-Fragment. Establishes the v1 default flow (email-link passwordless) by consolidating with the existing `magic_link.create_magic_link` token primitive (`src/dazzle_back/runtime/auth/magic_link.py`).
+- **`src/dazzle_back/runtime/auth/auth_views.py`** — new module. `build_login_magic_link_view` returns a typed `Page` with email-only form posting to `/auth/login/magic-link` (preserves `?next=` for post-login redirect, renders `?error=invalid_magic_link` as a `danger`-tone Text block when bounced from a stale token). `build_login_sent_view` returns the "check your inbox" confirmation page with account-enumeration-safe default copy.
+- **`POST /auth/login/magic-link`** issuance endpoint added to `magic_link_routes.py`. Looks up user by email (lowercased + stripped), issues a 15-minute token via `create_magic_link`, logs the link URL at INFO level so dev environments can copy-paste from the server log (real email send is the Phase 1.B follow-on). Account-enumeration guard: returns the same `303 → /login/sent` redirect whether the email matches a real user or not.
+- **`GET /login/sent`** confirmation page route. chrome=on renders the typed view; chrome=off serves a minimal HTML shell so the magic-link form's redirect doesn't 404.
+- **Chrome-flag gate at `GET /login`**: when `app.state.fragment_chrome=True`, renders the typed view; otherwise falls through to the legacy Jinja `site/auth/login.html` (removed in Phase 4.C). Same shape every other migrated route uses.
+- **22 unit tests** at `tests/unit/test_auth_views_login_magic_link.py` covering both views' shape (email-only form, no password field, submit button, product-name link, error block conditional, `next_url` threading, default vs custom CSS/JS overrides) + HTML escape safety on every user-supplied field.
+- **13 integration tests** at `tests/integration/test_auth_login_magic_link_chrome_gate.py` covering the chrome=on/off gate, magic-link issuance with known/unknown/empty email, account-enumeration guard, `next` param threading + safe-redirect filtering, log-based dev-mode pickup, and `/login/sent` rendering.
+
+### Changed
+
+- **`docs/api-surface/runtime-urls.txt`** — regenerated to include `/auth/login/magic-link` (POST) and `/login/sent` (GET). API surface drift gate green.
+
+### Agent Guidance
+
+- **Phase 1.A close-out** — login-magic-link is end-to-end live under chrome=on. Phase 1.B picks up: signup magic-link variant, opt-in password mode for `/login` + `/signup` (per-deployment flag), `/forgot-password` + `/reset-password` typed renders. SSO + MFA + Jinja-template removal land in 1.C–1.E. The `auth_views.py` module is the seam every subsequent auth typed render slots into; the chrome-flag gate pattern at `/login` is the template for `/signup`, `/forgot-password`, `/reset-password` route handlers.
+- **Mailer integration is deliberately deferred** — the issuance path logs the magic-link URL to INFO so the dev loop works without an SMTP server. Production deployments need a `MagicLinkMailer` interface (TBD shape — likely a `Protocol` registered via `app.state.magic_link_mailer`) before going live. Plan that in Phase 1.B alongside the rest of the password-mode flows.
+
 ## [0.67.28] - 2026-05-10
 
 ### Added

@@ -10,13 +10,19 @@ This endpoint is mounted unconditionally and is suitable for:
 - Dev QA mode (#768)
 """
 
+import logging
 from typing import Annotated
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
 
-from dazzle_back.runtime.auth.magic_link import validate_magic_link
+from dazzle_back.runtime.auth.magic_link import (
+    create_magic_link,
+    validate_magic_link,
+)
+
+_logger = logging.getLogger(__name__)
 
 
 def _is_safe_redirect_path(value: str) -> bool:
@@ -109,5 +115,74 @@ def create_magic_link_routes() -> APIRouter:
             samesite="lax",
         )
         return response
+
+    @router.post("/auth/login/magic-link")
+    async def issue_magic_link(
+        request: Request,
+        email: Annotated[str, Form()] = "",
+        next: Annotated[str, Query()] = "/",
+    ) -> RedirectResponse:
+        """Issue a magic-link login token for the supplied email.
+
+        Phase 1.A (v0.67.29) of the Jinja2 retirement plan:
+        consolidates the email-link passwordless login as the v1
+        default. Endpoint contract:
+
+        1. Look up the user by email. If not found, **still return
+           the same response** as the success path — defensive
+           against account enumeration. The user gets the "check
+           your inbox" page either way; the absence of a real
+           inbox just means no link is ever delivered.
+        2. When the user exists, create a magic-link token via
+           `magic_link.create_magic_link` and emit it to the
+           application log at INFO level (real email delivery is
+           a follow-on ship — see the Jinja2 retirement plan
+           Phase 1.B notes on email integration).
+        3. Redirect to `/login/sent` with status 303. The `next`
+           query param is preserved through the redirect so the
+           consumed magic-link lands the user on the originally-
+           requested page.
+
+        SECURITY: this endpoint is unauthenticated and rate-
+        limit-able. Production deployments should add a per-IP
+        rate limit at the reverse-proxy layer (n requests / min)
+        to prevent enumeration via timing or volume.
+        """
+        auth_store = request.app.state.auth_store
+        normalized_email = email.strip().lower()
+        if normalized_email:
+            user = auth_store.get_user_by_email(normalized_email)
+            if user is not None:
+                token = create_magic_link(
+                    auth_store,
+                    user_id=user.id,
+                    ttl_seconds=900,  # 15 minutes
+                    created_by="login_form",
+                )
+                # In the absence of a configured mailer, log the
+                # link so dev environments can complete the flow
+                # via copy-paste from the server log. Replaced by
+                # a real email send in Phase 1.B's mailer wiring.
+                base = str(request.base_url).rstrip("/")
+                next_param = f"?next={next}" if next and next != "/" else ""
+                _logger.info(
+                    "Magic-link issued for %s: %s/auth/magic/%s%s",
+                    normalized_email,
+                    base,
+                    token,
+                    next_param,
+                )
+            else:
+                _logger.info(
+                    "Magic-link request for unknown email %s — "
+                    "no link issued (account-enumeration guard)",
+                    normalized_email,
+                )
+        # Same response regardless of whether email matched a user
+        # — defensive against account enumeration.
+        sent_url = "/login/sent"
+        if next and _is_safe_redirect_path(next) and next != "/":
+            sent_url = f"/login/sent?next={next}"
+        return RedirectResponse(url=sent_url, status_code=303)
 
     return router
