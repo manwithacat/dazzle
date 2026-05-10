@@ -60,3 +60,46 @@ class TestDbVerifyImpl:
 
         result = await db_verify_impl(entities=[school, student], conn=conn)
         assert result["checks"][0]["status"] == "error"
+
+    @pytest.mark.asyncio
+    async def test_warning_count_tallies_error_checks(self, make_entity) -> None:
+        """#1035: column-mismatch / SQL errors emitted as `!` lines
+        must increment warning_count so the CLI can exit non-zero
+        instead of printing 'All FK references valid.'."""
+        student = make_entity("Student", {"school": "School"})
+        school = make_entity("School")
+
+        conn = AsyncMock()
+        conn.fetchval = AsyncMock(side_effect=Exception("column does not exist"))
+
+        result = await db_verify_impl(entities=[school, student], conn=conn)
+        assert result["warning_count"] == 1
+        assert result["total_issues"] == 0  # no orphans, but warnings ≠ no issues
+
+    @pytest.mark.asyncio
+    async def test_warning_count_zero_on_clean_run(self, make_entity) -> None:
+        school = make_entity("School")
+        student = make_entity("Student", {"school": "School"})
+
+        conn = AsyncMock()
+        conn.fetchval = AsyncMock(return_value=0)
+
+        result = await db_verify_impl(entities=[school, student], conn=conn)
+        assert result["warning_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_warning_count_independent_of_orphan_count(self, make_entity) -> None:
+        """A run can have BOTH orphans (counted as total_issues) and
+        column-mismatch warnings (counted as warning_count) — both
+        flag the verify command as failed."""
+        school = make_entity("School")
+        student = make_entity("Student", {"school": "School"})
+        teacher = make_entity("Teacher", {"school": "School"})
+
+        conn = AsyncMock()
+        # School→student: 5 orphans. School→teacher: SQL error (column mismatch).
+        conn.fetchval = AsyncMock(side_effect=[5, Exception("column 'school_id' does not exist")])
+
+        result = await db_verify_impl(entities=[school, student, teacher], conn=conn)
+        assert result["total_issues"] == 5
+        assert result["warning_count"] == 1

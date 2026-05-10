@@ -97,7 +97,11 @@ class TestDbVerifyCommand:
         }
 
         result = runner.invoke(db_app, ["verify"])
-        assert result.exit_code == 0
+        # #1035 (v0.67.21): money-drift findings now trigger exit 1 so
+        # CI / nightly quality swarms can wire `dazzle db verify` without
+        # a wrapper. Pre-fix the command exited 0 even when drift was
+        # reported — the contradiction this issue called out.
+        assert result.exit_code == 1
         assert "Company" in result.output
         assert "revenue" in result.output
         assert "--fix-money" in result.output

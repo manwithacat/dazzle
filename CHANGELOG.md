@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.21] - 2026-05-10
+
+### Fixed
+
+- **#1035 — `dazzle db verify` now exits non-zero when `!` column-mismatch warnings are emitted.** Pre-fix the CLI counted only `"orphans"`-status checks in `total_issues` and printed `"All FK references valid."` even when the loop emitted N column-mismatch warnings — the literal contradiction masked latent runtime-broken FK paths (the issue calls out one ~39-entity project where this swallowed 12 column mismatches across 6 entities, including a runtime-broken GraphQL resolver). The verify command now:
+  1. Tracks `warning_count` separately from `total_issues` in `db_verify_impl` (incremented per `"error"`-status check).
+  2. Replaces the unconditional `"All FK references valid."` summary with conditional output: prints the success message only when both `total_issues == 0` and `warning_count == 0`; emits `"N column mismatch(es) — see ! lines above"` when warnings are present.
+  3. Raises `typer.Exit(1)` when any of FK orphans, column mismatches, or money-column drift are surfaced — letting CI / nightly quality swarms wire `dazzle db verify` without a wrapper that re-parses stdout.
+
+### Changed
+
+- **`tests/unit/test_cli_db_ops.py::test_verify_reports_money_drift`** — pre-fix asserted exit code 0 when money drift was reported, codifying exactly the bug #1035 called out. Updated to assert exit code 1 (the new correct behavior). Test docstring annotated with the issue rationale so future readers see the intentional contract change.
+
+### Added
+
+- **3 new `db_verify` tests** covering the `warning_count` field: `test_warning_count_tallies_error_checks`, `test_warning_count_zero_on_clean_run`, `test_warning_count_independent_of_orphan_count` (asserting both counters increment independently when a run produces both orphans and column mismatches).
+
+### Agent Guidance
+
+- **`dazzle db verify` is now CI-wireable.** Projects can add `dazzle db verify` to their CI gate (or nightly runs) without checking `result.stdout` for `!` markers; the exit code is the contract. Operators should run with `--fix-money` only when there's drift, since money-column drift now also trips the gate (previously it printed advice and exited 0). When wiring into a quality swarm, expect non-zero exit on first run for any project that hasn't yet reconciled DSL field names against the live schema.
+
 ## [0.67.20] - 2026-05-10
 
 ### Added

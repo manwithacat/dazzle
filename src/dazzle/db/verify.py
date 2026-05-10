@@ -43,6 +43,7 @@ async def db_verify_impl(
     entity_map = {e.name: e for e in entities}
     checks: list[dict[str, Any]] = []
     total_issues = 0
+    warning_count = 0  # #1035: column-mismatch / SQL errors emitted as ! lines
 
     for entity in entities:
         ref_fields = get_ref_fields(entity)
@@ -95,8 +96,10 @@ async def db_verify_impl(
                         "error": str(e),
                     }
                 )
+                warning_count += 1
 
     return {
         "checks": checks,
         "total_issues": total_issues,
+        "warning_count": warning_count,
     }

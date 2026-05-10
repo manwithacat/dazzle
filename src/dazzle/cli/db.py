@@ -535,10 +535,22 @@ def verify_command(
                 f"{check.get('error', 'unknown error')}"
             )
 
-    if fk_result["total_issues"] == 0:
+    # #1035 (v0.67.21): exit non-zero when `!` column-mismatch warnings
+    # are emitted. Pre-fix the CLI counted only "orphans" status in
+    # total_issues and printed "All FK references valid." even when the
+    # loop emitted N column-mismatch warnings — the literal contradiction
+    # masked latent runtime-broken FK paths.
+    fk_warnings = fk_result.get("warning_count", 0)
+    fk_orphans = fk_result["total_issues"]
+    if fk_orphans == 0 and fk_warnings == 0:
         console.print("\n[green]All FK references valid.[/green]")
     else:
-        console.print(f"\n[red]{fk_result['total_issues']} FK issues found.[/red]")
+        if fk_orphans:
+            console.print(f"\n[red]{fk_orphans} FK orphan(s) found.[/red]")
+        if fk_warnings:
+            console.print(
+                f"[yellow]{fk_warnings} column mismatch(es) — see ! lines above.[/yellow]"
+            )
 
     money_result = result["money"]
     if money_result["drift_count"] or money_result["partial_count"]:
@@ -565,6 +577,14 @@ def verify_command(
             )
     else:
         console.print("\n[green]No legacy money-column drift.[/green]")
+
+    # #1035 (v0.67.21): exit non-zero when verify surfaced any FK
+    # issues — orphans, column mismatches, or money-column drift. The
+    # exit code lets `dazzle db verify` be wired into CI / nightly
+    # quality swarms without a wrapper that has to re-parse stdout.
+    money_drift = money_result["drift_count"] + money_result["partial_count"]
+    if fk_orphans or fk_warnings or money_drift:
+        raise typer.Exit(1)
 
 
 @db_app.command(name="reset")
