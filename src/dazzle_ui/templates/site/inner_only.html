@@ -1,0 +1,32 @@
+{# v0.67.24 (#1037): inner-only sitespec body for the chrome=on gate
+   flip. Mirrors the body contents of site/page.html but does NOT
+   extend site_base.html — the typed-Fragment Page wrapper provides
+   the document chrome instead.
+
+   Section-by-section migration to typed primitives is a follow-on
+   ship — for now sections still render via their Jinja partials.
+   This template is the seam that lets the typed Page chrome wrap
+   the legacy section body. #}
+{% include "site/includes/nav.html" %}
+
+<main id="dz-site-main" class="{{ 'dz-page-legal' if page_type == 'legal' else '' }}" data-route="{{ current_route }}">
+  {% if sections %}
+  {% for section in sections %}
+  {% if section.background and section.background != "default" %}
+  <div class="dz-bg-{{ section.background }}">
+  {% include ["site/sections/" + section.type + ".html", "site/sections/generic.html"] %}
+  </div>
+  {% else %}
+  {% include ["site/sections/" + section.type + ".html", "site/sections/generic.html"] %}
+  {% endif %}
+  {% endfor %}
+  {% else %}
+  <div class="dz-loading">Loading...</div>
+  {% endif %}
+  {# QA Personas section — #768 — only rendered when dev personas are provisioned #}
+  {% if qa_personas %}
+    {% include 'site/sections/qa_personas.html' %}
+  {% endif %}
+</main>
+
+{% include "site/includes/footer.html" %}

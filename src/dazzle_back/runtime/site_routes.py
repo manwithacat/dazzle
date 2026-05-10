@@ -300,6 +300,57 @@ def create_site_page_routes(
     from dazzle_ui.runtime.site_renderer import get_site_js
     from dazzle_ui.runtime.template_renderer import render_site_page
 
+    def _render_site_page_chromed(request: Request, ctx: Any) -> str:
+        """Render a sitespec page either via the typed-Fragment chrome
+        path (when `app.state.fragment_chrome=True`) or the legacy
+        Jinja `site/page.html` path (#1037, v0.67.24).
+
+        The gate flip — sections inside the body still render via
+        their Jinja partials in this ship; the typed path wraps that
+        inner HTML in a typed `Page` primitive (visible `data-dz-page`
+        markers land) so the chrome layer matches entity surface
+        routes and workspace routes. Section-by-section migration is
+        a follow-on multi-cycle ship — see #1037 investigation.
+        """
+        chrome_flag = bool(
+            getattr(getattr(request, "app", None), "state", None)
+            and getattr(request.app.state, "fragment_chrome", False)
+        )
+        if not chrome_flag:
+            return render_site_page("site/page.html", ctx)
+
+        # Typed path — render the section body via the existing Jinja
+        # partial (no per-section migration in this ship), then wrap
+        # in a typed Page so the chrome attrs land on the document.
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.renderers.page_builder import build_page
+        from dazzle_ui.runtime.template_context import PageContext
+
+        inner_html = render_site_page("site/inner_only.html", ctx)
+        page_ctx = PageContext(
+            page_title=getattr(ctx, "page_title", "") or "",
+            app_name=getattr(ctx, "app_name", None) or "Dazzle",
+            current_route=getattr(ctx, "current_route", "") or "/",
+        )
+        app_state = request.app.state
+        css_links = tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        )
+        js_scripts = tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        )
+        theme = getattr(app_state, "fragment_chrome_theme", None)
+        page = build_page(
+            page_ctx,
+            inner_html,
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
+        )
+        return FragmentRenderer().render(page)
+
     router = APIRouter()
 
     # Check once whether the project provides a custom CSS override
@@ -498,7 +549,7 @@ def create_site_page_routes(
                     privacy_page_url=privacy_url,
                     cookie_policy_url=cookie_url,
                 )
-                return HTMLResponse(content=render_site_page("site/page.html", ctx))
+                return HTMLResponse(content=_render_site_page_chromed(request, ctx))
         else:
 
             @router.get(route, response_class=HTMLResponse, include_in_schema=False)
@@ -531,7 +582,7 @@ def create_site_page_routes(
                     privacy_page_url=privacy_url,
                     cookie_policy_url=cookie_url,
                 )
-                return render_site_page("site/page.html", ctx)
+                return _render_site_page_chromed(request, ctx)
 
     # Create routes for legal pages
     if legal.get("terms"):
@@ -562,7 +613,7 @@ def create_site_page_routes(
                 privacy_page_url=privacy_url,
                 cookie_policy_url=cookie_url,
             )
-            return render_site_page("site/page.html", ctx)
+            return _render_site_page_chromed(request, ctx)
 
     if legal.get("privacy"):
         privacy_route = legal["privacy"].get("route", "/privacy")
@@ -592,7 +643,7 @@ def create_site_page_routes(
                 privacy_page_url=privacy_url,
                 cookie_policy_url=cookie_url,
             )
-            return render_site_page("site/page.html", ctx)
+            return _render_site_page_chromed(request, ctx)
 
     return router
 

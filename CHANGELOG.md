@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.24] - 2026-05-10
+
+### Added
+
+- **#1037 — Sitespec/marketing pages chrome gate flip (partial ship of full migration).** The `create_site_page_routes` handler in `src/dazzle_back/runtime/site_routes.py` now branches on `request.app.state.fragment_chrome` for every page-render call site (4 sites total: dynamic page, legacy page fallback, terms, privacy). Per the sequencing options in the issue investigation, this is **option 1 — gate flip only**: the document chrome lands on the typed-Fragment substrate, but section bodies still render via Jinja partials. Full section-by-section migration to typed primitives (option 2 — `SiteSection` primitive family + 19 section translators) is the planned multi-cycle follow-on; this ship lands the architectural seam.
+- **`_render_site_page_chromed(request, ctx)`** helper at the top of `create_site_page_routes`. When `fragment_chrome=True`: renders the section body via the new `site/inner_only.html` template (no `extends site_base.html`), wraps in a typed `Page` primitive via `build_page` + `FragmentRenderer.render`, supplies `css_links` / `js_scripts` / `theme` from `app.state.fragment_chrome_*` overrides (default to `/static/dist/dazzle.min.{css,js}`). When `fragment_chrome=False`: unchanged Jinja `site/page.html` path. Single seam = no four-way drift.
+- **`src/dazzle_ui/templates/site/inner_only.html`** — new sitespec template that mirrors the `body` block of `site/page.html` but does NOT extend `site_base.html`. The typed `Page` primitive provides the document chrome instead, so the inner-only template just emits nav + main + sections + footer. Section partials still render via their existing Jinja templates (no per-section migration in this ship).
+- **7 regression tests** at `tests/integration/test_sitespec_chrome_gate_flip.py`: source-level seam checks (helper exists, reads `fragment_chrome` from `app.state`, uses inner-only template, legacy fallback path still present, inner-only template doesn't extend `site_base.html`), live-render contract checks (chrome=off → entry template is `site/page.html`, chrome=on → entry template is `site/inner_only.html`, chrome=on response carries `<!DOCTYPE html>` from the typed Page).
+
+### Known Limitations
+
+- **Sections still render via Jinja under chrome=on.** The 19 section partials (hero, pricing-table, faq, features, cta, footer, etc.) under `src/dazzle_ui/templates/site/sections/` haven't been migrated. cyfuture's stop condition (`zero Jinja Template.render() calls under fragment_chrome=true`) is not yet met by this ship — `jinja2` retirement is still blocked. The follow-on ship that migrates sections will close that gap.
+
+### Agent Guidance
+
+- **Sitespec section migration is the remaining work for #1037.** The contract for each section: pure-function helper that takes the section dict (already shaped at sitespec parse time) and produces a typed-Fragment primitive instance (probably `Stack(children=...)` of typed primitives like `Heading` + `Text` + `ActionCard` + `BulletRow` etc., depending on section type). Wire each section type to a builder in a new `site_section_builder.py`; `inner_only.html` becomes redundant once every section has a typed builder. Sequencing: start with `hero` (simplest, single block) and `footer` (simplest, columns + disclaimer); pricing-table and faq are the largest — defer until last so the smaller wins land first.
+
 ## [0.67.23] - 2026-05-10
 
 ### Added
