@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.20] - 2026-05-10
+
+### Added
+
+- **#1017 — `entity_card` `thread_summary` mode body renderer.** Final of the four entity_card per-mode renderers. With this ship, all six section modes (halo / flags / mini_bars / stamps / thread_summary / quick_actions) have working body renderers; the entity_card primitive is feature-complete from DSL declaration through to live rendering.
+- **`_render_thread_summary_body(rows, timestamp_field, sender_field, subject_field, snippet_field)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Picks the SINGLE most-recent row from the pre-fetched set (sorted by `fields[0]` timestamp) and renders an `<article class="dz-thread-summary">` with header (sender + time), subject `<h4>`, and snippet `<p>`. Distinct from `stamps` (chronological list) — designed for "what's the latest from parents?" kind of summary where the user wants ONE row, not a list.
+- **Snippet truncation:** long bodies cap at ~140 chars at a word boundary with a `…` ellipsis suffix. The user drills into the full thread via the surface link the section's parent card carries (deferred wiring).
+- **Field convention:** `fields[0]` = timestamp (required), `fields[1]` = sender, `fields[2]` = subject, `fields[3]` = body/snippet. Section omits when there are no rows, no timestamp field is configured, or the timestamp is the only required input the row provides (other fields render as optional spans/elements when populated).
+- **9 thread_summary tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 43 tests total): most-recent thread selection across mixed input order, ISO timestamp + humanised visible text, snippet truncation at word boundary, omit paths (no rows / no timestamp), optional fields render only when configured, HTML escape across all four text fields, sidebar column placement, short snippet not truncated.
+
+### Changed
+
+- **`test_remaining_modes_emit_empty_body_pending_per_mode_renderers` → `test_per_mode_sections_omit_when_no_rows_pre_fetched`** — renamed and re-scoped: nothing's "pending" anymore; the test now asserts that all three data-driven modes correctly flag `is_omitted=True` when their row input is empty (the empty-state contract that prevents broken section chrome from rendering).
+
+### Agent Guidance
+
+- **All four #1015–#1018 region primitives are feature-complete.** Every layer from DSL declaration through to live HTML rendering is wired for cohort_strip / day_timeline / task_inbox / entity_card. The entity_card primitive supports six section modes with three rendering shapes (key-value grid for halo/flags, action button row for quick_actions, list shapes for mini_bars/stamps, single-record card for thread_summary). The per-section fan-out infrastructure (v0.67.18) handles RBAC scope per-entity, per-section failure isolation, and parallel asyncio.gather. This closes the AegisMark Day-One demo region-primitive arc started at v0.67.2.
+
 ## [0.67.19] - 2026-05-10
 
 ### Added

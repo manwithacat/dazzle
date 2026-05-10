@@ -261,6 +261,112 @@ def _build_day_timeline_slots(
     return slots
 
 
+def _render_thread_summary_body(
+    *,
+    rows: list[dict[str, Any]],
+    timestamp_field: str,
+    sender_field: str,
+    subject_field: str,
+    snippet_field: str,
+) -> str:
+    """Render the body of an `entity_card` `thread_summary` section
+    (#1017, v0.67.20).
+
+    Compact comm-summary card showing the single most-recent thread.
+    Distinct from `stamps` (chronological list) — this mode is
+    designed for "what's the latest from parents?" kind of summary
+    where the user wants ONE row, not a list. Most-recent picked by
+    `fields[0]` (timestamp).
+
+    Layout:
+      <article class="dz-thread-summary">
+        <header class="dz-thread-summary-header">
+          <span class="dz-thread-summary-sender">{sender}</span>
+          <time class="dz-thread-summary-time" datetime="<iso>">{visible}</time>
+        </header>
+        <h4 class="dz-thread-summary-subject">{subject}</h4>
+        <p class="dz-thread-summary-snippet">{snippet}</p>
+      </article>
+
+    Empty / no-rows / no-timestamp returns empty string; caller
+    flags omitted. Snippet is truncated to ~140 chars (compact-card
+    convention) to keep the section visually balanced — the user
+    drills into the full thread via the sender card's surface link.
+    """
+    if not rows or not timestamp_field:
+        return ""
+
+    def _to_dt(value: Any) -> _dt.datetime | None:
+        if isinstance(value, _dt.datetime):
+            return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
+        if isinstance(value, str) and value:
+            try:
+                stripped = value.rstrip("Z")
+                if stripped.endswith("+00:00") or "T" in stripped or " " in stripped:
+                    parsed = _dt.datetime.fromisoformat(stripped)
+                    return parsed if parsed.tzinfo else parsed.replace(tzinfo=_dt.UTC)
+            except ValueError:
+                return None
+        return None
+
+    # Pick the most-recent row by timestamp. Rows whose timestamp
+    # doesn't parse rank below any parseable row.
+    parsed: list[tuple[_dt.datetime | None, dict[str, Any]]] = [
+        (_to_dt(row.get(timestamp_field)), row) for row in rows
+    ]
+    parsed.sort(key=lambda pair: (pair[0] is None, -(pair[0].timestamp() if pair[0] else 0)))
+    chosen_ts, chosen_row = parsed[0]
+
+    sender = str(chosen_row.get(sender_field, "") or "") if sender_field else ""
+    subject = str(chosen_row.get(subject_field, "") or "") if subject_field else ""
+    snippet_raw = str(chosen_row.get(snippet_field, "") or "") if snippet_field else ""
+    # Truncate to ~140 chars at a word boundary; strip trailing
+    # whitespace; append a one-character ellipsis when truncated.
+    if len(snippet_raw) > 140:
+        truncated = snippet_raw[:140].rsplit(" ", 1)[0].rstrip()
+        snippet = f"{truncated}…"
+    else:
+        snippet = snippet_raw
+
+    if chosen_ts is not None:
+        iso = chosen_ts.isoformat()
+        visible = chosen_ts.strftime("%Y-%m-%d %H:%M")
+    else:
+        iso = str(chosen_row.get(timestamp_field, "") or "")
+        visible = iso
+
+    sender_html = (
+        f'<span class="dz-thread-summary-sender">{_dazzle_html_escape(sender)}</span>'
+        if sender
+        else ""
+    )
+    time_html = (
+        f'<time class="dz-thread-summary-time" '
+        f'datetime="{_dazzle_html_escape(iso)}">'
+        f"{_dazzle_html_escape(visible)}"
+        f"</time>"
+    )
+    subject_html = (
+        f'<h4 class="dz-thread-summary-subject">{_dazzle_html_escape(subject)}</h4>'
+        if subject
+        else ""
+    )
+    snippet_html = (
+        f'<p class="dz-thread-summary-snippet">{_dazzle_html_escape(snippet)}</p>'
+        if snippet
+        else ""
+    )
+
+    return (
+        f'<article class="dz-thread-summary">'
+        f'<header class="dz-thread-summary-header">'
+        f"{sender_html}{time_html}"
+        f"</header>"
+        f"{subject_html}{snippet_html}"
+        f"</article>"
+    )
+
+
 def _render_stamps_body(
     *,
     rows: list[dict[str, Any]],
@@ -958,6 +1064,30 @@ def _build_entity_card_sections(
                 timestamp_field=timestamp_field,
                 label_field=label_field,
                 detail_field=detail_field,
+            )
+            if not body_html:
+                is_omitted = True
+        elif mode == "thread_summary":
+            # thread_summary renders a compact comm-summary card
+            # showing the SINGLE most-recent thread / message in
+            # the row set (#1017 v0.67.20). Field convention:
+            # `fields[0]` = timestamp column (used to pick most
+            # recent), `fields[1]` = sender / counterparty,
+            # `fields[2]` = subject, `fields[3]` = body / snippet.
+            # Section omits when there are no rows or no timestamp
+            # field is configured (need a sort key to pick "most
+            # recent"). Sidebar column by default — the section's
+            # job is to be a compact secondary panel, not a row.
+            timestamp_field = fields[0] if fields else ""
+            sender_field = fields[1] if len(fields) > 1 else ""
+            subject_field = fields[2] if len(fields) > 2 else ""
+            snippet_field = fields[3] if len(fields) > 3 else ""
+            body_html = _render_thread_summary_body(
+                rows=section_rows,
+                timestamp_field=timestamp_field,
+                sender_field=sender_field,
+                subject_field=subject_field,
+                snippet_field=snippet_field,
             )
             if not body_html:
                 is_omitted = True

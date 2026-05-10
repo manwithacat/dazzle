@@ -107,21 +107,37 @@ def test_skips_fields_with_none_or_empty_values() -> None:
     assert "<dt>c</dt>" not in body
 
 
-def test_remaining_modes_emit_empty_body_pending_per_mode_renderers() -> None:
-    """mini_bars / stamps / thread_summary modes have deferred
-    per-mode compact renderers; the MVP emits empty bodies so the
-    section chrome renders without crashing. quick_actions mode
-    landed in v0.67.17 — see its dedicated test block below."""
+def test_per_mode_sections_omit_when_no_rows_pre_fetched() -> None:
+    """All four data-driven modes (mini_bars / stamps /
+    thread_summary / quick_actions) flag is_omitted=True when their
+    required input is absent: mini_bars / stamps / thread_summary
+    when no rows pre-fetched; quick_actions when no actions
+    declared. Provides empty `rows_per_section` (the data-resolution
+    layer hasn't fanned out yet) and asserts the chrome doesn't
+    render."""
     cfg = _config(
         sections=[
-            _section(name="marks", mode=EntityCardSectionMode.MINI_BARS),
-            _section(name="recent", mode=EntityCardSectionMode.STAMPS),
-            _section(name="comm", mode=EntityCardSectionMode.THREAD_SUMMARY),
+            _section(
+                name="marks",
+                mode=EntityCardSectionMode.MINI_BARS,
+                fields=["score"],
+            ),
+            _section(
+                name="recent",
+                mode=EntityCardSectionMode.STAMPS,
+                fields=["ts", "label"],
+            ),
+            _section(
+                name="comm",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["ts", "sender", "subject", "body"],
+            ),
         ]
     )
     out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg)
     for section in out:
         assert section["body"] == ""
+        assert section["is_omitted"] is True
 
 
 def test_section_mode_lands_on_output_dict() -> None:
@@ -567,3 +583,214 @@ def test_stamps_omits_label_span_when_label_field_unconfigured() -> None:
     body = out[0]["body"]
     assert "dz-stamp-time" in body
     assert "dz-stamp-label" not in body
+
+
+# ───────────────── thread_summary mode (#1017 v0.67.20) ─────────
+
+
+def test_thread_summary_renders_most_recent_thread() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="parent_contact",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at", "sender", "subject", "body"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "m1",
+            "sent_at": "2026-05-09T10:00:00+00:00",
+            "sender": "Mr Bayard",
+            "subject": "Re: parents evening",
+            "body": "Looking forward to chatting on Thursday.",
+        },
+        {
+            "id": "m2",
+            "sent_at": "2026-05-10T15:00:00+00:00",
+            "sender": "Mrs Wong",
+            "subject": "Maths homework",
+            "body": "Could you confirm the deadline?",
+        },
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-thread-summary" in body
+    # Most recent (Mrs Wong, 2026-05-10) — NOT Mr Bayard (2026-05-09).
+    assert "Mrs Wong" in body
+    assert "Maths homework" in body
+    assert "deadline" in body
+    assert "Mr Bayard" not in body
+    assert "parents evening" not in body
+
+
+def test_thread_summary_renders_iso_timestamp_in_time_element() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at", "sender", "subject", "body"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "1",
+            "sent_at": "2026-05-10T15:00:00+00:00",
+            "sender": "Alice",
+            "subject": "Hi",
+            "body": "Hello",
+        }
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert 'datetime="2026-05-10T15:00:00+00:00"' in body
+    assert ">2026-05-10 15:00<" in body
+
+
+def test_thread_summary_truncates_long_snippet_at_word_boundary() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at", "sender", "subject", "body"],
+            ),
+        ]
+    )
+    long_body = "Lorem ipsum " * 30  # ~360 chars
+    rows = [
+        {
+            "id": "1",
+            "sent_at": "2026-05-10T15:00:00+00:00",
+            "sender": "x",
+            "subject": "y",
+            "body": long_body,
+        }
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    # Snippet length capped (truncate at ~140 + ellipsis).
+    snippet_start = body.index("dz-thread-summary-snippet")
+    snippet_end = body.index("</p>", snippet_start)
+    snippet = body[snippet_start:snippet_end]
+    assert "…" in snippet
+    # Cap is on the raw text — generous header + escape allows
+    # roughly 200 chars total in the slice.
+    assert len(snippet) < 250
+
+
+def test_thread_summary_omits_section_when_no_rows() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at", "sender", "subject", "body"],
+            ),
+        ]
+    )
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: []})
+    assert out[0]["is_omitted"] is True
+
+
+def test_thread_summary_omits_section_when_no_timestamp_field() -> None:
+    """No timestamp = no way to pick most-recent — section omits."""
+    cfg = _config(sections=[_section(name="x", mode=EntityCardSectionMode.THREAD_SUMMARY)])
+    out = _build_entity_card_sections(
+        items=[{"id": "p1"}], config=cfg, rows_per_section={0: [{"sender": "x"}]}
+    )
+    assert out[0]["is_omitted"] is True
+
+
+def test_thread_summary_renders_with_optional_fields_unset() -> None:
+    """Only timestamp required; other fields render only when
+    configured AND populated."""
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at"],  # only timestamp
+            ),
+        ]
+    )
+    rows = [{"id": "1", "sent_at": "2026-05-10T15:00:00+00:00"}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "dz-thread-summary" in body
+    assert "dz-thread-summary-time" in body
+    assert "dz-thread-summary-sender" not in body
+    assert "dz-thread-summary-subject" not in body
+    assert "dz-thread-summary-snippet" not in body
+
+
+def test_thread_summary_html_escapes_all_text_fields() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at", "sender", "subject", "body"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "1",
+            "sent_at": "2026-05-10T15:00:00+00:00",
+            "sender": "<script>",
+            "subject": "<img src=x>",
+            "body": "<svg/>",
+        }
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert "<script>" not in body
+    assert "<img" not in body
+    assert "<svg" not in body
+    assert "&lt;script&gt;" in body
+    assert "&lt;img" in body
+    assert "&lt;svg" in body
+
+
+def test_thread_summary_lives_in_sidebar_column() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at"],
+            ),
+        ]
+    )
+    rows = [{"id": "1", "sent_at": "2026-05-10T15:00:00+00:00"}]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    assert out[0]["column"] == "sidebar"
+
+
+def test_thread_summary_short_snippet_not_truncated() -> None:
+    cfg = _config(
+        sections=[
+            _section(
+                name="x",
+                mode=EntityCardSectionMode.THREAD_SUMMARY,
+                fields=["sent_at", "sender", "subject", "body"],
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": "1",
+            "sent_at": "2026-05-10T15:00:00+00:00",
+            "sender": "a",
+            "subject": "b",
+            "body": "Short",
+        }
+    ]
+    out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
+    body = out[0]["body"]
+    assert ">Short<" in body
+    assert "…" not in body
