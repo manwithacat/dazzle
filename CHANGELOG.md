@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.9] - 2026-05-10
+
+### Fixed
+
+- **CI red on v0.67.6 + v0.67.7 — framework artefact coverage gate.** The lint job runs `dazzle coverage --fail-on-uncovered` which requires every `DisplayMode` enum value to appear as `display: <value>` in at least one example app's DSL. The four #1015–#1018 region primitives (`cohort_strip`, `day_timeline`, `task_inbox`, `entity_card`) added the enum values and shipped IR + adapter + renderer wiring but had no example consumer — coverage check went 32/36 = 89%. Wired four placeholder regions into `examples/ops_dashboard/dsl/app.dsl` exercising each new display value against the `System` and `Alert` entities. Coverage now 36/36 = 100% (overall 79/79 = 100%). Each region renders to its unconfigured/empty path until the data-resolution ship lands the typed config-block parser support.
+
+### Agent Guidance
+
+- **Coverage-gate reminder reinforced (memory'd 2026-05-03):** When adding a new `DisplayMode` value, add a placeholder consumer in an `examples/*` app's DSL **in the same ship**. The coverage gate scans `examples/` only — `fixtures/` doesn't count. Adapter dispatch + IR types + tests aren't sufficient to keep CI green; the example consumer is mandatory. Lesson re-learned across two ships (v0.67.6 + v0.67.7) — surfacing it again here so the rule sticks.
+
 ## [0.67.8] - 2026-05-10
 
 ### Added

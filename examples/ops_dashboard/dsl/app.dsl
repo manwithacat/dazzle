@@ -422,6 +422,31 @@ workspace command_center "Command Center":
       - label: "Response"
         value: response_time_ms
 
+  # ── #1015–#1018 region primitives (typed pilots, v0.67.2–v0.67.8) ─
+  # Each of these new region kinds has its own typed config block on
+  # WorkspaceRegion (cohort_strip_config / day_timeline_config /
+  # task_inbox_config / entity_card_config). The DSL surface for those
+  # config blocks is not yet parser-supported — these regions consume
+  # the dispatch surface only and degrade to the unconfigured/empty
+  # path until the data-resolution ship wires real source rows. Kept
+  # in ops_dashboard because it's the framework's reference apartment
+  # for "every display mode has a working consumer" (CI coverage gate).
+  systems_strip:
+    source: System
+    display: cohort_strip
+
+  ops_today:
+    source: Alert
+    display: day_timeline
+
+  ops_inbox:
+    source: Alert
+    display: task_inbox
+
+  alert_360:
+    source: Alert
+    display: entity_card
+
   ux:
     as ops_engineer:
       scope: all
