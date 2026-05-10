@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.12] - 2026-05-10
+
+### Added
+
+- **#1015–#1017 — DSL parser support for the remaining three typed-config blocks.** Companion ship to v0.67.11's cohort_strip parser; closes the four-config quartet. DSL authors can now declare `day_timeline_config:`, `task_inbox_config:`, and `entity_card_config:` blocks alongside their region declarations.
+- **`day_timeline_config:`** — three string fields (`starts_at`, `ends_at`, `card`). Required-field validation: both `starts_at` and `ends_at` must be present (the runtime compares now against [starts_at, ends_at] to find the active slot — both ends are load-bearing). `card` is optional; runtime falls through to a minimal default body.
+- **`task_inbox_config:`** — heterogeneous-source workflow inbox. Top-level `empty_state:` (string), `order:` (bracketed list), `sources:` (dash-list, required). Each source declares `source: <Entity>`, optional `filter:` (full ConditionExpr via `parse_condition_expr`), and exactly one of `as_task:` (nested icon/title/meta template block — `icon` accepts STRING for hyphenated lucide names like `"alert-triangle"`) or `count_as:` (collapsed-summary string). The `as_task` ⊕ `count_as` mutex is enforced at parse time so the runtime adapter sees a clean shape.
+- **`entity_card_config:`** — composite single-entity card. Optional `scope_param:` (defaults `"id"`), required `sections:` (dash-list). Each section: `name:` (required), `mode:` (required, must be one of the six `EntityCardSectionMode` values), and optional `source:`, `filter:` (ConditionExpr), `limit:` (1..100), `fields:` (bracketed identifier list), `actions:` (bracketed identifier list).
+- **`DayTimelineConfig`, `EntityCardConfig`, `EntityCardSection`, `EntityCardSectionMode`, `TaskInboxConfig`, `TaskSource`, `TaskSourceTemplate`** added to `dazzle.core.ir.__all__`. API surface baseline regenerated.
+- **Real configs landed in `examples/ops_dashboard`:** the `ops_today` region declares `day_timeline_config` against `Alert.triggered_at`; `ops_inbox` declares `task_inbox_config` with two heterogeneous sources (one `as_task` template + one `count_as` chip); `alert_360` declares `entity_card_config` with three sections covering halo / flags / stamps modes. First end-to-end exercise of the full DSL → IR → adapter → renderer pipeline for all four region kinds.
+- **30 parser tests** total (6 day_timeline + 12 task_inbox + 12 entity_card) at three new test files. Coverage: minimal/full configs, all required-field errors, all unknown-key errors, mode/mutex/dash-list validations.
+
+### Agent Guidance
+
+- **Parser-block pattern is now templated:** four typed-config-block parsers all share the same shape (IDENT-value-match branch → dedicated `_parse_<name>_config_block` method → optional nested dash-list helper), making the next typed config (whatever AegisMark needs next) cheap to add. The `kwargs: dict[str, Any] = {<required>}` then-conditionally-override pattern is the canonical way to preserve pydantic defaults when the DSL omits optional keys — don't re-declare defaults in the parser, just let pydantic supply them.
+
 ## [0.67.11] - 2026-05-10
 
 ### Added

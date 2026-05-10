@@ -449,14 +449,43 @@ workspace command_center "Command Center":
   ops_today:
     source: Alert
     display: day_timeline
+    day_timeline_config:
+      starts_at: triggered_at
+      ends_at: triggered_at
+      card: alert_card
 
   ops_inbox:
     source: Alert
     display: task_inbox
+    task_inbox_config:
+      empty_state: "All systems quiet."
+      sources:
+        - source: Alert
+          filter: status = active
+          as_task:
+            icon: "alert-triangle"
+            title: "{message}"
+            meta: "{severity}"
+        - source: Alert
+          filter: status = acknowledged
+          count_as: "alerts being worked"
 
   alert_360:
     source: Alert
     display: entity_card
+    entity_card_config:
+      scope_param: id
+      sections:
+        - name: halo
+          mode: halo
+          fields: [message, severity]
+        - name: meta
+          mode: flags
+          fields: [status, acknowledged_by]
+        - name: history
+          mode: stamps
+          source: Alert
+          limit: 5
 
   ux:
     as ops_engineer:

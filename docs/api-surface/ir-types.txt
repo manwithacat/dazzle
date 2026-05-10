@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 334 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
+# Counts: 340 BaseModels, 141 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -550,6 +550,13 @@ ir_class: DateLiteral
     - kind: DateLiteralKind
   optional: (none)
 
+ir_class: DayTimelineConfig
+  required:
+    - ends_at: str
+    - starts_at: str
+  optional:
+    - card: str = ''
+
 ir_class: DeltaSpec
   required:
     - period_seconds: int
@@ -647,6 +654,23 @@ ir_class: EntityBlueprint
     - notes: str | None = None
     - row_count_default: int = 10
     - tenant_scoped: bool = False
+
+ir_class: EntityCardConfig
+  required:
+    - sections: list[EntityCardSection]
+  optional:
+    - scope_param: str = 'id'
+
+ir_class: EntityCardSection
+  required:
+    - mode: EntityCardSectionMode
+    - name: str
+  optional:
+    - actions: list[str] = []
+    - fields: list[str] = []
+    - filter: ConditionExpr | None = None
+    - limit: int | None = None
+    - source: str | None = None
 
 ir_class: EntitySpec
   required:
@@ -2615,6 +2639,28 @@ ir_class: SurfaceSpec
     - ux: UXSpec | None = None
     - view_ref: str | None = None
 
+ir_class: TaskInboxConfig
+  required:
+    - sources: list[TaskSource]
+  optional:
+    - empty_state: str = 'All caught up.'
+    - order: list[str] = <factory:TaskInboxConfig.<lambda>>
+
+ir_class: TaskSource
+  required:
+    - source: str
+  optional:
+    - as_task: TaskSourceTemplate | None = None
+    - count_as: str = ''
+    - filter: ConditionExpr | None = None
+
+ir_class: TaskSourceTemplate
+  required:
+    - icon: str
+    - title: str
+  optional:
+    - meta: str = ''
+
 ir_class: Tautology
   required: (none)
   optional:
@@ -3405,6 +3451,15 @@ enum: EffectAction
   members:
     - CREATE = 'create'
     - UPDATE = 'update'
+
+enum: EntityCardSectionMode
+  members:
+    - FLAGS = 'flags'
+    - HALO = 'halo'
+    - MINI_BARS = 'mini_bars'
+    - QUICK_ACTIONS = 'quick_actions'
+    - STAMPS = 'stamps'
+    - THREAD_SUMMARY = 'thread_summary'
 
 enum: EntityEvent
   members:

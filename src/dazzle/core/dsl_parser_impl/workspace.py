@@ -922,6 +922,506 @@ class WorkspaceParserMixin:
 
         return lenses
 
+    def _parse_day_timeline_config_block(self) -> ir.DayTimelineConfig:
+        """Parse the indented body of a ``day_timeline_config:`` block (#1016).
+
+        Syntax::
+
+            day_timeline_config:
+              starts_at: period_start
+              ends_at: period_end
+              card: lesson_card
+
+        ``starts_at`` and ``ends_at`` are required (the runtime
+        compares ``now`` against [starts_at, ends_at] to find the
+        active slot — both ends must be named). ``card`` is the
+        composite-card template name and is optional; runtime uses
+        a minimal default body when omitted.
+        """
+        starts_at_str: str | None = None
+        ends_at_str: str | None = None
+        card_str: str = ""
+        _VALID_KEYS = {"starts_at", "ends_at", "card"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+
+            if key == "starts_at":
+                starts_at_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "ends_at":
+                ends_at_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "card":
+                card_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown day_timeline_config key {key!r}. "
+                    f"Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+        if starts_at_str is None or ends_at_str is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                "day_timeline_config requires both `starts_at:` and "
+                "`ends_at:` (the runtime compares now against the slot's "
+                "[starts_at, ends_at] window to find the active slot).",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.DayTimelineConfig(
+            starts_at=starts_at_str,
+            ends_at=ends_at_str,
+            card=card_str,
+        )
+
+    def _parse_task_inbox_config_block(self) -> ir.TaskInboxConfig:
+        """Parse the indented body of a ``task_inbox_config:`` block (#1015).
+
+        Syntax::
+
+            task_inbox_config:
+              empty_state: "All caught up."
+              order: [urgency, deadline]
+              sources:
+                - source: AssessmentEvent
+                  filter: state = "due_today"
+                  as_task:
+                    icon: register
+                    title: "Register {class.name}"
+                    meta: "{period.label}"
+                - source: ManuscriptFeedback
+                  filter: state = "ready_for_review"
+                  count_as: "manuscripts ready to review"
+
+        ``sources`` is required (the inbox needs at least one
+        contributing source). Each source must declare exactly one
+        of ``as_task`` (per-row task template) or ``count_as``
+        (collapsed-summary chip) — the mutex is enforced at parse
+        time so the runtime adapter sees a clean shape.
+        """
+        empty_state_str: str | None = None
+        order_keys: list[str] = []
+        sources: list[ir.TaskSource] = []
+        _VALID_KEYS = {"empty_state", "order", "sources"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+
+            if key == "empty_state":
+                empty_state_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "order":
+                # Bracketed list of bare identifiers: [urgency, deadline]
+                self.expect(TokenType.LBRACKET)
+                while not self.match(TokenType.RBRACKET):
+                    order_keys.append(self.expect_identifier_or_keyword().value)
+                    if self.match(TokenType.COMMA):
+                        self.advance()
+                self.expect(TokenType.RBRACKET)
+                self.skip_newlines()
+            elif key == "sources":
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                sources = self._parse_task_inbox_sources_block()
+                self.expect(TokenType.DEDENT)
+            else:
+                raise make_parse_error(
+                    f"Unknown task_inbox_config key {key!r}. "
+                    f"Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+        if not sources:
+            tok = self.current_token()
+            raise make_parse_error(
+                "task_inbox_config requires at least one source. Add a "
+                "`sources:` block with one or more dash-list entries.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        # Build kwargs only including overrides — preserves the
+        # config-level defaults (`order=["urgency","deadline"]`,
+        # `empty_state="All caught up."`) when the DSL omits them.
+        kwargs: dict[str, Any] = {"sources": sources}
+        if order_keys:
+            kwargs["order"] = order_keys
+        if empty_state_str is not None:
+            kwargs["empty_state"] = empty_state_str
+        return ir.TaskInboxConfig(**kwargs)
+
+    def _parse_task_inbox_sources_block(self) -> list[ir.TaskSource]:
+        """Parse the indented dash-list body of a ``sources:`` block (#1015).
+
+        Each entry leads with ``- source: <EntityName>``; the rest of
+        the entry's keys land in its INDENT block. Exactly one of
+        ``as_task`` (nested template block) or ``count_as`` (string)
+        must be set per entry.
+        """
+        sources: list[ir.TaskSource] = []
+        _VALID_KEYS = {"source", "filter", "as_task", "count_as"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "sources entries must start with `- source: <EntityName>`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            head_kw = self.expect_identifier_or_keyword().value
+            if head_kw != "source":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"sources entry must start with `source:`, got {head_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            source_str = self.expect_identifier_or_keyword().value
+            self.skip_newlines()
+
+            filter_expr: ir.ConditionExpr | None = None
+            as_task: ir.TaskSourceTemplate | None = None
+            count_as_str: str = ""
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "filter":
+                        filter_expr = self.parse_condition_expr()
+                        self.skip_newlines()
+                    elif key == "as_task":
+                        self.skip_newlines()
+                        self.expect(TokenType.INDENT)
+                        as_task = self._parse_task_source_template_block()
+                        self.expect(TokenType.DEDENT)
+                    elif key == "count_as":
+                        count_as_str = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown sources entry key {key!r}. "
+                            f"Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            # Mutex enforcement: as_task XOR count_as.
+            if as_task is None and not count_as_str:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"sources entry source={source_str!r} requires exactly "
+                    "one of `as_task:` (per-row template) or `count_as:` "
+                    "(collapsed-summary chip).",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            if as_task is not None and count_as_str:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"sources entry source={source_str!r}: `as_task:` and "
+                    "`count_as:` are mutually exclusive.",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            sources.append(
+                ir.TaskSource(
+                    source=source_str,
+                    filter=filter_expr,
+                    as_task=as_task,
+                    count_as=count_as_str,
+                )
+            )
+
+        return sources
+
+    def _parse_task_source_template_block(self) -> ir.TaskSourceTemplate:
+        """Parse a per-row ``as_task:`` template block (#1015).
+
+        Three string keys: ``icon`` (icon-token identifier),
+        ``title`` (template string with ``{field}`` placeholders),
+        ``meta`` (template string, optional).
+        """
+        icon_str: str = ""
+        title_str: str = ""
+        meta_str: str = ""
+        _VALID_KEYS = {"icon", "title", "meta"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "icon":
+                # Accept STRING (lucide-style names with hyphens are
+                # not valid identifiers — `alert-triangle` etc.) or
+                # bare identifier (`register`, `pupil`).
+                if self.match(TokenType.STRING):
+                    icon_str = self.advance().value
+                else:
+                    icon_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "title":
+                # Always a template string (placeholders need quoting).
+                title_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "meta":
+                meta_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown as_task key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+        if not icon_str or not title_str:
+            tok = self.current_token()
+            raise make_parse_error(
+                "as_task template requires both `icon:` and `title:`.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.TaskSourceTemplate(icon=icon_str, title=title_str, meta=meta_str)
+
+    def _parse_entity_card_config_block(self) -> ir.EntityCardConfig:
+        """Parse the indented body of an ``entity_card_config:`` block (#1017).
+
+        Syntax::
+
+            entity_card_config:
+              scope_param: pupil_id
+              sections:
+                - name: halo
+                  mode: halo
+                  fields: [name, year, photo]
+                - name: recent_marks
+                  mode: mini_bars
+                  source: ManuscriptFeedback
+                  filter: pupil = current
+                  limit: 5
+                - name: quick_actions
+                  mode: quick_actions
+                  actions: [log_behaviour, message_parent]
+
+        ``scope_param`` is optional (defaults ``"id"``). ``sections``
+        is required and must be non-empty.
+        """
+        scope_param_str: str | None = None
+        sections: list[ir.EntityCardSection] = []
+        _VALID_KEYS = {"scope_param", "sections"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+
+            if key == "scope_param":
+                scope_param_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "sections":
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                sections = self._parse_entity_card_sections_block()
+                self.expect(TokenType.DEDENT)
+            else:
+                raise make_parse_error(
+                    f"Unknown entity_card_config key {key!r}. "
+                    f"Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+
+        if not sections:
+            tok = self.current_token()
+            raise make_parse_error(
+                "entity_card_config requires at least one section. Add a "
+                "`sections:` block with one or more dash-list entries.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        kwargs: dict[str, Any] = {"sections": sections}
+        if scope_param_str is not None:
+            kwargs["scope_param"] = scope_param_str
+        return ir.EntityCardConfig(**kwargs)
+
+    def _parse_entity_card_sections_block(self) -> list[ir.EntityCardSection]:
+        """Parse the dash-list body of an entity_card ``sections:`` block.
+
+        Each entry must lead with ``- name:``. Required keys after
+        ``name``: ``mode`` (one of halo / flags / mini_bars / stamps
+        / thread_summary / quick_actions). Optional: source, filter,
+        limit (1..100), fields (bracketed identifier list), actions
+        (bracketed identifier list).
+        """
+        sections: list[ir.EntityCardSection] = []
+        _VALID_MODES = {mode.value for mode in ir.EntityCardSectionMode}
+        _VALID_KEYS = {"name", "mode", "source", "filter", "limit", "fields", "actions"}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "sections entries must start with `- name: <id>`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()
+            head_kw = self.expect_identifier_or_keyword().value
+            if head_kw != "name":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"sections entry must start with `name:`, got {head_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            name_str = self.expect_identifier_or_keyword().value
+            self.skip_newlines()
+
+            mode_val: str | None = None
+            source_str: str | None = None
+            filter_expr: ir.ConditionExpr | None = None
+            limit_val: int | None = None
+            fields_list: list[str] = []
+            actions_list: list[str] = []
+
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "mode":
+                        mode_val = self.expect_identifier_or_keyword().value
+                        if mode_val not in _VALID_MODES:
+                            raise make_parse_error(
+                                f"sections entry name={name_str!r}: mode "
+                                f"must be one of {sorted(_VALID_MODES)}; "
+                                f"got {mode_val!r}",
+                                self.file,
+                                key_tok.line,
+                                key_tok.column,
+                            )
+                        self.skip_newlines()
+                    elif key == "source":
+                        source_str = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    elif key == "filter":
+                        filter_expr = self.parse_condition_expr()
+                        self.skip_newlines()
+                    elif key == "limit":
+                        limit_val = int(self.expect(TokenType.NUMBER).value)
+                        self.skip_newlines()
+                    elif key == "fields":
+                        self.expect(TokenType.LBRACKET)
+                        while not self.match(TokenType.RBRACKET):
+                            fields_list.append(self.expect_identifier_or_keyword().value)
+                            if self.match(TokenType.COMMA):
+                                self.advance()
+                        self.expect(TokenType.RBRACKET)
+                        self.skip_newlines()
+                    elif key == "actions":
+                        self.expect(TokenType.LBRACKET)
+                        while not self.match(TokenType.RBRACKET):
+                            actions_list.append(self.expect_identifier_or_keyword().value)
+                            if self.match(TokenType.COMMA):
+                                self.advance()
+                        self.expect(TokenType.RBRACKET)
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown sections entry key {key!r}. "
+                            f"Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+
+            if mode_val is None:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"sections entry name={name_str!r} requires `mode:`.",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            sections.append(
+                ir.EntityCardSection(
+                    name=name_str,
+                    mode=ir.EntityCardSectionMode(mode_val),
+                    source=source_str,
+                    filter=filter_expr,
+                    limit=limit_val,
+                    fields=fields_list,
+                    actions=actions_list,
+                )
+            )
+
+        return sections
+
     def _parse_status_entries_block(self) -> list[ir.StatusListEntrySpec]:
         """Parse the indented body of a status_list ``entries:`` block (#3).
 
@@ -1565,6 +2065,9 @@ class WorkspaceParserMixin:
         # against `display`. Parser support for `cohort_strip_config:`
         # lands in v0.67.11; the other three follow on the same shape.
         cohort_strip_config: ir.CohortStripConfig | None = None  # #1018
+        day_timeline_config: ir.DayTimelineConfig | None = None  # #1016
+        task_inbox_config: ir.TaskInboxConfig | None = None  # #1015
+        entity_card_config: ir.EntityCardConfig | None = None  # #1017
         render: str | None = None  # Plan 2: opt-in renderer name (typed-fragment integration)
 
         while not self.match(TokenType.DEDENT):
@@ -2214,6 +2717,46 @@ class WorkspaceParserMixin:
                 cohort_strip_config = self._parse_cohort_strip_config_block()
                 self.expect(TokenType.DEDENT)
 
+            # day_timeline_config: indented block — typed config for
+            # #1016 day_timeline region (v0.67.12). Mirrors the
+            # cohort_strip_config IDENT-value-match pattern.
+            elif (
+                self.match(TokenType.IDENTIFIER)
+                and self.current_token().value == "day_timeline_config"
+            ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                day_timeline_config = self._parse_day_timeline_config_block()
+                self.expect(TokenType.DEDENT)
+
+            # task_inbox_config: indented block — typed config for #1015
+            # task_inbox region (v0.67.13).
+            elif (
+                self.match(TokenType.IDENTIFIER)
+                and self.current_token().value == "task_inbox_config"
+            ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                task_inbox_config = self._parse_task_inbox_config_block()
+                self.expect(TokenType.DEDENT)
+
+            # entity_card_config: indented block — typed config for #1017
+            # entity_card region (v0.67.13).
+            elif (
+                self.match(TokenType.IDENTIFIER)
+                and self.current_token().value == "entity_card_config"
+            ):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                entity_card_config = self._parse_entity_card_config_block()
+                self.expect(TokenType.DEDENT)
+
             else:
                 break
 
@@ -2315,4 +2858,7 @@ class WorkspaceParserMixin:
             secondary_action=secondary_action,
             render=render,
             cohort_strip_config=cohort_strip_config,  # #1018 (v0.67.11)
+            day_timeline_config=day_timeline_config,  # #1016 (v0.67.12)
+            task_inbox_config=task_inbox_config,  # #1015 (v0.67.13)
+            entity_card_config=entity_card_config,  # #1017 (v0.67.13)
         )
