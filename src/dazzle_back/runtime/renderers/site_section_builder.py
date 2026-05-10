@@ -46,6 +46,9 @@ TYPED_SECTION_TYPES: frozenset[str] = frozenset(
         "card_grid",
         "team",
         "testimonials",
+        "features",
+        "pricing",
+        "faq",
     }
 )
 
@@ -86,6 +89,12 @@ def render_typed_section(section: dict[str, Any]) -> str:
         return _build_team_section(section)
     if section_type == "testimonials":
         return _build_testimonials_section(section)
+    if section_type == "features":
+        return _build_features_section(section)
+    if section_type == "pricing":
+        return _build_pricing_section(section)
+    if section_type == "faq":
+        return _build_faq_section(section)
     raise KeyError(f"No typed builder for section type {section_type!r}")
 
 
@@ -691,6 +700,118 @@ def _build_testimonials_section(section: dict[str, Any]) -> str:
             f"</div>"
         )
     inner.append(f'<div class="dz-testimonials-grid">{"".join(item_parts)}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _build_features_section(section: dict[str, Any]) -> str:
+    """Typed builder for `type: features` — icon + title + body grid.
+
+    Distinct from `card_grid` in shape (no per-item CTA, no card
+    header chrome — just inline icon + h3 + p)."""
+    parts: list[str] = []
+    parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-features">')
+    inner: list[str] = [_section_header(section), _section_media(section)]
+    items = list(section.get("items") or [])
+    item_parts: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_inner: list[str] = []
+        icon = item.get("icon")
+        if icon:
+            item_inner.append(
+                f'<i data-lucide="{_html.escape(str(icon), quote=True)}" '
+                f'class="dz-feature-icon"></i>'
+            )
+        title = str(item.get("title", "") or "")
+        body = str(item.get("body", "") or "")
+        item_inner.append(f"<h3>{_html.escape(title)}</h3>")
+        item_inner.append(f"<p>{_html.escape(body)}</p>")
+        item_parts.append(f'<div class="dz-feature-item">{"".join(item_inner)}</div>')
+    inner.append(f'<div class="dz-features-grid">{"".join(item_parts)}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _build_pricing_section(section: dict[str, Any]) -> str:
+    """Typed builder for `type: pricing` — tier cards with optional
+    `highlighted: true` modifier on one tier (the recommended one).
+
+    Highlighted tier: gets `dz-pricing-highlighted` modifier class
+    AND its CTA renders as `dz-button-outline` instead of
+    `dz-button-primary` (deliberate inverse — the highlighted tier's
+    overall card is already visually emphasised, so the CTA inverts
+    to maintain visual balance). Matches the Jinja partial."""
+    parts: list[str] = []
+    parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-pricing">')
+    inner: list[str] = [_section_header(section)]
+    tiers = list(section.get("tiers") or [])
+    tier_parts: list[str] = []
+    for tier in tiers:
+        if not isinstance(tier, dict):
+            continue
+        is_highlighted = bool(tier.get("highlighted"))
+        modifier = " dz-pricing-highlighted" if is_highlighted else ""
+        name = str(tier.get("name", "") or "")
+        price = str(tier.get("price", "") or "")
+        period = str(tier.get("period", "/month") or "/month")
+
+        tier_inner: list[str] = []
+        tier_inner.append(f"<h3>{_html.escape(name)}</h3>")
+        tier_inner.append(
+            f'<div class="dz-pricing-price">'
+            f'<span class="dz-price">{_html.escape(price)}</span>'
+            f'<span class="dz-period">{_html.escape(period)}</span>'
+            f"</div>"
+        )
+
+        feature_parts: list[str] = []
+        for feature in tier.get("features") or []:
+            feature_parts.append(f"<li>{_html.escape(str(feature))}</li>")
+        tier_inner.append(f'<ul class="dz-pricing-features">{"".join(feature_parts)}</ul>')
+
+        cta = tier.get("cta") or {}
+        if cta:
+            href = str(cta.get("href", "#") or "#")
+            label = str(cta.get("label", "Choose Plan") or "Choose Plan")
+            button_cls = "dz-button-outline" if is_highlighted else "dz-button-primary"
+            tier_inner.append(
+                f'<a href="{_html.escape(href, quote=True)}" '
+                f'class="dz-button {button_cls}">'
+                f"{_html.escape(label)}</a>"
+            )
+
+        tier_parts.append(f'<div class="dz-pricing-tier{modifier}">{"".join(tier_inner)}</div>')
+    inner.append(f'<div class="dz-pricing-grid">{"".join(tier_parts)}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _build_faq_section(section: dict[str, Any]) -> str:
+    """Typed builder for `type: faq` — `<details>`/`<summary>` per
+    question. Matches the v0.62 native-HTML accordion shape (no
+    radio + div wrappers — those didn't match the existing CSS)."""
+    parts: list[str] = []
+    parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-faq">')
+    inner: list[str] = [_section_header(section)]
+    items = list(section.get("items") or [])
+    item_parts: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question", "") or "")
+        answer = str(item.get("answer", "") or "")
+        item_parts.append(
+            f'<details class="dz-faq-item">'
+            f"<summary>{_html.escape(question)}</summary>"
+            f"<p>{_html.escape(answer)}</p>"
+            f"</details>"
+        )
+    inner.append(f'<div class="dz-faq-list">{"".join(item_parts)}</div>')
     parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
     parts.append("</section>")
     return "".join(parts)

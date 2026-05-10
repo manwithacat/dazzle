@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.28] - 2026-05-10
+
+### Added
+
+- **#1037 — Final 3 sitespec sections typed; section migration arc closes (17/19 typed, 89%).** `features`, `pricing`, `faq` migrated. Combined with v0.67.25 + v0.67.26 + v0.67.27 batches, **17 of 19 section types now produce HTML via `site_section_builder.py` instead of Jinja partials**. Only `qa_personas` remains on Jinja, and it's a deliberate dev-only exception (gated on `{% if qa_personas %}` — never fires in production where cyfuture's stop condition matters).
+- **`_build_features_section`**: icon + title + body grid. Uses both `_section_header` and `_section_media` (matches the Jinja partial's macro imports — section-level header above the grid AND optional banner image between the header and the items).
+- **`_build_pricing_section`**: tier cards with `dz-pricing-highlighted` modifier on the recommended tier. **Deliberate inverse**: highlighted tier's CTA renders as `dz-button-outline` (not `-primary`) because the card is already visually emphasised — matching this is critical to visual parity with the Jinja partial.
+- **`_build_faq_section`**: native `<details>` / `<summary>` per question (matches the v0.62 Jinja refactor that switched away from radio + div wrappers since they didn't match the existing `.dz-faq-item` CSS rules).
+- **23 unit tests** at `tests/unit/test_site_section_final_builders.py`: per-section shape, conditional blocks, period default fallback for pricing, highlighted-tier CTA-class inversion, native `<details>`/`<summary>` shape for FAQ, all HTML escape paths.
+
+### Section migration arc — close-out summary
+
+The #1037 section migration is functionally complete for production sitespec rendering. **17 of 19 section types are now typed**:
+
+| Migrated (17) | Unmigrated (2) |
+|---|---|
+| hero, cta, generic, trust_bar, value_highlight, logo_cloud, markdown, stats, steps, comparison, split_content, card_grid, team, testimonials, features, pricing, faq | qa_personas (dev-only — gated on `{% if qa_personas %}`, never fires in production), implicit fallback for any sitespec author's custom section types |
+
+Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop condition is now achievable for any production sitespec that uses only the standard section types. **`jinja2` retirement is unblocked** for cyfuture once they verify against their nightly probe.
+
+### Agent Guidance
+
+- **Section migration shape is preserved as a templated pattern** for future-novel section types: builder fn + dispatch entry + `TYPED_SECTION_TYPES` member + test block. Helpers (`_section_id_attr`, `_section_header`, `_section_media`, `_slugify`) cover the shared macros from `_helpers.html`. The wiring in `_render_site_page_chromed` and `inner_only.html`'s `_typed` dispatch branch hasn't changed since v0.67.25 — that infrastructure is the seam new section types slot into.
+- **`qa_personas` is intentionally Jinja-only.** It's a dev-mode QA helper (renders only when `qa_personas` is non-empty in the sitespec context — i.e. when QA personas are provisioned for the local-dev login flow). Production deployments don't ship qa_personas. Migrating it would add the typed builder, but it's lower priority than other framework work and migrating dev-only helpers doesn't move the needle on the chrome=on stop condition.
+
 ## [0.67.27] - 2026-05-10
 
 ### Added
