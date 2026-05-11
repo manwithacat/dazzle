@@ -38,6 +38,12 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle_back/runtime/auth/two_factor_form_routes.py",
     "src/dazzle_back/runtime/auth/two_factor_views.py",
     "src/dazzle_back/runtime/error_views.py",
+    # Phase 4 app-shell completion (v0.67.55–v0.67.57):
+    "src/dazzle_back/runtime/exception_handlers.py",
+    "src/dazzle_back/runtime/renderers/page_builder.py",
+    "src/dazzle_back/runtime/shell.py",
+    "src/dazzle_ui/runtime/page_routes.py",
+    "src/dazzle_ui/runtime/workspace_renderer.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

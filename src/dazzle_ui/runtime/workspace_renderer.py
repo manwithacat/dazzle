@@ -865,8 +865,8 @@ def render_workspace_content_typed(
 ) -> str:
     """Render the workspace content via the typed-Fragment substrate.
 
-    Mirror of `render_fragment("workspace/_content.html", workspace=...,
-    catalog=..., fold_count=..., primary_actions=...)`. Composes
+    Mirror of the legacy `workspace/_content.html` Jinja render call
+    (workspace + catalog + fold_count + primary_actions inputs). Composes
     WorkspaceShell wrapping `Sequence(WorkspaceContextSelector?,
     WorkspaceToolbar, DashboardGrid, AddCardRow)` with a sibling
     WorkspaceDrawer, then renders via FragmentRenderer.

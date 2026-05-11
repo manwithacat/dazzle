@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.57] - 2026-05-11
+
+### Changed
+
+- **CI Jinja2 regression gate extended (5 new modules)** — `test_typed_runtime_no_jinja.py` now CI-locks the following modules as Jinja2-free, preventing future regressions: `dazzle_back.runtime.exception_handlers`, `dazzle_back.runtime.renderers.page_builder`, `dazzle_back.runtime.shell`, `dazzle_ui.runtime.page_routes`, `dazzle_ui.runtime.workspace_renderer`. These five completed the typed migration in Phase 4 (v0.67.42–v0.67.56); the gate ensures they stay that way.
+- **`workspace_renderer.render_workspace_content_typed` docstring** rephrased — the legacy call-syntax reference (`render_fragment("workspace/_content.html", ...)`) was triggering the typed-only gate's regex even though it was documentation, not live code. Rewrote to "Mirror of the legacy `workspace/_content.html` Jinja render call" with parameter-list prose.
+
+### Agent Guidance
+
+- When adding code to any module listed in `test_typed_runtime_no_jinja.py::_TYPED_ONLY_MODULES`, do NOT introduce `import jinja2`, `from jinja2`, `render_site_page(`, or `render_fragment(` patterns. Use the typed-Fragment substrate (`dazzle.render.fragment`) instead. The CI gate enforces this on every push.
+
 ## [0.67.56] - 2026-05-11
 
 ### Removed
