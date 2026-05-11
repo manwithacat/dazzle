@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.42] - 2026-05-11
+
+### Added
+
+- **Phase 4 first slice — chrome=on OG-tag parity.** The chrome=on marketing-page path was silently dropping Open Graph + Twitter card `<meta>` tags. This ship closes the gap, unblocking future removal of the `fragment_chrome` flag (which can't reasonably become the default while it regresses social-card metadata).
+- **`Page.og_meta`** new field on the typed `Page` primitive. Tuple of `(property, content)` pairs rendered as `<meta property="og:title" content="...">` etc. The existing `Page.meta` field continues to render `<meta name="...">` tags — Twitter cards (which use `name="twitter:*"`) keep flowing through `meta`.
+- **`build_page` / `build_app_chrome_page` / `dispatch_render_page`** in `src/dazzle_back/runtime/renderers/page_builder.py` gained an `og_meta=` kwarg threading the field through. Default empty tuple preserves backward compatibility with every existing caller.
+- **`_og_meta_pairs` helper** in `_render_site_page_chromed`: splits `SitePageContext.og_meta` into the `name=`/`property=` halves that mirror the legacy Jinja `site/includes/og_meta.html` partial. Twitter card name-tags, the OG property tags, and the plain `name="description"` tag are all populated when a hero section is present.
+- **9 unit tests** at `tests/unit/test_page_og_meta.py` cover default empty, `property=` vs `name=` rendering, escape safety on both attribute names and content values, ordering preservation (for `og:image` candidate lists), and the `build_page` integration.
+- **4 integration tests** appended to `tests/integration/test_sitespec_chrome_gate_flip.py` — chrome=on now emits all the OG / Twitter / description tags the chrome=off path does, and the SET parity is asserted directly against chrome=off as the baseline.
+
+### Changed
+
+- **`_render_site_page_chromed` in `site_routes.py`** now threads `og_meta` from `SitePageContext.og_meta` into the typed Page wrapper. Previously the typed path constructed the Page with empty `meta=()` — Open Graph crawlers (Slack unfurls, Twitter cards, LinkedIn previews, etc.) silently saw no metadata on chrome=on deployments.
+
+### Agent Guidance
+
+- **OG tags use `property=`, Twitter cards use `name=`.** It's an HTML quirk — the OG spec extends RDFa (which is property-based), Twitter chose name-based. Both attribute types are required for full social-card coverage. The typed Page renders them in fixed order: charset → viewport → name-meta → property-meta → title → favicon → CSS layer order → CSS links → JS scripts.
+- **Don't replicate this gap for new typed views.** When migrating a future Jinja path that emits social-card metadata, populate `Page.og_meta` (for `og:*`) AND `Page.meta` (for `twitter:*` and `description`). The parity test pattern in `tests/integration/test_sitespec_chrome_gate_flip.py::test_chrome_on_og_tags_match_chrome_off_set` is the right shape to copy.
+- **`fragment_chrome` flag removal still has 4 remaining sites.** `page_routes.py` (in-app surfaces), `server.py` (initialization), `manifest.py` (config schema), `build.py` (build-time decision). This ship closed the parity gap blocking the marketing-page site (`site_routes.py`); a follow-on ship can flip the marketing path to typed-Fragment unconditionally.
+
 ## [0.67.41] - 2026-05-11
 
 ### Added

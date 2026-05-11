@@ -221,3 +221,101 @@ def test_chrome_on_response_carries_typed_hero_class_names() -> None:
     assert "dz-hero-text" in body
     # Headline from _MIN_SITESPEC.
     assert ">Hello<" in body
+
+
+# ───────────────── Phase 4: OG meta parity (v0.67.42) ────────────
+
+
+_SITESPEC_WITH_HERO_OG = {
+    "version": 1,
+    "brand": {
+        "product_name": "Acme",
+        "tagline": "Best in class",
+        "company_legal_name": "Acme Inc",
+        "support_email": "support@example.com",
+    },
+    "pages": [
+        {
+            "route": "/",
+            "type": "landing",
+            "sections": [
+                {
+                    "type": "hero",
+                    "headline": "Welcome to Acme",
+                    "subhead": "The best thing since sliced bread",
+                },
+            ],
+        },
+    ],
+    "layout": {"nav": {"public": []}, "footer": {"columns": [], "disclaimer": ""}},
+}
+
+
+def _build_app_with_og() -> tuple[TestClient, TestClient]:
+    """Build matched chrome=off / chrome=on clients sharing the same sitespec."""
+    app_off = FastAPI()
+    app_off.state.fragment_chrome = False
+    app_off.include_router(create_site_page_routes(_SITESPEC_WITH_HERO_OG, project_root=None))
+
+    app_on = FastAPI()
+    app_on.state.fragment_chrome = True
+    app_on.include_router(create_site_page_routes(_SITESPEC_WITH_HERO_OG, project_root=None))
+
+    return TestClient(app_off), TestClient(app_on)
+
+
+def test_chrome_on_emits_og_property_tags() -> None:
+    """Phase 4 (v0.67.42): chrome=on now emits `<meta property="og:*">`
+    parity with the chrome=off Jinja path. Was the blocker for making
+    chrome=on the default."""
+    _client_off, client_on = _build_app_with_og()
+    resp = client_on.get("/")
+    assert resp.status_code == 200
+    body = resp.text
+    # Hero section's headline becomes og:title; subhead → og:description.
+    assert 'property="og:title"' in body
+    assert 'property="og:description"' in body
+    assert 'property="og:type"' in body
+
+
+def test_chrome_on_emits_twitter_card_name_tags() -> None:
+    """Twitter card tags use `name=` (not `property=`) so they thread
+    through Page.meta, not Page.og_meta."""
+    _client_off, client_on = _build_app_with_og()
+    resp = client_on.get("/")
+    assert resp.status_code == 200
+    body = resp.text
+    assert 'name="twitter:card"' in body
+    assert 'name="twitter:title"' in body
+
+
+def test_chrome_on_emits_description_meta() -> None:
+    """The plain `<meta name="description">` tag is rendered too."""
+    _client_off, client_on = _build_app_with_og()
+    resp = client_on.get("/")
+    assert resp.status_code == 200
+    assert 'name="description"' in resp.text
+
+
+def test_chrome_on_og_tags_match_chrome_off_set() -> None:
+    """Parity: the SET of meta tags emitted by chrome=on must include
+    every tag the chrome=off Jinja path emits. (Exact byte-level
+    equality is not required — typed Page chrome differs from
+    site_base.html in `<head>` ordering and unrelated `<style>` /
+    `<link>` content.)"""
+    client_off, client_on = _build_app_with_og()
+    resp_off = client_off.get("/")
+    resp_on = client_on.get("/")
+    assert resp_off.status_code == 200
+    assert resp_on.status_code == 200
+    for marker in (
+        'property="og:title"',
+        'property="og:description"',
+        'property="og:type"',
+        'name="twitter:card"',
+        'name="twitter:title"',
+        'name="twitter:description"',
+        'name="description"',
+    ):
+        assert marker in resp_off.text, f"missing {marker} in chrome=off baseline"
+        assert marker in resp_on.text, f"missing {marker} in chrome=on output"

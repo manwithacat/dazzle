@@ -373,14 +373,58 @@ def create_site_page_routes(
             or ("/static/dist/dazzle.min.js",)
         )
         theme = getattr(app_state, "fragment_chrome_theme", None)
+
+        # Phase 4 (v0.67.42): thread Open Graph + Twitter card meta
+        # tags from `ctx.og_meta` so the chrome=on path matches the
+        # chrome=off Jinja path's `site/includes/og_meta.html` output.
+        # Closes the parity gap blocking the chrome flag's removal.
+        extra_meta, og_meta = _og_meta_pairs(getattr(ctx, "og_meta", None))
+
         page = build_page(
             page_ctx,
             inner_html,
             css_links=css_links,
             js_scripts=js_scripts,
             theme=theme,
+            extra_meta=extra_meta,
+            og_meta=og_meta,
         )
         return FragmentRenderer().render(page)
+
+    def _og_meta_pairs(
+        og: Any,
+    ) -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]]:
+        """Split SitePageContext.og_meta into `name=` and `property=` tuples.
+
+        Mirrors `site/includes/og_meta.html`:
+          - `<meta name="description">`, `<meta name="twitter:*">` → `extra_meta`
+          - `<meta property="og:*">` → `og_meta`
+
+        Returns `((), ())` when ``og`` is None / falsy.
+        """
+        if not og:
+            return ((), ())
+        title = getattr(og, "title", "") or ""
+        description = getattr(og, "description", "") or ""
+        og_type = getattr(og, "og_type", "") or ""
+
+        name_pairs: list[tuple[str, str]] = []
+        property_pairs: list[tuple[str, str]] = []
+        if description:
+            name_pairs.append(("description", description))
+        if title:
+            property_pairs.append(("og:title", title))
+        if description:
+            property_pairs.append(("og:description", description))
+        if og_type:
+            property_pairs.append(("og:type", og_type))
+        if title or description:
+            name_pairs.append(("twitter:card", "summary"))
+        if title:
+            name_pairs.append(("twitter:title", title))
+        if description:
+            name_pairs.append(("twitter:description", description))
+        return tuple(name_pairs), tuple(property_pairs)
 
     router = APIRouter()
 

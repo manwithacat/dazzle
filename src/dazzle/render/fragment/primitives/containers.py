@@ -266,6 +266,12 @@ class Page:
     js_scripts: tuple[str, ...] = ()
     favicon: str = "/static/assets/dazzle-favicon.svg"
     meta: tuple[tuple[str, str], ...] = ()
+    # Phase 4 (v0.67.42): Open Graph + similar `<meta property="...">`
+    # tags. The HTML spec distinguishes `name=` (standard metadata) from
+    # `property=` (RDFa-extended metadata used by OG, og:title etc.) —
+    # the `meta` field emits the former, `og_meta` the latter. Twitter
+    # card tags use `name="twitter:*"` so they still go in `meta`.
+    og_meta: tuple[tuple[str, str], ...] = ()
     cascade_layer_order: str = "base, framework, app, overrides"
     toast_container: bool = True
     modal_slot: bool = True

@@ -551,6 +551,10 @@ class FragmentRenderer:
             parts.append(
                 f'<meta name="{ctx.escape_attr(name)}" content="{ctx.escape_attr(content)}">'
             )
+        for prop, content in p.og_meta:
+            parts.append(
+                f'<meta property="{ctx.escape_attr(prop)}" content="{ctx.escape_attr(content)}">'
+            )
         parts.append(f"<title>{ctx.escape(p.title)}</title>")
         parts.append(f'<link rel="icon" href="{ctx.escape_attr(p.favicon)}" type="image/svg+xml">')
         parts.append(f"<style>@layer {ctx.escape(p.cascade_layer_order)};</style>")

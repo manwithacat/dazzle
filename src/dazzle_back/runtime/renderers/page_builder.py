@@ -42,6 +42,7 @@ def build_page(
     theme: str | None = None,
     favicon: str = "/static/assets/dazzle-favicon.svg",
     extra_meta: tuple[tuple[str, str], ...] = (),
+    og_meta: tuple[tuple[str, str], ...] = (),
 ) -> Page:
     """Build a Page primitive from PageContext + already-rendered inner HTML.
 
@@ -49,6 +50,12 @@ def build_page(
     typically a `<section class="dz-surface">…</section>` block. This is
     wrapped in `RawHTML` so it composes into Page.body as a single Fragment
     leaf without re-escaping.
+
+    Phase 4 (v0.67.42): the `og_meta` kwarg carries Open-Graph-style
+    `<meta property="og:*">` tags. Twitter cards use `name="twitter:*"`
+    so they continue to thread through `extra_meta`. Closes the parity
+    gap that prevented chrome=on from being the default for marketing
+    pages.
     """
     page_title = ctx.page_title.strip() if ctx.page_title else ""
     app_name = (ctx.app_name or "Dazzle").strip()
@@ -61,6 +68,7 @@ def build_page(
         js_scripts=js_scripts,
         favicon=favicon,
         meta=extra_meta,
+        og_meta=og_meta,
     )
 
 
@@ -147,6 +155,7 @@ def build_app_chrome_page(
     theme: str | None = None,
     favicon: str = "/static/assets/dazzle-favicon.svg",
     extra_meta: tuple[tuple[str, str], ...] = (),
+    og_meta: tuple[tuple[str, str], ...] = (),
 ) -> Page:
     """Build a fully-chromed Page — `Page → AppShell → Sidebar/Topbar
     + body` — from PageContext's nav data.
@@ -173,6 +182,7 @@ def build_app_chrome_page(
         js_scripts=js_scripts,
         favicon=favicon,
         meta=extra_meta,
+        og_meta=og_meta,
     )
 
 
@@ -185,6 +195,7 @@ def dispatch_render_page(
     theme: str | None = None,
     favicon: str = "/static/assets/dazzle-favicon.svg",
     extra_meta: tuple[tuple[str, str], ...] = (),
+    og_meta: tuple[tuple[str, str], ...] = (),
     chrome: bool = True,
 ) -> str:
     """Build a Page and render it to HTML — convenience wrapper.
@@ -209,5 +220,6 @@ def dispatch_render_page(
         theme=theme,
         favicon=favicon,
         extra_meta=extra_meta,
+        og_meta=og_meta,
     )
     return FragmentRenderer().render(page)
