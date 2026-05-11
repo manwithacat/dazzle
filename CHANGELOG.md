@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.68] - 2026-05-11
+
+### Changed
+
+- **`route_generator.py` now fully Jinja-free** — the auto-generated list-htmx-fragment handler's row branch (the last `render_fragment` call in the file) is replaced by `_render_table_row()` and its dependency `_render_inline_edit()` and `_render_cell_display()`. The 6 custom Jinja filters (`bool_icon`, `dateformat`, `currency`, `ref_display`, `truncate_text`, `tojson`) are imported as plain Python functions from `template_renderer` and called directly.
+- **Inline-edit nested template** also inlined — `fragments/inline_edit.html`'s 4 input variants (text/bool/badge/date) emit identical Alpine bindings so the dzTable controller (`editing`, `commitEdit`, `cancelEdit`, `isEditing`) keeps working unchanged.
+- **Type-dispatched cell rendering** preserved: badge (with `data-dz-tone` from `_badge_tone_filter`), bool (check/cross icon), date, currency (per-row `currency_code`), sensitive (`****1234`), ref (explicit `_display` column or `_ref_display_name`), percentage, and the default truncated-text path.
+- **`route_generator.py` added to the typed-only allowlist** — locked as Jinja2-free.
+
+### Removed
+
+- **`TestRefCellMacro` test class retired** — the `macros/ref_cell.html` it tested was deleted in v0.67.66; the typed substrate provides ref-cell rendering via `_ref_display_name` + typed primitives.
+
+### Agent Guidance
+
+- Auto-generated CRUD list endpoints now render every HTMX-fragment response (rows + empty-state + pagination + sentinel) without touching Jinja. The 3 list templates (`table_rows.html`, `table_sentinel.html`, `table_pagination.html`) are still on disk for downstream Jinja-template consumers but the framework code path no longer reaches them.
+
 ## [0.67.67] - 2026-05-11
 
 ### Changed

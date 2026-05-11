@@ -5563,7 +5563,10 @@ class TestAttentionAccentMacro:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+@pytest.mark.skip(
+    reason="v0.67.66 retired macros/ref_cell.html — the typed-Fragment substrate "
+    "provides ref-cell rendering via _ref_display_name + typed primitives."
+)
 class TestRefCellMacro:
     """The ref_cell macro consolidates the ref-column display chain.
 

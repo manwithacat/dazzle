@@ -60,6 +60,12 @@ _TYPED_ONLY_MODULES = (
     # v0.67.65 — fragment_registry is a manifest table; rephrased
     # docstring to clear the gate's regex.
     "src/dazzle_ui/runtime/fragment_registry.py",
+    # v0.67.68 — route_generator detail-fields, table-pagination,
+    # table-sentinel, table-empty, table-rows, and inline-edit all
+    # now inline-render. The 3 list-fragment templates
+    # (table_rows.html, table_pagination.html, table_sentinel.html)
+    # are no longer reached from this code path.
+    "src/dazzle_back/runtime/route_generator.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against
