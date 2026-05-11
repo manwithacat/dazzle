@@ -44,6 +44,8 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle_back/runtime/shell.py",
     "src/dazzle_ui/runtime/page_routes.py",
     "src/dazzle_ui/runtime/workspace_renderer.py",
+    # v0.67.58 — audit-history detail-page render inlined via html.escape.
+    "src/dazzle_back/runtime/audit_region.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

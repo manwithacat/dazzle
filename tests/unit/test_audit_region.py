@@ -187,13 +187,14 @@ class TestEmptyStatePaths:
 
 class TestTemplateFailureFallback:
     def test_template_failure_returns_safe_markup(self, viewable_spec):
-        # Patch render_fragment to raise — the renderer must catch
-        # and return the minimal-but-valid empty-state markup so the
-        # surface body always has a renderable region.
+        # Patch the inline-HTML renderer to raise — the outer wrapper
+        # must catch and return the minimal-but-valid empty-state markup
+        # so the surface body always has a renderable region.
+        # (Phase 4 v0.67.58: was render_fragment; now _render_history_html.)
         rows = [_row("t1", "status", before="d", after="s")]
         with patch(
-            "dazzle_ui.runtime.template_renderer.render_fragment",
-            side_effect=RuntimeError("template missing"),
+            "dazzle_back.runtime.audit_region._render_history_html",
+            side_effect=RuntimeError("renderer failure"),
         ):
             html = _render(
                 audit_service=_StubAuditService(rows),

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.58] - 2026-05-11
+
+### Changed
+
+- **`audit_region.render_audit_history_region` migrated to inline-HTML rendering** — the detail-page audit-history surface no longer goes through Jinja. The legacy `workspace/regions/audit_history.html` template (60-line single-consumer file) was replaced by a focused inline renderer using stdlib `html.escape` for content/attribute escaping. CSS class names (`dz-audit-history__*`) match the legacy template, so existing styles apply without changes.
+- **Behavioural parity preserved**: the empty-state branch (no spec / RBAC denial / no rows / renderer exception) still emits `<p class="dz-audit-history__empty">No history yet.</p>` wrapped in the same `<section>` chrome.
+- **`audit_region.py` added to `test_typed_runtime_no_jinja.py` allowlist** — locked as Jinja2-free.
+
+### Agent Guidance
+
+- For single-consumer region renderers whose data shape is stable, direct-emission via `html.escape` is a legitimate alternative to standing up a full typed-Fragment primitive. Reserve the typed primitive route for shared/composable regions that benefit from `FragmentRenderer` dispatch.
+
 ## [0.67.57] - 2026-05-11
 
 ### Changed
