@@ -1,172 +1,21 @@
-"""Phase 4B.3 — dual-path validation harness.
+"""Phase 4B.3 — dual-path validation harness (residual byte-equivalence comparator).
 
-Renders a workspace region via both paths (legacy Jinja vs typed-
-Fragment adapter) and provides primitives for comparing the outputs.
-The harness consumes Phase 4B.2's `legacy_ctx_to_adapter_ctx` so
-both paths take the same legacy ctx as input and the diff captures
-only the rendering-strategy difference, not ctx-shape gymnastics.
+Phase 4 (v0.67.59): the legacy-vs-typed dual-path renderers
+(`render_via_legacy`, `render_via_typed`, `_LEGACY_TEMPLATE`,
+`_StubRegion`) were retired alongside the v0.67.52 DISPLAY_TEMPLATE_MAP
+flip — only 4 region templates remain on disk (`_typed_primitive.html`,
+`audit_history.html`, `radar.html`, `tab_data.html`), so the 30+
+template paths the legacy renderer dispatched to are mostly gone.
 
-Use cases:
-- **Smoke** — assert both paths produce non-empty output for a given
-  (display, ctx). Catches structural failures (missing template,
-  primitive crash on the typed side) without requiring byte match.
-- **Equivalence** — normalise whitespace + extract the region body
-  + diff. Phase 4B.4's per-display port uses this to gate display
-  migration: a display is "ready to migrate" when its byte-
-  equivalence diff is empty for example-app ctx.
-
-The harness deliberately does NOT pull in the workspace handler or
-example-app DSL — that's Phase 4B.4's wave structure. This module
-gives you a pure (display, legacy_ctx) → (legacy_html, typed_html)
-pair you can drive with synthetic or real captured ctx.
+What's preserved here are the two byte-equivalence helpers
+(`normalise_html`, `diff_summary`) that downstream typed-Fragment
+tests still use to compare two HTML outputs without caring about
+insignificant whitespace.
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import Any
-
-from dazzle.render.fragment import FragmentRenderer
-from dazzle_back.runtime.renderers.legacy_ctx import legacy_ctx_to_adapter_ctx
-from dazzle_back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
-
-# Maps lowercase display name → legacy Jinja template path. Mirrors
-# `dazzle_ui.runtime.workspace_renderer.DISPLAY_TEMPLATE_MAP` but
-# keyed by the same lowercase form the adapter / translator use.
-_LEGACY_TEMPLATE: dict[str, str] = {
-    "list": "workspace/regions/list.html",
-    "grid": "workspace/regions/grid.html",
-    "metrics": "workspace/regions/metrics.html",
-    "summary": "workspace/regions/metrics.html",
-    "detail": "workspace/regions/detail.html",
-    "kanban": "workspace/regions/kanban.html",
-    "timeline": "workspace/regions/timeline.html",
-    "bar_chart": "workspace/regions/bar_chart.html",
-    "funnel_chart": "workspace/regions/funnel_chart.html",
-    "queue": "workspace/regions/queue.html",
-    "tabbed_list": "workspace/regions/tabbed_list.html",
-    "heatmap": "workspace/regions/heatmap.html",
-    "progress": "workspace/regions/progress.html",
-    "activity_feed": "workspace/regions/activity_feed.html",
-    "tree": "workspace/regions/tree.html",
-    "pivot_table": "workspace/regions/pivot_table.html",
-    "line_chart": "workspace/regions/line_chart.html",
-    "area_chart": "workspace/regions/area_chart.html",
-    "sparkline": "workspace/regions/sparkline.html",
-    "diagram": "workspace/regions/diagram.html",
-    "histogram": "workspace/regions/histogram.html",
-    "radar": "workspace/regions/radar.html",
-    "box_plot": "workspace/regions/box_plot.html",
-    "bullet": "workspace/regions/bullet.html",
-    "bar_track": "workspace/regions/bar_track.html",
-    "action_grid": "workspace/regions/action_grid.html",
-    "profile_card": "workspace/regions/profile_card.html",
-    "pipeline_steps": "workspace/regions/pipeline_steps.html",
-    "status_list": "workspace/regions/status_list.html",
-    "confirm_action_panel": "workspace/regions/confirm_action_panel.html",
-    "search_box": "workspace/regions/search_box.html",
-}
-
-
-@dataclass
-class _StubRegion:
-    """Minimal region-shaped object the adapter consumes.
-
-    Real workspace regions carry the full RegionContext spec; the
-    harness only needs the fields the adapter's `_build_*` methods
-    read (name, display, title, empty_message). The `title` is
-    populated from ctx['title'] in `render_via_typed` because in
-    production the runtime sets both `region.title` and the
-    template kwarg `title` from the same RegionContext source —
-    keeping them mirrored on the typed path is what makes byte-
-    equivalence achievable.
-    """
-
-    name: str
-    display: str
-    title: str = ""
-    empty_message: str = "No data."
-
-
-def render_via_legacy(display: str, *, region_name: str | None = None, **legacy_ctx: Any) -> str:
-    """Render `display` via the legacy Jinja template path.
-
-    `region_name` is threaded through to the `region_card` macro via
-    the kwargs (Jinja's `region_name is defined` check); when
-    supplied, the macro emits `data-dz-region-name` + `id` attrs on
-    the chrome wrapper. Pairs with `render_via_typed`'s region_name
-    so both paths emit the same chrome attrs.
-
-    Imports `render_fragment` lazily because the dazzle_ui module
-    initialises a Jinja environment on first import; the harness
-    should not pay that cost when only the typed path is exercised.
-    """
-    template = _LEGACY_TEMPLATE.get(display)
-    if template is None:
-        raise ValueError(f"Unknown display: {display!r}")
-    from dazzle_ui.runtime.template_renderer import render_fragment
-
-    if region_name is not None:
-        legacy_ctx.setdefault("region_name", region_name)
-    return render_fragment(template, **legacy_ctx)
-
-
-def render_via_typed(
-    display: str,
-    legacy_ctx: dict[str, Any],
-    *,
-    region_name: str = "r",
-    emit_region_attrs: bool = False,
-) -> str:
-    """Render `display` via the typed-Fragment adapter path.
-
-    Threads through Phase 4B.2's translator so callers can supply the
-    same legacy ctx they'd hand to `render_via_legacy`. Returns the
-    rendered HTML wrapped in the legacy `region_card` chrome shape
-    (`<div data-dz-region>...</div>`) so byte-equivalence comparisons
-    against `render_via_legacy` can focus on the body — the chrome
-    layer is the same on both sides.
-
-    The typed adapter normally returns a `Surface(header=Heading,
-    body=Region(body=primitive))`. For dual-path validation we extract
-    the innermost `primitive` and wrap it in legacy chrome rather than
-    rendering the full Surface — the legacy `region_card` macro is
-    deliberately contentless (the dashboard slot owns title chrome),
-    so emitting the Surface header would always diverge.
-    """
-    adapter_ctx = legacy_ctx_to_adapter_ctx(display, legacy_ctx)
-    region = _StubRegion(
-        name=region_name,
-        display=display,
-        title=str(legacy_ctx.get("title") or ""),
-    )
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(region, adapter_ctx)
-
-    # Extract the inner body primitive from the Surface(body=Region(body=X))
-    # shape produced by `_wrap_surface`. Defensive against future shapes
-    # — fall back to rendering the surface itself if the structure
-    # diverges.
-    inner = getattr(getattr(surface, "body", None), "body", None)
-    fragment_to_render = inner if inner is not None else surface
-    body_html = FragmentRenderer().render(fragment_to_render)
-
-    # Wrap in legacy-shaped chrome. The `region_card` macro emits
-    # `data-dz-region-name` + `id` attrs only when its `name` arg is
-    # explicitly passed — `region_name` from template kwargs doesn't
-    # leak into the macro scope (imported without `with context`).
-    # In production, no template passes `name`, so the chrome wrapper
-    # is always plain `<div data-dz-region>`. Default the typed path
-    # to match; opt-in `emit_region_attrs=True` for callers that
-    # genuinely want the attrs (future workspace handler hookup).
-    if emit_region_attrs:
-        return (
-            f'<div data-dz-region data-dz-region-name="{region_name}" '
-            f'id="region-{region_name}">{body_html}</div>'
-        )
-    return f"<div data-dz-region>{body_html}</div>"
-
 
 _WHITESPACE = re.compile(r"\s+")
 _AFTER_OPEN_BRACKET = re.compile(r">\s+")
@@ -199,17 +48,13 @@ def normalise_html(html: str) -> str:
     whitespace (around `{{ value }}` expressions) match the typed
     renderer's compact output.
 
-    Does NOT reorder attributes — Phase 4B.4 may need an
-    `attribute-order-insensitive` mode if real-world diffs surface
-    flaky orderings. The current FragmentRenderer + Jinja both emit
-    deterministic order, so this hasn't been a problem yet.
+    Does NOT reorder attributes — the typed FragmentRenderer emits
+    deterministic order, so byte comparisons are stable.
     """
     s = _AFTER_OPEN_BRACKET.sub(">", html)
     s = _BEFORE_CLOSE_BRACKET.sub("<", s)
     # Canonicalize self-closing tags: `<tag />` and `<tag/>` are
-    # equivalent XML; legacy Jinja typically emits `/>` without a
-    # space, the typed renderer emits ` />`. Strip whitespace before
-    # `/>` so byte comparisons treat them as identical.
+    # equivalent XML; some renderers emit one form, some the other.
     s = _BEFORE_SELF_CLOSE.sub("/>", s)
     # Strip whitespace before `>` left by Jinja `{% if %}…{% endif %}`
     # blocks inside opening tags (e.g. `<details class="x" >`).
@@ -246,6 +91,4 @@ def diff_summary(legacy_html: str, typed_html: str) -> str | None:
 __all__ = [
     "diff_summary",
     "normalise_html",
-    "render_via_legacy",
-    "render_via_typed",
 ]

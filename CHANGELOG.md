@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.59] - 2026-05-11
+
+### Removed
+
+- **`dual_path.render_via_legacy` / `render_via_typed` / `_LEGACY_TEMPLATE` / `_StubRegion` retired** — the legacy-vs-typed byte-equivalence harness was a build-out scaffold for the v0.67.52 DISPLAY_TEMPLATE_MAP flip. Only 4 region templates remain on disk (`_typed_primitive.html`, `audit_history.html`, `radar.html`, `tab_data.html`) — the 30+ template paths the legacy renderer dispatched to are mostly gone, so the harness can no longer fire. The two byte-equivalence helpers (`normalise_html`, `diff_summary`) are preserved — downstream typed-Fragment tests still use them for HTML-output comparisons without caring about whitespace.
+
+### Changed
+
+- **`dual_path.py` + `legacy_ctx.py` added to `test_typed_runtime_no_jinja.py` allowlist** — both modules are now Jinja2-free. The `legacy_ctx_to_adapter_ctx` translator stays in place (its 30+ display-specific mappings are tested by `test_legacy_ctx_translator.py`), but the function has no production consumer now that `dual_path.render_via_typed` is gone — pure dead infrastructure pending a separate retirement decision.
+
+### Agent Guidance
+
+- For new typed-vs-typed byte-equivalence comparisons, import `diff_summary` and `normalise_html` from `dazzle_back.runtime.renderers.dual_path`. Do not reintroduce `render_via_legacy` / `render_via_typed` — the legacy Jinja templates they dispatched to are mostly retired.
+
 ## [0.67.58] - 2026-05-11
 
 ### Changed

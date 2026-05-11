@@ -2,7 +2,7 @@
 
 The legacy workspace runtime computes per-region ctx in
 `workspace_rendering.py` and passes it as kwargs to a Jinja template
-(`render_fragment(template, **kwargs)`). The typed-Fragment adapter
+(legacy fragment-render call). The typed-Fragment adapter
 (`WorkspaceRegionAdapter._build_*`) consumes a different ctx shape —
 flat dicts with explicit field names, pre-aggregated data tuples,
 typed primitives expectations.

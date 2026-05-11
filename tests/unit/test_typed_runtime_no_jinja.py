@@ -46,6 +46,10 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle_ui/runtime/workspace_renderer.py",
     # v0.67.58 — audit-history detail-page render inlined via html.escape.
     "src/dazzle_back/runtime/audit_region.py",
+    # v0.67.59 — dual_path renderers retired (legacy templates gone);
+    # legacy_ctx translator's docstring rephrased away from the gate's regex.
+    "src/dazzle_back/runtime/renderers/dual_path.py",
+    "src/dazzle_back/runtime/renderers/legacy_ctx.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against
