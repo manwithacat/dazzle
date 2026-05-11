@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.48] - 2026-05-11
+
+### Changed
+
+- **Workspace region migration batch — 5 more kinds on typed path.** `grid`, `heatmap`, `sparkline`, `status_list`, `profile_card` join `_TYPED_REGION_DISPLAYS`. Each gets an `adapter_ctx` population branch threading pre-computed data through:
+  - **grid** ← items + columns + display_key + entity_name
+  - **heatmap** ← heatmap_matrix + heatmap_col_values + heatmap_thresholds + total + items
+  - **sparkline** ← points (from `bucketed_metrics`) + chart_label
+  - **status_list** ← status_entries (authored on the IR region)
+  - **profile_card** ← profile_card_data (pre-assembled upstream)
+- **15 of 26 workspace region kinds** now render via the typed-Fragment substrate.
+
+### Agent Guidance
+
+- **11 region kinds remain on Jinja**: funnel_chart, metrics, pivot_table, timeline, kanban, pipeline_steps, queue, histogram, action_grid, confirm_action_panel, list, line_chart, area_chart, bar_chart, bar_track, bullet, radar, box_plot. The list + chart kinds carry the richest `ctx` contracts and warrant individual inspection; the others should batch cleanly with the same pattern.
+
 ## [0.67.47] - 2026-05-11
 
 ### Changed
