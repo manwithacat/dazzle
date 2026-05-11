@@ -42,6 +42,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
          tests/unit/test_no_stale_quill_refs.py \
          tests/unit/test_docs_drift.py \
          tests/unit/test_forbidden_detail.py \
+         tests/unit/test_typed_runtime_no_jinja.py \
          -q
   ```
 

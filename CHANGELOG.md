@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.38] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 5 prep — CI gate against regrowth.** `tests/unit/test_typed_runtime_no_jinja.py` pins the migration progress: it scans the eight migrated runtime modules for `import jinja2`, `from jinja2`, `render_site_page(...)`, and `render_fragment(...)` patterns, and fails if any reappear. Also asserts the `site/auth/` template directory stays empty, the three retired context builders (`build_site_auth_context`, `build_site_404_context`, `build_site_error_context`) stay deleted, and the 13 retired Jinja templates don't reappear.
+- **`/ship` policy-gate list updated** to include `tests/unit/test_typed_runtime_no_jinja.py` so the check runs pre-push on every ship.
+
+### Agent Guidance
+
+- **Don't import `jinja2` or call `render_site_page` / `render_fragment` in the typed-only modules.** The list of locked-down files lives in `_TYPED_ONLY_MODULES` in the new gate test. Adding Jinja2 back to one of those files is a regression — either the new code belongs in a different module, or the retirement plan is being deliberately rolled back (which needs a CHANGELOG entry under Removed/Changed and an explicit removal from the allow-list).
+- **New auth surfaces are typed-Fragment views.** If you're tempted to create `src/dazzle_ui/templates/site/auth/<anything>.html`, the gate will fail — that directory is sealed. New auth flows extend `dazzle_back.runtime.auth.{auth_views,two_factor_views}` and reuse the form-encoded route modules in the same package.
+- **The gate is permissive about the rest of the codebase.** Jinja2 is still used for the marketing site renderer, the app shell, workspace regions, etc. — those migrations are Phase 4 work. The gate's scope is narrow on purpose: it locks in the completed migrations without blocking unrelated work.
+
 ## [0.67.37] - 2026-05-11
 
 ### Added
