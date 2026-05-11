@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.70] - 2026-05-11
+
+### Changed
+
+- **Workspace region rendering fully Jinja-free** — the Jinja fallback path in `workspace_rendering.py` is gone. `DISPLAY_TEMPLATE_MAP.get(...)` defaults to `_TYPED_SHIM`; every region kind goes through the typed-shim fast-path.
+- **Radar display migrated to typed primitive** — `_build_radar` was already present in `region_adapter.py`; this commit wires it into the `_TYPED_REGION_DISPLAYS` whitelist + adds an `adapter_ctx["axes"]` population branch in `workspace_rendering.py` extracting (label, value) pairs from `bucketed_metrics`.
+- **AUDIT_HISTORY + TAB_DATA display modes** silently fall through to the default typed-shim. Neither has a DSL consumer or typed adapter. The detail-page audit-history surface is served separately by `render_audit_history_region` (inlined in v0.67.58).
+- **`workspace_rendering.py` added to typed-only allowlist**.
+- **`RegionContext.template` default** changed from `"workspace/regions/list.html"` (since-deleted) to the typed shim.
+
+### Removed
+
+- **3 workspace region templates retired** (61 → 58 framework templates):
+  - `workspace/regions/radar.html` (192 lines — typed `Radar` primitive replaces)
+  - `workspace/regions/audit_history.html` (60 lines — no consumer)
+  - `workspace/regions/tab_data.html` (94 lines — no consumer)
+- **~100 lines of `render_fragment(template, **60kwargs)` call** removed from `workspace_rendering.py` along with its long parameter list — every consumer of those kwargs was Jinja-only.
+- **`TestAttentionAccentMacro` test class retired** — `macros/attention_accent.html` was deleted in v0.67.66; typed substrate uses semantic `data-dz-tone` directly.
+
+### Agent Guidance
+
+- All workspace region display modes are now typed. To add a new display kind: implement a `_build_<name>` method in `WorkspaceRegionAdapter`, register the lowercase key in `_BUILDERS`, add the uppercase to `_TYPED_REGION_DISPLAYS` whitelist in `workspace_rendering.py` (with an `adapter_ctx` population branch), and add the uppercase entry mapped to `_TYPED_SHIM` in `DISPLAY_TEMPLATE_MAP`.
+
 ## [0.67.69] - 2026-05-11
 
 ### Removed

@@ -152,7 +152,7 @@ class RegionContext(BaseModel):
     date_range: bool = False
     col_span: int = 12  # Resolved column span (4, 6, 8, or 12)
     hidden: bool = False  # User has hidden this region
-    template: str = "workspace/regions/list.html"  # Region display template
+    template: str = "workspace/regions/_typed_primitive.html"  # default: typed shim
     # Diagram data (v0.48.15: DIAGRAM display mode)
     diagram_data: str = ""  # Mermaid diagram source for DIAGRAM regions
     # Region actions (v0.48.15: action buttons on region header)
@@ -390,11 +390,11 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "BOX_PLOT": _TYPED_SHIM,
     "ACTIVITY_FEED": _TYPED_SHIM,
     "LIST": _TYPED_SHIM,
-    # Not yet migrated — dedicated Jinja templates retained until
-    # their adapter builders ship.
-    "RADAR": "workspace/regions/radar.html",
-    "AUDIT_HISTORY": "workspace/regions/audit_history.html",
-    "TAB_DATA": "workspace/regions/tab_data.html",
+    "RADAR": _TYPED_SHIM,  # Phase 4 region migration (v0.67.70)
+    # AUDIT_HISTORY + TAB_DATA: no DSL consumer + no typed adapter; they
+    # fall through to the default `_TYPED_SHIM` and render an empty
+    # primitive body. Detail-page audit history is served separately by
+    # `render_audit_history_region` (not via this map).
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -484,7 +484,7 @@ def build_workspace_context(
         if display_mode == "LIST" and region.aggregates:
             display_mode = "SUMMARY"
 
-        template = DISPLAY_TEMPLATE_MAP.get(display_mode, "workspace/regions/list.html")
+        template = DISPLAY_TEMPLATE_MAP.get(display_mode, _TYPED_SHIM)
 
         # v0.61.83 (#914): explicit `width:` on the region wins over both
         # the stage default and the kanban auto-promotion. Saved layouts

@@ -5409,7 +5409,11 @@ class TestNoneVsDefaultDriftSweep:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+@pytest.mark.skip(
+    reason="v0.67.66 retired macros/attention_accent.html — the typed-Fragment "
+    "substrate uses semantic tone names directly (data-dz-tone, .dz-bullet-*). "
+    "Macro-level tier-to-class mapping is obsolete."
+)
 class TestAttentionAccentMacro:
     """The attention_accent macro consolidates the tier-to-class mapping.
 

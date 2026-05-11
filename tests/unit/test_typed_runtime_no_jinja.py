@@ -70,6 +70,10 @@ _TYPED_ONLY_MODULES = (
     # inner_only.html + nav.html + footer.html + theme_toggle.html +
     # qa_personas.html + all 19 site/sections/*.html templates deleted.
     "src/dazzle_back/runtime/site_routes.py",
+    # v0.67.70 — radar wired through typed primitive; AUDIT_HISTORY +
+    # TAB_DATA fall through to typed shim (no DSL consumer, no adapter).
+    # The render_fragment fallback path in workspace_rendering is gone.
+    "src/dazzle_back/runtime/workspace_rendering.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

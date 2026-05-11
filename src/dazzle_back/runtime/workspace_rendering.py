@@ -1624,8 +1624,6 @@ async def _workspace_region_handler(
     from fastapi import HTTPException
     from fastapi.responses import HTMLResponse
 
-    from dazzle_ui.runtime.template_renderer import render_fragment
-
     # Enforce authentication (#145)
     if ctx.require_auth:
         auth_ctx = None
@@ -2702,6 +2700,11 @@ async def _workspace_region_handler(
         # CSV export, date-range picker, RBAC propagation, bulk
         # actions plumbing).
         "LIST",
+        # Phase 4 region migration (v0.67.70): radar polar chart —
+        # `_build_radar` consumes (label, value) axis pairs from the
+        # legacy `bucketed_metrics` shape; the typed Radar primitive
+        # does its own polygon/polar math.
+        "RADAR",
     )
     if display_upper in _TYPED_REGION_DISPLAYS:
         from dazzle.render.fragment import FragmentRenderer
@@ -2917,6 +2920,25 @@ async def _workspace_region_handler(
                 # right dict shape.
                 adapter_ctx["buckets"] = bucketed_metrics
                 adapter_ctx["chart_label"] = ctx.ctx_region.title
+            elif display_upper == "RADAR":
+                # Phase 4 region migration (v0.67.70): radar consumes
+                # `axes` (label, value) pairs. The legacy template iterated
+                # `bucketed_metrics` and read each entry's `label` + `value`
+                # — same source, simpler shape here.
+                radar_axes: list[tuple[str, float]] = []
+                for entry in bucketed_metrics or []:
+                    if not isinstance(entry, dict):
+                        continue
+                    label = str(entry.get("label", "") or "")
+                    raw_val = entry.get("value", 0) or 0
+                    try:
+                        val = float(raw_val)
+                    except (TypeError, ValueError):
+                        val = 0.0
+                    if label:
+                        radar_axes.append((label, val))
+                adapter_ctx["axes"] = radar_axes
+                adapter_ctx["chart_label"] = ctx.ctx_region.title
             elif display_upper in ("LINE_CHART", "AREA_CHART"):
                 # TimeSeries variants: both read `points` from the
                 # same upstream `bucketed_metrics`. Reference lines /
@@ -3025,118 +3047,17 @@ async def _workspace_region_handler(
                     "</p>"
                 )
 
-    # Phase 4 fast-path (v0.67.63): for region kinds whose body is owned
-    # by the typed-Fragment substrate, `_typed_primitive.html` is just a
-    # `<div data-dz-region>{typed_primitive_html}</div>` wrapper. Inline-
-    # render that directly instead of going through render_fragment so
-    # the typed bulk of workspace regions avoids Jinja entirely.
-    if ctx.ctx_region.template == "workspace/regions/_typed_primitive.html":
-        import html as _html_mod
+    # Phase 4 (v0.67.70): every region display now resolves to
+    # `_typed_primitive.html`. The Jinja fallback path is gone — the
+    # typed substrate is the only render path.
+    import html as _html_mod
 
-        region_name_attr = _html_mod.escape(ctx.ctx_region.name, quote=True)
-        html = (
-            f'<div data-dz-region data-dz-region-name="{region_name_attr}" '
-            f'id="region-{region_name_attr}">'
-            f"{typed_primitive_html or ''}"
-            f"</div>"
-        )
-        return HTMLResponse(content=html)
-
-    html = render_fragment(
-        ctx.ctx_region.template,
-        title=ctx.ctx_region.title,
-        items=items,
-        total=total,
-        columns=columns,
-        metrics=metrics,
-        bucketed_metrics=bucketed_metrics,
-        pivot_buckets=pivot_buckets,
-        pivot_dim_specs=pivot_dim_specs,
-        empty_message=ctx.surface_empty_message or ctx.ctx_region.empty_message,
-        display_key=next(
-            (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
-            columns[0]["key"] if columns else "name",
-        ),
-        item=items[0] if items else None,
-        action_url=ctx.ctx_region.action_url,
-        # v0.61.7 (#861): forward the FK field the action URL should key on.
-        # Templates use `item[action_id_field] | resolve_fk_id` to handle
-        # both scalar ids and FK dicts expanded by _inject_display_names.
-        action_id_field=ctx.ctx_region.action_id_field,
-        sort_field=sort or "",
-        sort_dir=dir,
-        endpoint=ctx.ctx_region.endpoint,
-        region_name=ctx.ctx_region.name,
-        filter_columns=filter_columns,
-        active_filters=active_filters,
-        # Templates expect a string or None; reduce BucketRef to its field
-        # name (the unit already drove bucketed_metrics labels server-side).
-        group_by=(group_by.field if isinstance(group_by, _BucketRef) else group_by),
-        kanban_columns=kanban_columns,
-        queue_transitions=queue_transitions,
-        queue_status_field=queue_status_field,
-        queue_api_endpoint=queue_api_endpoint,
-        source_tabs=source_tabs,
-        source_entity=ctx.source,
-        # Heatmap context (v0.44.0)
-        heatmap_matrix=heatmap_matrix,
-        heatmap_col_values=heatmap_col_values,
-        heatmap_thresholds=heatmap_thresholds,
-        # Progress context (v0.44.0)
-        stage_counts=progress_stage_counts,
-        progress_total=progress_total,
-        complete_count=progress_complete_count,
-        complete_pct=progress_complete_pct,
-        # Date range (v0.44.0)
-        date_range=getattr(ctx.ctx_region, "date_range", False),
-        date_field=getattr(ctx.ctx_region, "date_field", ""),
-        date_from=request.query_params.get("date_from", ""),
-        date_to=request.query_params.get("date_to", ""),
-        # Tree context (#565)
-        tree_items=tree_items,
-        # Line/area chart overlays (#883, v0.61.26)
-        reference_lines=getattr(ctx.ctx_region, "reference_lines", []),
-        reference_bands=getattr(ctx.ctx_region, "reference_bands", []),
-        # Histogram (#882, v0.61.27) — pre-computed bins from `items`
-        histogram_bins=histogram_bins,
-        # Box plot (#881, v0.61.29) — per-group quartile stats from `items`
-        box_plot_stats=box_plot_stats,
-        # Bullet chart (#880, v0.61.30) — per-row {label, actual, target} from `items`
-        bullet_rows=bullet_rows,
-        bullet_max_value=bullet_max_value,
-        # Overlay series (#883, v0.61.33) — additional polylines on line/area charts
-        overlay_series_data=overlay_series_data,
-        # Bar track (#893, v0.61.53) — per-row {label, value, fill_pct, formatted_value}
-        bar_track_rows=bar_track_rows,
-        bar_track_max=bar_track_max,
-        # Action grid (#891, v0.61.54) — per-card {label, icon, url, tone, count}
-        action_card_data=action_card_data,
-        # Profile card (#892, v0.61.55) — single-record identity panel
-        profile_card_data=profile_card_data,
-        # Pipeline steps (#890, v0.61.56) — per-stage {label, caption, value}
-        pipeline_stage_data=pipeline_stage_data,
-        # Status list (#3, v0.61.69) — authored entries forwarded
-        # straight from the RegionContext. The template iterates
-        # `status_entries` directly; no per-request resolution needed.
-        # #908 (v0.61.76) added this forwarding — the variable was
-        # never being passed, so the template fell through to the
-        # empty-state branch even when entries: was declared.
-        status_entries=getattr(ctx.ctx_region, "status_entries", []),
-        # Confirm action panel (#6, v0.61.72) — checklist + dual button.
-        # IR-level fields (confirmations, action URLs, audit_enabled)
-        # were resolved upstream during build_workspace_context and
-        # live on the RegionContext. Only state_value is request-time
-        # because it depends on the fetched item.
-        confirmations=getattr(ctx.ctx_region, "confirmations", []),
-        state_value=confirm_state_value,
-        primary_action_url=getattr(ctx.ctx_region, "primary_action_url", ""),
-        secondary_action_url=getattr(ctx.ctx_region, "secondary_action_url", ""),
-        revoke_url=getattr(ctx.ctx_region, "revoke_url", ""),
-        audit_enabled=getattr(ctx.ctx_region, "audit_enabled", False),
-        # #1015–#1018 (v0.67.10) — pre-rendered typed primitive HTML
-        # for the four region kinds whose body is owned by the
-        # typed-Fragment substrate. Empty for legacy displays.
-        typed_primitive_html=typed_primitive_html,
+    region_name_attr = _html_mod.escape(ctx.ctx_region.name, quote=True)
+    html = (
+        f'<div data-dz-region data-dz-region-name="{region_name_attr}" '
+        f'id="region-{region_name_attr}">'
+        f"{typed_primitive_html or ''}"
+        f"</div>"
     )
     return HTMLResponse(content=html)
 
