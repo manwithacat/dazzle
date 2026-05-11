@@ -2652,17 +2652,22 @@ async def _workspace_region_handler(
 
         tree_items = [_build_subtree(r) for r in roots]
 
-    # #1015–#1018 region primitives — typed-Fragment-only render path
-    # (v0.67.10, data resolution v0.67.13). The four AegisMark Day-One
-    # demo region kinds bypass the legacy Jinja body: build the typed
-    # primitive via the adapter, render it via FragmentRenderer, hand
-    # the HTML to the shared shim template as `typed_primitive_html`.
-    # Data resolution layers (cells / slots / items / sections) are
-    # built per-display from the typed config blocks and the already-
-    # scoped `items` list — RBAC scope is enforced upstream by the
-    # source-row query, the data-resolution layer just shapes results.
+    # Phase 4 region migration (v0.67.46): the typed-primitive path
+    # extends beyond the original #1015–#1018 special cases. Region
+    # kinds whose adapter builder is mature + whose data shape matches
+    # the legacy Jinja partial's expectations are listed here; they
+    # bypass the Jinja body in favour of FragmentRenderer output.
+    # Adding a new display value is one entry in this whitelist plus
+    # a matching `adapter_ctx[...]` population below.
     typed_primitive_html: str = ""
-    if display_upper in ("COHORT_STRIP", "DAY_TIMELINE", "TASK_INBOX", "ENTITY_CARD"):
+    _TYPED_REGION_DISPLAYS = (
+        "COHORT_STRIP",
+        "DAY_TIMELINE",
+        "TASK_INBOX",
+        "ENTITY_CARD",
+        "PROGRESS",  # Phase 4 region migration (v0.67.46)
+    )
+    if display_upper in _TYPED_REGION_DISPLAYS:
         from dazzle.render.fragment import FragmentRenderer
         from dazzle_back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
 
@@ -2728,6 +2733,19 @@ async def _workspace_region_handler(
                     )
                     adapter_ctx["task_inbox_items"] = inbox_items
                     adapter_ctx["task_inbox_chips"] = inbox_chips
+            elif display_upper == "PROGRESS":
+                # Phase 4 region migration (v0.67.46): progress's
+                # adapter builder consumes pre-computed stage rollups
+                # from `progress_stage_counts` etc. already populated
+                # upstream in this function.
+                adapter_ctx["stage_counts"] = progress_stage_counts
+                adapter_ctx["progress_total"] = progress_total
+                adapter_ctx["complete_count"] = progress_complete_count
+                adapter_ctx["complete_pct"] = progress_complete_pct
+                # Legacy `items` fallback the adapter's _build_progress
+                # accepts when stage_counts is empty — pass through so
+                # the synthetic-stage path keeps working.
+                adapter_ctx["items"] = items
             elif display_upper == "ENTITY_CARD":
                 _card_cfg = getattr(ir_region, "entity_card_config", None)
                 if _card_cfg is not None:

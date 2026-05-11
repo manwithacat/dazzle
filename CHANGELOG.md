@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.46] - 2026-05-11
+
+### Changed
+
+- **Workspace `progress` region renders via typed-Fragment.** The first region beyond the original `#1015–#1018` set (cohort_strip / day_timeline / task_inbox / entity_card) joins the typed-primitive whitelist. The adapter's `_build_progress` consumes pre-computed `stage_counts` / `progress_total` / `complete_count` / `complete_pct` from `workspace_rendering.py` and emits the typed `StageBar` markup matching the legacy `workspace/regions/progress.html` shape.
+- **`_TYPED_REGION_DISPLAYS` whitelist** introduced as a tuple constant inside the workspace-region rendering function. Adding a new display value is a single tuple-entry plus an `adapter_ctx[...]` population branch. Replaces the inline literal-tuple membership check used for the original four #1015–#1018 displays.
+
+### Agent Guidance
+
+- **Region migration cadence.** Each region template under `src/dazzle_ui/templates/workspace/regions/` gets graduated to the typed path by (a) adding its uppercase display value to `_TYPED_REGION_DISPLAYS` and (b) populating the adapter context with whatever the typed builder reads. The data is usually already computed in `workspace_rendering.py` — wiring is mostly tuple-entry-plus-dict-assignment.
+- **Per-region adapter contracts are documented in `region_adapter.py` docstrings.** Each `_build_<kind>` method describes the `ctx` shape it consumes (primary + legacy-fallback paths where present). Reading the docstring tells you which keys to populate in `adapter_ctx` before extending the whitelist.
+- **`workspace/regions/<kind>.html` deletion happens when its display value is on the whitelist AND no tests render it directly.** Both conditions need confirming before retiring the Jinja file. The `progress.html` template stays on disk this ship; its retirement is the next ship.
+
 ## [0.67.45] - 2026-05-11
 
 ### Removed
