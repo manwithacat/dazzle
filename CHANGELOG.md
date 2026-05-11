@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.63] - 2026-05-11
+
+### Changed
+
+- **Workspace region typed-shim fast-path** — when `_workspace_region_handler` dispatches to a region whose template is `workspace/regions/_typed_primitive.html` (the shim used by every typed-Fragment-owned display kind), the renderer now inline-emits the `<div data-dz-region data-dz-region-name="…">{typed_primitive_html}</div>` wrapper directly instead of going through Jinja. This is the bulk path — only RADAR, AUDIT_HISTORY, and TAB_DATA still take the Jinja branch (their adapter builders are pending).
+- **Result**: workspace region rendering for the typed bulk (33 of 36 region display kinds) no longer involves Jinja at all. The Jinja `render_fragment(...)` call is still on disk for the 3 remaining region kinds, so `workspace_rendering.py` can't yet be added to the typed-only allowlist — but the dependency surface has shrunk meaningfully.
+
+### Agent Guidance
+
+- New typed-Fragment region kinds should: (a) implement their adapter builder in `WorkspaceRegionAdapter`, (b) get their `DisplayMode` mapped to `_TYPED_SHIM` in `workspace_renderer.DISPLAY_TEMPLATE_MAP`, and (c) inherit the typed-shim fast-path automatically. No new Jinja-template entries needed.
+
 ## [0.67.62] - 2026-05-11
 
 ### Changed

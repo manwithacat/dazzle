@@ -3025,6 +3025,23 @@ async def _workspace_region_handler(
                     "</p>"
                 )
 
+    # Phase 4 fast-path (v0.67.63): for region kinds whose body is owned
+    # by the typed-Fragment substrate, `_typed_primitive.html` is just a
+    # `<div data-dz-region>{typed_primitive_html}</div>` wrapper. Inline-
+    # render that directly instead of going through render_fragment so
+    # the typed bulk of workspace regions avoids Jinja entirely.
+    if ctx.ctx_region.template == "workspace/regions/_typed_primitive.html":
+        import html as _html_mod
+
+        region_name_attr = _html_mod.escape(ctx.ctx_region.name, quote=True)
+        html = (
+            f'<div data-dz-region data-dz-region-name="{region_name_attr}" '
+            f'id="region-{region_name_attr}">'
+            f"{typed_primitive_html or ''}"
+            f"</div>"
+        )
+        return HTMLResponse(content=html)
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
