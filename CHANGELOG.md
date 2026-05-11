@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.67] - 2026-05-11
+
+### Changed
+
+- **Empty-state branch lifted out of `fragments/table_rows.html`** — when a list-htmx-fragment request returns zero items, `route_generator._render_table_empty()` now emits the `<tr><td class="dz-tr-empty-cell">…</td></tr>` markup inline. The row branch (Alpine bindings + 6 custom filters + nested `inline_edit.html` include) stays on Jinja for now. This carves out the smaller half of `table_rows.html`'s rendering surface.
+- **All 4 empty-kinds preserved**: `collection` (default "+ Add one" affordance), `filtered` (Clear filters link), `forbidden` (custom RBAC copy), `loading` (try-reloading copy).
+
+### Agent Guidance
+
+- Empty-collection cases on auto-generated list endpoints now never touch Jinja. The remaining Jinja path is the row branch — migrating that requires porting the 6 custom filters (`bool_icon`, `dateformat`, `currency`, `ref_display`, `truncate_text`, `tojson`) and `inline_edit.html` to Python.
+
 ## [0.67.66] - 2026-05-11
 
 ### Removed

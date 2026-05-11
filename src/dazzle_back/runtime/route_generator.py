@@ -300,6 +300,86 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
     )
 
 
+def _render_table_empty(table: dict[str, Any], request: Any) -> str:
+    """Inline mirror of `fragments/table_rows.html`'s empty-state branch
+    (v0.67.67). Picks the per-kind message + affordance:
+
+        collection → "No X yet." + link to the create surface
+        filtered   → "No X match the current filters." + clear-filters link
+        forbidden  → custom `empty_forbidden` copy
+        loading    → "Couldn't load X. Try reloading."
+    """
+    import html as _html_mod
+
+    if not table:
+        entity_lower = "items"
+        msg = f"No {entity_lower} found."
+        return (
+            "<tr>"
+            f'<td colspan="1" class="dz-tr-empty-cell" data-dz-empty-kind="collection">'
+            f"{msg}</td></tr>"
+        )
+
+    entity_name = str(table.get("entity_name") or "items")
+    entity_lower = entity_name.lower()
+    columns = table.get("columns") or []
+    colspan = len(columns) + (2 if table.get("bulk_actions") else 1)
+    kind = str(table.get("empty_kind") or "collection")
+    kind_attr = _html_mod.escape(kind, quote=True)
+    table_id = _html_mod.escape(str(table.get("table_id") or "dt-table"), quote=True)
+    endpoint_attr = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
+
+    if kind == "filtered":
+        msg = str(table.get("empty_filtered") or f"No {entity_lower} match the current filters.")
+        msg_html = _html_mod.escape(msg, quote=False)
+        clear_link = ""
+        if table.get("filter_values") and request is not None:
+            url_path = _html_mod.escape(
+                str(getattr(request.url, "path", "") or ""),
+                quote=True,
+            )
+            clear_link = (
+                f'<a href="{url_path}" '  # nosemgrep
+                f'hx-get="{endpoint_attr}" '
+                f'hx-target="#{table_id}-body" '
+                f'hx-swap="innerHTML" '
+                f'hx-push-url="{url_path}" '
+                f'class="dz-tr-empty-link">Clear filters</a>'
+            )
+        inner = f"{msg_html}{clear_link}"
+    elif kind == "loading":
+        inner = _html_mod.escape(
+            f"Couldn't load {entity_lower}. Try reloading.",
+            quote=False,
+        )
+    elif kind == "forbidden" and table.get("empty_forbidden"):
+        inner = _html_mod.escape(str(table["empty_forbidden"]), quote=False)
+    else:
+        msg = str(
+            table.get("empty_collection")
+            or table.get("empty_message")
+            or f"No {entity_lower} found."
+        )
+        msg_html = _html_mod.escape(msg, quote=False)
+        create_link = ""
+        if table.get("create_url"):
+            create_url_attr = _html_mod.escape(
+                str(table["create_url"]),
+                quote=True,
+            )
+            create_link = (
+                f'<a href="{create_url_attr}" class="dz-tr-empty-link">Add one</a>'  # nosemgrep
+            )
+        inner = f"{msg_html}{create_link}"
+
+    return (
+        "<tr>"
+        f'<td colspan="{colspan}" class="dz-tr-empty-cell" '
+        f'data-dz-empty-kind="{kind_attr}">{inner}</td>'
+        "</tr>"
+    )
+
+
 def _render_table_sentinel(table: dict[str, Any]) -> str:
     """Inline mirror of `fragments/table_sentinel.html` (v0.67.65).
 
@@ -2030,9 +2110,13 @@ async def _list_handler_body(
                 "empty_message": getattr(request.state, "htmx_empty_message", "No items found."),
             }
 
-            # Render table rows (still Jinja — table_rows.html is rich with
-            # Alpine bindings + custom filters that don't inline cheaply).
-            html = render_fragment("fragments/table_rows.html", table=table_dict)
+            # Phase 4 (v0.67.67): inline-render the empty-state branch.
+            # The row branch (Alpine bindings + 6 custom filters + nested
+            # include) stays on Jinja for now.
+            if not items:
+                html = _render_table_empty(table_dict, request)
+            else:
+                html = render_fragment("fragments/table_rows.html", table=table_dict)
 
             # Check if table uses infinite scroll mode
             pagination_mode = getattr(request.state, "htmx_pagination_mode", "pages")
