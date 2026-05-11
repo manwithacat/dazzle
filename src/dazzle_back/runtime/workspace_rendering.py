@@ -2689,6 +2689,14 @@ async def _workspace_region_handler(
         "QUEUE",
         "ACTION_GRID",
         "CONFIRM_ACTION_PANEL",
+        # Phase 4 region migration batch (v0.67.50): chart + specialty:
+        "BAR_CHART",
+        "LINE_CHART",
+        "AREA_CHART",
+        "BAR_TRACK",
+        "BULLET",
+        "BOX_PLOT",
+        "ACTIVITY_FEED",
     )
     if display_upper in _TYPED_REGION_DISPLAYS:
         from dazzle.render.fragment import FragmentRenderer
@@ -2897,6 +2905,39 @@ async def _workspace_region_handler(
                 # Pre-assembled CTA card list (legacy alias
                 # `action_card_data` is the actual upstream name).
                 adapter_ctx["action_cards"] = action_card_data
+            elif display_upper == "BAR_CHART":
+                # Phase 4 region migration batch (v0.67.50): bar_chart's
+                # adapter consumes `buckets` (list of label/count
+                # tuples or dicts). bucketed_metrics is already the
+                # right dict shape.
+                adapter_ctx["buckets"] = bucketed_metrics
+                adapter_ctx["chart_label"] = ctx.ctx_region.title
+            elif display_upper in ("LINE_CHART", "AREA_CHART"):
+                # TimeSeries variants: both read `points` from the
+                # same upstream `bucketed_metrics`. Reference lines /
+                # bands / overlay series flow through too.
+                adapter_ctx["points"] = bucketed_metrics
+                adapter_ctx["chart_label"] = ctx.ctx_region.title
+                adapter_ctx["reference_lines"] = getattr(ctx.ctx_region, "reference_lines", [])
+                adapter_ctx["reference_bands"] = getattr(ctx.ctx_region, "reference_bands", [])
+                adapter_ctx["overlay_series_data"] = overlay_series_data
+            elif display_upper == "BAR_TRACK":
+                # Pre-computed per-row {label, value, fill_pct,
+                # formatted_value} from `_compute_bar_track_rows`.
+                adapter_ctx["bar_track_rows"] = bar_track_rows
+                adapter_ctx["bar_track_max"] = bar_track_max
+            elif display_upper == "BULLET":
+                # Pre-computed per-row {label, actual, target} from
+                # `_compute_bullet_rows`.
+                adapter_ctx["bullet_rows"] = bullet_rows
+                adapter_ctx["bullet_max_value"] = bullet_max_value
+            elif display_upper == "BOX_PLOT":
+                # Per-group quartile stats from `_compute_box_plot_stats`.
+                adapter_ctx["box_plot_stats"] = box_plot_stats
+            elif display_upper == "ACTIVITY_FEED":
+                # Items carry actor/description/created_at — the adapter
+                # reads them directly off the row dicts.
+                adapter_ctx["items"] = items
             elif display_upper == "CONFIRM_ACTION_PANEL":
                 # ConfirmGate full state machine — IR-level fields plus
                 # the request-time state value.

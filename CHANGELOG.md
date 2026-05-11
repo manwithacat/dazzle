@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.50] - 2026-05-11
+
+### Changed
+
+- **Workspace region migration batch — 7 chart + specialty kinds typed.** `bar_chart`, `line_chart`, `area_chart`, `bar_track`, `bullet`, `box_plot`, `activity_feed` all join `_TYPED_REGION_DISPLAYS`. Each `adapter_ctx` population branch threads pre-computed chart data through to the typed builder:
+  - **bar_chart** ← buckets (from `bucketed_metrics`) + chart_label
+  - **line_chart / area_chart** ← points (from `bucketed_metrics`) + chart_label + reference_lines + reference_bands + overlay_series_data
+  - **bar_track** ← bar_track_rows + bar_track_max
+  - **bullet** ← bullet_rows + bullet_max_value
+  - **box_plot** ← box_plot_stats
+  - **activity_feed** ← items (with description/created_at/actor keys)
+- **32 of 36 region kinds** render via the typed-Fragment substrate.
+
+### Agent Guidance
+
+- **Remaining 4 Jinja-rendered region kinds**: `list` (foundational list-view, dedicated single-ship), `radar` (needs spoke-data shape investigation), `audit_history` (no adapter builder yet), `tab_data` (no adapter builder yet). The latter two require new typed builder + IR-side data wiring before they can join the whitelist.
+- **`reference_lines` / `reference_bands` are IR-region fields** read off `ctx.ctx_region`. `overlay_series_data` is computed upstream in `workspace_rendering.py` and threads through for line/area charts only.
+
 ## [0.67.49] - 2026-05-11
 
 ### Changed
