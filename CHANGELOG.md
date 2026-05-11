@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.41] - 2026-05-11
+
+### Added
+
+- **Phase 3 — generic document creation toolkit at `src/dazzle/documents/`.** Reframed from the original "Letters" plan: documents are the generic case (invoices, receipts, certificates, statements, contracts, mail-merged letters, reports), and the API doesn't lock authors into letter-specific framing.
+- **`DocumentTemplate` Protocol** — runtime-checkable, structural. Any function with signature `(ctx, /) -> Page` qualifies; no subclass required.
+- **`DocumentContext` base class** — empty marker for context dataclasses. Inheriting is optional but signals intent. Authors typically write `@dataclass class InvoiceContext(DocumentContext): ...`.
+- **`render_document_html(template, ctx) -> str`** — always available. Runs the template through `FragmentRenderer` to produce a complete `<!DOCTYPE html>` page. No optional deps required.
+- **`render_document_pdf(template, ctx, options=None) -> bytes`** — runs the HTML through WeasyPrint. Imports `weasyprint` lazily; missing-dep raises an `ImportError` with the install hint (`pip install 'dazzle-dsl[compliance]'`).
+- **`PdfOptions` frozen dataclass** with `page_size` (default `"A4"`), `margin` (default `"20mm"`), `base_url`, and `presentational_hints` (default False). Threads the `@page` CSS rule into the rasterised output so deployments can switch Letter/A4/custom sizes without forking the renderer.
+- **14 unit tests** at `tests/unit/test_documents_api.py` covering Protocol satisfaction, full HTML rendering, context-data escape safety, PdfOptions defaults and frozenness, A4-vs-Letter byte-stream differences, bad return type rejection, and the missing-WeasyPrint error message.
+
+### Changed
+
+- **`test_typed_runtime_no_jinja.py`** allow-list extended with `src/dazzle/documents/__init__.py` and `src/dazzle/documents/api.py` — the new modules stay free of Jinja2.
+
+### Agent Guidance
+
+- **Document templates are ordinary Python functions.** `DocumentTemplate` is a Protocol, not a base class. Authors define `def render_invoice(ctx: InvoiceContext) -> Page: ...` and pass it to `render_document_html(...)` / `render_document_pdf(...)`. No registration step.
+- **WeasyPrint is a heavy dep** — it pulls cairo / pango / gdk-pixbuf via its own transitive chain. Don't import `dazzle.documents` from code paths that should stay light. The HTML path doesn't need WeasyPrint at all; the PDF path imports it lazily inside `render_document_pdf` so the module-level `import dazzle.documents` succeeds even without WeasyPrint installed.
+- **CWE-209-style discipline doesn't apply here.** Unlike the 500 error views, document templates ARE supposed to render the variable data — that's the whole point. Escape safety comes from the typed-Fragment primitives, not from withholding fields. Don't pass raw exception text or untrusted blobs as context; treat the context dataclass as the contract.
+- **For tenant-scoped documents**, set `PdfOptions.base_url` to a per-tenant URL prefix so relative `href` / `src` attributes in the template resolve correctly. The default (None) means relative URLs will fail to fetch — fine for static-asset-free documents, not for documents that reference logos / signatures from disk.
+
 ## [0.67.40] - 2026-05-11
 
 ### Added
