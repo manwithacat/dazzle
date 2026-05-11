@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.60] - 2026-05-11
+
+### Removed
+
+- **`dazzle_back.runtime.renderers.legacy_ctx` retired entirely** (319 lines of translator + 305 lines of tests, ~624 lines total). The `legacy_ctx_to_adapter_ctx` translator was build-out infrastructure for the v0.67.52 DISPLAY_TEMPLATE_MAP flip — it reshaped legacy Jinja-template kwargs into typed-adapter ctx for the `render_via_typed` byte-equivalence harness. After v0.67.59 removed `render_via_typed`, the translator had zero production consumers; its own test file was the only importer.
+
+### Agent Guidance
+
+- The legacy → adapter ctx translation patterns are now history. New region-rendering work plugs straight into the typed-Fragment substrate (`dazzle.render.fragment` primitives + `WorkspaceRegionAdapter`), no translator step.
+
 ## [0.67.59] - 2026-05-11
 
 ### Removed
