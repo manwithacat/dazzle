@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.64] - 2026-05-11
+
+### Changed
+
+- **`_render_detail_html` migrated to inline + typed Page wrap** — the auto-generated read-handler's HTMX/browser content-negotiation path (`dazzle_back.runtime.route_generator`) no longer goes through Jinja. The full-page browser path wraps the inline-rendered detail-fields HTML in a typed `Page` via `dispatch_render_page(chrome=False)` — no more `env.from_string("{%% extends 'layouts/single_column.html' %%}...")` string-built Jinja-extends pattern.
+- **Replaces 3 Jinja deps**: `fragments/detail_fields.html`, `layouts/single_column.html`, and `macros/status_badge.html`. The macro's Yes/No boolean badge rendering is inlined; long-string truncation (200 chars + ellipsis) and the underscore-to-space + title-case key formatting are preserved.
+
+### Agent Guidance
+
+- For auto-generated CRUD-read endpoints, the HTMX partial + browser fallback both now run through the typed substrate. Project authors customising read responses should target the inline-renderer in `_render_detail_html` or supply a route override that returns a typed `Page` via `dispatch_render_page`.
+
 ## [0.67.63] - 2026-05-11
 
 ### Changed

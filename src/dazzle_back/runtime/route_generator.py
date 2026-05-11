@@ -1996,7 +1996,7 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
     if not _wants_html(request):
         return None
     try:
-        from dazzle_ui.runtime.template_renderer import render_fragment
+        import html as _html_mod
 
         # Convert Pydantic model to dict
         if hasattr(result, "model_dump"):
@@ -2008,31 +2008,83 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
         else:
             return None
 
-        fragment_html = render_fragment(
-            "fragments/detail_fields.html",
-            item=item,
-            entity_name=entity_name,
+        # Phase 4 (v0.67.64): inline-render the detail-fields fragment.
+        # Replaces `fragments/detail_fields.html` + `status_badge` macro.
+        rows: list[str] = []
+        for key, value in item.items():
+            if value is None or key == "id":
+                continue
+            label = _html_mod.escape(
+                str(key).replace("_", " ").title(),
+                quote=False,
+            )
+            if value is True:
+                value_html = (
+                    '<span class="dz-badge" data-dz-tone="success" '
+                    'role="status" aria-label="Status: Yes">Yes</span>'
+                )
+            elif value is False:
+                value_html = (
+                    '<span class="dz-badge" data-dz-tone="neutral" '
+                    'role="status" aria-label="Status: No">No</span>'
+                )
+            elif isinstance(value, str) and len(value) > 200:
+                value_html = (
+                    '<span class="whitespace-pre-wrap">'
+                    f"{_html_mod.escape(value[:200], quote=False)}…"
+                    "</span>"
+                )
+            else:
+                value_html = _html_mod.escape(str(value), quote=False)
+            rows.append(
+                f'<dt class="dz-detail-fields-key">{label}</dt>'
+                f'<dd class="dz-detail-fields-value">{value_html}</dd>'
+            )
+
+        entity_label = _html_mod.escape(entity_name, quote=False)
+        fragment_html = (
+            '<div class="dz-detail-fields-card">'
+            '<div class="dz-detail-fields-body">'
+            f'<h2 class="dz-detail-fields-title">{entity_label}</h2>'
+            f'<dl class="dz-detail-fields-list">{"".join(rows)}</dl>'
+            "</div>"
+            "</div>"
         )
 
         if _is_htmx_request(request):
             # HTMX partial swap: return bare fragment
             return HTMLResponse(content=fragment_html)
 
-        # Direct browser navigation: wrap fragment in a full page (#349)
-        from dazzle_ui.runtime.template_renderer import get_jinja_env
+        # Direct browser navigation: wrap fragment in a typed Page (#349).
+        from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
+        from dazzle_ui.runtime.template_context import PageContext
 
-        env = get_jinja_env()
-        wrapper_source = (  # noqa: UP031
-            "{%% extends 'layouts/single_column.html' %%}{%% block content %%}%s{%% endblock %%}"
-        ) % fragment_html
-        full_html = env.from_string(wrapper_source).render(
+        page_ctx = PageContext(
             page_title=f"{entity_name} Detail",
+            app_name="Dazzle",
+            current_route=str(getattr(request.url, "path", "")),
+        )
+        app_state = request.app.state
+        css_links = tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        )
+        js_scripts = tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        )
+        theme = getattr(app_state, "fragment_chrome_theme", None)
+        full_html = dispatch_render_page(
+            page_ctx,
+            fragment_html,
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
+            chrome=False,
         )
         return HTMLResponse(content=full_html)
-    except ImportError:
-        return None  # Template renderer not available
     except Exception:
-        logger.debug("ignored exception in route_generator.py:1939", exc_info=True)
+        logger.debug("ignored exception in route_generator.py:_render_detail_html", exc_info=True)
         return None  # Fragment not found or render error
 
 
