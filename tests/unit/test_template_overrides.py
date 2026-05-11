@@ -146,9 +146,10 @@ class TestSemanticBlocks:
             ("layouts/app_shell.html", "sidebar_brand"),
             ("layouts/app_shell.html", "sidebar_nav"),
             ("layouts/app_shell.html", "sidebar_footer"),
-            ("components/detail_view.html", "detail_header"),
-            ("components/detail_view.html", "detail_fields"),
-            ("components/detail_view.html", "detail_transitions"),
+            # v0.67.75: components/detail_view.html retired — detail rendering
+            # moved to dazzle_ui.runtime.detail_renderer. The detail_header /
+            # detail_fields / detail_transitions overridable blocks no longer
+            # exist.
             # v0.67.74: components/form.html retired — form rendering moved
             # to dazzle_ui.runtime.form_renderer. The form_header /
             # form_fields / form_actions overridable blocks no longer exist.

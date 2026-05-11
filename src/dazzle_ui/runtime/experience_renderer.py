@@ -216,12 +216,10 @@ def _render_step_body(experience: Any) -> str:
         # Form step — fully inline-rendered (v0.67.74).
         body = _render_form_step_body(experience, page_context)
     elif ctx_detail is not None:
-        from dazzle_ui.runtime.template_renderer import render_fragment
+        # Phase 4 (v0.67.75): inline-render via detail_renderer.
+        from dazzle_ui.runtime.detail_renderer import render_detail_view
 
-        body_inner = render_fragment(  # nosemgrep
-            "components/detail_view.html",
-            **(page_context.model_dump() if hasattr(page_context, "model_dump") else {}),
-        )
+        body_inner = render_detail_view(ctx_detail)
         actions = _render_transitions_row(transitions)
         body = f"{body_inner}{actions}"
     elif ctx_table is not None:

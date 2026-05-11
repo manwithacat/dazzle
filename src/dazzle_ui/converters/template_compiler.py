@@ -1363,7 +1363,9 @@ def _compile_custom_surface(
         page_title=surface.title or surface.name,
         page_purpose=page_purpose,
         persona_purposes=persona_purposes,
-        template="components/detail_view.html",
+        # v0.67.75: PageContext.template field is no longer read by any
+        # renderer (detail rendering moved to detail_renderer.py).
+        template="",
     )
 
 

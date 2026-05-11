@@ -35,8 +35,6 @@ from dazzle_ui.converters.template_compiler import (  # noqa: E402
 from dazzle_ui.runtime.mock_data import generate_mock_records  # noqa: E402
 from dazzle_ui.runtime.template_context import (  # noqa: E402
     ColumnContext,
-    DetailContext,
-    FieldContext,
     NavItemContext,
     PageContext,
     TableContext,
@@ -506,24 +504,12 @@ class TestRendering:
         # But content is still rendered
         assert "<table" in html or "hx-get" in html
 
-    def test_render_detail_page(self) -> None:
-        ctx = PageContext(
-            page_title="Task Details",
-            app_name="Test App",
-            template="components/detail_view.html",
-            detail=DetailContext(
-                entity_name="Task",
-                title="Task Details",
-                fields=[
-                    FieldContext(name="title", label="Title"),
-                ],
-                item={"title": "My Task"},
-                edit_url="/task/1/edit",
-                back_url="/task",
-            ),
-        )
-        html = render_page(ctx)
-        assert "My Task" in html or "Task Details" in html
+    @pytest.mark.skip(
+        reason="v0.67.75 retired components/detail_view.html — detail rendering "
+        "goes through `dazzle_ui.runtime.detail_renderer.render_detail_view` "
+        "(inline Python). render_page no longer dispatches on PageContext.template."
+    )
+    def test_render_detail_page(self) -> None: ...
 
 
 # ===================================================================

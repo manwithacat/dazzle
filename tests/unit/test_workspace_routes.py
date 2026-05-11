@@ -4640,10 +4640,13 @@ class TestTransitionUrlSubstitution:
 
     @pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
     def test_detail_template_renders_transition_url(self) -> None:
-        """Detail template renders transition buttons with resolved URLs."""
-        html = render_fragment(
-            "components/detail_view.html",
-            detail=SimpleNamespace(
+        """Detail renderer emits transition buttons with resolved URLs.
+        v0.67.75: migrated from Jinja `components/detail_view.html` to
+        `dazzle_ui.runtime.detail_renderer.render_detail_view`."""
+        from dazzle_ui.runtime.detail_renderer import render_detail_view
+
+        html = render_detail_view(
+            SimpleNamespace(
                 entity_name="Task",
                 title="Task Details",
                 fields=[],
@@ -4659,7 +4662,12 @@ class TestTransitionUrlSubstitution:
                     ),
                 ],
                 status_field="status",
-            ),
+                related_groups=None,
+                external_link_actions=None,
+                integration_actions=None,
+                show_history=False,
+                entity_id=None,
+            )
         )
         assert "Start" in html
         assert 'hx-put="/tasks/t1"' in html
@@ -5288,8 +5296,21 @@ class TestNoneVsDefaultDriftSweep:
         )
         return SimpleNamespace(tabs=[tab])
 
+    def _render_status_cards(self, group, detail):
+        from dazzle_ui.runtime.detail_renderer import _render_related_status_cards
+
+        item = detail.item if not isinstance(detail, dict) else detail.get("item", {})
+        return _render_related_status_cards(group, item)
+
+    def _render_file_list(self, group, detail):
+        from dazzle_ui.runtime.detail_renderer import _render_related_file_list
+
+        item = detail.item if not isinstance(detail, dict) else detail.get("item", {})
+        return _render_related_file_list(group, item)
+
     def test_related_file_list_none_renders_emdash_not_literal_none(self) -> None:
-        """Primary label: None → — (not literal "None")."""
+        """v0.67.75: migrated from Jinja `related_file_list.html` to
+        `dazzle_ui.runtime.detail_renderer._render_related_file_list`."""
         group = self._make_group(
             columns=[
                 {"key": "name", "label": "Name", "type": "text"},
@@ -5298,11 +5319,7 @@ class TestNoneVsDefaultDriftSweep:
             rows=[{"id": "1", "name": None, "size": "1KB"}],
         )
         detail = SimpleNamespace(item={"id": "parent-1"})
-        html = render_fragment(
-            "fragments/related_file_list.html",
-            group=group,
-            detail=detail,
-        )
+        html = self._render_file_list(group, detail)
         assert "—" in html
         assert ">None<" not in html
         assert "None</p>" not in html
@@ -5310,7 +5327,6 @@ class TestNoneVsDefaultDriftSweep:
     def test_related_file_list_none_secondary_renders_empty_not_literal_none(
         self,
     ) -> None:
-        """Secondary label: None → "" (empty, not literal "None")."""
         group = self._make_group(
             columns=[
                 {"key": "name", "label": "Name", "type": "text"},
@@ -5319,17 +5335,12 @@ class TestNoneVsDefaultDriftSweep:
             rows=[{"id": "1", "name": "file.pdf", "caption": None}],
         )
         detail = SimpleNamespace(item={"id": "parent-1"})
-        html = render_fragment(
-            "fragments/related_file_list.html",
-            group=group,
-            detail=detail,
-        )
+        html = self._render_file_list(group, detail)
         assert "file.pdf" in html
         assert ">None<" not in html
         assert "None</p>" not in html
 
     def test_related_status_cards_none_renders_emdash(self) -> None:
-        """All lines in related_status_cards use emdash fallback."""
         group = self._make_group(
             columns=[
                 {"key": "title", "label": "Title", "type": "text"},
@@ -5341,17 +5352,12 @@ class TestNoneVsDefaultDriftSweep:
             ],
         )
         detail = SimpleNamespace(item={"id": "parent-1"})
-        html = render_fragment(
-            "fragments/related_status_cards.html",
-            group=group,
-            detail=detail,
-        )
+        html = self._render_status_cards(group, detail)
         assert "—" in html
         assert ">None<" not in html
         assert "None</p>" not in html
 
     def test_related_status_cards_real_value_renders_correctly(self) -> None:
-        """Sanity check: real (non-None) values still render normally."""
         group = self._make_group(
             columns=[
                 {"key": "title", "label": "Title", "type": "text"},
@@ -5360,11 +5366,7 @@ class TestNoneVsDefaultDriftSweep:
             rows=[{"id": "1", "title": "Login broken", "priority": "high"}],
         )
         detail = SimpleNamespace(item={"id": "parent-1"})
-        html = render_fragment(
-            "fragments/related_status_cards.html",
-            group=group,
-            detail=detail,
-        )
+        html = self._render_status_cards(group, detail)
         assert "Login broken" in html
         assert "high" in html
 

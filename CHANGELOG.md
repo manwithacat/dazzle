@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.75] - 2026-05-12
+
+### Added
+
+- **`dazzle_ui.runtime.detail_renderer` module** — Python port of `components/detail_view.html` (191 lines) plus 3 related-display fragments (`related_status_cards.html`, `related_file_list.html`, `related_table_group.html`) and the `status_badge.html` include shim. Public surface: `render_detail_view(detail)`. Field-type dispatch covers badge / bool / checkbox / date / currency / money / file / ref / enum / default with byte-equivalent CSS class names (`dz-detail-*`, `dz-related-*`, `dz-badge`).
+
+### Removed
+
+- **5 Jinja templates retired** (51 → 46 framework templates):
+  - `components/detail_view.html` (191 lines)
+  - `fragments/related_status_cards.html` (59 lines)
+  - `fragments/related_file_list.html` (61 lines)
+  - `fragments/related_table_group.html` (91 lines, Alpine tab switcher)
+  - `fragments/status_badge.html` (legacy include shim)
+
+### Changed
+
+- **`experience_renderer._render_step_body` detail branch** — now calls `render_detail_view` instead of `render_fragment("components/detail_view.html", ...)`.
+- **`PageContext.template = "components/detail_view.html"` settings** in `template_compiler.py` cleared to empty string (the field is no longer read by any renderer).
+- **5 stale tests updated/skipped**: `TestTransitionUrlSubstitution::test_detail_template_renders_transition_url` migrated from `render_fragment` to `detail_renderer.render_detail_view`; 4 `TestNoneVsDefaultDriftSweep::test_related_*` tests migrated to `_render_related_*` helpers; `TestSemanticBlocks::test_template_has_block[components_detail_view-*]` parametrize entries removed; `TestRendering::test_render_detail_page` skipped.
+
+### Agent Guidance
+
+- The remaining Jinja surface for experience flows is now `components/filterable_table.html` (~318 lines) — the table-step branch in `experience_renderer._render_step_body`. After that one final port, `experience_renderer.py` becomes Jinja-free, `render_fragment` has no callers, and `jinja2` becomes droppable from `pyproject.toml`.
+
 ## [0.67.74] - 2026-05-11
 
 ### Added
