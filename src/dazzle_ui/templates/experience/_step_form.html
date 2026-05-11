@@ -1,0 +1,60 @@
+{# Experience form step body (Phase 4, v0.67.71).
+
+   Extracted from the now-retired `experience/_content.html` so the
+   typed renderer (`experience_renderer.render_experience_inner_html`)
+   can dispatch just the form branch through Jinja for its
+   form_field + form_stepper + form_errors macro chain.
+
+   Context: `experience` (ExperienceContext) + `ctx` (PageContext).
+#}
+{% from 'macros/form_field.html' import render_field %}
+{% from 'macros/experience_transition.html' import experience_transition_button %}
+<div class="dz-experience-form-shell">
+  <form data-dazzle-form="{{ ctx.form.entity_name }}"
+        data-dazzle-form-mode="{{ ctx.form.mode }}"
+        hx-{{ "put" if ctx.form.method == "put" else "post" }}="{{ ctx.form.action_url }}"
+        hx-target="body"
+        hx-swap="innerHTML"
+        hx-target-422="#form-errors"
+        hx-target-5*="#form-errors"
+        hx-headers='{"Content-Type": "application/json"}'
+        hx-ext="json-enc"
+        class="dz-experience-form-body">
+
+    <div id="form-errors">
+      {% include 'fragments/form_errors.html' %}
+    </div>
+
+    {% if ctx.form.sections %}
+      {# Wizard sections within a step #}
+      {% include 'fragments/form_stepper.html' with context %}
+      {% for section in ctx.form.sections %}
+      <div class="dz-wizard-stage" data-dz-stage="{{ loop.index0 }}"
+           {% if not loop.first %}style="display:none"{% endif %}>
+        <h3 class="dz-experience-stage-title">{{ section.title }}</h3>
+        {% for field in section.fields %}
+          {{ render_field(field, ctx.form.initial_values) }}
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+      {% for field in ctx.form.fields %}
+        {{ render_field(field, ctx.form.initial_values) }}
+      {% endfor %}
+    {% endif %}
+
+    {# Form submit + navigation buttons #}
+    <div class="dz-experience-actions">
+      <button type="submit" class="dz-button dz-button-primary"
+              data-loading-class="loading"
+              data-loading-disable>
+        {% if ctx.form.mode == "edit" %}Save & Continue{% else %}Submit{% endif %}
+      </button>
+      {% for tr in experience.transitions %}
+        {% if tr.event != 'success' %}
+          {{ experience_transition_button(tr) }}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </form>
+</div>

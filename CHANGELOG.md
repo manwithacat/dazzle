@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.72] - 2026-05-11
+
+### Fixed
+
+- **Restore experience_renderer.py + experience/_step_form.html** that should have shipped in v0.67.71 — both files were untracked at commit time. Without them, `import dazzle_ui.runtime.experience_renderer` would fail at runtime. This release lands the actual files.
+
 ## [0.67.71] - 2026-05-11
 
 ### Added
