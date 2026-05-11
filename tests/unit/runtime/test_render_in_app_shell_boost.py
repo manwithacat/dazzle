@@ -87,7 +87,14 @@ def _make_request(headers: dict[str, str] | None = None) -> Request:
 
 
 def test_full_document_when_not_boosted(stub_template: Any) -> None:
-    """Regression: a normal (non-boosted) request still gets the full shell."""
+    """Regression: a normal (non-boosted) request still gets typed chrome.
+
+    Phase 4 (v0.67.55): the chrome is now supplied by the typed `AppShell`
+    primitive rather than the legacy Jinja `layouts/app_shell.html`. The
+    helper extracts the project template's `content` block and wraps it
+    in `Page → AppShell`. Title format is now `"{title} — {app_name}"`.
+    Project-template-rendered chrome (the test stub's `<nav>shell-chrome</nav>`)
+    is intentionally dropped — chrome is the framework's job."""
     from dazzle_back.runtime.shell import render_in_app_shell
 
     request = _make_request({})
@@ -99,8 +106,7 @@ def test_full_document_when_not_boosted(stub_template: Any) -> None:
     body = response.body.decode()
     assert "<html" in body.lower()
     assert "<main" in body.lower()
-    assert "<title>Hello</title>" in body
-    assert "shell-chrome" in body
+    assert "<title>Hello — Test App</title>" in body
     assert "page-body" in body
 
 

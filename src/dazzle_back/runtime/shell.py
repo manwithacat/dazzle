@@ -4,26 +4,34 @@ framework app shell (#951).
 Background: the `# dazzle:route-override` decorator (and any other
 project-registered FastAPI handler) can return arbitrary `Response`s,
 but until #951 there was no first-class way to render the page
-*inside* the framework's standard `dz://layouts/app_shell.html`. The
-shell needs `app_name`, `nav_items`, `nav_groups`, auth context,
-and a handful of optional metadata fields the page handler usually
-populates per-request.
+wrapped in the framework's standard app chrome. The chrome needs
+`app_name`, `nav_items`, `nav_groups`, auth context, and a handful
+of optional metadata fields the page handler usually populates
+per-request.
+
+Phase 4 app-shell migration (v0.67.55): the render path no longer
+walks the legacy `layouts/app_shell.html` Jinja chain. Instead the
+helper extracts the project template's `{% block content %}` body
+and wraps it in a typed `Page` + `AppShell` via
+`dispatch_render_page` — same pattern proven for marketing pages
+(v0.67.43), entity surfaces (v0.67.44), and experience routes
+(v0.67.54). Project authors keep authoring content as a `content`
+block; the typed chrome supplies the topbar/sidebar/nav.
 
 This module exposes:
 
 - `ShellState` — registered on `app.state.shell_state` during
   framework boot, carrying the nav data + app-wide config the
-  shell template reads.
+  chrome reads.
 - `register_shell_state(app, ...)` — called from
   `create_page_routes` so the shell helpers are available without
   the project depending on `_PageDeps` internals.
 - `render_in_app_shell(request, *, template, ...) -> Response` —
   the public one-liner project authors call. Resolves auth + nav
-  per-request and returns a TemplateResponse extending the
-  framework app shell.
+  per-request and returns an HTMLResponse with typed chrome.
 
-The project-side template should `{% extends "layouts/app_shell.html" %}`
-and provide a `{% block content %}…{% endblock %}` body.
+The project-side template provides a `{% block content %}…{% endblock %}`
+body; the typed chrome supplies everything else.
 """
 
 from __future__ import annotations
@@ -186,12 +194,12 @@ def render_in_app_shell(
     workspace_name: str | None = None,
     context: dict[str, Any] | None = None,
 ) -> Any:
-    """Render a project template inside the framework app shell.
+    """Render a project template wrapped in the framework app chrome.
 
-    The project template must `{% extends "layouts/app_shell.html" %}`
-    and provide a `{% block content %}…{% endblock %}` body. The
-    helper supplies every variable `app_shell.html` reads, derived
-    from request auth + the registered `ShellState` + the kwargs.
+    The project template provides a `{% block content %}…{% endblock %}`
+    body; the helper extracts that block and wraps it in a typed
+    `Page` + `AppShell` (Phase 4, v0.67.55). Auth + nav are resolved
+    from the request and the registered `ShellState`.
 
     Args:
         request: The FastAPI request. Used to resolve auth + the
@@ -220,8 +228,6 @@ def render_in_app_shell(
         Starlette `HTMLResponse` ready to return from the FastAPI
         handler. Status code 200 in the success path.
     """
-    from fastapi.templating import Jinja2Templates
-
     from dazzle_ui.runtime.template_renderer import get_jinja_env
 
     state = get_shell_state(request)
@@ -317,16 +323,64 @@ def render_in_app_shell(
             # or a project that bypassed the convention). Render the
             # whole template — at worst we ship slightly more chrome,
             # but we never crash the boosted nav.
-            fragment = tmpl.render(merged_context)
+            fragment = tmpl.render(merged_context)  # nosemgrep: direct-use-of-jinja2
         return HTMLResponse(content=fragment)
 
-    templates = Jinja2Templates(env=env)
-    # Starlette deprecated the old `TemplateResponse(name, ctx)` form
-    # in favour of `TemplateResponse(request, name, ctx)`. Pass the
-    # request explicitly to silence the warning AND ensure
-    # request-context-dependent template features (e.g. url_for)
-    # have access to it.
-    return templates.TemplateResponse(request, template, merged_context)
+    # Phase 4 app-shell migration (v0.67.55): the full-page render path
+    # now wraps the project template's `content` block in a typed
+    # `Page` + `AppShell` via `dispatch_render_page`, mirroring the
+    # marketing/entity/experience route patterns (v0.67.43/44/54). The
+    # Jinja `layouts/app_shell.html` chrome is bypassed entirely — the
+    # project template's `extends "layouts/app_shell.html"` directive
+    # is only used by Jinja to resolve the `content` block lookup chain.
+    from fastapi.responses import HTMLResponse
+
+    from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
+    from dazzle_ui.runtime.template_context import NavItemContext, PageContext
+
+    tmpl = env.get_template(template)
+    ctx = tmpl.new_context(merged_context)
+    if "content" in tmpl.blocks:
+        inner_html = "".join(tmpl.blocks["content"](ctx))
+    else:
+        inner_html = tmpl.render(merged_context)  # nosemgrep: direct-use-of-jinja2
+
+    nav_items_ctx: list[NavItemContext] = []
+    for n in nav_items:
+        route = getattr(n, "route", None) or (n.get("route") if isinstance(n, dict) else "")
+        label = getattr(n, "label", None) or (n.get("label") if isinstance(n, dict) else "")
+        if route and label:
+            nav_items_ctx.append(
+                NavItemContext(label=label, route=route, active=current_route == route)
+            )
+
+    page_ctx = PageContext(
+        page_title=merged_context["page_title"] or "",
+        app_name=merged_context["app_name"] or "Dazzle",
+        current_route=current_route,
+        nav_items=nav_items_ctx,
+        nav_groups=nav_groups,
+        view_name=merged_context.get("view_name", "") or "",
+        page_purpose=merged_context.get("page_purpose", "") or "",
+    )
+
+    app_state = request.app.state
+    css_links = tuple(
+        getattr(app_state, "fragment_chrome_css_links", None) or ("/static/dist/dazzle.min.css",)
+    )
+    js_scripts = tuple(
+        getattr(app_state, "fragment_chrome_js_scripts", None) or ("/static/dist/dazzle.min.js",)
+    )
+    theme = getattr(app_state, "fragment_chrome_theme", None)
+
+    html = dispatch_render_page(
+        page_ctx,
+        inner_html,
+        css_links=css_links,
+        js_scripts=js_scripts,
+        theme=theme,
+    )
+    return HTMLResponse(content=html)
 
 
 def _is_boosted_main_content_swap(request: Any) -> bool:

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.55] - 2026-05-11
+
+### Changed
+
+- **`render_in_app_shell` migrated to typed AppShell** — the public helper for rendering project-side routes inside the framework chrome (`dazzle_back.runtime.shell`) no longer walks the legacy `layouts/app_shell.html` Jinja chain. The full-page render path now extracts the project template's `{% block content %}` body and wraps it in a typed `Page` + `AppShell` via `dispatch_render_page`, mirroring the v0.67.43 (marketing), v0.67.44 (entity surfaces), and v0.67.54 (experience routes) patterns. The boosted-swap path (HX-Target=main-content) was already content-block-only and is unchanged.
+- **Breaking (project templates)**: project content-only — chrome rendered inside the project template's content block (sidebars/navs/topbars the project tried to provide itself outside `{% block content %}`) is dropped. The framework owns the chrome.
+- **Breaking (page `<title>` format)**: the typed `Page` builds `<title>` as `"{page_title} — {app_name}"`. Project routes that asserted exact-match titles need to update accordingly.
+
+### Agent Guidance
+
+- For project routes wrapping arbitrary content inside the framework app shell, continue calling `render_in_app_shell(request, template=..., title=..., context=...)` — the API is unchanged; only the chrome substrate moved from Jinja `app_shell.html` to typed `AppShell`.
+- The retirement of `layouts/app_shell.html` is now unblocked. No live render path walks the template; `extends "layouts/app_shell.html"` directives in project templates resolve via Jinja only to satisfy the `content` block lookup chain.
+
 ## [0.67.54] - 2026-05-11
 
 ### Removed
