@@ -146,9 +146,11 @@ def htmx_error_response(
 ) -> HTMLResponse:
     """Create an HTMX-aware validation error response.
 
-    Renders form_errors.html and returns it with HX-Retarget/#form-errors
-    so HTMX swaps the error into the correct container instead of replacing
-    the entire page body.
+    Phase 4 (v0.67.61): inline-rendered with the same CSS classes the
+    legacy `fragments/form_errors.html` template emitted, so existing
+    styles continue to apply unchanged. Returns the rendered HTML with
+    HX-Retarget/#form-errors so HTMX swaps the error into the correct
+    container instead of replacing the entire page body.
 
     Args:
         errors: List of human-readable error messages.
@@ -157,17 +159,26 @@ def htmx_error_response(
     Returns:
         HTMLResponse targeting #form-errors with reswap.
     """
-    try:
-        from dazzle_ui.runtime.template_renderer import render_fragment
-
-        html = render_fragment("fragments/form_errors.html", form_errors=errors)
-    except ImportError:
-        # Template renderer not available -- fall back to simple HTML
-        items = "".join(f"<li>{_escape(e)}</li>" for e in errors)
+    if errors:
+        items_html = "".join(f"<li>{_escape(str(e))}</li>" for e in errors)
         html = (
-            f'<div class="alert alert-error mb-4">'
-            f"<div><h3>Validation Error</h3><ul>{items}</ul></div></div>"
+            '<div class="dz-form-errors" role="alert" aria-live="assertive" data-dazzle-error>'
+            '<svg xmlns="http://www.w3.org/2000/svg" class="dz-form-errors-icon" '
+            'fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" '
+            'aria-hidden="true">'
+            '<path stroke-linecap="round" stroke-linejoin="round" '
+            'd="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 '
+            "2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 "
+            '0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />'
+            "</svg>"
+            '<div class="dz-form-errors-body">'
+            '<h3 class="dz-form-errors-title">Validation Error</h3>'
+            f'<ul class="dz-form-errors-list" role="list">{items_html}</ul>'
+            "</div>"
+            "</div>"
         )
+    else:
+        html = ""
 
     return htmx_response(
         html,

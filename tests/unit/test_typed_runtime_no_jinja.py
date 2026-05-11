@@ -50,6 +50,10 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle_back/runtime/renderers/dual_path.py",
     # legacy_ctx.py was retired entirely in v0.67.60 (dead code; tests
     # were the only consumer after v0.67.59 removed render_via_typed).
+    # v0.67.61 — htmx_error_response inline-rendered (form_errors.html
+    # template stays — Jinja `{% include %}` consumers in components/
+    # form.html and experience/_content.html still use it).
+    "src/dazzle_ui/runtime/htmx.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

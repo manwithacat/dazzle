@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.61] - 2026-05-11
+
+### Changed
+
+- **`htmx_error_response` inline-rendered** — the HTMX-aware form-validation-error helper (`dazzle_ui.runtime.htmx`) no longer goes through Jinja. The template `fragments/form_errors.html` STAYS on disk — it has Jinja `{% include %}` consumers in `components/form.html` and `experience/_content.html` — but the Python-level call inlines the same `dz-form-errors*` markup so existing CSS continues to apply. The legacy "ImportError fallback" simple-HTML branch (which emitted `alert alert-error` Tailwind classes that no longer exist) was removed; the inline render IS the path.
+- **`dazzle_ui.runtime.htmx` added to `test_typed_runtime_no_jinja.py` allowlist** — locked as Jinja2-free.
+
+### Removed
+
+- The unused `alert alert-error` fallback HTML (legacy Tailwind classes from before the v0.62 semantic-class refactor) — the new inline render always emits the canonical `dz-form-errors*` shape.
+
+### Agent Guidance
+
+- When adding HTMX-aware Python-level fragment renderers, use stdlib `html.escape` (or the existing `_escape` helper in `dazzle_ui.runtime.htmx`) and emit canonical `dz-*` CSS class names. Reserve Jinja `{% include %}` for shared partials authored within template chains.
+
 ## [0.67.60] - 2026-05-11
 
 ### Removed
