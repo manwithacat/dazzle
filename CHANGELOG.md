@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.76] - 2026-05-12
+
+### Added
+
+- **`dazzle_ui.runtime.table_renderer` module** — Python port of `components/filterable_table.html` (318 lines) plus 3 toolbar fragments: `fragments/search_input.html`, `fragments/filter_bar.html`, `fragments/bulk_actions.html`. Public surface: `render_filterable_table(table, *, page_title="")`. The full dzTable Alpine controller wiring (loading, colMenuOpen, isColumnVisible, toggleColumn, toggleSort, ariaSortDir, sortIcon, toggleSelectAll, bulkCount, startColumnResize, bulkDelete, clearSelection, dzFilterRefSelect) preserved verbatim.
+
+### Removed
+
+- **4 Jinja templates retired** (46 → 42 framework templates):
+  - `components/filterable_table.html` (318 lines)
+  - `fragments/search_input.html` (59 lines)
+  - `fragments/filter_bar.html` (86 lines)
+  - `fragments/bulk_actions.html` (34 lines)
+
+### Changed
+
+- **`experience_renderer._render_step_body` table branch** — now calls `render_filterable_table(ctx_table, page_title=...)` instead of `render_fragment("components/filterable_table.html", ...)`.
+- **`experience_renderer.py` is now fully Jinja-free.**
+- **No production code path calls `render_fragment` anymore.** The function is preserved in `template_renderer.py` for downstream / test use only.
+- **`components/alpine/slide_over.html`** added to the orphan-scan allowlist as a dormant Alpine primitive (was opt-in via `table.slide_over` in legacy filterable_table chrome).
+
+### Agent Guidance
+
+- The framework's Python-side render path is essentially Jinja-free. `render_fragment` and the Jinja env (`get_jinja_env`) remain in `template_renderer.py` solely for: (a) `render_page` (which renders base.html / layouts/single_column.html / etc.), (b) `render_in_app_shell` in `dazzle_back.runtime.shell`, (c) journey_reporter's `reports/*.html` dynamic dispatch, (d) PDF viewer page, (e) downstream-project Jinja extension via `extends "layouts/app_shell.html"`. Dropping `jinja2` as a dependency now requires migrating those remaining paths — but the experience-cluster work that motivated this whole effort is complete.
+
 ## [0.67.75] - 2026-05-12
 
 ### Added

@@ -62,6 +62,11 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Self-reference in Usage docstring ({# Usage: %}) was hiding "
         "this from the scan until cycle 304 fixed the comment-strip."
     ),
+    "components/alpine/slide_over.html": (
+        "Dormant Alpine primitive; was opt-in via `table.slide_over` "
+        "in the legacy filterable_table.html chrome (v0.67.76 retired). "
+        "Kept on disk for adopter-opt-in detail-drawer use."
+    ),
     # Dormant building-blocks with ux-architect contracts but no
     # production consumer. Same class as the PR #600 primitives.
     "components/modal.html": (

@@ -12,7 +12,7 @@ form_field / detail_view / filterable_table migrations.
 
 The legacy `experience/_content.html` Jinja template is retired —
 the outer shell rendering is owned here, and each rich-step branch
-calls `render_fragment` for its specific sub-template inline.
+used to be Jinja sub-templates (now fully inline Python).
 """
 
 from __future__ import annotations
@@ -223,11 +223,12 @@ def _render_step_body(experience: Any) -> str:
         actions = _render_transitions_row(transitions)
         body = f"{body_inner}{actions}"
     elif ctx_table is not None:
-        from dazzle_ui.runtime.template_renderer import render_fragment
+        # Phase 4 (v0.67.76): inline-render via table_renderer.
+        from dazzle_ui.runtime.table_renderer import render_filterable_table
 
-        body_inner = render_fragment(  # nosemgrep
-            "components/filterable_table.html",
-            **(page_context.model_dump() if hasattr(page_context, "model_dump") else {}),
+        body_inner = render_filterable_table(
+            ctx_table,
+            page_title=str(getattr(page_context, "page_title", "") or ""),
         )
         actions = _render_transitions_row(transitions)
         body = f"{body_inner}{actions}"
@@ -244,9 +245,9 @@ def _render_step_body(experience: Any) -> str:
 def render_experience_inner_html(experience: Any) -> str:
     """Render the experience-flow inner HTML (Phase 4, v0.67.71).
 
-    Replaces `render_fragment("experience/_content.html", experience=...)`.
+    Replaces the legacy `experience/_content.html` Jinja render call.
     The outer shell (title, step progress, container) is Python; step
-    bodies dispatch to typed branches or Jinja sub-templates.
+    bodies dispatch to typed-Python renderers (form, detail, table).
     """
     name_attr = _html_mod.escape(str(getattr(experience, "name", "") or ""), quote=True)
     title = _html_mod.escape(str(getattr(experience, "title", "") or ""), quote=False)
