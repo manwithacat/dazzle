@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.43] - 2026-05-11
+
+### Removed
+
+- **Jinja2 Retirement Phase 4 — chrome flag flipped on marketing pages.** `_render_site_page_chromed` in `site_routes.py` no longer consults `app.state.fragment_chrome`; the typed-Fragment path is unconditional. The legacy `site/page.html` Jinja template is deleted (no callers remain).
+- **`fragment_chrome` flag references in `site_routes.py`** — the marketing-page renderer ignores the flag. The flag is still consulted in `page_routes.py` (in-app surfaces — depends on app-shell migration) and `manifest.py` / `server.py` / `build.py` (initialization/config plumbing); those are follow-on cleanup.
+
+### Added
+
+- **Custom-CSS parity in the typed marketing-page path.** When `ctx.custom_css=True`, the chrome=on renderer now appends `/static/css/custom.css` to the Page's `css_links` — mirroring the legacy `site_base.html`'s `<head>` link. Closes the second parity gap (after Phase 4 first slice's OG-meta gap) that was blocking the chrome flag's removal.
+
+### Changed
+
+- **`tests/integration/test_sitespec_chrome_gate_flip.py`** rewritten. The chrome=off vs chrome=on dichotomy is gone — every test now asserts the typed path renders regardless of the flag value. The legacy `test_chrome_off_renders_via_legacy_jinja_template` and three sibling chrome=off tests were retired (their target no longer exists); the OG-parity additions from Phase 4 first slice continue to assert metadata emission.
+- **`tests/unit/test_site_templates.py`** all `_render("site/page.html", ctx)` callers swapped to `_render("site/inner_only.html", ctx)`. The inner-only template renders the same sections; the chrome (DOCTYPE, head) the deleted page.html provided is now the typed Page primitive's responsibility, tested elsewhere.
+- **`tests/unit/test_auth_password_reset.py`** — `TestSiteRendererSSR`, `TestOGMetaTags`, and `test_render_site_page_passes_custom_css` (which all rendered the deleted template directly) retired. Coverage moved to `test_page_og_meta.py` + the chrome-gate parity tests.
+- **`tests/unit/test_auth_nav.py`** `_render("site/page.html")` → `_render("site/inner_only.html")` — same swap.
+- **`tests/unit/test_typed_runtime_no_jinja.py`** retired-templates list extended with `site/page.html`.
+- **`tests/unit/test_template_orphan_scan.py`** allow-list extended with `site/site_base.html` and `site/includes/og_meta.html` — both are now orphans (their only Jinja consumer, `site/page.html`, is gone) but kept on disk as a backward-compat affordance for downstream apps with custom render paths.
+- **`tests/unit/test_page_route_coverage.py`** allow-list extended with `site/site_base.html` for the same reason.
+
+### Agent Guidance
+
+- **The marketing-page path is typed-Fragment-only.** Adding new section types means adding them to `TYPED_SECTION_TYPES` + writing a typed builder in `site_section_builder.py`. The Jinja section partials (`site/sections/*.html`) still exist but are reached only when a section's type is NOT in `TYPED_SECTION_TYPES`; migrating each one moves us closer to deleting that whole directory.
+- **`site_base.html` and `og_meta.html` are kept on disk but orphaned.** Downstream apps may still import them from custom Jinja routes. The framework no longer reaches either. Phase 5 (drop the `jinja2` dep entirely) is blocked on retiring these too, plus the in-app `page_routes.py` consumers.
+- **Remaining `fragment_chrome` flag sites**: `src/dazzle_ui/runtime/page_routes.py` (4 references — in-app surfaces), `src/dazzle_back/runtime/server.py` (initialization), `src/dazzle/core/manifest.py` (config schema), `src/dazzle/cli/runtime_impl/build.py` (build-time decision). All depend on the app-shell typed migration which is the largest remaining substrate piece.
+
 ## [0.67.42] - 2026-05-11
 
 ### Added

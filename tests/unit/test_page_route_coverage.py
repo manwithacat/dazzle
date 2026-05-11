@@ -71,7 +71,15 @@ PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
 # Page templates that genuinely should NOT be served by a page route
 # (e.g. the template is consumed by a different mechanism, or the
 # feature is pending a separate triage). Each entry requires a reason.
-INDIVIDUAL_ALLOWLIST: dict[str, str] = {}
+INDIVIDUAL_ALLOWLIST: dict[str, str] = {
+    # Phase 4 chrome-flag flip (v0.67.43) — site/page.html retired,
+    # so site_base.html (its parent) is no longer reached via a route.
+    # The typed Page primitive provides the same chrome.
+    "site/site_base.html": (
+        "Phase 4 chrome-flag flip retired site/page.html; site_base.html "
+        "kept for downstream apps with custom Jinja paths"
+    ),
+}
 
 # Render-call patterns. Each matches a known way the runtime serves a
 # page template as an HTML response. Extend when new render helpers land.

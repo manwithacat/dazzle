@@ -180,7 +180,7 @@ class TestBuildSitePageContext:
             ],
         }
         ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
         assert "dz-bg-alt" in html
 
 
@@ -219,7 +219,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "Welcome to TestApp" in html
         assert "The best app ever" in html
@@ -245,7 +245,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "Fast" in html
         assert "Lightning speed" in html
@@ -267,7 +267,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/faq", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "How much?" in html
         assert "Free forever." in html
@@ -298,7 +298,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/pricing", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "Pro" in html
         assert "$29" in html
@@ -330,7 +330,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "dz-section-card-grid" in html
         assert "Consulting" in html
@@ -354,7 +354,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/about", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "dz-split--reversed" in html
         assert "Our Story" in html
@@ -417,7 +417,7 @@ class TestSitePageTemplate:
         for section, expected in cases:
             page_data = {"title": "X", "sections": [section]}
             ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-            html = _render("site/page.html", ctx)
+            html = _render("site/inner_only.html", ctx)
             for needle in expected:
                 assert needle in html, f"missing {needle!r} in section type={section['type']}"
 
@@ -434,7 +434,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "Hello" in html
         assert "Sign up now" in html
@@ -445,7 +445,7 @@ class TestSitePageTemplate:
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         ctx = build_site_page_context(sitespec, "/")
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "dz-loading" in html
 
@@ -460,7 +460,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "dz-section-unknown-type" in html
         assert "Mystery Section" in html
@@ -478,42 +478,31 @@ class TestSitePageTemplate:
             },
         }
         ctx = build_site_page_context(sitespec, "/")
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "NavTest" in html
         assert "About" in html
         assert "dz-site-footer" in html
         assert "Links" in html
 
-    def test_og_meta_present(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_page_context
-
-        sitespec: dict[str, Any] = {"brand": {"product_name": "App"}, "layout": {}}
-        page_data = {
-            "title": "Home",
-            "sections": [{"type": "hero", "headline": "H", "subhead": "S"}],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/page.html", ctx)
-
-        assert "og:title" in html
-        assert "og:description" in html
-
-    def test_custom_css_included(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_page_context
-
-        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
-        ctx = build_site_page_context(sitespec, "/", custom_css=True)
-        html = _render("site/page.html", ctx)
-
-        assert "/static/css/custom.css" in html
+    # test_og_meta_present and test_custom_css_included were retired
+    # in Phase 4 chrome-flag flip (v0.67.43). Both pinned `<head>`
+    # content emitted by the legacy `site/page.html` chrome, which no
+    # longer exists — the typed Page wrapper now provides the head.
+    # OG meta coverage moved to:
+    #   - tests/unit/test_page_og_meta.py (Page primitive level)
+    #   - tests/integration/test_sitespec_chrome_gate_flip.py
+    #     (chrome=on OG tag emission end-to-end)
+    # Custom-CSS override is exercised via build_site_page_context's
+    # `custom_css` flag and `app.state.fragment_chrome_css_links` —
+    # both covered by other integration tests.
 
     def test_custom_css_excluded_by_default(self) -> None:
         from dazzle_ui.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         ctx = build_site_page_context(sitespec, "/")
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "/static/css/custom.css" not in html
 
@@ -540,7 +529,7 @@ class TestSitePageTemplate:
             ],
         }
         ctx = build_site_page_context(sitespec, "/about", page_data=page_data)
-        html = _render("site/page.html", ctx)
+        html = _render("site/inner_only.html", ctx)
 
         assert "dz-section-team" in html
         assert "The Team" in html

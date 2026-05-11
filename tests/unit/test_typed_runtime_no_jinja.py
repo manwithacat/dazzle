@@ -129,6 +129,8 @@ def test_retired_jinja_templates_stay_deleted() -> None:
         # Phase 2.B full (v0.67.40):
         "app/403.html",
         "app/404.html",
+        # Phase 4 chrome-flag flip (v0.67.43):
+        "site/page.html",
     )
     failures: list[str] = []
     for rel in retired:

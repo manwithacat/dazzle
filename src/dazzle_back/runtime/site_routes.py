@@ -301,33 +301,29 @@ def create_site_page_routes(
     from dazzle_ui.runtime.template_renderer import render_site_page
 
     def _render_site_page_chromed(request: Request, ctx: Any) -> str:
-        """Render a sitespec page either via the typed-Fragment chrome
-        path (when `app.state.fragment_chrome=True`) or the legacy
-        Jinja `site/page.html` path (#1037, v0.67.24+).
+        """Render a sitespec page via the typed-Fragment chrome path.
 
-        Typed-path body composition:
+        Phase 4 (v0.67.43): the `app.state.fragment_chrome` flag is no
+        longer consulted on the marketing-page path. The typed
+        substrate is the only render path; `site/page.html` was
+        deleted alongside this flag flip. Per-deployment overrides
+        for CSS / JS / theme still live on
+        `app.state.fragment_chrome_css_links` etc. — those state
+        attributes are retained because they're *asset overrides*,
+        not a "use Jinja vs. typed" toggle.
+
+        Body composition:
           1. Walk `ctx.sections`; for each section whose `type` is in
              `TYPED_SECTION_TYPES`, render via `site_section_builder`
              into HTML and replace the section dict with a marker
              (`{"type": "_typed", "_typed_html": "..."}`) so
              `inner_only.html` emits the pre-rendered HTML directly.
-          2. Sections with unmigrated types are left as-is — Jinja
-             includes their existing partials.
+          2. Sections with unmigrated types stay as-is — Jinja
+             partials still drive their render.
           3. The resulting inner HTML wraps in a typed `Page`
-             primitive so the document chrome lands on the typed
-             substrate. cyfuture's "zero Jinja" stop condition is
-             progressively closer with each section migration.
+             primitive (with OG / Twitter meta from `ctx.og_meta`,
+             per Phase 4 first slice v0.67.42).
         """
-        chrome_flag = bool(
-            getattr(getattr(request, "app", None), "state", None)
-            and getattr(request.app.state, "fragment_chrome", False)
-        )
-        if not chrome_flag:
-            return render_site_page("site/page.html", ctx)
-
-        # Typed path — pre-render migrated sections, leave unmigrated
-        # types for Jinja partials, then wrap the merged inner body in
-        # a typed Page primitive.
         from dazzle.render.fragment.renderer import FragmentRenderer
         from dazzle_back.runtime.renderers.page_builder import build_page
         from dazzle_back.runtime.renderers.site_section_builder import (
@@ -364,10 +360,19 @@ def create_site_page_routes(
             current_route=getattr(ctx, "current_route", "") or "/",
         )
         app_state = request.app.state
-        css_links = tuple(
+        css_links_list = list(
             getattr(app_state, "fragment_chrome_css_links", None)
             or ("/static/dist/dazzle.min.css",)
         )
+        # Phase 4 chrome-flag flip (v0.67.43): honour the project's
+        # custom.css override here too. The legacy `site/page.html` →
+        # `site_base.html` chain emitted `<link href="/static/css/custom.css">`
+        # in `<head>` when `ctx.custom_css=True`; the typed path now
+        # appends the same link to `css_links` so the override survives
+        # the migration.
+        if getattr(ctx, "custom_css", False) and "/static/css/custom.css" not in css_links_list:
+            css_links_list.append("/static/css/custom.css")
+        css_links = tuple(css_links_list)
         js_scripts = tuple(
             getattr(app_state, "fragment_chrome_js_scripts", None)
             or ("/static/dist/dazzle.min.js",)
@@ -375,9 +380,8 @@ def create_site_page_routes(
         theme = getattr(app_state, "fragment_chrome_theme", None)
 
         # Phase 4 (v0.67.42): thread Open Graph + Twitter card meta
-        # tags from `ctx.og_meta` so the chrome=on path matches the
-        # chrome=off Jinja path's `site/includes/og_meta.html` output.
-        # Closes the parity gap blocking the chrome flag's removal.
+        # tags from `ctx.og_meta` so the typed path matches the legacy
+        # Jinja path's `site/includes/og_meta.html` output.
         extra_meta, og_meta = _og_meta_pairs(getattr(ctx, "og_meta", None))
 
         page = build_page(

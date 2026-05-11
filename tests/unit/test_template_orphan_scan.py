@@ -84,6 +84,21 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "import via {% from 'macros/locale_switcher.html' %} when they want "
         "the switcher"
     ),
+    # Phase 4 chrome-flag flip (v0.67.43) — site/page.html retired,
+    # so the chain it pulled in (site_base.html + og_meta partial) is
+    # no longer referenced from any framework code path. The typed
+    # Page primitive provides the same head + chrome.
+    # Both files are kept on disk as a backward-compat affordance for
+    # downstream apps that historically embedded these via custom
+    # render calls; framework code paths no longer touch them.
+    "site/site_base.html": (
+        "Phase 4 chrome-flag flip retired the renderer that extended it; "
+        "kept on disk for downstream apps with custom Jinja paths"
+    ),
+    "site/includes/og_meta.html": (
+        "Phase 4 chrome-flag flip retired its only includer (site/page.html); "
+        "kept on disk for downstream apps with custom Jinja paths"
+    ),
 }
 
 

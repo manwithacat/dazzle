@@ -193,7 +193,7 @@ class TestNavTemplateRendering:
         ctx = build_site_page_context(_minimal_sitespec(), "/")
         from dazzle_ui.runtime.template_renderer import render_site_page
 
-        html = render_site_page("site/page.html", ctx)
+        html = render_site_page("site/inner_only.html", ctx)
         assert "Sign In" in html
         assert 'href="/login"' in html
 
@@ -206,7 +206,7 @@ class TestNavTemplateRendering:
         )
         from dazzle_ui.runtime.template_renderer import render_site_page
 
-        html = render_site_page("site/page.html", ctx)
+        html = render_site_page("site/inner_only.html", ctx)
         assert "Dashboard" in html
         assert 'href="/app/workspaces/customer_dashboard"' in html
         # Should NOT show Sign In

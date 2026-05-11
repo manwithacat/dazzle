@@ -121,71 +121,14 @@ class TestAuthMiddlewareExclusions:
         assert middleware.is_excluded_path("/auth/reset-password")
 
 
-class TestSiteRendererSSR:
-    """Test server-side rendering of sitespec pages via Jinja2 templates."""
-
-    def test_render_site_page_html_with_page_data(self) -> None:
-        """Test that site page SSR produces content when page_data is provided."""
-        from dazzle_ui.runtime.site_context import build_site_page_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {
-            "brand": {"product_name": "TestApp"},
-            "layout": {"nav": {}, "footer": {}},
-        }
-        page_data = {
-            "title": "Home",
-            "sections": [
-                {"type": "hero", "headline": "Welcome", "subhead": "Great app"},
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = render_site_page("site/page.html", ctx)
-
-        # SSR content should be present
-        assert "Welcome" in html
-        assert "Great app" in html
-        # OG meta should be present
-        assert "og:title" in html
-
-    def test_render_site_page_html_without_page_data(self) -> None:
-        """Test that site page SSR renders even without page_data."""
-        from dazzle_ui.runtime.site_context import build_site_page_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {
-            "brand": {"product_name": "TestApp"},
-            "layout": {"nav": {}, "footer": {}},
-        }
-        ctx = build_site_page_context(sitespec, "/")
-        html = render_site_page("site/page.html", ctx)
-        # Should render a valid page (no loading state — always SSR now)
-        assert "TestApp" in html
-        assert "<!DOCTYPE html>" in html.lower() or "<html" in html.lower()
-
-
-class TestOGMetaTags:
-    """Test Open Graph meta tag generation via Jinja2 templates."""
-
-    def test_og_meta_in_rendered_page(self) -> None:
-        """Test OG meta tags appear in rendered page HTML."""
-        from dazzle_ui.runtime.site_context import build_site_page_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec = {
-            "brand": {"product_name": "MyApp"},
-            "layout": {"nav": {}, "footer": {}},
-        }
-        page_data = {
-            "title": "Home",
-            "sections": [
-                {"type": "hero", "headline": "Welcome", "subhead": "The best app"},
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = render_site_page("site/page.html", ctx)
-        assert "og:title" in html
-        assert "og:type" in html
+# TestSiteRendererSSR + TestOGMetaTags retired in Phase 4 chrome-flag
+# flip (v0.67.43). Both rendered `site/page.html` directly to assert
+# `<!DOCTYPE html>` / `og:title` lived in the rendered output — that
+# chrome moved to the typed Page primitive when `site/page.html` was
+# retired. Coverage moved to:
+#   - tests/unit/test_page_og_meta.py — Page.og_meta + property=meta render
+#   - tests/integration/test_sitespec_chrome_gate_flip.py — chrome=on
+#     OG tag emission end-to-end + custom.css threading
 
 
 # Auth page Jinja renderers retired in Phase 1.E (v0.67.33).
@@ -220,18 +163,13 @@ class TestCustomCssOverride:
         html = get_shared_head_html("Test Page")
         assert "/static/css/custom.css" not in html
 
-    # site_404 + auth_* params retired in Phase 1.E/2.A — those templates
-    # were deleted. Only `site/page.html` still exercises custom_css via
-    # build_site_page_context.
-    def test_render_site_page_passes_custom_css(self) -> None:
-        """build_site_page_context propagates custom_css=True to head."""
-        from dazzle_ui.runtime.site_context import build_site_page_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        sitespec: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
-        ctx = build_site_page_context(sitespec, "/", custom_css=True)
-        html = render_site_page("site/page.html", ctx)
-        assert "/static/css/custom.css" in html
+    # test_render_site_page_passes_custom_css retired in Phase 4
+    # chrome-flag flip (v0.67.43). Used to render site/page.html
+    # directly — that template is gone. The custom.css override now
+    # threads through the typed Page wrapper; the end-to-end behavior
+    # is covered by test_create_site_page_routes_detects_custom_css
+    # below (full TestClient request) plus the chrome-gate parity
+    # tests in tests/integration/test_sitespec_chrome_gate_flip.py.
 
     def test_create_site_page_routes_detects_custom_css(self, tmp_path: Path) -> None:
         """create_site_page_routes enables custom_css when file exists."""
