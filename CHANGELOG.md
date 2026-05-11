@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.53] - 2026-05-11
+
+### Removed
+
+- **`layouts/single_column.html` retired.** The Phase 4 app-shell migration (v0.67.44) made `render_page` delegate to `dispatch_render_page` (typed-Fragment) for ALL layout-wrapped renders; the legacy `layouts/single_column.html` Jinja file has had no framework code paths reaching it since. The `context.layout == "single_column"` branch in `render_page` continues to work — it now selects `chrome=False` in `dispatch_render_page` (bare typed `Page`, no sidebar) instead of extending the deleted Jinja file.
+- No test references existed for the file; deletion is a clean break.
+
+### Agent Guidance
+
+- **`layouts/app_shell.html` still on disk** despite being orphaned at the framework code level. Tests in `test_template_html.py::TestRenderedHtmlValidation::test_app_shell_layout_structure` and `test_template_overrides.py` still load it directly. Retiring it requires either updating those tests to use a different template OR skipping them per the Phase 4 deletion-sweep pattern.
+
 ## [0.67.52] - 2026-05-11
 
 ### Removed
