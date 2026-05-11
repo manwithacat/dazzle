@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.78] - 2026-05-12
+
+### Changed
+
+- **`journey_reporter.render_report` inline-rendered** — closes [#1041](https://github.com/manwithacat/dazzle/issues/1041). The Jinja env + `FileSystemLoader` import is gone; the self-contained HTML report (including all `<style>` CSS) emits via stdlib `html.escape` + Python string composition. All sections preserved: verdict summary, per-persona sessions (with collapsible details + step table), cross-persona patterns (with severity badges + evidence lists), dead ends, navigation breaks, recommendations table.
+- **`reports/` template directory retired** — `src/dazzle_ui/templates/reports/e2e_journey.html` (341 lines) deleted. The `DYNAMIC_DIRECTORY_EXEMPTIONS["reports/"]` exemption in `test_template_orphan_scan.py` removed (now empty dict).
+
+### Added
+
+- **6 modules promoted to typed-only allowlist** in `test_typed_runtime_no_jinja.py`: `experience_routes.py` (was already listed), `form_renderer.py`, `detail_renderer.py`, `table_renderer.py`, `experience_renderer.py`, `journey_reporter.py`.
+
+### Cleanup
+
+- **`PAGE_TEMPLATE_PATTERNS` in `test_page_route_coverage.py`** trimmed to empty — every page-template family (auth/app/site/reports/experience/workspace pages) is now retired. The lint becomes a no-op until a new family lands.
+- **`INDIVIDUAL_ALLOWLIST` in `test_page_route_coverage.py`** trimmed — `site/site_base.html` entry was stale (file deleted in v0.67.66).
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+After this ship, only 2 of 5 remaining Jinja env users are left:
+1. **#1039** — `render_page` (renders base.html + single_column.html + pdf_viewer_page.html)
+2. **#1040** — `render_in_app_shell` (downstream Jinja-extends affordance)
+
 ## [0.67.77] - 2026-05-12
 
 ### Changed

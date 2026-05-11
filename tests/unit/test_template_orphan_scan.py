@@ -40,7 +40,8 @@ DAZZLE_CORE_ROOT = REPO_ROOT / "src" / "dazzle"
 # from a documented consumer. Templates under these prefixes are
 # EXCLUDED from orphan reporting entirely.
 DYNAMIC_DIRECTORY_EXEMPTIONS: dict[str, str] = {
-    "reports/": ("Dynamic get_template() in src/dazzle/agent/journey_reporter.py:23"),
+    # v0.67.78: reports/ retired — journey_reporter inline-renders via
+    # html.escape (closes #1041).
 }
 
 # Specific files that are genuinely unreferenced but intentionally

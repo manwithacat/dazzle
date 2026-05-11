@@ -75,12 +75,19 @@ _TYPED_ONLY_MODULES = (
     # The render_fragment fallback path in workspace_rendering is gone.
     "src/dazzle_back/runtime/workspace_rendering.py",
     # v0.67.71 — experience-shell rendering owned by
-    # `experience_renderer.render_experience_inner_html` (inline
-    # Python + sub-template Jinja calls for form/detail/table only).
-    # experience_routes.py is now Jinja-free; the remaining Jinja
-    # surface lives in `experience_renderer` until form_field /
-    # detail_view / filterable_table are ported.
+    # `experience_renderer.render_experience_inner_html` (inline Python).
     "src/dazzle_ui/runtime/experience_routes.py",
+    # v0.67.74 — form_field/form_stepper/search_select inlined.
+    "src/dazzle_ui/runtime/form_renderer.py",
+    # v0.67.75 — detail_view + related-* fragments inlined.
+    "src/dazzle_ui/runtime/detail_renderer.py",
+    # v0.67.76 — filterable_table + search_input + filter_bar + bulk_actions inlined.
+    "src/dazzle_ui/runtime/table_renderer.py",
+    # v0.67.71 — experience flow shell (form/detail/table dispatcher) is
+    # now fully Python. Renamed file kept under the same path.
+    "src/dazzle_ui/runtime/experience_renderer.py",
+    # v0.67.78 — journey_reporter inline-renders via html.escape (closes #1041).
+    "src/dazzle/agent/journey_reporter.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

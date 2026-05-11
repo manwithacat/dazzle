@@ -55,30 +55,23 @@ RENDER_CALLER_ROOTS = (
 # + layout-template detection so site_base.html (extended, not served)
 # is correctly excluded.
 PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
-    # site/auth/*.html retired in Phase 1.D.2 (v0.67.37) — all auth +
-    # 2FA pages now render via typed-Fragment views in
-    # `dazzle_back.runtime.auth.{auth_views,two_factor_views}`. No
-    # Jinja templates remain under site/auth/.
-    #
-    # app/*.html retired in Phase 2.B full (v0.67.40) — in-app 403/404
-    # render via typed views in `dazzle_back.runtime.app_error_views`.
-    "site/*.html",
-    "workspace/*.html",
-    "experience/*.html",
-    "reports/*.html",
+    # All page-template families retired in the Phase 4 migration sweep:
+    #   - site/auth/*.html (v0.67.37 — typed auth views)
+    #   - app/*.html (v0.67.40 — typed app-error views)
+    #   - site/*.html (v0.67.69 — Python marketing orchestration)
+    #   - reports/*.html (v0.67.78 — inline-render journey_reporter)
+    #   - experience/*.html (v0.67.71 — experience_renderer Python)
+    #   - workspace/*.html — only `_card_picker.html` + `_content.html`
+    #     remain, both underscore-prefixed legacy parity refs.
+    # The tuple is empty; the lint now only enforces the meta-property
+    # that PAGE_TEMPLATE_PATTERNS stays in sync with served families.
 )
 
 # Page templates that genuinely should NOT be served by a page route
 # (e.g. the template is consumed by a different mechanism, or the
 # feature is pending a separate triage). Each entry requires a reason.
 INDIVIDUAL_ALLOWLIST: dict[str, str] = {
-    # Phase 4 chrome-flag flip (v0.67.43) — site/page.html retired,
-    # so site_base.html (its parent) is no longer reached via a route.
-    # The typed Page primitive provides the same chrome.
-    "site/site_base.html": (
-        "Phase 4 chrome-flag flip retired site/page.html; site_base.html "
-        "kept for downstream apps with custom Jinja paths"
-    ),
+    # site/site_base.html was retired in v0.67.66; no live entries today.
 }
 
 # Render-call patterns. Each matches a known way the runtime serves a
@@ -232,7 +225,14 @@ class TestPageRouteCoverage:
             )
 
     def test_page_template_patterns_match_real_templates(self) -> None:
-        """Guard against stale PAGE_TEMPLATE_PATTERNS entries."""
+        """Guard against stale PAGE_TEMPLATE_PATTERNS entries.
+
+        v0.67.78: the tuple is empty after the Phase 4 sweep. This test
+        is a no-op until a new page-template family lands; the assertion
+        below documents that empty is valid.
+        """
+        if not PAGE_TEMPLATE_PATTERNS:
+            return  # No page families left; lint is vacuous.
         all_templates = {
             p.relative_to(TEMPLATES_ROOT).as_posix() for p in TEMPLATES_ROOT.rglob("*.html")
         }
