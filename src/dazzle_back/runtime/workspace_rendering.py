@@ -2678,6 +2678,17 @@ async def _workspace_region_handler(
         "SPARKLINE",
         "STATUS_LIST",
         "PROFILE_CARD",
+        # Phase 4 region migration batch (v0.67.49):
+        "METRICS",
+        "FUNNEL_CHART",
+        "HISTOGRAM",
+        "PIVOT_TABLE",
+        "TIMELINE",
+        "KANBAN",
+        "PIPELINE_STEPS",
+        "QUEUE",
+        "ACTION_GRID",
+        "CONFIRM_ACTION_PANEL",
     )
     if display_upper in _TYPED_REGION_DISPLAYS:
         from dazzle.render.fragment import FragmentRenderer
@@ -2827,6 +2838,78 @@ async def _workspace_region_handler(
                 # Pre-assembled identity-panel dict — built upstream in
                 # this function around line 2424.
                 adapter_ctx["profile_card_data"] = profile_card_data
+            elif display_upper == "METRICS":
+                # Phase 4 region migration batch (v0.67.49): metrics
+                # tiles read pre-computed aggregate values + columns.
+                adapter_ctx["metrics"] = metrics
+                adapter_ctx["columns"] = columns
+            elif display_upper == "FUNNEL_CHART":
+                # Funnel uses kanban_columns for stage order +
+                # bucketed_metrics for per-stage counts.
+                adapter_ctx["kanban_columns"] = kanban_columns
+                adapter_ctx["bucketed_metrics"] = bucketed_metrics
+            elif display_upper == "HISTOGRAM":
+                # Pre-computed bins from `_compute_histogram_bins`.
+                adapter_ctx["histogram_bins"] = histogram_bins
+                adapter_ctx["reference_lines"] = getattr(ctx.ctx_region, "reference_lines", [])
+            elif display_upper == "PIVOT_TABLE":
+                # Multi-dim pivot: workspace-shape primitive consumes
+                # pivot_buckets + pivot_dim_specs directly.
+                adapter_ctx["pivot_buckets"] = pivot_buckets
+                adapter_ctx["pivot_dim_specs"] = pivot_dim_specs
+                adapter_ctx["bucketed_metrics"] = bucketed_metrics
+                adapter_ctx["columns"] = columns
+            elif display_upper == "TIMELINE":
+                # Timeline events from scoped items + column declarations.
+                adapter_ctx["items"] = items
+                adapter_ctx["columns"] = columns
+                adapter_ctx["display_key"] = next(
+                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
+                    columns[0]["key"] if columns else "name",
+                )
+            elif display_upper == "KANBAN":
+                # KanbanRegion workspace-shape: items + status order
+                # + columns + display_key.
+                adapter_ctx["items"] = items
+                adapter_ctx["columns"] = columns
+                adapter_ctx["kanban_columns"] = kanban_columns
+                adapter_ctx["display_key"] = next(
+                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
+                    columns[0]["key"] if columns else "name",
+                )
+                adapter_ctx["group_by"] = (
+                    group_by.field if isinstance(group_by, _BucketRef) else group_by
+                )
+            elif display_upper == "PIPELINE_STEPS":
+                # Pre-computed per-stage rollups from upstream.
+                adapter_ctx["pipeline_stage_data"] = pipeline_stage_data
+            elif display_upper == "QUEUE":
+                # Review queue: items + state-transition wiring + the
+                # filter-chrome contract _build_list shares.
+                adapter_ctx["items"] = items
+                adapter_ctx["columns"] = columns
+                adapter_ctx["total"] = total
+                adapter_ctx["metrics"] = metrics
+                adapter_ctx["queue_transitions"] = queue_transitions
+                adapter_ctx["queue_status_field"] = queue_status_field
+                adapter_ctx["queue_api_endpoint"] = queue_api_endpoint
+            elif display_upper == "ACTION_GRID":
+                # Pre-assembled CTA card list (legacy alias
+                # `action_card_data` is the actual upstream name).
+                adapter_ctx["action_cards"] = action_card_data
+            elif display_upper == "CONFIRM_ACTION_PANEL":
+                # ConfirmGate full state machine — IR-level fields plus
+                # the request-time state value.
+                adapter_ctx["state_value"] = confirm_state_value
+                adapter_ctx["confirmations"] = getattr(ctx.ctx_region, "confirmations", [])
+                adapter_ctx["primary_action_url"] = getattr(
+                    ctx.ctx_region, "primary_action_url", ""
+                )
+                adapter_ctx["secondary_action_url"] = getattr(
+                    ctx.ctx_region, "secondary_action_url", ""
+                )
+                adapter_ctx["revoke_url"] = getattr(ctx.ctx_region, "revoke_url", "")
+                adapter_ctx["audit_enabled"] = getattr(ctx.ctx_region, "audit_enabled", False)
             elif display_upper == "ENTITY_CARD":
                 _card_cfg = getattr(ir_region, "entity_card_config", None)
                 if _card_cfg is not None:

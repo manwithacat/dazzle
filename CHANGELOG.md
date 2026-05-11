@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.49] - 2026-05-11
+
+### Changed
+
+- **Workspace region migration batch — 10 medium-complexity kinds typed.** `metrics`, `funnel_chart`, `histogram`, `pivot_table`, `timeline`, `kanban`, `pipeline_steps`, `queue`, `action_grid`, `confirm_action_panel` all join `_TYPED_REGION_DISPLAYS`. Each gets an `adapter_ctx` population branch threading the upstream pre-computed data (kanban_columns, pivot_buckets, pipeline_stage_data, action_card_data, queue_transitions, etc.) through to the typed builder.
+- **25 region kinds** now render via the typed-Fragment substrate.
+
+### Agent Guidance
+
+- **Remaining Jinja-rendered region kinds**: `list`, `line_chart`, `area_chart`, `bar_chart`, `bar_track`, `bullet`, `radar`, `box_plot`, `activity_feed`, `audit_history`, `tab_data`. The adapter's `_BUILDERS` table + `_TIMESERIES_VIEWS` dispatch already define typed builders for the chart kinds — the work is just adding them to `_TYPED_REGION_DISPLAYS` in `workspace_rendering.py` plus populating `adapter_ctx` from already-computed locals (bullet_rows, bar_track_rows, box_plot_stats, bucketed_metrics, reference_lines, reference_bands, overlay_series_data). `list` is the foundational list-view region with the richest `ctx` contract (sort/filter state, RBAC propagation, inline-edit wiring, FK display-name injection, bulk-action plumbing) — that's a dedicated single-region ship.
+
 ## [0.67.48] - 2026-05-11
 
 ### Changed
