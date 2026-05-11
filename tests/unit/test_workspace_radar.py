@@ -267,6 +267,11 @@ class TestRadarSvgOverflow:
         assert "overflow: visible" in rule_block
 
 
+@pytest.mark.skip(
+    reason="v0.67.70 retired workspace/regions/radar.html — float formatting "
+    "now lives in the typed `Radar` primitive renderer. Class-contract "
+    "coverage moved to dazzle.render.fragment.renderer tests."
+)
 class TestRadarFloatFormatting:
     """v0.61.85 (#915): the spoke `<title>` tooltips, the `aria-label`,
     the `dz-chart-summary` line, and the degenerate-list value cells

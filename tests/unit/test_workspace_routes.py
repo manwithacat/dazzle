@@ -7576,6 +7576,11 @@ class TestExperienceTransitionCSRF:
             )
 
 
+@pytest.mark.skip(
+    reason="v0.67.71 inlined macros/experience_transition.html into "
+    "experience_renderer._render_transition_button — the macro itself is "
+    "now a Python function. Macro-level coverage is obsolete."
+)
 class TestExperienceTransitionMacro:
     """Cycle 292 — shared `experience_transition_button` macro.
 

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.73] - 2026-05-11
+
+### Changed
+
+- **2 stale test classes retired** post-Phase-4-template-deletions:
+  - `TestRadarFloatFormatting` (tests/unit/test_workspace_radar.py) — pinned the retired `workspace/regions/radar.html` template's float-formatting branches; the typed `Radar` primitive renderer (`dazzle.render.fragment.renderer`) owns this now.
+  - `TestExperienceTransitionMacro` (tests/unit/test_workspace_routes.py) — pinned the `macros/experience_transition.html` macro that v0.67.71 inlined into `experience_renderer._render_transition_button`.
+
 ## [0.67.72] - 2026-05-11
 
 ### Fixed
