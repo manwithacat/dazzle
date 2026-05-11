@@ -60,19 +60,24 @@ class _JinjaSpy:
 
 
 def _client_for_example(app_name: str) -> tuple[TestClient, FastAPI]:
-    """Build a TestClient with chrome flag read from the example's
-    dazzle.toml — same path production uses."""
+    """Build a TestClient against the example's appspec.
+
+    Phase 4 app-shell migration (v0.67.45): the fragment_chrome flag
+    is retired — the typed-Fragment substrate is the only render path.
+    `load_manifest(...)` is still called for parity with the production
+    bootstrap (validates the manifest TOML), but its result no longer
+    threads into a render-mode decision.
+    """
     from dazzle_back.runtime.renderers.init import register_default_renderers
     from dazzle_back.runtime.services import RuntimeServices
 
     app_root = _EXAMPLES / app_name
     appspec = load_project_appspec(app_root)
-    manifest = load_manifest(app_root / "dazzle.toml")
+    _manifest = load_manifest(app_root / "dazzle.toml")  # validation only
     fastapi_app = FastAPI()
     services = RuntimeServices()
     register_default_renderers(services)
     fastapi_app.state.services = services
-    fastapi_app.state.fragment_chrome = manifest.fragment_chrome
     fastapi_app.include_router(create_page_routes(appspec, backend_url="http://127.0.0.1:9999"))
     return TestClient(fastapi_app), fastapi_app
 
@@ -84,16 +89,22 @@ def _resolve(template: str) -> str:
 # ─────────────────── Per-example chrome flag check ───────────────────
 
 
+# Phase 4 app-shell migration (v0.67.45): the `fragment_chrome` field
+# is retired from `ProjectManifest`. The per-example "must opt in"
+# assertion is obsolete — every render is typed-Fragment now,
+# regardless of dazzle.toml content. The zero-Jinja walk below pins
+# the actual contract (no Jinja templates fire on the rendered
+# response).
+
+
 @pytest.mark.parametrize("app_name", _APPS)
-def test_example_has_fragment_chrome_enabled(app_name: str) -> None:
-    """Every example's dazzle.toml must opt into Fragment chrome.
-    Pins the rollout state — if this fails, an example regressed
-    out of Jinja-free."""
+def test_example_manifest_loads(app_name: str) -> None:
+    """Validates that the example's dazzle.toml still parses
+    cleanly. Catches regressions in the manifest loader (e.g. when
+    deprecated keys like `[ui] fragment_chrome` should log but not
+    raise)."""
     manifest = load_manifest(_EXAMPLES / app_name / "dazzle.toml")
-    assert manifest.fragment_chrome is True, (
-        f"{app_name}/dazzle.toml has fragment_chrome={manifest.fragment_chrome}. "
-        f"All 5 examples should opt in."
-    )
+    assert manifest.name, f"{app_name}/dazzle.toml has empty project.name"
 
 
 # ─────────────────── Per-example zero-Jinja walk ─────────────────────

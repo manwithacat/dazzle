@@ -601,8 +601,8 @@ def build_css_command() -> None:
     (e.g. cyfuture's `bin/post_compile`) had been calling this in
     defence-in-depth; with Dazzle now shipping pre-built CSS at
     `src/dazzle_ui/runtime/static/dist/dazzle.min.css` (served at
-    `/static/dist/dazzle.min.css` by `fragment_chrome`), the post-
-    compile is genuinely obsolete. This no-op lets those hooks keep
+    `/static/dist/dazzle.min.css` by the typed Page primitive), the
+    post-compile is genuinely obsolete. This no-op lets those hooks keep
     invoking `dazzle build-css` until they're cleaned up.
     """
     typer.echo(

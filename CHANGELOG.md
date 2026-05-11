@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.45] - 2026-05-11
+
+### Removed
+
+- **`fragment_chrome` flag — initialisation plumbing retired.** With every render path going typed-Fragment in v0.67.43 / v0.67.44, the flag's setters had no readers left. This ship removes the dead writes.
+- **`server.py`** — the 30-line block that read `[ui] fragment_chrome` from `dazzle.toml` and set `app.state.fragment_chrome` is gone.
+- **`ProjectManifest.fragment_chrome` field** in `src/dazzle/core/manifest.py` — retired.
+- **`fragment_chrome_enabled` parsing** in `load_manifest` — removed.
+- **`test_examples_no_jinja.py::test_example_has_fragment_chrome_enabled`** — replaced with a more useful `test_example_manifest_loads` check (catches loader regressions including the new deprecation-log path).
+
+### Added
+
+- **`[ui] fragment_chrome` deprecation log.** The TOML key is still accepted in `dazzle.toml` without raising — existing project manifests keep loading. The loader now logs an INFO-level deprecation notice via `dazzle.manifest` directing maintainers to remove the key.
+- **`_client_for_example` helper** in the example zero-Jinja test no longer sets `app.state.fragment_chrome` — the typed-Fragment substrate is the only render path so the assignment was a no-op.
+
+### Agent Guidance
+
+- **`dazzle.toml` still accepts `[ui] fragment_chrome = ...`** — the loader logs a deprecation notice but does NOT raise. Downstream project manifests can be cleaned up at their own pace.
+- **`app.state.fragment_chrome` is gone, but the asset-override state attrs stay.** `app.state.fragment_chrome_css_links` / `fragment_chrome_js_scripts` / `fragment_chrome_theme` are STILL consumed by the typed Page builders — those are per-deployment branding overrides, not part of the retired flag. Renaming them is a separate (purely cosmetic) ship.
+- **Phase 4 is now complete.** Marketing pages (v0.67.43), in-app surfaces (v0.67.44), and initialisation plumbing (this ship) are all typed-Fragment-only. Phase 5 (drop the `jinja2` dep entirely) is blocked on the workspace region templates (~26 templates, multi-month migration), the `experience/*.html` + `reports/*.html` directories, and the orphaned `layouts/app_shell.html` + `site_base.html` (which are still on disk for downstream apps with custom Jinja routes).
+
 ## [0.67.44] - 2026-05-11
 
 ### Removed

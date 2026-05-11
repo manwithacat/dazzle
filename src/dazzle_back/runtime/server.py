@@ -406,36 +406,13 @@ class DazzleBackendApp:
         register_default_renderers(services)
         self._app.state.services = services
 
-        # P17 — `[ui] fragment_chrome = true` in dazzle.toml routes
-        # full-document responses through the typed Page/AppShell
-        # Fragment substrate, bypassing Jinja base.html. Off by
-        # default; existing deployments unchanged. When True AND
-        # surfaces are flipped via DSL `render: fragment` (Plan 11
-        # covers all 60 example DSL surfaces), zero Jinja templates
-        # are invoked per request — see
-        # tests/integration/test_simple_task_no_jinja_when_chrome_on.py
-        # for the empirical proof on simple_task.
-        if self._project_root is not None:
-            manifest_path = self._project_root / "dazzle.toml"
-            if manifest_path.is_file():
-                try:
-                    from dazzle.core.manifest import load_manifest
-
-                    manifest = load_manifest(manifest_path)
-                    self._app.state.fragment_chrome = bool(
-                        getattr(manifest, "fragment_chrome", False)
-                    )
-                except Exception:
-                    logger.warning(
-                        "Failed to read [ui] fragment_chrome from dazzle.toml; "
-                        "leaving Fragment chrome off.",
-                        exc_info=True,
-                    )
-                    self._app.state.fragment_chrome = False
-            else:
-                self._app.state.fragment_chrome = False
-        else:
-            self._app.state.fragment_chrome = False
+        # Phase 4 app-shell migration (v0.67.45): the `fragment_chrome`
+        # flag is retired. Every render path went typed-Fragment-only
+        # over v0.67.43 / v0.67.44. The state attribute is no longer
+        # set here — readers were removed in those ships. The
+        # `app.state.fragment_chrome_css_links` / `_js_scripts` /
+        # `_theme` per-deployment branding overrides are NOT retired
+        # — those are still consumed by the typed Page builders.
 
         # Security middleware (v0.11.0). v0.61.0 Phase 3: resolve active
         # analytics providers so their CSP origins are allow-listed.
