@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.44] - 2026-05-11
+
+### Removed
+
+- **Jinja2 Retirement Phase 4 — app-shell migration. `fragment_chrome` flag flipped on in-app routes.** Both entity-surface and workspace handlers in `page_routes.py` route unconditionally through `dispatch_render_page` (the typed-Fragment substrate). The flag check is gone.
+- **`workspace/workspace.html`** — the legacy Jinja workspace shell template is deleted. No production callers remain after the workspace handler's chrome=off branch was removed.
+- **`workspace/workspace.html` and the legacy chrome=off branches** in `page_routes.py` — entity-surface and workspace render paths now have a single typed-Fragment dispatch each.
+
+### Added
+
+- **`AppShell` contract data-* attrs.** The typed primitive now carries `view_name`, `surface_name`, `workspace_name` fields that emit as `data-dazzle-view` / `data-dz-surface` / `data-dz-workspace` attributes on the `<main>` element — matching the legacy `layouts/app_shell.html` contract that E2E locators, the agent observer, the testing harness, and accessibility scanners read from.
+- **`AppShell.page_purpose`** field renders as `<p class="dz-page-purpose" data-dazzle-purpose>` above the body inside `<main>` when non-empty. Mirrors UX-048 from the legacy template.
+- **`build_app_chrome_page`** in `page_builder.py` threads the four new fields from `PageContext` (`view_name`, `surface_name`, `workspace_name`, `page_purpose`) into the typed AppShell automatically.
+
+### Changed
+
+- **`render_page` in `template_renderer.py`** rewritten — the layout wrap now delegates to `dispatch_render_page` instead of constructing a Jinja `{% extends %}` wrapper template. `context.layout == "single_column"` chooses a bare typed `Page` (no sidebar); anything else chooses the typed `AppShell`. The legacy `layouts/app_shell.html` and `layouts/single_column.html` templates are orphaned at the framework level (kept on disk for downstream apps that historically extended them via custom routes).
+- **`render_page(partial=True)`** now behaves equivalently to `content_only=True`. The legacy partial-with-layout shape (Jinja base.html omits `<html><head>` when `_htmx_partial=True`) is gone — htmx callers swap the typed inner_html directly into the already-rendered AppShell on the live page.
+- **`tests/integration/test_examples_fragment_http.py::test_fragment_chrome_default_off_*` (2 tests)** flipped from "chrome=off keeps Jinja base.html" to "chrome flag has no effect — typed path is the only one".
+- **`tests/integration/test_cyfuture_workspaces_zero_jinja_when_chrome_on.py::test_workspace_full_page_uses_dispatch_render_page_when_chrome_on`** now asserts the typed seam is present AND that no `workspace/workspace.html` reference creeps back in (the legacy fallback is retired).
+- **`tests/unit/test_template_rendering.py::test_nav_links_use_fragment_targeting`** retired its htmx-specific assertions. The typed `Sidebar` primitive emits plain `<a class="dz-nav-link">` links — full-page navigation, not htmx-driven. Adding htmx-driven nav back is a future typed-primitive enhancement.
+
+### Agent Guidance
+
+- **Sidebar persona affordances are not yet on the typed substrate.** The legacy navbar surfaced `user_email`, `user_name`, `user_preferences` via Jinja partials in the topbar. The typed `Topbar` doesn't render these. Per the "adapt and optimise to the new system" guidance for Phase 4, this is an explicit trade-off — re-adding persona affordances means defining typed `PersonaCard` / `UserMenu` primitives (a separate follow-on ship), not patching the legacy Jinja partials.
+- **Sidebar nav is plain-anchor full-page navigation now.** Clicking a nav item triggers a full document load (no htmx swap, no view transition). Users who want htmx-driven nav must override the typed Sidebar at the project layer until a typed NavItem extension exposes htmx attributes.
+- **`render_page(partial=True)` and `render_page(content_only=True)` are now equivalent.** Both return the content render without the layout chrome. Existing callers that distinguished partial from content-only no longer need to — the behavior is the same.
+- **`fragment_chrome` flag is still consulted by `server.py` / `manifest.py` / `build.py` initialization plumbing.** Those are pure cleanup at this point (no readers in render code paths). A future ship can delete them.
+- **`layouts/app_shell.html` and `layouts/single_column.html` are orphaned but on disk** for downstream apps that historically extended them via custom Jinja routes. Phase 5 (drop `jinja2` dep entirely) is the deletion ship.
+
 ## [0.67.43] - 2026-05-11
 
 ### Removed

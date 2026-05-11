@@ -216,6 +216,26 @@ class AppShell:
     so keyboard users have a stable bypass; set to empty string to
     disable (rare — almost always wrong)."""
 
+    # Phase 4 app-shell migration (v0.67.44): contract data-* attrs that
+    # downstream tooling reads off the `<main>` element. The legacy
+    # `layouts/app_shell.html` emitted these from per-render context;
+    # the typed substrate carries them in the primitive so the same
+    # E2E locators / agent observers / accessibility scanners keep
+    # working unchanged.
+    view_name: str = ""
+    """Contract attr `data-dazzle-view` — surface ID (e.g.
+    `"task_list"`). Set per render from `PageContext.view_name`."""
+    surface_name: str = ""
+    """Contract attr `data-dz-surface` — workspace surface name when
+    present. Optional; empty omits the attribute."""
+    workspace_name: str = ""
+    """Contract attr `data-dz-workspace` — workspace identifier when
+    present. Optional; empty omits the attribute."""
+    page_purpose: str = ""
+    """Surface-level purpose subtitle (UX-048). Rendered as a muted
+    intro `<p class="dz-page-purpose">` above the body inside `<main>`
+    when non-empty. Empty omits the element entirely."""
+
 
 @dataclass(frozen=True, slots=True)
 class Page:

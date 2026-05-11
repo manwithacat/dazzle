@@ -739,25 +739,29 @@ def render_page(
         content_template = env.get_template(context.template)
         rendered_content = content_template.render(**template_vars)  # nosemgrep
 
-    # Fragment targeting: return just the content, no layout wrapper
-    if content_only:
+    # Fragment targeting: return just the content, no layout wrapper.
+    # `partial=True` callers (htmx-style swaps) get the same shape as
+    # `content_only=True` since the layout chrome is no longer
+    # injected here (Phase 4 v0.67.44 — typed-Fragment Page does the
+    # chrome at the caller's level, and htmx callers swap into the
+    # already-rendered chrome on the page).
+    if content_only or partial:
         return rendered_content
 
-    # Select layout
-    layout_map = {
-        "app_shell": "layouts/app_shell.html",
-        "single_column": "layouts/single_column.html",
-    }
-    layout_template_name = layout_map.get(context.layout, "layouts/app_shell.html")
+    # Phase 4 app-shell migration (v0.67.44): layout wrap delegates to
+    # the typed-Fragment dispatcher. `layouts/app_shell.html` +
+    # `layouts/single_column.html` are now orphaned Jinja templates
+    # (kept on disk for downstream apps that historically extended
+    # them via custom routes; framework code paths no longer touch
+    # them). `context.layout == "single_column"` → bare typed Page
+    # (no sidebar); anything else → typed AppShell.
+    from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
 
-    # Build a wrapper template string that extends the layout and injects content
-    # Use % formatting because the string contains Jinja2 delimiters that conflict with f-strings
-    wrapper_source = (  # noqa: UP031
-        "{%% extends '%s' %%}{%% block content %%}%s{%% endblock %%}"
-    ) % (layout_template_name, rendered_content)
-
-    wrapper_template = env.from_string(wrapper_source)
-    return wrapper_template.render(**template_vars)
+    return dispatch_render_page(
+        context,
+        rendered_content,
+        chrome=(context.layout != "single_column"),
+    )
 
 
 def render_site_page(

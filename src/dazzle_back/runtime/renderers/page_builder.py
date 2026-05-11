@@ -169,10 +169,20 @@ def build_app_chrome_page(
     title = f"{page_title} — {app_name}" if page_title else app_name
     sidebar = _build_sidebar_from_ctx(ctx)
     topbar = Topbar(title=app_name)
+    # Phase 4 app-shell migration (v0.67.44): thread the contract
+    # `data-dazzle-view` / `data-dz-surface` / `data-dz-workspace`
+    # attrs from PageContext into the typed AppShell so the same
+    # E2E locators / agent observers / accessibility tooling that
+    # ran against the legacy Jinja `layouts/app_shell.html` template
+    # keep working without changes.
     body = AppShell(
         sidebar=sidebar,
         header=topbar,
         body=RawHTML(inner_html),
+        view_name=getattr(ctx, "view_name", "") or "",
+        surface_name=getattr(ctx, "surface_name", "") or "",
+        workspace_name=getattr(ctx, "workspace_name", "") or "",
+        page_purpose=getattr(ctx, "page_purpose", "") or "",
     )
     return Page(
         title=title,

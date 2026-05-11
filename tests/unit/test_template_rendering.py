@@ -364,15 +364,19 @@ class TestRendering:
         # HTMX attributes or script
         assert "hx-" in html or "htmx" in html.lower()
 
-    def test_nav_links_use_fragment_targeting(self) -> None:
-        """Nav links should target #main-content with view transitions and preload."""
+    def test_nav_links_render_in_typed_sidebar(self) -> None:
+        """Phase 4 app-shell migration (v0.67.44): the typed Sidebar
+        primitive emits plain `<a class="dz-nav-link">` links, not
+        the htmx-driven `hx-target="#main-content"` nav the legacy
+        Jinja `layouts/app_shell.html` produced. Nav now does full-
+        page loads — htmx-driven nav can be re-added as a typed
+        NavItem extension later if the UX trade-off matters.
+        """
         html = render_page(self._make_list_page_context())
-        assert 'hx-target="#main-content"' in html
-        # v0.61.18 (#876) extended the swap string to scroll #main-content
-        # to top on morph; substring check survives future suffix changes.
-        assert 'hx-swap="morph:innerHTML transition:true' in html
-        assert 'hx-push-url="true"' in html
-        assert 'preload="mousedown"' in html
+        assert 'class="dz-nav-link"' in html
+        # The legacy htmx-targeting attrs MUST NOT appear (would
+        # indicate a Jinja-layout regression).
+        assert 'hx-target="#main-content"' not in html
 
     def test_render_page_content_only(self) -> None:
         """content_only=True returns just content (no layout); is shorter than full output.

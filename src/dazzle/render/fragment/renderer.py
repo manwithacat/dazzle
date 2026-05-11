@@ -611,9 +611,24 @@ class FragmentRenderer:
             parts.append(
                 f'<header class="dz-app-header">{self._emit(a.header, ctx)}</header>'  # type: ignore[arg-type]
             )
-        parts.append(
-            f'<main class="dz-app-main" id="main-content">{self._emit(a.body, ctx)}</main>'  # type: ignore[arg-type]
-        )
+        # Contract data-* attrs (Phase 4 app-shell migration, v0.67.44).
+        # The legacy `layouts/app_shell.html` emitted these on the
+        # `<main>` element; downstream tooling (E2E locators, agent
+        # observers, accessibility scanners) reads them by name.
+        main_attrs = ' class="dz-app-main" id="main-content"'
+        if a.view_name:
+            main_attrs += f' data-dazzle-view="{ctx.escape_attr(a.view_name)}"'
+        if a.surface_name:
+            main_attrs += f' data-dz-surface="{ctx.escape_attr(a.surface_name)}"'
+        if a.workspace_name:
+            main_attrs += f' data-dz-workspace="{ctx.escape_attr(a.workspace_name)}"'
+        main_inner: list[str] = []
+        if a.page_purpose:
+            main_inner.append(
+                f'<p class="dz-page-purpose" data-dazzle-purpose>{ctx.escape(a.page_purpose)}</p>'
+            )
+        main_inner.append(self._emit(a.body, ctx))  # type: ignore[arg-type]
+        parts.append(f"<main{main_attrs}>{''.join(main_inner)}</main>")
         if a.footer is not None:
             parts.append(
                 f'<footer class="dz-app-footer">{self._emit(a.footer, ctx)}</footer>'  # type: ignore[arg-type]

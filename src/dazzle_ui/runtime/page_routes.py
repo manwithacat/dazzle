@@ -1402,36 +1402,43 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # exception: the browser needs a full document for cache misses.
     is_partial = htmx.is_htmx and not htmx.is_history_restore
 
-    # Plan 17 P3+P8: Fragment chrome handles BOTH full-document AND
-    # htmx partial renders for chrome-on apps with a flipped surface.
+    # Phase 4 app-shell migration (v0.67.44): typed-Fragment is the
+    # only path. The `app.state.fragment_chrome` flag is no longer
+    # consulted here — the typed AppShell primitive renders the
+    # sidebar / topbar / body chrome that the legacy
+    # `layouts/app_shell.html` template used to provide.
     #
+    # Two render modes:
     # - Full document: wrap inner_html in a typed Page primitive
-    #   (DOCTYPE/<html>/<head>/<body>) — bypasses Jinja base.html.
+    #   (DOCTYPE / <html> / <head> / <body>) via dispatch_render_page.
     # - htmx partial: return inner_html directly. The client extracts
-    #   <body> content anyway, so for an already-rendered Fragment
-    #   surface body, that's exactly what to send. Skipping Jinja
-    #   here means a chrome-on app's htmx flows have NO Jinja in the
-    #   render path at all.
+    #   <body> content; for an already-rendered Fragment surface body,
+    #   that's exactly what to send.
     #
-    # Default off — existing deployments are unchanged. wants_fragment
-    # and wants_drawer paths above already short-circuit to inner_html
-    # via `render_page(content_only=True, inner_html=...)` (line 720
-    # in template_renderer.py), so they need no chrome-flag branching.
-    chrome_flag = bool(
-        getattr(getattr(prc.request, "app", None), "state", None)
-        and getattr(prc.request.app.state, "fragment_chrome", False)
-    )
-    use_fragment_chrome = chrome_flag and inner_html is not None
-    if use_fragment_chrome and not is_partial:
+    # The wants_fragment / wants_drawer paths above already short-
+    # circuit via render_page(content_only=True, inner_html=...) so
+    # they need no branching here.
+    if inner_html is None:
+        # Pre-typed-migration fallback: surfaces that haven't been
+        # converted to the typed substrate still render through the
+        # Jinja content template inside the typed Page chrome. Such
+        # callers pass `inner_html=None` so render_page handles the
+        # content render in `content_only` mode, then we wrap the
+        # result in the typed Page.
+        rendered_inner = render_page(render_ctx, content_only=True)
+    else:
+        rendered_inner = inner_html
+
+    if is_partial:
+        html = rendered_inner
+    else:
         from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
 
-        # P10: assets and theme are read from app.state with sensible
-        # bundled-mode defaults. Apps with non-default assets (themed
-        # builds, dev individual-script mode) override by setting
-        # `app.state.fragment_chrome_*` during app construction. Full
-        # dazzle.toml-driven resolution is a separate plan; this seam
-        # unblocks themed apps without reimplementing base.html's
-        # resolution logic.
+        # Assets and theme read from app.state. The `fragment_chrome_*`
+        # state-attribute names are kept for backward compat with
+        # downstream apps that already wire them — they're per-
+        # deployment branding overrides, not a "use Jinja vs. typed"
+        # toggle anymore.
         app_state = prc.request.app.state
         css_links = tuple(
             getattr(app_state, "fragment_chrome_css_links", None)
@@ -1444,17 +1451,11 @@ def _render_response(prc: _PageRequestContext) -> Response:
         theme = getattr(app_state, "fragment_chrome_theme", None)
         html = dispatch_render_page(
             render_ctx,
-            inner_html or "",
+            rendered_inner,
             css_links=css_links,
             js_scripts=js_scripts,
             theme=theme,
         )
-    elif use_fragment_chrome and is_partial:
-        # Body-only response for htmx — inner_html is the
-        # already-rendered Fragment surface body, ready for swap.
-        html = inner_html or ""
-    else:
-        html = render_page(render_ctx, partial=is_partial, inner_html=inner_html)
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
     # <title> never updates from server content. Fire the dz:titleUpdate
@@ -1654,7 +1655,6 @@ async def _workspace_handler(
     request: Request,
 ) -> Response:
     """Handle a workspace page route."""
-    from dazzle_ui.runtime.template_renderer import render_fragment
 
     # Inject auth context if available
     # Unauthenticated default: only public workspaces are visible.
@@ -1763,103 +1763,59 @@ async def _workspace_handler(
                 }
             )
 
-    # #1036 (v0.67.23): unify the typed-Fragment switch on
-    # `app.state.fragment_chrome` (the same flag every entity surface
-    # route uses) instead of the legacy `DAZZLE_TYPED_RENDER=1` env
-    # var. When fragment_chrome is on, both the htmx partial path AND
-    # the full-page path render through the typed substrate; when off,
-    # both fall back to the legacy Jinja templates. Closes the last
-    # page-level Jinja render for chrome=on apps so cyfuture and other
-    # downstream pilots can complete Jinja retirement.
-    chrome_flag = bool(
-        getattr(getattr(request, "app", None), "state", None)
-        and getattr(request.app.state, "fragment_chrome", False)
+    # Phase 4 app-shell migration (v0.67.44): the workspace page
+    # renders unconditionally through the typed-Fragment substrate.
+    # The `fragment_chrome` flag is no longer consulted; the typed
+    # AppShell primitive provides the sidebar / topbar / body chrome.
+    #
+    # Known regression accepted per the Phase 4 plan: persona
+    # affordances that lived in the legacy Jinja navbar
+    # (`user_email`, `user_name`, `user_preferences`) are not yet
+    # surfaced in the typed AppShell. They can be re-added as typed
+    # primitives once the persona-dropdown design lands. This is an
+    # explicit "adapt to the new system" trade-off, not a parity gap.
+    _ = (user_email, user_name, user_preferences, is_authenticated)
+
+    from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
+    from dazzle_ui.runtime.template_context import NavItemContext, PageContext
+    from dazzle_ui.runtime.workspace_renderer import (
+        render_workspace_content_typed,
     )
 
-    # Fragment targeting: return only the workspace content
+    workspace_inner = render_workspace_content_typed(
+        workspace=render_ws_ctx,
+        catalog=catalog,
+        fold_count=fold_count,
+        primary_actions=primary_actions,
+    )
+
+    # Fragment targeting: return only the workspace content.
     if htmx.wants_fragment:
-        if chrome_flag:
-            from dazzle_ui.runtime.workspace_renderer import (
-                render_workspace_content_typed,
-            )
-
-            html = render_workspace_content_typed(
-                workspace=render_ws_ctx,
-                catalog=catalog,
-                fold_count=fold_count,
-                primary_actions=primary_actions,
-            )
-        else:
-            html = render_fragment(
-                "workspace/_content.html",
-                workspace=render_ws_ctx,
-                user_preferences=user_preferences,
-                catalog=catalog,
-                fold_count=fold_count,
-                primary_actions=primary_actions,
-            )
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
-        return HTMLResponse(content=html, headers=headers)  # nosemgrep
+        return HTMLResponse(content=workspace_inner, headers=headers)  # nosemgrep
 
-    if chrome_flag:
-        # Typed-Fragment full-page render — produce the workspace
-        # content via the typed substrate, then wrap in the typed
-        # AppShell/Sidebar/Topbar chrome via dispatch_render_page.
-        # Mirrors the entity-surface pattern (page_routes.py:1420).
-        from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
-        from dazzle_ui.runtime.template_context import NavItemContext, PageContext
-        from dazzle_ui.runtime.workspace_renderer import (
-            render_workspace_content_typed,
-        )
-
-        inner_html = render_workspace_content_typed(
-            workspace=render_ws_ctx,
-            catalog=catalog,
-            fold_count=fold_count,
-            primary_actions=primary_actions,
-        )
-        page_ctx = PageContext(
-            page_title=ws_title,
-            app_name=ws_app_name,
-            nav_items=[NavItemContext(label=n["label"], route=n["route"]) for n in visible_nav],
-            nav_groups=ws_groups,
-            current_route=effective_route,
-        )
-        app_state = request.app.state
-        css_links = tuple(
-            getattr(app_state, "fragment_chrome_css_links", None)
-            or ("/static/dist/dazzle.min.css",)
-        )
-        js_scripts = tuple(
-            getattr(app_state, "fragment_chrome_js_scripts", None)
-            or ("/static/dist/dazzle.min.js",)
-        )
-        theme = getattr(app_state, "fragment_chrome_theme", None)
-        html = dispatch_render_page(
-            page_ctx,
-            inner_html,
-            css_links=css_links,
-            js_scripts=js_scripts,
-            theme=theme,
-        )
-    else:
-        html = render_fragment(
-            "workspace/workspace.html",
-            workspace=render_ws_ctx,
-            nav_items=visible_nav,
-            nav_groups=ws_groups,
-            app_name=ws_app_name,
-            page_title=ws_title,
-            current_route=effective_route,
-            is_authenticated=is_authenticated,
-            user_email=user_email,
-            user_name=user_name,
-            user_preferences=user_preferences,
-            catalog=catalog,
-            fold_count=fold_count,
-            primary_actions=primary_actions,
-            _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
-        )
+    page_ctx = PageContext(
+        page_title=ws_title,
+        app_name=ws_app_name,
+        nav_items=[NavItemContext(label=n["label"], route=n["route"]) for n in visible_nav],
+        nav_groups=ws_groups,
+        current_route=effective_route,
+    )
+    app_state = request.app.state
+    css_links = tuple(
+        getattr(app_state, "fragment_chrome_css_links", None) or ("/static/dist/dazzle.min.css",)
+    )
+    js_scripts = tuple(
+        getattr(app_state, "fragment_chrome_js_scripts", None) or ("/static/dist/dazzle.min.js",)
+    )
+    theme = getattr(app_state, "fragment_chrome_theme", None)
+    html = dispatch_render_page(
+        page_ctx,
+        workspace_inner,
+        css_links=css_links,
+        js_scripts=js_scripts,
+        theme=theme,
+    )
     return HTMLResponse(content=html)  # nosemgrep
 
 

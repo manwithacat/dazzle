@@ -282,14 +282,17 @@ def test_fragment_chrome_emits_body_announcer_slots() -> None:
 
 
 def test_fragment_chrome_default_off_unchanged_behaviour() -> None:
-    """Without the flag, responses still go through Jinja base.html —
-    confirmed by absence of the `dz-page` body class. Pins backward
-    compatibility."""
-    client = _client_for("simple_task")  # no fragment_chrome flag
+    """Phase 4 app-shell migration (v0.67.44): the `fragment_chrome`
+    flag no longer gates the marketing or in-app render paths — the
+    typed-Fragment substrate is the only render path. This test
+    formerly pinned "chrome=off keeps Jinja base.html"; it now pins
+    "chrome=off still produces the typed body class" (the flag is
+    legacy-noop)."""
+    client = _client_for("simple_task")  # no fragment_chrome flag set
     resp = client.get("/task")
     body = resp.text
-    assert '<body class="dz-page">' not in body, (
-        f"chrome flag default-off broken; got Fragment chrome unexpectedly. "
+    assert '<body class="dz-page">' in body, (
+        f"typed body class missing — Phase 4 typed AppShell path may have regressed. "
         f"body[:500]={body[:500]!r}"
     )
 
@@ -467,19 +470,23 @@ def test_fragment_chrome_sidebar_active_state_keys_off_current_route() -> None:
 
 
 def test_fragment_chrome_default_off_htmx_still_uses_jinja_partial() -> None:
-    """Backward compat: chrome flag off → htmx requests still go through
-    `render_page(partial=True, ...)` exactly as before. Pinned because
-    P8 is a behaviour change for chrome=on, must not leak to chrome=off."""
-    client = _client_for("simple_task")  # no fragment_chrome
+    """Phase 4 app-shell migration (v0.67.44): chrome flag no longer
+    gates render. htmx requests now ALWAYS return the typed inner
+    HTML directly (no Jinja layout markers, no DOCTYPE).
+
+    Was: chrome=off htmx returned `render_page(partial=True)` output
+    which carried `dz-toast-stack` / `dz-modal-slot` from the Jinja
+    base.html. Now: htmx returns the bare typed inner_html for swap.
+    """
+    client = _client_for("simple_task")  # flag value irrelevant now
     resp = client.get("/task", headers={"HX-Request": "true"})
     body = resp.text
-    # The legacy partial path renders the body slot — Jinja layout
-    # markers like `dz-toast-stack` should appear, distinguishing
-    # from the chrome-on bare-inner-html path.
-    assert "dz-modal-slot" in body or "dz-toast-stack" in body, (
-        f"chrome-off htmx response missing Jinja layout markers — did "
-        f"P8 leak to chrome-off path? body[:500]={body[:500]!r}"
+    # Typed partial markers — DOCTYPE/<html>/<head>/<body> stripped.
+    assert not body.lstrip().startswith("<!DOCTYPE"), (
+        f"htmx response unexpectedly includes DOCTYPE — would nest <html>. "
+        f"body[:200]={body[:200]!r}"
     )
+    assert "<html" not in body
 
 
 # ─────────────────── UX contract markers (CI-red fix) ───────────────────

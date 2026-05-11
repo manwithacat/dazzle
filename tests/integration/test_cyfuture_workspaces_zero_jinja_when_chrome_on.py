@@ -131,37 +131,30 @@ def test_workspace_htmx_partial_renders_zero_jinja_when_chrome_on() -> None:
 
 
 def test_workspace_full_page_uses_dispatch_render_page_when_chrome_on() -> None:
-    """Direct seam check: the workspace handler's chrome=on branch
-    should call `dispatch_render_page` (the typed-substrate seam),
-    not `render_fragment("workspace/workspace.html", ...)`. Spies
-    on both — succeeds when dispatch fires zero times in the false
-    branch and one or more times in the true branch.
+    """Direct seam check: the workspace handler should call
+    `dispatch_render_page` (the typed-substrate seam).
 
-    This catches a regression where the chrome flag plumbing breaks
-    even when no workspace route returns 200 in the test client
-    (e.g. auth-gated routes return 403 before the handler runs).
+    Phase 4 app-shell migration (v0.67.44): the chrome flag is no
+    longer consulted. The handler unconditionally routes through
+    dispatch_render_page — there is no Jinja workspace.html fallback
+    anymore. The test now just pins the typed seam is present.
     """
     from dazzle_ui.runtime import page_routes as pr_mod
 
-    # Source check: both branches present in the handler. We can't
-    # easily force a 200 response without auth setup, so this checks
-    # the source at module import time — if the chrome=on seam is
-    # ever removed, the symbol search fails.
     handler_src = (Path(pr_mod.__file__)).read_text(encoding="utf-8")
     assert "dispatch_render_page" in handler_src, (
         "page_routes.py no longer references dispatch_render_page — the "
         "typed workspace chrome path may have been removed."
     )
-    assert (
-        'render_fragment(\n            "workspace/workspace.html"' in handler_src
-        or 'render_fragment("workspace/workspace.html"' in handler_src
-    ), (
-        "page_routes.py no longer references the legacy "
-        "workspace/workspace.html template — chrome=off fallback "
-        "may have been removed; the regression test that asserts a "
-        "Jinja path exists has lost its anchor."
+    # The legacy `workspace/workspace.html` template was retired with
+    # the chrome-flag removal; assert no reference creeps back in.
+    assert "workspace/workspace.html" not in handler_src, (
+        "page_routes.py reintroduced workspace/workspace.html — that "
+        "template was retired in Phase 4 (v0.67.44). The typed-Fragment "
+        "workspace render is the only path now."
     )
-    # The new chrome_flag branch must read from app.state.fragment_chrome.
-    assert 'request.app.state, "fragment_chrome"' in handler_src, (
-        "Workspace handler is no longer reading fragment_chrome from app.state — #1036 regression."
-    )
+    # Phase 4 (v0.67.44): the workspace handler no longer reads
+    # `app.state.fragment_chrome` for the typed-vs-Jinja decision;
+    # typed-Fragment is the only path. Asset / theme overrides still
+    # thread through `app.state.fragment_chrome_*` state attributes
+    # (per-deployment branding, not a render-mode toggle).
