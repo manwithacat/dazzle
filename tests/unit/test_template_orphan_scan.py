@@ -96,41 +96,26 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "import via {% from 'macros/locale_switcher.html' %} when they want "
         "the switcher"
     ),
-    # Phase 4 region migration deletion sweep (v0.67.52): these helpers
-    # were consumed by the now-retired `workspace/regions/*.html` Jinja
-    # content templates. Kept on disk because they may still be useful
-    # for downstream apps that compose Jinja content alongside the typed
-    # substrate; framework code paths no longer reach them.
-    "fragments/date_range_picker.html": (
-        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
-        "kept for downstream Jinja composition"
-    ),
-    "fragments/empty_state.html": (
-        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
-        "kept for downstream Jinja composition"
-    ),
-    "macros/attention_accent.html": (
-        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
-        "kept for downstream Jinja composition"
-    ),
-    "macros/ref_cell.html": (
-        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
-        "kept for downstream Jinja composition"
-    ),
-    # Phase 4 chrome-flag flip (v0.67.43) — site/page.html retired,
-    # so the chain it pulled in (site_base.html + og_meta partial) is
-    # no longer referenced from any framework code path. The typed
-    # Page primitive provides the same head + chrome.
-    # Both files are kept on disk as a backward-compat affordance for
-    # downstream apps that historically embedded these via custom
-    # render calls; framework code paths no longer touch them.
-    "site/site_base.html": (
-        "Phase 4 chrome-flag flip retired the renderer that extended it; "
-        "kept on disk for downstream apps with custom Jinja paths"
-    ),
-    "site/includes/og_meta.html": (
-        "Phase 4 chrome-flag flip retired its only includer (site/page.html); "
-        "kept on disk for downstream apps with custom Jinja paths"
+    # Phase 4 region migration deletion sweep (v0.67.52) and chrome-flag
+    # flip (v0.67.43) retired the framework's consumers of several legacy
+    # helpers. v0.67.66 deleted them entirely (date_range_picker.html,
+    # empty_state.html, macros/attention_accent.html, macros/ref_cell.html,
+    # site/site_base.html, site/includes/og_meta.html,
+    # fragments/search_box_results.html, site/includes/analytics/*.html) —
+    # per the "breaking changes acceptable" directive, no in-tree code path
+    # or template needed them; the typed-Fragment substrate provides
+    # equivalent primitives.
+    # workspace/_content.html + workspace/_card_picker.html stay on disk
+    # because tests/unit/render/fragment/test_*_primitive.py still uses
+    # them as the legacy parity reference for the CardPicker / AddCardRow
+    # typed primitives. They're not in the typed-shim path anymore but
+    # the parity tests pin byte-equivalence — retiring requires migrating
+    # those tests.
+    "workspace/_content.html": (
+        "Legacy parity reference for typed WorkspaceShell primitive — "
+        "still loaded by tests/unit/render/fragment/test_workspace_content_*.py. "
+        "Its `{% include 'workspace/_card_picker.html' %}` keeps that "
+        "partial alive so we don't allowlist it separately."
     ),
 }
 

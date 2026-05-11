@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.66] - 2026-05-11
+
+### Removed
+
+- **9 orphaned Jinja templates deleted** (93 → 84 framework templates):
+  - `fragments/date_range_picker.html`
+  - `fragments/empty_state.html`
+  - `fragments/search_box_results.html`
+  - `macros/attention_accent.html`
+  - `macros/ref_cell.html`
+  - `site/site_base.html`
+  - `site/includes/og_meta.html`
+  - `site/includes/analytics/head_scripts.html`
+  - `site/includes/analytics/body_scripts.html`
+
+  All were already orphan-allowlisted as "kept for downstream Jinja composition" but had no in-tree code path or template reference. Per the "breaking changes acceptable" directive: the typed-Fragment substrate provides equivalent primitives (`DateRangePicker`, `EmptyState`, search-box result renderer in `fts_routes`, status-badge primitive, ref-cell rendering, typed `Page`/`AppShell`/og-meta wiring, analytics emission via the typed renderer pipeline). Downstream consumers that custom-included these partials will need to migrate to the typed primitives or vendor the partial in their own template tree.
+
+### Changed
+
+- **Orphan-scan allowlist trimmed** from 8 entries to 2 (`macros/locale_switcher.html` adopter-opt-in, `macros/a11y.html` adopter-opt-in, plus `workspace/_content.html` for the legacy-parity test reference).
+
+### Agent Guidance
+
+- The orphan-scan allowlist (`tests/unit/test_template_orphan_scan.py::INDIVIDUAL_ALLOWLIST`) is now the canonical record of *intentional* orphans. Entries that drift to "no longer needed" should be deleted rather than left in the allowlist with stale "kept for downstream" reasons.
+
 ## [0.67.65] - 2026-05-11
 
 ### Changed
