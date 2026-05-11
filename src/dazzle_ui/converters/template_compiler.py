@@ -921,7 +921,9 @@ def _compile_list_surface(
         page_title=surface.title or f"{entity_name} List",
         page_purpose=page_purpose,
         persona_purposes=persona_purposes,
-        template="components/filterable_table.html",
+        # v0.67.79: PageContext.template field is no longer read by any
+        # renderer (table rendering moved to table_renderer.py).
+        template="",
         table=TableContext(
             entity_name=entity_name,
             title=surface.title or f"{entity_name}s",

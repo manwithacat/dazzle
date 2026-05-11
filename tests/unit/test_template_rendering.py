@@ -184,7 +184,8 @@ class TestCompileSurfaceToContext:
         assert ctx.table is not None
         assert ctx.form is None
         assert ctx.detail is None
-        assert ctx.template == "components/filterable_table.html"
+        # v0.67.79: PageContext.template no longer set for list surfaces;
+        # rendering goes through table_renderer.render_filterable_table.
         assert ctx.page_title == "Tasks"
         assert ctx.table.entity_name == "Task"
         assert ctx.table.api_endpoint == "/tasks"

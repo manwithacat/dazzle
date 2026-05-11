@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.79] - 2026-05-12
+
+### Changed
+
+- **`render_page` dispatches to typed renderers when `PageContext.template` is empty** — closes the second-largest blocker on [#1039](https://github.com/manwithacat/dazzle/issues/1039). New `_render_typed_body(context)` helper inspects `context.form / detail / table` and calls the right typed renderer (`form_renderer.render_form_field`, `detail_renderer.render_detail_view`, `table_renderer.render_filterable_table`). The Jinja path remains for `pdf_viewer_page.html` and `review_queue.html` consumers (the last two non-typed template-driven surfaces).
+- **`template_compiler` list-surface template** cleared — `compile_surface_to_context` for LIST surfaces no longer sets `PageContext.template = "components/filterable_table.html"`. The typed `table_renderer.render_filterable_table` is the entry point; the dead field setting is gone.
+- **1 stale assertion updated** — `test_list_mode_produces_table_context` no longer asserts `ctx.template == "components/filterable_table.html"`.
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+After this ship, the Jinja path in `render_page` only fires for:
+- `components/pdf_viewer_page.html` (PDF viewer DSL hook)
+- `components/review_queue.html` (SurfaceMode.REVIEW)
+
+These 2 templates are the last gating consumers for #1039.
+
 ## [0.67.78] - 2026-05-12
 
 ### Changed

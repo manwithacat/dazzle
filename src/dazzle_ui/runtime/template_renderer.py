@@ -689,6 +689,29 @@ def add_theme_template_dirs(theme_template_dirs: list[Path]) -> None:
         _env.loader = ChoiceLoader([theme_loader, existing])
 
 
+def _render_typed_body(context: PageContext) -> str:
+    """Dispatch a PageContext to the right typed renderer (v0.67.79).
+
+    Called by `render_page` when `PageContext.template` is empty —
+    which is the case for create/edit/list/view surfaces after the
+    Phase 4 typed-renderer migrations (v0.67.74 form_renderer,
+    v0.67.75 detail_renderer, v0.67.76 table_renderer).
+    """
+    if context.form is not None:
+        from dazzle_ui.runtime.form_renderer import render_form_field
+
+        return "".join(render_form_field(f) for f in context.form.fields)
+    if context.detail is not None:
+        from dazzle_ui.runtime.detail_renderer import render_detail_view
+
+        return render_detail_view(context.detail)
+    if context.table is not None:
+        from dazzle_ui.runtime.table_renderer import render_filterable_table
+
+        return render_filterable_table(context.table, page_title=context.page_title)
+    return ""
+
+
 def render_page(
     context: PageContext,
     *,
@@ -731,8 +754,14 @@ def render_page(
         # produced the inner HTML. Skip the Jinja content-template render
         # and use what was supplied.
         rendered_content = inner_html
+    elif not context.template:
+        # Phase 4 (v0.67.79): typed-substrate dispatch. The compiler
+        # sets PageContext.template="" for surfaces that have moved to
+        # the typed renderers (form/detail/table since v0.67.74–v0.67.76).
+        rendered_content = _render_typed_body(context)
     else:
-        # Render the content template first (standalone fragment)
+        # Render the content template first (standalone fragment).
+        # Surviving template-driven path: pdf_viewer_page + review_queue.
         content_template = env.get_template(context.template)
         rendered_content = content_template.render(**template_vars)  # nosemgrep
 
