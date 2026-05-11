@@ -41,6 +41,7 @@ def build_login_magic_link_view(
     product_name: str,
     next_url: str = "/",
     error_message: str = "",
+    sso_providers: tuple[Any, ...] = (),
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
     js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
 ) -> Page:
@@ -56,7 +57,14 @@ def build_login_magic_link_view(
     they originally requested. `error_message` renders as a
     visible-error block above the form when the previous attempt
     failed (e.g. invalid token).
+
+    `sso_providers` is the tuple of `SsoProviderConfig`s configured
+    on `app.state.sso_providers`. When non-empty, a "Continue with
+    <provider>" link is rendered above the email form for each
+    provider, with an "or continue with" divider.
     """
+    from dazzle_back.runtime.auth.sso_views import build_sso_button_row
+
     form_action = "/auth/login/magic-link"
     if next_url and next_url != "/":
         form_action = f"{form_action}?next={next_url}"
@@ -67,6 +75,8 @@ def build_login_magic_link_view(
     ]
     if error_message:
         body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.extend(build_sso_button_row(providers=sso_providers, next_url=next_url))
 
     body_children.append(
         FormStack(
@@ -99,6 +109,7 @@ def build_login_password_view(
     product_name: str,
     next_url: str = "/",
     error_message: str = "",
+    sso_providers: tuple[Any, ...] = (),
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
     js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
 ) -> Page:
@@ -114,7 +125,12 @@ def build_login_password_view(
     password-mode flow; a "Use sign-in link instead" link to `/login`
     is NOT included because in password mode the magic-link route is
     off — flipping deployments choose one mode at startup.
+
+    `sso_providers` (Phase 1.C, v0.67.39): when non-empty, "Continue
+    with <provider>" links render above the email/password form.
     """
+    from dazzle_back.runtime.auth.sso_views import build_sso_button_row
+
     form_action = "/auth/login/password"
     if next_url and next_url != "/":
         form_action = f"{form_action}?next={next_url}"
@@ -125,6 +141,8 @@ def build_login_password_view(
     ]
     if error_message:
         body_children.append(Text(body=error_message, tone="danger"))
+
+    body_children.extend(build_sso_button_row(providers=sso_providers, next_url=next_url))
 
     body_children.append(
         FormStack(

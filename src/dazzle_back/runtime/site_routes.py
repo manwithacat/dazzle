@@ -769,17 +769,33 @@ def create_auth_page_routes(
         css_links, js_scripts = _typed_chrome_assets(app_state)
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
         password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
+        sso_providers = tuple(getattr(app_state, "sso_providers", ()) or ())
         error_message = ""
         if error == "invalid_magic_link":
             error_message = "That sign-in link is invalid or expired. Request a new one below."
         elif error == "invalid_credentials":
             error_message = "That email and password didn't match. Try again."
+        elif error == "sso_failed":
+            error_message = "We couldn't complete the sign-in. Please try again."
+        elif error == "sso_no_email":
+            error_message = (
+                "That SSO provider didn't share an email address with us — "
+                "try a different sign-in method."
+            )
+        elif error == "sso_email_unverified":
+            error_message = (
+                "Your SSO email address isn't verified with the provider yet. "
+                "Verify it and try again."
+            )
+        elif error == "sso_provider_unknown":
+            error_message = "That SSO provider isn't configured on this deployment."
         builder = build_login_password_view if password_mode else build_login_magic_link_view
         page = builder(
             page_title="Sign in",
             product_name=product_name,
             next_url=next,
             error_message=error_message,
+            sso_providers=sso_providers,
             css_links=css_links,
             js_scripts=js_scripts,
         )

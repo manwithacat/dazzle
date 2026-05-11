@@ -92,6 +92,40 @@ class AuthSubsystem:
         two_factor_form_router = create_two_factor_form_routes()
         ctx.app.include_router(two_factor_form_router)
 
+        # SSO initiation + callback routes (Phase 1.C, v0.67.39).
+        # Mounted unconditionally so the endpoint dispatcher can return
+        # a friendly "sso_provider_unknown" redirect when SSO isn't
+        # configured. The OAuth client is only constructed when a
+        # registered provider is hit — `authlib` stays an optional dep.
+        from dazzle_back.runtime.auth.sso_config import (
+            load_sso_providers_from_env,
+        )
+        from dazzle_back.runtime.auth.sso_routes import create_sso_routes
+
+        configured = load_sso_providers_from_env()
+        ctx.app.state.sso_providers = configured
+        if configured:
+            # SessionMiddleware backs Authlib's `state` storage between
+            # the initiate redirect and the callback. The session
+            # cookie is signed (not encrypted) via itsdangerous — fine
+            # for the short-lived state token but DON'T put sensitive
+            # data in `request.session`. The secret defaults to a
+            # random per-process value; production deployments should
+            # set DAZZLE_SESSION_SECRET so the cookie survives restarts.
+            import os
+            import secrets
+
+            from starlette.middleware.sessions import SessionMiddleware
+
+            session_secret = os.environ.get("DAZZLE_SESSION_SECRET") or secrets.token_urlsafe(64)
+            ctx.app.add_middleware(
+                SessionMiddleware,
+                secret_key=session_secret,
+                same_site="lax",
+                https_only=False,  # cookie_secure() controls per-cookie
+            )
+            ctx.app.include_router(create_sso_routes())
+
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
         # time (#838). When no SecurityConfig is present on the AppSpec, the

@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.39] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 1.C — SSO via Authlib (Google + Microsoft).** Same-domain callback only per the locked Phase 1 design decision (Q3). End-to-end OIDC flow: `GET /auth/sso/{provider}` initiates, `GET /auth/sso/{provider}/callback` consumes the code, creates a passwordless user (or matches an existing one by email), and signs them in.
+- **`src/dazzle_back/runtime/auth/sso_config.py`** — `SsoProviderConfig` dataclass + `load_sso_providers_from_env()` loader. Recognises `DAZZLE_SSO_{GOOGLE,MICROSOFT}_CLIENT_ID` / `_CLIENT_SECRET` / `_SCOPES` env vars. A provider is enabled only when both id + secret are set; missing either silently omits the provider so the deployment doesn't have to know which envs are populated.
+- **`src/dazzle_back/runtime/auth/sso_routes.py`** — initiation + callback handlers. Authlib's `StarletteOAuth2App` is built lazily (first hit) so the optional `authlib` dependency doesn't import in deployments that don't use SSO. The OAuth client cache lives on `app.state._sso_clients`.
+- **`src/dazzle_back/runtime/auth/sso_views.py`** — `build_sso_button_row(providers, next_url)` returns a tuple of typed-Fragment children rendering "Continue with <provider>" links plus an "or continue with" divider. Empty tuple when no providers are configured.
+- **`build_login_magic_link_view` and `build_login_password_view`** in `auth_views.py` now accept an `sso_providers=` kwarg. When non-empty, the button row renders above the email/password form. Default empty tuple preserves backward compatibility with every existing caller.
+- **`/login` GET handler** in `site_routes.py` reads `app.state.sso_providers` and passes it to the view builder. New error-message branches for `?error=sso_failed` / `sso_no_email` / `sso_email_unverified` / `sso_provider_unknown`.
+- **`AuthSubsystem.start`** registers `SessionMiddleware` and the SSO router when at least one provider is configured. Session secret defaults to a random per-process value; production deployments should set `DAZZLE_SESSION_SECRET` so the cookie survives restarts.
+- **Authlib + itsdangerous** as new optional deps under the `sso` extra (`pip install 'dazzle-dsl[sso]'`).
+- **12 view + config unit tests** + **13 integration tests** with a fake OAuth client driving every flow path: initiation, callback success (existing user vs. new provisioning), token-exchange failure, missing email, unverified email, lowercase normalisation, safe + unsafe `?next=` threading, and the unknown-provider friendly redirect.
+
+### Changed
+
+- **`tests/unit/test_typed_runtime_no_jinja.py`** allow-list extended with the three new SSO modules; the regrowth gate now covers 11 typed-only files.
+- **`docs/api-surface/runtime-urls.txt`** — regenerated to include the `/login` handler's expanded query-param signature (added `error: str = ''` carries the new SSO error codes).
+
+### Security
+
+- **Email-verification gate** — the callback refuses to provision or log in a user when the IdP returns `email_verified: false` (Google always populates the field; Microsoft is allowed through when the field is absent). Closes a class of email-takeover attacks against deployments configured for sloppy IdPs.
+- **Same-origin redirect protection** — the `?next=` parameter is stashed in the session at initiate time and re-validated via `_is_safe_redirect_path` at callback time. Off-origin values fall back to `/app`.
+- **Lazy OAuth client construction** — Authlib only imports when SSO is actually configured, so the broader runtime stays free of the dep when SSO isn't in use.
+
+### Agent Guidance
+
+- **SSO is deployment-time opt-in.** Set `DAZZLE_SSO_GOOGLE_CLIENT_ID` + `DAZZLE_SSO_GOOGLE_CLIENT_SECRET` (and/or the Microsoft pair) before app startup. The framework auto-detects, registers the routes, and renders the buttons. No DSL changes needed.
+- **Don't trust `userinfo.email` without `email_verified=True`.** The callback enforces this. If you ever add a new provider, make sure its discovery doc + claims include the verification flag — Google does, Microsoft sometimes does. Missing the flag is OK; literal `False` rejects.
+- **`request.session` is signed, not encrypted.** Don't stash sensitive data there. The SSO flow only puts a short-lived `sso_next` redirect target in the session; that's safe to leak.
+- **Production sessions need `DAZZLE_SESSION_SECRET`.** Without it, the framework picks a random per-process value, and any restart invalidates in-flight SSO state. Surfaces as "SSO randomly fails when the user takes >1 minute on the IdP page after a deploy."
+
 ## [0.67.38] - 2026-05-11
 
 ### Added
