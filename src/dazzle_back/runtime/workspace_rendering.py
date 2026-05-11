@@ -2697,6 +2697,11 @@ async def _workspace_region_handler(
         "BULLET",
         "BOX_PLOT",
         "ACTIVITY_FEED",
+        # Phase 4 region migration (v0.67.51): foundational list-view
+        # — the richest ctx contract (sort/filter state, FilterBar,
+        # CSV export, date-range picker, RBAC propagation, bulk
+        # actions plumbing).
+        "LIST",
     )
     if display_upper in _TYPED_REGION_DISPLAYS:
         from dazzle.render.fragment import FragmentRenderer
@@ -2938,6 +2943,27 @@ async def _workspace_region_handler(
                 # Items carry actor/description/created_at — the adapter
                 # reads them directly off the row dicts.
                 adapter_ctx["items"] = items
+            elif display_upper == "LIST":
+                # Phase 4 region migration (v0.67.51): foundational
+                # list-view. Read all the chrome contract (filter bar,
+                # date range, CSV, sort headers) plus row data.
+                adapter_ctx["items"] = items
+                adapter_ctx["columns"] = columns
+                adapter_ctx["total"] = total
+                adapter_ctx["endpoint"] = ctx.ctx_region.endpoint
+                adapter_ctx["region_name"] = getattr(ctx.ctx_region, "name", "")
+                adapter_ctx["filter_columns"] = filter_columns
+                adapter_ctx["active_filters"] = active_filters
+                adapter_ctx["date_range"] = getattr(ctx.ctx_region, "date_range", False)
+                adapter_ctx["date_field"] = getattr(ctx.ctx_region, "date_field", "")
+                adapter_ctx["date_from"] = request.query_params.get("date_from", "")
+                adapter_ctx["date_to"] = request.query_params.get("date_to", "")
+                adapter_ctx["csv_export"] = getattr(ctx.ctx_region, "csv_export", False)
+                adapter_ctx["sort_field"] = sort or ""
+                adapter_ctx["sort_dir"] = dir
+                adapter_ctx["empty_message"] = (
+                    ctx.surface_empty_message or ctx.ctx_region.empty_message
+                )
             elif display_upper == "CONFIRM_ACTION_PANEL":
                 # ConfirmGate full state machine — IR-level fields plus
                 # the request-time state value.

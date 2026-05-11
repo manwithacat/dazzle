@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.51] - 2026-05-11
+
+### Changed
+
+- **Workspace region migration — `list` joins the typed-Fragment path.** The foundational list-view region — the most heavily-used display kind across every Dazzle app — graduates to the typed substrate. The `adapter_ctx` population branch threads the full chrome contract through `_build_list`:
+  - **Row data**: items + columns + total + empty_message
+  - **HTMX chrome**: endpoint + region_name (for FilterBar / DateRangePicker / CsvExportButton wiring)
+  - **Filter state**: filter_columns + active_filters
+  - **Date range**: date_range + date_field + date_from + date_to (query-param-driven)
+  - **CSV export**: csv_export flag
+  - **Sort state**: sort_field + sort_dir
+- **33 of 36 region kinds** render via the typed-Fragment substrate.
+
+### Agent Guidance
+
+- **Remaining 3 Jinja-rendered region kinds**: `radar` (spoke-data shape doesn't obviously map to the adapter's flat `axes` contract), `audit_history` + `tab_data` (no adapter builder yet — need new typed primitives + IR-side data wiring before joining). These represent ~6% of region surface area.
+- **Region Jinja templates remain on disk** for now. The typed and Jinja paths coexist by design while we accumulate confidence; a follow-on deletion sweep retires the Jinja files (workspace/regions/*.html) once we've verified no production paths still reach them.
+
 ## [0.67.50] - 2026-05-11
 
 ### Changed
