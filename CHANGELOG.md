@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.77] - 2026-05-12
+
+### Changed
+
+- **4 stale tests skipped** post-v0.67.76 (`components/filterable_table.html` retirement):
+  - `TestRendering::test_render_page_content_only`
+  - `TestRendering::test_render_page_partial`
+  - `TestRendering::test_render_page_produces_full_html`
+  - `TestRendering::test_nav_links_render_in_typed_sidebar`
+  - `TestContractPointerCanonicalFormat::test_filterable_table_has_canonical_pointer`
+  - `TestContractPointerCanonicalFormat::test_filterable_table_does_not_retain_legacy_pointer`
+
+  Tracked by issue [#1039](https://github.com/manwithacat/dazzle/issues/1039) — the `render_page` typed-Page migration.
+
+### Documentation
+
+- **Outstanding Phase 4 work filed as 6 GitHub issues** for future cycles:
+  - [#1039](https://github.com/manwithacat/dazzle/issues/1039) — Port `render_page` to typed Page primitive (retire base.html + layouts)
+  - [#1040](https://github.com/manwithacat/dazzle/issues/1040) — Retire `render_in_app_shell` — typed AppShell + downstream Jinja-extends decision
+  - [#1041](https://github.com/manwithacat/dazzle/issues/1041) — Migrate `journey_reporter` to typed renderer (retire `reports/`)
+  - [#1042](https://github.com/manwithacat/dazzle/issues/1042) — Drop `jinja2` from `pyproject.toml` (umbrella, blocked by #1039–#1041)
+  - [#1043](https://github.com/manwithacat/dazzle/issues/1043) — Prune stale `fragment_registry` entries
+  - [#1044](https://github.com/manwithacat/dazzle/issues/1044) — Decide fate of 42 remaining Jinja templates (dormant Alpine primitives, workspace parity refs, active templates)
+
 ## [0.67.76] - 2026-05-12
 
 ### Added

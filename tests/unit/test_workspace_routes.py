@@ -6103,9 +6103,12 @@ class TestContractPointerCanonicalFormat:
         root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
         return (root / rel_path).read_text()
 
-    def test_filterable_table_has_canonical_pointer(self) -> None:
-        src = self._read("components/filterable_table.html")
-        assert "Contract: ~/.claude/skills/ux-architect/components/data-table.md" in src
+    @pytest.mark.skip(
+        reason="v0.67.76 retired components/filterable_table.html — Contract: "
+        "pointer for the data-table component now documented in "
+        "`dazzle_ui.runtime.table_renderer` docstring."
+    )
+    def test_filterable_table_has_canonical_pointer(self) -> None: ...
 
     def test_card_picker_has_canonical_pointer_with_ux_id(self) -> None:
         src = self._read("workspace/_card_picker.html")
@@ -6114,10 +6117,11 @@ class TestContractPointerCanonicalFormat:
             in src
         )
 
-    def test_filterable_table_does_not_retain_legacy_pointer(self) -> None:
-        """The cycle-285 drift ('data-table contract' comma-joined in line 1) must be gone."""
-        src = self._read("components/filterable_table.html")
-        assert "ux-architect/components/data-table contract" not in src
+    @pytest.mark.skip(
+        reason="v0.67.76 retired components/filterable_table.html — pointer-drift "
+        "regression guard is obsolete."
+    )
+    def test_filterable_table_does_not_retain_legacy_pointer(self) -> None: ...
 
 
 # ---------------------------------------------------------------------------
