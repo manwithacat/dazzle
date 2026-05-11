@@ -9,7 +9,6 @@ from typing import Any
 
 from dazzle_ui.runtime.template_context import (
     QAPersonaCardContext,
-    SiteAuthContext,
     SiteCTAContext,
     SiteFooterColumn,
     SiteFooterLink,
@@ -193,90 +192,12 @@ def build_site_page_context(
     )
 
 
-def build_site_auth_context(
-    sitespec_data: dict[str, Any],
-    page_type: str,
-    *,
-    custom_css: bool = False,
-    session_token: str = "",
-    default_method: str = "totp",
-    methods: list[str] | None = None,
-) -> SiteAuthContext:
-    """Build a SiteAuthContext for auth page templates.
-
-    Args:
-        sitespec_data: Site specification data.
-        page_type: One of "2fa_setup", "2fa_settings", "2fa_challenge".
-            (login/signup/forgot_password/reset_password retired in Phase 1.E.)
-        custom_css: Include project-level custom CSS.
-        session_token: Pre-login session token for 2FA challenge (#831).
-        default_method: Default 2FA method to challenge ("totp" or "email_otp").
-        methods: Enabled 2FA methods for the user; controls UI affordances
-            on the challenge page.
-
-    Returns:
-        SiteAuthContext ready for template rendering.
-    """
-    brand = sitespec_data.get("brand", {})
-    product_name = brand.get("product_name", "My App")
-
-    # Phase 1.E (v0.67.33): login / signup / forgot_password /
-    # reset_password are now typed-Fragment views \u2014 their config
-    # blocks were removed when the Jinja templates were deleted.
-    # Only the 2FA page types remain in this dispatcher.
-    configs: dict[str, dict[str, Any]] = {
-        "2fa_setup": {
-            "title": "Set Up 2FA",
-            "action_url": "/auth/2fa/setup/totp",
-            "button_text": "Enable",
-            "is_login": False,
-            "other_page": "/app",
-            "other_link_text": "Back to app",
-            "show_forgot_password": False,
-            "show_name_field": False,
-            "show_confirm_password": False,
-            "show_success_alert": True,
-            "subtitle": "",
-        },
-        "2fa_settings": {
-            "title": "2FA Settings",
-            "action_url": "/auth/2fa/status",
-            "button_text": "",
-            "is_login": False,
-            "other_page": "/app",
-            "other_link_text": "Back to app",
-            "show_forgot_password": False,
-            "show_name_field": False,
-            "show_confirm_password": False,
-            "show_success_alert": True,
-            "subtitle": "",
-        },
-        "2fa_challenge": {
-            "title": "Verify Your Identity",
-            "action_url": "/auth/2fa/verify",
-            "button_text": "Verify",
-            "is_login": False,
-            "other_page": "/login",
-            "other_link_text": "Back to sign in",
-            "show_forgot_password": False,
-            "show_name_field": False,
-            "show_confirm_password": False,
-            "show_success_alert": False,
-            "subtitle": "Enter the verification code to continue.",
-        },
-    }
-
-    cfg = configs.get(page_type, configs["2fa_setup"])
-
-    return SiteAuthContext(
-        product_name=product_name,
-        page_type=page_type,
-        custom_css=custom_css,
-        session_token=session_token,
-        default_method=default_method,
-        methods=list(methods) if methods else ["totp"],
-        **cfg,
-    )
+# build_site_auth_context retired in Phase 1.D.2 (v0.67.37). All
+# auth-page surfaces now render via typed-Fragment views in
+# `dazzle_back.runtime.auth.{auth_views,two_factor_views}`. The
+# `SiteAuthContext` Pydantic model in `template_context.py` is kept
+# for now because the template_renderer's Union type still references
+# it, but no production code path constructs it.
 
 
 # build_site_404_context and build_site_error_context were retired in

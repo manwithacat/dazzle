@@ -9,7 +9,11 @@ safety on user-supplied input.
 from __future__ import annotations
 
 from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.auth.two_factor_views import build_2fa_challenge_view
+from dazzle_back.runtime.auth.two_factor_views import (
+    build_2fa_challenge_view,
+    build_2fa_settings_view,
+    build_2fa_setup_view,
+)
 
 
 def _render(page: object) -> str:
@@ -191,3 +195,109 @@ def test_session_token_escaped_in_mode_switch_links() -> None:
     # The verbatim malicious payload must not appear unescaped in any
     # href= attribute.
     assert 'href="/2fa/challenge?session="><x' not in html
+
+
+# ───────────────── build_2fa_setup_view (Phase 1.D.2) ─────────────────
+
+
+def test_setup_view_renders_required_element_ids() -> None:
+    """The DOM contract the extracted JS depends on must be intact."""
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    for element_id in (
+        "dz-auth-error",
+        "dz-auth-success",
+        "dz-setup-totp",
+        "dz-qr-container",
+        "dz-totp-verify",
+        "dz-totp-secret",
+        "dz-totp-form",
+        "totp_code",
+        "dz-enable-email-otp",
+        "dz-recovery-section",
+        "dz-recovery-codes",
+    ):
+        assert f'id="{element_id}"' in html, f"missing required element id: {element_id}"
+
+
+def test_setup_view_references_extracted_js() -> None:
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    assert "/static/js/dz-2fa-setup.js" in html
+    # No inline `<script>` block — JS lives in the extracted file.
+    assert "<script>" not in html
+
+
+def test_setup_view_totp_code_input_attributes() -> None:
+    """The TOTP code input must keep the canonical attributes for
+    iOS/Android keyboard hints and validation."""
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    for attr in (
+        'inputmode="numeric"',
+        'pattern="[0-9]*"',
+        'maxlength="6"',
+        'placeholder="000000"',
+    ):
+        assert attr in html, f"missing required TOTP attribute: {attr}"
+
+
+def test_setup_view_links_back_to_app() -> None:
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    assert 'href="/app"' in html
+    assert "Back to App" in html
+
+
+def test_setup_view_escapes_product_name() -> None:
+    html = _render(build_2fa_setup_view(product_name="<Evil>"))
+    assert "<Evil>" not in html
+    assert "&lt;Evil&gt;" in html
+
+
+def test_setup_view_recovery_section_initially_hidden() -> None:
+    """The recovery-codes section is hidden until the JS reveals it
+    after a successful verify — pin via class membership."""
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    import re
+
+    m = re.search(r'<div\s+id="dz-recovery-section"[^>]*>', html)
+    assert m is not None
+    assert "hidden" in m.group(0)
+
+
+def test_setup_view_totp_verify_block_initially_hidden() -> None:
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    import re
+
+    m = re.search(r'<div\s+id="dz-totp-verify"[^>]*>', html)
+    assert m is not None
+    assert "hidden" in m.group(0)
+
+
+# ───────────────── build_2fa_settings_view (Phase 1.D.2) ─────────────────
+
+
+def test_settings_view_renders_required_element_ids() -> None:
+    html = _render(build_2fa_settings_view(product_name="Acme"))
+    for element_id in ("dz-auth-error", "dz-auth-success", "dz-status"):
+        assert f'id="{element_id}"' in html, f"missing required element id: {element_id}"
+
+
+def test_settings_view_references_extracted_js() -> None:
+    html = _render(build_2fa_settings_view(product_name="Acme"))
+    assert "/static/js/dz-2fa-settings.js" in html
+    assert "<script>" not in html
+
+
+def test_settings_view_status_loading_placeholder() -> None:
+    html = _render(build_2fa_settings_view(product_name="Acme"))
+    assert "Loading status" in html
+
+
+def test_settings_view_links_back_to_app() -> None:
+    html = _render(build_2fa_settings_view(product_name="Acme"))
+    assert 'href="/app"' in html
+    assert "Back to App" in html
+
+
+def test_settings_view_escapes_product_name() -> None:
+    html = _render(build_2fa_settings_view(product_name="<x>"))
+    assert "<x>" not in html
+    assert "&lt;x&gt;" in html

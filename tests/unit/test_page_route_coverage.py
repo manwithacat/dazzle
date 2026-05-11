@@ -55,7 +55,10 @@ RENDER_CALLER_ROOTS = (
 # + layout-template detection so site_base.html (extended, not served)
 # is correctly excluded.
 PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
-    "site/auth/*.html",
+    # site/auth/*.html retired in Phase 1.D.2 (v0.67.37) — all auth +
+    # 2FA pages now render via typed-Fragment views in
+    # `dazzle_back.runtime.auth.{auth_views,two_factor_views}`. No
+    # Jinja templates remain under site/auth/.
     "app/*.html",
     "site/*.html",
     "workspace/*.html",

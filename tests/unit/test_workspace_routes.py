@@ -6539,112 +6539,14 @@ class TestWorkspaceContextSelector:
 
 
 class TestAuth2FAFlow:
-    """auth-2fa.md — paired contract covering 3 surfaces (challenge/setup/settings).
+    """auth-2fa.md — paired contract covering 3 surfaces.
 
-    Cycle 298 — promotes PROP-068 from cycle 295's scan. Tests pin 16
-    structural quality gates across the flow. **Does NOT render the
-    templates** because they extend site_base.html which requires a
-    full site context + theme_css / assets / etc. Instead reads template
-    source and asserts structural invariants — the appropriate approach
-    for class-contract + extends-based templates where the rendered
-    output is dominated by parent chrome.
+    Phase 1.D.2 (v0.67.37): all three 2FA Jinja templates retired.
+    Surface coverage now lives in `tests/unit/test_two_factor_views.py`
+    (DOM contract assertions on the typed-Fragment views). The only
+    structural test left here is the CSRF-exemption check, which
+    spans the whole `/auth/` URL prefix rather than any one surface.
     """
-
-    @staticmethod
-    def _read(relpath: str) -> str:
-        from pathlib import Path
-
-        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
-        return (root / relpath).read_text()
-
-    # --- Challenge surface ---------------------------------------------------
-    # The 2fa_challenge.html template was retired in Phase 1.D.1
-    # (v0.67.35). Coverage for the challenge surface now lives in
-    # tests/unit/test_two_factor_views.py (typed-Fragment view) and
-    # the form-encoded /auth/2fa/verify/submit endpoint tests.
-
-    # --- Setup surface -------------------------------------------------------
-
-    def test_setup_has_two_sections_with_hr(self) -> None:
-        src = self._read("site/auth/2fa_setup.html")
-        assert 'id="dz-totp-section"' in src
-        assert 'id="dz-email-otp-section"' in src
-        # An <hr> must separate them
-        assert "<hr" in src
-
-    def test_setup_qr_verify_and_recovery_initially_hidden(self) -> None:
-        src = self._read("site/auth/2fa_setup.html")
-        # The verify form is hidden until fetch succeeds
-        assert 'id="dz-totp-verify" class="hidden"' in src
-        # Recovery section is hidden until codes are generated
-        assert 'id="dz-recovery-section" class="hidden' in src
-
-    def test_setup_has_inline_success_banner(self) -> None:
-        src = self._read("site/auth/2fa_setup.html")
-        assert 'id="dz-auth-success"' in src
-        assert 'role="status"' in src
-
-    # --- Settings surface ----------------------------------------------------
-
-    def test_settings_has_status_loading_placeholder(self) -> None:
-        src = self._read("site/auth/2fa_settings.html")
-        assert 'id="dz-status"' in src
-        assert "Loading status" in src
-
-    def test_settings_has_back_to_app_link(self) -> None:
-        src = self._read("site/auth/2fa_settings.html")
-        assert 'href="/app"' in src
-        assert "Back to App" in src
-
-    def test_settings_has_inline_success_banner(self) -> None:
-        src = self._read("site/auth/2fa_settings.html")
-        assert 'id="dz-auth-success"' in src
-
-    # --- Cross-surface gates -------------------------------------------------
-
-    def test_remaining_surfaces_have_iife_script(self) -> None:
-        """Setup + settings templates still ship an IIFE wrapper.
-
-        Phase 1.D.1 (v0.67.35) retired 2fa_challenge.html; setup +
-        settings stay on Jinja until their typed-Fragment views land.
-        """
-        for path in (
-            "site/auth/2fa_setup.html",
-            "site/auth/2fa_settings.html",
-        ):
-            src = self._read(path)
-            assert "{% block scripts_extra %}" in src
-            assert "(function()" in src or "(function ()" in src
-            assert "})()" in src or "})();" in src
-
-    def test_no_alpine_or_htmx_directives(self) -> None:
-        """Setup + settings surfaces are plain-JS — no Alpine, no HTMX."""
-        import re
-
-        for path in (
-            "site/auth/2fa_setup.html",
-            "site/auth/2fa_settings.html",
-        ):
-            src = self._read(path)
-            for banned in ("x-data", "x-show", "@click"):
-                assert banned not in src, f"Alpine directive {banned} in {path}"
-            hx_attrs = re.findall(r"\bhx-[a-z-]+", src)
-            for attr in hx_attrs:
-                assert attr == "hx-history", (
-                    f"unexpected HTMX directive {attr} in {path} — 2FA uses plain fetch()"
-                )
-
-    def test_remaining_surfaces_have_contract_pointer(self) -> None:
-        """Cycle 298 added Contract: pointer headers; the two
-        surviving 2FA templates still carry them."""
-        for path in (
-            "site/auth/2fa_setup.html",
-            "site/auth/2fa_settings.html",
-        ):
-            src = self._read(path)
-            assert (
-                "Contract: ~/.claude/skills/ux-architect/components/auth-2fa.md (UX-077" in src
-            ), f"missing Contract pointer in {path}"
 
     def test_auth_2fa_endpoints_are_csrf_exempt(self) -> None:
         """`/auth/` must be in the CSRF exempt_path_prefixes for 2FA fetches to work."""

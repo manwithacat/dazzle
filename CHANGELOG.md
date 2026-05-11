@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.37] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 1.D.2 — typed 2FA setup + settings views.** Closes the auth Jinja retirement. The `site/auth/` directory is now empty.
+- **`build_2fa_setup_view`** and **`build_2fa_settings_view`** in `src/dazzle_back/runtime/auth/two_factor_views.py`. Both use `RawHTML` to render the DOM scaffold (preserving every element ID the client JS reads) and reference the extracted client behavior via `Page.js_scripts`.
+- **`src/dazzle_ui/runtime/static/js/dz-2fa-setup.js`** — extracted from the inline `<script>` in `2fa_setup.html`. Plain ES2015+ IIFE; same fetch-driven flow (POST `/auth/2fa/setup/totp` → QR + secret → POST `/auth/2fa/verify/totp` → recovery codes; POST `/auth/2fa/setup/email-otp`). Wrapped null-checks added on every `getElementById(...)` so the script no-ops cleanly if the DOM contract drifts.
+- **`src/dazzle_ui/runtime/static/js/dz-2fa-settings.js`** — extracted from the inline `<script>` in `2fa_settings.html`. Same load-status + enable/disable + regenerate-codes flow against `/auth/2fa/status`, `/auth/2fa/totp`, `/auth/2fa/email-otp`, and `/auth/2fa/recovery/regenerate`.
+- **18 view-builder unit tests** at `tests/unit/test_two_factor_views.py` covering both new views: DOM-contract element IDs (the JS depends on these by name), external JS reference, no inline `<script>`, TOTP input attributes, escape safety on `product_name`, and the initially-hidden state of `dz-recovery-section` and `dz-totp-verify`.
+
+### Removed
+
+- **`src/dazzle_ui/templates/site/auth/2fa_setup.html`** and **`src/dazzle_ui/templates/site/auth/2fa_settings.html`** — replaced by typed-Fragment views. The `site/auth/` template directory is now empty (and removed).
+- **`src/dazzle_ui/templates/macros/auth_page_wrapper.html`** — no more callers. The macro lived from cycle 298 through Phase 1.E; with all 2FA templates retired, the last consumer is gone.
+- **`tests/unit/test_auth_page_wrapper.py`** — the regression tests for the macro (`#842` cycle) no longer have a target. Coverage moved to `tests/unit/test_two_factor_views.py` (DOM contract on the typed scaffolds).
+- **`build_site_auth_context`** in `src/dazzle_ui/runtime/site_context.py` — no production code path constructs it. The `SiteAuthContext` Pydantic model in `template_context.py` is preserved for now because `template_renderer`'s Union type still references it; that's a Phase 4 cleanup target.
+- **`TestAuth2FAFlow` class body** in `tests/unit/test_workspace_routes.py` reduced to just the CSRF-exemption gate (which spans the whole `/auth/` prefix, not any single surface). The 8 template-source-reading gates now have no template to read.
+- **`"site/auth/*.html"`** glob from `PAGE_TEMPLATE_PATTERNS` in `tests/unit/test_page_route_coverage.py` — matching zero templates after the directory was removed.
+
+### Changed
+
+- **`/2fa/setup` and `/2fa/settings` GET handlers** in `site_routes.py` render typed views via `FragmentRenderer`; each appends its dedicated client script (`/static/js/dz-2fa-setup.js` or `/static/js/dz-2fa-settings.js`) onto the deployment-wide `js_scripts` tuple.
+- **`create_auth_page_routes`** in `site_routes.py` no longer reads `project_root` for custom-CSS detection — that lookup is gone, replaced by the `app.state.fragment_chrome_css_links` override pattern used throughout Phase 1. The signature still accepts `project_root` for backward call-site compatibility but it's no longer consulted.
+- **`tests/unit/test_2fa_page_routes.py`** test pair flipped from `build_site_auth_context` + Jinja-render assertions to typed-view render assertions on `build_2fa_setup_view` / `build_2fa_settings_view`.
+
+### Agent Guidance
+
+- **The `site/auth/` Jinja directory is empty.** All auth + 2FA surfaces — login, signup, forgot, reset, 2fa-challenge, 2fa-setup, 2fa-settings — are typed-Fragment views in `dazzle_back.runtime.auth.{auth_views,two_factor_views}`.
+- **RawHTML is the right tool for "DOM contract" migrations.** When the legacy Jinja template carries inline JS that targets specific element IDs, the typed view emits the DOM scaffold via `RawHTML(...)` and references the extracted JS via `Page.js_scripts`. Audit-counted escape hatches; each one represents a UI pattern that doesn't yet have native primitive coverage. Acceptable for high-interactivity surfaces (2FA setup); not for forms that fit cleanly into FormStack.
+- **Extracted JS files live under `src/dazzle_ui/runtime/static/js/`** with the `dz-` prefix. They run as IIFEs so global state doesn't leak; every `getElementById(...)` is wrapped in a null-check so the same script can be loaded on pages that don't carry the full DOM contract without erroring.
+
 ## [0.67.36] - 2026-05-11
 
 ### Added

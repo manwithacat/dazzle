@@ -700,14 +700,15 @@ def create_auth_page_routes(
     Returns:
         FastAPI router with auth page routes
     """
-    from dazzle_ui.runtime.site_context import build_site_auth_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
 
     router = APIRouter()
 
-    has_custom_css = bool(
-        project_root and (project_root / "static" / "css" / "custom.css").is_file()
-    )
+    # Phase 1.D.2 (v0.67.37): all auth/2FA routes use typed-Fragment
+    # views that pull per-deployment CSS overrides from
+    # `app.state.fragment_chrome_css_links` rather than the legacy
+    # project-root probe. `project_root` is kept on the signature for
+    # backward call-site compatibility but is no longer consulted.
+    _ = project_root
 
     _auth_fn = get_auth_context
 
@@ -938,24 +939,52 @@ def create_auth_page_routes(
         request: Request,
         sitespec: dict[str, Any] = sitespec_data,
     ) -> Response:
-        """Serve the 2FA enrolment page (authenticated users only)."""
+        """Serve the 2FA enrolment page (authenticated users only).
+
+        Phase 1.D.2 (v0.67.37): typed-Fragment is the only path —
+        `site/auth/2fa_setup.html` was deleted. DOM scaffold is
+        emitted via RawHTML inside the typed Page; client behavior
+        lives in `/static/js/dz-2fa-setup.js` (referenced via
+        `Page.js_scripts`).
+        """
         redirect = _require_auth(request, "/2fa/setup")
         if redirect is not None:
             return redirect
-        ctx = build_site_auth_context(sitespec, "2fa_setup", custom_css=has_custom_css)
-        return HTMLResponse(content=render_site_page("site/auth/2fa_setup.html", ctx))
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.two_factor_views import build_2fa_setup_view
+
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        # The 2FA setup page also needs the dz-2fa-setup.js client.
+        js_scripts = tuple(list(js_scripts) + ["/static/js/dz-2fa-setup.js"])
+        page = build_2fa_setup_view(
+            product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     @router.get("/2fa/settings", include_in_schema=False)
     async def two_factor_settings_page(
         request: Request,
         sitespec: dict[str, Any] = sitespec_data,
     ) -> Response:
-        """Serve the 2FA management page (authenticated users only)."""
+        """Serve the 2FA management page (Phase 1.D.2: typed-only)."""
         redirect = _require_auth(request, "/2fa/settings")
         if redirect is not None:
             return redirect
-        ctx = build_site_auth_context(sitespec, "2fa_settings", custom_css=has_custom_css)
-        return HTMLResponse(content=render_site_page("site/auth/2fa_settings.html", ctx))
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.two_factor_views import build_2fa_settings_view
+
+        app_state = request.app.state
+        css_links, js_scripts = _typed_chrome_assets(app_state)
+        js_scripts = tuple(list(js_scripts) + ["/static/js/dz-2fa-settings.js"])
+        page = build_2fa_settings_view(
+            product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     @router.get("/2fa/challenge", response_class=HTMLResponse, include_in_schema=False)
     async def two_factor_challenge_page(

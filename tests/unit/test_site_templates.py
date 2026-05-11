@@ -184,22 +184,10 @@ class TestBuildSitePageContext:
         assert "dz-bg-alt" in html
 
 
-class TestBuildSiteAuthContext:
-    """Tests for build_site_auth_context() — login/signup/forgot/reset
-    page_types retired in Phase 1.E (v0.67.33); only 2FA contexts remain."""
-
-    def test_2fa_setup_context(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {"product_name": "App"}}, "2fa_setup")
-        assert ctx.title == "Set Up 2FA"
-        assert ctx.action_url == "/auth/2fa/setup/totp"
-
-    def test_2fa_settings_context(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-
-        ctx = build_site_auth_context({"brand": {}}, "2fa_settings")
-        assert ctx.title == "2FA Settings"
+# TestBuildSiteAuthContext class retired in Phase 1.D.2 (v0.67.37).
+# `build_site_auth_context` is gone; auth-page coverage now lives in
+# the typed-view test suites under `tests/unit/test_auth_views_*.py`
+# and `tests/unit/test_two_factor_views.py`.
 
 
 # TestBuildSite404Context removed in Phase 2.A (v0.67.34) —

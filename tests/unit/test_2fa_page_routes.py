@@ -21,22 +21,28 @@ SITESPEC: dict[str, Any] = {"brand": {"product_name": "TestApp"}}
 class TestTwoFactorPageContextBuilder:
     """The site-context builder must understand the three new page types."""
 
-    def test_setup_context_renders(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
+    def test_setup_view_renders_with_product_name(self) -> None:
+        """Phase 1.D.2 (v0.67.37): setup is a typed-Fragment view."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.two_factor_views import build_2fa_setup_view
 
-        ctx = build_site_auth_context(SITESPEC, "2fa_setup")
-        html = render_site_page("site/auth/2fa_setup.html", ctx)
+        html = FragmentRenderer().render(build_2fa_setup_view(product_name="TestApp"))
         assert "Set Up 2FA" in html
         assert "TestApp" in html
+        # External JS reference, not inline script.
+        assert "/static/js/dz-2fa-setup.js" in html
 
-    def test_settings_context_renders(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_auth_context
-        from dazzle_ui.runtime.template_renderer import render_site_page
+    def test_settings_view_renders_with_product_name(self) -> None:
+        """Phase 1.D.2 (v0.67.37): settings is a typed-Fragment view."""
+        from dazzle.render.fragment.renderer import FragmentRenderer
+        from dazzle_back.runtime.auth.two_factor_views import (
+            build_2fa_settings_view,
+        )
 
-        ctx = build_site_auth_context(SITESPEC, "2fa_settings")
-        html = render_site_page("site/auth/2fa_settings.html", ctx)
+        html = FragmentRenderer().render(build_2fa_settings_view(product_name="TestApp"))
         assert "2FA Settings" in html
+        assert "TestApp" in html
+        assert "/static/js/dz-2fa-settings.js" in html
 
     def test_challenge_view_carries_session_token(self) -> None:
         """Phase 1.D.1 (v0.67.35): challenge surface is now a typed-
