@@ -122,20 +122,41 @@ def create_fragment_router(
             secondary_key = source_config.get("secondary_key", "")
             field_name = request.query_params.get("field_name", source)
 
-            # Render via Jinja2 template (auto-escaped)
-            from dazzle_ui.runtime.template_renderer import render_fragment
+            # Phase 4 (v0.67.62): inline-render with stdlib html.escape.
+            import html as _html_mod
 
-            html = render_fragment(
-                "fragments/search_results.html",
-                items=items,
-                display_key=display_key,
-                value_key=value_key,
-                secondary_key=secondary_key,
-                field_name=field_name,
-                query=q,
-                min_chars=min_chars,
-                select_endpoint=f"/api/_fragments/select?source={source}",
-            )
+            select_endpoint = f"/api/_fragments/select?source={source}"
+            if items:
+                rows: list[str] = []
+                for item in items:
+                    val = item.get(value_key)
+                    val_attr = _html_mod.escape(str(val), quote=True)
+                    display = _html_mod.escape(str(item.get(display_key, "")), quote=False)
+                    secondary_html = ""
+                    if secondary_key:
+                        sec = item.get(secondary_key)
+                        if sec:
+                            secondary_html = (
+                                f'<div class="dz-search-result-secondary">'
+                                f"{_html_mod.escape(str(sec), quote=False)}</div>"
+                            )
+                    href = f"{_html_mod.escape(select_endpoint, quote=True)}&amp;id={val_attr}"
+                    rows.append(
+                        f'<div class="dz-search-result-row" '
+                        f'hx-get="{href}" '
+                        f'hx-target="#search-results-{_html_mod.escape(field_name, quote=True)}" '
+                        f'hx-swap="innerHTML">'
+                        f'<div class="dz-search-result-name">{display}</div>'
+                        f"{secondary_html}"
+                        f"</div>"
+                    )
+                html = "".join(rows)
+            else:
+                if q:
+                    msg = f'No results found for "{_html_mod.escape(str(q), quote=False)}"'
+                else:
+                    msg = f"Type at least {min_chars} characters to search..."
+                html = f'<div class="dz-search-result-empty">{msg}</div>'
             return _html(html)
 
         except Exception as e:
@@ -191,15 +212,36 @@ def create_fragment_router(
                 for result_field, form_field in autofill.items()
             ]
 
-            # Render via Jinja2 template (auto-escaped)
-            from dazzle_ui.runtime.template_renderer import render_fragment
+            # Phase 4 (v0.67.62): inline-render with stdlib html.escape.
+            import html as _html_mod
 
-            resp_html = render_fragment(
-                "fragments/select_result.html",
-                field_name=field_name,
-                selected_value=str(record.get(value_key, id)),
-                display_val=str(record.get(display_key, str(id))),
-                autofill_values=autofill_values,
+            selected_value = str(record.get(value_key, id))
+            display_val = str(record.get(display_key, str(id)))
+            fn_attr = _html_mod.escape(field_name, quote=True)
+            sv_attr = _html_mod.escape(selected_value, quote=True)
+            dv_attr = _html_mod.escape(display_val, quote=True)
+            dv_text = _html_mod.escape(display_val, quote=False)
+
+            autofill_html = "".join(
+                f'<input id="field-{_html_mod.escape(form_field, quote=True)}" '
+                f'name="{_html_mod.escape(form_field, quote=True)}" '
+                f'data-dazzle-field="{_html_mod.escape(form_field, quote=True)}" '
+                f'value="{_html_mod.escape(field_value, quote=True)}" '
+                f'hx-swap-oob="true" />'
+                for form_field, field_value in autofill_values
+            )
+
+            # All interpolated values flow through html.escape with
+            # quote=True (attributes) or quote=False (text).
+            resp_html = (
+                f'<div class="dz-select-result-confirm">Selected: {dv_text}</div>'
+                f'<input type="hidden" name="{fn_attr}" id="field-{fn_attr}" '  # nosemgrep
+                f'data-dazzle-field="{fn_attr}" value="{sv_attr}" '
+                f'hx-swap-oob="true" />'
+                f'<input type="text" id="search-input-{fn_attr}" '  # nosemgrep
+                f'class="dz-select-result-input" value="{dv_attr}" '
+                f'hx-swap-oob="true" />'
+                f"{autofill_html}"
             )
             return _html(resp_html)
 

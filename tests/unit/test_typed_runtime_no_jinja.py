@@ -54,6 +54,9 @@ _TYPED_ONLY_MODULES = (
     # template stays — Jinja `{% include %}` consumers in components/
     # form.html and experience/_content.html still use it).
     "src/dazzle_ui/runtime/htmx.py",
+    # v0.67.62 — htmx-fragment endpoints inline-render via html.escape.
+    "src/dazzle_back/runtime/fragment_routes.py",
+    "src/dazzle_back/runtime/fts_routes.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

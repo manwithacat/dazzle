@@ -132,24 +132,93 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
 
     The `<mark>` tags inside snippets come from `ts_headline` and
     contain matched terms only — Postgres pre-escapes the surrounding
-    text. The fragment renders snippets via Jinja's autoescape OFF on
-    the snippet column only (since the markup IS the highlight).
+    text. Snippets are emitted via raw concatenation (no escape) so
+    the highlight markup survives; everything else goes through
+    `html.escape`.
+
+    Phase 4 (v0.67.62): inline-rendered with stdlib html.escape. The
+    legacy `fragments/search_box_results.html` template is preserved
+    on disk for downstream Jinja consumers.
     """
-    from dazzle_ui.runtime.template_renderer import render_fragment
+    import html
+
+    from dazzle_ui.runtime.template_renderer import _gettext
 
     items = result.get("items", []) or []
     snippet_fields = result.get("snippet_fields", []) or []
-    total = result.get("total", 0)
-    return HTMLResponse(  # nosemgrep
-        render_fragment(
-            "fragments/search_box_results.html",
-            entity=entity,
-            q=q,
-            items=items,
-            snippet_fields=snippet_fields,
-            total=total,
+    total = result.get("total", 0) or 0
+
+    if total == 0:
+        no_results = html.escape(_gettext("No results for"), quote=False)
+        q_html = html.escape(str(q), quote=False)
+        body = (
+            f'<div class="dz-search-box-empty dz-search-box-empty--no-results">'
+            f"{no_results} <em>{q_html}</em></div>"
         )
+        return HTMLResponse(body)  # nosemgrep: direct-use-of-jinja2
+
+    entity_slug = html.escape(str(entity).lower(), quote=True)
+    label_text = _gettext("result") if total == 1 else _gettext("results")
+    count_html = (
+        f'<div class="dz-search-box-result-count">'
+        f"{total} {html.escape(label_text, quote=False)}</div>"
     )
+
+    rows: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            _id = item.get("id")
+            if not _id:
+                vals = list(item.values())
+                _id = vals[0] if vals else ""
+        else:
+            _id = ""
+        id_str = str(_id)
+        id_attr = html.escape(id_str, quote=True)
+
+        label_value: Any = None
+        if snippet_fields:
+            first_field = snippet_fields[0]
+            if isinstance(item, dict):
+                label_value = item.get(first_field)
+        if not label_value and isinstance(item, dict):
+            label_value = item.get("title") or item.get("name")
+        if not label_value:
+            label_value = id_str
+        label_html = html.escape(str(label_value), quote=False)
+
+        snippets_html = ""
+        if snippet_fields and isinstance(item, dict):
+            snippet_items: list[str] = []
+            for fld in snippet_fields:
+                snip = item.get(f"{fld}__snippet")
+                if not snip:
+                    continue
+                fld_html = html.escape(str(fld), quote=False)
+                # Snippet HTML is server-trusted (PG ts_headline output) —
+                # the configured StartSel/StopSel `<mark>` tags must
+                # survive. Surrounding text is pre-escaped by PG.
+                snippet_items.append(
+                    f'<li class="dz-search-box-result-snippet">'
+                    f'<span class="dz-search-box-result-snippet-field">{fld_html}:</span>'
+                    f'<span class="dz-search-box-result-snippet-text">{snip}</span>'
+                    f"</li>"
+                )
+            if snippet_items:
+                snippets_html = (
+                    f'<ul class="dz-search-box-result-snippets">{"".join(snippet_items)}</ul>'
+                )
+
+        rows.append(
+            f'<li class="dz-search-box-result">'
+            f'<a href="/app/{entity_slug}/{id_attr}" class="dz-search-box-result-link">'
+            f'<span class="dz-search-box-result-title">{label_html}</span>'
+            f"{snippets_html}"
+            f"</a></li>"
+        )
+
+    body = f'{count_html}<ul class="dz-search-box-result-list" role="list">{"".join(rows)}</ul>'
+    return HTMLResponse(body)  # nosemgrep: direct-use-of-jinja2
 
 
 def _find_cedar_spec(appspec: Any, entity_name: str) -> Any | None:

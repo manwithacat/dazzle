@@ -83,13 +83,9 @@ _DICT_KEY_RE = re.compile(
 
 
 INDIVIDUAL_ALLOWLIST: dict[str, str] = {
-    # Fallback alert — only reachable when template_renderer fails to
-    # import. Dev-only; migrating has no user-visible benefit.
-    "src/dazzle_ui/runtime/htmx.py": (
-        "alert alert-error fallback (line 168) only reached when "
-        "template_renderer import fails — dev-only, unreachable in production. "
-        "Deferred cycle 316."
-    ),
+    # NOTE: htmx.py was removed from the allowlist in v0.67.61 (the
+    # `alert alert-error` fallback branch was deleted along with the
+    # `render_fragment` call — the inline render IS the path now).
     # NOTE: template_renderer.py was removed from the allowlist in cycle 321.
     # The deprecated `_badge_filter` (dead code, 0 template consumers since
     # cycle 238) was deleted; `_bool_icon_filter`'s two remaining tokens

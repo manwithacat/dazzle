@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.62] - 2026-05-11
+
+### Changed
+
+- **3 more htmx-fragment endpoints inline-rendered**: `fts_routes._render_results_html` (search_box `?html=1` result list), `fragment_routes` search + select endpoints (`/api/_fragments/search`, `/api/_fragments/select`). All three previously went through `render_fragment(...)`; now they emit HTML via stdlib `html.escape` with `dz-*` CSS class names preserved. The legacy templates (`fragments/search_box_results.html`, `fragments/search_results.html`, `fragments/select_result.html`) stay on disk — `fragment_registry.py` still advertises them as discoverable fragments for downstream Jinja consumers.
+- Three more modules added to the `test_typed_runtime_no_jinja.py` typed-only allowlist: `fts_routes.py`, `fragment_routes.py`, `htmx.py` (logged in v0.67.61 changelog but the daisyui-allowlist entry only retired here).
+- Stale DaisyUI-allowlist entry for `htmx.py` removed (the `alert alert-error` fallback branch was deleted in v0.67.61).
+
+### Agent Guidance
+
+- The progression toward dropping `jinja2` as a dependency is now active. New htmx-fragment endpoints SHOULD inline-render via `html.escape` rather than introduce new `render_fragment(...)` call sites. Reserve `render_fragment` for the few remaining big-template paths (workspace_rendering, route_generator, experience_routes fragment swap) — these will migrate in subsequent cycles.
+
 ## [0.67.61] - 2026-05-11
 
 ### Changed
