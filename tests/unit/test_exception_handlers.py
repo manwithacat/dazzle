@@ -297,7 +297,16 @@ class TestErrorHandlerDispatch:
 
     @pytest.mark.asyncio
     async def test_404_on_app_path_renders_app_shell(self, handler: Any) -> None:
-        """404 under /app/* should render the in-app shell, not the marketing site."""
+        """404 under /app/* renders the typed in-app 404 view.
+
+        Phase 2.B full (v0.67.40): in-app errors are typed-Fragment
+        views (`build_app_404_view`), no longer embedded in the
+        Jinja app shell. The legacy template put the 404 inside an
+        `<aside>` sidebar layout but rendered the sidebar empty in
+        practice; the typed view drops the empty sidebar entirely
+        and keeps the same logical UX (heading + message + back +
+        dashboard CTAs).
+        """
         from starlette.exceptions import HTTPException
 
         req = self._make_request("/app/contact/bad-id")
@@ -307,14 +316,15 @@ class TestErrorHandlerDispatch:
 
         assert response.status_code == 404
         body = response.body.decode()
-        # In-app shell markers — the app_shell layout renders a <aside>
-        # (sidebar) plus the 404 h1 inside the page body.
+        # Typed-view markers — 404 heading + stack layout.
         assert "<h1" in body and "404" in body
-        assert "<aside" in body  # app_shell sidebar present
-        # Back affordance to /app/contact (parent list)
+        assert "dz-stack" in body
+        # Back affordance to /app/contact (parent list).
         assert 'href="/app/contact"' in body
         assert "Back to List" in body
-        # MUST NOT contain marketing nav links
+        # Dashboard CTA always present.
+        assert "Go to Dashboard" in body
+        # MUST NOT contain marketing nav links or legacy Jinja chrome.
         assert "site/includes/nav.html" not in body
         assert "Get Started" not in body
 
@@ -347,7 +357,8 @@ class TestErrorHandlerDispatch:
 
     @pytest.mark.asyncio
     async def test_403_on_app_path_renders_app_shell(self, handler: Any) -> None:
-        """403 under /app/* should also render the in-app shell."""
+        """403 under /app/* renders the typed in-app 403 view
+        (Phase 2.B full)."""
         from starlette.exceptions import HTTPException
 
         req = self._make_request("/app/workspaces/my_tickets")
@@ -358,8 +369,8 @@ class TestErrorHandlerDispatch:
         assert response.status_code == 403
         body = response.body.decode()
         assert "403" in body
-        assert "<aside" in body
-        # Back to dashboard (workspace parent rule)
+        assert "dz-stack" in body
+        # Back to dashboard (workspace parent rule).
         assert 'href="/app"' in body
         assert "Back to Dashboard" in body
         # Custom message from exc.detail

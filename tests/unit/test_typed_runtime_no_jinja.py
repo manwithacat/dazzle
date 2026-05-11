@@ -24,6 +24,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 # Modules that completed the migration. Each entry MUST NOT contain
 # `import jinja2`, `from jinja2`, `render_site_page`, or `render_fragment`.
 _TYPED_ONLY_MODULES = (
+    "src/dazzle_back/runtime/app_error_views.py",
     "src/dazzle_back/runtime/auth/auth_views.py",
     "src/dazzle_back/runtime/auth/magic_link_routes.py",
     "src/dazzle_back/runtime/auth/mailer.py",
@@ -123,6 +124,9 @@ def test_retired_jinja_templates_stay_deleted() -> None:
         "site/403.html",
         "site/404.html",
         "macros/auth_page_wrapper.html",
+        # Phase 2.B full (v0.67.40):
+        "app/403.html",
+        "app/404.html",
     )
     failures: list[str] = []
     for rel in retired:

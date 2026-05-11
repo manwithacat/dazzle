@@ -59,7 +59,9 @@ PAGE_TEMPLATE_PATTERNS: tuple[str, ...] = (
     # 2FA pages now render via typed-Fragment views in
     # `dazzle_back.runtime.auth.{auth_views,two_factor_views}`. No
     # Jinja templates remain under site/auth/.
-    "app/*.html",
+    #
+    # app/*.html retired in Phase 2.B full (v0.67.40) — in-app 403/404
+    # render via typed views in `dazzle_back.runtime.app_error_views`.
     "site/*.html",
     "workspace/*.html",
     "experience/*.html",

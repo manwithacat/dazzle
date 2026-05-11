@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.40] - 2026-05-11
+
+### Added
+
+- **Jinja2 Retirement Phase 2.B full — typed in-app error views.** Closes the error retirement. `build_app_403_view`, `build_app_404_view`, and `build_app_500_view` in `src/dazzle_back/runtime/app_error_views.py` replace the legacy `app/403.html` and `app/404.html` Jinja templates and add a typed 500 path (which had no template before — `/app/*` unhandled exceptions used to fall through to Starlette's plain-text default).
+- **`build_app_403_view`** renders the `#808` structured disclosure inline (`entity`, `operation`, `permitted_personas`, `current_roles`) so the user can self-diagnose. Empty `current_roles` shows "(none)".
+- **`build_app_404_view`** renders the `#811` "Did you mean…" suggestion list when present, and skips malformed entries silently (missing `url` or `label`).
+- **`build_app_500_view`** is CWE-209 hardened: the signature deliberately does NOT accept a `message=` kwarg, so handlers can't accidentally leak exception text to the response body. The user gets a generic apology + back-to-dashboard CTA.
+- **22 view-builder unit tests** at `tests/unit/test_app_error_views.py` covering shape, forbidden-detail panel, suggestion list, back-affordance threading, dashboard CTA, escape safety, malformed-suggestion skipping, and the explicit no-message-kwarg assertion on the 500 view.
+
+### Removed
+
+- **`src/dazzle_ui/templates/app/403.html`** and **`src/dazzle_ui/templates/app/404.html`** — replaced by typed views. The `app/` template directory is now empty (and removed).
+- **`PAGE_TEMPLATE_PATTERNS['app/*.html']`** in `tests/unit/test_page_route_coverage.py` — matching zero templates after the directory was retired.
+
+### Changed
+
+- **`_render_app_shell_error`** in `exception_handlers.py` rewritten to dispatch to the typed views. The `template_name` kwarg is gone — callers pass only the `status_code` (403/404/500) and the renderer picks the right view. The function signature is otherwise compatible with the existing call sites (forbidden_detail, suggestions, message).
+- **In-app 500 path now uses the typed view.** The pre-Phase-2.B-full handler explicitly skipped `/app/*` requests when rendering the typed 500; that path-prefix guard is gone. Browsers under `/app/*` hitting an uncaught exception now get the typed `build_app_500_view` (with the same CWE-209 leak protection as the marketing variant).
+- **`test_typed_runtime_no_jinja.py`** allow-list extended with `src/dazzle_back/runtime/app_error_views.py`. Retired-template list extended with `app/403.html` and `app/404.html`.
+
+### Agent Guidance
+
+- **In-app error views are app-shell-LITE, not full app shell.** The legacy templates extended `layouts/app_shell.html` to embed the authenticated sidebar+navbar, but the helper that built their context (`_render_app_shell_error`) passed empty `nav_items` / `nav_groups` / `user_email`, so the sidebar already rendered empty in practice. The typed views drop the embedded empty shell entirely — same logical UX (heading + message + back + dashboard CTAs), smaller dependency surface. If the empty-sidebar UX turns out to be jarring, the views can grow back into embedded shell views once the full app-shell typed-Fragment migration lands.
+- **CWE-209 is enforced by the 500 view's signature, not by handler discipline.** `build_app_500_view` deliberately has no `message=` kwarg. If you need to vary the user-facing copy, add a typed `tone` or `audience` parameter — never a raw exception-string passthrough.
+- **`_render_app_shell_error` now accepts 403/404/500.** Adding a fourth status code requires both a new view builder AND an explicit branch in the dispatcher (the helper raises `ValueError` on unknown codes — the JSON fallback in the outer handler is the right destination for anything else).
+
 ## [0.67.39] - 2026-05-11
 
 ### Added

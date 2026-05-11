@@ -252,7 +252,6 @@ def _typed_error_assets(request: Any) -> tuple[tuple[str, ...], tuple[str, ...]]
 
 def _render_app_shell_error(
     *,
-    template_name: str,
     status_code: int,
     message: str,
     request: Any,
@@ -260,57 +259,73 @@ def _render_app_shell_error(
     forbidden_detail: dict[str, Any] | None = None,
     suggestions: list[dict[str, str]] | None = None,
 ) -> Any:
-    """Render an in-app error page inside the authenticated app shell.
+    """Render an in-app error page via the typed-Fragment views.
 
-    Builds a minimal context that the ``layouts/app_shell.html`` layout
-    can render without crashing — the sidebar uses ``nav_items|default([])``
-    so an empty nav is harmless; the navbar uses ``user_email|default('')``
-    so a missing email is also fine. The page looks like an authenticated
-    surface (sidebar present, persona chrome visible) even though the
-    error handler doesn't have access to the full ``PageRouteContext``.
+    Phase 2.B full (v0.67.40): replaces the Jinja `app/403.html` /
+    `app/404.html` templates (which extended `layouts/app_shell.html`)
+    with typed views in `dazzle_back.runtime.app_error_views`. The
+    legacy templates already rendered with an empty sidebar / empty
+    persona chrome because the helper passed empty `nav_items` /
+    `user_email`, so the visual UX is comparable — but the rendering
+    layer no longer depends on the much bigger app-shell Jinja chain.
 
-    When ``forbidden_detail`` is provided (see ``#808``), the 403
-    template receives the structured disclosure — which roles are
-    permitted, which roles the user actually has — so the page can
-    tell the user "signed in as X; this page requires Y" rather than
-    leaving them stranded with a bare "Forbidden".
+    `forbidden_detail` carries the structured `#808` disclosure for
+    403s; `suggestions` carries the `#811` "did you mean" list for
+    404s. The 500 path uses neither — it's a generic apology page
+    (CWE-209: exception detail never leaks to the response body).
+
+    `status_code` selects the view: 403 / 404 / 500. Any other status
+    code is rejected — the caller should route it through the JSON
+    fallback in the dispatcher.
     """
     from fastapi.responses import HTMLResponse
 
-    # Delegate to the existing render_fragment wrapper. It uses the same
-    # autoescape-configured Jinja env as render_page / render_site_page,
-    # and the templates we render here (app/404.html, app/403.html)
-    # extend layouts/app_shell.html so inheritance resolves normally.
-    from dazzle_ui.runtime.template_renderer import render_fragment
+    from dazzle.render.fragment.renderer import FragmentRenderer
+    from dazzle_back.runtime.app_error_views import (
+        build_app_403_view,
+        build_app_404_view,
+        build_app_500_view,
+    )
 
+    css_links, js_scripts = _typed_error_assets(request)
     back = _compute_back_affordance(str(request.url.path))
+    back_url, back_label = back if back else ("", "")
 
-    # Minimal context — the app_shell layout's blocks all use `| default`
-    # for optional keys, so we only need to fill in what this error page
-    # template references directly. The sidebar renders empty but the
-    # chrome stays intact.
-    ctx: dict[str, Any] = {
-        "app_name": app_name,
-        "message": message,
-        "is_authenticated": True,
-        "nav_items": [],
-        "nav_groups": [],
-        "user_email": "",
-        "user_name": "",
-        "user_roles": [],
-        "current_route": str(request.url.path),
-    }
-    if back:
-        ctx["back_url"], ctx["back_label"] = back
+    if status_code == 403:
+        page = build_app_403_view(
+            app_name=app_name,
+            message=message,
+            forbidden_detail=forbidden_detail,
+            back_url=back_url,
+            back_label=back_label,
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+    elif status_code == 404:
+        page = build_app_404_view(
+            app_name=app_name,
+            message=message,
+            suggestions=suggestions,
+            back_url=back_url,
+            back_label=back_label,
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+    elif status_code == 500:
+        page = build_app_500_view(
+            app_name=app_name,
+            back_url=back_url,
+            back_label=back_label,
+            css_links=css_links,
+            js_scripts=js_scripts,
+        )
+    else:
+        raise ValueError(
+            f"_render_app_shell_error: unsupported status_code {status_code}; "
+            "expected 403, 404, or 500"
+        )
 
-    if forbidden_detail:
-        ctx["forbidden_detail"] = forbidden_detail
-
-    if suggestions:
-        ctx["suggestions"] = suggestions
-
-    html = render_fragment(template_name, **ctx)
-    return HTMLResponse(content=html, status_code=status_code)
+    return HTMLResponse(content=FragmentRenderer().render(page), status_code=status_code)
 
 
 def register_site_error_handlers(
@@ -402,7 +417,6 @@ def register_site_error_handlers(
 
             if _is_app_path(str(request.url.path)):
                 resp = _render_app_shell_error(
-                    template_name="app/403.html",
                     status_code=403,
                     message=message,
                     request=request,
@@ -439,7 +453,6 @@ def register_site_error_handlers(
                     str(request.url.path), entity_slugs, workspace_slugs
                 )
                 return _render_app_shell_error(
-                    template_name="app/404.html",
                     status_code=404,
                     message="The page you're looking for doesn't exist.",
                     request=request,
@@ -458,22 +471,28 @@ def register_site_error_handlers(
             )
 
         if exc.status_code == 500 and is_browser:
-            # Marketing-site 500: render the typed view. The app-shell
-            # 500 path (under /app/*) still falls through to the JSON
-            # branch below because we haven't migrated the app shell to
-            # typed-Fragment yet. Browsers under /app/* will see the
-            # default Starlette plain-text response until then.
-            if not _is_app_path(str(request.url.path)):
-                css_links, js_scripts = _typed_error_assets(request)
-                page = build_site_500_view(
-                    product_name=app_name,
-                    css_links=css_links,
-                    js_scripts=js_scripts,
-                )
-                return HTMLResponse(
-                    content=FragmentRenderer().render(page),
+            # Phase 2.B full (v0.67.40): both marketing AND app-shell
+            # 500 paths render a typed view now. The app-shell variant
+            # uses the typed app-shell-lite view via
+            # `_render_app_shell_error`; the marketing variant uses
+            # `build_site_500_view` directly.
+            if _is_app_path(str(request.url.path)):
+                return _render_app_shell_error(
                     status_code=500,
+                    message="",
+                    request=request,
+                    app_name=app_name,
                 )
+            css_links, js_scripts = _typed_error_assets(request)
+            page = build_site_500_view(
+                product_name=app_name,
+                css_links=css_links,
+                js_scripts=js_scripts,
+            )
+            return HTMLResponse(
+                content=FragmentRenderer().render(page),
+                status_code=500,
+            )
 
         # For API requests or other status codes, return JSON
         from fastapi.responses import JSONResponse
@@ -515,7 +534,15 @@ def register_site_error_handlers(
         accept = request.headers.get("accept", "") if hasattr(request, "headers") else ""
         is_browser = "text/html" in accept
 
-        if is_browser and not _is_app_path(str(getattr(request.url, "path", "/"))):
+        if is_browser:
+            request_path = str(getattr(request.url, "path", "/"))
+            if _is_app_path(request_path):
+                return _render_app_shell_error(
+                    status_code=500,
+                    message="",
+                    request=request,
+                    app_name=app_name,
+                )
             css_links, js_scripts = _typed_error_assets(request)
             page = build_site_500_view(
                 product_name=app_name,

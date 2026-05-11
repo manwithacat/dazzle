@@ -149,26 +149,61 @@ def test_site_403_json_returns_json() -> None:
     assert resp.json() == {"detail": "denied"}
 
 
-# ───────────────── App-shell branch still on Jinja ─────────────────
+# ───────────────── App-shell branch — typed (Phase 2.B full) ─────────────────
 
 
-def test_app_path_404_still_renders_jinja_app_shell() -> None:
-    """In-app 404s render via the existing Jinja `app/404.html`
-    template — that migration is out of scope for Phase 2.A."""
+def test_app_path_404_renders_typed_app_view() -> None:
+    """Phase 2.B full (v0.67.40): in-app 404 renders the typed
+    `build_app_404_view` — no Jinja templates fire."""
     client = _build_app()
     with _JinjaSpy() as spy:
         resp = client.get("/app/raises-404", headers={"accept": "text/html"})
     assert resp.status_code == 404
-    # The app-shell layout fires its Jinja template + ancestors.
-    assert any("app/404.html" in c for c in spy.calls)
+    assert spy.calls == []
+    body = resp.text
+    assert "404" in body
+    assert "TestApp" in body
+    assert "Go to Dashboard" in body
 
 
-def test_app_path_403_still_renders_jinja_app_shell() -> None:
+def test_app_path_403_renders_typed_app_view() -> None:
     client = _build_app()
     with _JinjaSpy() as spy:
         resp = client.get("/app/raises-403", headers={"accept": "text/html"})
     assert resp.status_code == 403
-    assert any("app/403.html" in c for c in spy.calls)
+    assert spy.calls == []
+    body = resp.text
+    assert "403" in body
+    assert "Go to Dashboard" in body
+
+
+def test_app_path_403_forbidden_detail_renders_panel() -> None:
+    """The structured #808 detail still renders in the typed view —
+    persona disclosure is the whole point of the in-app variant."""
+    app = FastAPI()
+    register_site_error_handlers(app, _SITESPEC)
+
+    @app.get("/app/forbidden")
+    def _f() -> None:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "Insufficient role",
+                "entity": "Task",
+                "operation": "delete",
+                "permitted_personas": ["admin"],
+                "current_roles": ["viewer"],
+            },
+        )
+
+    client = TestClient(app, follow_redirects=False)
+    resp = client.get("/app/forbidden", headers={"accept": "text/html"})
+    assert resp.status_code == 403
+    body = resp.text
+    assert "Insufficient role" in body
+    assert "Entity: Task" in body
+    assert "admin" in body
+    assert "viewer" in body
 
 
 # ───────────────── Asset overrides ─────────────────
@@ -275,16 +310,20 @@ def test_site_500_explicit_httpexception_renders_typed_view() -> None:
     assert "Try again" in body
 
 
-def test_site_500_app_path_falls_through_to_starlette_default() -> None:
-    """Phase 2.B partial: only the marketing path gets the typed
-    view. App-shell 500 stays on Starlette's plain-text default
-    until the app-shell migration lands."""
+def test_site_500_app_path_renders_typed_app_view() -> None:
+    """Phase 2.B full (v0.67.40): unhandled exception inside /app/*
+    now renders the typed `build_app_500_view` — no longer falls
+    through to Starlette's plain-text default."""
     client = _build_500_app()
     resp = client.get("/app/boom", headers={"accept": "text/html"})
     assert resp.status_code == 500
-    # The typed view should NOT be the response body — it carries
-    # the typed-Fragment "Try again" CTA and the product name.
-    assert "Try again" not in resp.text
+    body = resp.text
+    assert "500" in body
+    assert "TestApp" in body
+    assert "Go to Dashboard" in body
+    # CWE-209: even on the in-app path, the exception text must not leak.
+    assert "internal db connection lost" not in body
+    assert "RuntimeError" not in body
 
 
 def test_site_500_uses_app_state_css_override() -> None:
