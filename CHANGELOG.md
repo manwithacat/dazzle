@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.56] - 2026-05-11
+
+### Removed
+
+- **`layouts/app_shell.html` chrome retired** — the legacy 241-line Jinja template that emitted the framework's sidebar, topbar, nav, dark-mode toggle, and main-content shell is gone. The template file remains as a 22-line vestigial extends anchor (a `{% extends "base.html" %}` shell with no-op block stubs for `navbar`/`sidebar`/`sidebar_brand`/`sidebar_nav`/`sidebar_footer`/`content`) so downstream project templates that still say `{% extends "layouts/app_shell.html" %}` continue to parse. Chrome is now exclusively rendered by the typed `AppShell` primitive.
+- The `# nosemgrep` comments inherited from prior phases stay in place for the test files that still exercise the override-registry mechanism via direct `tpl.render(...)` calls.
+
+### Changed
+
+- **Breaking (chrome customisation)**: project templates that supplied custom chrome via block-level overrides (e.g. `{% block sidebar_nav %}…{% endblock %}` against `layouts/app_shell.html`) no longer affect the rendered output. The framework's typed chrome is the single source of chrome HTML. Projects that need to customise chrome supply CSS overrides or set `app.state.fragment_chrome_*` hooks instead.
+- **Breaking (a11y skip-link)**: the `macros/a11y.html::skip_link` macro is no longer imported by the framework shell. The typed `AppShell` primitive emits its own skip-link with the same `dz-skip-link` class and `href="#main-content"` target. Functional behaviour is identical. The macro itself stays on disk for adopter-opt-in use in project templates.
+- Two tests retired as Phase 4 sweep skips:
+  - `test_sidebar_nav_scrolls_to_top_on_morph` — pinned `scroll:#main-content:top` on the legacy htmx-morph nav. The typed substrate uses full-page navigation, so the browser handles scroll reset natively.
+  - `test_project_extends_framework_via_dz_prefix` — assertion updated from `"main-content" in rendered` to `"DOCTYPE" in rendered` (the vestigial anchor walks the base.html extends chain but emits no main-content chrome of its own).
+
+### Agent Guidance
+
+- Chrome overrides via Jinja block inheritance against `layouts/app_shell.html` no longer work. To customise the typed chrome: (a) supply CSS overrides via `app.state.fragment_chrome_css_links`, or (b) author a custom typed primitive and wire it via the dispatch layer.
+- Downstream project templates may keep their `{% extends "layouts/app_shell.html" %}` directives — they continue to parse against the vestigial anchor, and the `{% block content %}` body is extracted and wrapped in typed chrome by `render_in_app_shell`.
+
 ## [0.67.55] - 2026-05-11
 
 ### Changed

@@ -75,6 +75,18 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Dormant building-block with contract (island.md, UX-059); "
         "IslandContext dataclass wired but no template include"
     ),
+    # Phase 4 app-shell retirement (v0.67.56) — a11y skip-link macro
+    # used to be imported by layouts/app_shell.html; after the shell was
+    # stubbed down to a vestigial extends anchor, the import is gone but
+    # the macro itself is still useful for downstream project templates
+    # that want the same skip-link affordance via
+    # `{% from 'macros/a11y.html' import skip_link %}`.
+    "macros/a11y.html": (
+        "Adopter-opt-in macro; the typed AppShell primitive emits its "
+        "own skip-link, so this macro is retained for project templates "
+        "that still author their own chrome and want the framework "
+        "convention available"
+    ),
     # #955 cycle 6 — locale-switcher macro called by adopter templates
     # via {% from 'macros/locale_switcher.html' import render_locale_switcher %}.
     # No framework template imports it because not every project will

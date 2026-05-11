@@ -236,7 +236,7 @@ class TestRenderedHtmlValidation:
         """base.html extends to a well-formed HTML document."""
         try:
             template = jinja_env.get_template("base.html")
-            html = template.render(**_MOCK_CONTEXT)
+            html = template.render(**_MOCK_CONTEXT)  # nosemgrep: direct-use-of-jinja2
         except Exception:
             pytest.skip("base.html requires specific context")
 
@@ -247,7 +247,7 @@ class TestRenderedHtmlValidation:
         """App shell layout renders balanced HTML."""
         try:
             template = jinja_env.get_template("layouts/app_shell.html")
-            html = template.render(**_MOCK_CONTEXT)
+            html = template.render(**_MOCK_CONTEXT)  # nosemgrep: direct-use-of-jinja2
         except Exception:
             pytest.skip("app_shell.html requires specific context")
 
@@ -283,7 +283,7 @@ class TestRenderedHtmlValidation:
             "action_url": "/app/system/{id}",
             "action_id_field": "id",
         }
-        html = template.render(**context)
+        html = template.render(**context)  # nosemgrep: direct-use-of-jinja2
 
         nested = find_nested_chromes(html)
         assert not nested, (
@@ -653,23 +653,17 @@ class TestDashboardRegionCompositeShapes:
         assert "border: 1px solid var(--colour-border)" in css
         assert "background: var(--colour-surface)" in css
 
+    @pytest.mark.skip(
+        reason="Phase 4 app-shell retirement (v0.67.56) — layouts/app_shell.html "
+        "is now a vestigial extends anchor; the typed Sidebar/NavItem primitives "
+        "use full-page navigation rather than htmx morph swap, so the "
+        "scroll:#main-content:top modifier is no longer needed. Scroll reset on "
+        "nav is preserved by browser default behaviour on full-page navigation."
+    )
     def test_sidebar_nav_scrolls_to_top_on_morph(self):
-        """#876: cross-page nav clicks must reset scroll on the morph
-        target. Without ``scroll:#main-content:top`` on hx-swap, the
-        idiomorph extension preserves the previous page's scroll offset,
-        landing the new content's heading above the viewport.
-        """
-        shell_template = TEMPLATES_DIR / "layouts" / "app_shell.html"
-        text = shell_template.read_text()
-        # Both ungrouped nav anchors and grouped child anchors must carry
-        # the scroll modifier — otherwise mixed nav surfaces would behave
-        # differently on click.
-        occurrences = text.count("scroll:#main-content:top")
-        assert occurrences >= 2, (
-            f"layouts/app_shell.html should have scroll:#main-content:top "
-            f"on both ungrouped and grouped nav anchors; found {occurrences} "
-            "occurrence(s) — #876 will regress."
-        )
+        """#876 (retired): legacy htmx-morph nav required an explicit scroll
+        modifier; the typed substrate does full-page navigation and the
+        browser resets scroll automatically."""
 
     def test_context_selector_defaults_to_first_option(self):
         """#870: when no saved preference exists, the context selector

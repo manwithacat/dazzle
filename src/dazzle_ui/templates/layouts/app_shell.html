@@ -1,241 +1,30 @@
+{#
+   Vestigial app-shell anchor (Phase 4, v0.67.56).
+
+   The framework no longer renders chrome through this template — it
+   exists only as a Jinja `extends` resolution target so downstream
+   project templates that still say `{% extends "layouts/app_shell.html" %}`
+   continue to parse. The public `render_in_app_shell()` helper (in
+   dazzle_back.runtime.shell) extracts the project template's
+   `{% block content %}` body and wraps it in a typed `Page` +
+   `AppShell` primitive — see dazzle.render.fragment.primitives.containers.
+
+   The named blocks below (navbar / sidebar / sidebar_brand / sidebar_nav
+   / sidebar_footer / content) are preserved as no-op stubs so the
+   framework's override registry can still resolve them by name, even
+   though chrome content is supplied by typed primitives rather than
+   Jinja overrides. Override hooks that targeted chrome regions land
+   in dead blocks — to customise the typed chrome, supply CSS overrides
+   or a custom typed primitive via app.state.fragment_chrome_* hooks.
+#}
 {% extends "base.html" %}
-{% from 'macros/a11y.html' import skip_link %}
 
 {% block body %}
-{{ skip_link("#main-content") }}
-{# Contract: ~/.claude/skills/ux-architect/components/app-shell.md (UX-031) #}
-{# v0.62 CSS refactor: inline Tailwind → semantic .dz-app-* / .dz-sidebar-* /
-   .dz-topbar-* classes (components/fragments.css). Sidebar open/collapsed
-   state still lives on the root via `data-dz-sidebar="open"` (Alpine `:data-`
-   bind) — CSS attribute selectors drive both the slide transform on the
-   sidebar AND the lg:pl-64 padding offset on the content area. Active nav
-   link styling keys off `aria-current="page"` (already emitted) so the
-   visual state and accessibility attribute share one source of truth. #}
-<div x-data="{
-       sidebarOpen: $persist(true).as('dz-sidebar'),
-       dark: $persist(false).as('dz-dark-mode'),
-       toggleDark() { this.dark = !this.dark; this.applyDark() },
-       applyDark() {
-         const v = this.dark ? 'dark' : 'light';
-         document.documentElement.setAttribute('data-theme', v);
-         document.documentElement.classList.toggle('dark', this.dark);
-         // Mirror into the dz_theme cookie so the marketing shell and
-         // the server's first-paint render stay in sync (UX-048 Q1).
-         document.cookie = 'dz_theme=' + v + '; path=/; max-age=31536000; SameSite=Lax';
-       },
-       toggleSidebar(action) {
-         if (action === 'open') this.sidebarOpen = true;
-         else if (action === 'close') this.sidebarOpen = false;
-         else this.sidebarOpen = !this.sidebarOpen;
-       }
-     }"
-     x-init="applyDark(); let mq = window.matchMedia('(min-width: 1024px)'); mq.addEventListener('change', e => { if (e.matches) sidebarOpen = true })"
-     class="dz-app-shell"
-     :data-dz-sidebar="sidebarOpen ? 'open' : ''">
-
-  {# Main content wrapper — padding offsets for the sidebar on desktop
-     are applied via `[data-dz-sidebar="open"] .dz-app-content` rule. #}
-  <div class="dz-app-content">
-
-    {# Top bar (mobile + desktop when sidebar collapsed) #}
-    {% block navbar %}
-    <div class="dz-topbar">
-      <div class="dz-topbar-leading">
-        {# Mobile: open drawer #}
-        <button type="button"
-                class="dz-icon-button is-mobile-only"
-                @click="toggleSidebar()"
-                aria-label="Open navigation menu">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
-        {# Desktop collapsed: expand sidebar #}
-        <button type="button"
-                class="dz-icon-button is-desktop-only"
-                x-show="!sidebarOpen"
-                @click="toggleSidebar('open')"
-                aria-label="Expand sidebar">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg>
-          <span class="visually-hidden">Expand sidebar</span>
-        </button>
-      </div>
-      <div class="dz-topbar-title">
-        <span class="dz-topbar-title-text">{{ app_name | default("Dazzle") }}</span>
-      </div>
-      <div class="dz-topbar-trailing">
-        {% if is_authenticated %}
-        <span class="dz-topbar-user">{{ user_name or user_email }}</span>
-        {% endif %}
-        {# Dark mode toggle — #938: gated on `[ui] dark_mode_toggle`.
-           Defaults to true; projects with a deliberately light-only
-           brand (paper / academic) set the flag to false to hide the
-           toggle everywhere. The Alpine `applyDark()` is still wired
-           so existing keyboard / programmatic callers don't break,
-           but with no button to invoke it the surface is gone. #}
-        {% if dark_mode_toggle_enabled() %}
-        <button type="button"
-                class="dz-icon-button"
-                @click="toggleDark()" aria-label="Toggle dark mode">
-          <svg x-show="!dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-          </svg>
-          <svg x-show="dark" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-          </svg>
-          <span class="visually-hidden">Toggle dark mode</span>
-        </button>
-        {% endif %}
-      </div>
-    </div>
-    {% endblock navbar %}
-
-    {# Page content — data-dz-* attrs feed the v0.61.0 analytics bus #}
-    <main id="main-content" class="dz-app-main" tabindex="-1"
-          data-dazzle-view="{{ view_name | default('') }}"
-          {% if surface_name %}data-dz-surface="{{ surface_name }}"{% endif %}
-          {% if workspace_name %}data-dz-workspace="{{ workspace_name }}"{% endif %}>
-      {# Surface-level purpose subtitle (UX-048). Rendered above the
-         content block as a muted intro line. Per-persona override
-         resolved in page_routes._render_response. #}
-      {% if page_purpose %}
-      <p class="dz-page-purpose" data-dazzle-purpose>{{ page_purpose }}</p>
-      {% endif %}
-      {% block content %}{% endblock %}
-    </main>
-  </div>
-
-  {# Overlay backdrop — mobile only, shown when sidebar open #}
-  <div x-show="sidebarOpen"
-       x-transition:enter="transition-opacity ease-out duration-150"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition-opacity ease-in duration-100"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"
-       @click="toggleSidebar('close')"
-       class="dz-app-backdrop"
-       style="display: none"
-       aria-label="Close sidebar overlay"></div>
-
-  {# Sidebar #}
-  {% block sidebar %}
-  <aside class="dz-sidebar">
-    {# Brand + collapse toggle #}
-    {% block sidebar_brand %}
-    <div class="dz-sidebar-brand">
-      <h1 class="dz-sidebar-brand-text">{{ app_name | default("Dazzle") }}</h1>
-      <button type="button"
-              class="dz-icon-button is-desktop-only"
-              @click="toggleSidebar('close')" aria-label="Collapse sidebar">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg>
-        <span class="visually-hidden">Collapse sidebar</span>
-      </button>
-    </div>
-    {% endblock sidebar_brand %}
-
-    {# Navigation #}
-    {% block sidebar_nav %}
-    <nav aria-label="Main navigation" class="dz-sidebar-nav">
-    <ul class="dz-sidebar-nav-list">
-      {# Ungrouped nav items first — workspace home link sorts above groups (#630) #}
-      {% for nav_item in nav_items | default([]) %}
-      <li>
-        <a href="{{ nav_item.route }}"
-           hx-get="{{ nav_item.route }}"
-           hx-target="#main-content"
-           hx-swap="morph:innerHTML transition:true scroll:#main-content:top"
-           hx-push-url="true"
-           preload="mousedown"
-           class="dz-sidebar-nav-link"
-           {% if current_route == nav_item.route %}aria-current="page"{% endif %}
-           data-dazzle-nav="{{ nav_item.route }}">
-          {% if nav_item.icon %}<i data-lucide="{{ nav_item.icon }}" class="dz-sidebar-nav-icon" aria-hidden="true"></i>{% endif %}
-          <span class="dz-sidebar-nav-label">{{ nav_item.label }}</span>
-        </a>
-      </li>
-      {% endfor %}
-
-      {# Collapsible nav groups #}
-      {% for group in nav_groups | default([]) %}
-      <li>
-        <details{% if not group.collapsed %} open{% endif %} class="group">
-          <summary class="dz-sidebar-nav-group-summary">
-            {% if group.icon %}<i data-lucide="{{ group.icon }}" class="dz-sidebar-nav-icon" aria-hidden="true"></i>{% endif %}
-            <span class="dz-sidebar-nav-label">{{ group.label }}</span>
-          </summary>
-          <ul class="dz-sidebar-nav-group-children">
-            {% for child in group.children %}
-            <li>
-              <a href="{{ child.route }}"
-                 hx-get="{{ child.route }}"
-                 hx-target="#main-content"
-                 hx-swap="morph:innerHTML transition:true scroll:#main-content:top"
-                 hx-push-url="true"
-                 preload="mousedown"
-                 class="dz-sidebar-nav-link"
-                 {% if current_route == child.route %}aria-current="page"{% endif %}
-                 data-dazzle-nav="{{ child.route }}">
-                {% if child.icon %}<i data-lucide="{{ child.icon }}" class="dz-sidebar-nav-icon" aria-hidden="true"></i>{% endif %}
-                <span class="dz-sidebar-nav-label">{{ child.label }}</span>
-              </a>
-            </li>
-            {% endfor %}
-          </ul>
-        </details>
-      </li>
-      {% endfor %}
-    </ul>
-    </nav>
-    {# Icon upgrade is handled globally in base.html via DOMContentLoaded +
-       htmx:afterSettle hooks (#846) — the old inline one-shot ran before
-       the deferred lucide.min.js loaded and left every <i data-lucide>
-       blank on initial render. #}
-    {% endblock sidebar_nav %}
-
-    {# User section + dark mode toggle #}
-    {% block sidebar_footer %}
-    <div class="dz-sidebar-footer">
-      {% if is_authenticated %}
-      <div class="dz-sidebar-user-block">
-        <div class="dz-sidebar-user-name" title="{{ user_email }}">{{ user_name or user_email }}</div>
-        {# HTMX POST (not a <form>) — the base.html htmx:configRequest listener injects the X-CSRF-Token header automatically. #}
-        <div class="dz-sidebar-action-row">
-          <button type="button"
-                  hx-post="/auth/logout"
-                  hx-target="body"
-                  hx-swap="innerHTML"
-                  class="dz-sidebar-action-button">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-            </svg>
-            Logout
-          </button>
-        </div>
-      </div>
-      {% endif %}
-
-      {# Dark mode toggle (sidebar, visible on desktop) — #938 gated on
-         `[ui] dark_mode_toggle`. #}
-      {% if dark_mode_toggle_enabled() %}
-      <div class="dz-sidebar-darkmode">
-        <button type="button"
-                class="dz-sidebar-action-button"
-                @click="toggleDark()"
-                aria-label="Toggle dark mode">
-          <svg x-show="!dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-          </svg>
-          <svg x-show="dark" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-          </svg>
-          <span x-text="dark ? 'Light mode' : 'Dark mode'">Dark mode</span>
-        </button>
-      </div>
-      {% endif %}
-    </div>
-    {% endblock sidebar_footer %}
-  </aside>
-  {% endblock sidebar %}
-</div>
+{% block navbar %}{% endblock %}
+{% block sidebar %}
+  {% block sidebar_brand %}{% endblock %}
+  {% block sidebar_nav %}{% endblock %}
+  {% block sidebar_footer %}{% endblock %}
+{% endblock %}
+{% block content %}{% endblock %}
 {% endblock %}

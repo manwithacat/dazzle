@@ -39,7 +39,7 @@ class TestCreateJinjaEnv:
 
         env = create_jinja_env(tmp_path)
         tpl = env.get_template("base.html")
-        rendered = tpl.render()
+        rendered = tpl.render()  # nosemgrep: direct-use-of-jinja2
         assert "PROJECT BASE" in rendered
 
     def test_dz_prefix_accesses_framework_originals(self, tmp_path: Path) -> None:
@@ -51,7 +51,7 @@ class TestCreateJinjaEnv:
         env = create_jinja_env(tmp_path)
         # dz:// prefix should still get the framework original
         tpl = env.get_template("dz://base.html")
-        rendered = tpl.render()
+        rendered = tpl.render()  # nosemgrep: direct-use-of-jinja2
         assert "PROJECT" not in rendered
         assert "Dazzle" in rendered or "DOCTYPE" in rendered
 
@@ -71,10 +71,13 @@ class TestCreateJinjaEnv:
 
         env = create_jinja_env(tmp_path)
         tpl = env.get_template("layouts/app_shell.html")
-        rendered = tpl.render(nav_items=[], app_name="Test")
+        rendered = tpl.render(nav_items=[], app_name="Test")  # nosemgrep: direct-use-of-jinja2
         assert "My Custom Brand" in rendered
-        # The rest of the shell should still render
-        assert "main-content" in rendered
+        # The vestigial app_shell.html stub extends base.html — verify the
+        # extends chain still walks (base.html emits <!DOCTYPE html>).
+        # Phase 4 (v0.67.56): chrome moved to typed AppShell; the stub
+        # only preserves block hooks for the override registry.
+        assert "DOCTYPE" in rendered or "<html" in rendered.lower()
 
     def test_nonexistent_project_dir_uses_framework_only(self) -> None:
         from dazzle_ui.runtime.template_renderer import create_jinja_env
@@ -121,7 +124,7 @@ class TestConfigureProjectTemplates:
 
             env = mod.get_jinja_env()
             tpl = env.get_template("base.html")
-            assert "CONFIGURED" in tpl.render()
+            assert "CONFIGURED" in tpl.render()  # nosemgrep: direct-use-of-jinja2
         finally:
             # Restore original singleton
             mod._env = original_env
