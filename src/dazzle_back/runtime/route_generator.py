@@ -229,6 +229,112 @@ def _htmx_current_url(request: Any) -> str | None:
     return request.headers.get("hx-current-url") if _is_htmx_request(request) else None
 
 
+def _build_table_url_params(table: dict[str, Any], page: int, *, with_search: bool = True) -> str:
+    """Construct the query string used by `_render_table_*` (URL parts only,
+    no leading `?`). Mirrors the legacy Jinja template's per-attr concat
+    so the output is byte-equivalent."""
+    import html as _html_mod
+
+    parts = [f"page={page}", f"page_size={table.get('page_size', 50)}"]
+    if table.get("sort_field"):
+        parts.append(f"sort={_html_mod.escape(str(table['sort_field']), quote=True)}")
+        parts.append(f"dir={_html_mod.escape(str(table.get('sort_dir', '')), quote=True)}")
+    if with_search and table.get("search_query"):
+        parts.append(f"search={_html_mod.escape(str(table['search_query']), quote=True)}")
+    for k, v in (table.get("filter_values") or {}).items():
+        k_attr = _html_mod.escape(str(k), quote=True)
+        v_attr = _html_mod.escape(str(v), quote=True)
+        parts.append(f"filter[{k_attr}]={v_attr}")
+    return "&amp;".join(parts)
+
+
+def _render_table_pagination(table: dict[str, Any]) -> str:
+    """Inline mirror of `fragments/table_pagination.html` (v0.67.65).
+
+    Emits the pagination summary + ellipsis-collapsed page buttons.
+    Returns empty string when `total <= page_size` (matches Jinja `{% if %}`)."""
+    import html as _html_mod
+
+    from dazzle_ui.runtime.template_renderer import _pagination_pages
+
+    if not table:
+        return ""
+    total = int(table.get("total", 0) or 0)
+    page_size = int(table.get("page_size", 50) or 50)
+    if total <= page_size:
+        return ""
+    total_pages = (total + page_size - 1) // page_size
+    current_page = int(table.get("page", 1) or 1)
+    table_id = _html_mod.escape(str(table.get("table_id") or "dt-table"), quote=True)
+    endpoint_attr = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
+    rows_label = "row" if total == 1 else "rows"
+
+    buttons: list[str] = []
+    for p in _pagination_pages(current_page, total_pages):
+        if p is None:
+            buttons.append('<span class="dz-pagination-ellipsis" aria-hidden="true">…</span>')
+            continue
+        is_current = p == current_page
+        current_cls = " is-current" if is_current else ""
+        current_attr = ' aria-current="page"' if is_current else ""
+        url_q = _build_table_url_params(table, p)
+        buttons.append(
+            f'<button class="dz-pagination-page{current_cls}"{current_attr} '  # nosemgrep
+            f'hx-get="{endpoint_attr}?{url_q}" '
+            f'hx-target="#{table_id}-body" '
+            f'hx-swap="morph:innerHTML" '
+            f'hx-headers=\'{{"Accept": "text/html"}}\' '
+            f'hx-indicator="#{table_id}-loading">{p}</button>'
+        )
+
+    return (
+        '<div class="dz-pagination">'
+        '<span class="dz-pagination-summary">'
+        '<span class="dz-bulk-summary-selected">'
+        f"<span data-dz-bulk-count-target>0</span> of {total} selected"
+        "</span>"
+        f'<span class="dz-bulk-summary-rows">{total} {rows_label}</span>'
+        "</span>"
+        f'<div class="dz-pagination-pages">{"".join(buttons)}</div>'
+        "</div>"
+    )
+
+
+def _render_table_sentinel(table: dict[str, Any]) -> str:
+    """Inline mirror of `fragments/table_sentinel.html` (v0.67.65).
+
+    Emits the infinite-scroll sentinel <tr> that triggers on revealed.
+    Returns empty string when there are no more pages."""
+    import html as _html_mod
+
+    if not table:
+        return ""
+    total = int(table.get("total", 0) or 0)
+    page_size = int(table.get("page_size", 50) or 50)
+    current_page = int(table.get("page", 1) or 1)
+    if total <= current_page * page_size:
+        return ""
+    next_page = current_page + 1
+    columns = table.get("columns") or []
+    colspan = len(columns) + 1
+    table_id = _html_mod.escape(str(table.get("table_id") or "dt-table"), quote=True)
+    endpoint_attr = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
+    url_q = _build_table_url_params(table, next_page, with_search=False)
+
+    return (
+        f'<tr class="dz-sentinel" '  # nosemgrep
+        f'hx-get="{endpoint_attr}?{url_q}" '
+        f'hx-trigger="revealed" '
+        f'hx-swap="afterend" '
+        f'hx-headers=\'{{"Accept": "text/html"}}\' '
+        f'hx-indicator="#{table_id}-loading">'
+        f'<td colspan="{colspan}" class="dz-sentinel-cell">'
+        f'<span class="dz-sentinel-spinner"></span>'
+        f'<span class="visually-hidden">Loading more...</span>'
+        f"</td></tr>"
+    )
+
+
 def _htmx_parent_url(request: Any) -> str | None:
     """Return the parent of HX-Current-URL (e.g. /tasks/abc → /tasks) for post-delete redirect."""
     url = _htmx_current_url(request)
@@ -1924,23 +2030,20 @@ async def _list_handler_body(
                 "empty_message": getattr(request.state, "htmx_empty_message", "No items found."),
             }
 
-            # Render table rows
+            # Render table rows (still Jinja — table_rows.html is rich with
+            # Alpine bindings + custom filters that don't inline cheaply).
             html = render_fragment("fragments/table_rows.html", table=table_dict)
 
             # Check if table uses infinite scroll mode
             pagination_mode = getattr(request.state, "htmx_pagination_mode", "pages")
 
             if pagination_mode == "infinite":
-                # Append sentinel row for infinite scroll (triggers on revealed)
-                sentinel_html = render_fragment("fragments/table_sentinel.html", table=table_dict)
-                html += sentinel_html
+                # Phase 4 (v0.67.65): inline-render the infinite-scroll sentinel.
+                html += _render_table_sentinel(table_dict)
             else:
-                # Append OOB pagination so buttons stay in sync after
-                # sort/filter/search/page changes
-                pagination_html = render_fragment(
-                    "fragments/table_pagination.html", table=table_dict
-                )
-                html += f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'  # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
+                # Phase 4 (v0.67.65): inline-render the pagination row.
+                pagination_html = _render_table_pagination(table_dict)
+                html += f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'  # nosemgrep
 
             return HTMLResponse(content=html)
         except ImportError:

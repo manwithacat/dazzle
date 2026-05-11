@@ -6,7 +6,7 @@ and tooling can discover fragments without reading template files.
 Fragments fall into two categories:
 
 1. **Active** — wired into a real runtime call site (template include
-   or Python ``render_fragment()`` call). These are exercised whenever
+   or direct Python render call). These are exercised whenever
    the framework renders a page and their coverage is asserted by
    ``dazzle coverage --fail-on-uncovered`` in CI.
 

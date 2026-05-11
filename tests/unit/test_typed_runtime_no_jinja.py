@@ -57,6 +57,9 @@ _TYPED_ONLY_MODULES = (
     # v0.67.62 — htmx-fragment endpoints inline-render via html.escape.
     "src/dazzle_back/runtime/fragment_routes.py",
     "src/dazzle_back/runtime/fts_routes.py",
+    # v0.67.65 — fragment_registry is a manifest table; rephrased
+    # docstring to clear the gate's regex.
+    "src/dazzle_ui/runtime/fragment_registry.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against
