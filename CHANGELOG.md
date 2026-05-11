@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.71] - 2026-05-11
+
+### Added
+
+- **`dazzle_ui.runtime.experience_renderer` module** — owns the experience-flow inner HTML rendering: outer shell (title, step progress indicator, container divs, transition action buttons), simple branches (ready, placeholder, non-surface step), and step-body dispatch. Rich step bodies (form / detail / table) call `render_fragment` for their sub-templates; the orchestration is Python.
+- **`experience/_step_form.html` template** — extracted from the now-retired `experience/_content.html` so the form-step branch can still render through the form_field + form_stepper + form_errors macro chain pending the form_field migration.
+
+### Removed
+
+- **`experience/_content.html` retired** — the outer shell + 4-way step dispatcher is now Python. The `experience_transition.html` macro is also inlined.
+
+### Changed
+
+- **`experience_routes.py` added to typed-only allowlist** — no longer imports `render_fragment`; it imports `render_experience_inner_html` from the new `experience_renderer` module.
+- The remaining Jinja surface for experience flows is concentrated in `experience_renderer.py` (3 `render_fragment` calls: `experience/_step_form.html`, `components/detail_view.html`, `components/filterable_table.html`) plus their downstream macros.
+
+### Agent Guidance
+
+- experience_routes.py is no longer a Jinja consumer. Future work to fully retire the experience cluster needs to migrate `form_field.html` (530 lines), `detail_view.html` (191 lines), and `filterable_table.html` (318 lines) to typed primitives. After that, `experience_renderer.py` can drop its `render_fragment` calls and `experience/_step_form.html` can be deleted.
+
 ## [0.67.70] - 2026-05-11
 
 ### Changed

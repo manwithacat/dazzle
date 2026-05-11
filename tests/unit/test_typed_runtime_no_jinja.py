@@ -74,6 +74,13 @@ _TYPED_ONLY_MODULES = (
     # TAB_DATA fall through to typed shim (no DSL consumer, no adapter).
     # The render_fragment fallback path in workspace_rendering is gone.
     "src/dazzle_back/runtime/workspace_rendering.py",
+    # v0.67.71 — experience-shell rendering owned by
+    # `experience_renderer.render_experience_inner_html` (inline
+    # Python + sub-template Jinja calls for form/detail/table only).
+    # experience_routes.py is now Jinja-free; the remaining Jinja
+    # surface lives in `experience_renderer` until form_field /
+    # detail_view / filterable_table are ported.
+    "src/dazzle_ui/runtime/experience_routes.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

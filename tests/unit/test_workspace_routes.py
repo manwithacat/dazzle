@@ -6993,15 +6993,11 @@ class TestStepsIndicator:
             "Contract: ~/.claude/skills/ux-architect/components/steps-indicator.md (UX-075)" in src
         )
 
-    # Divergence note present
-    def test_experience_shell_divergence_documented(self) -> None:
-        """The fragment's NOTE warns against collapsing experience-shell into it."""
-        from pathlib import Path
-
-        root = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
-        src = (root / "fragments" / "steps_indicator.html").read_text()
-        assert "experience/_content.html" in src
-        assert "do NOT" in src or "do not" in src.lower()
+    @pytest.mark.skip(
+        reason="v0.67.71 retired experience/_content.html — the steps_indicator "
+        "divergence note no longer needs to reference the deleted template."
+    )
+    def test_experience_shell_divergence_documented(self) -> None: ...
 
 
 # ---------------------------------------------------------------------------
@@ -7215,7 +7211,11 @@ class TestWorkspaceHeading:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+@pytest.mark.skip(
+    reason="v0.67.71 retired experience/_content.html — the outer shell + "
+    "dispatcher is now in experience_renderer._render_step_body (inline Python). "
+    "Class-contract coverage moved to experience-route end-to-end tests."
+)
 class TestExperienceShellComposition:
     """experience/_content.html — composition shell pinning step progress + 4-way dispatcher.
 

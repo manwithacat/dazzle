@@ -271,12 +271,12 @@ async def _experience_step_get(
     deps: _ExperienceDeps, request: Request, name: str, step: str
 ) -> Response:
     """GET /experiences/{name}/{step} — render a step."""
+    from dazzle_ui.runtime.experience_renderer import render_experience_inner_html
     from dazzle_ui.runtime.experience_state import (
         cookie_name,
         create_initial_state,
         sign_state,
     )
-    from dazzle_ui.runtime.template_renderer import render_fragment
 
     experience = deps.experiences_by_name.get(name)
     if not experience:
@@ -370,10 +370,7 @@ async def _experience_step_get(
 
     # Fragment targeting: return only the content
     if htmx.wants_fragment:
-        html = render_fragment(
-            "experience/_content.html",
-            experience=exp_ctx,
-        )
+        html = render_experience_inner_html(exp_ctx)
         headers = {
             "HX-Trigger": json.dumps({"dz:titleUpdate": exp_ctx.title}),
         }
@@ -389,10 +386,7 @@ async def _experience_step_get(
         from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
         from dazzle_ui.runtime.template_context import NavItemContext, PageContext
 
-        inner_html = render_fragment(
-            "experience/_content.html",
-            experience=exp_ctx,
-        )
+        inner_html = render_experience_inner_html(exp_ctx)
         nav_items_ctx = [
             NavItemContext(
                 label=getattr(n, "label", None) or n.get("label", "")
