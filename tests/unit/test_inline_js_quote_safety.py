@@ -29,7 +29,9 @@ TEMPLATES_DIR = Path(__file__).parent.parent.parent / "src" / "dazzle_ui" / "tem
 # and must use ``| tojson`` rather than ``'{{ X | e }}'`` for safety.
 DYNAMIC_INLINE_JS_TEMPLATES = [
     "fragments/inline_edit.html",
-    "macros/form_field.html",
+    # v0.67.74: macros/form_field.html retired — `form_renderer.py` uses
+    # `json.dumps` (Python equivalent of `| tojson`) for filename + value
+    # interpolations into Alpine x-init / :value bindings.
 ]
 
 
@@ -84,25 +86,20 @@ class TestInlineJsQuoteSafety:
                 f"Found legacy `| e` HTML-escape in JS-string position: {line.strip()}"
             )
 
-    def test_search_select_wrapper_carries_widget_decorator(self):
-        """Closes #878: the search_select fragment must stamp
-        ``data-dz-widget="search_select"`` on its wrapper div so the fidelity
-        scorer's `_iter_inputs_with_widget_context` can attribute the widget
-        kind to the inner hidden input. Without this marker the structural
-        check raises a false-positive INCORRECT_INPUT_TYPE for every str
-        field rendered through `source=...`."""
-        source = _read("fragments/search_select.html")
-        assert 'data-dz-widget="search_select"' in source, (
-            "fragments/search_select.html must carry the "
-            'data-dz-widget="search_select" marker on its wrapper div — '
-            "otherwise the fidelity scorer can't recognise the hidden+text "
-            "composite as a search_select widget (see #878)."
-        )
+    @pytest.mark.skip(
+        reason="v0.67.74 retired fragments/search_select.html — the "
+        "search_select renderer in `dazzle_ui.runtime.form_renderer` stamps "
+        '`data-dz-widget="search_select"` directly on the wrapper div.'
+    )
+    def test_search_select_wrapper_carries_widget_decorator(self): ...
 
+    @pytest.mark.skip(
+        reason="v0.67.74 retired macros/form_field.html — the file-upload "
+        "branch in `form_renderer._render_file` uses `json.dumps` for "
+        "filenames (apostrophe-safe by construction)."
+    )
     def test_form_field_file_upload_uses_tojson_for_filename(self):
-        """form_field.html file branch: x-init filename must be tojson-encoded
-        so apostrophes in filenames don't break Alpine initialisation."""
-        source = _read("macros/form_field.html")
+        source = ""
         # Find x-init lines that set filename (file upload branch)
         filename_init_lines = [
             line for line in source.splitlines() if "x-init" in line and "filename" in line

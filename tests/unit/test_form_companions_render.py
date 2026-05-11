@@ -33,7 +33,7 @@ def jinja_env():
 
 def _render_form(jinja_env, form: FormContext) -> str:
     tmpl = jinja_env.get_template("components/form.html")
-    return tmpl.render(form=form)
+    return tmpl.render(form=form)  # nosemgrep: direct-use-of-jinja2
 
 
 def _make_form(
@@ -52,6 +52,11 @@ def _make_form(
     )
 
 
+@pytest.mark.skip(
+    reason="v0.67.74 retired components/form.html — form rendering now goes "
+    "through `dazzle_ui.runtime.form_renderer` (inline Python). Template-level "
+    "companion-position coverage is obsolete pending typed companion path."
+)
 class TestCompanionPositions:
     def test_top_companion_renders_before_sections(self, jinja_env) -> None:
         c = CompanionContext(
@@ -100,6 +105,11 @@ class TestCompanionPositions:
         assert alpha_idx < helper_idx < beta_idx
 
 
+@pytest.mark.skip(
+    reason="v0.67.74 retired components/form.html — companion display modes "
+    "render through the typed companion path now (pending). Template-level "
+    "coverage is obsolete."
+)
 class TestCompanionDisplayModes:
     def test_summary_row_renders_metric_tiles(self, jinja_env) -> None:
         c = CompanionContext(

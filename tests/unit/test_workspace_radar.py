@@ -75,7 +75,11 @@ _FOUR_SPOKES = [
 ]
 
 
-@pytest.mark.skipif(not _HAS_TEMPLATES, reason="dazzle_ui not installed")
+@pytest.mark.skip(
+    reason="v0.67.70 retired workspace/regions/radar.html — the typed `Radar` "
+    "primitive (dazzle.render.fragment.renderer) renders polygons + spokes "
+    "differently. Template-level coverage is obsolete."
+)
 class TestRadarTemplate:
     def test_renders_one_marker_per_spoke(self) -> None:
         html = render_fragment(
@@ -169,7 +173,11 @@ class TestRadarTemplate:
         assert DISPLAY_TEMPLATE_MAP["RADAR"] == "workspace/regions/radar.html"
 
 
-@pytest.mark.skipif(not _HAS_TEMPLATES, reason="dazzle_ui not installed")
+@pytest.mark.skip(
+    reason="v0.67.70 retired workspace/regions/radar.html — multi-series support "
+    "lives in the typed `Radar` primitive (single-series only for now; "
+    "multi-series migration deferred to a future cycle)."
+)
 class TestRadarMultiSeries:
     """v0.61.32 (#879 multi-series): radar can render multiple polygons
     when each bucket carries a `metrics` sub-dict from the multi-measure

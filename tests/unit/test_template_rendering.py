@@ -37,7 +37,6 @@ from dazzle_ui.runtime.template_context import (  # noqa: E402
     ColumnContext,
     DetailContext,
     FieldContext,
-    FormContext,
     NavItemContext,
     PageContext,
     TableContext,
@@ -209,7 +208,8 @@ class TestCompileSurfaceToContext:
 
         assert ctx.form is not None
         assert ctx.table is None
-        assert ctx.template == "components/form.html"
+        # v0.67.74: PageContext.template field is no longer read by any
+        # renderer; the compiler leaves it empty for form surfaces now.
         assert ctx.form.mode == "create"
         assert ctx.form.method == "post"
         assert ctx.form.action_url == "/tasks"
@@ -489,25 +489,14 @@ class TestRendering:
         assert "bob@example.com" in fragment
         assert "{'id'" not in fragment
 
-    def test_render_form_page(self) -> None:
-        ctx = PageContext(
-            page_title="Create Task",
-            app_name="Test App",
-            template="components/form.html",
-            form=FormContext(
-                entity_name="Task",
-                title="Create Task",
-                fields=[
-                    FieldContext(name="title", label="Title", type="text", required=True),
-                ],
-                action_url="/tasks",
-                method="post",
-                mode="create",
-            ),
-        )
-        html = render_page(ctx)
-        assert "<form" in html
-        assert "<input" in html or "title" in html.lower()
+    @pytest.mark.skip(
+        reason="v0.67.74 retired components/form.html — form rendering goes "
+        "through `form_renderer.render_form_field` (inline Python). "
+        "render_page no longer handles form surfaces via PageContext.template; "
+        "form rendering is owned by experience_renderer + future typed "
+        "form-surface path."
+    )
+    def test_render_form_page(self) -> None: ...
 
     def test_render_page_partial(self) -> None:
         """partial=True omits the HTML/HEAD wrapper."""

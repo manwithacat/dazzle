@@ -10,6 +10,8 @@ Covers:
 
 from typing import Any
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 
@@ -191,6 +193,11 @@ class TestFormSurfaceCompile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skip(
+    reason="v0.67.74 retired components/form.html — form rendering goes "
+    "through `form_renderer.render_form_field` + `render_form_stepper` "
+    "(inline Python). Template-level coverage is obsolete."
+)
 class TestFormTemplateRendering:
     """form.html renders stepper and wizard stages for multi-section forms."""
 
@@ -231,7 +238,7 @@ class TestFormTemplateRendering:
             initial_values={},
             sections=sections or [],
         )
-        return template.render(form=form_obj)
+        return template.render(form=form_obj)  # nosemgrep: direct-use-of-jinja2
 
     def test_no_sections_renders_flat_form(self) -> None:
         html = self._render_form()

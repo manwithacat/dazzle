@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.74] - 2026-05-11
+
+### Added
+
+- **`dazzle_ui.runtime.form_renderer` module** — Python port of `macros/form_field.html` + `fragments/search_select.html` + `fragments/form_stepper.html`. Public surface: `render_form_field(field, values, errors)`, `render_form_stepper(form_ctx)`. All 12 widget branches + 8 field-type branches preserved with byte-equivalent CSS class names (dz-form-*, dz-file-upload-*, dz-form-color-*, dz-form-money-*, dz-form-slider-*, dz-form-richtext, dz-search-select-*, dz-form-stepper-*).
+
+### Removed
+
+- **7 Jinja form templates retired** (58 → 51 framework templates):
+  - `macros/form_field.html` (530 lines, 12+ widget branches)
+  - `macros/form_companion.html`
+  - `macros/experience_transition.html`
+  - `fragments/form_stepper.html`
+  - `fragments/search_select.html`
+  - `components/form.html` (consumer of all the above; no live Python consumer remained after the experience-shell migration)
+  - `experience/_step_form.html` (Jinja shim used by experience_renderer pre-form_field-port)
+
+### Changed
+
+- **`experience_renderer._render_form_step_body`** (new) — inline-renders the entire experience form step (form chrome + form_stepper + form fields + transition buttons). Replaces the prior `render_fragment("experience/_step_form.html", ...)` call.
+- **`PageContext.template` field** is no longer read by any renderer; the template_compiler now sets it to empty string (was `"components/form.html"` for create/edit surfaces).
+- **8 stale test classes / tests retired** as Phase-4 sweep skips: TestFormFieldWidgets, TestFieldHelpRendering, TestCompanionPositions, TestCompanionDisplayModes, TestFormTemplateRendering, TestRadarTemplate, TestRadarMultiSeries, test_render_form_page, test_site_base_emits_theme_attribute_from_ctxvar, test_form_field_template_emits_options_json, test_stepper_uses_dzwizard_methods, test_search_select_wrapper_carries_widget_decorator, test_form_field_file_upload_uses_tojson_for_filename.
+- **Components/form.html block tests** in `TestSemanticBlocks` removed from the parametrized list.
+- **`DYNAMIC_INLINE_JS_TEMPLATES`** trimmed — `macros/form_field.html` removed (no longer a template).
+
+### Agent Guidance
+
+- New form-field variants should land in `dazzle_ui.runtime.form_renderer` as additional branches in `render_form_field`. Keep the CSS class names matching the legacy template family so existing styles continue to apply.
+- The form-step rendering in experience flows is now end-to-end Python — no Jinja consumed for form surfaces. Detail-step and table-step branches still call `render_fragment` for `components/detail_view.html` (191 lines) and `components/filterable_table.html` (318 lines) — last two remaining Jinja templates in the experience cluster.
+
 ## [0.67.73] - 2026-05-11
 
 ### Changed

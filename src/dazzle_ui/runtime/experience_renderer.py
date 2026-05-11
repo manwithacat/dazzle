@@ -59,6 +59,91 @@ def _render_transitions_row(
     return f'<div class="{cls}">{"".join(parts)}</div>'
 
 
+def _render_form_step_body(experience: Any, page_context: Any) -> str:
+    """Inline-render the form-step body (Phase 4, v0.67.74).
+
+    Replaces `experience/_step_form.html`. Composes:
+      - `<form>` element with HTMX wiring (hx-post/hx-put + json-enc)
+      - empty `#form-errors` slot (htmx_error_response swaps content)
+      - optional form_stepper (when sections are declared)
+      - form fields rendered via `form_renderer.render_form_field`
+      - submit button + transition buttons (excluding `success` event)
+    """
+    from dazzle_ui.runtime.form_renderer import render_form_field, render_form_stepper
+
+    form = getattr(page_context, "form", None)
+    if form is None:
+        return ""
+
+    entity_name_attr = _html_mod.escape(str(getattr(form, "entity_name", "") or ""), quote=True)
+    mode = str(getattr(form, "mode", "") or "")
+    mode_attr = _html_mod.escape(mode, quote=True)
+    method = str(getattr(form, "method", "") or "post").lower()
+    action_url_attr = _html_mod.escape(str(getattr(form, "action_url", "") or ""), quote=True)
+    hx_method = "put" if method == "put" else "post"
+    submit_label = "Save & Continue" if mode == "edit" else "Submit"
+
+    initial_values = getattr(form, "initial_values", None) or {}
+
+    sections = getattr(form, "sections", None) or []
+    if sections:
+        stepper_html = render_form_stepper(form)
+        stage_blocks: list[str] = []
+        for idx, section in enumerate(sections):
+            section_title = (
+                section.get("title", "")
+                if isinstance(section, dict)
+                else getattr(section, "title", "")
+            )
+            section_title_html = _html_mod.escape(str(section_title or ""), quote=False)
+            fields = (
+                section.get("fields", [])
+                if isinstance(section, dict)
+                else getattr(section, "fields", None) or []
+            )
+            field_html = "".join(render_form_field(f, initial_values) for f in fields)
+            hide_style = ' style="display:none"' if idx > 0 else ""
+            stage_blocks.append(
+                f'<div class="dz-wizard-stage" data-dz-stage="{idx}"{hide_style}>'  # nosemgrep
+                f'<h3 class="dz-experience-stage-title">{section_title_html}</h3>'
+                f"{field_html}"
+                "</div>"
+            )
+        fields_body = stepper_html + "".join(stage_blocks)
+    else:
+        fields_body = "".join(
+            render_form_field(f, initial_values) for f in (getattr(form, "fields", None) or [])
+        )
+
+    transition_buttons = "".join(
+        _render_transition_button(tr)
+        for tr in (getattr(experience, "transitions", None) or [])
+        if str(getattr(tr, "event", "") or "") != "success"
+    )
+
+    return (
+        '<div class="dz-experience-form-shell">'
+        f'<form data-dazzle-form="{entity_name_attr}" '  # nosemgrep
+        f'data-dazzle-form-mode="{mode_attr}" '
+        f'hx-{hx_method}="{action_url_attr}" '
+        f'hx-target="body" '
+        f'hx-swap="innerHTML" '
+        f'hx-target-422="#form-errors" '
+        f'hx-target-5*="#form-errors" '
+        f'hx-headers=\'{{"Content-Type": "application/json"}}\' '
+        f'hx-ext="json-enc" '
+        f'class="dz-experience-form-body">'
+        '<div id="form-errors"></div>'
+        f"{fields_body}"
+        '<div class="dz-experience-actions">'
+        '<button type="submit" class="dz-button dz-button-primary" '
+        'data-loading-class="loading" data-loading-disable>'
+        f"{submit_label}</button>"
+        f"{transition_buttons}"
+        "</div></form></div>"
+    )
+
+
 def _render_step_progress(experience: Any) -> str:
     """Step progress indicator — the `<ol class="dz-steps">` strip."""
     steps = list(getattr(experience, "steps", None) or [])
@@ -128,14 +213,8 @@ def _render_step_body(experience: Any) -> str:
     ctx_table = getattr(page_context, "table", None)
 
     if ctx_form is not None:
-        # Form step — render through Jinja for now (form_field macro chain).
-        from dazzle_ui.runtime.template_renderer import render_fragment
-
-        body = render_fragment(  # nosemgrep
-            "experience/_step_form.html",
-            experience=experience,
-            ctx=page_context,
-        )
+        # Form step — fully inline-rendered (v0.67.74).
+        body = _render_form_step_body(experience, page_context)
     elif ctx_detail is not None:
         from dazzle_ui.runtime.template_renderer import render_fragment
 

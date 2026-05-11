@@ -149,9 +149,9 @@ class TestSemanticBlocks:
             ("components/detail_view.html", "detail_header"),
             ("components/detail_view.html", "detail_fields"),
             ("components/detail_view.html", "detail_transitions"),
-            ("components/form.html", "form_header"),
-            ("components/form.html", "form_fields"),
-            ("components/form.html", "form_actions"),
+            # v0.67.74: components/form.html retired — form rendering moved
+            # to dazzle_ui.runtime.form_renderer. The form_header /
+            # form_fields / form_actions overridable blocks no longer exist.
             ("components/filterable_table.html", "table_header"),
         ],
         ids=lambda v: v.replace("/", "_").replace(".html", "") if "/" in str(v) else str(v),

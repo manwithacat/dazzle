@@ -1010,7 +1010,10 @@ def _compile_form_surface(
             page_title=surface.title or f"Create {entity_name}",
             page_purpose=page_purpose,
             persona_purposes=persona_purposes,
-            template="components/form.html",
+            # v0.67.74: PageContext.template field is no longer read by any
+            # renderer (form rendering moved to form_renderer.py + inline
+            # Python). Empty string for clarity.
+            template="",
             form=FormContext(
                 entity_name=entity_name,
                 title=surface.title or f"Create {entity_name}",
@@ -1031,7 +1034,10 @@ def _compile_form_surface(
             page_title=surface.title or f"Edit {entity_name}",
             page_purpose=page_purpose,
             persona_purposes=persona_purposes,
-            template="components/form.html",
+            # v0.67.74: PageContext.template field is no longer read by any
+            # renderer (form rendering moved to form_renderer.py + inline
+            # Python). Empty string for clarity.
+            template="",
             form=FormContext(
                 entity_name=entity_name,
                 title=surface.title or f"Edit {entity_name}",

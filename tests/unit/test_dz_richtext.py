@@ -605,10 +605,14 @@ class TestCycle5DSLKnobs:
         assert 'toolbar_csv.split(",")' in src
 
     def test_form_field_template_emits_options_json(self) -> None:
-        tpl = (ROOT / "src" / "dazzle_ui" / "templates" / "macros" / "form_field.html").read_text()
-        assert "{{ _rt_opts | tojson }}" in tpl
-        assert "field.extra.rich_text_toolbar" in tpl
-        assert "field.extra.rich_text_max_length" in tpl
+        """v0.67.74: macros/form_field.html retired — the rich-text branch
+        now lives in `dazzle_ui.runtime.form_renderer._render_rich_text`.
+        Verify the Python port still threads the same `rich_text_toolbar`
+        + `rich_text_max_length` extra keys into the data-dz-options JSON."""
+        src = (ROOT / "src" / "dazzle_ui" / "runtime" / "form_renderer.py").read_text()
+        assert "rich_text_toolbar" in src
+        assert "rich_text_max_length" in src
+        assert "data-dz-options" in src
 
     def test_compiler_max_length_value_error_swallowed(self) -> None:
         """A non-numeric `rich_text_max_length="oops"` doesn't crash

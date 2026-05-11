@@ -124,24 +124,13 @@ def test_jinja_global_is_registered() -> None:
     assert callable(env.globals["theme_variant"])
 
 
-def test_site_base_emits_theme_attribute_from_ctxvar() -> None:
-    """site_base.html must render `<html data-theme="…">` from the
-    current theme variant. Verifies the full Jinja-global → template
-    wiring."""
-    env = get_jinja_env()
-    tmpl = env.get_template("site/site_base.html")
-
-    # Default (light) outside a middleware context.
-    html_light = tmpl.render(product_name="Test", _dazzle_version="test")
-    assert '<html lang="en" data-theme="light">' in html_light
-
-    # Dark when ctxvar is set.
-    token = theme_variant_ctxvar.set("dark")
-    try:
-        html_dark = tmpl.render(product_name="Test", _dazzle_version="test")
-        assert '<html lang="en" data-theme="dark">' in html_dark
-    finally:
-        theme_variant_ctxvar.reset(token)
+@pytest.mark.skip(
+    reason="v0.67.66 retired site/site_base.html — the typed Page primitive "
+    "(dazzle.render.fragment.primitives.containers) owns the <html> shell and "
+    "data-theme attribute. The `test_base_emits_theme_attribute_from_ctxvar` "
+    "test below still covers the in-app base.html path."
+)
+def test_site_base_emits_theme_attribute_from_ctxvar() -> None: ...
 
 
 def test_base_emits_theme_attribute_from_ctxvar() -> None:
@@ -150,12 +139,12 @@ def test_base_emits_theme_attribute_from_ctxvar() -> None:
     env = get_jinja_env()
     tmpl = env.get_template("base.html")
 
-    html_light = tmpl.render(app_name="X", _dazzle_version="test", page_title="P")
+    html_light = tmpl.render(app_name="X", _dazzle_version="test", page_title="P")  # nosemgrep
     assert '<html lang="en" data-theme="light">' in html_light
 
     token = theme_variant_ctxvar.set("dark")
     try:
-        html_dark = tmpl.render(app_name="X", _dazzle_version="test", page_title="P")
+        html_dark = tmpl.render(app_name="X", _dazzle_version="test", page_title="P")  # nosemgrep
         assert '<html lang="en" data-theme="dark">' in html_dark
     finally:
         theme_variant_ctxvar.reset(token)
@@ -168,7 +157,7 @@ def test_htmx_partial_skips_html_wrapper() -> None:
     the `_htmx_partial` guard and breaks HTMX fragment rendering."""
     env = get_jinja_env()
     tmpl = env.get_template("base.html")
-    html = tmpl.render(
+    html = tmpl.render(  # nosemgrep: direct-use-of-jinja2
         app_name="X",
         _dazzle_version="test",
         page_title="P",

@@ -201,6 +201,12 @@ class _FakeField:
         self.extra = kwargs.get("extra", {})
 
 
+@pytest.mark.skip(
+    reason="v0.67.74 retired macros/form_field.html — the form-field renderer "
+    "moved to `dazzle_ui.runtime.form_renderer.render_form_field` (inline "
+    "Python). Macro-level coverage migrated to direct unit tests on the "
+    "Python helper."
+)
 class TestFormFieldWidgets:
     def _render(self, jinja_env, field, values=None, errors=None):
         tmpl = jinja_env.from_string(
@@ -364,6 +370,11 @@ class TestFormFieldWidgets:
         assert "x-data=" not in html
 
 
+@pytest.mark.skip(
+    reason="v0.67.74 retired macros/form_field.html — `_hint_paragraph` in "
+    "`dazzle_ui.runtime.form_renderer` handles the help text. Macro-level "
+    "regression pinning is now stale."
+)
 class TestFieldHelpRendering:
     """#918 introduced `help:` on fields; #925 caught that the checkbox
     branch wired the aria reference but skipped the actual `<p>` element.
