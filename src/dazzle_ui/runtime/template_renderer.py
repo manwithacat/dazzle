@@ -18,9 +18,6 @@ from markupsafe import Markup
 if TYPE_CHECKING:
     from dazzle_ui.runtime.template_context import (
         PageContext,
-        Site404Context,
-        SiteAuthContext,
-        SitePageContext,
     )
 
 # Template directory
@@ -762,24 +759,6 @@ def render_page(
         rendered_content,
         chrome=(context.layout != "single_column"),
     )
-
-
-def render_site_page(
-    template_name: str,
-    context: SitePageContext | SiteAuthContext | Site404Context,
-) -> str:
-    """Render a site page from a context model.
-
-    Args:
-        template_name: Template path relative to templates/ (e.g. "site/page.html").
-        context: Pydantic context model.
-
-    Returns:
-        Rendered HTML string.
-    """
-    env = get_jinja_env()
-    template = env.get_template(template_name)  # nosemgrep
-    return template.render(**context.model_dump())  # nosemgrep
 
 
 def render_fragment(template_name: str, **kwargs: Any) -> str:

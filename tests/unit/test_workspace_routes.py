@@ -6612,7 +6612,11 @@ class TestAuth2FAFlow:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+@pytest.mark.skip(
+    reason="v0.67.69 retired site/includes/footer.html — footer is now "
+    "inline-rendered in site_routes._render_site_inner_html. Class-contract "
+    "coverage moved to end-to-end marketing-page tests."
+)
 class TestSiteFooter:
     """site-footer.md — marketing-chrome footer. Dual-file contract.
 

@@ -40,10 +40,6 @@ DAZZLE_CORE_ROOT = REPO_ROOT / "src" / "dazzle"
 # from a documented consumer. Templates under these prefixes are
 # EXCLUDED from orphan reporting entirely.
 DYNAMIC_DIRECTORY_EXEMPTIONS: dict[str, str] = {
-    "site/sections/": (
-        "Dynamic-dispatch include in site/page.html:15,18,26 — "
-        "'site/sections/' + section.type + '.html'"
-    ),
     "reports/": ("Dynamic get_template() in src/dazzle/agent/journey_reporter.py:23"),
 }
 

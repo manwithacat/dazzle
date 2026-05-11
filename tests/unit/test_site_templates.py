@@ -10,6 +10,8 @@ Tests cover:
 
 from typing import Any
 
+import pytest
+
 
 def _render(template: str, context_model: Any) -> str:
     """Helper to render a site template with a context model."""
@@ -169,19 +171,13 @@ class TestBuildSitePageContext:
         # Explicit background should be preserved, not overwritten
         assert ctx.sections[1]["background"] == "primary"
 
-    def test_background_class_in_rendered_html(self) -> None:
-        from dazzle_ui.runtime.site_context import build_site_page_context
-
-        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
-        page_data = {
-            "title": "Home",
-            "sections": [
-                {"type": "hero", "headline": "Hello", "background": "alt"},
-            ],
-        }
-        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
-        html = _render("site/inner_only.html", ctx)
-        assert "dz-bg-alt" in html
+    @pytest.mark.skip(
+        reason="v0.67.69 retired site/inner_only.html — background-class "
+        "rendering is now tested via the typed `_render_site_inner_html` "
+        "in tests/unit/test_site_routes_no_duplicate_registration.py + "
+        "the typed-section-builder tests."
+    )
+    def test_background_class_in_rendered_html(self) -> None: ...
 
 
 # TestBuildSiteAuthContext class retired in Phase 1.D.2 (v0.67.37).
@@ -200,6 +196,12 @@ class TestBuildSitePageContext:
 # =========================================================================
 
 
+@pytest.mark.skip(
+    reason="v0.67.69 retired site/sections/*.html, site/inner_only.html, and "
+    "site/includes/* Jinja templates — the marketing-page render now goes "
+    "through `_render_site_inner_html` (site_routes.py) using stdlib "
+    "html.escape. Section-by-section parity tests are obsolete."
+)
 class TestSitePageTemplate:
     """Tests for site/page.html template rendering."""
 

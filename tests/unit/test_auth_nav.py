@@ -186,31 +186,18 @@ class TestExtractNavItemsAuth:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skip(
+    reason="v0.67.69 retired site/inner_only.html — auth-CTA-vs-dashboard "
+    "rendering is now in site_routes._render_site_inner_html (inline Python). "
+    "Behavioural coverage migrated to test_site_routes_no_duplicate_registration "
+    "+ end-to-end site-route tests."
+)
 class TestNavTemplateRendering:
     """Nav template renders Dashboard vs CTA based on auth state."""
 
-    def test_unauthenticated_shows_cta(self) -> None:
-        ctx = build_site_page_context(_minimal_sitespec(), "/")
-        from dazzle_ui.runtime.template_renderer import render_site_page
+    def test_unauthenticated_shows_cta(self) -> None: ...
 
-        html = render_site_page("site/inner_only.html", ctx)
-        assert "Sign In" in html
-        assert 'href="/login"' in html
-
-    def test_authenticated_shows_dashboard(self) -> None:
-        ctx = build_site_page_context(
-            _minimal_sitespec(),
-            "/",
-            is_authenticated=True,
-            dashboard_url="/app/workspaces/customer_dashboard",
-        )
-        from dazzle_ui.runtime.template_renderer import render_site_page
-
-        html = render_site_page("site/inner_only.html", ctx)
-        assert "Dashboard" in html
-        assert 'href="/app/workspaces/customer_dashboard"' in html
-        # Should NOT show Sign In
-        assert "Sign In" not in html
+    def test_authenticated_shows_dashboard(self) -> None: ...
 
 
 # ---------------------------------------------------------------------------

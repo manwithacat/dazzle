@@ -262,6 +262,105 @@ def _load_content_file(project_root: Path, content_path: str) -> str | None:
         return None
 
 
+def _render_site_footer_column(col: Any) -> str:
+    """Render one footer column from the legacy `footer_columns` list."""
+    import html as _html_mod
+
+    title = _html_mod.escape(str(getattr(col, "title", "") or ""), quote=False)
+    links = getattr(col, "links", None) or []
+    links_html = "".join(
+        f'<li><a href="{_html_mod.escape(str(getattr(lk, "href", "") or ""), quote=True)}">'  # nosemgrep
+        f"{_html_mod.escape(str(getattr(lk, 'label', '') or ''), quote=False)}"
+        f"</a></li>"
+        for lk in links
+    )
+    return f'<div class="dz-footer-col"><h4>{title}</h4><ul>{links_html}</ul></div>'
+
+
+def _render_qa_personas_html(qa_personas: list[Any]) -> str:
+    """Inline mirror of `site/sections/qa_personas.html` (Phase 4, v0.67.69).
+
+    Dev-only persona impersonation cards — the trailing `<script>` block
+    wires click handlers that POST to `/qa/magic-link` and redirect to
+    the returned URL. The script is identical to the legacy template's
+    output."""
+    import html as _html_mod
+
+    cards: list[str] = []
+    for persona in qa_personas:
+        pid = _html_mod.escape(str(getattr(persona, "id", "") or ""), quote=True)
+        pid_text = _html_mod.escape(str(getattr(persona, "id", "") or ""), quote=False)
+        display_name = _html_mod.escape(
+            str(getattr(persona, "display_name", "") or ""), quote=False
+        )
+        email = _html_mod.escape(str(getattr(persona, "email", "") or ""), quote=False)
+        description = _html_mod.escape(str(getattr(persona, "description", "") or ""), quote=False)
+        stories = getattr(persona, "stories", None) or []
+        stories_html = ""
+        if stories:
+            story_items = "".join(
+                f'<li><span aria-hidden="true">→</span>'
+                f"<span>{_html_mod.escape(str(s), quote=False)}</span></li>"
+                for s in stories
+            )
+            stories_html = f'<ul class="dz-qa-persona-stories">{story_items}</ul>'
+
+        cards.append(
+            '<article class="dz-qa-persona">'
+            '<div class="dz-qa-persona-header">'
+            f'<h3 class="dz-qa-persona-name">{display_name}</h3>'
+            f'<span class="dz-qa-persona-id">{pid_text}</span>'
+            "</div>"
+            f'<p class="dz-qa-persona-email">{email}</p>'
+            f'<p class="dz-qa-persona-description">{description}</p>'
+            f"{stories_html}"
+            f'<button type="button" data-qa-login-persona="{pid}" '  # nosemgrep
+            f'class="dz-button dz-button-primary dz-qa-persona-login">'
+            f"Log in as {display_name}"
+            f"</button>"
+            "</article>"
+        )
+
+    header_html = (
+        '<div class="dz-qa-personas-header">'
+        '<div class="dz-qa-banner">'
+        '<svg class="dz-qa-banner-icon" fill="currentColor" viewBox="0 0 20 20" '
+        'aria-hidden="true">'
+        '<path d="M10 2L2 18h16L10 2zm0 5l5 9H5l5-9z"/></svg>'
+        "Local Dev Mode — not visible in production"
+        "</div>"
+        '<h2 class="dz-qa-personas-title">Try the app as different personas</h2>'
+        '<p class="dz-qa-personas-subtitle">'
+        "This is local QA mode. Pick a persona to explore the app with their permissions and data."
+        "</p></div>"
+    )
+    script_html = (
+        "<script>(function(){"
+        "document.querySelectorAll('[data-qa-login-persona]').forEach(function(btn){"
+        "btn.addEventListener('click',function(){"
+        "var personaId=btn.dataset.qaLoginPersona;"
+        "btn.disabled=true;"
+        "var originalText=btn.textContent;"
+        "btn.textContent='Logging in...';"
+        "fetch('/qa/magic-link',{method:'POST',"
+        "headers:{'Content-Type':'application/json'},"
+        "body:JSON.stringify({persona_id:personaId})"
+        "}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})"
+        ".then(function(data){if(data.url){window.location.href=data.url;}"
+        "else{throw new Error('No URL in response');}})"
+        ".catch(function(err){btn.disabled=false;btn.textContent='Error — try again';"
+        "setTimeout(function(){btn.textContent=originalText;},2000);"
+        "console.error('QA magic link failed:',err);});});});}());</script>"
+    )
+    return (
+        '<section class="dz-qa-personas">'
+        f"{header_html}"
+        f'<div class="dz-qa-personas-grid">{"".join(cards)}</div>'
+        f"{script_html}"
+        "</section>"
+    )
+
+
 def create_site_page_routes(
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
@@ -298,7 +397,149 @@ def create_site_page_routes(
     from dazzle_ui.runtime.css_loader import get_bundled_css
     from dazzle_ui.runtime.site_context import build_site_page_context
     from dazzle_ui.runtime.site_renderer import get_site_js
-    from dazzle_ui.runtime.template_renderer import render_site_page
+
+    def _render_site_inner_html(request: Request, ctx: Any) -> str:
+        """Inline-render the marketing-page body (Phase 4, v0.67.69).
+
+        Replaces the legacy `site/inner_only.html` Jinja path. Composes:
+          - `site/includes/nav.html`  (header with logo + nav items + theme toggle)
+          - per-section dispatch (typed sections only — see below)
+          - `site/includes/footer.html` (column links + copyright)
+          - optional `site/sections/qa_personas.html` (dev-only persona cards)
+
+        Sections are dispatched to the typed `render_typed_section` builder
+        when their `type` is in `TYPED_SECTION_TYPES`; the upstream caller
+        pre-renders them and replaces the section dict with a `_typed`
+        marker carrying the rendered HTML. Unknown section types are
+        skipped per the v0.67.69 breaking-change directive — projects
+        with custom section types should register a typed builder.
+
+        Theme toggle and dark-mode-toggle controls are visibility-gated
+        by `dark_mode_toggle_enabled()`.
+        """
+        import html as _html_mod
+
+        from dazzle_back.runtime.renderers.site_section_builder import (
+            TYPED_SECTION_TYPES,
+            render_typed_section,
+        )
+        from dazzle_ui.runtime.theme import is_dark_mode_toggle_enabled
+
+        product_name = _html_mod.escape(
+            str(getattr(ctx, "product_name", "") or ""),
+            quote=False,
+        )
+        nav_items = getattr(ctx, "nav_items", None) or []
+        is_authenticated = bool(getattr(ctx, "is_authenticated", False))
+        dashboard_url_raw = str(getattr(ctx, "dashboard_url", "") or "")
+        nav_cta = getattr(ctx, "nav_cta", None)
+        footer_columns = getattr(ctx, "footer_columns", None) or []
+        copyright_text = _html_mod.escape(
+            str(getattr(ctx, "copyright_text", "") or ""),
+            quote=False,
+        )
+        page_type = str(getattr(ctx, "page_type", "") or "")
+        current_route = _html_mod.escape(
+            str(getattr(ctx, "current_route", "") or ""),
+            quote=True,
+        )
+        sections = getattr(ctx, "sections", None) or []
+        qa_personas = getattr(ctx, "qa_personas", None) or []
+
+        # --- Nav (site/includes/nav.html) ----------------------------
+        nav_links_html = "".join(
+            f'<a href="{_html_mod.escape(str(getattr(item, "href", "") or ""), quote=True)}" '  # nosemgrep
+            f'class="dz-nav-link">'
+            f"{_html_mod.escape(str(getattr(item, 'label', '') or ''), quote=False)}"
+            f"</a>"
+            for item in nav_items
+        )
+        if is_authenticated:
+            dashboard_attr = _html_mod.escape(dashboard_url_raw, quote=True)
+            cta_html = (
+                f'<a href="{dashboard_attr}" '  # nosemgrep
+                f'class="dz-button dz-button-primary">Dashboard</a>'
+            )
+        elif nav_cta is not None:
+            cta_href = _html_mod.escape(str(getattr(nav_cta, "href", "") or ""), quote=True)
+            cta_label = _html_mod.escape(str(getattr(nav_cta, "label", "") or ""), quote=False)
+            cta_html = f'<a href="{cta_href}" class="dz-button dz-button-primary">{cta_label}</a>'  # nosemgrep
+        else:
+            cta_html = ""
+        theme_toggle_html = ""
+        if is_dark_mode_toggle_enabled():
+            theme_toggle_html = (
+                '<button class="dz-theme-toggle" id="dz-theme-toggle" '
+                'aria-label="Toggle dark mode" title="Toggle dark mode">'
+                '<svg class="dz-theme-toggle__icon dz-theme-toggle__sun" width="20" height="20" '
+                'xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" '
+                'stroke="currentColor" stroke-width="2">'
+                '<path stroke-linecap="round" stroke-linejoin="round" '
+                'd="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707'
+                'm12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />'
+                "</svg>"
+                '<svg class="dz-theme-toggle__icon dz-theme-toggle__moon" width="20" height="20" '
+                'xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" '
+                'stroke="currentColor" stroke-width="2">'
+                '<path stroke-linecap="round" stroke-linejoin="round" '
+                'd="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354'
+                '-5.646z" /></svg>'
+                "</button>"
+            )
+        nav_html = (
+            '<header class="dz-site-header"><nav class="dz-site-nav">'
+            f'<a href="/" class="dz-site-logo">{product_name}</a>'
+            '<div class="dz-nav-items">'
+            f"{nav_links_html}{cta_html}{theme_toggle_html}"
+            "</div></nav></header>"
+        )
+
+        # --- Section dispatch (only typed sections survive) ---------
+        section_parts: list[str] = []
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            stype = str(section.get("type", "") or "")
+            if stype == "_typed":
+                section_html = str(section.get("_typed_html", "") or "")
+            elif stype in TYPED_SECTION_TYPES:
+                section_html = render_typed_section(section)
+            else:
+                # Unknown / non-typed section: skip per v0.67.69 directive.
+                continue
+            bg = str(section.get("background", "") or "")
+            if bg and bg != "default":
+                bg_attr = _html_mod.escape(bg, quote=True)
+                section_parts.append(f'<div class="dz-bg-{bg_attr}">{section_html}</div>')
+            else:
+                section_parts.append(section_html)
+        sections_html = (
+            "".join(section_parts)
+            if section_parts
+            else ('<div class="dz-loading">Loading...</div>')
+        )
+
+        # --- QA Personas (dev-only) ---------------------------------
+        qa_html = _render_qa_personas_html(qa_personas) if qa_personas else ""
+
+        # --- Main body ----------------------------------------------
+        main_class = ' class="dz-page-legal"' if page_type == "legal" else ""
+        main_html = (
+            f'<main id="dz-site-main"{main_class} data-route="{current_route}">'
+            f"{sections_html}{qa_html}"
+            "</main>"
+        )
+
+        # --- Footer (site/includes/footer.html) ---------------------
+        footer_cols_html = "".join(_render_site_footer_column(col) for col in footer_columns)
+        footer_html = (
+            '<footer class="dz-site-footer">'
+            f'<div class="dz-footer-content">{footer_cols_html}</div>'
+            f'<div class="dz-footer-bottom"><p>{copyright_text}</p></div>'
+            "</footer>"
+        )
+
+        return f"{nav_html}{main_html}{footer_html}"
 
     def _render_site_page_chromed(request: Request, ctx: Any) -> str:
         """Render a sitespec page via the typed-Fragment chrome path.
@@ -353,7 +594,7 @@ def create_site_page_routes(
                 ctx.model_copy(update={"sections": replaced}) if hasattr(ctx, "model_copy") else ctx
             )
 
-        inner_html = render_site_page("site/inner_only.html", ctx)
+        inner_html = _render_site_inner_html(request, ctx)
         page_ctx = PageContext(
             page_title=getattr(ctx, "page_title", "") or "",
             app_name=getattr(ctx, "app_name", None) or "Dazzle",

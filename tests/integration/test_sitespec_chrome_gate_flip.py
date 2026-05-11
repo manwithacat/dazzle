@@ -89,25 +89,18 @@ def _build_app(*, chrome: bool) -> TestClient:
 # ───────────────── Source-level seam tests ────────────────────
 
 
-def test_helper_uses_inner_only_template() -> None:
-    """The marketing-page renderer uses the inner-only template,
-    not the full `site/page.html` (which was retired with this
-    chrome-flag flip)."""
-    from pathlib import Path
-
-    src = Path("src/dazzle_back/runtime/site_routes.py").read_text(encoding="utf-8")
-    assert '"site/inner_only.html"' in src
+@pytest.mark.skip(
+    reason="v0.67.69 retired site/inner_only.html — marketing-page rendering "
+    "now goes through `_render_site_inner_html` (inline Python) in site_routes."
+)
+def test_helper_uses_inner_only_template() -> None: ...
 
 
-def test_inner_only_template_does_not_extend_site_base() -> None:
-    """The inner-only template must NOT extend `site_base.html`
-    — otherwise the typed Page wrapper would emit a doubled
-    `<html>...</html>` shell."""
-    from pathlib import Path
-
-    src = Path("src/dazzle_ui/templates/site/inner_only.html").read_text(encoding="utf-8")
-    assert '{% extends "site/site_base.html" %}' not in src
-    assert "{% extends" not in src  # no extends at all
+@pytest.mark.skip(
+    reason="v0.67.69 retired site/inner_only.html — marketing-page rendering "
+    "now goes through `_render_site_inner_html` (inline Python) in site_routes."
+)
+def test_inner_only_template_does_not_extend_site_base() -> None: ...
 
 
 def test_legacy_page_html_template_is_retired() -> None:
@@ -125,18 +118,12 @@ def test_legacy_page_html_template_is_retired() -> None:
 # ───────────────── Live-render tests (Phase 4: chrome flag retired) ────
 
 
-def test_marketing_path_renders_inner_only_regardless_of_flag() -> None:
-    """Phase 4 (v0.67.43): the marketing-page renderer ignores the
-    `fragment_chrome` flag — it always uses the typed-Fragment path
-    with `inner_only.html` for sections."""
-    for chrome in (False, True):
-        client = _build_app(chrome=chrome)
-        with _JinjaSpy() as spy:
-            resp = client.get("/")
-        assert resp.status_code == 200
-        assert "site/page.html" not in spy.calls
-        assert "site/site_base.html" not in spy.calls
-        assert "site/inner_only.html" in spy.calls
+@pytest.mark.skip(
+    reason="v0.67.69 retired site/inner_only.html — marketing pages render "
+    "without Jinja. Negative-spy assertions (page.html / site_base.html not in "
+    "spy.calls) are subsumed by test_typed_runtime_no_jinja gate."
+)
+def test_marketing_path_renders_inner_only_regardless_of_flag() -> None: ...
 
 
 def test_marketing_response_contains_typed_page_chrome() -> None:
@@ -161,8 +148,10 @@ def test_hero_renders_via_typed_builder_not_jinja_partial() -> None:
     with _JinjaSpy() as spy:
         resp = client.get("/")
     assert resp.status_code == 200
+    # v0.67.69: site/inner_only.html retired; marketing pages render
+    # without ANY Jinja templates. Both assertions enforce this.
     assert "site/sections/hero.html" not in spy.calls
-    assert "site/inner_only.html" in spy.calls
+    assert "site/inner_only.html" not in spy.calls
 
 
 def test_chrome_on_response_carries_typed_hero_class_names() -> None:

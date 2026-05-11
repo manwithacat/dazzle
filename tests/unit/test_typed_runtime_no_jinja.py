@@ -66,6 +66,10 @@ _TYPED_ONLY_MODULES = (
     # (table_rows.html, table_pagination.html, table_sentinel.html)
     # are no longer reached from this code path.
     "src/dazzle_back/runtime/route_generator.py",
+    # v0.67.69 — marketing-page render fully Python-orchestrated.
+    # inner_only.html + nav.html + footer.html + theme_toggle.html +
+    # qa_personas.html + all 19 site/sections/*.html templates deleted.
+    "src/dazzle_back/runtime/site_routes.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

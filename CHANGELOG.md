@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.69] - 2026-05-11
+
+### Removed
+
+- **23 marketing-site Jinja templates retired** (84 → 61 framework templates):
+  - `site/inner_only.html` (the marketing body shell)
+  - `site/includes/nav.html` (marketing header + nav links)
+  - `site/includes/footer.html` (marketing footer columns)
+  - `site/includes/theme_toggle.html` (dark-mode toggle)
+  - `site/sections/_helpers.html`, `site/sections/generic.html`, and the 17 named-type section templates (hero, cta, card_grid, comparison, faq, features, logo_cloud, markdown, pricing, qa_personas, split_content, stats, steps, team, testimonials, trust_bar, value_highlight)
+- **`render_site_page` function retired** from `dazzle_ui.runtime.template_renderer` — no live consumer remained after the migration.
+
+### Changed
+
+- **Marketing-page rendering fully Python-orchestrated** — `site_routes._render_site_inner_html` (new) composes the marketing body in Python: nav header + section dispatch (via the typed `render_typed_section` builder) + footer + optional QA-personas section. The typed substrate was already 17/17 sections covered; this commit closes the orchestration loop. Unknown section types are silently skipped per the "breaking changes acceptable" directive — projects with custom section types should register a typed builder.
+- **`qa_personas.html` ported to inline Python** including the trailing `<script>` block with `data-qa-login-persona` click handlers (POST to `/qa/magic-link`, redirect to returned URL). Dev-only path; identical client-side behaviour.
+- **`theme_toggle.html` inlined** as well — the sun/moon SVG icons are emitted directly by the Python helper when `is_dark_mode_toggle_enabled()` returns True.
+- **`site_routes.py` added to typed-only allowlist** — locked as Jinja2-free.
+- **`DYNAMIC_DIRECTORY_EXEMPTIONS["site/sections/"]`** removed from the orphan-scan test — the dynamic `{% include [prefix + section.type + suffix] %}` dispatch site is gone.
+
+### Agent Guidance
+
+- Marketing pages no longer touch Jinja. To add a new marketing section type: implement a builder in `dazzle_back.runtime.renderers.site_section_builder`, register it in `TYPED_SECTION_TYPES`, and the orchestrator will pick it up automatically.
+- The `dark_mode_toggle_enabled()` Jinja global is now imported from `dazzle_ui.runtime.theme.is_dark_mode_toggle_enabled` for Python use.
+
 ## [0.67.68] - 2026-05-11
 
 ### Changed

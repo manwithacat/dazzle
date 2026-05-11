@@ -90,11 +90,11 @@ class TestSitePageToggleButton:
         "path,tokens",
         [
             (
-                "src/dazzle_ui/templates/site/includes/theme_toggle.html",
+                "src/dazzle_back/runtime/site_routes.py",
                 ["dz-theme-toggle", "Toggle dark mode"],
             ),
             (
-                "src/dazzle_ui/templates/site/includes/theme_toggle.html",
+                "src/dazzle_back/runtime/site_routes.py",
                 ["dz-theme-toggle__sun", "dz-theme-toggle__moon"],
             ),
             (
@@ -114,6 +114,8 @@ class TestSitePageToggleButton:
         ],
     )
     def test_file_contains_tokens(self, path: str, tokens: list[str]) -> None:
+        # v0.67.69: theme_toggle.html retired; toggle button is now
+        # inline-rendered in site_routes._render_site_inner_html.
         content = Path(path).read_text()
         for token in tokens:
             assert token in content
