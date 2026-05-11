@@ -178,6 +178,9 @@ class TestComputeAggregateMetricsTones:
         assert "tone" not in metrics[0]
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestTonesTemplateBinding:
     """The metrics template must surface a per-tile background tint
     when `metric.tone` is set, and fall through to the default muted

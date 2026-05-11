@@ -209,6 +209,9 @@ workspace dash "Dash":
 # ───────────────────────── runtime + template wiring ──────────────────────────
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestConfirmActionPanelRuntimeWiring:
     def test_display_template_map_includes_confirm_action_panel(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
@@ -216,7 +219,7 @@ class TestConfirmActionPanelRuntimeWiring:
         assert "CONFIRM_ACTION_PANEL" in DISPLAY_TEMPLATE_MAP
         assert (
             DISPLAY_TEMPLATE_MAP["CONFIRM_ACTION_PANEL"]
-            == "workspace/regions/confirm_action_panel.html"
+            == "workspace/regions/_typed_primitive.html"
         )
 
     def test_template_file_exists(self) -> None:
@@ -254,6 +257,9 @@ class TestConfirmActionPanelRuntimeWiring:
         assert len(ctx.confirmations) == 1
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestConfirmActionPanelTemplateBranches:
     """Template-source invariants for the off/live/revoked mode
     branching. The static template must contain at least one branch

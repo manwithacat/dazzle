@@ -84,6 +84,27 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "import via {% from 'macros/locale_switcher.html' %} when they want "
         "the switcher"
     ),
+    # Phase 4 region migration deletion sweep (v0.67.52): these helpers
+    # were consumed by the now-retired `workspace/regions/*.html` Jinja
+    # content templates. Kept on disk because they may still be useful
+    # for downstream apps that compose Jinja content alongside the typed
+    # substrate; framework code paths no longer reach them.
+    "fragments/date_range_picker.html": (
+        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
+        "kept for downstream Jinja composition"
+    ),
+    "fragments/empty_state.html": (
+        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
+        "kept for downstream Jinja composition"
+    ),
+    "macros/attention_accent.html": (
+        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
+        "kept for downstream Jinja composition"
+    ),
+    "macros/ref_cell.html": (
+        "Phase 4 deletion sweep retired its workspace/regions/* consumers; "
+        "kept for downstream Jinja composition"
+    ),
     # Phase 4 chrome-flag flip (v0.67.43) — site/page.html retired,
     # so the chain it pulled in (site_base.html + og_meta partial) is
     # no longer referenced from any framework code path. The typed

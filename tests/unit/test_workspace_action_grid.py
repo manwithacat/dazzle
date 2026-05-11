@@ -253,12 +253,15 @@ class TestActionGridContext:
 # ───────────────────────── template wiring ──────────────────────────
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestActionGridTemplateWiring:
     def test_template_map_includes_action_grid(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "ACTION_GRID" in DISPLAY_TEMPLATE_MAP
-        assert DISPLAY_TEMPLATE_MAP["ACTION_GRID"] == "workspace/regions/action_grid.html"
+        assert DISPLAY_TEMPLATE_MAP["ACTION_GRID"] == "workspace/regions/_typed_primitive.html"
 
     def test_template_file_exists(self) -> None:
         path = (

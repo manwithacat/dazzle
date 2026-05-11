@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.52] - 2026-05-11
+
+### Removed
+
+- **Phase 4 region migration deletion sweep — 29 workspace region Jinja templates retired.** `DISPLAY_TEMPLATE_MAP` flipped: 29 display kinds now route to `_typed_primitive.html` (the shim that wraps the typed-Fragment render in the `region_card` chrome), joining the original 4 #1015–#1018 typed-only kinds. The legacy `workspace/regions/<kind>.html` files have been deleted from disk.
+- Templates retired: `list`, `grid`, `metrics`, `detail`, `kanban`, `timeline`, `bar_chart`, `funnel_chart`, `queue`, `tabbed_list`, `heatmap`, `progress`, `activity_feed`, `tree`, `pivot_table`, `line_chart`, `area_chart`, `sparkline`, `diagram`, `histogram`, `box_plot`, `bullet`, `bar_track`, `action_grid`, `profile_card`, `pipeline_steps`, `status_list`, `confirm_action_panel`, `search_box`.
+- **`tests/unit/test_dual_path_validation.py`** deleted — its 39 tests asserted byte-equivalence between the typed-Fragment and Jinja paths for every region kind. Per the user's explicit guidance for this ship — "pixel perfection and complete fidelity with old jinja templates is a non-goal" — those assertions are obsolete.
+- ~290 tests across 19 files pinning legacy Jinja markup (specific class names, attribute orderings, comment markers, status-badge HTML, etc.) class-level-skipped with a Phase 4 deletion-sweep reason. They remain in the codebase for archaeological reference; future ships can delete them outright.
+
+### Changed
+
+- **`DISPLAY_TEMPLATE_MAP`** rewrites with explicit comments documenting which kinds route through the typed shim vs. retain a dedicated Jinja template. Only `radar`, `audit_history`, and `tab_data` still render via dedicated Jinja templates; each lacks a fully-tested adapter builder + IR-side data path.
+- **`tests/unit/test_template_orphan_scan.py`** allow-list extended with the four Jinja partials whose only consumers were the now-deleted region templates (`fragments/date_range_picker.html`, `fragments/empty_state.html`, `macros/attention_accent.html`, `macros/ref_cell.html`). They're kept on disk for downstream apps that still compose Jinja content alongside the typed substrate.
+
+### Agent Guidance
+
+- **Region output now varies from the legacy Jinja.** Class names, element nesting, and a11y attributes reflect the typed design system rather than the per-template Jinja markup. Downstream DSL or test suites pinning specific Jinja-rendered byte sequences need to adapt — agents updating DSL after this ship is the expected workflow. The semantic shape (what data renders, what URLs are wired, what controls are present) is preserved; only the exact HTML differs.
+- **`render_fragment("workspace/regions/<kind>.html", ...)` is no longer valid for the 29 retired kinds.** Tests or code that invoked the Jinja template directly with hand-crafted context will fail at import time (TemplateNotFound). Reroute via the workspace runtime, or use `WorkspaceRegionAdapter().build(region, ctx)` + `FragmentRenderer().render(surface)` directly for unit-level fixtures.
+- **3 region kinds still on Jinja**: `radar` (spoke-data shape doesn't map cleanly to the adapter's flat `axes` contract), `audit_history` + `tab_data` (no adapter builder). Their dedicated Jinja templates remain reachable via `DISPLAY_TEMPLATE_MAP`.
+- **Phase 5 (drop `jinja2` dep entirely)** is closer but still blocked on those 3 regions plus orphaned chrome (`layouts/app_shell.html`, `site_base.html`, etc.) and the legacy Jinja consumed by static_preview / fidelity tooling.
+
 ## [0.67.51] - 2026-05-11
 
 ### Changed

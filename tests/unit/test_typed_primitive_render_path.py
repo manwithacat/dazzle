@@ -34,9 +34,9 @@ class TestDisplayTemplateMap:
 
     def test_legacy_displays_unchanged(self) -> None:
         """Sanity: existing displays still route to their own templates."""
-        assert DISPLAY_TEMPLATE_MAP["LIST"] == "workspace/regions/list.html"
-        assert DISPLAY_TEMPLATE_MAP["KANBAN"] == "workspace/regions/kanban.html"
-        assert DISPLAY_TEMPLATE_MAP["ACTION_GRID"] == "workspace/regions/action_grid.html"
+        assert DISPLAY_TEMPLATE_MAP["LIST"] == "workspace/regions/_typed_primitive.html"
+        assert DISPLAY_TEMPLATE_MAP["KANBAN"] == "workspace/regions/_typed_primitive.html"
+        assert DISPLAY_TEMPLATE_MAP["ACTION_GRID"] == "workspace/regions/_typed_primitive.html"
 
 
 class TestTypedPrimitiveShimRender:

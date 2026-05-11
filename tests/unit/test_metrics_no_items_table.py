@@ -25,6 +25,9 @@ _TEMPLATE_PATH = (
 )
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestMetricsTemplateHasNoItemsTable:
     """The static template body must not contain the items-table
     block. We do not need to render it through Jinja — these are
@@ -59,6 +62,9 @@ class TestMetricsTemplateHasNoItemsTable:
         assert "<tbody" not in text
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestMetricsTemplateStillRendersTiles:
     """Defensive — make sure we didn't accidentally also delete the
     metrics tiles loop while removing the items table."""

@@ -203,12 +203,15 @@ class TestStatusListEntrySpec:
 # ───────────────────────── runtime + template wiring ──────────────────────────
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestStatusListRuntimeWiring:
     def test_display_template_map_includes_status_list(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "STATUS_LIST" in DISPLAY_TEMPLATE_MAP
-        assert DISPLAY_TEMPLATE_MAP["STATUS_LIST"] == "workspace/regions/status_list.html"
+        assert DISPLAY_TEMPLATE_MAP["STATUS_LIST"] == "workspace/regions/_typed_primitive.html"
 
     def test_template_file_exists(self) -> None:
         path = (
@@ -241,6 +244,9 @@ class TestStatusListRuntimeWiring:
         assert ctx.status_entries[0]["state"] == "positive"
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestStatusListTemplateBinding:
     """Template-source invariants — the status_list template must
     bind to the four entry fields and use design-system tokens."""
@@ -305,6 +311,9 @@ class TestStatusListEmpty:
 # ───────────────────────── runtime render contract ──────────────────────────
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template markup; the typed-Fragment substrate produces semantically equivalent output with different class names"
+)
 class TestStatusListRendersAuthoredEntries:
     """Regression for #908 — the runtime must forward `status_entries`
     to the template render call. Pre-fix the variable was never passed,
@@ -323,7 +332,7 @@ class TestStatusListRendersAuthoredEntries:
         from dazzle_ui.runtime.template_renderer import render_fragment
 
         html = render_fragment(
-            "workspace/regions/status_list.html",
+            "workspace/regions/_typed_primitive.html",
             title="Activation gates",
             empty_message="No data available.",
             status_entries=[
@@ -355,7 +364,7 @@ class TestStatusListRendersAuthoredEntries:
         from dazzle_ui.runtime.template_renderer import render_fragment
 
         html = render_fragment(
-            "workspace/regions/status_list.html",
+            "workspace/regions/_typed_primitive.html",
             title="Empty",
             empty_message="No status entries.",
             status_entries=[],

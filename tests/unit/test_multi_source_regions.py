@@ -369,7 +369,7 @@ class TestBuildWorkspaceContext:
             ],
         )
         ctx = build_workspace_context(ws, self._make_appspec())
-        assert ctx.regions[0].template == "workspace/regions/tabbed_list.html"
+        assert ctx.regions[0].template == "workspace/regions/_typed_primitive.html"
 
     def test_multi_source_no_single_endpoint(self) -> None:
         """Multi-source regions should not have a single endpoint."""
@@ -421,7 +421,7 @@ class TestPerSourceTabTemplate:
         ctx = build_workspace_context(ws, self._make_appspec())
         parent_region = ctx.regions[0]
         # The parent region uses tabbed_list for the tab container
-        assert parent_region.template == "workspace/regions/tabbed_list.html"
+        assert parent_region.template == "workspace/regions/_typed_primitive.html"
         # Create per-source copy as server.py does
         for tab in parent_region.source_tabs:
             src_region = parent_region.model_copy(

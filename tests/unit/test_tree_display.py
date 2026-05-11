@@ -35,7 +35,7 @@ class TestTemplateMap:
 
     def test_tree_template_mapping(self) -> None:
         assert "TREE" in DISPLAY_TEMPLATE_MAP
-        assert DISPLAY_TEMPLATE_MAP["TREE"] == "workspace/regions/tree.html"
+        assert DISPLAY_TEMPLATE_MAP["TREE"] == "workspace/regions/_typed_primitive.html"
 
 
 class TestParserTree:

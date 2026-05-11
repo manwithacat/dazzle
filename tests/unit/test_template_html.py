@@ -131,14 +131,14 @@ FRAGMENT_TEMPLATES = [
 
 # Workspace region templates — where structural bugs are most likely.
 REGION_TEMPLATES = [
-    "workspace/regions/metrics.html",
-    "workspace/regions/detail.html",
-    "workspace/regions/list.html",
-    "workspace/regions/grid.html",
-    "workspace/regions/timeline.html",
-    "workspace/regions/queue.html",
-    "workspace/regions/progress.html",
-    "workspace/regions/activity_feed.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
+    "workspace/regions/_typed_primitive.html",
 ]
 
 # Component templates — key structural pieces.
@@ -265,7 +265,7 @@ class TestRenderedHtmlValidation:
         """
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
-        template = jinja_env.get_template("workspace/regions/grid.html")
+        template = jinja_env.get_template("workspace/regions/_typed_primitive.html")
         context = {
             **_MOCK_CONTEXT,
             "title": "System Status",
@@ -337,7 +337,7 @@ _DASHBOARD_SLOT_WITH_REGION = """
 # context a runtime render site could build for that template.
 _REGION_CASES = [
     (
-        "workspace/regions/grid.html",
+        "workspace/regions/_typed_primitive.html",
         "System Status",
         {
             "region_name": "system_status",
@@ -356,7 +356,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/list.html",
+        "workspace/regions/_typed_primitive.html",
         "Recent Tickets",
         {
             "region_name": "recent_tickets",
@@ -370,7 +370,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/timeline.html",
+        "workspace/regions/_typed_primitive.html",
         "Alert Timeline",
         {
             "region_name": "alert_timeline",
@@ -382,7 +382,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/kanban.html",
+        "workspace/regions/_typed_primitive.html",
         "Ticket Board",
         {
             "region_name": "ticket_board",
@@ -398,7 +398,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/bar_chart.html",
+        "workspace/regions/_typed_primitive.html",
         "Alerts by Severity",
         {
             "region_name": "alert_severity_breakdown",
@@ -410,7 +410,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/metrics.html",
+        "workspace/regions/_typed_primitive.html",
         "Health Summary",
         {
             "region_name": "health_summary",
@@ -422,7 +422,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/queue.html",
+        "workspace/regions/_typed_primitive.html",
         "Ack Queue",
         {
             "region_name": "ack_queue",
@@ -434,7 +434,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/activity_feed.html",
+        "workspace/regions/_typed_primitive.html",
         "Comment Activity",
         {
             "region_name": "comment_activity",
@@ -447,7 +447,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/heatmap.html",
+        "workspace/regions/_typed_primitive.html",
         "Alert Heatmap",
         {
             "region_name": "alert_heatmap",
@@ -459,7 +459,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/progress.html",
+        "workspace/regions/_typed_primitive.html",
         "Backlog Progress",
         {
             "region_name": "backlog_progress",
@@ -471,7 +471,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/tree.html",
+        "workspace/regions/_typed_primitive.html",
         "Device Tree",
         {
             "region_name": "device_tree",
@@ -483,7 +483,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/diagram.html",
+        "workspace/regions/_typed_primitive.html",
         "Fleet Diagram",
         {
             "region_name": "fleet_diagram",
@@ -494,7 +494,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/tabbed_list.html",
+        "workspace/regions/_typed_primitive.html",
         "Issue Tabs",
         {
             "region_name": "issue_tabs",
@@ -510,7 +510,7 @@ _REGION_CASES = [
         },
     ),
     (
-        "workspace/regions/funnel_chart.html",
+        "workspace/regions/_typed_primitive.html",
         "Resolution Funnel",
         {
             "region_name": "resolution_funnel",

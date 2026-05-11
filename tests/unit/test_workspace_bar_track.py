@@ -251,6 +251,9 @@ class TestBarTrackPostProcessing:
 # ───────────────────────── template wiring ─────────────────────────
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestBarTrackTemplateWiring:
     """The template path map and renderer wiring must be in place for
     the runtime branch to find `bar_track.html`."""
@@ -259,7 +262,7 @@ class TestBarTrackTemplateWiring:
         from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "BAR_TRACK" in DISPLAY_TEMPLATE_MAP
-        assert DISPLAY_TEMPLATE_MAP["BAR_TRACK"] == "workspace/regions/bar_track.html"
+        assert DISPLAY_TEMPLATE_MAP["BAR_TRACK"] == "workspace/regions/_typed_primitive.html"
 
     def test_template_file_exists(self) -> None:
         path = (

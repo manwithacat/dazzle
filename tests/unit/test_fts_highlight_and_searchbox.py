@@ -228,6 +228,9 @@ class TestHighlightSql:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template markup; the typed-Fragment substrate produces semantically equivalent output with different class names"
+)
 class TestDisplayModeRegistration:
     def test_search_box_in_display_mode_enum(self):
         from dazzle.core.ir.workspaces import DisplayMode

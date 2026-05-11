@@ -263,12 +263,15 @@ class TestResolvePath:
 # ───────────────────────── template wiring ──────────────────────────
 
 
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
+)
 class TestProfileCardTemplateWiring:
     def test_template_map_includes_profile_card(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "PROFILE_CARD" in DISPLAY_TEMPLATE_MAP
-        assert DISPLAY_TEMPLATE_MAP["PROFILE_CARD"] == "workspace/regions/profile_card.html"
+        assert DISPLAY_TEMPLATE_MAP["PROFILE_CARD"] == "workspace/regions/_typed_primitive.html"
 
     def test_template_file_exists(self) -> None:
         path = (

@@ -333,45 +333,68 @@ def _build_diagram_data(display_mode: str, app_spec: Any) -> str:
     return "\n".join(lines)
 
 
+# Phase 4 region migration deletion sweep (v0.67.52): 33 region kinds
+# route through the typed-Fragment substrate. The `WorkspaceRegionAdapter`
+# builds the typed primitive (via the `_TYPED_REGION_DISPLAYS` whitelist
+# in `workspace_rendering.py`), the runtime renders it via
+# `FragmentRenderer`, and the `_typed_primitive.html` shim wraps the
+# pre-rendered HTML in the `region_card` chrome.
+#
+# Pixel parity with the retired Jinja content templates is a non-goal:
+# typed primitives produce semantically equivalent, correctly-styled
+# HTML — class names, element nesting, and a11y attributes match the
+# typed design system rather than the Jinja-template-by-Jinja-template
+# legacy markup. Downstream apps that pinned exact Jinja byte sequences
+# need to adapt; agents updating example DSL after this ship is the
+# expected workflow.
+#
+# Three kinds still render dedicated Jinja templates: `radar`,
+# `audit_history`, `tab_data`. Each lacks a fully-tested adapter
+# builder + IR-side data path; future ships graduate them.
+_TYPED_SHIM = "workspace/regions/_typed_primitive.html"
 DISPLAY_TEMPLATE_MAP: dict[str, str] = {
-    "LIST": "workspace/regions/list.html",
-    "GRID": "workspace/regions/grid.html",
-    "METRICS": "workspace/regions/metrics.html",
-    "SUMMARY": "workspace/regions/metrics.html",
-    "DETAIL": "workspace/regions/detail.html",
-    "KANBAN": "workspace/regions/kanban.html",
-    "TIMELINE": "workspace/regions/timeline.html",
-    "BAR_CHART": "workspace/regions/bar_chart.html",
-    "FUNNEL_CHART": "workspace/regions/funnel_chart.html",
-    "QUEUE": "workspace/regions/queue.html",
-    "TABBED_LIST": "workspace/regions/tabbed_list.html",
-    "HEATMAP": "workspace/regions/heatmap.html",
-    "PROGRESS": "workspace/regions/progress.html",
-    "ACTIVITY_FEED": "workspace/regions/activity_feed.html",
-    "TREE": "workspace/regions/tree.html",
-    "PIVOT_TABLE": "workspace/regions/pivot_table.html",
-    "LINE_CHART": "workspace/regions/line_chart.html",
-    "AREA_CHART": "workspace/regions/area_chart.html",
-    "SPARKLINE": "workspace/regions/sparkline.html",
-    "DIAGRAM": "workspace/regions/diagram.html",
-    "HISTOGRAM": "workspace/regions/histogram.html",
+    # Original #1015–#1018 typed-only region primitives (v0.67.10).
+    "COHORT_STRIP": _TYPED_SHIM,
+    "DAY_TIMELINE": _TYPED_SHIM,
+    "TASK_INBOX": _TYPED_SHIM,
+    "ENTITY_CARD": _TYPED_SHIM,
+    # Phase 4 migrations (v0.67.46 → v0.67.51 prepared the adapter
+    # plumbing; v0.67.52 flips the consumer to actually use it).
+    "PROGRESS": _TYPED_SHIM,
+    "DETAIL": _TYPED_SHIM,
+    "TREE": _TYPED_SHIM,
+    "DIAGRAM": _TYPED_SHIM,
+    "SEARCH_BOX": _TYPED_SHIM,
+    "TABBED_LIST": _TYPED_SHIM,
+    "GRID": _TYPED_SHIM,
+    "HEATMAP": _TYPED_SHIM,
+    "SPARKLINE": _TYPED_SHIM,
+    "STATUS_LIST": _TYPED_SHIM,
+    "PROFILE_CARD": _TYPED_SHIM,
+    "METRICS": _TYPED_SHIM,
+    "SUMMARY": _TYPED_SHIM,  # alias for METRICS (adapter dispatches identically)
+    "FUNNEL_CHART": _TYPED_SHIM,
+    "HISTOGRAM": _TYPED_SHIM,
+    "PIVOT_TABLE": _TYPED_SHIM,
+    "TIMELINE": _TYPED_SHIM,
+    "KANBAN": _TYPED_SHIM,
+    "PIPELINE_STEPS": _TYPED_SHIM,
+    "QUEUE": _TYPED_SHIM,
+    "ACTION_GRID": _TYPED_SHIM,
+    "CONFIRM_ACTION_PANEL": _TYPED_SHIM,
+    "BAR_CHART": _TYPED_SHIM,
+    "LINE_CHART": _TYPED_SHIM,
+    "AREA_CHART": _TYPED_SHIM,
+    "BAR_TRACK": _TYPED_SHIM,
+    "BULLET": _TYPED_SHIM,
+    "BOX_PLOT": _TYPED_SHIM,
+    "ACTIVITY_FEED": _TYPED_SHIM,
+    "LIST": _TYPED_SHIM,
+    # Not yet migrated — dedicated Jinja templates retained until
+    # their adapter builders ship.
     "RADAR": "workspace/regions/radar.html",
-    "BOX_PLOT": "workspace/regions/box_plot.html",
-    "BULLET": "workspace/regions/bullet.html",
-    "BAR_TRACK": "workspace/regions/bar_track.html",  # #893
-    "ACTION_GRID": "workspace/regions/action_grid.html",  # #891
-    "PROFILE_CARD": "workspace/regions/profile_card.html",  # #892
-    "PIPELINE_STEPS": "workspace/regions/pipeline_steps.html",  # #890
-    "STATUS_LIST": "workspace/regions/status_list.html",  # #3, v0.61.69
-    "CONFIRM_ACTION_PANEL": "workspace/regions/confirm_action_panel.html",  # #6, v0.61.72
-    "SEARCH_BOX": "workspace/regions/search_box.html",  # #954 cycle 4
-    # #1015–#1018 region primitives — typed-Fragment-only render path.
-    # The handler pre-renders via WorkspaceRegionAdapter and passes
-    # the HTML to the shared shim template as `typed_primitive_html`.
-    "COHORT_STRIP": "workspace/regions/_typed_primitive.html",  # #1018 (v0.67.10)
-    "DAY_TIMELINE": "workspace/regions/_typed_primitive.html",  # #1016 (v0.67.10)
-    "TASK_INBOX": "workspace/regions/_typed_primitive.html",  # #1015 (v0.67.10)
-    "ENTITY_CARD": "workspace/regions/_typed_primitive.html",  # #1017 (v0.67.10)
+    "AUDIT_HISTORY": "workspace/regions/audit_history.html",
+    "TAB_DATA": "workspace/regions/tab_data.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)

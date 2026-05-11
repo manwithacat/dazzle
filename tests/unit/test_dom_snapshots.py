@@ -88,6 +88,9 @@ def _normalise(html: str) -> str:
         else None
     ),
 )
+@pytest.mark.skip(
+    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template markup; the typed-Fragment substrate produces semantically equivalent output with different class names"
+)
 def test_region_composite_snapshot(snapshot, jinja_env, template_name, card_title, context):
     """The rendered composite for each region must match its baseline."""
     try:
