@@ -379,17 +379,59 @@ async def _experience_step_get(
         }
         response = HTMLResponse(content=html, headers=headers)  # type: ignore[assignment]  # nosemgrep
     else:
-        html = render_fragment(
-            "experience/experience.html",
+        # Phase 4 experience-shell migration (v0.67.54): the outer
+        # `experience/experience.html` Jinja shell (which extended
+        # `layouts/app_shell.html`) is retired. We render the inner
+        # `_content.html` via Jinja (form/detail/table step still
+        # need its rich step-body logic) and wrap it in a typed
+        # `Page` + `AppShell` via `dispatch_render_page` — same shape
+        # used by the marketing-page + entity-surface routes.
+        from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
+        from dazzle_ui.runtime.template_context import NavItemContext, PageContext
+
+        inner_html = render_fragment(
+            "experience/_content.html",
             experience=exp_ctx,
-            nav_items=deps.nav_items,
-            nav_groups=deps.nav_groups,
-            app_name=deps.app_name,
-            current_route=current_route,
-            theme_css=deps.theme_css,
-            _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
-            **auth_ctx,
         )
+        nav_items_ctx = [
+            NavItemContext(
+                label=getattr(n, "label", None) or n.get("label", "")
+                if isinstance(n, dict)
+                else getattr(n, "label", ""),
+                route=getattr(n, "route", None) or n.get("route", "")
+                if isinstance(n, dict)
+                else getattr(n, "route", ""),
+            )
+            for n in (deps.nav_items or [])
+        ]
+        page_ctx = PageContext(
+            page_title=exp_ctx.title or "",
+            app_name=deps.app_name or "Dazzle",
+            current_route=current_route,
+            nav_items=nav_items_ctx,
+            nav_groups=deps.nav_groups or [],
+        )
+        app_state = request.app.state
+        css_links = tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        )
+        js_scripts = tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        )
+        theme = getattr(app_state, "fragment_chrome_theme", None)
+        html = dispatch_render_page(
+            page_ctx,
+            inner_html,
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
+        )
+        # auth_ctx + theme_css fields previously threaded into the
+        # Jinja layout are dropped — the typed AppShell doesn't yet
+        # surface persona affordances per the Phase 4 trade-off.
+        _ = (auth_ctx, htmx)
         response = HTMLResponse(content=html)  # type: ignore[assignment]  # nosemgrep
 
     # Set state cookie on every response

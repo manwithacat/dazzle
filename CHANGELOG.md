@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.54] - 2026-05-11
+
+### Removed
+
+- **`experience/experience.html` retired** — the outer Jinja shell that wrapped each experience step in `layouts/app_shell.html` is gone. Experience-route GET handlers now render the inner `_content.html` via Jinja (rich step-body logic stays) and wrap it in a typed `Page` + `AppShell` via `dispatch_render_page`, mirroring the marketing-page (`_render_site_page_chromed`, v0.67.43) and entity-surface (`page_routes.py`, v0.67.44) patterns.
+
+### Changed
+
+- **`experience_routes.py` full-page render path** now calls `dispatch_render_page(page_ctx, inner_html, css_links=..., js_scripts=..., theme=...)` instead of `render_fragment("experience/experience.html", ...)`. The htmx fragment path is unchanged — it continues to return just the inner `_content.html`.
+- **Accepted regression** (consistent with the Phase 4 app-shell migration v0.67.44): persona affordances (`auth_ctx`, `theme_css`) that the legacy Jinja layout threaded into the navbar don't render in the typed `AppShell`. The `_ = (auth_ctx, htmx)` marker line documents the intentional drop until typed `PersonaCard`/`UserMenu` primitives land.
+
+### Agent Guidance
+
+- **`layouts/app_shell.html` deletion is one step closer**: experience-routes was one of two remaining live consumers. The other is `dazzle_back.runtime.shell.render_in_app_shell` — a documented downstream-API for project authors to render custom pages inside the framework app shell via Jinja `{% extends "layouts/app_shell.html" %}`. Retiring `app_shell.html` requires either retiring `render_in_app_shell` (breaking change for downstream apps that use it) or migrating its implementation to construct a typed AppShell directly. Decoupling that takes its own ship.
+
 ## [0.67.53] - 2026-05-11
 
 ### Removed
