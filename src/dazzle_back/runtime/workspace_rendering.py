@@ -2666,6 +2666,12 @@ async def _workspace_region_handler(
         "TASK_INBOX",
         "ENTITY_CARD",
         "PROGRESS",  # Phase 4 region migration (v0.67.46)
+        # Phase 4 region migration batch (v0.67.47):
+        "DETAIL",
+        "TREE",
+        "DIAGRAM",
+        "SEARCH_BOX",
+        "TABBED_LIST",
     )
     if display_upper in _TYPED_REGION_DISPLAYS:
         from dazzle.render.fragment import FragmentRenderer
@@ -2746,6 +2752,42 @@ async def _workspace_region_handler(
                 # accepts when stage_counts is empty — pass through so
                 # the synthetic-stage path keeps working.
                 adapter_ctx["items"] = items
+            elif display_upper == "DETAIL":
+                # Phase 4 region migration batch (v0.67.47): detail's
+                # adapter consumes a single record + the region's
+                # declared field shape.
+                adapter_ctx["item"] = items[0] if items else None
+                adapter_ctx["fields"] = columns
+            elif display_upper == "TREE":
+                # _build_tree wants the pre-computed nested tree shape
+                # already produced upstream by `_build_subtree`.
+                adapter_ctx["tree_items"] = tree_items
+                adapter_ctx["items"] = items
+                adapter_ctx["display_key"] = next(
+                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
+                    columns[0]["key"] if columns else "name",
+                )
+            elif display_upper == "DIAGRAM":
+                # _build_diagram prefers `diagram_data` (Mermaid source)
+                # but falls back to nodes/edges from the IR region
+                # when not pre-computed.
+                adapter_ctx["nodes"] = getattr(ctx.ctx_region, "nodes", []) or []
+                adapter_ctx["edges"] = getattr(ctx.ctx_region, "edges", []) or []
+            elif display_upper == "SEARCH_BOX":
+                # _build_search_box wants source_entity + region name +
+                # optional placeholder/coaching message.
+                adapter_ctx["source_entity"] = getattr(ctx, "source", "") or ""
+                adapter_ctx["name"] = getattr(ctx.ctx_region, "name", "")
+                adapter_ctx["placeholder"] = getattr(ctx.ctx_region, "search_placeholder", "") or ""
+                adapter_ctx["coaching_message"] = (
+                    getattr(ctx.ctx_region, "coaching_message", "") or ""
+                )
+            elif display_upper == "TABBED_LIST":
+                # _build_tabbed_list prefers `source_tabs` (HTMX-driven
+                # lazy panels) which the runtime already computed
+                # upstream from the IR region's source declarations.
+                adapter_ctx["region_name"] = getattr(ctx.ctx_region, "name", "")
+                adapter_ctx["source_tabs"] = source_tabs
             elif display_upper == "ENTITY_CARD":
                 _card_cfg = getattr(ir_region, "entity_card_config", None)
                 if _card_cfg is not None:

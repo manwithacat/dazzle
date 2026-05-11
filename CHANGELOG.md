@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.47] - 2026-05-11
+
+### Changed
+
+- **Workspace region migration batch — 5 more kinds on typed path.** `detail`, `tree`, `diagram`, `search_box`, `tabbed_list` join the `_TYPED_REGION_DISPLAYS` whitelist. Each gets a dedicated `adapter_ctx` population branch threading the relevant pre-computed data through to the adapter builder (item + fields for detail, tree_items + display_key for tree, nodes + edges for diagram fallback, source_entity + placeholder for search_box, source_tabs for tabbed_list).
+- **10 of 26 workspace region kinds** now render via the typed-Fragment substrate. Region ledger now: cohort_strip + day_timeline + task_inbox + entity_card + progress + detail + tree + diagram + search_box + tabbed_list ✓.
+
+### Agent Guidance
+
+- **Region migration is mechanical now.** Each kind extends `_TYPED_REGION_DISPLAYS` by one tuple entry and adds a 4–6-line `adapter_ctx[...]` population branch reading from the already-computed locals in `workspace_rendering.py`. Remaining: grid, heatmap, sparkline, status_list, profile_card, funnel_chart, metrics, pivot_table, timeline, kanban, pipeline_steps, queue, histogram, action_grid, confirm_action_panel, list, line_chart, area_chart, bar_chart, bar_track, bullet, radar, box_plot. List + the four chart kinds are the heaviest because their builders have richer `ctx` contracts (sort/filter state, axis config, bucket ref resolution).
+- **Jinja partials stay on disk until both conditions hold**: (a) the display kind is on the typed whitelist AND (b) no test renders the Jinja partial directly. Sweeping `workspace/regions/` for direct render_fragment callers is the prerequisite for the deletion ship.
+
 ## [0.67.46] - 2026-05-11
 
 ### Changed
