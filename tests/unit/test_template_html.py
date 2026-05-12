@@ -119,33 +119,20 @@ class TestTemplateLinting:
 
 
 # Fragment templates — self-contained HTMX partials, good balance candidates.
+# Post-#1044: the parking-lot fragments (toast, alert_banner, steps_indicator,
+# skeleton_patterns) and `empty_state.html` / `bulk_actions.html` were retired.
 FRAGMENT_TEMPLATES = [
-    "fragments/toast.html",
-    "fragments/empty_state.html",
-    "fragments/alert_banner.html",
-    "fragments/steps_indicator.html",
-    "fragments/skeleton_patterns.html",
     "fragments/form_errors.html",
-    "fragments/bulk_actions.html",
 ]
 
 # Workspace region templates — where structural bugs are most likely.
 REGION_TEMPLATES = [
     "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
-    "workspace/regions/_typed_primitive.html",
 ]
 
 # Component templates — key structural pieces.
-COMPONENT_TEMPLATES = [
-    "components/modal.html",
-    "components/island.html",
-]
+# Post-#1044: `components/modal.html` + `components/island.html` retired.
+COMPONENT_TEMPLATES: list[str] = []
 
 
 # Minimal mock context that satisfies most templates' variable expectations.

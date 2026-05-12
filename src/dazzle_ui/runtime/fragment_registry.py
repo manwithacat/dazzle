@@ -1,44 +1,19 @@
 """Fragment registry for composable HTMX fragments.
 
-Provides a static registry of available fragment types so that agents
-and tooling can discover fragments without reading template files.
+Provides a static registry of the active framework fragments so that
+agents and tooling can discover them without reading template files.
 
-Fragments fall into two categories:
-
-1. **Active** — wired into a real runtime call site (template include
-   or direct Python render call). These are exercised whenever
-   the framework renders a page and their coverage is asserted by
-   ``dazzle coverage --fail-on-uncovered`` in CI.
-
-2. **Parking-lot primitives** — shipped as canonical renderers for
-   downstream consumers to opt into via surface config. They have a
-   registry entry so tooling can discover them, but nothing in the
-   framework runtime includes them by default. Listed in the
-   ``PARKING_LOT_FRAGMENTS`` set below and excluded from the coverage
-   requirement so the metric stays honest. A parking-lot fragment
-   graduates to "active" when a real include/render site lands — at
-   that point, remove it from ``PARKING_LOT_FRAGMENTS``.
+Post-#1044 (v0.67.90+): the parking-lot tier was retired entirely
+along with all 14 dormant Jinja templates that backed it. The remaining
+5 fragments are framework-internal — each is wired into a real Python
+renderer (form_renderer / detail_renderer / table_renderer) and the
+``.html`` template on disk is the historical Jinja shape kept for the
+parking-lot fragment test suite that gates the final ``jinja2`` drop.
 """
 
 from typing import Any
 
 FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
-    "search_results": {
-        "template": "fragments/search_results.html",
-        "params": [
-            "items",
-            "display_key",
-            "value_key",
-            "secondary_key",
-            "field_name",
-            "query",
-            "min_chars",
-            "select_endpoint",
-        ],
-        "emits": [],
-        "listens": [],
-        "description": "Result items returned by the search endpoint.",
-    },
     "table_rows": {
         "template": "fragments/table_rows.html",
         "params": [
@@ -73,45 +48,6 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "listens": [],
         "description": "Validation error alert with single or multiple error messages.",
     },
-    # --- Parking-lot primitives ------------------------------------------
-    # Canonical renderers for cross-cutting UI primitives. Consumers
-    # include these by name via the registry; include sites in base
-    # layouts and region templates opt them into specific surfaces.
-    "accordion": {
-        "template": "fragments/accordion.html",
-        "params": ["sections"],
-        "emits": [],
-        "listens": [],
-        "description": "Collapsible sections — expand/collapse groups of content.",
-    },
-    "alert_banner": {
-        "template": "fragments/alert_banner.html",
-        "params": ["message", "level"],
-        "emits": [],
-        "listens": [],
-        "description": "Full-width alert banner for app-level flash messages.",
-    },
-    "breadcrumbs": {
-        "template": "fragments/breadcrumbs.html",
-        "params": ["crumbs"],
-        "emits": [],
-        "listens": [],
-        "description": "Breadcrumb navigation trail for multi-level pages.",
-    },
-    "command_palette": {
-        "template": "fragments/command_palette.html",
-        "params": ["actions"],
-        "emits": [],
-        "listens": [],
-        "description": "Cmd+K spotlight-style search and action launcher.",
-    },
-    "context_menu": {
-        "template": "fragments/context_menu.html",
-        "params": ["menu_id", "items"],
-        "emits": [],
-        "listens": [],
-        "description": "Right-click triggered menu for row/field-level actions.",
-    },
     "detail_fields": {
         "template": "fragments/detail_fields.html",
         "params": ["item", "fields"],
@@ -119,68 +55,12 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "listens": [],
         "description": "Definition-list renderer for detail/view surfaces.",
     },
-    "popover": {
-        "template": "fragments/popover.html",
-        "params": ["trigger_text", "position"],
-        "emits": [],
-        "listens": [],
-        "description": "Anchored floating content panel (click-triggered).",
-    },
-    "select_result": {
-        "template": "fragments/select_result.html",
-        "params": ["display_val", "value"],
-        "emits": [],
-        "listens": [],
-        "description": "OOB swap fragment for autofill after search selection.",
-    },
-    "skeleton_patterns": {
-        "template": "fragments/skeleton_patterns.html",
-        "params": ["variant"],
-        "emits": [],
-        "listens": [],
-        "description": "Loading-state skeleton shapes for HTMX in-flight requests.",
-    },
-    "slide_over": {
-        "template": "fragments/slide_over.html",
-        "params": ["panel_id", "width", "title"],
-        "emits": [],
-        "listens": [],
-        "description": "Right-edge slide-out panel with focus trap for deep edits.",
-    },
-    "steps_indicator": {
-        "template": "fragments/steps_indicator.html",
-        "params": ["steps", "current_step"],
-        "emits": [],
-        "listens": [],
-        "description": "Visual progress indicator for multi-step experience flows.",
-    },
     "table_sentinel": {
         "template": "fragments/table_sentinel.html",
         "params": ["table"],
         "emits": [],
         "listens": [],
         "description": "Infinite-scroll trigger row for paginated tables.",
-    },
-    "toast": {
-        "template": "fragments/toast.html",
-        "params": ["message", "level"],
-        "emits": [],
-        "listens": [],
-        "description": "Auto-dismissing notification emitted via with_toast() helper.",
-    },
-    "toggle_group": {
-        "template": "fragments/toggle_group.html",
-        "params": ["name", "options", "value", "multiple"],
-        "emits": [],
-        "listens": [],
-        "description": "Segmented button group — exclusive or multi-select radiogroup.",
-    },
-    "tooltip_rich": {
-        "template": "fragments/tooltip_rich.html",
-        "params": ["trigger_text", "content"],
-        "emits": [],
-        "listens": [],
-        "description": "HTML-content tooltip with configurable show/hide delays.",
     },
 }
 
@@ -195,29 +75,7 @@ def get_fragment_info(name: str) -> dict[str, Any] | None:
     return FRAGMENT_REGISTRY.get(name)
 
 
-# The 12 canonical UI primitives shipped by the framework for downstream
-# consumers to opt into — they have a template + registry entry but no
-# runtime caller wires them in by default. Kept explicit so the coverage
-# tool can exclude them from the "every artefact must have a live
-# consumer" gate without re-hunting include sites. Audit source:
-# grep for ``fragments/<name>`` excluding fragment_registry.py + the
-# fragment's own file. Re-run after any template edit and drop names
-# from this set as real call sites land. See #794 post-mortem item #91.
-PARKING_LOT_FRAGMENTS: frozenset[str] = frozenset(
-    {
-        "accordion",
-        "alert_banner",
-        "breadcrumbs",
-        "command_palette",
-        "context_menu",
-        "popover",
-        "search_results",
-        "select_result",
-        "skeleton_patterns",
-        "slide_over",
-        "steps_indicator",
-        "toast",
-        "toggle_group",
-        "tooltip_rich",
-    }
-)
+# Post-#1044: the parking-lot tier is empty. The frozenset stays so
+# existing imports keep working; cli/coverage.py still references it
+# to compute the "every counted fragment has a real caller" gate.
+PARKING_LOT_FRAGMENTS: frozenset[str] = frozenset()

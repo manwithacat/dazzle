@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.90] - 2026-05-12
+
+### Removed
+
+- **19 dormant Jinja templates** — closes Phase A of [#1044](https://github.com/manwithacat/dazzle/issues/1044). The parking-lot fragment tier was retired entirely along with the dormant Alpine primitives and `components/modal.html` / `components/island.html`:
+  - `fragments/accordion.html`, `alert_banner.html`, `breadcrumbs.html`, `command_palette.html`, `context_menu.html`, `popover.html`, `search_results.html`, `select_result.html`, `skeleton_patterns.html`, `slide_over.html`, `steps_indicator.html`, `toast.html`, `toggle_group.html`, `tooltip_rich.html` (14)
+  - `components/alpine/confirm_dialog.html`, `dropdown.html`, `slide_over.html` (3)
+  - `components/modal.html`, `components/island.html` (2)
+  - The `components/` and `components/alpine/` directories are now empty and removed.
+- **6 dedicated test files** for the parking-lot tier — `test_tooltip_fragment.py`, `test_phase2_fragments.py`, `test_phase3_fragments.py`, `test_toggle_group_fragment.py`, `test_parking_lot_primitives.py`, `test_template_xfor_alpine_children.py` (~1,149 lines)
+- **3 large class sections in `test_workspace_routes.py`** — `TestAlpineDropdownComponent`, `TestSearchResultsFragment` / `TestSelectResultFragment` (Cycle 288), `TestStepsIndicator` (Cycle 296) — 592 lines deleted
+- **`TestIslandTemplate`** in `test_island_runtime.py` — tested the now-deleted `components/island.html`
+- **Parking-lot tier in `FRAGMENT_REGISTRY`** — 14 entries removed from the registry. `PARKING_LOT_FRAGMENTS = frozenset()` (kept as empty set so existing imports compile; `cli/coverage.py` still references it as the gate's exclusion set).
+
+### Changed
+
+- **`tests/unit/test_fragment_registry.py`** — `EXPECTED_FRAGMENTS` trimmed to the 6 remaining active framework fragments (`table_rows`, `table_pagination`, `inline_edit`, `form_errors`, `detail_fields`, `table_sentinel`). New `test_parking_lot_is_empty_post_1044` guards against re-introduction.
+- **`tests/unit/test_template_orphan_scan.py::INDIVIDUAL_ALLOWLIST`** — entries for the deleted dormant Alpine primitives and `components/modal.html` / `components/island.html` removed.
+- **`tests/unit/test_template_html.py`** — `FRAGMENT_TEMPLATES`, `REGION_TEMPLATES`, `COMPONENT_TEMPLATES` trimmed to the surviving set.
+
+### Progress on #1042 (drop jinja2 umbrella) + #1044 (template inventory triage)
+
+`src/dazzle_ui/templates/` now contains ~18 templates (was 37 pre-ship). Phase B work to retire the remaining and drop `jinja2`:
+- 3 analytics partials (`site/includes/analytics/gtm_head.html`, `gtm_noscript.html`, `plausible_head.html`) — port to Python alongside the consent banner work in #1051
+- 3 workspace parity templates (`workspace/_content.html`, `_card_picker.html`, `regions/_typed_primitive.html`) — referenced by `test_workspace_*.py` parity tests
+- 4 macro templates (`macros/a11y.html`, `locale_switcher.html`, `region_wrapper.html`, `status_badge.html`) — adopter-opt-in helpers
+- 6 active fragment templates (`fragments/*` — `table_rows`, `table_pagination`, `inline_edit`, `form_errors`, `detail_fields`, `table_sentinel`) — backstop tests for the Python `*_renderer.py` ports; deletable when those parity tests retire
+- `base.html` + `layouts/app_shell.html` — vestigial extends anchors for the (now-retired) override_registry
+- `get_jinja_env()` + `render_fragment` helper in `template_renderer.py` + theme globals in `system_routes.py` / `combined_server.py` / `hot_reload.py` — become dead code after the above
+- Drop `jinja2>=3.0` from `pyproject.toml`
+
+### Agent Guidance
+
+- The framework no longer ships any "parking-lot" UI primitives waiting for adopter opt-in. Custom UI patterns (toasts, modals, tooltips, command palettes) must be composed by the adopter using typed Page / Fragment primitives or shipped as bespoke renderers.
+
 ## [0.67.89] - 2026-05-12
 
 ### Removed

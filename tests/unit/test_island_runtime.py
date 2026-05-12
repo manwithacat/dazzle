@@ -152,38 +152,6 @@ class TestIslandLoaderJS:
         assert "WeakSet" in content
 
 
-class TestIslandTemplate:
-    """Tests for the island mount point template."""
-
-    def test_template_file_exists(self):
-        """Test that island.html template exists."""
-        tpl_path = (
-            Path(__file__).parent.parent.parent
-            / "src"
-            / "dazzle_ui"
-            / "templates"
-            / "components"
-            / "island.html"
-        )
-        assert tpl_path.exists(), f"Island template not found at {tpl_path}"
-
-    def test_template_has_data_attributes(self):
-        """Test that template contains data-island attributes."""
-        tpl_path = (
-            Path(__file__).parent.parent.parent
-            / "src"
-            / "dazzle_ui"
-            / "templates"
-            / "components"
-            / "island.html"
-        )
-        content = tpl_path.read_text()
-        assert "data-island=" in content
-        assert "data-island-src=" in content
-        assert "data-island-props=" in content
-        assert "data-island-api-base=" in content
-
-
 class TestIslandRoutes:
     """Tests for island API route generation."""
 

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from dazzle_ui.runtime.fragment_registry import (
     FRAGMENT_REGISTRY,
+    PARKING_LOT_FRAGMENTS,
     get_fragment_info,
     get_fragment_registry,
 )
@@ -11,28 +12,12 @@ from dazzle_ui.runtime.fragment_registry import (
 TEMPLATES_ROOT = Path(__file__).resolve().parents[2] / "src" / "dazzle_ui" / "templates"
 
 EXPECTED_FRAGMENTS = [
-    "search_results",
     "table_rows",
     "table_pagination",
     "inline_edit",
     "form_errors",
-    # Parking-lot primitives registered in v0.57.35 so every fragment
-    # under templates/fragments/ has a discoverable entry here.
-    "accordion",
-    "alert_banner",
-    "breadcrumbs",
-    "command_palette",
-    "context_menu",
     "detail_fields",
-    "popover",
-    "select_result",
-    "skeleton_patterns",
-    "slide_over",
-    "steps_indicator",
     "table_sentinel",
-    "toast",
-    "toggle_group",
-    "tooltip_rich",
 ]
 
 
@@ -51,7 +36,7 @@ class TestFragmentRegistry:
             assert isinstance(info["params"], list), f"{name}: params not a list"
 
     def test_get_fragment_info_found(self) -> None:
-        info = get_fragment_info("search_results")
+        info = get_fragment_info("table_rows")
         assert info is not None
         assert "params" in info
 
@@ -61,6 +46,12 @@ class TestFragmentRegistry:
     def test_fragment_count(self) -> None:
         registry = get_fragment_registry()
         assert len(registry) == len(EXPECTED_FRAGMENTS)
+
+    def test_parking_lot_is_empty_post_1044(self) -> None:
+        """Post-#1044: the parking-lot tier is retired. Adding a new
+        parking-lot fragment requires re-introducing Jinja2 — gate it
+        explicitly so the regression is visible."""
+        assert PARKING_LOT_FRAGMENTS == frozenset()
 
     def test_every_template_resolves_to_disk(self) -> None:
         """Every registry entry's ``template`` path must exist on disk.

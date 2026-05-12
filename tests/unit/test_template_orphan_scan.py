@@ -62,31 +62,12 @@ INDIVIDUAL_ALLOWLIST: dict[str, str] = {
         "Vestigial extends anchor for override_registry consumers; "
         "render_in_app_shell retired in #1040 / v0.67.84"
     ),
-    # Dormant Alpine primitives from PR #600 — awaiting user direction.
-    # See dev_docs/framework-gaps/2026-04-20-pr600-dormant-alpine-primitives.md
-    # (cycles 286+287 discovery).
-    "components/alpine/confirm_dialog.html": (
-        "Dormant Alpine primitive; PR #600; cycle 287 gap doc"
-    ),
-    "components/alpine/dropdown.html": (
-        "Dormant Alpine primitive; PR #600; cycle 286 gap doc. "
-        "Self-reference in Usage docstring ({# Usage: %}) was hiding "
-        "this from the scan until cycle 304 fixed the comment-strip."
-    ),
-    "components/alpine/slide_over.html": (
-        "Dormant Alpine primitive; was opt-in via `table.slide_over` "
-        "in the legacy filterable_table.html chrome (v0.67.76 retired). "
-        "Kept on disk for adopter-opt-in detail-drawer use."
-    ),
-    # Dormant building-blocks with ux-architect contracts but no
-    # production consumer. Same class as the PR #600 primitives.
-    "components/modal.html": (
-        "Dormant building-block with contract (modal.md); no production consumer"
-    ),
-    "components/island.html": (
-        "Dormant building-block with contract (island.md, UX-059); "
-        "IslandContext dataclass wired but no template include"
-    ),
+    # Post-#1044 (v0.67.90): the dormant Alpine primitives
+    # (confirm_dialog, dropdown, slide_over) and `components/modal.html`
+    # / `components/island.html` building-blocks were retired entirely
+    # along with the parking-lot fragment tier — the dazzle-drop-jinja2
+    # push needs every framework template gone, and these had no
+    # production consumer.
     # Phase 4 app-shell retirement (v0.67.56) — a11y skip-link macro
     # used to be imported by layouts/app_shell.html; after the shell was
     # stubbed down to a vestigial extends anchor, the import is gone but
