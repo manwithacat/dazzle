@@ -723,69 +723,40 @@ def render_page(
     content_only: bool = False,
     inner_html: str | None = None,
 ) -> str:
-    """
-    Render a full page from a PageContext.
+    """Render a full page from a PageContext.
 
-    Renders the component template, then wraps it in the layout using
-    a dynamically constructed wrapper template that extends the layout
-    and injects the rendered content into the content block.
+    Post-#1039 (Phase 4): every framework surface dispatches via
+    `_render_typed_body` — the typed renderers (form / detail / table /
+    pdf_viewer) emit HTML directly without touching the Jinja env. The
+    layout wrapper delegates to the typed-Fragment Page builder.
 
     Args:
         context: Page context with all data needed for rendering.
-        partial: When True, injects ``_htmx_partial=True`` into template
-            variables so ``base.html`` omits the ``<html><head>`` wrapper.
-        content_only: When True, renders only the content template without
+        partial: When True, ``content_only`` semantics with htmx-target
+            framing. Same shape as ``content_only=True`` since the
+            layout chrome is no longer injected here.
+        content_only: When True, returns just the rendered body without
             the layout wrapper — used for htmx fragment targeting.
-        inner_html: When provided, skip rendering the content template and
-            use this pre-rendered HTML as the content block (Plan 3 Task 4
-            — dispatch via the renderer registry). The provided HTML is
-            inserted verbatim into the layout's ``content`` block; callers
-            are responsible for any escaping. With ``content_only=True``
-            this short-circuits to returning ``inner_html`` directly.
+        inner_html: When provided, skip the typed-body dispatch and use
+            this pre-rendered HTML as the content block (renderer
+            registry Plan 3 Task 4). Inserted verbatim; callers are
+            responsible for any escaping.
 
     Returns:
         Rendered HTML string.
     """
-    env = get_jinja_env()
-
-    # Build template variables from context
-    template_vars = context.model_dump()
-    if partial:
-        template_vars["_htmx_partial"] = True
-
     if inner_html is not None:
-        # Pre-rendered content path (Plan 3 Task 4): the renderer registry
-        # produced the inner HTML. Skip the Jinja content-template render
-        # and use what was supplied.
         rendered_content = inner_html
-    elif not context.template:
-        # Phase 4 (v0.67.79): typed-substrate dispatch. The compiler
-        # sets PageContext.template="" for surfaces that have moved to
-        # the typed renderers (form/detail/table since v0.67.74–v0.67.76).
-        rendered_content = _render_typed_body(context)
     else:
-        # Render the content template first (standalone fragment).
-        # Surviving template-driven path: pdf_viewer_page (#1045 will
-        # retire this).
-        content_template = env.get_template(context.template)
-        rendered_content = content_template.render(**template_vars)  # nosemgrep
+        rendered_content = _render_typed_body(context)
 
     # Fragment targeting: return just the content, no layout wrapper.
-    # `partial=True` callers (htmx-style swaps) get the same shape as
-    # `content_only=True` since the layout chrome is no longer
-    # injected here (Phase 4 v0.67.44 — typed-Fragment Page does the
-    # chrome at the caller's level, and htmx callers swap into the
-    # already-rendered chrome on the page).
     if content_only or partial:
         return rendered_content
 
     # Phase 4 app-shell migration (v0.67.44): layout wrap delegates to
-    # the typed-Fragment dispatcher. `layouts/app_shell.html` +
-    # `layouts/single_column.html` are now orphaned Jinja templates
-    # (kept on disk for downstream apps that historically extended
-    # them via custom routes; framework code paths no longer touch
-    # them). `context.layout == "single_column"` → bare typed Page
-    # (no sidebar); anything else → typed AppShell.
+    # the typed-Fragment dispatcher. `context.layout == "single_column"`
+    # → bare typed Page (no sidebar); anything else → typed AppShell.
     from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
 
     return dispatch_render_page(

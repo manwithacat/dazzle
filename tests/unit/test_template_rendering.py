@@ -346,27 +346,6 @@ class TestRendering:
             ),
         )
 
-    @pytest.mark.skip(
-        reason="v0.67.76 retired components/filterable_table.html — render_page "
-        "no longer dispatches on PageContext.template for list surfaces. "
-        "Tracked by issue #1039."
-    )
-    def test_render_page_produces_full_html(self) -> None: ...
-
-    @pytest.mark.skip(
-        reason="v0.67.76 retired components/filterable_table.html — same root "
-        "cause. Tracked by issue #1039."
-    )
-    def test_nav_links_render_in_typed_sidebar(self) -> None: ...
-
-    @pytest.mark.skip(
-        reason="v0.67.76 retired components/filterable_table.html — render_page "
-        "no longer dispatches on PageContext.template for list surfaces; the "
-        "table renderer (`table_renderer.render_filterable_table`) is the "
-        "Python entry point. Tracked by issue #1039 (render_page typed-Page port)."
-    )
-    def test_render_page_content_only(self) -> None: ...
-
     def test_render_fragment_no_layout(self) -> None:
         """Fragments should NOT include DOCTYPE or full layout."""
         fragment = render_fragment(
@@ -459,28 +438,6 @@ class TestRendering:
         )
         assert "bob@example.com" in fragment
         assert "{'id'" not in fragment
-
-    @pytest.mark.skip(
-        reason="v0.67.74 retired components/form.html — form rendering goes "
-        "through `form_renderer.render_form_field` (inline Python). "
-        "render_page no longer handles form surfaces via PageContext.template; "
-        "form rendering is owned by experience_renderer + future typed "
-        "form-surface path."
-    )
-    def test_render_form_page(self) -> None: ...
-
-    @pytest.mark.skip(
-        reason="v0.67.76 retired components/filterable_table.html — same root "
-        "cause as test_render_page_content_only above. Tracked by issue #1039."
-    )
-    def test_render_page_partial(self) -> None: ...
-
-    @pytest.mark.skip(
-        reason="v0.67.75 retired components/detail_view.html — detail rendering "
-        "goes through `dazzle_ui.runtime.detail_renderer.render_detail_view` "
-        "(inline Python). render_page no longer dispatches on PageContext.template."
-    )
-    def test_render_detail_page(self) -> None: ...
 
 
 # ===================================================================

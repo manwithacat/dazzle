@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.83] - 2026-05-12
+
+### Changed
+
+- **`render_page` Jinja content-template branch removed** — closes [#1039](https://github.com/manwithacat/dazzle/issues/1039). With #1045 (pdf_viewer) and #1046 (SurfaceMode.REVIEW) shipped, `PageContext.template` is `""` for every framework surface. The dead `elif not context.template / else` branch is gone; `render_page` now just dispatches to `_render_typed_body(context)` (or uses pre-rendered `inner_html`), then delegates layout to `dispatch_render_page`. The unconditional `get_jinja_env()` call at the top is gone — `render_fragment` and `render_surface` still call it lazily for downstream Jinja-fragment callers.
+
+### Removed
+
+- **6 stale skipped tests** in `tests/unit/test_template_rendering.py` — placeholder stubs (`def test_…() -> None: ...`) that were pinned to #1039 for future deletion (test_render_page_produces_full_html, test_nav_links_render_in_typed_sidebar, test_render_page_content_only, test_render_form_page, test_render_page_partial, test_render_detail_page). The behaviours they would have exercised are covered by the new typed-renderer test suites (test_form_renderer, test_detail_renderer, test_table_renderer, test_pdf_viewer_component).
+
+### Notes on remaining Phase 4 work
+
+- **`base.html` + `layouts/app_shell.html` kept on disk** — they are the override-extension affordance for downstream adopters via `override_registry` (`{% extends "dz://layouts/app_shell.html" %}`). Their fate is tracked under #1040 (decide the Jinja-extends downstream contract) and #1044 (template inventory triage).
+- **jinja2 dependency stays** until #1040 closes — `render_in_app_shell` in `dazzle_back.runtime.shell` is the next blocker for #1042 (drop jinja2 umbrella).
+
+### Agent Guidance
+
+- `render_page` no longer touches the Jinja env. Surfaces dispatch through `_render_typed_body` based on which content context is set (`form` / `pdf_viewer` / `detail` / `table`). Adding a new typed surface = add a renderer + a branch in `_render_typed_body` + leave `PageContext.template = ""` in the compiler.
+
 ## [0.67.82] - 2026-05-12
 
 ### Removed
