@@ -50,7 +50,7 @@ entries:
         description: Default status value
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: enum[new,open,pending,resolved,closed]={{ default_value }}"
+      body: "$field_name: enum[new,open,pending,resolved,closed]=$default_value"
     metadata:
       stability: stable
       source: agent
@@ -80,7 +80,7 @@ entries:
         description: Default priority value
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: enum[low,medium,high,urgent]={{ default_value }}"
+      body: "$field_name: enum[low,medium,high,urgent]=$default_value"
     metadata:
       stability: stable
       source: agent
@@ -109,7 +109,7 @@ entries:
         description: Whether the field is required
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: ref User{% if required %} required{% endif %}"
+      body: "$field_name: ref User required"
     metadata:
       stability: stable
       source: agent
@@ -139,7 +139,7 @@ entries:
         description: Whether the field is required
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: ref Ticket{% if required %} required{% endif %}"
+      body: "$field_name: ref Ticket required"
     metadata:
       stability: stable
       source: agent
@@ -164,7 +164,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        assigned_to: ref User{% if user_required %} required{% endif %}
+        assigned_to: ref User required
         assigned_at: datetime optional
     metadata:
       stability: stable
@@ -225,9 +225,9 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
-          {{ parent_field }}: ref {{ parent_entity }} required
+          $parent_field: ref $parent_entity required
           author: ref User required
           content: text required
           created_at: datetime auto_add
@@ -257,7 +257,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
           title: str(200) required
           description: text required
@@ -303,33 +303,33 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_list "$entity_name List":
+          uses entity $entity_name
           mode: list
 
-          section main "{{ entity_name }}s":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_names":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_detail "$entity_name Detail":
+          uses entity $entity_name
           mode: view
 
-          section main "{{ entity_name }} Details":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_name Details":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Create $entity_name":
+          uses entity $entity_name
           mode: create
 
-          section main "New {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "New $entity_name":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_edit "Edit $entity_name":
+          uses entity $entity_name
           mode: edit
 
-          section main "Edit {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "Edit $entity_name":
+            field $title_field "${title_field_title}"
     metadata:
       stability: stable
       source: agent
@@ -355,7 +355,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ surface_name }} "Ticket Dashboard":
+        surface $surface_name "Ticket Dashboard":
           uses entity Ticket
           mode: list
 
@@ -388,7 +388,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ surface_name }} "Ticket Details":
+        surface $surface_name "Ticket Details":
           uses entity Ticket
           mode: view
 
@@ -435,8 +435,8 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_create "Add Comment":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Add Comment":
+          uses entity $entity_name
           mode: create
 
           section main "New Comment":
@@ -469,7 +469,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        experience {{ experience_name }} "Ticket Lifecycle":
+        experience $experience_name "Ticket Lifecycle":
           step create_ticket "Create Ticket":
             surface ticket_create
 

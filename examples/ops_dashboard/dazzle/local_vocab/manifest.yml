@@ -51,7 +51,7 @@ entries:
         description: Default status value
     expansion:
       language: dazzle-core-dsl
-      body: "status: enum[healthy,degraded,critical,offline]={{ default_value }}"
+      body: "status: enum[healthy,degraded,critical,offline]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -76,7 +76,7 @@ entries:
         description: Default service type
     expansion:
       language: dazzle-core-dsl
-      body: "service_type: enum[web,api,database,cache,queue]={{ default_value }}"
+      body: "service_type: enum[web,api,database,cache,queue]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -100,7 +100,7 @@ entries:
         description: Default severity value
     expansion:
       language: dazzle-core-dsl
-      body: "severity: enum[low,medium,high,critical]={{ default_value }}"
+      body: "severity: enum[low,medium,high,critical]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -176,7 +176,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
           name: str(200) required
           service_type: enum[web,api,database,cache,queue]=web
@@ -217,9 +217,9 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
-          system: ref {{ system_entity }} required
+          system: ref $system_entity required
           severity: enum[low,medium,high,critical]=low
           message: str(500) required
           triggered_at: datetime auto_add
@@ -257,29 +257,29 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_list "$entity_name List":
+          uses entity $entity_name
           mode: list
-          section main "{{ entity_name }}s":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_names":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_detail "$entity_name Detail":
+          uses entity $entity_name
           mode: view
-          section main "{{ entity_name }} Details":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_name Details":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Create $entity_name":
+          uses entity $entity_name
           mode: create
-          section main "New {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "New $entity_name":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_edit "Edit $entity_name":
+          uses entity $entity_name
           mode: edit
-          section main "Edit {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "Edit $entity_name":
+            field $title_field "${title_field_title}"
     metadata:
       stability: stable
       source: user
@@ -305,7 +305,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        workspace {{ workspace_name }} "Command Center":
+        workspace $workspace_name "Command Center":
           purpose: "Real-time operations monitoring and incident response"
           stage: "command_center"
 

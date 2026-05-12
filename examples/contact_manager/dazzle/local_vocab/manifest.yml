@@ -57,8 +57,8 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        first_name: str({{ first_max_length }}) required
-        last_name: str({{ last_max_length }}) required
+        first_name: str($first_max_length) required
+        last_name: str($last_max_length) required
     metadata:
       stability: stable
       source: user
@@ -89,7 +89,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        email: email{% if email_unique %} unique{% endif %}{% if email_required %} required{% endif %}
+        email: email unique required
         phone: str(20)
     metadata:
       stability: stable
@@ -121,8 +121,8 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        company: str({{ company_max_length }})
-        job_title: str({{ title_max_length }})
+        company: str($company_max_length)
+        job_title: str($title_max_length)
     metadata:
       stability: stable
       source: user
@@ -146,7 +146,7 @@ entries:
         description: Name of the favorite field
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: bool=false"
+      body: "$field_name: bool=false"
     metadata:
       stability: stable
       source: user
@@ -178,29 +178,29 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_list "$entity_name List":
+          uses entity $entity_name
           mode: list
-          section main "{{ entity_name }}s":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_names":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_detail "$entity_name Detail":
+          uses entity $entity_name
           mode: view
-          section main "{{ entity_name }} Details":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_name Details":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Create $entity_name":
+          uses entity $entity_name
           mode: create
-          section main "New {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "New $entity_name":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_edit "Edit $entity_name":
+          uses entity $entity_name
           mode: edit
-          section main "Edit {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "Edit $entity_name":
+            field $title_field "${title_field_title}"
     metadata:
       stability: stable
       source: user
@@ -230,7 +230,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
           first_name: str(100) required
           last_name: str(100) required

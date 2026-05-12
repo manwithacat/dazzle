@@ -51,7 +51,7 @@ entries:
         description: Default device status
     expansion:
       language: dazzle-core-dsl
-      body: "status: enum[prototype,active,recalled,retired]={{ default_value }}"
+      body: "status: enum[prototype,active,recalled,retired]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -76,7 +76,7 @@ entries:
         description: Default issue status
     expansion:
       language: dazzle-core-dsl
-      body: "status: enum[open,triaged,in_progress,fixed,verified,closed]={{ default_value }}"
+      body: "status: enum[open,triaged,in_progress,fixed,verified,closed]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -101,7 +101,7 @@ entries:
         description: Default severity value
     expansion:
       language: dazzle-core-dsl
-      body: "severity: enum[low,medium,high,critical]={{ default_value }}"
+      body: "severity: enum[low,medium,high,critical]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -126,7 +126,7 @@ entries:
         description: Default category
     expansion:
       language: dazzle-core-dsl
-      body: "category: enum[battery,connectivity,mechanical,overheating,crash,other]={{ default_value }}"
+      body: "category: enum[battery,connectivity,mechanical,overheating,crash,other]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -151,7 +151,7 @@ entries:
         description: Default skill level
     expansion:
       language: dazzle-core-dsl
-      body: "skill_level: enum[casual,enthusiast,engineer]={{ default_value }}"
+      body: "skill_level: enum[casual,enthusiast,engineer]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -176,7 +176,7 @@ entries:
         description: Default environment
     expansion:
       language: dazzle-core-dsl
-      body: "environment: enum[indoor,outdoor,vehicle,industrial,other]={{ default_value }}"
+      body: "environment: enum[indoor,outdoor,vehicle,industrial,other]=$default_value"
     metadata:
       stability: stable
       source: user
@@ -223,7 +223,7 @@ entries:
         description: Name of the photo URL field
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: str(500)"
+      body: "$field_name: str(500)"
     metadata:
       stability: stable
       source: user
@@ -248,7 +248,7 @@ entries:
         description: Name of the active flag field
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: bool=true"
+      body: "$field_name: bool=true"
     metadata:
       stability: stable
       source: user
@@ -278,7 +278,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
           name: str(200) required
           model: str(200) required
@@ -315,7 +315,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
           name: str(200) required
           email: str(255) required unique
@@ -350,7 +350,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "Issue Report":
+        entity $entity_name "Issue Report":
           id: uuid pk
           device_id: uuid required
           reported_by_id: uuid required
@@ -390,7 +390,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "Test Session":
+        entity $entity_name "Test Session":
           id: uuid pk
           device_id: uuid required
           tester_id: uuid required
@@ -433,29 +433,29 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_list "$entity_name List":
+          uses entity $entity_name
           mode: list
-          section main "{{ entity_name }}s":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_names":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_detail "$entity_name Detail":
+          uses entity $entity_name
           mode: view
-          section main "{{ entity_name }} Details":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_name Details":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Create $entity_name":
+          uses entity $entity_name
           mode: create
-          section main "New {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "New $entity_name":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_edit "Edit $entity_name":
+          uses entity $entity_name
           mode: edit
-          section main "Edit {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "Edit $entity_name":
+            field $title_field "${title_field_title}"
     metadata:
       stability: stable
       source: user

@@ -6,9 +6,8 @@ Expands vocabulary references to core DSL using template substitution.
 
 import re
 from pathlib import Path
+from string import Template
 from typing import Any
-
-from jinja2 import BaseLoader, Environment, StrictUndefined, TemplateError
 
 from .errors import DazzleError
 from .vocab import VocabEntry, VocabManifest, VocabParameter
@@ -35,20 +34,19 @@ class VocabExpander:
             manifest: VocabManifest containing vocabulary entries
         """
         self.manifest = manifest
-        # autoescape=False is safe here: we generate DSL code, not HTML
-        self.jinja_env = Environment(  # nosec B701
-            loader=BaseLoader(),
-            undefined=StrictUndefined,  # Raise error on undefined variables
-            trim_blocks=True,
-            lstrip_blocks=True,
-            autoescape=False,  # Explicit: generating code, not HTML
-        )
 
     def expand_entry(
         self, entry_id: str, params: dict[str, Any], visited: set[str] | None = None
     ) -> str:
         """
         Expand a vocabulary entry with given parameters.
+
+        Post-#1047 (v0.67.89+): templates use stdlib ``string.Template``
+        substitution (``$var`` / ``${var}``) — Jinja2 filters
+        (``| lower``, ``| title``), conditionals (``{% if %}``), and
+        loops (``{% for %}``) are no longer supported. Vocab authors
+        must pre-process values in the calling DSL or split conditional
+        macros into separate entries.
 
         Args:
             entry_id: ID of vocabulary entry to expand
@@ -79,11 +77,11 @@ class VocabExpander:
         # Validate and prepare parameters
         prepared_params = self._prepare_parameters(entry, params)
 
-        # Expand template
+        # Expand template via stdlib string.Template.
         try:
-            template = self.jinja_env.from_string(entry.expansion["body"])
-            expanded: str = template.render(**prepared_params)
-        except TemplateError as e:
+            template = Template(entry.expansion["body"])
+            expanded: str = template.substitute(**prepared_params)
+        except (KeyError, ValueError) as e:
             raise ExpansionError(f"Template expansion failed for '{entry_id}': {e}")
         except Exception as e:
             raise ExpansionError(f"Unexpected error expanding '{entry_id}': {e}")

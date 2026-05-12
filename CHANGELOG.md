@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.89] - 2026-05-12
+
+### Removed
+
+- **`jinja2` import retired from `src/dazzle/core/expander.py`** — closes [#1047](https://github.com/manwithacat/gh-issue/1047). DSL vocab macros now expand via stdlib `string.Template` (`$var` / `${var}` syntax) instead of Jinja2 (`{{ var }}`).
+
+### Changed
+
+- **`VocabExpander.expand_entry`** rewritten: `Template(entry.expansion["body"]).substitute(**prepared_params)`. The `Environment(loader=BaseLoader(), undefined=StrictUndefined, ...)` setup is gone. Missing parameters raise `KeyError`, which the expander wraps as `"Template expansion failed for '<entry>': ..."`.
+- **Example vocab manifest syntax** — converted across all five example apps. Pattern translations:
+  - `{{ var }}` → `$var`
+  - `{{ var | lower }}` → `${var_lower}` (caller must pre-lower the value)
+  - `{{ var | title }}` → `${var_title}` (caller must pre-title the value)
+  - `{{ var | join(',') }}` → `${var_joined}` (caller pre-joins)
+  - `{% if cond %}X{% endif %}` → block markers stripped (manifests are demo content; production vocab post-#1047 must split conditional macros into separate entries)
+- Five manifests updated: `contact_manager`, `fieldtest_hub`, `ops_dashboard`, `simple_task`, `support_tickets`. Net 22 `{% ... %}` block markers stripped.
+
+### Breaking Change Notice
+
+Downstream vocab manifest authors must rewrite Jinja-style entries to use stdlib `string.Template` syntax. Jinja2 filters, conditionals, and loops in macro bodies are no longer supported. Filter behaviour (e.g. `| lower`) must be applied by the caller before the parameter reaches `expand_entry`. Conditional inclusions must be expressed as separate macros.
+
+Note: zero `.dsl` files in `examples/` or `fixtures/` actually invoked vocab via `@use` directives prior to this change, so the runtime migration impact is bounded.
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+All 5 sub-issues now closed (#1047, #1048, #1049, #1050, #1051). Production source code no longer imports `jinja2` anywhere except the one remaining test-only path:
+
+- `src/dazzle_ui/runtime/template_renderer.py` — framework-internal `render_fragment` helper for the parking-lot fragment test suite (~284 references across 23 test files). Goes away with #1044 (template inventory triage) which retires the parking-lot fragments as a group.
+
+After #1044 closes, the final steps to drop `jinja2>=3.0` from `pyproject.toml` are:
+1. Delete `render_fragment` and `get_jinja_env` from `template_renderer.py`
+2. Remove the theme globals (`_use_cdn`, `_app_theme_*`, `_feedback_widget_enabled`) from `system_routes.py` / `combined_server.py` / `hot_reload.py` — they become dead code
+3. Drop `from jinja2 import ...` and the helper module entirely
+4. Remove `jinja2>=3.0` from `pyproject.toml` `[project].dependencies`
+
+### Agent Guidance
+
+- DSL vocab `expansion.body` templates use stdlib `string.Template` syntax: `$var` or `${var}`. Need filter behaviour? Compute the value before passing it as a parameter (e.g. pass `entity_name_lower` instead of relying on `{{ entity_name | lower }}`). Need conditionals? Split the macro into separate entries (e.g. `email_unique_required` vs. `email_optional`).
+
 ## [0.67.88] - 2026-05-12
 
 ### Removed

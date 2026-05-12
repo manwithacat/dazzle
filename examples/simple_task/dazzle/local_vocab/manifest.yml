@@ -50,7 +50,7 @@ entries:
         description: Default status value
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: enum[todo,in_progress,done]={{ default_value }}"
+      body: "$field_name: enum[todo,in_progress,done]=$default_value"
     metadata:
       stability: stable
       source: agent
@@ -80,7 +80,7 @@ entries:
         description: Default priority value
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: enum[low,medium,high]={{ default_value }}"
+      body: "$field_name: enum[low,medium,high]=$default_value"
     metadata:
       stability: stable
       source: agent
@@ -109,7 +109,7 @@ entries:
         description: Whether the field is required
     expansion:
       language: dazzle-core-dsl
-      body: "{{ field_name }}: ref User{% if required %} required{% endif %}"
+      body: "$field_name: ref User required"
     metadata:
       stability: stable
       source: agent
@@ -142,33 +142,33 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_list "$entity_name List":
+          uses entity $entity_name
           mode: list
 
-          section main "{{ entity_name }}s":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_names":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_detail "$entity_name Detail":
+          uses entity $entity_name
           mode: view
 
-          section main "{{ entity_name }} Details":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "$entity_name Details":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Create $entity_name":
+          uses entity $entity_name
           mode: create
 
-          section main "New {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "New $entity_name":
+            field $title_field "${title_field_title}"
 
-        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_edit "Edit $entity_name":
+          uses entity $entity_name
           mode: edit
 
-          section main "Edit {{ entity_name }}":
-            field {{ title_field }} "{{ title_field | title }}"
+          section main "Edit $entity_name":
+            field $title_field "${title_field_title}"
     metadata:
       stability: stable
       source: agent
@@ -197,12 +197,12 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_list "$entity_name List":
+          uses entity $entity_name
           mode: list
 
-          section main "{{ entity_name }}s":
-            field {{ display_field }} "{{ display_field | title }}"
+          section main "$entity_names":
+            field $display_field "${display_field_title}"
     metadata:
       stability: stable
       source: agent
@@ -230,12 +230,12 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_detail "$entity_name Detail":
+          uses entity $entity_name
           mode: view
 
-          section main "{{ entity_name }} Details":
-            field {{ display_field }} "{{ display_field | title }}"
+          section main "$entity_name Details":
+            field $display_field "${display_field_title}"
     metadata:
       stability: stable
       source: agent
@@ -263,12 +263,12 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_create "Create $entity_name":
+          uses entity $entity_name
           mode: create
 
-          section main "New {{ entity_name }}":
-            field {{ main_field }} "{{ main_field | title }}"
+          section main "New $entity_name":
+            field $main_field "${main_field_title}"
     metadata:
       stability: stable
       source: agent
@@ -297,12 +297,12 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
-          uses entity {{ entity_name }}
+        surface ${entity_name_lower}_edit "Edit $entity_name":
+          uses entity $entity_name
           mode: edit
 
-          section main "Edit {{ entity_name }}":
-            field {{ main_field }} "{{ main_field | title }}"
+          section main "Edit $entity_name":
+            field $main_field "${main_field_title}"
     metadata:
       stability: stable
       source: agent
@@ -336,9 +336,9 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        entity {{ entity_name }} "{{ entity_name }}":
+        entity $entity_name "$entity_name":
           id: uuid pk
-          title: str({{ title_max_length }}) required
+          title: str($title_max_length) required
           description: text
           status: enum[todo,in_progress,done]=todo
           created_at: datetime auto_add
@@ -391,8 +391,8 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        {{ field_name }}: datetime optional
-        {% if include_user %}deleted_by: ref User{% endif %}
+        $field_name: datetime optional
+        deleted_by: ref User
     metadata:
       stability: experimental
       source: agent
@@ -446,9 +446,9 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        {{ field_name }}: enum[{{ states | join(',') }}]={{ initial_state }}
-        {% if track_transitions %}{{ field_name }}_changed_at: datetime optional{% endif %}
-        {% if track_transitions %}{{ field_name }}_changed_by: ref User{% endif %}
+        $field_name: enum[${states_joined}]=$initial_state
+        $field_name_changed_at: datetime optional
+        $field_name_changed_by: ref User
     metadata:
       stability: experimental
       source: agent
@@ -499,9 +499,9 @@ entries:
       language: dazzle-core-dsl
       body: |
         # Search and filter hints (stack interprets)
-        # search_fields: {{ search_fields | join(', ') }}
-        # filter_fields: {{ filter_fields | join(', ') }}
-        # full_text: {{ full_text }}
+        # search_fields: ${search_fields_joined}
+        # filter_fields: ${filter_fields_joined}
+        # full_text: $full_text
     metadata:
       stability: experimental
       source: agent
@@ -548,7 +548,7 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        {{ tenant_field }}: ref {{ tenant_entity }} required
+        $tenant_field: ref $tenant_entity required
     metadata:
       stability: experimental
       source: agent
@@ -594,9 +594,9 @@ entries:
     expansion:
       language: dazzle-core-dsl
       body: |
-        {{ version_field }}: int
-        {% if keep_history %}version_created_at: datetime auto_add{% endif %}
-        {% if keep_history %}version_created_by: ref User{% endif %}
+        $version_field: int
+        version_created_at: datetime auto_add
+        version_created_by: ref User
     metadata:
       stability: experimental
       source: agent
