@@ -44,6 +44,19 @@ build/
 *.pyc
 # v0.62 (Phase 4 teardown): dazzle-bundle.css no longer generated.
 
+# v0.67.95 / #1052: framework asset bundles built by scripts/build_dist.py.
+# Previously tracked in git; rebuilt on every release so each ship commit
+# added ~3 large binary diffs that buried real changes. Now built by CI
+# before the test job (.github/workflows/ci.yml "Build dist bundles" step)
+# and by the wheel-publish workflow before twine upload.
+src/dazzle_ui/runtime/static/dist/dazzle.min.css
+src/dazzle_ui/runtime/static/dist/dazzle.min.js
+src/dazzle_ui/runtime/static/dist/dazzle-icons.min.js
+# gzipped variants emitted by build_dist.py at the same time:
+src/dazzle_ui/runtime/static/dist/dazzle.min.css.gz
+src/dazzle_ui/runtime/static/dist/dazzle.min.js.gz
+src/dazzle_ui/runtime/static/dist/dazzle-icons.min.js.gz
+
 # Test artifacts
 .coverage
 htmlcov/

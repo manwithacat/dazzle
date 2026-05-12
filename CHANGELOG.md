@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.95] - 2026-05-12
+
+### Changed
+
+- **`dist/dazzle.min.{css,js}` + `dist/dazzle-icons.min.js` no longer tracked in git** — closes [#1052](https://github.com/manwithacat/gh-issue/1052). The three asset-bundle files were rebuilt by `scripts/build_dist.py` on every release (every patch ship), adding ~3 large binary diffs per commit to PRs and `git log -p`. Across v0.67.79 → v0.67.94 every ship commit rewrote these files; agents auditing recent work had to filter them out by hand.
+
+  Now gitignored and built on demand:
+  - **CI** (`.github/workflows/ci.yml`): new `Build asset bundles` step runs `python scripts/build_dist.py` immediately after `pip install` in `python-tests`, `integration`, and `postgres-tests` jobs.
+  - **Publish workflow** (`.github/workflows/publish-pypi.yml`): already built bundles before `twine upload`; unchanged.
+  - **Wheel build**: `MANIFEST.in`'s `recursive-include src/dazzle_ui/runtime/static *.js *.css` rule picks up the freshly-built files; `pip install dazzle-dsl` still ships the bundle.
+  - **Local dev**: run `python scripts/build_dist.py` once after clone, or any time you touch a `static/css/*.css` source.
+
+### Agent Guidance
+
+- The framework's bundle artefacts live under `src/dazzle_ui/runtime/static/dist/` but are no longer in version control. To rebuild locally: `python scripts/build_dist.py`. The artefacts are required for `dazzle serve` (the FastAPI static mount serves them at `/static/dist/...`) but not for `pytest` (tests reference URLs as strings, not files).
+
 ## [0.67.94] - 2026-05-12
 
 ### Added

@@ -32,6 +32,12 @@ jobs:
         # Install optional LSP dependencies
         pip install pygls || true
 
+    - name: Build asset bundles
+      # #1052: dist/dazzle.min.{css,js} + dazzle-icons.min.js are
+      # gitignored; build them here so the static-mount + any
+      # bundle-shape tests have the artifacts on disk.
+      run: python scripts/build_dist.py
+
     - name: Run tests with pytest
       run: |
         pytest -v --cov=src/dazzle --cov-report=xml --cov-report=term-missing -m "not e2e"
@@ -248,6 +254,10 @@ jobs:
         # Install optional LSP dependencies
         pip install pygls || true
 
+    - name: Build asset bundles
+      # #1052: dist/dazzle.min.* are gitignored — built here for tests.
+      run: python scripts/build_dist.py
+
     - name: Run integration tests
       run: |
         pytest tests/integration/ -v --maxfail=1 -m "not e2e"
@@ -339,6 +349,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev,llm,mcp,mobile,postgres]"
         pip install pygls || true
+
+    - name: Build asset bundles
+      # #1052: dist/dazzle.min.* are gitignored — built here for tests.
+      run: python scripts/build_dist.py
 
     - name: Run PostgreSQL-specific tests
       env:
