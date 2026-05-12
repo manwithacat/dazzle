@@ -13,7 +13,12 @@ the dispatcher and makes each compute independently testable.
 
 from typing import Any
 
-from dazzle.back.runtime.workspace_card_data import _resolve_display_name
+from dazzle.back.runtime.workspace_card_data import (
+    _initials_from,
+    _interpolate_card_template,
+    _resolve_display_name,
+    _resolve_path,
+)
 
 
 def compute_heatmap(
@@ -238,3 +243,128 @@ def compute_bullet(
     scale_candidates.extend(getattr(b, "to_value", 0.0) for b in (reference_bands or []))
     max_value = max(scale_candidates) if scale_candidates else 0.0
     return rows, max_value
+
+
+def compute_bar_track(
+    bucketed_metrics: list[dict[str, Any]],
+    explicit_max: float | None,
+    format_spec: str,
+    region_name: str,
+) -> tuple[list[dict[str, Any]], float]:
+    """Build (rows, max) for a BAR_TRACK region.
+
+    Each bucket becomes a row with label / value / fill_pct /
+    formatted_value. The fill_pct is clamped to [0, 100]. When
+    explicit_max is None, the auto-max is the largest bucket value
+    (falling back to 1.0 to avoid div-by-zero).
+
+    Accepts both str.format-template syntax (``"{:.0%}"``) and bare
+    format-spec syntax (``".0%"``); detects by looking for ``{``.
+    Malformed format specs fall back to raw str + a logger warning
+    (the dashboard doesn't crash on author error).
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    rows: list[dict[str, Any]] = []
+    if not bucketed_metrics:
+        return rows, 0.0
+
+    values: list[float] = []
+    for bucket in bucketed_metrics:
+        try:
+            values.append(float(bucket.get("value") or 0))
+        except (TypeError, ValueError):
+            values.append(0.0)
+
+    max_value = (
+        float(explicit_max)
+        if explicit_max is not None
+        else (max(values) if values and max(values) > 0 else 1.0)
+    )
+
+    for bucket, value in zip(bucketed_metrics, values, strict=True):
+        fill_pct = max(0.0, min(100.0, (value / max_value) * 100.0)) if max_value else 0.0
+        try:
+            if not format_spec:
+                formatted = str(value)
+            elif "{" in format_spec:
+                formatted = format_spec.format(value)
+            else:
+                formatted = format(value, format_spec)
+        except (ValueError, TypeError, KeyError, IndexError):
+            logger.warning(
+                "bar_track region %r: invalid track_format %r — rendering raw value",
+                region_name,
+                format_spec,
+            )
+            formatted = str(value)
+        rows.append(
+            {
+                "label": str(bucket.get("label") or ""),
+                "value": value,
+                "fill_pct": fill_pct,
+                "formatted_value": formatted,
+            }
+        )
+    return rows, max_value
+
+
+def compute_profile_card(
+    items: list[dict[str, Any]],
+    ctx_region: Any,
+) -> dict[str, Any]:
+    """Build the profile_card payload dict (#892).
+
+    Reads the first item (callers narrow via ``filter:`` to one
+    record), then resolves the avatar/primary/secondary/stats/facts
+    fields. The secondary + fact templates support tiny
+    ``{{ field }}`` / ``{{ field.path }}`` interpolation via
+    ``_interpolate_card_template`` — logic-less, no Jinja eval.
+
+    Empty items returns an empty dict — caller treats this as
+    "render the empty: message".
+    """
+    if not items:
+        return {}
+    item = items[0]
+    avatar_field = ctx_region.avatar_field
+    primary_field = ctx_region.primary
+    secondary_tmpl = ctx_region.secondary
+    stats_specs = ctx_region.profile_stats or []
+    fact_tmpls = ctx_region.facts or []
+
+    avatar_url = str(_resolve_path(item, avatar_field) or "") if avatar_field else ""
+    primary_str = str(_resolve_path(item, primary_field) or "") if primary_field else ""
+    initials = _initials_from(primary_str)
+
+    return {
+        "avatar_url": avatar_url,
+        "initials": initials,
+        "primary": primary_str,
+        "secondary": _interpolate_card_template(secondary_tmpl or "", item),
+        "stats": [
+            {
+                "label": stat["label"],
+                "value": str(_resolve_path(item, stat["value"]) or ""),
+            }
+            for stat in stats_specs
+        ],
+        "facts": [_interpolate_card_template(fact, item) for fact in fact_tmpls],
+    }
+
+
+def compute_confirm_action_state(
+    items: list[dict[str, Any]],
+    state_field: str | None,
+) -> str:
+    """Read state_value from the first fetched item for a
+    CONFIRM_ACTION_PANEL region (v0.61.72, #6).
+
+    Empty string when no field configured or no item — caller falls
+    through to the safe default ("off").
+    """
+    if not (state_field and items):
+        return ""
+    return str(_resolve_path(items[0], state_field) or "")

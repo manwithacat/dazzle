@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.107] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 8 of N)
+
+- **Extracted 3 more leaf data builders** from `_workspace_region_handler` to `workspace_region_computes.py` — progress on [#1057](https://github.com/manwithacat/gh-issue/1057):
+  - `compute_bar_track`: BAR_TRACK row builder with auto-max scale + format-spec rendering (#893)
+  - `compute_profile_card`: PROFILE_CARD payload assembly with template interpolation (#892)
+  - `compute_confirm_action_state`: state-field read for CONFIRM_ACTION_PANEL (v0.61.72, #6)
+
+- **`workspace_rendering.py`** trimmed from 1,430 → 1,355 lines (-75 in this cut). Region branches that previously inlined ~120 lines of data-shape logic are now 5-7 line function calls each.
+
+- **`test_workspace_profile_card.py::test_build_profile_stats_from_dict_specs`** — source-pin test updated to look at `workspace_region_computes.py` for the dict-access invariant. Same #910 follow-up safeguard, new home.
+
+### Cumulative
+
+After 8 cuts: `workspace_rendering.py` 4,483 → 1,355 lines (-3,128, -70%). Same 11 sibling modules — this cut grew `workspace_region_computes` to 370 lines (8 pure leaf computes covering HEATMAP, PROGRESS, TREE, BULLET, QUEUE, BAR_TRACK, PROFILE_CARD, CONFIRM_ACTION_PANEL).
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,115 source files checked).
+
 ## [0.67.106] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 7 of N)

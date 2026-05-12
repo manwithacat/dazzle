@@ -355,29 +355,35 @@ class TestProfileCardStatsBuildFromDicts:
 
     def test_build_profile_stats_from_dict_specs_no_attribute_error(self) -> None:
         """Repro of the 500: stats specs are dicts, not pydantic
-        models — accessing `_stat.label` raised AttributeError. Now
-        uses `_stat["label"]`."""
+        models — accessing `stat.label` raised AttributeError. Now
+        uses ``stat["label"]``.
+
+        v0.67.107 (#1057 cut 8): the PROFILE_CARD compute moved to
+        ``workspace_region_computes.compute_profile_card``. Same
+        invariant, new home.
+        """
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle/back/runtime/workspace_region_computes.py"
         ).read_text()
         # The runtime must use dict access (the boundary always converts to dicts)
-        assert '_stat["label"]' in src, (
+        assert 'stat["label"]' in src, (
             "PROFILE_CARD render path must use dict-access on stats specs — "
-            "attribute access (`_stat.label`) raised 500 in production (#910 "
+            "attribute access (`stat.label`) raised 500 in production (#910 "
             "follow-up: AegisMark pupil_identity profile_card)."
         )
-        assert '_stat["value"]' in src
+        assert 'stat["value"]' in src
         # And NOT the attribute form in the comprehension itself.
         # Substring check on the full file would match the docstring,
         # so scope to a window around the dict literal we care about.
-        marker = '"label": _stat["label"]'
+        marker = '"label": stat["label"]'
         idx = src.find(marker)
         assert idx >= 0
         # Window the assertion to ±200 chars of the dict literal so the
         # docstring history doesn't trip us up.
         window = src[max(0, idx - 200) : idx + 400]
-        assert "_stat.label" not in window
-        assert "_stat.value" not in window
+        assert "stat.label" not in window
+        assert "stat.value" not in window
 
     def test_runtime_boundary_emits_dicts_not_models(self) -> None:
         """Pin the IR→template-context boundary shape: profile_stats

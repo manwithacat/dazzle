@@ -75,8 +75,11 @@ from dazzle.back.runtime.workspace_columns import (
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext  # noqa: F401
 from dazzle.back.runtime.workspace_csv import _render_csv_response  # noqa: F401
 from dazzle.back.runtime.workspace_region_computes import (
+    compute_bar_track,
     compute_bullet,
+    compute_confirm_action_state,
     compute_heatmap,
+    compute_profile_card,
     compute_progress,
     compute_queue,
     compute_tree,
@@ -595,57 +598,16 @@ async def _workspace_region_handler(
     # `format()` rather than Jinja so the template stays simple and we
     # don't risk template injection from an author-supplied format
     # string.
-    bar_track_rows: list[dict[str, Any]] = []
-    bar_track_max: float = 0.0
     if ctx.ctx_region.display == "BAR_TRACK" and bucketed_metrics:
-        _explicit_max = ctx.ctx_region.track_max
-        _format_spec = ctx.ctx_region.track_format or ""
-        _values: list[float] = []
-        for _bucket in bucketed_metrics:
-            try:
-                _values.append(float(_bucket.get("value") or 0))
-            except (TypeError, ValueError):
-                _values.append(0.0)
-        # Auto-max when not explicitly set: use the largest bucketed
-        # value so all bars fit in [0, 1] of the track. Falls back to
-        # 1.0 when all values are zero/negative to avoid div-by-zero.
-        bar_track_max = (
-            float(_explicit_max)
-            if _explicit_max is not None
-            else (max(_values) if _values and max(_values) > 0 else 1.0)
+        bar_track_rows, bar_track_max = compute_bar_track(
+            bucketed_metrics,
+            explicit_max=ctx.ctx_region.track_max,
+            format_spec=ctx.ctx_region.track_format or "",
+            region_name=ctx.ctx_region.name,
         )
-        for _bucket, _value in zip(bucketed_metrics, _values, strict=True):
-            _fill_pct = (
-                max(0.0, min(100.0, (_value / bar_track_max) * 100.0)) if bar_track_max else 0.0
-            )
-            # Accept both str.format-template syntax (`"{:.0%}"` — what the
-            # issue example shows; matches f-string convention) and bare
-            # format-spec syntax (`".0%"`). Detect by looking for the
-            # `{` wrapper.
-            try:
-                if not _format_spec:
-                    _formatted = str(_value)
-                elif "{" in _format_spec:
-                    _formatted = _format_spec.format(_value)
-                else:
-                    _formatted = format(_value, _format_spec)
-            except (ValueError, TypeError, KeyError, IndexError):
-                # Malformed format spec → fall back to raw str. Logged so
-                # authors notice; doesn't crash the dashboard.
-                logger.warning(
-                    "bar_track region %r: invalid track_format %r — rendering raw value",
-                    ctx.ctx_region.name,
-                    _format_spec,
-                )
-                _formatted = str(_value)
-            bar_track_rows.append(
-                {
-                    "label": str(_bucket.get("label") or ""),
-                    "value": _value,
-                    "fill_pct": _fill_pct,
-                    "formatted_value": _formatted,
-                }
-            )
+    else:
+        bar_track_rows = []
+        bar_track_max = 0.0
 
     # Action grid (#891, v0.61.54): CTA cards on dashboards. Each card
     # carries a label/icon/url/tone (already resolved at context build
@@ -871,47 +833,10 @@ async def _workspace_region_handler(
     # `{{ field.path }}` interpolation against the item dict — handled
     # server-side by `_interpolate_card_template` so the template is
     # logic-less. No Jinja eval, no expressions.
-    profile_card_data: dict[str, Any] = {}
     if ctx.ctx_region.display == "PROFILE_CARD":
-        _item = items[0] if items else None
-        if _item is not None:
-            _avatar_field = ctx.ctx_region.avatar_field
-            _primary_field = ctx.ctx_region.primary
-            _secondary_tmpl = ctx.ctx_region.secondary
-            _stats_specs = ctx.ctx_region.profile_stats or []
-            _fact_tmpls = ctx.ctx_region.facts or []
-            _avatar_url = ""
-            if _avatar_field:
-                _av = _resolve_path(_item, _avatar_field)
-                _avatar_url = str(_av or "")
-            _primary_str = ""
-            if _primary_field:
-                _pv = _resolve_path(_item, _primary_field)
-                _primary_str = str(_pv or "")
-            _initials = _initials_from(_primary_str)
-            # v0.61.80 (#910 follow-up): `_stats_specs` is a list of
-            # `{label, value}` dicts coming through the IR→template-context
-            # boundary in `workspace_renderer.py` (see line 569: `profile_stats=
-            # [{"label": s.label, "value": s.value} for s in ...]`). The pre-fix
-            # code accessed `_stat.label` (attribute), which silently worked
-            # only when `items` was empty so the `if _item is not None` branch
-            # never ran — pre-#909 every prod call had wrong-bound scope filters
-            # that emptied items. The #910 fix restored items, surfacing the
-            # AttributeError as a 500. Use dict access to match the boundary.
-            profile_card_data = {
-                "avatar_url": _avatar_url,
-                "initials": _initials,
-                "primary": _primary_str,
-                "secondary": _interpolate_card_template(_secondary_tmpl or "", _item),
-                "stats": [
-                    {
-                        "label": _stat["label"],
-                        "value": str(_resolve_path(_item, _stat["value"]) or ""),
-                    }
-                    for _stat in _stats_specs
-                ],
-                "facts": [_interpolate_card_template(_fact, _item) for _fact in _fact_tmpls],
-            }
+        profile_card_data: dict[str, Any] = compute_profile_card(items, ctx.ctx_region)
+    else:
+        profile_card_data = {}
 
     # v0.61.72 (#6): confirm_action_panel reads state_value from the
     # entity field named by `state_field` so the template can branch
@@ -919,12 +844,12 @@ async def _workspace_region_handler(
     # fetched item (callers typically narrow with `filter:`). Empty
     # string when no field configured or no item — template falls
     # through to the safe default ("off").
-    confirm_state_value: str = ""
     if ctx.ctx_region.display == "CONFIRM_ACTION_PANEL":
-        _state_field = getattr(ctx.ctx_region, "state_field", None)
-        if _state_field and items:
-            _val = _resolve_path(items[0], _state_field)
-            confirm_state_value = str(_val or "")
+        confirm_state_value: str = compute_confirm_action_state(
+            items, getattr(ctx.ctx_region, "state_field", None)
+        )
+    else:
+        confirm_state_value = ""
 
     # Multi-dimension aggregate for pivot_table (cycle 25) and area_chart
     # (cycle 28 — stacked time-series). Reads `group_by_dims` from the IR
