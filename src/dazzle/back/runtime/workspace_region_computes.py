@@ -368,3 +368,230 @@ def compute_confirm_action_state(
     if not (state_field and items):
         return ""
     return str(_resolve_path(items[0], state_field) or "")
+
+
+async def compute_action_grid(
+    cards: list[dict[str, Any]],
+    repositories: dict[str, Any] | None,
+    source_entity: str,
+    scope_only_filters: dict[str, Any] | None,
+    scope_denied: bool,
+) -> list[dict[str, Any]]:
+    """Build action-card payloads with optional aggregate counts (#891).
+
+    Each card carries label/icon/url/tone (already resolved at context
+    build time) plus an optional ``count_aggregate`` expression. When
+    parseable, fires one ``_fetch_count_metric`` per card concurrently
+    via ``asyncio.gather``. Cross-entity counts run unscoped with a
+    warning, mirroring the source-entity scope gate (#901). When
+    ``scope_denied`` is True, all cards render without counts.
+    """
+    import asyncio as _asyncio
+    import logging
+
+    from dazzle.back.runtime.workspace_aggregation import (
+        _AGGREGATE_RE,
+        _fetch_count_metric,
+    )
+
+    logger = logging.getLogger(__name__)
+    out: list[dict[str, Any]] = []
+
+    if not cards:
+        return out
+
+    if scope_denied:
+        for card in cards:
+            out.append(
+                {
+                    "label": card.get("label", ""),
+                    "icon": card.get("icon", ""),
+                    "url": card.get("url", ""),
+                    "tone": card.get("tone", "neutral"),
+                    "count": None,
+                }
+            )
+        return out
+
+    count_tasks: list[Any] = []
+    count_indices: list[int] = []
+    for idx, card in enumerate(cards):
+        expr = card.get("count_aggregate") or ""
+        if not expr:
+            continue
+        m = _AGGREGATE_RE.match(expr)
+        if not m:
+            continue
+        func, entity_name, where = m.groups()
+        agg_repo = repositories.get(entity_name) if repositories else None
+        if func != "count" or agg_repo is None:
+            continue
+        card_scope = scope_only_filters if entity_name == source_entity else None
+        if card_scope is None and scope_only_filters is not None:
+            logger.warning(
+                "action_grid card %d (entity=%s, source=%s): cross-entity "
+                "count is unscoped — destination entity's own RBAC at "
+                "navigation time still applies, but the count badge "
+                "shows ALL rows the runtime can read",
+                idx,
+                entity_name,
+                source_entity,
+            )
+        count_tasks.append(
+            _fetch_count_metric(
+                f"action_card_{idx}",
+                agg_repo,
+                where,
+                card_scope,
+                source_entity=entity_name,
+            )
+        )
+        count_indices.append(idx)
+
+    count_results: dict[int, Any] = {}
+    if count_tasks:
+        results = await _asyncio.gather(*count_tasks, return_exceptions=True)
+        for ridx, rresult in zip(count_indices, results, strict=True):
+            if isinstance(rresult, tuple):
+                count_results[ridx] = rresult[1]
+            else:
+                logger.warning("action_grid card %d count query failed: %s", ridx, rresult)
+
+    for idx, card in enumerate(cards):
+        out.append(
+            {
+                "label": card.get("label", ""),
+                "icon": card.get("icon", ""),
+                "url": card.get("url", ""),
+                "tone": card.get("tone", "neutral"),
+                "count": count_results.get(idx),
+            }
+        )
+    return out
+
+
+async def compute_pipeline_steps(
+    stages: list[dict[str, Any]],
+    repositories: dict[str, Any] | None,
+    source_entity: str,
+    scope_only_filters: dict[str, Any] | None,
+    scope_denied: bool,
+) -> list[dict[str, Any]]:
+    """Build pipeline-stage data with aggregate value/progress per stage (#890).
+
+    Each stage's ``value`` and ``progress`` fields are either:
+    - an aggregate expression (matches ``_AGGREGATE_RE``, fires a count
+      query),
+    - or a literal string (renders verbatim — v0.61.66 #4).
+
+    Cross-entity aggregates run unscoped with a warning (#901). When
+    ``scope_denied`` is True, aggregate stages render without values
+    but literals are preserved.
+    """
+    import asyncio as _asyncio
+    import logging
+
+    from dazzle.back.runtime.workspace_aggregation import (
+        _AGGREGATE_RE,
+        _fetch_count_metric,
+    )
+    from dazzle.back.runtime.workspace_card_data import _coerce_pipeline_progress
+
+    logger = logging.getLogger(__name__)
+    out: list[dict[str, Any]] = []
+
+    if not stages:
+        return out
+
+    if scope_denied:
+        for stage in stages:
+            expr = stage.get("value") or ""
+            is_literal = bool(expr) and not _AGGREGATE_RE.match(expr)
+            prog_expr = stage.get("progress") or ""
+            prog_is_literal = bool(prog_expr) and not _AGGREGATE_RE.match(prog_expr)
+            prog_raw: Any = prog_expr if prog_is_literal else None
+            prog_clamped, prog_overshoot = _coerce_pipeline_progress(prog_raw)
+            out.append(
+                {
+                    "label": stage.get("label", ""),
+                    "caption": stage.get("caption", ""),
+                    "value": expr if is_literal else None,
+                    "progress": prog_clamped,
+                    "progress_overshoot": prog_overshoot,
+                }
+            )
+        return out
+
+    stage_tasks: list[Any] = []
+    stage_task_keys: list[tuple[int, str]] = []
+    stage_literals: dict[tuple[int, str], str] = {}
+
+    def queue_stage_field(sidx: int, field: str, expr: str) -> None:
+        if not expr:
+            return
+        m = _AGGREGATE_RE.match(expr)
+        if not m:
+            stage_literals[(sidx, field)] = expr
+            return
+        func, entity_name, where = m.groups()
+        agg_repo = repositories.get(entity_name) if repositories else None
+        if func != "count" or agg_repo is None:
+            return
+        stage_scope = scope_only_filters if entity_name == source_entity else None
+        if stage_scope is None and scope_only_filters is not None:
+            logger.warning(
+                "pipeline_steps stage %d %s (entity=%s, source=%s): "
+                "cross-entity count is unscoped — destination entity's "
+                "own RBAC at navigation time still applies, but the "
+                "stage %s shows ALL rows the runtime can read",
+                sidx,
+                field,
+                entity_name,
+                source_entity,
+                field,
+            )
+        stage_tasks.append(
+            _fetch_count_metric(
+                f"pipeline_stage_{sidx}_{field}",
+                agg_repo,
+                where,
+                stage_scope,
+                source_entity=entity_name,
+            )
+        )
+        stage_task_keys.append((sidx, field))
+
+    for sidx, stage in enumerate(stages):
+        queue_stage_field(sidx, "value", stage.get("value") or "")
+        queue_stage_field(sidx, "progress", stage.get("progress") or "")
+
+    stage_results: dict[tuple[int, str], Any] = {}
+    if stage_tasks:
+        sresults = await _asyncio.gather(*stage_tasks, return_exceptions=True)
+        for key, srresult in zip(stage_task_keys, sresults, strict=True):
+            if isinstance(srresult, tuple):
+                stage_results[key] = srresult[1]
+            else:
+                logger.warning(
+                    "pipeline_steps stage %d %s query failed: %s",
+                    key[0],
+                    key[1],
+                    srresult,
+                )
+
+    for sidx, stage in enumerate(stages):
+        val: Any = stage_literals.get((sidx, "value"), stage_results.get((sidx, "value")))
+        prog_raw_resolved: Any = stage_literals.get(
+            (sidx, "progress"), stage_results.get((sidx, "progress"))
+        )
+        prog_clamped, prog_overshoot = _coerce_pipeline_progress(prog_raw_resolved)
+        out.append(
+            {
+                "label": stage.get("label", ""),
+                "caption": stage.get("caption", ""),
+                "value": val,
+                "progress": prog_clamped,
+                "progress_overshoot": prog_overshoot,
+            }
+        )
+    return out

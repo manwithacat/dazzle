@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.108] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 9 of N)
+
+- **Extracted the 2 async aggregate branches** from `_workspace_region_handler` to `workspace_region_computes.py` — progress on [#1057](https://github.com/manwithacat/gh-issue/1057):
+  - `compute_action_grid`: action-card payloads with optional per-card aggregate counts via `asyncio.gather` (#891)
+  - `compute_pipeline_steps`: pipeline-stage data with aggregate value+progress per stage, scope-denied literal fallback (#890, #911)
+
+- **`workspace_rendering.py`** trimmed from 1,355 → 1,180 lines (-175 in this cut). The two longest remaining display branches (~85 lines each, the only ones still using `asyncio.gather` inline) are now 8-line function calls. Both share the same #901 cross-entity scope gate — pulled out as duplicated logic in both extracted functions (intentional, since the gate is a per-call decision, not a shared helper).
+
+- **`test_cross_entity_aggregate_scope_regression.py`** updated to source-grep `workspace_region_computes.py` for the #901 gate (same regression guard, new file).
+
+### Cumulative
+
+After 9 cuts: `workspace_rendering.py` 4,483 → 1,180 lines (-3,303, -74%). `workspace_region_computes.py` grew to 597 lines (10 leaf/branch computes covering HEATMAP, PROGRESS, TREE, BULLET, QUEUE, BAR_TRACK, PROFILE_CARD, CONFIRM_ACTION_PANEL, ACTION_GRID, PIPELINE_STEPS).
+
+The remaining 1,180 lines of `_workspace_region_handler` is now the prelude (auth/user/scope/items — ~330 lines), inline aggregation orchestration (~250 lines for bucketed/pivot/overlay paths), the page-rendering finalize tail (~400 lines), plus the request-handler shell itself. Each is bigger per-cut than what's been done — they coordinate state across branches rather than being leaf computes.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,115 source files checked).
+
 ## [0.67.107] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 8 of N)

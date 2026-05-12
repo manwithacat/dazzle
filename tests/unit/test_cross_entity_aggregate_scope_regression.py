@@ -24,26 +24,27 @@ class TestCrossEntityScopeGate:
     """Static-source guard pinning the #901 fix in both branches."""
 
     def _read_runtime(self) -> str:
+        # v0.67.108 (#1057 cut 9): action_grid + pipeline_steps moved to
+        # workspace_region_computes (compute_action_grid /
+        # compute_pipeline_steps). Same invariants, new home.
         return (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle/back/runtime/workspace_region_computes.py"
         ).read_text()
 
     def test_action_grid_per_card_gates_scope_on_entity_match(self) -> None:
         """The action_grid per-card branch must gate scope_filters on
         whether the per-card entity matches the region source — a
-        bare `_scope_only_filters` pass-through regresses #901."""
+        bare ``scope_only_filters`` pass-through regresses #901."""
         src = self._read_runtime()
-        # The action_card_data branch must have the gate
-        assert (
-            "_card_scope = (\n                    _scope_only_filters if _entity_name == ctx.source else None\n                )"
-            in src
-            or ("_card_scope" in src and "_entity_name == ctx.source" in src)
-        ), "action_grid per-card branch missing #901 entity-match gate"
+        assert "card_scope" in src and "entity_name == source_entity" in src, (
+            "action_grid per-card branch missing #901 entity-match gate"
+        )
 
     def test_pipeline_steps_per_stage_gates_scope_on_entity_match(self) -> None:
         """Same check for the pipeline_steps per-stage branch."""
         src = self._read_runtime()
-        assert "_stage_scope" in src and "_entity_name == ctx.source" in src, (
+        assert "stage_scope" in src and "entity_name == source_entity" in src, (
             "pipeline_steps per-stage branch missing #901 entity-match gate"
         )
 
