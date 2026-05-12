@@ -541,7 +541,7 @@ def assemble_post_build_routes(
     try:
         from dazzle.back.converters.entity_converter import convert_entity
         from dazzle.back.runtime.access_evaluator import evaluate_permission
-        from dazzle.back.runtime.workspace_rendering import _inject_display_names
+        from dazzle.back.runtime.workspace_card_data import _inject_display_names
         from dazzle.ui.runtime.page_routes import create_page_routes
 
         page_router = create_page_routes(

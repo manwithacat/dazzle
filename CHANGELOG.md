@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.102] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 3 of N)
+
+- **Extracted 11 pure card-data shapers + display-name helpers to `src/dazzle/back/runtime/workspace_card_data.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). All synchronous, no I/O, no IR dispatch:
+  - `_CARD_TEMPLATE_RE` regex + `_resolve_path` + `_initials_from`
+  - `_build_cohort_cells` (cohort_strip), `_build_day_timeline_slots` (day_timeline), `_build_task_inbox_payload` + `_resolve_task_inbox_multi_source` (task_inbox), `_items_from_template` (profile_card)
+  - `_coerce_urgency`, `_coerce_pipeline_progress`, `_interpolate_card_template`
+  - `_resolve_display_name`, `_inject_display_names` (FK display-name resolution, used by heatmap, cohort, box_plot)
+
+- **`workspace_rendering.py`** trimmed from 4,004 → 3,549 lines (-455 in this cut). The 11 helpers are re-imported back at the top so internal call sites + the ~30 test imports continue to resolve.
+
+- **`app_factory.py`** updated to import `_inject_display_names` from its new location directly (mypy's `attr-defined` is strict about re-exports without `__all__`).
+
+- **`test_workspace_profile_card.py::test_template_no_jinja_eval_in_runtime_helper`** updated to check `workspace_card_data.py` instead of `workspace_rendering.py` for the `def _interpolate_card_template` source pin — same invariant, new home.
+
+### Cumulative
+
+After 3 cuts: `workspace_rendering.py` 4,483 → 3,549 lines (-934, -21%). Three new focused modules: `workspace_columns.py` (209), `workspace_card_bodies.py` (314), `workspace_card_data.py` (501).
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,107 source files checked).
+
 ## [0.67.101] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 2 of N)

@@ -322,8 +322,10 @@ class TestProfileCardSafety:
         `test_unsafe_expression_left_as_literal` case above. This test
         is the static-source guard: the implementation must NOT import
         jinja2 inside `_interpolate_card_template`'s module path."""
+        # v0.67.102 (#1057 cut 3): the interpolator moved to
+        # workspace_card_data.py — same invariant, different file.
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_card_data.py"
         ).read_text()
         # The interpolator function should appear in the source
         assert "def _interpolate_card_template" in src
