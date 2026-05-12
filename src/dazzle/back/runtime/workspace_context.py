@@ -1,0 +1,50 @@
+"""WorkspaceRegionContext — the per-region context bundle.
+
+Extracted from workspace_rendering.py in #1057 cut 5 (v0.67.104).
+Lives in its own module so async fetchers + scope-filter helpers
+can depend on the dataclass without pulling in the rest of
+workspace_rendering (which would create a circular import).
+
+The dataclass aggregates everything a region handler needs that
+isn't request-shaped (paging, query params). Built once per
+region at workspace-route construction time, then passed by
+reference into the handler closure.
+"""
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass
+class WorkspaceRegionContext:
+    """Bundles the non-request, non-pagination context for a workspace region handler."""
+
+    ctx_region: Any
+    ir_region: Any
+    source: str
+    entity_spec: Any
+    attention_signals: list[Any]
+    ws_access: Any
+    repositories: dict[str, Any]
+    require_auth: bool
+    auth_middleware: Any
+    # Pre-computed at startup (constant-folded from IR)
+    precomputed_columns: list[dict[str, Any]] = field(default_factory=list)
+    # Pre-computed ref relation names for eager-loading (from entity_auto_includes)
+    auto_include: list[str] = field(default_factory=list)
+    # Surface UX metadata (#362)
+    surface_default_sort: list[Any] = field(default_factory=list)
+    surface_empty_message: str = ""
+    # Runtime parameter resolution (#572)
+    param_resolver: Any = None  # ParamResolver | None
+    tenant_id: str | None = None
+    # Entity access spec for scope predicate enforcement (#574)
+    cedar_access_spec: Any = None
+    fk_graph: Any = None
+    # DSL user entity name for current_user resolution (#588)
+    user_entity_name: str = "User"
+    # #1015 (v0.67.16) — per-entity access specs for multi-source
+    # task_inbox fan-out. Maps entity name → access spec so each
+    # source can apply its own scope rules at fetch time. Default
+    # empty dict keeps single-source paths cost-free.
+    entity_access_specs: dict[str, Any] = field(default_factory=dict)

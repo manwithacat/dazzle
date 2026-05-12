@@ -48,8 +48,8 @@ from dazzle.back.runtime.workspace_columns import (
 from dazzle.back.runtime.workspace_columns import (
     field_kind_to_col_type as _field_kind_to_col_type,  # noqa: F401
 )
+from dazzle.back.runtime.workspace_context import WorkspaceRegionContext  # noqa: F401
 from dazzle.back.runtime.workspace_rendering import (  # noqa: F401
-    WorkspaceRegionContext,
     _fetch_region_json,
     _workspace_batch_handler,
     _workspace_region_handler,

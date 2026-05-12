@@ -14,8 +14,8 @@ from dazzle.back.runtime.workspace_columns import (
 from dazzle.back.runtime.workspace_columns import (
     build_surface_columns as _build_surface_columns,
 )
+from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.back.runtime.workspace_rendering import (
-    WorkspaceRegionContext,
     _workspace_batch_handler,
     _workspace_region_handler,
     _workspace_stats_handler,

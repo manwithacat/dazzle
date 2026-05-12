@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.104] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 5 of N)
+
+- **Extracted 5 supporting modules around `_workspace_region_handler`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The `WorkspaceRegionContext` dataclass was the keystone — once it lived in its own module, the satellite helpers that depend on it could finally leave without circular imports:
+  - `workspace_context.py` (50 lines): `WorkspaceRegionContext` dataclass.
+  - `workspace_scope.py` (68 lines): `_apply_workspace_scope_filters` (RBAC row-level enforcement for region queries).
+  - `workspace_user.py` (70 lines): `_resolve_workspace_user` (auth subject → DSL user entity row).
+  - `workspace_csv.py` (38 lines): `_render_csv_response` (pure CSV-download streaming response).
+  - `workspace_card_fetchers.py` (438 lines): the 4 async card-data fetchers (`_fetch_entity_card_section_rows`, `_fetch_task_inbox_items_per_source`, `_safe_fetch`, `_empty_list_coro`) + `_build_entity_card_sections` (the per-mode dispatcher that assembles section dicts from already-fetched rows).
+
+- **`workspace_rendering.py`** trimmed from 2,377 → 1,823 lines (-554). The 9 extracted symbols are re-imported back at the top so existing imports from `workspace_rendering` continue to resolve.
+
+- **`workspace_route_builder.py`** + **`server.py`** updated to import `WorkspaceRegionContext` from its new home directly.
+
+### Cumulative
+
+After 5 cuts: `workspace_rendering.py` 4,483 → 1,823 lines (-2,660, -59%). Nine new focused modules totalling 2,925 lines:
+- `workspace_columns` (217), `workspace_card_bodies` (314), `workspace_card_data` (502)
+- `workspace_aggregation` (1,228)
+- `workspace_context` (50), `workspace_scope` (68), `workspace_user` (70), `workspace_csv` (38), `workspace_card_fetchers` (438)
+
+What's left in `workspace_rendering.py`: the 1,455-line `_workspace_region_handler` plus the 3 thin sibling handlers (`_fetch_region_json`, `_workspace_batch_handler`, `_workspace_stats_handler`). The remaining file is now ~80% one async function — the next move is the real per-display-mode dispatcher split, which is a logic refactor rather than code motion.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,113 source files checked).
+
 ## [0.67.103] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 4 of N)
