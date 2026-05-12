@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.103] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 4 of N)
+
+- **Extracted the aggregation machinery to `src/dazzle/back/runtime/workspace_aggregation.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The full SQL aggregation path used by chart, pivot, histogram, box-plot, KPI, and bucketed bar/line regions:
+  - `_AGGREGATE_RE`, `_format_bucket_label`, `_parse_simple_where`, `_build_aggregate_filters`
+  - `_fetch_count_metric`, `_fetch_scalar_metric` — scalar dispatchers
+  - `_resolve_fk_target_spec`, `_compute_pivot_buckets`, `_aggregate_via_groupby`, `_enumerate_distinct_buckets`
+  - `_compute_box_plot_stats`, `_compute_histogram_bins`, `_bucket_key_label`
+  - `_compute_bucketed_aggregates`, `_compute_aggregate_metrics` — top-level dispatchers
+
+- **`workspace_rendering.py`** trimmed from 3,549 → 2,377 lines (-1,172 in this cut). The aggregation helpers are re-imported back at the top so the giant `_workspace_region_handler` keeps working unchanged.
+
+- **`server.py`** updated to import `_AGGREGATE_RE`, `_compute_aggregate_metrics`, `_fetch_count_metric`, `_parse_simple_where` from the new `workspace_aggregation` module directly (mypy's strict re-export rule).
+
+### Cumulative
+
+After 4 cuts: `workspace_rendering.py` 4,483 → 2,377 lines (-2,106, -47%). Four new focused modules totalling 2,261 lines (`workspace_columns` 217, `workspace_card_bodies` 314, `workspace_card_data` 502, `workspace_aggregation` 1,228) — the file is now roughly the size of its biggest remaining piece, the 1,455-line `_workspace_region_handler` async function.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,108 source files checked).
+
 ## [0.67.102] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 3 of N)

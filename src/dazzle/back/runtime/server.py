@@ -33,6 +33,12 @@ from dazzle.back.runtime.model_generator import (
 from dazzle.back.runtime.repository import RepositoryFactory
 from dazzle.back.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle.back.runtime.service_loader import ServiceLoader
+from dazzle.back.runtime.workspace_aggregation import (  # noqa: F401
+    _AGGREGATE_RE,
+    _compute_aggregate_metrics,
+    _fetch_count_metric,
+    _parse_simple_where,
+)
 from dazzle.back.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,  # noqa: F401
 )
@@ -43,12 +49,8 @@ from dazzle.back.runtime.workspace_columns import (
     field_kind_to_col_type as _field_kind_to_col_type,  # noqa: F401
 )
 from dazzle.back.runtime.workspace_rendering import (  # noqa: F401
-    _AGGREGATE_RE,
     WorkspaceRegionContext,
-    _compute_aggregate_metrics,
-    _fetch_count_metric,
     _fetch_region_json,
-    _parse_simple_where,
     _workspace_batch_handler,
     _workspace_region_handler,
 )
