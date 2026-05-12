@@ -307,11 +307,15 @@ class TestAggregateScopeGate:
         # where someone removes the default-deny init.
         from pathlib import Path
 
+        # v0.67.111 (#1057 cut 12): default-deny init moved to
+        # workspace_region_fetch.RegionItemsResult — the dataclass
+        # field default IS the #887 invariant now.
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2]
+            / "src/dazzle/back/runtime/workspace_region_fetch.py"
         ).read_text()
-        # The pre-init must default-deny; explicit `True` is the contract.
-        assert "_scope_denied: bool = True" in src, (
+        # The dataclass default must default-deny; explicit `True` is the contract.
+        assert "scope_denied: bool = True" in src, (
             "Default-deny init missing — #887 regression risk"
         )
 

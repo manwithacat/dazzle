@@ -20,14 +20,17 @@ end-to-end by Playwright gates elsewhere.
 from pathlib import Path
 
 # v0.67.105 (#1057 cut 6): batch + stats handlers moved to workspace_handlers.py.
-# These source-grep tests now sweep both files so the invariants follow the
+# v0.67.111 (#1057 cut 12): the per-region `workspace_region_query_failed`
+# log line moved to workspace_region_fetch.py.
+# These source-grep tests sweep all three files so the invariants follow the
 # code, not the filename.
 WS_RENDERING = Path("src/dazzle/back/runtime/workspace_rendering.py")
 WS_HANDLERS = Path("src/dazzle/back/runtime/workspace_handlers.py")
+WS_FETCH = Path("src/dazzle/back/runtime/workspace_region_fetch.py")
 
 
 def _read() -> str:
-    return WS_RENDERING.read_text() + "\n" + WS_HANDLERS.read_text()
+    return "\n".join((WS_RENDERING.read_text(), WS_HANDLERS.read_text(), WS_FETCH.read_text()))
 
 
 class TestWorkspaceRegionErrorVisibility:

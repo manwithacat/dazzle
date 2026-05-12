@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.111] - 2026-05-13
+
+### Changed — workspace_rendering decomposition (cut 12 of N)
+
+- **Extracted Phase 2 of the region handler — source query** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_fetch.py` (206 lines):
+  - `RegionItemsResult` dataclass — phase 2 output (items, total, scope_only_filters, scope_denied)
+  - `fetch_region_items()` — async function that builds filters from IR + query params + date range, applies scope predicates, calls `repo.list`, injects FK display names, and fail-closes on any exception
+
+- **`_workspace_region_handler`** trimmed from 1,044 → 909 lines (-135). The 140-line source-query block in the middle of the dispatcher is now a single 8-line call: `fetched = await fetch_region_items(...)` plus local-var unpacking for downstream phase 4/5/6 reads.
+
+- **Dataclass default-deny invariant**: `RegionItemsResult.scope_denied: bool = True` (the dataclass field default) is now the #887 default-deny contract — replacing the inline `_scope_denied: bool = True` pre-init.
+
+- **Two source-pin tests rebased**:
+  - `test_workspace_scope_enforcement::test_default_deny_initial_state_blocks_aggregates`: now greps `workspace_region_fetch.py` for the dataclass default.
+  - `test_workspace_region_error_visibility`: sweeps `workspace_rendering` + `workspace_handlers` + `workspace_region_fetch` (the ERROR-level structured log moved with the query block).
+
+### Cumulative
+
+After 12 cuts: `workspace_rendering.py` 4,483 → **909 lines (-3,574, -80%)**. The file is now ~5× smaller than where it started. 14 sibling modules totalling 4,308 lines.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,117 source files checked).
+
 ## [0.67.110] - 2026-05-13
 
 ### Changed — workspace_rendering decomposition (cut 11 of N)

@@ -90,6 +90,7 @@ from dazzle.back.runtime.workspace_region_computes import (
     compute_queue,
     compute_tree,
 )
+from dazzle.back.runtime.workspace_region_fetch import fetch_region_items
 from dazzle.back.runtime.workspace_region_prelude import resolve_request_user_context
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters  # noqa: F401
 from dazzle.back.runtime.workspace_user import _resolve_workspace_user  # noqa: F401
@@ -117,153 +118,17 @@ async def _workspace_region_handler(
     # Raises HTTPException(401/403) if the request is unauthorised.
     user_ctx = await resolve_request_user_context(request, ctx)
     _current_user_id = user_ctx.user_id
-    _current_user_entity = user_ctx.user_entity
     _auth_ctx_for_filters = user_ctx.auth_ctx_for_filters
     _filter_context = user_ctx.filter_context
-    _context_id = _filter_context.get("current_context")
 
-    # Query the source entity
-    items: list[dict[str, Any]] = []
-    total = 0
+    # Phase 2: filters + sort + scope + repo.list. Returns the row
+    # data plus the scope state downstream aggregate paths gate on.
+    fetched = await fetch_region_items(request, ctx, user_ctx, sort, dir, page, page_size)
+    items = fetched.items
+    total = fetched.total
+    _scope_only_filters = fetched.scope_only_filters
+    _scope_denied = fetched.scope_denied
     columns: list[dict[str, Any]] = []
-
-    # SECURITY (#887): default-deny scope state before evaluating
-    # `_apply_workspace_scope_filters`. The aggregate / bucketed /
-    # pivot / overlay code paths downstream gate on `_scope_denied`,
-    # so any failure path that skips scope evaluation (no repo, early
-    # exception) MUST surface as a denial — otherwise unfiltered SQL
-    # aggregates leak cross-tenant data.
-    _scope_only_filters: dict[str, Any] | None = None
-    _scope_denied: bool = True
-
-    repo = ctx.repositories.get(ctx.source) if ctx.repositories else None
-    if repo:
-        try:
-            # Build filters from IR ConditionExpr
-            # Multi-source regions store per-source filter on _source_filter
-            filters: dict[str, Any] | None = None
-            ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
-            if ir_filter is not None:
-                try:
-                    from dazzle.back.runtime.route_generator import (
-                        _extract_condition_filters,
-                    )
-
-                    filters = {}
-                    _extract_condition_filters(
-                        ir_filter,
-                        _current_user_id or "",
-                        filters,
-                        logger,
-                        _auth_ctx_for_filters,
-                        context_id=_context_id,
-                    )
-                    if not filters:
-                        filters = None
-                except Exception:
-                    logger.warning("Failed to evaluate condition filter", exc_info=True)
-
-            # Build sort — user sort param > IR region sort > surface UX sort (#362)
-            sort_list: list[str] | None = None
-            if sort:
-                sort_list = [f"-{sort}" if dir == "desc" else sort]
-            else:
-                ir_sort = ctx.ir_region.sort
-                if ir_sort:
-                    sort_list = [
-                        f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort
-                    ]
-                elif ctx.surface_default_sort:
-                    sort_list = [
-                        f"-{s.field}" if s.direction == "desc" else s.field
-                        for s in ctx.surface_default_sort
-                    ]
-
-            # Collect interactive filters from query params
-            for param_key, param_val in request.query_params.items():
-                if param_key.startswith("filter_") and param_val:
-                    field_name = param_key[7:]  # strip "filter_"
-                    if filters is None:
-                        filters = {}
-                    filters[field_name] = param_val
-
-            # Date range filtering (#566)
-            date_field = ctx.ctx_region.date_field if hasattr(ctx.ctx_region, "date_field") else ""
-            if date_field:
-                date_from = request.query_params.get("date_from")
-                date_to = request.query_params.get("date_to")
-                if date_from:
-                    if filters is None:
-                        filters = {}
-                    filters[f"{date_field}__gte"] = date_from
-                if date_to:
-                    if filters is None:
-                        filters = {}
-                    filters[f"{date_field}__lte"] = date_to
-
-            # SECURITY: apply entity-level scope predicates (#574)
-            _scope_only_filters, _scope_denied = _apply_workspace_scope_filters(
-                ctx, _auth_ctx_for_filters, _current_user_id, None
-            )
-            if _scope_only_filters:
-                filters = {**(filters or {}), **_scope_only_filters}
-
-            # Use pre-computed auto_include from entity_auto_includes (#272, #423)
-            include_rels = ctx.auto_include
-
-            # Grouped views need enough items to distribute across columns.
-            # BOX_PLOT (#889) added so a paginated default still surfaces
-            # all FK-distinct buckets when `group_by: <fk_column>`.
-            if (
-                ctx.ctx_region.display in ("KANBAN", "BAR_CHART", "FUNNEL_CHART", "BOX_PLOT")
-                and not ctx.ctx_region.limit
-            ):
-                limit = min(page_size, 200) if page_size > 20 else 50
-            else:
-                limit = ctx.ctx_region.limit or page_size
-            if _scope_denied:
-                # No scope rule matched — default-deny: empty result set
-                result = {"items": [], "total": 0}
-            else:
-                result = await repo.list(
-                    page=page,
-                    page_size=limit,
-                    filters=filters,
-                    sort=sort_list,
-                    include=include_rels or None,
-                    fk_display_only=True,
-                )
-            if isinstance(result, dict):
-                _result: dict[str, Any] = result
-                raw_items = _result.get("items", [])
-                items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
-                # Resolve FK dicts to display strings (#571)
-                items = [_inject_display_names(item) for item in items]
-                # SECURITY: use item count as total for workspace regions.
-                # The repo COUNT query may not have scope rules applied,
-                # which would leak unscoped record counts in pagination
-                # metadata (e.g., "Showing 10 of 52,380") (#573).
-                total = len(items)
-
-            # Zero results is valid — the region shows its empty: message.
-            # Do NOT fall back to unfiltered queries: scope/filter conditions
-            # are access-control gates, not advisory hints (#546).
-        except Exception as exc:
-            # #935: previously logged at WARN which hid backend errors
-            # (DB type mismatches, missing columns, scope-predicate
-            # compilation failures) inside the noise threshold of a
-            # busy server. The fail-closed semantics (#546) are
-            # preserved — the region still renders empty — but the
-            # log line is now ERROR-level + structured so anyone
-            # hitting "my region shows no rows but the entity list
-            # shows 5" gets a single grep to find the cause.
-            logger.error(
-                "workspace_region_query_failed entity=%s region=%s exc=%s",
-                ctx.source,
-                ctx.ctx_region.name,
-                type(exc).__name__,
-                exc_info=True,
-            )
 
     # Use pre-computed columns from startup (constant-folded from IR),
     # filtered by per-persona visible: predicates (#872).
