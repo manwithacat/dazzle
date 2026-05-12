@@ -1,11 +1,16 @@
 """Render compliance markdown documents to branded PDF via WeasyPrint.
 
-WeasyPrint is an optional dependency — this module gracefully handles
-its absence with a clear error message.
+WeasyPrint and markdown are optional dependencies — this module
+gracefully handles their absence with a clear error message.
+
+Post-#1050 (v0.67.86+): the HTML wrapper template uses stdlib
+`string.Template` (variable substitution only — no logic in the
+template) instead of Jinja2.
 """
 
 from datetime import date
 from pathlib import Path
+from string import Template
 from typing import Any
 
 import yaml
@@ -13,7 +18,6 @@ import yaml
 try:
     import markdown  # type: ignore[import-untyped,unused-ignore]
     import weasyprint
-    from jinja2 import Template
 
     HAS_RENDERER_DEPS = True
 except ImportError:
@@ -75,13 +79,13 @@ def render_document(
 ) -> Path:
     """Render a markdown document to a branded PDF.
 
-    Requires weasyprint, jinja2, and markdown packages.
-    Install with: pip install weasyprint jinja2 markdown
+    Requires weasyprint and markdown packages.
+    Install with: pip install weasyprint markdown
     """
     if not HAS_RENDERER_DEPS:
         raise RuntimeError(
             "PDF rendering requires optional dependencies. "
-            "Install with: pip install weasyprint jinja2 markdown"
+            "Install with: pip install weasyprint markdown"
         )
 
     brand = brandspec["brand"]
@@ -102,7 +106,7 @@ def render_document(
         raise FileNotFoundError(f"CSS not found: {CSS_PATH}")
 
     template = Template(TEMPLATE_PATH.read_text())
-    html_str = template.render(
+    html_str = template.substitute(
         content=content_html,
         document_title=document_title,
         document_id=document_id,
@@ -114,7 +118,9 @@ def render_document(
         author=doc_control.get("author", "Compliance Pipeline"),
         reviewer=reviewer or doc_control.get("reviewer", ""),
         approver=approver or doc_control.get("approver", ""),
-        colours=colours,
+        colour_primary=colours["primary"],
+        colour_secondary=colours["secondary"],
+        colour_accent=colours["accent"],
         css_path=str(CSS_PATH),
     )
 

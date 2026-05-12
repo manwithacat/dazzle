@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.86] - 2026-05-12
+
+### Changed
+
+- **`src/dazzle/compliance/renderer.py` migrated off jinja2** — closes [#1050](https://github.com/manwithacat/dazzle/issues/1050). Replaced `jinja2.Template(...).render(...)` with stdlib `string.Template(...).substitute(...)`. The `document.html` wrapper template was already pure variable interpolation (no `{% for %}` / `{% if %}`), so the migration is mechanical: `{{ var }}` → `$var`, dict access `{{ colours.primary }}` → flattened `$colour_primary`.
+- **`src/dazzle/compliance/templates/document.html`** rewritten with `$var` syntax. Same output shape.
+- **Optional-import block** in `renderer.py` no longer needs `from jinja2 import Template`. `pip install weasyprint markdown` is now sufficient — `jinja2` no longer required for compliance PDFs.
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+One fewer jinja2 user. Remaining users:
+- `src/dazzle_ui/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot fragment test suite (#1044)
+- `src/dazzle/core/expander.py` (#1047 — DSL vocab macros)
+- `src/dazzle_back/runtime/llm_executor.py` (#1048 — LLM prompts)
+- `src/dazzle/services/agent_commands/renderer.py` (#1049 — slash-command markdown)
+- Theme globals on the Jinja env in `system_routes.py` + `combined_server.py` + `hot_reload.py` — become dead code once `get_jinja_env` goes away
+
 ## [0.67.85] - 2026-05-12
 
 ### Removed
