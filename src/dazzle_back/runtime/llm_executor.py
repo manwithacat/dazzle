@@ -3,6 +3,14 @@
 Connects DSL-declared ``llm_intent`` blocks to the ``LLMAPIClient`` at
 runtime, producing ``ExecutionResult`` values and optionally recording
 ``AIJob`` entities for cost tracking.
+
+Post-#1048 (v0.67.88+): prompt templates use stdlib ``string.Template``
+syntax (``$var`` / ``${var}``) instead of Jinja2 ``{{ var }}``. The
+input dict is unpacked directly into the substitution namespace, so a
+DSL prompt of ``"Classify: $description"`` interpolates against the
+intent's ``input_map``-derived dict directly. Loops and conditionals
+in prompts are no longer supported — author multiple intents or
+pre-compose the prompt in the caller.
 """
 
 from __future__ import annotations  # required: forward reference
@@ -12,9 +20,8 @@ import logging
 import time
 from dataclasses import dataclass
 from decimal import Decimal
+from string import Template
 from typing import Any
-
-import jinja2
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.llm import LLMIntentSpec, LLMModelSpec, RetryBackoff
@@ -99,10 +106,19 @@ class LLMIntentExecutor:
 
     @staticmethod
     def _render_prompt(template_str: str, input_data: dict[str, Any]) -> str:
-        """Render a Jinja2 prompt template with ``input`` in the namespace."""
-        env = jinja2.Environment(undefined=jinja2.StrictUndefined)  # nosec B701 — prompt rendering, not HTML
-        tpl = env.from_string(template_str)
-        return tpl.render(input=input_data)
+        """Render a prompt template via stdlib ``string.Template``.
+
+        The template uses ``$var`` / ``${var}`` placeholders. ``input_data``
+        is unpacked directly into the substitution namespace, so a prompt
+        of ``"Classify: $description"`` substitutes against the intent's
+        ``input_map``-derived dict (each key in ``input_data`` becomes a
+        usable ``$<key>`` placeholder).
+
+        Raises ``KeyError`` if a placeholder has no matching key in
+        ``input_data`` — the executor's caller converts that to a
+        well-formed ``ExecutionResult`` error.
+        """
+        return Template(template_str).substitute(**input_data)
 
     @staticmethod
     def _build_client(model: LLMModelSpec) -> LLMAPIClient:
@@ -141,7 +157,7 @@ class LLMIntentExecutor:
         # Render prompt
         try:
             rendered = self._render_prompt(intent.prompt_template, input_data)
-        except jinja2.TemplateError as exc:
+        except (KeyError, ValueError) as exc:
             return ExecutionResult(success=False, error=f"Prompt template error: {exc}")
 
         # Build client

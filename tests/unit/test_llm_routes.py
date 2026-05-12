@@ -17,7 +17,7 @@ def _make_app() -> tuple[FastAPI, LLMIntentExecutor]:
     intent = LLMIntentSpec(
         name="summarize",
         model_ref="m1",
-        prompt_template="Summarise: {{ input.text }}",
+        prompt_template="Summarise: $text",
         description="Summarise text",
     )
     appspec = AppSpec(

@@ -49,7 +49,7 @@ llm_model claude_sonnet "Claude Sonnet (Balanced)":
 llm_intent classify_task_priority "Auto-classify Task Priority":
   description: "Analyze task title and description to suggest priority level"
   model: claude_haiku
-  prompt: "Analyze task '{{ input.title }}' with description '{{ input.description }}' and classify its priority as low, medium, high, or urgent. Respond with JSON containing priority, reasoning, and confidence."
+  prompt: "Analyze task '$title' with description '$description' and classify its priority as low, medium, high, or urgent. Respond with JSON containing priority, reasoning, and confidence."
   timeout: 15
   retry:
     max_attempts: 2
@@ -61,7 +61,7 @@ llm_intent classify_task_priority "Auto-classify Task Priority":
 llm_intent suggest_task_tags "Suggest Tags for Task":
   description: "Analyze task to suggest relevant tags/labels"
   model: claude_haiku
-  prompt: "Suggest relevant tags for task '{{ input.title }}' with description '{{ input.description }}'. Available tags: backend, frontend, api, database, ui, testing, documentation, infrastructure, security, performance. Respond with JSON containing tags array and reasoning."
+  prompt: "Suggest relevant tags for task '$title' with description '$description'. Available tags: backend, frontend, api, database, ui, testing, documentation, infrastructure, security, performance. Respond with JSON containing tags array and reasoning."
   timeout: 10
   pii:
     scan: true
@@ -70,7 +70,7 @@ llm_intent suggest_task_tags "Suggest Tags for Task":
 llm_intent summarize_task_comments "Summarize Task Discussion":
   description: "Summarize the comment thread on a task"
   model: claude_sonnet
-  prompt: "Summarize the discussion on task '{{ input.task_title }}' based on the provided comments. Provide a brief summary of key decisions, outstanding questions, and next steps."
+  prompt: "Summarize the discussion on task '$task_title' based on the provided comments. Provide a brief summary of key decisions, outstanding questions, and next steps."
   timeout: 30
   retry:
     max_attempts: 2
@@ -82,7 +82,7 @@ llm_intent summarize_task_comments "Summarize Task Discussion":
 llm_intent estimate_task_effort "Estimate Task Effort":
   description: "Estimate effort required for a task"
   model: claude_sonnet
-  prompt: "Estimate effort for task '{{ input.title }}' with description '{{ input.description }}' and priority '{{ input.priority }}'. Respond with JSON containing effort_hours, complexity, risks, dependencies, and confidence."
+  prompt: "Estimate effort for task '$title' with description '$description' and priority '$priority'. Respond with JSON containing effort_hours, complexity, risks, dependencies, and confidence."
   timeout: 20
   pii:
     scan: true

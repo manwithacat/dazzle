@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import jinja2
 import pytest
 
 from dazzle.core.ir.appspec import AppSpec
@@ -63,16 +62,20 @@ def _make_appspec(
 
 class TestPromptRendering:
     def test_renders_valid_template(self) -> None:
-        result = LLMIntentExecutor._render_prompt("Hello {{ input.name }}", {"name": "World"})
+        result = LLMIntentExecutor._render_prompt("Hello $name", {"name": "World"})
         assert result == "Hello World"
 
     def test_missing_var_raises(self) -> None:
-        with pytest.raises(jinja2.UndefinedError):
-            LLMIntentExecutor._render_prompt("{{ input.missing }}", {})
+        # Post-#1048 (v0.67.88+): string.Template raises KeyError on
+        # missing substitutions (was jinja2.UndefinedError).
+        with pytest.raises(KeyError):
+            LLMIntentExecutor._render_prompt("$missing", {})
 
-    def test_complex_template(self) -> None:
-        tpl = "{% for item in input.tags %}{{ item }},{% endfor %}"
-        result = LLMIntentExecutor._render_prompt(tpl, {"tags": ["a", "b"]})
+    def test_caller_pre_composes_loops(self) -> None:
+        """Post-#1048: loops happen in the caller's Python, then the
+        pre-formatted string is interpolated as a single placeholder."""
+        joined = ",".join(["a", "b"]) + ","
+        result = LLMIntentExecutor._render_prompt("$items_block", {"items_block": joined})
         assert result == "a,b,"
 
 
@@ -142,7 +145,9 @@ class TestExecute:
 
     @pytest.mark.asyncio
     async def test_bad_template(self) -> None:
-        appspec = _make_appspec(intents=[_make_intent(prompt_template="{{ input.missing }}")])
+        # Post-#1048: $missing with no `missing` key in input raises
+        # KeyError, which the executor wraps as a template error.
+        appspec = _make_appspec(intents=[_make_intent(prompt_template="$missing")])
         executor = LLMIntentExecutor(appspec)
         with patch.object(LLMIntentExecutor, "_build_client"):
             result = await executor.execute("summarize", {})

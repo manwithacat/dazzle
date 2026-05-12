@@ -89,6 +89,10 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle_ui/runtime/experience_renderer.py",
     # v0.67.78 — journey_reporter inline-renders via html.escape (closes #1041).
     "src/dazzle/agent/journey_reporter.py",
+    # v0.67.87 — agent_commands templates ported to Python f-strings (closes #1049).
+    "src/dazzle/services/agent_commands/renderer.py",
+    # v0.67.88 — llm_executor prompt rendering migrated to string.Template (closes #1048).
+    "src/dazzle_back/runtime/llm_executor.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against

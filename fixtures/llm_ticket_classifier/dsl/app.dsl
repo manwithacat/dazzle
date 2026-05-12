@@ -68,7 +68,7 @@ llm_config:
 # Simple category classification — auto-triggers on new tickets
 llm_intent classify_ticket "Classify Support Ticket":
   model: claude_haiku
-  prompt: "Classify this support ticket into exactly one category: billing, technical, feature_request, account, or other.\n\nTicket:\n{{ input.description }}\n\nRespond with only the category name."
+  prompt: "Classify this support ticket into exactly one category: billing, technical, feature_request, account, or other.\n\nTicket:\n$description\n\nRespond with only the category name."
   timeout: 15
   trigger:
     on_entity: Ticket
@@ -82,7 +82,7 @@ llm_intent classify_ticket "Classify Support Ticket":
 # Priority assessment with structured output
 llm_intent assess_priority "Assess Ticket Priority":
   model: claude_sonnet
-  prompt: "Assess the priority of this support ticket. Consider urgency, business impact, and customer sentiment.\n\nTicket:\n{{ input.description }}\n\nRespond with JSON: {\"priority\": \"low|medium|high|critical\", \"reasoning\": \"brief explanation\"}"
+  prompt: "Assess the priority of this support ticket. Consider urgency, business impact, and customer sentiment.\n\nTicket:\n$description\n\nRespond with JSON: {\"priority\": \"low|medium|high|critical\", \"reasoning\": \"brief explanation\"}"
   output_schema: PriorityAssessment
   timeout: 30
   retry:
@@ -95,7 +95,7 @@ llm_intent assess_priority "Assess Ticket Priority":
 # Sentiment analysis
 llm_intent analyze_sentiment "Analyze Customer Sentiment":
   model: claude_haiku
-  prompt: "Analyze the customer sentiment in this support ticket.\n\nTicket:\n{{ input.description }}\n\nRespond with JSON: {\"sentiment\": \"positive|neutral|negative|frustrated\", \"confidence\": 0.0-1.0}"
+  prompt: "Analyze the customer sentiment in this support ticket.\n\nTicket:\n$description\n\nRespond with JSON: {\"sentiment\": \"positive|neutral|negative|frustrated\", \"confidence\": 0.0-1.0}"
   timeout: 10
   pii:
     scan: true
@@ -104,7 +104,7 @@ llm_intent analyze_sentiment "Analyze Customer Sentiment":
 # Generate response suggestion
 llm_intent suggest_response "Suggest Response":
   model: claude_sonnet
-  prompt: "Based on this support ticket and its classification, suggest a helpful response template.\n\nTicket:\n{{ input.description }}\n\nCategory: {{ input.category }}\nPriority: {{ input.priority }}\n\nProvide a professional, empathetic response template."
+  prompt: "Based on this support ticket and its classification, suggest a helpful response template.\n\nTicket:\n$description\n\nCategory: $category\nPriority: $priority\n\nProvide a professional, empathetic response template."
   timeout: 45
   retry:
     max_attempts: 2

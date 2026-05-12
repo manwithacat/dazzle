@@ -38,7 +38,7 @@
 # - [x] llm_intent name: (no title)
 # - [x] model: model_name
 # - [x] prompt: "template string"
-# - [x] prompt: with {{ input.field }} placeholders
+# - [x] prompt: with $field placeholders
 # - [x] output_schema: EntityName
 # - [x] timeout: seconds
 # - [x] retry: block
@@ -256,7 +256,7 @@ llm_config:
 
 llm_intent summarize_text "Summarize Text":
   model: claude_haiku
-  prompt: "Summarize the following text concisely:\n\n{{ input.text }}"
+  prompt: "Summarize the following text concisely:\n\n$text"
   timeout: 30
   pii:
     scan: true
@@ -268,7 +268,7 @@ llm_intent summarize_text "Summarize Text":
 
 llm_intent translate:
   model: claude_haiku
-  prompt: "Translate the following text to {{ input.target_language }}:\n\n{{ input.text }}"
+  prompt: "Translate the following text to $target_language:\n\n$text"
   timeout: 45
   pii:
     scan: true
@@ -280,7 +280,7 @@ llm_intent translate:
 
 llm_intent extract_entities "Extract Entities":
   model: claude_sonnet
-  prompt: "Extract all named entities from the following text:\n\n{{ input.text }}\n\nReturn a structured list of entities with their types."
+  prompt: "Extract all named entities from the following text:\n\n$text\n\nReturn a structured list of entities with their types."
   output_schema: ExtractedEntity
   timeout: 60
   pii:
@@ -289,7 +289,7 @@ llm_intent extract_entities "Extract Entities":
 
 llm_intent classify_priority "Classify Task Priority":
   model: claude_haiku
-  prompt: "Analyze this task and classify its priority:\n\nTitle: {{ input.title }}\nDescription: {{ input.description }}\n\nReturn the priority level (low, medium, high, urgent) with reasoning."
+  prompt: "Analyze this task and classify its priority:\n\nTitle: $title\nDescription: $description\n\nReturn the priority level (low, medium, high, urgent) with reasoning."
   output_schema: PriorityClassification
   timeout: 20
   pii:
@@ -302,7 +302,7 @@ llm_intent classify_priority "Classify Task Priority":
 
 llm_intent analyze_sentiment "Analyze Sentiment":
   model: claude_haiku
-  prompt: "Analyze the sentiment of the following text:\n\n{{ input.text }}\n\nReturn: positive, negative, or neutral with confidence score."
+  prompt: "Analyze the sentiment of the following text:\n\n$text\n\nReturn: positive, negative, or neutral with confidence score."
   output_schema: SentimentResult
   timeout: 30
   retry:
@@ -320,7 +320,7 @@ llm_intent analyze_sentiment "Analyze Sentiment":
 
 llm_intent generate_code "Generate Code":
   model: claude_sonnet
-  prompt: "Generate {{ input.language }} code that accomplishes the following:\n\n{{ input.specification }}\n\nProvide clean, well-commented code."
+  prompt: "Generate $language code that accomplishes the following:\n\n$specification\n\nProvide clean, well-commented code."
   timeout: 120
   retry:
     max_attempts: 5
@@ -337,7 +337,7 @@ llm_intent generate_code "Generate Code":
 
 llm_intent customer_insight "Customer Insight":
   model: claude_sonnet
-  prompt: "Analyze the following customer data and provide insights:\n\n{{ input.customer_data }}"
+  prompt: "Analyze the following customer data and provide insights:\n\n$customer_data"
   timeout: 60
   pii:
     scan: true
@@ -349,7 +349,7 @@ llm_intent customer_insight "Customer Insight":
 
 llm_intent support_ticket_summary "Summarize Support Ticket":
   model: claude_haiku
-  prompt: "Summarize this support ticket:\n\nSubject: {{ input.subject }}\nBody: {{ input.body }}\nCustomer: {{ input.customer_name }}"
+  prompt: "Summarize this support ticket:\n\nSubject: $subject\nBody: $body\nCustomer: $customer_name"
   output_schema: TicketSummary
   timeout: 45
   pii:
@@ -362,7 +362,7 @@ llm_intent support_ticket_summary "Summarize Support Ticket":
 
 llm_intent analyze_document "Analyze Document":
   model: claude_opus
-  prompt: "Analyze the following document and extract key information:\n\n{{ input.document_text }}"
+  prompt: "Analyze the following document and extract key information:\n\n$document_text"
   output_schema: DocumentAnalysis
   timeout: 180
   pii:
@@ -376,7 +376,7 @@ llm_intent analyze_document "Analyze Document":
 
 llm_intent full_analysis "Full Text Analysis":
   model: claude_sonnet
-  prompt: "Perform a comprehensive analysis of the following text:\n\nTitle: {{ input.title }}\nContent: {{ input.content }}\nContext: {{ input.context }}\n\nProvide:\n1. Summary\n2. Key themes\n3. Sentiment\n4. Entity extraction\n5. Recommendations"
+  prompt: "Perform a comprehensive analysis of the following text:\n\nTitle: $title\nContent: $content\nContext: $context\n\nProvide:\n1. Summary\n2. Key themes\n3. Sentiment\n4. Entity extraction\n5. Recommendations"
   output_schema: ComprehensiveAnalysis
   timeout: 180
   retry:
@@ -395,7 +395,7 @@ llm_intent full_analysis "Full Text Analysis":
 
 llm_intent generate_report "Generate Report":
   model: claude_opus
-  prompt: "Generate a {{ input.report_type }} report based on the following data:\n\n{% for item in input.data_items %}\n- {{ item.name }}: {{ item.value }}\n{% endfor %}\n\nReport period: {{ input.start_date }} to {{ input.end_date }}\nFormat: {{ input.output_format }}"
+  prompt: "Generate a $report_type report based on the following data:\n\n$data_items_block\n\nReport period: $start_date to $end_date\nFormat: $output_format"
   output_schema: GeneratedReport
   timeout: 300
   retry:
@@ -411,7 +411,7 @@ llm_intent generate_report "Generate Report":
 
 llm_intent chat_response "Chat Response":
   model: gpt4o
-  prompt: "You are a helpful assistant. Continue this conversation:\n\n{{ input.conversation_history }}\n\nUser: {{ input.user_message }}\n\nAssistant:"
+  prompt: "You are a helpful assistant. Continue this conversation:\n\n$conversation_history\n\nUser: $user_message\n\nAssistant:"
   timeout: 60
   retry:
     max_attempts: 3
@@ -428,7 +428,7 @@ llm_intent chat_response "Chat Response":
 
 llm_intent fast_classification "Fast Classification":
   model: gpt4o_mini
-  prompt: "Classify the following text into one of these categories: {{ input.categories }}\n\nText: {{ input.text }}"
+  prompt: "Classify the following text into one of these categories: $categories\n\nText: $text"
   timeout: 15
   pii:
     scan: true
@@ -436,7 +436,7 @@ llm_intent fast_classification "Fast Classification":
 
 llm_intent quality_reasoning "Quality Reasoning":
   model: claude_opus
-  prompt: "Provide detailed reasoning and analysis for the following question:\n\n{{ input.question }}\n\nConsider multiple perspectives and provide a thorough answer."
+  prompt: "Provide detailed reasoning and analysis for the following question:\n\n$question\n\nConsider multiple perspectives and provide a thorough answer."
   timeout: 240
   retry:
     max_attempts: 2
@@ -447,7 +447,7 @@ llm_intent quality_reasoning "Quality Reasoning":
 
 llm_intent local_embedding "Local Embedding":
   model: local_llama
-  prompt: "Generate a summary embedding for:\n\n{{ input.text }}"
+  prompt: "Generate a summary embedding for:\n\n$text"
   timeout: 30
   pii:
     scan: true
@@ -459,7 +459,7 @@ llm_intent local_embedding "Local Embedding":
 
 llm_intent code_review "Code Review":
   model: claude_sonnet
-  prompt: "Review the following {{ input.language }} code for:\n1. Bugs and errors\n2. Security issues\n3. Performance improvements\n4. Best practices\n\nCode:\n```{{ input.language }}\n{{ input.code }}\n```"
+  prompt: "Review the following $language code for:\n1. Bugs and errors\n2. Security issues\n3. Performance improvements\n4. Best practices\n\nCode:\n```$language\n$code\n```"
   output_schema: CodeReviewResult
   timeout: 120
   retry:

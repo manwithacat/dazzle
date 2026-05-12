@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.88] - 2026-05-12
+
+### Removed
+
+- **`jinja2` import retired from `src/dazzle_back/runtime/llm_executor.py`** — closes [#1048](https://github.com/manwithacat/gh-issue/1048). LLM prompt templates now use stdlib `string.Template` (`$var` / `${var}` syntax) instead of Jinja2 (`{{ var }}`).
+
+### Changed
+
+- **`LLMIntentExecutor._render_prompt`** rewritten: `Template(template_str).substitute(**input_data)`. Input dict keys become available as `$<key>` placeholders directly — the `input.` prefix is gone. Missing keys raise `KeyError`, which the executor wraps as `"Prompt template error: ..."`.
+- **`prompt_template` syntax in DSL `llm_intent` blocks** — converted across all fixtures and example apps. Pattern: `{{ input.description }}` → `$description`. Files updated:
+  - `examples/simple_task/dsl/llm.dsl`
+  - `fixtures/pra/dsl/llm.dsl`
+  - `fixtures/llm_ticket_classifier/dsl/app.dsl`
+- **One complex prompt template in `fixtures/pra/dsl/llm.dsl`** (the `generate_report` intent that used `{% for item in input.data_items %}`) — flattened to a single `$data_items_block` placeholder. The caller pre-formats the list as a string before invoking the executor.
+
+### Breaking Change Notice
+
+Downstream DSL files with `llm_intent` blocks using `{{ input.field }}` syntax will fail at prompt-render time. Migration: replace `{{ input.X }}` → `$X` for every input field. Loops and conditionals in prompts are no longer supported — author multiple intents or pre-compose the prompt in the caller before passing it to the executor.
+
+### Tests
+
+- `tests/unit/test_llm_executor.py::TestPromptRendering` — three tests rewritten:
+  - `test_renders_valid_template`: `$name` (was `{{ input.name }}`)
+  - `test_missing_var_raises`: now expects `KeyError` (was `jinja2.UndefinedError`)
+  - `test_caller_pre_composes_loops`: replaces `test_complex_template`; pins the "loops happen in the caller" migration pattern
+- `tests/unit/test_llm_routes.py` — fixture prompt rewritten to `$text`
+- `tests/unit/test_typed_runtime_no_jinja.py::_TYPED_ONLY_MODULES` — `llm_executor.py` and `agent_commands/renderer.py` added to the no-jinja regression gate
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+4 of 5 sub-issues closed (#1048, #1049, #1050, #1051). Remaining:
+- **#1047** — `src/dazzle/core/expander.py` (DSL vocab macros) — the trickiest because user-authored vocab manifests use Jinja filters (`| lower`, `| title`) and conditionals heavily. No example `.dsl` file actually invokes vocab via `@use` though, so migration impact is bounded.
+- `src/dazzle_ui/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot fragment test suite (goes away with #1044)
+- Theme globals on Jinja env in `system_routes.py` + `combined_server.py` + `hot_reload.py` — become dead code once `get_jinja_env` is gone
+
+### Agent Guidance
+
+- DSL `llm_intent` prompts use stdlib `string.Template` syntax: `$var` or `${var}`. The variable name is the key in the intent's `input_map`-derived dict — no nested `input.` accessor needed. To compose dynamic lists into a prompt, format them in the caller before invoking the executor.
+
 ## [0.67.87] - 2026-05-12
 
 ### Removed
