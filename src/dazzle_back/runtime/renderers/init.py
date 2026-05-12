@@ -1,9 +1,10 @@
 """Default renderer registration — called once at app startup.
 
 `register_default_renderers(services)` populates the renderer registry with
-the framework defaults: Jinja (legacy path, stub adapter) and Fragment
-(typed substrate from Plan 1). Apps may register additional renderers
-after this call.
+the framework defaults. Post-#1051 (v0.67.85+) only the typed Fragment
+renderer is registered — the legacy Jinja adapter was retired entirely
+along with `render_fragment` / `render_surface`. Apps may register
+additional renderers after this call.
 
 `default_renderer_names()` returns the same set without requiring a
 `RuntimeServices` instance — production `build_appspec` call sites use it
@@ -12,13 +13,12 @@ to populate `known_renderers=` for link-time validation, before the
 """
 
 from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
-from dazzle_back.runtime.renderers.jinja import JinjaRenderer
 from dazzle_back.runtime.services import RuntimeServices
 
 # Single source of truth: the framework default renderer set. Both the
 # registration helper below and `default_renderer_names()` derive from this
 # tuple, so the link-time validator and runtime registry can never disagree.
-_DEFAULT_RENDERERS: tuple[str, ...] = ("jinja", "fragment")
+_DEFAULT_RENDERERS: tuple[str, ...] = ("fragment",)
 
 
 def register_default_renderers(services: RuntimeServices) -> None:
@@ -28,7 +28,6 @@ def register_default_renderers(services: RuntimeServices) -> None:
     because the registry rejects duplicate names. Tests should construct
     fresh `RuntimeServices` instances rather than reuse and re-register.
     """
-    services.renderer_registry.register(name="jinja", handler=JinjaRenderer())
     services.renderer_registry.register(name="fragment", handler=FragmentSurfaceRenderer())
 
 

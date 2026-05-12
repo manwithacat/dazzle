@@ -30,18 +30,15 @@ def test_fragment_surface_renderer_renders_a_minimal_list_surface() -> None:
     assert "dz-surface" in html  # uses Fragment chrome, not Jinja chrome
 
 
-def test_fragment_surface_renderer_signature_matches_jinja_adapter() -> None:
-    """Both adapters share the (surface, ctx) -> str signature so the
-    dispatcher can call them uniformly."""
-    from dazzle_back.runtime.renderers.jinja import JinjaRenderer
+def test_fragment_surface_renderer_signature_is_stable() -> None:
+    """The (surface, ctx) -> str signature is the dispatcher contract.
 
+    Pre-#1051 this test compared FragmentSurfaceRenderer against the
+    JinjaRenderer adapter; the adapter was retired so the gate now
+    just pins the FragmentSurfaceRenderer signature directly.
+    """
     fragment_render = FragmentSurfaceRenderer.render
-    jinja_render = JinjaRenderer.render
 
-    # Same parameter count (self + surface + ctx)
-    assert fragment_render.__code__.co_argcount == jinja_render.__code__.co_argcount
-    # Same parameter names
-    assert (
-        fragment_render.__code__.co_varnames[: fragment_render.__code__.co_argcount]
-        == jinja_render.__code__.co_varnames[: jinja_render.__code__.co_argcount]
-    )
+    # render(self, surface, ctx) — 3 positional parameters
+    assert fragment_render.__code__.co_argcount == 3
+    assert fragment_render.__code__.co_varnames[:3] == ("self", "surface", "ctx")

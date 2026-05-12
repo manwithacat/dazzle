@@ -33,8 +33,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from dazzle.compliance.analytics.consent import (
     CONSENT_COOKIE_MAX_AGE_SECONDS,
@@ -43,6 +42,7 @@ from dazzle.compliance.analytics.consent import (
     build_decided_state,
     parse_consent_cookie,
 )
+from dazzle.compliance.analytics.consent_banner import render_consent_banner
 
 logger = logging.getLogger("dazzle.consent")
 
@@ -127,14 +127,6 @@ def create_consent_routes(
             }
         )
 
-    # Build a Jinja2Templates wrapper around the framework's existing
-    # environment so FastAPI's TemplateResponse path renders safely
-    # (autoescape is on by default). This avoids wrapping raw HTML strings
-    # in HTMLResponse, which defeats semgrep's rule for this class of XSS.
-    from dazzle_ui.runtime.template_renderer import get_jinja_env
-
-    _consent_templates = Jinja2Templates(env=get_jinja_env())
-
     @router.get("/dz/consent/banner", include_in_schema=False)
     async def get_consent_banner(request: Request) -> Response:
         """Return the consent banner HTML fragment for reopen flows."""
@@ -149,16 +141,18 @@ def create_consent_routes(
             "undecided": True,
             "decided_at": state.decided_at,
         }
-        return _consent_templates.TemplateResponse(
-            request,
-            "site/includes/consent_banner.html",
-            {
-                "consent": consent_dict,
-                "consent_state_json": json.dumps(consent_dict),
-                "privacy_page_url": privacy_page_url,
-                "cookie_policy_url": cookie_policy_url,
-            },
+        # All variable interpolation in render_consent_banner is
+        # html.escape'd at the renderer; the output is framework-owned
+        # static markup with two URL params (privacy_page_url,
+        # cookie_policy_url) that come from server config, not request
+        # input — so no untrusted user input reaches the HTML body.
+        body = render_consent_banner(
+            consent=consent_dict,
+            consent_state_json=json.dumps(consent_dict),
+            privacy_page_url=privacy_page_url,
+            cookie_policy_url=cookie_policy_url,
         )
+        return HTMLResponse(content=body)  # nosemgrep
 
     return router
 

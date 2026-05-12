@@ -46,15 +46,11 @@ from dazzle_ui.runtime.template_context import (
     PdfViewerContext,
     TableContext,
 )
-from dazzle_ui.runtime.template_renderer import (
-    render_fragment,
-    render_page,
-)
+from dazzle_ui.runtime.template_renderer import render_page
 
 __all__ = [
     # Template rendering
     "render_page",
-    "render_fragment",
     "PageContext",
     "TableContext",
     "FormContext",

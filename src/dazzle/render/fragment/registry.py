@@ -20,11 +20,10 @@ class Renderer(Protocol):
     """Structural protocol for registered renderers.
 
     Plan 5 unified the dispatch shape: every renderer adapter takes
-    `(surface, ctx)` and returns an HTML string. Adapters bridge to
-    underlying renderers — JinjaRenderer wraps the legacy template
-    path; FragmentSurfaceRenderer wraps the typed Fragment substrate.
-    Custom renderers (e.g. cytoscape_3d, future PDF/native targets) just
-    need to satisfy this protocol.
+    `(surface, ctx)` and returns an HTML string. Post-#1051 (v0.67.85+)
+    only the typed FragmentSurfaceRenderer ships by default; custom
+    renderers (e.g. cytoscape_3d, future PDF/native targets) just need
+    to satisfy this protocol.
 
     The first parameter is intentionally `Any` rather than `SurfaceSpec`
     to avoid a circular import (this module is in `dazzle.render.fragment`,

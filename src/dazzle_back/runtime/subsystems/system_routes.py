@@ -530,7 +530,6 @@ class SystemRoutesSubsystem:
         # Configure project-level template overrides (v0.29.0)
         try:
             from dazzle_ui.runtime.template_renderer import (
-                TEMPLATES_DIR,
                 configure_project_templates,
                 get_jinja_env,
             )
@@ -680,28 +679,10 @@ class SystemRoutesSubsystem:
                                 exc_info=True,
                             )
 
-                    # Build override registry if project has declaration headers
-                    try:
-                        from dazzle import __version__ as dz_version
-                        from dazzle_ui.runtime.override_registry import (
-                            build_registry,
-                            save_registry,
-                        )
-
-                        registry = build_registry(
-                            project_templates,
-                            TEMPLATES_DIR,
-                            framework_version=dz_version,
-                        )
-                        if registry.get("template_overrides"):
-                            from dazzle.core.paths import project_overrides_file
-
-                            save_registry(
-                                registry,
-                                project_overrides_file(ctx.project_root),
-                            )
-                    except Exception:
-                        logger.debug("Override registry build skipped", exc_info=True)
+                    # #1051 v0.67.85: override_registry retired — projects
+                    # no longer author Jinja templates with the `dazzle:override`
+                    # declaration shape; downstream rendering composes typed
+                    # Page + AppShell primitives directly.
         except ImportError:
             pass  # dazzle_ui not installed
 

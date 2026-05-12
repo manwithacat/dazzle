@@ -1,4 +1,8 @@
-"""Default Jinja and Fragment renderers register at startup."""
+"""Default Fragment renderer registers at startup.
+
+Post-#1051 (v0.67.85+) the legacy "jinja" renderer adapter is retired;
+only the typed Fragment renderer is shipped as a default.
+"""
 
 import pytest
 
@@ -8,10 +12,10 @@ from dazzle_back.runtime.renderers.init import register_default_renderers
 from dazzle_back.runtime.services import RuntimeServices
 
 
-def test_register_default_renderers_adds_jinja_and_fragment() -> None:
+def test_register_default_renderers_adds_fragment() -> None:
     services = RuntimeServices()
     register_default_renderers(services)
-    assert sorted(services.renderer_registry.registered_names()) == ["fragment", "jinja"]
+    assert sorted(services.renderer_registry.registered_names()) == ["fragment"]
 
 
 def test_fragment_handler_is_a_FragmentSurfaceRenderer() -> None:

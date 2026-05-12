@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.85] - 2026-05-12
+
+### Removed
+
+- **`render_fragment` and `render_surface` retired from the public API** — closes [#1051](https://github.com/manwithacat/gh-issue/1051). The downstream-facing Jinja-fragment helpers are no longer exported from `dazzle_ui.runtime`. Adopters compose typed `Page` + `AppShell` primitives directly. `render_fragment` remains as a framework-internal helper for the parking-lot fragment template test suite; it goes away with those templates (tracked under #1044).
+- **`JinjaRenderer` adapter retired entirely** — `src/dazzle_back/runtime/renderers/jinja.py` deleted. The renderer registry's default set is now just `{"fragment"}`. Surface `render:` clauses that named `"jinja"` will fail link-time validation. The dispatcher's fallback when `surface.render` is unset switched from `"jinja"` to `"fragment"`.
+- **`override_registry` retired entirely** — closes the `dazzle:override` declaration-header pattern for downstream Jinja-template authoring. Deleted:
+  - `src/dazzle_ui/runtime/override_registry.py` (246 lines)
+  - `src/dazzle/cli/overrides.py` (135 lines — the `dazzle overrides` CLI)
+  - `tests/unit/test_override_registry.py`
+  - Auto-build hook in `dazzle_back/runtime/subsystems/system_routes.py`
+- **`tests/unit/runtime/test_jinja_renderer_adapter.py`** deleted — the entire test file targeted the now-retired adapter.
+- **`src/dazzle_ui/templates/site/includes/consent_banner.html`** deleted — the consent banner now renders via `src/dazzle/compliance/analytics/consent_banner.render_consent_banner` (Python).
+
+### Added
+
+- **`src/dazzle/compliance/analytics/consent_banner.py`** — pure-Python port of the 150-line Jinja consent banner. `render_consent_banner(consent, consent_state_json, privacy_page_url, cookie_policy_url)` emits the same `<div id="dz-consent-banner">` chrome with byte-identical bridge contract (`role="dialog"`, per-category `data-dz-consent-category` hooks, `data-consent-state` JSON payload). The keyboard handler and focus trap in `static/js/dz-consent.js` mount unchanged.
+
+### Changed
+
+- **`src/dazzle_back/runtime/consent_routes.py`** — `GET /dz/consent/banner` no longer instantiates `Jinja2Templates(env=get_jinja_env())`; it calls `render_consent_banner(...)` and returns an `HTMLResponse` (the variable interpolation is `html.escape`'d at the renderer, and the only URL parameters come from server config not request input).
+- **`src/dazzle_back/runtime/renderers/dispatch.py`** — fallback renderer name when `surface.render` is unset changed from `"jinja"` to `"fragment"`.
+- **`src/dazzle_back/runtime/renderers/init.py`** — `_DEFAULT_RENDERERS` is now `("fragment",)` only.
+
+### Breaking Change Notice
+
+Three downstream-facing affordances retired in this release:
+
+1. **`from dazzle_ui.runtime import render_fragment` → ImportError.** Adopters that rendered HTMX partial fragments via `render_fragment("fragments/foo.html", **vars)` must compose the equivalent HTML via Python (e.g. mirror the framework's `form_renderer` / `detail_renderer` pattern) and return it as a string.
+2. **Surface DSL `render: jinja` → link-time validation failure.** Update surfaces to `render: fragment` (or omit the field — `fragment` is the new default).
+3. **`dazzle overrides` CLI removed.** Downstream projects authoring Jinja templates with `{# dazzle:override layouts/app_shell.html #}` + `{# dazzle:blocks ... #}` declaration headers had this CLI to track block hashes across framework upgrades. The whole pattern is retired; projects should migrate templates to typed primitives.
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+Public Jinja-fragment API surface is gone. Remaining `jinja2` users:
+1. `src/dazzle_ui/runtime/template_renderer.py` — `get_jinja_env()` + framework-internal `render_fragment` helper (kept for the parking-lot fragment test suite; goes away with #1044)
+2. `src/dazzle/core/expander.py` (#1047)
+3. `src/dazzle_back/runtime/llm_executor.py` (#1048)
+4. `src/dazzle/services/agent_commands/renderer.py` (#1049)
+5. `src/dazzle/compliance/renderer.py` (#1050)
+6. `src/dazzle_back/runtime/subsystems/system_routes.py` + `combined_server.py` + `hot_reload.py` — set theme/feedback globals on the Jinja env. Become dead code once `get_jinja_env` is gone; cleanup will land alongside #1044.
+
+### Agent Guidance
+
+- The renderer registry default is `fragment`. New surface adapters register under the `fragment` family or define their own (e.g. `cytoscape_3d` for graph visualisations).
+- Downstream projects rendering custom HTML no longer extend Jinja templates. The supported pattern is composing typed `Page` + `AppShell` primitives and calling `dispatch_render_page(page_ctx, inner_html, ...)` from `dazzle_back.runtime.renderers.page_builder` — same pattern used internally by all framework routes since v0.67.55.
+
 ## [0.67.84] - 2026-05-12
 
 ### Removed
