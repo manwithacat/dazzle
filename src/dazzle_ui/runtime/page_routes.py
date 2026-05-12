@@ -808,87 +808,6 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     prc.ctx_overrides["detail"] = req_detail
 
 
-async def _handle_review(prc: _PageRequestContext) -> None:
-    """Fetch and prepare review page data for the per-request context."""
-    req_review = prc.ctx.review.model_copy(deep=True)
-
-    # Fetch the current item
-    req_review.item = await _fetch_json(
-        prc.effective_backend_url,
-        f"{prc.ctx.review.api_endpoint}/{{id}}",
-        prc.path_id,
-        prc.cookies,
-    )
-    if "error" in req_review.item:
-        logger.warning(
-            "Review page data fetch failed for %s/%s",
-            prc.ctx.review.entity_name,
-            prc.path_id,
-        )
-
-    # Evaluate when_expr for conditional field visibility (#363)
-    if req_review.item and "error" not in req_review.item:
-        from dazzle_ui.utils.expression_eval import evaluate_when_expr
-
-        for _field in req_review.fields:
-            if _field.when_expr:
-                _field.visible = evaluate_when_expr(_field.when_expr, req_review.item)
-
-    # Evaluate role-based visible conditions (#487)
-    if prc.ctx.user_roles is not None:
-        from dazzle_ui.utils.condition_eval import evaluate_condition
-
-        _role_ctx = {
-            "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
-        }
-        for _field in req_review.fields:
-            if _field.visible_condition:
-                if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
-                    _field.visible = False
-
-    # Substitute {id} in action transition URLs
-    for action in req_review.actions:
-        if action.transition_url and "{id}" in action.transition_url:
-            action.transition_url = action.transition_url.replace("{id}", str(prc.path_id))
-
-    # Fetch the review queue to compute position + navigation
-    # Use the same filter from request params (e.g. filter[status]=prepared)
-    queue_params: dict[str, str] = {"page_size": "1000"}
-    for key, val in prc.request.query_params.items():
-        if key.startswith("filter[") and val:
-            queue_params[key] = val
-    queue_qs = urllib.parse.urlencode(queue_params)
-    queue_url = f"{prc.effective_backend_url}{prc.ctx.review.api_endpoint}?{queue_qs}"
-    try:
-        queue_data = await _fetch_url(queue_url, prc.cookies)
-        queue_items = queue_data.get("items", [])
-        queue_ids = [str(item.get("id", "")) for item in queue_items]
-        req_review.queue_total = len(queue_ids)
-
-        current_id = str(prc.path_id)
-        if current_id in queue_ids:
-            pos = queue_ids.index(current_id)
-            req_review.queue_position = pos
-            # Build prev/next URLs preserving filter params
-            filter_qs = urllib.parse.urlencode(
-                {k: v for k, v in prc.request.query_params.items() if k.startswith("filter[")}
-            )
-            base = prc.ctx.review.queue_url.rstrip("/")
-            suffix = f"?{filter_qs}" if filter_qs else ""
-            if pos > 0:
-                req_review.prev_url = f"{base}/{queue_ids[pos - 1]}{suffix}"
-            if pos < len(queue_ids) - 1:
-                req_review.next_url = f"{base}/{queue_ids[pos + 1]}{suffix}"
-    except Exception:
-        logger.warning(
-            "Failed to fetch review queue for %s",
-            prc.ctx.review.entity_name,
-            exc_info=True,
-        )
-
-    prc.ctx_overrides["review"] = req_review
-
-
 async def _handle_edit_form(prc: _PageRequestContext) -> None:
     """Fetch and prepare edit form data for the per-request context."""
     req_form = prc.ctx.form.model_copy(deep=True)
@@ -1516,10 +1435,6 @@ async def _page_handler(
     # Detail page (path_id + detail context present)
     if path_id and ctx.detail:
         await _handle_detail(prc)
-
-    # Review page (path_id + review context present)
-    if path_id and ctx.review:
-        await _handle_review(prc)
 
     # Edit form (path_id + form in edit mode)
     if path_id and ctx.form and ctx.form.mode == "edit":

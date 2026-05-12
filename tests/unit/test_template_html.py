@@ -145,7 +145,6 @@ REGION_TEMPLATES = [
 COMPONENT_TEMPLATES = [
     "components/modal.html",
     "components/island.html",
-    "components/review_queue.html",
 ]
 
 

@@ -131,10 +131,6 @@ def test_view_surface_threads_purpose() -> None:
     _assert_purpose_on_context(ir.SurfaceMode.VIEW)
 
 
-def test_review_surface_threads_purpose() -> None:
-    _assert_purpose_on_context(ir.SurfaceMode.REVIEW)
-
-
 # =============================================================================
 # Render — app_shell.html emits the subtitle when page_purpose is set
 # =============================================================================

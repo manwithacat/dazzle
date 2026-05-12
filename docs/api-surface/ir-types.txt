@@ -4063,7 +4063,6 @@ enum: SurfaceMode
     - CUSTOM = 'custom'
     - EDIT = 'edit'
     - LIST = 'list'
-    - REVIEW = 'review'
     - VIEW = 'view'
 
 enum: SurfaceTrigger

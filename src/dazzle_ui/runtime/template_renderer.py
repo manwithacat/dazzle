@@ -761,7 +761,8 @@ def render_page(
         rendered_content = _render_typed_body(context)
     else:
         # Render the content template first (standalone fragment).
-        # Surviving template-driven path: pdf_viewer_page + review_queue.
+        # Surviving template-driven path: pdf_viewer_page (#1045 will
+        # retire this).
         content_template = env.get_template(context.template)
         rendered_content = content_template.render(**template_vars)  # nosemgrep
 

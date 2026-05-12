@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.81] - 2026-05-12
+
+### Removed
+
+- **`SurfaceMode.REVIEW` retired** — closes [#1046](https://github.com/manwithacat/dazzle/issues/1046). The REVIEW surface mode was fully wired (enum value, compile branch, runtime handler, queue navigation, transition action mapping, template, dedicated test file) but **zero example apps or fixtures** declared `mode: review`. The audit across `examples/` and `fixtures/` confirmed the feature was dormant. Path A (retire) chosen over Path B (port to typed primitive). Files removed:
+  - `SurfaceMode.REVIEW = "review"` enum entry in `src/dazzle/core/ir/surfaces.py`
+  - `_compile_review_surface()` and `SurfaceMode.REVIEW` route mapping in `src/dazzle_ui/converters/template_compiler.py`
+  - `ReviewContext` and `ReviewActionContext` Pydantic models in `src/dazzle_ui/runtime/template_context.py` (including `PageContext.review` field)
+  - `_handle_review()` and its dispatch in `src/dazzle_ui/runtime/page_routes.py`
+  - `src/dazzle_ui/templates/components/review_queue.html` (160 lines)
+  - `tests/unit/test_review_surface.py` (248 lines)
+  - REVIEW-specific assertions trimmed from `tests/unit/test_template_html.py` and `tests/unit/test_page_purpose_wiring.py`
+
+### Changed
+
+- **`render_page` template-driven path comment** updated — `review_queue.html` is gone, only `pdf_viewer_page.html` (#1045) remains.
+- **`docs/api-surface/ir-types.txt`** regenerated — `SurfaceMode` enum loses `REVIEW` entry.
+
+### Agent Guidance
+
+- `SurfaceMode` is now `{VIEW, CREATE, EDIT, LIST, CUSTOM}`. Surfaces that previously declared `mode: review` will fail to parse — port them to `mode: view` with a state-machine transitions widget, or to `mode: list` with a state filter.
+
+### Progress on #1042 (drop jinja2 umbrella) + #1039 (render_page typed Page port)
+
+After this ship, the Jinja template-driven path in `render_page` only fires for `components/pdf_viewer_page.html` (#1045). Closing #1045 unblocks #1039 unblocks the final jinja2 drop in #1042.
+
 ## [0.67.80] - 2026-05-12
 
 ### Removed

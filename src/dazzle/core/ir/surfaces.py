@@ -62,7 +62,6 @@ class SurfaceMode(StrEnum):
     CREATE = "create"
     EDIT = "edit"
     LIST = "list"
-    REVIEW = "review"
     CUSTOM = "custom"
 
 
