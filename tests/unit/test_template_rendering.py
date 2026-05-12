@@ -226,7 +226,9 @@ class TestCompileSurfaceToContext:
 
         assert ctx.detail is not None
         assert ctx.form is None
-        assert ctx.template == "components/detail_view.html"
+        # Post-#1045: VIEW surfaces use typed dispatch — template is empty,
+        # detail_renderer fires via PageContext.detail.
+        assert ctx.template == ""
         assert ctx.detail.entity_name == "Task"
         assert ctx.detail.edit_url is not None
         assert "{id}" in ctx.detail.edit_url

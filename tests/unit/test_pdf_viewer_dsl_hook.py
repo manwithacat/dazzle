@@ -1,21 +1,23 @@
 """Tests for #942 cycle 4 — the ``display: pdf_viewer`` DSL hook.
 
+Post-#1045: the wrapper renders via the typed `pdf_viewer_renderer`
+(Python) rather than `components/pdf_viewer_page.html` (Jinja).
+
 Covers:
 - Parser accepts ``display: pdf_viewer`` on a surface body and stores
   it on ``SurfaceSpec.display``
 - Parser rejects unknown values (only ``pdf_viewer`` is recognised today)
 - Template compiler routes a VIEW-mode surface with display=pdf_viewer
-  through ``components/pdf_viewer_page.html`` and populates the
+  through the typed dispatch (``template=""``) and populates the
   ``pdf_viewer`` ctx with the entity's first file-storage field
 - Template compiler ignores ``display: pdf_viewer`` when the entity
   has no file-storage field (falls back to generic detail layout)
-- The wrapper template renders the include with a proxy URL built
-  from ``detail.item[file_field]`` + ``storage_name``
+- The renderer builds a proxy URL from ``detail.item[file_field]`` +
+  ``storage_name``
 """
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -137,27 +139,30 @@ class TestCompilerRouting:
         entity = next(e for e in frag.entities if e.name == "Document")
         return compile_surface_to_context(surface, entity, app_prefix="/app")
 
-    def test_routes_to_pdf_viewer_template(self) -> None:
+    def test_routes_to_typed_pdf_viewer_renderer(self) -> None:
         ctx = self._compile_view_surface()
-        assert ctx.template == "components/pdf_viewer_page.html"
+        # Post-#1045: typed dispatch — template is empty, pdf_viewer is set.
+        assert ctx.template == ""
         assert ctx.pdf_viewer is not None
         assert ctx.pdf_viewer.storage_name == "cohort_pdfs"
         assert ctx.pdf_viewer.file_field == "source_pdf"
 
     def test_falls_back_when_no_file_field(self) -> None:
         ctx = self._compile_view_surface(with_file_field=False)
-        assert ctx.template == "components/detail_view.html"
+        # Without a file-storage field, pdf_viewer hook stays unset and
+        # detail_renderer handles the surface via the typed dispatch.
+        assert ctx.template == ""
         assert ctx.pdf_viewer is None
 
     def test_no_display_means_generic_detail(self) -> None:
         ctx = self._compile_view_surface(display=None)
-        assert ctx.template == "components/detail_view.html"
+        assert ctx.template == ""
         assert ctx.pdf_viewer is None
 
     def test_detail_context_still_populated(self) -> None:
-        """The wrapper relies on detail.item being filled in by
+        """The renderer relies on detail.item being filled in by
         ``_handle_detail`` at request time. The compiler must keep
-        the DetailContext intact even when the template changes."""
+        the DetailContext intact even when pdf_viewer is set."""
         ctx = self._compile_view_surface()
         assert ctx.detail is not None
         assert ctx.detail.entity_name == "Document"
@@ -165,29 +170,13 @@ class TestCompilerRouting:
 
 
 # ---------------------------------------------------------------------------
-# Wrapper template rendering
+# Typed renderer (post-#1045 replacement for Jinja wrapper)
 # ---------------------------------------------------------------------------
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-WRAPPER = REPO_ROOT / "src/dazzle_ui/templates/components/pdf_viewer_page.html"
-
-
-class TestWrapperTemplate:
-    @pytest.fixture
-    def jinja_env(self) -> Any:
-        from dazzle_ui.runtime.template_renderer import create_jinja_env
-
-        return create_jinja_env()
-
-    def _render(self, jinja_env: Any, **kwargs: Any) -> str:
-        tmpl = jinja_env.get_template("components/pdf_viewer_page.html")
-        return tmpl.render(**kwargs)  # nosemgrep: direct-use-of-jinja2
-
-    def test_wrapper_template_exists(self) -> None:
-        assert WRAPPER.exists(), "pdf_viewer_page.html must be in templates/"
-
-    def test_proxy_url_built_from_storage_and_file_field(self, jinja_env: Any) -> None:
+class TestTypedRenderer:
+    def test_proxy_url_built_from_storage_and_file_field(self) -> None:
+        from dazzle_ui.runtime.pdf_viewer_renderer import render_pdf_viewer
         from dazzle_ui.runtime.template_context import (
             DetailContext,
             FieldContext,
@@ -205,12 +194,13 @@ class TestWrapperTemplate:
             storage_name="cohort_pdfs",
             file_field="source_pdf",
         )
-        html = self._render(jinja_env, detail=detail, pdf_viewer=pdf_viewer)
+        html = render_pdf_viewer(detail, pdf_viewer)
         assert 'src="/api/storage/cohort_pdfs/proxy?key=u1/abc/file.pdf"' in html
         assert 'data-dz-widget="pdf-viewer"' in html
         assert 'data-dz-back-url="/app/document"' in html
 
-    def test_empty_src_when_record_missing_file_value(self, jinja_env: Any) -> None:
+    def test_empty_src_when_record_missing_file_value(self) -> None:
+        from dazzle_ui.runtime.pdf_viewer_renderer import render_pdf_viewer
         from dazzle_ui.runtime.template_context import (
             DetailContext,
             FieldContext,
@@ -225,5 +215,5 @@ class TestWrapperTemplate:
             back_url="/app/doc",
         )
         pdf_viewer = PdfViewerContext(storage_name="docs", file_field="missing_field")
-        html = self._render(jinja_env, detail=detail, pdf_viewer=pdf_viewer)
+        html = render_pdf_viewer(detail, pdf_viewer)
         assert 'src=""' in html

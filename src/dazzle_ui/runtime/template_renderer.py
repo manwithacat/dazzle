@@ -701,6 +701,10 @@ def _render_typed_body(context: PageContext) -> str:
         from dazzle_ui.runtime.form_renderer import render_form_field
 
         return "".join(render_form_field(f) for f in context.form.fields)
+    if context.pdf_viewer is not None:
+        from dazzle_ui.runtime.pdf_viewer_renderer import render_pdf_viewer
+
+        return render_pdf_viewer(context.detail, context.pdf_viewer)
     if context.detail is not None:
         from dazzle_ui.runtime.detail_renderer import render_detail_view
 

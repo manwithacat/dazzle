@@ -1244,7 +1244,6 @@ def _compile_view_surface(
     # ``storage_name`` (which both come from the entity's
     # ``file storage=...`` field).
     pdf_viewer_ctx: PdfViewerContext | None = None
-    template_name = "components/detail_view.html"
     if surface.display == "pdf_viewer" and entity is not None:
         for f in entity.fields:
             if f.type.kind == FieldTypeKind.FILE and f.storage:
@@ -1252,14 +1251,13 @@ def _compile_view_surface(
                     storage_name=f.storage[0],
                     file_field=f.name,
                 )
-                template_name = "components/pdf_viewer_page.html"
                 break
 
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
         page_purpose=page_purpose,
         persona_purposes=persona_purposes,
-        template=template_name,
+        template="",
         detail=DetailContext(
             entity_name=entity_name,
             title=surface.title or f"{entity_name} Details",

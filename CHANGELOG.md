@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.82] - 2026-05-12
+
+### Removed
+
+- **`components/pdf_viewer_page.html` (29 lines) + `components/pdf_viewer.html` (298 lines)** — closes [#1045](https://github.com/manwithacat/dazzle/issues/1045). Both Jinja templates retired in favour of `src/dazzle_ui/runtime/pdf_viewer_renderer.py` — a pure-Python port mirroring `form_renderer`, `detail_renderer`, and `table_renderer`. All chrome (header + back button, sibling nav, embed slot, panels, footer keyboard legend, help dialog) emits via `html.escape` + string composition. The `data-dz-widget="pdf-viewer"` bridge contract is preserved byte-for-byte so `static/js/pdf-viewer.js` mounts unchanged.
+
+### Added
+
+- **`pdf_viewer_renderer.render_pdf_viewer(detail, pdf_viewer)`** — DSL-hook entry point that mirrors the legacy `pdf_viewer_page.html` wrapper. Builds the proxy URL from `detail.item[file_field]` + `storage_name` and delegates to `render_pdf_viewer_component`.
+- **`pdf_viewer_renderer.render_pdf_viewer_component(...)`** — pure renderer for the chrome (port of `pdf_viewer.html`). Direct adopter entry point with the full keyword-args surface: `src`, `back_url`, `title`, `prev_url`, `next_url`, `panels`, `panel_html`, `panel_label`, `footer_slot_html`, `show_kbd_legend`.
+
+### Changed
+
+- **`template_compiler.compile_surface_to_context` no longer sets `template_name` for VIEW surfaces** — both the generic detail path and the `display: pdf_viewer` path now leave `PageContext.template = ""` so `_render_typed_body` fires.
+- **`_render_typed_body` extended** — `context.pdf_viewer` now dispatches to `pdf_viewer_renderer.render_pdf_viewer` (branch ordered before the generic detail dispatch since `display: pdf_viewer` always also has a `detail` context).
+- **Test rewrites** — `tests/unit/test_pdf_viewer_dsl_hook.py` (renamed Jinja-rendering class to `TestTypedRenderer`) and `tests/unit/test_pdf_viewer_component.py` (~715 lines, the template-rendering tests now drive `render_pdf_viewer_component`). JS, CSS, bundle-integration, and quality-gates tests are unaffected.
+
+### Progress on #1042 (drop jinja2 umbrella) + #1039 (render_page typed Page port)
+
+After this ship, the Jinja template-driven path in `render_page` fires for **zero** framework surfaces. The only callers of `get_jinja_env` remaining are downstream-adopter shim usage (covered by #1040 `render_in_app_shell`) and other independent users (expander, llm_executor, agent_commands renderer, compliance renderer) — none of which are part of `render_page`'s hot path.
+
+### Agent Guidance
+
+- When porting a Jinja template to a typed renderer: (1) mirror an existing `*_renderer.py` (form / detail / table / pdf_viewer); (2) clear the `template_name` in the compiler so `_render_typed_body` fires; (3) add the dispatch branch in `template_renderer._render_typed_body`; (4) rewrite the Jinja-rendering tests to drive the Python renderer; (5) delete the template files.
+
 ## [0.67.81] - 2026-05-12
 
 ### Removed
