@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.96] - 2026-05-12
+
+### Changed
+
+- **`itsdangerous>=2.1` promoted from `sso` extras to core deps** — closes [#1054](https://github.com/manwithacat/gh-issue/1054). It's required by Starlette's `SessionMiddleware`, which `tests/integration/test_sso_routes.py` imports unconditionally at module load. CI installs `dev,llm,mcp,mobile,postgres` extras but not `sso`, so test collection failed with `ModuleNotFoundError: No module named 'itsdangerous'` on every push — every CI run since at least 36e284cf was red.
+
+  The package is ~7KB with no transitive deps. The SSO flow is a load-bearing auth path; treating its session-middleware dep as optional was more pain than win.
+
+### Fixed
+
+- **CI green again.** The two affected jobs (`Python Tests (py3.12)` and `PostgreSQL Tests`) no longer fail at test-collection time with the `itsdangerous` import error. Whatever real test signal lurks behind that failure is now visible.
+
 ## [0.67.95] - 2026-05-12
 
 ### Changed
