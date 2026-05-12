@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.97] - 2026-05-12
+
+### Fixed
+
+- **22 pre-existing test failures cleared — suite is fully green** — closes [#1053](https://github.com/manwithacat/gh-issue/1053). All 22 failures were Jinja-retirement aftershocks: tests that read deleted `.html` template files from disk and asserted on specific markup. The templates were retired across #1039, #1040, #1043, #1044, #1045, #1046, #1049, #1051; the parity tests survived as dead code that failed at file-open time.
+
+### Removed
+
+- **10 test files** that probed deleted templates — each test class read a `templates/.../*.html` file with `Path(...).read_text()` then searched the content for class names or attribute presence. None of them tested the Python renderers; all are dead post-#1044:
+  - `tests/unit/test_audit_show_history.py` (5 tests on `audit_history.html`)
+  - `tests/unit/test_back_button_url_safety.py` (2 tests on `detail_view.html`)
+  - `tests/unit/test_filter_bar_no_xfor.py` (2 tests on `filter_bar.html`)
+  - `tests/unit/test_form_stepper_alpine_scope_regression.py` (3 tests on `form.html`)
+  - `tests/unit/test_list_surface_cls_reservation.py` (`filterable_table.html`)
+  - `tests/unit/test_multi_source_regions.py` (`tab_data.html`)
+  - `tests/unit/test_table_loading_overlay.py` (table overlay template)
+  - `tests/unit/test_analytics_js_location.py` (`site_base.html`)
+  - `tests/unit/test_asset_fingerprint.py` (`site_base.html`)
+  - `tests/integration/test_template_pages.py` (4 integration tests for create-page template)
+
+### Changed
+
+- **`tests/unit/fixtures/ir_reader_baseline.json`** grew by 5 entries — `islands.IslandSpec.fallback`, `sitespec.FAQItem.answer`, `sitespec.FAQItem.question`, `sitespec.LogoSpec.alt`, `sitespec.MediaSpec.alt`. These IR fields lost their template readers in Phase B/C of #1044 (sitespec marketing templates retired). They'll get readers back when the typed AppShell + sitespec primitives grow props for them — tracked as part of theme-restoration follow-up work (#1042 epilogue). Baselined explicitly so the parity gate continues to flag genuinely new orphans.
+
+### Why delete the tests rather than migrate them to test Python renderers
+
+The Python renderers (form_renderer, detail_renderer, table_renderer, etc.) have their own tests under `tests/unit/render/fragment/` and the renderer-specific files (`test_pdf_viewer_component.py`, `test_app_chrome.py`, etc.) — they already pin the output shape. The deleted parity tests were a *second* layer of "the template emits these CSS classes" assertions on top of the template engine; with the templates gone, the second layer is redundant.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 22 failed → **0 failed**, 13,982 passed, 153 skipped.
+- mypy baseline unchanged at 46 (real type bugs — addressed under #1056).
+- CI red (#1054) cleared in v0.67.96.
+
+The framework now ships with a fully-green test suite — "failed" once again means "I broke something".
+
 ## [0.67.96] - 2026-05-12
 
 ### Changed
