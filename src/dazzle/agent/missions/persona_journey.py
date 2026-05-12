@@ -852,18 +852,18 @@ def _analyze_orphan_surfaces(
 
     # 2. Experience steps with kind=surface
     for exp in experiences:
-        for step in exp.steps:
-            step_kind = str(step.kind)
+        for exp_step in exp.steps:
+            step_kind = str(exp_step.kind)
             if step_kind in ("surface", "StepKind.SURFACE"):
-                surface_ref = step.surface
+                surface_ref = exp_step.surface
                 if surface_ref:
                     referenced.add(surface_ref)
 
     # 3. Process human_task steps
     for proc in processes:
-        for step in proc.steps:
-            if is_step_kind(step, "human_task"):
-                human_task = step.human_task
+        for proc_step in proc.steps:
+            if is_step_kind(proc_step, "human_task"):
+                human_task = proc_step.human_task
                 if human_task:
                     surface_ref = human_task.surface
                     if surface_ref:
@@ -1093,8 +1093,8 @@ def _analyze_navigation_scope(
     # In many projects (including Dazzle archetypes), permissions use
     # `role(name)` conditions where role names map 1:1 to persona IDs.
     policy_entities: set[str] = set()
-    for entity in entities:
-        access = entity.access
+    for entity_spec in entities:
+        access = entity_spec.access
         if not access:
             continue
         for perm in access.permissions:
@@ -1102,7 +1102,7 @@ def _analyze_navigation_scope(
                 continue
             # Check persona-explicit rules
             if persona_id in perm.personas:
-                policy_entities.add(entity.name)
+                policy_entities.add(entity_spec.name)
                 break
             # Check role-based condition (role names often match persona IDs)
             op_kind = str(perm.operation)
@@ -1110,10 +1110,10 @@ def _analyze_navigation_scope(
                 condition = perm.condition
                 # `authenticated` permissions (no condition) are accessible to all personas
                 if condition is None and perm.require_auth:
-                    policy_entities.add(entity.name)
+                    policy_entities.add(entity_spec.name)
                     break
                 if _condition_matches_role(condition, persona_id):
-                    policy_entities.add(entity.name)
+                    policy_entities.add(entity_spec.name)
                     break
 
     # ── Expected entity set ──────────────────────────────────────────

@@ -292,7 +292,7 @@ class SesProvider:
         client = self.client
         if client is None:
             try:
-                import boto3  # type: ignore[import-not-found]
+                import boto3
             except ImportError as exc:
                 raise RuntimeError(
                     "SesProvider requires boto3 — install with `pip install dazzle-dsl[aws]`"
@@ -390,7 +390,7 @@ class SendgridProvider:
                     "in dazzle.toml or via env-derived secrets management"
                 )
             try:
-                from sendgrid import (  # type: ignore[import-not-found]
+                from sendgrid import (
                     SendGridAPIClient,
                 )
             except ImportError as exc:
@@ -439,7 +439,8 @@ class SendgridProvider:
             raise
 
         # Success path: SendGrid returns 202 Accepted on enqueue.
-        status_code = getattr(response, "status_code", 0)
+        raw_status = getattr(response, "status_code", 0)
+        status_code = int(raw_status) if raw_status is not None else 0
         if status_code == 429 or status_code >= 500:
             logger.warning(
                 "sendgrid_provider: transient %s sending to %s — retrying",
@@ -462,7 +463,7 @@ class SendgridProvider:
         when the ``sendgrid`` extra isn't installed.
         """
         try:
-            from sendgrid.helpers.mail import (  # type: ignore[import-not-found]
+            from sendgrid.helpers.mail import (
                 Mail,
             )
         except ImportError as exc:
@@ -569,7 +570,7 @@ class RetryPolicy:
         """
         if attempt < 1:
             return 0.0
-        return min(self.base_delay_seconds * (2 ** (attempt - 1)), self.max_delay_seconds)
+        return float(min(self.base_delay_seconds * (2 ** (attempt - 1)), self.max_delay_seconds))
 
 
 @dataclass

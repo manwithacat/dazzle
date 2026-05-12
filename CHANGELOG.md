@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.99] - 2026-05-12
+
+### Fixed
+
+- **46 mypy errors burned down to 0** — closes [#1056](https://github.com/manwithacat/gh-issue/1056). The baseline was stable across the last ~15 ship commits; each error masked a real type bug or covered a `# type: ignore` that no longer applied. Cleared in one focused session — no shortcuts (no fresh `# type: ignore` adds, no module-level mypy suppressions). The errors broke down as:
+  - **11 unused `# type: ignore` comments** — stripped (babel_format, fragment/renderer, notifications). Each was load-bearing during an earlier mypy upgrade and no longer needed.
+  - **8 generic type-param errors** — `tuple` and `dict` parameters annotated (`tuple[Any, ...]`, `dict[str, Any]`) across svg, fragment/primitives/data, agent/missions/ux_quality.
+  - **7 variable-shadowing bugs** in `agent/missions/persona_journey.py` and `ui/runtime/workspace_renderer.py` — loop variables (`entity`, `step`, `r`) reused later in the same function with different types, confusing mypy's flow analysis. Fixed by renaming to distinct identifiers (`entity_spec`, `exp_step`/`proc_step`, `renderer`).
+  - **3 union-attr `.value` access on `None | something`** — narrowed via explicit `if x is not None and hasattr(x, "value"):` rather than the previous bare `hasattr` (which doesn't narrow for mypy).
+  - **3 `Faker` optional-import type narrowing** — `blueprint_generator.py` reassigned `Faker = None` on ImportError but kept the original class type annotation. Switched to `Faker: type[Any] | None = _RealFaker`; instance attr typed as `Any`.
+  - **2 "Returning Any from float-typed function"** — explicit `float(...)` wrap on `round()` returns and `min()` results.
+  - **1 dead-`event`-attr access** in `_shared.py` — `StateTransition.event` was renamed to `.trigger` long ago; the agent_commands inspect output referenced the dead name. Fixed.
+  - **1 missing return annotation** in `ux_quality._make_stagnation_completion` — added `Callable[[AgentAction, list[Step]], bool]`.
+  - **1 ProcessStepSpec vs ExperienceStep** crossover in `persona_journey.py` — same shadowing pattern as above.
+  - **1 dict-item type** in `discovery.py` — `surface.title` could be `None`; coerced with `or ""`.
+  - **1 fields_out redeclaration** in `page_routes.py` — form branch and detail branch both declared `fields_out`; renamed the detail-branch local.
+  - **1 misc** — fragment/coverage.py `mode_value` calculation rewritten with explicit if-elif chain to satisfy union narrowing.
+
+### Changed
+
+- **`.github/workflows/ci.yml` mypy step**: replaced piecemeal `mypy src/dazzle/core src/dazzle/cli ... && mypy src/dazzle_back/ ...` (post-package-merge anachronism) with a single `mypy src/dazzle`. CI now fails on any mypy error — no baseline allowed.
+
+### Why this matters
+
+mypy is now a useful PR gate. Pre-v0.67.99: "is this PR clean?" meant "is this PR clean *modulo the baseline*?" — a different and worse question. The 46 baselined errors each masked something real; for instance the `fields_out` redeclaration was an actual scoping bug that would have produced wrong values in the detail-branch render, and the `StateTransition.event` reference was a 100% runtime AttributeError if that branch were exercised.
+
+### Agent Guidance
+
+- mypy is now part of the green-build gate. New code is expected to type-check on first push. The common patterns that tripped up the burn-down:
+  - Don't reuse loop variables (`step`, `entity`, `r`) for different-typed bindings within a function.
+  - `hasattr(x, "value")` doesn't narrow a `Foo | None` to `Foo` for mypy. Use `if x is not None and hasattr(x, "value"):` or `isinstance(x, MyEnum)`.
+  - For optional-import fallbacks (`try: import X / except ImportError: X = None`), annotate the binding explicitly: `X: type[RealX] | None = _RealX`.
+
 ## [0.67.98] - 2026-05-12
 
 ### Changed — package merge

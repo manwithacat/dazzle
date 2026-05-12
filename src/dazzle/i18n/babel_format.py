@@ -98,7 +98,7 @@ def format_date(value: Any, fmt: str = "medium", locale: str | None = None) -> s
     if target is None:
         return "" if value is None else str(value)
     try:
-        from babel.dates import format_date as _babel_format_date  # type: ignore[import-not-found]
+        from babel.dates import format_date as _babel_format_date
     except ImportError:
         # Fallback: locale-independent ISO date
         if isinstance(target, datetime):
@@ -120,7 +120,7 @@ def format_datetime(value: Any, fmt: str = "medium", locale: str | None = None) 
     if target is None:
         return "" if value is None else str(value)
     try:
-        from babel.dates import (  # type: ignore[import-not-found]
+        from babel.dates import (
             format_datetime as _babel_format_datetime,
         )
     except ImportError:
@@ -143,7 +143,7 @@ def format_time(value: Any, fmt: str = "medium", locale: str | None = None) -> s
     if target is None:
         return "" if value is None else str(value)
     try:
-        from babel.dates import format_time as _babel_format_time  # type: ignore[import-not-found]
+        from babel.dates import format_time as _babel_format_time
     except ImportError:
         if isinstance(target, datetime):
             return target.time().isoformat(timespec="seconds")
@@ -166,7 +166,7 @@ def format_number(value: Any, locale: str | None = None) -> str:
     if target is None:
         return "" if value is None else str(value)
     try:
-        from babel.numbers import format_decimal  # type: ignore[import-not-found]
+        from babel.numbers import format_decimal
     except ImportError:
         # Fallback: locale-independent thousands separator only
         if isinstance(target, int):
@@ -194,7 +194,7 @@ def format_decimal(value: Any, fmt: str | None = None, locale: str | None = None
         return "" if value is None else str(value)
     try:
         from babel.numbers import (
-            format_decimal as _babel_format_decimal,  # type: ignore[import-not-found]
+            format_decimal as _babel_format_decimal,
         )
     except ImportError:
         return format_number(value, locale=locale)
@@ -220,7 +220,7 @@ def format_currency(value: Any, currency: str = "USD", locale: str | None = None
     if target is None:
         return "" if value is None else str(value)
     try:
-        from babel.numbers import (  # type: ignore[import-not-found]
+        from babel.numbers import (
             format_currency as _babel_format_currency,
         )
     except ImportError:

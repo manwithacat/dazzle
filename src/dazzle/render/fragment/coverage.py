@@ -271,9 +271,13 @@ def _audit_surface(appspec: object, surface: object) -> SurfaceCoverage:
     blockers: list[Blocker] = []
 
     mode_obj = getattr(surface, "mode", None)
-    mode_value = (
-        mode_obj.value if hasattr(mode_obj, "value") else (str(mode_obj) if mode_obj else "")
-    )
+    mode_value: str
+    if mode_obj is not None and hasattr(mode_obj, "value"):
+        mode_value = str(mode_obj.value)
+    elif mode_obj:
+        mode_value = str(mode_obj)
+    else:
+        mode_value = ""
     if mode_value not in _SUPPORTED_MODES:
         blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail=mode_value.upper()))
 

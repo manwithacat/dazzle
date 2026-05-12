@@ -972,8 +972,8 @@ def render_workspace_content_typed(
         body=Sequence(children=tuple(inner_pieces)),
     )
 
-    r = FragmentRenderer()
-    return r.render(shell) + r.render(WorkspaceDrawer())
+    renderer = FragmentRenderer()
+    return renderer.render(shell) + renderer.render(WorkspaceDrawer())
 
 
 def _resolve_fk_field(

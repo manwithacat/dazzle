@@ -14,6 +14,7 @@ The mission output lives in the `results` dict passed by the caller
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from ..core import AgentTool, Mission
@@ -21,10 +22,10 @@ from ..models import AgentAction, Step
 from ._shared import ComponentContract
 
 
-def make_record_gate_tool(results: dict) -> AgentTool:
+def make_record_gate_tool(results: dict[str, Any]) -> AgentTool:
     """Create the record_gate_result tool bound to a shared results dict."""
 
-    def handler(args: dict) -> str:
+    def handler(args: dict[str, Any]) -> str:
         gate_id = args["gate_id"]
         passed = args["pass"]
         observation = args["observation"]
@@ -111,7 +112,7 @@ Be efficient. Each test should take 2-5 actions. Don't linger on pages or re-ver
 """
 
 
-def _make_stagnation_completion(window: int = 5):
+def _make_stagnation_completion(window: int = 5) -> Callable[[AgentAction, list[Step]], bool]:
     """Completion criteria: stop after `window` steps with no record_gate_result call."""
 
     def completion(action: AgentAction, history: list[Step]) -> bool:
@@ -131,7 +132,7 @@ def build_ux_quality_mission(
     persona: Any,
     example_app: str,
     base_url: str,
-    results: dict,
+    results: dict[str, Any],
 ) -> Mission:
     """Build a Mission that drives Playwright through a component's quality gates.
 

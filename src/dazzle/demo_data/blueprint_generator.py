@@ -22,14 +22,17 @@ if TYPE_CHECKING:
         FieldPattern,
     )
 
-# Try to import Faker, fall back to basic generation if not available
+# Try to import Faker, fall back to basic generation if not available.
+# Keep Faker typed as `type[Any] | None` so the optional-dep guard
+# (FAKER_AVAILABLE check) narrows correctly at every call site.
 try:
-    from faker import Faker
+    from faker import Faker as _RealFaker
 
+    Faker: type[Any] | None = _RealFaker
     FAKER_AVAILABLE = True
 except ImportError:
-    FAKER_AVAILABLE = False
     Faker = None
+    FAKER_AVAILABLE = False
 
 
 _DATE_LIKE_TOKENS = ("date", "time", "_at", "deadline", "due", "expires", "starts", "ends")
@@ -111,11 +114,10 @@ class BlueprintDataGenerator:
         random.seed(self.seed)
 
         # Initialize Faker if available
-        if FAKER_AVAILABLE:
+        self.fake: Any = None
+        if FAKER_AVAILABLE and Faker is not None:
             self.fake = Faker("en_GB")
             Faker.seed(self.seed)
-        else:
-            self.fake = None
 
         # Track generated data for foreign key references
         self._generated_data: dict[str, list[dict[str, Any]]] = {}

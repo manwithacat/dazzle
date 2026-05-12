@@ -229,11 +229,10 @@ jobs:
         pip install pygls bleach || true
 
     - name: Run mypy
-      run: |
-        # Check core modules (parser, IR, CLI, MCP) - eject module excluded for now
-        mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-        # Check backend runtime
-        mypy src/dazzle_back/ --ignore-missing-imports
+      # #1056 (v0.67.99): full mypy check across the merged dazzle/
+      # package. Baseline previously sat at 46 errors that masked real
+      # type bugs; burned down to 0 in v0.67.99. New errors fail CI.
+      run: mypy src/dazzle
 
   integration:
     runs-on: ubuntu-latest

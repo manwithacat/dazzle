@@ -94,7 +94,8 @@ class LockFile:
         if not self.path.exists():
             return None
         try:
-            return json.loads(self.path.read_text())
+            result: dict[str, Any] = json.loads(self.path.read_text())
+            return result
         except (OSError, json.JSONDecodeError):
             return None
 

@@ -1135,11 +1135,14 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
         # always rendered EmptyState. Match the legacy template's
         # `detail.item.get(field.name, "")` value source.
         item = getattr(detail, "item", {}) or {}
-        fields_out: list[dict[str, Any]] = []
+        # Re-bind: `fields_out` was also used by the form branch above; the
+        # detail branch is a distinct code path with the same conceptual
+        # output, so we shadow it deliberately.
+        detail_fields_out: list[dict[str, Any]] = []
         for f in getattr(detail, "fields", []) or []:
             field_name = getattr(f, "name", "") or getattr(f, "key", "")
             value = item.get(field_name, "") if isinstance(item, dict) else ""
-            fields_out.append(
+            detail_fields_out.append(
                 {
                     "key": field_name,
                     "label": getattr(f, "label", "") or field_name,
@@ -1147,17 +1150,21 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
                     "kind": getattr(f, "type", "text") or "text",
                 }
             )
+        fields_out = detail_fields_out
         # Plan 10: thread surface.related_groups (IR-level) into the ctx
         related_groups_out: list[dict[str, Any]] = []
         for rg in getattr(surface, "related_groups", []) or []:
             display = getattr(rg, "display", None)
+            display_str: str
+            if display is not None and hasattr(display, "value"):
+                display_str = str(display.value)
+            else:
+                display_str = str(display or "table")
             related_groups_out.append(
                 {
                     "name": getattr(rg, "name", ""),
                     "title": getattr(rg, "title", "") or getattr(rg, "name", ""),
-                    "display": display.value
-                    if hasattr(display, "value")
-                    else str(display or "table"),
+                    "display": display_str,
                 }
             )
         # Issue #1030: thread action-bearing fields from DetailContext

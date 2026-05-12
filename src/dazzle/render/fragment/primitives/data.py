@@ -14,7 +14,7 @@ declared rows and columns; etc.
 import types
 import typing
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 from dazzle.render.fragment.htmx import URL
 
@@ -642,7 +642,7 @@ class PivotTableRegion:
 
     dim_specs: tuple[PivotDimSpec, ...]
     measure_keys: tuple[str, ...]
-    rows: tuple[dict, ...]
+    rows: tuple[dict[str, Any], ...]
     empty_message: str = "No data to pivot."
 
 

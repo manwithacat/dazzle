@@ -2973,7 +2973,7 @@ class FragmentRenderer:
         (`@click="showPicker = !showPicker"`), then the embedded
         CardPicker — visibility CSS-driven per #982 via
         `[data-show-picker="1"]` on the workspace ancestor."""
-        picker_html = self._emit(r.picker, ctx)  # type: ignore[arg-type]
+        picker_html = self._emit(r.picker, ctx)
         return (
             f'<div class="dz-add-card-row">'
             f'<button @click="showPicker = !showPicker" '
@@ -3002,7 +3002,7 @@ class FragmentRenderer:
         sse_attrs = ""
         if g.sse_url:
             sse_attrs = f' hx-ext="sse" sse-connect="{ctx.escape_attr(g.sse_url)}"'
-        cards_html = "".join(self._emit(c, ctx) for c in g.cards)  # type: ignore[arg-type]
+        cards_html = "".join(self._emit(c, ctx) for c in g.cards)
         return (
             f'<div class="dz-dashboard-grid" '
             f"data-grid-container "

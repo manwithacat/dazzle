@@ -294,7 +294,11 @@ def make_query_dsl_tool(appspec: AppSpec) -> AgentTool:
                     if sm and sm.states:
                         result["states"] = [s if isinstance(s, str) else s.name for s in sm.states]
                         result["transitions"] = [
-                            {"from": t.from_state, "to": t.to_state, "event": t.event}
+                            {
+                                "from": t.from_state,
+                                "to": t.to_state,
+                                "trigger": str(t.trigger),
+                            }
                             for t in sm.transitions
                         ]
                     return result

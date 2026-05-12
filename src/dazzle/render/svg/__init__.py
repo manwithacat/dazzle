@@ -13,6 +13,7 @@ templates' viewBox dimensions, padding, and colour tokens.
 
 import math
 from html import escape as _escape
+from typing import Any
 
 # Geometry — matches legacy `line_chart.html` exactly so dual-path
 # validation (Phase 4B.3) produces byte-equivalent output.
@@ -47,8 +48,8 @@ def time_series_svg(
     points: tuple[tuple[str, float], ...],
     *,
     view: str = "line",
-    reference_lines: tuple = (),
-    reference_bands: tuple = (),
+    reference_lines: tuple[Any, ...] = (),
+    reference_bands: tuple[Any, ...] = (),
     width: int = DEFAULT_WIDTH,
     height: int = DEFAULT_HEIGHT,
 ) -> str:
@@ -93,7 +94,7 @@ def time_series_svg(
         value_range = 1
 
     def _y(val: float) -> float:
-        return round(pt + plot_h - ((val - min_val) / value_range * plot_h), 2)
+        return float(round(pt + plot_h - ((val - min_val) / value_range * plot_h), 2))
 
     # Int-narrowing for aria-label so whole-valued floats render without
     # the trailing `.0` (matches Jinja's `{{ max_val }}` behaviour).
@@ -198,7 +199,7 @@ def box_plot_svg(
     label: str,
     groups: tuple[tuple[str, float, float, float, float, float], ...],
     *,
-    reference_lines: tuple = (),
+    reference_lines: tuple[Any, ...] = (),
     samples: tuple[int, ...] = (),
 ) -> str:
     """Produce inline SVG for a BoxPlot primitive.
@@ -500,7 +501,7 @@ def histogram_svg(
     label: str,
     bins: tuple[tuple[str, int, float, float], ...],
     *,
-    reference_lines: tuple = (),
+    reference_lines: tuple[Any, ...] = (),
 ) -> str:
     """Produce inline SVG for a Histogram primitive.
 

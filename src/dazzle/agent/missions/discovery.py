@@ -168,7 +168,7 @@ def _make_list_surfaces_tool(
             surfaces.append(
                 {
                     "name": surface.name,
-                    "title": surface.title,
+                    "title": surface.title or "",
                     "mode": mode,
                     "entity": entity_ref or "",
                     "url_hint": f"/{surface.name.replace('_', '-')}",
