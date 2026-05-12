@@ -2,6 +2,10 @@
 
 Contains functions for building workspace region data, computing aggregate
 metrics, and rendering workspace regions as HTML or JSON.
+
+Post-#1057 (v0.67.100): column-metadata builders moved to
+``workspace_columns.py``. Old import paths preserved as re-exports
+below so external callers keep working.
 """
 
 import asyncio
@@ -14,6 +18,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from starlette.responses import StreamingResponse
+
+# Re-exports for back-compat — #1057 moved these to workspace_columns.
+from dazzle.back.runtime.workspace_columns import (  # noqa: F401
+    build_entity_columns as _build_entity_columns,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1256,199 +1265,6 @@ async def _resolve_workspace_user(
 
     # Fallback to auth user ID
     return str(auth.user.id), None
-
-
-def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
-    """Map an IR field to a column rendering type for workspace templates.
-
-    Args:
-        field: FieldSpec IR object.
-        entity: Optional EntitySpec — when provided, checks if this field
-                is the state-machine status field and returns ``"badge"``.
-    """
-    kind = field.type.kind
-    kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-    if kind_val == "enum":
-        return "badge"
-    if kind_val == "bool":
-        return "bool"
-    if kind_val in ("date", "datetime"):
-        return "date"
-    if kind_val == "money":
-        return "currency"
-    # State-machine status field renders as badge
-    if entity is not None:
-        sm = entity.state_machine
-        if sm and sm.status_field == field.name:
-            return "badge"
-    return "text"
-
-
-def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str, Any]]:
-    """Build column metadata from a list surface's field projection.
-
-    Uses the surface's section elements to determine which entity fields to
-    show and in what order, rather than dumping all entity fields.
-    """
-    from dazzle.core.strings import to_api_plural
-
-    if not entity_spec or not hasattr(entity_spec, "fields"):
-        return []
-
-    # Collect field names from surface sections (preserving order). Carry the
-    # element-level (or fallback section-level) visible: predicate so the
-    # request handler can hide columns the persona shouldn't see (#872).
-    surface_fields: list[str] = []
-    field_visible_conditions: dict[str, dict[str, Any] | None] = {}
-    for section in surface_spec.sections:
-        _sec_vis = getattr(section, "visible", None)
-        _section_vis_cond = _sec_vis.model_dump() if _sec_vis is not None else None
-        for element in section.elements:
-            fn = element.field_name
-            if fn and fn != "id" and fn not in surface_fields:
-                surface_fields.append(fn)
-                _el_vis = getattr(element, "visible", None)
-                field_visible_conditions[fn] = (
-                    _el_vis.model_dump() if _el_vis else _section_vis_cond
-                )
-
-    if not surface_fields:
-        return _build_entity_columns(entity_spec)
-
-    # Build a lookup from entity fields
-    field_map: dict[str, Any] = {f.name: f for f in entity_spec.fields}
-
-    columns: list[dict[str, Any]] = []
-    for fn in surface_fields:
-        f = field_map.get(fn)
-        if not f:
-            continue
-        _vis_cond = field_visible_conditions.get(fn)
-        ft = f.type
-        kind = ft.kind
-        kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-        # Ref and belongs_to fields
-        if kind_val in ("ref", "belongs_to"):
-            rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-            ref_entity = getattr(ft, "ref_entity", None)
-            ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
-            ref_col: dict[str, Any] = {
-                "key": rel_name,
-                "label": rel_name.replace("_", " ").title(),
-                "type": "ref",
-                "sortable": False,
-                "ref_route": ref_route,
-            }
-            if _vis_cond:
-                ref_col["visible_condition"] = _vis_cond
-            columns.append(ref_col)
-            continue
-        # Skip non-displayable types
-        if kind_val in ("uuid", "has_many", "has_one", "embeds"):
-            continue
-        col_type = _field_kind_to_col_type(f, entity_spec)
-        col_key = f"{f.name}_minor" if kind_val == "money" else f.name
-        col: dict[str, Any] = {
-            "key": col_key,
-            "label": f.name.replace("_", " ").title(),
-            "type": col_type,
-            "sortable": True,
-        }
-        if _vis_cond:
-            col["visible_condition"] = _vis_cond
-        if kind_val == "money":
-            col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
-        if col_type == "badge":
-            if kind_val == "enum":
-                ev = getattr(ft, "enum_values", None)
-                if ev:
-                    col["filterable"] = True
-                    col["filter_options"] = list(ev)
-            else:
-                sm = entity_spec.state_machine
-                if sm:
-                    states = sm.states
-                    if states:
-                        col["filterable"] = True
-                        col["filter_options"] = list(states)
-        if col_type == "bool":
-            col["filterable"] = True
-            col["filter_options"] = ["true", "false"]
-        columns.append(col)
-    return columns
-
-
-def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
-    """Pre-compute column metadata from an entity spec (constant-folded at startup).
-
-    This replaces per-request column derivation with a one-time computation.
-    All data comes from IR (field types, enum values, state machines) and
-    never changes during the lifetime of the server.
-    """
-    from dazzle.core.strings import to_api_plural
-
-    columns: list[dict[str, Any]] = []
-    if not entity_spec or not hasattr(entity_spec, "fields"):
-        return columns
-
-    for f in entity_spec.fields:
-        if f.name == "id":
-            continue
-        ft = f.type
-        kind = ft.kind
-        kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-        # Show ref/belongs_to columns with resolved display name; hide other relation types
-        if kind_val in ("ref", "belongs_to"):
-            rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-            ref_entity = getattr(ft, "ref_entity", None)
-            # Ensure ref_entity is a plain string (not a pydantic/Cython object)
-            ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
-            columns.append(
-                {
-                    "key": rel_name,
-                    "label": rel_name.replace("_", " ").title(),
-                    "type": "ref",
-                    "sortable": False,
-                    "ref_route": ref_route,
-                }
-            )
-            continue
-        if kind_val in ("uuid", "has_many", "has_one", "embeds"):
-            continue
-        if f.name.endswith("_id"):
-            continue
-        col_type = _field_kind_to_col_type(f, entity_spec)
-        col_key = f.name
-        if kind_val == "money":
-            col_key = f"{f.name}_minor"
-        col: dict[str, Any] = {
-            "key": col_key,
-            "label": f.name.replace("_", " ").title(),
-            "type": col_type,
-            "sortable": True,
-        }
-        if kind_val == "money":
-            col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
-        if col_type == "badge":
-            if kind_val == "enum":
-                ev = getattr(ft, "enum_values", None)
-                if ev:
-                    col["filterable"] = True
-                    col["filter_options"] = list(ev)
-            else:
-                sm = entity_spec.state_machine
-                if sm:
-                    states = sm.states
-                    if states:
-                        col["filterable"] = True
-                        col["filter_options"] = list(states)
-        if col_type == "bool":
-            col["filterable"] = True
-            col["filter_options"] = ["true", "false"]
-        columns.append(col)
-        if len(columns) >= 8:
-            break
-    return columns
 
 
 @dataclass

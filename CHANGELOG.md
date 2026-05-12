@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.100] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 1 of N)
+
+- **Extracted 3 column-metadata builders to `src/dazzle/back/runtime/workspace_columns.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The 4,483-line `workspace_rendering.py` mega-module loses its first ~190 lines as a self-contained concern: `field_kind_to_col_type`, `build_surface_columns`, `build_entity_columns`. The new module is 209 lines, takes IR specs in, returns plain dicts out, has no request/response coupling.
+
+- **`workspace_rendering.py`** trimmed from 4,483 → 4,292 lines. Re-exports the 3 functions under their old underscore-prefixed names for back-compat (`_field_kind_to_col_type`, etc.), so existing test imports continue to work without touching ~20 call sites in `tests/unit/test_workspace_rendering.py`.
+
+- **`server.py`** and **`workspace_route_builder.py`** updated to import from the new module directly. Old aliased re-exports kept on `server.py` for test-import compatibility.
+
+### Findings — the issue's original plan needed revision
+
+#1057's body proposed splitting by **display family** (charts/cards/pivots/etc.) — but the file's structure isn't a per-display-mode dispatch table. The 4,483 lines decompose by **concern**, not by region type:
+
+- 1,455 lines: the single `_workspace_region_handler` async function (request handling + inline dispatch via `if ctx.ctx_region.display == "HISTOGRAM": ...` chains)
+- ~800 lines: per-display-mode body builders (`_build_cohort_cells`, `_build_day_timeline_slots`, `_build_task_inbox_payload`, `_build_entity_card_sections`, etc.)
+- ~700 lines: aggregation helpers (`_build_aggregate_filters`, `_fetch_count_metric`, `_compute_pivot_buckets`, `_aggregate_via_groupby`)
+- ~270 lines: column-metadata builders (this cut)
+- ~150 lines: scope-filter helpers
+- ~100 lines: display-name resolution helpers
+- ~50 lines: CSV export
+- ~3 batch/stats request handlers (~500 lines combined)
+
+Each is a clean per-concern extraction. The new sub-modules naturally name themselves after their concern (`workspace_columns`, `workspace_aggregation`, `workspace_region_bodies`, etc.) — not after a display family. Future cuts under #1057 should follow the same pattern.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,105 source files checked, +1 from new module).
+- `workspace_rendering.py`: 4,483 → 4,292 lines (−4.3%). 7 more passes of similar size yields ~3,500 → 1,000 lines on the mega-file.
+
+### Agent Guidance
+
+- When extracting from `workspace_rendering.py`, prefer per-concern modules (`workspace_columns`, `workspace_aggregation`, …) over per-display-family modules. The internal dispatch is `if display == "X":` chains inside the big handler — those branches share state with each other, so extracting by display mode is harder than it sounds.
+- Keep re-exports in `workspace_rendering.py` for any extracted symbol that has test consumers — touches fewer files per cut and lets the migration land in small slices.
+
 ## [0.67.99] - 2026-05-12
 
 ### Fixed

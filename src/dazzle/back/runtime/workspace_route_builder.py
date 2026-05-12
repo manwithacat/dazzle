@@ -8,10 +8,14 @@ import logging
 from typing import Any
 
 from dazzle.back.runtime.auth import AuthMiddleware
+from dazzle.back.runtime.workspace_columns import (
+    build_entity_columns as _build_entity_columns,
+)
+from dazzle.back.runtime.workspace_columns import (
+    build_surface_columns as _build_surface_columns,
+)
 from dazzle.back.runtime.workspace_rendering import (
     WorkspaceRegionContext,
-    _build_entity_columns,
-    _build_surface_columns,
     _workspace_batch_handler,
     _workspace_region_handler,
     _workspace_stats_handler,
