@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.105] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 6 of N)
+
+- **Extracted the 3 sibling request handlers to `src/dazzle/back/runtime/workspace_handlers.py`** (301 lines) — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). All three reuse `_workspace_region_handler` underneath but wrap it for different response shapes:
+  - `_fetch_region_json`: single-region JSON re-fetch path.
+  - `_workspace_batch_handler`: N-regions-per-request batch with shared scope-filter computation.
+  - `_workspace_stats_handler`: workspace-level KPI rollup (metrics-only).
+
+- **`workspace_rendering.py`** trimmed from 1,823 → 1,536 lines (-287). The handlers module imports `_workspace_region_handler` from the rendering module (one-way dependency — no circular).
+
+- **`server.py`** and **`workspace_route_builder.py`** updated to import the handlers from their new home directly.
+
+- **5 test imports** in `test_workspace_rendering.py` updated to `from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler` (rather than maintaining a back-import shim that would have re-introduced circularity).
+
+- **`test_workspace_region_error_visibility.py`** updated to source-grep both `workspace_rendering.py` AND `workspace_handlers.py` so the structured-logging invariants follow the code rather than pinning to one file.
+
+### Cumulative
+
+After 6 cuts: `workspace_rendering.py` 4,483 → 1,536 lines (-2,947, -66%). Ten focused sibling modules totalling 3,226 lines. The remaining 1,536 lines are now ~95% one async function (`_workspace_region_handler`, 1,455 lines) — the per-display-mode dispatcher split is the only meaningful refactor left, and it's the one that's a logic change rather than code motion.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,114 source files checked).
+
 ## [0.67.104] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 5 of N)

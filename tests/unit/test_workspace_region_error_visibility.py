@@ -19,11 +19,15 @@ end-to-end by Playwright gates elsewhere.
 
 from pathlib import Path
 
+# v0.67.105 (#1057 cut 6): batch + stats handlers moved to workspace_handlers.py.
+# These source-grep tests now sweep both files so the invariants follow the
+# code, not the filename.
 WS_RENDERING = Path("src/dazzle/back/runtime/workspace_rendering.py")
+WS_HANDLERS = Path("src/dazzle/back/runtime/workspace_handlers.py")
 
 
 def _read() -> str:
-    return WS_RENDERING.read_text()
+    return WS_RENDERING.read_text() + "\n" + WS_HANDLERS.read_text()
 
 
 class TestWorkspaceRegionErrorVisibility:

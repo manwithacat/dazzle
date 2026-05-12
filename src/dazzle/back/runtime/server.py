@@ -49,11 +49,11 @@ from dazzle.back.runtime.workspace_columns import (
     field_kind_to_col_type as _field_kind_to_col_type,  # noqa: F401
 )
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext  # noqa: F401
-from dazzle.back.runtime.workspace_rendering import (  # noqa: F401
+from dazzle.back.runtime.workspace_handlers import (  # noqa: F401
     _fetch_region_json,
     _workspace_batch_handler,
-    _workspace_region_handler,
 )
+from dazzle.back.runtime.workspace_rendering import _workspace_region_handler  # noqa: F401
 from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
 from dazzle.core.ir import AppSpec
 

@@ -1228,14 +1228,14 @@ class TestWorkspaceStatsHandler:
         )
 
     async def test_returns_empty_stats_when_no_aggregates(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler
 
         ctx = self._make_ctx(region_name="tasks", aggregates={})
         result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
         assert result == {"workspace": "dash", "stats": {}}
 
     async def test_computes_count_entity_aggregates(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler
 
         class FakeRepo:
             async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
@@ -1251,7 +1251,7 @@ class TestWorkspaceStatsHandler:
         assert result["stats"] == {"overview": {"Total Work": 42}}
 
     async def test_namespaces_stats_by_region(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler
 
         class FakeRepo:
             def __init__(self, total: int) -> None:
@@ -1275,7 +1275,7 @@ class TestWorkspaceStatsHandler:
         assert result["stats"]["campaigns"] == {"Running": 3}
 
     async def test_skips_regions_without_aggregates(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler
 
         class FakeRepo:
             async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
@@ -1294,7 +1294,7 @@ class TestWorkspaceStatsHandler:
     async def test_requires_auth_when_configured(self) -> None:
         from fastapi import HTTPException
 
-        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler
 
         class FailingAuth:
             def get_auth_context(self, request: Any) -> Any:
