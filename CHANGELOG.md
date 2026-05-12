@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.84] - 2026-05-12
+
+### Removed
+
+- **`render_in_app_shell()` retired entirely** (Path A) — closes [#1040](https://github.com/manwithacat/dazzle/issues/1040). The downstream-facing helper for rendering a project Jinja template inside the framework app chrome is gone. Project authors now compose `Page` + `AppShell` typed primitives directly — the pattern already used by every framework-internal route since v0.67.55. Files removed:
+  - `src/dazzle_back/runtime/shell.py` (411 lines — `render_in_app_shell`, `ShellState` dataclass, `build_shell_state`, `register_shell_state`, `get_shell_state`, `_is_boosted_main_content_swap`)
+  - `tests/unit/test_shell_helper.py` (280 lines)
+  - `tests/unit/runtime/test_render_in_app_shell_boost.py` (208 lines)
+
+### Changed
+
+- **`app_factory.py`** — `register_shell_state(...)` call removed. `app.state.shell_state` had no other consumer once `render_in_app_shell` was gone.
+- **`test_typed_runtime_no_jinja.py`** — `shell.py` entry removed from `_TYPED_ONLY_MODULES` (the path is gone from disk).
+- **`test_template_orphan_scan.py`** — `layouts/app_shell.html` added to `INDIVIDUAL_ALLOWLIST` as the vestigial extends anchor for `override_registry` consumers. Final retirement tracked under #1044.
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+The framework's render path no longer imports `jinja2`. The remaining `jinja2` users are:
+1. `src/dazzle_ui/runtime/template_renderer.py` — owns `get_jinja_env()` for the `render_fragment()` / `render_surface()` helpers + the `override_registry`'s `dz://` extends affordance
+2. `src/dazzle/core/expander.py` — DSL string interpolation (could swap to `string.Template`)
+3. `src/dazzle_back/runtime/llm_executor.py` — prompt template rendering (could swap to `string.Template`)
+4. `src/dazzle/services/agent_commands/renderer.py` — markdown template rendering
+5. `src/dazzle/compliance/renderer.py` — compliance report rendering
+
+Migrating items 2–5 is the path to actually dropping `jinja2` from `pyproject.toml`. Item 1 stays as the public `render_fragment` adapter API and the override_registry extends anchor; that's the long-term Jinja boundary.
+
+### Breaking Change Notice
+
+Downstream projects calling `from dazzle_back.runtime.shell import render_in_app_shell` will see `ImportError` on upgrade. The migration is to construct an `AppShell` + `Page` typed primitive directly and call `dispatch_render_page(...)` from `dazzle_back.runtime.renderers.page_builder`. See `src/dazzle_back/runtime/site_routes.py` for an idiomatic example.
+
+### Agent Guidance
+
+- The framework no longer ships a "wrap a Jinja template in app chrome" helper. New downstream-facing rendering needs should compose typed primitives directly. `dispatch_render_page(page_ctx, inner_html, ...)` is the entry point.
+
 ## [0.67.83] - 2026-05-12
 
 ### Changed

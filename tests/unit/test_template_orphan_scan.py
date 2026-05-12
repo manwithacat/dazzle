@@ -52,6 +52,16 @@ DYNAMIC_DIRECTORY_EXEMPTIONS: dict[str, str] = {
 # contract. If an entry's reason goes stale (the template BECOMES
 # referenced), this test fails and forces removal.
 INDIVIDUAL_ALLOWLIST: dict[str, str] = {
+    # Vestigial extends anchor for downstream projects that author
+    # `{% extends "dz://layouts/app_shell.html" %}` templates and ship
+    # block overrides via `override_registry`. The framework's runtime
+    # render path no longer touches this template (Phase 4); kept on
+    # disk solely so the override_registry's extends lookup keeps
+    # resolving. Final retirement tracked under #1044.
+    "layouts/app_shell.html": (
+        "Vestigial extends anchor for override_registry consumers; "
+        "render_in_app_shell retired in #1040 / v0.67.84"
+    ),
     # Dormant Alpine primitives from PR #600 — awaiting user direction.
     # See dev_docs/framework-gaps/2026-04-20-pr600-dormant-alpine-primitives.md
     # (cycles 286+287 discovery).

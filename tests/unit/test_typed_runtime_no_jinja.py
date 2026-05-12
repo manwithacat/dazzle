@@ -41,7 +41,8 @@ _TYPED_ONLY_MODULES = (
     # Phase 4 app-shell completion (v0.67.55–v0.67.57):
     "src/dazzle_back/runtime/exception_handlers.py",
     "src/dazzle_back/runtime/renderers/page_builder.py",
-    "src/dazzle_back/runtime/shell.py",
+    # `shell.py` and `render_in_app_shell` were retired entirely in v0.67.84
+    # (closes #1040); the path is gone from disk.
     "src/dazzle_ui/runtime/page_routes.py",
     "src/dazzle_ui/runtime/workspace_renderer.py",
     # v0.67.58 — audit-history detail-page render inlined via html.escape.
