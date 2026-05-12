@@ -74,6 +74,13 @@ from dazzle.back.runtime.workspace_columns import (
 )
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext  # noqa: F401
 from dazzle.back.runtime.workspace_csv import _render_csv_response  # noqa: F401
+from dazzle.back.runtime.workspace_region_computes import (
+    compute_bullet,
+    compute_heatmap,
+    compute_progress,
+    compute_queue,
+    compute_tree,
+)
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters  # noqa: F401
 from dazzle.back.runtime.workspace_user import _resolve_workspace_user  # noqa: F401
 
@@ -568,45 +575,17 @@ async def _workspace_region_handler(
     # MVP — per-group_by aggregation deferred (would need multi-measure
     # support in `_compute_bucketed_aggregates`). Reference_bands (#883)
     # render as comparative qualitative zones behind each bar.
-    bullet_rows: list[dict[str, Any]] = []
-    bullet_max_value: float = 0.0
     if ctx.ctx_region.display == "BULLET":
-        _label_field = getattr(ctx.ir_region, "bullet_label", None)
-        _actual_field = getattr(ctx.ir_region, "bullet_actual", None)
-        _target_field = getattr(ctx.ir_region, "bullet_target", None)
-        if _label_field and _actual_field:
-            for item in items:
-                _actual_raw = item.get(_actual_field)
-                if _actual_raw is None:
-                    continue
-                try:
-                    _actual = float(_actual_raw)
-                except (TypeError, ValueError):
-                    continue
-                _target: float | None = None
-                if _target_field:
-                    _target_raw = item.get(_target_field)
-                    if _target_raw is not None:
-                        try:
-                            _target = float(_target_raw)
-                        except (TypeError, ValueError):
-                            _target = None
-                bullet_rows.append(
-                    {
-                        "label": str(item.get(_label_field, "") or ""),
-                        "actual": _actual,
-                        "target": _target,
-                    }
-                )
-            # Shared scale for all rows — max of actual values, target ticks,
-            # and the band extents so out-of-range values still fit.
-            _scale_candidates: list[float] = [r["actual"] for r in bullet_rows]
-            _scale_candidates.extend(r["target"] for r in bullet_rows if r["target"] is not None)
-            _scale_candidates.extend(
-                getattr(b, "to_value", 0.0)
-                for b in (getattr(ctx.ir_region, "reference_bands", None) or [])
-            )
-            bullet_max_value = max(_scale_candidates) if _scale_candidates else 0.0
+        bullet_rows, bullet_max_value = compute_bullet(
+            items,
+            label_field=getattr(ctx.ir_region, "bullet_label", None),
+            actual_field=getattr(ctx.ir_region, "bullet_actual", None),
+            target_field=getattr(ctx.ir_region, "bullet_target", None),
+            reference_bands=getattr(ctx.ir_region, "reference_bands", None),
+        )
+    else:
+        bullet_rows = []
+        bullet_max_value = 0.0
 
     # Bar track (#893, v0.61.53): per-row label + filled track + value.
     # Reuses the single-dim chart pipeline — `bucketed_metrics` is
@@ -975,28 +954,14 @@ async def _workspace_region_handler(
         )
 
     # Queue display: extract state machine transitions for inline action buttons
-    queue_transitions: list[dict[str, str]] = []
-    queue_status_field = ""
-    queue_api_endpoint = ""
     if ctx.ctx_region.display == "QUEUE" and ctx.entity_spec:
-        sm = ctx.entity_spec.state_machine
-        if sm:
-            queue_status_field = sm.status_field
-            seen: set[str] = set()
-            for t in sm.transitions:
-                to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
-                if to_state not in seen:
-                    seen.add(to_state)
-                    queue_transitions.append(
-                        {
-                            "to_state": to_state,
-                            "label": to_state.replace("_", " ").title(),
-                        }
-                    )
-        # API endpoint for PUT transitions
-        from dazzle.core.strings import to_api_plural
-
-        queue_api_endpoint = f"/{to_api_plural(ctx.source)}"
+        queue_transitions, queue_status_field, queue_api_endpoint = compute_queue(
+            ctx.entity_spec, ctx.source
+        )
+    else:
+        queue_transitions = []
+        queue_status_field = ""
+        queue_api_endpoint = ""
 
     # Multi-source tabbed regions pass source_tabs to the template
     source_tabs = ctx.ctx_region.source_tabs or []
@@ -1024,104 +989,34 @@ async def _workspace_region_handler(
     else:
         heatmap_thresholds = list(getattr(ctx.ctx_region, "heatmap_thresholds", None) or [])
     if ctx.ctx_region.display == "HEATMAP" and items:
-        hm_rows_field = getattr(ctx.ctx_region, "heatmap_rows", "") or ""
-        hm_cols_field = getattr(ctx.ctx_region, "heatmap_columns", "") or ""
-        hm_value_field = getattr(ctx.ctx_region, "heatmap_value", "") or ""
-        # Collect unique column values and build pivot
-        # Use _display sibling keys injected by _inject_display_names() (#586)
-        col_set: set[str] = set()
-        for item in items:
-            cv = str(item.get(f"{hm_cols_field}_display", "")) or _resolve_display_name(
-                item.get(hm_cols_field, "")
-            )
-            if cv:
-                col_set.add(cv)
-        heatmap_col_values = sorted(col_set)
-        # Group by row → column → value; track raw row IDs for action URLs
-        row_map: dict[str, dict[str, float]] = {}
-        row_ids: dict[str, str] = {}
-        for item in items:
-            rv = str(item.get(f"{hm_rows_field}_display", "")) or _resolve_display_name(
-                item.get(hm_rows_field, "")
-            )
-            cv = str(item.get(f"{hm_cols_field}_display", "")) or _resolve_display_name(
-                item.get(hm_cols_field, "")
-            )
-            val = float(item.get(hm_value_field, 0) or 0)
-            if rv not in row_map:
-                row_map[rv] = {}
-            row_map[rv][cv] = val
-            # Store raw row ID for action URL interpolation.
-            # When the FK is expanded (dict), use its "id"; when it's a plain
-            # UUID string, that IS the target entity ID — don't fall back to
-            # the source item's own id (#633).
-            raw_row = item.get(hm_rows_field)
-            if isinstance(raw_row, dict):
-                row_id = str(raw_row.get("id", ""))
-            elif raw_row:
-                row_id = str(raw_row)
-            else:
-                row_id = str(item.get("id", ""))
-            row_ids[rv] = row_id
-        for row_label in sorted(row_map.keys()):
-            cells: list[dict[str, Any]] = []
-            for col_label in heatmap_col_values:
-                cell_val = row_map[row_label].get(col_label, 0.0)
-                cells.append({"value": cell_val, "column": col_label})
-            heatmap_matrix.append(
-                {"row": row_label, "row_id": row_ids.get(row_label, ""), "cells": cells}
-            )
+        heatmap_matrix, heatmap_col_values = compute_heatmap(
+            items,
+            rows_field=getattr(ctx.ctx_region, "heatmap_rows", "") or "",
+            cols_field=getattr(ctx.ctx_region, "heatmap_columns", "") or "",
+            value_field=getattr(ctx.ctx_region, "heatmap_value", "") or "",
+        )
 
     # Progress: count items per stage and compute percentage (v0.44.0)
-    progress_stage_counts: list[dict[str, Any]] = []
-    progress_total = 0
-    progress_complete_count = 0
-    progress_complete_pct = 0.0
     progress_stages_list: list[str] = list(getattr(ctx.ctx_region, "progress_stages", None) or [])
     progress_complete_at: str = getattr(ctx.ctx_region, "progress_complete_at", "") or ""
     if ctx.ctx_region.display == "PROGRESS" and items and progress_stages_list:
-        stage_counter: dict[str, int] = dict.fromkeys(progress_stages_list, 0)
-        status_field = group_by or "status"
-        for item in items:
-            item_stage = str(item.get(status_field, ""))
-            if item_stage in stage_counter:
-                stage_counter[item_stage] += 1
-        progress_total = sum(stage_counter.values())
-        # Find the index of complete_at stage; everything at or past it is "complete"
-        complete_idx = -1
-        if progress_complete_at in progress_stages_list:
-            complete_idx = progress_stages_list.index(progress_complete_at)
-        for i, stage_name in enumerate(progress_stages_list):
-            cnt = stage_counter.get(stage_name, 0)
-            is_complete = complete_idx >= 0 and i >= complete_idx
-            progress_stage_counts.append(
-                {"name": stage_name, "count": cnt, "complete": is_complete}
-            )
-            if is_complete:
-                progress_complete_count += cnt
-        if progress_total > 0:
-            progress_complete_pct = round(progress_complete_count / progress_total * 100, 1)
+        _prog = compute_progress(
+            items, progress_stages_list, progress_complete_at, group_by or "status"
+        )
+        progress_stage_counts: list[dict[str, Any]] = _prog["stage_counts"]
+        progress_total: int = _prog["total"]
+        progress_complete_count: int = _prog["complete_count"]
+        progress_complete_pct: float = _prog["complete_pct"]
+    else:
+        progress_stage_counts = []
+        progress_total = 0
+        progress_complete_count = 0
+        progress_complete_pct = 0.0
 
     # Tree display (#565) — build nested hierarchy from flat items
     display_upper = ctx.ctx_region.display
     if display_upper == "TREE" and group_by and items:
-        items_by_id = {str(item.get("id", "")): item for item in items}
-        children_map: dict[str, list[dict[str, Any]]] = {}
-        for item in items:
-            parent_id = str(item.get(group_by, "") or "")
-            children_map.setdefault(parent_id, []).append(item)
-
-        # Root items have no parent or parent not in the set
-        roots = [item for item in items if str(item.get(group_by, "") or "") not in items_by_id]
-
-        def _build_subtree(node: dict[str, Any]) -> dict[str, Any]:
-            node_id = str(node.get("id", ""))
-            node["_children"] = children_map.get(node_id, [])
-            for child in node["_children"]:
-                _build_subtree(child)
-            return node
-
-        tree_items = [_build_subtree(r) for r in roots]
+        tree_items = compute_tree(items, group_by)
 
     # Phase 4 region migration (v0.67.46): the typed-primitive path
     # extends beyond the original #1015–#1018 special cases. Region

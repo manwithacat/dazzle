@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.106] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 7 of N)
+
+- **First refactor inside `_workspace_region_handler` itself** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). Extracted 5 pure leaf data builders from the 1,455-line dispatcher to a new `src/dazzle/back/runtime/workspace_region_computes.py` (240 lines):
+  - `compute_heatmap`: pivot flat items into a row/column matrix (HEATMAP display)
+  - `compute_progress`: count items per stage and compute completion pct (PROGRESS display)
+  - `compute_tree`: build nested hierarchy from flat items via a parent FK (TREE display)
+  - `compute_bullet`: build (rows, max_value) for a BULLET region with shared scale
+  - `compute_queue`: extract state-machine transitions + API endpoint for a QUEUE region
+
+- **Each function is pure** (no I/O, no DB, no IR dispatch) — they take already-fetched `items` plus the relevant slice of region config and return a structured data shape. No closure state, fully unit-testable in isolation.
+
+- **`workspace_rendering.py`** trimmed from 1,536 → 1,430 lines (-106). The dispatcher branches that used to inline ~140 lines of data-shape logic are now 4-9 line function calls each.
+
+### Why this matters
+
+This is the first cut that's a real **logic refactor** rather than code motion. The 6 prior cuts (v0.67.100 → v0.67.105) pulled out cohesive sibling modules without touching the dispatcher's internals; this one starts breaking the dispatcher open by display family. The pattern proves out — pure leaf computes can come out cleanly with explicit-parameter signatures, no closure-state coupling.
+
+Async / complex branches (ACTION_GRID, PROFILE_CARD, CONFIRM_ACTION_PANEL, PIPELINE_STEPS) are still inline — they need either `asyncio.gather` orchestration or deeper closure state, so they're follow-up work.
+
+### Cumulative
+
+After 7 cuts: `workspace_rendering.py` 4,483 → 1,430 lines (-3,053, -68%). Eleven focused sibling modules totalling 3,466 lines.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,115 source files checked).
+
 ## [0.67.105] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 6 of N)
