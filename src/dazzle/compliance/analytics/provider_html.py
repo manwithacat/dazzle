@@ -20,14 +20,9 @@ Consent gating semantics are preserved from the original templates:
 
 from __future__ import annotations
 
-import html as _html_mod
 from typing import Any
 
-
-def _esc(value: Any, *, quote: bool = False) -> str:
-    if value is None:
-        return ""
-    return _html_mod.escape(str(value), quote=quote)
+from dazzle.render.html import esc as _esc
 
 
 def _consent_value(consent: dict[str, Any], key: str) -> str:

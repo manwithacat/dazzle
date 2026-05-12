@@ -12,16 +12,10 @@ handler and focus trap in `static/js/dz-consent.js` mount unchanged.
 
 from __future__ import annotations
 
-import html as _html_mod
 import json as _json
 from typing import Any
 
-
-def _esc(value: Any, *, quote: bool = False) -> str:
-    if value is None:
-        return ""
-    return _html_mod.escape(str(value), quote=quote)
-
+from dazzle.render.html import esc as _esc
 
 _DEFAULT_TITLE = "Your privacy choices"
 _DEFAULT_DESCRIPTION = (

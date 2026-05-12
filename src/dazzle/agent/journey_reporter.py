@@ -8,18 +8,11 @@ no `jinja2` dependency. Closes #1041.
 
 from __future__ import annotations
 
-import html as _html_mod
 from pathlib import Path
 from typing import Any
 
 from dazzle.agent.journey_models import AnalysisReport, JourneySession
-
-
-def _esc(value: Any, *, quote: bool = False) -> str:
-    if value is None:
-        return ""
-    return _html_mod.escape(str(value), quote=quote)
-
+from dazzle.render.html import esc as _esc
 
 _CSS = """
 :root {

@@ -22,19 +22,12 @@ to apply.
 
 from __future__ import annotations
 
-import html as _html_mod
 import json
 from os.path import basename
 from typing import Any
 from urllib.parse import urlparse
 
-
-def _esc(value: Any, *, quote: bool = False) -> str:
-    """Convenience escape — None → empty string, otherwise stringify
-    and html.escape. `quote=True` for attribute values."""
-    if value is None:
-        return ""
-    return _html_mod.escape(str(value), quote=quote)
+from dazzle.render.html import esc as _esc
 
 
 def _basename_or_url(value: Any) -> str:

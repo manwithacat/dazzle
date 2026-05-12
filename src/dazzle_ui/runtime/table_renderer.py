@@ -20,15 +20,10 @@ verbatim. CSS classes match the legacy template byte-for-byte
 
 from __future__ import annotations
 
-import html as _html_mod
 import json
 from typing import Any
 
-
-def _esc(value: Any, *, quote: bool = False) -> str:
-    if value is None:
-        return ""
-    return _html_mod.escape(str(value), quote=quote)
+from dazzle.render.html import esc as _esc
 
 
 def _render_search_input(table: Any, endpoint: str, target: str) -> str:

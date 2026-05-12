@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.94] - 2026-05-12
+
+### Added
+
+- **`src/dazzle/render/html.py`** — canonical `esc(value, *, quote=False)` helper for the framework-emits-HTML pattern. Single source of truth replacing 7 byte-identical local `_esc` definitions across the inline-Python renderers.
+- **[ADR-0023](docs/adr/0023-template-emission-patterns.md)** — documents the two-pattern template-emission model. Pattern A (framework code emits HTML) uses f-strings + `dazzle.render.html.esc`; Pattern B (framework code executes user-authored templates — DSL `llm_intent` prompts, vocab `expansion.body`, project-supplied `compliance/document.html`) keeps `string.Template`. Choice is mechanical: who writes the template.
+
+### Changed — Convergence migration
+
+7 HTML renderers now import the shared `esc` helper. Each lost its local `_esc(value, *, quote=False)` definition + `import html as _html_mod` line; gained `from dazzle.render.html import esc as _esc`. Every call site (~150 across the 7 files) stays unchanged — the import is aliased so the `_esc(...)` shape continues to work.
+
+Migrated files:
+- `src/dazzle/agent/journey_reporter.py`
+- `src/dazzle/compliance/analytics/consent_banner.py`
+- `src/dazzle/compliance/analytics/provider_html.py`
+- `src/dazzle_ui/runtime/detail_renderer.py`
+- `src/dazzle_ui/runtime/form_renderer.py`
+- `src/dazzle_ui/runtime/pdf_viewer_renderer.py`
+- `src/dazzle_ui/runtime/table_renderer.py`
+
+### Not Changed
+
+- `compliance/renderer.py`, `core/expander.py`, `llm_executor.py` stay on `string.Template`. These execute *user-authored* templates (project HTML brand wrapper, DSL vocab macros, DSL `llm_intent` prompts) — Pattern B per ADR-0023.
+- `agent_commands/template_strings.py` keeps its f-string approach without the escape helper (emits markdown not HTML; nothing to escape).
+- `render/fragment/renderer.py` and `render/svg/__init__.py` keep their direct `from html import escape as _escape` imports — they don't have the `None → ""` semantics of `_esc`.
+
+### Why one helper, not `escape` / `escape_attr`?
+
+The pre-existing 7 local helpers all used `_esc(value, *, quote=False)` with ~150 call sites already passing `quote=True` for attribute context. Renaming would have required touching every call site (we tried; auto-translation mishandled multi-line args). Keeping the existing signature lets the convergence be a near-mechanical "delete-local + add-import" edit per file. A future split into `escape` / `escape_attr` is a trivial search-and-replace if call-site readability matters more than the rewrite cost.
+
+### Agent Guidance
+
+- Use `from dazzle.render.html import esc as _esc` in any new HTML-emitting renderer. Pass `quote=True` for attribute values, omit (default `quote=False`) for element bodies.
+- Don't reach for `string.Template` unless you're executing a user-authored template (vocab manifest, DSL prompt, project HTML file).
+- ADR-0023 is the canonical reference.
+
 ## [0.67.93] - 2026-05-12
 
 ### Added

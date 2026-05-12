@@ -12,17 +12,10 @@ keyboard handler in `static/js/pdf-viewer.js` mounts the same way.
 
 from __future__ import annotations
 
-import html as _html_mod
 from typing import Any
 
+from dazzle.render.html import esc as _esc
 from dazzle_ui.runtime.template_context import DetailContext, PdfViewerContext
-
-
-def _esc(value: Any, *, quote: bool = False) -> str:
-    if value is None:
-        return ""
-    return _html_mod.escape(str(value), quote=quote)
-
 
 _BACK_SVG = (
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" '
