@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.87] - 2026-05-12
+
+### Removed
+
+- **9 Jinja2 `.j2` markdown templates** retired — closes [#1049](https://github.com/manwithacat/gh-issue/1049). All templates under `src/dazzle/services/agent_commands/templates/` deleted: `ship.md.j2`, `qa.md.j2`, `issues.md.j2`, `spec_sync.md.j2`, `explore.md.j2`, `polish.md.j2`, `improve.md.j2`, `agents_md.j2`, `claude_md_section.j2`. Total: 794 lines of Jinja markdown gone.
+- **Three `Environment(loader=FileSystemLoader(...))` instances** retired from `agent_commands/renderer.py`. The `jinja2` import is gone from this module.
+- **`TEMPLATES_DIR` constant** removed from `agent_commands/renderer.py`.
+
+### Added
+
+- **`src/dazzle/services/agent_commands/template_strings.py`** — Python ports of all 9 templates. Each former `.j2` becomes a Python function that composes the same markdown via f-strings. Loops (`{% for %}`) and conditionals (`{% if %}`) are now ordinary Python control flow. The `_SKILL_RENDERERS` dispatcher keys on the original `.j2` filenames so the `definitions/*.toml` configs need no changes.
+
+### Changed
+
+- **`renderer.py` `render_skill` / `render_agents_md` / `render_claude_md_section`** now thin wrappers around the `template_strings` Python implementations.
+- **`tests/unit/test_agent_command_models.py`** — replaced `test_all_templates_exist` (filesystem check) with `test_all_skill_templates_have_renderers` (registry check). The two top-level templates (`agents_md.j2`, `claude_md_section.j2`) are tested via the existing `test_render_agents_md` / `test_render_claude_md_section` tests, not the dispatcher.
+
+### Progress on #1042 (drop jinja2 umbrella)
+
+Three of the original 5 sub-issues closed (#1049, #1050, #1051). Remaining:
+- `src/dazzle/core/expander.py` (#1047 — DSL vocab macros, user-authored templates)
+- `src/dazzle_back/runtime/llm_executor.py` (#1048 — LLM prompts, user-authored templates)
+- `src/dazzle_ui/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot test suite (goes away with #1044)
+- Theme globals on Jinja env in `system_routes.py` + `combined_server.py` + `hot_reload.py` — become dead code once `get_jinja_env` is gone
+
+### Agent Guidance
+
+- Markdown rendering for slash commands and `AGENTS.md` / `CLAUDE.md` sections uses pure Python composition via `template_strings.py`. Add a new command by: (1) creating a `_render_<name>(cmd, ctx)` function; (2) registering it in `_SKILL_RENDERERS` keyed by the `definitions/*.toml`'s `[skill_template].file` value.
+
 ## [0.67.86] - 2026-05-12
 
 ### Changed

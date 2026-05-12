@@ -15,12 +15,12 @@ from dazzle.services.agent_commands.models import (
     ToolsConfig,
 )
 from dazzle.services.agent_commands.renderer import (
-    TEMPLATES_DIR,
     evaluate_maturity,
     render_agents_md,
     render_claude_md_section,
     render_skill,
 )
+from dazzle.services.agent_commands.template_strings import _SKILL_RENDERERS
 
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -309,15 +309,18 @@ _EXPECTED_TEMPLATES = [
     "ship.md.j2",
     "polish.md.j2",
     "issues.md.j2",
-    "agents_md.j2",
-    "claude_md_section.j2",
 ]
+# Post-#1049 (v0.67.87+): templates are Python functions in
+# template_strings.py, not files on disk. `agents_md.j2` and
+# `claude_md_section.j2` are rendered via dedicated top-level
+# functions (render_agents_md, render_claude_md_section), so they
+# aren't keys in _SKILL_RENDERERS — checked separately below.
 
 
-def test_all_templates_exist() -> None:
+def test_all_skill_templates_have_renderers() -> None:
+    """Every command-defined template_file must have a registered renderer."""
     for name in _EXPECTED_TEMPLATES:
-        path = TEMPLATES_DIR / name
-        assert path.exists(), f"Template {name} not found at {path}"
+        assert name in _SKILL_RENDERERS, f"Template {name} has no entry in _SKILL_RENDERERS"
 
 
 def test_render_improve_skill() -> None:

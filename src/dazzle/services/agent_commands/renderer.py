@@ -1,4 +1,9 @@
-"""Maturity gate evaluator, template renderer, and project sync for agent commands."""
+"""Maturity gate evaluator, template renderer, and project sync for agent commands.
+
+Post-#1049 (v0.67.87+): the 9 markdown templates are rendered via
+inline Python composition in `template_strings.py` rather than Jinja2.
+The migration drops one of the last `jinja2` users blocking #1042.
+"""
 
 import configparser
 import json
@@ -8,14 +13,19 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from jinja2 import Environment, FileSystemLoader
-
 from .loader import load_all_commands
 from .models import CommandDefinition, CommandStatus, MaturityGate, SyncManifest
+from .template_strings import (
+    render_agents_md as _render_agents_md_impl,
+)
+from .template_strings import (
+    render_claude_md_section as _render_claude_md_section_impl,
+)
+from .template_strings import (
+    render_skill as _render_skill_impl,
+)
 
 logger = logging.getLogger(__name__)
-
-TEMPLATES_DIR: Path = Path(__file__).parent / "templates"
 
 
 def evaluate_maturity(gate: MaturityGate, ctx: dict[str, Any]) -> tuple[bool, str | None]:
@@ -184,46 +194,22 @@ def build_project_context(project_root: Path) -> dict[str, Any]:
 
 
 def render_skill(cmd: CommandDefinition, ctx: dict[str, Any]) -> str:
-    """Render a command's Jinja2 template."""
-    env = Environment(  # nosec B701 — renders markdown templates for CLAUDE.md, not HTML; autoescape would corrupt output
-        loader=FileSystemLoader(str(TEMPLATES_DIR)),
-        keep_trailing_newline=True,
-        trim_blocks=True,
-        lstrip_blocks=True,
-        autoescape=False,
-    )
-    template = env.get_template(cmd.template_file)
-    return template.render(cmd=cmd, ctx=ctx)
+    """Render a command's markdown template via the Python port."""
+    return _render_skill_impl(cmd, ctx)
 
 
 def render_agents_md(
     commands: list[tuple[CommandDefinition, bool, str | None]], ctx: dict[str, Any]
 ) -> str:
-    """Render AGENTS.md from all commands."""
-    env = Environment(  # nosec B701 — renders markdown templates for CLAUDE.md, not HTML; autoescape would corrupt output
-        loader=FileSystemLoader(str(TEMPLATES_DIR)),
-        keep_trailing_newline=True,
-        trim_blocks=True,
-        lstrip_blocks=True,
-        autoescape=False,
-    )
-    template = env.get_template("agents_md.j2")
-    return template.render(commands=commands, ctx=ctx)
+    """Render AGENTS.md from all commands via the Python port."""
+    return _render_agents_md_impl(commands, ctx)
 
 
 def render_claude_md_section(
     commands: list[tuple[CommandDefinition, bool, str | None]], ctx: dict[str, Any]
 ) -> str:
-    """Render the section to append to .claude/CLAUDE.md."""
-    env = Environment(  # nosec B701 — renders markdown templates for CLAUDE.md, not HTML; autoescape would corrupt output
-        loader=FileSystemLoader(str(TEMPLATES_DIR)),
-        keep_trailing_newline=True,
-        trim_blocks=True,
-        lstrip_blocks=True,
-        autoescape=False,
-    )
-    template = env.get_template("claude_md_section.j2")
-    return template.render(commands=commands, ctx=ctx)
+    """Render the section to append to .claude/CLAUDE.md via the Python port."""
+    return _render_claude_md_section_impl(commands, ctx)
 
 
 def sync_to_project(project_root: Path) -> SyncManifest:
