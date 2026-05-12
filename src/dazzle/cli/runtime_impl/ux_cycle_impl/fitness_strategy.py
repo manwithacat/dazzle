@@ -17,6 +17,7 @@ from dazzle.agent.core import DazzleAgent
 from dazzle.agent.executor import PlaywrightExecutor
 from dazzle.agent.missions._shared import ComponentContract, parse_component_contract
 from dazzle.agent.observer import PlaywrightObserver
+from dazzle.back.runtime.pg_backend import PostgresBackend
 from dazzle.cli.runtime_impl.ux_cycle_impl._playwright_helpers import (
     PlaywrightBundle as _PlaywrightBundle,
 )
@@ -32,7 +33,6 @@ from dazzle.fitness.engine import FitnessEngine
 from dazzle.fitness.pg_snapshot_source import PgSnapshotSource
 from dazzle.llm.api_client import LLMAPIClient
 from dazzle.qa.server import AppConnection
-from dazzle_back.runtime.pg_backend import PostgresBackend
 
 
 @dataclass

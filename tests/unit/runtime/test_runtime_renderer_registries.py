@@ -1,7 +1,7 @@
 """RuntimeServices carries the renderer and primitive registries."""
 
+from dazzle.back.runtime.services import RuntimeServices
 from dazzle.render.fragment.registry import PrimitiveRegistry, RendererRegistry
-from dazzle_back.runtime.services import RuntimeServices
 
 
 def test_runtime_services_has_renderer_registry() -> None:

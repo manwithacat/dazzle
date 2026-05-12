@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle_ui.runtime.template_renderer import _pagination_pages
+from dazzle.ui.runtime.template_renderer import _pagination_pages
 
 
 class TestSmallTotals:

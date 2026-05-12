@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle_back.runtime.locale_middleware import (
+from dazzle.back.runtime.locale_middleware import (
     LocaleMiddleware,
     _normalise_locale,
     _pick_supported,
@@ -168,18 +168,18 @@ class TestGettextFilter:
     """The ``_()`` Jinja filter is identity-passthrough in cycle 1."""
 
     def test_passthrough_no_kwargs(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _gettext
+        from dazzle.ui.runtime.template_renderer import _gettext
 
         assert _gettext("Hello") == "Hello"
 
     def test_format_substitutes_kwargs(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _gettext
+        from dazzle.ui.runtime.template_renderer import _gettext
 
         assert _gettext("Hello {name}", name="world") == "Hello world"
 
     def test_malformed_format_returns_source(self) -> None:
         """Don't raise on malformed placeholders; cycle 2 will warn."""
-        from dazzle_ui.runtime.template_renderer import _gettext
+        from dazzle.ui.runtime.template_renderer import _gettext
 
         # Missing kwarg should not crash — return the unsubstituted string.
         assert _gettext("Hello {missing}") == "Hello {missing}"

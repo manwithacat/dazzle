@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 # Skip these tests if runtime modules are not available
-pytest.importorskip("dazzle_back")
-pytest.importorskip("dazzle_ui")
+pytest.importorskip("dazzle.back")
+pytest.importorskip("dazzle.ui")
 
 
 class TestDazzleServeBasics:
@@ -88,6 +88,7 @@ class TestAPIGeneration:
 
     def test_backend_spec_entity_conversion(self) -> None:
         """Test that entities are converted from AppSpec to BackendSpec."""
+        from dazzle.back.converters import convert_appspec_to_backend
         from dazzle.core.ir import (
             AppSpec,
             DomainSpec,
@@ -101,7 +102,6 @@ class TestAPIGeneration:
         from dazzle.core.ir import (
             FieldSpec as IRFieldSpec,
         )
-        from dazzle_back.converters import convert_appspec_to_backend
 
         # Create a simple AppSpec
         app_spec = AppSpec(

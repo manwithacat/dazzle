@@ -84,14 +84,14 @@ class TestCreateBulkRoutes:
         ],
     )
     def test_returns_none(self, surfaces: list, repositories: dict) -> None:
-        from dazzle_back.runtime.bulk_routes import create_bulk_routes
+        from dazzle.back.runtime.bulk_routes import create_bulk_routes
 
         assert create_bulk_routes(surfaces=surfaces, repositories=repositories) is None
 
 
 class TestBulkEndpointHandler:
     def _build(self, rows: list[dict[str, Any]]) -> TestClient:
-        from dazzle_back.runtime.bulk_routes import create_bulk_routes
+        from dazzle.back.runtime.bulk_routes import create_bulk_routes
 
         router = create_bulk_routes(
             surfaces=[_surface_with_bulk()],

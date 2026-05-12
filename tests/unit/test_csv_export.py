@@ -4,7 +4,7 @@ import asyncio
 import csv
 import io
 
-from dazzle_back.runtime.workspace_rendering import _render_csv_response
+from dazzle.back.runtime.workspace_rendering import _render_csv_response
 
 
 def _get_body(resp) -> str:  # type: ignore[no-untyped-def]

@@ -54,7 +54,7 @@ class TestCreate2FARoutesAcceptsConfig:
     def test_default_when_not_supplied(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle_back.runtime.auth.routes_2fa import _TwoFaDeps, create_2fa_routes
+        from dazzle.back.runtime.auth.routes_2fa import _TwoFaDeps, create_2fa_routes
 
         mock_store = MagicMock()
         router = create_2fa_routes(mock_store)
@@ -68,7 +68,7 @@ class TestCreate2FARoutesAcceptsConfig:
     def test_custom_config_is_stored(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle_back.runtime.auth.routes_2fa import _TwoFaDeps, create_2fa_routes
+        from dazzle.back.runtime.auth.routes_2fa import _TwoFaDeps, create_2fa_routes
 
         tf = TwoFactorConfig(enabled=True, recovery_code_count=12)
         mock_store = MagicMock()
@@ -90,7 +90,7 @@ class TestRecoveryCodeCountIsRead:
     """The policy knob actually reaches generate_recovery_codes()."""
 
     def test_generate_uses_supplied_count(self) -> None:
-        from dazzle_back.runtime.recovery_codes import generate_recovery_codes
+        from dazzle.back.runtime.recovery_codes import generate_recovery_codes
 
         codes_default = generate_recovery_codes()
         assert len(codes_default) == 8  # TwoFactorConfig default
@@ -105,7 +105,8 @@ class TestRecoveryCodeCountIsRead:
         source = (
             Path(__file__).resolve().parents[2]
             / "src"
-            / "dazzle_back"
+            / "dazzle"
+            / "back"
             / "runtime"
             / "auth"
             / "routes_2fa.py"
@@ -124,7 +125,8 @@ class TestSubsystemWiring:
         source = (
             Path(__file__).resolve().parents[2]
             / "src"
-            / "dazzle_back"
+            / "dazzle"
+            / "back"
             / "runtime"
             / "subsystems"
             / "auth.py"

@@ -16,12 +16,12 @@ from dazzle.core.ir.experiences import (
     StepTransition,
 )
 from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle_ui.runtime.experience_persistence import (
+from dazzle.ui.runtime.experience_persistence import (
     ExperienceProgress,
     ExperienceProgressStore,
 )
-from dazzle_ui.runtime.experience_routes import create_experience_routes
-from dazzle_ui.runtime.experience_state import (
+from dazzle.ui.runtime.experience_routes import create_experience_routes
+from dazzle.ui.runtime.experience_state import (
     ExperienceState,
     cookie_name,
     sign_state,
@@ -245,7 +245,7 @@ class TestResumeFromFileStore:
         assert loaded is not None
         assert loaded.current_step == "enter_details"
 
-    @patch("dazzle_ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_transition_saves_progress(
         self, mock_proxy: AsyncMock, client: TestClient, project_root: Path
     ) -> None:

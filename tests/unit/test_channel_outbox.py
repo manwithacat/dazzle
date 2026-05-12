@@ -11,13 +11,13 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from dazzle_back.channels.outbox import (
+from dazzle.back.channels.outbox import (
     OutboxMessage,
     OutboxRepository,
     OutboxStatus,
     create_outbox_message,
 )
-from dazzle_back.runtime.pg_backend import PostgresBackend
+from dazzle.back.runtime.pg_backend import PostgresBackend
 
 
 @pytest.fixture

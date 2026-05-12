@@ -28,11 +28,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jinja2 import Template
 
-pytest.importorskip("dazzle_back.runtime.site_routes")
-from dazzle_back.runtime.auth.password_login_routes import (  # noqa: E402
+pytest.importorskip("dazzle.back.runtime.site_routes")
+from dazzle.back.runtime.auth.password_login_routes import (  # noqa: E402
     create_password_login_routes,
 )
-from dazzle_back.runtime.site_routes import create_auth_page_routes  # noqa: E402
+from dazzle.back.runtime.site_routes import create_auth_page_routes  # noqa: E402
 
 _MIN_SITESPEC = {
     "version": 1,

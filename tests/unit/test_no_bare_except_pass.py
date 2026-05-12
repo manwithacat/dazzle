@@ -34,7 +34,7 @@ import ast
 import pathlib
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-PROD_DIRS = ("src/dazzle", "src/dazzle_back", "src/dazzle_ui")
+PROD_DIRS = ("src/dazzle", "src/dazzle/back", "src/dazzle/ui")
 
 
 def _is_bare_except_exception(handler: ast.ExceptHandler) -> bool:

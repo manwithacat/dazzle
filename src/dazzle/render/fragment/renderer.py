@@ -1171,7 +1171,7 @@ class FragmentRenderer:
         # Late import to avoid circular dependency between renderer and
         # workspace adapter (the helper lives in adapter for now; could
         # be promoted to a shared module if more renderers need it).
-        from dazzle_back.runtime.renderers.region_adapter import (
+        from dazzle.back.runtime.renderers.region_adapter import (
             _render_status_badge_html,
         )
 
@@ -1407,7 +1407,7 @@ class FragmentRenderer:
         `<div class="dz-radar-region">` (the legacy class).
         """
         from dazzle.render.svg import radar_svg
-        from dazzle_ui.runtime.template_renderer import _metric_number_filter
+        from dazzle.ui.runtime.template_renderer import _metric_number_filter
 
         # Phase 4B.4 wave 3: aligned with legacy template — strip the
         # `<section class="dz-radar">` + `<h4>` chrome. Summary uses
@@ -1972,7 +1972,7 @@ class FragmentRenderer:
 
         Empty path renders the legacy `fragments/empty_state.html` shape.
         """
-        from dazzle_back.runtime.renderers.region_adapter import (
+        from dazzle.back.runtime.renderers.region_adapter import (
             _render_status_badge_html,
         )
 
@@ -2107,7 +2107,7 @@ class FragmentRenderer:
         Empty path renders `<p class="dz-empty-dense dz-queue-empty">`
         — note the legacy template uses BOTH classes.
         """
-        from dazzle_back.runtime.renderers.region_adapter import (
+        from dazzle.back.runtime.renderers.region_adapter import (
             _render_status_badge_html,
         )
 
@@ -2230,7 +2230,7 @@ class FragmentRenderer:
         Measure cells render raw values with `.is-measure` class.
         Summary line "{N} row(s)".
         """
-        from dazzle_back.runtime.renderers.region_adapter import (
+        from dazzle.back.runtime.renderers.region_adapter import (
             _render_status_badge_html,
         )
 

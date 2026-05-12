@@ -1,6 +1,6 @@
 """Unit tests for the fragment registry."""
 
-from dazzle_ui.runtime.fragment_registry import (
+from dazzle.ui.runtime.fragment_registry import (
     PARKING_LOT_FRAGMENTS,
     get_fragment_info,
     get_fragment_registry,

@@ -26,7 +26,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from dazzle_back.runtime.sibling_nav import _parse_sort, sibling_urls
+from dazzle.back.runtime.sibling_nav import _parse_sort, sibling_urls
 
 # ---------------------------------------------------------------------------
 # Fake repository

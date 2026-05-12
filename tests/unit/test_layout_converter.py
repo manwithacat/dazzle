@@ -7,7 +7,7 @@ from dazzle.core.ir import (
     WorkspaceRegion,
     WorkspaceSpec,
 )
-from dazzle.ui.layout_engine import (
+from dazzle.layout import (
     convert_workspace_to_layout,
     convert_workspaces_to_layouts,
     enrich_app_spec_with_layouts,

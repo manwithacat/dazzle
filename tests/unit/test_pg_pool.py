@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture()
 def _pg_backend():
     """Create a PostgresBackend with a fake URL (no real DB needed)."""
-    from dazzle_back.runtime.pg_backend import PostgresBackend
+    from dazzle.back.runtime.pg_backend import PostgresBackend
 
     return PostgresBackend("postgresql://localhost:5432/test_db")
 

@@ -10,15 +10,15 @@ from pathlib import Path
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
-from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.errors import ParseError
-from dazzle.core.lexer import Lexer, TokenType
-from dazzle_back.channels.templates import (
+from dazzle.back.channels.templates import (
     TemplateSyntaxError,
     extract_variables,
     render_template,
     validate_template,
 )
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
+from dazzle.core.lexer import Lexer, TokenType
 
 # =============================================================================
 # Template Engine Property Tests

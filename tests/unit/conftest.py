@@ -29,7 +29,7 @@ _TRACKED_PREFIXES = (
     "dazzle.mcp.",
     "dazzle.mcp",
     "dazzle.api_kb",
-    "dazzle_back.runtime.control_plane",
+    "dazzle.back.runtime.control_plane",
     "dazzle.core.sitespec_loader",
     "dazzle.core.copy_parser",
     "dazzle.core.site_coherence",

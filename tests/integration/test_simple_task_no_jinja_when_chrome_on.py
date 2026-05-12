@@ -22,8 +22,8 @@ from jinja2 import Template
 
 from dazzle.core.appspec_loader import load_project_appspec
 
-pytest.importorskip("dazzle_ui.runtime.page_routes")
-from dazzle_ui.runtime.page_routes import create_page_routes  # noqa: E402
+pytest.importorskip("dazzle.ui.runtime.page_routes")
+from dazzle.ui.runtime.page_routes import create_page_routes  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"
@@ -55,8 +55,8 @@ class _JinjaSpy:
 
 
 def _client_chrome_on() -> tuple[TestClient, FastAPI]:
-    from dazzle_back.runtime.renderers.init import register_default_renderers
-    from dazzle_back.runtime.services import RuntimeServices
+    from dazzle.back.runtime.renderers.init import register_default_renderers
+    from dazzle.back.runtime.services import RuntimeServices
 
     appspec = load_project_appspec(_EXAMPLES / "simple_task")
     fastapi_app = FastAPI()

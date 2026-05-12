@@ -2,9 +2,9 @@
 
 import pytest
 
+from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.render.fragment import Heading, Region, Surface, Table
-from dazzle_back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 
 
 def test_list_mode_produces_surface_with_heading_and_region() -> None:

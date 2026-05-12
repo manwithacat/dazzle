@@ -10,6 +10,10 @@ direction (▲/▼) and its next-click flips."""
 
 from __future__ import annotations
 
+from dazzle.back.runtime.renderers.fragment_adapter import (
+    FragmentSurfaceAdapter,
+    _build_column_header,
+)
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.render.fragment import (
     URL,
@@ -17,12 +21,8 @@ from dazzle.render.fragment import (
     SortHeader,
     Table,
 )
-from dazzle_back.runtime.renderers.fragment_adapter import (
-    FragmentSurfaceAdapter,
-    _build_column_header,
-)
-from dazzle_ui.runtime.page_routes import _build_dispatch_ctx
-from dazzle_ui.runtime.template_context import ColumnContext, TableContext
+from dazzle.ui.runtime.page_routes import _build_dispatch_ctx
+from dazzle.ui.runtime.template_context import ColumnContext, TableContext
 
 
 class _Surface:

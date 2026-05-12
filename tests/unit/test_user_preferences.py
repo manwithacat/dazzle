@@ -10,7 +10,7 @@ pytest.importorskip("fastapi", reason="FastAPI required for preference route tes
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from dazzle_back.runtime.auth.models import AuthContext, UserRecord  # noqa: E402
+from dazzle.back.runtime.auth.models import AuthContext, UserRecord  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # AuthContext.preferences field
@@ -37,7 +37,7 @@ def _make_app_with_prefs(
     user_id: UUID | None = None,
 ) -> tuple[FastAPI, MagicMock]:
     """Create a FastAPI app with preference routes wired to a mock store."""
-    from dazzle_back.runtime.auth.routes import create_auth_routes
+    from dazzle.back.runtime.auth.routes import create_auth_routes
 
     uid = user_id or uuid4()
     mock_store = MagicMock()
@@ -73,7 +73,7 @@ class TestPreferenceRoutes:
         assert data["preferences"]["theme"] == "dark"
 
     def test_get_preferences_unauthenticated(self) -> None:
-        from dazzle_back.runtime.auth.routes import create_auth_routes
+        from dazzle.back.runtime.auth.routes import create_auth_routes
 
         mock_store = MagicMock()
         mock_store.validate_session.return_value = AuthContext()
@@ -156,13 +156,13 @@ class TestPreferenceRoutes:
 
 class TestPageContextPreferences:
     def test_default_empty(self) -> None:
-        from dazzle_ui.runtime.template_context import PageContext
+        from dazzle.ui.runtime.template_context import PageContext
 
         ctx = PageContext(page_title="Test")
         assert ctx.user_preferences == {}
 
     def test_populated(self) -> None:
-        from dazzle_ui.runtime.template_context import PageContext
+        from dazzle.ui.runtime.template_context import PageContext
 
         ctx = PageContext(
             page_title="Test",

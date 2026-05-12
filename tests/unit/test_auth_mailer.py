@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
-from dazzle_back.runtime.auth.mailer import (
+from dazzle.back.runtime.auth.mailer import (
     LogMailer,
     MagicLinkMailer,
     get_mailer,

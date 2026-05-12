@@ -3,7 +3,7 @@
 
 import pytest
 
-from dazzle_back.runtime.asset_manifest import collect_required_assets
+from dazzle.back.runtime.asset_manifest import collect_required_assets
 
 
 class _FakeField:

@@ -33,7 +33,7 @@ def _mock_dazzle_back():
     mock_auth.AuthStore.return_value = store
 
     saved = {}
-    for mod_name in ["dazzle_back", "dazzle_back.runtime", "dazzle_back.runtime.auth"]:
+    for mod_name in ["dazzle.back", "dazzle.back.runtime", "dazzle.back.runtime.auth"]:
         saved[mod_name] = sys.modules.get(mod_name)
         sys.modules[mod_name] = (
             mock_runtime
@@ -44,9 +44,9 @@ def _mock_dazzle_back():
         )
 
     # Fix: make dazzle_back.runtime.auth.AuthStore resolve correctly
-    sys.modules["dazzle_back.runtime.auth"] = mock_auth
-    sys.modules["dazzle_back.runtime"] = mock_runtime
-    sys.modules["dazzle_back"] = MagicMock()
+    sys.modules["dazzle.back.runtime.auth"] = mock_auth
+    sys.modules["dazzle.back.runtime"] = mock_runtime
+    sys.modules["dazzle.back"] = MagicMock()
 
     yield store, fake_user
 

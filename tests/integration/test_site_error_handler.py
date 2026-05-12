@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from jinja2 import Template
 
-from dazzle_back.runtime.exception_handlers import register_site_error_handlers
+from dazzle.back.runtime.exception_handlers import register_site_error_handlers
 
 _SITESPEC = {
     "brand": {"product_name": "TestApp"},

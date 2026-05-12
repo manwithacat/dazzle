@@ -26,81 +26,81 @@ _ROOT = Path(__file__).resolve().parents[2]
 _TYPED_ONLY_MODULES = (
     "src/dazzle/documents/__init__.py",
     "src/dazzle/documents/api.py",
-    "src/dazzle_back/runtime/app_error_views.py",
-    "src/dazzle_back/runtime/auth/auth_views.py",
-    "src/dazzle_back/runtime/auth/magic_link_routes.py",
-    "src/dazzle_back/runtime/auth/mailer.py",
-    "src/dazzle_back/runtime/auth/password_login_routes.py",
-    "src/dazzle_back/runtime/auth/password_reset_routes.py",
-    "src/dazzle_back/runtime/auth/sso_config.py",
-    "src/dazzle_back/runtime/auth/sso_routes.py",
-    "src/dazzle_back/runtime/auth/sso_views.py",
-    "src/dazzle_back/runtime/auth/two_factor_form_routes.py",
-    "src/dazzle_back/runtime/auth/two_factor_views.py",
-    "src/dazzle_back/runtime/error_views.py",
+    "src/dazzle/back/runtime/app_error_views.py",
+    "src/dazzle/back/runtime/auth/auth_views.py",
+    "src/dazzle/back/runtime/auth/magic_link_routes.py",
+    "src/dazzle/back/runtime/auth/mailer.py",
+    "src/dazzle/back/runtime/auth/password_login_routes.py",
+    "src/dazzle/back/runtime/auth/password_reset_routes.py",
+    "src/dazzle/back/runtime/auth/sso_config.py",
+    "src/dazzle/back/runtime/auth/sso_routes.py",
+    "src/dazzle/back/runtime/auth/sso_views.py",
+    "src/dazzle/back/runtime/auth/two_factor_form_routes.py",
+    "src/dazzle/back/runtime/auth/two_factor_views.py",
+    "src/dazzle/back/runtime/error_views.py",
     # Phase 4 app-shell completion (v0.67.55–v0.67.57):
-    "src/dazzle_back/runtime/exception_handlers.py",
-    "src/dazzle_back/runtime/renderers/page_builder.py",
+    "src/dazzle/back/runtime/exception_handlers.py",
+    "src/dazzle/back/runtime/renderers/page_builder.py",
     # `shell.py` and `render_in_app_shell` were retired entirely in v0.67.84
     # (closes #1040); the path is gone from disk.
-    "src/dazzle_ui/runtime/page_routes.py",
-    "src/dazzle_ui/runtime/workspace_renderer.py",
+    "src/dazzle/ui/runtime/page_routes.py",
+    "src/dazzle/ui/runtime/workspace_renderer.py",
     # v0.67.58 — audit-history detail-page render inlined via html.escape.
-    "src/dazzle_back/runtime/audit_region.py",
+    "src/dazzle/back/runtime/audit_region.py",
     # v0.67.59 — dual_path renderers retired (legacy templates gone).
-    "src/dazzle_back/runtime/renderers/dual_path.py",
+    "src/dazzle/back/runtime/renderers/dual_path.py",
     # legacy_ctx.py was retired entirely in v0.67.60 (dead code; tests
     # were the only consumer after v0.67.59 removed render_via_typed).
     # v0.67.61 — htmx_error_response inline-rendered (form_errors.html
     # template stays — Jinja `{% include %}` consumers in components/
     # form.html and experience/_content.html still use it).
-    "src/dazzle_ui/runtime/htmx.py",
+    "src/dazzle/ui/runtime/htmx.py",
     # v0.67.62 — htmx-fragment endpoints inline-render via html.escape.
-    "src/dazzle_back/runtime/fragment_routes.py",
-    "src/dazzle_back/runtime/fts_routes.py",
+    "src/dazzle/back/runtime/fragment_routes.py",
+    "src/dazzle/back/runtime/fts_routes.py",
     # v0.67.65 — fragment_registry is a manifest table; rephrased
     # docstring to clear the gate's regex.
-    "src/dazzle_ui/runtime/fragment_registry.py",
+    "src/dazzle/ui/runtime/fragment_registry.py",
     # v0.67.68 — route_generator detail-fields, table-pagination,
     # table-sentinel, table-empty, table-rows, and inline-edit all
     # now inline-render. The 3 list-fragment templates
     # (table_rows.html, table_pagination.html, table_sentinel.html)
     # are no longer reached from this code path.
-    "src/dazzle_back/runtime/route_generator.py",
+    "src/dazzle/back/runtime/route_generator.py",
     # v0.67.69 — marketing-page render fully Python-orchestrated.
     # inner_only.html + nav.html + footer.html + theme_toggle.html +
     # qa_personas.html + all 19 site/sections/*.html templates deleted.
-    "src/dazzle_back/runtime/site_routes.py",
+    "src/dazzle/back/runtime/site_routes.py",
     # v0.67.70 — radar wired through typed primitive; AUDIT_HISTORY +
     # TAB_DATA fall through to typed shim (no DSL consumer, no adapter).
     # The render_fragment fallback path in workspace_rendering is gone.
-    "src/dazzle_back/runtime/workspace_rendering.py",
+    "src/dazzle/back/runtime/workspace_rendering.py",
     # v0.67.71 — experience-shell rendering owned by
     # `experience_renderer.render_experience_inner_html` (inline Python).
-    "src/dazzle_ui/runtime/experience_routes.py",
+    "src/dazzle/ui/runtime/experience_routes.py",
     # v0.67.74 — form_field/form_stepper/search_select inlined.
-    "src/dazzle_ui/runtime/form_renderer.py",
+    "src/dazzle/ui/runtime/form_renderer.py",
     # v0.67.75 — detail_view + related-* fragments inlined.
-    "src/dazzle_ui/runtime/detail_renderer.py",
+    "src/dazzle/ui/runtime/detail_renderer.py",
     # v0.67.76 — filterable_table + search_input + filter_bar + bulk_actions inlined.
-    "src/dazzle_ui/runtime/table_renderer.py",
+    "src/dazzle/ui/runtime/table_renderer.py",
     # v0.67.71 — experience flow shell (form/detail/table dispatcher) is
     # now fully Python. Renamed file kept under the same path.
-    "src/dazzle_ui/runtime/experience_renderer.py",
+    "src/dazzle/ui/runtime/experience_renderer.py",
     # v0.67.78 — journey_reporter inline-renders via html.escape (closes #1041).
     "src/dazzle/agent/journey_reporter.py",
     # v0.67.87 — agent_commands templates ported to Python f-strings (closes #1049).
     "src/dazzle/services/agent_commands/renderer.py",
     # v0.67.88 — llm_executor prompt rendering migrated to string.Template (closes #1048).
-    "src/dazzle_back/runtime/llm_executor.py",
+    "src/dazzle/back/runtime/llm_executor.py",
     # v0.67.92 — jinja2 dropped entirely (closes #1042/#1044). The
     # framework's last Jinja env users were retired here.
     "src/dazzle/core/expander.py",
     "src/dazzle/compliance/renderer.py",
-    "src/dazzle_ui/runtime/template_renderer.py",
-    "src/dazzle_ui/runtime/combined_server.py",
-    "src/dazzle_ui/runtime/hot_reload.py",
-    "src/dazzle_back/runtime/subsystems/system_routes.py",
+    "src/dazzle/ui/runtime/template_renderer.py",
+    "src/dazzle/ui/runtime/combined_server.py",
+    "src/dazzle/ui/runtime/hot_reload.py",
+    "src/dazzle/back/runtime/subsystems/system_routes.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against
@@ -144,7 +144,7 @@ def test_site_auth_template_dir_does_not_exist() -> None:
     Phase 1.D.2 (v0.67.37). Re-creating it would mean someone
     re-introduced a Jinja auth template — that's the regression
     this gate is designed to catch."""
-    auth_dir = _ROOT / "src" / "dazzle_ui" / "templates" / "site" / "auth"
+    auth_dir = _ROOT / "src" / "dazzle" / "ui" / "templates" / "site" / "auth"
     assert not auth_dir.exists(), (
         f"site/auth/ Jinja template directory has reappeared at {auth_dir}. "
         "The auth Jinja retirement (Phases 1.A–1.D.2) deliberately emptied "
@@ -158,7 +158,7 @@ def test_legacy_auth_context_builders_are_retired() -> None:
     `build_site_error_context` were retired across Phases 1.D.2,
     2.A. Re-introducing them in `site_context.py` would mean someone
     rebuilt the legacy Jinja path."""
-    src = (_ROOT / "src" / "dazzle_ui" / "runtime" / "site_context.py").read_text()
+    src = (_ROOT / "src" / "dazzle" / "ui" / "runtime" / "site_context.py").read_text()
     for legacy in (
         "def build_site_auth_context(",
         "def build_site_404_context(",
@@ -173,8 +173,8 @@ def test_legacy_auth_context_builders_are_retired() -> None:
 
 def test_retired_jinja_templates_stay_deleted() -> None:
     """The 13 templates deleted across Phases 1.A–2.A must not
-    reappear under `src/dazzle_ui/templates/`."""
-    templates_root = _ROOT / "src" / "dazzle_ui" / "templates"
+    reappear under `src/dazzle/ui/templates/`."""
+    templates_root = _ROOT / "src" / "dazzle" / "ui" / "templates"
     retired = (
         "site/auth/login.html",
         "site/auth/signup.html",

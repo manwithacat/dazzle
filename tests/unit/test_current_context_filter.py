@@ -41,7 +41,7 @@ class TestCurrentContextAccessConditionSpec:
     """AccessConditionSpec path: `current_context` resolves via context_id kwarg."""
 
     def test_resolves_current_context_to_selected_id(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -60,7 +60,7 @@ class TestCurrentContextAccessConditionSpec:
 
     def test_no_context_skips_filter(self) -> None:
         """Selector cleared ⇒ filter drops out so persona scope applies unfiltered."""
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -79,7 +79,7 @@ class TestCurrentContextAccessConditionSpec:
 
     def test_literal_string_unchanged(self) -> None:
         """Plain literal equals-another-string still works (no current_context regression)."""
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("status", "active")
         filters: dict[str, Any] = {}
@@ -99,7 +99,7 @@ class TestCurrentContextIRConditionExpr:
     """IR ConditionExpr path: same resolution."""
 
     def test_resolves_current_context_to_selected_id(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         cond = _ir_cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -117,7 +117,7 @@ class TestCurrentContextIRConditionExpr:
         assert filters == {"teaching_group": "tg-xyz"}
 
     def test_no_context_skips_filter(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         cond = _ir_cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -134,7 +134,7 @@ class TestCurrentContextIRConditionExpr:
 
     def test_combined_with_current_user(self) -> None:
         """An AND of `current_user` + `current_context` resolves both sides."""
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         left = _ir_cmp("owner", "current_user")
         right = _ir_cmp("teaching_group", "current_context")
@@ -163,7 +163,7 @@ class TestBackwardsCompatibility:
     """Callers that don't pass context_id still work (kwarg is optional)."""
 
     def test_without_context_id_kwarg_is_safe(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("status", "active")
         filters: dict[str, Any] = {}

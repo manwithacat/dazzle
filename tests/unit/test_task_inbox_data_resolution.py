@@ -11,11 +11,11 @@ ship).
 
 from __future__ import annotations
 
-from dazzle.core.ir.workspaces import TaskInboxConfig, TaskSource, TaskSourceTemplate
-from dazzle_back.runtime.workspace_rendering import (
+from dazzle.back.runtime.workspace_rendering import (
     _build_task_inbox_payload,
     _coerce_urgency,
 )
+from dazzle.core.ir.workspaces import TaskInboxConfig, TaskSource, TaskSourceTemplate
 
 
 def _config(*, sources: list[TaskSource] | None = None) -> TaskInboxConfig:

@@ -22,9 +22,9 @@ from typing import Any
 
 import pytest
 
-from dazzle_back.runtime.cron import CronParseError, parse_cron
-from dazzle_back.runtime.job_queue import InMemoryJobQueue
-from dazzle_back.runtime.job_scheduler import (
+from dazzle.back.runtime.cron import CronParseError, parse_cron
+from dazzle.back.runtime.job_queue import InMemoryJobQueue
+from dazzle.back.runtime.job_scheduler import (
     parse_scheduled_jobs,
     run_scheduler_loop,
 )

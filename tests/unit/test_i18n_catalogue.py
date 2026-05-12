@@ -205,7 +205,7 @@ class TestGettextFilterReadsContextVar:
         kwargs: dict,
         expected: str,
     ) -> None:
-        from dazzle_ui.runtime.template_renderer import _gettext
+        from dazzle.ui.runtime.template_renderer import _gettext
 
         if reg_locale:
             register_translations(reg_locale, reg_mapping)
@@ -222,7 +222,7 @@ class TestLocaleMiddlewareSetsContextVar:
 
     @pytest.mark.asyncio
     async def test_middleware_sets_contextvar_during_dispatch(self):
-        from dazzle_back.runtime.locale_middleware import LocaleMiddleware
+        from dazzle.back.runtime.locale_middleware import LocaleMiddleware
 
         seen: list[str] = []
 
@@ -252,7 +252,7 @@ class TestLocaleMiddlewareSetsContextVar:
     async def test_middleware_resets_contextvar_on_exception(self):
         """If the downstream raises, the ctxvar still resets — otherwise
         a stuck locale would bleed across requests on a worker."""
-        from dazzle_back.runtime.locale_middleware import LocaleMiddleware
+        from dazzle.back.runtime.locale_middleware import LocaleMiddleware
 
         async def fake_call_next(request):
             raise RuntimeError("downstream blew up")

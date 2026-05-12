@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle_back.events.framework import EventFramework, EventFrameworkConfig
+from dazzle.back.events.framework import EventFramework, EventFrameworkConfig
 
 pytestmark = pytest.mark.postgres
 
@@ -72,11 +72,11 @@ class TestEventFrameworkPgMode:
         try:
             with (
                 patch(
-                    "dazzle_back.events.postgres_bus.PostgresBus",
+                    "dazzle.back.events.postgres_bus.PostgresBus",
                     return_value=mock_pg_bus,
                 ),
                 patch(
-                    "dazzle_back.events.postgres_bus.PostgresConfig",
+                    "dazzle.back.events.postgres_bus.PostgresConfig",
                     mock_pg_config,
                 ),
             ):
@@ -154,11 +154,11 @@ class TestEventFrameworkPgMode:
         try:
             with (
                 patch(
-                    "dazzle_back.events.postgres_bus.PostgresBus",
+                    "dazzle.back.events.postgres_bus.PostgresBus",
                     return_value=mock_pg_bus,
                 ),
                 patch(
-                    "dazzle_back.events.postgres_bus.PostgresConfig",
+                    "dazzle.back.events.postgres_bus.PostgresConfig",
                     MagicMock(),
                 ),
             ):

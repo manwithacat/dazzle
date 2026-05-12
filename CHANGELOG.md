@@ -9,6 +9,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.98] - 2026-05-12
+
+### Changed — package merge
+
+- **`dazzle_back` and `dazzle_ui` merged into `dazzle/`** — closes [#1055](https://github.com/manwithacat/gh-issue/1055). The framework now ships a single top-level package (`dazzle/`) instead of three siblings (`dazzle/`, `dazzle_back/`, `dazzle_ui/`). The `dazzle_back` and `dazzle_ui` contents are now nested as `dazzle.back` and `dazzle.ui` subpackages.
+
+  Layout change:
+
+  | Before | After |
+  |--------|-------|
+  | `src/dazzle_back/runtime/app_factory.py` | `src/dazzle/back/runtime/app_factory.py` |
+  | `src/dazzle_ui/runtime/template_renderer.py` | `src/dazzle/ui/runtime/template_renderer.py` |
+  | `from dazzle_back.X import Y` | `from dazzle.back.X import Y` |
+  | `from dazzle_ui.X import Y` | `from dazzle.ui.X import Y` |
+  | `import dazzle_back` | `from dazzle import back as dazzle_back` |
+  | `import dazzle_ui` | `from dazzle import ui as dazzle_ui` |
+  | `top_level.txt`: `dazzle, dazzle_back, dazzle_ui, dazzle_e2e` | `top_level.txt`: `dazzle, dazzle_e2e` |
+
+  `dazzle_e2e` (Playwright test harness) stays separate — it's the one boundary that's genuinely independent.
+
+- **`dazzle.ui.layout_engine` renamed to `dazzle.layout`** — the existing `dazzle.ui` (semantic layout engine, archetypes, attention adjustment) was relocated to `dazzle.layout/` so the new `dazzle.ui` (former `dazzle_ui`) takes its natural home. Only the layout module itself imported from this path; rename is mechanical.
+
+- **585 Python files** had their imports rewritten (mostly mechanical regex pass — `from dazzle_back` → `from dazzle.back`, etc.). **96 files** had string-literal references (e.g. `pytest.importorskip("dazzle_back")`, package-data keys in pyproject) rewritten to the new dotted paths. **15 files** had non-Path string-pair concatenations (`"dazzle" / "back"`) collapsed back to `"dazzle.back"` after the path-component split heuristic over-applied. **12 files** had Path-chain `/ "dazzle.ui"` re-split to `/ "dazzle" / "ui"` so pathlib resolves them correctly. **56 files** had repo-relative path strings (`"src/dazzle_back/..."`) rewritten.
+
+- **`pyproject.toml`** updated: `[tool.setuptools.package-data]` keys now reference `dazzle.ui.runtime.static` etc.; `[tool.pytest.ini_options].testpaths` updated to `src/dazzle/back/tests`; `[[tool.mypy.overrides]].module` list updated.
+
+- **`MANIFEST.in`** updated to `recursive-include src/dazzle/ui/runtime/static *.js *.css`.
+
+- **`docs/api-surface/runtime-urls.txt`** and **`public-helpers.txt`** baselines regenerated to reflect the new module paths.
+
+### Why this matters
+
+Pre-merge: 20 bidirectional cross-package imports (`dazzle_ui` ↔ `dazzle_back`) made the boundary fiction. The folder names also misled — `dazzle_ui/runtime/page_routes.py` was a FastAPI router (2,189 lines, sounded like UI, was backend); `dazzle_back/runtime/audit_region.py` rendered HTML (sounded like backend, was UI). After this merge an agent searching for "where does X live?" pays a single tree traversal instead of three.
+
+### Breaking Changes
+
+Downstream consumers that imported via the old paths must rewrite:
+
+- `from dazzle_back.X import Y` → `from dazzle.back.X import Y`
+- `from dazzle_ui.X import Y` → `from dazzle.ui.X import Y`
+- `import dazzle_back` → `from dazzle import back as dazzle_back` (or rewrite usages to `dazzle.back.*`)
+- `import dazzle_ui` → `from dazzle import ui as dazzle_ui` (or rewrite usages to `dazzle.ui.*`)
+- Path strings like `Path("src/dazzle_back/...")` → `Path("src/dazzle/back/...")`
+- pyproject extras / package-data references to `dazzle_back` / `dazzle_ui` → `dazzle.back` / `dazzle.ui`
+
+### Test Results
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, **0 failed**.
+- mypy baseline: 46 errors (unchanged from pre-merge; same set of pre-existing type issues now under `dazzle.ui.*` paths instead of `dazzle_ui.*`).
+- ruff: clean after `--fix` autofixed 188 import-organisation issues.
+
+### Agent Guidance
+
+- The single top-level `dazzle` package is the canonical search root for everything except the e2e test harness. Tab-completing `from dazzle.` shows every subsystem.
+- The `dazzle.back` and `dazzle.ui` namespaces are documentation-only distinctions — file new modules under whichever subpackage best matches their role, knowing the bidirectional dependency between them is expected (and was the original reason the sibling-package layout was misleading).
+
 ## [0.67.97] - 2026-05-12
 
 ### Fixed

@@ -45,13 +45,13 @@ from lsprotocol.types import (
 )
 from pygls.lsp.server import LanguageServer
 
+from dazzle.back.runtime.renderers.init import default_renderer_names
 from dazzle.core import ir
 from dazzle.core.errors import DazzleError, LinkError, ParseError, ValidationError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle_back.runtime.renderers.init import default_renderer_names
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

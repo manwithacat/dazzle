@@ -20,7 +20,7 @@ import inspect
 
 from fastapi import Request
 
-from dazzle_ui.runtime.page_routes import (
+from dazzle.ui.runtime.page_routes import (
     _make_page_handler,
     _make_workspace_handler,
 )

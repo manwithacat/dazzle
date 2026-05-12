@@ -6,7 +6,7 @@ Provides convenient functions for the common load → parse → build pipeline.
 
 from pathlib import Path
 
-from dazzle_back.runtime.renderers.init import default_renderer_names
+from dazzle.back.runtime.renderers.init import default_renderer_names
 
 from . import ir
 from .fileset import discover_dsl_files

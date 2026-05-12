@@ -9,8 +9,8 @@ just shapes.
 
 from __future__ import annotations
 
+from dazzle.back.runtime.workspace_rendering import _build_cohort_cells
 from dazzle.core.ir.workspaces import CohortStripConfig, CohortStripLens
-from dazzle_back.runtime.workspace_rendering import _build_cohort_cells
 
 
 def _config(*, member_via: str = "profile", lenses: list[dict] | None = None) -> CohortStripConfig:

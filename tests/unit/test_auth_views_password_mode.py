@@ -6,11 +6,11 @@ shape, action URLs, escape safety, error rendering, next-URL threading.
 
 from __future__ import annotations
 
-from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.auth.auth_views import (
+from dazzle.back.runtime.auth.auth_views import (
     build_login_password_view,
     build_signup_password_view,
 )
+from dazzle.render.fragment.renderer import FragmentRenderer
 
 
 def _render(page: object) -> str:

@@ -508,7 +508,7 @@ def impersonate(
     import socket
     from datetime import timedelta
 
-    from dazzle_back.runtime.auth.magic_link import create_magic_link
+    from dazzle.back.runtime.auth.magic_link import create_magic_link
 
     store = _get_auth_store()
     user = _resolve_user(store, identifier)

@@ -21,8 +21,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
-from dazzle_back.runtime.auth import (
+from dazzle.back.runtime.auth import (
     AuthContext,
     SessionRecord,
     TwoFactorMixin,
@@ -31,6 +30,7 @@ from dazzle_back.runtime.auth import (
     create_auth_routes,
     hash_password,
 )
+from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
 
 # FastAPI / httpx are dev-only deps; skip route tests if unavailable.
 try:
@@ -64,7 +64,7 @@ def _mock_totp_module(verify_return: bool) -> Iterator[MagicMock]:
     """
     mock_module = MagicMock()
     mock_module.verify_totp = MagicMock(return_value=verify_return)
-    key = "dazzle_back.runtime.totp"
+    key = "dazzle.back.runtime.totp"
     original = sys.modules.get(key)
     sys.modules[key] = mock_module
     try:

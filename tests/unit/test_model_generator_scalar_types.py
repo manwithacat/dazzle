@@ -15,8 +15,8 @@ What this catches:
 
 from __future__ import annotations
 
-from dazzle_back.runtime.model_generator import _scalar_type_to_python
-from dazzle_back.specs.entity import ScalarType
+from dazzle.back.runtime.model_generator import _scalar_type_to_python
+from dazzle.back.specs.entity import ScalarType
 
 # Members that genuinely should map to ``str`` (URLs, emails, opaque tokens).
 _STR_MEMBERS: frozenset[ScalarType] = frozenset(

@@ -18,8 +18,8 @@ from dazzle.core.ir.predicates import (
 
 pytest.importorskip("fastapi")
 
+from dazzle.back.runtime.predicate_compiler import compile_predicate
 from dazzle.core.ir.fk_graph import FKEdge, FKGraph
-from dazzle_back.runtime.predicate_compiler import compile_predicate
 
 
 def _simple_graph() -> FKGraph:
@@ -70,7 +70,7 @@ class TestUserAttrCheck:
         # Params contain a UserAttrRef marker that the route handler resolves
         # at request time via _resolve_user_attribute(attr_name, auth_context).
         assert len(params) == 1
-        from dazzle_back.runtime.predicate_compiler import UserAttrRef
+        from dazzle.back.runtime.predicate_compiler import UserAttrRef
 
         assert isinstance(params[0], UserAttrRef)
         assert params[0].attr_name == "school"

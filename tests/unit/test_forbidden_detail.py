@@ -14,7 +14,7 @@ from enum import Enum
 
 import pytest
 
-from dazzle_back.runtime.route_generator import _forbidden_detail
+from dazzle.back.runtime.route_generator import _forbidden_detail
 
 
 class _FakeOp(Enum):

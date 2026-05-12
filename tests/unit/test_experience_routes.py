@@ -14,8 +14,8 @@ from dazzle.core.ir.experiences import (
     StepTransition,
 )
 from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle_ui.runtime.experience_routes import create_experience_routes
-from dazzle_ui.runtime.experience_state import (
+from dazzle.ui.runtime.experience_routes import create_experience_routes
+from dazzle.ui.runtime.experience_state import (
     ExperienceState,
     cookie_name,
     sign_state,
@@ -195,7 +195,7 @@ class TestBackNavigation:
 
 
 class TestTransition:
-    @patch("dazzle_ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_successful_transition(self, mock_proxy: AsyncMock, client: TestClient) -> None:
         mock_proxy.return_value = (True, {"id": "new-id-123"})
 
@@ -272,7 +272,7 @@ class TestBranching:
 
 
 class TestFormProxy:
-    @patch("dazzle_ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_proxy_success_stores_entity_id(
         self, mock_proxy: AsyncMock, client: TestClient
     ) -> None:
@@ -293,7 +293,7 @@ class TestFormProxy:
         assert new_state is not None
         assert new_state.data.get("Client_id") == "created-456"
 
-    @patch("dazzle_ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_proxy_failure_returns_error(self, mock_proxy: AsyncMock, client: TestClient) -> None:
         mock_proxy.return_value = (
             False,

@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import pytest
 
+from dazzle.back.runtime.predicate_compiler import compile_predicate
 from dazzle.core.ir.domain import EntitySpec
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.fk_graph import FKGraph
@@ -45,7 +46,6 @@ from dazzle.core.ir.predicates import (
     UserAttrCheck,
     ValueRef,
 )
-from dazzle_back.runtime.predicate_compiler import compile_predicate
 
 
 def _make_fk_graph_with_entity(
@@ -87,7 +87,7 @@ class TestUserAttrCheckQualifiesColumn:
         """The fallback for callers that don't pass entity_name keeps
         the bare-column behaviour. Direct compiler invocations from
         tests / ad-hoc scripts shouldn't break."""
-        from dazzle_back.runtime.predicate_compiler import _compile_user_attr_check
+        from dazzle.back.runtime.predicate_compiler import _compile_user_attr_check
 
         predicate = UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school")
         sql, _ = _compile_user_attr_check(predicate)
@@ -167,7 +167,7 @@ class TestQualificationSurvivesJoinScenario:
     `"StudentProfile"."school"` and `"StudentProfile"."id"` respectively."""
 
     def test_full_where_clause_unambiguous(self) -> None:
-        from dazzle_back.runtime.query_builder import QueryBuilder
+        from dazzle.back.runtime.query_builder import QueryBuilder
 
         # Compile the scope predicate the way RBAC does
         scope_predicate = UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school")

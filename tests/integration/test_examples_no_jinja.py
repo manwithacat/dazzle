@@ -25,8 +25,8 @@ from jinja2 import Template
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.manifest import load_manifest
 
-pytest.importorskip("dazzle_ui.runtime.page_routes")
-from dazzle_ui.runtime.page_routes import create_page_routes  # noqa: E402
+pytest.importorskip("dazzle.ui.runtime.page_routes")
+from dazzle.ui.runtime.page_routes import create_page_routes  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"
@@ -68,8 +68,8 @@ def _client_for_example(app_name: str) -> tuple[TestClient, FastAPI]:
     bootstrap (validates the manifest TOML), but its result no longer
     threads into a render-mode decision.
     """
-    from dazzle_back.runtime.renderers.init import register_default_renderers
-    from dazzle_back.runtime.services import RuntimeServices
+    from dazzle.back.runtime.renderers.init import register_default_renderers
+    from dazzle.back.runtime.services import RuntimeServices
 
     app_root = _EXAMPLES / app_name
     appspec = load_project_appspec(app_root)

@@ -13,8 +13,8 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.ui.layout_engine.converter import convert_workspace_to_layout
-from dazzle.ui.layout_engine.plan import build_layout_plan
+from dazzle.layout.converter import convert_workspace_to_layout
+from dazzle.layout.plan import build_layout_plan
 
 
 @pytest.fixture

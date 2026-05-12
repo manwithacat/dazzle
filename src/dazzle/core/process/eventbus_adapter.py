@@ -381,8 +381,8 @@ class EventBusProcessAdapter(ProcessAdapter):
         """
         try:
             # fmt: off
-            import dazzle_back.events.envelope as _env_mod  # noqa: PLC0415
-            import dazzle_back.runtime.auth.events as _auth_mod  # noqa: PLC0415
+            import dazzle.back.events.envelope as _env_mod  # noqa: PLC0415
+            import dazzle.back.runtime.auth.events as _auth_mod  # noqa: PLC0415
             # fmt: on
         except ImportError:
             return None

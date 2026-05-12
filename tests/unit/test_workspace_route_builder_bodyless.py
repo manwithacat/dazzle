@@ -27,9 +27,9 @@ def _build_app_and_init_routes(dsl_src: str, tmp_path):
     app so tests can inspect `app.routes` for the expected paths."""
     from fastapi import FastAPI
 
+    from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
     from dazzle.core.linker import build_appspec
     from dazzle.core.parser import parse_modules
-    from dazzle_back.runtime.workspace_route_builder import WorkspaceRouteBuilder
 
     dsl_path = tmp_path / "app.dsl"
     dsl_path.write_text(dsl_src)
@@ -169,6 +169,7 @@ class TestNonBodylessSourcelessSkipped:
         # situation programmatically rather than via DSL.
         from fastapi import FastAPI
 
+        from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
         from dazzle.core.ir import (
             AppSpec,
             DisplayMode,
@@ -176,7 +177,6 @@ class TestNonBodylessSourcelessSkipped:
             WorkspaceRegion,
             WorkspaceSpec,
         )
-        from dazzle_back.runtime.workspace_route_builder import WorkspaceRouteBuilder
 
         # Hand-build a minimal AppSpec with a sourceless LIST region
         # (bypasses the parser's bodyless-region check).

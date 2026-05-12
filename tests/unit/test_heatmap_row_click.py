@@ -16,7 +16,8 @@ import pytest
 HEATMAP = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "dazzle_ui"
+    / "dazzle"
+    / "ui"
     / "templates"
     / "workspace"
     / "regions"
@@ -72,7 +73,7 @@ class TestHeatmapRowClick:
 
         css = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle_ui/runtime/static/css/components/regions.css"
+            / "src/dazzle/ui/runtime/static/css/components/regions.css"
         ).read_text()
         assert ".dz-heatmap-grid > tbody > tr.is-clickable" in css
         assert "cursor: pointer" in css

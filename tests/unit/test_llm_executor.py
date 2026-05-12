@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from dazzle.back.runtime.llm_executor import LLMIntentExecutor
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import DomainSpec
 from dazzle.core.ir.llm import (
@@ -14,7 +15,6 @@ from dazzle.core.ir.llm import (
     RetryBackoff,
     RetryPolicySpec,
 )
-from dazzle_back.runtime.llm_executor import LLMIntentExecutor
 
 
 def _make_model(

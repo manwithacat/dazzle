@@ -26,7 +26,7 @@ import pytest
 # locally.
 pytest.importorskip("redis.asyncio")
 
-from dazzle_back.runtime.redis_job_queue import (  # noqa: E402
+from dazzle.back.runtime.redis_job_queue import (  # noqa: E402
     RedisJobQueue,
     RedisJobQueueError,
 )
@@ -320,7 +320,7 @@ class TestProtocolConformance:
         # Structural — instances must have the three Protocol
         # methods so the cycle-5 worker can use them
         # interchangeably with InMemoryJobQueue.
-        from dazzle_back.runtime.job_queue import JobQueue
+        from dazzle.back.runtime.job_queue import JobQueue
 
         q = RedisJobQueue("redis://localhost")
         # Static `isinstance` against a Protocol works at runtime

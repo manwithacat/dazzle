@@ -20,7 +20,8 @@ from pathlib import Path
 JS_FILE = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "dazzle_ui"
+    / "dazzle"
+    / "ui"
     / "runtime"
     / "static"
     / "js"

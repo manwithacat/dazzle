@@ -8,8 +8,8 @@ for the new-user creation path.
 
 from __future__ import annotations
 
+from dazzle.back.runtime.auth.auth_views import build_signup_magic_link_view
 from dazzle.render.fragment import FragmentRenderer
-from dazzle_back.runtime.auth.auth_views import build_signup_magic_link_view
 
 
 def _render(page_fragment: object) -> str:

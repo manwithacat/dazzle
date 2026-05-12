@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Files that import parse_modules at runtime to drive schema migrations,
 # DSL deployment, or background worker DSL loading.
 RUNTIME_PARSE_MODULES_CALLERS = [
-    "src/dazzle_back/alembic/env.py",
+    "src/dazzle/back/alembic/env.py",
     "src/dazzle/cli/migrate.py",
     "src/dazzle/process/worker.py",
 ]

@@ -3,7 +3,7 @@
 
 import inspect
 
-from dazzle_back.runtime import workspace_rendering
+from dazzle.back.runtime import workspace_rendering
 
 
 class TestGrantPreFetchingWiring:

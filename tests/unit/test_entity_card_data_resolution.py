@@ -9,12 +9,12 @@ empty bodies pending the per-mode compact renderer ship.
 
 from __future__ import annotations
 
+from dazzle.back.runtime.workspace_rendering import _build_entity_card_sections
 from dazzle.core.ir.workspaces import (
     EntityCardConfig,
     EntityCardSection,
     EntityCardSectionMode,
 )
-from dazzle_back.runtime.workspace_rendering import _build_entity_card_sections
 
 
 def _section(

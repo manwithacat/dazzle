@@ -31,12 +31,12 @@ def _get_framework_alembic_dir() -> Path:
     """Locate the framework's alembic directory (env.py, templates, INI)."""
     # Works both in editable installs and pip-installed packages
     try:
-        import dazzle_back
+        from dazzle import back as dazzle_back
 
         return (Path(dazzle_back.__file__).resolve().parent / "alembic").resolve()
     except (ImportError, AttributeError):
         # Fallback for dev layout
-        return (Path(__file__).resolve().parents[2] / "dazzle_back" / "alembic").resolve()
+        return (Path(__file__).resolve().parents[2] / "dazzle" / "back" / "alembic").resolve()
 
 
 def _get_project_versions_dir() -> Path:
@@ -243,7 +243,7 @@ def baseline_command(
 
     # Validate that DSL metadata is loadable and non-empty
     try:
-        from dazzle_back.alembic.env import _load_target_metadata
+        from dazzle.back.alembic.env import _load_target_metadata
 
         metadata = _load_target_metadata()
         table_count = len(metadata.tables)
@@ -847,12 +847,12 @@ def explain_aggregate_command(
     row-level security is applied at request time. Add ``--scope`` later
     if we need to simulate a persona's predicate.
     """
-    from dazzle.core.ir.fields import FieldTypeKind
-    from dazzle_back.runtime.aggregate import (
+    from dazzle.back.runtime.aggregate import (
         Dimension,
         build_aggregate_sql,
         resolve_fk_display_field,
     )
+    from dazzle.core.ir.fields import FieldTypeKind
 
     project_root = Path.cwd().resolve()
     appspec = load_project_appspec(project_root)

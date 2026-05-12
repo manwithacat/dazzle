@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle_back.runtime.site_routes import create_auth_page_routes
+from dazzle.back.runtime.site_routes import create_auth_page_routes
 
 SITESPEC: dict[str, Any] = {"brand": {"product_name": "TestApp"}}
 
@@ -23,8 +23,8 @@ class TestTwoFactorPageContextBuilder:
 
     def test_setup_view_renders_with_product_name(self) -> None:
         """Phase 1.D.2 (v0.67.37): setup is a typed-Fragment view."""
+        from dazzle.back.runtime.auth.two_factor_views import build_2fa_setup_view
         from dazzle.render.fragment.renderer import FragmentRenderer
-        from dazzle_back.runtime.auth.two_factor_views import build_2fa_setup_view
 
         html = FragmentRenderer().render(build_2fa_setup_view(product_name="TestApp"))
         assert "Set Up 2FA" in html
@@ -34,10 +34,10 @@ class TestTwoFactorPageContextBuilder:
 
     def test_settings_view_renders_with_product_name(self) -> None:
         """Phase 1.D.2 (v0.67.37): settings is a typed-Fragment view."""
-        from dazzle.render.fragment.renderer import FragmentRenderer
-        from dazzle_back.runtime.auth.two_factor_views import (
+        from dazzle.back.runtime.auth.two_factor_views import (
             build_2fa_settings_view,
         )
+        from dazzle.render.fragment.renderer import FragmentRenderer
 
         html = FragmentRenderer().render(build_2fa_settings_view(product_name="TestApp"))
         assert "2FA Settings" in html
@@ -49,10 +49,10 @@ class TestTwoFactorPageContextBuilder:
         Fragment view, not a Jinja template. The token threads
         through `build_2fa_challenge_view` rather than the legacy
         SiteAuthContext."""
-        from dazzle.render.fragment.renderer import FragmentRenderer
-        from dazzle_back.runtime.auth.two_factor_views import (
+        from dazzle.back.runtime.auth.two_factor_views import (
             build_2fa_challenge_view,
         )
+        from dazzle.render.fragment.renderer import FragmentRenderer
 
         page = build_2fa_challenge_view(
             product_name="TestApp",
@@ -109,7 +109,7 @@ class TestTwoFactorAuthGuards:
         app = FastAPI()
         app.include_router(router)
         # Also mount /login so redirects don't 404
-        from dazzle_back.runtime.site_routes import create_auth_page_routes as _mk
+        from dazzle.back.runtime.site_routes import create_auth_page_routes as _mk
 
         app.include_router(_mk(SITESPEC))
         return TestClient(app)

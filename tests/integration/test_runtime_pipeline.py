@@ -15,16 +15,15 @@ import os
 
 import pytest
 
-from dazzle.core import ir
-
 # Runtime Backend
-from dazzle_back.converters import convert_appspec_to_backend
-from dazzle_back.runtime import FASTAPI_AVAILABLE, create_app
-from dazzle_back.specs import BackendSpec
-from dazzle_ui.converters import convert_appspec_to_ui
-from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
-from dazzle_ui.runtime.template_renderer import render_page
-from dazzle_ui.specs import UISpec
+from dazzle.back.converters import convert_appspec_to_backend
+from dazzle.back.runtime import FASTAPI_AVAILABLE, create_app
+from dazzle.back.specs import BackendSpec
+from dazzle.core import ir
+from dazzle.ui.converters import convert_appspec_to_ui
+from dazzle.ui.converters.template_compiler import compile_appspec_to_templates
+from dazzle.ui.runtime.template_renderer import render_page
+from dazzle.ui.specs import UISpec
 
 # =============================================================================
 # Test Fixtures - Hand-built AppSpecs

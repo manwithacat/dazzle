@@ -37,8 +37,8 @@ def _make_deps(
     surface_mode: dict[str, str] | None = None,
     route_entity: dict[str, str] | None = None,
 ) -> Any:
-    from dazzle_back.runtime.access_evaluator import evaluate_permission
-    from dazzle_ui.runtime.page_routes import _PageDeps
+    from dazzle.back.runtime.access_evaluator import evaluate_permission
+    from dazzle.ui.runtime.page_routes import _PageDeps
 
     return _PageDeps(
         appspec=appspec,
@@ -73,10 +73,10 @@ class TestCreateFormPermissionCheck:
         # The fix maps surface_mode=="create" → AccessOperationKind.CREATE
         # in _page_handler. We test _user_can_mutate which uses the same
         # Cedar infrastructure.
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -112,10 +112,10 @@ class TestNavEntityFiltering:
     """Sidebar nav items filtered by entity permit rules (#583)."""
 
     def test_denied_entity_removed_from_nav(self) -> None:
-        from dazzle_ui.runtime.page_routes import _filter_nav_by_entity_access
+        from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -145,10 +145,10 @@ class TestNavEntityFiltering:
         assert filtered[0].label == "Dashboard"
 
     def test_permitted_entity_kept_in_nav(self) -> None:
-        from dazzle_ui.runtime.page_routes import _filter_nav_by_entity_access
+        from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -175,10 +175,10 @@ class TestNavEntityFiltering:
         assert len(filtered) == 1
 
     def test_superuser_bypasses_nav_filter(self) -> None:
-        from dazzle_ui.runtime.page_routes import _filter_nav_by_entity_access
+        from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -205,7 +205,7 @@ class TestNavEntityFiltering:
         assert len(filtered) == 1
 
     def test_entity_without_cedar_spec_kept(self) -> None:
-        from dazzle_ui.runtime.page_routes import _filter_nav_by_entity_access
+        from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
         deps = _make_deps(
             _make_appspec(),
@@ -227,7 +227,7 @@ class TestColumnVisibleCondition:
     """List columns respect visible: directive for per-role visibility (#585)."""
 
     def test_column_context_has_visible_condition(self) -> None:
-        from dazzle_ui.runtime.template_context import ColumnContext
+        from dazzle.ui.runtime.template_context import ColumnContext
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         col = ColumnContext(key="salary", label="Salary", visible_condition=vis)
@@ -235,8 +235,8 @@ class TestColumnVisibleCondition:
         assert col.hidden is False
 
     def test_column_hidden_when_role_denied(self) -> None:
-        from dazzle_ui.runtime.template_context import ColumnContext
-        from dazzle_ui.utils.condition_eval import evaluate_condition
+        from dazzle.ui.runtime.template_context import ColumnContext
+        from dazzle.ui.utils.condition_eval import evaluate_condition
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         col = ColumnContext(key="salary", label="Salary", visible_condition=vis)
@@ -246,8 +246,8 @@ class TestColumnVisibleCondition:
         assert col.hidden is True
 
     def test_column_visible_when_role_allowed(self) -> None:
-        from dazzle_ui.runtime.template_context import ColumnContext
-        from dazzle_ui.utils.condition_eval import evaluate_condition
+        from dazzle.ui.runtime.template_context import ColumnContext
+        from dazzle.ui.utils.condition_eval import evaluate_condition
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         col = ColumnContext(key="salary", label="Salary", visible_condition=vis)
@@ -257,7 +257,7 @@ class TestColumnVisibleCondition:
         assert col.hidden is False
 
     def test_column_without_condition_always_visible(self) -> None:
-        from dazzle_ui.runtime.template_context import ColumnContext
+        from dazzle.ui.runtime.template_context import ColumnContext
 
         col = ColumnContext(key="name", label="Name")
         assert col.visible_condition is None
@@ -269,7 +269,7 @@ class TestColumnVisibleCondition:
         The page handler deep-copies ctx.table before checking
         visibility — verify that the original columns stay unhidden.
         """
-        from dazzle_ui.runtime.template_context import ColumnContext, TableContext
+        from dazzle.ui.runtime.template_context import ColumnContext, TableContext
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         shared_table = TableContext(
@@ -284,7 +284,7 @@ class TestColumnVisibleCondition:
 
         # Simulate what page_routes.py now does: deep-copy, then mutate copy
         req_table = shared_table.model_copy(deep=True)
-        from dazzle_ui.utils.condition_eval import evaluate_condition
+        from dazzle.ui.utils.condition_eval import evaluate_condition
 
         role_ctx = {"user_roles": ["viewer"]}
         for _col in req_table.columns:
@@ -312,10 +312,10 @@ class TestEmptyStateCTAGuard:
 
     def test_create_url_suppressed_for_denied_role(self) -> None:
         """Table create_url set to None when role lacks CREATE permission."""
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,

@@ -21,7 +21,7 @@ from typing import Any
 
 import pytest
 
-from dazzle_ui.runtime.workspace_renderer import _action_to_url
+from dazzle.ui.runtime.workspace_renderer import _action_to_url
 
 
 def _stub_app_spec(surfaces):

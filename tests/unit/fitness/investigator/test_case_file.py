@@ -20,7 +20,7 @@ def _finding(
     *,
     persona: str = "admin",
     summary_observed: str = "aria-describedby missing",
-    evidence_text: str = "src/dazzle_ui/templates/form.html:47 — control has no describedby",
+    evidence_text: str = "src/dazzle/ui/templates/form.html:47 — control has no describedby",
 ) -> Finding:
     return Finding(
         id=fid,
@@ -75,7 +75,7 @@ def test_build_case_file_happy_path(tmp_path: Path) -> None:
         ],
     )
 
-    locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
+    locus_dir = tmp_path / "src" / "dazzle" / "ui" / "templates"
     locus_dir.mkdir(parents=True)
     locus_file = locus_dir / "form.html"
     locus_file.write_text("\n".join(f"<div>line {i}</div>" for i in range(1, 21)))
@@ -85,7 +85,7 @@ def test_build_case_file_happy_path(tmp_path: Path) -> None:
     assert case_file.cluster.cluster_id == "CL-deadbeef"
     assert case_file.sample_finding.id == "f_001"
     assert case_file.locus is not None
-    assert case_file.locus.file_path == "src/dazzle_ui/templates/form.html"
+    assert case_file.locus.file_path == "src/dazzle/ui/templates/form.html"
     assert case_file.locus.mode == "full"
     assert case_file.locus.total_lines == 20
     assert case_file.dazzle_root == tmp_path
@@ -142,23 +142,23 @@ def test_build_case_file_picks_siblings_matching_cluster(tmp_path: Path) -> None
             _finding(
                 "f_001",
                 summary_observed="aria-describedby missing",
-                evidence_text="src/dazzle_ui/templates/form.html:47 — control has no describedby",
+                evidence_text="src/dazzle/ui/templates/form.html:47 — control has no describedby",
             ),
             # Sibling that canonicalises to the same summary
             _finding(
                 "f_002",
                 summary_observed="Aria-describedby missing",  # case variation
-                evidence_text="src/dazzle_ui/templates/form.html:64 — label missing",
+                evidence_text="src/dazzle/ui/templates/form.html:64 — label missing",
             ),
             # Non-sibling: different canonical summary
             _finding(
                 "f_003",
                 summary_observed="completely different issue",
-                evidence_text="src/dazzle_ui/templates/form.html:100 — other",
+                evidence_text="src/dazzle/ui/templates/form.html:100 — other",
             ),
         ],
     )
-    locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
+    locus_dir = tmp_path / "src" / "dazzle" / "ui" / "templates"
     locus_dir.mkdir(parents=True)
     (locus_dir / "form.html").write_text("\n".join(f"<div>line {i}</div>" for i in range(1, 21)))
 
@@ -253,7 +253,7 @@ def test_sibling_picker_prefers_diverse_observed_text(tmp_path: Path) -> None:
     (tmp_path / "dev_docs").mkdir()
     upsert_findings(tmp_path / "dev_docs" / "fitness-backlog.md", findings)
 
-    locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
+    locus_dir = tmp_path / "src" / "dazzle" / "ui" / "templates"
     locus_dir.mkdir(parents=True)
     (locus_dir / "form.html").write_text("<div>form</div>\n")
 

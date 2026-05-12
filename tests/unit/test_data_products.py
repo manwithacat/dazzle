@@ -11,6 +11,18 @@ Part of v0.18.0 Event-First Architecture (Issue #25, Phase G).
 
 import pytest
 
+from dazzle.back.data_products import (
+    CrossTenantPolicy,
+    CrossTenantValidator,
+    CuratedTopicGenerator,
+    DataProductTransformer,
+    PolicyTestGenerator,
+    generate_curated_topics,
+)
+from dazzle.back.data_products.cross_tenant import (
+    CrossTenantAuditAction,
+    CrossTenantPermission,
+)
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec, FieldSpec
 from dazzle.core.ir.fields import FieldType, FieldTypeKind
@@ -21,18 +33,6 @@ from dazzle.core.ir.governance import (
     DataProductsSpec,
     DataProductTransform,
     PoliciesSpec,
-)
-from dazzle_back.data_products import (
-    CrossTenantPolicy,
-    CrossTenantValidator,
-    CuratedTopicGenerator,
-    DataProductTransformer,
-    PolicyTestGenerator,
-    generate_curated_topics,
-)
-from dazzle_back.data_products.cross_tenant import (
-    CrossTenantAuditAction,
-    CrossTenantPermission,
 )
 
 

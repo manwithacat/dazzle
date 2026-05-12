@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle_back.runtime.workspace_rendering import (
+from dazzle.back.runtime.workspace_rendering import (
     _inject_display_names,
     _resolve_display_name,
 )
@@ -229,6 +229,6 @@ class TestResolveThresholdsFunction:
         ],
     )
     def test_resolve_thresholds(self, input_factory: Any, expected: list[float]) -> None:
-        from dazzle_ui.runtime.workspace_renderer import _resolve_thresholds
+        from dazzle.ui.runtime.workspace_renderer import _resolve_thresholds
 
         assert _resolve_thresholds(input_factory()) == expected

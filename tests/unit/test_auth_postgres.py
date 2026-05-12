@@ -32,16 +32,16 @@ class TestAuthStoreInit:
 
     def test_normalizes_heroku_postgres_url(self):
         """Verify postgres:// is normalized to postgresql://."""
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgres://user:pass@host/db")
             assert store._database_url == "postgresql://user:pass@host/db"
 
     def test_postgresql_url_unchanged(self):
         """Verify postgresql:// URLs are not modified."""
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://user:pass@host/db")
             assert store._database_url == "postgresql://user:pass@host/db"
@@ -53,8 +53,8 @@ class TestAuthStoreExecute:
     @pytest.fixture
     def mock_postgres_store(self):
         """Create a mock PostgreSQL AuthStore."""
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://localhost/test")
             return store
@@ -147,8 +147,8 @@ class TestPostgresTableInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://mock/test")
 
@@ -228,14 +228,14 @@ class TestPostgresGetConnection:
         mock_pg, mock_rows = mock_psycopg
         mock_conn = MagicMock()
 
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://localhost/test")
 
-        with patch("dazzle_back.runtime.auth.store.psycopg") as patched_pg:
+        with patch("dazzle.back.runtime.auth.store.psycopg") as patched_pg:
             patched_pg.connect.return_value = mock_conn
-            from dazzle_back.runtime.auth.store import dict_row
+            from dazzle.back.runtime.auth.store import dict_row
 
             store._get_connection()
 
@@ -250,15 +250,15 @@ class TestPostgresUserOperations:
     @pytest.fixture
     def mock_postgres_store(self):
         """Create a mock PostgreSQL AuthStore."""
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://localhost/test")
             return store
 
     def test_row_to_user_handles_postgres_row(self, mock_postgres_store):
         """Verify _row_to_user correctly converts PostgreSQL rows."""
-        from dazzle_back.runtime.auth import UserRecord
+        from dazzle.back.runtime.auth import UserRecord
 
         now = datetime.now(UTC)
         row = {
@@ -290,8 +290,8 @@ class TestExecuteModify:
     @pytest.fixture
     def mock_postgres_store(self):
         """Create a mock PostgreSQL AuthStore."""
-        with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-            from dazzle_back.runtime.auth import AuthStore
+        with patch("dazzle.back.runtime.auth.AuthStore._init_db"):
+            from dazzle.back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://localhost/test")
             return store

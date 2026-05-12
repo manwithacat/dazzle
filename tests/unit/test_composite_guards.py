@@ -12,13 +12,13 @@ from typing import Any
 
 import pytest
 
-from dazzle_back.runtime.state_machine import (
+from dazzle.back.runtime.state_machine import (
     GuardNotSatisfiedError,
     TransitionValidator,
     evaluate_guard_expr,
     validate_status_update,
 )
-from dazzle_back.specs.entity import (
+from dazzle.back.specs.entity import (
     StateMachineSpec,
     StateTransitionSpec,
     TransitionGuardSpec,

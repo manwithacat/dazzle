@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle_back.runtime.workspace_rendering import (
+from dazzle.back.runtime.workspace_rendering import (
     _inject_display_names,
     _resolve_display_name,
 )

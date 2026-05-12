@@ -7,13 +7,13 @@ GET handlers in `site_routes.py` rely on.
 
 from __future__ import annotations
 
-from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.auth.auth_views import (
+from dazzle.back.runtime.auth.auth_views import (
     build_forgot_password_sent_view,
     build_forgot_password_view,
     build_reset_password_done_view,
     build_reset_password_view,
 )
+from dazzle.render.fragment.renderer import FragmentRenderer
 
 
 def _render(page: object) -> str:

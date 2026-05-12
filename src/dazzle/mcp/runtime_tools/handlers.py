@@ -461,8 +461,8 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
 
     # Try to import GraphQL support
     try:
+        from dazzle.back import convert_appspec_to_backend, inspect_schema, print_schema
         from dazzle.core.ir.appspec import AppSpec
-        from dazzle_back import convert_appspec_to_backend, inspect_schema, print_schema
 
         # Reconstruct AppSpec and convert to BackendSpec for GraphQL generation
         appspec = AppSpec.model_validate(spec)
@@ -694,7 +694,7 @@ def _get_channel_status(args: dict[str, Any]) -> str:
         import importlib.util
 
         # Check if dazzle_back.channels is available
-        if importlib.util.find_spec("dazzle_back.channels"):
+        if importlib.util.find_spec("dazzle.back.channels"):
             # Note: In real usage, this would connect to the running DNR server
             # For now, return the DSL spec with a note about runtime status
             runtime_status = {"note": "Start DNR server for live status"}

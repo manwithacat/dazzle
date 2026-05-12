@@ -1,19 +1,19 @@
 """
-DAZZLE UI Generation Module.
+Dazzle Runtime - UI (Dazzle UI)
 
-This module provides UI generation capabilities including:
-- Semantic layout engine (v0.3.0)
-- Stack-specific renderers
+LLM-first UI specification and runtime for Dazzle applications.
+
+This package provides:
+- UISpec: Complete UI specification types (workspaces, components, themes)
+- Runtime: Native UI runtime (signals-based state + DOM rendering)
+- Components: Built-in primitive and pattern components
+- Converters: Transform Dazzle AppSpec to UISpec
 """
 
-from dazzle.ui.layout_engine import (
-    ArchetypeDefinition,
-    build_layout_plan,
-    select_stage,
-)
+from dazzle._version import get_version as _get_version
 
-__all__ = [
-    "ArchetypeDefinition",
-    "build_layout_plan",
-    "select_stage",
-]
+__version__ = _get_version()
+
+from dazzle.ui.specs.ui_spec import UISpec
+
+__all__ = ["UISpec"]

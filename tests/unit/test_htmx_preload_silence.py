@@ -13,7 +13,7 @@ status. Real user-clicked navigations still log normally.
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DZ_ALPINE = REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "js" / "dz-alpine.js"
+DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "js" / "dz-alpine.js"
 
 
 def test_response_error_listener_present() -> None:

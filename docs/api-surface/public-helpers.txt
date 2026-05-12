@@ -25,7 +25,7 @@ package: dazzle
   - __version__: str (version-like)
   - ir: module (dazzle.core.ir)
 
-package: dazzle_back
+package: dazzle.back
   source: _LOADERS
   count: 9
   exports:
@@ -34,13 +34,13 @@ package: dazzle_back
   - PostgresBackend: class (database_url: str, search_path: str | None = None)
   - build_metadata: function (entities: 'list[EntitySpec]') -> 'sqlalchemy.MetaData'
   - convert_appspec_to_backend: function (appspec: 'ir.AppSpec') -> 'BackendSpec'
-  - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle_back.specs.entity.EntitySpec]
+  - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle.back.specs.entity.EntitySpec]
   - create_bus: function (config: 'TierConfig | None' = None) -> 'EventBus'
   - inspect_schema: function (spec: 'BackendSpec') -> 'dict[str, Any]'
   - print_schema: function (spec: 'BackendSpec') -> 'str'
 
-package: dazzle_ui
+package: dazzle.ui
   source: __all__
   count: 1
   exports:
-  - UISpec: class (bases=[BaseModel]) (*, name: str, version: str = '1.0.0', description: str | None = None, shell: dazzle_ui.specs.shell.ShellSpec = <factory>, workspaces: list[dazzle_ui.specs.workspace.WorkspaceSpec] = <factory>, components: list[dazzle_ui.specs.component.ComponentSpec] = <factory>, themes: list[dazzle_ui.specs.theme.ThemeSpec] = <factory>, default_workspace: str | None = None, default_theme: str | None = None, metadata: dict[str, typing.Any] = <factory>) -> None
+  - UISpec: class (bases=[BaseModel]) (*, name: str, version: str = '1.0.0', description: str | None = None, shell: dazzle.ui.specs.shell.ShellSpec = <factory>, workspaces: list[dazzle.ui.specs.workspace.WorkspaceSpec] = <factory>, components: list[dazzle.ui.specs.component.ComponentSpec] = <factory>, themes: list[dazzle.ui.specs.theme.ThemeSpec] = <factory>, default_workspace: str | None = None, default_theme: str | None = None, metadata: dict[str, typing.Any] = <factory>) -> None

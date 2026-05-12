@@ -7,9 +7,9 @@ from uuid import uuid4
 
 import pytest
 
+from dazzle.back.runtime.condition_evaluator import evaluate_condition
+from dazzle.back.runtime.grant_store import GrantStore
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle_back.runtime.condition_evaluator import evaluate_condition
-from dazzle_back.runtime.grant_store import GrantStore
 
 pytestmark = pytest.mark.postgres
 

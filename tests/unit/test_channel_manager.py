@@ -9,14 +9,14 @@ import os
 
 import pytest
 
-from dazzle.core.ir import ChannelKind, ChannelSpec
-from dazzle_back.channels import (
+from dazzle.back.channels import (
     ChannelManager,
     create_channel_manager,
 )
-from dazzle_back.channels.detection import DetectionResult, ProviderStatus
-from dazzle_back.channels.outbox import OutboxStatus
-from dazzle_back.runtime.pg_backend import PostgresBackend
+from dazzle.back.channels.detection import DetectionResult, ProviderStatus
+from dazzle.back.channels.outbox import OutboxStatus
+from dazzle.back.runtime.pg_backend import PostgresBackend
+from dazzle.core.ir import ChannelKind, ChannelSpec
 
 
 @pytest.fixture

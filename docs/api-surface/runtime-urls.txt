@@ -1,6 +1,6 @@
 # DAZZLE Runtime URLs — API Surface (cycle 5 of #961)
 #
-# Source of truth: AST walk of src/dazzle_back/runtime/*_routes.py
+# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py
 # Regenerate: dazzle inspect-api runtime-urls --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #

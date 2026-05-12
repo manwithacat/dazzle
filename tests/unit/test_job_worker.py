@@ -25,8 +25,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
-from dazzle_back.runtime.job_queue import InMemoryJobQueue, JobMessage
-from dazzle_back.runtime.job_worker import WorkerOutcome, process_one
+from dazzle.back.runtime.job_queue import InMemoryJobQueue, JobMessage
+from dazzle.back.runtime.job_worker import WorkerOutcome, process_one
 
 # ---------------------------------------------------------------------------
 # Test handlers (importable as module:attr — process_one will resolve them)

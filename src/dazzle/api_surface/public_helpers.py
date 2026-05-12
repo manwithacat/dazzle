@@ -25,17 +25,17 @@ def _load_packages() -> list[tuple[str, types.ModuleType]]:
     public package to the snapshot is a code change, not a config change.
     """
     import dazzle
-    import dazzle_back
-    import dazzle_ui
+    from dazzle import back as dazzle_back
+    from dazzle import ui as dazzle_ui
 
     return [
         ("dazzle", dazzle),
-        ("dazzle_back", dazzle_back),
-        ("dazzle_ui", dazzle_ui),
+        ("dazzle.back", dazzle_back),
+        ("dazzle.ui", dazzle_ui),
     ]
 
 
-PACKAGE_NAMES = ["dazzle", "dazzle_back", "dazzle_ui"]
+PACKAGE_NAMES = ["dazzle", "dazzle.back", "dazzle.ui"]
 
 
 def _public_names(module: types.ModuleType) -> list[str]:

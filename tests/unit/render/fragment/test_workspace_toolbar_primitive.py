@@ -10,8 +10,8 @@ resetLayout, save, _saveError) is owned by the parent
 
 from __future__ import annotations
 
+from dazzle.back.runtime.renderers.dual_path import diff_summary
 from dazzle.render.fragment import FragmentRenderer, WorkspaceToolbar
-from dazzle_back.runtime.renderers.dual_path import diff_summary
 
 # The legacy `_content.html` toolbar block, extracted verbatim. Pinned
 # here as a literal so any drift between the typed primitive and the

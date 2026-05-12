@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from dazzle_ui.converters.workspace_converter import workspace_allowed_personas
+from dazzle.ui.converters.workspace_converter import workspace_allowed_personas
 
 
 @dataclass

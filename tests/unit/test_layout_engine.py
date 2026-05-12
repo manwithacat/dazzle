@@ -9,14 +9,14 @@ from dazzle.core.ir import (
     PersonaLayout,
     WorkspaceLayout,
 )
-from dazzle.ui.layout_engine import (
+from dazzle.layout import (
     ARCHETYPE_DEFINITIONS,
     build_layout_plan,
     select_stage,
 )
-from dazzle.ui.layout_engine.adjust import adjust_attention_for_persona
-from dazzle.ui.layout_engine.allocate import assign_signals_to_surfaces
-from dazzle.ui.layout_engine.archetypes import FOCUS_METRIC
+from dazzle.layout.adjust import adjust_attention_for_persona
+from dazzle.layout.allocate import assign_signals_to_surfaces
+from dazzle.layout.archetypes import FOCUS_METRIC
 
 
 class TestArchetypeSelection:

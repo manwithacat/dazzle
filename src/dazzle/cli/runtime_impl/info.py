@@ -18,10 +18,10 @@ def info_command() -> None:
     dnr_back_available = False
     fastapi_available = False
     try:
-        import dazzle_back  # noqa: F401
+        from dazzle import back as dazzle_back  # noqa: F401
 
         dnr_back_available = True
-        from dazzle_back.runtime import FASTAPI_AVAILABLE
+        from dazzle.back.runtime import FASTAPI_AVAILABLE
 
         fastapi_available = FASTAPI_AVAILABLE
     except ImportError:
@@ -30,7 +30,7 @@ def info_command() -> None:
     # Check Dazzle UI
     dnr_ui_available = False
     try:
-        import dazzle_ui  # noqa: F401
+        from dazzle import ui as dazzle_ui  # noqa: F401
 
         dnr_ui_available = True
     except ImportError:

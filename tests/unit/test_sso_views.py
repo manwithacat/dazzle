@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.auth.auth_views import (
+from dazzle.back.runtime.auth.auth_views import (
     build_login_magic_link_view,
     build_login_password_view,
 )
-from dazzle_back.runtime.auth.sso_config import SsoProviderConfig
-from dazzle_back.runtime.auth.sso_views import (
+from dazzle.back.runtime.auth.sso_config import SsoProviderConfig
+from dazzle.back.runtime.auth.sso_views import (
     build_sso_button_row,
     render_sso_section,
 )
+from dazzle.render.fragment.renderer import FragmentRenderer
 
 
 def _google() -> SsoProviderConfig:

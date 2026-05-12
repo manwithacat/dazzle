@@ -1,6 +1,6 @@
 """Tests for _INTEGRITY_ERRORS tuple in repository module."""
 
-from dazzle_back.runtime.repository import _INTEGRITY_ERRORS
+from dazzle.back.runtime.repository import _INTEGRITY_ERRORS
 
 
 class TestIntegrityErrors:

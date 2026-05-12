@@ -2,9 +2,9 @@
 
 import pytest
 
+from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
 from dazzle.render.fragment import Region, Surface
 from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
 
 
 class _FakeRegion:

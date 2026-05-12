@@ -5,13 +5,13 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.core.ir.conditions import ConditionExpr, GrantCheck
-from dazzle_back.converters.entity_converter import _convert_access_condition
-from dazzle_back.runtime.access_evaluator import (
+from dazzle.back.converters.entity_converter import _convert_access_condition
+from dazzle.back.runtime.access_evaluator import (
     AccessRuntimeContext,
     evaluate_access_condition,
 )
-from dazzle_back.specs.auth import AccessConditionSpec
+from dazzle.back.specs.auth import AccessConditionSpec
+from dazzle.core.ir.conditions import ConditionExpr, GrantCheck
 
 
 class TestConvertGrantCheck:

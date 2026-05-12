@@ -28,8 +28,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle_back.runtime.job_queue import InMemoryJobQueue
-from dazzle_back.runtime.job_triggers import (
+from dazzle.back.runtime.job_queue import InMemoryJobQueue
+from dazzle.back.runtime.job_triggers import (
     build_trigger_callbacks,
     register_job_triggers,
     should_fire,

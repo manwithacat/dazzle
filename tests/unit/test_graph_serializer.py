@@ -2,8 +2,8 @@
 
 import pytest
 
+from dazzle.back.runtime.graph_serializer import GraphSerializer
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
-from dazzle_back.runtime.graph_serializer import GraphSerializer
 
 # ---------------------------------------------------------------------------
 # Fixtures

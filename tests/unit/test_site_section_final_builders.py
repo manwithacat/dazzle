@@ -14,7 +14,7 @@ for any sitespec that doesn't author custom non-standard types.
 
 from __future__ import annotations
 
-from dazzle_back.runtime.renderers.site_section_builder import (
+from dazzle.back.runtime.renderers.site_section_builder import (
     TYPED_SECTION_TYPES,
     _build_faq_section,
     _build_features_section,

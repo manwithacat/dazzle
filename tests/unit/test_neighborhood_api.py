@@ -1,8 +1,8 @@
 """Integration tests for neighborhood endpoint (#619 Phase 3)."""
 
+from dazzle.back.runtime.graph_serializer import GraphSerializer
+from dazzle.back.runtime.neighborhood import NeighborhoodQueryBuilder
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
-from dazzle_back.runtime.graph_serializer import GraphSerializer
-from dazzle_back.runtime.neighborhood import NeighborhoodQueryBuilder
 
 
 class TestNeighborhoodPipeline:

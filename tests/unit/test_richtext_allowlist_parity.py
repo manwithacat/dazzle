@@ -19,16 +19,17 @@ from pathlib import Path
 
 import bleach
 
+from dazzle.back.runtime.richtext_field import clean_rich_text
 from dazzle.core.ir.richtext import (
     RICH_TEXT_ALLOWED_ATTRS,
     RICH_TEXT_PROTOCOL_PATTERN,
 )
-from dazzle_back.runtime.richtext_field import clean_rich_text
 
 JS_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "dazzle_ui"
+    / "dazzle"
+    / "ui"
     / "runtime"
     / "static"
     / "js"

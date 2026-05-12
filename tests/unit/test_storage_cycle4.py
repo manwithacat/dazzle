@@ -22,7 +22,7 @@ from typing import Any
 
 import pytest
 
-from dazzle_back.runtime.storage import (
+from dazzle.back.runtime.storage import (
     FakeStorageProvider,
     StorageRegistry,
     StorageVerificationError,

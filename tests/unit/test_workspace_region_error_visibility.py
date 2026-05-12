@@ -19,7 +19,7 @@ end-to-end by Playwright gates elsewhere.
 
 from pathlib import Path
 
-WS_RENDERING = Path("src/dazzle_back/runtime/workspace_rendering.py")
+WS_RENDERING = Path("src/dazzle/back/runtime/workspace_rendering.py")
 
 
 def _read() -> str:

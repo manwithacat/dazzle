@@ -4,12 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.core.ir.process import ProcessSpec, ProcessStepSpec, StepKind
-from dazzle_back.runtime.process_executor import (
+from dazzle.back.runtime.process_executor import (
     ProcessContext,
     ProcessExecutor,
     StepResult,
 )
+from dazzle.core.ir.process import ProcessSpec, ProcessStepSpec, StepKind
 
 # ---------------------------------------------------------------------------
 # Helpers

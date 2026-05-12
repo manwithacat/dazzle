@@ -4,9 +4,9 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle_back.events.bus import NackReason
-from dazzle_back.events.envelope import EventEnvelope
-from dazzle_back.events.null import NullBus, NullEventFramework
+from dazzle.back.events.bus import NackReason
+from dazzle.back.events.envelope import EventEnvelope
+from dazzle.back.events.null import NullBus, NullEventFramework
 
 
 @pytest.fixture

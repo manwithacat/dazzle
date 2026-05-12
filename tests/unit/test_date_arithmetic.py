@@ -11,6 +11,8 @@ Tests cover:
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from dazzle.back.converters.entity_converter import convert_entity
+from dazzle.back.runtime.model_generator import _create_date_factory
 from dazzle.core.dsl_parser_impl import Parser, parse_dsl
 from dazzle.core.ir import (
     DateArithmeticExpr,
@@ -20,8 +22,6 @@ from dazzle.core.ir import (
     DurationUnit,
 )
 from dazzle.core.lexer import Lexer, TokenType
-from dazzle_back.converters.entity_converter import convert_entity
-from dazzle_back.runtime.model_generator import _create_date_factory
 
 # =============================================================================
 # Lexer Tests

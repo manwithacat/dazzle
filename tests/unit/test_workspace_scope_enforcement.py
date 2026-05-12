@@ -20,7 +20,7 @@ def _make_region_ctx(
     fk_graph: Any = None,
 ) -> Any:
     """Create a minimal WorkspaceRegionContext-like object for scope tests."""
-    from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+    from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
 
     ctx_region = SimpleNamespace(
         name="tasks",
@@ -92,7 +92,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_no_access_spec_returns_filters_unchanged(self) -> None:
         """No cedar_access_spec means no filtering — backward compat."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -109,7 +109,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_no_scopes_passes_through(self) -> None:
         """Access spec with permits but no scopes passes through (no row filter) (#607)."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -123,7 +123,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_no_user_id_skips_enforcement(self) -> None:
         """Without a user ID, scope enforcement is skipped."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -139,7 +139,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_no_auth_context_skips_enforcement(self) -> None:
         """Without auth context, scope enforcement is skipped."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -154,7 +154,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_scope_match_all_returns_no_extra_filters(self) -> None:
         """Scope rule with no condition/predicate = 'all' — no extra filters."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -172,7 +172,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_scope_no_role_match_returns_denied(self) -> None:
         """No scope rule matches user roles — default-deny."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -187,7 +187,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_scope_predicate_merged_into_filters(self) -> None:
         """Scope rule with predicate merges __scope_predicate into filters."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -206,7 +206,7 @@ class TestApplyWorkspaceScopeFilters:
         # Mock _resolve_scope_filters to return a predicate result
         scope_filters = {"__scope_predicate": ("school_id = $1", ["school-1"])}
         with patch(
-            "dazzle_back.runtime.route_generator._resolve_scope_filters",
+            "dazzle.back.runtime.route_generator._resolve_scope_filters",
             return_value=scope_filters,
         ):
             result_filters, denied = _apply_workspace_scope_filters(
@@ -221,7 +221,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_scope_wildcard_persona_matches_any_role(self) -> None:
         """Scope rule with '*' persona matches any authenticated user."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -236,7 +236,7 @@ class TestApplyWorkspaceScopeFilters:
 
     def test_scope_denied_produces_empty_items(self) -> None:
         """When scope returns None (default-deny), denied flag is True."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 
@@ -308,7 +308,7 @@ class TestAggregateScopeGate:
         from pathlib import Path
 
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
         ).read_text()
         # The pre-init must default-deny; explicit `True` is the contract.
         assert "_scope_denied: bool = True" in src, (
@@ -324,7 +324,7 @@ class TestAggregateScopeGate:
         from pathlib import Path
 
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
         ).read_text()
         # Count gate uses in `_workspace_region_handler` — there are
         # 4 aggregate call sites in that handler (metrics / bucketed /
@@ -347,7 +347,7 @@ class TestAggregateScopeGate:
         """End-to-end-ish: when a scope rule names role `admin` and the
         user has only `viewer`, the helper must return denied=True.
         This is the upstream signal that the aggregate gates rely on."""
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
 

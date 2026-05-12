@@ -2,7 +2,7 @@
 Runtime-URLs API surface snapshot — cycle 5 of #961.
 
 Walks the framework runtime route modules under
-`src/dazzle_back/runtime/*_routes.py` via AST and snapshots every
+`src/dazzle/back/runtime/*_routes.py` via AST and snapshots every
 `@router.<method>(...)` decoration: HTTP method, path template, handler
 function name, and parameter signature.
 
@@ -22,7 +22,7 @@ from .dsl_constructs import REPO_ROOT
 
 BASELINE_PATH = REPO_ROOT / "docs" / "api-surface" / "runtime-urls.txt"
 
-ROUTES_DIR = REPO_ROOT / "src" / "dazzle_back" / "runtime"
+ROUTES_DIR = REPO_ROOT / "src" / "dazzle" / "back" / "runtime"
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "websocket"}
 
@@ -117,7 +117,7 @@ def snapshot_runtime_urls() -> str:
     lines: list[str] = []
     lines.append("# DAZZLE Runtime URLs — API Surface (cycle 5 of #961)")
     lines.append("#")
-    lines.append("# Source of truth: AST walk of src/dazzle_back/runtime/*_routes.py")
+    lines.append("# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py")
     lines.append("# Regenerate: dazzle inspect-api runtime-urls --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")

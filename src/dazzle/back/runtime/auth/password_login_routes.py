@@ -1,0 +1,149 @@
+"""Form-encoded password-mode login + signup endpoints (Phase 1.B.3,
+v0.67.32). Pairs with the typed-Fragment views in `auth_views.py`:
+`build_login_password_view` posts to `/auth/login/password`, and
+`build_signup_password_view` posts to `/auth/signup/password`.
+
+The legacy JSON endpoints in `routes.py` (`/auth/login`, `/auth/register`)
+remain mounted for programmatic API callers; these new endpoints accept
+`application/x-www-form-urlencoded`, set the session cookie, and return
+HTML redirects so the typed-Fragment forms work end-to-end without JS.
+
+Mount only when `app.state.auth_password_mode_enabled` is True (the
+default is False — magic-link mode is the framework default per
+ADR-N from the Jinja2 retirement plan)."""
+
+import logging
+from typing import Annotated
+from urllib.parse import urlparse
+
+from fastapi import APIRouter, Form, Query, Request
+from fastapi.responses import RedirectResponse
+
+from dazzle.back.runtime.auth.crypto import cookie_secure
+
+_logger = logging.getLogger(__name__)
+
+
+def _is_safe_redirect_path(value: str) -> bool:
+    """Reject scheme/netloc/backslash redirect targets — only same-origin
+    paths beginning with `/` survive. Mirrors the helper in
+    `magic_link_routes.py` (Phase 1.A) — kept inline so the two route
+    modules don't have a hidden import-cycle relationship."""
+    if "\\" in value:
+        return False
+    parsed = urlparse(value)
+    if parsed.scheme or parsed.netloc:
+        return False
+    return parsed.path.startswith("/")
+
+
+def _set_session_cookie(response: RedirectResponse, request: Request, session_id: str) -> None:
+    """Attach the dazzle_session cookie to ``response`` with the same
+    flags the JSON `/auth/login` endpoint sets — httpOnly, samesite=lax,
+    secure when the request is HTTPS."""
+    response.set_cookie(
+        key="dazzle_session",
+        value=session_id,
+        httponly=True,
+        secure=cookie_secure(request),
+        samesite="lax",
+    )
+
+
+def create_password_login_routes() -> APIRouter:
+    """Form-encoded password-mode endpoints for the typed-Fragment views."""
+    router = APIRouter(tags=["auth"])
+
+    @router.post("/auth/login/password")
+    async def submit_login_password(
+        request: Request,
+        email: Annotated[str, Form()] = "",
+        password: Annotated[str, Form()] = "",
+        next: Annotated[str, Query()] = "/",
+    ) -> RedirectResponse:
+        """Authenticate email + password and create a session.
+
+        Failed authentication redirects to `/login?error=invalid_credentials`
+        (preserving `?next=` so the user lands on the original page after
+        a successful retry). 2FA-enabled accounts redirect to
+        `/2fa/challenge?session=<pending_session_id>` — the typed 2FA
+        view (Phase 1.D, future ship) consumes the pending session.
+        """
+        auth_store = request.app.state.auth_store
+        normalized_email = email.strip().lower()
+        user = auth_store.authenticate(normalized_email, password) if password else None
+        if user is None:
+            target = "/login?error=invalid_credentials"
+            if next and _is_safe_redirect_path(next) and next != "/":
+                target = f"/login?error=invalid_credentials&next={next}"
+            return RedirectResponse(url=target, status_code=303)
+
+        if getattr(user, "two_factor_enabled", False):
+            pending = auth_store.create_session(user)
+            challenge_url = f"/2fa/challenge?session={pending.id}"
+            if next and _is_safe_redirect_path(next) and next != "/":
+                challenge_url = f"{challenge_url}&next={next}"
+            return RedirectResponse(url=challenge_url, status_code=303)
+
+        session = auth_store.create_session(user)
+        redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
+        response = RedirectResponse(url=redirect_to, status_code=303)
+        _set_session_cookie(response, request, session.id)
+        return response
+
+    @router.post("/auth/signup/password")
+    async def submit_signup_password(
+        request: Request,
+        email: Annotated[str, Form()] = "",
+        name: Annotated[str, Form()] = "",
+        password: Annotated[str, Form()] = "",
+        confirm_password: Annotated[str, Form()] = "",
+        next: Annotated[str, Query()] = "/",
+    ) -> RedirectResponse:
+        """Create a password-mode user and sign them in.
+
+        Failure paths (all redirect to `/signup` with an error query):
+          - ``mismatch``: ``password != confirm_password`` (server-side
+            check; the typed form has no JS).
+          - ``already_registered``: ``get_user_by_email`` returned a row.
+          - ``create_failed``: ``create_user`` raised — usually a
+            unique-constraint race we lost to a concurrent signup.
+
+        Success path: create session, set cookie, redirect to
+        ``next_url`` (when safe) or ``/app``.
+        """
+        if not password or password != confirm_password:
+            return RedirectResponse(url="/signup?error=mismatch", status_code=303)
+
+        auth_store = request.app.state.auth_store
+        normalized_email = email.strip().lower()
+        normalized_name = name.strip() or None
+
+        if not normalized_email or "@" not in normalized_email:
+            return RedirectResponse(url="/signup?error=invalid_email", status_code=303)
+
+        existing = auth_store.get_user_by_email(normalized_email)
+        if existing is not None:
+            return RedirectResponse(url="/signup?error=already_registered", status_code=303)
+
+        try:
+            user = auth_store.create_user(
+                email=normalized_email,
+                password=password,
+                username=normalized_name,
+            )
+        except Exception as exc:  # noqa: BLE001 — surface in logs
+            _logger.warning(  # nosemgrep
+                "Signup: create_user failed for %s: %s",  # nosemgrep
+                normalized_email,
+                exc,
+            )
+            return RedirectResponse(url="/signup?error=create_failed", status_code=303)
+
+        session = auth_store.create_session(user)
+        redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
+        response = RedirectResponse(url=redirect_to, status_code=303)
+        _set_session_cookie(response, request, session.id)
+        return response
+
+    return router

@@ -5,7 +5,8 @@ import pathlib
 BRIDGE_PATH = (
     pathlib.Path(__file__).resolve().parents[2]
     / "src"
-    / "dazzle_ui"
+    / "dazzle"
+    / "ui"
     / "runtime"
     / "static"
     / "js"

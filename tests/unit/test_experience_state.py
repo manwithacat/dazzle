@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dazzle_ui.runtime.experience_state import (
+from dazzle.ui.runtime.experience_state import (
     ExperienceState,
     cookie_name,
     create_initial_state,

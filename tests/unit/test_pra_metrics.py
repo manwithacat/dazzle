@@ -2,7 +2,7 @@
 Unit tests for PRA metrics infrastructure.
 """
 
-from dazzle_back.metrics import (
+from dazzle.back.metrics import (
     BacklogTracker,
     LatencyHistogram,
     MetricsCollector,

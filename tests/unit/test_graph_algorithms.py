@@ -11,7 +11,7 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(not HAS_NX, reason="networkx not installed")
 
-from dazzle_back.runtime.graph_algorithms import (  # noqa: E402
+from dazzle.back.runtime.graph_algorithms import (  # noqa: E402
     connected_components,
     shortest_path,
 )

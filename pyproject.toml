@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.67.97"
+version = "0.67.98"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -249,14 +249,14 @@ dazzle = ["py.typed"]
 # Fragment renderer emits verbatim (e.g. WorkspaceDrawer markup +
 # IIFE script). Read at module-import time, then cached.
 "dazzle.render.fragment.static" = ["*.html"]
-# Dazzle UI templates (Jinja2 HTML templates for site pages, components, etc.)
-# Note: templates/ is a data directory, not a Python package, so include from parent
-"dazzle_ui" = ["templates/**/*.html", "templates/**/*.css", "templates/**/*.js", "static/**/*.js", "static/**/*.css"]
-# Dazzle UI runtime static files (JS, CSS)
-"dazzle_ui.runtime.static" = ["**/*.js", "**/*.css"]
+# Dazzle UI runtime static files (JS, CSS). Post-#1055 (v0.67.98) the
+# `dazzle_ui` top-level package was nested as `dazzle.ui` so all
+# package-data keys reference the new path.
+"dazzle.ui" = ["static/**/*.js", "static/**/*.css"]
+"dazzle.ui.runtime.static" = ["**/*.js", "**/*.css"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/dazzle_back/tests"]
+testpaths = ["tests", "src/dazzle/back/tests"]
 pythonpath = ["src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -388,17 +388,17 @@ disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = [
-    "dazzle_back.runtime.island_routes",
-    "dazzle_back.runtime.debug_routes",
-    "dazzle_back.runtime.event_explorer",
-    "dazzle_back.runtime.audit_routes",
-    "dazzle_back.runtime.test_routes",
-    "dazzle_back.runtime.social_auth",
-    "dazzle_back.runtime.jwt_middleware",
-    "dazzle_back.runtime.route_generator",
-    "dazzle_back.runtime.auth.routes",
-    "dazzle_back.runtime.auth.routes_2fa",
-    "dazzle_back.runtime.auth.routes_jwt",
+    "dazzle.back.runtime.island_routes",
+    "dazzle.back.runtime.debug_routes",
+    "dazzle.back.runtime.event_explorer",
+    "dazzle.back.runtime.audit_routes",
+    "dazzle.back.runtime.test_routes",
+    "dazzle.back.runtime.social_auth",
+    "dazzle.back.runtime.jwt_middleware",
+    "dazzle.back.runtime.route_generator",
+    "dazzle.back.runtime.auth.routes",
+    "dazzle.back.runtime.auth.routes_2fa",
+    "dazzle.back.runtime.auth.routes_jwt",
 ]
 # FastAPI app.get/post decorators on closure-scoped routes are untyped (app: Any).
 # APIRouter imported via _fastapi_compat is typed as Any, causing valid-type errors

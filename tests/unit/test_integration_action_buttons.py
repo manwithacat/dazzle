@@ -7,8 +7,8 @@ from dazzle.core.ir.integrations import (
     MappingTriggerSpec,
     MappingTriggerType,
 )
-from dazzle_ui.runtime.page_routes import _inject_integration_actions
-from dazzle_ui.runtime.template_context import (
+from dazzle.ui.runtime.page_routes import _inject_integration_actions
+from dazzle.ui.runtime.template_context import (
     DetailContext,
     FieldContext,
     IntegrationActionContext,

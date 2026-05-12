@@ -21,7 +21,7 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle_back.runtime.access_control import (
+from dazzle.back.runtime.access_control import (
     AccessContext,
     AccessOperation,
     AccessPolicy,

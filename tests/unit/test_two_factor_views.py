@@ -8,12 +8,12 @@ safety on user-supplied input.
 
 from __future__ import annotations
 
-from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.auth.two_factor_views import (
+from dazzle.back.runtime.auth.two_factor_views import (
     build_2fa_challenge_view,
     build_2fa_settings_view,
     build_2fa_setup_view,
 )
+from dazzle.render.fragment.renderer import FragmentRenderer
 
 
 def _render(page: object) -> str:

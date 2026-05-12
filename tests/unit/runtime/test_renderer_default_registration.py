@@ -6,10 +6,10 @@ only the typed Fragment renderer is shipped as a default.
 
 import pytest
 
+from dazzle.back.runtime.renderers.fragment import FragmentSurfaceRenderer
+from dazzle.back.runtime.renderers.init import register_default_renderers
+from dazzle.back.runtime.services import RuntimeServices
 from dazzle.render.fragment.errors import PrimitiveRegistrationError
-from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
-from dazzle_back.runtime.renderers.init import register_default_renderers
-from dazzle_back.runtime.services import RuntimeServices
 
 
 def test_register_default_renderers_adds_fragment() -> None:

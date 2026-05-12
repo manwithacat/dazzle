@@ -31,12 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.core import ir
-from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.errors import ParseError
-from dazzle.core.manifest import StorageConfig
-from dazzle.core.validator import validate_storage_refs
-from dazzle_back.runtime.storage import (
+from dazzle.back.runtime.storage import (
     FakeStorageProvider,
     StorageRegistry,
     StorageVerificationError,
@@ -44,6 +39,11 @@ from dazzle_back.runtime.storage import (
     register_upload_ticket_routes,
     verify_storage_field_keys,
 )
+from dazzle.core import ir
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
+from dazzle.core.manifest import StorageConfig
+from dazzle.core.validator import validate_storage_refs
 
 # ---------------------------------------------------------------------------
 # Helpers

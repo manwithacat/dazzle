@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle_back.runtime.renderers.site_section_builder import (
+from dazzle.back.runtime.renderers.site_section_builder import (
     TYPED_SECTION_TYPES,
     _build_hero_section,
     render_typed_section,

@@ -21,8 +21,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle_back.runtime.aggregate import AggregateBucket
-from dazzle_back.runtime.workspace_rendering import (
+from dazzle.back.runtime.aggregate import AggregateBucket
+from dazzle.back.runtime.workspace_rendering import (
     _aggregate_via_groupby,
     _compute_bucketed_aggregates,
 )

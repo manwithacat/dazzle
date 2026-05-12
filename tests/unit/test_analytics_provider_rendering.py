@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from dazzle.back.runtime.security_middleware import _build_csp_header
 from dazzle.compliance.analytics import (
     resolve_active_providers,
 )
@@ -15,7 +16,6 @@ from dazzle.core.ir import (
     AnalyticsProviderInstance,
     AnalyticsSpec,
 )
-from dazzle_back.runtime.security_middleware import _build_csp_header
 
 
 def _spec(*providers: tuple[str, dict[str, str]]) -> AnalyticsSpec:

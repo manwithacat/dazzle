@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from dazzle_back.runtime.totp import (
+from dazzle.back.runtime.totp import (
     generate_totp,
     generate_totp_secret,
     get_totp_uri,

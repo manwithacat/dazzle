@@ -22,11 +22,11 @@ Run standalone:
 
 from dazzle.core import ir
 from dazzle.core.ir.surfaces import SurfaceSection
-from dazzle_ui.converters.template_compiler import (
+from dazzle.ui.converters.template_compiler import (
     _extract_surface_purpose,
     compile_surface_to_context,
 )
-from dazzle_ui.runtime.template_renderer import render_page
+from dazzle.ui.runtime.template_renderer import render_page
 
 
 def _task_entity() -> ir.EntitySpec:

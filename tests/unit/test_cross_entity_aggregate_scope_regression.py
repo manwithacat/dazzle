@@ -25,7 +25,7 @@ class TestCrossEntityScopeGate:
 
     def _read_runtime(self) -> str:
         return (
-            Path(__file__).resolve().parents[2] / "src/dazzle_back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
         ).read_text()
 
     def test_action_grid_per_card_gates_scope_on_entity_match(self) -> None:

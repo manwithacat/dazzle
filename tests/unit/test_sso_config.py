@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle_back.runtime.auth.sso_config import (
+from dazzle.back.runtime.auth.sso_config import (
     SsoProviderConfig,
     get_provider,
     load_sso_providers_from_env,

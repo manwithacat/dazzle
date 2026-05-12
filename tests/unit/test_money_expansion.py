@@ -13,6 +13,15 @@ from pathlib import Path
 
 import pytest
 
+from dazzle.back.converters.entity_converter import (
+    _expand_money_field,
+    convert_entity,
+)
+from dazzle.back.converters.surface_converter import (
+    _generate_input_schema,
+    _map_field_type_name,
+)
+from dazzle.back.specs import ScalarType
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     EntitySpec,
@@ -25,21 +34,12 @@ from dazzle.core.ir import (
     SurfaceSection,
     SurfaceSpec,
 )
-from dazzle_back.converters.entity_converter import (
-    _expand_money_field,
-    convert_entity,
-)
-from dazzle_back.converters.surface_converter import (
-    _generate_input_schema,
-    _map_field_type_name,
-)
-from dazzle_back.specs import ScalarType
-from dazzle_ui.converters.template_compiler import (
+from dazzle.ui.converters.template_compiler import (
     _build_columns,
     _build_form_fields,
 )
-from dazzle_ui.runtime.mock_data import generate_mock_records
-from dazzle_ui.runtime.template_renderer import _currency_filter
+from dazzle.ui.runtime.mock_data import generate_mock_records
+from dazzle.ui.runtime.template_renderer import _currency_filter
 
 # =============================================================================
 # Entity Converter Tests

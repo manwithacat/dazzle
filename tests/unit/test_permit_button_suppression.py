@@ -34,8 +34,8 @@ def _make_deps(
     entity_cedar_specs: dict[str, Any] | None = None,
     surface_entity: dict[str, str] | None = None,
 ) -> Any:
-    from dazzle_back.runtime.access_evaluator import evaluate_permission
-    from dazzle_ui.runtime.page_routes import _PageDeps
+    from dazzle.back.runtime.access_evaluator import evaluate_permission
+    from dazzle.ui.runtime.page_routes import _PageDeps
 
     return _PageDeps(
         appspec=appspec,
@@ -54,13 +54,13 @@ class TestShouldSuppressMutations:
     """Workspace read_only persona variant suppresses all mutation buttons."""
 
     def test_no_workspace_no_suppression(self) -> None:
-        from dazzle_ui.runtime.page_routes import _should_suppress_mutations
+        from dazzle.ui.runtime.page_routes import _should_suppress_mutations
 
         deps = _make_deps(_make_appspec())
         assert not _should_suppress_mutations(deps, "task_list", None, ["role_teacher"])
 
     def test_read_only_persona_suppresses(self) -> None:
-        from dazzle_ui.runtime.page_routes import _should_suppress_mutations
+        from dazzle.ui.runtime.page_routes import _should_suppress_mutations
 
         ws = ir.WorkspaceSpec(
             name="student_portal",
@@ -76,7 +76,7 @@ class TestShouldSuppressMutations:
         assert _should_suppress_mutations(deps, "feedback_list", None, ["role_student"])
 
     def test_non_read_only_persona_allows(self) -> None:
-        from dazzle_ui.runtime.page_routes import _should_suppress_mutations
+        from dazzle.ui.runtime.page_routes import _should_suppress_mutations
 
         ws = ir.WorkspaceSpec(
             name="teacher_ws",
@@ -94,7 +94,7 @@ class TestShouldSuppressMutations:
 
     def test_role_prefix_stripped(self) -> None:
         """User roles have 'role_' prefix; persona IDs don't."""
-        from dazzle_ui.runtime.page_routes import _should_suppress_mutations
+        from dazzle.ui.runtime.page_routes import _should_suppress_mutations
 
         ws = ir.WorkspaceSpec(
             name="student_portal",
@@ -115,23 +115,23 @@ class TestUserCanMutate:
     """Entity permit rules control per-operation button visibility."""
 
     def test_no_cedar_spec_allows(self) -> None:
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
         deps = _make_deps(_make_appspec())
         assert _user_can_mutate(deps, "task_view", "update", None)
 
     def test_no_surface_name_allows(self) -> None:
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
         deps = _make_deps(_make_appspec())
         assert _user_can_mutate(deps, None, "delete", None)
 
     def test_permitted_role_allows(self) -> None:
         """Teacher with update permission can see Edit button."""
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -158,10 +158,10 @@ class TestUserCanMutate:
 
     def test_denied_role_blocks(self) -> None:
         """Student without update permission cannot see Edit button."""
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -188,10 +188,10 @@ class TestUserCanMutate:
 
     def test_delete_denied_separately(self) -> None:
         """Update allowed but delete denied — only delete is blocked."""
-        from dazzle_ui.runtime.page_routes import _user_can_mutate
+        from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle_back.runtime.access_evaluator")
-        from dazzle_back.specs.auth import (
+        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,

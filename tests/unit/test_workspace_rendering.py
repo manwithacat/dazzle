@@ -70,7 +70,7 @@ class TestFieldKindToColType:
         ids=["enum_badge", "bool", "date", "datetime_date", "money_currency", "str_text"],
     )
     def test_kind_mapping(self, field_name, kind, enum_values, expected) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
+        from dazzle.back.runtime.server import _field_kind_to_col_type
 
         f = _make_field(field_name, kind, enum_values=enum_values)
         assert _field_kind_to_col_type(f) == expected
@@ -84,7 +84,7 @@ class TestFieldKindToColType:
         ids=["status_field_badge", "non_status_field_text"],
     )
     def test_state_machine_dispatch(self, field_name, expected) -> None:
-        from dazzle_back.runtime.server import _field_kind_to_col_type
+        from dazzle.back.runtime.server import _field_kind_to_col_type
 
         f = _make_field(field_name, FieldTypeKind.STR)
         sm = SimpleNamespace(status_field="status", states=["open", "closed"])
@@ -102,7 +102,7 @@ class TestFilterableColumns:
 
     def _build_columns(self, entity: Any) -> list[dict[str, Any]]:
         """Simulate the column-building loop from server.py."""
-        from dazzle_back.runtime.server import _field_kind_to_col_type
+        from dazzle.back.runtime.server import _field_kind_to_col_type
 
         columns: list[dict[str, Any]] = []
         for f in entity.fields:
@@ -211,7 +211,7 @@ class TestTimeagoFilter:
     """timeago Jinja2 filter returns human-readable relative times."""
 
     def test_seconds_ago(self) -> None:
-        from dazzle_ui.runtime.template_renderer import _timeago_filter
+        from dazzle.ui.runtime.template_renderer import _timeago_filter
 
         dt = datetime.now() - timedelta(seconds=30)
         result = _timeago_filter(dt)
@@ -235,7 +235,7 @@ class TestTimeagoFilter:
         ],
     )
     def test_filter(self, input_factory, expected) -> None:
-        from dazzle_ui.runtime.template_renderer import _timeago_filter
+        from dazzle.ui.runtime.template_renderer import _timeago_filter
 
         assert _timeago_filter(input_factory()) == expected
 
@@ -265,7 +265,7 @@ class TestAttentionHighlighting:
         self, signals: list[Any], item: dict[str, Any]
     ) -> dict[str, str] | None:
         """Reproduce the attention evaluation logic from server.py."""
-        from dazzle_back.runtime.condition_evaluator import evaluate_condition
+        from dazzle.back.runtime.condition_evaluator import evaluate_condition
 
         severity_order = {"critical": 0, "warning": 1, "notice": 2, "info": 3}
         best: dict[str, str] | None = None
@@ -316,7 +316,7 @@ class TestRefColumnHiding:
 
     def _build_columns(self, entity: Any) -> list[dict[str, Any]]:
         """Simulate the column-building loop from workspace_rendering.py."""
-        from dazzle_back.runtime.server import _field_kind_to_col_type
+        from dazzle.back.runtime.server import _field_kind_to_col_type
 
         columns: list[dict[str, Any]] = []
         for f in entity.fields:
@@ -454,7 +454,7 @@ class TestCrossEntityAction:
         cross_entity_fallback_to_id.
         """
         from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
 
         # Same entity → /app/<entity>/{id}
         region = WorkspaceRegion(name="tasks", source="Task", action="task_edit")
@@ -534,7 +534,7 @@ class TestDisplayModes:
     ) -> None:
         """Combined: enum value, template mapping, region acceptance, render template, string-from-value."""
         from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion, WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle.ui.runtime.workspace_renderer import (
             DISPLAY_TEMPLATE_MAP,
             build_workspace_context,
         )
@@ -581,7 +581,7 @@ class TestCurrentUserFilter:
     )
     def test_current_user_filter_resolution(self, filter_ctx, expected_value) -> None:
         """current_user resolves from filter context (None when unauthenticated)."""
-        from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+        from dazzle.back.runtime.condition_evaluator import condition_to_sql_filter
 
         condition = {
             "comparison": {
@@ -624,7 +624,7 @@ class TestBuildSurfaceColumns:
 
     def test_uses_surface_field_projection(self) -> None:
         """Only surface-declared fields appear as columns."""
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -645,7 +645,7 @@ class TestBuildSurfaceColumns:
 
     def test_preserves_field_order(self) -> None:
         """Columns should appear in surface section order, not entity order."""
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Notification",
@@ -668,7 +668,7 @@ class TestBuildSurfaceColumns:
 
     def test_falls_back_to_all_fields_when_surface_empty(self) -> None:
         """Empty surface sections should fall back to all entity fields."""
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -687,7 +687,7 @@ class TestBuildSurfaceColumns:
 
     def test_skips_id_field_in_projection(self) -> None:
         """'id' in surface fields should be ignored."""
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -705,7 +705,7 @@ class TestBuildSurfaceColumns:
 
     def test_column_types_preserved(self) -> None:
         """Surface-aware columns should have correct types (badge, date, etc.)."""
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -744,7 +744,7 @@ class TestSurfaceColumnsVisibleCondition:
     """_build_surface_columns() should carry visible: predicates onto columns (#872)."""
 
     def test_element_visible_attached_to_column(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -776,7 +776,7 @@ class TestSurfaceColumnsVisibleCondition:
         }
 
     def test_section_visible_falls_through_to_columns(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -800,7 +800,7 @@ class TestSurfaceColumnsVisibleCondition:
             assert col["visible_condition"]["role_check"]["role_name"] == "school_admin"
 
     def test_element_visible_overrides_section_visible(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
 
         entity = _make_entity(
             "Task",
@@ -835,7 +835,7 @@ class TestWorkspaceRegionContextUXMetadata:
 
     def test_default_sort_stored(self) -> None:
         """surface_default_sort should store SortSpec-like objects."""
-        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
 
         sort_specs = [SimpleNamespace(field="due_date", direction="desc")]
         ctx = WorkspaceRegionContext(
@@ -868,7 +868,7 @@ class TestWorkspaceRegionContextUXMetadata:
 
     def test_empty_message_stored(self) -> None:
         """surface_empty_message should store the surface's empty message."""
-        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
 
         ctx = WorkspaceRegionContext(
             ctx_region=SimpleNamespace(
@@ -898,7 +898,7 @@ class TestWorkspaceRegionContextUXMetadata:
 
     def test_defaults_when_not_provided(self) -> None:
         """Default values should be empty list/string when not provided."""
-        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
 
         ctx = WorkspaceRegionContext(
             ctx_region=SimpleNamespace(
@@ -954,7 +954,7 @@ class TestViewportLazyLoading:
     )
     def test_fold_count(self, stage, expected) -> None:
         from dazzle.core.ir.workspaces import WorkspaceSpec
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
 
         kwargs = {"name": "dashboard", "regions": []}
         if stage is not None:
@@ -965,7 +965,7 @@ class TestViewportLazyLoading:
 
     def test_stage_fold_count_map_keys(self) -> None:
         """All stages in STAGE_DEFAULT_SPANS have a corresponding fold count."""
-        from dazzle_ui.runtime.workspace_renderer import STAGE_DEFAULT_SPANS, STAGE_FOLD_COUNTS
+        from dazzle.ui.runtime.workspace_renderer import STAGE_DEFAULT_SPANS, STAGE_FOLD_COUNTS
 
         for stage in STAGE_DEFAULT_SPANS:
             assert stage in STAGE_FOLD_COUNTS, f"Missing fold count for stage: {stage}"
@@ -990,7 +990,7 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle_back.runtime.workspace_rendering import _workspace_region_handler
+        from dazzle.back.runtime.workspace_rendering import _workspace_region_handler
 
         source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
         tree = ast.parse(source)
@@ -1024,7 +1024,7 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle_back.runtime.workspace_rendering import _resolve_workspace_user
+        from dazzle.back.runtime.workspace_rendering import _resolve_workspace_user
 
         source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
 
@@ -1048,7 +1048,7 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle_back.runtime.workspace_rendering import (
+        from dazzle.back.runtime.workspace_rendering import (
             _resolve_workspace_user,
             _workspace_region_handler,
         )
@@ -1071,7 +1071,7 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle_back.runtime.workspace_rendering import _resolve_workspace_user
+        from dazzle.back.runtime.workspace_rendering import _resolve_workspace_user
 
         source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
 
@@ -1098,7 +1098,7 @@ class TestCurrentUserDotNotation:
 
         Combined: department, department_ref_dict, plain_still_works, missing_entity, missing_field.
         """
-        from dazzle_back.runtime.condition_evaluator import _resolve_value
+        from dazzle.back.runtime.condition_evaluator import _resolve_value
 
         # Scalar field (uuid string)
         ctx_scalar = {
@@ -1150,7 +1150,7 @@ class TestCurrentUserDotNotation:
 
     def test_condition_to_sql_filter_with_dot_notation(self) -> None:
         """condition_to_sql_filter resolves current_user.department in filters."""
-        from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+        from dazzle.back.runtime.condition_evaluator import condition_to_sql_filter
 
         condition = {
             "comparison": {
@@ -1171,7 +1171,7 @@ class TestCurrentUserDotNotation:
 
     def test_identifier_kind_dot_notation(self) -> None:
         """Handle current_user.field via identifier kind value format."""
-        from dazzle_back.runtime.condition_evaluator import _resolve_value
+        from dazzle.back.runtime.condition_evaluator import _resolve_value
 
         context = {
             "current_user_id": "user-123",
@@ -1201,7 +1201,7 @@ class TestWorkspaceStatsHandler:
         ws_access: Any = None,
         auth_middleware: Any = None,
     ) -> Any:
-        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
 
         return WorkspaceRegionContext(
             ctx_region=SimpleNamespace(
@@ -1228,14 +1228,14 @@ class TestWorkspaceStatsHandler:
         )
 
     async def test_returns_empty_stats_when_no_aggregates(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
 
         ctx = self._make_ctx(region_name="tasks", aggregates={})
         result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
         assert result == {"workspace": "dash", "stats": {}}
 
     async def test_computes_count_entity_aggregates(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
 
         class FakeRepo:
             async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
@@ -1251,7 +1251,7 @@ class TestWorkspaceStatsHandler:
         assert result["stats"] == {"overview": {"Total Work": 42}}
 
     async def test_namespaces_stats_by_region(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
 
         class FakeRepo:
             def __init__(self, total: int) -> None:
@@ -1275,7 +1275,7 @@ class TestWorkspaceStatsHandler:
         assert result["stats"]["campaigns"] == {"Running": 3}
 
     async def test_skips_regions_without_aggregates(self) -> None:
-        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
 
         class FakeRepo:
             async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
@@ -1294,7 +1294,7 @@ class TestWorkspaceStatsHandler:
     async def test_requires_auth_when_configured(self) -> None:
         from fastapi import HTTPException
 
-        from dazzle_back.runtime.workspace_rendering import _workspace_stats_handler
+        from dazzle.back.runtime.workspace_rendering import _workspace_stats_handler
 
         class FailingAuth:
             def get_auth_context(self, request: Any) -> Any:

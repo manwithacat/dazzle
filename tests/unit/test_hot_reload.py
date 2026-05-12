@@ -1,7 +1,7 @@
 """
 Regression tests for HotReloadManager wiring (#834).
 
-The module at src/dazzle_ui/runtime/hot_reload.py was imported by nothing
+The module at src/dazzle/ui/runtime/hot_reload.py was imported by nothing
 prior to cycle 328 — it was half-shipped behind the combined_server
 `enable_watch` flag but never actually instantiated. These tests pin the
 wiring: constructing a manager from a project root, starting/stopping its
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from dazzle_ui.runtime.hot_reload import (
+from dazzle.ui.runtime.hot_reload import (
     FileWatcher,
     HotReloadManager,
     create_reload_callback,
@@ -139,11 +139,12 @@ class TestCombinedServerWiring:
         source = (
             Path(__file__).resolve().parents[2]
             / "src"
-            / "dazzle_ui"
+            / "dazzle"
+            / "ui"
             / "runtime"
             / "combined_server.py"
         ).read_text()
-        assert "from dazzle_ui.runtime.hot_reload import" in source
+        assert "from dazzle.ui.runtime.hot_reload import" in source
         assert "HotReloadManager" in source
         assert "create_reload_callback" in source
         # The F841 "reserved for future use" markers must be gone — this is

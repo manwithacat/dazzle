@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle_back.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
+from dazzle.back.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
 
 # ---------------------------------------------------------------------------
 # strip_html_tags (str fields)

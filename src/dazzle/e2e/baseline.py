@@ -116,9 +116,9 @@ class BaselineManager:
             try:
                 import importlib.util
 
-                spec = importlib.util.find_spec("dazzle_back")
+                spec = importlib.util.find_spec("dazzle.back")
                 if spec is None or spec.origin is None:
-                    raise FileNotFoundError("dazzle_back package not found")
+                    raise FileNotFoundError("dazzle.back package not found")
                 pkg_dir = Path(spec.origin).parent
                 alembic_ini = pkg_dir / "alembic.ini"
                 if not alembic_ini.exists():

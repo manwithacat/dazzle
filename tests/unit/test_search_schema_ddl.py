@@ -24,12 +24,12 @@ from typing import Any
 
 import pytest
 
-from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
-from dazzle.core.ir.search import SearchField, SearchSpec
-from dazzle_back.runtime.search_schema import (
+from dazzle.back.runtime.search_schema import (
     SEARCH_VECTOR_COLUMN,
     build_search_index_ddl,
 )
+from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
+from dazzle.core.ir.search import SearchField, SearchSpec
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -283,7 +283,7 @@ class TestBackendConvertedEntityShape:
     def _backend_entity(self, name: str, fields: list[tuple[str, str]]) -> Any:
         from types import SimpleNamespace
 
-        from dazzle_back.specs.entity import FieldType, ScalarType
+        from dazzle.back.specs.entity import FieldType, ScalarType
 
         scalar_by_str = {st.value: st for st in ScalarType}
         field_specs = [

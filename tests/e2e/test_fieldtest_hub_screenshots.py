@@ -38,8 +38,8 @@ except ImportError:
     Page = None
 
 # Skip if Dazzle is not available
-pytest.importorskip("dazzle_back")
-pytest.importorskip("dazzle_ui")
+pytest.importorskip("dazzle.back")
+pytest.importorskip("dazzle.ui")
 
 # Configuration
 SERVER_STARTUP_TIMEOUT = 60

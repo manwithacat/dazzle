@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from dazzle.back.runtime.event_bus import EntityEvent, EntityEventType
+from dazzle.back.runtime.llm_trigger import LLMTriggerMatcher
 from dazzle.core.ir.llm import LLMTriggerEvent, LLMTriggerSpec
-from dazzle_back.runtime.event_bus import EntityEvent, EntityEventType
-from dazzle_back.runtime.llm_trigger import LLMTriggerMatcher
 
 # ---------------------------------------------------------------------------
 # Helpers

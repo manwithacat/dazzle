@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import patch
 
-from dazzle_back.runtime.job_loop import run_worker_loop
-from dazzle_back.runtime.job_queue import InMemoryJobQueue, JobMessage
-from dazzle_back.runtime.job_worker import WorkerOutcome
+from dazzle.back.runtime.job_loop import run_worker_loop
+from dazzle.back.runtime.job_queue import InMemoryJobQueue, JobMessage
+from dazzle.back.runtime.job_worker import WorkerOutcome
 
 # ---------------------------------------------------------------------------
 # Shared handlers + stubs
@@ -174,7 +174,7 @@ class TestExceptionResilience:
             loop.call_later(0.2, stop.set)
 
             with patch(
-                "dazzle_back.runtime.job_loop.process_one",
+                "dazzle.back.runtime.job_loop.process_one",
                 side_effect=_raising_process_one,
             ):
                 return await run_worker_loop(

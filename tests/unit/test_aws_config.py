@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle_back.runtime.aws_config import (
+from dazzle.back.runtime.aws_config import (
     AWSConfig,
     get_aioboto3_session,
     get_aws_config,
