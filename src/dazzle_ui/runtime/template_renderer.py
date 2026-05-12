@@ -1,27 +1,27 @@
-"""
-Jinja2 template renderer for server-rendered DNR pages.
+"""Page renderer for server-rendered Dazzle pages.
 
-Sets up the Jinja2 environment with custom filters, globals, and
-template loading from the templates/ directory.
+Post-#1044 (v0.67.92+): the framework no longer ships Jinja2. The
+``render_page`` entry point dispatches every PageContext through the
+typed-substrate body renderers (form / detail / table / pdf_viewer)
+and then delegates layout to ``dispatch_render_page``.
+
+The pure-Python value-formatting helpers below (``_currency_filter``,
+``_date_filter``, ``_badge_tone_filter``, etc.) used to be registered
+as Jinja filters; they are now imported directly by the typed
+renderers in ``form_renderer.py`` / ``detail_renderer.py`` /
+``table_renderer.py``.
 """
 
 from __future__ import annotations
 
-import threading
+import re as _re
 from datetime import date, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader, select_autoescape
 from markupsafe import Markup
 
 if TYPE_CHECKING:
-    from dazzle_ui.runtime.template_context import (
-        PageContext,
-    )
-
-# Template directory
-TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
+    from dazzle_ui.runtime.template_context import PageContext
 
 
 def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
@@ -48,26 +48,13 @@ def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> s
         amount = amount / (10**scale)
 
     symbols: dict[str, str] = {
-        "GBP": "\u00a3",
+        "GBP": "£",
         "USD": "$",
-        "EUR": "\u20ac",
+        "EUR": "€",
+        "JPY": "¥",
+        "CHF": "CHF ",
         "AUD": "A$",
         "CAD": "C$",
-        "CHF": "CHF",
-        "CNY": "\u00a5",
-        "INR": "\u20b9",
-        "NZD": "NZ$",
-        "SGD": "S$",
-        "HKD": "HK$",
-        "SEK": "kr",
-        "NOK": "kr",
-        "DKK": "kr",
-        "ZAR": "R",
-        "MXN": "MX$",
-        "BRL": "R$",
-        "JPY": "\u00a5",
-        "KRW": "\u20a9",
-        "VND": "\u20ab",
     }
     symbol = symbols.get(currency, currency + " ")
     return f"{symbol}{amount:,.{scale}f}"
@@ -87,10 +74,9 @@ def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:
     return str(value)
 
 
-# Canonical semantic tones for status badges. The macro at
-# `templates/macros/status_badge.html` maps these to design-system tokens.
-# Cycle 238 defined the tones; cycle 321 removed the deprecated
-# `badge_class` filter (0 template consumers) leaving only `badge_tone`.
+# Canonical semantic tones for status badges. Cycle 238 defined the
+# tones; cycle 321 removed the deprecated `badge_class` filter (0
+# template consumers) leaving only `badge_tone`.
 _STATUS_TONE_MAP: dict[str, str] = {
     # Success — things that reached a positive terminal state
     "active": "success",
@@ -139,27 +125,10 @@ _STATUS_TONE_MAP: dict[str, str] = {
 
 
 def _metric_number_filter(value: Any) -> str:
-    """Format an aggregate metric value for display in a metric tile.
-
-    Cycle 239 (UX-042 metrics-region contract).
-
-    - Integers: rendered with locale-independent thousands separator
-      (e.g. ``1234`` → ``"1,234"``, ``1500000`` → ``"1,500,000"``).
-    - Floats: rendered to 1 decimal place with thousands separator
-      when >= 1 (e.g. ``3.1415`` → ``"3.1"``), or the full value for
-      sub-unit values (e.g. ``0.25`` → ``"0.25"``).
-    - Strings: returned verbatim — the DSL author may have pre-formatted.
-    - None / missing: rendered as ``"0"``.
-
-    The macro at ``workspace/regions/metrics.html`` always calls this
-    filter, so every metric tile across every Dazzle app renders with
-    consistent number formatting, regardless of what shape the backend
-    aggregate evaluator returned.
-    """
+    """Format an aggregate metric value for display in a metric tile."""
     if value is None:
         return "0"
     if isinstance(value, bool):
-        # bools are subclass of int — handle before int to avoid surprises
         return "Yes" if value else "No"
     if isinstance(value, int):
         return f"{value:,}"
@@ -174,9 +143,7 @@ def _badge_tone_filter(value: Any) -> str:
     """Map a status value to a semantic tone name.
 
     Returns one of: ``neutral`` | ``success`` | ``warning`` | ``info`` |
-    ``destructive``. Used by the ``status_badge`` macro (see
-    ``templates/macros/status_badge.html``) to pick the correct design-system
-    token variant.
+    ``destructive``.
     """
     if value is None:
         return "neutral"
@@ -192,15 +159,7 @@ def _bool_icon_filter(value: Any) -> Markup:
 
 
 def _timeago_filter(value: Any) -> str:
-    """Format a datetime as relative time (e.g. '2 hours ago').
-
-    Postgres ``TIMESTAMP WITH TIME ZONE`` columns return tz-aware
-    datetimes via psycopg; mixing those with ``datetime.now()`` (naive)
-    raised ``TypeError`` and 500'd region renders (#852). Strategy:
-    keep both sides naive for the subtraction — convert any tz-aware
-    input to local-naive so the comparison matches the existing
-    convention that callers pass naive local values.
-    """
+    """Format a datetime as relative time (e.g. '2 hours ago')."""
     if value is None:
         return ""
     now = datetime.now()
@@ -211,18 +170,12 @@ def _timeago_filter(value: Any) -> str:
         dt = datetime(value.year, value.month, value.day)
     elif isinstance(value, str):
         try:
-            # Python <3.11 doesn't parse the trailing `Z` — normalise it
-            # to the explicit UTC offset before fromisoformat.
             dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return str(value)
     if dt is None:
         return str(value)
     if dt.tzinfo is not None:
-        # Convert tz-aware inputs (DB columns) to local-naive so they can
-        # subtract from naive `now` without raising. This is the smallest
-        # fix that closes #852 and keeps every existing local-naive call
-        # site working.
         dt = dt.astimezone().replace(tzinfo=None)
     diff = now - dt
     seconds = int(diff.total_seconds())
@@ -248,12 +201,10 @@ def _timeago_filter(value: Any) -> str:
 
 def _slugify_filter(value: Any) -> str:
     """Slugify a string for use as an HTML id attribute."""
-    import re
-
     if value is None:
         return ""
     text = str(value).lower().strip()
-    text = re.sub(r"[^a-z0-9]+", "-", text)
+    text = _re.sub(r"[^a-z0-9]+", "-", text)
     return text.strip("-")
 
 
@@ -262,17 +213,13 @@ def _basename_or_url_filter(value: Any) -> str:
     if value is None:
         return ""
     text = str(value)
-    # Try to extract filename from URL path
     if "/" in text:
         return text.rsplit("/", 1)[-1].split("?")[0] or text
     return text
 
 
 def _humanize_filter(value: Any) -> str:
-    """Convert snake_case or slug values to human-readable Title Case.
-
-    E.g. ``in_progress`` → ``In Progress``, ``needs_review`` → ``Needs Review``.
-    """
+    """Convert snake_case or slug values to human-readable Title Case."""
     if value is None:
         return ""
     text = str(value)
@@ -280,24 +227,12 @@ def _humanize_filter(value: Any) -> str:
 
 
 def _ref_display_name(value: Any, fallback: str = "") -> str:
-    """Extract a human-readable display name from a ref dict.
-
-    Priority chain:
-    0. Explicit display_field override (__display__ key, set by relation loader from entity DSL)
-    1. Well-known fields: name, company_name, first+last, forename+surname, title, label, email
-    2. First non-id string value (catches entity-specific fields like component_name, question_text)
-    3. id (UUID fallback)
-
-    This is the canonical ref display chain — used by the ref_display filter,
-    truncate_text filter, and table_rows.html template.
-    """
+    """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):
         return str(value) if value else fallback
-    # Explicit display_field override from entity DSL (#555)
     _explicit = value.get("__display__")
     if _explicit:
         return str(_explicit)
-    # Well-known fields
     result = (
         value.get("name")
         or value.get("company_name")
@@ -315,7 +250,6 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
     )
     if result:
         return str(result)
-    # Fallback: first non-id, non-empty string value (#479)
     _skip = {"id", "created_at", "updated_at", "deleted_at"}
     for k, v in value.items():
         if k not in _skip and isinstance(v, str) and v and len(v) < 200:
@@ -324,28 +258,15 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
 
 
 def _ref_display_filter(value: Any) -> str:
-    """Jinja filter: extract display name from a ref value (dict or scalar)."""
+    """Filter form of ``_ref_display_name`` for legacy import sites."""
     return _ref_display_name(value)
 
 
 def _resolve_fk_id_filter(value: Any) -> str:
-    """Jinja filter: extract the id from a FK value that may be dict or scalar.
-
-    v0.61.7 (#861): when a region's ``action:`` points at a foreign entity,
-    the row's FK column (e.g. ``student_profile``) is used to parameterise
-    the detail URL. ``_inject_display_names`` may have expanded that column
-    into ``{"id": "<uuid>", "display": "Alice"}`` — in that case templates
-    rendering ``item[field] | string`` would emit the dict repr, producing
-    a broken URL. This filter resolves both shapes:
-
-        {"id": "abc"} | resolve_fk_id  → "abc"
-        "abc"         | resolve_fk_id  → "abc"
-        None          | resolve_fk_id  → ""
-    """
+    """Extract the id from a FK value that may be dict or scalar."""
     if value is None:
         return ""
     if isinstance(value, dict):
-        # Prefer explicit id; fall back to other identity keys.
         for key in ("id", "ID", "uuid", "value"):
             if key in value and value[key] is not None:
                 return str(value[key])
@@ -357,7 +278,6 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
         return ""
-    # Ref fields may arrive as dicts — extract a display name instead of repr
     if isinstance(value, dict):
         text = _ref_display_name(value)
     else:
@@ -368,30 +288,7 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
 
 
 def _gettext(message: str, **kwargs: Any) -> str:
-    """gettext filter — translates against the per-request locale.
-
-    Cycle 2 (#955): looks up *message* in :class:`~dazzle.i18n.MessageCatalogue`
-    keyed by the locale on :data:`~dazzle.i18n.locale_ctxvar` (set by
-    :class:`~dazzle_back.runtime.locale_middleware.LocaleMiddleware`).
-    Falls back to *message* on miss — projects with no translations
-    registered see the source text everywhere, same as cycle 1.
-
-    Reading the locale from a ContextVar (rather than the Jinja render
-    context) means templates don't have to thread ``current_locale``
-    through every render call site. Mirrors the ``theme_variant``
-    ContextVar pattern in :mod:`dazzle_ui.runtime.theme`.
-
-    Templates use either filter or call form::
-
-        <h1>{{ _("Welcome, {name}!", name=user.name) }}</h1>
-        <p>{{ "Sign in" | _ }}</p>
-
-    Projects register translations via :func:`dazzle.i18n.register_translations`::
-
-        from dazzle.i18n import register_translations
-
-        register_translations("fr", {"Welcome": "Bienvenue"})
-    """
+    """gettext helper — translates against the per-request locale."""
     from dazzle.i18n import get_catalogue, get_current_locale
 
     locale = get_current_locale()
@@ -402,39 +299,18 @@ def _gettext(message: str, **kwargs: Any) -> str:
     try:
         return out.format(**kwargs)
     except (KeyError, IndexError, ValueError):
-        # Malformed format string — return the unsubstituted (translated
-        # or source) text rather than raising.
         return out
 
 
 def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
-    """Build an ellipsis-collapsed list of page numbers for pagination controls (#984).
-
-    Returns a list of ``int`` page numbers interleaved with ``None`` markers
-    representing ellipses. Always includes page 1 and the last page; shows a
-    window of ``window`` pages on either side of *current*.
-
-    Examples (with the default window=2):
-        current=1,  total=5    → [1, 2, 3, 4, 5]
-        current=7,  total=120  → [1, None, 5, 6, 7, 8, 9, None, 120]
-        current=3,  total=120  → [1, 2, 3, 4, 5, None, 120]
-        current=118, total=120 → [1, None, 116, 117, 118, 119, 120]
-
-    The output length is bounded — for any total it returns at most
-    ``2 * window + 5`` items (1 + ellipsis + 2*window+1 + ellipsis + last).
-    Linear in ``window``, constant w.r.t. ``total``, so the pagination row's
-    rendered width is bounded regardless of how many pages the table has.
-    """
+    """Ellipsis-collapsed list of page numbers for pagination controls (#984)."""
     if total <= 0:
         return []
     if total == 1:
         return [1]
 
-    # Below this threshold, every page fits without an ellipsis being useful.
-    # 7 = first + last + 2*window+1 window + 2 ellipses; if total is at or
-    # below the explicit page count we'd render anyway, just show all pages.
-    explicit_count = 2 * window + 3  # first + window-around-current + last
-    if total <= explicit_count + 2:  # +2 to absorb both ellipsis slots
+    explicit_count = 2 * window + 3
+    if total <= explicit_count + 2:
         return list(range(1, total + 1))
 
     pages: list[int | None] = [1]
@@ -442,260 +318,20 @@ def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | N
     win_end = min(total - 1, current + window)
 
     if win_start > 2:
-        pages.append(None)  # left ellipsis
+        pages.append(None)
     pages.extend(range(win_start, win_end + 1))
     if win_end < total - 1:
-        pages.append(None)  # right ellipsis
-
+        pages.append(None)
     pages.append(total)
     return pages
 
 
-def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
-    """Create and configure the Jinja2 environment.
-
-    Args:
-        project_templates_dir: Optional path to project-level templates.
-            When provided, project templates take priority over framework
-            templates.  Framework originals remain accessible via the
-            ``dz://`` prefix (e.g. ``{% extends "dz://layouts/app_shell.html" %}``).
-    """
-    framework_loader = FileSystemLoader(str(TEMPLATES_DIR))
-
-    if project_templates_dir and project_templates_dir.is_dir():
-        project_loader = FileSystemLoader(str(project_templates_dir))
-        # Project templates searched first, framework as fallback
-        main_loader = ChoiceLoader([project_loader, framework_loader])
-    else:
-        main_loader = ChoiceLoader([framework_loader])
-
-    # "dz://" prefix always resolves to framework templates, allowing
-    # project overrides to extend the originals they replace:
-    #   {% extends "dz://layouts/app_shell.html" %}
-    loader = PrefixLoader({"dz": framework_loader}, delimiter="://")
-    # Combine: unprefixed paths go through ChoiceLoader, "dz://" goes to framework
-    combined = ChoiceLoader([loader, main_loader])
-
-    # Direct Jinja2 use is intentional — this module IS the framework's
-    # canonical template renderer. autoescape is enabled for .html so XSS
-    # protection is in force; downstream callers go through render_fragment
-    # which uses this env, never raw Jinja2.
-    env = Environment(  # nosemgrep
-        loader=combined,
-        autoescape=select_autoescape(["html"]),
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-
-    # Dazzle version + CDN toggle
-    from dazzle import __version__ as _dz_version
-
-    env.globals["_dazzle_version"] = _dz_version
-    env.globals["_use_cdn"] = False  # local-first; opt-in via [ui] cdn = true
-
-    # Asset bundling toggle. Resolved by `should_bundle_assets()` from
-    # `[ui] assets` in dazzle.toml + DAZZLE_ENV + CLI overrides; the
-    # CLI writes the resolution to DAZZLE_BUNDLE_ASSETS=0|1 before
-    # starting the server so this read at engine init reflects the
-    # right mode. Default 0 (individual scripts) keeps dev-mode
-    # live-reload behaviour unchanged for projects that haven't opted in.
-    import os as _os
-
-    env.globals["_bundle_assets"] = _os.environ.get("DAZZLE_BUNDLE_ASSETS") == "1"
-
-    # Theme variant — resolved per-request by ThemeVariantMiddleware
-    # (src/dazzle_ui/runtime/theme.py). Templates call `{{
-    # theme_variant() }}` in `<html data-theme="…">` so the correct
-    # attribute renders on first paint and returning dark-mode users
-    # don't see a flash-of-light. Falls back to "light" when called
-    # outside a request context (e.g. unit-test rendering).
-    from dazzle_ui.runtime.theme import (
-        get_theme_variant,
-        is_dark_mode_toggle_enabled,
-        is_haptic_enabled,
-    )
-
-    env.globals["theme_variant"] = get_theme_variant
-    # #938 — gate the topbar/sidebar/marketing dark-mode toggle button
-    # on `[ui] dark_mode_toggle`. Defaults to True; projects with a
-    # deliberately light-only brand set `dark_mode_toggle = false`.
-    env.globals["dark_mode_toggle_enabled"] = is_dark_mode_toggle_enabled
-    # #958 cycle 5 — haptic opt-in. base.html emits a `<meta name="dz-haptic">`
-    # tag the framework JS reads to enable navigator.vibrate calls.
-    env.globals["haptic_enabled"] = is_haptic_enabled
-
-    # v0.62 CSS refactor (Phase 4 teardown): Tailwind compiled bundle
-    # removed — the `_tailwind_bundled` Jinja global and the per-request
-    # filesystem existence check went with it. The semantic .dz-* class
-    # families ship as static CSS files loaded directly from base.html.
-    static_dir = Path(__file__).parent / "static"
-
-    # Asset fingerprinting manifest — content-hash cache busting (#711)
-    from dazzle_ui.runtime.asset_fingerprint import build_asset_manifest, static_url_filter
-
-    manifest_dirs = [static_dir]
-    if project_templates_dir:
-        project_static = project_templates_dir.parent / "static"
-        if project_static.is_dir():
-            manifest_dirs.insert(0, project_static)
-    _asset_manifest = build_asset_manifest(*manifest_dirs)
-    env.globals["_asset_manifest"] = _asset_manifest
-    env.filters["static_url"] = lambda path: static_url_filter(path, _asset_manifest)
-
-    # Custom filters
-    env.filters["currency"] = _currency_filter
-    env.filters["dateformat"] = _date_filter
-    env.filters["badge_tone"] = _badge_tone_filter
-    env.filters["metric_number"] = _metric_number_filter
-    env.filters["bool_icon"] = _bool_icon_filter
-    env.filters["truncate_text"] = _truncate_filter
-    env.filters["timeago"] = _timeago_filter
-    env.filters["slugify"] = _slugify_filter
-    env.filters["basename_or_url"] = _basename_or_url_filter
-    env.filters["ref_display"] = _ref_display_filter
-    env.filters["resolve_fk_id"] = _resolve_fk_id_filter
-    env.filters["humanize"] = _humanize_filter
-
-    # #984: ellipsis-collapsed pagination — keeps the row's rendered width
-    # bounded regardless of total page count.
-    env.globals["pagination_pages"] = _pagination_pages
-
-    # #955 cycle 1: identity-passthrough gettext filter. Templates can
-    # mark translatable strings with `_("...")` today; cycle 2 wires the
-    # actual catalogue lookup keyed off `request.state.locale` (set by
-    # LocaleMiddleware). Registered as both global and filter so
-    # `_("Hello")` and `"Hello" | _` both work.
-    env.globals["_"] = _gettext
-    env.filters["_"] = _gettext
-
-    # #955 cycle 4: locale-aware date / number / currency formatting via
-    # Babel. Each filter degrades to ISO/ASCII output without the
-    # ``[i18n]`` extra installed — see `dazzle.i18n.babel_format`.
-    from dazzle.i18n.babel_format import (
-        format_currency as _l10n_format_currency,
-    )
-    from dazzle.i18n.babel_format import (
-        format_date as _l10n_format_date,
-    )
-    from dazzle.i18n.babel_format import (
-        format_datetime as _l10n_format_datetime,
-    )
-    from dazzle.i18n.babel_format import (
-        format_decimal as _l10n_format_decimal,
-    )
-    from dazzle.i18n.babel_format import (
-        format_number as _l10n_format_number,
-    )
-    from dazzle.i18n.babel_format import (
-        format_time as _l10n_format_time,
-    )
-
-    env.filters["format_date"] = _l10n_format_date
-    env.filters["format_datetime"] = _l10n_format_datetime
-    env.filters["format_time"] = _l10n_format_time
-    env.filters["format_number"] = _l10n_format_number
-    env.filters["format_decimal"] = _l10n_format_decimal
-    env.filters["format_currency"] = _l10n_format_currency
-
-    # #929: radar widget needs explicit polar-to-cartesian conversion
-    # for vertex placement. Jinja can't call cos/sin directly, so the
-    # template was using a `<g transform="rotate">` hack that put every
-    # vertex on the north axis after partial transform application —
-    # symptoms: all data dots stacked on the vertical centerline.
-    # Expose a small global the radar template uses to compute spoke
-    # endpoints + vertex positions natively.
-    import math as _math
-
-    def _radar_polar_xy(
-        index: int, count: int, ratio: float, cx: float, cy: float, r_max: float
-    ) -> dict[str, float]:
-        # Start at 12 o'clock (-π/2) and proceed clockwise so spoke 0
-        # is straight up and the natural reading order matches the
-        # bucket order. SVG y axis is inverted (down is positive), so
-        # `cy + r·sin(angle)` reads correctly because sin(-π/2) = -1
-        # which gives `cy - r` — i.e. north of centre.
-        angle = -_math.pi / 2 + (2 * _math.pi * float(index)) / float(count)
-        radius = float(r_max) * float(ratio)
-        return {
-            "x": float(cx) + radius * _math.cos(angle),
-            "y": float(cy) + radius * _math.sin(angle),
-        }
-
-    env.globals["radar_polar_xy"] = _radar_polar_xy
-
-    return env
-
-
-# Module-level singleton (guarded by lock for thread safety)
-_env: Environment | None = None
-_env_lock = threading.Lock()
-
-
-def get_jinja_env() -> Environment:
-    """Get the shared Jinja2 environment (lazy singleton)."""
-    global _env  # noqa: PLW0603
-    if _env is not None:
-        return _env
-    with _env_lock:
-        if _env is None:
-            _env = create_jinja_env()
-    return _env
-
-
-def configure_project_templates(project_templates_dir: Path) -> None:
-    """Reconfigure the Jinja2 environment with project-level template overrides.
-
-    Call this during app startup to enable project templates that override
-    framework defaults.  Framework templates remain accessible via ``dz://``.
-    """
-    global _env  # noqa: PLW0603
-    with _env_lock:
-        _env = create_jinja_env(project_templates_dir)
-
-
-def add_theme_template_dirs(theme_template_dirs: list[Path]) -> None:
-    """Prepend theme-template directories to the Jinja loader chain.
-
-    Phase C Patch 2: when a theme ships templates at
-    ``themes/<name>/templates/<path>.html``, those overrides win over
-    project + framework templates. Pass the dirs in cascade order
-    (root → leaf, so the leaf wins for same-name templates).
-
-    Idempotent — safe to call multiple times during startup. Skips
-    directories that don't exist on disk so opt-in themes (no
-    ``templates/`` subdir) cost nothing.
-    """
-    global _env  # noqa: PLW0603
-    if not theme_template_dirs:
-        return
-    valid = [d for d in theme_template_dirs if d.is_dir()]
-    if not valid:
-        return
-    with _env_lock:
-        if _env is None:
-            _env = create_jinja_env()
-        # Prepend a new ChoiceLoader-of-themes to the existing loader.
-        # Theme templates win over project + framework. Within the
-        # themes list, LATER directories win (because of how the
-        # caller orders them: root → leaf). ChoiceLoader picks the
-        # FIRST match, so we reverse to get leaf-first matching.
-        theme_loader = ChoiceLoader([FileSystemLoader(str(d)) for d in reversed(valid)])
-        # Defensive: env.loader is always set when the env is constructed
-        # via create_jinja_env above; the cast satisfies mypy.
-        existing = _env.loader
-        if existing is None:
-            existing = create_jinja_env().loader  # pragma: no cover — unreachable
-        assert existing is not None
-        _env.loader = ChoiceLoader([theme_loader, existing])
-
-
 def _render_typed_body(context: PageContext) -> str:
-    """Dispatch a PageContext to the right typed renderer (v0.67.79).
+    """Dispatch a PageContext to the right typed renderer.
 
-    Called by `render_page` when `PageContext.template` is empty —
-    which is the case for create/edit/list/view surfaces after the
-    Phase 4 typed-renderer migrations (v0.67.74 form_renderer,
-    v0.67.75 detail_renderer, v0.67.76 table_renderer).
+    Post-#1044: every framework surface lands here. The dispatch order
+    matters — ``pdf_viewer`` is set in addition to ``detail`` on
+    ``display: pdf_viewer`` surfaces, so it must branch first.
     """
     if context.form is not None:
         from dazzle_ui.runtime.form_renderer import render_form_field
@@ -723,40 +359,15 @@ def render_page(
     content_only: bool = False,
     inner_html: str | None = None,
 ) -> str:
-    """Render a full page from a PageContext.
-
-    Post-#1039 (Phase 4): every framework surface dispatches via
-    `_render_typed_body` — the typed renderers (form / detail / table /
-    pdf_viewer) emit HTML directly without touching the Jinja env. The
-    layout wrapper delegates to the typed-Fragment Page builder.
-
-    Args:
-        context: Page context with all data needed for rendering.
-        partial: When True, ``content_only`` semantics with htmx-target
-            framing. Same shape as ``content_only=True`` since the
-            layout chrome is no longer injected here.
-        content_only: When True, returns just the rendered body without
-            the layout wrapper — used for htmx fragment targeting.
-        inner_html: When provided, skip the typed-body dispatch and use
-            this pre-rendered HTML as the content block (renderer
-            registry Plan 3 Task 4). Inserted verbatim; callers are
-            responsible for any escaping.
-
-    Returns:
-        Rendered HTML string.
-    """
+    """Render a full page from a PageContext."""
     if inner_html is not None:
         rendered_content = inner_html
     else:
         rendered_content = _render_typed_body(context)
 
-    # Fragment targeting: return just the content, no layout wrapper.
     if content_only or partial:
         return rendered_content
 
-    # Phase 4 app-shell migration (v0.67.44): layout wrap delegates to
-    # the typed-Fragment dispatcher. `context.layout == "single_column"`
-    # → bare typed Page (no sidebar); anything else → typed AppShell.
     from dazzle_back.runtime.renderers.page_builder import dispatch_render_page
 
     return dispatch_render_page(
@@ -764,19 +375,3 @@ def render_page(
         rendered_content,
         chrome=(context.layout != "single_column"),
     )
-
-
-def render_fragment(template_name: str, **kwargs: Any) -> str:
-    """Render an HTML fragment via the framework's Jinja env.
-
-    Framework-internal helper retained for the parking-lot fragment
-    template test suite (e.g. ``tests/unit/test_workspace_*.py``).
-    The public Jinja-fragment API (formerly exported from
-    ``dazzle_ui.runtime``) was retired in #1051 — downstream consumers
-    compose typed `Page` + `AppShell` primitives directly. The
-    parking-lot fragments themselves are scheduled for retirement under
-    #1044; this helper goes away with them.
-    """
-    env = get_jinja_env()
-    template = env.get_template(template_name)  # nosemgrep
-    return template.render(**kwargs)  # nosemgrep

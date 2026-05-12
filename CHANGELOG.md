@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.92] - 2026-05-12
+
+### Removed — jinja2 dropped entirely 🎉
+
+Closes Phase C of [#1044](https://github.com/manwithacat/gh-issue/1044) **and** the long-running umbrella [#1042](https://github.com/manwithacat/gh-issue/1042). The framework no longer ships **any** Jinja templates and `jinja2` is dropped from `pyproject.toml`.
+
+- **15 remaining templates deleted**: 6 active fragments (`fragments/table_rows`, `table_pagination`, `inline_edit`, `form_errors`, `detail_fields`, `table_sentinel`), 4 macros (`macros/a11y`, `locale_switcher`, `region_wrapper`, `status_badge`), 3 workspace templates (`workspace/_content`, `_card_picker`, `regions/_typed_primitive`), `base.html`, `layouts/app_shell.html`. The entire `src/dazzle_ui/templates/` directory is gone.
+- **65 jinja-dependent test files deleted** (~12,000 lines):
+  - 42 unit tests under `tests/unit/` that imported `render_fragment` / `get_jinja_env` / `create_jinja_env` or read template files from disk (parity tests for workspace regions, dashboard, drawer, picker, base shell, etc.)
+  - 2 integration tests (`test_examples_fragment_smoke`, `test_cyfuture_workspaces_zero_jinja_when_chrome_on`)
+  - 21 follow-on template-reading tests that the broader sweep made redundant (`test_template_orphan_scan`, `test_dz_richtext`, `test_dz_debug`, `test_asset_bundle`, `test_dashboard_builder_triggers`, etc.)
+- **`get_jinja_env`, `create_jinja_env`, `configure_project_templates`, `add_theme_template_dirs`, `render_fragment`** functions removed from `src/dazzle_ui/runtime/template_renderer.py`. `TEMPLATES_DIR` constant removed.
+- **`Environment` / `FileSystemLoader` / `ChoiceLoader` / `PrefixLoader`** imports gone — `markupsafe` stays for the `_bool_icon_filter` HTML emission.
+- **Theme + CDN + feedback-widget Jinja-globals plumbing** in `src/dazzle_back/runtime/subsystems/system_routes.py` (~165 lines), `src/dazzle_ui/runtime/combined_server.py`, and `src/dazzle_ui/runtime/hot_reload.py` deleted — these populated globals consumed only by the now-retired `base.html` / `layouts/app_shell.html`.
+- **`jinja2>=3.1` removed** from `pyproject.toml` `[project].dependencies`. **`djlint>=1.34` removed** from `[project.optional-dependencies].dev` along with the `[tool.djlint]` config block.
+
+### Changed
+
+- **`src/dazzle_ui/runtime/template_renderer.py`** trimmed from 782 → 313 lines. The pure-Python value-formatting helpers (`_currency_filter`, `_date_filter`, `_badge_tone_filter`, `_metric_number_filter`, `_bool_icon_filter`, `_timeago_filter`, `_slugify_filter`, `_basename_or_url_filter`, `_humanize_filter`, `_ref_display_name`, `_ref_display_filter`, `_resolve_fk_id_filter`, `_truncate_filter`, `_gettext`, `_pagination_pages`) all survive — they're imported directly by `form_renderer.py` / `detail_renderer.py` / `table_renderer.py`. `render_page` and `_render_typed_body` are the entire public API now.
+- **`fragment_registry.py`** rewritten — entries now point at the Python `module` that emits each fragment instead of a `template` filesystem path. The registry is informational metadata for MCP `status` / `coverage` tooling; nothing is rendered through it.
+- **`test_typed_runtime_no_jinja.py::_TYPED_ONLY_MODULES`** extended with the final 6 modules now confirmed jinja-free: `core/expander.py`, `compliance/renderer.py`, `dazzle_ui/runtime/template_renderer.py`, `combined_server.py`, `hot_reload.py`, `dazzle_back/runtime/subsystems/system_routes.py`.
+
+### Behavioural Notes
+
+- **Theme support is temporarily disabled.** The pre-Phase-C theme inheritance + CDN + favicon + feedback-widget mechanisms wrote globals to the Jinja env consumed by `base.html`. With both gone, those configuration paths are dead. Restoring them via typed `AppShell` primitive props is tracked as a follow-up; the framework still serves the default theme bundled in `dist/dazzle.min.css`.
+- **Hot reload** still notifies the browser on file changes; the template-cache-clear call is a no-op now (no template cache exists).
+
+### Breaking Changes
+
+1. **`from dazzle_ui.runtime.template_renderer import render_fragment / get_jinja_env / configure_project_templates / add_theme_template_dirs / create_jinja_env / TEMPLATES_DIR`** → `ImportError`. There is no replacement — downstream rendering composes typed `Page` / `AppShell` primitives and calls `dispatch_render_page(...)` directly.
+2. **`pip install dazzle-dsl`** no longer pulls in `jinja2`. Downstream projects that import `jinja2` need to add it to their own dependencies.
+3. **Theme switching via DSL `app foo: theme:` or `[ui] theme = "..."` in dazzle.toml is currently inert.** Themes will return via typed primitive config in a follow-up.
+
+### Progress / Closes
+
+- **#1044** closed entirely (Phases A + B + C).
+- **#1042** closed entirely — `jinja2` dropped from `pyproject.toml`.
+
+### Agent Guidance
+
+- The framework's HTML rendering surface is now exclusively typed Python: `form_renderer`, `detail_renderer`, `table_renderer`, `pdf_viewer_renderer`, `journey_reporter`, `consent_banner`, `provider_html`, `agent_commands.template_strings`, plus the `FragmentRenderer` substrate. New HTML emission goes in one of these files or a new `_renderer.py` peer; never reach for Jinja.
+
 ## [0.67.91] - 2026-05-12
 
 ### Removed

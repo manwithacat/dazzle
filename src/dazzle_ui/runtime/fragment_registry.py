@@ -1,21 +1,24 @@
-"""Fragment registry for composable HTMX fragments.
+"""Fragment registry — informational catalog (post-#1044).
 
-Provides a static registry of the active framework fragments so that
-agents and tooling can discover them without reading template files.
+Pre-#1044 this listed Jinja templates under
+``src/dazzle_ui/templates/fragments/`` that downstream agents and
+tooling could discover. After the #1044 jinja2 retirement the
+framework no longer ships any Jinja templates — every fragment is
+emitted by a Python renderer in ``dazzle_ui.runtime``. The registry
+stays so the MCP ``status`` / ``coverage`` tooling that reads
+``get_fragment_registry()`` has a stable, queryable list of the
+fragment-rendering call sites.
 
-Post-#1044 (v0.67.90+): the parking-lot tier was retired entirely
-along with all 14 dormant Jinja templates that backed it. The remaining
-5 fragments are framework-internal — each is wired into a real Python
-renderer (form_renderer / detail_renderer / table_renderer) and the
-``.html`` template on disk is the historical Jinja shape kept for the
-parking-lot fragment test suite that gates the final ``jinja2`` drop.
+Each entry maps a logical fragment name → the Python renderer module
+that emits it. The ``params`` / ``description`` fields are kept
+unchanged from the legacy registry so existing consumers don't break.
 """
 
 from typing import Any
 
 FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
     "table_rows": {
-        "template": "fragments/table_rows.html",
+        "module": "dazzle_ui.runtime.table_renderer",
         "params": [
             "table.rows",
             "table.columns",
@@ -28,35 +31,35 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "description": "Table body rows with typed cell rendering and row-level actions.",
     },
     "table_pagination": {
-        "template": "fragments/table_pagination.html",
+        "module": "dazzle_ui.runtime.table_renderer",
         "params": ["table.total", "table.page_size", "table.page", "table.api_endpoint"],
         "emits": [],
         "listens": [],
         "description": "Page navigation buttons for paginated tables.",
     },
     "inline_edit": {
-        "template": "fragments/inline_edit.html",
+        "module": "dazzle_ui.runtime.table_renderer",
         "params": ["field_name", "field_value", "endpoint", "field_type"],
         "emits": [],
         "listens": [],
         "description": "Click-to-edit field with inline event handlers and HTMX save.",
     },
     "form_errors": {
-        "template": "fragments/form_errors.html",
+        "module": "dazzle_ui.runtime.form_renderer",
         "params": ["form_errors"],
         "emits": [],
         "listens": [],
         "description": "Validation error alert with single or multiple error messages.",
     },
     "detail_fields": {
-        "template": "fragments/detail_fields.html",
+        "module": "dazzle_ui.runtime.detail_renderer",
         "params": ["item", "fields"],
         "emits": [],
         "listens": [],
         "description": "Definition-list renderer for detail/view surfaces.",
     },
     "table_sentinel": {
-        "template": "fragments/table_sentinel.html",
+        "module": "dazzle_ui.runtime.table_renderer",
         "params": ["table"],
         "emits": [],
         "listens": [],
@@ -75,7 +78,6 @@ def get_fragment_info(name: str) -> dict[str, Any] | None:
     return FRAGMENT_REGISTRY.get(name)
 
 
-# Post-#1044: the parking-lot tier is empty. The frozenset stays so
-# existing imports keep working; cli/coverage.py still references it
-# to compute the "every counted fragment has a real caller" gate.
+# Post-#1044: the parking-lot tier was retired entirely. The frozenset
+# stays empty so existing imports (cli/coverage.py) keep working.
 PARKING_LOT_FRAGMENTS: frozenset[str] = frozenset()

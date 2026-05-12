@@ -305,15 +305,11 @@ def run_unified_server(
         bundled_css=bundled_css,
     )
 
-    # Apply --local-assets / --cdn-assets toggle (#637)
-    if local_assets:
-        try:
-            from dazzle_ui.runtime.template_renderer import get_jinja_env
-
-            get_jinja_env().globals["_use_cdn"] = False
-        except Exception:
-            # Toggle is non-critical; default CDN behaviour stands if Jinja isn't ready (#smells-1.1).
-            logger.debug("Could not flip _use_cdn=False on jinja env", exc_info=True)
+    # Post-#1044 (v0.67.92): the --local-assets toggle previously
+    # flipped _use_cdn on the Jinja env so base.html could emit local
+    # vs. CDN asset URLs. Jinja is gone; CDN-vs-local routing returns
+    # via typed AppShell primitive config in a follow-up.
+    _ = local_assets
 
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"

@@ -386,16 +386,14 @@ class HotReloadManager:
             print(f"[Dazzle] Reloaded: {', '.join(reloaded)}")
 
     def _clear_runtime_cache(self) -> None:
-        """Clear the template renderer cache."""
-        try:
-            from dazzle_ui.runtime.template_renderer import get_jinja_env
+        """No-op post-#1044 — the framework no longer ships Jinja2.
 
-            # Force Jinja2 to reload templates from disk
-            env = get_jinja_env()
-            if hasattr(env, "cache"):
-                env.cache.clear()  # type: ignore[union-attr]
-        except ImportError:
-            pass
+        The hook stays so the watchdog continues to fire on file changes
+        (the SSE notifier downstream still drives the browser-side
+        reload); if a future Python-renderer cache appears, clear it
+        here.
+        """
+        pass
 
     def _clear_css_cache(self) -> None:
         """Clear the CSS cache (no-op — CSS is loaded fresh from disk)."""

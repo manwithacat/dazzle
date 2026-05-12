@@ -93,6 +93,14 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/services/agent_commands/renderer.py",
     # v0.67.88 — llm_executor prompt rendering migrated to string.Template (closes #1048).
     "src/dazzle_back/runtime/llm_executor.py",
+    # v0.67.92 — jinja2 dropped entirely (closes #1042/#1044). The
+    # framework's last Jinja env users were retired here.
+    "src/dazzle/core/expander.py",
+    "src/dazzle/compliance/renderer.py",
+    "src/dazzle_ui/runtime/template_renderer.py",
+    "src/dazzle_ui/runtime/combined_server.py",
+    "src/dazzle_ui/runtime/hot_reload.py",
+    "src/dazzle_back/runtime/subsystems/system_routes.py",
 )
 
 # Patterns that indicate Jinja2 use. Each is a regex matched against
