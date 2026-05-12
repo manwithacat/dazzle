@@ -3,13 +3,23 @@
 Kept separate from the registry to make it easy to add custom providers
 without importing the whole registry module (which in turn imports the
 framework-default provider modules).
+
+Post-#1044 (v0.67.91+): the ``head_template`` / ``noscript_template``
+string fields are replaced by ``head_renderer`` / ``noscript_renderer``
+callables. Provider authors implement a function
+``(params, consent) -> str`` that returns the HTML snippet directly
+— no Jinja env needed.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from dazzle.core.ir import ConsentCategory
+
+ProviderRenderer = Callable[[dict[str, Any], dict[str, Any]], str]
 
 
 @dataclass(frozen=True)
@@ -45,14 +55,14 @@ class ProviderDefinition:
             this provider's scripts fall under. Determines when the script
             actually loads.
         csp: Origins the provider needs in the CSP header.
-        head_template: Jinja template path rendered inside ``<head>``.
-            Relative to the framework templates root. Optional — provider
-            may have body-only scripts.
-        body_template: Jinja template path rendered at the start of ``<body>``
-            (after opening tag). Optional.
-        noscript_template: Jinja template path rendered inside ``<noscript>``
-            (GTM convention — enables analytics when JS is disabled, if the
-            provider supports it).
+        head_renderer: Callable returning the HTML snippet rendered
+            inside ``<head>``. Takes (params, consent) and returns a
+            string. Optional — provider may have body-only scripts.
+        body_renderer: Callable returning the HTML snippet rendered at
+            the start of ``<body>`` (after opening tag). Optional.
+        noscript_renderer: Callable returning the HTML snippet rendered
+            inside ``<noscript>`` (GTM convention — enables analytics
+            when JS is disabled, if the provider supports it).
         supports_server_side: Whether this provider has a server-side sink
             implementation (Phase 5). Informational for audits.
         linked_subprocessor_name: Name of the matching subprocessor in
@@ -68,9 +78,9 @@ class ProviderDefinition:
     label: str
     consent_category: ConsentCategory
     csp: ProviderCSPRequirements
-    head_template: str | None = None
-    body_template: str | None = None
-    noscript_template: str | None = None
+    head_renderer: ProviderRenderer | None = None
+    body_renderer: ProviderRenderer | None = None
+    noscript_renderer: ProviderRenderer | None = None
     supports_server_side: bool = False
     linked_subprocessor_name: str | None = None
     required_params: tuple[str, ...] = ()

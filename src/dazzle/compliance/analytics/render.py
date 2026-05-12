@@ -16,8 +16,9 @@ Plausible is cookieless + consent-optional — we load it when analytics is
 granted. Future providers declare their own gating semantics via a
 `load_before_consent` flag on ProviderDefinition.
 
-Returns a list of dicts shaped for template iteration (see
-`site/includes/analytics/head_scripts.html`).
+Returns a list of dicts shaped for renderer dispatch — each entry
+includes the head/body/noscript Python renderer callables that emit
+the provider's script HTML.
 """
 
 from __future__ import annotations
@@ -76,8 +77,8 @@ def resolve_active_providers(
     """Return the list of provider render entries for this request.
 
     Each entry is a dict with:
-        name, consent_category, params, head_template, body_template,
-        noscript_template, definition.
+        name, consent_category, params, head_renderer, body_renderer,
+        noscript_renderer, definition.
 
     Args:
         analytics: The AppSpec's analytics block (None → no providers).
@@ -165,8 +166,8 @@ def _render_entry(
         "name": definition.name,
         "consent_category": definition.consent_category.value,
         "params": params,
-        "head_template": definition.head_template,
-        "body_template": definition.body_template,
-        "noscript_template": definition.noscript_template,
+        "head_renderer": definition.head_renderer,
+        "body_renderer": definition.body_renderer,
+        "noscript_renderer": definition.noscript_renderer,
         "definition": definition,
     }

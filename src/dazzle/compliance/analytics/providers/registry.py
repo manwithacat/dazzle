@@ -18,6 +18,11 @@ Unknown provider names are parser errors.
 
 from __future__ import annotations
 
+from dazzle.compliance.analytics.provider_html import (
+    render_gtm_head,
+    render_gtm_noscript,
+    render_plausible_head,
+)
 from dazzle.core.ir import ConsentCategory
 
 from .base import ProviderCSPRequirements, ProviderDefinition
@@ -51,8 +56,8 @@ FRAMEWORK_PROVIDERS: list[ProviderDefinition] = [
                 "https://*.google-analytics.com",
             ),
         ),
-        head_template="site/includes/analytics/gtm_head.html",
-        noscript_template="site/includes/analytics/gtm_noscript.html",
+        head_renderer=render_gtm_head,
+        noscript_renderer=render_gtm_noscript,
         supports_server_side=True,
         linked_subprocessor_name="google_tag_manager",
         required_params=("id",),
@@ -68,7 +73,7 @@ FRAMEWORK_PROVIDERS: list[ProviderDefinition] = [
             script_src=("https://plausible.io",),
             connect_src=("https://plausible.io",),
         ),
-        head_template="site/includes/analytics/plausible_head.html",
+        head_renderer=render_plausible_head,
         supports_server_side=True,
         linked_subprocessor_name="plausible",
         required_params=("domain",),

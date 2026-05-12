@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.91] - 2026-05-12
+
+### Removed
+
+- **3 Jinja analytics-provider templates** retired (Phase B of [#1044](https://github.com/manwithacat/dazzle/issues/1044)):
+  - `src/dazzle_ui/templates/site/includes/analytics/gtm_head.html`
+  - `src/dazzle_ui/templates/site/includes/analytics/gtm_noscript.html`
+  - `src/dazzle_ui/templates/site/includes/analytics/plausible_head.html`
+  - The `site/includes/analytics/` and `site/` directories were emptied and removed.
+
+### Added
+
+- **`src/dazzle/compliance/analytics/provider_html.py`** — pure-Python ports of the 3 analytics-provider snippets. `render_gtm_head(params, consent)`, `render_gtm_noscript(params, consent)`, and `render_plausible_head(params, consent)` each emit the same HTML the Jinja templates produced. Consent Mode v2 mapping (analytics/advertising/personalization → `gtag('consent','default',...)` payload) is preserved byte-for-byte.
+
+### Changed
+
+- **`ProviderDefinition` schema** swapped string-path fields for callable fields:
+  - `head_template: str | None` → `head_renderer: ProviderRenderer | None`
+  - `body_template: str | None` → `body_renderer: ProviderRenderer | None`
+  - `noscript_template: str | None` → `noscript_renderer: ProviderRenderer | None`
+  - New type alias `ProviderRenderer = Callable[[dict[str, Any], dict[str, Any]], str]`.
+- **`resolve_active_providers`** entry-dict keys updated correspondingly (`head_template` → `head_renderer`, etc.). The framework runtime never consumed the template-path fields directly — only test code asserted on them — so this is a contract change for **downstream provider authors** who registered custom `ProviderDefinition`s, not for runtime consumers.
+- **`tests/unit/test_analytics_provider_rendering.py::test_render_entry_contains_renderers`** (renamed from `test_render_entry_contains_templates`) asserts on the callable identity.
+
+### Breaking Change Notice
+
+Downstream code registering custom analytics `ProviderDefinition` instances with `head_template="..."` / `noscript_template="..."` Jinja paths will fail at construction time (`TypeError`). Migration: write a Python function `(params: dict, consent: dict) -> str` returning the HTML snippet and pass it as `head_renderer=...` / `noscript_renderer=...`. Function signature matches `ProviderRenderer` (new type alias in `providers/base.py`).
+
+### Progress on #1042 (drop jinja2 umbrella) + #1044 (template inventory)
+
+15 templates remain (was 18 pre-ship). Phase C work to drop `jinja2` fully:
+- 6 active fragment templates (`fragments/*` — `table_rows`, `table_pagination`, `inline_edit`, `form_errors`, `detail_fields`, `table_sentinel`) — backstop parity tests for the Python `*_renderer.py` ports
+- 4 macros (`macros/a11y`, `locale_switcher`, `region_wrapper`, `status_badge`) — referenced by fragment templates and `_typed_primitive.html`
+- 3 workspace templates (`workspace/_content.html`, `_card_picker.html`, `regions/_typed_primitive.html`) — metadata strings; `region.template` is set but never invoked by a Jinja render call
+- `base.html` + `layouts/app_shell.html` — vestigial extends anchors
+
+After those retire: delete `get_jinja_env()` + `render_fragment` from `template_renderer.py`, remove theme globals in `system_routes.py` / `combined_server.py` / `hot_reload.py`, drop `jinja2>=3.0` from `pyproject.toml`.
+
 ## [0.67.90] - 2026-05-12
 
 ### Removed

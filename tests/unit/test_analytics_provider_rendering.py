@@ -102,16 +102,23 @@ class TestResolveActiveProviders:
         assert len(active) == 1
         assert active[0]["name"] == "plausible"
 
-    def test_render_entry_contains_templates(self) -> None:
+    def test_render_entry_contains_renderers(self) -> None:
+        # Post-#1044: head_template/noscript_template (Jinja paths) are
+        # replaced by head_renderer/noscript_renderer Python callables.
+        from dazzle.compliance.analytics.provider_html import (
+            render_gtm_head,
+            render_gtm_noscript,
+        )
+
         spec = _spec(("gtm", {"id": "GTM-X"}))
         state = build_decided_state(
             analytics=True, advertising=True, personalization=True, functional=True
         )
         active = resolve_active_providers(spec, state)
         entry = active[0]
-        assert entry["head_template"] == "site/includes/analytics/gtm_head.html"
-        assert entry["noscript_template"] == "site/includes/analytics/gtm_noscript.html"
-        assert entry["body_template"] is None
+        assert entry["head_renderer"] is render_gtm_head
+        assert entry["noscript_renderer"] is render_gtm_noscript
+        assert entry["body_renderer"] is None
 
 
 class TestCSPHeaderInjection:
