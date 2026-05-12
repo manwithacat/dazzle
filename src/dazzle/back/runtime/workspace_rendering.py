@@ -8,7 +8,6 @@ Post-#1057 (v0.67.100): column-metadata builders moved to
 below so external callers keep working.
 """
 
-import datetime as _dt
 import logging
 from typing import Any
 
@@ -92,6 +91,7 @@ from dazzle.back.runtime.workspace_region_computes import (
 )
 from dazzle.back.runtime.workspace_region_fetch import fetch_region_items
 from dazzle.back.runtime.workspace_region_prelude import resolve_request_user_context
+from dazzle.back.runtime.workspace_region_render import RegionRenderInputs, render_region_html
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters  # noqa: F401
 from dazzle.back.runtime.workspace_user import _resolve_workspace_user  # noqa: F401
 
@@ -497,413 +497,44 @@ async def _workspace_region_handler(
     if display_upper == "TREE" and group_by and items:
         tree_items = compute_tree(items, group_by)
 
-    # Phase 4 region migration (v0.67.46): the typed-primitive path
-    # extends beyond the original #1015–#1018 special cases. Region
-    # kinds whose adapter builder is mature + whose data shape matches
-    # the legacy Jinja partial's expectations are listed here; they
-    # bypass the Jinja body in favour of FragmentRenderer output.
-    # Adding a new display value is one entry in this whitelist plus
-    # a matching `adapter_ctx[...]` population below.
-    typed_primitive_html: str = ""
-    _TYPED_REGION_DISPLAYS = (
-        "COHORT_STRIP",
-        "DAY_TIMELINE",
-        "TASK_INBOX",
-        "ENTITY_CARD",
-        "PROGRESS",  # Phase 4 region migration (v0.67.46)
-        # Phase 4 region migration batch (v0.67.47):
-        "DETAIL",
-        "TREE",
-        "DIAGRAM",
-        "SEARCH_BOX",
-        "TABBED_LIST",
-        # Phase 4 region migration batch (v0.67.48):
-        "GRID",
-        "HEATMAP",
-        "SPARKLINE",
-        "STATUS_LIST",
-        "PROFILE_CARD",
-        # Phase 4 region migration batch (v0.67.49):
-        "METRICS",
-        "FUNNEL_CHART",
-        "HISTOGRAM",
-        "PIVOT_TABLE",
-        "TIMELINE",
-        "KANBAN",
-        "PIPELINE_STEPS",
-        "QUEUE",
-        "ACTION_GRID",
-        "CONFIRM_ACTION_PANEL",
-        # Phase 4 region migration batch (v0.67.50): chart + specialty:
-        "BAR_CHART",
-        "LINE_CHART",
-        "AREA_CHART",
-        "BAR_TRACK",
-        "BULLET",
-        "BOX_PLOT",
-        "ACTIVITY_FEED",
-        # Phase 4 region migration (v0.67.51): foundational list-view
-        # — the richest ctx contract (sort/filter state, FilterBar,
-        # CSV export, date-range picker, RBAC propagation, bulk
-        # actions plumbing).
-        "LIST",
-        # Phase 4 region migration (v0.67.70): radar polar chart —
-        # `_build_radar` consumes (label, value) axis pairs from the
-        # legacy `bucketed_metrics` shape; the typed Radar primitive
-        # does its own polygon/polar math.
-        "RADAR",
+    # Phase 6: bundle all the computed shapes and hand off to the
+    # typed-primitive render tail. Returns the wrapped HTML body
+    # ready for HTMLResponse.
+    render_inputs = RegionRenderInputs(
+        items=items,
+        columns=columns,
+        total=total,
+        metrics=metrics,
+        bucketed_metrics=bucketed_metrics,
+        kanban_columns=kanban_columns,
+        heatmap_matrix=heatmap_matrix,
+        heatmap_col_values=heatmap_col_values,
+        heatmap_thresholds=heatmap_thresholds,
+        histogram_bins=histogram_bins,
+        box_plot_stats=box_plot_stats,
+        pivot_buckets=pivot_buckets,
+        pivot_dim_specs=pivot_dim_specs,
+        tree_items=tree_items,
+        source_tabs=source_tabs,
+        bar_track_rows=bar_track_rows,
+        bar_track_max=bar_track_max,
+        bullet_rows=bullet_rows,
+        bullet_max_value=bullet_max_value,
+        progress_stage_counts=progress_stage_counts,
+        progress_total=progress_total,
+        progress_complete_count=progress_complete_count,
+        progress_complete_pct=progress_complete_pct,
+        action_card_data=action_card_data,
+        pipeline_stage_data=pipeline_stage_data,
+        profile_card_data=profile_card_data,
+        confirm_state_value=confirm_state_value,
+        queue_transitions=queue_transitions,
+        queue_status_field=queue_status_field,
+        queue_api_endpoint=queue_api_endpoint,
+        overlay_series_data=overlay_series_data,
+        group_by=group_by,
+        filter_columns=filter_columns,
+        active_filters=active_filters,
     )
-    if display_upper in _TYPED_REGION_DISPLAYS:
-        from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
-        from dazzle.render.fragment import FragmentRenderer
-
-        # Adapter wants the lowercase display value (its _BUILDERS
-        # keys) on `region.display`, plus the IR config slots. Use
-        # the IR region directly — it carries the typed configs.
-        ir_region = ctx.ir_region or ctx.ctx_region
-        # Force a lowercase display value if the IR carries the
-        # uppercase enum (defensive — most callers already lowercase).
-        _display_obj = getattr(ir_region, "display", None)
-        _display_val = getattr(_display_obj, "value", None) or str(_display_obj or "")
-        if _display_val and _display_val.upper() == display_upper:
-            adapter_ctx: dict[str, Any] = {
-                "region_url": getattr(ctx.ctx_region, "endpoint", "") or "",
-            }
-            # Per-display data resolution. Each branch reads its own
-            # typed config off the IR region and shapes `items` (or
-            # other already-scoped data) into the dict shape the
-            # adapter consumes. Empty config = empty/unconfigured state
-            # in the primitive (handled by the adapter).
-            if display_upper == "COHORT_STRIP":
-                _cohort_cfg = getattr(ir_region, "cohort_strip_config", None)
-                if _cohort_cfg is not None:
-                    _active_lens_id = (
-                        request.query_params.get("lens")
-                        or getattr(_cohort_cfg, "default_lens", "")
-                        or (getattr(_cohort_cfg.lenses[0], "id", "") if _cohort_cfg.lenses else "")
-                    )
-                    adapter_ctx["cohort_active_lens"] = _active_lens_id
-                    adapter_ctx["cohort_cells"] = _build_cohort_cells(
-                        items=items,
-                        config=_cohort_cfg,
-                        active_lens_id=_active_lens_id,
-                    )
-            elif display_upper == "DAY_TIMELINE":
-                _day_cfg = getattr(ir_region, "day_timeline_config", None)
-                if _day_cfg is not None:
-                    adapter_ctx["day_timeline_slots"] = _build_day_timeline_slots(
-                        items=items,
-                        config=_day_cfg,
-                        now=_dt.datetime.now(_dt.UTC),
-                    )
-            elif display_upper == "TASK_INBOX":
-                _inbox_cfg = getattr(ir_region, "task_inbox_config", None)
-                if _inbox_cfg is not None:
-                    # #1015 (v0.67.16) — fan out per-source queries in
-                    # parallel, scope each against its own entity's
-                    # access spec, pass the items_per_source dict to
-                    # the helper. Falls through to single-source MVP
-                    # when the fan-out produces an empty dict (e.g.
-                    # repositories not yet wired in test contexts).
-                    _items_per_source = await _fetch_task_inbox_items_per_source(
-                        config=_inbox_cfg,
-                        ctx=ctx,
-                        request=request,
-                        auth_context=_auth_ctx_for_filters,
-                        user_id=_current_user_id,
-                    )
-                    inbox_items, inbox_chips = _build_task_inbox_payload(
-                        items=items,
-                        config=_inbox_cfg,
-                        items_per_source=_items_per_source,
-                    )
-                    adapter_ctx["task_inbox_items"] = inbox_items
-                    adapter_ctx["task_inbox_chips"] = inbox_chips
-            elif display_upper == "PROGRESS":
-                # Phase 4 region migration (v0.67.46): progress's
-                # adapter builder consumes pre-computed stage rollups
-                # from `progress_stage_counts` etc. already populated
-                # upstream in this function.
-                adapter_ctx["stage_counts"] = progress_stage_counts
-                adapter_ctx["progress_total"] = progress_total
-                adapter_ctx["complete_count"] = progress_complete_count
-                adapter_ctx["complete_pct"] = progress_complete_pct
-                # Legacy `items` fallback the adapter's _build_progress
-                # accepts when stage_counts is empty — pass through so
-                # the synthetic-stage path keeps working.
-                adapter_ctx["items"] = items
-            elif display_upper == "DETAIL":
-                # Phase 4 region migration batch (v0.67.47): detail's
-                # adapter consumes a single record + the region's
-                # declared field shape.
-                adapter_ctx["item"] = items[0] if items else None
-                adapter_ctx["fields"] = columns
-            elif display_upper == "TREE":
-                # _build_tree wants the pre-computed nested tree shape
-                # already produced upstream by `_build_subtree`.
-                adapter_ctx["tree_items"] = tree_items
-                adapter_ctx["items"] = items
-                adapter_ctx["display_key"] = next(
-                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
-                    columns[0]["key"] if columns else "name",
-                )
-            elif display_upper == "DIAGRAM":
-                # _build_diagram prefers `diagram_data` (Mermaid source)
-                # but falls back to nodes/edges from the IR region
-                # when not pre-computed.
-                adapter_ctx["nodes"] = getattr(ctx.ctx_region, "nodes", []) or []
-                adapter_ctx["edges"] = getattr(ctx.ctx_region, "edges", []) or []
-            elif display_upper == "SEARCH_BOX":
-                # _build_search_box wants source_entity + region name +
-                # optional placeholder/coaching message.
-                adapter_ctx["source_entity"] = getattr(ctx, "source", "") or ""
-                adapter_ctx["name"] = getattr(ctx.ctx_region, "name", "")
-                adapter_ctx["placeholder"] = getattr(ctx.ctx_region, "search_placeholder", "") or ""
-                adapter_ctx["coaching_message"] = (
-                    getattr(ctx.ctx_region, "coaching_message", "") or ""
-                )
-            elif display_upper == "TABBED_LIST":
-                # _build_tabbed_list prefers `source_tabs` (HTMX-driven
-                # lazy panels) which the runtime already computed
-                # upstream from the IR region's source declarations.
-                adapter_ctx["region_name"] = getattr(ctx.ctx_region, "name", "")
-                adapter_ctx["source_tabs"] = source_tabs
-            elif display_upper == "GRID":
-                # Phase 4 region migration batch (v0.67.48): grid renders
-                # card cells from the scoped item rows + the region's
-                # column declarations.
-                adapter_ctx["items"] = items
-                adapter_ctx["columns"] = columns
-                adapter_ctx["display_key"] = next(
-                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
-                    columns[0]["key"] if columns else "name",
-                )
-                adapter_ctx["entity_name"] = ctx.source
-            elif display_upper == "HEATMAP":
-                # Threshold-tinted matrix from pre-computed aggregates.
-                adapter_ctx["heatmap_matrix"] = heatmap_matrix
-                adapter_ctx["heatmap_col_values"] = heatmap_col_values
-                adapter_ctx["heatmap_thresholds"] = heatmap_thresholds
-                adapter_ctx["total"] = total
-                adapter_ctx["items"] = items
-            elif display_upper == "SPARKLINE":
-                # Sparkline is a TimeSeries view variant; its adapter
-                # builder reads `points` as a list of label/value
-                # tuples or dicts. `bucketed_metrics` is already that
-                # shape.
-                adapter_ctx["points"] = bucketed_metrics
-                adapter_ctx["chart_label"] = ctx.ctx_region.title
-            elif display_upper == "STATUS_LIST":
-                # Authored entries forwarded directly from the IR region
-                # — no per-request resolution needed (#3, v0.61.69).
-                adapter_ctx["status_entries"] = getattr(ctx.ctx_region, "status_entries", [])
-            elif display_upper == "PROFILE_CARD":
-                # Pre-assembled identity-panel dict — built upstream in
-                # this function around line 2424.
-                adapter_ctx["profile_card_data"] = profile_card_data
-            elif display_upper == "METRICS":
-                # Phase 4 region migration batch (v0.67.49): metrics
-                # tiles read pre-computed aggregate values + columns.
-                adapter_ctx["metrics"] = metrics
-                adapter_ctx["columns"] = columns
-            elif display_upper == "FUNNEL_CHART":
-                # Funnel uses kanban_columns for stage order +
-                # bucketed_metrics for per-stage counts.
-                adapter_ctx["kanban_columns"] = kanban_columns
-                adapter_ctx["bucketed_metrics"] = bucketed_metrics
-            elif display_upper == "HISTOGRAM":
-                # Pre-computed bins from `_compute_histogram_bins`.
-                adapter_ctx["histogram_bins"] = histogram_bins
-                adapter_ctx["reference_lines"] = getattr(ctx.ctx_region, "reference_lines", [])
-            elif display_upper == "PIVOT_TABLE":
-                # Multi-dim pivot: workspace-shape primitive consumes
-                # pivot_buckets + pivot_dim_specs directly.
-                adapter_ctx["pivot_buckets"] = pivot_buckets
-                adapter_ctx["pivot_dim_specs"] = pivot_dim_specs
-                adapter_ctx["bucketed_metrics"] = bucketed_metrics
-                adapter_ctx["columns"] = columns
-            elif display_upper == "TIMELINE":
-                # Timeline events from scoped items + column declarations.
-                adapter_ctx["items"] = items
-                adapter_ctx["columns"] = columns
-                adapter_ctx["display_key"] = next(
-                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
-                    columns[0]["key"] if columns else "name",
-                )
-            elif display_upper == "KANBAN":
-                # KanbanRegion workspace-shape: items + status order
-                # + columns + display_key.
-                adapter_ctx["items"] = items
-                adapter_ctx["columns"] = columns
-                adapter_ctx["kanban_columns"] = kanban_columns
-                adapter_ctx["display_key"] = next(
-                    (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
-                    columns[0]["key"] if columns else "name",
-                )
-                adapter_ctx["group_by"] = (
-                    group_by.field if isinstance(group_by, _BucketRef) else group_by
-                )
-            elif display_upper == "PIPELINE_STEPS":
-                # Pre-computed per-stage rollups from upstream.
-                adapter_ctx["pipeline_stage_data"] = pipeline_stage_data
-            elif display_upper == "QUEUE":
-                # Review queue: items + state-transition wiring + the
-                # filter-chrome contract _build_list shares.
-                adapter_ctx["items"] = items
-                adapter_ctx["columns"] = columns
-                adapter_ctx["total"] = total
-                adapter_ctx["metrics"] = metrics
-                adapter_ctx["queue_transitions"] = queue_transitions
-                adapter_ctx["queue_status_field"] = queue_status_field
-                adapter_ctx["queue_api_endpoint"] = queue_api_endpoint
-            elif display_upper == "ACTION_GRID":
-                # Pre-assembled CTA card list (legacy alias
-                # `action_card_data` is the actual upstream name).
-                adapter_ctx["action_cards"] = action_card_data
-            elif display_upper == "BAR_CHART":
-                # Phase 4 region migration batch (v0.67.50): bar_chart's
-                # adapter consumes `buckets` (list of label/count
-                # tuples or dicts). bucketed_metrics is already the
-                # right dict shape.
-                adapter_ctx["buckets"] = bucketed_metrics
-                adapter_ctx["chart_label"] = ctx.ctx_region.title
-            elif display_upper == "RADAR":
-                # Phase 4 region migration (v0.67.70): radar consumes
-                # `axes` (label, value) pairs. The legacy template iterated
-                # `bucketed_metrics` and read each entry's `label` + `value`
-                # — same source, simpler shape here.
-                radar_axes: list[tuple[str, float]] = []
-                for entry in bucketed_metrics or []:
-                    if not isinstance(entry, dict):
-                        continue
-                    label = str(entry.get("label", "") or "")
-                    raw_val = entry.get("value", 0) or 0
-                    try:
-                        val = float(raw_val)
-                    except (TypeError, ValueError):
-                        val = 0.0
-                    if label:
-                        radar_axes.append((label, val))
-                adapter_ctx["axes"] = radar_axes
-                adapter_ctx["chart_label"] = ctx.ctx_region.title
-            elif display_upper in ("LINE_CHART", "AREA_CHART"):
-                # TimeSeries variants: both read `points` from the
-                # same upstream `bucketed_metrics`. Reference lines /
-                # bands / overlay series flow through too.
-                adapter_ctx["points"] = bucketed_metrics
-                adapter_ctx["chart_label"] = ctx.ctx_region.title
-                adapter_ctx["reference_lines"] = getattr(ctx.ctx_region, "reference_lines", [])
-                adapter_ctx["reference_bands"] = getattr(ctx.ctx_region, "reference_bands", [])
-                adapter_ctx["overlay_series_data"] = overlay_series_data
-            elif display_upper == "BAR_TRACK":
-                # Pre-computed per-row {label, value, fill_pct,
-                # formatted_value} from `_compute_bar_track_rows`.
-                adapter_ctx["bar_track_rows"] = bar_track_rows
-                adapter_ctx["bar_track_max"] = bar_track_max
-            elif display_upper == "BULLET":
-                # Pre-computed per-row {label, actual, target} from
-                # `_compute_bullet_rows`.
-                adapter_ctx["bullet_rows"] = bullet_rows
-                adapter_ctx["bullet_max_value"] = bullet_max_value
-            elif display_upper == "BOX_PLOT":
-                # Per-group quartile stats from `_compute_box_plot_stats`.
-                adapter_ctx["box_plot_stats"] = box_plot_stats
-            elif display_upper == "ACTIVITY_FEED":
-                # Items carry actor/description/created_at — the adapter
-                # reads them directly off the row dicts.
-                adapter_ctx["items"] = items
-            elif display_upper == "LIST":
-                # Phase 4 region migration (v0.67.51): foundational
-                # list-view. Read all the chrome contract (filter bar,
-                # date range, CSV, sort headers) plus row data.
-                adapter_ctx["items"] = items
-                adapter_ctx["columns"] = columns
-                adapter_ctx["total"] = total
-                adapter_ctx["endpoint"] = ctx.ctx_region.endpoint
-                adapter_ctx["region_name"] = getattr(ctx.ctx_region, "name", "")
-                adapter_ctx["filter_columns"] = filter_columns
-                adapter_ctx["active_filters"] = active_filters
-                adapter_ctx["date_range"] = getattr(ctx.ctx_region, "date_range", False)
-                adapter_ctx["date_field"] = getattr(ctx.ctx_region, "date_field", "")
-                adapter_ctx["date_from"] = request.query_params.get("date_from", "")
-                adapter_ctx["date_to"] = request.query_params.get("date_to", "")
-                adapter_ctx["csv_export"] = getattr(ctx.ctx_region, "csv_export", False)
-                adapter_ctx["sort_field"] = sort or ""
-                adapter_ctx["sort_dir"] = dir
-                adapter_ctx["empty_message"] = (
-                    ctx.surface_empty_message or ctx.ctx_region.empty_message
-                )
-            elif display_upper == "CONFIRM_ACTION_PANEL":
-                # ConfirmGate full state machine — IR-level fields plus
-                # the request-time state value.
-                adapter_ctx["state_value"] = confirm_state_value
-                adapter_ctx["confirmations"] = getattr(ctx.ctx_region, "confirmations", [])
-                adapter_ctx["primary_action_url"] = getattr(
-                    ctx.ctx_region, "primary_action_url", ""
-                )
-                adapter_ctx["secondary_action_url"] = getattr(
-                    ctx.ctx_region, "secondary_action_url", ""
-                )
-                adapter_ctx["revoke_url"] = getattr(ctx.ctx_region, "revoke_url", "")
-                adapter_ctx["audit_enabled"] = getattr(ctx.ctx_region, "audit_enabled", False)
-            elif display_upper == "ENTITY_CARD":
-                _card_cfg = getattr(ir_region, "entity_card_config", None)
-                if _card_cfg is not None:
-                    # #1017 (v0.67.18) — per-section fan-out for modes
-                    # that pull from related entities (mini_bars, stamps,
-                    # thread_summary). Sections without their own
-                    # `source:` (halo / flags / quick_actions) skip the
-                    # fan-out and read from the scoped record directly.
-                    _rows_per_section = await _fetch_entity_card_section_rows(
-                        config=_card_cfg,
-                        ctx=ctx,
-                        request=request,
-                        auth_context=_auth_ctx_for_filters,
-                        user_id=_current_user_id,
-                    )
-                    adapter_ctx["entity_card_sections"] = _build_entity_card_sections(
-                        items=items,
-                        config=_card_cfg,
-                        rows_per_section=_rows_per_section,
-                    )
-                    if items:
-                        # Heading from the resolved single record's
-                        # `name` / `title` / `message` field — first
-                        # row scoped via the `scope_param` URL parameter
-                        # which the upstream filter machinery already
-                        # applied. Empty when no record matched.
-                        record = items[0]
-                        adapter_ctx["entity_card_record_label"] = str(
-                            record.get("name") or record.get("title") or record.get("message") or ""
-                        )
-            try:
-                surface = WorkspaceRegionAdapter().build(ir_region, adapter_ctx)
-                inner = getattr(getattr(surface, "body", None), "body", None)
-                fragment_to_render = inner if inner is not None else surface
-                typed_primitive_html = FragmentRenderer().render(fragment_to_render)
-            except Exception as exc:  # noqa: BLE001 — surface to operator log
-                logger.error(
-                    "typed-primitive render failed for %s region %s: %s",
-                    display_upper,
-                    getattr(ctx.ctx_region, "name", "?"),
-                    exc,
-                )
-                typed_primitive_html = (
-                    '<p class="dz-empty-dense" role="status">'
-                    "Typed primitive render failed; check server logs."
-                    "</p>"
-                )
-
-    # Phase 4 (v0.67.70): every region display now resolves to
-    # `_typed_primitive.html`. The Jinja fallback path is gone — the
-    # typed substrate is the only render path.
-    import html as _html_mod
-
-    region_name_attr = _html_mod.escape(ctx.ctx_region.name, quote=True)
-    html = (
-        f'<div data-dz-region data-dz-region-name="{region_name_attr}" '
-        f'id="region-{region_name_attr}">'
-        f"{typed_primitive_html or ''}"
-        f"</div>"
-    )
-    return HTMLResponse(content=html)
+    html_body = await render_region_html(request, ctx, user_ctx, render_inputs, sort, dir)
+    return HTMLResponse(content=html_body)

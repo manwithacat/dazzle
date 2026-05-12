@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.112] - 2026-05-13
+
+### Changed — workspace_rendering decomposition (cut 13 of N)
+
+- **Extracted Phase 6 of the region handler — typed-primitive render tail** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_render.py` (432 lines):
+  - `RegionRenderInputs` dataclass — 30 fields bundling every shape phases 1-5 produce (items, columns, totals, metrics, per-display pre-computes). Single typed contract between the orchestration handler and the render tail.
+  - `render_region_html()` async function — runs the 34-branch display dispatch, calls `WorkspaceRegionAdapter().build()` + `FragmentRenderer().render()`, wraps in `<div data-dz-region>` chrome.
+  - `_TYPED_REGION_DISPLAYS` whitelist (34 entries) — adding a new display is still one entry here plus one `elif` branch in `render_region_html`.
+
+- **`_workspace_region_handler`** trimmed from 909 → 541 lines (-368) — the largest single cut. The 410-line render tail is now a `RegionRenderInputs(...)` construction + a single `await render_region_html(...)` call.
+
+- **Per-family decomposition** (chart / list / card / dashboard / specialty sub-functions inside `workspace_region_render.py`) deferred to cut 14 — it's a pure rearrangement inside the new module, no behaviour change.
+
+### Cumulative
+
+After 13 cuts: `workspace_rendering.py` 4,483 → **541 lines (-3,942, -88%)**. The file is now ~8× smaller than its baseline. 15 sibling modules.
+
+The remaining 541 lines are the orchestration spine — Phase 2's `fetched = ...` plumbing, Phase 4's metrics/bucketed/overlay/pivot/histogram/box_plot setup, the columns + filters + attention + kanban calls, and the per-display compute calls — all glue between extracted helpers. No more 100+-line inline blocks.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,118 source files checked).
+
 ## [0.67.111] - 2026-05-13
 
 ### Changed — workspace_rendering decomposition (cut 12 of N)
