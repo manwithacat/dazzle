@@ -557,6 +557,10 @@ class FragmentRenderer:
             )
         parts.append(f"<title>{ctx.escape(p.title)}</title>")
         parts.append(f'<link rel="icon" href="{ctx.escape_attr(p.favicon)}" type="image/svg+xml">')
+        # Font preconnects come before stylesheets so the browser can
+        # open the TCP+TLS handshake while the rest of <head> parses.
+        for origin in p.font_preconnect:
+            parts.append(f'<link rel="preconnect" href="{ctx.escape_attr(origin)}" crossorigin>')
         parts.append(f"<style>@layer {ctx.escape(p.cascade_layer_order)};</style>")
         for css_url in p.css_links:
             parts.append(f'<link rel="stylesheet" href="{ctx.escape_attr(css_url)}">')

@@ -415,12 +415,20 @@ async def _experience_step_get(
             or ("/static/dist/dazzle.min.js",)
         )
         theme = getattr(app_state, "fragment_chrome_theme", None)
+        font_preconnect = tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ())
+        favicon = getattr(
+            app_state,
+            "fragment_chrome_favicon",
+            "/static/assets/dazzle-favicon.svg",
+        )
         html = dispatch_render_page(
             page_ctx,
             inner_html,
             css_links=css_links,
             js_scripts=js_scripts,
             theme=theme,
+            font_preconnect=font_preconnect,
+            favicon=favicon,
         )
         # auth_ctx + theme_css fields previously threaded into the
         # Jinja layout are dropped — the typed AppShell doesn't yet

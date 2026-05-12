@@ -527,14 +527,43 @@ class SystemRoutesSubsystem:
                     "version": _dz_version,
                 }
 
-        # Post-#1044 (v0.67.92): jinja2 dropped entirely. The block
-        # that previously walked the project's `templates/` dir +
-        # resolved theme inheritance + populated Jinja env globals
-        # (_use_cdn, _favicon, _app_theme*, _feedback_widget_enabled)
-        # was dead code — those globals fed the now-retired base.html
-        # and layouts/app_shell.html templates. Theme + CDN + feedback
-        # toggles must come back via typed AppShell primitive config
-        # in a follow-up; tracked as part of the post-Phase-C cleanup.
+        # Theme + chrome resolution (#1042 follow-up, v0.67.93). The
+        # typed-Page primitive substrate consumes the same theme /
+        # favicon / feedback-widget config the legacy Jinja env did,
+        # but via `AppChrome` stashed on app.state. Page-render call
+        # sites read `app.state.fragment_chrome` and thread the
+        # css_links / js_scripts / theme / font_preconnect kwargs into
+        # `dispatch_render_page`.
+        try:
+            from pathlib import Path
+
+            from dazzle_ui.runtime.app_chrome import resolve_app_chrome
+
+            mf = None
+            if ctx.project_root:
+                manifest_path = Path(ctx.project_root) / "dazzle.toml"
+                if manifest_path.exists():
+                    from dazzle.core.manifest import load_manifest
+
+                    mf = load_manifest(manifest_path)
+
+            chrome = resolve_app_chrome(
+                appspec,
+                project_root=Path(ctx.project_root) if ctx.project_root else None,
+                manifest=mf,
+            )
+            ctx.app.state.fragment_chrome = chrome
+            # Back-compat slots — existing readers (page_routes,
+            # experience_routes, route_generator, exception_handlers,
+            # site_routes) read these direct attributes via getattr().
+            ctx.app.state.fragment_chrome_css_links = chrome.css_links
+            ctx.app.state.fragment_chrome_js_scripts = chrome.js_scripts
+            ctx.app.state.fragment_chrome_theme = chrome.theme
+            ctx.app.state.fragment_chrome_font_preconnect = chrome.font_preconnect
+            ctx.app.state.fragment_chrome_favicon = chrome.favicon
+            ctx.app.state.fragment_chrome_feedback_widget_enabled = chrome.feedback_widget_enabled
+        except ImportError:
+            pass  # dazzle_ui not installed (CLI-only context)
 
         # Mount static files from project dir + framework dir
         try:

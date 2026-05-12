@@ -292,6 +292,12 @@ class Page:
     # the `meta` field emits the former, `og_meta` the latter. Twitter
     # card tags use `name="twitter:*"` so they still go in `meta`.
     og_meta: tuple[tuple[str, str], ...] = ()
+    # Post-#1042 theme-support restoration: external origins emitted
+    # as `<link rel="preconnect" href="...">` in `<head>`. Themes that
+    # ship custom fonts (Inter, Geist, JetBrains Mono…) declare the
+    # font CDN host here so the browser opens the TCP+TLS handshake
+    # before the stylesheet itself loads.
+    font_preconnect: tuple[str, ...] = ()
     cascade_layer_order: str = "base, framework, app, overrides"
     toast_container: bool = True
     modal_slot: bool = True

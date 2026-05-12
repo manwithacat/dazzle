@@ -2597,12 +2597,20 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
             or ("/static/dist/dazzle.min.js",)
         )
         theme = getattr(app_state, "fragment_chrome_theme", None)
+        font_preconnect = tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ())
+        favicon = getattr(
+            app_state,
+            "fragment_chrome_favicon",
+            "/static/assets/dazzle-favicon.svg",
+        )
         full_html = dispatch_render_page(
             page_ctx,
             fragment_html,
             css_links=css_links,
             js_scripts=js_scripts,
             theme=theme,
+            font_preconnect=font_preconnect,
+            favicon=favicon,
             chrome=False,
         )
         return HTMLResponse(content=full_html)

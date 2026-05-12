@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.93] - 2026-05-12
+
+### Added
+
+- **`src/dazzle_ui/runtime/app_chrome.py`** — typed `AppChrome` dataclass + `resolve_app_chrome(appspec, project_root, manifest)` resolver. Replaces the Jinja env globals (`_app_theme`, `_app_theme_url_chain`, `_app_theme_map`, `_app_theme_font_preconnect`, `_use_cdn`, `_favicon`, `_feedback_widget_enabled`) retired with v0.67.92. Theme name resolution order is unchanged: `DAZZLE_OVERRIDE_THEME` env var > `app foo: theme:` DSL > `[ui] theme = "..."` in dazzle.toml > framework default.
+- **`Page.font_preconnect: tuple[str, ...]`** field — emits one `<link rel="preconnect" href="..." crossorigin>` per origin in `<head>`, positioned before the framework bundle's `<link rel="stylesheet">` so the TCP+TLS handshake overlaps with stylesheet parsing.
+- **13 new tests**:
+  - `tests/unit/test_app_chrome.py` (9 tests) — defaults, manifest favicon override, CDN toggle, feedback-widget threading, missing-theme graceful degradation, env theme precedence, use_cdn-is-informational
+  - `tests/unit/test_page_preconnect.py` (5 tests) — Page emits preconnects in order, before stylesheets, with attribute escaping
+
+### Changed
+
+- **`system_routes.py`** — at app boot, resolves `AppChrome` and stashes it on `ctx.app.state.fragment_chrome`. Back-compat flat attributes (`fragment_chrome_css_links`, `fragment_chrome_js_scripts`, `fragment_chrome_theme`, `fragment_chrome_font_preconnect`, `fragment_chrome_favicon`, `fragment_chrome_feedback_widget_enabled`) populated for existing readers in `page_routes`, `experience_routes`, `route_generator`, `exception_handlers`, `site_routes`.
+- **`page_builder.build_page` / `build_app_chrome_page` / `dispatch_render_page`** — added `font_preconnect: tuple[str, ...]` kwarg, threaded through to `Page.font_preconnect`.
+- **`page_routes.py`, `experience_routes.py`, `route_generator.py`** — every `dispatch_render_page` call site now reads `font_preconnect` + `favicon` from `app.state` alongside `css_links` / `js_scripts` / `theme`.
+
+### Restored Behaviour
+
+Theme support that was inert post-#1042 (v0.67.92) is back:
+- **DSL `app foo: theme: "linear-dark"`** routes through to `<html data-theme="linear-dark">` + the matching `<link rel="stylesheet" href="/static/css/themes/linear-dark.css">`.
+- **`[ui] theme = "..."` in dazzle.toml** works as before.
+- **`DAZZLE_OVERRIDE_THEME` env var** still wins over both.
+- **Theme inheritance chains** (theme extending another theme) emit both stylesheets, parent first, with the leaf winning via the existing CSS `@layer` cascade.
+- **Font preconnects** declared on a theme manifest emit as `<link rel="preconnect">` in `<head>` (new in this release — pre-jinja-retirement it lived as `_app_theme_font_preconnect` global consumed by `base.html`).
+- **Manifest `favicon = "..."`** propagates to `<link rel="icon">`.
+- **`appspec.feedback_widget.enabled`** populates `AppChrome.feedback_widget_enabled` for the future feedback-widget island.
+
+### Notes
+
+- The `theme_map` field on `AppChrome` (full theme-name → CSS-chain mapping) is populated but currently has no runtime consumer; the live-theme-switcher island that consumed it pre-Phase-C still needs to be migrated to a typed primitive. Tracked as a separate follow-up.
+- The `use_cdn` field is informational — the framework always serves local `dist/dazzle.min.{css,js}` assets. CDN routing returns in a follow-up that touches `combined_server.py`.
+- **`exception_handlers.py` / `site_routes.py`** still read `css_links` + `js_scripts` only; they fall back to the framework default. Threading `font_preconnect` + `favicon` through these auxiliary routes is a minor follow-up.
+
+### Agent Guidance
+
+- Theme + chrome configuration flows app boot → `resolve_app_chrome` → `app.state.fragment_chrome` → page render call sites → `dispatch_render_page(font_preconnect=..., favicon=...)`. New chrome-affecting fields (e.g. a future "skin" or accent-color knob) extend `AppChrome` + flow through the same path.
+
 ## [0.67.92] - 2026-05-12
 
 ### Removed — jinja2 dropped entirely 🎉

@@ -43,6 +43,7 @@ def build_page(
     favicon: str = "/static/assets/dazzle-favicon.svg",
     extra_meta: tuple[tuple[str, str], ...] = (),
     og_meta: tuple[tuple[str, str], ...] = (),
+    font_preconnect: tuple[str, ...] = (),
 ) -> Page:
     """Build a Page primitive from PageContext + already-rendered inner HTML.
 
@@ -69,6 +70,7 @@ def build_page(
         favicon=favicon,
         meta=extra_meta,
         og_meta=og_meta,
+        font_preconnect=font_preconnect,
     )
 
 
@@ -156,6 +158,7 @@ def build_app_chrome_page(
     favicon: str = "/static/assets/dazzle-favicon.svg",
     extra_meta: tuple[tuple[str, str], ...] = (),
     og_meta: tuple[tuple[str, str], ...] = (),
+    font_preconnect: tuple[str, ...] = (),
 ) -> Page:
     """Build a fully-chromed Page — `Page → AppShell → Sidebar/Topbar
     + body` — from PageContext's nav data.
@@ -193,6 +196,7 @@ def build_app_chrome_page(
         favicon=favicon,
         meta=extra_meta,
         og_meta=og_meta,
+        font_preconnect=font_preconnect,
     )
 
 
@@ -206,6 +210,7 @@ def dispatch_render_page(
     favicon: str = "/static/assets/dazzle-favicon.svg",
     extra_meta: tuple[tuple[str, str], ...] = (),
     og_meta: tuple[tuple[str, str], ...] = (),
+    font_preconnect: tuple[str, ...] = (),
     chrome: bool = True,
 ) -> str:
     """Build a Page and render it to HTML — convenience wrapper.
@@ -231,5 +236,6 @@ def dispatch_render_page(
         favicon=favicon,
         extra_meta=extra_meta,
         og_meta=og_meta,
+        font_preconnect=font_preconnect,
     )
     return FragmentRenderer().render(page)

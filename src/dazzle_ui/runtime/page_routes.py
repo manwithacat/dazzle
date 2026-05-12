@@ -1368,12 +1368,20 @@ def _render_response(prc: _PageRequestContext) -> Response:
             or ("/static/dist/dazzle.min.js",)
         )
         theme = getattr(app_state, "fragment_chrome_theme", None)
+        font_preconnect = tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ())
+        favicon = getattr(
+            app_state,
+            "fragment_chrome_favicon",
+            "/static/assets/dazzle-favicon.svg",
+        )
         html = dispatch_render_page(
             render_ctx,
             rendered_inner,
             css_links=css_links,
             js_scripts=js_scripts,
             theme=theme,
+            font_preconnect=font_preconnect,
+            favicon=favicon,
         )
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
@@ -1724,12 +1732,20 @@ async def _workspace_handler(
         getattr(app_state, "fragment_chrome_js_scripts", None) or ("/static/dist/dazzle.min.js",)
     )
     theme = getattr(app_state, "fragment_chrome_theme", None)
+    font_preconnect = tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ())
+    favicon = getattr(
+        app_state,
+        "fragment_chrome_favicon",
+        "/static/assets/dazzle-favicon.svg",
+    )
     html = dispatch_render_page(
         page_ctx,
         workspace_inner,
         css_links=css_links,
         js_scripts=js_scripts,
         theme=theme,
+        font_preconnect=font_preconnect,
+        favicon=favicon,
     )
     return HTMLResponse(content=html)  # nosemgrep
 
