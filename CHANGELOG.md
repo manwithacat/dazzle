@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.101] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 2 of N)
+
+- **Extracted 5 entity-card section body renderers to `src/dazzle/back/runtime/workspace_card_bodies.py`** — progress on [#1057](https://github.com/manwithacat/dazzle/issues/1057). The four `entity_card` display-mode body builders (`_render_thread_summary_body`, `_render_stamps_body`, `_render_mini_bars_body`, `_render_quick_actions_body`) and their shared HTML escape helper (`_dazzle_html_escape`) are pure string composers — no I/O, no DB, no IR access. They take resolved row dicts in and return raw HTML strings out, dispatched to from `_build_entity_card_sections`.
+
+- **`workspace_rendering.py`** trimmed from 4,292 → 4,004 lines (-288). The 5 functions are imported back into the module so the dispatcher in `_build_entity_card_sections` continues to work. No external call sites — zero re-exports needed for back-compat, this cluster was fully encapsulated.
+
+- **New module is 314 lines**: 18-line module docstring + the 5 functions, no side effects, no IR dependency.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,106 source files checked, +1 from new module).
+
 ## [0.67.100] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 1 of N)
