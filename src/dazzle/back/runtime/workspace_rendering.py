@@ -90,6 +90,7 @@ from dazzle.back.runtime.workspace_region_computes import (
     compute_queue,
     compute_tree,
 )
+from dazzle.back.runtime.workspace_region_prelude import resolve_request_user_context
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters  # noqa: F401
 from dazzle.back.runtime.workspace_user import _resolve_workspace_user  # noqa: F401
 
@@ -110,97 +111,16 @@ async def _workspace_region_handler(
     Extracted from DazzleBackendApp._init_workspace_routes to reduce closure
     complexity.  All context is bundled in a ``WorkspaceRegionContext``.
     """
-    from fastapi import HTTPException
     from fastapi.responses import HTMLResponse
 
-    # Enforce authentication (#145)
-    if ctx.require_auth:
-        auth_ctx = None
-        if ctx.auth_middleware:
-            try:
-                auth_ctx = ctx.auth_middleware.get_auth_context(request)
-            except Exception:
-                logger.debug("Failed to get auth context for region", exc_info=True)
-        if not (auth_ctx and auth_ctx.is_authenticated):
-            raise HTTPException(status_code=401, detail="Authentication required")
-
-        # RBAC: enforce workspace persona restrictions on region data.
-        # Roles use "role_" prefix; persona IDs don't.
-        if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
-            is_super = auth_ctx.user and auth_ctx.user.is_superuser
-            normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
-            if not is_super and not any(
-                r in ctx.ws_access.allow_personas for r in normalized_roles
-            ):
-                raise HTTPException(status_code=403, detail="Workspace access denied")
-
-    # Resolve current user ID for filter expressions (e.g. reviewer == current_user)
-    # Auth user IDs and User entity IDs are separate; resolve via email match (#480).
-    # Always attempt resolution when middleware is available, even in test mode
-    # where require_auth is False — the user may still be authenticated (#483).
-    _current_user_id, _current_user_entity = await _resolve_workspace_user(
-        request, ctx.auth_middleware, ctx.repositories, ctx.user_entity_name
-    )
-
-    # Build auth_context for _extract_condition_filters (shared with entity scope path)
-    _auth_ctx_for_filters: Any = None
-    if ctx.auth_middleware:
-        try:
-            _auth_ctx_for_filters = ctx.auth_middleware.get_auth_context(request)
-            # Ensure preferences contain entity attributes so current_user.<attr> resolves
-            if _auth_ctx_for_filters and _current_user_entity:
-                prefs = getattr(_auth_ctx_for_filters, "preferences", None)
-                if prefs is None:
-                    _auth_ctx_for_filters.preferences = {}
-                    prefs = _auth_ctx_for_filters.preferences
-                from uuid import UUID as _UUID
-
-                for k, v in _current_user_entity.items():
-                    if k not in prefs and v is not None:
-                        prefs[k] = str(v) if isinstance(v, _UUID) else v
-                if _current_user_id and "entity_id" not in prefs:
-                    prefs["entity_id"] = _current_user_id
-        except Exception:
-            logger.debug("Failed to get auth context for filter resolution", exc_info=True)
-
-    # Build legacy filter context for attention signals and grant evaluation
-    _filter_context: dict[str, Any] = {}
-    if _current_user_id:
-        _filter_context["current_user_id"] = _current_user_id
-    if _current_user_entity:
-        _filter_context["current_user_entity"] = _current_user_entity
-    # Context selector value (v0.38.0): from query param or user preferences
-    _context_id = request.query_params.get("context_id")
-    if _context_id:
-        _filter_context["current_context"] = _context_id
-
-    # Pre-fetch active grants for has_grant() condition evaluation (v0.42.0)
-    if _current_user_id:
-        try:
-            from .grant_store import GrantStore
-
-            # Get DB connection from any available repository
-            _db_mgr = None
-            if ctx.repositories:
-                for _r in ctx.repositories.values():
-                    _db_mgr = getattr(_r, "db", None)
-                    if _db_mgr:
-                        break
-            if _db_mgr:
-                _grant_conn = _db_mgr.get_persistent_connection()
-                _grant_store = GrantStore(_grant_conn)
-                from uuid import UUID as _UUID
-
-                _active_grants = _grant_store.list_grants(
-                    principal_id=_UUID(_current_user_id), status="active"
-                )
-                _filter_context["active_grants"] = _active_grants
-            else:
-                _filter_context["active_grants"] = []
-        except Exception:
-            # Grant tables may not exist if no grant_schemas defined
-            logger.debug("Could not pre-fetch grants", exc_info=True)
-            _filter_context["active_grants"] = []
+    # Phase 1: auth gate + identity resolution + filter-context build.
+    # Raises HTTPException(401/403) if the request is unauthorised.
+    user_ctx = await resolve_request_user_context(request, ctx)
+    _current_user_id = user_ctx.user_id
+    _current_user_entity = user_ctx.user_entity
+    _auth_ctx_for_filters = user_ctx.auth_ctx_for_filters
+    _filter_context = user_ctx.filter_context
+    _context_id = _filter_context.get("current_context")
 
     # Query the source entity
     items: list[dict[str, Any]] = []

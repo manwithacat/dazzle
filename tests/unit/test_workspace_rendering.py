@@ -985,14 +985,20 @@ class TestCurrentUserTestMode:
         Previously the guard was ``if ctx.require_auth and ctx.auth_middleware``,
         which skipped user resolution entirely in test mode.  After #483 the guard
         is just ``if ctx.auth_middleware``.
+
+        v0.67.110 (#1057 cut 11): the guard moved to
+        ``workspace_region_prelude.resolve_request_user_context``. Same
+        invariant, new home.
         """
         import ast
         import inspect
         import textwrap
 
-        from dazzle.back.runtime.workspace_rendering import _workspace_region_handler
+        from dazzle.back.runtime.workspace_region_prelude import (
+            resolve_request_user_context,
+        )
 
-        source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+        source = textwrap.dedent(inspect.getsource(resolve_request_user_context))
         tree = ast.parse(source)
 
         # Walk the AST looking for `if ctx.auth_middleware:` without `ctx.require_auth`

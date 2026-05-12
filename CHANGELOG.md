@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.110] - 2026-05-13
+
+### Changed — workspace_rendering decomposition (cut 11 of N)
+
+- **Extracted Phase 1 of the region handler — auth + identity prelude** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_prelude.py` (159 lines):
+  - `RequestUserContext` dataclass — phase 1 output (user_id, user_entity, auth_ctx_for_filters, filter_context)
+  - `resolve_request_user_context()` — async function that runs auth gate → user resolution → filter-context build → grant pre-fetch, returning the dataclass
+
+- **`_workspace_region_handler`** trimmed from 1,124 → 1,044 lines (-80). The 88-line prelude block at the top of the dispatcher is now a single 6-line call: `user_ctx = await resolve_request_user_context(request, ctx)` plus local-var unpacking for back-compat with the rest of the function.
+
+- **Two source-pin tests rebased** to the new home:
+  - `test_workspace_rendering_grants.py`: greps `workspace_region_prelude` for the grant-store / active_grants invariant.
+  - `test_workspace_rendering.py::TestCurrentUserTestMode`: AST-walks `resolve_request_user_context` for the #483 guard shape (`if ctx.auth_middleware:` without `require_auth`).
+
+### Agent Guidance
+
+- New per-phase pattern for the region handler: each phase returns a small dataclass (`RequestUserContext`, soon `RegionItemsResult`, …) instead of multi-return tuples. Dataclasses give named access at call sites, which makes downstream `result.scope_denied` style reads grep-friendly — agents auditing the pipeline don't need to chase tuple-slot numbers back to the function signature.
+
+### Cumulative
+
+After 11 cuts: `workspace_rendering.py` 4,483 → 1,044 lines (-3,439, **-77%**). 13 sibling modules totalling 4,102 lines.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,116 source files checked).
+
 ## [0.67.109] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 10 of N)
