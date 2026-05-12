@@ -49,18 +49,6 @@ class FieldSourceContext(BaseModel):
     autofill: dict[str, str] = Field(default_factory=dict)  # result_field → form_field_name
 
 
-class FragmentContext(BaseModel):
-    """Context for rendering a composable HTMX fragment."""
-
-    fragment_id: str  # Unique DOM id, also the HTMX target
-    template: str  # e.g. "fragments/search_select.html"
-    endpoint: str  # URL that returns this fragment's HTML
-    trigger: str = "load"  # HTMX trigger
-    swap: str = "innerHTML"  # HTMX swap strategy
-    children: list[FragmentContext] = []
-    params: dict[str, Any] = Field(default_factory=dict)
-
-
 class FieldContext(BaseModel):
     """Field definition for form rendering."""
 
@@ -624,30 +612,3 @@ class SiteAuthContext(BaseModel):
     # in `dazzle_back.runtime.error_views`.
 
     message: str = ""
-
-
-def resolve_fragment_for_field(field: FieldContext) -> FragmentContext | None:
-    """If *field* has a ``source``, wrap it into a FragmentContext for search_select.
-
-    Returns:
-        FragmentContext pointing to the ``search_select`` fragment template,
-        or None when the field has no dynamic source.
-    """
-    if not field.source:
-        return None
-
-    return FragmentContext(
-        fragment_id=f"fragment-{field.name}",
-        template="fragments/search_select.html",
-        endpoint=field.source.endpoint,
-        trigger="load",
-        swap="innerHTML",
-        params={
-            "field_name": field.name,
-            "field_label": field.label,
-            "field_placeholder": field.placeholder or f"Search {field.label}...",
-            "source_endpoint": field.source.endpoint,
-            "debounce_ms": field.source.debounce_ms,
-            "min_chars": field.source.min_chars,
-        },
-    )

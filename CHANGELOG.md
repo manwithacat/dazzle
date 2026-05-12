@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.80] - 2026-05-12
+
+### Removed
+
+- **4 stale `FRAGMENT_REGISTRY` entries** — closes [#1043](https://github.com/manwithacat/dazzle/issues/1043). `search_select`, `search_input`, `bulk_actions`, and `status_badge` each pointed at `fragments/<name>.html` templates that were deleted by the v0.67.62–v0.67.76 typed-renderer sweep. The `search_select` rendering is now in `form_renderer._render_search_select`, `search_input` and `bulk_actions` in `table_renderer`, and `status_badge` in `detail_renderer` (mirroring `macros/status_badge.html`). The orphan registry entries misled tooling and agents into discovering fragments they could not render.
+- **`get_template_for_source()` helper** — dead code in `fragment_registry.py` whose only purpose was returning the `search_select` template path.
+- **`FragmentContext` Pydantic model + `resolve_fragment_for_field()` helper** — dead code in `template_context.py`, zero callers in src or tests.
+
+### Changed
+
+- **`PARKING_LOT_FRAGMENTS` expanded** — `search_results` and `select_result` moved from the "active" tier into parking-lot. Both templates remain on disk and tested in isolation, but their previous live caller (`search_select`) is gone; they ship for downstream HTMX consumers to opt into.
+
+### Added
+
+- **`test_every_template_resolves_to_disk`** in `test_fragment_registry.py` — gate that walks every `FRAGMENT_REGISTRY` entry and asserts the `template` path resolves to a real file. Prevents the v0.67.62 regression class.
+
+### Agent Guidance
+
+- When retiring a Jinja fragment to a typed Python renderer, also remove its `FRAGMENT_REGISTRY` entry (or move to `PARKING_LOT_FRAGMENTS` if the template is kept on disk for adopter opt-in). The drift test now fails the build if the entry's template path no longer exists.
+
 ## [0.67.79] - 2026-05-12
 
 ### Changed

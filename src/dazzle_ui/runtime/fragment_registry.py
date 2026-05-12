@@ -23,20 +23,6 @@ Fragments fall into two categories:
 from typing import Any
 
 FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
-    "search_select": {
-        "template": "fragments/search_select.html",
-        "params": [
-            "field.name",
-            "field.label",
-            "field.placeholder",
-            "field.source.endpoint",
-            "field.source.debounce_ms",
-            "field.source.min_chars",
-        ],
-        "emits": ["itemSelected"],
-        "listens": [],
-        "description": "Debounced search input with dropdown selection and autofill.",
-    },
     "search_results": {
         "template": "fragments/search_results.html",
         "params": [
@@ -52,13 +38,6 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "emits": [],
         "listens": [],
         "description": "Result items returned by the search endpoint.",
-    },
-    "search_input": {
-        "template": "fragments/search_input.html",
-        "params": ["endpoint", "target", "placeholder"],
-        "emits": [],
-        "listens": [],
-        "description": "Debounced search text input with loading indicator and clear button.",
     },
     "table_rows": {
         "template": "fragments/table_rows.html",
@@ -86,20 +65,6 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "emits": [],
         "listens": [],
         "description": "Click-to-edit field with inline event handlers and HTMX save.",
-    },
-    "bulk_actions": {
-        "template": "fragments/bulk_actions.html",
-        "params": ["entity_name", "actions_endpoint"],
-        "emits": [],
-        "listens": ["selected"],
-        "description": "Toolbar for bulk update/delete on selected table rows.",
-    },
-    "status_badge": {
-        "template": "fragments/status_badge.html",
-        "params": ["value"],
-        "emits": [],
-        "listens": [],
-        "description": "Coloured badge for status values with automatic formatting.",
     },
     "form_errors": {
         "template": "fragments/form_errors.html",
@@ -230,20 +195,6 @@ def get_fragment_info(name: str) -> dict[str, Any] | None:
     return FRAGMENT_REGISTRY.get(name)
 
 
-def get_template_for_source(source: Any) -> str:
-    """Return the fragment template name for a field with a dynamic source.
-
-    Args:
-        source: A ``FieldSourceContext`` (or any object with an ``endpoint`` attr).
-
-    Returns:
-        Template name string, e.g. ``"fragments/search_select.html"``.
-    """
-    # Fields with an external data source always render as search_select
-    result: str = FRAGMENT_REGISTRY["search_select"]["template"]
-    return result
-
-
 # The 12 canonical UI primitives shipped by the framework for downstream
 # consumers to opt into — they have a template + registry entry but no
 # runtime caller wires them in by default. Kept explicit so the coverage
@@ -260,6 +211,8 @@ PARKING_LOT_FRAGMENTS: frozenset[str] = frozenset(
         "command_palette",
         "context_menu",
         "popover",
+        "search_results",
+        "select_result",
         "skeleton_patterns",
         "slide_over",
         "steps_indicator",
