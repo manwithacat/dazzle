@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.109] - 2026-05-12
+
+### Changed — workspace_rendering decomposition (cut 10 of N)
+
+- **Extracted 4 cross-branch helpers** from the dispatcher to `workspace_region_computes.py` — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). These run for every region (not display-mode-specific) but were inline boilerplate inside `_workspace_region_handler`:
+  - `compute_columns_for_persona`: filter precomputed columns by ``visible_condition`` (#872)
+  - `compute_filter_columns_and_active`: build (filter_columns, active_filters) from request query params
+  - `apply_attention_signals`: annotate items with the highest-severity matching signal
+  - `compute_kanban_columns`: resolve enum/state-machine bucket list for KANBAN / BAR_CHART / FUNNEL_CHART
+
+- **`workspace_rendering.py`** trimmed from 1,180 → 1,124 lines (-56). Smaller cut than 8/9 because these blocks were thinner; the value is what they leave behind — pure functions that are unit-testable, not buried in a 1,455-line god function.
+
+### Cumulative
+
+After 10 cuts: `workspace_rendering.py` 4,483 → 1,124 lines (-3,359, **-75%**). `workspace_region_computes.py` now hosts 14 pure data-shape helpers (10 per-display + 4 cross-branch).
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,115 source files checked).
+
 ## [0.67.108] - 2026-05-12
 
 ### Changed — workspace_rendering decomposition (cut 9 of N)

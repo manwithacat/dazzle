@@ -595,3 +595,123 @@ async def compute_pipeline_steps(
             }
         )
     return out
+
+
+def compute_columns_for_persona(
+    precomputed_columns: list[dict[str, Any]],
+    user_roles: list[str],
+) -> list[dict[str, Any]]:
+    """Filter precomputed columns by their ``visible_condition`` (#872).
+
+    Builds a fresh list — never mutates the shared one. Columns
+    without a visible_condition pass through. Roles are stripped
+    of any ``role_`` prefix to match how the condition author
+    writes them.
+    """
+    if not any(c.get("visible_condition") for c in precomputed_columns):
+        return precomputed_columns
+
+    from dazzle.ui.utils.condition_eval import evaluate_condition as _eval_vis
+
+    role_ctx = {"user_roles": [r.removeprefix("role_") for r in user_roles]}
+    return [
+        c
+        for c in precomputed_columns
+        if not c.get("visible_condition") or _eval_vis(c["visible_condition"], {}, role_ctx)
+    ]
+
+
+def compute_filter_columns_and_active(
+    columns: list[dict[str, Any]],
+    query_params: Any,
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Build (filter_columns, active_filters) from column metadata + request.
+
+    Filter columns are the subset of resolved columns marked
+    ``filterable``. Active filters are the ``filter_<key>=<value>``
+    query-param pairs.
+    """
+    filter_columns = [
+        {
+            "key": c["key"],
+            "label": c["label"],
+            "options": c.get("filter_options", []),
+        }
+        for c in columns
+        if c.get("filterable")
+    ]
+    active_filters: dict[str, str] = {
+        k[7:]: v for k, v in query_params.items() if k.startswith("filter_") and v
+    }
+    return filter_columns, active_filters
+
+
+def apply_attention_signals(
+    items: list[dict[str, Any]],
+    attention_signals: list[Any],
+    filter_context: dict[str, Any],
+) -> None:
+    """Annotate items with the highest-severity attention signal that
+    matches each one (mutates items in place).
+
+    Each item gets an ``_attention`` key with ``{level, message}`` for
+    the most severe signal whose condition evaluates true. Severity
+    order: critical > warning > notice > info.
+    """
+    if not (attention_signals and items):
+        return
+
+    import logging
+
+    from dazzle.back.runtime.condition_evaluator import evaluate_condition as _eval_cond
+
+    logger = logging.getLogger(__name__)
+    severity_order = {"critical": 0, "warning": 1, "notice": 2, "info": 3}
+
+    for item in items:
+        best: dict[str, str] | None = None
+        best_sev = 999
+        for sig in attention_signals:
+            try:
+                cond_dict = sig.condition.model_dump(exclude_none=True)
+                if _eval_cond(cond_dict, item, filter_context):
+                    lvl = sig.level.value if hasattr(sig.level, "value") else str(sig.level)
+                    sev = severity_order.get(lvl, 99)
+                    if sev < best_sev:
+                        best_sev = sev
+                        best = {"level": lvl, "message": sig.message}
+            except Exception:
+                logger.debug("Failed to evaluate attention signal", exc_info=True)
+        if best:
+            item["_attention"] = best
+
+
+def compute_kanban_columns(
+    entity_spec: Any,
+    group_by_field: str,
+) -> list[str]:
+    """Resolve the bucket column list for a grouped view (KANBAN /
+    BAR_CHART / FUNNEL_CHART).
+
+    First checks the field's enum values, then falls back to the
+    entity's state-machine states (only when the state machine's
+    ``status_field`` matches ``group_by_field``).
+
+    Returns an empty list when the field has no enum and no matching
+    state machine — caller should fall back to distinct items[group_by].
+    """
+    if entity_spec is None:
+        return []
+
+    for f in entity_spec.fields:
+        if f.name == group_by_field:
+            ev = getattr(f.type, "enum_values", None)
+            if ev:
+                return list(ev)
+            break
+
+    sm = entity_spec.state_machine
+    if sm and sm.status_field == group_by_field:
+        return [s if isinstance(s, str) else str(s) for s in sm.states]
+
+    return []

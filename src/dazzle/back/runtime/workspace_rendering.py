@@ -75,11 +75,15 @@ from dazzle.back.runtime.workspace_columns import (
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext  # noqa: F401
 from dazzle.back.runtime.workspace_csv import _render_csv_response  # noqa: F401
 from dazzle.back.runtime.workspace_region_computes import (
+    apply_attention_signals,
     compute_action_grid,
     compute_bar_track,
     compute_bullet,
+    compute_columns_for_persona,
     compute_confirm_action_state,
+    compute_filter_columns_and_active,
     compute_heatmap,
+    compute_kanban_columns,
     compute_pipeline_steps,
     compute_profile_card,
     compute_progress,
@@ -341,25 +345,13 @@ async def _workspace_region_handler(
                 exc_info=True,
             )
 
-    # Use pre-computed columns from startup (constant-folded from IR).
-    # Filter out columns whose visible: predicate fails for the current
-    # persona (#872). Build a fresh list — never mutate the shared one.
+    # Use pre-computed columns from startup (constant-folded from IR),
+    # filtered by per-persona visible: predicates (#872).
     if ctx.precomputed_columns:
-        if any(c.get("visible_condition") for c in ctx.precomputed_columns):
-            from dazzle.ui.utils.condition_eval import evaluate_condition as _eval_vis
-
-            _request_roles = list(_auth_ctx_for_filters.roles) if _auth_ctx_for_filters else []
-            _role_ctx = {
-                "user_roles": [r.removeprefix("role_") for r in _request_roles],
-            }
-            columns = [
-                c
-                for c in ctx.precomputed_columns
-                if not c.get("visible_condition")
-                or _eval_vis(c["visible_condition"], {}, _role_ctx)
-            ]
-        else:
-            columns = ctx.precomputed_columns
+        columns = compute_columns_for_persona(
+            ctx.precomputed_columns,
+            list(_auth_ctx_for_filters.roles) if _auth_ctx_for_filters else [],
+        )
     elif items:
         columns = [
             {
@@ -401,51 +393,13 @@ async def _workspace_region_handler(
     # values), else falls back to distinct items[group_by].
     bucketed_metrics: list[dict[str, Any]] = []
 
-    # Build filter column metadata for template
-    filter_columns: list[dict[str, Any]] = [
-        {
-            "key": c["key"],
-            "label": c["label"],
-            "options": c.get("filter_options", []),
-        }
-        for c in columns
-        if c.get("filterable")
-    ]
-    active_filters: dict[str, str] = {
-        k[7:]: v for k, v in request.query_params.items() if k.startswith("filter_") and v
-    }
+    # Filter column metadata + active filters from the request.
+    filter_columns, active_filters = compute_filter_columns_and_active(
+        columns, request.query_params
+    )
 
-    # Evaluate attention signals for row highlighting
-    if ctx.attention_signals and items:
-        from dazzle.back.runtime.condition_evaluator import (
-            evaluate_condition as _eval_cond,
-        )
-
-        _severity_order = {
-            "critical": 0,
-            "warning": 1,
-            "notice": 2,
-            "info": 3,
-        }
-        for item in items:
-            best: dict[str, str] | None = None
-            best_sev = 999
-            for sig in ctx.attention_signals:
-                try:
-                    cond_dict = sig.condition.model_dump(exclude_none=True)
-                    if _eval_cond(cond_dict, item, _filter_context):
-                        lvl = sig.level.value if hasattr(sig.level, "value") else str(sig.level)
-                        sev = _severity_order.get(lvl, 99)
-                        if sev < best_sev:
-                            best_sev = sev
-                            best = {
-                                "level": lvl,
-                                "message": sig.message,
-                            }
-                except Exception:
-                    logger.debug("Failed to evaluate attention signal", exc_info=True)
-            if best:
-                item["_attention"] = best
+    # Annotate items with the highest-severity matching attention signal.
+    apply_attention_signals(items, ctx.attention_signals, _filter_context)
 
     # Grouped displays: extract column values from group_by field's enum/state-machine
     kanban_columns: list[str] = []
@@ -467,17 +421,7 @@ async def _workspace_region_handler(
         and ctx.ctx_region.display in _grouped_modes
         and ctx.entity_spec
     ):
-        # Try enum values first, then state machine states
-        for f in ctx.entity_spec.fields:
-            if f.name == group_by:
-                ev = getattr(f.type, "enum_values", None)
-                if ev:
-                    kanban_columns = list(ev)
-                break
-        if not kanban_columns:
-            sm = ctx.entity_spec.state_machine
-            if sm and sm.status_field == group_by:
-                kanban_columns = [s if isinstance(s, str) else str(s) for s in sm.states]
+        kanban_columns = compute_kanban_columns(ctx.entity_spec, group_by)
 
     # Compute bucketed aggregates for bar_chart / line_chart / sparkline —
     # single-dim distributions or time-series. Multi-dim (area_chart /
