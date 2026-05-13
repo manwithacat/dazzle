@@ -11,16 +11,44 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    - If the argument matches `\d+\.\d+\.\d+`: use it as-is.
    - Otherwise: tell the user the argument was not understood and stop.
 
-3. **Update version in all canonical locations** (use the Edit tool for each):
-   - `pyproject.toml` — the `version = "..."` line (near line 7)
-   - `.claude/CLAUDE.md` — the `**Version**: X.Y.Z` line at the bottom
-   - `ROADMAP.md` — the `**Current Version**: vX.Y.Z` line near the top
-   - `src/dazzle/mcp/semantics_kb/core.toml` — the `version = "..."` line
-   - `homebrew/dazzle.rb` — the `version "X.Y.Z"` line AND the `url "...vX.Y.Z.tar.gz"` line
+3. **Apply ALL version-line bumps in a single Bash invocation.** Five files carry the project's canonical version string, plus a sixth file (homebrew) carries it on two lines. Editing them one-by-one with the Edit tool triggers a pre-commit reformat race that costs ~30s of agent time per bump (closed #1063 surface A; this step closes surface B).
 
-   **Do NOT** touch version references in code comments (e.g. `# v0.19.0 HLESS`) or dependency pins (e.g. `aiosqlite>=0.19.0`). Those refer to the version a feature was introduced, not the current project version.
+   Substitute `OLD` and `NEW` and run:
 
-4. **Update CHANGELOG.md** following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventions:
+   ```bash
+   OLD="0.67.126"
+   NEW="0.67.127"
+
+   # pyproject.toml + core.toml — `version = "X.Y.Z"`
+   sed -i.bak "s/^version = \"${OLD}\"$/version = \"${NEW}\"/" pyproject.toml src/dazzle/mcp/semantics_kb/core.toml
+
+   # .claude/CLAUDE.md — `**Version**: X.Y.Z`
+   sed -i.bak "s/\\*\\*Version\\*\\*: ${OLD}/**Version**: ${NEW}/" .claude/CLAUDE.md
+
+   # ROADMAP.md — `**Current Version**: vX.Y.Z`
+   sed -i.bak "s/\\*\\*Current Version\\*\\*: v${OLD}/**Current Version**: v${NEW}/" ROADMAP.md
+
+   # homebrew/dazzle.rb — `version "X.Y.Z"` AND `tags/vX.Y.Z.tar.gz`
+   sed -i.bak \
+     -e "s/^  version \"${OLD}\"$/  version \"${NEW}\"/" \
+     -e "s|tags/v${OLD}\\.tar\\.gz|tags/v${NEW}.tar.gz|" \
+     homebrew/dazzle.rb
+
+   # Clean up sed's .bak files (BSD sed on macOS requires the extension).
+   find . -maxdepth 3 -name "*.bak" -delete
+
+   # Verify all six version lines moved exactly. Expected: 6 matching lines.
+   # Note: \*\*Version\*\* on CLAUDE.md has trailing text on the same line
+   # (`| **Python**: 3.12+ | ...`) so don't anchor with `$`.
+   grep -E "^version = \"${NEW}\"$|^\\*\\*Version\\*\\*: ${NEW} |^\\*\\*Current Version\\*\\*: v${NEW}$|^  version \"${NEW}\"$|tags/v${NEW}\\.tar\\.gz" \
+     pyproject.toml src/dazzle/mcp/semantics_kb/core.toml .claude/CLAUDE.md ROADMAP.md homebrew/dazzle.rb
+   ```
+
+   If the final `grep` prints fewer than 6 lines, **stop and investigate** — one of the canonical locations didn't match the expected shape and needs manual attention.
+
+   **Do NOT** touch version references in code comments (e.g. `# v0.19.0 HLESS`) or dependency pins (e.g. `aiosqlite>=0.19.0`). Those refer to the version a feature was introduced, not the current project version. The sed patterns above are anchored (`^`) to avoid matching those.
+
+4. **Update CHANGELOG.md** following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventions. This is the only step that needs structured logic, so use the Edit tool here:
    - Read `CHANGELOG.md` and find the `## [Unreleased]` section.
    - If the Unreleased section has content (entries under Added/Changed/Deprecated/Fixed/Removed/Security):
      1. Insert a new heading `## [X.Y.Z] - YYYY-MM-DD` (today's date) immediately after the Unreleased section heading's blank line.

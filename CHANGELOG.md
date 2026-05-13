@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.127] - 2026-05-14
+
+### Changed — atomic bump skill (closes #1063)
+
+Rewrote `.claude/commands/bump.md` step 3 to apply ALL version-line edits via a single Bash `sed` invocation across the 6 canonical locations (pyproject.toml, core.toml, CLAUDE.md, ROADMAP.md, homebrew/dazzle.rb × 2 lines). Previously the skill instructed the agent to do 6 sequential `Edit` calls, each triggering the full pre-commit hook chain — which reformatted the file and made the next Edit's `old_string` cache stale. Surface A of #1063 (pre-commit excludes for CHANGELOG/ROADMAP) shipped in v0.67.126; this is surface B and closes the issue.
+
+The recipe ends with a 6-line `grep -E` verification that asserts every expected line moved exactly. If the count is wrong, the skill instructs the agent to stop and investigate — failing loud beats a silent partial-bump.
+
+This bump itself was applied with the new skill — first dogfood. Expected impact (per stall-log mining): pyproject.toml drops out of the top-5 friction targets within the next 30-day window.
+
+### Agent Guidance
+
+- When a skill instructs "use the Edit tool for each", that's a smell — consider whether a single Bash invocation would be safer against the post-commit-hook reformat race.
+
 ## [0.67.126] - 2026-05-13
 
 ### Changed — agent-experience quick wins (closes #1066, #1067; partial #1063)
