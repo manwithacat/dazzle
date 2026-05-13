@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.131] - 2026-05-14
+
+### Changed — region_adapter metrics-family mixin extracted (progress on #1065)
+
+PR 4 of the region_adapter decomposition. Second family extracted via the validated mixin pattern.
+
+**Moved to `region_adapter/_builders_metrics.py`** as `_BuildersMetricsMixin`:
+- `_build_metrics` — MetricsGrid of MetricTile primitives
+- `_build_status_list` — vertical icon + title + caption + pill rows
+- `_build_progress` — `<progress>` header + StageBar chip list
+- `_build_pipeline_steps` — horizontal stage cards with arrow connectors
+
+No family-local helpers — `_metric_number_filter` import stays inline (lazy from `template_renderer`), all other plumbing lives in `_shared.py`.
+
+**Sizes:**
+- `_dispatcher.py`: 2,052 → 1,765 lines (-287)
+- `_builders_metrics.py`: 324 lines (new)
+- Cumulative since PR 1: 1,106 lines moved out of the dispatcher (155 to `_shared`, 664 to charts, 287 to metrics)
+- 2 of 6 families extracted.
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct.
+
+**Next PR queued**: `_builders_timeline.py` — 4 builders (`_build_timeline`, `_build_day_timeline`, `_build_activity_feed`, `_build_task_inbox`), ~266 lines.
+
 ## [0.67.130] - 2026-05-14
 
 ### Changed — region_adapter chart-family mixin extracted (progress on #1065)
