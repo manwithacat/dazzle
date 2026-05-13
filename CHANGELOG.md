@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.120] - 2026-05-13
+
+### Fixed — sitespec.yaml silent failure on schema mismatch (closes #1060)
+
+Before: a `path:` key on a sitespec page (instead of the canonical `route:`) caused `_parse_page` to raise `KeyError("route")`. Both boot call-sites (`serve.py`, `app_factory.py`) caught bare `Exception` and downgraded it to a single `Warning:` log line — silently dropping the entire sitespec (landing page, nav, footer). `dazzle validate` never parsed sitespec.yaml at all, so the schema error was invisible to static checks.
+
+Three fixes:
+
+1. **Backward-compatible `path:` accepted with deprecation warning.** `_parse_page` in `src/dazzle/core/sitespec_loader.py` now reads `data.get("route") or data.get("path")`. If `path:` is used, a one-time deprecation warning surfaces. If neither key is present, raises `SiteSpecError` with the offending data — not a bare `KeyError`.
+2. **`dazzle validate` now statically parses `sitespec.yaml`.** Added a `load_sitespec` call inside `validate_command()` in `src/dazzle/cli/project.py`. Any `SiteSpecError` surfaces as a hard error (exit code 1) before users hit `serve`.
+3. **`fixtures/llm_ticket_classifier/sitespec.yaml`** migrated from `path:` to `route:` (canonical).
+
+Caught by `/fuzz` sweep (2026-05-13). Tests: 13,982 passed.
+
 ## [0.67.119] - 2026-05-13
 
 ### Fixed — fragment_chrome deprecation noise (closes #1059)

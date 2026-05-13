@@ -218,6 +218,9 @@ def _parse_section(data: dict[str, Any]) -> SectionSpec:
     )
 
 
+_PATH_KEY_DEPRECATION_WARNED = False
+
+
 def _parse_page(data: dict[str, Any]) -> PageSpec:
     """Parse a page from raw YAML data.
 
@@ -226,6 +229,9 @@ def _parse_page(data: dict[str, Any]) -> PageSpec:
 
     Returns:
         PageSpec object.
+
+    Raises:
+        SiteSpecError: If neither `route` nor `path` is present on the page.
     """
     # Parse sections
     sections = []
@@ -239,8 +245,27 @@ def _parse_page(data: dict[str, Any]) -> PageSpec:
 
     page_type = PageKind(data.get("type", "landing"))
 
+    # Accept both `route:` (canonical) and `path:` (deprecated alias) — early
+    # builds of sitespec.yaml used `path:` and some hand-written fixtures
+    # still do. Without this fallback the loader raises KeyError and the
+    # boot-time try/except in serve.py silently drops the entire sitespec.
+    route = data.get("route") or data.get("path")
+    if route is None:
+        raise SiteSpecError(f"Page missing required 'route' key (data: {data!r})")
+    if "path" in data and "route" not in data:
+        global _PATH_KEY_DEPRECATION_WARNED
+        if not _PATH_KEY_DEPRECATION_WARNED:
+            import logging as _logging
+
+            _logging.getLogger("dazzle.sitespec").warning(
+                "sitespec.yaml uses deprecated 'path:' key on page %r — "
+                "rename to 'route:' (the canonical key).",
+                route,
+            )
+            _PATH_KEY_DEPRECATION_WARNED = True
+
     return PageSpec(
-        route=data["route"],
+        route=route,
         type=page_type,
         title=data.get("title"),
         sections=sections,

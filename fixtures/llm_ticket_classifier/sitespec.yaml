@@ -23,7 +23,7 @@ layout:
         href: "/terms"
 
 pages:
-  - path: "/"
+  - route: "/"
     title: "Home"
     sections:
       - type: hero
