@@ -32,7 +32,7 @@ async def _login_for_token(
     deps: _JwtDeps,
     form_data: Any = None,
     credentials: TokenRequest | None = None,
-    request: FastAPIRequest | None = None,
+    request: "FastAPIRequest | None" = None,
 ) -> Any:
     """OAuth2 compatible token endpoint.
 
@@ -79,7 +79,7 @@ async def _login_for_token(
 async def _refresh_access_token(
     deps: _JwtDeps,
     data: RefreshTokenRequest,
-    request: FastAPIRequest | None = None,
+    request: "FastAPIRequest | None" = None,
 ) -> Any:
     """Exchange refresh token for new token pair.
 

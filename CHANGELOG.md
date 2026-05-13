@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.123] - 2026-05-13
+
+### Fixed — wheel-import crash when FastAPI not installed (release CI red)
+
+`src/dazzle/back/runtime/auth/routes_jwt.py:35,82` had
+
+```python
+request: FastAPIRequest | None = None,
+```
+
+When `dazzle` is installed without the `[serve]` extras, FastAPI is absent and the compat shim sets `FastAPIRequest = None`. Python then evaluates the union `None | None` **at function-definition time**, raising `TypeError: unsupported operand type(s) for |: 'NoneType' and 'NoneType'`. That broke the smoke-test step on every release since at least v0.67.119 (4 tags red — v0.67.119, .120, .121, .122 never reached PyPI).
+
+Fix: wrap the annotation in quotes so Python defers evaluation — `request: "FastAPIRequest | None" = None`. FastAPI's runtime annotation inspection happens only when the routes register, which only runs when `FASTAPI_AVAILABLE`, by which point `FastAPIRequest` is the real `starlette.requests.Request` class. The bare `FastAPIRequest` annotations at lines 138/174/209 are safe — a single-name annotation doesn't trigger the `|` operator even when the name resolves to `None`.
+
+Caught by post-ship `gh run list` after CI flagged 4 red release workflows.
+
 ## [0.67.122] - 2026-05-13
 
 ### Added — four `dazzle validate` blindspots closed (closes #1061)
