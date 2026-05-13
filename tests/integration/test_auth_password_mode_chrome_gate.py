@@ -21,12 +21,9 @@ Coverage:
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 pytest.importorskip("dazzle.back.runtime.site_routes")
 from dazzle.back.runtime.auth.password_login_routes import (  # noqa: E402
@@ -127,28 +124,6 @@ def _build_app(
     app.include_router(create_auth_page_routes(_MIN_SITESPEC, project_root=None))
     app.include_router(create_password_login_routes())
     return TestClient(app, follow_redirects=False), store
-
-
-class _JinjaSpy:
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_t: Template, *a: object, **kw: object) -> str:
-            name = getattr(self_t, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_t, *a, **kw)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
 
 
 # ───────────────── GET /login flag matrix ────────────────────

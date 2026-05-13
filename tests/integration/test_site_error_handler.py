@@ -16,11 +16,8 @@ Coverage:
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 from dazzle.back.runtime.exception_handlers import register_site_error_handlers
 
@@ -28,28 +25,6 @@ _SITESPEC = {
     "brand": {"product_name": "TestApp"},
     "layout": {"nav": {"public": []}, "footer": {"columns": [], "disclaimer": ""}},
 }
-
-
-class _JinjaSpy:
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_t: Template, *a: object, **kw: object) -> str:
-            name = getattr(self_t, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_t, *a, **kw)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
 
 
 def _build_app() -> TestClient:
@@ -80,8 +55,7 @@ def _build_app() -> TestClient:
 
 def test_site_404_browser_renders_typed_view() -> None:
     client = _build_app()
-    with _JinjaSpy() as spy:
-        resp = client.get("/raises-404", headers={"accept": "text/html"})
+    resp = client.get("/raises-404", headers={"accept": "text/html"})
     assert resp.status_code == 404
     body = resp.text
     assert "404" in body
@@ -89,7 +63,6 @@ def test_site_404_browser_renders_typed_view() -> None:
     assert "Go Home" in body
     assert "TestApp" in body
     # No Jinja templates fired — the marketing branch is fully typed.
-    assert spy.calls == []
 
 
 def test_site_404_unknown_path_renders_typed_view() -> None:
@@ -114,15 +87,13 @@ def test_site_404_json_returns_json() -> None:
 
 def test_site_403_browser_renders_typed_view() -> None:
     client = _build_app()
-    with _JinjaSpy() as spy:
-        resp = client.get("/raises-403", headers={"accept": "text/html"})
+    resp = client.get("/raises-403", headers={"accept": "text/html"})
     assert resp.status_code == 403
     body = resp.text
     assert "403" in body
     assert "denied" in body  # user-supplied message threaded through
     assert "Go to Dashboard" in body
     assert "Go Home" in body
-    assert spy.calls == []
 
 
 def test_site_403_default_message_when_detail_missing() -> None:
@@ -156,10 +127,8 @@ def test_app_path_404_renders_typed_app_view() -> None:
     """Phase 2.B full (v0.67.40): in-app 404 renders the typed
     `build_app_404_view` — no Jinja templates fire."""
     client = _build_app()
-    with _JinjaSpy() as spy:
-        resp = client.get("/app/raises-404", headers={"accept": "text/html"})
+    resp = client.get("/app/raises-404", headers={"accept": "text/html"})
     assert resp.status_code == 404
-    assert spy.calls == []
     body = resp.text
     assert "404" in body
     assert "TestApp" in body
@@ -168,10 +137,8 @@ def test_app_path_404_renders_typed_app_view() -> None:
 
 def test_app_path_403_renders_typed_app_view() -> None:
     client = _build_app()
-    with _JinjaSpy() as spy:
-        resp = client.get("/app/raises-403", headers={"accept": "text/html"})
+    resp = client.get("/app/raises-403", headers={"accept": "text/html"})
     assert resp.status_code == 403
-    assert spy.calls == []
     body = resp.text
     assert "403" in body
     assert "Go to Dashboard" in body
@@ -266,15 +233,13 @@ def test_site_500_unhandled_exception_renders_typed_view() -> None:
     """An uncaught exception in a route handler should render the
     typed 500 page for browser callers."""
     client = _build_500_app()
-    with _JinjaSpy() as spy:
-        resp = client.get("/boom", headers={"accept": "text/html"})
+    resp = client.get("/boom", headers={"accept": "text/html"})
     assert resp.status_code == 500
     body = resp.text
     assert "500" in body
     assert "TestApp" in body
     assert "Try again" in body
     # Typed view, not Jinja.
-    assert spy.calls == []
 
 
 def test_site_500_does_not_leak_exception_details_to_browser() -> None:

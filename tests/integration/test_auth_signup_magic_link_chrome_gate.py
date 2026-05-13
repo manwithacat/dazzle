@@ -16,12 +16,11 @@ End-to-end coverage:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 pytest.importorskip("dazzle.back.runtime.site_routes")
 from dazzle.back.runtime.auth.magic_link_routes import (  # noqa: E402
@@ -115,37 +114,13 @@ def _build_app(
     return TestClient(app, follow_redirects=False), auth_store, actual_mailer
 
 
-class _JinjaSpy:
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_t: Template, *a: object, **kw: object) -> str:
-            name = getattr(self_t, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_t, *a, **kw)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
-
-
 # ───────────────── GET /signup chrome gate ────────────────────
 
 
 def test_get_signup_chrome_on_renders_typed_view_no_jinja() -> None:
     client, _, _ = _build_app(chrome=True)
-    with _JinjaSpy() as spy:
-        resp = client.get("/signup")
+    resp = client.get("/signup")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "<!DOCTYPE html>" in body
     assert "/auth/signup/magic-link" in body
@@ -160,10 +135,8 @@ def test_get_signup_chrome_off_now_also_renders_typed_view() -> None:
     """Phase 1.E (v0.67.33): /signup is typed-only — chrome flag
     no longer gates the render."""
     client, _, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/signup")
+    resp = client.get("/signup")
     assert resp.status_code == 200
-    assert spy.calls == []
     assert "/auth/signup/magic-link" in resp.text
 
 

@@ -23,12 +23,10 @@ Coverage:
 from __future__ import annotations
 
 import logging
-from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 pytest.importorskip("dazzle.back.runtime.site_routes")
 from dazzle.back.runtime.auth.password_reset_routes import (  # noqa: E402
@@ -121,37 +119,13 @@ def _build_app(
     return TestClient(app, follow_redirects=False), auth_store
 
 
-class _JinjaSpy:
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_t: Template, *a: object, **kw: object) -> str:
-            name = getattr(self_t, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_t, *a, **kw)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
-
-
 # ───────────────── GET /forgot-password chrome gate ────────────────────
 
 
 def test_get_forgot_password_chrome_on_renders_typed_view() -> None:
     client, _ = _build_app(chrome=True)
-    with _JinjaSpy() as spy:
-        resp = client.get("/forgot-password")
+    resp = client.get("/forgot-password")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "<!DOCTYPE html>" in body
     assert "/auth/forgot-password/submit" in body
@@ -164,10 +138,8 @@ def test_get_forgot_password_chrome_off_now_also_renders_typed_view() -> None:
     """Phase 1.E (v0.67.33): typed-only — chrome flag no longer
     consulted at /forgot-password."""
     client, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/forgot-password")
+    resp = client.get("/forgot-password")
     assert resp.status_code == 200
-    assert spy.calls == []
     assert "/auth/forgot-password/submit" in resp.text
 
 
@@ -278,10 +250,8 @@ def test_get_reset_password_chrome_off_now_also_renders_typed_view() -> None:
     """Phase 1.E (v0.67.33): typed-only — chrome flag no longer
     consulted at /reset-password."""
     client, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/reset-password")
+    resp = client.get("/reset-password")
     assert resp.status_code == 200
-    assert spy.calls == []
     assert "/auth/reset-password/submit" in resp.text
 
 
@@ -363,10 +333,8 @@ def test_post_reset_password_empty_password_redirects_with_mismatch() -> None:
 
 def test_get_forgot_password_sent_chrome_on_renders_typed_view() -> None:
     client, _ = _build_app(chrome=True)
-    with _JinjaSpy() as spy:
-        resp = client.get("/forgot-password/sent")
+    resp = client.get("/forgot-password/sent")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "Check your inbox" in body
     assert "If an account exists" in body  # account-enumeration safe
@@ -376,10 +344,8 @@ def test_get_forgot_password_sent_chrome_off_also_renders_typed_view() -> None:
     """Phase 1.E (v0.67.33): minimal HTML fallback gone — typed view
     is the only path."""
     client, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/forgot-password/sent")
+    resp = client.get("/forgot-password/sent")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "Check your inbox" in body
     assert "<!DOCTYPE html>" in body
@@ -387,10 +353,8 @@ def test_get_forgot_password_sent_chrome_off_also_renders_typed_view() -> None:
 
 def test_get_reset_password_done_chrome_on_renders_typed_view() -> None:
     client, _ = _build_app(chrome=True)
-    with _JinjaSpy() as spy:
-        resp = client.get("/reset-password/done")
+    resp = client.get("/reset-password/done")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "Password updated" in body
     assert 'href="/login"' in body
@@ -400,10 +364,8 @@ def test_get_reset_password_done_chrome_off_also_renders_typed_view() -> None:
     """Phase 1.E (v0.67.33): minimal HTML fallback gone — typed view
     is the only path."""
     client, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/reset-password/done")
+    resp = client.get("/reset-password/done")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "Password updated" in body
     assert "<!DOCTYPE html>" in body

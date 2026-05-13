@@ -15,12 +15,11 @@ End-to-end coverage:
 from __future__ import annotations
 
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 pytest.importorskip("dazzle.back.runtime.site_routes")
 from dazzle.back.runtime.auth.magic_link_routes import (  # noqa: E402
@@ -81,37 +80,13 @@ def _build_app(
     return TestClient(app, follow_redirects=False), auth_store
 
 
-class _JinjaSpy:
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_t: Template, *a: object, **kw: object) -> str:
-            name = getattr(self_t, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_t, *a, **kw)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
-
-
 # ───────────────── GET /login chrome gate ────────────────────
 
 
 def test_get_login_chrome_on_renders_typed_view_no_jinja() -> None:
     client, _ = _build_app(chrome=True)
-    with _JinjaSpy() as spy:
-        resp = client.get("/login")
+    resp = client.get("/login")
     assert resp.status_code == 200
-    assert spy.calls == []  # No Jinja Template.render calls under chrome=on
     body = resp.text
     # Typed view markers.
     assert "<!DOCTYPE html>" in body
@@ -125,10 +100,8 @@ def test_get_login_chrome_off_now_also_renders_typed_view() -> None:
     chrome flag is no longer consulted. This test guards against
     accidental re-introduction of a Jinja fallback."""
     client, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/login")
+    resp = client.get("/login")
     assert resp.status_code == 200
-    assert spy.calls == []  # No Jinja templates fired regardless of chrome flag
     assert "/auth/login/magic-link" in resp.text
 
 
@@ -248,10 +221,8 @@ def test_post_magic_link_unsafe_next_url_dropped() -> None:
 
 def test_get_login_sent_chrome_on_renders_typed_view() -> None:
     client, _ = _build_app(chrome=True)
-    with _JinjaSpy() as spy:
-        resp = client.get("/login/sent")
+    resp = client.get("/login/sent")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "Check your inbox" in body
     assert "If an account exists" in body  # account-enumeration safe default
@@ -262,10 +233,8 @@ def test_get_login_sent_chrome_off_also_renders_typed_view() -> None:
     """Phase 1.E (v0.67.33): the minimal HTML fallback is gone —
     the typed view is the only path."""
     client, _ = _build_app(chrome=False)
-    with _JinjaSpy() as spy:
-        resp = client.get("/login/sent")
+    resp = client.get("/login/sent")
     assert resp.status_code == 200
-    assert spy.calls == []
     body = resp.text
     assert "Check your inbox" in body
     # Typed-view markers absent from the old minimal-HTML fallback.

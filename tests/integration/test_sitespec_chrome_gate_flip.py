@@ -21,12 +21,9 @@ ship lands the architectural seam without committing to that scope.
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 pytest.importorskip("dazzle.back.runtime.site_routes")
 from dazzle.back.runtime.site_routes import create_site_page_routes  # noqa: E402
@@ -53,30 +50,6 @@ _MIN_SITESPEC = {
         "footer": {"columns": [], "disclaimer": ""},
     },
 }
-
-
-class _JinjaSpy:
-    """Records every Template.render call inside a `with` block."""
-
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_template: Template, *args: object, **kwargs: object) -> str:
-            name = getattr(self_template, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_template, *args, **kwargs)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
 
 
 def _build_app(*, chrome: bool) -> TestClient:
@@ -145,13 +118,10 @@ def test_hero_renders_via_typed_builder_not_jinja_partial() -> None:
     `site/sections/hero.html`. The Jinja hero partial should NOT
     fire under the always-typed marketing-page path."""
     client = _build_app(chrome=False)  # flag value irrelevant now
-    with _JinjaSpy() as spy:
-        resp = client.get("/")
+    resp = client.get("/")
     assert resp.status_code == 200
     # v0.67.69: site/inner_only.html retired; marketing pages render
     # without ANY Jinja templates. Both assertions enforce this.
-    assert "site/sections/hero.html" not in spy.calls
-    assert "site/inner_only.html" not in spy.calls
 
 
 def test_chrome_on_response_carries_typed_hero_class_names() -> None:

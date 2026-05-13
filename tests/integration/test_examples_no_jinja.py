@@ -15,12 +15,10 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.manifest import load_manifest
@@ -33,30 +31,6 @@ _EXAMPLES = _REPO_ROOT / "examples"
 _BOGUS_UUID = "00000000-0000-0000-0000-000000000000"
 
 _APPS = ("simple_task", "contact_manager", "support_tickets", "ops_dashboard", "fieldtest_hub")
-
-
-class _JinjaSpy:
-    """Records every Template.render call. Enabled inside a `with` block."""
-
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-        self._original = Template.render
-
-    def __enter__(self) -> _JinjaSpy:
-        spy = self
-        original = self._original
-
-        def tracked(self_template: Template, *args: object, **kwargs: object) -> str:
-            name = getattr(self_template, "name", None) or "<inline>"
-            spy.calls.append(name)
-            return original(self_template, *args, **kwargs)
-
-        self._patch = patch.object(Template, "render", tracked)
-        self._patch.start()
-        return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._patch.stop()
 
 
 def _client_for_example(app_name: str) -> tuple[TestClient, FastAPI]:
@@ -119,17 +93,13 @@ def test_example_walks_all_routes_with_zero_jinja(app_name: str) -> None:
     Failure mode is informative: lists which routes fired which
     templates so regressions are immediately diagnosable."""
     client, app = _client_for_example(app_name)
-    fired: dict[str, tuple[int, list[str]]] = {}
     for route in app.routes:
         path = getattr(route, "path", "") or ""
         methods = getattr(route, "methods", None) or set()
         if "GET" not in methods or path.startswith(("/openapi", "/docs", "/redoc")):
             continue
         url = _resolve(path)
-        with _JinjaSpy() as spy:
-            resp = client.get(url, follow_redirects=False)
-        if spy.calls:
-            fired[path] = (resp.status_code, sorted(set(spy.calls)))
-    assert not fired, f"{app_name}: Jinja templates rendered under chrome=on:\n" + "\n".join(
-        f"  {p} (status={code}): {tmpls!r}" for p, (code, tmpls) in fired.items()
-    )
+        resp = client.get(url, follow_redirects=False)
+        # Jinja-free is structurally guaranteed (#1042 removed jinja2).
+        # Verify every GET route at least serves without 5xx.
+        assert resp.status_code < 500, f"{app_name} {path} returned {resp.status_code}"
