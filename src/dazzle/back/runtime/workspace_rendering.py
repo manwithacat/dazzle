@@ -1,19 +1,35 @@
-"""Workspace rendering helpers extracted from server.py.
+"""Re-export shim for the workspace-region runtime modules.
 
-Contains functions for building workspace region data, computing aggregate
-metrics, and rendering workspace regions as HTML or JSON.
+Historical home of the 4,483-line workspace region rendering monolith.
+Decomposed across #1057 cuts 1-15 (v0.67.100 → v0.67.114) into 16
+focused sibling modules; the handler itself moved to
+``workspace_region_handler.py`` in cut 16 (v0.67.115). This file is
+now a pure re-export surface kept for back-compat with the ~50 test
+sites that import these names from ``workspace_rendering``.
 
-Post-#1057 (v0.67.100): column-metadata builders moved to
-``workspace_columns.py``. Old import paths preserved as re-exports
-below so external callers keep working.
+Where things live now:
+
+- ``_workspace_region_handler`` → ``workspace_region_handler``
+- ``WorkspaceRegionContext`` → ``workspace_context``
+- ``_apply_workspace_scope_filters`` → ``workspace_scope``
+- ``_resolve_workspace_user`` → ``workspace_user``
+- ``_render_csv_response`` → ``workspace_csv``
+- Aggregation regex + helpers → ``workspace_aggregation``
+- Card-body HTML renderers → ``workspace_card_bodies``
+- Card-data shapers → ``workspace_card_data``
+- Async card fetchers + ``_build_entity_card_sections`` → ``workspace_card_fetchers``
+- Column metadata builders → ``workspace_columns``
+- Per-display data computes → ``workspace_region_computes``
+- Phase 1 prelude → ``workspace_region_prelude``
+- Phase 2 fetch → ``workspace_region_fetch``
+- Phases 4-5 orchestration → ``workspace_region_orchestration``
+- Phase 6 render tail → ``workspace_region_render``
+- Sibling request handlers (region-JSON / batch / stats) → ``workspace_handlers``
+
+New code should import directly from the module of origin; the
+re-exports here are kept only so external test imports don't break.
 """
 
-import logging
-from typing import Any
-
-# Aggregation machinery — #1057 cut 4 moved these to workspace_aggregation.
-# Re-imported because `_workspace_region_handler` (below) dispatches to
-# them and ~30 test sites import them from this module.
 from dazzle.back.runtime.workspace_aggregation import (  # noqa: F401
     _AGGREGATE_RE,
     _aggregate_via_groupby,
@@ -31,13 +47,6 @@ from dazzle.back.runtime.workspace_aggregation import (  # noqa: F401
     _parse_simple_where,
     _resolve_fk_target_spec,
 )
-
-# Card-body renderers — #1057 cut 2 moved these to workspace_card_bodies.
-# Imported here because `_build_entity_card_sections` (below) dispatches
-# to them by display mode.
-# Card-data shapers — #1057 cut 3 moved these to workspace_card_data.
-# Imported here because `_build_entity_card_sections` (below) dispatches
-# to them by display mode, and tests still import them from this module.
 from dazzle.back.runtime.workspace_card_data import (  # noqa: F401
     _CARD_TEMPLATE_RE,
     _build_cohort_cells,
@@ -60,8 +69,6 @@ from dazzle.back.runtime.workspace_card_fetchers import (  # noqa: F401
     _fetch_task_inbox_items_per_source,
     _safe_fetch,
 )
-
-# Re-exports for back-compat — #1057 moved these to workspace_columns.
 from dazzle.back.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,  # noqa: F401
 )
@@ -73,69 +80,6 @@ from dazzle.back.runtime.workspace_columns import (
 )
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext  # noqa: F401
 from dazzle.back.runtime.workspace_csv import _render_csv_response  # noqa: F401
-from dazzle.back.runtime.workspace_region_computes import compute_columns_for_persona
-from dazzle.back.runtime.workspace_region_fetch import fetch_region_items
-from dazzle.back.runtime.workspace_region_orchestration import compute_region_render_inputs
-from dazzle.back.runtime.workspace_region_prelude import resolve_request_user_context
-from dazzle.back.runtime.workspace_region_render import render_region_html
+from dazzle.back.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters  # noqa: F401
 from dazzle.back.runtime.workspace_user import _resolve_workspace_user  # noqa: F401
-
-logger = logging.getLogger(__name__)
-
-
-async def _workspace_region_handler(
-    request: Any,
-    page: int,
-    page_size: int,
-    sort: str | None,
-    dir: str,
-    *,
-    ctx: WorkspaceRegionContext,
-) -> Any:
-    """Return rendered HTML for a workspace region.
-
-    Extracted from DazzleBackendApp._init_workspace_routes to reduce closure
-    complexity.  All context is bundled in a ``WorkspaceRegionContext``.
-    """
-    from fastapi.responses import HTMLResponse
-
-    # Phase 1: auth gate + identity resolution + filter-context build.
-    # Raises HTTPException(401/403) if the request is unauthorised.
-    user_ctx = await resolve_request_user_context(request, ctx)
-
-    # Phase 2: filters + sort + scope + repo.list. Returns the row
-    # data plus the scope state downstream aggregate paths gate on.
-    fetched = await fetch_region_items(request, ctx, user_ctx, sort, dir, page, page_size)
-
-    # Phase 3: column metadata — pre-computed visible:-filtered columns
-    # from startup, or auto-derived from the first item's keys (#872).
-    if ctx.precomputed_columns:
-        columns = compute_columns_for_persona(
-            ctx.precomputed_columns,
-            list(user_ctx.auth_ctx_for_filters.roles) if user_ctx.auth_ctx_for_filters else [],
-        )
-    elif fetched.items:
-        columns = [
-            {
-                "key": k,
-                "label": k.replace("_", " ").title(),
-                "type": "text",
-                "sortable": True,
-            }
-            for k in fetched.items[0].keys()
-            if k != "id"
-        ]
-    else:
-        columns = []
-
-    # CSV export (#562) — short-circuits the typed-primitive render.
-    if request.query_params.get("format") == "csv":
-        return _render_csv_response(fetched.items, columns, ctx.ctx_region.name)
-
-    # Phases 4-5: build every shape the render tail consumes.
-    render_inputs = await compute_region_render_inputs(request, ctx, user_ctx, fetched, columns)
-
-    # Phase 6: typed-primitive render + region-chrome wrap.
-    html_body = await render_region_html(request, ctx, user_ctx, render_inputs, sort, dir)
-    return HTMLResponse(content=html_body)

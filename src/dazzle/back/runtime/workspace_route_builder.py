@@ -19,7 +19,7 @@ from dazzle.back.runtime.workspace_handlers import (
     _workspace_batch_handler,
     _workspace_stats_handler,
 )
-from dazzle.back.runtime.workspace_rendering import _workspace_region_handler
+from dazzle.back.runtime.workspace_region_handler import _workspace_region_handler
 from dazzle.core.ir import AppSpec
 
 logger = logging.getLogger(__name__)

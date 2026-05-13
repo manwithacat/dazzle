@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.115] - 2026-05-13
+
+### Changed — workspace_rendering decomposition (cut 16 — final code motion)
+
+- **Moved `_workspace_region_handler` itself to its own module** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New `src/dazzle/back/runtime/workspace_region_handler.py` (94 lines) hosts the 6-phase async orchestration spine; `workspace_rendering.py` is now a pure re-export shim.
+
+- **`workspace_rendering.py`** trimmed from 141 → **79 lines** — entirely re-export imports with a self-documenting "where things live now" docstring. Zero logic remains. The 4,483-line monolith is gone; this file exists only so the ~50 test sites that import names from `workspace_rendering` keep resolving.
+
+- **`server.py`** + **`workspace_route_builder.py`** updated to import `_workspace_region_handler` from `workspace_region_handler` directly (mypy's strict re-export rule).
+
+### Agent Guidance
+
+- New code MUST import from the module of origin (`workspace_region_handler`, `workspace_region_orchestration`, etc.) — not from `workspace_rendering`, which is now a back-compat shim and will eventually be removed. The shim's docstring lists the canonical homes for every symbol.
+
+### Cumulative
+
+After 16 cuts: `workspace_rendering.py` 4,483 → **79 lines (-4,404, -98%)**. 17 focused sibling modules totalling ~4,900 lines. The orchestration handler is a 94-line file whose body is six named phase calls reading top-to-bottom.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,120 source files checked).
+
 ## [0.67.114] - 2026-05-13
 
 ### Changed — workspace_rendering decomposition (cut 15 of N)
