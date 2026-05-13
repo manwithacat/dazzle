@@ -35,7 +35,9 @@ Bump the project's semantic version. The user may specify a bump level as an arg
      homebrew/dazzle.rb
 
    # Clean up sed's .bak files (BSD sed on macOS requires the extension).
-   find . -maxdepth 3 -name "*.bak" -delete
+   # maxdepth 6 covers src/dazzle/mcp/semantics_kb/core.toml.bak; bump if
+   # any future target moves deeper.
+   find . -maxdepth 6 -name "*.bak" -delete
 
    # Verify all six version lines moved exactly. Expected: 6 matching lines.
    # Note: \*\*Version\*\* on CLAUDE.md has trailing text on the same line

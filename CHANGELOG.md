@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.128] - 2026-05-14
+
+### Changed — region_adapter.py converted to a package (progress on #1065)
+
+First of 6+ PRs decomposing `src/dazzle/back/runtime/renderers/region_adapter.py` (2,871 lines, friction-168 in the 30-day stall-log sweep) into per-display-family modules.
+
+**This PR**: pure refactor with zero behavioural change. Renamed the file to `region_adapter/_dispatcher.py` (preserves git history via `git mv`) and added `region_adapter/__init__.py` that re-exports `WorkspaceRegionAdapter` + `_render_status_badge_html`. Every existing `from dazzle.back.runtime.renderers.region_adapter import ...` call site keeps working unchanged — verified across the 6 external importers (renderer.py × 4 sites, workspace_region_render.py × 1, tests × 2).
+
+Tests: 13,982 passed, 191 region-adapter-direct tests passed.
+
+**Next PR (queued)**: extract the 4 cross-cutting helpers (`_region_title`, `_wrap_surface`, `_render_status_badge_html`, `_render_typed_value`) into `region_adapter/_shared.py`. Subsequent PRs move per-family builders (tables / cards / timeline / charts / metrics / misc) into `_builders_<family>.py` modules.
+
+### Agent Guidance
+
+- New package layout: `src/dazzle/back/runtime/renderers/region_adapter/` is a directory, not a file. Public surface is in `__init__.py`; implementation in `_dispatcher.py`. When per-family files land they'll be `_builders_<family>.py`.
+
 ## [0.67.127] - 2026-05-14
 
 ### Changed — atomic bump skill (closes #1063)
