@@ -184,7 +184,7 @@ class TestInterpolateCardTemplate:
         ],
     )
     def test_interpolate(self, template: str, item: dict, expected: str) -> None:
-        from dazzle.back.runtime.workspace_rendering import _interpolate_card_template
+        from dazzle.back.runtime.workspace_card_data import _interpolate_card_template
 
         assert _interpolate_card_template(template, item) == expected
 
@@ -193,7 +193,7 @@ class TestInterpolateCardTemplate:
         they don't match the strict IDENT.IDENT* shape so they're
         left as literal `{{ ... }}` placeholders for the author to
         notice. Critically: never eval'd."""
-        from dazzle.back.runtime.workspace_rendering import _interpolate_card_template
+        from dazzle.back.runtime.workspace_card_data import _interpolate_card_template
 
         item = {"a": 1}
         # Pipe filter — not matched, stays literal
@@ -224,7 +224,7 @@ class TestInitialsFrom:
         ],
     )
     def test_initials_from(self, name: str, expected: str) -> None:
-        from dazzle.back.runtime.workspace_rendering import _initials_from
+        from dazzle.back.runtime.workspace_card_data import _initials_from
 
         assert _initials_from(name) == expected
 
@@ -234,28 +234,28 @@ class TestInitialsFrom:
 
 class TestResolvePath:
     def test_single_segment(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _resolve_path
+        from dazzle.back.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"name": "X"}, "name") == "X"
 
     def test_dotted_path(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _resolve_path
+        from dazzle.back.runtime.workspace_card_data import _resolve_path
 
         item = {"tutor": {"name": "Mr Khan"}}
         assert _resolve_path(item, "tutor.name") == "Mr Khan"
 
     def test_missing_segment(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _resolve_path
+        from dazzle.back.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"a": 1}, "missing") is None
 
     def test_descend_into_non_dict(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _resolve_path
+        from dazzle.back.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"a": "string"}, "a.b") is None
 
     def test_empty_path(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _resolve_path
+        from dazzle.back.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"a": 1}, "") is None
 
@@ -403,7 +403,7 @@ class TestProfileCardStatsBuildFromDicts:
         same shape the runtime would produce given a non-empty item
         and dict-shaped stats — exercising the exact lines that 500'd."""
         # Mirror of the comprehension in workspace_rendering.py PROFILE_CARD
-        from dazzle.back.runtime.workspace_rendering import _resolve_path
+        from dazzle.back.runtime.workspace_card_data import _resolve_path
 
         item = {
             "id": "abc",

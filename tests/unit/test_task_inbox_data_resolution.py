@@ -11,7 +11,7 @@ ship).
 
 from __future__ import annotations
 
-from dazzle.back.runtime.workspace_rendering import (
+from dazzle.back.runtime.workspace_card_data import (
     _build_task_inbox_payload,
     _coerce_urgency,
 )

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.workspace_rendering import (
+from dazzle.back.runtime.workspace_card_data import (
     _inject_display_names,
     _resolve_display_name,
 )

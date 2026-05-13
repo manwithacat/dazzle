@@ -73,8 +73,26 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/back/runtime/site_routes.py",
     # v0.67.70 — radar wired through typed primitive; AUDIT_HISTORY +
     # TAB_DATA fall through to typed shim (no DSL consumer, no adapter).
-    # The render_fragment fallback path in workspace_rendering is gone.
-    "src/dazzle/back/runtime/workspace_rendering.py",
+    # The render_fragment fallback path is gone.
+    # v0.67.116 (#1057 cut 17): workspace_rendering.py was decomposed
+    # across 17 cuts and the back-compat shim deleted. The typed-only
+    # invariant now applies to every sibling module the handler delegates to.
+    "src/dazzle/back/runtime/workspace_region_handler.py",
+    "src/dazzle/back/runtime/workspace_region_prelude.py",
+    "src/dazzle/back/runtime/workspace_region_fetch.py",
+    "src/dazzle/back/runtime/workspace_region_orchestration.py",
+    "src/dazzle/back/runtime/workspace_region_render.py",
+    "src/dazzle/back/runtime/workspace_region_computes.py",
+    "src/dazzle/back/runtime/workspace_aggregation.py",
+    "src/dazzle/back/runtime/workspace_card_bodies.py",
+    "src/dazzle/back/runtime/workspace_card_data.py",
+    "src/dazzle/back/runtime/workspace_card_fetchers.py",
+    "src/dazzle/back/runtime/workspace_columns.py",
+    "src/dazzle/back/runtime/workspace_context.py",
+    "src/dazzle/back/runtime/workspace_csv.py",
+    "src/dazzle/back/runtime/workspace_handlers.py",
+    "src/dazzle/back/runtime/workspace_scope.py",
+    "src/dazzle/back/runtime/workspace_user.py",
     # v0.67.71 — experience-shell rendering owned by
     # `experience_renderer.render_experience_inner_html` (inline Python).
     "src/dazzle/ui/runtime/experience_routes.py",

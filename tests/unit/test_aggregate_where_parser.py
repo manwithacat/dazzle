@@ -226,7 +226,7 @@ class TestBuildAggregateFilters:
         return SimpleNamespace(entity_spec=SimpleNamespace(fields=fields))
 
     def test_no_where_clause_returns_scope_only(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _build_aggregate_filters
+        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
 
         repo = self._make_repo(["a", "b"])
         scope = {"tenant_id": "t-1"}
@@ -234,7 +234,7 @@ class TestBuildAggregateFilters:
         assert out == {"tenant_id": "t-1"}
 
     def test_where_clause_populates_scope_predicate(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _build_aggregate_filters
+        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
 
         repo = self._make_repo(["status"])
         out = _build_aggregate_filters('status = "open"', None, repo, "X")
@@ -248,7 +248,7 @@ class TestBuildAggregateFilters:
         """When scope_filters already carries a __scope_predicate (from
         the RBAC compiler), the aggregate where-predicate AND-combines
         with it — single SQL fragment, no QueryBuilder change required."""
-        from dazzle.back.runtime.workspace_rendering import _build_aggregate_filters
+        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
 
         repo = self._make_repo(["status"])
         scope = {"__scope_predicate": ('"tenant_id" = %s', ["t-1"])}
@@ -266,7 +266,7 @@ class TestBuildAggregateFilters:
     def test_column_vs_column_uses_known_columns(self) -> None:
         """When both RHS and LHS are in `entity_spec.fields`, the parser
         emits ColumnRefCheck and the SQL has no params for the comparison."""
-        from dazzle.back.runtime.workspace_rendering import _build_aggregate_filters
+        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
 
         repo = self._make_repo(["latest_grade", "target_grade"])
         out = _build_aggregate_filters("latest_grade >= target_grade", None, repo, "StudentProfile")
@@ -280,7 +280,7 @@ class TestBuildAggregateFilters:
         UUIDs from `current_bucket` substitution like `target = t-1`)
         must fall through to the legacy `_parse_simple_where` so the
         existing bucketed-aggregate path keeps working unchanged."""
-        from dazzle.back.runtime.workspace_rendering import _build_aggregate_filters
+        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
 
         repo = self._make_repo(["target"])
         out = _build_aggregate_filters("target = t-1", None, repo, "X")

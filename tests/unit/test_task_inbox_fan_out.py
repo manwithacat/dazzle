@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.workspace_rendering import _fetch_task_inbox_items_per_source
+from dazzle.back.runtime.workspace_card_fetchers import _fetch_task_inbox_items_per_source
 from dazzle.core.ir.workspaces import TaskInboxConfig, TaskSource, TaskSourceTemplate
 
 

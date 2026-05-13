@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.116] - 2026-05-13
+
+### Removed — workspace_rendering decomposition (cut 17 — shim deletion, closes #1057)
+
+- **`src/dazzle/back/runtime/workspace_rendering.py` deleted.** The back-compat re-export shim that survived after cut 16 is gone — every test site that imported from it has been migrated to the canonical sibling module (17 test files, ~65 import statements rewritten).
+
+- **Migration was mechanical**: a one-shot script mapped each symbol (`_compute_aggregate_metrics`, `WorkspaceRegionContext`, `_render_csv_response`, etc.) to its canonical home (`workspace_aggregation`, `workspace_context`, `workspace_csv`, …) and rewrote single-line + parenthesised-multi-line imports in place.
+
+- **Source-pin tests retargeted**:
+  - `test_workspace_region_error_visibility`: now sweeps `workspace_region_handler` + `workspace_handlers` + `workspace_region_fetch` (the three places the structured ERROR log lines live).
+  - `test_typed_runtime_no_jinja`: the typed-only invariant expanded from one file to 16 sibling modules — every module the handler delegates to is now jinja2-free by contract.
+
+- **`test_bar_chart_bucketed_aggregate`**: `caplog.at_level(logger="dazzle.back.runtime.workspace_rendering")` rebased to `dazzle.back.runtime.workspace_aggregation` (where `_compute_pivot_buckets` logs from now).
+
+### Agent Guidance
+
+- **`workspace_rendering` no longer exists.** Import from the canonical module of origin:
+  - Auth / identity prelude → `workspace_region_prelude`
+  - Source query → `workspace_region_fetch`
+  - Per-display computes → `workspace_region_computes`
+  - Aggregate machinery → `workspace_aggregation`
+  - Card data shapers → `workspace_card_data`
+  - Card HTML bodies → `workspace_card_bodies`
+  - Async card fetchers → `workspace_card_fetchers`
+  - Column metadata → `workspace_columns`
+  - `WorkspaceRegionContext` → `workspace_context`
+  - Scope filter → `workspace_scope`
+  - User resolution → `workspace_user`
+  - CSV response → `workspace_csv`
+  - Phase 4-5 orchestration → `workspace_region_orchestration`
+  - Phase 6 render tail → `workspace_region_render`
+  - Sibling request handlers → `workspace_handlers`
+  - The handler itself → `workspace_region_handler`
+
+### Cumulative — final
+
+After **17 cuts**: `workspace_rendering.py` 4,483 → **0 lines (file deleted, -100%)**. 17 focused sibling modules totalling ~4,900 lines, the handler itself is a 94-line orchestration spine of six named phase calls.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,119 source files checked).
+
 ## [0.67.115] - 2026-05-13
 
 ### Changed — workspace_rendering decomposition (cut 16 — final code motion)

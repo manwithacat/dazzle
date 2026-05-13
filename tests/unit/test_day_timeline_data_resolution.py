@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from dazzle.back.runtime.workspace_rendering import _build_day_timeline_slots
+from dazzle.back.runtime.workspace_card_data import _build_day_timeline_slots
 from dazzle.core.ir.workspaces import DayTimelineConfig
 
 

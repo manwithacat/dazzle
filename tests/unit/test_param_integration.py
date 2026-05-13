@@ -129,7 +129,7 @@ class TestWorkspaceHeatmapThresholdsStatic:
 
     def test_workspace_region_context_has_param_fields(self) -> None:
         """WorkspaceRegionContext accepts param_resolver and tenant_id."""
-        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 
         ctx = WorkspaceRegionContext(
             ctx_region=MagicMock(),

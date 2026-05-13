@@ -624,7 +624,9 @@ class TestBuildSurfaceColumns:
 
     def test_uses_surface_field_projection(self) -> None:
         """Only surface-declared fields appear as columns."""
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -645,7 +647,9 @@ class TestBuildSurfaceColumns:
 
     def test_preserves_field_order(self) -> None:
         """Columns should appear in surface section order, not entity order."""
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Notification",
@@ -668,7 +672,9 @@ class TestBuildSurfaceColumns:
 
     def test_falls_back_to_all_fields_when_surface_empty(self) -> None:
         """Empty surface sections should fall back to all entity fields."""
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -687,7 +693,9 @@ class TestBuildSurfaceColumns:
 
     def test_skips_id_field_in_projection(self) -> None:
         """'id' in surface fields should be ignored."""
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -705,7 +713,9 @@ class TestBuildSurfaceColumns:
 
     def test_column_types_preserved(self) -> None:
         """Surface-aware columns should have correct types (badge, date, etc.)."""
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -744,7 +754,9 @@ class TestSurfaceColumnsVisibleCondition:
     """_build_surface_columns() should carry visible: predicates onto columns (#872)."""
 
     def test_element_visible_attached_to_column(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -776,7 +788,9 @@ class TestSurfaceColumnsVisibleCondition:
         }
 
     def test_section_visible_falls_through_to_columns(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -800,7 +814,9 @@ class TestSurfaceColumnsVisibleCondition:
             assert col["visible_condition"]["role_check"]["role_name"] == "school_admin"
 
     def test_element_visible_overrides_section_visible(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _build_surface_columns
+        from dazzle.back.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
 
         entity = _make_entity(
             "Task",
@@ -835,7 +851,7 @@ class TestWorkspaceRegionContextUXMetadata:
 
     def test_default_sort_stored(self) -> None:
         """surface_default_sort should store SortSpec-like objects."""
-        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 
         sort_specs = [SimpleNamespace(field="due_date", direction="desc")]
         ctx = WorkspaceRegionContext(
@@ -868,7 +884,7 @@ class TestWorkspaceRegionContextUXMetadata:
 
     def test_empty_message_stored(self) -> None:
         """surface_empty_message should store the surface's empty message."""
-        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 
         ctx = WorkspaceRegionContext(
             ctx_region=SimpleNamespace(
@@ -898,7 +914,7 @@ class TestWorkspaceRegionContextUXMetadata:
 
     def test_defaults_when_not_provided(self) -> None:
         """Default values should be empty list/string when not provided."""
-        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 
         ctx = WorkspaceRegionContext(
             ctx_region=SimpleNamespace(
@@ -1030,7 +1046,7 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle.back.runtime.workspace_rendering import _resolve_workspace_user
+        from dazzle.back.runtime.workspace_user import _resolve_workspace_user
 
         source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
 
@@ -1054,10 +1070,8 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle.back.runtime.workspace_rendering import (
-            _resolve_workspace_user,
-            _workspace_region_handler,
-        )
+        from dazzle.back.runtime.workspace_region_handler import _workspace_region_handler
+        from dazzle.back.runtime.workspace_user import _resolve_workspace_user
 
         handler_source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
         helper_source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
@@ -1077,7 +1091,7 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle.back.runtime.workspace_rendering import _resolve_workspace_user
+        from dazzle.back.runtime.workspace_user import _resolve_workspace_user
 
         source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
 
@@ -1207,7 +1221,7 @@ class TestWorkspaceStatsHandler:
         ws_access: Any = None,
         auth_middleware: Any = None,
     ) -> Any:
-        from dazzle.back.runtime.workspace_rendering import WorkspaceRegionContext
+        from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 
         return WorkspaceRegionContext(
             ctx_region=SimpleNamespace(

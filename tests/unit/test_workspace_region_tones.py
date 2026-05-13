@@ -133,7 +133,7 @@ class TestComputeAggregateMetricsTones:
 
     @pytest.mark.asyncio
     async def test_metrics_get_tone_when_configured(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _compute_aggregate_metrics
+        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         metrics = await _compute_aggregate_metrics(
             aggregates={"active": "count", "resolved": "count"},
@@ -148,7 +148,7 @@ class TestComputeAggregateMetricsTones:
 
     @pytest.mark.asyncio
     async def test_metric_without_tone_omits_key(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _compute_aggregate_metrics
+        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         metrics = await _compute_aggregate_metrics(
             aggregates={"active": "count", "untoned": "count"},
@@ -166,7 +166,7 @@ class TestComputeAggregateMetricsTones:
 
     @pytest.mark.asyncio
     async def test_no_tones_dict_leaves_metrics_untouched(self) -> None:
-        from dazzle.back.runtime.workspace_rendering import _compute_aggregate_metrics
+        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         metrics = await _compute_aggregate_metrics(
             aggregates={"active": "count"},
@@ -222,7 +222,7 @@ class TestTonesIsPresentationOnly:
     def test_tones_does_not_change_metric_value(self) -> None:
         import asyncio
 
-        from dazzle.back.runtime.workspace_rendering import _compute_aggregate_metrics
+        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         async def run() -> tuple[list[dict], list[dict]]:
             with_tones = await _compute_aggregate_metrics(
