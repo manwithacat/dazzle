@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.129] - 2026-05-14
+
+### Changed — region_adapter._shared extraction (progress on #1065)
+
+PR 2 of the region_adapter decomposition. Pure refactor, zero behaviour change.
+
+Extracted the four cross-cutting helpers from `region_adapter/_dispatcher.py` into a new `region_adapter/_shared.py`:
+
+- `_region_title` — used by every builder
+- `_wrap_surface` — used by every builder
+- `_render_status_badge_html` — used by tables/cards/timeline + externally imported by `renderer.py` (4 lazy-import sites)
+- `_render_typed_value` — used by tables/cards/misc
+
+`_dispatcher.py` now re-imports them from `._shared` so its 33 internal call sites stay unchanged. `__init__.py` re-exports `_render_status_badge_html` directly from `_shared` (the external import path is preserved).
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct tests passed.
+
+**Next PR queued**: `_builders_charts.py` — the chart family is the most self-contained (10 builders, only `_parse_reference_lines`/`_parse_reference_bands` move with it) so it's the safest first family extraction.
+
 ## [0.67.128] - 2026-05-14
 
 ### Changed — region_adapter.py converted to a package (progress on #1065)

@@ -26,6 +26,8 @@ into its own `_builders_<family>.py` module.
 
 from dazzle.back.runtime.renderers.region_adapter._dispatcher import (
     WorkspaceRegionAdapter,
+)
+from dazzle.back.runtime.renderers.region_adapter._shared import (
     _render_status_badge_html,
 )
 
