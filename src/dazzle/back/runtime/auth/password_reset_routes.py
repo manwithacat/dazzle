@@ -18,6 +18,7 @@ default `LogMailer` is wired (development pickup).
 
 import logging
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
@@ -87,7 +88,10 @@ def create_password_reset_routes() -> APIRouter:
         if not new_password or new_password != confirm_password:
             target = "/reset-password?error=mismatch"
             if token:
-                target = f"/reset-password?token={token}&error=mismatch"
+                # URL-encode the token so a crafted value can't break out
+                # of the query string. The path itself is hardcoded
+                # same-origin, so this stays an internal redirect.
+                target = f"/reset-password?token={quote(token, safe='')}&error=mismatch"
             return RedirectResponse(url=target, status_code=303)
 
         auth_store = request.app.state.auth_store

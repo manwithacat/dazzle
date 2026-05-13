@@ -83,10 +83,17 @@ class MetricsEmitter:
         """Lazy initialize Redis connection."""
         if self._redis is None:
             try:
+                # Handle Heroku/AWS Redis SSL — check the host suffix
+                # rather than a substring of the full URL so an operator
+                # whose path contains "amazonaws.com" doesn't accidentally
+                # disable cert verification (CodeQL
+                # py/incomplete-url-substring-sanitization).
+                from urllib.parse import urlparse
+
                 import redis
 
-                # Handle Heroku/AWS Redis SSL
-                ssl_cert_reqs = None if "amazonaws.com" in self._redis_url else "required"
+                _host = urlparse(self._redis_url).hostname or ""
+                ssl_cert_reqs = None if _host.endswith(".amazonaws.com") else "required"
                 self._redis = redis.from_url(
                     self._redis_url,
                     decode_responses=True,

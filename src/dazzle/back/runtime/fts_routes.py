@@ -149,8 +149,8 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     total = result.get("total", 0) or 0
 
     if total == 0:
-        no_results = html.escape(_gettext("No results for"), quote=False)
-        q_html = html.escape(str(q), quote=False)
+        no_results = html.escape(_gettext("No results for"), quote=True)
+        q_html = html.escape(str(q), quote=True)
         body = (
             f'<div class="dz-search-box-empty dz-search-box-empty--no-results">'
             f"{no_results} <em>{q_html}</em></div>"
@@ -161,7 +161,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     label_text = _gettext("result") if total == 1 else _gettext("results")
     count_html = (
         f'<div class="dz-search-box-result-count">'
-        f"{total} {html.escape(label_text, quote=False)}</div>"
+        f"{total} {html.escape(label_text, quote=True)}</div>"
     )
 
     rows: list[str] = []
@@ -185,7 +185,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
             label_value = item.get("title") or item.get("name")
         if not label_value:
             label_value = id_str
-        label_html = html.escape(str(label_value), quote=False)
+        label_html = html.escape(str(label_value), quote=True)
 
         snippets_html = ""
         if snippet_fields and isinstance(item, dict):
@@ -194,7 +194,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
                 snip = item.get(f"{fld}__snippet")
                 if not snip:
                     continue
-                fld_html = html.escape(str(fld), quote=False)
+                fld_html = html.escape(str(fld), quote=True)
                 # Snippet HTML is server-trusted (PG ts_headline output) —
                 # the configured StartSel/StopSel `<mark>` tags must
                 # survive. Surrounding text is pre-escaped by PG.

@@ -19,7 +19,7 @@ Two endpoints:
 import logging
 from datetime import timedelta
 from typing import Annotated
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -66,7 +66,12 @@ def create_two_factor_form_routes(
         from dazzle.back.runtime.totp import verify_totp
 
         auth_store = request.app.state.auth_store
-        challenge_back = f"/2fa/challenge?session={session_token}&method={method}"
+        # URL-encode the form-supplied values so a crafted token can't
+        # break out of the query string. Path is hardcoded same-origin.
+        challenge_back = (
+            f"/2fa/challenge?session={quote(session_token, safe='')}"
+            f"&method={quote(method, safe='')}"
+        )
 
         if not session_token or not code:
             return RedirectResponse(url=f"{challenge_back}&error=invalid_code", status_code=303)
@@ -129,7 +134,9 @@ def create_two_factor_form_routes(
         the same `?sent=1` indicator so the verify form renders.
         """
         auth_store = request.app.state.auth_store
-        back = f"/2fa/challenge?session={session_token}&mode=email_otp&sent=1"
+        # URL-encode the form-supplied value so a crafted token can't
+        # break out of the query string. Path is hardcoded same-origin.
+        back = f"/2fa/challenge?session={quote(session_token, safe='')}&mode=email_otp&sent=1"
 
         if not session_token:
             return RedirectResponse(url="/login?error=invalid_credentials", status_code=303)

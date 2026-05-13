@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 import pytest
 
 from dazzle.back.runtime.auth.sso_config import (
@@ -55,7 +57,7 @@ def test_google_env_pair_enables_google() -> None:
     assert p.client_id == "google-id"
     assert p.client_secret == "google-secret"
     assert "openid" in p.scopes
-    assert "google.com" in p.discovery_url
+    assert urlparse(p.discovery_url).netloc.endswith("google.com")
 
 
 def test_microsoft_env_pair_enables_microsoft() -> None:
@@ -68,7 +70,7 @@ def test_microsoft_env_pair_enables_microsoft() -> None:
     assert len(providers) == 1
     assert providers[0].name == "microsoft"
     assert providers[0].display_name == "Microsoft"
-    assert "microsoftonline.com" in providers[0].discovery_url
+    assert urlparse(providers[0].discovery_url).netloc.endswith("microsoftonline.com")
 
 
 def test_both_providers_enabled() -> None:

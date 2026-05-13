@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.117] - 2026-05-13
+
+### Security — CodeQL alert sweep
+
+Audited 19 open CodeQL alerts. Triage:
+
+- **1 real bug fixed** — `py/url-redirection` on the email click tracker (`email_templates.py:714`). The `track_click` endpoint accepted an arbitrary `url` query param and redirected to it; an attacker could craft `/click/<email_id>?url=javascript:...` or `/click/<email_id>?url=http://evil.com`. Added a scheme allowlist (http / https / relative paths starting with `/`) — invalid targets fall back to `/` but the click is still recorded for analytics. Proper fix (server-side URL store keyed by `email_id`) deferred — scheme allowlist closes the worst attack class.
+
+- **1 reflected-XSS hardening** — `py/reflective-xss` on `fts_routes._render_results_html`. The `html.escape(..., quote=False)` calls already escaped `&<>` (correct for text content), but `quote=False` left `'` and `"` unescaped. Bumped all five sites to `quote=True` — defense-in-depth if any of these strings ever moves into an attribute context.
+
+- **5 defense-in-depth fixes** — `urllib.parse.quote()` on form-supplied values interpolated into same-origin redirect query strings (`password_reset_routes.py`, `two_factor_form_routes.py`). The path component was always hardcoded so these were CodeQL false positives, but URL-encoding the values is strictly more robust and silences the scanner.
+
+- **1 substring-sanitization fix** — `py/incomplete-url-substring-sanitization` on `metrics/emitter.py:89`. `"amazonaws.com" in self._redis_url` replaced with `urlparse(...).hostname.endswith(".amazonaws.com")`. The redis URL is operator-controlled (not user input) so this was a false positive, but the host-suffix check is the textbook fix and removes the "redirect target contains the magic string somewhere" failure mode.
+
+- **2 test assertion hardening** — `test_sso_config.py` `"google.com" in p.discovery_url` → `urlparse(p.discovery_url).netloc.endswith("google.com")`. Better test (ensures URL points AT the host, not just contains the string).
+
+- **9 false positives** remain in CodeQL's view but are correctly guarded in code:
+  - 8× `py/url-redirection` via the existing `_is_safe_redirect_path` helper (CodeQL doesn't recognise it as a sanitiser).
+  - 1× `py/cookie-injection` in `locale_routes.py:137` — already validated by `_SAFE_LOCALE_TAG.fullmatch` immediately before the cookie set (the comment even calls out CodeQL).
+
+  These should be dismissed in the GitHub Security UI rather than refactored — restructuring the code to fool the taint tracker would harm readability.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,119 source files checked).
+
 ## [0.67.116] - 2026-05-13
 
 ### Removed — workspace_rendering decomposition (cut 17 — shim deletion, closes #1057)

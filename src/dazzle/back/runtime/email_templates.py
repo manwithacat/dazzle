@@ -702,7 +702,21 @@ def create_email_tracking_routes(template_engine: EmailTemplateEngine) -> Any:
         Click tracking endpoint.
 
         Records the click event and redirects to the original URL.
+
+        SECURITY: the ``url`` query param is user-controllable (anyone
+        who crafts a tracking link can choose the destination), so we
+        guard against javascript:/data:/file:/vbscript: redirect
+        targets. Only http(s):// and relative paths starting with `/`
+        are permitted. Invalid targets fall back to the app root —
+        the click is still recorded for analytics.
         """
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        is_http = parsed.scheme in ("http", "https") and bool(parsed.netloc)
+        is_relative = not parsed.scheme and not parsed.netloc and url.startswith("/")
+        safe_target = url if (is_http or is_relative) else "/"
+
         template_engine.record_event(
             email_id=email_id,
             event_type="clicked",
@@ -711,6 +725,6 @@ def create_email_tracking_routes(template_engine: EmailTemplateEngine) -> Any:
             ip_address=request.client.host if request.client else None,
         )
 
-        return RedirectResponse(url=url, status_code=302)
+        return RedirectResponse(url=safe_target, status_code=302)
 
     return router
