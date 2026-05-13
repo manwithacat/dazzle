@@ -1,6 +1,9 @@
 """
 Page routes for server-rendered Dazzle pages.
 
+Entry point: src/dazzle/back/runtime/app_factory.py:create_app() mounts
+this router alongside site_routes.py and experience_routes.py.
+
 Creates FastAPI routes that render full HTML pages using Jinja2 templates.
 Each workspace+surface combination gets a GET route that:
 1. Calls the template compiler to get a PageContext
@@ -64,6 +67,8 @@ async def _fetch_url(url: str, cookies: dict[str, str] | None = None) -> dict[st
     return result
 
 
+# Also imported directly by src/dazzle/ui/runtime/experience_routes.py
+# — update both call-sites together when changing the resolution rules.
 def _resolve_backend_url(request: Any, fallback: str) -> str:
     """Derive the backend URL for internal API calls.
 
@@ -576,6 +581,9 @@ def _dedupe_nav_items_against_groups(
     return [item for item in nav_items if getattr(item, "route", None) not in grouped_routes]
 
 
+# Compile-time nav-visibility mirror in
+# src/dazzle/ui/converters/template_compiler.py — keep both in sync when
+# changing access-check semantics.
 def _check_surface_access(prc: _PageRequestContext) -> Response | None:
     """Enforce surface-level access control. Returns a Response to abort, or None."""
     from dazzle.ui.runtime.surface_access import (
@@ -1785,6 +1793,8 @@ async def _root_redirect(
 # =============================================================================
 
 
+# Sibling route factories: create_site_page_routes / create_auth_page_routes
+# live in src/dazzle/back/runtime/site_routes.py.
 def create_page_routes(
     appspec: ir.AppSpec,
     backend_url: str | None = None,

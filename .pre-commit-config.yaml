@@ -12,7 +12,13 @@ repos:
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
+        # Exclude human-edited release/governance docs — the trailing-space
+        # strip caused ~50 agent-Edit failures across recent releases
+        # (#1063) because the file changes between Edit and the next
+        # Edit's read-cache, breaking the agent's mental model.
+        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$
       - id: end-of-file-fixer
+        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$
       - id: check-yaml
         exclude: mkdocs\.yml$  # Uses PyYAML-specific tags
       - id: check-toml

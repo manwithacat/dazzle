@@ -1,7 +1,37 @@
-"""
-Route generator - generates FastAPI routes from EndpointSpec.
+"""Route generator — generates FastAPI route handlers from EndpointSpec.
 
-This module creates FastAPI routers and routes from backend specifications.
+SECTION MAP (line anchors approximate — use them to jump directly to a
+section rather than scanning the 4,000+ lines):
+
+  L  51  Contracts          HandlerConfig, RouteSpec (shared CRUD bundle)
+  L 143  Request utils      _is_htmx_request, _wants_html, _forbidden_detail
+  L 232  HTMX renderers     _render_table_row, _render_table_pagination,
+                             _render_inline_edit, _render_cell_display,
+                             _render_table_sentinel, _with_htmx_triggers
+                             NOTE: 500+ lines of inline HTML; no Jinja2.
+  L 828  Cedar row-RBAC     _extract_cedar_row_filters (DEPRECATED shim),
+                             _build_fk_path_subquery, _extract_condition_filters
+  L1301  Audit / access     _normalize_role, _build_access_context,
+                             _compute_field_changes, _log_audit_decision
+  L1430  Auth wrapper       _wrap_with_auth → _build_cedar_handler /
+                             _build_auth_handler / _build_noauth_handler
+  L1741  List handler       create_list_handler, _list_handler_body,
+                             _resolve_scope_filters, _resolve_predicate_filters
+  L2512  Detail HTML        _render_detail_html
+  L2622  Read handler       create_read_handler
+  L2726  Ref injection      resolve_backed_entity_refs, inject_current_user_refs
+  L2861  Write handlers     create_create_handler, create_update_handler,
+                             create_delete_handler, create_custom_handler
+  L3155  Graph helpers      _materialize_graph, _neighborhood_handler_body,
+                             create_neighborhood_handler  (#619 phases 3–4)
+  L3456  Graph algorithms   create_shortest_path_handler,
+                             create_components_handler  (#619 phase 4)
+  L3594  RouteGenerator     Primary class — wires all factories into APIRouter
+  L4101  Convenience        generate_crud_routes (thin wrapper)
+
+Closes #1066. Section map added to cut agent repeat-reads; introduced
+after `scripts/stall_log_mine.py` flagged this file as friction-148
+(135 repeat reads, 4-line docstring).
 """
 
 import logging

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.126] - 2026-05-13
+
+### Changed — agent-experience quick wins (closes #1066, #1067; partial #1063)
+
+Three landed-together AX improvements derived from `scripts/stall_log_mine.py` (the 30-day stall-log sweep at 74a6b6d6).
+
+**#1066 — route_generator.py section-map docstring.** Replaced the 4-line module-top docstring on `src/dazzle/back/runtime/route_generator.py` (4,257 lines) with a 35-line section map. 16 logical sections line-anchored (HTMX renderers, Cedar RBAC, audit, auth wrapper, list/read/write handlers, graph subsystem, ref injection, RouteGenerator class). Closes the friction-148 measurement without any code restructuring; mining showed 135 repeat reads in the window against a 4-line docstring vs `renderer.py`'s multi-paragraph docstring producing 84 repeat reads on a comparable-size file.
+
+**#1067 — forward-pointer comments on transit-point files.** Added 5 one-line forward-pointers:
+
+- `src/dazzle/ui/runtime/page_routes.py` — entry-point note (app_factory mounts), `_resolve_backend_url` cross-caller note (experience_routes), `_check_surface_access` mirror note (template_compiler), `create_page_routes` sibling-factory note (site_routes).
+- `src/dazzle/core/dsl_parser_impl/workspace.py` — mixin-composition + IR-type pointer in module docstring, `_parse_workspace_access` runtime-enforcement pointer.
+
+Each pointer maps to a grep round-trip the stall miner had logged. Estimated to cut ~30% of navigational repeat-reads on these two files.
+
+**#1063 surface A — pre-commit excludes for human-edit docs.** Added `exclude: ^(CHANGELOG\.md|ROADMAP\.md)$` to the `trailing-whitespace` and `end-of-file-fixer` hooks in `.pre-commit-config.yaml`. The trailing-space strip on CHANGELOG.md after `git add` was the dominant cause of the 14 edit-failure cluster on this file — agent writes a multi-paragraph CHANGELOG entry, hook strips a trailing space on `git add`, next Edit raises "File has been modified since read". The exclude is narrow (just CHANGELOG.md + ROADMAP.md), Python files keep full hook coverage. Surface B (atomic bump-cycle skill rewrite) remains open on #1063.
+
+### Agent Guidance
+
+- New diagnostic: `python scripts/stall_log_mine.py --days 30` (added in 74a6b6d6) emits a friction-ranked AX report at `dev_docs/agent-stall-mining-<date>.md`. Re-run monthly to track whether AX work moves the score; see #1068 for the measurement protocol.
+- Large hub files now follow a section-map docstring pattern (`route_generator.py`). When adding to a >2,000-line file, **extend the section map** in the module docstring rather than letting structure rot.
+- Cross-module dependencies should be signposted via one-line forward-pointer comments on both ends. Pattern: `# Also imported by <path> — update both call-sites together.`
+
 ## [0.67.125] - 2026-05-13
 
 ### Changed — cache Playwright chromium between INTERACTION_WALK CI runs
