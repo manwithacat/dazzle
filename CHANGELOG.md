@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.114] - 2026-05-13
+
+### Changed — workspace_rendering decomposition (cut 15 of N)
+
+- **Extracted Phase 4-5 of the region handler — compute orchestration** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_orchestration.py` (361 lines): `compute_region_render_inputs()` — async function that runs every aggregate / bucketed / per-display compute call and returns a fully-populated `RegionRenderInputs` dataclass.
+
+- **`_workspace_region_handler`** trimmed from 541 → **141 lines** (-400 in this cut). The ~340-line aggregate + per-display compute orchestration is now a single `await compute_region_render_inputs(...)` call.
+
+- **The full handler is now 6 named phase calls** (24 lines, excluding imports + docstring):
+  ```python
+  user_ctx = await resolve_request_user_context(request, ctx)
+  fetched = await fetch_region_items(request, ctx, user_ctx, sort, dir, page, page_size)
+  columns = compute_columns_for_persona(...)  # or auto-derive from items[0]
+  if request.query_params.get("format") == "csv":
+      return _render_csv_response(...)
+  render_inputs = await compute_region_render_inputs(request, ctx, user_ctx, fetched, columns)
+  html_body = await render_region_html(request, ctx, user_ctx, render_inputs, sort, dir)
+  return HTMLResponse(content=html_body)
+  ```
+
+- **`test_workspace_scope_enforcement::test_aggregate_call_sites_gated_on_scope_denied`** rebased to grep `workspace_region_orchestration.py` (where the 4 `not scope_denied` guards now live) + `workspace_handlers.py` (the 5th gate, in `_fetch_region_json`).
+
+### Cumulative
+
+After 15 cuts: `workspace_rendering.py` 4,483 → **141 lines (-4,342, -97%)**. The file that started as a 4,483-line god-module is now a 141-line orchestration spine that delegates to 16 focused sibling modules. The Phase-N pattern reads top-to-bottom; every phase boundary is a typed dataclass.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,119 source files checked).
+
 ## [0.67.113] - 2026-05-13
 
 ### Changed — workspace_rendering decomposition (cut 14 of N)

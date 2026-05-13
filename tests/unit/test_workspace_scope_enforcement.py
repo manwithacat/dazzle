@@ -320,28 +320,38 @@ class TestAggregateScopeGate:
         )
 
     def test_aggregate_call_sites_gated_on_scope_denied(self) -> None:
-        """Each aggregate / bucketed / pivot call site in
-        `_workspace_region_handler` must include `not _scope_denied`
-        in its guard. This is a static check on the source — if a
-        future edit removes one of these guards, this test fails
-        loudly before the bypass reaches production."""
+        """Each aggregate / bucketed / pivot call site must include
+        ``not scope_denied`` in its guard. This is a static check on
+        the source — if a future edit removes one of these guards,
+        this test fails loudly before the bypass reaches production.
+
+        v0.67.114 (#1057 cut 15): the orchestration of aggregate
+        call sites moved from ``_workspace_region_handler`` to
+        ``compute_region_render_inputs`` in
+        ``workspace_region_orchestration.py``. The 4 sites (metrics /
+        bucketed / overlays / pivot) live there now; the 5th lives
+        in ``_fetch_region_json`` (workspace_handlers.py). Local-var
+        underscore-prefix dropped (it's a parameter now).
+        """
         from pathlib import Path
 
-        src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
+        root = Path(__file__).resolve().parents[2]
+        orchestration = (
+            root / "src/dazzle/back/runtime/workspace_region_orchestration.py"
         ).read_text()
-        # Count gate uses in `_workspace_region_handler` — there are
-        # 4 aggregate call sites in that handler (metrics / bucketed /
-        # overlays / pivot) plus 1 in `_fetch_region_json`. Every one
-        # must either short-circuit on `_scope_denied` or the function
-        # itself must fail with that flag set.
-        assert src.count("and not _scope_denied") >= 4, (
-            "Expected ≥4 `not _scope_denied` guards across aggregate call "
-            "sites in workspace_rendering.py — #887 fix incomplete"
+        handlers = (root / "src/dazzle/back/runtime/workspace_handlers.py").read_text()
+        # 4 sites in the orchestrator (metrics / bucketed / overlays / pivot)
+        # + 1 in workspace_handlers (_fetch_region_json) = ≥5.
+        total = orchestration.count("and not scope_denied") + handlers.count(
+            "and not _scope_denied"
         )
-        # `_fetch_region_json` uses an `if ... and not _scope_denied:` form
-        # via the `if ctx.ctx_region.aggregates and not _scope_denied:` line.
-        assert "ctx.ctx_region.aggregates and not _scope_denied" in src, (
+        assert total >= 4, (
+            "Expected ≥4 `not scope_denied` guards across aggregate call "
+            "sites in workspace_region_orchestration.py — #887 fix incomplete"
+        )
+        # `_fetch_region_json` (now in workspace_handlers.py) uses an
+        # `if ctx.ctx_region.aggregates and not _scope_denied:` line.
+        assert "ctx.ctx_region.aggregates and not _scope_denied" in handlers, (
             "_fetch_region_json aggregate gate missing — #887 fix incomplete"
         )
 
