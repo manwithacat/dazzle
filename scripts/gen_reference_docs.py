@@ -584,9 +584,7 @@ Auto-generated reference documentation for the Dazzle codebase.
 """
 
     module_descriptions = {
-        "dazzle": "Core DSL parser, IR, validator, and CLI",
-        "dazzle_back": "FastAPI backend runtime and services",
-        "dazzle_ui": "JavaScript UI runtime and components",
+        "dazzle": "DSL parser, IR, runtime, CLI, MCP server, UI, and back-end services",
     }
 
     for scope in sorted(by_scope.keys()):
@@ -601,8 +599,8 @@ Auto-generated reference documentation for the Dazzle codebase.
 - **IR Types**: [dazzle/core/ir/](modules/dazzle.md#coreir)
 - **Validator**: [dazzle/core/validator.py](files/src/dazzle/core/validator.py.md)
 - **CLI**: [dazzle/cli/](modules/dazzle.md#cli)
-- **Backend Runtime**: [dazzle_back/runtime/](modules/dazzle_back.md#runtime)
-- **UI Components**: [dazzle_ui/runtime/](modules/dazzle_ui.md#runtimestaticjs)
+- **Backend Runtime**: [dazzle/back/runtime/](modules/dazzle.md#backruntime)
+- **UI Components**: [dazzle/ui/runtime/](modules/dazzle.md#uiruntime)
 """
 
     return content, module_pages
