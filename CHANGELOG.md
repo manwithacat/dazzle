@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.132] - 2026-05-14
+
+### Changed — region_adapter timeline-family mixin extracted (progress on #1065)
+
+PR 5 of the region_adapter decomposition. Third family extracted.
+
+**Moved to `region_adapter/_builders_timeline.py`** as `_BuildersTimelineMixin`:
+- `_build_timeline` — `Timeline` of `TimelineEvents` with rich per-event fields
+- `_build_activity_feed` — chronological dot + bubble feed
+- `_build_day_timeline` — vertical scroll of slot cards (#1016)
+- `_build_task_inbox` — workflow-led prioritised due-action list (#1015)
+
+No family-local helpers — uses `_render_typed_value` (for `_build_timeline`'s secondary-field rendering) and `_region_title` / `_wrap_surface` from `_shared`. `_timeago_filter` stays as an inline lazy import.
+
+**Sizes:**
+- `_dispatcher.py`: 1,765 → 1,498 lines (-267)
+- `_builders_timeline.py`: 310 lines (new)
+- Cumulative since PR 1: 1,373 lines moved out of the dispatcher
+- 3 of 6 families extracted
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct.
+
+**Next PR queued**: `_builders_misc.py` — 5 builders (`_build_grid`, `_build_detail`, `_build_tree`, `_build_confirm_action_panel`, `_build_search_box`), ~227 lines. Plus `_pick_label` migrates with it (its only caller is `_build_tree`).
+
 ## [0.67.131] - 2026-05-14
 
 ### Changed — region_adapter metrics-family mixin extracted (progress on #1065)
