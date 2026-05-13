@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.130] - 2026-05-14
+
+### Changed — region_adapter chart-family mixin extracted (progress on #1065)
+
+PR 3 of the region_adapter decomposition. First family extraction; validates the mixin pattern for the remaining 5 family PRs.
+
+**Moved to `region_adapter/_builders_charts.py`**:
+- 10 chart `_build_*` methods (`_build_radar`, `_build_box_plot`, `_build_time_series`, `_build_diagram`, `_build_bar_track`, `_build_bullet`, `_build_funnel_chart`, `_build_histogram`, `_build_heatmap`, `_build_bar_chart`)
+- 2 module-level helpers used only by chart builders (`_parse_reference_lines`, `_parse_reference_bands`)
+- Packaged as `_BuildersChartsMixin`; `WorkspaceRegionAdapter` now inherits from it. `getattr`-based dispatch in `build()` finds the methods unchanged via Python's MRO.
+
+**Sizes**:
+- `_dispatcher.py`: 2,720 → 2,052 lines (-668)
+- `_builders_charts.py`: 725 lines (new)
+- Cumulative since PR 1: ~819 lines moved out of the dispatcher (155 to `_shared.py`, 664 to `_builders_charts.py`)
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct. Verified all 10 chart methods bind correctly on the adapter instance.
+
+**Next PR queued**: `_builders_metrics.py` (4 builders: `_build_metrics`, `_build_status_list`, `_build_progress`, `_build_pipeline_steps`; ~273 lines). Self-contained; no family-local helpers to migrate.
+
+### Agent Guidance
+
+- Mixin pattern for splitting fat dispatch classes: define `_BuildersFooMixin` in `_builders_foo.py`, have the main class inherit from it. `getattr(self, method_name)` dispatch works unchanged. Each mixin imports from `._shared` for cross-family helpers; family-local helpers stay in the same file as their methods. See `_builders_charts.py` for the canonical example.
+
 ## [0.67.129] - 2026-05-14
 
 ### Changed — region_adapter._shared extraction (progress on #1065)
