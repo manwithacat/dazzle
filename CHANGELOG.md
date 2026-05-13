@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.124] - 2026-05-13
+
+### Fixed — promote `fastapi` to core dep so PyPI smoke-test passes
+
+`fastapi` was in the `[serve]` extras but `dazzle.core.appspec_loader` transitively imports `dazzle.back.runtime` whose `server.py` / `file_routes.py` / `search_routes.py` / `qa_routes.py` / etc. all have unconditional `from fastapi import …` at module load. The PyPI smoke-test installs only core deps and immediately crashes with `ModuleNotFoundError: No module named 'fastapi'` on `dazzle --help`. That's been red on every release since at least v0.67.70 (confirmed via `gh run list --workflow="Publish to PyPI"`).
+
+Promoted `fastapi>=0.100.0` from `[serve]` to core dependencies. `[serve]` keeps `uvicorn`, `httpx`, `python-multipart` (those genuinely are runtime-only). `[dev]` keeps `fastapi` for documentation; pip dedupes.
+
+After this lands, v0.67.119–123 changes will be combined into the v0.67.124 wheel (the earlier tags never reached PyPI).
+
 ## [0.67.123] - 2026-05-13
 
 ### Fixed — wheel-import crash when FastAPI not installed (release CI red)
