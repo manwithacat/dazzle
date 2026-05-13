@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.125] - 2026-05-13
+
+### Changed — cache Playwright chromium between INTERACTION_WALK CI runs
+
+The `Install Playwright chromium` step downloaded the ~150MB browser binary on every run, which made it the dominant flake class — v0.67.124 timed out the 5-minute window on an otherwise green build (CDN/network blip). Added `actions/cache@v4` keyed on the resolved `playwright.__version__`. On cache hit, only `playwright install-deps chromium` (apt-get OS packages) re-runs; the binary is restored from cache. Expected to drop ~30s off every run and eliminate the CDN-timeout class.
+
 ## [0.67.124] - 2026-05-13
 
 ### Fixed — promote `fastapi` to core dep so PyPI smoke-test passes

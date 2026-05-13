@@ -510,11 +510,36 @@ jobs:
         # the interaction harness. Pin at least 1.40 for the sync API
         # shape we use in dazzle/cli/ux_interactions.py.
         pip install "playwright>=1.40"
+        # Capture the resolved playwright version so the cache key
+        # invalidates whenever the wheel pin moves. Coming from a
+        # python package metadata read, not external user input.
+        PLAYWRIGHT_VERSION=$(python -c "import playwright; print(playwright.__version__)")
+        echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> "$GITHUB_ENV"
 
-    - name: Install Playwright chromium
+    # Cache the chromium browser binary (~150MB) keyed on the resolved
+    # playwright version. CDN downloads were the dominant flake class
+    # on this job — v0.67.124 timed out the 5-min install on an
+    # otherwise green build. On cache hit we still re-run install-deps
+    # (apt-get OS packages are fresh on every runner) but skip the
+    # network pull.
+    - name: Cache Playwright chromium browser
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-chromium-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+    - name: Install Playwright chromium (with OS deps)
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: |
         python -m playwright install --with-deps chromium
       timeout-minutes: 5
+
+    - name: Install Playwright OS deps (cache hit)
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      run: |
+        python -m playwright install-deps chromium
+      timeout-minutes: 2
 
     - name: Run INTERACTION_WALK (with retry)
       # Per design-doc step 4: retry up to 2 times on regression to
