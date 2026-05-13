@@ -15,8 +15,6 @@ name = "dnr"
 # this app is built around. CRM data benefits from readability over
 # density.
 theme = "paper"
-# P17 — typed Page/AppShell Fragment chrome (zero Jinja per request).
-fragment_chrome = true
 
 [auth]
 enabled = true

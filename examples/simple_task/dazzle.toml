@@ -15,9 +15,3 @@ provider = "session"
 allow_registration = true
 
 [ui]
-# P17 — opt simple_task into the typed Page/AppShell Fragment chrome
-# substrate. With Plan 11's mass-flip of every DSL surface to
-# `render: fragment`, this means simple_task serves with zero Jinja
-# template invocations per request. Empirical proof in
-# tests/integration/test_simple_task_no_jinja_when_chrome_on.py.
-fragment_chrome = true

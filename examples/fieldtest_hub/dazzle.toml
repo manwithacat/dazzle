@@ -9,9 +9,6 @@ paths = ["./dsl"]
 [stack]
 name = "dnr"
 
-[ui]
-# P17 — typed Page/AppShell Fragment chrome (zero Jinja per request).
-fragment_chrome = true
 
 [auth]
 enabled = true

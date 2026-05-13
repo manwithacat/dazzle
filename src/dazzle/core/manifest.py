@@ -6,6 +6,15 @@ from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
 
+_FRAGMENT_CHROME_WARNED = False
+
+
+def _fragment_chrome_warned() -> bool:
+    global _FRAGMENT_CHROME_WARNED
+    already = _FRAGMENT_CHROME_WARNED
+    _FRAGMENT_CHROME_WARNED = True
+    return already
+
 
 @dataclass
 class DockerConfig:
@@ -827,8 +836,9 @@ def load_manifest(path: Path) -> ProjectManifest:
     # Phase 4 app-shell migration (v0.67.45): `[ui] fragment_chrome` is
     # retired. The key is still accepted in dazzle.toml without raising
     # so existing project manifests keep loading; a deprecation log
-    # surfaces the no-op.
-    if "fragment_chrome" in ui_data:
+    # surfaces the no-op. Dedupe via module-level guard: load_manifest is
+    # called 3× per boot (manifest, appspec loader, extensions router).
+    if "fragment_chrome" in ui_data and not _fragment_chrome_warned():
         import logging as _logging
 
         _logging.getLogger("dazzle.manifest").info(

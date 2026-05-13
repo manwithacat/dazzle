@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.119] - 2026-05-13
+
+### Fixed — fragment_chrome deprecation noise (closes #1059)
+
+`[ui] fragment_chrome` has been a no-op since v0.67.43 but the deprecation log fired **three times per `dazzle serve` boot** despite a single occurrence per `dazzle.toml` — `load_manifest` is called 3× during normal startup (manifest read, appspec loader, extensions router) and the deprecation site had no memoization. Added a module-level guard so the warning emits at most once per process. Also dropped the now-dead `fragment_chrome = true` key from all five example apps (`simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`) so the warning never surfaces on example boots.
+
+Caught by `/fuzz` sweep (2026-05-13). `pytest tests/ -m "not e2e"`: 13,982 passed.
+
 ## [0.67.118] - 2026-05-13
 
 ### Fixed — two region-render regressions (closes #1058)
