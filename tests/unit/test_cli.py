@@ -34,6 +34,17 @@ entity Task "Task":
   title: str(200) required
   status: enum[todo,done]=todo
 
+  permit:
+    list: authenticated
+    read: authenticated
+    create: authenticated
+    update: authenticated
+    delete: authenticated
+
+  scope:
+    list: all
+      as: authenticated
+
   fitness:
     repr_fields: [title, status]
 

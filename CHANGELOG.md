@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.122] - 2026-05-13
+
+### Added — four `dazzle validate` blindspots closed (closes #1061)
+
+Caught by `/fuzz` sweep (2026-05-13): four cross-fixture classes of bug that `validate` was passing silently even though the machinery to detect each one already existed or was trivial. All four land as **WARNINGs** so existing CI stays green; promote to ERRORs in a future minor.
+
+1. **`role(<name>)` not in `User.role` enum.** New `validate_role_references_against_enum` walks every entity's permit conditions, extracts `role(<name>)` references via `_walk_role_names`, and compares against the User entity's `role: enum[...]` values. Catches the `shapes_validation` case where `permit: list: role(guardian)` references a persona name that doesn't exist as a User.role value — rule was dead code. Falls back to "entity named User or Account" so fixtures without explicit `archetype: user` still get checked.
+
+2. **`tenancy.partition_key` not declared on any entity.** New `validate_tenancy_partition_key` verifies the named field exists on at least one entity. Catches `examples/support_tickets` where `tenancy: partition_key: tenant_id` silently produced un-partitioned data. Skipped under `TenancyMode.SINGLE`.
+
+3. **`process` step service refs that don't resolve.** New `validate_process_step_service_refs` walks each `process.steps` entry with `kind == SERVICE` and checks `service:` against `appspec.domain_services`. Catches `fixtures/pra` where `service: auto_assign_task` referenced a nonexistent service.
+
+4. **RBAC matrix `PolicyWarning`s now surface.** New `validate_rbac_matrix_diagnostics` calls `generate_access_matrix(appspec)` and forwards every `PolicyWarning.message` as a validator warning. Catches `redundant_forbid`, `orphan_role`, and `no_scope_rule` classes that the matrix has been silently producing.
+
+Tests: 13,982 passed.
+
+### Agent Guidance
+
+- Four new validator functions in `src/dazzle/core/validator.py` — all four are additive WARNINGs and wired through `lint_appspec` in `lint.py`. Each is independent of the others; promote individually to ERROR once apps are clean.
+- `_walk_role_names(condition)` is a local helper for the role-enum check — separate from `_extract_roles_from_condition` in `rbac/matrix.py` to avoid taking on that import edge.
+- `_find_user_role_enum(appspec)` falls back from `ArchetypeKind.USER` to entity-name matching ("User"/"Account"); update both branches if you need to extend.
+
 ## [0.67.121] - 2026-05-13
 
 ### Fixed — support_tickets internal-Comment scope leak + framework guard (closes #1062)

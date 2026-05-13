@@ -2926,3 +2926,186 @@ def validate_storage_refs(
                     f"will be ignored at runtime."
                 )
     return errors, warnings
+
+
+# =============================================================================
+# Validator hardening — closes #1061
+# =============================================================================
+#
+# Four blindspots that `dazzle validate` silently allowed before #1061:
+#   1. `role(<name>)` in permit clauses that doesn't match any User.role
+#      enum value (dead permissions — never matches any user).
+#   2. `tenancy.partition_key` naming a field that no entity declares
+#      (multi-tenancy silently broken).
+#   3. Service refs inside `process` step `service:` clauses that don't
+#      resolve to a declared `domain_service`.
+#   4. RBAC matrix `PolicyWarning`s (redundant_forbid, orphan_role) that
+#      `generate_access_matrix` produces but no validator surfaced.
+#
+# All four are warnings (not errors) so existing CI stays green; promote
+# to errors in a future minor once downstream apps have absorbed them.
+
+
+def _walk_role_names(condition: Any) -> set[str]:
+    """Recursively collect role names from a ConditionExpr tree."""
+    if condition is None:
+        return set()
+    roles: set[str] = set()
+    if condition.role_check is not None:
+        roles.add(condition.role_check.role_name)
+    if condition.is_compound:
+        roles.update(_walk_role_names(condition.left))
+        roles.update(_walk_role_names(condition.right))
+    return roles
+
+
+def _find_user_role_enum(appspec: ir.AppSpec) -> tuple[str, set[str]] | None:
+    """Locate the User entity's enum-typed `role` field and return its values.
+
+    Returns (entity_name, enum_values) or None if no User entity / no role
+    field with enum values is found. Prefers the explicit USER archetype
+    but falls back to "any entity named User with an enum role field" so
+    fixtures that don't tag the archetype still get checked.
+    """
+    candidates: list[ir.EntitySpec] = []
+    for entity in appspec.domain.entities:
+        if entity.archetype_kind == ir.ArchetypeKind.USER:
+            candidates.insert(0, entity)
+        elif entity.name in {"User", "Account"}:
+            candidates.append(entity)
+    for entity in candidates:
+        for field in entity.fields:
+            if field.name != "role":
+                continue
+            if field.type.kind == ir.FieldTypeKind.ENUM and field.type.enum_values:
+                return entity.name, set(field.type.enum_values)
+    return None
+
+
+def validate_role_references_against_enum(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn when a `role(<name>)` check references a value not in User.role.
+
+    A common /fuzz finding (shapes_validation #530): a permit clause
+    `role(guardian)` silently never matches because `guardian` is a
+    persona name, not a value in the User.role enum.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    user_info = _find_user_role_enum(appspec)
+    if user_info is None:
+        return errors, warnings
+    user_entity_name, enum_values = user_info
+
+    for entity in appspec.domain.entities:
+        if entity.access is None:
+            continue
+        seen: set[tuple[str, str]] = set()
+        for rule in entity.access.permissions:
+            for role_name in _walk_role_names(rule.condition):
+                if role_name in enum_values:
+                    continue
+                key = (entity.name, role_name)
+                if key in seen:
+                    continue
+                seen.add(key)
+                warnings.append(
+                    f"Entity '{entity.name}': permit references "
+                    f"role({role_name!r}) which is not in {user_entity_name}.role "
+                    f"enum ({sorted(enum_values)}). The check will never "
+                    f"match — rule is dead."
+                )
+
+    return errors, warnings
+
+
+def validate_tenancy_partition_key(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Verify `tenancy.partition_key` names a field on at least one entity.
+
+    A `tenancy: partition_key: tenant_id` block silently produces an
+    un-partitioned runtime if no entity carries that field (found in
+    support_tickets during /fuzz).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    tenancy = appspec.tenancy
+    if tenancy is None or tenancy.isolation is None:
+        return errors, warnings
+    partition_key = tenancy.isolation.partition_key
+    if not partition_key:
+        return errors, warnings
+    # SHARED_SCHEMA mode is the only one that needs the column to exist on
+    # tenanted entities; single-tenant mode has no partition key in use.
+    if tenancy.isolation.mode == ir.TenancyMode.SINGLE:
+        return errors, warnings
+
+    has_partition_field = any(
+        field.name == partition_key for entity in appspec.domain.entities for field in entity.fields
+    )
+    if not has_partition_field:
+        warnings.append(
+            f"tenancy.partition_key={partition_key!r} but no entity "
+            f"declares a field with that name. Multi-tenancy is "
+            f"effectively disabled — data is not partitioned."
+        )
+    return errors, warnings
+
+
+def validate_process_step_service_refs(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn when a process step references a service that doesn't exist.
+
+    Found in fixtures/pra during /fuzz: `service: auto_assign_task` on a
+    process step where no such domain_service is declared.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    domain_service_names = {s.name for s in appspec.domain_services}
+    for process in appspec.processes:
+        for step in process.steps:
+            if step.kind != ir.ProcessStepKind.SERVICE:
+                continue
+            if step.service and step.service not in domain_service_names:
+                warnings.append(
+                    f"Process {process.name!r} step {step.name!r}: "
+                    f"service {step.service!r} is not declared in "
+                    f"`domain_services`. The step will fail at runtime."
+                )
+    return errors, warnings
+
+
+def validate_rbac_matrix_diagnostics(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Surface PolicyWarnings from `generate_access_matrix`.
+
+    The RBAC matrix already detects redundant_forbid and orphan_role
+    patterns at link-time, but no validator was surfacing them — they
+    were silently discarded. This wires them into `dazzle validate`.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    try:
+        from dazzle.rbac.matrix import generate_access_matrix
+    except ImportError:
+        return errors, warnings
+
+    try:
+        matrix = generate_access_matrix(appspec)
+    except Exception:
+        # Matrix generation can fail on incomplete AppSpecs during early
+        # development; don't block validation.
+        return errors, warnings
+
+    for warning in matrix.warnings:
+        warnings.append(f"[RBAC {warning.kind}] {warning.message}")
+
+    return errors, warnings

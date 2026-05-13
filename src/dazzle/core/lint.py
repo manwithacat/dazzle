@@ -16,11 +16,15 @@ from .validator import (
     validate_lifecycles,
     validate_money_fields,
     validate_notifications,
+    validate_process_step_service_refs,
+    validate_rbac_matrix_diagnostics,
+    validate_role_references_against_enum,
     validate_scope_predicates,
     validate_sensitive_fields,
     validate_services,
     validate_slas,
     validate_surfaces,
+    validate_tenancy_partition_key,
     validate_ux_specs,
     validate_visibility_bool_field_scope_coverage,
     validate_webhooks,
@@ -153,6 +157,17 @@ def lint_appspec(
     errors, warnings = validate_visibility_bool_field_scope_coverage(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
+
+    # Validator hardening — closes #1061
+    for check in (
+        validate_role_references_against_enum,
+        validate_tenancy_partition_key,
+        validate_process_step_service_refs,
+        validate_rbac_matrix_diagnostics,
+    ):
+        errors, warnings = check(appspec)
+        all_errors.extend(errors)
+        all_warnings.extend(warnings)
 
     # Graph semantics validation (v0.46.0 — #619)
     errors, warnings = validate_graph_declarations(appspec)
