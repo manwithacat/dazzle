@@ -22,6 +22,7 @@ from .validator import (
     validate_slas,
     validate_surfaces,
     validate_ux_specs,
+    validate_visibility_bool_field_scope_coverage,
     validate_webhooks,
     validate_workspace_region_actions,
 )
@@ -145,6 +146,11 @@ def lint_appspec(
 
     # Scope predicate validation (FK path integrity)
     errors, warnings = validate_scope_predicates(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Visibility-bool fields without scope coverage (#1062)
+    errors, warnings = validate_visibility_bool_field_scope_coverage(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

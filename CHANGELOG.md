@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.121] - 2026-05-13
+
+### Fixed — support_tickets internal-Comment scope leak + framework guard (closes #1062)
+
+The `examples/support_tickets` Comment entity declared `scope: list: all as: agent, manager, customer` despite having an `is_internal: bool` field intended to gate visibility — customers could list every comment regardless of `is_internal` value. The `comment_create` and `comment_edit` surfaces also exposed the `is_internal` toggle to customers with no `ux: hide`.
+
+Two parts:
+
+1. **App fix.** Split Comment scope into a customer-filtered rule (`is_internal = false as: customer`) plus an unfiltered rule for agent/manager. Added `ux: as customer: hide: is_internal` on both create/edit surfaces.
+2. **Framework lint rule.** New `validate_visibility_bool_field_scope_coverage()` walks each entity's scope rules and warns when a bool field named `is_internal`, `is_private`, `internal_only`, etc. exists and the entity is exposed to ≥2 personas via scope rules whose condition trees never reference that field. Tree walk goes through `Comparison.field` plus `FunctionCall.argument`, recursing through compound `left`/`right` branches — purely structural, no string heuristics. Wired into `lint_appspec()` so it runs on every `dazzle validate`.
+
+Caught by `/fuzz` (2026-05-13).
+
+### Agent Guidance
+
+- New `_VISIBILITY_BOOL_FIELD_NAMES` set in `validator.py` lists the field-name heuristics. Extend it (not the function) when new visibility-gate naming conventions emerge.
+- Use the standalone `_condition_field_references(condition)` helper if you need a recursive walk over `ConditionExpr` for any reason — it returns the set of field/function-argument names referenced anywhere in the tree.
+
 ## [0.67.120] - 2026-05-13
 
 ### Fixed — sitespec.yaml silent failure on schema mismatch (closes #1060)

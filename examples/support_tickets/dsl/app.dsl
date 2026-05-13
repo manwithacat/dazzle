@@ -154,8 +154,10 @@ entity Comment "Comment":
     delete: role(manager)
 
   scope:
+    list: is_internal = false
+      as: customer
     list: all
-      as: agent, manager, customer
+      as: agent, manager
 
   fitness:
     repr_fields: [ticket, author, content, is_internal]
@@ -348,6 +350,10 @@ surface comment_create "Create Comment":
     field content "Comment"
     field is_internal "Internal"
 
+  ux:
+    as customer:
+      hide: is_internal
+
 surface comment_edit "Edit Comment":
   uses entity Comment
   mode: edit
@@ -356,6 +362,10 @@ surface comment_edit "Edit Comment":
   section main "Edit Comment":
     field content "Comment"
     field is_internal "Internal"
+
+  ux:
+    as customer:
+      hide: is_internal
 
 # =============================================================================
 # WORKSPACES - Composed views with stages

@@ -2357,6 +2357,95 @@ def validate_sensitive_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]
     return errors, warnings
 
 
+_VISIBILITY_BOOL_FIELD_NAMES = frozenset(
+    {"is_internal", "is_private", "internal_only", "internal", "private"}
+)
+
+
+def _condition_field_references(condition: Any) -> set[str]:
+    """Collect every entity field name referenced by a ConditionExpr tree.
+
+    Walks Comparison.field plus FunctionCall.argument on leaves and
+    recurses through compound `left`/`right` branches.
+    """
+    if condition is None:
+        return set()
+    refs: set[str] = set()
+    comparison = getattr(condition, "comparison", None)
+    if comparison is not None:
+        if comparison.field:
+            refs.add(comparison.field)
+        if comparison.function and comparison.function.argument:
+            refs.add(comparison.function.argument)
+    left = getattr(condition, "left", None)
+    right = getattr(condition, "right", None)
+    if left is not None:
+        refs.update(_condition_field_references(left))
+    if right is not None:
+        refs.update(_condition_field_references(right))
+    return refs
+
+
+def validate_visibility_bool_field_scope_coverage(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn when an entity has a likely-visibility bool field but no scope filter.
+
+    An entity carrying a bool field named `is_internal`, `is_private`,
+    `internal_only`, etc. is signalling intent that some rows should be
+    invisible to certain personas. If the entity is exposed to multiple
+    personas via an unfiltered `all` scope (condition=None) and no scope
+    rule references that field's name, the field is decoration — rows
+    leak across personas regardless of its value.
+
+    Caught by /fuzz on examples/support_tickets where Comment.is_internal
+    was leaking to the `customer` persona (#1062).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    for entity in appspec.domain.entities:
+        if entity.access is None or not entity.access.scopes:
+            continue
+
+        bool_visibility_fields = [
+            f.name
+            for f in entity.fields
+            if f.name in _VISIBILITY_BOOL_FIELD_NAMES and f.type.kind == ir.FieldTypeKind.BOOL
+        ]
+        if not bool_visibility_fields:
+            continue
+
+        # Collect every persona named by any scope rule on this entity.
+        all_personas: set[str] = set()
+        for rule in entity.access.scopes:
+            all_personas.update(rule.personas)
+
+        if len(all_personas) < 2:
+            # Single-persona exposure: no leak surface.
+            continue
+
+        referenced_fields: set[str] = set()
+        for rule in entity.access.scopes:
+            referenced_fields.update(_condition_field_references(rule.condition))
+
+        unreferenced = [name for name in bool_visibility_fields if name not in referenced_fields]
+        if not unreferenced:
+            continue
+
+        for field_name in unreferenced:
+            warnings.append(
+                f"Entity '{entity.name}': bool field '{field_name}' looks "
+                f"like a visibility gate but no scope rule references it — "
+                f"all {len(all_personas)} personas ({', '.join(sorted(all_personas))}) "
+                f"see rows regardless of '{field_name}' value. Add a "
+                f"`scope: list: {field_name} = false as: <persona>` rule "
+                f"or rename the field if visibility wasn't the intent."
+            )
+
+    return errors, warnings
+
+
 def validate_scope_predicates(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate scope predicates against the FK graph (belt-and-suspenders).
