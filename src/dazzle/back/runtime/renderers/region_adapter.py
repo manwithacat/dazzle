@@ -241,7 +241,25 @@ def _render_typed_value(
         display = item.get(f"{key}_display") or value
         display_str = str(display)
         if ref_route:
-            url = f"{ref_route}/{value}" if not ref_route.endswith("/") else f"{ref_route}{value}"
+            # Resolve the FK id. After repo.list(fk_display_only=True)
+            # the column value can be either a scalar id (string/uuid)
+            # or a dict carrying ``id`` + ``__display__``. Extract the
+            # id explicitly so the URL never embeds a dict's repr —
+            # which would produce strings like ``/users/{'id': ...}``
+            # and trip the URL-scheme validator on the first ``:``.
+            if isinstance(value, dict):
+                id_value = str(value.get("id") or "")
+            else:
+                id_value = str(value or "")
+            # Templated route (``/users/{id}``) gets the literal
+            # placeholder substituted. Routes without a placeholder
+            # fall back to plain path concatenation.
+            if "{id}" in ref_route:
+                url = ref_route.replace("{id}", id_value)
+            elif ref_route.endswith("/"):
+                url = f"{ref_route}{id_value}"
+            else:
+                url = f"{ref_route}/{id_value}"
             return Link(label=display_str, href=URL(url))
         return RawHTML(_html_escape(display_str))
 

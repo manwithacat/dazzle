@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.118] - 2026-05-13
+
+### Fixed — two region-render regressions (closes #1058)
+
+**Bug 1 — KANBAN region crash with FK columns.** Any region with `display: kanban` whose entity carried a `ref` field (e.g. `assigned_to: ref User`) rendered as the typed-primitive error placeholder (`"Typed primitive render failed; check server logs."`). Root cause in `region_adapter._render_typed_value`:
+
+```python
+ref_route = "/users/{id}"  # column metadata: templated route
+url = f"{ref_route}/{value}"  # WRONG — `value` is the FK dict
+```
+
+After `repo.list(fk_display_only=True)` the FK column value is a dict like `{"id": "uuid-...", "__display__": "Alice"}`. The f-string interpolated its `__str__` (`"{'id': 'uuid-...', '__display__': 'Alice'}"`) into the URL, which then tripped the URL-scheme validator on the first `:` and raised. The fix extracts the id explicitly and substitutes the `{id}` placeholder:
+
+```python
+id_value = value["id"] if isinstance(value, dict) else value
+url = ref_route.replace("{id}", id_value)  # or fall back to concat
+```
+
+**Bug 2 — SUMMARY region renders empty.** `display: summary` is an alias for `display: metrics` (handled by `WorkspaceRegionAdapter._ALIASES`), but `SUMMARY` was missing from `_TYPED_REGION_DISPLAYS` / `_CARD_FAMILY` in `workspace_region_render.py`. Without family-membership the dispatch skipped the typed-primitive build and returned just the `<div data-dz-region…></div>` wrapper. Added `SUMMARY` to `_CARD_FAMILY` and extended the METRICS branch to handle both display values.
+
+Both regressions were caught by `INTERACTION_WALK` once it finally ran on green upstream jobs after v0.67.117 — gated for 2+ days behind the dazzle_back/dazzle_ui merge fallout.
+
+### Result
+
+- Local reproduction with `dazzle serve --local` on `examples/support_tickets`: both `/api/workspaces/ticket_queue/regions/ticket_board` (KANBAN) and `/api/workspaces/ticket_queue/regions/queue_metrics` (SUMMARY) now render correctly.
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,119 source files checked).
+
 ## [0.67.117] - 2026-05-13
 
 ### Security — CodeQL alert sweep

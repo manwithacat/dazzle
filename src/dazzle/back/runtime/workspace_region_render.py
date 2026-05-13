@@ -160,6 +160,10 @@ _CARD_FAMILY: frozenset[str] = frozenset(
         "ENTITY_CARD",
         "CONFIRM_ACTION_PANEL",
         "METRICS",
+        # `summary` is an alias for `metrics` (see WorkspaceRegionAdapter._ALIASES)
+        # — keep the dispatch family-matched so the adapter sees the same
+        # ctx shape for both display values.
+        "SUMMARY",
         "STATUS_LIST",
     }
 )
@@ -383,7 +387,8 @@ async def _build_card_adapter_ctx(
         adapter_ctx["secondary_action_url"] = getattr(ctx_region, "secondary_action_url", "")
         adapter_ctx["revoke_url"] = getattr(ctx_region, "revoke_url", "")
         adapter_ctx["audit_enabled"] = getattr(ctx_region, "audit_enabled", False)
-    elif display_upper == "METRICS":
+    elif display_upper in ("METRICS", "SUMMARY"):
+        # `summary` aliases to `metrics` in the adapter (#1058 follow-up).
         adapter_ctx["metrics"] = inputs.metrics
         adapter_ctx["columns"] = inputs.columns
     elif display_upper == "STATUS_LIST":
