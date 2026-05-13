@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.113] - 2026-05-13
+
+### Changed — workspace_rendering decomposition (cut 14 of N)
+
+- **Decomposed `render_region_html`'s 34-branch dispatch into 5 per-family builders** — finishing the cut-13 design — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). Pure rearrangement inside `workspace_region_render.py`; no behaviour change, same tests, same wire format.
+
+- **New `RenderEnv` dataclass** — 7 fields (ctx, ir_region, inputs, request, user_ctx, sort, sort_dir) — bundles every per-request input the family builders read. Each family takes one `env` parameter instead of 7 positional args.
+
+- **Five family builders** with module-level frozenset membership tuples:
+  - `_build_chart_adapter_ctx` — 11 displays (BAR_CHART, LINE_CHART, AREA_CHART, SPARKLINE, HISTOGRAM, HEATMAP, FUNNEL_CHART, BAR_TRACK, BULLET, BOX_PLOT, RADAR). Sync — no I/O.
+  - `_build_list_adapter_ctx` — 7 displays (LIST, KANBAN, QUEUE, TIMELINE, GRID, TREE, ACTIVITY_FEED). Sync.
+  - `_build_card_adapter_ctx` — 6 displays (DETAIL, PROFILE_CARD, ENTITY_CARD, CONFIRM_ACTION_PANEL, METRICS, STATUS_LIST). Async (ENTITY_CARD fans out per-section queries via `_fetch_entity_card_section_rows`).
+  - `_build_dashboard_adapter_ctx` — 6 displays (COHORT_STRIP, DAY_TIMELINE, TASK_INBOX, PROGRESS, ACTION_GRID, PIPELINE_STEPS). Async (TASK_INBOX fans out per-source queries).
+  - `_build_specialty_adapter_ctx` — 4 displays (DIAGRAM, SEARCH_BOX, TABBED_LIST, PIVOT_TABLE). Sync.
+
+- **`render_region_html`** is now a thin dispatcher: 7-line family selection + the existing adapter/fragment/wrap finalizer. The 34-branch if/elif chain is gone.
+
+- **`_TYPED_REGION_DISPLAYS`** is now the union of the 5 family frozensets — agents adding a new display add the name to one family tuple + a branch in that family's builder.
+
+- **`workspace_region_render.py`** grew from 432 → 618 lines because per-family function headers + dict-copy machinery cost ~5 lines each. The win is structural — agents grep `_build_<family>_adapter_ctx` to find every display in a family, and each builder is self-contained (one named env input).
+
+### Cumulative
+
+After 14 cuts: `workspace_rendering.py` still 541 lines (no change this cut — the rearrangement was entirely inside `workspace_region_render.py`). The Phase 6 file is now navigable by family, which is the structural improvement this cut delivers.
+
+### Result
+
+- `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, 0 failed.
+- mypy: 0 errors (1,118 source files checked).
+
 ## [0.67.112] - 2026-05-13
 
 ### Changed — workspace_rendering decomposition (cut 13 of N)
