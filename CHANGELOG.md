@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.133] - 2026-05-14
+
+### Changed — region_adapter misc-family mixin extracted (progress on #1065)
+
+PR 6 of the region_adapter decomposition. Fourth family extracted.
+
+**Moved to `region_adapter/_builders_misc.py`** as `_BuildersMiscMixin`:
+- `_build_grid` — CSS-driven responsive card grid
+- `_build_detail` — single-item DetailGrid
+- `_build_tree` — recursive nested `<details>` hierarchy
+- `_build_confirm_action_panel` — three-state consent panel (ConfirmGate)
+- `_build_search_box` — HTMX FTS input + lazy results
+
+Plus the family-local helper `_pick_label` and its `_LABEL_CANDIDATES` constant (only caller was `_build_tree`).
+
+The orphan `_DATE_CANDIDATES` constant was also removed (already dead since v0.67.131).
+
+**Sizes:**
+- `_dispatcher.py`: 1,498 → 1,207 lines (-291)
+- `_builders_misc.py`: 333 lines (new)
+- Cumulative since PR 1: 1,664 lines moved out of the dispatcher
+- 4 of 6 families extracted
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct.
+
+**Next PR queued**: `_builders_cards.py` — 5 builders (`_build_kanban`, `_build_profile_card`, `_build_action_grid`, `_build_entity_card`, `_build_cohort_strip`), ~333 lines. `_coerce_columns`/`_format_card` will move with `_build_kanban`.
+
 ## [0.67.132] - 2026-05-14
 
 ### Changed — region_adapter timeline-family mixin extracted (progress on #1065)
