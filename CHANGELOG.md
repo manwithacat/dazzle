@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.138] - 2026-05-14
+
+### Changed — renderer layout-family mixin extracted (progress on #1064)
+
+PR 3 of the renderer decomposition. First family extraction; validates the mixin pattern through match-based dispatch (the key difference from #1065's dict-based pattern).
+
+**Moved to `renderer/_render_layout.py`** as `_RenderLayoutMixin`:
+- `_emit_text`, `_emit_heading`, `_emit_stack`, `_emit_row`, `_emit_split`, `_emit_grid`, `_emit_card`
+- `_emit_surface`, `_emit_region`, `_emit_drawer`, `_emit_modal`, `_emit_tabs`
+- `_emit_icon`, `_emit_badge`, `_emit_empty_state`, `_emit_skeleton`, `_emit_lazy_tab_panel`
+
+17 primitives total. All use only `self._emit(child, ctx)` for recursion (verified by a static analysis pass before extraction).
+
+### Agent Guidance
+
+- The mixin's `_emit` recursion boundary needs a `TYPE_CHECKING` stub for mypy: `if TYPE_CHECKING: def _emit(self, fragment: Fragment, ctx: RenderContext) -> str: ...`. This declares the contract that the host class (here `FragmentRenderer`) must satisfy. See `_render_layout.py` for the canonical pattern — each subsequent family mixin (forms, shell, etc.) will follow the same stub.
+
+**Sizes:**
+- `_emit.py`: 3,672 → 3,472 lines (-200)
+- `_render_layout.py`: 260 lines (new)
+- `_helpers.py`: 147; `__init__.py`: 52
+- Cumulative since PR 1: 458 lines moved out of `_emit.py`
+- **1 of 7 families extracted**
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+**Next PR queued**: `_render_forms.py` — 9 form primitives (~245 lines). Next-smallest family per the investigation, also self-contained.
+
 ## [0.67.137] - 2026-05-14
 
 ### Changed — render_helpers extraction (progress on #1064)
