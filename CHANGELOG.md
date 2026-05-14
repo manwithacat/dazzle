@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.136] - 2026-05-14
+
+### Changed — renderer.py file → package conversion (progress on #1064)
+
+PR 1 of ~9 PRs to decompose `src/dazzle/render/fragment/renderer.py` (3,784 lines, friction 190). Same template as the just-completed #1065 (region_adapter decomposition).
+
+**This PR** — pure refactor, zero behavioural change. `renderer.py` is now `renderer/_emit.py` (via `git mv` to preserve history) with a 48-line `renderer/__init__.py` re-exporting `FragmentRenderer`, `_load_static`, plus the two module-level static-asset constants the packaging test asserts (`_WORKSPACE_DRAWER_HTML`, `_WORKSPACE_CONTEXT_SCRIPT_TEMPLATE`).
+
+Every existing `from dazzle.render.fragment.renderer import …` call site (15+ across `back/runtime`, `documents`, and tests) continues to work unchanged.
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+**Sub-fix**: `tests/unit/test_fragment_static_assets_packaging.py` asserts module-level access to two static-asset constants — added them to the `__init__.py` re-export. The test now passes against both file and package shapes.
+
+**Next PR queued**: `render_helpers.py` extraction with the 3 cross-arm class-method helpers identified in the [#1064 investigation](https://github.com/manwithacat/dazzle/issues/1064#issuecomment-4445763224): `_hx_attrs`, `_pagination_pages`, `_render_references`. Same shape as `_shared.py` in the region_adapter package.
+
 ## [0.67.135] - 2026-05-14
 
 ### Changed — region_adapter decomposition complete (closes #1065)
