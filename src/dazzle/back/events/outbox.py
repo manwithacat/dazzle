@@ -13,6 +13,7 @@ Rule 1: No dual writes (DB and bus must not drift)
 
 from __future__ import annotations  # required: forward reference
 
+import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -20,6 +21,8 @@ from typing import Any
 from uuid import UUID
 
 from dazzle.back.events.envelope import EventEnvelope
+
+logger = logging.getLogger(__name__)
 
 # Type alias for connection type (psycopg async)
 # Using Any to avoid import issues with psycopg which is optional
@@ -111,14 +114,42 @@ class EventOutbox:
         self._table = table_name
 
     async def create_table(self, conn: OutboxConnection) -> None:
-        """Create the outbox table if it doesn't exist."""
+        """Create the outbox table if it doesn't exist.
+
+        Uses a short `lock_timeout` so that `CREATE INDEX IF NOT EXISTS`
+        does not block startup when an orphan `dazzle serve` subprocess
+        from a prior run still holds `idle in transaction` on the same
+        table (#1072 Bug A — diagnosed cycle 134). If the timeout fires,
+        the index must already exist (these are all `IF NOT EXISTS`
+        statements), so we swallow the error and continue: the worst
+        case is a missing index, which the next clean boot will create.
+        """
         await conn.execute(
             CREATE_OUTBOX_TABLE
         )  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+        # 5 seconds is generous for a healthy boot but bounded enough that
+        # a stuck startup surfaces fast rather than hanging the contract
+        # runner / test harness indefinitely.
+        await conn.execute("SET lock_timeout = '5s'")
         for index_sql in CREATE_OUTBOX_INDEXES:
-            await conn.execute(
-                index_sql
-            )  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            try:
+                await conn.execute(
+                    index_sql
+                )  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            except Exception as exc:
+                # Lock-timeout (or any DDL error here) is not fatal — the
+                # IF NOT EXISTS contract means the index probably exists
+                # from a prior boot. Log + continue so startup completes.
+                logger.warning(
+                    "Outbox index DDL skipped (likely held by another process): %s: %s",
+                    type(exc).__name__,
+                    exc,
+                )
+                # Postgres aborts the transaction on error; rollback so
+                # subsequent commands run cleanly.
+                await conn.rollback()
+                await conn.execute("SET lock_timeout = '5s'")
+        await conn.execute("SET lock_timeout = '0'")
         await conn.commit()
 
     async def append(

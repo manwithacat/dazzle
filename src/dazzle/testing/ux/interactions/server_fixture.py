@@ -24,15 +24,18 @@ design rationale.
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import sys
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 
 from dazzle.qa.server import AppConnection
+
+logger = logging.getLogger(__name__)
 
 # Defaults — tunable via env in CI if cold starts are consistently
 # slower than local dev. Not exposed as args to keep the fixture
@@ -162,7 +165,7 @@ def launch_interaction_server(
     # that died holding locks, so this subprocess's CREATE INDEX /
     # migration queries don't block on phantom transactions. Best-
     # effort; failures swallowed.
-    try:
+    with suppress(Exception):
         from dazzle.cli.dotenv import load_project_dotenv
         from dazzle.e2e._pg_cleanup import terminate_stale_sessions
 
@@ -170,8 +173,6 @@ def launch_interaction_server(
         db_url = os.environ.get("DATABASE_URL", "")
         if db_url:
             terminate_stale_sessions(db_url)
-    except Exception:
-        pass
 
     env = os.environ.copy()
     if extra_env:
@@ -180,12 +181,30 @@ def launch_interaction_server(
     # start_new_session=True puts the server in its own process group,
     # so SIGTERM reaches uvicorn + any child workers at teardown. Same
     # pattern as ModeRunner.
+    # #1072 Bug A root cause (cycle 134): the previous `stdout=PIPE,
+    # stderr=PIPE` setup caused a pipe-buffer deadlock — when the
+    # subprocess emits enough output (e.g. repeated psycopg tracebacks
+    # from a schema mismatch), the ~64KB OS pipe buffer fills, the
+    # subprocess blocks on its next write, and uvicorn's worker hangs
+    # → request handlers stop responding → contract verifier times out.
+    # Mirror ModeRunner's pattern: write to a log file (unbounded sink)
+    # so the subprocess can never block on output. The log is captured
+    # in the project's `.dazzle/managed-server-logs/` for debugging
+    # post-run failures.
+    log_dir = project_root / ".dazzle" / "managed-server-logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    from datetime import UTC
+    from datetime import datetime as _dt
+
+    _ts = _dt.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    _log_path = log_dir / f"managed-{_ts}.log"
+    _log_fh = _log_path.open("wb")
     proc = subprocess.Popen(
         [sys.executable, "-m", "dazzle", "serve", "--local"],
         cwd=project_root,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=_log_fh,
+        stderr=subprocess.STDOUT,
         start_new_session=True,
     )
 
@@ -225,6 +244,11 @@ def launch_interaction_server(
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
+        # Close the log file handle (#1072 — buffer-deadlock fix).
+        try:
+            _log_fh.close()
+        except OSError:
+            pass
         # Restore DAZZLE_TEST_SECRET so we don't leak the subprocess's
         # value into whatever the parent does next.
         if prior_test_secret is None:
@@ -241,11 +265,9 @@ def launch_interaction_server(
         # Defensive PG-session cleanup on exit (#1072 Bug A) — even after
         # SIGTERM, the subprocess's SQLAlchemy session pool may not have
         # finalised. Sweep on the way out so the next run starts clean.
-        try:
+        with suppress(Exception):
             from dazzle.e2e._pg_cleanup import terminate_stale_sessions
 
             db_url = os.environ.get("DATABASE_URL", "")
             if db_url:
                 terminate_stale_sessions(db_url)
-        except Exception:
-            pass

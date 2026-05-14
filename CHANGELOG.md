@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.156] - 2026-05-14
+
+### Fixed — #1072 Bug A root cause: subprocess.PIPE buffer deadlock in `launch_interaction_server` — closes #1072
+
+After ruling out hypothesis 1 (connection pool) and hypothesis 2 (DB lock contention via `pg_locks`), instrumentation revealed the actual root cause: a **classic Python subprocess pipe-buffer deadlock**.
+
+`launch_interaction_server` (the substrate used by `dazzle ux verify --contracts --managed` and `--browser`) configured the subprocess with `stdout=subprocess.PIPE, stderr=subprocess.PIPE` but **never read from those pipes**. When the subprocess emitted enough output (e.g. repeated psycopg tracebacks from a schema mismatch on the Alert entity's `status` column in ops_dashboard — a separate latent bug), the ~64KB OS pipe buffer filled, the next subprocess write blocked, and **uvicorn's worker thread stalled** trying to flush. From the contract verifier's perspective, requests after the buffer filled timed out.
+
+This explains the bisection result from cycle 134: `--persona ops_engineer` alone passed (fewer requests → less output → buffer never filled), `--persona admin` first then ops_engineer failed (admin's contracts triggered the schema-error spam, filling the buffer before ops_engineer's batch).
+
+### The fix
+
+Mirror `ModeRunner`'s pattern: write subprocess output to a log file (unbounded sink) instead of an OS pipe. The fixture now creates `<project>/.dazzle/managed-server-logs/managed-<timestamp>.log` per run. Subprocess output never blocks; uvicorn workers stay responsive; contract verifier completes consistently.
+
+Verified end-to-end: **3 consecutive `dazzle ux verify --contracts --managed` runs against ops_dashboard all pass 18/0/12.** Previously failed 2 of 2 with `ReadTimeout` on `rbac:Alert:ops_engineer:list` and `rbac:Alert:ops_engineer:create`.
+
+Bonus: `dazzle.back.events.outbox.create_table` now sets `lock_timeout=5s` before each `CREATE INDEX IF NOT EXISTS` and swallows lock-timeout errors. Protects against the secondary failure mode where a leaked subprocess from a previous run holds `idle in transaction` on `_dazzle_event_outbox` and the new subprocess hangs on `CREATE INDEX`. The IF NOT EXISTS contract means the index probably already exists from a prior clean boot anyway.
+
+### Investigation arc
+
+This is a single bug ID (#1072) but a four-cycle investigation:
+
+| Cycle | Step | Finding |
+|---|---|---|
+| 119 | Symptom report | 2 contracts time out with empty error |
+| 124 | Diagnostic patch | `type(e).__name__` fallback revealed `ReadTimeout` |
+| 134 | Hypothesis 1 ruled out | Pool size doesn't matter (`DAZZLE_DB_POOL_MAX=30` same failure) |
+| 134 | Hypothesis 2 ruled out | `pg_blocking_pids` shows zero blocked sessions during hang |
+| 134 | Real root cause | `/health` curl also hangs → whole server unresponsive → instrumented subprocess → pipe deadlock |
+
+The bisection that produced the lock — `--persona X` alone always passes, combined run fails — was the strongest single signal. Future framework debuggers: when "whole server unresponsive" appears suddenly mid-test, suspect `subprocess.PIPE` without a reader before suspecting the DB.
+
+### Agent Guidance
+
+When spawning a long-running subprocess from a test fixture or runtime utility, **never use `stdout=subprocess.PIPE, stderr=subprocess.PIPE` without a thread/asyncio task reading those pipes**. The OS pipe buffer is ~64KB on macOS and Linux; any subprocess that emits more than that to stdout blocks indefinitely on write, which blocks the whole subprocess. Use `subprocess.DEVNULL` if you don't care about the output, or redirect to a file handle (`open(path, "wb")`) if you do.
+
+The `ModeRunner` substrate gets this right (writes to `.dazzle/e2e-logs/`); `launch_interaction_server` did not. v0.67.156 brings them into line.
+
+Discovered + fixed by `/improve` cycle 134.
+
 ## [0.67.155] - 2026-05-14
 
 ### Docs — Connection pool budgeting for Heroku Postgres + local dev

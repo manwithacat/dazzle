@@ -18,8 +18,11 @@ class TestOutboxCreateTable:
         conn = AsyncMock()
         await outbox.create_table(conn)
 
-        # Should call execute for table + 3 indexes = 4 calls
-        assert conn.execute.call_count == 4
+        # Should call execute for: CREATE TABLE (1) + SET lock_timeout (1)
+        # + 3 CREATE INDEXes (3) + SET lock_timeout='0' reset (1) = 6 calls.
+        # The lock_timeout pair was added in #1072 fix to prevent startup
+        # from hanging when an orphan subprocess holds the outbox table.
+        assert conn.execute.call_count == 6
 
     @pytest.mark.asyncio
     async def test_postgres_commits_after_ddl(self) -> None:
