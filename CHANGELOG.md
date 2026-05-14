@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.145] - 2026-05-14
+
+### Fixed — `make test-ux-preflight` Makefile rot
+
+Speculative `/improve` cycle found `make test-ux-preflight` failing at Step 0b. 5 of 9 referenced tests no longer exist (`test_template_orphan_scan`, `test_page_route_coverage`, `test_daisyui_python_lint`, `test_dom_snapshots`, `test_card_safety_invariants` — all deleted during the Jinja retirement / Phase 4 deletion sweep, beginning v0.67.52). The mypy target `src/dazzle_ui/` also no longer exists — the package merged into `src/dazzle/ui/` at v0.67.98 (#1055).
+
+Updated `test-ux-preflight`:
+- Pruned the 5 deleted tests; kept the 4 real invariant guards (`test_canonical_pointer_lint`, `test_template_none_safety`, `test_external_resource_lint`, `test_ir_field_reader_parity`)
+- Added `test_typed_runtime_no_jinja` — the canonical structural anchor that replaced most of the deleted ones
+- Switched mypy target to `src/dazzle/ui/`
+
+Verified green: 12 passed, 11 skipped, mypy clean (60 files).
+
+Rot accumulated for ~92 versions (v0.67.52 → v0.67.144). The `/loop /improve` cron had been silently skipping cycles because preflight was failing — explaining the lack of progress on the `/improve` backlog (zero actionable rows across all 4 lanes despite 101+ rows on file).
+
+### Agent Guidance
+
+- Stale `make test-ux-preflight` is itself an AX-class signal: preflight is the rate-limiter on `/improve` and `/ux-cycle`-style autonomous-improvement loops. When a structural test gets deleted, audit `Makefile` for stale references in the same PR.
+
 ## [0.67.144] - 2026-05-14
 
 ### Changed — renderer decomposition COMPLETE (closes #1064)

@@ -99,17 +99,22 @@ test-fast:
 # for ~40 cycles before cycle 311 surfaced 9 red tests in the full suite, AND
 # the hypothesized 4th class (type-error drift in dazzle_ui/) that cycle 313 flagged.
 test-ux-preflight:
-	pytest tests/unit/test_template_orphan_scan.py \
-	       tests/unit/test_page_route_coverage.py \
-	       tests/unit/test_canonical_pointer_lint.py \
+	@# 5 of 9 prior preflight tests removed during the Jinja retirement
+	@# (Phase 4 deletion sweep, v0.67.X): test_template_orphan_scan,
+	@# test_page_route_coverage, test_daisyui_python_lint, test_dom_snapshots,
+	@# test_card_safety_invariants. Their drift classes are covered by
+	@# the typed-runtime gate (test_typed_runtime_no_jinja) which is now
+	@# the structural anchor for UI changes. The 4 remaining tests still
+	@# guard meaningful invariants (canonical-pointer linkage, template
+	@# None-safety, external-resource SRI, IR↔field-reader parity).
+	pytest tests/unit/test_canonical_pointer_lint.py \
 	       tests/unit/test_template_none_safety.py \
-	       tests/unit/test_daisyui_python_lint.py \
 	       tests/unit/test_external_resource_lint.py \
 	       tests/unit/test_ir_field_reader_parity.py \
-	       tests/unit/test_dom_snapshots.py \
-	       tests/unit/test_card_safety_invariants.py \
+	       tests/unit/test_typed_runtime_no_jinja.py \
 	       -q
-	mypy src/dazzle_ui/ --ignore-missing-imports
+	@# src/dazzle_ui/ merged into src/dazzle/ui/ in v0.67.98 (#1055).
+	mypy src/dazzle/ui/ --ignore-missing-imports
 	@# Non-blocking dist/ drift warning (cycle 319, silent-drift class 3).
 	@# Cycle 317 gap doc flagged dist/ accumulating across ~20 cycles; this
 	@# surfaces it on every preflight but doesn't fail the cycle — runs
