@@ -141,7 +141,7 @@
       {
         "name": "Alert",
         "row_count_default": 80,
-        "notes": "Alert — 80 rows spread across the last 21 days so the time-series charts (line_chart, area_chart, sparkline) have meaningful density per bucket.",
+        "notes": "Alert \u2014 80 rows spread across the last 21 days so the time-series charts (line_chart, area_chart, sparkline) have meaningful density per bucket.",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -192,10 +192,19 @@
             }
           },
           {
-            "field_name": "acknowledged",
-            "strategy": "boolean_weighted",
+            "field_name": "status",
+            "strategy": "enum_weighted",
             "params": {
-              "true_weight": 0.3
+              "enum_values": [
+                "active",
+                "acknowledged",
+                "resolved"
+              ],
+              "weights": [
+                0.4,
+                0.3,
+                0.3
+              ]
             }
           },
           {
