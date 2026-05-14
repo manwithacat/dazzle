@@ -1403,7 +1403,7 @@ ir_class: LayoutSpec
   optional:
     - auth: AuthEntrySpec = <factory:AuthEntrySpec>
     - footer: FooterSpec = <factory:FooterSpec>
-    - nav: NavSpec = <factory:NavSpec>
+    - nav: SiteNavSpec = <factory:SiteNavSpec>
     - section_backgrounds: str = ''
     - theme: ThemeKind = <ThemeKind.SAAS_DEFAULT: 'saas-default'>
 
@@ -1697,12 +1697,6 @@ ir_class: NavItemSpec
     - href: str
     - label: str
   optional: (none)
-
-ir_class: NavSpec
-  required: (none)
-  optional:
-    - authenticated: list[NavItemSpec] = []
-    - public: list[NavItemSpec] = []
 
 ir_class: NotExpr
   required:
@@ -2375,6 +2369,12 @@ ir_class: SideEffectPolicy
   optional:
     - allowed_effects: list[str] = []
     - external_effects_allowed: bool = False
+
+ir_class: SiteNavSpec
+  required: (none)
+  optional:
+    - authenticated: list[NavItemSpec] = []
+    - public: list[NavItemSpec] = []
 
 ir_class: SiteSpec
   required: (none)

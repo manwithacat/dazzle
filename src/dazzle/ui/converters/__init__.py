@@ -26,7 +26,7 @@ from dazzle.ui.specs import (
     FooterSpec,
     HeaderSpec,
     NavItemSpec,
-    NavSpec,
+    ShellNavSpec,
     ShellSpec,
     StaticPageSpec,
     ThemeSpec,
@@ -73,7 +73,7 @@ def convert_shell_config(
 
     # If we have manifest config, use it
     if shell_config is not None:
-        nav = NavSpec(
+        nav = ShellNavSpec(
             style=cast(Literal["sidebar", "topbar", "tabs"], shell_config.nav.style),
             items=nav_items,  # Auto-generated from workspaces
             brand=app_name.replace("_", " ").title(),
@@ -121,7 +121,7 @@ def convert_shell_config(
     # Generate defaults
     return ShellSpec(
         layout="app-shell",
-        nav=NavSpec(
+        nav=ShellNavSpec(
             style="sidebar",
             items=nav_items,
             brand=app_name.replace("_", " ").title(),

@@ -31,7 +31,7 @@ class NavGroupUISpec(BaseModel):
     items: list[NavItemSpec] = Field(default_factory=list, description="Items in this group")
 
 
-class NavSpec(BaseModel):
+class ShellNavSpec(BaseModel):
     """Navigation configuration."""
 
     style: Literal["sidebar", "topbar", "tabs"] = Field(
@@ -90,7 +90,7 @@ class ShellSpec(BaseModel):
     Example:
         ShellSpec(
             layout="app-shell",
-            nav=NavSpec(
+            nav=ShellNavSpec(
                 style="sidebar",
                 brand="My Task App",
                 items=[
@@ -111,7 +111,7 @@ class ShellSpec(BaseModel):
     layout: Literal["app-shell", "minimal"] = Field(
         default="app-shell", description="Shell layout type"
     )
-    nav: NavSpec = Field(default_factory=NavSpec, description="Navigation configuration")
+    nav: ShellNavSpec = Field(default_factory=ShellNavSpec, description="Navigation configuration")
     header: HeaderSpec = Field(default_factory=HeaderSpec, description="Header configuration")
     footer: FooterSpec = Field(default_factory=FooterSpec, description="Footer configuration")
     pages: list[StaticPageSpec] = Field(

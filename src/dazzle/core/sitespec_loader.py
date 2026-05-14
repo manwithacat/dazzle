@@ -43,12 +43,12 @@ from .ir.sitespec import (
     LogoSpec,
     MediaSpec,
     NavItemSpec,
-    NavSpec,
     PageKind,
     PageSpec,
     PricingTier,
     SectionKind,
     SectionSpec,
+    SiteNavSpec,
     SiteSpec,
     StatItem,
     StepItem,
@@ -344,10 +344,10 @@ def _parse_sitespec_data(data: dict[str, Any]) -> SiteSpec:
             auth = AuthEntrySpec(**layout_data["auth"])
 
         # Parse nav
-        nav = NavSpec()
+        nav = SiteNavSpec()
         if "nav" in layout_data:
             nav_data = layout_data["nav"]
-            nav = NavSpec(
+            nav = SiteNavSpec(
                 public=_parse_nav_items(nav_data.get("public", [])),
                 authenticated=_parse_nav_items(nav_data.get("authenticated", [])),
             )

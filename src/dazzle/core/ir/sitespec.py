@@ -132,7 +132,7 @@ class AuthEntrySpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class NavSpec(BaseModel):
+class SiteNavSpec(BaseModel):
     """
     Navigation configuration.
 
@@ -168,7 +168,7 @@ class LayoutSpec(BaseModel):
 
     theme: ThemeKind = ThemeKind.SAAS_DEFAULT
     auth: AuthEntrySpec = Field(default_factory=AuthEntrySpec)
-    nav: NavSpec = Field(default_factory=NavSpec)
+    nav: SiteNavSpec = Field(default_factory=SiteNavSpec)
     footer: FooterSpec = Field(default_factory=FooterSpec)
     section_backgrounds: str = ""  # "" (manual), "auto-alternate"
 
@@ -684,7 +684,7 @@ def create_default_sitespec(
         layout=LayoutSpec(
             theme=ThemeKind.SAAS_DEFAULT,
             auth=AuthEntrySpec(primary_entry="/login"),
-            nav=NavSpec(
+            nav=SiteNavSpec(
                 public=[
                     NavItemSpec(label="Home", href="/"),
                     NavItemSpec(label="Pricing", href="/pricing"),

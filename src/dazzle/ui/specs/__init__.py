@@ -22,7 +22,7 @@ from dazzle.ui.specs.shell import (
     FooterSpec,
     HeaderSpec,
     NavItemSpec,
-    NavSpec,
+    ShellNavSpec,
     ShellSpec,
     StaticPageSpec,
 )
@@ -62,7 +62,7 @@ from dazzle.ui.specs.workspace import (
 __all__ = [
     # Shell types
     "ShellSpec",
-    "NavSpec",
+    "ShellNavSpec",
     "NavItemSpec",
     "HeaderSpec",
     "FooterSpec",

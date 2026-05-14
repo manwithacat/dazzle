@@ -29,7 +29,7 @@ class UISpec(BaseModel):
             name="invoice_system_ui",
             version="1.0.0",
             shell=ShellSpec(
-                nav=NavSpec(style="sidebar", brand="Invoice System"),
+                nav=ShellNavSpec(style="sidebar", brand="Invoice System"),
                 footer=FooterSpec(powered_by=True)
             ),
             workspaces=[

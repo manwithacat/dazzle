@@ -22,12 +22,12 @@ from dazzle.core.ir.sitespec import (
     MediaKind,
     MediaSpec,
     NavItemSpec,
-    NavSpec,
     PageKind,
     PageSpec,
     PricingTier,
     SectionKind,
     SectionSpec,
+    SiteNavSpec,
     SiteSpec,
     ThemeKind,
     create_default_sitespec,
@@ -185,7 +185,7 @@ class TestSiteSpecIR:
             brand=BrandSpec(product_name="TestApp"),
             layout=LayoutSpec(
                 theme=ThemeKind.SAAS_DEFAULT,
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     public=[NavItemSpec(label="Home", href="/")],
                 ),
                 footer=FooterSpec(
@@ -733,7 +733,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     public=[
                         NavItemSpec(label="Home", href="/"),
                     ],
@@ -762,7 +762,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     authenticated=[
                         NavItemSpec(label="Contacts", href="/app/contacts"),
                     ],
@@ -788,7 +788,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     public=[
                         NavItemSpec(label="Nonexistent", href="/xyz/totally/different"),
                     ],
@@ -812,7 +812,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     public=[
                         NavItemSpec(label="About", href="/abut"),  # Typo
                     ],
@@ -835,7 +835,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     public=[
                         NavItemSpec(label="Docs", href="https://docs.example.com"),
                         NavItemSpec(label="Email", href="mailto:support@example.com"),
@@ -853,7 +853,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     authenticated=[
                         NavItemSpec(label="Tasks", href="/app/task"),
                     ],
@@ -871,7 +871,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     authenticated=[
                         NavItemSpec(label="Dashboard", href="/app/workspaces/dashboard"),
                     ],
@@ -892,7 +892,7 @@ class TestNavLinkValidation:
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
-                nav=NavSpec(
+                nav=SiteNavSpec(
                     authenticated=[
                         NavItemSpec(label="Tasks", href="/app/task"),
                     ],
