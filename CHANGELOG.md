@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.140] - 2026-05-14
+
+### Changed — renderer dashboard-family mixin extracted (progress on #1064)
+
+PR 5 of the renderer decomposition. Third family extracted.
+
+**Moved to `renderer/_render_dashboard.py`** as `_RenderDashboardMixin`:
+- `_emit_dashboard_grid`, `_emit_dashboard_card`
+- `_emit_cohort_strip_region`, `_emit_day_timeline_region`
+- `_emit_entity_card_region`, `_emit_task_inbox_region`
+
+6 dashboard primitives — workspace-shaped composite regions. All use only `self._emit(child, ctx)` for child recursion.
+
+**Sizes:**
+- `_emit.py`: 3,260 → 2,851 lines (-409)
+- `_render_dashboard.py`: 454 lines (new)
+- Cumulative since PR 1: 1,079 lines moved out of `_emit.py`
+- **3 of 7 families extracted**
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+**Next PR queued**: `_render_shell.py` — 12 shell primitives (~370 lines): Page, AppShell, ErrorPage, SkipLink, Topbar, NavItem, NavGroup, Sidebar, WorkspaceShell, WorkspaceToolbar, WorkspaceDrawer, WorkspaceContextSelector.
+
 ## [0.67.139] - 2026-05-14
 
 ### Changed — renderer forms-family mixin extracted (progress on #1064)
