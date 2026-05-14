@@ -156,6 +156,23 @@ def launch_interaction_server(
     if runtime_path.exists():
         runtime_path.unlink()
 
+    # Defensive PG-session cleanup before launch (#1072 Bug A — same
+    # class as the ModeRunner fix in v0.67.153). Terminates any
+    # `idle in transaction` sessions left over from a prior subprocess
+    # that died holding locks, so this subprocess's CREATE INDEX /
+    # migration queries don't block on phantom transactions. Best-
+    # effort; failures swallowed.
+    try:
+        from dazzle.cli.dotenv import load_project_dotenv
+        from dazzle.e2e._pg_cleanup import terminate_stale_sessions
+
+        load_project_dotenv(project_root)
+        db_url = os.environ.get("DATABASE_URL", "")
+        if db_url:
+            terminate_stale_sessions(db_url)
+    except Exception:
+        pass
+
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
@@ -220,3 +237,15 @@ def launch_interaction_server(
                 runtime_path.unlink()
             except OSError:
                 pass
+
+        # Defensive PG-session cleanup on exit (#1072 Bug A) — even after
+        # SIGTERM, the subprocess's SQLAlchemy session pool may not have
+        # finalised. Sweep on the way out so the next run starts clean.
+        try:
+            from dazzle.e2e._pg_cleanup import terminate_stale_sessions
+
+            db_url = os.environ.get("DATABASE_URL", "")
+            if db_url:
+                terminate_stale_sessions(db_url)
+        except Exception:
+            pass

@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.154] - 2026-05-14
+
+### Fixed — server_fixture: extend defensive PG-session cleanup to `--managed` ux-verify path
+
+v0.67.153 added defensive cleanup to `ModeRunner`. Subsequent investigation showed `dazzle ux verify --contracts --managed` doesn't use `ModeRunner` — it uses the separate `launch_interaction_server` context manager in `src/dazzle/testing/ux/interactions/server_fixture.py`. The v0.67.153 fix didn't run on the actual user-visible path.
+
+This release wires the same `terminate_stale_sessions` cleanup into `launch_interaction_server` on both enter (before subprocess Popen) and exit (after subprocess teardown). Behaviour matches v0.67.153 — scoped to current_database(), filtered to idle-in-transaction, best-effort.
+
+### Bug A — partial-fix scope clarified
+
+Investigation in cycle 134 found that #1072 Bug A as the user originally observed it is **not** the cross-run leaked-session class the v0.67.153 + v0.67.154 fix addresses. The user's symptom (2 ops_engineer Alert contracts time out) reproduces even with a clean PG state — and **disappears entirely** when the failing persona's contracts are run in isolation:
+
+```
+$ dazzle ux verify --contracts --managed                         # all personas
+Contracts: 16 passed, 2 failed, 12 pending
+
+$ dazzle ux verify --contracts --managed --persona ops_engineer   # alone
+Contracts: 14 passed, 0 failed, 8 pending     ← ALL GREEN
+```
+
+So the real Bug A is an in-process accumulation bug — running admin's contracts FIRST puts the server in a state where the second persona's contracts hang. Four hypotheses recorded on #1072 (connection-pool starvation, lock contention on `User`/outbox/audit tables, test-mode auth path holds session lock, fresh httpx.AsyncClient per request not draining). Recommend keeping #1072 open with the partial-fix tag until a follow-up investigation lands a real fix.
+
+Operator workaround: pass `--persona <name>` per persona separately. The combined run is what hangs.
+
 ## [0.67.153] - 2026-05-14
 
 ### Fixed — ModeRunner defensive PG cleanup — partial #1072 Bug A
