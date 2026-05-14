@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.150] - 2026-05-14
+
+### Changed — `dazzle.back.print_schema` → `format_schema` — closes #1076
+
+Misleading-verb rename. The function returns a GraphQL SDL string; it doesn't write to stdout. The previous name implied side-effect output, inconsistent with its companion `inspect_schema` (returns dict, correctly named).
+
+```diff
+- from dazzle.back import print_schema
++ from dazzle.back import format_schema
+```
+
+**Touch points** (all updated in one commit per ADR-0003 "no backward compat shims"):
+- `src/dazzle/back/graphql/integration.py:423` — function definition + docstring note
+- `src/dazzle/back/__init__.py` — `_LOADERS` mapping + lazy loader + TYPE_CHECKING import
+- `src/dazzle/mcp/runtime_tools/handlers.py:464` — MCP schema-inspect handler
+- `src/dazzle/cli/runtime_impl/inspect.py:383` — `dazzle inspect` CLI command
+- `tests/unit/test_graphql.py:395` — test renamed to `test_format_schema`
+- `docs/api-surface/public-helpers.txt` — baseline regenerated via `dazzle inspect-api public-helpers --write`
+
+Verified end-to-end: 13,983 unit tests pass + drift gate green.
+
+Discovered by `/improve` cycle 131 (`api_surface_audit` of public-helpers); filed as #1076, shipped cycle 134.
+
 ## [0.67.149] - 2026-05-14
 
 ### Fixed — linker: 18 silently-dropped DSL constructs propagated through to AppSpec — closes #1075

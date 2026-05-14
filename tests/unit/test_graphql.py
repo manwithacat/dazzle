@@ -392,11 +392,11 @@ class TestIntegration:
         assert info["stats"]["query_count"] == 2  # task + tasks
         assert info["stats"]["mutation_count"] == 3  # create + update + delete
 
-    def test_print_schema(self, backend_spec: BackendSpec) -> None:
-        """Test schema printing."""
-        from dazzle.back.graphql.integration import print_schema
+    def test_format_schema(self, backend_spec: BackendSpec) -> None:
+        """Schema formatter returns SDL as a string (renamed from print_schema in #1076)."""
+        from dazzle.back.graphql.integration import format_schema
 
-        sdl = print_schema(backend_spec)
+        sdl = format_schema(backend_spec)
         assert isinstance(sdl, str)
         assert "type Task" in sdl
 

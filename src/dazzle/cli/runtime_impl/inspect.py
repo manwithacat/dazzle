@@ -380,7 +380,7 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
 def _inspect_schema(appspec: ir.AppSpec, format_output: str) -> None:
     """Inspect GraphQL schema."""
     try:
-        from dazzle.back import convert_appspec_to_backend, inspect_schema, print_schema
+        from dazzle.back import convert_appspec_to_backend, format_schema, inspect_schema
     except ImportError:
         typer.echo(
             "GraphQL support not available. Install with: pip install strawberry-graphql",
@@ -397,7 +397,7 @@ def _inspect_schema(appspec: ir.AppSpec, format_output: str) -> None:
         # Print SDL for tree/summary formats
         typer.echo("📊 GraphQL Schema")
         typer.echo()
-        sdl = print_schema(backend_spec)
+        sdl = format_schema(backend_spec)
         typer.echo(sdl)
 
 

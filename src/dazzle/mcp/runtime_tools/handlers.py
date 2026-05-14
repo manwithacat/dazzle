@@ -461,7 +461,7 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
 
     # Try to import GraphQL support
     try:
-        from dazzle.back import convert_appspec_to_backend, inspect_schema, print_schema
+        from dazzle.back import convert_appspec_to_backend, format_schema, inspect_schema
         from dazzle.core.ir.appspec import AppSpec
 
         # Reconstruct AppSpec and convert to BackendSpec for GraphQL generation
@@ -472,7 +472,7 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
             info = inspect_schema(backend_spec)
             return json.dumps(info, indent=2)
         else:
-            sdl = print_schema(backend_spec)
+            sdl = format_schema(backend_spec)
             return json.dumps(
                 {
                     "status": "success",

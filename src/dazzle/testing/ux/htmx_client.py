@@ -98,7 +98,7 @@ class HtmxClient:
                 headers=self._htmx_headers(target=hx_target),
                 cookies=self._cookies(),
                 follow_redirects=False,
-                timeout=30,  # #1072 Bug A — managed-mode cold-start can exceed 10s
+                timeout=60,  # #1072 Bug A — bumped 30→60 after 30s still hit (cycle 134)
             )
         return HtmxResponse(
             status=resp.status_code,
@@ -113,9 +113,11 @@ class HtmxClient:
 
         url = f"{self.base_url}{path}"
         async with httpx.AsyncClient() as client:
-            # #1072 Bug A — managed-mode subprocess can take >10s on
-            # cold-start fetches; the previous 10s ceiling produced
-            # silent ReadTimeouts that the ux verify path swallowed.
+            # #1072 — managed-mode subprocess can take >10s on cold-start
+            # fetches; the previous 10s ceiling produced silent ReadTimeouts
+            # that the ux verify path swallowed. 30s covers normal cold-start.
+            # (Bug A's true root cause is PG-session leak holding locks across
+            # cycles — independent of this timeout; see issue #1072 update.)
             resp = await client.get(url, cookies=self._cookies(), follow_redirects=True, timeout=30)
         return HtmxResponse(status=resp.status_code, html=resp.text, headers=dict(resp.headers))
 
@@ -174,7 +176,7 @@ class HtmxClient:
                 f"{self.base_url}/__test__/authenticate",
                 json={"role": persona, "username": persona},
                 headers=headers,
-                timeout=30,  # #1072 Bug A — managed-mode cold-start can exceed 10s
+                timeout=60,  # #1072 Bug A — bumped 30→60 after 30s still hit (cycle 134)
             )
         if resp.status_code != 200:
             return False

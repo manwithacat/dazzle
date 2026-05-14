@@ -420,9 +420,13 @@ def _camel_case(name: str) -> str:
 # =============================================================================
 
 
-def print_schema(spec: BackendSpec) -> str:
+def format_schema(spec: BackendSpec) -> str:
     """
-    Print the GraphQL schema SDL for a BackendSpec.
+    Return the GraphQL schema SDL for a BackendSpec as a string.
+
+    Note: this function does NOT write to stdout — it returns the SDL.
+    Renamed from `print_schema` in v0.67.150 (#1076) to match its actual
+    behaviour. The previous name implied side-effect output.
 
     Args:
         spec: BackendSpec to generate schema from

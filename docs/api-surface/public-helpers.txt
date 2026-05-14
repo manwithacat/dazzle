@@ -36,8 +36,8 @@ package: dazzle.back
   - convert_appspec_to_backend: function (appspec: 'ir.AppSpec') -> 'BackendSpec'
   - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle.back.specs.entity.EntitySpec]
   - create_bus: function (config: 'TierConfig | None' = None) -> 'EventBus'
+  - format_schema: function (spec: 'BackendSpec') -> 'str'
   - inspect_schema: function (spec: 'BackendSpec') -> 'dict[str, Any]'
-  - print_schema: function (spec: 'BackendSpec') -> 'str'
 
 package: dazzle.ui
   source: __all__
