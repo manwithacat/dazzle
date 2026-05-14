@@ -7,8 +7,6 @@ match arm causes mypy to flag the unreachable case (with `--strict`) and
 the test_fragment_exhaustiveness test to fail.
 """
 
-from html import escape as _escape
-
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML, Slot
@@ -79,8 +77,6 @@ from dazzle.render.fragment.primitives import (
     ProfileCard,
     QueueRegion,
     Radar,
-    ReferenceBand,
-    ReferenceLine,
     RefPicker,
     Region,
     Row,
@@ -112,6 +108,16 @@ from dazzle.render.fragment.primitives import (
     WorkspaceDrawer,
     WorkspaceShell,
     WorkspaceToolbar,
+)
+
+# Cross-arm helpers extracted to ._helpers in #1064 PR 2 (v0.67.137).
+# Internal `self._hx_attrs(...)` / `self._pagination_pages(...)` /
+# `self._render_references(...)` call sites updated to call the
+# module-level forms directly — they never used `self`.
+from dazzle.render.fragment.renderer._helpers import (
+    _hx_attrs,
+    _pagination_pages,
+    _render_references,
 )
 
 
@@ -823,60 +829,6 @@ class FragmentRenderer:
         lines = "".join('<div class="dz-skeleton__line"></div>' for _ in range(s.lines))
         return f'<div class="dz-skeleton">{lines}</div>'
 
-    @staticmethod
-    def _hx_attrs(
-        *,
-        hx_get: object,
-        hx_post: object,
-        hx_target: object,
-        hx_swap: object | None,
-        hx_trigger: object | None = None,
-        hx_indicator: object | None = None,
-        hx_confirm: object | None = None,
-        hx_put: object | None = None,
-        hx_delete: object | None = None,
-        hx_vals: str = "",
-        hx_ext: tuple[str, ...] = (),
-    ) -> str:
-        """Build the htmx attribute string for an interactive primitive.
-
-        All values are escaped for attribute context. Wrapper types (URL,
-        TargetSelector, HxTrigger) are validated at construction; this
-        escape pass converts characters like `&` in query strings to their
-        HTML entity form so the output is valid HTML5.
-
-        Phase 4B.1.d added hx_put + hx_vals + hx_ext (queue transitions,
-        JSON payloads, hx-ext extension list).
-        """
-        parts: list[str] = []
-        if hx_get is not None:
-            parts.append(f'hx-get="{_escape(str(hx_get), quote=True)}"')
-        if hx_post is not None:
-            parts.append(f'hx-post="{_escape(str(hx_post), quote=True)}"')
-        if hx_put is not None:
-            parts.append(f'hx-put="{_escape(str(hx_put), quote=True)}"')
-        if hx_delete is not None:
-            parts.append(f'hx-delete="{_escape(str(hx_delete), quote=True)}"')
-        if hx_target is not None:
-            parts.append(f'hx-target="{_escape(str(hx_target), quote=True)}"')
-        if hx_swap is not None:
-            parts.append(f'hx-swap="{_escape(str(hx_swap), quote=True)}"')
-        if hx_trigger is not None:
-            parts.append(f'hx-trigger="{_escape(str(hx_trigger), quote=True)}"')
-        if hx_indicator is not None:
-            parts.append(f'hx-indicator="{_escape(str(hx_indicator), quote=True)}"')
-        if hx_confirm is not None:
-            parts.append(f'hx-confirm="{_escape(str(hx_confirm), quote=True)}"')
-        if hx_vals:
-            # Use single quotes around the JSON value so internal double
-            # quotes (a JSON dict's quoted keys) don't need escaping.
-            # Single quotes inside the value are escaped to &#39;.
-            escaped_vals = hx_vals.replace("'", "&#39;")
-            parts.append(f"hx-vals='{escaped_vals}'")
-        if hx_ext:
-            parts.append(f'hx-ext="{_escape(",".join(hx_ext), quote=True)}"')
-        return " ".join(parts)
-
     def _emit_button(self, b: Button, ctx: RenderContext) -> str:
         tokens = b.tokens if b.tokens is not None else ctx.tokens.button
         cls_parts = [
@@ -886,7 +838,7 @@ class FragmentRenderer:
             f"dz-button--visibility-{b.visibility}",
         ]
         cls = " ".join(cls_parts)
-        attrs = self._hx_attrs(
+        attrs = _hx_attrs(
             hx_get=b.hx_get,
             hx_post=b.hx_post,
             hx_put=b.hx_put,
@@ -909,7 +861,7 @@ class FragmentRenderer:
         return f'<a class="dz-link" href="{href}">{ctx.escape(link.label)}</a>'
 
     def _emit_interactive(self, iw: Interactive, ctx: RenderContext) -> str:
-        attrs = self._hx_attrs(
+        attrs = _hx_attrs(
             hx_get=iw.hx_get,
             hx_post=iw.hx_post,
             hx_target=iw.hx_target,
@@ -934,32 +886,6 @@ class FragmentRenderer:
         actions_html = "".join(self._emit(a, ctx) for a in t.actions)  # type: ignore[arg-type]
         label = ctx.escape_attr(t.label)
         return f'<div class="dz-toolbar" aria-label="{label}">{actions_html}</div>'
-
-    @staticmethod
-    def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
-        """Mirror of `dazzle_ui.runtime.template_renderer._pagination_pages`
-        (#984). Returns a bounded ellipsis-collapsed page list.
-
-        Examples (window=2):
-            current=1,  total=5    → [1, 2, 3, 4, 5]
-            current=7,  total=120  → [1, None, 5, 6, 7, 8, 9, None, 120]"""
-        if total <= 0:
-            return []
-        if total == 1:
-            return [1]
-        explicit_count = 2 * window + 3
-        if total <= explicit_count + 2:
-            return list(range(1, total + 1))
-        pages: list[int | None] = [1]
-        win_start = max(2, current - window)
-        win_end = min(total - 1, current + window)
-        if win_start > 2:
-            pages.append(None)
-        pages.extend(range(win_start, win_end + 1))
-        if win_end < total - 1:
-            pages.append(None)
-        pages.append(total)
-        return pages
 
     def _emit_create_button(self, b: CreateButton, ctx: RenderContext) -> str:
         """Render a CreateButton matching legacy `filterable_table.html`
@@ -999,7 +925,7 @@ class FragmentRenderer:
         endpoint_str = ctx.escape_attr(str(p.endpoint))
         target = ctx.escape_attr(f"#{p.region_name}-body")
         extra = ctx.escape_attr(p.extra_query) if p.extra_query else ""
-        pages = self._pagination_pages(p.page, total_pages)
+        pages = _pagination_pages(p.page, total_pages)
         page_html_parts: list[str] = []
         for entry in pages:
             if entry is None:
@@ -1111,44 +1037,6 @@ class FragmentRenderer:
             f"{delta_html}"
             f"</div>"
         )
-
-    def _render_references(
-        self,
-        block_class: str,
-        reference_lines: tuple[ReferenceLine, ...],
-        reference_bands: tuple[ReferenceBand, ...],
-        ctx: RenderContext,
-    ) -> str:
-        """Shared helper — emit a `<dl class="<block>__references">` annotation
-        list when a chart primitive carries reference_lines or reference_bands.
-        Returns empty string when both tuples are empty.
-
-        Used by TimeSeries, BarChart, BarTrack, BoxPlot. Future SVG-rendering
-        ship will overlay references on the visual chart instead.
-        """
-        if not reference_lines and not reference_bands:
-            return ""
-        line_items = "".join(
-            f'<div class="{block_class}__ref-line" '
-            f'data-style="{ctx.escape_attr(line.style)}" '
-            f'data-value="{line.value}">'
-            f'<dt class="{block_class}__ref-label">{ctx.escape(line.label) or "ref"}</dt>'
-            f'<dd class="{block_class}__ref-value">{line.value}</dd>'
-            f"</div>"
-            for line in reference_lines
-        )
-        band_items = "".join(
-            f'<div class="{block_class}__ref-band" '
-            f'data-color="{ctx.escape_attr(band.color)}" '
-            f'data-from="{band.from_value}" '
-            f'data-to="{band.to_value}">'
-            f'<dt class="{block_class}__ref-label">{ctx.escape(band.label) or "band"}</dt>'
-            f'<dd class="{block_class}__ref-range">'
-            f"{band.from_value}–{band.to_value}</dd>"
-            f"</div>"
-            for band in reference_bands
-        )
-        return f'<dl class="{block_class}__references">{line_items}{band_items}</dl>'
 
     def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
         """Render a bar chart as label/track/fill/value rows — byte-equivalent
@@ -2637,7 +2525,7 @@ class FragmentRenderer:
             f"</div>"
             for label, value, formatted, fill_pct in b.rows
         )
-        refs = self._render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
+        refs = _render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
         max_rounded = round(b.max_value, 2)
         max_summary = str(int(max_rounded)) if max_rounded == int(max_rounded) else str(max_rounded)
         return (

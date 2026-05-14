@@ -14,7 +14,7 @@ import pytest
 from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.render.fragment import URL, FragmentRenderer, Pagination
-from dazzle.render.fragment.renderer import FragmentRenderer as _FR
+from dazzle.render.fragment.renderer._helpers import _pagination_pages
 
 
 class _Surface:
@@ -150,7 +150,7 @@ def test_pagination_primitive_extra_query_appended_to_each_page_link() -> None:
 def test_pagination_pages_helper_bounded() -> None:
     """The `_pagination_pages` helper returns at most 2*window+5 entries
     regardless of total, so the rendered row width is bounded."""
-    pages = _FR._pagination_pages(50, 10000, window=2)
+    pages = _pagination_pages(50, 10000, window=2)
     # Max entries: first + ellipsis + 5 (window=2 gives 2*2+1=5) + ellipsis + last = 9
     assert len(pages) <= 9
     assert pages[0] == 1
@@ -159,5 +159,5 @@ def test_pagination_pages_helper_bounded() -> None:
 
 def test_pagination_pages_no_ellipsis_when_total_small() -> None:
     """Small totals (≤ 2*window+5) emit every page without ellipses."""
-    pages = _FR._pagination_pages(3, 5, window=2)
+    pages = _pagination_pages(3, 5, window=2)
     assert pages == [1, 2, 3, 4, 5]

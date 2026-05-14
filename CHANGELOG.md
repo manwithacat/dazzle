@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.137] - 2026-05-14
+
+### Changed — render_helpers extraction (progress on #1064)
+
+PR 2 of the renderer.py decomposition. Extracted 3 cross-arm helpers from `renderer/_emit.py` to a new `renderer/_helpers.py`:
+
+- `_hx_attrs` — HTMX attribute-string builder (3 callers: `_emit_button`, `_emit_link`, `_emit_interactive`)
+- `_pagination_pages` — bounded ellipsis-collapsed page list (1 caller: `_emit_pagination`)
+- `_render_references` — chart reference-line/-band `<dl>` block (1 caller: `_emit_bar_track`)
+
+All three were already pure functions — `_hx_attrs` and `_pagination_pages` were `@staticmethod`; `_render_references` took `self` but only used `ctx`, never `self`. The previous class-method form was incidental, not architectural. As module-level functions in `_helpers.py`, each follow-up family-mixin PR can import them without depending on the dispatcher class (which is what enables the mixin pattern).
+
+Updated 4 internal call sites in `_emit.py` (`self._hx_attrs(...)` → `_hx_attrs(...)` etc.) and fixed `tests/unit/test_dispatch_ctx_list_pagination.py` to import `_pagination_pages` directly from `_helpers` instead of poking at `FragmentRenderer._pagination_pages`.
+
+**Sizes:**
+- `renderer/_emit.py`: 3,784 → 3,672 lines (-112)
+- `renderer/_helpers.py`: 147 lines (new)
+- `renderer/__init__.py`: 52 lines
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct + 12 pagination-direct.
+
+**Next PR queued**: `_render_layout.py` (first family — 17 layout primitives: Text, Heading, Stack, Row, Split, Grid, Surface, Card, Region, Drawer, Modal, Tabs, LazyTabPanel, Icon, Badge, EmptyState, Skeleton). Smallest and most self-contained of the 7 families per the [original investigation](https://github.com/manwithacat/dazzle/issues/1064#issuecomment-4445763224); good first family to validate the mixin pattern works through `match`-based dispatch.
+
 ## [0.67.136] - 2026-05-14
 
 ### Changed — renderer.py file → package conversion (progress on #1064)
