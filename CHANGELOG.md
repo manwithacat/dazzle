@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.153] - 2026-05-14
+
+### Fixed — ModeRunner defensive PG cleanup — partial #1072 Bug A
+
+When a previous `dazzle serve --local` subprocess is killed (CI timeout, Ctrl+C, OOM, etc.), it can leave `idle in transaction` postgres sessions holding table locks on the project's database. The next managed-mode subprocess boots a fresh server, but its migrations / `CREATE INDEX` queries block waiting on the leaked locks — from httpx's view the connection accepts the request and never receives headers → ReadTimeout fires.
+
+**Fix**: `ModeRunner.__aenter__` now defensively terminates `idle in transaction` (and `idle in transaction (aborted)`) sessions on the project's database before launching the new subprocess. Also fires on `__aexit__` so the next managed-mode run doesn't have to detect anything left behind.
+
+Key design choices:
+- **Scoped to current_database()** — only the project's own DB is touched, never the rest of the cluster
+- **Filtered to idle-in-transaction only** — active sessions and ordinary idle sessions are left alone
+- **Best-effort** — psycopg ImportError, connect errors, missing DATABASE_URL all silently no-op (the subprocess boot will surface any remaining problem)
+- **Dotenv-aware** — uses `load_project_dotenv` to find DATABASE_URL the same way the subprocess will (matches #814's fix)
+
+New module: `src/dazzle/e2e/_pg_cleanup.py`. New regression test: `tests/unit/e2e/test_pg_cleanup.py` (5 cases covering happy path, error paths, missing-URL, missing-psycopg, terminated-count tally).
+
+**Scope of fix**: closes #1072 Bug A **for the dead-process case** — the common path where a previous run was killed and its OS process is gone but its PG sessions linger.
+
+**Does NOT yet close**: the **live-leaked-process case** where a previous `dazzle serve --local` is still running in the background (e.g. the operator started one manually and forgot to kill it). In that case, the cleanup terminates the live process's idle sessions, but its outbox publisher immediately reconnects and re-opens an idle transaction. Need fix path (3) from #1072 — SIGTERM handler in `dazzle serve --test-mode` that closes the SQLAlchemy session pool on shutdown — and an operator-level `pkill dazzle serve` or PID-tracking step. Tracked in #1072 with a comment.
+
+Verified: 13,991 unit tests pass (+5 new pg_cleanup tests). `make test-ux-preflight` green. The cycle 124–134 root-cause hypothesis is now substantiated by code.
+
+### Agent Guidance
+
+When you reach for `os.environ.get("DATABASE_URL", ...)` inside `src/dazzle/e2e/*` or any framework helper that's invoked from a project subdir, also call `dazzle.cli.dotenv.load_project_dotenv(project_root)` first. Otherwise per-project DATABASE_URL in `<project>/.env` is invisible (the parent shell only has whatever the operator exported). Same class as the #814 root cause; the issue keeps recurring because every new caller is its own discovery.
+
+Discovered + fixed by `/improve` cycles 119, 124, 134 (this commit).
+
 ## [0.67.152] - 2026-05-14
 
 ### Fixed — qa trial dedup: cross-category collapse on shared evidence — closes #1073

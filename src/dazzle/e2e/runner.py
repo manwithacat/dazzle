@@ -38,6 +38,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any, Literal
 
+from dazzle.e2e._pg_cleanup import terminate_stale_sessions
 from dazzle.e2e.baseline import BaselineManager
 from dazzle.e2e.errors import (
     HealthCheckTimeoutError,
@@ -119,7 +120,22 @@ class ModeRunner:
         self._lock.acquire(self.mode_spec.name, self._log_path)
 
         try:
-            # 2. Apply DB policy
+            # 2a. Defensive PG cleanup (#1072 Bug A) — any prior subprocess
+            # that was killed mid-flight (CI timeout, Ctrl+C, OOM) can leak
+            # `idle in transaction` sessions holding table locks. Terminate
+            # them on the project's database before the new subprocess boots
+            # so its migrations / CREATE INDEX queries don't block forever.
+            # Use the per-project .env if DATABASE_URL isn't in the shell —
+            # mirrors the subprocess's own resolution path (#814). Imported
+            # lazily to avoid a circular import with the CLI package.
+            from dazzle.cli.dotenv import load_project_dotenv
+
+            load_project_dotenv(self.project_root)
+            db_url = os.environ.get("DATABASE_URL", "")
+            if db_url:
+                terminate_stale_sessions(db_url)
+
+            # 2b. Apply DB policy
             self._apply_db_policy()
 
             # 3. Env prep
@@ -334,6 +350,15 @@ class ModeRunner:
                 signal.signal(signal.SIGTERM, self._prev_sigterm)
         except (ValueError, OSError):
             pass
+
+        # Defensive PG cleanup (#1072 Bug A) — even if the subprocess shut
+        # down "cleanly" via SIGTERM, its SQLAlchemy session pool may not
+        # have finalised. Sweep `idle in transaction` sessions on the way
+        # out so the NEXT managed-mode start doesn't have to detect them.
+        db_url = os.environ.get("DATABASE_URL", "")
+        if db_url:
+            with suppress(Exception):
+                terminate_stale_sessions(db_url)
 
         # Release lock
         if self._lock is not None:
