@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.139] - 2026-05-14
+
+### Changed — renderer forms-family mixin extracted (progress on #1064)
+
+PR 4 of the renderer decomposition. Second family extracted.
+
+**Moved to `renderer/_render_forms.py`** as `_RenderFormsMixin`:
+- `_emit_form_section`, `_emit_form_stack`, `_emit_field`, `_emit_combobox`
+- `_emit_file_upload`, `_emit_ref_picker`, `_emit_submit`
+- `_emit_card_picker`, `_emit_add_card_row`
+
+9 form primitives. All use only `self._emit(child, ctx)` for child recursion.
+
+**Sizes:**
+- `_emit.py`: 3,472 → 3,260 lines (-212)
+- `_render_forms.py`: 262 lines (new)
+- Cumulative since PR 1: 670 lines moved out of `_emit.py`
+- **2 of 7 families extracted**
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+**Next PR queued**: `_render_dashboard.py` — 6 primitives (~440 lines): DashboardGrid, DashboardCard, CohortStripRegion, DayTimelineRegion, EntityCardRegion, TaskInboxRegion.
+
 ## [0.67.138] - 2026-05-14
 
 ### Changed — renderer layout-family mixin extracted (progress on #1064)
