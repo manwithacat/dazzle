@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.135] - 2026-05-14
+
+### Changed — region_adapter decomposition complete (closes #1065)
+
+**PR 8 of 8 — the final family extraction.** After 7 prior PRs across v0.67.128–v0.67.134, the last 4 builders move out and `_dispatcher.py` collapses to a pure dispatch shell.
+
+**Moved to `region_adapter/_builders_tables.py`** as `_BuildersTablesMixin`:
+- `_build_list` — ListRegion with optional FilterBar / DateRangePicker / CsvExportButton chrome
+- `_build_queue` — QueueRegion with inline state-transition action buttons
+- `_build_pivot_table` — PivotTableRegion (or legacy 2-dim PivotTable fallback)
+- `_build_tabbed_list` — LazyTabPanel (HTMX) or eager Tabs fallback
+
+### Final sizes (vs. 2,871-line original):
+
+| File | Lines |
+|---|---:|
+| `_dispatcher.py` | **164** (was 2,720 — **-94%**) |
+| `_builders_charts.py` | 725 |
+| `_builders_tables.py` | 604 (new) |
+| `_builders_cards.py` | 481 |
+| `_builders_misc.py` | 333 |
+| `_builders_metrics.py` | 324 |
+| `_builders_timeline.py` | 310 |
+| `_shared.py` | 180 |
+| `__init__.py` | 37 |
+| **Total** | 3,158 |
+
+The total grew by 287 lines vs. the original — that's the cost of explicit mixin scaffolding (each family has its own module docstring, import block, and class declaration). The cost is paid back in agent-friction reduction: future edits load a 300–700 line family file instead of paging through a 2,871-line monolith. Friction-score validation deferred to the next monthly `stall_log_mine.py` sweep.
+
+The dispatcher is now exactly: class shell + 3 dispatch tables (`_BUILDERS`, `_ALIASES`, `_TIMESERIES_VIEWS`) + `build()` method. Adding a new region display value is one entry in `_BUILDERS` plus one method on the appropriate family mixin — no scrolling required.
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct.
+
+### Agent Guidance
+
+- The mixin-per-family pattern in `src/dazzle/back/runtime/renderers/region_adapter/` is now the canonical template for splitting fat dispatch classes. When the next 2,000+ line `_dispatcher`-style file emerges (e.g. `route_generator.py` if its README isn't enough — see #1066), mirror this layout: family mixins in `_builders_<family>.py`, cross-cutting helpers in `_shared.py`, dispatch tables stay in `_dispatcher.py`. Public re-exports live in `__init__.py`.
+
 ## [0.67.134] - 2026-05-14
 
 ### Changed — region_adapter cards-family mixin extracted (progress on #1065)
