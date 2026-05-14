@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.152] - 2026-05-14
+
+### Fixed — qa trial dedup: cross-category collapse on shared evidence — closes #1073
+
+The v0.57.83 dedup heuristic clustered friction entries by `(category, url)` with a `SequenceMatcher` ratio on the description. It missed near-duplicates when the agent split one observable phenomenon across multiple categories — same DOM evidence, varied phrasing, different category labels (`missing` / `confusion` / `other`).
+
+Pattern observed across three cycles (3, 112, 120 — see `dev_docs/improve-backlog.md` rows TR-7, TR-18, TR-19). Cycle 120's ops_dashboard `oncall_engineer` trial: 5 near-identical "No alerts. All systems operational" entries split across 3 categories. All 5 passed through the dedup.
+
+**Fix**: added a second collapse pass keyed on `(url, evidence_prefix[:80])`. Identical evidence means identical observation regardless of category framing. Surviving entries from pass 1 (which still does same-category description-similarity clustering) get re-grouped if they share the same DOM evidence.
+
+Conservative: the cross-category pass requires non-empty url AND non-empty evidence. Entries with no evidence — the historical test corpus — pass through unchanged. The pre-existing `test_different_categories_do_not_cluster` assertion still holds (regression test added: `test_cross_category_no_collapse_without_evidence`).
+
+Verified: cycle 120's 5-entry "No alerts" cluster now collapses to 1 canonical + 4 near-duplicates clustered. 13,986 unit tests pass.
+
+### Agent Guidance
+
+When dedup heuristics produce misses, look for entries that share a stronger signal than the one you're keying on. Description varies because the LLM rephrases; DOM evidence doesn't. Two passes (specific-then-broader) is often better than one pass with a relaxed single key — the relaxed key would also collapse legitimately-distinct findings.
+
+Discovered cumulatively across `/improve` cycles 3, 112, 120; fixed cycle 134.
+
 ## [0.67.151] - 2026-05-14
 
 ### Changed — MCP: 4 project-* tools collapsed into one `project` tool with operation enum — closes #1074

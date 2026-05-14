@@ -538,6 +538,75 @@ class TestFrictionClustering:
         out = render_trial_report(report)
         assert "Friction observations (1 · 1 near-duplicates clustered)" in out
 
+    def test_cross_category_collapse_on_shared_evidence(self) -> None:
+        """#1073: cycle 120 ops_dashboard recorded 5 near-identical 'No alerts'
+        entries spanning 3 categories (missing × 3, confusion × 1, other × 1).
+
+        The original same-category dedup let all 5 through. The cross-category
+        pass keyed on shared evidence collapses them — agents file the same
+        observable phenomenon under varied categories when description wording
+        differs, but the DOM evidence is identical.
+        """
+        evidence = (
+            "URL: http://localhost:3462/app/alert - Page shows 'No items yet' "
+            "and 'No alerts. All systems operational.'"
+        )
+        friction = [
+            {
+                "category": "missing",
+                "description": "The alerts page shows 'No items yet' and 'No alerts.'",
+                "url": "/app/alert",
+                "evidence": evidence,
+            },
+            {
+                "category": "missing",
+                "description": "Cannot test the alert acknowledgment workflow.",
+                "url": "/app/alert",
+                "evidence": evidence,
+            },
+            {
+                "category": "confusion",
+                "description": "Can't tell if the system is healthy or just unconfigured.",
+                "url": "/app/alert",
+                "evidence": evidence,
+            },
+            {
+                "category": "other",
+                "description": "Need sample data for a real evaluation.",
+                "url": "/app/alert",
+                "evidence": evidence,
+            },
+            {
+                "category": "missing",
+                "description": "No way to evaluate alert sorting or acknowledgment.",
+                "url": "/app/alert",
+                "evidence": evidence,
+            },
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        # Original 5 entries → 1 canonical + 4 collapsed (across 3 categories).
+        # The cross-category pass collapses the 3 single-category survivors
+        # into one shared-evidence cluster.
+        assert "Friction observations (1 · 4 near-duplicates clustered)" in out
+
+    def test_cross_category_no_collapse_without_evidence(self) -> None:
+        """The cross-category pass requires non-empty evidence. Two entries
+        with same url + different categories but no evidence MUST NOT collapse
+        (regression guard for the historical
+        test_different_categories_do_not_cluster assertion)."""
+        friction = [
+            {"category": "bug", "description": "Same words.", "url": "/x"},
+            {"category": "praise", "description": "Same words.", "url": "/x"},
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (2)" in out
+
 
 # ---------------------------------------------------------------------------
 # Verdict fallback formatter (the LLM call itself is integration-only)

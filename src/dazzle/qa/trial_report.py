@@ -36,6 +36,11 @@ from typing import Any
 _CATEGORY_ORDER = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 _CLUSTER_SIMILARITY_THRESHOLD = 0.65
+# #1073 — Secondary collapse pass keyed on shared evidence rather than
+# category/description. Catches the cross-category dedup miss observed
+# in cycles 3, 112, and 120 where the same DOM excerpt was filed under
+# different categories (bug/missing/confusion/other) with varied wording.
+_EVIDENCE_PREFIX_LEN = 80
 
 
 @dataclass
@@ -80,12 +85,23 @@ def _title_from_description(desc: str, max_chars: int = 80) -> str:
 def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Collapse near-duplicate friction entries.
 
-    Groups entries with the same ``category`` and ``url`` whose
-    descriptions have a ``SequenceMatcher`` ratio above the threshold.
+    Two-pass collapse (#1073):
+
+    1. **Same-category pass**: groups entries with the same ``category``
+       and ``url`` whose descriptions have a ``SequenceMatcher`` ratio
+       above the threshold. The original v0.57.83 algorithm.
+    2. **Cross-category evidence pass**: collapses surviving clusters
+       that share the same ``url`` + ``evidence`` prefix (first 80 chars,
+       normalised). Fires when the agent split one observable phenomenon
+       across multiple categories (`missing` + `other` + `confusion`)
+       because the description phrasing varied, even though the DOM
+       evidence is identical. Symptom from cycle 120 ops_dashboard run.
+
     The first entry in each group becomes canonical and gets a
     ``similar_count`` field; the rest are dropped from the rendered
     report. Raw JSON transcripts still include every entry.
     """
+    # Pass 1 — same-category, description-similarity clustering.
     clusters: list[dict[str, Any]] = []
     for entry in items:
         category = entry.get("category", "other")
@@ -108,7 +124,37 @@ def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not matched:
             clusters.append(dict(entry))
 
-    return clusters
+    # Pass 2 — cross-category collapse keyed on (url, evidence prefix).
+    # Evidence is the DOM excerpt the agent attached; identical evidence
+    # means identical observation regardless of category framing.
+    if not clusters:
+        return clusters
+
+    def _evidence_key(entry: dict[str, Any]) -> tuple[str, str]:
+        url = (entry.get("url") or "").strip()
+        evidence = (entry.get("evidence") or "").strip().lower()
+        return (url, evidence[:_EVIDENCE_PREFIX_LEN])
+
+    collapsed: list[dict[str, Any]] = []
+    for canonical in clusters:
+        key = _evidence_key(canonical)
+        # An entry with empty url or evidence has no cross-category dedup
+        # signal — pass it through unmolested.
+        if not key[0] or not key[1]:
+            collapsed.append(canonical)
+            continue
+        matched = False
+        for prior in collapsed:
+            if _evidence_key(prior) == key:
+                prior["similar_count"] = prior.get("similar_count", 1) + canonical.get(
+                    "similar_count", 1
+                )
+                matched = True
+                break
+        if not matched:
+            collapsed.append(canonical)
+
+    return collapsed
 
 
 def _sort_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
