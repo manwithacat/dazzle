@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.155] - 2026-05-14
+
+### Docs — Connection pool budgeting for Heroku Postgres + local dev
+
+While investigating #1072 Bug A hypothesis 1, found that existing pool docs missed the +4 non-pool framework connections (outbox publisher + consumers + startup-migration transients). Per-process footprint is ~14 connections, not just `DAZZLE_DB_POOL_MAX`.
+
+Updates:
+- **`docs/reference/databases.md`** — new "Connection Pool" section covering the full per-process budget, local-postgres recommendations, Heroku per-plan tuning table, diagnostic command cheat-sheet (`heroku pg:info`, `pg_stat_activity` queries), symptom → fix table for the four common pool-related failure modes
+- **`docs/guides/heroku.md`** — corrected formula to `(POOL_MAX + 4) × WEB_CONCURRENCY < max_connections - 5`; expanded plan table to include total-footprint column showing how Essential-0 (20 conns) needs `WEB_CONCURRENCY=1`; added pointer to the reference for diagnostics
+
+### Investigation note — #1072 Bug A hypothesis 1 ruled out
+
+`DAZZLE_DB_POOL_MAX=30` (3× default) does not change the ux-verify `--managed` failure pattern. Pool exhaustion is not the cause. Comment landed on #1072 with remaining hypotheses (lock contention on `User`, test-auth path session locks, httpx.AsyncClient per-call connection accumulation).
+
 ## [0.67.154] - 2026-05-14
 
 ### Fixed — server_fixture: extend defensive PG-session cleanup to `--managed` ux-verify path

@@ -50,19 +50,29 @@ This uses uvicorn's multi-worker mode. Each worker gets its own process and conn
 
 ## Connection Pool Tuning
 
-Match `DAZZLE_DB_POOL_MAX` to your Heroku Postgres plan's connection limit:
+Match `DAZZLE_DB_POOL_MAX` to your Heroku Postgres plan's connection limit. The full per-process budget is **~14 connections** (pool ceiling + ~3-4 event-framework + ~1-2 startup-migration transients), so the formula has a hidden multiplier:
 
-| Plan | Max Connections | Recommended `DAZZLE_DB_POOL_MAX` |
-|------|----------------|----------------------------------|
-| Essential-0 | 20 | `4` (with 4 workers = 16 total) |
-| Essential-1 | 40 | `8` (with 4 workers = 32 total) |
-| Standard-0 | 120 | `10` (with 4 workers = 40 total) |
+| Plan | Max Connections | Recommended `DAZZLE_DB_POOL_MAX` (with 4 workers) | Total footprint |
+|------|----------------:|----------------------------------:|----------------:|
+| Essential-0 | 20 | `2` | `(2+4)*4 = 24` — over; use `WEB_CONCURRENCY=1` |
+| Essential-1 | 40 | `5` | `(5+4)*4 = 36` |
+| Standard-0 | 120 | `15` | `(15+4)*4 = 76` |
+| Standard-2+ | 400+ | `25` | `(25+4)*4 = 116` |
 
-**Formula**: `DAZZLE_DB_POOL_MAX * WEB_CONCURRENCY < plan_max_connections`
+**Formula**: `(DAZZLE_DB_POOL_MAX + 4) * WEB_CONCURRENCY < plan_max_connections - 5`
+
+The `+4` accounts for non-pool framework connections; the `-5` leaves headroom for `heroku pg:psql` debug sessions.
 
 ```bash
-heroku config:set DAZZLE_DB_POOL_MAX=4 WEB_CONCURRENCY=4
+# Conservative defaults for Essential-1 (single dyno, 4 workers):
+heroku config:set DAZZLE_DB_POOL_MAX=5 WEB_CONCURRENCY=4
+
+# Or simplify the footprint with a single worker per dyno + horizontal scaling:
+heroku config:set DAZZLE_DB_POOL_MAX=10 WEB_CONCURRENCY=1
+heroku ps:scale web=4
 ```
+
+See `docs/reference/databases.md` → **Connection Pool** for diagnostic commands and full symptom → fix table.
 
 ## Scaling
 

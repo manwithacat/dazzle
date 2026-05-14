@@ -96,6 +96,82 @@ export AUTH_DATABASE_URL=postgresql://localhost:5432/myapp_auth
 dazzle serve --local
 ```
 
+## Connection Pool
+
+Dazzle uses [`psycopg_pool.ConnectionPool`](https://www.psycopg.org/psycopg3/docs/advanced/pool.html) for the main request-handler connections, and dedicated long-lived `psycopg.AsyncConnection` instances for the event framework. Both share the same `DATABASE_URL`.
+
+### Config
+
+| Variable | Default | Description |
+|---|---|---|
+| `DAZZLE_DB_POOL_MIN` | `2` | Connections kept open even when idle |
+| `DAZZLE_DB_POOL_MAX` | `10` | Hard ceiling on the main pool |
+
+The event-framework connections (outbox publisher + consumer listeners) are **not** in the main pool — they're 1-3 additional long-lived connections per server process. Reserve headroom when sizing the pool against the Postgres server's `max_connections`.
+
+**Per-process connection count budget** (rule of thumb):
+
+```
+DAZZLE_DB_POOL_MAX            (main pool ceiling)
++ 2-3                          (event framework: 1 outbox publisher + 1-2 listener consumers)
++ 1-2                          (transient migration / schema-create on startup)
+= ~14 connections per `dazzle serve` process
+```
+
+Multiply by `WEB_CONCURRENCY` (uvicorn workers) for total cluster footprint.
+
+### Local PostgreSQL
+
+Default `max_connections = 100` on a stock Postgres install is plenty for a single Dazzle dev server. No tuning needed.
+
+If you run **multiple example apps simultaneously** (e.g. for cross-app testing), each gets its own database AND its own server process. With 5 example apps × 14 connections = 70 connections — still under 100. If you push into the limit, either:
+
+- Lower `DAZZLE_DB_POOL_MAX` per project (e.g. `DAZZLE_DB_POOL_MAX=4`)
+- Raise `max_connections` in `postgresql.conf` (requires server restart): `max_connections = 200`
+
+### Heroku Postgres
+
+Heroku Postgres plans have per-tier connection ceilings — they're the dominant constraint for production deployments. **Always set `DAZZLE_DB_POOL_MAX * WEB_CONCURRENCY < plan_max_connections - 5`** (the `-5` leaves headroom for `psql` debug sessions, `heroku pg:psql`, and event-framework connections).
+
+| Plan | `max_connections` | Recommended `DAZZLE_DB_POOL_MAX` (with 4 workers) | Notes |
+|---|---:|---:|---|
+| Essential-0 | 20 | `2` | Tight — 2 × 4 = 8, plus 4 event-framework × 4 workers = 16; consider 1 worker only |
+| Essential-1 | 40 | `5` | 5 × 4 = 20, + 16 event = 36; comfortable |
+| Standard-0 | 120 | `15` | 15 × 4 = 60, + 16 event = 76; room to spare |
+| Standard-2+ | 400+ | `25` | Generous |
+
+On the smallest Heroku plans, also consider `WEB_CONCURRENCY=1` (single worker per dyno) and scale horizontally with `heroku ps:scale web=N` — that way each dyno's footprint is small and connection accounting is linear.
+
+### Heroku TCP timeouts
+
+Heroku terminates idle TCP after **30 minutes** of inactivity. The default `psycopg_pool` does **not** detect and reconnect — a queued idle connection picked up after 30 min will hit `OperationalError: server closed the connection unexpectedly` on the first query.
+
+For production deployments, set `pool_recycle` (TBD — currently not exposed; if you hit this, file an issue referencing #1072 follow-ups).
+
+### Diagnostic commands
+
+```bash
+# Heroku
+heroku pg:info                                          # show current connection count + plan limit
+heroku pg:psql -c "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database();"
+
+# Local
+psql -d <dbname> -c "SELECT count(*) FROM pg_stat_activity WHERE datname = '<dbname>';"
+psql -d <dbname> -c "SHOW max_connections;"
+
+# Inspect idle-in-transaction sessions (the #1072 Bug A diagnostic)
+psql -d <dbname> -c "SELECT pid, state, query FROM pg_stat_activity WHERE datname='<dbname>' AND state LIKE 'idle in transaction%';"
+```
+
+### What pool-related symptoms look like
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `psycopg_pool.PoolTimeout` after ~30s | Pool exhausted — too many concurrent in-flight requests | Increase `DAZZLE_DB_POOL_MAX` until error stops or you hit `max_connections - 5` |
+| `FATAL: too many clients already` | Cluster-wide ceiling hit | Lower `DAZZLE_DB_POOL_MAX * WEB_CONCURRENCY * dyno_count` below `max_connections` |
+| `server closed the connection unexpectedly` | TCP idle-killed by Heroku / DBaaS provider | (See "Heroku TCP timeouts" above) |
+| `CREATE INDEX ... waiting` indefinitely | A separate process holds `idle in transaction` on the table | `pg_terminate_backend(pid)` the offender; root-cause the leak |
+
 ## Schema Management
 
 Dazzle automatically creates and migrates database tables on startup. No manual migration step is required for development.
