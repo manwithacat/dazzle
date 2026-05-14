@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.144] - 2026-05-14
+
+### Changed — renderer decomposition COMPLETE (closes #1064)
+
+**PR 9 of 9 — the final family extraction.** After 8 prior PRs across v0.67.136–v0.67.143, the last 17 tabular primitives move out and `_emit.py` collapses to a pure dispatch shell.
+
+**Moved to `renderer/_render_tables.py`** as `_RenderTablesMixin`:
+- `_emit_table`, `_emit_kpi`
+- `_emit_pivot_table`, `_emit_pivot_table_region`
+- `_emit_list_region`, `_emit_grid_region`
+- `_emit_detail_grid`, `_emit_status_list`, `_emit_activity_feed`
+- `_emit_profile_card`, `_emit_action_card`, `_emit_action_grid`
+- `_emit_metrics_grid`, `_emit_metric_tile`
+- `_emit_bar_track`, `_emit_stage_bar`, `_emit_queue_region`
+
+### Final sizes (vs. 3,784-line original):
+
+| File | Lines |
+|---|---:|
+| `_emit.py` | **364** (was 3,784 — **-90%**) |
+| `_render_tables.py` | 882 (new — largest family) |
+| `_render_charts.py` | 879 |
+| `_render_interactive.py` | 515 |
+| `_render_shell.py` | 475 |
+| `_render_dashboard.py` | 454 |
+| `_render_layout.py` | 274 |
+| `_render_forms.py` | 262 |
+| `_helpers.py` | 147 |
+| `__init__.py` | 52 |
+| **Total** | 4,304 |
+
+The total grew by 520 lines vs. the original — explicit mixin scaffolding cost (each family has its own module docstring, `TYPE_CHECKING` stub for the `_emit` recursion boundary, and class declaration). Same trade-off as #1065: more bytes on disk in exchange for shorter individual files, each readable in a single agent pass.
+
+`_emit.py` is now exactly: the imports, the class declaration inheriting from 6 family mixins, the `render()` public entry point, and the `_emit()` match block (the runtime exhaustiveness check that adding a new primitive must extend).
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+### Agent Guidance
+
+- The mixin-per-family pattern is now the **canonical template** for splitting fat dispatch classes. Two completed reference implementations: `region_adapter/` (dict-based dispatch, #1065) and `renderer/` (match-based dispatch, #1064). When the next ≥2,000-line dispatcher emerges, mirror this layout: family mixins in `_render_<family>.py` / `_builders_<family>.py`, cross-cutting helpers in `_shared.py` or `_helpers.py`, dispatch tables / match block in the dispatcher. Public re-exports live in `__init__.py`.
+- Mixin recursion contract: when a family method needs to recurse via the dispatcher's `_emit` (or equivalent), declare a `TYPE_CHECKING` stub on the mixin so mypy resolves the call. See `_render_layout.py` for the canonical example.
+
 ## [0.67.143] - 2026-05-14
 
 ### Changed — renderer charts-family mixin extracted (progress on #1064)
