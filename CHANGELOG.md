@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.146] - 2026-05-14
+
+### Fixed — `make test-ux-deep` Makefile rot (companion to v0.67.145)
+
+After v0.67.145 repaired `test-ux-preflight`, an audit of the parent `test-ux-deep` target found the same shape of rot — line 135 mypy'd `src/dazzle_back/` which no longer exists (merged into `src/dazzle/back/` at v0.67.98 / #1055).
+
+Fix: `src/dazzle_back/` → `src/dazzle/back/`. The rest of the target's paths (`src/dazzle/core`, `src/dazzle/cli`, `src/dazzle/mcp`, `tests/unit/audit_internals.py`) were verified to still exist. Added a path-note comment documenting the rename so future readers don't bring back the stale form.
+
+Verified: `make test-ux-deep` green — 12 passed + 11 skipped (preflight), mypy clean (60 + 726 source files).
+
+This and v0.67.145 together restore the autonomous-improvement loop's preflight floor. `/loop /improve` should now make actual cycle progress instead of silently skipping.
+
 ## [0.67.145] - 2026-05-14
 
 ### Fixed — `make test-ux-preflight` Makefile rot

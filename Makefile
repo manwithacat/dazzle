@@ -126,13 +126,15 @@ test-ux-preflight:
 		echo "  Rebuild + commit before /ship to keep the wheel fresh."; \
 	fi
 
-# Deeper drift audit for cycles touching framework Python beyond src/dazzle_ui/
+# Deeper drift audit for cycles touching framework Python beyond src/dazzle/ui/
 # (cycle 320). Superset of test-ux-preflight plus mypy across core + cli +
-# mcp + dazzle_back. Takes ~7s — not part of the per-cron-tick preflight,
+# mcp + dazzle/back. Takes ~7s — not part of the per-cron-tick preflight,
 # but recommended before /ship or after any cross-subtree edit. Complements
 # /ship's own mypy which only runs on push.
+#
+# Path note: src/dazzle_back/ → src/dazzle/back/ at v0.67.98 (#1055).
 test-ux-deep: test-ux-preflight
-	mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_back/ \
+	mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/back/ \
 	     --ignore-missing-imports --exclude 'eject'
 
 # On-demand half-finished-internals audit. Not part of preflight — regenerates
