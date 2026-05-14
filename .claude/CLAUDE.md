@@ -92,7 +92,9 @@ surface task_list "Tasks":
 
 **Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `webhook`, `approval`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`, `analytics`
 
-*(This is the user-facing subset. The parser also dispatches on `app`, `test`, `flow`, `rule`, `message`, `channel`, `asset`, `document`, `template`, `demo`, `event_model`, `subscribe`, `project`, `stream`, `hless`, `policies`, `tenancy`, `interfaces`, `data_products`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `job`, `audit`, `search`, `grant_schema`, `param`, `question`. The drift test in `tests/unit/test_docs_drift.py` asserts every name listed above actually exists in the parser.)*
+*(This is the user-facing subset. The parser also dispatches on `app`, `test`, `flow`, `rule`, `message`, `channel`, `asset`, `document`, `template`, `demo`, `event_model`, `subscribe`, `projection`, `stream`, `hless`, `policies`, `tenancy`, `interfaces`, `data_products`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `job`, `audit`, `search`, `grant_schema`, `param`, `question`. The drift test in `tests/unit/test_docs_drift.py` asserts every name listed above actually exists in the parser.)*
+
+**On `hless`** — yes, the keyword is an acronym (HLESS = High-Level Event Semantics Specification). It's **deliberately** distinct from Kafka- and stack-flavoured terminology like "stream", "topic", "consumer-group". Dazzle's event semantics are aligned with academic event-systems literature — not Kafka's vocabulary. The keyword is a load-bearing signal of that distinction. **Don't propose renaming it** (this has been suggested + rejected — see #1069 API-003). The full rationale (semantic drift, vocabulary lock-in, human imprecision — the three failure modes HLESS addresses) is in [`docs/architecture/hless-deep-dive.md`](../docs/architecture/hless-deep-dive.md).
 
 **Scope rules** compile to a formal predicate algebra and are statically validated against the FK graph at `dazzle validate` time. Supported forms:
 - Direct: `school_id = current_user.school` — column equality check
@@ -306,4 +308,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.67.158 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.67.159 | **Python**: 3.12+ | **Status**: Production Ready

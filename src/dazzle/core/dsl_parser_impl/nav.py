@@ -42,7 +42,7 @@ class NavParserMixin:
         file: Any
         _parse_nav_group: Any
 
-    def parse_nav_definition(self) -> ir.NavDefinitionSpec:
+    def parse_nav_definition(self) -> ir.NavSpec:
         """Parse a top-level `nav <name>:` block."""
         self.advance()  # consume `nav`
         name = self.expect_identifier_or_keyword().value
@@ -66,4 +66,4 @@ class NavParserMixin:
         if self.match(TokenType.DEDENT):
             self.advance()
 
-        return ir.NavDefinitionSpec(name=name, groups=groups)
+        return ir.NavSpec(name=name, groups=groups)

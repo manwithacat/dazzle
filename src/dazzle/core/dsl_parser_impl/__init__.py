@@ -522,7 +522,7 @@ class Parser(
         return ir.ModuleFragment(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "nav_definitions": [*fragment.nav_definitions, nav_spec],
+                "navs": [*fragment.navs, nav_spec],
             }
         )
 

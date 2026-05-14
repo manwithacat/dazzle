@@ -75,7 +75,7 @@ from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .views import ViewSpec
 from .webhooks import WebhookSpec
-from .workspaces import NavDefinitionSpec, WorkspaceSpec
+from .workspaces import NavSpec, WorkspaceSpec
 
 
 class AppConfigSpec(BaseModel):
@@ -218,7 +218,7 @@ class ModuleFragment(BaseModel):
     # Shared nav definitions (v0.61.95, #926). Referenced by
     # `WorkspaceSpec.nav_ref`; resolved by the linker which inlines the
     # named definition's groups into `WorkspaceSpec.nav_groups`.
-    nav_definitions: list[NavDefinitionSpec] = Field(default_factory=list)
+    navs: list[NavSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

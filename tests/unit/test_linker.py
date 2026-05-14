@@ -271,7 +271,7 @@ def test_all_shared_fragment_fields_propagated_to_appspec():
     # These are computed/replaced fields, not direct fragment maps:
     # - entities (extended with auto-generated AIJob / AuditEntry)
     # - surfaces (extended with admin surfaces + auto-archetype surfaces)
-    # - workspaces (resolved via nav_definitions)
+    # - workspaces (resolved via navs)
     # - triples (computed)
     # All shared with ModuleFragment but legitimately overridden.
     legitimate_overrides = {"entities", "surfaces", "workspaces"}

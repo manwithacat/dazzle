@@ -871,7 +871,7 @@ class NavGroupSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class NavDefinitionSpec(BaseModel):
+class NavSpec(BaseModel):
     """A reusable, named navigation definition (v0.61.95, #926).
 
     Top-level `nav <name>:` blocks declare a list of nav groups that

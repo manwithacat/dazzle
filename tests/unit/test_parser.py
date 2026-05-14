@@ -2582,8 +2582,8 @@ workspace dashboard "Dashboard":
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         # The nav definition itself is captured at module level:
-        assert len(fragment.nav_definitions) == 1
-        nav = fragment.nav_definitions[0]
+        assert len(fragment.navs) == 1
+        nav = fragment.navs[0]
         assert nav.name == "teacher_nav"
         assert len(nav.groups) == 2
         assert nav.groups[0].label == "My Classes"
@@ -2695,7 +2695,7 @@ workspace ws "WS":
     source: Class
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert fragment.nav_definitions[0].groups[0].label == "Classes"
+        assert fragment.navs[0].groups[0].label == "Classes"
 
     def test_nav_group_icon_with_keyword_substring(self):
         """Issue #922: hyphenated icon names that contain a reserved keyword

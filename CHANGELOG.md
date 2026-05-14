@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.159] - 2026-05-14
+
+### Changed!— `NavDefinitionSpec` → `NavSpec` + `nav_definitions` → `navs` (#1069 API-002)
+
+Workspace-level nav now uses the canonical short name. Previous `NavDefinitionSpec` was the only `FooDefinitionSpec`-suffixed class in the IR — the suffix was load-bearing only because **three** unrelated classes were called `NavSpec` (sitespec marketing-nav, ui-shell-nav, workspace nav). The previous commit (414d8b3f) renamed the two other NavSpecs to `SiteNavSpec` + `ShellNavSpec`, freeing up the canonical name for the user-facing workspace nav construct.
+
+```diff
+- from dazzle.core.ir import NavDefinitionSpec
++ from dazzle.core.ir import NavSpec
+
+- appspec.nav_definitions    # gone
++ appspec.navs               # via ModuleFragment.navs
+```
+
+Touch points: `ir/workspaces.py` (class), `ir/module.py` (import + field), `ir/__init__.py` (export), `dsl_parser_impl/nav.py` (return type + constructor), `dsl_parser_impl/__init__.py` (fragment-update kwarg), `linker_impl.py` (3 references + return kwarg + local var), 2 tests, 2 surface baselines regenerated.
+
+### Documented — #1069 API-003 won't-fix-by-design (HLESS is a deliberate signal)
+
+The proposed `hless` keyword expansion in API-003 was based on a flawed premise — that the acronym is opacity to be fixed. It's not: **HLESS is deliberately distinct from Kafka- and stack-flavoured terminology** ("stream", "topic", "consumer group"). Dazzle's event semantics align with academic event-systems literature, not Kafka's vocabulary. The keyword is a load-bearing signal of that alignment.
+
+To prevent the audit pattern from re-proposing the rename:
+
+- `CLAUDE.md` — new paragraph under "DSL Quick Reference" stating the rationale + linking to `docs/architecture/hless-deep-dive.md` (the 387-line canonical explainer of the three failure modes HLESS addresses: semantic drift, vocabulary lock-in, human imprecision).
+- `src/dazzle/core/lexer.py` near `TokenType.HLESS = "hless"` — multi-line block comment with the rationale + cross-references.
+- `src/dazzle/core/ir/hless.py` module docstring — extended with the "Why the name HLESS?" paragraph + deep-dive link.
+
+Anyone grepping `class HLESSPragma`, `TokenType.HLESS`, or hitting the DSL Quick Reference now finds the rationale before reaching for a rename.
+
+### Verified
+
+- 13,992 unit tests pass
+- `dazzle validate` + drift gate green
+- `dazzle inspect-api dsl-constructs` shows `construct: nav` mapping to `NavSpec` correctly
+- No backward-compat shims per ADR-0003
+
+### #1069 status after this ship
+
+**Closed**: API-001 (project→projection, v0.67.158), API-002 (NavDefinitionSpec→NavSpec, this release), API-003 (won't-fix-by-design, this release).
+
+The umbrella issue can now be closed.
+
 ## [0.67.158] - 2026-05-14
 
 ### Changed!— DSL keyword `project` → `projection` (#1069 API-001 of 3)

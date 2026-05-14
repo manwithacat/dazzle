@@ -122,8 +122,8 @@ construct: message
   ir_classes: MessageSpec
 
 construct: nav
-  fragment_fields: nav_definitions
-  ir_classes: NavDefinitionSpec
+  fragment_fields: navs
+  ir_classes: NavSpec
 
 construct: notification
   fragment_fields: notifications

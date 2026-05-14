@@ -395,7 +395,13 @@ class TokenType(Enum):
     ERASURE = "erasure"
     DATA_PRODUCT = "data_product"
 
-    # v0.19.0 HLESS (High-Level Event Semantics) Keywords
+    # v0.19.0 HLESS (High-Level Event Semantics Specification) Keywords.
+    # NOTE: the `hless` keyword and `HLESS*` IR class names are deliberate —
+    # they signal that Dazzle's event semantics align with academic
+    # event-systems literature rather than stack-flavoured terminology
+    # ("stream", "topic", "consumer group"). Renaming has been proposed
+    # and rejected (#1069 API-003). Full rationale + the three failure
+    # modes HLESS addresses are in docs/architecture/hless-deep-dive.md.
     # RecordKind types (INTENT already exists in v0.7.1 LLM Cognition)
     FACT = "FACT"
     OBSERVATION = "OBSERVATION"

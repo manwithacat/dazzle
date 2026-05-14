@@ -12,7 +12,15 @@ append-only record streams. HLESS prevents semantic drift by:
 CRITICAL: The unqualified word "event" is forbidden in HLESS mode.
 Use RecordKind (INTENT, FACT, OBSERVATION, DERIVATION) instead.
 
-See: dev_docs/architecture/event_first/high_level_event_semantics.md
+Why the name "HLESS"? It's deliberately distinct from Kafka- and
+stack-flavoured terminology (stream / topic / consumer-group). Dazzle's
+event semantics align with academic event-systems literature, not
+Kafka's vocabulary. Renaming to e.g. "HighLevelEventSemantics" was
+proposed and rejected — the acronym is a load-bearing signal of the
+distinction. See docs/architecture/hless-deep-dive.md and #1069 (API-003).
+
+See: docs/architecture/hless-deep-dive.md (canonical rationale)
+See: dev_docs/architecture/event_first/high_level_event_semantics.md (working notes)
 """
 
 from __future__ import annotations  # required: forward reference

@@ -1419,20 +1419,20 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
     # nav_groups expanded by prepending the named definition's groups
     # so explicit per-workspace `nav_group` blocks append after the
     # inherited ones (composition semantics from the issue).
-    nav_definitions: list[ir.NavDefinitionSpec] = []
-    nav_def_index: dict[str, ir.NavDefinitionSpec] = {}
+    navs: list[ir.NavSpec] = []
+    nav_index: dict[str, ir.NavSpec] = {}
     for module in modules:
-        for nav_def in module.fragment.nav_definitions:
-            if nav_def.name not in nav_def_index:
-                nav_def_index[nav_def.name] = nav_def
-                nav_definitions.append(nav_def)
+        for nav_def in module.fragment.navs:
+            if nav_def.name not in nav_index:
+                nav_index[nav_def.name] = nav_def
+                navs.append(nav_def)
 
     resolved_workspaces: list[ir.WorkspaceSpec] = []
     for workspace in symbols.workspaces.values():
         if workspace.nav_ref is None:
             resolved_workspaces.append(workspace)
             continue
-        resolved_def = nav_def_index.get(workspace.nav_ref)
+        resolved_def = nav_index.get(workspace.nav_ref)
         if resolved_def is None:
             # Unresolved reference — keep workspace as-is. Validation
             # surfaces this separately so the parse path stays simple.
@@ -1494,7 +1494,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         feedback_widget=symbols.feedback_widget,  # Feedback Widget
         subprocessors=list(symbols.subprocessors.values()),  # v0.61.0
         analytics=symbols.analytics,  # v0.61.0 Phase 3
-        nav_definitions=nav_definitions,  # v0.61.95 (#926)
+        navs=navs,  # v0.61.95 (#926)
         tenancy=symbols.tenancy,  # #957 cycle 3
         # #1075 — fields not previously routed through the symbol table.
         # Flattened across modules; first-occurrence wins for scalars.

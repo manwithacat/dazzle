@@ -1621,7 +1621,7 @@ ir_class: ModuleFragment
     - llm_intents: list[LLMIntentSpec] = []
     - llm_models: list[LLMModelSpec] = []
     - messages: list[MessageSpec] = []
-    - nav_definitions: list[NavDefinitionSpec] = []
+    - navs: list[NavSpec] = []
     - notifications: list[NotificationSpec] = []
     - params: list[ParamSpec] = []
     - personas: list[PersonaSpec] = []
@@ -1672,12 +1672,6 @@ ir_class: MoneyWithScale
   optional:
     - scale_override: int | None = None
 
-ir_class: NavDefinitionSpec
-  required:
-    - name: str
-  optional:
-    - groups: list[NavGroupSpec] = []
-
 ir_class: NavGroupSpec
   required:
     - label: str
@@ -1697,6 +1691,12 @@ ir_class: NavItemSpec
     - href: str
     - label: str
   optional: (none)
+
+ir_class: NavSpec
+  required:
+    - name: str
+  optional:
+    - groups: list[NavGroupSpec] = []
 
 ir_class: NotExpr
   required:
