@@ -293,9 +293,21 @@ jobs:
 
     - name: Validate all example and fixture projects
       run: |
+        # fixtures/pra is the parser-conformance corpus — intentionally
+        # contains validation-failing shapes (HLESS decimal-on-monetary,
+        # unreachable entities, broken FK chains, etc.) used to exercise
+        # the parser/validator paths. It MUST fail `dazzle validate`.
+        # Same convention as the example-apps `/improve` lane which
+        # excludes pra. The other fixtures (shapes_validation,
+        # rbac_validation, project_tracker, ...) are real-app-shaped
+        # and DO pass validate.
         for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then
             example=$(basename "$dir")
+            if [ "$example" = "pra" ]; then
+              echo "Skipping $example (parser-conformance corpus)"
+              continue
+            fi
             echo "Validating $example..."
             cd "$dir"
             python -m dazzle validate
@@ -513,7 +525,10 @@ jobs:
         # Capture the resolved playwright version so the cache key
         # invalidates whenever the wheel pin moves. Coming from a
         # python package metadata read, not external user input.
-        PLAYWRIGHT_VERSION=$(python -c "import playwright; print(playwright.__version__)")
+        # playwright 1.59+ dropped the `__version__` module attribute; read
+        # the package metadata directly so the cache-key probe survives
+        # version-pin bumps. importlib.metadata.version is stdlib since 3.8.
+        PLAYWRIGHT_VERSION=$(python -c "from importlib.metadata import version; print(version('playwright'))")
         echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> "$GITHUB_ENV"
 
     # Cache the chromium browser binary (~150MB) keyed on the resolved

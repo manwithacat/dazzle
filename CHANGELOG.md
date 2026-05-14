@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.160] - 2026-05-15
+
+### Fixed — CI: two local-vs-server deltas that produced false-red builds
+
+User feedback: "CI is still a little bit flakey... seeing a delta between local testing passing and green on the server side." Investigated v0.67.158's CI run (id 25889461805) which showed 2 hard failures:
+
+#### Bug 1 — INTERACTION_WALK: `playwright.__version__` AttributeError
+
+`.github/workflows/ci.yml:516` reads the resolved playwright version for cache-key keying:
+
+```bash
+python -c "import playwright; print(playwright.__version__)"
+```
+
+The pin `playwright>=1.40` now resolves to **playwright 1.59.0**, which **dropped the `__version__` module attribute** as part of an internal cleanup. Result: every CI run since the 1.59.0 wheel went live failed the INTERACTION_WALK job at the "Install dependencies" step with `AttributeError: module 'playwright' has no attribute '__version__'`.
+
+**Fix**: read the version via `importlib.metadata.version("playwright")` instead — stdlib since Python 3.8, package-metadata sourced (independent of whether the package exposes `__version__`).
+
+#### Bug 2 — E2E Smoke: `dazzle validate` fails on `fixtures/pra`
+
+The "Validate all example and fixture projects" step (line 294) runs `python -m dazzle validate` against every `examples/*/` AND `fixtures/*/` directory and treats non-zero exit as a hard failure.
+
+`fixtures/pra` is the **parser-conformance corpus** — intentionally contains validation-failing shapes (HLESS decimal-on-monetary streams, unreachable entities, broken FK chains) used to exercise parser + validator paths. It MUST fail `dazzle validate` by design. The same exclusion is already documented in `dev_docs/improve-backlog.md` ("Note: pra excluded — it's a parser conformance corpus, not a real app").
+
+The CI loop was missing the same exclusion that the autonomous-improve `example-apps` lane has had since cycle 1.
+
+**Fix**: skip `pra` explicitly in the validate-all loop with a comment explaining why. Other fixtures (`shapes_validation`, `rbac_validation`, `project_tracker`, `component_showcase`, `design_studio`, `llm_ticket_classifier`) are real-app-shaped and continue to be validated as before.
+
+### Why this delta wasn't caught locally
+
+Local pre-ship test scope (`pytest tests/ -m "not e2e"`) doesn't run the validate-all-projects loop. The two failures only surface on CI's E2E Smoke job, which is the canonical "spot-check every example app boots" step. Both bugs were deterministic, not flakey — every CI run since the playwright 1.59.0 wheel landed (or since the pra-decimal HLESS check tightened to ERROR severity) was red on these two jobs.
+
+### Agent Guidance
+
+CI red-vs-local-green deltas typically split into three classes:
+
+1. **Scope delta** (Bug 2): CI runs steps that local pre-ship doesn't. Mitigation: add the CI step to `make test-ux-deep` so `/ship` catches it before push. Or surface in a `make ci-local` target that exactly mirrors the CI job list.
+2. **Environment delta** (Bug 1): a transitive dependency upgraded between local install and CI's fresh resolve. Mitigation: pin tightly in `pyproject.toml` for tooling that the CI is keying on, OR write defensive probes (use `importlib.metadata.version()` not `pkg.__version__`).
+3. **Service delta** (not this round): managed-mode subprocess flakes against fresh PostgreSQL/Redis. Most recently fixed by v0.67.156's pipe-buffer-deadlock fix.
+
+When investigating "CI is flakey", first check if the same SHA fails 2+ runs deterministically. Both bugs here were 100% reproducible across 3 prior CI runs on different commits — that's a deterministic regression, not a flake.
+
 ## [0.67.159] - 2026-05-14
 
 ### Changed!— `NavDefinitionSpec` → `NavSpec` + `nav_definitions` → `navs` (#1069 API-002)
