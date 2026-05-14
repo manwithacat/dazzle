@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.157] - 2026-05-14
+
+### Fixed — RBAC: `list:` scope rule implicitly covers `read:` (Option A) — closes #1071
+
+Every Dazzle example app + every documented downstream pattern declares one `list:` scope rule per entity and relies on the implicit understanding that "the row-visibility predicate also governs reads." The runtime resolver in `src/dazzle/rbac/matrix.py` did strict per-operation matching, so `read:` ops with no explicit `read:` scope returned `PERMIT_NO_SCOPE` → runtime returned 0 records → forcing boilerplate `read:` scope blocks duplicating each `list:` predicate. Every example app produced ~20 `no_scope_rule` warnings on `dazzle validate` from this single class.
+
+**Fix**: `_find_scope_for_role` now falls back to the `list:` rule when the caller asks for `read` and no explicit `read:` rule matches. The fallback:
+
+- Only applies to `READ` (visibility-class op). `CREATE`, `UPDATE`, `DELETE` are mutating-class ops where row-filter semantics differ from listing; they still require explicit scope rules.
+- Loses to an explicit `read:` rule — declared overrides always win. The implicit inheritance only fires when no `read:` rule was authored.
+- Single-file change, ~12 lines added.
+
+**Verified**: simple_task's `dazzle validate` RBAC warning count drops from **23 → 15** (the 8 disappeared warnings are all the `read:` PERMIT_NO_SCOPE cases that the implicit fallback now resolves). The remaining 15 are correct `create`/`update`/`delete` warnings — apps that want to permit those operations still need explicit per-op scope rules, by design.
+
+5 new regression test cases in `test_rbac_matrix.py::test_list_scope_falls_back_for_read_op` pin: (A) list+read both inherit `list: all`, (B) field-conditional `list:` propagates as PERMIT_SCOPED to read, (C) explicit `read:` overrides the fallback, (D) fallback does NOT apply to create/update/delete.
+
+13,992 unit tests pass.
+
+### Agent Guidance
+
+The scope-rule resolver now follows a "visibility-class fallback" principle: `read` reuses `list`'s row predicate by default. Mutating ops stay explicit. When designing future scope-class extensions (e.g. `search:`, `export:`), consider whether the new op is visibility-class (inherit) or mutating-class (require explicit declaration). For visibility-class ops, add the same `LIST` fallback. For mutating ops, leave the strict `PERMIT_NO_SCOPE` behaviour — it's the load-bearing default-deny ergonomic.
+
+Discovered + filed by `/improve` cycle 117 (#1071); fixed by `/issues` cycle.
+
 ## [0.67.156] - 2026-05-14
 
 ### Fixed — #1072 Bug A root cause: subprocess.PIPE buffer deadlock in `launch_interaction_server` — closes #1072

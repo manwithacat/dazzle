@@ -512,3 +512,82 @@ def test_scope_rules_combined() -> None:
         _make_appspec([_make_entity("Task", access=a6)], [_make_persona("user")])
     )
     assert m6.get("user", "Task", "read") == PolicyDecision.PERMIT_FILTERED
+
+
+def test_list_scope_falls_back_for_read_op() -> None:
+    """#1071: `list:` scope rule implicitly covers `read:` when no explicit
+    `read:` rule exists. The dominant DSL pattern across all Dazzle apps
+    declares only `list:` and relies on this fallback. Without it, every
+    app produces `PERMIT_NO_SCOPE` on `read` ops despite working `list:`.
+
+    Cases:
+    - permit on list+read, scope on list only → list passes (PERMIT),
+      read falls back to list's scope (PERMIT).
+    - permit on read only, scope with field cond on list → read inherits
+      filtered scope (PERMIT_SCOPED).
+    - Explicit `read:` scope wins over fallback.
+    - Fallback does NOT apply to create/update/delete (still PERMIT_NO_SCOPE).
+    """
+    # Case A: list: all + read inherits list: all → both PERMIT.
+    a = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, personas=["admin"]),
+            _permit_rule(PermissionKind.READ, personas=["admin"]),
+        ],
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["admin"], condition=None)],
+    )
+    m = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=a)], [_make_persona("admin")])
+    )
+    assert m.get("admin", "Task", "list") == PolicyDecision.PERMIT
+    assert m.get("admin", "Task", "read") == PolicyDecision.PERMIT
+
+    # Case B: list:'all where owner=user' covers read too → PERMIT_SCOPED for both.
+    b = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, personas=["user"]),
+            _permit_rule(PermissionKind.READ, personas=["user"]),
+        ],
+        scopes=[
+            _scope_rule(PermissionKind.LIST, personas=["user"], condition=_field_cond("owner_id"))
+        ],
+    )
+    m = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=b)], [_make_persona("user")])
+    )
+    assert m.get("user", "Task", "list") == PolicyDecision.PERMIT_SCOPED
+    assert m.get("user", "Task", "read") == PolicyDecision.PERMIT_SCOPED
+
+    # Case C: explicit read: rule wins over the list: fallback.
+    c = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, personas=["admin"]),
+            _permit_rule(PermissionKind.READ, personas=["admin"]),
+        ],
+        scopes=[
+            _scope_rule(PermissionKind.LIST, personas=["admin"], condition=_field_cond("owner_id")),
+            _scope_rule(PermissionKind.READ, personas=["admin"], condition=None),
+        ],
+    )
+    m = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=c)], [_make_persona("admin")])
+    )
+    # Explicit read: with condition=None should win → PERMIT (not PERMIT_SCOPED).
+    assert m.get("admin", "Task", "read") == PolicyDecision.PERMIT
+
+    # Case D: fallback does NOT apply to mutating ops (create/update/delete).
+    # permit on update but only list: scope → still PERMIT_NO_SCOPE.
+    d = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.UPDATE, personas=["admin"]),
+            _permit_rule(PermissionKind.DELETE, personas=["admin"]),
+            _permit_rule(PermissionKind.CREATE, personas=["admin"]),
+        ],
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["admin"], condition=None)],
+    )
+    m = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=d)], [_make_persona("admin")])
+    )
+    assert m.get("admin", "Task", "update") == PolicyDecision.PERMIT_NO_SCOPE
+    assert m.get("admin", "Task", "delete") == PolicyDecision.PERMIT_NO_SCOPE
+    assert m.get("admin", "Task", "create") == PolicyDecision.PERMIT_NO_SCOPE

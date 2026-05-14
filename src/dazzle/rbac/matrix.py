@@ -194,12 +194,37 @@ def _find_scope_for_role(
 
     A rule matches when its operation equals *operation* and either '*' is in
     its personas list or *role* is explicitly listed.
+
+    #1071: When *operation* is ``READ`` and no explicit ``read:`` scope rule
+    matches, fall back to the ``list:`` scope rule. The dominant convention
+    across every Dazzle example app + downstream user app authored to date
+    is "one ``list:`` rule governs the row-visibility predicate; read views
+    inherit it." Without this fallback, every app that follows the documented
+    pattern hits PERMIT_NO_SCOPE on ``read`` ops → returns 0 records → forces
+    boilerplate `read:` scope blocks that duplicate the `list:` predicate.
+
+    The fallback only applies to ``read`` (visibility-class op). ``create``,
+    ``update``, ``delete`` are mutating-class ops where row-filter semantics
+    differ from listing, and they still require explicit scope rules. The
+    fallback ALSO loses to an explicit ``read:`` rule — declared overrides
+    always win over the implicit inheritance.
     """
     for scope in scopes:
         if scope.operation != operation:
             continue
         if "*" in scope.personas or role in scope.personas:
             return scope
+
+    # #1071 — list: → read: implicit fallback. Re-run the loop against LIST
+    # only when the caller asked for READ and the explicit READ pass returned
+    # nothing. Never recurses (operation passed in is always LIST after the
+    # fallback, never READ again).
+    if operation == PermissionKind.READ:
+        for scope in scopes:
+            if scope.operation != PermissionKind.LIST:
+                continue
+            if "*" in scope.personas or role in scope.personas:
+                return scope
     return None
 
 
