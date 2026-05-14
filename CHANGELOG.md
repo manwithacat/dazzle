@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.148] - 2026-05-14
+
+### Fixed — `dazzle ux verify --contracts --managed`: empty-error swallow + 10s timeout — closes #1072 Bug B + partial #1072 Bug A
+
+The contract runner's RBAC loop reported `FAIL rbac:...:list — ` with **nothing after the em-dash** for any contract that raised an exception inside the try-block at `src/dazzle/cli/ux.py:362-365`. The handler did `rc.error = str(e)`, but some exception types stringify to `""`, so the FAIL line was unactionable.
+
+Discovery by instrumentation: `rc.error = msg if msg else f"{type(e).__name__}: <no message>"` plus a `logger.warning(...)` on every empty-message exception. The next run immediately surfaced:
+
+```
+RBAC contract for Alert/ops_engineer/list raised empty ReadTimeout
+RBAC contract for Alert/ops_engineer/create raised empty ReadTimeout
+```
+
+→ The exception was `httpx.ReadTimeout`. The contract HTTP fetches were hitting the 10s timeout configured in `src/dazzle/testing/ux/htmx_client.py` (three call sites: `get`, `get_full_page`, `authenticate`). Managed-mode subprocess cold-start can take longer than 10s — particularly for the *first* fetch on a fresh per-persona `HtmxClient`.
+
+**Fix:**
+- `cli/ux.py` — never assign `""` to `rc.error`; fall back to `<ExceptionClass>: <no message>`. Also emit `logger.warning` on every empty-message exception so the diagnosis trail is preserved even when log level filters the FAIL print.
+- `testing/ux/htmx_client.py` — bumped three `timeout=10` call sites to `timeout=30` (`get`, `get_full_page`, `authenticate`). The 5s health-check at the same module stays at 5s — fast-fail is what we want there.
+
+**Bug A** (false RBAC failure on managed ops_dashboard) is **partially** resolved by this — the 30s ceiling is more forgiving but doesn't *prove* the contracts will now pass; the next ux-converge cycle will confirm. **Bug B** (empty-error swallow) is fully closed — exceptions can no longer be unloggable.
+
+### Agent Guidance
+
+When an exception handler stringifies the exception (`str(e)`) to populate an error display, always defend against the empty-string case by falling back to `type(e).__name__` plus a sentinel. Several httpx and asyncio exceptions stringify to `""` and would otherwise leave the diagnosis path a dead end. Pattern:
+
+```python
+msg = str(e)
+display = msg if msg else f"{type(e).__name__}: <no message>"
+```
+
+Discovered by `/improve` cycle 119 (initial finding, filed #1072), cycle 124 (instrument-then-fix).
+
 ## [0.67.147] - 2026-05-14
 
 ### Fixed — linker: `domain_services` propagated through `merge_fragments` + `build_appspec` — closes #1070

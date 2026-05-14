@@ -98,7 +98,7 @@ class HtmxClient:
                 headers=self._htmx_headers(target=hx_target),
                 cookies=self._cookies(),
                 follow_redirects=False,
-                timeout=10,
+                timeout=30,  # #1072 Bug A — managed-mode cold-start can exceed 10s
             )
         return HtmxResponse(
             status=resp.status_code,
@@ -113,7 +113,10 @@ class HtmxClient:
 
         url = f"{self.base_url}{path}"
         async with httpx.AsyncClient() as client:
-            resp = await client.get(url, cookies=self._cookies(), follow_redirects=True, timeout=10)
+            # #1072 Bug A — managed-mode subprocess can take >10s on
+            # cold-start fetches; the previous 10s ceiling produced
+            # silent ReadTimeouts that the ux verify path swallowed.
+            resp = await client.get(url, cookies=self._cookies(), follow_redirects=True, timeout=30)
         return HtmxResponse(status=resp.status_code, html=resp.text, headers=dict(resp.headers))
 
     async def get_workspace_composite(self, path: str) -> HtmxResponse:
@@ -171,7 +174,7 @@ class HtmxClient:
                 f"{self.base_url}/__test__/authenticate",
                 json={"role": persona, "username": persona},
                 headers=headers,
-                timeout=10,
+                timeout=30,  # #1072 Bug A — managed-mode cold-start can exceed 10s
             )
         if resp.status_code != 200:
             return False

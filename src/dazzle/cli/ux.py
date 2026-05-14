@@ -2,6 +2,7 @@
 
 import asyncio
 import json as _json
+import logging
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
+logger = logging.getLogger(__name__)
 console = Console()
 
 ux_app = typer.Typer(
@@ -362,7 +364,19 @@ def _run_contracts(
                         check_contract(rc, page_resp.html)
                 except Exception as e:
                     rc.status = "failed"
-                    rc.error = str(e)
+                    msg = str(e)
+                    # #1072 Bug B — some exceptions stringify to "" leaving the
+                    # FAIL line unloggable. Always include the class name so the
+                    # diagnosis path isn't a dead end.
+                    rc.error = msg if msg else f"{type(e).__name__}: <no message>"
+                    if not msg:
+                        logger.warning(
+                            "RBAC contract for %s/%s/%s raised empty %s",
+                            rc.entity,
+                            rc.persona,
+                            rc.operation,
+                            type(e).__name__,
+                        )
 
     asyncio.run(_run())
 
