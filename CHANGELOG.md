@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.134] - 2026-05-14
+
+### Changed — region_adapter cards-family mixin extracted (progress on #1065)
+
+PR 7 of the region_adapter decomposition. Fifth family extracted.
+
+**Moved to `region_adapter/_builders_cards.py`** as `_BuildersCardsMixin`:
+- `_build_kanban` — `KanbanRegion` with per-card title + secondary fields + attention tag
+- `_build_profile_card` — single-record identity panel (`ProfileCard`)
+- `_build_action_grid` — dashboard CTA cards (`ActionGrid`)
+- `_build_entity_card` — composite 360° drill-down (#1017)
+- `_build_cohort_strip` — horizontal member-skim with lens toggle (#1018)
+
+### Removed — dead code (`_coerce_columns`, `_format_card`)
+
+The Phase 4A `_coerce_columns` and `_format_card` module-level helpers were superseded by the Phase 4B.4 `KanbanRegion` rewrite and had no remaining callers. Dropped both. No shim — clean break per the project's `No backward compat shims` policy (ADR-0003).
+
+**Sizes:**
+- `_dispatcher.py`: 1,207 → 726 lines (-481)
+- `_builders_cards.py`: 481 lines (new)
+- Cumulative since PR 1: 1,994 lines moved out of the dispatcher
+- 5 of 6 families extracted
+
+Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct.
+
+**Next PR queued (final)**: `_builders_tables.py` — 4 builders (`_build_list`, `_build_queue`, `_build_pivot_table`, `_build_tabbed_list`), ~545 lines. After this lands, `_dispatcher.py` is the class shell + dispatch + maps (~150 lines), and #1065 closes.
+
 ## [0.67.133] - 2026-05-14
 
 ### Changed — region_adapter misc-family mixin extracted (progress on #1065)
