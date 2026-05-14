@@ -373,7 +373,7 @@ class Parser(
             }
         )
 
-    def _dispatch_project(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+    def _dispatch_projection(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         projection = self.parse_projection()
         return ir.ModuleFragment(
             **{
@@ -681,7 +681,7 @@ class Parser(
             TokenType.DEMO: self._dispatch_demo,
             TokenType.EVENT_MODEL: self._dispatch_event_model,
             TokenType.SUBSCRIBE: self._dispatch_subscribe,
-            TokenType.PROJECT: self._dispatch_project,
+            TokenType.PROJECTION: self._dispatch_projection,
             TokenType.STREAM: self._dispatch_stream,
             TokenType.HLESS: self._dispatch_hless,
             TokenType.POLICIES: self._dispatch_policies,

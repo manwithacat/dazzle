@@ -145,7 +145,7 @@ construct: process
   fragment_fields: processes
   ir_classes: ProcessSpec
 
-construct: project
+construct: projection
   fragment_fields: projections
   ir_classes: ProjectionSpec
 

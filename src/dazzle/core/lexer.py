@@ -383,7 +383,7 @@ class TokenType(Enum):
     EVENT_MODEL = "event_model"
     PUBLISH = "publish"
     SUBSCRIBE = "subscribe"
-    PROJECT = "project"
+    PROJECTION = "projection"
     TOPIC = "topic"
     RETENTION = "retention"
     # v0.18.0 Governance Keywords (Issue #25)

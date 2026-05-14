@@ -157,7 +157,7 @@ subscribe orders as conditional_handler:
 # PROJECT: BASIC UPSERT
 # =============================================================================
 
-project OrderDashboard from orders:
+projection OrderDashboard from orders:
   on OrderCreated:
     upsert with order_id, status=pending
 
@@ -168,7 +168,7 @@ project OrderDashboard from orders:
 # PROJECT: WITH DELETE
 # =============================================================================
 
-project ActiveOrders from orders:
+projection ActiveOrders from orders:
   on OrderCreated:
     upsert with order_id
 
@@ -182,7 +182,7 @@ project ActiveOrders from orders:
 # PROJECT: DOTTED TOPIC
 # =============================================================================
 
-project AlertMetrics from dazzle.events.alerts:
+projection AlertMetrics from dazzle.events.alerts:
   on AlertRaised:
     upsert with alert_id, severity=severity, active=true
 
@@ -193,7 +193,7 @@ project AlertMetrics from dazzle.events.alerts:
 # PROJECT: MULTIPLE HANDLERS
 # =============================================================================
 
-project AuditHistory from audit_events:
+projection AuditHistory from audit_events:
   on AuditEntry:
     upsert with entity_id, action=action, actor=actor
 
@@ -409,7 +409,7 @@ subscribe system as ops_monitoring:
 # COMPLEX PROJECTIONS
 # =============================================================================
 
-project CartAnalytics from ecommerce:
+projection CartAnalytics from ecommerce:
   on CartCreated:
     upsert with cart_id, customer_id=customer_id, status=active
 
@@ -419,14 +419,14 @@ project CartAnalytics from ecommerce:
   on CartAbandoned:
     update status=abandoned, abandoned_at=abandoned_at
 
-project SessionMetrics from user_activity:
+projection SessionMetrics from user_activity:
   on UserLoggedIn:
     upsert with user_id, session_start=timestamp, active=true
 
   on UserLoggedOut:
     update session_end=timestamp, duration=session_duration, active=false
 
-project ServiceHealth from system:
+projection ServiceHealth from system:
   on ServiceStarted:
     upsert with component, status=running, started_at=started_at
 

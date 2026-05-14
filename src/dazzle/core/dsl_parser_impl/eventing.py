@@ -406,7 +406,7 @@ class EventingParserMixin:
               on OrderStatusChanged:
                 update status=new_status
         """
-        self.expect(TokenType.PROJECT)
+        self.expect(TokenType.PROJECTION)
 
         name = self.expect(TokenType.IDENTIFIER).value
 

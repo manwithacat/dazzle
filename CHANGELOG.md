@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.158] - 2026-05-14
+
+### Changed!— DSL keyword `project` → `projection` (#1069 API-001 of 3)
+
+**Breaking change.** First of three renames from #1069. The DSL keyword now matches its IR class (`ProjectionSpec`) and parser method (`parse_projection()`). Previous `project` collided with the universal "code project / git repo" sense — every reader had to know it meant CQRS projection, not the package.
+
+```diff
+- project OrderDashboard from orders:
++ projection OrderDashboard from orders:
+```
+
+Touch points:
+- `src/dazzle/core/lexer.py` — `TokenType.PROJECT` → `TokenType.PROJECTION`
+- `src/dazzle/core/dsl_parser_impl/__init__.py` — dispatch table entry + handler method rename
+- `src/dazzle/core/dsl_parser_impl/eventing.py` — `parse_projection` token expect
+- `src/dazzle/core/grammar_gen.py` — BNF
+- `fixtures/pra/dsl/events.dsl` — 7 occurrences of `project <Name> from` → `projection <Name> from`
+- `docs/api-surface/dsl-constructs.txt` — baseline regenerated
+
+No example app DSL files used the keyword. The pra fixture was the only DSL consumer.
+
+### API-002 deferred — naming collision discovered
+
+API-002 (`NavDefinitionSpec` → `NavSpec`) was attempted in this release but **abandoned** when investigation revealed **3 separate `NavSpec` classes** already exist in the codebase for unrelated concepts:
+
+1. `src/dazzle/core/ir/sitespec/__init__.py` → marketing-page site nav
+2. `src/dazzle/core/ir/workspaces.py` → workspace-level nav (the proposed rename target)
+3. `src/dazzle/ui/specs/shell.py` → UI shell nav
+
+The rename would create unresolvable import collisions. The existing `NavDefinitionSpec` name actually disambiguates well from the three other "Nav*" concepts. Recommend either:
+
+(a) **Drop API-002** — `NavDefinitionSpec` stays as-is; the name is unique by design.
+(b) **Choose a different rename target** — e.g. `WorkspaceNavSpec` (clearer than the other two), pending a maintainer call.
+
+Filed back on #1069. API-001 lands now; API-002 needs a fresh design pass.
+
+### API-003 — still open
+
+The `hless` keyword (HLESS = "High-Level Event Semantics Specification" per `lexer.py:398` and `ir/llm_events.py:5`) needs a maintainer call on the canonical expanded form for public class names. ~18 files / ~300 lines.
+
+### Verified
+
+- 13,992 unit tests pass
+- `dazzle validate` on `examples/simple_task` + `fixtures/pra` both clean
+- Drift gate green; baselines regenerated
+- No backward-compat shims per ADR-0003
+
+### Agent Guidance
+
+When renaming a public DSL keyword, the touch points are: lexer (TokenType), grammar (BNF), parser (`_dispatch_*` method + dispatch table), eventing/process/other parsers (`expect(TokenType.X)`), fixture/example DSL files using the keyword, surface baseline (`dazzle inspect-api dsl-constructs --write`). Grep `TokenType.OLDNAME` to find missed spots — that's how API-001's `eventing.py:409` reference surfaced.
+
+**Naming-collision lesson**: before renaming a type to a common name like `Foo`, grep `class Foo\b` and `import Foo\b` across the codebase first. Multiple unrelated `Foo` classes are a real possibility in a multi-module project; surfacing them upfront saves a wasted rename pass.
+
+Discovered + filed by `/improve` cycle 113 (audit) + 114 (filed #1069); fixed by `/issues`.
+
 ## [0.67.157] - 2026-05-14
 
 ### Fixed — RBAC: `list:` scope rule implicitly covers `read:` (Option A) — closes #1071

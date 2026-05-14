@@ -1181,7 +1181,7 @@ subscribe_decl
                   DEDENT ;
 
 projection_decl
-              ::= "project" IDENT ":" NEWLINE
+              ::= "projection" IDENT ":" NEWLINE
                   INDENT
                     ("from" ":" IDENT NEWLINE)?
                     ("into" ":" IDENT NEWLINE)?
