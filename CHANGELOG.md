@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.141] - 2026-05-14
+
+### Changed — renderer shell-family mixin extracted (progress on #1064)
+
+PR 6 of the renderer decomposition. Fourth family extracted.
+
+**Moved to `renderer/_render_shell.py`** as `_RenderShellMixin`:
+- `_emit_page`, `_emit_app_shell`, `_emit_error_page`, `_emit_skip_link`
+- `_emit_topbar`, `_emit_nav_item`, `_emit_nav_group`, `_emit_sidebar`
+- `_emit_workspace_shell`, `_emit_workspace_toolbar`, `_emit_workspace_drawer`, `_emit_workspace_context_selector`
+
+12 shell primitives. Plus moved with them: the 3 workspace HTML constants (`_WORKSPACE_DRAWER_HTML`, `_WORKSPACE_CONTEXT_SCRIPT_TEMPLATE`, `_WORKSPACE_TOOLBAR_HTML`) and the `_load_static` static-asset helper (since they're only used by this family).
+
+**Circular-import fix**: moving the constants caused `_emit.py` to need them and `_render_shell.py` to need `_load_static` from `_emit.py` — broken. Resolution: `_load_static` lives in `_render_shell.py` now (its callers do too). `__init__.py` updated to re-export `_load_static` + workspace constants from `_render_shell` instead of `_emit`.
+
+**Sizes:**
+- `_emit.py`: 2,851 → 2,450 lines (-401)
+- `_render_shell.py`: 475 lines (new — includes 3 constants + 12 methods + `_load_static`)
+- Cumulative since PR 1: 1,334 lines moved out of `_emit.py`
+- **4 of 7 families extracted**
+
+Tests: 13,982 passed (full not-e2e), 30 renderer-direct (incl. packaging tests).
+
+**Next PR queued**: `_render_interactive.py` — 14 interactive primitives (~475 lines): Button, Link, Interactive, InlineEdit, Toolbar, CreateButton, Pagination, BulkActionToolbar, SearchBox, ConfirmGate, FilterBar, SortHeader, CsvExportButton, DateRangePicker. Uses `_hx_attrs` and `_pagination_pages` from `_helpers.py` (already extracted in PR 2), plus `_BULK_ACTION_TOOLBAR_HTML` will migrate with it.
+
 ## [0.67.140] - 2026-05-14
 
 ### Changed — renderer dashboard-family mixin extracted (progress on #1064)

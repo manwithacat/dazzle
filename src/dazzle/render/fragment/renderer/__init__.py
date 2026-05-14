@@ -37,10 +37,10 @@ mixins per family inherited by the dispatcher class, with public
 re-exports here.
 """
 
-from dazzle.render.fragment.renderer._emit import (
+from dazzle.render.fragment.renderer._emit import FragmentRenderer
+from dazzle.render.fragment.renderer._render_shell import (
     _WORKSPACE_CONTEXT_SCRIPT_TEMPLATE,
     _WORKSPACE_DRAWER_HTML,
-    FragmentRenderer,
     _load_static,
 )
 
