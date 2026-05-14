@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.68.1] - 2026-05-15
+
+### Fixed
+
+- **Codecov badge** — pinned to `branch/main/graph/badge.svg` (was bare repo URL). Bypasses stale GitHub camo-proxy cache that was serving "unknown" even though codecov uploads were succeeding and the badge endpoint returned 65%. Investigation confirmed uploads work tokenless on the public repo; no token or config change needed.
+
 ## [0.68.0] - 2026-05-15
 
 ### Milestone — close-out of the v0.67.x patch arc (v0.67.146 → v0.67.160)
