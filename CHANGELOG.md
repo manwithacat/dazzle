@@ -9,6 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.68.0] - 2026-05-15
+
+### Milestone — close-out of the v0.67.x patch arc (v0.67.146 → v0.67.160)
+
+No new functional changes beyond v0.67.160. Minor-version bump marks the conclusion of a 14-patch arc that landed eight framework fixes + two breaking DSL renames + three reference docs + a full /improve → /issues investigation chain. All work is already in shipped patches; this entry is the milestone roll-up.
+
+**Framework fixes (verified green on CI)**:
+
+- **#1070** — linker dropped `domain_services` during merge (v0.67.147). Affected every Dazzle app silently.
+- **#1072 Bug B** — `ux verify --contracts --managed` emitted empty `ReadTimeout` errors. Diagnostic instrumentation revealed Bug A (v0.67.148).
+- **#1075** — linker dropped 18 additional shared `ModuleFragment`/`AppSpec` fields (channels, messages, subscriptions, projections, etc.) — 11 confirmed-dropping in real DSL. Proactive audit prompted by v0.67.147 Agent Guidance. Parametrised regression test added (v0.67.149).
+- **#1076** — `dazzle.back.print_schema` returned a string but the name implied stdout output. Renamed `format_schema` (v0.67.150).
+- **#1074** — 4 MCP project-* tools collapsed into one `project` tool with `operation` enum, matching every other tool in the registry (v0.67.151).
+- **#1073** — qa trial dedup post-processor missed near-duplicates split across categories. Added second-pass collapse on shared evidence (v0.67.152).
+- **#1072 Bug A** — managed-mode contract verifier hung with `subprocess.PIPE` buffer deadlock. Two defensive layers (v0.67.153 / v0.67.154) plus the real root-cause fix (v0.67.156).
+- **#1071** — RBAC `list:` scope now implicitly covers `read:` (visibility-class inheritance). simple_task warnings drop 23→15 (v0.67.157).
+
+**Breaking DSL renames (#1069 closed)**:
+
+- `project` keyword → `projection` (matches `ProjectionSpec`; v0.67.158)
+- `NavDefinitionSpec` → `NavSpec` (canonical short name now available after disambiguating sitespec + ui-shell variants in 414d8b3f; v0.67.159)
+- `hless` keyword **kept as-is** by design — academic-event-systems-literature signal, not stack-flavoured Kafka vocabulary. Rationale surfaced at three grep paths (`CLAUDE.md`, `lexer.py`, `ir/hless.py`) to prevent future audit cycles from re-proposing (v0.67.159).
+
+**Reference documentation**:
+
+- `docs/reference/databases.md` Connection Pool section — full per-process budget (~14 connections including event-framework + startup transients, not just `DAZZLE_DB_POOL_MAX`), Heroku per-plan tuning, diagnostic command cheat-sheet, symptom → fix table.
+- `docs/guides/heroku.md` corrected formula: `(POOL_MAX + 4) × WEB_CONCURRENCY < max_connections - 5` (was missing the +4 non-pool framework connections).
+
+**CI repair**:
+
+- `playwright.__version__` → `importlib.metadata.version("playwright")` (1.59.0 dropped the attribute).
+- Validate-all loop now skips `fixtures/pra` (parser-conformance corpus, intentionally validation-failing).
+
+### Verified at v0.68.0
+
+- All 11 CI jobs green on the previous SHA: type-check, lint, security, Python tests, PostgreSQL tests, integration, INTERACTION_WALK, E2E Runtime, E2E Smoke, UX Contracts, Homebrew Formula Validation.
+- 13,992 unit tests pass + 153 skipped.
+- Drift gate green; surface baselines current.
+- Worktree clean.
+
+### Agent Guidance — accumulated from the arc
+
+Several patterns surfaced repeatedly across this arc; each is documented in the patch CHANGELOG that introduced it:
+
+1. **Never use `stdout=subprocess.PIPE` without a reader** (v0.67.156) — pipe buffer deadlocks at ~64KB.
+2. **Use `importlib.metadata.version()` not `pkg.__version__`** (v0.67.160) — defensive against attribute removal in dependency upgrades.
+3. **Grep `class Foo\b` before renaming TO a common name** (v0.67.158) — multi-module collisions are routine.
+4. **5 touch points for new DSL constructs** (v0.67.147 + v0.67.149) — SymbolTable field, collector method, collection loop, merge_fragments return, AppSpec mapping. Miss any and the construct goes into the void.
+5. **Visibility-class scope rules inherit, mutating-class don't** (v0.67.157) — `list:` covers `read:`, but `create`/`update`/`delete` stay explicit.
+
 ## [0.67.160] - 2026-05-15
 
 ### Fixed — CI: two local-vs-server deltas that produced false-red builds
