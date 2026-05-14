@@ -19,36 +19,36 @@ from .state import is_dev_mode
 
 
 def get_dev_mode_tools() -> list[Tool]:
-    """Get tools specific to dev mode (unchanged - 4 tools)."""
+    """Get tools specific to dev mode.
+
+    Single `project` tool with an `operation` enum — matches the
+    registry's dominant noun+ops pattern (`dsl validate`, `story get`,
+    etc.). Replaces 4 method-named outliers in v0.67.151 (#1074).
+    """
     return [
         Tool(
-            name="list_projects",
-            description="List all available example projects in the Dazzle dev environment",
-            inputSchema={"type": "object", "properties": {}, "required": []},
-        ),
-        Tool(
-            name="select_project",
-            description="Select an example project to work with",
+            name="project",
+            description=(
+                "Manage the active project and walk the project list. "
+                "Operations: list (list available projects), get_active (current "
+                "selection), select (choose one by name), validate_all (validate "
+                "every project at once)."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "operation": {
+                        "type": "string",
+                        "description": "Operation to perform",
+                        "enum": ["list", "get_active", "select", "validate_all"],
+                    },
                     "project_name": {
                         "type": "string",
-                        "description": "Name of the example project to select",
-                    }
+                        "description": "Name of the project (required for operation=select)",
+                    },
                 },
-                "required": ["project_name"],
+                "required": ["operation"],
             },
-        ),
-        Tool(
-            name="get_active_project",
-            description="Get the currently selected project",
-            inputSchema={"type": "object", "properties": {}, "required": []},
-        ),
-        Tool(
-            name="validate_all_projects",
-            description="Validate all example projects at once",
-            inputSchema={"type": "object", "properties": {}, "required": []},
         ),
     ]
 

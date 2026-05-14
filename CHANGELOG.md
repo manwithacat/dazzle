@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.151] - 2026-05-14
+
+### Changed — MCP: 4 project-* tools collapsed into one `project` tool with operation enum — closes #1074
+
+**Before** (4 tools, method-named outliers):
+
+```
+list_projects, select_project, get_active_project, validate_all_projects
+```
+
+**After** (1 tool with op enum, matches the registry's dominant noun+ops pattern used by every other tool — `dsl validate`, `story get`, `db status`, etc.):
+
+```
+project { operation: list | get_active | select | validate_all, project_name?: str }
+```
+
+**Migration**:
+
+```diff
+- {"name": "list_projects", "arguments": {}}
++ {"name": "project", "arguments": {"operation": "list"}}
+
+- {"name": "select_project", "arguments": {"project_name": "x"}}
++ {"name": "project", "arguments": {"operation": "select", "project_name": "x"}}
+
+- {"name": "get_active_project", "arguments": {}}
++ {"name": "project", "arguments": {"operation": "get_active"}}
+
+- {"name": "validate_all_projects", "arguments": {}}
++ {"name": "project", "arguments": {"operation": "validate_all"}}
+```
+
+**Touch points** (all updated in one commit per ADR-0003 "no backward compat shims"):
+- `src/dazzle/mcp/server/tools_consolidated.py` — `get_dev_mode_tools` returns 1 tool not 4
+- `src/dazzle/mcp/server/__init__.py` — `call_tool` dispatch routes by `operation` enum; subtle gotcha: when delegating `get_active` to the `status` consolidated tool, the caller's `operation` key is stripped before spread so it doesn't shadow status's own enum
+- `docs/api-surface/mcp-tools.txt` — baseline regenerated via `dazzle inspect-api mcp-tools --write` (36 → 33 tools listed)
+- `tests/test_mcp_integration.py` — 8 call-sites updated to use the new shape; `tools/list` assertion checks for `"project"` instead of the 4 old names
+
+**Verified**: 13,984 unit tests pass + drift gate green + MCP integration tests pass.
+
+### Agent Guidance
+
+The MCP registry now has zero verb-in-tool-name outliers. New MCP tools MUST use the `noun + operation enum` pattern, not method-style names. If you're adding a tool with a verb-flavored name like `do_x_thing`, instead add an `operation` enum value to an existing or new noun-named tool.
+
+When delegating between consolidated tools (one tool's handler routes to another's), strip the caller's `operation` key from the forwarded args — otherwise the dict-spread shadow-overwrites the delegated tool's own enum. Caught in cycle 134's first test run.
+
+Discovered by `/improve` cycle 126 (`api_surface_audit` of mcp-tools); filed as #1074, shipped cycle 134.
+
 ## [0.67.150] - 2026-05-14
 
 ### Changed — `dazzle.back.print_schema` → `format_schema` — closes #1076

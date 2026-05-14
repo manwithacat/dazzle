@@ -156,7 +156,10 @@ class TestMCPServerIntegration:
         select_resp = send_jsonrpc(
             mcp_server,
             "tools/call",
-            {"name": "select_project", "arguments": {"project_name": "simple_task"}},
+            {
+                "name": "project",
+                "arguments": {"operation": "select", "project_name": "simple_task"},
+            },
             id=request_id_counter["id"],
         )
         select_data = json.loads(select_resp["result"]["content"][0]["text"])
@@ -297,11 +300,8 @@ class TestMCPDevMode:
         tools = await list_tools_handler()
         tool_names = [t.name for t in tools]
 
-        # Dev mode tools should be present
-        assert "list_projects" in tool_names
-        assert "select_project" in tool_names
-        assert "get_active_project" in tool_names
-        assert "validate_all_projects" in tool_names
+        # Dev mode `project` tool should be present (consolidated in #1074)
+        assert "project" in tool_names
 
         # Consolidated tools should also be present
         assert "dsl" in tool_names
@@ -314,7 +314,7 @@ class TestMCPDevMode:
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = await call_tool("list_projects", {})
+        result = await call_tool("project", {"operation": "list"})
 
         assert len(result) == 1
         data = json.loads(result[0].text)
@@ -338,7 +338,7 @@ class TestMCPDevMode:
 
         # Select a project (none auto-selected, so pick any)
         target_project = project_names[-1]
-        result = await call_tool("select_project", {"project_name": target_project})
+        result = await call_tool("project", {"operation": "select", "project_name": target_project})
 
         data = json.loads(result[0].text)
         assert data["status"] == "selected"
@@ -351,7 +351,9 @@ class TestMCPDevMode:
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = await call_tool("select_project", {"project_name": "nonexistent_project"})
+        result = await call_tool(
+            "project", {"operation": "select", "project_name": "nonexistent_project"}
+        )
 
         data = json.loads(result[0].text)
         assert "error" in data
@@ -365,7 +367,7 @@ class TestMCPDevMode:
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = await call_tool("get_active_project", {})
+        result = await call_tool("project", {"operation": "get_active"})
 
         data = json.loads(result[0].text)
         assert data["mode"] == "dev"
@@ -381,7 +383,7 @@ class TestMCPDevMode:
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = await call_tool("validate_all_projects", {})
+        result = await call_tool("project", {"operation": "validate_all"})
 
         data = json.loads(result[0].text)
         assert "summary" in data
@@ -437,11 +439,8 @@ class TestMCPDevModeIntegration:
         tools = response["result"]["tools"]
         tool_names = [t["name"] for t in tools]
 
-        # Dev mode tools should be present
-        assert "list_projects" in tool_names
-        assert "select_project" in tool_names
-        assert "get_active_project" in tool_names
-        assert "validate_all_projects" in tool_names
+        # Dev mode `project` tool should be present (consolidated in #1074)
+        assert "project" in tool_names
 
     def test_list_projects_via_subprocess(self, mcp_server, request_id_counter):
         """Test list_projects tool via subprocess."""
@@ -449,7 +448,7 @@ class TestMCPDevModeIntegration:
         response = send_jsonrpc(
             mcp_server,
             "tools/call",
-            {"name": "list_projects", "arguments": {}},
+            {"name": "project", "arguments": {"operation": "list"}},
             id=request_id_counter["id"],
         )
 
@@ -466,7 +465,7 @@ class TestMCPDevModeIntegration:
         response = send_jsonrpc(
             mcp_server,
             "tools/call",
-            {"name": "list_projects", "arguments": {}},
+            {"name": "project", "arguments": {"operation": "list"}},
             id=request_id_counter["id"],
         )
         projects_data = json.loads(response["result"]["content"][0]["text"])
@@ -477,7 +476,10 @@ class TestMCPDevModeIntegration:
         response = send_jsonrpc(
             mcp_server,
             "tools/call",
-            {"name": "select_project", "arguments": {"project_name": project_names[0]}},
+            {
+                "name": "project",
+                "arguments": {"operation": "select", "project_name": project_names[0]},
+            },
             id=request_id_counter["id"],
         )
         select_data = json.loads(response["result"]["content"][0]["text"])

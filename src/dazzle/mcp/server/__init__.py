@@ -100,20 +100,34 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     if result is not None:
         return [TextContent(type="text", text=result)]
 
-    # Dev mode tools (simple, handled directly)
-    if name == "list_projects":
-        result = list_projects()
-    elif name == "select_project":
-        result = select_project(arguments)
-    elif name == "get_active_project":
-        # Route through consolidated dispatch for roots-awareness
-        result = await dispatch_consolidated_tool(
-            "status", {"operation": "active_project", **(arguments or {})}, session=session
-        )
-        if result is None:
-            result = get_active_project_info()
-    elif name == "validate_all_projects":
-        result = validate_all_projects()
+    # Dev mode `project` tool (consolidated in #1074 — was 4 separate tools)
+    if name == "project":
+        op = (arguments or {}).get("operation", "")
+        if op == "list":
+            result = list_projects()
+        elif op == "select":
+            result = select_project(arguments)
+        elif op == "get_active":
+            # Route through consolidated dispatch for roots-awareness.
+            # Strip the project-tool's operation key from the forwarded args
+            # so it doesn't shadow status tool's own operation enum.
+            forwarded = {k: v for k, v in (arguments or {}).items() if k != "operation"}
+            result = await dispatch_consolidated_tool(
+                "status", {"operation": "active_project", **forwarded}, session=session
+            )
+            if result is None:
+                result = get_active_project_info()
+        elif op == "validate_all":
+            result = validate_all_projects()
+        else:
+            result = json.dumps(
+                {
+                    "error": (
+                        f"Unknown operation {op!r} for project tool. "
+                        "Valid: list, get_active, select, validate_all"
+                    )
+                }
+            )
     else:
         result = json.dumps({"error": f"Unknown tool: {name}"})
 
