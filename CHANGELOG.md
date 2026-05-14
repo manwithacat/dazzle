@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.142] - 2026-05-14
+
+### Changed — renderer interactive-family mixin extracted (progress on #1064)
+
+PR 7 of the renderer decomposition. Fifth family extracted.
+
+**Moved to `renderer/_render_interactive.py`** as `_RenderInteractiveMixin`:
+- `_emit_button`, `_emit_link`, `_emit_interactive`, `_emit_inline_edit`
+- `_emit_toolbar`, `_emit_create_button`, `_emit_pagination`
+- `_emit_search_box`, `_emit_confirm_gate`
+- `_emit_filter_bar`, `_emit_sort_header`, `_emit_csv_export_button`, `_emit_date_range_picker`
+
+13 interactive primitives. Plus moved with them: `_BULK_ACTION_TOOLBAR_HTML` (the BulkActionToolbar match-arm returns this constant directly — no dedicated method). Uses `_hx_attrs` + `_pagination_pages` from `_helpers.py` (extracted in PR 2).
+
+**Sizes:**
+- `_emit.py`: 2,450 → 2,004 lines (-446)
+- `_render_interactive.py`: 513 lines (new)
+- Cumulative since PR 1: 1,780 lines moved out of `_emit.py`
+- **5 of 7 families extracted**
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+**Next PR queued**: `_render_charts.py` — 16 chart primitives (~830 lines): BarChart, Timeline, KanbanBoard, KanbanRegion, CalendarGrid, Diagram, TimeSeries, Radar, BoxPlot, Bullet, Sparkline, Tree, PipelineSteps, Funnel, Heatmap, Histogram. Will pull `_DIAGRAM_MERMAID_SCRIPT` constant too.
+
 ## [0.67.141] - 2026-05-14
 
 ### Changed — renderer shell-family mixin extracted (progress on #1064)
