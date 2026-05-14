@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.143] - 2026-05-14
+
+### Changed — renderer charts-family mixin extracted (progress on #1064)
+
+PR 8 of the renderer decomposition. Sixth (and largest) family extracted.
+
+**Moved to `renderer/_render_charts.py`** as `_RenderChartsMixin`:
+- 16 chart methods: `bar_chart`, `timeline`, `kanban_board`, `calendar_grid`, `diagram`, `time_series`, `radar`, `box_plot`, `bullet`, `sparkline`, `tree`, `pipeline_steps`, `kanban_region`, `funnel`, `heatmap`, `histogram`
+- 1 private helper: `_emit_tree_node` (recursive tree walker)
+- `_DIAGRAM_MERMAID_SCRIPT` constant (Mermaid CDN loader script)
+- `TimelineEvent` sub-type import (used by `_emit_timeline`)
+
+**Sizes:**
+- `_emit.py`: 2,004 → 1,184 lines (-820)
+- `_render_charts.py`: 880 lines (new — largest family file)
+- Cumulative since PR 1: 2,600 lines moved out of `_emit.py`
+- **6 of 7 families extracted**
+
+Tests: 13,982 passed (full not-e2e), 26 renderer-direct.
+
+**Next PR queued (FINAL)**: `_render_tables.py` — 17 tabular primitives (~890 lines): Table, KPI, ListRegion, GridRegion, DetailGrid, StatusList, ActivityFeed, ProfileCard, ActionCard, ActionGrid, MetricsGrid, MetricTile, BarTrack, StageBar, QueueRegion, PivotTableRegion, PivotTable. After that lands, `_emit.py` collapses to a pure dispatch shell (~250 lines) and **#1064 closes**.
+
 ## [0.67.142] - 2026-05-14
 
 ### Changed — renderer interactive-family mixin extracted (progress on #1064)
