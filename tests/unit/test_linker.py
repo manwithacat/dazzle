@@ -210,6 +210,37 @@ def test_reference_validation():
     print("  ✓ Invalid reference detected")
 
 
+def test_domain_services_propagated_to_appspec():
+    """Domain services declared in any module must reach appspec.domain_services (#1070)."""
+    from dazzle.core.linker import build_appspec
+
+    services_mod = ir.ModuleIR(
+        name="app.services",
+        file=Path("services.dsl"),
+        uses=[],
+        fragment=ir.ModuleFragment(
+            domain_services=[
+                ir.DomainServiceSpec(name="calc_workload", kind="domain_logic"),
+                ir.DomainServiceSpec(name="send_email", kind="integration"),
+            ],
+        ),
+    )
+    root_mod = ir.ModuleIR(
+        name="app.core",
+        file=Path("app.dsl"),
+        uses=[],
+        fragment=ir.ModuleFragment(),
+    )
+
+    appspec = build_appspec([root_mod, services_mod], "app.core")
+    names = {s.name for s in appspec.domain_services}
+    assert names == {"calc_workload", "send_email"}, (
+        f"Expected both services to reach appspec, got {names}. "
+        "Regression of #1070: linker dropped domain_services during merge."
+    )
+    print("  ✓ Domain services propagated through linker (#1070)")
+
+
 def main():
     """Run all linker tests."""
     print("=" * 60)

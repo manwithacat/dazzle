@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.147] - 2026-05-14
+
+### Fixed — linker: `domain_services` propagated through `merge_fragments` + `build_appspec` — closes #1070
+
+`dazzle validate` on `examples/simple_task` was emitting 3 false-positive runtime warnings:
+
+```
+WARNING: Process 'task_auto_assignment' step 'find_candidate': service 'auto_assign_task' is not declared in `domain_services`. The step will fail at runtime.
+WARNING: Process 'task_escalation' step 'level_1_notify': service 'send_overdue_reminder' is not declared in `domain_services`. The step will fail at runtime.
+WARNING: Process 'task_escalation' step 'level_2_escalate': service 'escalate_overdue_task' is not declared in `domain_services`. The step will fail at runtime.
+```
+
+All three services WERE declared in `simple_task/dsl/services.dsl` with the right `kind:` directive. The validator's check at `validator.py:3070` (`{s.name for s in appspec.domain_services}`) was correct from its perspective — but `appspec.domain_services` was always `[]` regardless of DSL content.
+
+**Root cause:** The linker pipeline silently dropped domain services at three layers:
+
+1. `SymbolTable` had no `domain_services` field and no `add_domain_service` method
+2. The per-module collection loop in `build_symbol_table` skipped `module.fragment.domain_services`
+3. `merge_fragments` built the unified `ModuleFragment` without `domain_services=…`
+4. `build_appspec`'s final `AppSpec(...)` construction in `linker.py` also omitted `domain_services=merged_fragment.domain_services`
+
+So services that parsed correctly into per-module fragments never reached the merged `AppSpec`. The validator's check was dead code on every Dazzle app. Three readers (`validator.validate_service_step_diagnostics`, `fidelity_scorer._known_services`, `appspec_queries.list_services`) all operated on the empty list.
+
+**Fix:** Threaded `domain_services` through all three layers of the linker pipeline. Two-line additions to each of: `SymbolTable` (field + collector method + collection loop), `merge_fragments` (return kwarg), and `build_appspec`'s `AppSpec(...)` construction.
+
+**Verified:** simple_task's 3 service warnings disappear. 13,983 tests pass + 153 skipped + 0 fail. `pytest tests/unit/test_linker.py` adds `test_domain_services_propagated_to_appspec` (parses a fragment with 2 domain services, asserts both reach `appspec.domain_services`) — pins the regression so the bug can't silently come back.
+
+**Blast radius:** Affected `examples/simple_task` and `fixtures/pra` directly. Any downstream user app authoring `service X: kind: domain_logic` had services silently lost at link time.
+
+### Agent Guidance
+
+When a builder construct (entity / surface / etc.) has both a parser path AND an `AppSpec` field but doesn't propagate, the bug class is usually a *pipeline omission*: the parser fills the per-module `ModuleFragment.X`, but one of the linker layers (symbol table, merge_fragments, AppSpec construction) skipped the field. Grep `linker_impl.py` for the field name — zero matches is the strongest signal.
+
+When extending DSL with new constructs, the four touch points are: (1) `SymbolTable` field, (2) `add_FIELD` method + `_add_symbol` call, (3) collection loop in `build_symbol_table`, (4) `merge_fragments` return + (5) `build_appspec`'s `AppSpec(...)` mapping. Miss any and the construct goes into the void at the layer you missed.
+
+Discovered by `/improve` cycle 116 (initial repro), cycle 121 (fix).
+
 ## [0.67.146] - 2026-05-14
 
 ### Fixed — `make test-ux-deep` Makefile rot (companion to v0.67.145)

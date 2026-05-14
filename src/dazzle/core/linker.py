@@ -203,6 +203,7 @@ def build_appspec(
         workspaces=workspaces,
         experiences=merged_fragment.experiences,
         apis=merged_fragment.apis,
+        domain_services=merged_fragment.domain_services,  # #1070
         foreign_models=merged_fragment.foreign_models,
         integrations=merged_fragment.integrations,
         tests=merged_fragment.tests,

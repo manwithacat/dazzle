@@ -141,6 +141,7 @@ class SymbolTable:
 
     # Remaining symbols managed directly
     apis: dict[str, ir.APISpec] = field(default_factory=dict)
+    domain_services: dict[str, ir.DomainServiceSpec] = field(default_factory=dict)  # #1070
     integrations: dict[str, ir.IntegrationSpec] = field(default_factory=dict)
     tests: dict[str, ir.TestSpec] = field(default_factory=dict)
     archetypes: dict[str, ir.ArchetypeSpec] = field(default_factory=dict)  # v0.10.3
@@ -253,6 +254,17 @@ class SymbolTable:
     def add_api(self, api: ir.APISpec, module_name: str) -> None:
         """Add external API to symbol table, checking for duplicates."""
         _add_symbol(self.apis, api.name, api, "API", module_name, self.symbol_sources)
+
+    def add_domain_service(self, domain_service: ir.DomainServiceSpec, module_name: str) -> None:
+        """Add domain service to symbol table, checking for duplicates (#1070)."""
+        _add_symbol(
+            self.domain_services,
+            domain_service.name,
+            domain_service,
+            "domain service",
+            module_name,
+            self.symbol_sources,
+        )
 
     def add_foreign_model(self, foreign_model: ir.ForeignModelSpec, module_name: str) -> None:
         """Add foreign model to symbol table, checking for duplicates."""
@@ -556,6 +568,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add external APIs
         for api in module.fragment.apis:
             symbols.add_api(api, module.name)
+
+        # Add domain services (#1070 — previously dropped on the floor)
+        for domain_service in module.fragment.domain_services:
+            symbols.add_domain_service(domain_service, module.name)
 
         # Add foreign models
         for foreign_model in module.fragment.foreign_models:
@@ -1431,6 +1447,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         workspaces=resolved_workspaces,
         experiences=list(symbols.experiences.values()),
         apis=list(symbols.apis.values()),
+        domain_services=list(symbols.domain_services.values()),  # #1070
         foreign_models=list(symbols.foreign_models.values()),
         integrations=list(symbols.integrations.values()),
         tests=list(symbols.tests.values()),
