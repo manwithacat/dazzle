@@ -241,6 +241,56 @@ def test_domain_services_propagated_to_appspec():
     print("  ✓ Domain services propagated through linker (#1070)")
 
 
+def test_all_shared_fragment_fields_propagated_to_appspec():
+    """Every field on both ModuleFragment AND AppSpec must round-trip through build_appspec (#1075).
+
+    Generalises test_domain_services_propagated_to_appspec to catch the
+    full systemic-drops class: any field that exists on both types but
+    isn't propagated by the linker pipeline is a silent dropper bug
+    (the validator/scorer/renderer reads `[]` or `None` regardless of DSL).
+    """
+    from dazzle.core.linker import build_appspec
+
+    appspec_fields = set(ir.AppSpec.model_fields.keys())
+    fragment_fields = set(ir.ModuleFragment.model_fields.keys())
+    shared = appspec_fields & fragment_fields
+
+    # Shape-check: every shared field must appear as `merged_fragment.<field>`
+    # in `build_appspec`'s `AppSpec(...)` construction. A grep-based check
+    # is sufficient here — the runtime end-to-end is covered by the cycle 121
+    # canary test_domain_services_propagated_to_appspec which exercises one
+    # real construct against the full parser+linker pipeline.
+    import inspect
+
+    build_appspec_src = inspect.getsource(build_appspec)
+    missing = []
+    for field_name in sorted(shared):
+        if f"merged_fragment.{field_name}" not in build_appspec_src:
+            missing.append(field_name)
+
+    # These are computed/replaced fields, not direct fragment maps:
+    # - entities (extended with auto-generated AIJob / AuditEntry)
+    # - surfaces (extended with admin surfaces + auto-archetype surfaces)
+    # - workspaces (resolved via nav_definitions)
+    # - triples (computed)
+    # All shared with ModuleFragment but legitimately overridden.
+    legitimate_overrides = {"entities", "surfaces", "workspaces"}
+    real_drops = [f for f in missing if f not in legitimate_overrides]
+
+    assert not real_drops, (
+        f"Linker drops the following shared ModuleFragment/AppSpec fields "
+        f"during build_appspec: {real_drops}. Each is silently lost — "
+        f"every consumer of AppSpec.{{field}} reads [] or None regardless "
+        f"of DSL content. Cycle 128 audit found this; #1075 tracks the fix. "
+        f"Add `{{field}}=merged_fragment.{{field}}` to the AppSpec(...) "
+        f"construction in src/dazzle/core/linker.py:194 (and the matching "
+        f"merge_fragments return in linker_impl.py:1444) for each missing field."
+    )
+    print(
+        f"  ✓ All {len(shared) - len(legitimate_overrides)} shared fields propagated through linker (#1075)"
+    )
+
+
 def main():
     """Run all linker tests."""
     print("=" * 60)

@@ -1441,6 +1441,24 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         merged_groups = [*resolved_def.groups, *workspace.nav_groups]
         resolved_workspaces.append(workspace.model_copy(update={"nav_groups": merged_groups}))
 
+    # #1075 — collect fields not tracked by SymbolTable directly from
+    # per-module fragments. Using `sum(..., [])` would be O(n^2); flatten
+    # via list-comprehension. First-occurrence wins for scalar fields
+    # (matches the convention used for llm_config / feedback_widget /
+    # analytics / tenancy elsewhere in this function).
+    def _flatten_list(field: str) -> list[Any]:
+        out: list[Any] = []
+        for m in modules:
+            out.extend(getattr(m.fragment, field, []) or [])
+        return out
+
+    def _first_scalar(field: str) -> Any:
+        for m in modules:
+            v = getattr(m.fragment, field, None)
+            if v is not None:
+                return v
+        return None
+
     return ir.ModuleFragment(
         entities=list(symbols.entities.values()),
         surfaces=list(symbols.surfaces.values()),
@@ -1478,4 +1496,24 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         analytics=symbols.analytics,  # v0.61.0 Phase 3
         nav_definitions=nav_definitions,  # v0.61.95 (#926)
         tenancy=symbols.tenancy,  # #957 cycle 3
+        # #1075 — fields not previously routed through the symbol table.
+        # Flattened across modules; first-occurrence wins for scalars.
+        archetypes=_flatten_list("archetypes"),
+        assets=_flatten_list("assets"),
+        channels=_flatten_list("channels"),
+        documents=_flatten_list("documents"),
+        e2e_flows=_flatten_list("e2e_flows"),
+        fixtures=_flatten_list("fixtures"),
+        interfaces=_first_scalar("interfaces"),
+        messages=_flatten_list("messages"),
+        params=_flatten_list("params"),
+        policies=_first_scalar("policies"),
+        projections=_flatten_list("projections"),
+        rules=_flatten_list("rules"),
+        streams=_flatten_list("streams"),
+        subscriptions=_flatten_list("subscriptions"),
+        templates=_flatten_list("templates"),
+        event_model=_first_scalar("event_model"),
+        hless_pragma=_first_scalar("hless_pragma"),
+        data_products=_first_scalar("data_products"),
     )

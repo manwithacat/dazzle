@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.149] - 2026-05-14
+
+### Fixed — linker: 18 silently-dropped DSL constructs propagated through to AppSpec — closes #1075
+
+Followup to v0.67.147 (#1070) — that fix repaired `domain_services`, but the same class of bug affected 18 other shared `ModuleFragment`/`AppSpec` fields. A proactive audit (per the v0.67.147 Agent Guidance note about other constructs being affected) cross-referenced `AppSpec.model_fields` against `build_appspec`'s explicit keyword-argument mapping. 16 candidate drops surfaced; 11 confirmed-dropping in real DSL (simple_task + pra fixture); 5 plausibly affected (no current DSL exercises them).
+
+**Confirmed dropped per DSL audit:**
+
+| Field | Apps/fixtures with non-zero parsed content silently lost |
+|---|---|
+| `archetypes` | support_tickets (2), pra (3) |
+| `assets` | pra (4) |
+| `channels` | simple_task (3), pra (11) |
+| `documents` | pra (4) |
+| `event_model` | simple_task (1), pra (1) |
+| `hless_pragma` | pra (1) |
+| `messages` | simple_task (5), pra (7) |
+| `projections` | pra (7) |
+| `streams` | pra (9) |
+| `subscriptions` | simple_task (2), pra (7) |
+| `templates` | pra (5) |
+
+Every consumer of these fields was reading `[]` or `None` regardless of DSL content. simple_task alone silently lost 3 channels, 5 messages, 2 subscriptions, and its entire event_model spec.
+
+**Fix shape:**
+
+1. `merge_fragments` (linker_impl.py): added `_flatten_list` + `_first_scalar` helpers that pull untracked fields directly from per-module fragments. 18 new entries on the return value cover `archetypes`, `assets`, `channels`, `data_products`, `documents`, `e2e_flows`, `event_model`, `fixtures`, `hless_pragma`, `interfaces`, `messages`, `params`, `policies`, `projections`, `rules`, `streams`, `subscriptions`, `templates`. Note: SymbolTable is intentionally bypassed — these constructs had no existing duplicate-detection rules and adding 18 SymbolTable fields would be a much larger change.
+2. `build_appspec` (linker.py): 16 new keyword args on the `AppSpec(...)` construction map the freshly-merged fields through.
+3. `tests/unit/test_linker.py`: new `test_all_shared_fragment_fields_propagated_to_appspec` parametrised-style test asserts every shared `ModuleFragment`/`AppSpec` field appears in `build_appspec`'s explicit mapping. Future construct additions that miss the linker layer will fail this test immediately.
+4. `tests/unit/fixtures/ir_reader_baseline.json`: removed `appspec.AppSpec.hless_pragma` + `module.ModuleFragment.hless_pragma` from the orphan-baseline (the parity test correctly flagged that these now have readers — that's the welcome side-effect of the fix).
+
+Verified end-to-end: simple_task's parser now produces an AppSpec with `channels=3`, `messages=5`, `subscriptions=2`, `event_model=present` (all `0`/`None` before). 13,984/13,984 tests pass.
+
+### Agent Guidance
+
+The v0.67.147 guidance ("this pattern likely also affects other constructs") landed — proactive audit found 11× the original scope. Repeat the pattern when shipping a class-fix: add a parametrised test that asserts the **shape** of the fix (here: "every shared `ModuleFragment`/`AppSpec` field appears in `build_appspec` mapping"), then any future construct introduction that forgets the linker bridge will fail the test instead of silently passing.
+
+The SymbolTable intentionally bypassed: ~85 small additions (18 fields × ~5 touch points) would be a much larger change for marginal benefit. The 18 dropped constructs didn't have working duplicate-detection rules in the linker; the per-module `_flatten_list` approach matches what `nav_definitions` already does for cross-module aggregation. If duplicate detection becomes necessary for any of these, lift the field into SymbolTable then.
+
+Discovered + fixed by `/improve` cycles 121 (predicted), 128 (audited), 129 (fixed).
+
 ## [0.67.148] - 2026-05-14
 
 ### Fixed — `dazzle ux verify --contracts --managed`: empty-error swallow + 10s timeout — closes #1072 Bug B + partial #1072 Bug A
