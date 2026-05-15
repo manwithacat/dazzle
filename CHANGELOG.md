@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.12] - 2026-05-15
+
+### Added
+
+- **#1095: import-boundary enforcement gate (`tests/unit/test_import_boundaries.py`).** Final workstream of the #1086 sequence. Three pytest gates that lock in the structural wins from #1090, #1091, #1092, #1093, #1094:
+
+  1. `test_back_does_not_import_migrated_render_modules` — `back/` cannot import from `dazzle.ui.runtime.template_renderer`, `template_context`, `surface_access`, or the now-deleted `back.runtime.renderers.page_builder` / `dispatch` / `access_evaluator` paths. New code that needs these helpers imports from `dazzle.render.*`.
+  2. `test_ui_does_not_import_from_back` — `ui/` cannot import from `dazzle.back.*`, with the one documented exemption `ui/runtime/combined_server.py` (entry-point glue per the #1086 plan).
+  3. `test_back_does_not_import_concrete_ir_submodules` — `back/` cannot import from `dazzle.core.ir.appspec`, `surfaces`, or `domain` directly. Use the `dazzle.core.ir` re-export facade or the `dazzle.core.ir.protocols` adapter.
+
+  All three pass on commit `45ccf2f6`. Sanity-checked by injecting a fake violation and confirming the gate fails.
+
+### Scope Notes
+
+- A broader `back/` ↛ `dazzle.ui.*` ban remains aspirational. Back still imports ui-side helpers like `theme`, `css_loader`, `asset_fingerprint`, `htmx`, `app_chrome`, `site_renderer`, `workspace_renderer`, `condition_eval`, etc. These need their own migrate-to-`render` workstreams — they fall outside the scope of #1086's original A/B/D plan, which targeted the rendering-pipeline path (filters, dispatch, page_builder, context, surface_access). Tracked as future work; the gate's docstring documents the carve-out.
+
+### Closing #1086
+
+The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is broken** along the rendering-pipeline path (A+B+D), the **IR fan-in** on the three banned core.ir.* submodules is closed (C1+C2), and the **enforcement gate** locks the gains (E). The remaining ui-side helpers in back/ are documented follow-up work, not part of the #1086 closure conditions.
+
+### Agent Guidance
+
+- When adding new imports in `back/` or `ui/`, run `pytest tests/unit/test_import_boundaries.py` locally before pushing. The CI gate will fail on any of the three rules above.
+- The `_UI_TO_BACK_EXEMPT` set in the test file documents which files have legitimate cross-layer imports. Adding a new entry should be rare and carry a comment explaining why.
+
 ## [0.70.11] - 2026-05-15
 
 ### Changed
