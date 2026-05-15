@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.2] - 2026-05-15
+
+### Fixed
+
+- **#1079: base CSS for typed-substrate layout primitives** — `Stack`, `Row`, `Grid` (in `src/dazzle/render/fragment/primitives/layout.py`) emit `dz-stack` / `dz-row` / `dz-grid` classes plus `--gap-*` / `--align-*` / `--columns-*` modifiers. After the v0.67.52 Phase 4 typed-substrate migration, only a single nested `.dz-region--kind-detail .dz-stack` rule survived in `fragment-primitives.css` — the base styles for every layout primitive were absent. Children rendered with zero spacing on every consumer: 403/404/500 marketing pages (Stack of Links emitting `Go to DashboardGo Home` with no separator), and most region empty-state cards as "silent blank boxes". Added base `display: flex/grid` + design-token `gap` rules for all three primitives, plus regression test `tests/unit/test_fragment_layout_css.py` pinning the renderer→CSS contract. Caught by the cycle 141 visual-Tier 2 subagent sweep — first real-world catch from the new substrate.
+
 ## [0.69.1] - 2026-05-15
 
 ### Fixed
