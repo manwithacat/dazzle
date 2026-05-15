@@ -442,9 +442,8 @@ class TestServerWithDatabase:
     @pytest.fixture
     def simple_appspec(self) -> Any:
         """Create a simple AppSpec for testing."""
-        from dazzle.core.ir.appspec import AppSpec
-        from dazzle.core.ir.domain import DomainSpec
-        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir import AppSpec, DomainSpec
+        from dazzle.core.ir import EntitySpec as IREntitySpec
         from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
         from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
         from dazzle.core.ir.fields import FieldType as IRFieldType
@@ -472,7 +471,7 @@ class TestServerWithDatabase:
             ],
         )
 
-        from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+        from dazzle.core.ir import SurfaceMode, SurfaceSpec
 
         task_list_surface = SurfaceSpec(
             name="task_list",

@@ -57,18 +57,18 @@ class _TestClient(_RawTestClient):
 
 
 from dazzle.back.runtime.app_factory import create_app  # noqa: E402
-from dazzle.core.ir.appspec import AppSpec  # noqa: E402
-from dazzle.core.ir.domain import DomainSpec  # noqa: E402
-from dazzle.core.ir.domain import EntitySpec as IREntitySpec  # noqa: E402
-from dazzle.core.ir.fields import FieldModifier, FieldTypeKind  # noqa: E402
-from dazzle.core.ir.fields import FieldSpec as IRFieldSpec  # noqa: E402
-from dazzle.core.ir.fields import FieldType as IRFieldType  # noqa: E402
-from dazzle.core.ir.surfaces import (  # noqa: E402
+from dazzle.core.ir import (  # noqa: E402
+    AppSpec,  # noqa: E402
+    DomainSpec,  # noqa: E402
     SurfaceElement,
     SurfaceMode,
     SurfaceSection,
     SurfaceSpec,
 )
+from dazzle.core.ir import EntitySpec as IREntitySpec  # noqa: E402
+from dazzle.core.ir.fields import FieldModifier, FieldTypeKind  # noqa: E402
+from dazzle.core.ir.fields import FieldSpec as IRFieldSpec  # noqa: E402
+from dazzle.core.ir.fields import FieldType as IRFieldType  # noqa: E402
 
 # =============================================================================
 # Fixtures

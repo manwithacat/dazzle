@@ -17,7 +17,7 @@ from dazzle.core.ir.process import StepKind
 
 if TYPE_CHECKING:
     from dazzle.back.runtime.llm_executor import LLMIntentExecutor
-    from dazzle.core.ir.appspec import AppSpec
+    from dazzle.core.ir import AppSpec
     from dazzle.core.ir.process import ProcessStepSpec
 
 logger = logging.getLogger(__name__)

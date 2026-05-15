@@ -1104,7 +1104,7 @@ class DazzleBackendApp:
                 entity_audit_configs[entity.name] = _ac
             elif _global_audit:
                 # Default to audit: all when audit_trail is globally enabled
-                from dazzle.core.ir.domain import AuditConfig
+                from dazzle.core.ir import AuditConfig
 
                 entity_audit_configs[entity.name] = AuditConfig(enabled=True)
 

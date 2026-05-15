@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from dazzle.back.runtime.event_bus import EntityEvent
     from dazzle.back.runtime.llm_executor import ExecutionResult
     from dazzle.back.runtime.llm_queue import LLMJob, LLMJobQueue
-    from dazzle.core.ir.appspec import AppSpec
+    from dazzle.core.ir import AppSpec
 
 logger = logging.getLogger(__name__)
 

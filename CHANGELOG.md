@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.11] - 2026-05-15
+
+### Changed
+
+- **#1093: remaining `back/` IR consumers migrated off the three banned `core.ir.*` submodule paths.** Workstream C2 of the #1086 cleanup. The triage in C1 anticipated ~20 sites; the actual gate scope (`from dazzle.core.ir.appspec` / `surfaces` / `domain`) was much narrower — 9 sites total once the broader codebase had already standardised on the `dazzle.core.ir` re-export facade for most types:
+
+  - `back/runtime/llm_executor.py`, `llm_trigger.py`, `process_executor.py`, `process_manager.py` — switched `AppSpec` from `core.ir.appspec` to `core.ir`.
+  - `back/runtime/server.py` — `AuditConfig` deferred-import switched from `core.ir.domain` to `core.ir`.
+  - `back/specs/backend_spec.py` — `PersonaSpec` / `SurfaceSpec` / `WorkspaceSpec` switched to `core.ir`. (The original C2 plan exempted this file as the IR→runtime bridge, but the facade re-export works fine here too and keeps the gate strictly empty.)
+  - `back/tests/test_auth.py`, `test_runtime.py`, `test_e2e.py` — hand-crafted IR objects in tests; imports moved to the `core.ir` facade.
+
+  Done criteria from #1093:
+  ```
+  grep -rn "from dazzle.core.ir.appspec\|from dazzle.core.ir.surfaces\|from dazzle.core.ir.domain" \
+          src/dazzle/back/ --include='*.py'
+  ```
+  returns empty.
+
+  Note on the protocol facade: the renderer subset migrated to `SurfaceLike` in C1 (#1092) used true `typing.Protocol` types. The C2 sites here read attributes that don't yet have an adapter pattern — they instantiate concrete classes (`AuditConfig(enabled=True)`), iterate concrete collections (`appspec.processes`, `appspec.schedules`), and Pydantic-declare `list[SurfaceSpec]` fields. For those, the `core.ir` re-export facade is the right layer. Adding narrow protocols (`AppSpecLike`, `EntityLike`, etc.) is justified when a future consumer reads enough attrs to make the contract worth stating; doing so prematurely would just shadow the concrete classes.
+
+  With this and #1092 landed, the IR fan-in side of #1086 is structurally complete. The umbrella issue can close once #1095 (the enforcement gate) lands.
+
+### Agent Guidance
+
+- When importing IR types in `back/` or other non-core layers, use `from dazzle.core.ir import X` (the `__init__.py` facade) rather than reaching into the submodules `appspec` / `surfaces` / `domain`. The #1095 enforcement gate will fail builds that violate this.
+
 ## [0.70.10] - 2026-05-15
 
 ### Changed

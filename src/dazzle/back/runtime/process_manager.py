@@ -9,7 +9,7 @@ entity event triggers.
 import logging
 from typing import Any
 
-from dazzle.core.ir.appspec import AppSpec
+from dazzle.core.ir import AppSpec
 from dazzle.core.ir.process import ProcessSpec, ProcessTriggerKind, ScheduleSpec
 from dazzle.core.process.adapter import (
     ProcessAdapter,

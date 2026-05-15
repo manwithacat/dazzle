@@ -23,7 +23,7 @@ from decimal import Decimal
 from string import Template
 from typing import Any
 
-from dazzle.core.ir.appspec import AppSpec
+from dazzle.core.ir import AppSpec
 from dazzle.core.ir.llm import LLMIntentSpec, LLMModelSpec, RetryBackoff
 from dazzle.core.ir.llm import LLMProvider as IRProvider
 from dazzle.llm.api_client import LLMAPIClient

@@ -13,9 +13,7 @@ from dazzle.back.specs.channel import ChannelSpec, MessageSpec
 from dazzle.back.specs.endpoint import EndpointSpec
 from dazzle.back.specs.entity import EntitySpec
 from dazzle.back.specs.service import ServiceSpec
-from dazzle.core.ir.personas import PersonaSpec
-from dazzle.core.ir.surfaces import SurfaceSpec
-from dazzle.core.ir.workspaces import WorkspaceSpec
+from dazzle.core.ir import PersonaSpec, SurfaceSpec, WorkspaceSpec
 
 
 class BackendSpec(BaseModel):
