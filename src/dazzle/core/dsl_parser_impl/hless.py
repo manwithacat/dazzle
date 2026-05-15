@@ -47,10 +47,12 @@ DSL syntax examples:
         allowed: false
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from .. import ir
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class HLESSParserMixin:
@@ -124,181 +126,16 @@ class HLESSParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # Required fields
-        record_kind: ir.RecordKind | None = None
-        partition_key: str | None = None
-        ordering_scope: str | None = None
-        time_semantics: ir.TimeSemantics | None = None
-        idempotency: ir.IdempotencyStrategy | None = None
-
-        # Optional fields
-        schemas: list[ir.StreamSchema] = []
-        invariants: list[str] = []
-        notes: list[str] = []
-        causality_fields: list[str] = ["trace_id", "causation_id", "correlation_id"]
-        side_effect_policy = ir.SideEffectPolicy()
-        expected_outcomes: list[ir.ExpectedOutcome] | None = None
-        lineage: ir.DerivationLineage | None = None
-        description: str | None = None
-        cross_partition = False
-
-        # Time fields (before building TimeSemantics)
-        t_event_field: str | None = None
-        t_log_field = "_t_log"
-        t_process_field: str | None = None
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # kind: INTENT | FACT | OBSERVATION | DERIVATION
-            if self.match(TokenType.KIND):
-                self.advance()
-                self.expect(TokenType.COLON)
-                record_kind = self._parse_record_kind()
-
-            # description: "..."
-            elif self.match(TokenType.DESCRIPTION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                description = self.expect(TokenType.STRING).value
-
-            # schema SchemaName:
-            elif self.match(TokenType.SCHEMA):
-                schema = self._parse_stream_schema()
-                schemas.append(schema)
-
-            # partition_key: field_name
-            elif self.match(TokenType.PARTITION_KEY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                partition_key = self.expect(TokenType.IDENTIFIER).value
-
-            # ordering_scope: per_order
-            elif self.match(TokenType.ORDERING_SCOPE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                ordering_scope = self.expect(TokenType.IDENTIFIER).value
-
-            # t_event: field_name
-            elif self.match(TokenType.T_EVENT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                t_event_field = self.expect(TokenType.IDENTIFIER).value
-
-            # t_log: field_name (optional, defaults to _t_log)
-            elif self.match(TokenType.T_LOG):
-                self.advance()
-                self.expect(TokenType.COLON)
-                t_log_field = self.expect(TokenType.IDENTIFIER).value
-
-            # t_process: field_name (for DERIVATION)
-            elif self.match(TokenType.T_PROCESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                t_process_field = self.expect(TokenType.IDENTIFIER).value
-
-            # idempotency:
-            elif self.match(TokenType.IDEMPOTENCY):
-                idempotency = self._parse_idempotency()
-
-            # invariant: "..."
-            elif self.match(TokenType.INVARIANT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                invariants.append(self.expect(TokenType.STRING).value)
-
-            # note: "..."
-            elif self.match(TokenType.NOTE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                notes.append(self.expect(TokenType.STRING).value)
-
-            # outcomes: (for INTENT streams)
-            elif self.match(TokenType.OUTCOMES):
-                expected_outcomes = self._parse_outcomes()
-
-            # derives_from: (for DERIVATION streams)
-            elif self.match(TokenType.DERIVES_FROM):
-                lineage = self._parse_lineage()
-
-            # side_effects:
-            elif self.match(TokenType.SIDE_EFFECTS):
-                side_effect_policy = self._parse_side_effects()
-
-            # causality_fields: [trace_id, causation_id, correlation_id]
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "causality_fields"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                causality_fields = self._parse_hless_list()
-
-            # cross_partition: true
-            elif (
-                self.match(TokenType.IDENTIFIER) and self.current_token().value == "cross_partition"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    cross_partition = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    cross_partition = False
-                else:
-                    # Assume identifier "true" or "false"
-                    val = self.expect(TokenType.IDENTIFIER).value
-                    cross_partition = val.lower() == "true"
-
-            else:
-                # Skip unknown
-                self.advance()
-
-            self.skip_newlines()
-
+        state = _StreamState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_STREAM_KEYWORDS,
+            ident_keywords=_STREAM_IDENT_KEYWORDS,
+            state=state,
+            on_unknown=_on_unknown_stream,
+        )
         self.expect(TokenType.DEDENT)
-
-        # Validate required fields
-        if record_kind is None:
-            self.error("Stream must specify 'kind: INTENT|FACT|OBSERVATION|DERIVATION'")
-        if partition_key is None:
-            self.error("Stream must specify 'partition_key'")
-        if ordering_scope is None:
-            self.error("Stream must specify 'ordering_scope'")
-        if t_event_field is None:
-            self.error("Stream must specify 't_event' (domain occurrence time field)")
-
-        # Build TimeSemantics
-        time_semantics = ir.TimeSemantics(
-            t_event_field=t_event_field,
-            t_log_field=t_log_field,
-            t_process_field=t_process_field,
-        )
-
-        # Fill in default idempotency if not specified
-        if idempotency is None:
-            idempotency = ir.get_default_idempotency(record_kind)
-
-        return ir.StreamSpec(
-            name=name,
-            record_kind=record_kind,
-            schemas=schemas,
-            partition_key=partition_key,
-            ordering_scope=ordering_scope,
-            time_semantics=time_semantics,
-            idempotency=idempotency,
-            causality_fields=causality_fields,
-            invariants=invariants,
-            side_effect_policy=side_effect_policy,
-            expected_outcomes=expected_outcomes,
-            lineage=lineage,
-            cross_partition=cross_partition,
-            description=description,
-            notes=notes,
-        )
+        return _build_stream(self, name, state)
 
     def _parse_record_kind(self) -> ir.RecordKind:
         """Parse RecordKind (INTENT, FACT, OBSERVATION, DERIVATION)."""
@@ -853,3 +690,246 @@ class HLESSParserMixin:
             reason = self.advance().value
 
         return ir.HLESSPragma(mode=mode, reason=reason)
+
+
+# ============================================================ #
+# parse_stream — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 215-line monolith was replaced (v0.70.15) with the dispatch
+# pattern shipped in #1097. Each former branch is a small ``_kw_*``
+# free function below; the post-loop required-field validation +
+# TimeSemantics build + default-idempotency injection live in
+# :func:`_build_stream`.
+
+
+@dataclass
+class _StreamState:
+    """Accumulator for :meth:`HLESSParserMixin.parse_stream`.
+
+    One field per legal keyword in a ``stream:`` block, mirroring the
+    locals of the legacy monolith. Required-field assertions and IR
+    assembly happen in :func:`_build_stream` post-loop.
+    """
+
+    # Required
+    record_kind: ir.RecordKind | None = None
+    partition_key: str | None = None
+    ordering_scope: str | None = None
+    t_event_field: str | None = None
+    # Time fields (defaulted)
+    t_log_field: str = "_t_log"
+    t_process_field: str | None = None
+    # Optional
+    idempotency: ir.IdempotencyStrategy | None = None
+    schemas: list[ir.StreamSchema] = field(default_factory=list)
+    invariants: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    causality_fields: list[str] = field(
+        default_factory=lambda: ["trace_id", "causation_id", "correlation_id"]
+    )
+    side_effect_policy: ir.SideEffectPolicy = field(default_factory=ir.SideEffectPolicy)
+    expected_outcomes: list[ir.ExpectedOutcome] | None = None
+    lineage: ir.DerivationLineage | None = None
+    description: str | None = None
+    cross_partition: bool = False
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _kw_kind(parser: Any, state: _StreamState) -> None:
+    """``kind: INTENT | FACT | OBSERVATION | DERIVATION``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.record_kind = parser._parse_record_kind()
+
+
+def _kw_description(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.description = parser.expect(TokenType.STRING).value
+
+
+def _kw_schema(parser: Any, state: _StreamState) -> None:
+    """``schema SchemaName: ...`` — appended to ``state.schemas``."""
+    state.schemas.append(parser._parse_stream_schema())
+
+
+def _kw_partition_key(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.partition_key = parser.expect(TokenType.IDENTIFIER).value
+
+
+def _kw_ordering_scope(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.ordering_scope = parser.expect(TokenType.IDENTIFIER).value
+
+
+def _kw_t_event(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.t_event_field = parser.expect(TokenType.IDENTIFIER).value
+
+
+def _kw_t_log(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.t_log_field = parser.expect(TokenType.IDENTIFIER).value
+
+
+def _kw_t_process(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.t_process_field = parser.expect(TokenType.IDENTIFIER).value
+
+
+def _kw_idempotency(parser: Any, state: _StreamState) -> None:
+    state.idempotency = parser._parse_idempotency()
+
+
+def _kw_invariant(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.invariants.append(parser.expect(TokenType.STRING).value)
+
+
+def _kw_note(parser: Any, state: _StreamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.notes.append(parser.expect(TokenType.STRING).value)
+
+
+def _kw_outcomes(parser: Any, state: _StreamState) -> None:
+    state.expected_outcomes = parser._parse_outcomes()
+
+
+def _kw_derives_from(parser: Any, state: _StreamState) -> None:
+    state.lineage = parser._parse_lineage()
+
+
+def _kw_side_effects(parser: Any, state: _StreamState) -> None:
+    state.side_effect_policy = parser._parse_side_effects()
+
+
+# ---------- IDENT-text-matched parsers ---------- #
+#
+# These keywords are not lexer tokens — they're matched on the
+# IDENTIFIER value, mirroring the original monolith.
+
+
+def _kw_causality_fields(parser: Any, state: _StreamState) -> None:
+    """``causality_fields: [trace_id, causation_id, correlation_id]``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.causality_fields = parser._parse_hless_list()
+
+
+def _kw_cross_partition(parser: Any, state: _StreamState) -> None:
+    """``cross_partition: true|false`` — bool flag (#984)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.cross_partition = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.cross_partition = False
+    else:
+        # Assume identifier "true" or "false" (tolerant of lexer mode where
+        # `true`/`false` come through as plain IDENTIFIERs).
+        val = parser.expect(TokenType.IDENTIFIER).value
+        state.cross_partition = val.lower() == "true"
+
+
+# ---------- Dispatch tables ---------- #
+
+
+_STREAM_KEYWORDS: dict[TokenType, KeywordParser[_StreamState]] = {
+    TokenType.KIND: _kw_kind,
+    TokenType.DESCRIPTION: _kw_description,
+    TokenType.SCHEMA: _kw_schema,
+    TokenType.PARTITION_KEY: _kw_partition_key,
+    TokenType.ORDERING_SCOPE: _kw_ordering_scope,
+    TokenType.T_EVENT: _kw_t_event,
+    TokenType.T_LOG: _kw_t_log,
+    TokenType.T_PROCESS: _kw_t_process,
+    TokenType.IDEMPOTENCY: _kw_idempotency,
+    TokenType.INVARIANT: _kw_invariant,
+    TokenType.NOTE: _kw_note,
+    TokenType.OUTCOMES: _kw_outcomes,
+    TokenType.DERIVES_FROM: _kw_derives_from,
+    TokenType.SIDE_EFFECTS: _kw_side_effects,
+}
+
+
+_STREAM_IDENT_KEYWORDS: dict[str, KeywordParser[_StreamState]] = {
+    "causality_fields": _kw_causality_fields,
+    "cross_partition": _kw_cross_partition,
+}
+
+
+def _on_unknown_stream(parser: Any) -> None:
+    """Silently skip unknown keywords inside a ``stream:`` block.
+
+    Mirrors the legacy ``else: self.advance()`` branch — forward-compat
+    tolerance for additions to the grammar that older parsers don't yet
+    recognise. The loop's top-of-iteration ``skip_newlines()`` cleans
+    up after this on the next pass.
+    """
+    parser.advance()
+
+
+# ---------- Post-loop builder ---------- #
+
+
+def _build_stream(parser: Any, name: str, state: _StreamState) -> ir.StreamSpec:
+    """Build the :class:`ir.StreamSpec` from the accumulated state.
+
+    Required-field validation + TimeSemantics assembly + default
+    idempotency injection — all mirrored from the legacy post-loop tail.
+    """
+    if state.record_kind is None:
+        parser.error("Stream must specify 'kind: INTENT|FACT|OBSERVATION|DERIVATION'")
+    if state.partition_key is None:
+        parser.error("Stream must specify 'partition_key'")
+    if state.ordering_scope is None:
+        parser.error("Stream must specify 'ordering_scope'")
+    if state.t_event_field is None:
+        parser.error("Stream must specify 't_event' (domain occurrence time field)")
+    # parser.error is NoReturn but `parser` is typed Any here, so re-narrow
+    # for mypy after the four checks above.
+    assert state.record_kind is not None
+    assert state.partition_key is not None
+    assert state.ordering_scope is not None
+    assert state.t_event_field is not None
+
+    time_semantics = ir.TimeSemantics(
+        t_event_field=state.t_event_field,
+        t_log_field=state.t_log_field,
+        t_process_field=state.t_process_field,
+    )
+
+    idempotency = state.idempotency
+    if idempotency is None:
+        idempotency = ir.get_default_idempotency(state.record_kind)
+
+    return ir.StreamSpec(
+        name=name,
+        record_kind=state.record_kind,
+        schemas=state.schemas,
+        partition_key=state.partition_key,
+        ordering_scope=state.ordering_scope,
+        time_semantics=time_semantics,
+        idempotency=idempotency,
+        causality_fields=state.causality_fields,
+        invariants=state.invariants,
+        side_effect_policy=state.side_effect_policy,
+        expected_outcomes=state.expected_outcomes,
+        lineage=state.lineage,
+        cross_partition=state.cross_partition,
+        description=state.description,
+        notes=state.notes,
+    )

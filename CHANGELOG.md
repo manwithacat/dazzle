@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.15] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_stream` migrated to keyword-dispatch.** Second consumer of the #1097 helper (after `parse_workspace_region` in v0.70.14). The 215-line monolith in `src/dazzle/core/dsl_parser_impl/hless.py` becomes ~17 lines of dispatch shell + 14 `_kw_*` free functions + 2 IDENT-text-matched (`causality_fields`, `cross_partition`) + a 47-line `_build_stream` builder that handles required-field validation + `TimeSemantics` assembly + default-idempotency injection. Byte-identical IR verified against a 136-StreamSpec snapshot across `examples/` + `fixtures/`. Preserves the legacy `else: self.advance()` silent-skip behavior for unknown keywords via an `on_unknown=_on_unknown_stream` override.
+
+### Agent Guidance
+
+- When `parser.error()` is invoked from a `_build_*` helper where `parser: Any`, mypy doesn't see the `NoReturn` annotation. Add `assert state.X is not None` lines after the validation block to re-narrow types before constructing the frozen IR. The pattern is in `hless.py:_build_stream`.
+- `tests/unit/test_ir_field_reader_parity.py` flags IR fields whose only `.attr` accesses are inside the parser's accumulator dataclass (`state.X`). The heuristic counts dataclass attribute reads as IR readers — false-positive but harmless. When migrating a parser whose IR fields share names with the accumulator, expect baseline entries in `tests/unit/fixtures/ir_reader_baseline.json` to be flagged as "resolved orphans"; remove them per the test's own instructions.
+- Triage of remaining oversized parsers (post-#1098, post-this-PR): see [#1088 comment](https://github.com/manwithacat/dazzle/issues/1088). Next-best candidates by leverage: `parse_test` (344 lines), `parse_surface` (205), `parse_persona_variant` (161), `parse_tenancy` (170).
+
 ## [0.70.14] - 2026-05-15
 
 ### Changed
