@@ -88,10 +88,14 @@ class LLMParserMixin:
         return "-".join(parts)
 
     def parse_llm_config(self) -> ir.LLMConfigSpec:
-        """
-        Parse llm_config declaration.
+        """Parse a top-level ``llm_config:`` block.
 
-        Syntax:
+        Refactored to dispatch-table style (follow-on to #1098). 6
+        token-keyed `_lc_kw_*` + 1 IDENT-text-matched (`concurrency`)
+        + a `_build_llm_config` builder.
+
+        Syntax::
+
             llm_config:
               default_model: claude_sonnet
               artifact_store: local
@@ -111,105 +115,16 @@ class LLMParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        default_model: str | None = None
-        default_provider: ir.LLMProvider | None = None
-        budget_alert_usd: Decimal | None = None
-        artifact_store: ir.ArtifactStore = ir.ArtifactStore.LOCAL
-        logging: ir.LoggingPolicySpec = ir.LoggingPolicySpec()
-        rate_limits: dict[str, int] | None = None
-        concurrency: dict[str, int] | None = None
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # default_model: model_name
-            if self.match(TokenType.DEFAULT_MODEL):
-                self.advance()
-                self.expect(TokenType.COLON)
-                default_model = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # default_provider: anthropic | openai | google | local
-            elif self.match(TokenType.DEFAULT_PROVIDER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                provider_str = self.expect_identifier_or_keyword().value
-                try:
-                    default_provider = ir.LLMProvider(provider_str)
-                except ValueError:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Invalid LLM provider: {provider_str}. "
-                        "Must be: anthropic, openai, google, or local",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # budget_alert_usd: 50.00
-            elif self.match(TokenType.BUDGET_ALERT_USD):
-                self.advance()
-                self.expect(TokenType.COLON)
-                budget_alert_usd = Decimal(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            # artifact_store: local | s3 | gcs
-            elif self.match(TokenType.ARTIFACT_STORE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                store_str = self.expect_identifier_or_keyword().value
-                try:
-                    artifact_store = ir.ArtifactStore(store_str)
-                except ValueError:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Invalid artifact store: {store_str}. Must be: local, s3, or gcs",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # logging: (nested block)
-            elif self.match(TokenType.LOGGING):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                logging = self._parse_logging_policy()
-
-            # rate_limits: (nested block)
-            elif self.match(TokenType.RATE_LIMITS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                rate_limits = self._parse_rate_limits()
-
-            # concurrency: (nested block — same format as rate_limits)
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "concurrency":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                concurrency = self._parse_concurrency_limits()
-
-            else:
-                # Skip unknown fields
-                self.advance()
-                self.skip_newlines()
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.LLMConfigSpec(
-            default_model=default_model,
-            default_provider=default_provider,
-            budget_alert_usd=budget_alert_usd,
-            artifact_store=artifact_store,
-            logging=logging,
-            rate_limits=rate_limits,
-            concurrency=concurrency,
+        state = _LLMConfigState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_LLM_CONFIG_KEYWORDS,
+            ident_keywords=_LLM_CONFIG_IDENT_KEYWORDS,
+            state=state,
+            on_unknown=_on_unknown_llm_config,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_llm_config(state)
 
     def _parse_logging_policy(self) -> ir.LoggingPolicySpec:
         """Parse logging policy block."""
@@ -936,4 +851,142 @@ def _build_llm_model(
         max_tokens=state.max_tokens,
         cost_per_1k_input=state.cost_per_1k_input,
         cost_per_1k_output=state.cost_per_1k_output,
+    )
+
+
+# ============================================================ #
+# parse_llm_config — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 122-line monolith was replaced (v0.70.26) with the dispatch
+# pattern shipped in #1097. 6 token-keyed `_lc_kw_*` + 1 IDENT-keyed
+# (`concurrency`) + a `_build_llm_config` builder.
+
+
+@dataclass
+class _LLMConfigState:
+    """Accumulator for :meth:`LLMParserMixin.parse_llm_config`."""
+
+    default_model: str | None = None
+    default_provider: ir.LLMProvider | None = None
+    budget_alert_usd: Decimal | None = None
+    artifact_store: ir.ArtifactStore = ir.ArtifactStore.LOCAL
+    logging: ir.LoggingPolicySpec = field(default_factory=ir.LoggingPolicySpec)
+    rate_limits: dict[str, int] | None = None
+    concurrency: dict[str, int] | None = None
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _lc_kw_default_model(parser: Any, state: _LLMConfigState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.default_model = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _lc_kw_default_provider(parser: Any, state: _LLMConfigState) -> None:
+    """``default_provider: anthropic | openai | google | local`` — validated."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    provider_str = parser.expect_identifier_or_keyword().value
+    try:
+        state.default_provider = ir.LLMProvider(provider_str)
+    except ValueError:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Invalid LLM provider: {provider_str}. Must be: anthropic, openai, google, or local",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _lc_kw_budget_alert_usd(parser: Any, state: _LLMConfigState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.budget_alert_usd = Decimal(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _lc_kw_artifact_store(parser: Any, state: _LLMConfigState) -> None:
+    """``artifact_store: local | s3 | gcs`` — validated."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    store_str = parser.expect_identifier_or_keyword().value
+    try:
+        state.artifact_store = ir.ArtifactStore(store_str)
+    except ValueError:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Invalid artifact store: {store_str}. Must be: local, s3, or gcs",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _lc_kw_logging(parser: Any, state: _LLMConfigState) -> None:
+    """``logging:`` — nested LoggingPolicy block."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.logging = parser._parse_logging_policy()
+
+
+def _lc_kw_rate_limits(parser: Any, state: _LLMConfigState) -> None:
+    """``rate_limits:`` — nested map of model_name → int RPM."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.rate_limits = parser._parse_rate_limits()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _lc_kw_concurrency(parser: Any, state: _LLMConfigState) -> None:
+    """``concurrency:`` — nested map (same shape as rate_limits)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.concurrency = parser._parse_concurrency_limits()
+
+
+# ---------- Dispatch tables + on_unknown + builder ---------- #
+
+
+_LLM_CONFIG_KEYWORDS: dict[TokenType, KeywordParser[_LLMConfigState]] = {
+    TokenType.DEFAULT_MODEL: _lc_kw_default_model,
+    TokenType.DEFAULT_PROVIDER: _lc_kw_default_provider,
+    TokenType.BUDGET_ALERT_USD: _lc_kw_budget_alert_usd,
+    TokenType.ARTIFACT_STORE: _lc_kw_artifact_store,
+    TokenType.LOGGING: _lc_kw_logging,
+    TokenType.RATE_LIMITS: _lc_kw_rate_limits,
+}
+
+
+_LLM_CONFIG_IDENT_KEYWORDS: dict[str, KeywordParser[_LLMConfigState]] = {
+    "concurrency": _lc_kw_concurrency,
+}
+
+
+def _on_unknown_llm_config(parser: Any) -> None:
+    """Silently skip unknown keywords + their newline (mirrors legacy else)."""
+    parser.advance()
+    parser.skip_newlines()
+
+
+def _build_llm_config(state: _LLMConfigState) -> ir.LLMConfigSpec:
+    return ir.LLMConfigSpec(
+        default_model=state.default_model,
+        default_provider=state.default_provider,
+        budget_alert_usd=state.budget_alert_usd,
+        artifact_store=state.artifact_store,
+        logging=state.logging,
+        rate_limits=state.rate_limits,
+        concurrency=state.concurrency,
     )

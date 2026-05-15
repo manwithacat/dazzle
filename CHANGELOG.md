@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.26] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_llm_config` migrated to keyword-dispatch.** Thirteenth consumer of the #1097 helper. The 122-line monolith in `src/dazzle/core/dsl_parser_impl/llm.py` becomes a 37-line dispatch shell + 6 token-keyed `_lc_kw_*` parsers (default_model/default_provider/budget_alert_usd/artifact_store/logging/rate_limits) + 1 IDENT-text-matched (`concurrency`) + a 9-line `_build_llm_config` builder. Enum-validation preserved for `default_provider` and `artifact_store`. Nested-block delegation to `_parse_logging_policy`, `_parse_rate_limits`, `_parse_concurrency_limits` mixin helpers. Byte-identical IR verified against 3 `LLMConfigSpec`s.
+
 ## [0.70.25] - 2026-05-16
 
 ### Changed
