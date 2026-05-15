@@ -11,7 +11,7 @@ form, and dashboard modes.
 
 from typing import Any
 
-from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.render.fragment import (
     URL,
     Button,
@@ -46,7 +46,7 @@ from dazzle.render.fragment import (
 class FragmentSurfaceAdapter:
     """Translate a SurfaceSpec + context into a Fragment tree."""
 
-    def build(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Fragment:
+    def build(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Fragment:
         if surface.mode == SurfaceMode.LIST:
             return self._build_list(surface, ctx)
         if surface.mode == SurfaceMode.VIEW:
@@ -58,7 +58,7 @@ class FragmentSurfaceAdapter:
             f"Plans 3+8+9 cover LIST/VIEW/CREATE/EDIT. CUSTOM lands later."
         )
 
-    def _build_list(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
+    def _build_list(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Surface:
         title = surface.title or surface.name.replace("_", " ").title()
         items: list[dict[str, Any]] = ctx.get("items", [])
         columns: list[dict[str, Any]] = ctx.get("columns", [])
@@ -201,7 +201,7 @@ class FragmentSurfaceAdapter:
             body=Region(kind="list", body=body, data_table=entity_name),
         )
 
-    def _build_view(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> Surface:
+    def _build_view(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Surface:
         """Detail surface — fields + action toolbar + related groups.
 
         Plan 8: each field renders as a Row of (Heading-level-4 label,
@@ -402,7 +402,7 @@ class FragmentSurfaceAdapter:
 
     def _build_form(
         self,
-        surface: SurfaceSpec,
+        surface: SurfaceLike,
         ctx: dict[str, Any],
         *,
         mode: SurfaceMode,

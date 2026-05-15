@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.10] - 2026-05-15
+
+### Changed
+
+- **#1092: `dazzle.core.ir.protocols` facade introduced; renderers migrated.** Workstream C1 of the #1086 IR fan-in cleanup. New `dazzle.core.ir.protocols` module hosts read-only structural protocols (`typing.Protocol`) for IR types, exposing the narrow attribute subset each non-core layer actually reads. First protocol: `SurfaceLike` (`name`, `title`, `mode`, `render`) — covers the four attributes used by the renderer subsystem.
+
+  Migrated to `SurfaceLike`:
+  - `back.runtime.renderers.fragment.FragmentSurfaceRenderer.render`
+  - `back.runtime.renderers.fragment_adapter.FragmentSurfaceAdapter.build` / `_build_list` / `_build_view` / `_build_form`
+  - `render.dispatch.dispatch_render`
+
+  `SurfaceMode` (the value enum) is re-exported from `core.ir.protocols` alongside the protocol, so renderers comparing `surface.mode == SurfaceMode.LIST` import both names from the facade instead of reaching into `core.ir.surfaces`.
+
+  `back.specs.backend_spec.py` keeps concrete `SurfaceSpec` / `PersonaSpec` / `WorkspaceSpec` imports — that file is the explicit IR→runtime bridge and lives inside the allowed layer (`back/specs/`).
+
+  Done criteria from #1092:
+  ```
+  grep -rn "from dazzle.core.ir.surfaces\|from dazzle.core.ir.appspec" \
+          src/dazzle/back/runtime/renderers/ --include='*.py'
+  ```
+  returns empty.
+
+  Workstream C2 (#1093) covers the larger remaining surface — route_generator, workspace runtime, data_products, graphql adapters, llm executor, etc. — and will add more protocols (`EntityLike`, `FieldLike`, `PersonaLike`, `WorkspaceLike`, etc.) as their callers are migrated.
+
+### Agent Guidance
+
+- IR consumers outside `dazzle.core/` and `dazzle.back/specs/` should import from `dazzle.core.ir.protocols` rather than the concrete `core.ir.*` modules. When adding a new protocol, scope it to the attrs you actually read — don't restate the whole concrete class.
+- `SurfaceMode` (and other value enums that are part of an IR contract) live in `core.ir.protocols` for downstream import. Adding a new `*Like` protocol that uses an enum? Re-export the enum from `protocols` too.
+
 ## [0.70.9] - 2026-05-15
 
 ### Changed (BREAKING)

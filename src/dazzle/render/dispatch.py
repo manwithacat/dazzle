@@ -43,12 +43,12 @@ from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML
 
 if TYPE_CHECKING:
-    from dazzle.core.ir.surfaces import SurfaceSpec
+    from dazzle.core.ir.protocols import SurfaceLike
     from dazzle.render.context import PageContext
 
 
 def dispatch_render(
-    surface: SurfaceSpec,
+    surface: SurfaceLike,
     *,
     ctx: dict[str, Any],
     services: Any,

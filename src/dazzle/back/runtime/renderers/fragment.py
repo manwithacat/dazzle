@@ -12,7 +12,7 @@ from the IR + ctx, then `FragmentRenderer` emits HTML from the tree.
 
 from typing import Any
 
-from dazzle.core.ir.surfaces import SurfaceSpec
+from dazzle.core.ir.protocols import SurfaceLike
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 
@@ -34,7 +34,7 @@ class FragmentSurfaceRenderer:
         self._renderer = FragmentRenderer()
         self._surface_adapter = FragmentSurfaceAdapter()
 
-    def render(self, surface: SurfaceSpec, ctx: dict[str, Any]) -> str:
+    def render(self, surface: SurfaceLike, ctx: dict[str, Any]) -> str:
         fragment = self._surface_adapter.build(surface, ctx)
         return self._renderer.render(fragment)
 
