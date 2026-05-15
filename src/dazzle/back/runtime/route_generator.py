@@ -285,7 +285,7 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
     Returns empty string when `total <= page_size` (matches Jinja `{% if %}`)."""
     import html as _html_mod
 
-    from dazzle.ui.runtime.template_renderer import _pagination_pages
+    from dazzle.render.filters import _pagination_pages
 
     if not table:
         return ""
@@ -427,7 +427,7 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
     """
     import html as _html_mod
 
-    from dazzle.ui.runtime.template_renderer import (
+    from dazzle.render.filters import (
         _bool_icon_filter,
         _currency_filter,
         _date_filter,
@@ -441,7 +441,7 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
             return '<span class="dz-badge-empty" aria-label="No status">—</span>'
         # Match the legacy macro: badge_tone is identity-passthrough when
         # value isn't in the canonical tone map — render a default badge.
-        from dazzle.ui.runtime.template_renderer import _badge_tone_filter
+        from dazzle.render.filters import _badge_tone_filter
 
         tone = _badge_tone_filter(value)
         label = str(value).replace("_", " ").title()
@@ -498,7 +498,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     import html as _html_mod
     import json
 
-    from dazzle.ui.runtime.template_renderer import _ref_display_name
+    from dazzle.render.filters import _ref_display_name
 
     columns = table.get("columns") or []
     bulk_actions = bool(table.get("bulk_actions"))

@@ -64,7 +64,7 @@ class _BuildersTimelineMixin:
             total: int — overflow indicator denominator
             empty_message: optional empty-state fallback
         """
-        from dazzle.ui.runtime.template_renderer import _timeago_filter
+        from dazzle.render.filters import _timeago_filter
 
         title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
@@ -137,7 +137,7 @@ class _BuildersTimelineMixin:
               - actor or user: optional actor name
               - action / title: fallback description fields
         """
-        from dazzle.ui.runtime.template_renderer import _timeago_filter
+        from dazzle.render.filters import _timeago_filter
 
         title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []

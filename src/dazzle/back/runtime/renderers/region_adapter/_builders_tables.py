@@ -251,7 +251,7 @@ class _BuildersTablesMixin:
             queue_api_endpoint: str URL — base URL for transitions
                 (transitions PUT to f"{queue_api_endpoint}/{item.id}")
         """
-        from dazzle.ui.runtime.template_renderer import (
+        from dazzle.render.filters import (
             _metric_number_filter,
             _timeago_filter,
         )

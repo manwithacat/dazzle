@@ -6,7 +6,7 @@ from FK reference dicts using the canonical display chain.
 
 import pytest
 
-from dazzle.ui.runtime.template_renderer import _ref_display_name
+from dazzle.render.filters import _ref_display_name
 
 
 class TestRefDisplayName:

@@ -418,7 +418,7 @@ def radar_svg(
     # suffixes for large values, plain int repr otherwise. Late import
     # to avoid the SVG module pulling dazzle_ui at module load.
     # Pre-narrow to int when whole so the filter renders "9" not "9.0".
-    from dazzle.ui.runtime.template_renderer import _metric_number_filter
+    from dazzle.render.filters import _metric_number_filter
 
     max_for_label = int(max_val) if max_val == int(max_val) else max_val
     max_val_label = _metric_number_filter(max_for_label)

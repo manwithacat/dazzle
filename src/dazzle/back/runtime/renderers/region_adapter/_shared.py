@@ -76,7 +76,7 @@ def _render_status_badge_html(
     """
     from html import escape as _esc
 
-    from dazzle.ui.runtime.template_renderer import (
+    from dazzle.render.filters import (
         _badge_tone_filter,
         _humanize_filter,
     )
@@ -128,7 +128,7 @@ def _render_typed_value(
         return RawHTML(_render_status_badge_html(value, size=badge_size, bordered=badge_bordered))
 
     if col_type == "bool":
-        from dazzle.ui.runtime.template_renderer import _bool_icon_filter
+        from dazzle.render.filters import _bool_icon_filter
 
         # Use the legacy bool_icon filter directly so the typed-Fragment
         # output is byte-equivalent: True → success-tinted ✓ check, False
@@ -141,12 +141,12 @@ def _render_typed_value(
         return RawHTML("—")
 
     if col_type == "date":
-        from dazzle.ui.runtime.template_renderer import _date_filter
+        from dazzle.render.filters import _date_filter
 
         return RawHTML(_date_filter(value))
 
     if col_type == "currency":
-        from dazzle.ui.runtime.template_renderer import _currency_filter
+        from dazzle.render.filters import _currency_filter
 
         return RawHTML(_currency_filter(value))
 

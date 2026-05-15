@@ -34,12 +34,12 @@ from dazzle.core.ir import (
     SurfaceSection,
     SurfaceSpec,
 )
+from dazzle.render.filters import _currency_filter
 from dazzle.ui.converters.template_compiler import (
     _build_columns,
     _build_form_fields,
 )
 from dazzle.ui.runtime.mock_data import generate_mock_records
-from dazzle.ui.runtime.template_renderer import _currency_filter
 
 # =============================================================================
 # Entity Converter Tests

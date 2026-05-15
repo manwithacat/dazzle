@@ -205,7 +205,7 @@ class TestGettextFilterReadsContextVar:
         kwargs: dict,
         expected: str,
     ) -> None:
-        from dazzle.ui.runtime.template_renderer import _gettext
+        from dazzle.render.filters import _gettext
 
         if reg_locale:
             register_translations(reg_locale, reg_mapping)

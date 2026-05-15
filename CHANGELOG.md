@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.6] - 2026-05-15
+
+### Changed
+
+- **#1090: Jinja-filter helpers moved from `dazzle.ui.runtime.template_renderer` into new `dazzle.render.filters` module.** First workstream of the #1086 back↔ui cycle break. 15 pure value-formatting helpers (`_currency_filter`, `_date_filter`, `_metric_number_filter`, `_badge_tone_filter`, `_bool_icon_filter`, `_timeago_filter`, `_slugify_filter`, `_basename_or_url_filter`, `_humanize_filter`, `_ref_display_name`, `_ref_display_filter`, `_resolve_fk_id_filter`, `_truncate_filter`, `_gettext`, `_pagination_pages`) plus the `_STATUS_TONE_MAP` constant now live in `dazzle.render` — neutral location that neither `back/` nor `ui/` "imports up" from. `template_renderer.py` keeps only `render_page` and `_render_typed_body` (the actual page-rendering entry points). All 15 call sites updated (8 in `back/runtime/`, 1 in `ui/runtime/detail_renderer.py`, 2 in `render/`, plus 7 test files).
+
+  Done criteria from #1090:
+  ```
+  grep -rn 'from dazzle.ui.runtime.template_renderer' src/dazzle/back/ --include='*.py'
+  ```
+  returns empty.
+
+  No backward-compat shim — `template_renderer.py` no longer re-exports the moved helpers. Downstream code importing them from the old location fails at import time.
+
+### Agent Guidance
+
+- Pure value-formatting helpers (the kind that take an IR/data value and return a string or `Markup`) live in `dazzle.render.filters`, not `dazzle.ui.runtime.template_renderer`. New helpers in that style should go straight to `render/filters.py`.
+
 ## [0.70.5] - 2026-05-15
 
 ### Changed

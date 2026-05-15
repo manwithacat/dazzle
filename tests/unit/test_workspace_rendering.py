@@ -211,7 +211,7 @@ class TestTimeagoFilter:
     """timeago Jinja2 filter returns human-readable relative times."""
 
     def test_seconds_ago(self) -> None:
-        from dazzle.ui.runtime.template_renderer import _timeago_filter
+        from dazzle.render.filters import _timeago_filter
 
         dt = datetime.now() - timedelta(seconds=30)
         result = _timeago_filter(dt)
@@ -235,7 +235,7 @@ class TestTimeagoFilter:
         ],
     )
     def test_filter(self, input_factory, expected) -> None:
-        from dazzle.ui.runtime.template_renderer import _timeago_filter
+        from dazzle.render.filters import _timeago_filter
 
         assert _timeago_filter(input_factory()) == expected
 

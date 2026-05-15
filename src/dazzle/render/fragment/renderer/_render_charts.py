@@ -319,8 +319,8 @@ class _RenderChartsMixin:
         CSS hooks keep working; the SVG sits in a new
         `<div class="dz-radar-region">` (the legacy class).
         """
+        from dazzle.render.filters import _metric_number_filter
         from dazzle.render.svg import radar_svg
-        from dazzle.ui.runtime.template_renderer import _metric_number_filter
 
         # Phase 4B.4 wave 3: aligned with legacy template — strip the
         # `<section class="dz-radar">` + `<h4>` chrome. Summary uses

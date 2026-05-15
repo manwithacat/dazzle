@@ -24,7 +24,7 @@ from dazzle.render.html import esc as _esc
 
 def _render_status_badge(value: Any) -> str:
     """Inline mirror of `macros/status_badge.html::render_status_badge`."""
-    from dazzle.ui.runtime.template_renderer import _badge_tone_filter
+    from dazzle.render.filters import _badge_tone_filter
 
     if value in (None, "", "—"):
         return '<span class="dz-badge-empty" aria-label="No status">—</span>'
@@ -39,13 +39,13 @@ def _render_status_badge(value: Any) -> str:
 
 def _render_field_value(field: Any, value: Any, item: dict[str, Any]) -> str:
     """Render one detail-row value cell by field type."""
-    from dazzle.ui.runtime.form_renderer import _basename_or_url
-    from dazzle.ui.runtime.template_renderer import (
+    from dazzle.render.filters import (
         _bool_icon_filter,
         _currency_filter,
         _date_filter,
         _ref_display_name,
     )
+    from dazzle.ui.runtime.form_renderer import _basename_or_url
 
     if value is None:
         return "—"
@@ -201,7 +201,7 @@ def _render_related_status_cards(group: Any, detail_item: dict[str, Any]) -> str
 
 
 def _render_related_file_list(group: Any, detail_item: dict[str, Any]) -> str:
-    from dazzle.ui.runtime.template_renderer import _date_filter
+    from dazzle.render.filters import _date_filter
 
     parts: list[str] = []
     tabs = list(getattr(group, "tabs", None) or [])
@@ -283,7 +283,7 @@ def _render_related_file_list(group: Any, detail_item: dict[str, Any]) -> str:
 
 
 def _render_related_table_cell(col: Any, item: dict[str, Any]) -> str:
-    from dazzle.ui.runtime.template_renderer import (
+    from dazzle.render.filters import (
         _bool_icon_filter,
         _currency_filter,
         _date_filter,

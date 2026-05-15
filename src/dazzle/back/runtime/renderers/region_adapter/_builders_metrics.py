@@ -251,7 +251,7 @@ class _BuildersMetricsMixin:
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
-        from dazzle.ui.runtime.template_renderer import _metric_number_filter
+        from dazzle.render.filters import _metric_number_filter
 
         title = _region_title(region)
         metrics_list: list[dict[str, Any]] = ctx.get("metrics", []) or []

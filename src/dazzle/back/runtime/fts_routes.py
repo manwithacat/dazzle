@@ -142,7 +142,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     """
     import html
 
-    from dazzle.ui.runtime.template_renderer import _gettext
+    from dazzle.render.filters import _gettext
 
     items = result.get("items", []) or []
     snippet_fields = result.get("snippet_fields", []) or []
