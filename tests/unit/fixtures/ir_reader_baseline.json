@@ -162,7 +162,6 @@
   "test_design.TestGap.related_entities",
   "test_design.TestGapAnalysis.suggested_designs",
   "tests.TestSetupStep.variable_name",
-  "tests.TestSpec.setup_steps",
   "themespec.AttentionRule.match_entity_category",
   "themespec.AttentionRule.treatment",
   "themespec.VisualTreatment.animation",

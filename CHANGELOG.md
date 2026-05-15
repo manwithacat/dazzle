@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.16] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_test` migrated to keyword-dispatch.** Third consumer of the #1097 helper (after `parse_workspace_region` in v0.70.14 and `parse_stream` in v0.70.15). The 344-line monolith in `src/dazzle/core/dsl_parser_impl/test.py` becomes a 27-line dispatch shell + 7 outer `_kw_*` functions (setup/action/data/filter/search/order_by/expect) + 7 nested assertion parsers (`_assertion_status/created/field/error_message/count/first/last`) routed through an inner `_ASSERTION_DISPATCH` table + a 26-line `_build_test` builder that handles the action-data merge and required-action assertion. Byte-identical IR verified against a synthetic 4-TestSpec, 13-assertion fixture exercising every branch (no real `.dsl` file in the tree uses `test` declarations today — the syntax remains documented for future work). Preserves legacy `else: self.advance()` silent-skip + the legacy quirk that `search:` and `order_by:` parse their values then discard them (now flagged in the relevant `_kw_*` docstrings).
+
+### Agent Guidance
+
+- Nested-block parsers can layer dispatch tables: a top-level `_kw_*` calls `parse_block_with_dispatch` for its outer keywords, and one of those `_kw_*` (e.g. `_kw_expect` here) runs its own internal dispatch loop over a sub-table (`_ASSERTION_DISPATCH`). Useful when the inner shape has its own distinct keyword set that doesn't share the outer state semantics.
+- The `_ir_field_reader_parity` test flags an IR field as "resolved orphan" whenever a `state.X` access lands in the parser. For new dispatch migrations: prune the corresponding entries from `tests/unit/fixtures/ir_reader_baseline.json` per the test's instructions, then ship.
+
 ## [0.70.15] - 2026-05-15
 
 ### Changed
