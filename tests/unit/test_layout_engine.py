@@ -4,9 +4,9 @@ import pytest
 
 from dazzle.core.ir import (
     AttentionSignalKind,
-    LayoutArchetype,
     LayoutSignal,
     PersonaLayout,
+    Stage,
     WorkspaceLayout,
 )
 from dazzle.layout import (
@@ -25,8 +25,8 @@ class TestArchetypeSelection:
     @pytest.mark.parametrize(
         ("signal_id", "kind", "label", "weight", "expected"),
         [
-            ("kpi1", AttentionSignalKind.KPI, "Critical KPI", 0.9, LayoutArchetype.FOCUS_METRIC),
-            ("table1", AttentionSignalKind.TABLE, "Data Table", 0.8, LayoutArchetype.SCANNER_TABLE),
+            ("kpi1", AttentionSignalKind.KPI, "Critical KPI", 0.9, Stage.FOCUS_METRIC),
+            ("table1", AttentionSignalKind.TABLE, "Data Table", 0.8, Stage.SCANNER_TABLE),
         ],
         ids=[
             "test_select_focus_metric_single_kpi",
@@ -82,7 +82,7 @@ class TestArchetypeSelection:
         )
 
         archetype = select_stage(workspace)
-        assert archetype == LayoutArchetype.MONITOR_WALL
+        assert archetype == Stage.MONITOR_WALL
 
     def test_select_dual_pane_list_detail(self):
         """Test that list + detail selects DUAL_PANE_FLOW."""
@@ -108,7 +108,7 @@ class TestArchetypeSelection:
         )
 
         archetype = select_stage(workspace)
-        assert archetype == LayoutArchetype.DUAL_PANE_FLOW
+        assert archetype == Stage.DUAL_PANE_FLOW
 
     def test_select_command_center_expert_many_signals(self):
         """Test that expert with many diverse signals gets COMMAND_CENTER."""
@@ -137,7 +137,7 @@ class TestArchetypeSelection:
 
         archetype = select_stage(workspace, persona)
         # With 6 diverse signals and expert persona → COMMAND_CENTER
-        assert archetype == LayoutArchetype.COMMAND_CENTER
+        assert archetype == Stage.COMMAND_CENTER
 
     def test_select_respects_stage(self):
         """Test that stage is respected."""
@@ -158,7 +158,7 @@ class TestArchetypeSelection:
 
         archetype = select_stage(workspace)
         # Should respect hint even though signal profile suggests FOCUS_METRIC
-        assert archetype == LayoutArchetype.SCANNER_TABLE
+        assert archetype == Stage.SCANNER_TABLE
 
     def test_determinism_same_inputs_same_output(self):
         """Test that same inputs always produce same output."""
@@ -181,7 +181,7 @@ class TestArchetypeSelection:
 
         # All results should be identical
         assert len(set(results)) == 1
-        assert results[0] == LayoutArchetype.FOCUS_METRIC
+        assert results[0] == Stage.FOCUS_METRIC
 
 
 class TestSurfaceAllocation:
@@ -409,7 +409,7 @@ class TestLayoutPlanBuilder:
 
         assert plan.workspace_id == "dashboard"
         assert plan.persona_id is None
-        assert plan.stage == LayoutArchetype.FOCUS_METRIC
+        assert plan.stage == Stage.FOCUS_METRIC
         assert len(plan.surfaces) > 0
         assert len(plan.over_budget_signals) == 0
 
@@ -536,7 +536,7 @@ class TestArchetypeDefinitions:
 
     def test_all_archetypes_defined(self):
         """Test that all archetypes have definitions."""
-        for archetype in LayoutArchetype:
+        for archetype in Stage:
             assert archetype in ARCHETYPE_DEFINITIONS
 
     def test_archetype_surface_capacities(self):

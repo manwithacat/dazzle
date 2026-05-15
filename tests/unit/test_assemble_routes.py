@@ -139,9 +139,9 @@ class TestAssembleRoutesStructure:
         calls = _find_calls(self._source, "validate_routes")
         assert calls, "validate_routes call not found"
 
-    def test_calls_register_site_404_handler(self) -> None:
-        calls = _find_calls(self._source, "register_site_404_handler")
-        assert calls, "register_site_404_handler call not found"
+    def test_calls_register_site_error_handlers(self) -> None:
+        calls = _find_calls(self._source, "register_site_error_handlers")
+        assert calls, "register_site_error_handlers call not found"
 
     def test_calls_sync_schedules_from_appspec(self) -> None:
         calls = _find_calls(self._source, "sync_schedules_from_appspec")

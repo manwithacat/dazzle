@@ -5,11 +5,11 @@ from pydantic import ValidationError
 
 from dazzle.core.ir import (
     AttentionSignalKind,
-    LayoutArchetype,
     LayoutPlan,
     LayoutSignal,
     LayoutSurface,
     PersonaLayout,
+    Stage,
     WorkspaceLayout,
 )
 
@@ -213,9 +213,9 @@ class TestLayoutSurface:
         """Combined: creation defaults, with-signals, capacity validation,
         priority validation, immutability."""
         # Defaults
-        s = LayoutSurface(id="primary", stage=LayoutArchetype.SCANNER_TABLE)
+        s = LayoutSurface(id="primary", stage=Stage.SCANNER_TABLE)
         assert s.id == "primary"
-        assert s.stage == LayoutArchetype.SCANNER_TABLE
+        assert s.stage == Stage.SCANNER_TABLE
         assert s.capacity == 1.0
         assert s.priority == 1
         assert s.assigned_signals == []
@@ -224,7 +224,7 @@ class TestLayoutSurface:
         # With signals
         s2 = LayoutSurface(
             id="sidebar",
-            stage=LayoutArchetype.MONITOR_WALL,
+            stage=Stage.MONITOR_WALL,
             capacity=0.5,
             priority=2,
             assigned_signals=["signal1", "signal2"],
@@ -236,19 +236,19 @@ class TestLayoutSurface:
         assert s2.constraints == {"max_width": 300}
 
         # Capacity bounds
-        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, capacity=0.0)
-        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, capacity=2.0)
+        LayoutSurface(id="t", stage=Stage.FOCUS_METRIC, capacity=0.0)
+        LayoutSurface(id="t", stage=Stage.FOCUS_METRIC, capacity=2.0)
         with pytest.raises(ValidationError):
-            LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, capacity=-0.1)
+            LayoutSurface(id="t", stage=Stage.FOCUS_METRIC, capacity=-0.1)
 
         # Priority bounds
-        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, priority=1)
-        LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, priority=10)
+        LayoutSurface(id="t", stage=Stage.FOCUS_METRIC, priority=1)
+        LayoutSurface(id="t", stage=Stage.FOCUS_METRIC, priority=10)
         with pytest.raises(ValidationError):
-            LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC, priority=0)
+            LayoutSurface(id="t", stage=Stage.FOCUS_METRIC, priority=0)
 
         # Immutability
-        immut = LayoutSurface(id="t", stage=LayoutArchetype.FOCUS_METRIC)
+        immut = LayoutSurface(id="t", stage=Stage.FOCUS_METRIC)
         with pytest.raises((ValidationError, AttributeError)):
             immut.capacity = 2.0
 
@@ -259,10 +259,10 @@ class TestLayoutPlan:
     def test_layout_plan_combined(self):
         """Combined: creation defaults, all-fields with surfaces, immutability."""
         # Defaults
-        p = LayoutPlan(workspace_id="dashboard", stage=LayoutArchetype.MONITOR_WALL)
+        p = LayoutPlan(workspace_id="dashboard", stage=Stage.MONITOR_WALL)
         assert p.workspace_id == "dashboard"
         assert p.persona_id is None
-        assert p.stage == LayoutArchetype.MONITOR_WALL
+        assert p.stage == Stage.MONITOR_WALL
         assert p.surfaces == []
         assert p.over_budget_signals == []
         assert p.warnings == []
@@ -270,17 +270,13 @@ class TestLayoutPlan:
 
         # All fields
         surfaces = [
-            LayoutSurface(
-                id="primary", stage=LayoutArchetype.MONITOR_WALL, assigned_signals=["signal1"]
-            ),
-            LayoutSurface(
-                id="sidebar", stage=LayoutArchetype.MONITOR_WALL, assigned_signals=["signal2"]
-            ),
+            LayoutSurface(id="primary", stage=Stage.MONITOR_WALL, assigned_signals=["signal1"]),
+            LayoutSurface(id="sidebar", stage=Stage.MONITOR_WALL, assigned_signals=["signal2"]),
         ]
         p2 = LayoutPlan(
             workspace_id="dashboard",
             persona_id="admin",
-            stage=LayoutArchetype.MONITOR_WALL,
+            stage=Stage.MONITOR_WALL,
             surfaces=surfaces,
             over_budget_signals=["signal3"],
             warnings=["Attention budget exceeded by 0.2"],
@@ -293,13 +289,13 @@ class TestLayoutPlan:
         assert p2.metadata["selection_score"] == 0.85
 
         # Immutability
-        immut = LayoutPlan(workspace_id="t", stage=LayoutArchetype.FOCUS_METRIC)
+        immut = LayoutPlan(workspace_id="t", stage=Stage.FOCUS_METRIC)
         with pytest.raises((ValidationError, AttributeError)):
-            immut.stage = LayoutArchetype.SCANNER_TABLE
+            immut.stage = Stage.SCANNER_TABLE
 
 
 class TestLayoutArchetype:
-    """Tests for LayoutArchetype enum."""
+    """Tests for Stage enum."""
 
     def test_archetype_combined(self):
         """Combined: all archetypes defined + individual values."""
@@ -310,12 +306,12 @@ class TestLayoutArchetype:
             "monitor_wall",
             "command_center",
         }
-        assert {a.value for a in LayoutArchetype} == expected
-        assert LayoutArchetype.FOCUS_METRIC.value == "focus_metric"
-        assert LayoutArchetype.SCANNER_TABLE.value == "scanner_table"
-        assert LayoutArchetype.DUAL_PANE_FLOW.value == "dual_pane_flow"
-        assert LayoutArchetype.MONITOR_WALL.value == "monitor_wall"
-        assert LayoutArchetype.COMMAND_CENTER.value == "command_center"
+        assert {a.value for a in Stage} == expected
+        assert Stage.FOCUS_METRIC.value == "focus_metric"
+        assert Stage.SCANNER_TABLE.value == "scanner_table"
+        assert Stage.DUAL_PANE_FLOW.value == "dual_pane_flow"
+        assert Stage.MONITOR_WALL.value == "monitor_wall"
+        assert Stage.COMMAND_CENTER.value == "command_center"
 
 
 class TestAttentionSignalKind:

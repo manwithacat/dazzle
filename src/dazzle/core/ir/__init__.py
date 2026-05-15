@@ -351,7 +351,6 @@ from .jobs import (
 # Layout Engine
 from .layout import (
     AttentionSignalKind,
-    LayoutArchetype,  # Backward compat alias for Stage
     LayoutPlan,
     LayoutSignal,
     LayoutSurface,
@@ -1006,7 +1005,6 @@ __all__ = [
     "WorkspaceLayout",
     "PersonaLayout",
     "Stage",
-    "LayoutArchetype",  # Backward compat alias for Stage
     "LayoutSurface",
     "LayoutPlan",
     "UXLayouts",

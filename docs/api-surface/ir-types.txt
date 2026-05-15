@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 340 BaseModels, 141 Enums, 21 other (functions / typealiases / constants)
+# Counts: 340 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -3694,14 +3694,6 @@ enum: LLMTriggerEvent
     - CREATED = 'created'
     - DELETED = 'deleted'
     - UPDATED = 'updated'
-
-enum: Stage
-  members:
-    - COMMAND_CENTER = 'command_center'
-    - DUAL_PANE_FLOW = 'dual_pane_flow'
-    - FOCUS_METRIC = 'focus_metric'
-    - MONITOR_WALL = 'monitor_wall'
-    - SCANNER_TABLE = 'scanner_table'
 
 enum: LegalBasis
   members:

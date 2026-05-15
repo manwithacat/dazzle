@@ -209,10 +209,6 @@ class Stage(StrEnum):
     COMMAND_CENTER = "command_center"  # Dense, expert-focused dashboard
 
 
-# Backward compatibility alias
-LayoutArchetype = Stage
-
-
 class LayoutSurface(BaseModel):
     """
     Named region within a layout where signals are rendered.

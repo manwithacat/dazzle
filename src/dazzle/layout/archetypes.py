@@ -10,7 +10,7 @@ from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass
 
-from dazzle.core.ir import LayoutArchetype
+from dazzle.core.ir import Stage
 
 
 @dataclass(frozen=True)
@@ -38,7 +38,7 @@ class ArchetypeDefinition:
         best_for: Description of ideal use cases
     """
 
-    archetype: LayoutArchetype
+    archetype: Stage
     name: str
     description: str
     surfaces: list[SurfaceDefinition]
@@ -52,7 +52,7 @@ class ArchetypeDefinition:
 # =============================================================================
 
 FOCUS_METRIC = ArchetypeDefinition(
-    archetype=LayoutArchetype.FOCUS_METRIC,
+    archetype=Stage.FOCUS_METRIC,
     name="Focus Metric",
     description="Single dominant KPI with supporting context",
     surfaces=[
@@ -75,7 +75,7 @@ FOCUS_METRIC = ArchetypeDefinition(
 )
 
 SCANNER_TABLE = ArchetypeDefinition(
-    archetype=LayoutArchetype.SCANNER_TABLE,
+    archetype=Stage.SCANNER_TABLE,
     name="Scanner Table",
     description="Table-centric layout with filters and actions",
     surfaces=[
@@ -104,7 +104,7 @@ SCANNER_TABLE = ArchetypeDefinition(
 )
 
 DUAL_PANE_FLOW = ArchetypeDefinition(
-    archetype=LayoutArchetype.DUAL_PANE_FLOW,
+    archetype=Stage.DUAL_PANE_FLOW,
     name="Dual Pane Flow",
     description="Master-detail pattern with list and detail view",
     surfaces=[
@@ -127,7 +127,7 @@ DUAL_PANE_FLOW = ArchetypeDefinition(
 )
 
 MONITOR_WALL = ArchetypeDefinition(
-    archetype=LayoutArchetype.MONITOR_WALL,
+    archetype=Stage.MONITOR_WALL,
     name="Monitor Wall",
     description="Multiple moderate-importance signals in grid layout",
     surfaces=[
@@ -156,7 +156,7 @@ MONITOR_WALL = ArchetypeDefinition(
 )
 
 COMMAND_CENTER = ArchetypeDefinition(
-    archetype=LayoutArchetype.COMMAND_CENTER,
+    archetype=Stage.COMMAND_CENTER,
     name="Command Center",
     description="Dense, expert-focused dashboard with many signals",
     surfaces=[
@@ -191,16 +191,16 @@ COMMAND_CENTER = ArchetypeDefinition(
 )
 
 # Lookup table for all archetypes
-ARCHETYPE_DEFINITIONS: dict[LayoutArchetype, ArchetypeDefinition] = {
-    LayoutArchetype.FOCUS_METRIC: FOCUS_METRIC,
-    LayoutArchetype.SCANNER_TABLE: SCANNER_TABLE,
-    LayoutArchetype.DUAL_PANE_FLOW: DUAL_PANE_FLOW,
-    LayoutArchetype.MONITOR_WALL: MONITOR_WALL,
-    LayoutArchetype.COMMAND_CENTER: COMMAND_CENTER,
+ARCHETYPE_DEFINITIONS: dict[Stage, ArchetypeDefinition] = {
+    Stage.FOCUS_METRIC: FOCUS_METRIC,
+    Stage.SCANNER_TABLE: SCANNER_TABLE,
+    Stage.DUAL_PANE_FLOW: DUAL_PANE_FLOW,
+    Stage.MONITOR_WALL: MONITOR_WALL,
+    Stage.COMMAND_CENTER: COMMAND_CENTER,
 }
 
 
-def get_archetype_definition(archetype: LayoutArchetype) -> ArchetypeDefinition:
+def get_archetype_definition(archetype: Stage) -> ArchetypeDefinition:
     """Get archetype definition by enum value."""
     return ARCHETYPE_DEFINITIONS[archetype]
 

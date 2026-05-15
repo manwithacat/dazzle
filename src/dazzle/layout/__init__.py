@@ -29,11 +29,11 @@ from dazzle.layout.select_archetype import (
 )
 from dazzle.layout.types import (
     AttentionSignalKind,
-    LayoutArchetype,
     LayoutPlan,
     LayoutSignal,
     LayoutSurface,
     PersonaLayout,
+    Stage,
     WorkspaceLayout,
 )
 from dazzle.layout.variants import (
@@ -72,7 +72,7 @@ __all__ = [
     # IR types (re-exported for convenience)
     "LayoutSignal",
     "AttentionSignalKind",
-    "LayoutArchetype",
+    "Stage",
     "LayoutPlan",
     "LayoutSurface",
     "PersonaLayout",

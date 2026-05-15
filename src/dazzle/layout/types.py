@@ -7,18 +7,18 @@ src/dazzle/core/ir.py to maintain single source of truth.
 
 from dazzle.core.ir import (
     AttentionSignalKind,
-    LayoutArchetype,
     LayoutPlan,
     LayoutSignal,
     LayoutSurface,
     PersonaLayout,
+    Stage,
     WorkspaceLayout,
 )
 
 __all__ = [
     "LayoutSignal",
     "AttentionSignalKind",
-    "LayoutArchetype",
+    "Stage",
     "LayoutPlan",
     "LayoutSurface",
     "PersonaLayout",

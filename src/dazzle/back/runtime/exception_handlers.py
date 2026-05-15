@@ -558,7 +558,3 @@ def register_site_error_handlers(
             status_code=500,
             content={"detail": "Internal Server Error"},
         )
-
-
-# Backward-compatible alias
-register_site_404_handler = register_site_error_handlers

@@ -42,10 +42,6 @@ SHIM_PATTERNS = [
 # rather than a removable wrapper. Each entry should reference an issue or
 # ADR that pins the rename plan.
 ALLOWED_PATHS: set[str] = {
-    # LayoutArchetype = Stage rename — used pervasively in dazzle/ui/layout_engine.
-    # Removing the alias is a multi-file rename tracked separately.
-    "src/dazzle/core/ir/layout.py",
-    "src/dazzle/core/ir/__init__.py",
     # Substantial API wrappers around dazzle.agent — refactor tracked separately.
     "src/dazzle/testing/agent_e2e.py",
     # RBAC backward-compat warning text describing PERMIT_UNPROTECTED legacy state.

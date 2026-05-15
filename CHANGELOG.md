@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.2] - 2026-05-15
+
+### Removed
+
+- **#1089: 3 dead backward-compat aliases removed (ADR-0003).** Pattern P10 from the 2026-05-15 smells run.
+  - `dazzle.mcp.server.handlers.common.handler_error_json` / `async_handler_error_json` — zero importers; deleted outright.
+  - `dazzle.core.ir.LayoutArchetype` (alias for `Stage`) — alias deleted, the 9 call sites in `src/dazzle/layout/` updated to use `Stage` directly. Also removed from `dazzle.core.ir.__all__` and `dazzle.layout.types.__all__`.
+  - `dazzle.back.runtime.exception_handlers.register_site_404_handler` (alias for `register_site_error_handlers`) — alias deleted; sole caller in `app_factory.py:695` updated.
+- `tests/unit/test_no_shims.py` `ALLOWED_PATHS` entries for `core/ir/layout.py` and `core/ir/__init__.py` removed (the aliases they covered are gone, so the gate now enforces no-shim on those files too).
+- `docs/api-surface/ir-types.txt` baseline regenerated — enum count went 141 → 140 (the `LayoutArchetype` alias entry is no longer in `__all__`; `Stage` is unchanged).
+
+### Agent Guidance
+
+- Downstream code importing `LayoutArchetype`, `handler_error_json`, `async_handler_error_json`, or `register_site_404_handler` will fail at import time. Rename to `Stage`, `wrap_handler_errors`, `wrap_async_handler_errors`, and `register_site_error_handlers` respectively.
+
 ## [0.70.1] - 2026-05-15
 
 ### Changed

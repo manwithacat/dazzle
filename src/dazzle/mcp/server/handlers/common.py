@@ -95,11 +95,6 @@ def wrap_async_handler_errors(
     return wrapper
 
 
-# Backward-compatible aliases
-handler_error_json = wrap_handler_errors
-async_handler_error_json = wrap_async_handler_errors
-
-
 # ---------------------------------------------------------------------------
 # Timeout-protected execution
 # ---------------------------------------------------------------------------
