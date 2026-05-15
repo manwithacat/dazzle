@@ -27,10 +27,14 @@ DSL Syntax (v0.22.0):
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
+from ..errors import make_parse_error
+from ..ir.location import SourceLocation
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class StoryParserMixin:
@@ -64,25 +68,25 @@ class StoryParserMixin:
         return "".join(parts)
 
     def parse_story(self) -> ir.StorySpec:
-        """
-        Parse a story block.
+        """Parse a ``story <ID> "Title":`` block.
 
-        Grammar:
+        Refactored to dispatch-table style (follow-on to #1098). 8
+        token-keyed `_s_kw_*` parsers (status/actor/trigger/scope/given/
+        when/then/unless) + a `_skip_unknown_story_field` on_unknown +
+        a `_build_story` builder enforcing the required actor + trigger.
+
+        Grammar::
+
             story STORY_ID STRING COLON NEWLINE INDENT
-              actor COLON IDENTIFIER NEWLINE
-              trigger COLON IDENTIFIER NEWLINE
+              [actor COLON IDENTIFIER NEWLINE]
+              [trigger COLON IDENTIFIER NEWLINE]
               [scope COLON LBRACKET identifier_list RBRACKET NEWLINE]
               [given COLON NEWLINE INDENT condition_list DEDENT]
               [when COLON NEWLINE INDENT condition_list DEDENT]
               [then COLON NEWLINE INDENT condition_list DEDENT]
               [unless COLON NEWLINE INDENT unless_list DEDENT]
             DEDENT
-
-        Returns:
-            StorySpec with parsed values
         """
-        # story ST-001 "Title":
-        # Story ID can be compound like ST-001, so read tokens until we hit STRING
         loc = self._source_location()
         story_id = self._parse_compound_id()
         title = self.expect(TokenType.STRING).value
@@ -90,121 +94,21 @@ class StoryParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # Parse description if present (docstring-style)
-        description = None
+        # Optional docstring-style description before the field dispatch.
+        description: str | None = None
         if self.match(TokenType.STRING):
             description = self.advance().value
             self.skip_newlines()
 
-        # Initialize fields
-        actor = None
-        trigger = None
-        scope: list[str] = []
-        status: ir.StoryStatus | None = None
-        given: list[ir.StoryCondition] = []
-        when: list[ir.StoryCondition] = []
-        then: list[ir.StoryCondition] = []
-        unless: list[ir.StoryException] = []
-
-        # Parse story fields
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            if self.match(TokenType.STATUS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                status_str = self.expect_identifier_or_keyword().value
-                status = self._parse_story_status(status_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.ACTOR):
-                self.advance()
-                self.expect(TokenType.COLON)
-                actor = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            elif self.match(TokenType.TRIGGER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                trigger_str = self.expect_identifier_or_keyword().value
-                trigger = self._parse_story_trigger(trigger_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.SCOPE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                scope = self._parse_identifier_list()
-                self.skip_newlines()
-
-            elif self.match(TokenType.GIVEN):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                given = self._parse_condition_list()
-
-            elif self.match(TokenType.WHEN):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                when = self._parse_condition_list()
-
-            elif self.match(TokenType.THEN):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                then = self._parse_condition_list()
-
-            elif self.match(TokenType.UNLESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                unless = self._parse_unless_list()
-
-            else:
-                # Skip unknown field
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                    self._skip_to_next_field()
-
-        self.expect(TokenType.DEDENT)
-
-        if actor is None:
-            from ..errors import make_parse_error
-
-            raise make_parse_error(
-                "Story missing required 'actor' field",
-                self.file,
-                self.current_token().line,
-                self.current_token().column,
-            )
-
-        if trigger is None:
-            from ..errors import make_parse_error
-
-            raise make_parse_error(
-                "Story missing required 'trigger' field",
-                self.file,
-                self.current_token().line,
-                self.current_token().column,
-            )
-
-        return ir.StorySpec(
-            story_id=story_id,
-            title=title,
-            description=description,
-            actor=actor,
-            trigger=trigger,
-            scope=scope,
-            status=status or ir.StoryStatus.DRAFT,
-            given=given,
-            when=when,
-            then=then,
-            unless=unless,
-            source=loc,
+        state = _StoryState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_STORY_KEYWORDS,
+            state=state,
+            on_unknown=_skip_unknown_story_field,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_story(self, story_id, title, description, loc, state)
 
     def _parse_story_trigger(self, trigger_str: str) -> ir.StoryTrigger:
         """Parse trigger string to StoryTrigger enum."""
@@ -468,3 +372,161 @@ class StoryParserMixin:
         ):
             self.advance()
             self.skip_newlines()
+
+
+# ============================================================ #
+# parse_story — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 141-line monolith was replaced (v0.70.22) with the dispatch
+# pattern shipped in #1097. 8 token-keyed `_s_kw_*` + a custom
+# on-unknown that tolerates ``unknown: value`` patterns by skipping
+# to the next field + a `_build_story` builder enforcing the
+# required `actor` and `trigger` fields.
+
+
+@dataclass
+class _StoryState:
+    """Accumulator for :meth:`StoryParserMixin.parse_story`."""
+
+    actor: str | None = None
+    trigger: ir.StoryTrigger | None = None
+    scope: list[str] = field(default_factory=list)
+    status: ir.StoryStatus | None = None
+    given: list[ir.StoryCondition] = field(default_factory=list)
+    when: list[ir.StoryCondition] = field(default_factory=list)
+    then: list[ir.StoryCondition] = field(default_factory=list)
+    unless: list[ir.StoryException] = field(default_factory=list)
+
+
+# ---------- Keyword parsers ---------- #
+
+
+def _s_kw_status(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    status_str = parser.expect_identifier_or_keyword().value
+    state.status = parser._parse_story_status(status_str)
+    parser.skip_newlines()
+
+
+def _s_kw_actor(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.actor = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _s_kw_trigger(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    trigger_str = parser.expect_identifier_or_keyword().value
+    state.trigger = parser._parse_story_trigger(trigger_str)
+    parser.skip_newlines()
+
+
+def _s_kw_scope(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.scope = parser._parse_identifier_list()
+    parser.skip_newlines()
+
+
+def _s_kw_given(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.given = parser._parse_condition_list()
+
+
+def _s_kw_when(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.when = parser._parse_condition_list()
+
+
+def _s_kw_then(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.then = parser._parse_condition_list()
+
+
+def _s_kw_unless(parser: Any, state: _StoryState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.unless = parser._parse_unless_list()
+
+
+# ---------- Dispatch table + on_unknown + builder ---------- #
+
+
+_STORY_KEYWORDS: dict[TokenType, KeywordParser[_StoryState]] = {
+    TokenType.STATUS: _s_kw_status,
+    TokenType.ACTOR: _s_kw_actor,
+    TokenType.TRIGGER: _s_kw_trigger,
+    TokenType.SCOPE: _s_kw_scope,
+    TokenType.GIVEN: _s_kw_given,
+    TokenType.WHEN: _s_kw_when,
+    TokenType.THEN: _s_kw_then,
+    TokenType.UNLESS: _s_kw_unless,
+}
+
+
+def _skip_unknown_story_field(parser: Any) -> None:
+    """Tolerate ``unknown_field: value`` lines (mirrors legacy else branch).
+
+    Advances past the unknown keyword, and if it's followed by a colon,
+    delegates to the mixin's ``_skip_to_next_field`` helper to skip the
+    value as well. Without this, the dispatch helper's default
+    ``Unknown keyword`` raise would break forward-compat parsing.
+    """
+    parser.advance()
+    if parser.match(TokenType.COLON):
+        parser.advance()
+        parser._skip_to_next_field()
+
+
+def _build_story(
+    parser: Any,
+    story_id: str,
+    title: str,
+    description: str | None,
+    loc: SourceLocation,
+    state: _StoryState,
+) -> ir.StorySpec:
+    """Enforce required actor + trigger, then assemble the frozen IR."""
+    if state.actor is None:
+        tok = parser.current_token()
+        raise make_parse_error(
+            "Story missing required 'actor' field",
+            parser.file,
+            tok.line,
+            tok.column,
+        )
+
+    if state.trigger is None:
+        tok = parser.current_token()
+        raise make_parse_error(
+            "Story missing required 'trigger' field",
+            parser.file,
+            tok.line,
+            tok.column,
+        )
+
+    return ir.StorySpec(
+        story_id=story_id,
+        title=title,
+        description=description,
+        actor=state.actor,
+        trigger=state.trigger,
+        scope=state.scope,
+        status=state.status or ir.StoryStatus.DRAFT,
+        given=state.given,
+        when=state.when,
+        then=state.then,
+        unless=state.unless,
+        source=loc,
+    )

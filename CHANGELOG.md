@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.22] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_story` migrated to keyword-dispatch.** Ninth consumer of the #1097 helper. The 141-line monolith in `src/dazzle/core/dsl_parser_impl/story.py` becomes a 41-line dispatch shell + 8 token-keyed `_s_kw_*` functions (status/actor/trigger/scope/given/when/then/unless) + a 40-line `_build_story` builder enforcing required `actor` + `trigger` fields. Unknown-keyword path tolerates ``unknown: value`` lines via a custom on_unknown that advances past the keyword + colon + value (legacy forward-compat behaviour preserved verbatim). Byte-identical IR verified against 81 `StorySpec`s across 6 files in `examples/` + `fixtures/`.
+
+### Agent Guidance
+
+- When a parser has a "skip unknown lines for forward-compat" else branch (vs the strict "raise on unknown" default), wire a custom `on_unknown=_skip_unknown_X_field` parameter into `parse_block_with_dispatch`. Pattern is in `story.py:_skip_unknown_story_field`.
+
 ## [0.70.21] - 2026-05-15
 
 ### Changed
