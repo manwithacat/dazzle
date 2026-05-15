@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.3] - 2026-05-15
+
+### Changed
+
+- **#1085: ADR-0005 module-level singleton encapsulation.** Pattern P13 from the 2026-05-15 smells run. Four mutable module-level singletons that used the `global` keyword (each carrying a `# noqa: PLW0603` suppression) replaced with encapsulated equivalents:
+  - `_AUTH_STORE` / `_COOKIE_NAME` in `back/runtime/auth/current.py` → `_AuthStoreRef` class with class-level `store` and `cookie_name` attrs. Public `register_auth_store(store, cookie_name)` API unchanged.
+  - `_event_framework` in `back/runtime/auth/events.py` → `_EventFrameworkRef.framework`. Public `configure_auth_events(framework)` API unchanged. The cross-package caller in `core/process/eventbus_adapter.py:390` updated.
+  - `_TOOL_DISPATCH.update(...)` at module scope in `mcp/runtime_tools/handlers.py` → lazy `_build_dispatch_table()` factory called on first dispatch lookup. No state mutation at import time.
+  - `_resolver_registry` in `compliance/analytics/tenant_resolver.py` → `_ResolverRegistry` class with `set`/`get`/`clear` methods. Public `set_tenant_analytics_resolver` / `get_tenant_analytics_resolver` / `clear_tenant_analytics_resolvers` API unchanged.
+
+  Done criteria from #1085:
+  ```
+  grep -rn 'global _AUTH_STORE\|global _event_framework\|_TOOL_DISPATCH.update\|_resolver_registry\[' src/dazzle --include='*.py' | wc -l
+  ```
+  outputs `0`.
+
+  Test patches in `tests/unit/test_auth_events.py` migrated from `_event_framework` to `_EventFrameworkRef.framework`. All other public APIs unchanged; tests not affected.
+
+  Scope note: this closes the literal `global`-keyword / module-scope-mutation gate but stops short of the full ADR-0005 "move into RuntimeServices / ServerState" refactor (which would change `register_auth_store(store)` into `register_auth_store(app, store)` and cascade through `tests/unit/test_auth_current_helpers.py` and `test_storage_cycle3.py`). The encapsulation here gives the same testability benefit without the API break; deeper migration to `request.app.state.services` is left for a focused follow-up alongside #1086.
+
+### Agent Guidance
+
+- New module-level mutable state should use the encapsulated-class pattern (`class _Ref: x: Any = None`) rather than `global x` declarations, OR — preferably for runtime services — go on `RuntimeServices` and be accessed via `request.app.state.services`. The `global` keyword inside `src/dazzle/` is now down to a handful of legacy sites with explicit `# noqa: PLW0603` justifications.
+
 ## [0.70.2] - 2026-05-15
 
 ### Removed

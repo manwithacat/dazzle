@@ -19,14 +19,22 @@ from .components import (
     get_valid_layout_kinds,
 )
 
-# Dispatch table mapping tool names to handler functions.
-# Populated after handler definitions via _build_dispatch_table().
-_TOOL_DISPATCH: dict[str, Callable[[dict[str, Any]], str]] = {}
+# Dispatch table lazily built on first use (see _build_dispatch_table at the
+# bottom of this module). The previous module-scope `.update(...)` call was an
+# ADR-0005 violation — import order affected state.
+_dispatch_cache: dict[str, Callable[[dict[str, Any]], str]] | None = None
+
+
+def _get_dispatch() -> dict[str, Callable[[dict[str, Any]], str]]:
+    global _dispatch_cache  # noqa: PLW0603  # one-time lazy init, replaces module-scope mutation
+    if _dispatch_cache is None:
+        _dispatch_cache = _build_dispatch_table()
+    return _dispatch_cache
 
 
 def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
     """Handle DNR tool calls."""
-    handler = _TOOL_DISPATCH.get(name)
+    handler = _get_dispatch().get(name)
     if handler is None:
         return json.dumps({"error": f"Unknown DNR tool: {name}"})
     try:
@@ -814,8 +822,9 @@ def _get_outbox_status(_args: dict[str, Any] | None = None) -> str:
 # Dispatch Table
 # =============================================================================
 
-_TOOL_DISPATCH.update(
-    {
+
+def _build_dispatch_table() -> dict[str, Callable[[dict[str, Any]], str]]:
+    return {
         # Backend tools
         "list_dnr_entities": _list_dnr_entities,
         "get_dnr_entity": _get_dnr_entity,
@@ -839,4 +848,3 @@ _TOOL_DISPATCH.update(
         "list_messages": _list_messages,
         "get_outbox_status": _get_outbox_status,
     }
-)

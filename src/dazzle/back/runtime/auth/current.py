@@ -36,10 +36,15 @@ from typing import Any
 
 from .models import AuthContext
 
-# Module-level singleton — set by server startup. None when auth is
-# disabled or before the server has wired up its AuthStore.
-_AUTH_STORE: Any = None
-_COOKIE_NAME = "dazzle_session"
+
+# AuthStore reference set by server startup. Encapsulated on a class so
+# the storage is named and immune to the ``global`` keyword footgun
+# (ADR-0005). ``store`` is None when auth is disabled or before the
+# server has wired up its AuthStore. ``_publish``-style call sites that
+# can't reach ``request.app.state.services`` go through this slot.
+class _AuthStoreRef:
+    store: Any = None
+    cookie_name: str = "dazzle_session"
 
 
 def register_auth_store(store: Any, cookie_name: str = "dazzle_session") -> None:
@@ -50,9 +55,8 @@ def register_auth_store(store: Any, cookie_name: str = "dazzle_session") -> None
     re-registering replaces the prior reference (useful in tests where
     multiple servers spin up sequentially).
     """
-    global _AUTH_STORE, _COOKIE_NAME
-    _AUTH_STORE = store
-    _COOKIE_NAME = cookie_name
+    _AuthStoreRef.store = store
+    _AuthStoreRef.cookie_name = cookie_name
 
 
 def _resolve_auth(request: Any) -> AuthContext:
@@ -60,17 +64,18 @@ def _resolve_auth(request: Any) -> AuthContext:
     AuthStore. Returns an empty `AuthContext` (is_authenticated=False)
     in every failure mode — including auth being disabled — so callers
     can branch on `auth_context.is_authenticated` without surprises."""
-    if _AUTH_STORE is None:
+    store = _AuthStoreRef.store
+    if store is None:
         return AuthContext()
     try:
         cookies = request.cookies
     except AttributeError:
         return AuthContext()
-    session_id = cookies.get(_COOKIE_NAME) if cookies else None
+    session_id = cookies.get(_AuthStoreRef.cookie_name) if cookies else None
     if not session_id:
         return AuthContext()
     try:
-        result: AuthContext = _AUTH_STORE.validate_session(session_id)
+        result: AuthContext = store.validate_session(session_id)
         return result
     except Exception:
         # AuthStore can raise on malformed session tokens or DB errors.

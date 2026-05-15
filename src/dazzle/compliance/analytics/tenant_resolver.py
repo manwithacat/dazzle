@@ -147,8 +147,31 @@ def make_app_wide_resolver(
 # Process-wide resolver registry
 # ---------------------------------------------------------------------------
 
-_resolver_registry: dict[str, TenantAnalyticsResolver] = {}
 _DEFAULT_KEY = "__default__"
+
+
+class _ResolverRegistry:
+    """Encapsulated process-wide resolver registry.
+
+    Wraps the per-app-key dict so the storage isn't a free-standing
+    module-level mutable. The class instance below is the singleton;
+    callers go through the named methods rather than mutating a dict.
+    """
+
+    def __init__(self) -> None:
+        self._items: dict[str, TenantAnalyticsResolver] = {}
+
+    def set(self, app_key: str, resolver: TenantAnalyticsResolver) -> None:
+        self._items[app_key] = resolver
+
+    def get(self, app_key: str) -> TenantAnalyticsResolver | None:
+        return self._items.get(app_key)
+
+    def clear(self) -> None:
+        self._items.clear()
+
+
+_registry = _ResolverRegistry()
 
 
 def set_tenant_analytics_resolver(
@@ -165,7 +188,7 @@ def set_tenant_analytics_resolver(
     Call this during application startup — typically inside a
     ``on_startup`` hook or the app factory's post-build phase.
     """
-    _resolver_registry[app_key] = resolver
+    _registry.set(app_key, resolver)
     logger.info(
         "Registered tenant analytics resolver under key %r (name=%s).",
         app_key,
@@ -177,12 +200,12 @@ def get_tenant_analytics_resolver(
     app_key: str = _DEFAULT_KEY,
 ) -> TenantAnalyticsResolver | None:
     """Return the registered resolver for ``app_key``, or None."""
-    return _resolver_registry.get(app_key)
+    return _registry.get(app_key)
 
 
 def clear_tenant_analytics_resolvers() -> None:
     """Wipe the registry. Test-only helper — production code never calls this."""
-    _resolver_registry.clear()
+    _registry.clear()
 
 
 # ---------------------------------------------------------------------------

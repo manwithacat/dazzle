@@ -24,10 +24,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Module-level event framework reference (set once at startup)
+# Event framework reference (set once at startup).
+#
+# Encapsulated on a class so the storage is named and immune to the
+# ``global`` keyword footgun (ADR-0005). The framework is also kept on
+# ``app.state.services.event_framework`` for request-driven code; this
+# slot exists because ``_publish()`` runs in handler tasks that don't
+# carry a request reference.
 # ---------------------------------------------------------------------------
 
-_event_framework: Any = None
+
+class _EventFrameworkRef:
+    framework: Any = None
 
 
 def configure_auth_events(framework: Any) -> None:
@@ -36,8 +44,7 @@ def configure_auth_events(framework: Any) -> None:
     Called once during ``EventsSubsystem.startup()`` so that ``_publish()``
     can reach the bus without importing a global singleton.
     """
-    global _event_framework  # noqa: PLW0603  # clean setter called once at startup
-    _event_framework = framework
+    _EventFrameworkRef.framework = framework
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +136,7 @@ async def _publish(envelope: EventEnvelope) -> None:
     responses are never blocked by event infrastructure issues.
     """
     try:
-        framework = _event_framework
+        framework = _EventFrameworkRef.framework
         bus = framework.get_bus() if framework else None
         if bus:
             await bus.publish(envelope.topic, envelope)

@@ -387,7 +387,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         except ImportError:
             return None
 
-        framework = _auth_mod._event_framework  # noqa: SLF001
+        framework = _auth_mod._EventFrameworkRef.framework  # noqa: SLF001
         if framework is None or framework.get_bus() is None:
             return None
 
