@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.13] - 2026-05-15
+
+### Added
+
+- **#1097 (1088a): keyword-dispatch helper for DSL block parsers.** New module `dazzle.core.dsl_parser_impl.dispatch` exposing `parse_block_with_dispatch(parser, *, first_class_keywords, state, ident_keywords=..., on_unknown=...)`. Replaces the long `if/elif self.match(TokenType.X)` chain that produced #1088's 859-line monolith. Closes the design-phase prerequisite for #1098 (pilot migration of `parse_workspace_region`) and the broader parser-style cleanup.
+
+  Pattern (documented in `docs/reference/grammar.md` under "Writing a Keyword-Dispatch Parser"):
+
+  ```python
+  @dataclass
+  class _PersonaState:
+      description: str | None = None
+      goals: list[str] = field(default_factory=list)
+      # ... one field per legal keyword
+
+  _PERSONA_KEYWORDS: dict[TokenType, KeywordParser] = {
+      TokenType.DESCRIPTION: _kw_description,
+      # ...
+  }
+
+  def parse_persona(self) -> PersonaSpec:
+      # ...header parsing...
+      state = _PersonaState()
+      parse_block_with_dispatch(
+          self,
+          first_class_keywords=_PERSONA_KEYWORDS,
+          ident_keywords=_PERSONA_IDENT_KEYWORDS,
+          state=state,
+      )
+      self.expect(TokenType.DEDENT)
+      return _build_persona(persona_id, label, state)
+  ```
+
+  Test coverage in `tests/unit/test_parser_dispatch.py` (8 tests): first-class keyword dispatch, identifier-text keyword dispatch, multi-keyword blocks, defaults from absent keywords, unknown-keyword raises, custom `on_unknown` callback, exception propagation from keyword parsers, and nested dispatch (sub-blocks).
+
+  No production parser migrates in this release — #1098 (pilot on `parse_workspace_region`) ships the first real use, then per-parser sub-issues follow for the other 30+ oversized parsers.
+
+  Design data: see #1099 spike comparison. The dispatch-table style wins on agent-utility for Dazzle's specific DSL (best error-message customisability, no perf cost, no new dependencies). Parser combinators (parsy) and parser generators (Lark) were both evaluated and rejected for the immediate refactor — Lark stays open as a future investigation (#1100).
+
+### Agent Guidance
+
+- New parsers for INDENT-bounded DSL blocks should use `parse_block_with_dispatch` rather than hand-rolling an elif chain. The grammar.md section "Writing a Keyword-Dispatch Parser" documents the convention.
+- Each keyword's parser is one small free function — independently testable. The accumulator dataclass holds all per-block state and makes the legal keyword set discoverable at a glance.
+
 ## [0.70.12] - 2026-05-15
 
 ### Added

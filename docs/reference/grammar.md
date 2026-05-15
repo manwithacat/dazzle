@@ -1555,3 +1555,82 @@ The grammar above is derived from these parser mixin modules:
 | `ledger.py` | `LedgerParserMixin` | Financial |
 | `governance.py` | `GovernanceParserMixin` | Governance |
 | `llm.py` | `LLMParserMixin` | LLM |
+
+## Writing a Keyword-Dispatch Parser (post-#1088a)
+
+The `dsl_parser_impl/` family has historically used a `while not self.match(TokenType.DEDENT): if … elif self.match(TokenType.X): … elif self.match(TokenType.Y): …` chain to parse INDENT-bounded blocks. For blocks with more than ~5 keywords this produced hard-to-read monoliths — the worst case (`parse_workspace_region`) reached 859 lines / 52-branch elif chain before #1088a landed.
+
+New parsers — and refactors of existing ones — should use the **keyword-dispatch helper** in `src/dazzle/core/dsl_parser_impl/dispatch.py`:
+
+```python
+from dataclasses import dataclass, field
+from dazzle.core.dsl_parser_impl.dispatch import (
+    KeywordParser,
+    parse_block_with_dispatch,
+)
+from dazzle.core.lexer import TokenType
+
+
+@dataclass
+class _PersonaState:
+    """Accumulator — one field per legal keyword in the block."""
+    description: str | None = None
+    goals: list[str] = field(default_factory=list)
+    proficiency: str = "intermediate"
+    # ...
+
+
+def _kw_description(parser, state: _PersonaState) -> None:
+    parser.advance()                                  # consume `description`
+    parser.expect(TokenType.COLON)
+    state.description = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_goals(parser, state: _PersonaState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.goals = parser._parse_string_list()
+    parser.skip_newlines()
+
+
+_PERSONA_KEYWORDS: dict[TokenType, KeywordParser] = {
+    TokenType.DESCRIPTION: _kw_description,
+    TokenType.GOALS:       _kw_goals,
+}
+_PERSONA_IDENT_KEYWORDS: dict[str, KeywordParser] = {
+    "default_workspace":   _kw_default_workspace,
+    "backed_by":           _kw_backed_by,
+    # ...
+}
+
+
+class ScenarioParserMixin:
+    def parse_persona(self) -> ir.PersonaSpec:
+        persona_id, label, _ = self._parse_construct_header(
+            TokenType.PERSONA, allow_keyword_name=True,
+        )
+        state = _PersonaState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_PERSONA_KEYWORDS,
+            ident_keywords=_PERSONA_IDENT_KEYWORDS,
+            state=state,
+        )
+        self.expect(TokenType.DEDENT)
+        return _build_persona(persona_id, label or persona_id, state)
+```
+
+### Rules of thumb
+
+1. **One accumulator dataclass per block.** Field names match the keyword names; defaults match what an absent keyword should mean.
+2. **One keyword-parser function per keyword.** Module-private (`_kw_*` prefix). Takes `(parser, state)`, mutates `state`, advances the parser past its value tokens.
+3. **Two dispatch tables.** `first_class_keywords` for keywords with their own `TokenType` (e.g. `TokenType.DESCRIPTION`). `ident_keywords` for keywords matched as plain `IDENTIFIER` tokens (e.g. `"backed_by"`).
+4. **Caller owns the header and the closing DEDENT.** The helper handles only the body — that keeps `_parse_construct_header` and the final IR-build under direct caller control.
+5. **`on_unknown=...` for custom recovery.** The default raises `"Unknown keyword in block: 'foo'"`. Override when the block has a renamed-keyword diagnostic, an `extra_attrs` catch-all, or other bespoke recovery.
+
+### When *not* to use the dispatch helper
+
+- Blocks with ≤3 keywords. The dispatch indirection costs more than the elif chain saves.
+- Parsers that need positional argument order (rare in Dazzle DSL but possible — most state machines need this).
+- Parsers where the keyword-parser logic needs information from earlier keywords mid-block (rare — usually the accumulator-then-build pattern handles this fine, but if you need conditional sub-grammars based on `display:` for instance, that's still handled by the accumulator + a post-loop dispatch on `state.display`).
