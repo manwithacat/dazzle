@@ -19,10 +19,12 @@ DSL Syntax (v0.44.0):
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 from .. import ir
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class ParamParserMixin:
@@ -62,12 +64,20 @@ class ParamParserMixin:
         return int(self.expect(TokenType.NUMBER).value)
 
     def parse_param(self) -> ir.ParamSpec:
-        """
-        Parse a param declaration.
+        """Parse a ``param <dotted.key> ["description"]:`` block.
 
-        The 'param' keyword has already been consumed by the dispatcher.
+        Refactored to dispatch-table style (follow-on to #1098). 1
+        token-keyed (``scope``) + 5 IDENT-text-matched (``type``,
+        ``default``, ``category``, ``sensitive``, ``constraints``) +
+        a tolerant ``_skip_unknown_param_field`` on_unknown that
+        consumes the unknown key + COLON + rest of the line + a
+        ``_build_param`` builder.
 
-        Grammar:
+        The ``param`` keyword is consumed by the top-level dispatcher
+        before this method is called.
+
+        Grammar::
+
             param DOTTED_KEY [STRING] COLON NEWLINE INDENT
               type COLON TYPE_EXPR NEWLINE
               default COLON VALUE NEWLINE
@@ -78,18 +88,13 @@ class ParamParserMixin:
                 KEY COLON VALUE ...
               DEDENT]
             DEDENT
-
-        Returns:
-            ParamSpec with parsed values.
         """
-        # Parse dotted key name: heatmap.rag.thresholds
         key_parts = [self.expect_identifier_or_keyword().value]
         while self.match(TokenType.DOT):
             self.advance()
             key_parts.append(self.expect_identifier_or_keyword().value)
         key = ".".join(key_parts)
 
-        # Optional title string
         description: str | None = None
         if self.match(TokenType.STRING):
             description = self.advance().value
@@ -98,86 +103,16 @@ class ParamParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # Parse body fields
-        param_type: str = "str"
-        default: Any = None
-        scope: Literal["system", "tenant", "user"] = "system"
-        category: str | None = None
-        sensitive: bool = False
-        constraints: ir.ParamConstraints | None = None
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            token = self.current_token()
-
-            # Handle type: <type_expr>
-            if token.value == "type":
-                self.advance()
-                self.expect(TokenType.COLON)
-                param_type = self._parse_param_type_expr()
-                self.skip_newlines()
-
-            # default: <value>
-            elif token.value == "default":
-                self.advance()
-                self.expect(TokenType.COLON)
-                default = self._parse_param_default_value()
-                self.skip_newlines()
-
-            # scope: system|tenant|user
-            elif token.type == TokenType.SCOPE:
-                self.advance()
-                self.expect(TokenType.COLON)
-                scope = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # category: "string"
-            elif token.value == "category":
-                self.advance()
-                self.expect(TokenType.COLON)
-                category = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # sensitive: true|false
-            elif token.value == "sensitive":
-                self.advance()
-                self.expect(TokenType.COLON)
-                sensitive = self.current_token().type == TokenType.TRUE
-                self.advance()
-                self.skip_newlines()
-
-            # constraints: (nested block)
-            elif token.value == "constraints":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                constraints = self._parse_param_constraints()
-
-            else:
-                # Skip unknown fields
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                    # Consume rest of line
-                    while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
-                        self.advance()
-                self.skip_newlines()
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.ParamSpec(
-            key=key,
-            param_type=param_type,
-            default=default,
-            scope=scope,
-            description=description,
-            category=category,
-            sensitive=sensitive,
-            constraints=constraints,
+        state = _ParamState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_PARAM_KEYWORDS,
+            ident_keywords=_PARAM_IDENT_KEYWORDS,
+            state=state,
+            on_unknown=_skip_unknown_param_field,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_param(key, description, state)
 
     def _parse_param_type_expr(self) -> str:
         """Parse type expression as string, e.g. 'list[float]', 'int', 'str'."""
@@ -357,3 +292,125 @@ class ParamParserMixin:
             num_str = num_str + "." + frac
         val = float(num_str)
         return -val if negative else val
+
+
+# ============================================================ #
+# parse_param — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 116-line monolith was replaced (v0.70.28) with the dispatch
+# pattern shipped in #1097. 1 token-keyed (``scope``) + 5
+# IDENT-text-matched (``type``, ``default``, ``category``,
+# ``sensitive``, ``constraints``) + a tolerant on_unknown that
+# consumes the unknown key + colon + rest of line + a
+# `_build_param` builder.
+
+
+@dataclass
+class _ParamState:
+    """Accumulator for :meth:`ParamParserMixin.parse_param`."""
+
+    param_type: str = "str"
+    default: Any = None
+    scope: Literal["system", "tenant", "user"] = "system"
+    category: str | None = None
+    sensitive: bool = False
+    constraints: ir.ParamConstraints | None = None
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _pa_kw_scope(parser: Any, state: _ParamState) -> None:
+    """``scope: system|tenant|user`` — lexer-keyword form."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.scope = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _pa_kw_type(parser: Any, state: _ParamState) -> None:
+    """``type: <type_expr>`` — type expression captured as raw string."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.param_type = parser._parse_param_type_expr()
+    parser.skip_newlines()
+
+
+def _pa_kw_default(parser: Any, state: _ParamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.default = parser._parse_param_default_value()
+    parser.skip_newlines()
+
+
+def _pa_kw_category(parser: Any, state: _ParamState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.category = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _pa_kw_sensitive(parser: Any, state: _ParamState) -> None:
+    """``sensitive: true|false`` — tolerant of any TRUE-typed token."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.sensitive = parser.current_token().type == TokenType.TRUE
+    parser.advance()
+    parser.skip_newlines()
+
+
+def _pa_kw_constraints(parser: Any, state: _ParamState) -> None:
+    """``constraints:`` — nested block delegating to the mixin helper."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.constraints = parser._parse_param_constraints()
+
+
+# ---------- Dispatch tables + on_unknown + builder ---------- #
+
+
+_PARAM_KEYWORDS: dict[TokenType, KeywordParser[_ParamState]] = {
+    TokenType.SCOPE: _pa_kw_scope,
+}
+
+
+_PARAM_IDENT_KEYWORDS: dict[str, KeywordParser[_ParamState]] = {
+    "type": _pa_kw_type,
+    "default": _pa_kw_default,
+    "category": _pa_kw_category,
+    "sensitive": _pa_kw_sensitive,
+    "constraints": _pa_kw_constraints,
+}
+
+
+def _skip_unknown_param_field(parser: Any) -> None:
+    """Tolerate ``unknown: value`` lines — advance past key + COLON + value.
+
+    Mirrors the legacy else branch: advance the unknown identifier, and if
+    followed by a colon, consume the rest of the line until newline / dedent /
+    EOF. Skip_newlines at the end re-syncs the loop.
+    """
+    parser.advance()
+    if parser.match(TokenType.COLON):
+        parser.advance()
+        while not parser.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+            parser.advance()
+    parser.skip_newlines()
+
+
+def _build_param(key: str, description: str | None, state: _ParamState) -> ir.ParamSpec:
+    return ir.ParamSpec(
+        key=key,
+        param_type=state.param_type,
+        default=state.default,
+        scope=state.scope,
+        description=description,
+        category=state.category,
+        sensitive=state.sensitive,
+        constraints=state.constraints,
+    )

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.28] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_param` migrated to keyword-dispatch.** Fifteenth consumer of the #1097 helper. The 116-line monolith in `src/dazzle/core/dsl_parser_impl/params.py` becomes a 49-line dispatch shell (mostly grammar docstring) + 1 token-keyed `_pa_kw_scope` + 5 IDENT-text-matched (`type`, `default`, `category`, `sensitive`, `constraints`) + a tolerant `_skip_unknown_param_field` on_unknown that consumes the unknown key + colon + rest of line + a 10-line `_build_param` builder. The dotted-key parse (e.g. ``heatmap.rag.thresholds``) and optional description STRING after the header are preserved verbatim in the dispatch shell. Byte-identical IR verified against a synthetic 3-`ParamSpec` fixture exercising scope/type/default/category/sensitive (no real `.dsl` files in the corpus use ``param`` blocks today).
+
 ## [0.70.27] - 2026-05-16
 
 ### Changed
