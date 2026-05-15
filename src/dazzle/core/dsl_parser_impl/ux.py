@@ -32,148 +32,43 @@ class UXParserMixin:
         parse_condition_expr: Any
 
     def parse_ux_block(self) -> ir.UXSpec:
-        """
-        Parse UX block within a surface.
+        """Parse a ``ux:`` block within a surface.
 
-        Syntax:
+        Refactored to dispatch-table style (follow-on to #1098). 8
+        token-keyed (purpose/show/sort/filter/search/empty/search_first/
+        attention/as) + 1 IDENT-text-matched (bulk_actions) + a
+        15-line `_build_ux` builder.
+
+        Syntax::
+
             ux:
               purpose: "..."
               show: field1, field2
               sort: field1 desc, field2 asc
               filter: field1, field2
               search: field1, field2
-              empty: "..."
+              empty: "..."   # OR empty: block form (#807)
               attention critical:
                 when: condition
                 message: "..."
                 action: surface_name
-              for persona_name:
+              as persona_name:
                 scope: ...
-                ...
         """
         self.expect(TokenType.UX)
         self.expect(TokenType.COLON)
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        purpose = None
-        show: list[str] = []
-        sort: list[ir.SortSpec] = []
-        filter_fields: list[str] = []
-        search_fields: list[str] = []
-        empty_message: str | ir.EmptyMessages | None = None
-        search_first = False
-        attention_signals: list[ir.AttentionSignal] = []
-        persona_variants: list[ir.PersonaVariant] = []
-        bulk_actions: list[ir.BulkActionSpec] = []
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # purpose: "..."
-            if self.match(TokenType.PURPOSE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                purpose = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # show: field1, field2
-            elif self.match(TokenType.SHOW):
-                self.advance()
-                self.expect(TokenType.COLON)
-                show = self.parse_field_list()
-                self.skip_newlines()
-
-            # sort: field1 desc, field2 asc
-            elif self.match(TokenType.SORT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                sort = self.parse_sort_list()
-                self.skip_newlines()
-
-            # filter: field1, field2
-            elif self.match(TokenType.FILTER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                filter_fields = self.parse_field_list()
-                self.skip_newlines()
-
-            # search: field1, field2
-            elif self.match(TokenType.SEARCH):
-                self.advance()
-                self.expect(TokenType.COLON)
-                search_fields = self.parse_field_list()
-                self.skip_newlines()
-
-            # empty: "..."     (legacy form — single string)
-            # empty:            (block form, #807 — typed per-case)
-            #   collection: "..."
-            #   filtered: "..."
-            #   forbidden: "..."
-            elif self.match(TokenType.EMPTY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                # Peek: STRING → legacy; NEWLINE → block form.
-                if self.match(TokenType.STRING):
-                    empty_message = self.expect(TokenType.STRING).value
-                    self.skip_newlines()
-                else:
-                    empty_message = self.parse_empty_messages_block()
-
-            # search_first: true|false
-            elif self.match(TokenType.SEARCH_FIRST):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    search_first = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    search_first = False
-                else:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Expected true or false, got {token.type.value}",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # attention critical/warning/notice/info:
-            elif self.match(TokenType.ATTENTION):
-                signal = self.parse_attention_signal()
-                attention_signals.append(signal)
-
-            # as <persona>: persona variant inside ux block. Renamed
-            # from `for <persona>:`.
-            elif self.match(TokenType.AS):
-                variant = self.parse_persona_variant()
-                persona_variants.append(variant)
-
-            # bulk_actions: indented block mapping action_name → field -> value
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "bulk_actions":
-                bulk_actions = self.parse_bulk_actions_block()
-
-            else:
-                break
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.UXSpec(
-            purpose=purpose,
-            show=show,
-            sort=sort,
-            filter=filter_fields,
-            search=search_fields,
-            empty_message=empty_message,
-            search_first=search_first,
-            attention_signals=attention_signals,
-            persona_variants=persona_variants,
-            bulk_actions=bulk_actions,
+        state = _UXState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_UX_KEYWORDS,
+            ident_keywords=_UX_IDENT_KEYWORDS,
+            state=state,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_ux(state)
 
     def parse_empty_messages_block(self) -> ir.EmptyMessages:
         """Parse the block form of the ``empty:`` directive (#807).
@@ -652,4 +547,158 @@ def _build_persona_variant(persona: str, state: _PersonaVariantState) -> ir.Pers
         defaults=state.defaults,
         focus=state.focus,
         empty_message=state.empty_message,
+    )
+
+
+# ================================================================ #
+# parse_ux_block — keyword-dispatch decomposition (#1098 template) #
+# ================================================================ #
+#
+# The 142-line monolith was replaced (v0.70.21) with the dispatch
+# pattern shipped in #1097. 8 token-keyed `_ux_kw_*` + 1 IDENT-keyed
+# (bulk_actions) + a 15-line `_build_ux` builder. Sub-block parsers
+# (parse_empty_messages_block, parse_attention_signal,
+# parse_persona_variant, parse_bulk_actions_block) remain on the
+# mixin; the `_ux_kw_*` shells delegate to them.
+
+
+@dataclass
+class _UXState:
+    """Accumulator for :meth:`UXParserMixin.parse_ux_block`."""
+
+    purpose: str | None = None
+    show: list[str] = field(default_factory=list)
+    sort: list[ir.SortSpec] = field(default_factory=list)
+    filter_fields: list[str] = field(default_factory=list)
+    search_fields: list[str] = field(default_factory=list)
+    empty_message: str | ir.EmptyMessages | None = None
+    search_first: bool = False
+    attention_signals: list[ir.AttentionSignal] = field(default_factory=list)
+    persona_variants: list[ir.PersonaVariant] = field(default_factory=list)
+    bulk_actions: list[ir.BulkActionSpec] = field(default_factory=list)
+
+
+# ---------- Keyword parsers ---------- #
+
+
+def _ux_kw_purpose(parser: Any, state: _UXState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.purpose = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _ux_kw_show(parser: Any, state: _UXState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.show = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _ux_kw_sort(parser: Any, state: _UXState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.sort = parser.parse_sort_list()
+    parser.skip_newlines()
+
+
+def _ux_kw_filter(parser: Any, state: _UXState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.filter_fields = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _ux_kw_search(parser: Any, state: _UXState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.search_fields = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _ux_kw_empty(parser: Any, state: _UXState) -> None:
+    """``empty: "<text>"`` (legacy) OR ``empty:`` + indented block (#807).
+
+    Peek discriminator: STRING → legacy single message; anything else
+    (typically NEWLINE) → typed-per-case block parsed via
+    ``parse_empty_messages_block``.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.empty_message = parser.expect(TokenType.STRING).value
+        parser.skip_newlines()
+    else:
+        state.empty_message = parser.parse_empty_messages_block()
+
+
+def _ux_kw_search_first(parser: Any, state: _UXState) -> None:
+    """``search_first: true|false`` — opt-in search-first UI layout."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.search_first = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.search_first = False
+    else:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Expected true or false, got {token.type.value}",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _ux_kw_attention(parser: Any, state: _UXState) -> None:
+    """``attention <severity>:`` — helper consumes its own keyword."""
+    state.attention_signals.append(parser.parse_attention_signal())
+
+
+def _ux_kw_as(parser: Any, state: _UXState) -> None:
+    """``as <persona>:`` — persona variant inside ux block (renamed from ``for``)."""
+    state.persona_variants.append(parser.parse_persona_variant())
+
+
+def _ux_kw_bulk_actions(parser: Any, state: _UXState) -> None:
+    """``bulk_actions:`` — IDENT-keyed sub-block (helper consumes its own keyword)."""
+    state.bulk_actions = parser.parse_bulk_actions_block()
+
+
+# ---------- Dispatch tables ---------- #
+
+
+_UX_KEYWORDS: dict[TokenType, KeywordParser[_UXState]] = {
+    TokenType.PURPOSE: _ux_kw_purpose,
+    TokenType.SHOW: _ux_kw_show,
+    TokenType.SORT: _ux_kw_sort,
+    TokenType.FILTER: _ux_kw_filter,
+    TokenType.SEARCH: _ux_kw_search,
+    TokenType.EMPTY: _ux_kw_empty,
+    TokenType.SEARCH_FIRST: _ux_kw_search_first,
+    TokenType.ATTENTION: _ux_kw_attention,
+    TokenType.AS: _ux_kw_as,
+}
+
+
+_UX_IDENT_KEYWORDS: dict[str, KeywordParser[_UXState]] = {
+    "bulk_actions": _ux_kw_bulk_actions,
+}
+
+
+def _build_ux(state: _UXState) -> ir.UXSpec:
+    return ir.UXSpec(
+        purpose=state.purpose,
+        show=state.show,
+        sort=state.sort,
+        filter=state.filter_fields,
+        search=state.search_fields,
+        empty_message=state.empty_message,
+        search_first=state.search_first,
+        attention_signals=state.attention_signals,
+        persona_variants=state.persona_variants,
+        bulk_actions=state.bulk_actions,
     )

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.21] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_ux_block` migrated to keyword-dispatch.** Eighth consumer of the #1097 helper. The 142-line monolith in `src/dazzle/core/dsl_parser_impl/ux.py` becomes a 37-line dispatch shell (most of which is the docstring documenting `ux:` block syntax) + 9 token-keyed `_ux_kw_*` functions + 1 IDENT-text-matched (`bulk_actions`) + a 12-line `_build_ux` builder. The `_ux_kw_empty` parser preserves the legacy peek-discriminated branch — STRING → legacy single-message form; otherwise indented block form (#807). Sub-block parsers (`parse_empty_messages_block`, `parse_attention_signal`, `parse_persona_variant`, `parse_bulk_actions_block`) stay on the mixin; the `_ux_kw_*` shells delegate to them. Byte-identical IR verified against the 158-`SurfaceSpec` snapshot whose `ux` slot covers every `UXSpec`.
+
 ## [0.70.20] - 2026-05-15
 
 ### Changed
