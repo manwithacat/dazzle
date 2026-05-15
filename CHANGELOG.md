@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.25] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_llm_model` migrated to keyword-dispatch.** Twelfth consumer of the #1097 helper. The 133-line monolith in `src/dazzle/core/dsl_parser_impl/llm.py` becomes a 34-line dispatch shell + 6 token-keyed `_lm_kw_*` parsers (provider/model_id/tier/max_tokens/cost_per_1k_input/cost_per_1k_output) + a 30-line `_build_llm_model` builder enforcing the required `provider` + `model_id` fields. Preserves the enum-validation pattern for `provider` (anthropic/openai/google/local) and `tier` (fast/balanced/quality) — both wrap `ValueError` from the enum constructor into actionable parse errors. `model_id` retains its dual STRING/hyphenated-identifier acceptance via the `_parse_model_id_value` helper. Byte-identical IR verified against 17 `LLMModelSpec`s across 3 files. Drops 2 entries from the IR-reader-parity baseline.
+
 ## [0.70.24] - 2026-05-16
 
 ### Changed

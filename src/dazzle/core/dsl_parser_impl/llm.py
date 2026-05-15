@@ -32,10 +32,15 @@ class LLMParserMixin:
         file: Any
 
     def parse_llm_model(self) -> ir.LLMModelSpec:
-        """
-        Parse llm_model declaration.
+        """Parse a ``llm_model <name> "Title"?:`` declaration.
 
-        Syntax:
+        Refactored to dispatch-table style (follow-on to #1098). 6
+        token-keyed `_lm_kw_*` parsers (provider/model_id/tier/max_tokens/
+        cost_per_1k_input/cost_per_1k_output) + a `_build_llm_model`
+        builder enforcing the required `provider` + `model_id` fields.
+
+        Syntax::
+
             llm_model claude_sonnet "Claude Sonnet":
               provider: anthropic
               model_id: claude-3-5-sonnet-20241022
@@ -52,119 +57,15 @@ class LLMParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        provider: ir.LLMProvider | None = None
-        model_id: str | None = None
-        tier: ir.ModelTier = ir.ModelTier.BALANCED
-        max_tokens: int = 4096
-        cost_per_1k_input: Decimal | None = None
-        cost_per_1k_output: Decimal | None = None
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # provider: anthropic | openai | google | local
-            if self.match(TokenType.PROVIDER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                provider_str = self.expect_identifier_or_keyword().value
-                try:
-                    provider = ir.LLMProvider(provider_str)
-                except ValueError:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Invalid LLM provider: {provider_str}. "
-                        "Must be: anthropic, openai, google, or local",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # model_id: claude-3-5-sonnet-20241022
-            elif self.match(TokenType.MODEL_ID):
-                self.advance()
-                self.expect(TokenType.COLON)
-                # model_id can be a string or identifier
-                if self.match(TokenType.STRING):
-                    model_id = self.current_token().value
-                    self.advance()
-                else:
-                    model_id = self._parse_model_id_value()
-                self.skip_newlines()
-
-            # tier: fast | balanced | quality
-            elif self.match(TokenType.TIER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                tier_str = self.expect_identifier_or_keyword().value
-                try:
-                    tier = ir.ModelTier(tier_str)
-                except ValueError:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Invalid model tier: {tier_str}. Must be: fast, balanced, or quality",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # max_tokens: 4096
-            elif self.match(TokenType.MAX_TOKENS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                max_tokens = int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            # cost_per_1k_input: 0.003
-            elif self.match(TokenType.COST_PER_1K_INPUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                cost_per_1k_input = Decimal(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            # cost_per_1k_output: 0.015
-            elif self.match(TokenType.COST_PER_1K_OUTPUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                cost_per_1k_output = Decimal(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            else:
-                # Skip unknown fields
-                self.advance()
-                self.skip_newlines()
-
-        self.expect(TokenType.DEDENT)
-
-        # Validate required fields
-        if provider is None:
-            raise make_parse_error(
-                "llm_model requires 'provider' field",
-                self.file,
-                self.current_token().line,
-                self.current_token().column,
-            )
-        if model_id is None:
-            raise make_parse_error(
-                "llm_model requires 'model_id' field",
-                self.file,
-                self.current_token().line,
-                self.current_token().column,
-            )
-
-        return ir.LLMModelSpec(
-            name=name,
-            title=title,
-            provider=provider,
-            model_id=model_id,
-            tier=tier,
-            max_tokens=max_tokens,
-            cost_per_1k_input=cost_per_1k_input,
-            cost_per_1k_output=cost_per_1k_output,
+        state = _LLMModelState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_LLM_MODEL_KEYWORDS,
+            state=state,
+            on_unknown=_on_unknown_llm_model,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_llm_model(self, name, title, state)
 
     def _parse_model_id_value(self) -> str:
         """Parse a model ID value which may contain hyphens."""
@@ -889,4 +790,150 @@ def _build_llm_intent(name: str, title: str | None, state: _LLMIntentState) -> i
         retry=state.retry,
         pii=state.pii,
         triggers=state.triggers,
+    )
+
+
+# ============================================================ #
+# parse_llm_model — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 133-line monolith was replaced (v0.70.25) with the dispatch
+# pattern shipped in #1097. 6 token-keyed `_lm_kw_*` parsers + a
+# `_build_llm_model` builder enforcing the required `provider` and
+# `model_id` fields.
+
+
+@dataclass
+class _LLMModelState:
+    """Accumulator for :meth:`LLMParserMixin.parse_llm_model`."""
+
+    provider: ir.LLMProvider | None = None
+    model_id: str | None = None
+    tier: ir.ModelTier = ir.ModelTier.BALANCED
+    max_tokens: int = 4096
+    cost_per_1k_input: Decimal | None = None
+    cost_per_1k_output: Decimal | None = None
+
+
+# ---------- Keyword parsers ---------- #
+
+
+def _lm_kw_provider(parser: Any, state: _LLMModelState) -> None:
+    """``provider: anthropic | openai | google | local`` — validated."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    provider_str = parser.expect_identifier_or_keyword().value
+    try:
+        state.provider = ir.LLMProvider(provider_str)
+    except ValueError:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Invalid LLM provider: {provider_str}. Must be: anthropic, openai, google, or local",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _lm_kw_model_id(parser: Any, state: _LLMModelState) -> None:
+    """``model_id: <STRING | hyphenated-id>`` — accepts both forms."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.model_id = parser.current_token().value
+        parser.advance()
+    else:
+        state.model_id = parser._parse_model_id_value()
+    parser.skip_newlines()
+
+
+def _lm_kw_tier(parser: Any, state: _LLMModelState) -> None:
+    """``tier: fast | balanced | quality`` — validated."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    tier_str = parser.expect_identifier_or_keyword().value
+    try:
+        state.tier = ir.ModelTier(tier_str)
+    except ValueError:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Invalid model tier: {tier_str}. Must be: fast, balanced, or quality",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _lm_kw_max_tokens(parser: Any, state: _LLMModelState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.max_tokens = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _lm_kw_cost_per_1k_input(parser: Any, state: _LLMModelState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.cost_per_1k_input = Decimal(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _lm_kw_cost_per_1k_output(parser: Any, state: _LLMModelState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.cost_per_1k_output = Decimal(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+# ---------- Dispatch table + on_unknown + builder ---------- #
+
+
+_LLM_MODEL_KEYWORDS: dict[TokenType, KeywordParser[_LLMModelState]] = {
+    TokenType.PROVIDER: _lm_kw_provider,
+    TokenType.MODEL_ID: _lm_kw_model_id,
+    TokenType.TIER: _lm_kw_tier,
+    TokenType.MAX_TOKENS: _lm_kw_max_tokens,
+    TokenType.COST_PER_1K_INPUT: _lm_kw_cost_per_1k_input,
+    TokenType.COST_PER_1K_OUTPUT: _lm_kw_cost_per_1k_output,
+}
+
+
+def _on_unknown_llm_model(parser: Any) -> None:
+    """Silently skip unknown keywords + their newline (mirrors legacy else branch)."""
+    parser.advance()
+    parser.skip_newlines()
+
+
+def _build_llm_model(
+    parser: Any, name: str, title: str | None, state: _LLMModelState
+) -> ir.LLMModelSpec:
+    """Enforce required provider + model_id; assemble the IR."""
+    if state.provider is None:
+        token = parser.current_token()
+        raise make_parse_error(
+            "llm_model requires 'provider' field",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    if state.model_id is None:
+        token = parser.current_token()
+        raise make_parse_error(
+            "llm_model requires 'model_id' field",
+            parser.file,
+            token.line,
+            token.column,
+        )
+
+    return ir.LLMModelSpec(
+        name=name,
+        title=title,
+        provider=state.provider,
+        model_id=state.model_id,
+        tier=state.tier,
+        max_tokens=state.max_tokens,
+        cost_per_1k_input=state.cost_per_1k_input,
+        cost_per_1k_output=state.cost_per_1k_output,
     )

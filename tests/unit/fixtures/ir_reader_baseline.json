@@ -106,8 +106,6 @@
   "llm.ArtifactRefSpec.artifact_id",
   "llm.ArtifactRefSpec.byte_size",
   "llm.ArtifactRefSpec.storage_uri",
-  "llm.LLMModelSpec.cost_per_1k_input",
-  "llm.LLMModelSpec.cost_per_1k_output",
   "messaging.ChannelSpec.receive_operations",
   "messaging.DocumentSpec.for_entity",
   "messaging.MappingSpec.is_template",
