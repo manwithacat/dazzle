@@ -42,7 +42,7 @@ def _resolve_project_dir(app: str | None) -> Path:
     raise typer.Exit(code=1)
 
 
-def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str) -> None:
+def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str) -> bool:
     """Seed demo data after the trial server is up (#817, #820).
 
     ``--fresh-db`` truncates the DB, which left every trial running
@@ -60,6 +60,14 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
 
     The test-secret gate keeps the seed endpoint safe; non-dev servers
     don't enable test routes.
+
+    Returns:
+        ``True`` if seeding succeeded, was skipped harmlessly (no
+        blueprint, no rows, soft failure inside the loop), or partially
+        succeeded under the circuit breaker. ``False`` only when the
+        hard-gate blueprint verifier flagged validation errors — the
+        outer trial flow must abort in that case rather than run the
+        LLM agent against an empty DB (#1077).
     """
     import json as _json
     import tempfile
@@ -75,13 +83,13 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     existing_data = _find_data_dir(project_dir)
 
     if not blueprint.exists() and existing_data is None:
-        return  # nothing to seed
+        return True  # nothing to seed — harmless skip
 
     try:
         appspec = load_project_appspec(project_dir)
     except Exception as exc:
         typer.echo(f"Seed skipped: could not load appspec ({exc})", err=True)
-        return
+        return True
 
     # Hard-gate (#826): verify the blueprint up front and abort the
     # trial when there are errors. Previously this was a soft-gate —
@@ -119,7 +127,7 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
                         )
                     if len(errors) > 5:
                         typer.echo(f"  ... and {len(errors) - 5} more.", err=True)
-                    return
+                    return False  # hard-gate abort — outer flow must bail (#1077)
         except Exception:
             # A bug in the verifier must never block a trial — fall through
             # to the seed attempt with whatever blueprint exists (#smells-1.1).
@@ -139,11 +147,11 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
                     f"Seed skipped: demo_generate_impl returned {result.get('status')}",
                     err=True,
                 )
-                return
+                return True
             data_dir = Path(result["output_dir"])
         except Exception as exc:
             typer.echo(f"Seed skipped: demo data generation failed ({exc})", err=True)
-            return
+            return True
     else:
         data_dir = existing_data
 
@@ -173,7 +181,7 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
 
     if not fixtures:
         typer.echo("Seed skipped: no rows to seed", err=True)
-        return
+        return True
 
     headers = {"Content-Type": "application/json"}
     if test_secret:
@@ -223,7 +231,7 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
                         break
     except Exception as exc:
         typer.echo(f"Seed skipped: POST /__test__/seed raised {exc}", err=True)
-        return
+        return True
 
     typer.echo(
         f"Seeded demo data: {created_count} of {len(fixtures)} fixture(s) "
@@ -238,6 +246,7 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
             f"likely cause — run `dazzle demo verify` to see full details.",
             err=True,
         )
+    return True
 
 
 def _reset_db_for_trial(project_dir: Path) -> None:
@@ -500,7 +509,19 @@ def qa_trial(
             test_secret_val = ""
 
         if fresh_db:
-            _seed_demo_data_for_trial(project_dir, site_url, test_secret_val)
+            seed_ok = _seed_demo_data_for_trial(project_dir, site_url, test_secret_val)
+            if not seed_ok:
+                # #1077: seed helper hard-aborted on blueprint drift.
+                # Without this guard the outer flow would continue and
+                # run the LLM agent against an empty DB, producing a
+                # misleading "I cannot recommend this app" verdict that
+                # is actually about data emptiness, not framework UX.
+                typer.echo(
+                    "Trial aborted: blueprint drift detected. "
+                    "Fix the blueprint and re-run (no LLM agent dispatched).",
+                    err=True,
+                )
+                raise typer.Exit(code=3)
 
         async def _run_trial() -> tuple[Any, Any]:
             """Full async path: start browser, authenticate via POST +

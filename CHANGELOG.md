@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.5] - 2026-05-15
+
+### Fixed
+
+- **#1077: qa trial outer flow aborts on blueprint-drift hard-gate.** `_seed_demo_data_for_trial` now returns a `bool` — `True` for success / harmless skips, `False` only when the hard-gate blueprint verifier flagged validation errors. The outer `qa_trial` flow checks the return and raises `typer.Exit(code=3)` before launching the LLM agent. Previously a stale blueprint silently aborted the seed step but the trial continued to run the agent against an empty DB, producing misleading "I cannot recommend this app" verdicts that were actually about data emptiness, not framework UX (cycle 135 reproduction). Two regression tests in `TestSeedPreflightAndCircuitBreaker`. Companion to #826 (the seed-helper internal hard-gate) — together they make blueprint drift fail fast at both layers.
+
 ## [0.69.4] - 2026-05-15
 
 ### Fixed

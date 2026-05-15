@@ -716,13 +716,27 @@ class TestSeedPreflightAndCircuitBreaker:
 
         monkeypatch.setattr(_demo_mod, "demo_generate_impl", _boom)
 
-        qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
+        seed_ok = qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
         out = capsys.readouterr()
         err = out.err
         assert "Seed aborted" in err
         assert "2 validation error(s)" in err
         assert "Manuscript.id" in err
         assert "strategy_type_mismatch" in err
+        # #1077: helper signals abort to the outer trial flow via the
+        # falsy return — without this the outer flow runs the LLM agent
+        # against an empty DB and produces a misleading verdict.
+        assert seed_ok is False
+
+    def test_no_blueprint_returns_truthy(self, tmp_path: Path) -> None:
+        """No blueprint → helper returns True (harmless skip), outer
+        flow continues. #1077 regression: only blueprint-drift returns
+        False; missing blueprint is not an abort signal."""
+        from dazzle.cli import qa as qa_cli
+
+        # No `dsl/seeds/demo_data/blueprint.json`, no JSONL data dir.
+        result = qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
+        assert result is True
 
     def test_circuit_breaker_trips_after_consecutive_failures(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
