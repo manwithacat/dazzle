@@ -1,42 +1,40 @@
-"""Tests for dazzle.qa.evaluate — pluggable LLM evaluator."""
+"""Tests for dazzle.qa.evaluate — subagent prompt builder + findings parser."""
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-from dazzle.qa.evaluate import ClaudeEvaluator, build_evaluation_prompt, parse_findings
-from dazzle.qa.models import CapturedScreen, Finding
+from dazzle.qa.evaluate import build_subagent_prompt, parse_findings
+from dazzle.qa.models import Finding
+
+
+def _make_manifest() -> dict:
+    return {
+        "timestamp": "2026-05-15T00:00:00+00:00",
+        "apps": [
+            {
+                "app": "ops_dashboard",
+                "screens": [
+                    {
+                        "persona": "ops_engineer",
+                        "workspace": "command_center",
+                        "url": "/app/workspaces/command_center",
+                        "screenshot": "/tmp/x/cc_ops_engineer.png",
+                        "viewport": "desktop",
+                    },
+                ],
+            },
+        ],
+    }
+
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# build_subagent_prompt
 # ---------------------------------------------------------------------------
 
 
-def _make_screen(tmp_path: Path) -> CapturedScreen:
-    screenshot = tmp_path / "screen.png"
-    screenshot.write_bytes(b"\x89PNG\r\n")
-    return CapturedScreen(
-        persona="teacher",
-        workspace="teacher_workspace",
-        url="/app/workspaces/teacher_workspace",
-        screenshot=screenshot,
-    )
-
-
-# ---------------------------------------------------------------------------
-# build_evaluation_prompt
-# ---------------------------------------------------------------------------
-
-
-class TestBuildEvaluationPrompt:
+class TestBuildSubagentPrompt:
     def test_contains_all_eight_category_names(self) -> None:
-        screen = CapturedScreen(
-            persona="teacher",
-            workspace="teacher_workspace",
-            url="/app",
-            screenshot=Path("x.png"),
-        )
-        prompt = build_evaluation_prompt(screen)
+        prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
         expected_ids = [
             "text_wrapping",
             "truncation",
@@ -50,27 +48,52 @@ class TestBuildEvaluationPrompt:
         for cat_id in expected_ids:
             assert cat_id in prompt, f"Category '{cat_id}' missing from prompt"
 
-    def test_contains_workspace_context(self) -> None:
-        screen = CapturedScreen(
-            persona="admin",
-            workspace="admin_workspace",
-            url="/app/workspaces/admin_workspace",
-            screenshot=Path("x.png"),
-        )
-        prompt = build_evaluation_prompt(screen)
-        assert "admin_workspace" in prompt
-        assert "admin" in prompt
+    def test_contains_per_screen_context(self) -> None:
+        prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
+        assert "ops_dashboard" in prompt
+        assert "command_center" in prompt
+        assert "ops_engineer" in prompt
+        assert "/tmp/x/cc_ops_engineer.png" in prompt
+
+    def test_includes_findings_path_for_write(self) -> None:
+        prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
+        assert "/tmp/findings.json" in prompt
+        # Must instruct the subagent to Write the JSON output.
+        assert "Write" in prompt
 
     def test_requests_json_array_output(self) -> None:
-        screen = CapturedScreen(
-            persona="teacher",
-            workspace="teacher_workspace",
-            url="/app",
-            screenshot=Path("x.png"),
-        )
-        prompt = build_evaluation_prompt(screen)
+        prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
         assert "JSON" in prompt or "json" in prompt
         assert "[]" in prompt or "empty array" in prompt.lower() or "array" in prompt.lower()
+
+    def test_filters_categories_when_specified(self) -> None:
+        prompt = build_subagent_prompt(
+            _make_manifest(),
+            "/tmp/findings.json",
+            categories=["data_quality"],
+        )
+        assert "data_quality" in prompt
+        assert "text_wrapping" not in prompt
+
+    def test_handles_multi_app_manifest(self) -> None:
+        manifest = _make_manifest()
+        manifest["apps"].append(
+            {
+                "app": "simple_task",
+                "screens": [
+                    {
+                        "persona": "admin",
+                        "workspace": "task_board",
+                        "url": "/app/workspaces/task_board",
+                        "screenshot": "/tmp/y/tb_admin.png",
+                    }
+                ],
+            }
+        )
+        prompt = build_subagent_prompt(manifest, "/tmp/findings.json")
+        assert "ops_dashboard" in prompt
+        assert "simple_task" in prompt
+        assert "2 apps" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -128,28 +151,19 @@ class TestParseFindings:
         results = parse_findings("this is not JSON at all {{{")
         assert results == []
 
-
-# ---------------------------------------------------------------------------
-# ClaudeEvaluator
-# ---------------------------------------------------------------------------
-
-
-class TestClaudeEvaluator:
-    def test_evaluate_calls_anthropic_client(self, tmp_path: Path) -> None:
-        screen = _make_screen(tmp_path)
-
-        # Build a mock Anthropic client
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="[]")]
-        mock_client.messages.create.return_value = mock_response
-
-        evaluator = ClaudeEvaluator(client=mock_client)
-
-        with patch("dazzle.qa.evaluate._read_screenshot_b64", return_value="AAAA"):
-            findings = evaluator.evaluate(screen)
-
-        assert mock_client.messages.create.called
-        call_kwargs = mock_client.messages.create.call_args
-        assert call_kwargs is not None
-        assert findings == []
+    def test_skips_entries_missing_required_keys(self, tmp_path: Path) -> None:
+        raw = json.dumps(
+            [
+                {"category": "data_quality", "severity": "high"},  # missing fields
+                {
+                    "category": "alignment",
+                    "severity": "low",
+                    "location": "Header",
+                    "description": "Misaligned",
+                    "suggestion": "Fix",
+                },
+            ]
+        )
+        results = parse_findings(raw)
+        assert len(results) == 1
+        assert results[0].category == "alignment"

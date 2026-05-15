@@ -19,8 +19,10 @@ Usage::
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -146,6 +148,55 @@ async def capture_screenshots(
                 results.append(screen)
 
     return results
+
+
+def write_manifest(
+    screens: list[CapturedScreen],
+    app_name: str,
+    manifest_path: Path,
+) -> None:
+    """Append *screens* to a fleet-wide JSON manifest at *manifest_path*.
+
+    Used by the `/improve` Tier 2 visual-QA sub-strategy: each example
+    app calls :func:`capture_screenshots` and then this helper to add its
+    screens under a per-app section. The strategy then hands the
+    manifest to a CC subagent for evaluation, side-stepping the
+    Anthropic API.
+
+    If the manifest exists, the new screens are appended under their
+    app_name key (replacing any prior entry for the same app — re-runs
+    overwrite). If it doesn't exist, a new file is created.
+
+    Args:
+        screens: Captured screens for this app.
+        app_name: Identifier for the app (e.g. "ops_dashboard").
+        manifest_path: JSON manifest path. Parent dirs are created as needed.
+    """
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if manifest_path.exists():
+        data = json.loads(manifest_path.read_text())
+    else:
+        data = {"timestamp": datetime.now(UTC).isoformat(), "apps": []}
+
+    data["apps"] = [a for a in data.get("apps", []) if a.get("app") != app_name]
+    data["apps"].append(
+        {
+            "app": app_name,
+            "screens": [
+                {
+                    "persona": s.persona,
+                    "workspace": s.workspace,
+                    "url": s.url,
+                    "screenshot": str(s.screenshot),
+                    "viewport": s.viewport,
+                }
+                for s in screens
+            ],
+        }
+    )
+
+    manifest_path.write_text(json.dumps(data, indent=2) + "\n")
 
 
 async def _capture_one(

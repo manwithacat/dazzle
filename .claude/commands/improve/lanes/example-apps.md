@@ -93,16 +93,13 @@ Add new rows to backlog as `PENDING`. Increments shared budget by 1.
 
 #### Tier 2 (when Tier 1 exhausted, medium cost): Visual quality
 
-For each example app:
-```bash
-cd examples/<app> && dazzle qa visual --json 2>&1
-```
+Runs as a Claude Code Task subagent — no Anthropic API call, no API token spend. Cognitive work bills to the Claude Code subscription. See `improve/strategies/visual_tier2_subagent.md` for the full numbered playbook.
 
-Parse JSON output. Each finding becomes a row:
-- Description: `[{category}] {description} at {location}`
-- Severity: high → critical, medium → warning, low → info
+In short: `dazzle qa capture --manifest <path>` writes a fleet-wide JSON manifest of screenshots; `dazzle.qa.evaluate.build_subagent_prompt(...)` builds a multi-screen mission; the subagent Reads each PNG, evaluates against `dazzle.qa.categories.CATEGORIES`, and writes findings JSON; `dazzle.cli.runtime_impl.ux_cycle_impl.visual_tier2_ingest.ingest_visual_findings(...)` writes new `visual_quality` rows into this lane's section of the backlog (dedup by `(app, category, location)`, severity-sorted, `seen=K` reinforced on re-runs).
 
-Increments shared budget by 1 per app scanned.
+Row shape: `| N | <app> | visual_quality | [<category>] <description> at <location> | PENDING | 0 | seen=1, screenshot=<path>, ts=<...> |`.
+
+Increments shared budget by 5 (single heavy dispatch, ~25-50 screens).
 
 #### Tier 3 (when Tier 2 exhausted, high cost): LLM cross-app review
 

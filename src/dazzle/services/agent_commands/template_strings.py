@@ -671,7 +671,7 @@ to running each tool manually:
 - `dazzle lint` — record lint violations
 - MCP `conformance` with `operation=summary` — record conformance gaps
 - MCP `dsl` with `operation=fidelity` — record fidelity gaps
-- (optional, needs LLM) `dazzle qa visual --json` — record visual findings
+- (optional, needs LLM) the `/improve` example-apps `visual_tier2_subagent` strategy — capture + CC-subagent evaluation
 
 **Backlog format:**
 
@@ -736,7 +736,7 @@ Run verification appropriate to the gap type:
 | Conformance | MCP `conformance operation=summary` — count increases |
 | Fidelity | MCP `dsl operation=fidelity` — gap resolved |
 | Surface | MCP `dsl operation=inspect_surface` — surface exists |
-| Visual quality | `dazzle qa visual --json` — finding gone |
+| Visual quality | re-run `/improve example-apps visual_tier2_subagent` — finding gone |
 
 If verification fails: increment attempts, log the failure, retry
 from ENHANCE (≤ 3 attempts).

@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.0] - 2026-05-15
+
+### Changed
+
+- **Visual QA pipeline moved to CC-subagent substrate.** `/improve` example-apps Tier 2 now dispatches a Claude Code Task subagent for screenshot evaluation rather than calling Claude Vision via the Anthropic API directly. Same pattern as `framework-ux`'s `missing_contracts` / `edge_cases` strategies. Cognition bills to the Claude Code subscription. New strategy file at `.claude/commands/improve/strategies/visual_tier2_subagent.md`; new ingest helper at `src/dazzle/cli/runtime_impl/ux_cycle_impl/visual_tier2_ingest.py`.
+- **`dazzle qa capture` gains `--manifest <path>`** flag. Writes a fleet-wide JSON manifest of `(app, persona, workspace, url, screenshot)` records; multiple invocations with the same path append (re-running an app overwrites that app's entry). Used by the Tier 2 strategy to hand a multi-app manifest to a single subagent dispatch.
+
+### Removed
+
+- **`dazzle qa visual` CLI command removed.** Replaced by the `/improve` example-apps Tier 2 sub-strategy. `dazzle qa capture` (capture-only) remains. The `ClaudeEvaluator` class, `build_evaluation_prompt` helper, and `QAEvaluator` Protocol in `src/dazzle/qa/evaluate.py` are also removed — they were only ever used by the removed CLI. The Anthropic-SDK `anthropic` package stays as a dependency (still used by `dazzle qa trial`'s LLM agent loop).
+
+### Agent Guidance
+
+- **Visual QA findings flow as backlog rows, not CLI output.** When a user asks "run visual QA against X," dispatch the `/improve example-apps visual_tier2_subagent` strategy — don't reach for a removed `qa visual` command. Findings land in `dev_docs/improve-backlog.md` under `## Lane: example-apps` as `visual_quality` rows that the lane's normal OBSERVE → ENHANCE cycle drains one per cycle.
+- **Tier 2 budget is +5.** Single heavy subagent dispatch (~25-50 screens per fleet sweep). Signal-gate re-runs on `ux-component-shipped` / `dazzle-updated` rather than running every cycle.
+
 ## [0.68.1] - 2026-05-15
 
 ### Fixed
