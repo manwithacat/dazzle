@@ -441,7 +441,7 @@ def create_reload_callback(
 
             # Link modules. Pass `known_renderers=` so hot-reload catches
             # `render: <unknown>` clauses in the same way the boot path does.
-            from dazzle.back.runtime.renderers.init import default_renderer_names
+            from dazzle.core.renderer_registry import default_renderer_names
 
             app_spec = build_appspec(
                 modules,

@@ -1,5 +1,14 @@
 # Smells Log
 
+## Smells Run — 2026-05-15
+- Regressions: 8/10 hard gates PASS; 3 drifted upward (1.5b getattr 1,027→1,624; 1.6 fns>150ln 119→135; 1.7 classes>800ln 9→11)
+- New patterns: 15 (P1–P15) — 6 HIGH, 6 MEDIUM, 3 LOW
+- Top concern: P3 — 207 `except Exception → logger.debug` on load-bearing paths (auth/job/grant). Same bug class as 1.1 escaping at DEBUG level.
+- Resolved since last: lru_cache singleton cluster collapsed; ADR-0003 shims 5→3 clusters
+- Worsened: getattr +597; complexity (fns>150 +16, classes>800 +2, parse_workspace_region depth-53 newly quantified)
+- Recommended next 3: (1) reclassify DEBUG→WARNING+exc_info on auth/job/grant + semgrep gate; (2) move `default_renderer_names` into core + rewrite `_TOOL_DISPATCH` as factory (P2+P13); (3) `dazzle.core.ir.protocols` facade unblocking `back↔ui` cycle (P1+P5)
+- Commit: d1706bd3
+
 ## Smells Run — 2026-05-04
 - Regressions: 6/9 hard gates PASS; 3 TRACK (1.5b getattr 1,027; 1.6 fns >150ln 119; 1.7 classes >800ln 9)
 - New patterns: 15 (consolidated from prior 17 — silent-swallow merged with broad-except)

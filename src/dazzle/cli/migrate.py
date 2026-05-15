@@ -240,7 +240,7 @@ def deploy_command(
     # Validate DSL
     console.print("Validating DSL...")
     try:
-        from dazzle.back.runtime.renderers.init import default_renderer_names
+        from dazzle.core.renderer_registry import default_renderer_names
 
         modules = parse_modules(dsl_files)
         # build_appspec wants the module name (e.g. "myapp.core") not

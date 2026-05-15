@@ -6,13 +6,12 @@ Provides convenient functions for the common load → parse → build pipeline.
 
 from pathlib import Path
 
-from dazzle.back.runtime.renderers.init import default_renderer_names
-
 from . import ir
 from .fileset import discover_dsl_files
 from .linker import build_appspec
 from .manifest import ProjectManifest, load_manifest
 from .parser import parse_modules
+from .renderer_registry import default_renderer_names
 
 
 def load_project(

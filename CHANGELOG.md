@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.1] - 2026-05-15
+
+### Changed
+
+- **#1084: `dazzle.core` no longer imports from `dazzle.back`.** Pattern P2 from the 2026-05-15 smells run. `default_renderer_names()` and the `_DEFAULT_RENDERERS` tuple moved from `dazzle.back.runtime.renderers.init` into new `dazzle.core.renderer_registry`. The runtime `register_default_renderers()` helper stays in `back/runtime/renderers/init.py` (it depends on `RuntimeServices` + `FragmentSurfaceRenderer`) but now imports `_DEFAULT_RENDERERS` from `core` to keep the link-time validator and runtime registry in sync. All 11 call sites updated (5 in `core`/`cli`/`lsp`, 6 elsewhere). The most dangerous coupling in the codebase — one more downward import would have transitively pulled FastAPI into the DSL parser. No backward-compat shim per ADR-0003.
+
+### Agent Guidance
+
+- The framework default-renderer-name set is the single source of truth for both link-time validation (`build_appspec(..., known_renderers=...)`) and runtime registration. It lives in `dazzle.core.renderer_registry` because parsing happens before any `RuntimeServices` exists. Don't put it anywhere else.
+
 ## [0.70.0] - 2026-05-15
 
 ### Changed (BREAKING)

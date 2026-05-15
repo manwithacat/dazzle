@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
-from dazzle.back.runtime.renderers.init import default_renderer_names
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.discovery import Relevance
 from dazzle.core.errors import DazzleError, ParseError
@@ -33,6 +32,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_site_url
 from dazzle.core.parser import parse_modules
+from dazzle.core.renderer_registry import default_renderer_names
 
 if TYPE_CHECKING:
     from dazzle.core import ir

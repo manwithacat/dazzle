@@ -7,12 +7,12 @@ All code that needs to load a project's AppSpec should import from here.
 import logging
 from pathlib import Path
 
-from dazzle.back.runtime.renderers.init import default_renderer_names
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.core.renderer_registry import default_renderer_names
 
 _log = logging.getLogger(__name__)
 

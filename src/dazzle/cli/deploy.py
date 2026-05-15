@@ -42,7 +42,7 @@ def _load_spec(project_dir: Path) -> AppSpec:
         console.print("[red]No DSL files found in project[/red]")
         raise typer.Exit(1)
 
-    from dazzle.back.runtime.renderers.init import default_renderer_names
+    from dazzle.core.renderer_registry import default_renderer_names
 
     modules = parse_modules(dsl_files)
     spec = build_appspec(

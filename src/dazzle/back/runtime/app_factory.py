@@ -812,8 +812,8 @@ def create_app_factory(
     # Parse DSL and build spec. Pass `known_renderers=` so the linker
     # rejects `render: <unknown>` clauses against the same default set
     # the runtime registry will install moments later — see
-    # `dazzle_back.runtime.renderers.init.default_renderer_names`.
-    from dazzle.back.runtime.renderers.init import default_renderer_names
+    # `dazzle.core.renderer_registry.default_renderer_names`.
+    from dazzle.core.renderer_registry import default_renderer_names
 
     try:
         dsl_files = discover_dsl_files(project_root, manifest)
