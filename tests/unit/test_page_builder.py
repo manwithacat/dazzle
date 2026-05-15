@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dazzle.back.runtime.renderers.page_builder import build_page, dispatch_render_page
+from dazzle.render.dispatch import build_page, dispatch_render_page
 from dazzle.render.fragment import Page
 
 

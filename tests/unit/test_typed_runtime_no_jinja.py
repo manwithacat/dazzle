@@ -40,7 +40,7 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/back/runtime/error_views.py",
     # Phase 4 app-shell completion (v0.67.55–v0.67.57):
     "src/dazzle/back/runtime/exception_handlers.py",
-    "src/dazzle/back/runtime/renderers/page_builder.py",
+    "src/dazzle/render/dispatch.py",  # was back/runtime/renderers/page_builder.py until #1094
     # `shell.py` and `render_in_app_shell` were retired entirely in v0.67.84
     # (closes #1040); the path is gone from disk.
     "src/dazzle/ui/runtime/page_routes.py",

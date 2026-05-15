@@ -27,7 +27,7 @@ from dazzle.ui.runtime.page_routes import (
 
 
 class _DummyDeps:
-    """Minimal stand-in for `_PageDeps` — handlers don't unpack
+    """Minimal stand-in for `_PageRouterConfig` — handlers don't unpack
     fields at signature-introspection time."""
 
     pass

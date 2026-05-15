@@ -24,16 +24,6 @@ Example usage:
 """
 
 from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE
-from dazzle.back.runtime.access_evaluator import (
-    can_create,
-    can_delete,
-    can_read,
-    can_update,
-    evaluate_access_condition,
-    evaluate_permission,
-    evaluate_visibility,
-    filter_visible_records,
-)
 from dazzle.back.runtime.app_factory import create_app, run_app
 from dazzle.back.runtime.migrations import (
     MigrationAction,
@@ -69,6 +59,16 @@ from dazzle.back.runtime.service_generator import (
     ServiceFactory,
 )
 from dazzle.core.access import AccessRuntimeContext
+from dazzle.render.access_evaluator import (
+    can_create,
+    can_delete,
+    can_read,
+    can_update,
+    evaluate_access_condition,
+    evaluate_permission,
+    evaluate_visibility,
+    filter_visible_records,
+)
 
 __all__ = [
     # Access control (v0.7.0)

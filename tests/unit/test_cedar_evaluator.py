@@ -8,14 +8,6 @@ Validates the three-rule Cedar evaluation semantics:
 Also tests persona scoping, superuser bypass, and backward compatibility.
 """
 
-from dazzle.back.runtime.access_evaluator import (
-    AccessDecision,
-    AccessRuntimeContext,
-    evaluate_permission,
-    evaluate_permission_bool,
-    evaluate_visibility,
-    filter_visible_records,
-)
 from dazzle.back.specs.auth import (
     AccessAuthContext,
     AccessComparisonKind,
@@ -26,6 +18,14 @@ from dazzle.back.specs.auth import (
     EntityAccessSpec,
     PermissionRuleSpec,
     VisibilityRuleSpec,
+)
+from dazzle.render.access_evaluator import (
+    AccessDecision,
+    AccessRuntimeContext,
+    evaluate_permission,
+    evaluate_permission_bool,
+    evaluate_visibility,
+    filter_visible_records,
 )
 
 # =============================================================================

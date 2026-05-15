@@ -37,10 +37,9 @@ def _make_deps(
     surface_mode: dict[str, str] | None = None,
     route_entity: dict[str, str] | None = None,
 ) -> Any:
-    from dazzle.back.runtime.access_evaluator import evaluate_permission
-    from dazzle.ui.runtime.page_routes import _PageDeps
+    from dazzle.ui.runtime.page_routes import _PageRouterConfig
 
-    return _PageDeps(
+    return _PageRouterConfig(
         appspec=appspec,
         backend_url="http://localhost:8000",
         theme_css="",
@@ -51,7 +50,6 @@ def _make_deps(
         surface_entity=surface_entity or {},
         surface_mode=surface_mode or {},
         route_entity=route_entity or {},
-        evaluate_permission=evaluate_permission,
     )
 
 
@@ -75,7 +73,7 @@ class TestCreateFormPermissionCheck:
         # Cedar infrastructure.
         from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        pytest.importorskip("dazzle.render.access_evaluator")
         from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
@@ -114,7 +112,7 @@ class TestNavEntityFiltering:
     def test_denied_entity_removed_from_nav(self) -> None:
         from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
-        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        pytest.importorskip("dazzle.render.access_evaluator")
         from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
@@ -147,7 +145,7 @@ class TestNavEntityFiltering:
     def test_permitted_entity_kept_in_nav(self) -> None:
         from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
-        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        pytest.importorskip("dazzle.render.access_evaluator")
         from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
@@ -177,7 +175,7 @@ class TestNavEntityFiltering:
     def test_superuser_bypasses_nav_filter(self) -> None:
         from dazzle.ui.runtime.page_routes import _filter_nav_by_entity_access
 
-        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        pytest.importorskip("dazzle.render.access_evaluator")
         from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
@@ -314,7 +312,7 @@ class TestEmptyStateCTAGuard:
         """Table create_url set to None when role lacks CREATE permission."""
         from dazzle.ui.runtime.page_routes import _user_can_mutate
 
-        pytest.importorskip("dazzle.back.runtime.access_evaluator")
+        pytest.importorskip("dazzle.render.access_evaluator")
         from dazzle.back.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,

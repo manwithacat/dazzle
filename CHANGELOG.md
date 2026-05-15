@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.9] - 2026-05-15
+
+### Changed (BREAKING)
+
+- **#1094: `_PageDeps` callable-injection shim removed; back-side rendering helpers moved to `dazzle.render`.** Workstream D of the #1086 back↔ui cycle break. Closes the long-standing #679 workaround.
+
+  Modules moved to `dazzle.render`:
+  - `back.runtime.renderers.page_builder` → `render.dispatch` (merged with the surface dispatcher; `dispatch_render_page`, `build_page`, `build_app_chrome_page` now live here).
+  - `back.runtime.renderers.dispatch.dispatch_render` → `render.dispatch` (same file; `services` typed as `Any` to avoid the back-runtime dependency).
+  - `back.runtime.access_evaluator` → `render.access_evaluator` (now imports comparison helpers from `core.comparison` directly).
+  - `_inject_display_names` + `_resolve_display_name` → `render.display_names`.
+  - `_forbidden_detail` → `render.access_messages`.
+
+  `dazzle.ui.runtime.page_routes._PageDeps` deleted. Renamed `_PageRouterConfig` covers the same config-bag role but no longer carries the `evaluate_permission` / `inject_display_names` callable fields — those helpers are now imported directly from `dazzle.render` at the call site.
+
+  `dazzle.ui.runtime.page_routes.create_page_routes` signature: `evaluate_permission_fn` and `inject_display_names_fn` parameters removed. `back.runtime.app_factory` no longer passes them.
+
+  `back.runtime.workspace_card_data.py` and `back.runtime.route_generator.py` keep tiny re-exports of the moved helpers so back-internal callers keep working without further surgery; those re-exports can be deleted in a follow-up.
+
+  Done criteria from #1094:
+  - `grep -rn "_PageDeps" src/dazzle/` returns empty.
+  - `grep -n "from dazzle.back" src/dazzle/ui/runtime/page_routes.py src/dazzle/ui/runtime/template_renderer.py` returns empty.
+
+  `combined_server.py` retains its `back/` imports — that module's job is to glue both layers together at the entry point. The #1086 plan and the #1095 enforcement gate both document this exemption.
+
+### Agent Guidance
+
+- Page rendering helpers (`dispatch_render_page`, `dispatch_render`, `build_page`, `build_app_chrome_page`) live in `dazzle.render.dispatch`. The access evaluator and display-name helpers live in `dazzle.render.access_evaluator` and `dazzle.render.display_names`. The forbidden-detail builder lives in `dazzle.render.access_messages`. New code in `ui/` or `back/` should import from these locations directly.
+- The `_PageDeps` shim is gone. Page-router config now lives in `_PageRouterConfig` (same module). Cross-layer callables are out — direct imports from `dazzle.render` everywhere.
+
 ## [0.70.8] - 2026-05-15
 
 ### Changed

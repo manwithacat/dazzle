@@ -10,16 +10,6 @@ Tests the runtime evaluation of access rules including:
 
 import pytest
 
-from dazzle.back.runtime.access_evaluator import (
-    AccessRuntimeContext,
-    can_create,
-    can_delete,
-    can_read,
-    can_update,
-    evaluate_access_condition,
-    evaluate_visibility,
-    filter_visible_records,
-)
 from dazzle.back.specs import (
     AccessComparisonKind,
     AccessConditionSpec,
@@ -30,6 +20,16 @@ from dazzle.back.specs import (
     VisibilityRuleSpec,
 )
 from dazzle.back.specs.auth import AccessAuthContext
+from dazzle.render.access_evaluator import (
+    AccessRuntimeContext,
+    can_create,
+    can_delete,
+    can_read,
+    can_update,
+    evaluate_access_condition,
+    evaluate_visibility,
+    filter_visible_records,
+)
 
 # =============================================================================
 # Test Fixtures

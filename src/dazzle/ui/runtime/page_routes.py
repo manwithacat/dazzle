@@ -26,6 +26,9 @@ from typing import Any
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.manifest import resolve_api_url
+from dazzle.render.access_evaluator import evaluate_permission
+from dazzle.render.access_messages import _forbidden_detail
+from dazzle.render.display_names import _inject_display_names
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +180,7 @@ def _is_field_cond(cond: Any) -> bool:
 
 
 def _should_suppress_mutations(
-    deps: "_PageDeps",
+    deps: "_PageRouterConfig",
     surface_name: str | None,
     auth_ctx: Any,
     user_roles: list[str],
@@ -196,7 +199,7 @@ def _should_suppress_mutations(
 
 
 def _user_can_mutate(
-    deps: "_PageDeps",
+    deps: "_PageRouterConfig",
     surface_name: str | None,
     operation: str,
     auth_ctx: Any,
@@ -204,9 +207,6 @@ def _user_can_mutate(
     """Check if user can perform a mutation (create/update/delete) on the entity."""
     if not surface_name or not deps.entity_cedar_specs or auth_ctx is None:
         return True  # No access control configured
-
-    if deps.evaluate_permission is None:
-        return True  # No evaluator available
 
     _entity_name = deps.surface_entity.get(surface_name)
     _cedar_spec = deps.entity_cedar_specs.get(_entity_name) if _entity_name else None
@@ -238,7 +238,7 @@ def _user_can_mutate(
         roles=[r.removeprefix("role_") for r in _raw_roles],
         is_superuser=getattr(_user, "is_superuser", False) if _user else False,
     )
-    _decision = deps.evaluate_permission(
+    _decision = evaluate_permission(
         _cedar_spec,
         _op,
         None,
@@ -400,15 +400,12 @@ def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
 
 def _filter_nav_by_entity_access(
     nav_items: list[Any],
-    deps: "_PageDeps",
+    deps: "_PageRouterConfig",
     auth_ctx: Any,
 ) -> list[Any]:
     """Remove nav items whose entity denies the user's role for LIST (#583)."""
     if auth_ctx is None or not auth_ctx.is_authenticated:
         return nav_items
-
-    if deps.evaluate_permission is None:
-        return nav_items  # No evaluator available
 
     _user = auth_ctx.user
     _raw_roles = list(getattr(_user, "roles", [])) if _user else []
@@ -441,7 +438,7 @@ def _filter_nav_by_entity_access(
             # No rules or needs record context — keep the item visible
             filtered.append(item)
             continue
-        _decision = deps.evaluate_permission(
+        _decision = evaluate_permission(
             cedar_spec,
             AccessOperationKind.LIST,
             None,
@@ -459,7 +456,14 @@ def _filter_nav_by_entity_access(
 
 
 @dataclass
-class _PageDeps:
+class _PageRouterConfig:
+    """Per-router configuration built once at startup, threaded through
+    every page handler. The cross-layer callable-injection fields that
+    historically lived here (`evaluate_permission`, `inject_display_names`,
+    #679 workaround) were removed in #1094 — those helpers now live in
+    `dazzle.render` and are imported directly at the call site.
+    """
+
     appspec: ir.AppSpec
     backend_url: str
     theme_css: str
@@ -473,9 +477,6 @@ class _PageDeps:
     surface_workspace: dict[str, str] = field(default_factory=dict)
     # Route path → entity name — for filtering sidebar nav items by entity permit (#583)
     route_entity: dict[str, str] = field(default_factory=dict)
-    # Callables injected from dazzle.back — breaks circular import (#679)
-    evaluate_permission: Callable[..., Any] | None = None
-    inject_display_names: Callable[..., Any] | None = None
 
 
 # =============================================================================
@@ -487,7 +488,7 @@ class _PageDeps:
 class _PageRequestContext:
     """Shared state built once per request, passed to each handler helper."""
 
-    deps: _PageDeps
+    deps: _PageRouterConfig
     ctx: Any
     request: Any  # FastAPI Request
     auth_ctx: Any  # AuthContext | None
@@ -628,7 +629,7 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
 
     _entity_name = prc.deps.surface_entity.get(prc.surface_name)
     _cedar_spec = prc.deps.entity_cedar_specs.get(_entity_name) if _entity_name else None
-    if _cedar_spec is None or prc.deps.evaluate_permission is None:
+    if _cedar_spec is None:
         return None
 
     # Determine operation: list surfaces use LIST, create surfaces
@@ -664,7 +665,7 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
         roles=[r.removeprefix("role_") for r in _raw_roles],
         is_superuser=getattr(_user, "is_superuser", False) if _user else False,
     )
-    _decision = prc.deps.evaluate_permission(
+    _decision = prc.evaluate_permission(
         _cedar_spec,
         _op,
         None,
@@ -678,8 +679,6 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
         # returned a bare JSONResponse, stranding browser users
         # with a raw JSON body on what should be an HTML route.
         from fastapi import HTTPException
-
-        from dazzle.back.runtime.route_generator import _forbidden_detail
 
         raise HTTPException(
             status_code=403,
@@ -706,8 +705,7 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     )
     # Resolve FK dicts -> display strings so detail fields show names not UUIDs (#663)
     if req_detail.item and "error" not in req_detail.item:
-        if prc.deps.inject_display_names is not None:
-            req_detail.item = prc.deps.inject_display_names(req_detail.item)
+        req_detail.item = _inject_display_names(req_detail.item)
 
     if "error" in req_detail.item:
         logger.warning(
@@ -1255,7 +1253,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     if not (has_table or has_detail or has_form):
         return None
 
-    from dazzle.back.runtime.renderers.dispatch import dispatch_render
+    from dazzle.render.dispatch import dispatch_render
     from dazzle.render.fragment.errors import FragmentError
 
     ctx_dict = _build_dispatch_ctx(render_ctx, surface)
@@ -1366,7 +1364,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
     if is_partial:
         html = rendered_inner
     else:
-        from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
+        from dazzle.render.dispatch import dispatch_render_page
 
         # Assets and theme read from app.state. The `fragment_chrome_*`
         # state-attribute names are kept for backward compat with
@@ -1417,7 +1415,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
 
 
 async def _page_handler(
-    deps: _PageDeps,
+    deps: _PageRouterConfig,
     route_path: str,
     ctx: Any,
     view_name: str | None,
@@ -1474,7 +1472,7 @@ async def _page_handler(
 
 
 def _make_page_handler(
-    deps: _PageDeps, route_path: str, ctx: Any, view_name: str | None = None
+    deps: _PageRouterConfig, route_path: str, ctx: Any, view_name: str | None = None
 ) -> Any:
     """Create a closure handler for a specific page route.
 
@@ -1492,7 +1490,7 @@ def _make_page_handler(
 
 def _make_workspace_handler(
     *,
-    deps: _PageDeps,
+    deps: _PageRouterConfig,
     ws_ctx: Any,
     ws_route: str,
     ws_allowed_personas: list[str],
@@ -1581,7 +1579,7 @@ def _build_workspace_primary_action_candidates(
 
 
 async def _workspace_handler(
-    deps: _PageDeps,
+    deps: _PageRouterConfig,
     ws_context: Any,
     ws_route: str,
     ws_allowed_personas: list[str],
@@ -1714,8 +1712,8 @@ async def _workspace_handler(
     # explicit "adapt to the new system" trade-off, not a parity gap.
     _ = (user_email, user_name, user_preferences, is_authenticated)
 
-    from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
     from dazzle.render.context import NavItemContext, PageContext
+    from dazzle.render.dispatch import dispatch_render_page
     from dazzle.ui.runtime.workspace_renderer import (
         render_workspace_content_typed,
     )
@@ -1766,7 +1764,7 @@ async def _workspace_handler(
 
 
 async def _root_redirect(
-    deps: _PageDeps,
+    deps: _PageRouterConfig,
     persona_ws_routes: dict[str, str],
     fallback_ws_route: str,
     request: Request,
@@ -1802,9 +1800,7 @@ def create_page_routes(
     get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
     *,
-    evaluate_permission_fn: Callable[..., Any] | None = None,
     convert_entity_fn: Callable[..., Any] | None = None,
-    inject_display_names_fn: Callable[..., Any] | None = None,
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -1886,7 +1882,7 @@ def create_page_routes(
         _slug = _entity.name.lower().replace("_", "-")
         route_entity[f"{app_prefix}/{_slug}"] = _entity.name
 
-    deps = _PageDeps(
+    deps = _PageRouterConfig(
         appspec=appspec,
         backend_url=backend_url,
         theme_css=theme_css,
@@ -1899,8 +1895,6 @@ def create_page_routes(
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,
         route_entity=route_entity,
-        evaluate_permission=evaluate_permission_fn,
-        inject_display_names=inject_display_names_fn,
     )
 
     # Register routes — sort by specificity so FastAPI matches the most-specific

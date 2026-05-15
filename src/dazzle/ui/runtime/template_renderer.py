@@ -60,7 +60,7 @@ def render_page(
     if content_only or partial:
         return rendered_content
 
-    from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
+    from dazzle.render.dispatch import dispatch_render_page
 
     return dispatch_render_page(
         context,

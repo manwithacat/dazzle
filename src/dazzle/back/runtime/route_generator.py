@@ -187,61 +187,10 @@ def _is_htmx_request(request: Any) -> bool:
     return HtmxDetails.from_request(request).is_htmx
 
 
-def _forbidden_detail(
-    *,
-    entity_name: str,
-    operation: Any,
-    cedar_access_spec: Any,
-    current_roles: list[str] | None = None,
-) -> dict[str, Any]:
-    """Build a structured 403 detail dict disclosing role requirements.
-
-    Instead of raising ``HTTPException(detail="Forbidden")`` — which
-    strands the user with no affordance (see #808) — emit enough
-    context for the error page to render a "you're signed in as X,
-    this page requires Y" disclosure. The framework already knows
-    which personas are permitted for this operation on this entity;
-    we just have to thread it through.
-
-    Args:
-        entity_name: The entity whose access was denied.
-        operation: The access operation (read/list/create/update/…).
-        cedar_access_spec: The entity's access spec (has permissions
-            with ``personas`` lists per operation).
-        current_roles: Roles the requesting user actually had.
-
-    Returns:
-        Dict suitable for passing as ``HTTPException(detail=...)``.
-        The exception handler unpacks it; API clients receive it
-        verbatim as JSON.
-    """
-    # `operation` may arrive as a string ("create") or an enum
-    # (AccessOperationKind.CREATE). Normalise both to lowercase
-    # strings so matching against rule.operation (which is an enum)
-    # works either way.
-    op_str = str(getattr(operation, "value", operation)).lower()
-
-    permitted: list[str] = []
-    try:
-        for rule in getattr(cedar_access_spec, "permissions", []) or []:
-            rule_op = str(
-                getattr(getattr(rule, "operation", None), "value", getattr(rule, "operation", None))
-            ).lower()
-            if rule_op == op_str:
-                for p in getattr(rule, "personas", None) or []:
-                    if p not in permitted:
-                        permitted.append(p)
-    except Exception:  # pragma: no cover — defensive: never shadow the 403 (#smells-1.1)
-        logger.debug("Permitted-personas computation failed; omitting from 403", exc_info=True)
-
-    return {
-        "error": "forbidden",
-        "message": f"You don't have permission to {op_str} {entity_name}.",
-        "entity": entity_name,
-        "operation": op_str,
-        "permitted_personas": permitted,
-        "current_roles": list(current_roles or []),
-    }
+# _forbidden_detail moved to dazzle.render.access_messages in #1094 so that
+# ui/ page handlers can build the same payload without crossing back↔ui.
+# Re-exported here so the existing back-internal call sites keep working.
+from dazzle.render.access_messages import _forbidden_detail  # noqa: E402, F401
 
 
 def _wants_html(request: Any) -> bool:
@@ -1553,9 +1502,9 @@ def _build_cedar_handler(
         request: Request,
         auth_context: AuthContext,
     ) -> Any:
-        from dazzle.back.runtime.access_evaluator import evaluate_permission
         from dazzle.back.runtime.audit_log import measure_evaluation_time
         from dazzle.core.access import AccessDecision
+        from dazzle.render.access_evaluator import evaluate_permission
 
         # Pre-read for operations that need existing record for policy eval
         existing = None
@@ -2220,7 +2169,7 @@ async def _list_handler_body(
         # Only gate when all list rules are pure role checks (no field conditions)
         has_field_conditions = any(_is_field_condition(r.condition) for r in list_rules)
         if list_rules and not has_field_conditions:
-            from dazzle.back.runtime.access_evaluator import evaluate_permission
+            from dazzle.render.access_evaluator import evaluate_permission
 
             _user, _ctx = _build_access_context(auth_context)
             decision = evaluate_permission(
@@ -2609,8 +2558,8 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
             return HTMLResponse(content=fragment_html)
 
         # Direct browser navigation: wrap fragment in a typed Page (#349).
-        from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
         from dazzle.render.context import PageContext
+        from dazzle.render.dispatch import dispatch_render_page
 
         page_ctx = PageContext(
             page_title=f"{entity_name} Detail",
@@ -2687,9 +2636,9 @@ def create_read_handler(spec: RouteSpec) -> Callable[..., Any]:
         async def _read_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle.back.runtime.access_evaluator import evaluate_permission
             from dazzle.back.runtime.audit_log import measure_evaluation_time
             from dazzle.core.access import AccessDecision, AccessOperationKind
+            from dazzle.render.access_evaluator import evaluate_permission
 
             result = await service.execute(operation="read", id=id, include=auto_include)
             if result is None:

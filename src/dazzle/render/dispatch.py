@@ -1,9 +1,21 @@
-"""PageContext → Page primitive adapter (Plan 17 P2).
+"""Render dispatch — surface-to-fragment + page-chrome composition.
 
-The Fragment substrate ships a typed `Page` primitive that wraps an
-HTML document. This module is the bridge from the runtime's
-`PageContext` (carrying surface-level metadata + an already-rendered
-inner HTML body) to a `Page` primitive ready for the Fragment renderer.
+Two entry points:
+
+- ``dispatch_render(surface, ctx, services)`` — looks up the registered
+  renderer by ``surface.render`` and invokes its adapter to produce the
+  inner-HTML for one surface. Used by ``ui.runtime.page_routes`` when
+  building a workspace page.
+
+- ``dispatch_render_page(ctx, inner_html, ...)`` — wraps an already-
+  rendered inner-HTML body in a typed ``Page`` (optionally chromed with
+  ``AppShell`` + ``Sidebar`` + ``Topbar``) and renders the document.
+
+Both functions live in ``dazzle.render`` — neutral ground between
+``back/`` (renderer registry + RuntimeServices) and ``ui/`` (page
+routes). Moved here in #1094 (parent #1086) to break the back↔ui
+import cycle that previously required a callable-injection shim
+(see the `#679` workaround).
 
 Asset URLs (css_links, js_scripts) and theme are intentionally passed
 in by the caller as kwargs rather than scraped from PageContext — the
@@ -15,7 +27,7 @@ would duplicate a moving target; passing in is honest.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.render.fragment import (
     URL,
@@ -27,10 +39,39 @@ from dazzle.render.fragment import (
     Text,
     Topbar,
 )
+from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML
 
 if TYPE_CHECKING:
+    from dazzle.core.ir.surfaces import SurfaceSpec
     from dazzle.render.context import PageContext
+
+
+def dispatch_render(
+    surface: SurfaceSpec,
+    *,
+    ctx: dict[str, Any],
+    services: Any,
+) -> str:
+    """Render ``surface`` using the renderer named by ``surface.render``,
+    or ``"fragment"`` if unset. Returns the HTML string.
+
+    ``services`` is a ``RuntimeServices`` instance; typed as ``Any``
+    here to avoid the back→render dependency arrow (#1086 layer
+    contract). Only the ``renderer_registry.resolve`` /
+    ``registered_names`` duck-typed contract is used.
+
+    Raises FragmentError if the named renderer is not registered.
+    """
+    renderer_name = surface.render or "fragment"
+    handler = services.renderer_registry.resolve(renderer_name)
+    if handler is None:
+        raise FragmentError(
+            f"surface {surface.name!r}: unknown renderer {renderer_name!r}; "
+            f"registered renderers: {sorted(services.renderer_registry.registered_names())}"
+        )
+
+    return handler.render(surface, ctx)
 
 
 def build_page(

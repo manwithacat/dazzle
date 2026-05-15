@@ -565,12 +565,12 @@ def create_site_page_routes(
              primitive (with OG / Twitter meta from `ctx.og_meta`,
              per Phase 4 first slice v0.67.42).
         """
-        from dazzle.back.runtime.renderers.page_builder import build_page
         from dazzle.back.runtime.renderers.site_section_builder import (
             TYPED_SECTION_TYPES,
             render_typed_section,
         )
         from dazzle.render.context import PageContext
+        from dazzle.render.dispatch import build_page
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         sections = list(getattr(ctx, "sections", None) or [])

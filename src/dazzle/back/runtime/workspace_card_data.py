@@ -20,6 +20,11 @@ import datetime as _dt
 import re
 from typing import Any
 
+# Display-name helpers moved to dazzle.render.display_names in #1094 so
+# they're reachable from ui/ without crossing the back↔ui boundary.
+# Re-exported here for back-internal callers.
+from dazzle.render.display_names import _inject_display_names, _resolve_display_name  # noqa: F401
+
 # v0.61.55 (#892): profile_card template-string interpolation. Matches
 # `{{ field }}` and `{{ field.path.with.dots }}` only — no expressions,
 # no filters, no Jinja eval. Anything that doesn't match the strict
@@ -462,41 +467,3 @@ def _resolve_task_inbox_multi_source(
                 }
             )
     return inbox_items, inbox_chips
-
-
-def _resolve_display_name(value: Any) -> str:
-    """Resolve a field value to a display string.
-
-    FK relations are dicts with an optional ``__display__`` key.
-    Falls back to ``name``, ``title``, ``code``, ``label``, then ``id``.
-    Scalar values are simply stringified.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, dict):
-        for key in ("__display__", "name", "title", "code", "label", "id"):
-            v = value.get(key)
-            if v is not None:
-                return str(v)
-        # Last resort: first string value in the dict
-        for v in value.values():
-            if isinstance(v, str) and v:
-                return v
-        return str(value.get("id", ""))
-    return str(value)
-
-
-def _inject_display_names(item: dict[str, Any]) -> dict[str, Any]:
-    """Inject ``{field}_display`` keys for FK dict fields (#571).
-
-    For each field whose value is a dict (FK relation), adds a sibling key
-    with the resolved display name. The original dict is preserved for
-    templates that need the id for linking.
-    """
-    extras: dict[str, str] = {}
-    for key, value in item.items():
-        if isinstance(value, dict) and key != "_attention":
-            extras[f"{key}_display"] = _resolve_display_name(value)
-    if extras:
-        item.update(extras)
-    return item

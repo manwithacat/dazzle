@@ -1,18 +1,19 @@
-"""
-Access rule evaluator with Cedar-style permit/forbid semantics.
+"""Access rule evaluator with Cedar-style permit/forbid semantics.
 
-Evaluates EntityAccessSpec from BackendSpec at runtime, supporting:
+Evaluates EntityAccessSpec at runtime, supporting:
 - Cedar three-rule evaluation: FORBID > PERMIT > default-deny
 - Role checks: role(admin)
 - Persona scoping: restrict rules to specific personas
 - Relationship traversal: owner.team_id
 - Logical operators: AND/OR
 - Comparison operators: =, !=, >, <, >=, <=, in, not in
+
+Moved to ``dazzle.render`` in #1094 (parent #1086). Both ``back/`` (route
+generators, app factory) and ``ui/`` (page routes) import from here.
 """
 
 from typing import Any
 
-from dazzle.back.runtime._comparison import eval_comparison_op, normalize_for_comparison
 from dazzle.core.access import (
     AccessAuthContext,
     AccessComparisonKind,
@@ -25,6 +26,7 @@ from dazzle.core.access import (
     EntityAccessSpec,
     PermissionRuleSpec,
 )
+from dazzle.core.comparison import eval_comparison_op, normalize_for_comparison
 
 # =============================================================================
 # Condition Evaluation

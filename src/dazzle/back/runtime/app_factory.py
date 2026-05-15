@@ -540,19 +540,19 @@ def assemble_post_build_routes(
     # ---- 3. App page routes (/app/*) ----
     try:
         from dazzle.back.converters.entity_converter import convert_entity
-        from dazzle.back.runtime.access_evaluator import evaluate_permission
-        from dazzle.back.runtime.workspace_card_data import _inject_display_names
         from dazzle.ui.runtime.page_routes import create_page_routes
 
+        # evaluate_permission / _inject_display_names used to be injected
+        # into the ui page_routes module via a callable-injection shim
+        # (#679 workaround); since #1094 they live in dazzle.render and
+        # ui imports them directly. No longer threaded through this call.
         page_router = create_page_routes(
             appspec,
             backend_url=backend_url,
             theme_css=theme_css,
             get_auth_context=get_auth_context,
             app_prefix="/app",
-            evaluate_permission_fn=evaluate_permission,
             convert_entity_fn=convert_entity,
-            inject_display_names_fn=_inject_display_names,
         )
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
