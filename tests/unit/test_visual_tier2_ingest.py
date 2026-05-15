@@ -84,6 +84,7 @@ def test_three_findings_become_three_rows_severity_sorted(tmp_path: Path) -> Non
         [
             {
                 "app": "simple_task",
+                "screenshot": "/tmp/y/tb_admin.png",
                 "category": "alignment",
                 "severity": "low",
                 "location": "task_board header",
@@ -92,6 +93,7 @@ def test_three_findings_become_three_rows_severity_sorted(tmp_path: Path) -> Non
             },
             {
                 "app": "ops_dashboard",
+                "screenshot": "/tmp/x/cc_ops_engineer.png",
                 "category": "data_quality",
                 "severity": "high",
                 "location": "alerts_timeseries chart",
@@ -100,6 +102,7 @@ def test_three_findings_become_three_rows_severity_sorted(tmp_path: Path) -> Non
             },
             {
                 "app": "ops_dashboard",
+                "screenshot": "/tmp/x/cc_ops_engineer.png",
                 "category": "empty_state",
                 "severity": "medium",
                 "location": "system_status panel",
@@ -160,6 +163,119 @@ def test_dedup_on_rerun_reinforces_existing_row(tmp_path: Path) -> None:
     assert "seen=2" in text
     # Only one row for this finding — not duplicated.
     assert text.count("data_quality") == 1
+
+
+def test_screenshot_field_pins_row_to_source_screen(tmp_path: Path) -> None:
+    """Regression test: each row's `screenshot=` should match the source screen,
+    not just the first screenshot for the app (the cycle 141 smoke-test bug)."""
+    backlog = tmp_path / "improve-backlog.md"
+    manifest = tmp_path / "manifest.json"
+    findings = tmp_path / "findings.json"
+    _seed_backlog(backlog)
+    # Manifest with two simple_task screens — the finding-specific
+    # screenshot path is the second one, not the first.
+    manifest.write_text(
+        json.dumps(
+            {
+                "apps": [
+                    {
+                        "app": "simple_task",
+                        "screens": [
+                            {
+                                "persona": "admin",
+                                "workspace": "task_board",
+                                "url": "/app/workspaces/task_board",
+                                "screenshot": "/tmp/x/task_board_admin.png",
+                            },
+                            {
+                                "persona": "member",
+                                "workspace": "my_work",
+                                "url": "/app/workspaces/my_work",
+                                "screenshot": "/tmp/x/my_work_member.png",
+                            },
+                        ],
+                    }
+                ]
+            }
+        )
+    )
+    _write_findings(
+        findings,
+        [
+            {
+                "app": "simple_task",
+                "screenshot": "/tmp/x/my_work_member.png",
+                "category": "empty_state",
+                "severity": "medium",
+                "location": "my_work — My Completed section",
+                "description": "blank region with no copy",
+                "suggestion": "add empty-state icon + CTA",
+            }
+        ],
+    )
+    result = ingest_visual_findings(findings, manifest, backlog)
+    assert result.rows_added == 1
+
+    text = backlog.read_text()
+    # The row's notes should reference the my_work screenshot, NOT the
+    # first-in-manifest task_board one.
+    row = next(line for line in text.splitlines() if line.startswith("| 2 |"))
+    assert "screenshot=/tmp/x/my_work_member.png" in row
+    assert "task_board_admin.png" not in row
+
+
+def test_screenshot_fallback_to_manifest_when_finding_omits_it(tmp_path: Path) -> None:
+    """If the finding lacks `screenshot` but provides persona+workspace,
+    ingest should look up the screenshot from the manifest."""
+    backlog = tmp_path / "improve-backlog.md"
+    manifest = tmp_path / "manifest.json"
+    findings = tmp_path / "findings.json"
+    _seed_backlog(backlog)
+    manifest.write_text(
+        json.dumps(
+            {
+                "apps": [
+                    {
+                        "app": "simple_task",
+                        "screens": [
+                            {
+                                "persona": "admin",
+                                "workspace": "task_board",
+                                "url": "/app/workspaces/task_board",
+                                "screenshot": "/tmp/x/task_board_admin.png",
+                            },
+                            {
+                                "persona": "member",
+                                "workspace": "my_work",
+                                "url": "/app/workspaces/my_work",
+                                "screenshot": "/tmp/x/my_work_member.png",
+                            },
+                        ],
+                    }
+                ]
+            }
+        )
+    )
+    _write_findings(
+        findings,
+        [
+            {
+                "app": "simple_task",
+                "persona": "member",
+                "workspace": "my_work",
+                "category": "empty_state",
+                "severity": "medium",
+                "location": "my_work — My Completed section",
+                "description": "blank region",
+                "suggestion": "add CTA",
+            }
+        ],
+    )
+    result = ingest_visual_findings(findings, manifest, backlog)
+    assert result.rows_added == 1
+    text = backlog.read_text()
+    row = next(line for line in text.splitlines() if line.startswith("| 2 |"))
+    assert "screenshot=/tmp/x/my_work_member.png" in row
 
 
 def test_findings_with_missing_required_fields_skip(tmp_path: Path) -> None:

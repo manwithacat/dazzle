@@ -107,6 +107,7 @@ Only flag genuine UX problems a human would actually notice. Skip:
 Write a JSON array of findings to `{findings_path}`. Each finding must have these fields, all strings:
 
 - `app`: app identifier (e.g. `ops_dashboard`) — derived from which screenshot triggered the finding
+- `screenshot`: absolute path of the specific screenshot file that triggered the finding (copy the exact path from the list above — this is how the ingest step pairs the finding back to its source image)
 - `category`: one of the category ids listed above
 - `severity`: `"high"`, `"medium"`, or `"low"`
 - `location`: short description of where on the page the issue appears (e.g. `"alerts_timeseries region header"`)

@@ -259,12 +259,20 @@ def ingest_visual_findings(
                 result.rows_reinforced += 1
             continue
 
-        # Screenshot path is best-effort — finding may not carry persona/workspace.
-        screenshot = ""
-        for (s_app, _, _), path in screenshot_index.items():
-            if s_app == app:
-                screenshot = path
-                break
+        # Prefer the screenshot path the subagent attached to this finding.
+        # Fall back to a manifest lookup by (persona, workspace) if present,
+        # finally to "first screenshot for the app" so older finding shapes
+        # don't lose all context.
+        screenshot = str(f.get("screenshot", "") or "")
+        if not screenshot:
+            persona = str(f.get("persona", ""))
+            workspace = str(f.get("workspace", ""))
+            screenshot = screenshot_index.get((app, persona, workspace), "")
+        if not screenshot:
+            for (s_app, _, _), path in screenshot_index.items():
+                if s_app == app:
+                    screenshot = path
+                    break
 
         new_rows.append(_format_row(next_id, app, f, screenshot, timestamp))
         existing_keys.add(key)

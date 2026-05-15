@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.1] - 2026-05-15
+
+### Fixed
+
+- **Visual Tier 2 ingest — screenshot field now pins to source screen.** The cycle 141 smoke-test surfaced that every backlog row's `screenshot=` note pointed at the first screen for the app rather than the screen the finding actually came from. Root cause: subagent output schema didn't include a `screenshot` field, so the ingest helper fell back to a first-match-per-app lookup. Fix: added `screenshot` (absolute path) to the required output schema in `build_subagent_prompt`, and updated `ingest_visual_findings` to prefer `finding["screenshot"]` over manifest lookup (with `(persona, workspace)` lookup as middle fallback, first-screenshot-per-app as last resort). Two new regression tests pin the source-screenshot-pairing behaviour.
+
 ## [0.69.0] - 2026-05-15
 
 ### Changed

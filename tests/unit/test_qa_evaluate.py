@@ -61,6 +61,13 @@ class TestBuildSubagentPrompt:
         # Must instruct the subagent to Write the JSON output.
         assert "Write" in prompt
 
+    def test_output_schema_requires_screenshot_field(self) -> None:
+        """Subagent must echo the screenshot path that triggered each finding —
+        the ingest step pairs the row back to its source image. Forgetting this
+        was the cycle 141 smoke-test bug."""
+        prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
+        assert "`screenshot`" in prompt
+
     def test_requests_json_array_output(self) -> None:
         prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
         assert "JSON" in prompt or "json" in prompt
