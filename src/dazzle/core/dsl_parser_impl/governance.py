@@ -31,10 +31,12 @@ DSL syntax examples:
 """
 
 import logging
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 logger = logging.getLogger(__name__)
 
@@ -215,9 +217,16 @@ class GovernanceParserMixin:
     # =========================================================================
 
     def parse_tenancy(self) -> ir.TenancySpec:
-        """Parse tenancy declaration.
+        """Parse a ``tenancy:`` declaration.
 
-        DSL syntax:
+        Refactored to dispatch-table style (follow-on to #1098). All 9
+        keys are IDENT-text-matched (no dedicated lexer tokens) — they're
+        routed through :data:`_TENANCY_IDENT_KEYWORDS`. Builder assembles
+        :class:`ir.TenantIsolationSpec` + :class:`ir.TenantProvisioningSpec`
+        + :class:`ir.TenancySpec` from the accumulated state.
+
+        DSL syntax::
+
             tenancy:
               mode: shared_schema
               partition_key: tenant_id
@@ -230,161 +239,16 @@ class GovernanceParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # Default values
-        mode = ir.TenancyMode.SHARED_SCHEMA
-        partition_key = "tenant_id"
-        topic_namespace = ir.TopicNamespaceMode.SHARED
-        enforce_in_queries = True
-        cross_tenant_access = False
-        auto_create = True
-        require_approval = False
-        default_limits: dict[str, int] = {}
-        entities_excluded: list[str] = []
-        # #957 cycle 1
-        admin_personas: list[str] = []
-        per_tenant_config: dict[str, str] = {}
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            if self.match(TokenType.IDENTIFIER):
-                key = self.current_token().value
-                self.advance()
-
-                if self.match(TokenType.COLON):
-                    self.advance()  # consume COLON
-                    if key == "mode":
-                        value = self.expect_identifier_or_keyword().value
-                        try:
-                            mode = ir.TenancyMode(value.lower())
-                        except ValueError:
-                            pass
-                    elif key == "partition_key":
-                        partition_key = self.expect_identifier_or_keyword().value
-                    elif key == "topics":
-                        value = self.expect_identifier_or_keyword().value
-                        try:
-                            topic_namespace = ir.TopicNamespaceMode(value.lower())
-                        except ValueError:
-                            pass
-                    elif key == "enforce_in_queries":
-                        value = self.expect_identifier_or_keyword().value
-                        enforce_in_queries = value.lower() in ("true", "yes", "on")
-                    elif key == "cross_tenant_access":
-                        value = self.expect_identifier_or_keyword().value
-                        cross_tenant_access = value.lower() in ("true", "yes", "on")
-                    elif key == "provisioning":
-                        # Parse nested provisioning block
-                        self.skip_newlines()
-                        if self.match(TokenType.INDENT):
-                            while not self.match(TokenType.DEDENT):
-                                self.skip_newlines()
-                                if self.match(TokenType.DEDENT):
-                                    break
-                                if self.match(TokenType.IDENTIFIER):
-                                    pkey = self.current_token().value
-                                    self.advance()
-                                    if self.match(TokenType.COLON):
-                                        self.advance()  # consume COLON
-                                        pvalue = self.expect_identifier_or_keyword().value
-                                        if pkey == "auto_create":
-                                            auto_create = pvalue.lower() in ("true", "yes", "on")
-                                        elif pkey == "require_approval":
-                                            require_approval = pvalue.lower() in (
-                                                "true",
-                                                "yes",
-                                                "on",
-                                            )
-                                self.skip_newlines()
-                            self.expect(TokenType.DEDENT)
-                    elif key == "exclude":
-                        # Parse list of excluded entities
-                        if self.match(TokenType.LBRACKET):
-                            self.advance()  # consume LBRACKET
-                            while not self.match(TokenType.RBRACKET):
-                                if self.match(TokenType.IDENTIFIER):
-                                    entities_excluded.append(self.current_token().value)
-                                    self.advance()
-                                if self.match(TokenType.COMMA):
-                                    self.advance()  # consume COMMA
-                                else:
-                                    break
-                            self.expect(TokenType.RBRACKET)
-                    elif key == "admin_personas":
-                        # #957 cycle 1: persona names that bypass tenant scope
-                        if self.match(TokenType.LBRACKET):
-                            self.advance()  # consume LBRACKET
-                            while not self.match(TokenType.RBRACKET):
-                                if self.match(TokenType.IDENTIFIER):
-                                    admin_personas.append(self.current_token().value)
-                                    self.advance()
-                                elif self.match(TokenType.STRING):
-                                    admin_personas.append(str(self.advance().value))
-                                if self.match(TokenType.COMMA):
-                                    self.advance()
-                                else:
-                                    break
-                            self.expect(TokenType.RBRACKET)
-                    elif key == "per_tenant_config":
-                        # #957 cycle 1: nested key→type map. Explicitly
-                        # consume the INDENT — `match` is pure peek, so
-                        # without an `advance()` here the loop spins on
-                        # the unconsumed INDENT token forever.
-                        self.skip_newlines()
-                        if self.match(TokenType.INDENT):
-                            self.advance()  # consume INDENT
-                            while not self.match(TokenType.DEDENT, TokenType.EOF):
-                                self.skip_newlines()
-                                if self.match(TokenType.DEDENT, TokenType.EOF):
-                                    break
-                                if (
-                                    self.match(TokenType.IDENTIFIER)
-                                    or self._is_keyword_as_identifier()
-                                ):
-                                    cfg_key = self.current_token().value
-                                    self.advance()
-                                    if self.match(TokenType.COLON):
-                                        self.advance()
-                                        cfg_type = self.expect_identifier_or_keyword().value
-                                        per_tenant_config[cfg_key] = cfg_type
-                                else:
-                                    # Unexpected token (not a config key) — bail
-                                    # out instead of spinning. The outer DEDENT
-                                    # match will exit the tenancy block cleanly.
-                                    break
-                                self.skip_newlines()
-                            if self.match(TokenType.DEDENT):
-                                self.advance()
-            else:
-                self.advance()
-
-            self.skip_newlines()
-
+        state = _TenancyState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords={},
+            ident_keywords=_TENANCY_IDENT_KEYWORDS,
+            state=state,
+            on_unknown=_on_unknown_tenancy,
+        )
         self.expect(TokenType.DEDENT)
-
-        isolation = ir.TenantIsolationSpec(
-            mode=mode,
-            partition_key=partition_key,
-            topic_namespace=topic_namespace,
-            enforce_in_queries=enforce_in_queries,
-            cross_tenant_access=cross_tenant_access,
-        )
-
-        provisioning = ir.TenantProvisioningSpec(
-            auto_create=auto_create,
-            require_approval=require_approval,
-            default_limits=default_limits,
-        )
-
-        return ir.TenancySpec(
-            isolation=isolation,
-            provisioning=provisioning,
-            entities_excluded=entities_excluded,
-            admin_personas=admin_personas,
-            per_tenant_config=per_tenant_config,
-        )
+        return _build_tenancy(state)
 
     # =========================================================================
     # Interfaces Section Parsing
@@ -752,3 +616,220 @@ class GovernanceParserMixin:
             except ValueError:
                 pass
         return result
+
+
+# ================================================================ #
+# parse_tenancy — keyword-dispatch decomposition (#1098 template)   #
+# ================================================================ #
+#
+# The 170-line monolith was replaced (v0.70.19) with the dispatch
+# pattern shipped in #1097. All 9 keys are IDENT-text-matched (no
+# dedicated lexer tokens) — they live in :data:`_TENANCY_IDENT_KEYWORDS`.
+# Builder assembles the nested IsolationSpec + ProvisioningSpec from
+# the flat state.
+
+
+_TRUTHY = ("true", "yes", "on")
+
+
+@dataclass
+class _TenancyState:
+    """Accumulator for :meth:`GovernanceParserMixin.parse_tenancy`.
+
+    Flat mirror of the legacy monolith's locals (which are then sliced
+    into the nested IsolationSpec + ProvisioningSpec by the builder).
+    """
+
+    mode: ir.TenancyMode = ir.TenancyMode.SHARED_SCHEMA
+    partition_key: str = "tenant_id"
+    topic_namespace: ir.TopicNamespaceMode = ir.TopicNamespaceMode.SHARED
+    enforce_in_queries: bool = True
+    cross_tenant_access: bool = False
+    auto_create: bool = True
+    require_approval: bool = False
+    default_limits: dict[str, int] = field(default_factory=dict)
+    entities_excluded: list[str] = field(default_factory=list)
+    admin_personas: list[str] = field(default_factory=list)
+    per_tenant_config: dict[str, str] = field(default_factory=dict)
+
+
+# ---------- Per-key parsers (all IDENT-text-matched) ---------- #
+
+
+def _t_kw_mode(parser: Any, state: _TenancyState) -> None:
+    """``mode: shared_schema | ...`` — tolerant of unknown values (kept as default)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value = parser.expect_identifier_or_keyword().value
+    try:
+        state.mode = ir.TenancyMode(value.lower())
+    except ValueError:
+        pass
+
+
+def _t_kw_partition_key(parser: Any, state: _TenancyState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.partition_key = parser.expect_identifier_or_keyword().value
+
+
+def _t_kw_topics(parser: Any, state: _TenancyState) -> None:
+    """``topics: shared | namespace_per_tenant`` — tolerant of unknown values."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value = parser.expect_identifier_or_keyword().value
+    try:
+        state.topic_namespace = ir.TopicNamespaceMode(value.lower())
+    except ValueError:
+        pass
+
+
+def _t_kw_enforce_in_queries(parser: Any, state: _TenancyState) -> None:
+    """``enforce_in_queries: true|yes|on`` — anything else → False."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.enforce_in_queries = parser.expect_identifier_or_keyword().value.lower() in _TRUTHY
+
+
+def _t_kw_cross_tenant_access(parser: Any, state: _TenancyState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.cross_tenant_access = parser.expect_identifier_or_keyword().value.lower() in _TRUTHY
+
+
+def _t_kw_provisioning(parser: Any, state: _TenancyState) -> None:
+    """Nested ``provisioning:`` block: ``auto_create``, ``require_approval``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    if not parser.match(TokenType.INDENT):
+        return
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        if parser.match(TokenType.IDENTIFIER):
+            pkey = parser.current_token().value
+            parser.advance()
+            if parser.match(TokenType.COLON):
+                parser.advance()
+                pvalue = parser.expect_identifier_or_keyword().value
+                if pkey == "auto_create":
+                    state.auto_create = pvalue.lower() in _TRUTHY
+                elif pkey == "require_approval":
+                    state.require_approval = pvalue.lower() in _TRUTHY
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
+
+
+def _t_kw_exclude(parser: Any, state: _TenancyState) -> None:
+    """``exclude: [Entity1, Entity2, ...]`` — list of identifiers."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if not parser.match(TokenType.LBRACKET):
+        return
+    parser.advance()
+    while not parser.match(TokenType.RBRACKET):
+        if parser.match(TokenType.IDENTIFIER):
+            state.entities_excluded.append(parser.current_token().value)
+            parser.advance()
+        if parser.match(TokenType.COMMA):
+            parser.advance()
+        else:
+            break
+    parser.expect(TokenType.RBRACKET)
+
+
+def _t_kw_admin_personas(parser: Any, state: _TenancyState) -> None:
+    """``admin_personas: [name1, "name with spaces", ...]`` — IDENT or STRING entries (#957)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if not parser.match(TokenType.LBRACKET):
+        return
+    parser.advance()
+    while not parser.match(TokenType.RBRACKET):
+        if parser.match(TokenType.IDENTIFIER):
+            state.admin_personas.append(parser.current_token().value)
+            parser.advance()
+        elif parser.match(TokenType.STRING):
+            state.admin_personas.append(str(parser.advance().value))
+        if parser.match(TokenType.COMMA):
+            parser.advance()
+        else:
+            break
+    parser.expect(TokenType.RBRACKET)
+
+
+def _t_kw_per_tenant_config(parser: Any, state: _TenancyState) -> None:
+    """Nested ``per_tenant_config:`` block — key→type map (#957).
+
+    ``match()`` is pure peek, so without an explicit ``advance()`` after
+    seeing INDENT the original loop spun forever. Preserved here.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    if not parser.match(TokenType.INDENT):
+        return
+    parser.advance()  # consume INDENT
+    while not parser.match(TokenType.DEDENT, TokenType.EOF):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT, TokenType.EOF):
+            break
+        if parser.match(TokenType.IDENTIFIER) or parser._is_keyword_as_identifier():
+            cfg_key = parser.current_token().value
+            parser.advance()
+            if parser.match(TokenType.COLON):
+                parser.advance()
+                state.per_tenant_config[cfg_key] = parser.expect_identifier_or_keyword().value
+        else:
+            # Unexpected token — bail out instead of spinning. Outer DEDENT
+            # match will exit the tenancy block cleanly.
+            break
+        parser.skip_newlines()
+    if parser.match(TokenType.DEDENT):
+        parser.advance()
+
+
+# ---------- Dispatch table + unknown handler + builder ---------- #
+
+
+_TENANCY_IDENT_KEYWORDS: dict[str, KeywordParser[_TenancyState]] = {
+    "mode": _t_kw_mode,
+    "partition_key": _t_kw_partition_key,
+    "topics": _t_kw_topics,
+    "enforce_in_queries": _t_kw_enforce_in_queries,
+    "cross_tenant_access": _t_kw_cross_tenant_access,
+    "provisioning": _t_kw_provisioning,
+    "exclude": _t_kw_exclude,
+    "admin_personas": _t_kw_admin_personas,
+    "per_tenant_config": _t_kw_per_tenant_config,
+}
+
+
+def _on_unknown_tenancy(parser: Any) -> None:
+    """Silently skip unknown keywords (mirrors legacy ``else: self.advance()``)."""
+    parser.advance()
+
+
+def _build_tenancy(state: _TenancyState) -> ir.TenancySpec:
+    """Assemble the nested IsolationSpec + ProvisioningSpec from flat state."""
+    isolation = ir.TenantIsolationSpec(
+        mode=state.mode,
+        partition_key=state.partition_key,
+        topic_namespace=state.topic_namespace,
+        enforce_in_queries=state.enforce_in_queries,
+        cross_tenant_access=state.cross_tenant_access,
+    )
+    provisioning = ir.TenantProvisioningSpec(
+        auto_create=state.auto_create,
+        require_approval=state.require_approval,
+        default_limits=state.default_limits,
+    )
+    return ir.TenancySpec(
+        isolation=isolation,
+        provisioning=provisioning,
+        entities_excluded=state.entities_excluded,
+        admin_personas=state.admin_personas,
+        per_tenant_config=state.per_tenant_config,
+    )

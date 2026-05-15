@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.19] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_tenancy` migrated to keyword-dispatch.** Sixth consumer of the #1097 helper. The 170-line monolith in `src/dazzle/core/dsl_parser_impl/governance.py` becomes a 32-line dispatch shell + 9 IDENT-text-matched `_t_kw_*` functions + a 20-line `_build_tenancy` builder that assembles the nested `TenantIsolationSpec` + `TenantProvisioningSpec` from the flat accumulator. Byte-identical IR verified against a 2-spec snapshot (synthetic fixture + `examples/support_tickets/dsl/runtime.dsl`). Drops 5 entries from the IR-reader-parity baseline. Pre-existing latent bug in the `provisioning:` nested-block parser (cursor stays on INDENT, infinite loop) is preserved — no real DSL uses it today; separate issue to fix.
+
 ## [0.70.18] - 2026-05-15
 
 ### Changed
