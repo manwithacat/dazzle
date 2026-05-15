@@ -565,10 +565,22 @@ async def render_region_html(
         from dazzle.render.fragment import FragmentRenderer
 
         # Adapter wants the lowercase display value (its _BUILDERS keys).
+        # `ctx_region.display` is the authoritative post-inference value
+        # (e.g. EX-047 promotes a region with `aggregate:` from LIST →
+        # SUMMARY); `ir_region.display` is the raw declared value and may
+        # still be "list" in that case. The display_upper whitelist gate
+        # above already validated against _TYPED_REGION_DISPLAYS, so we
+        # use display_upper itself rather than failing the render when
+        # ir_region disagrees with the inferred mode (#1082).
         ir_region = ctx.ir_region or ctx.ctx_region
         _display_obj = getattr(ir_region, "display", None)
         _display_val = getattr(_display_obj, "value", None) or str(_display_obj or "")
-        if _display_val and _display_val.upper() == display_upper:
+        _effective_display = (
+            _display_val
+            if _display_val and _display_val.upper() == display_upper
+            else display_upper.lower()
+        )
+        if _effective_display:
             env = RenderEnv(
                 ctx=ctx,
                 ir_region=ir_region,
@@ -595,7 +607,13 @@ async def render_region_html(
                 adapter_ctx = _build_specialty_adapter_ctx(display_upper, env, base_ctx)
 
             try:
-                surface = WorkspaceRegionAdapter().build(ir_region, adapter_ctx)
+                # #1082: pass the post-inference display so the
+                # adapter routes correctly even when ir_region.display
+                # is still the pre-inference raw value (e.g. "list" for
+                # a region whose aggregate: promoted it to SUMMARY).
+                surface = WorkspaceRegionAdapter().build(
+                    ir_region, adapter_ctx, display_override=_effective_display
+                )
                 inner = getattr(getattr(surface, "body", None), "body", None)
                 fragment_to_render = inner if inner is not None else surface
                 typed_primitive_html = FragmentRenderer().render(fragment_to_render)

@@ -131,18 +131,33 @@ class WorkspaceRegionAdapter(
         "sparkline": "sparkline",
     }
 
-    def build(self, region: Any, ctx: dict[str, Any]) -> Fragment:
+    def build(
+        self,
+        region: Any,
+        ctx: dict[str, Any],
+        display_override: str | None = None,
+    ) -> Fragment:
         """Dispatch on `region.display` to the right primitive.
 
         Resolves aliases first, then looks up the canonical builder.
         Adding a new display value is one entry in `_BUILDERS` (or
         `_ALIASES` for a redirect) — no if-chain edits required.
+
+        `display_override` lets the caller force a specific display
+        value when post-inference promotion has changed the effective
+        display (e.g. EX-047 promotes a region with `aggregate:` from
+        LIST → SUMMARY, but `ir_region.display` is still "list" — the
+        caller passes the inferred `ctx_region.display` here to route
+        correctly). #1082.
         """
-        display_obj = getattr(region, "display", None)
-        raw_display = getattr(display_obj, "value", None)
-        if raw_display is None:
-            raw_display = "" if display_obj is None else str(display_obj)
-        display_value = raw_display.strip()
+        if display_override is not None:
+            display_value = display_override.strip()
+        else:
+            display_obj = getattr(region, "display", None)
+            raw_display = getattr(display_obj, "value", None)
+            if raw_display is None:
+                raw_display = "" if display_obj is None else str(display_obj)
+            display_value = raw_display.strip()
 
         # TimeSeries family — same builder, different view argument.
         view = self._TIMESERIES_VIEWS.get(display_value)

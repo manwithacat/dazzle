@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.6] - 2026-05-15
+
+### Fixed
+
+- **#1082: SUMMARY/METRICS regions now emit EmptyState when aggregate input is empty.** Two-part fix in `workspace_region_render.py` and `region_adapter/_dispatcher.py`. The render guard at line 571 was silently dropping the typed-primitive path when `ir_region.display` (raw IR default: "list") disagreed with `ctx_region.display` (EX-047 post-inference: "SUMMARY"). Then even past the guard, the adapter dispatched by `ir_region.display` so it would have routed to the list builder instead of metrics. Relaxed the guard + added a `display_override` kwarg to `WorkspaceRegionAdapter.build()` so callers thread the post-inference display through. The metrics builder's existing EmptyState fallback (lines 267-272 of `_builders_metrics.py`) now fires correctly. Pins the renderer→adapter contract with 4 new tests in `tests/unit/test_region_adapter_dispatcher.py`.
+
 ## [0.69.5] - 2026-05-15
 
 ### Fixed
