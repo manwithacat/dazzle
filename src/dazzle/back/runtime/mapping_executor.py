@@ -334,7 +334,7 @@ class MappingExecutor:
                 if method in ("POST", "PUT", "PATCH"):
                     request_kwargs["json"] = body
 
-                async with httpx.AsyncClient(timeout=30.0) as client:
+                async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  retry via async_retrying_request below
                     resp = await async_retrying_request(
                         client,
                         method,

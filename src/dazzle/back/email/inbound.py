@@ -235,7 +235,7 @@ class MailpitInboundAdapter(InboundMailAdapter):
         artifacts = []
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient() as client:  # see async_retrying_request below
                 # List messages
                 response = await async_retrying_request(
                     client,
@@ -301,7 +301,7 @@ class MailpitInboundAdapter(InboundMailAdapter):
         try:
             import httpx
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient() as client:  # noqa: DZ-HTTP-NORETRY  health check must not mask transient failures
                 response = await client.get(
                     f"{self._http_url}/api/v1/messages",
                     params={"limit": 1},

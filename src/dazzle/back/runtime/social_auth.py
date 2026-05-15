@@ -252,7 +252,7 @@ async def exchange_github_code(
 
     from dazzle.core.http_client import async_retrying_request
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as client:  # see async_retrying_request below
         # Exchange code for access token
         token_response = await async_retrying_request(
             client,
@@ -364,7 +364,7 @@ async def verify_github_token(access_token: str) -> SocialProfile:
 
     from dazzle.core.http_client import async_retrying_request
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as client:  # see async_retrying_request below
         # Fetch user profile
         user_response = await async_retrying_request(
             client,

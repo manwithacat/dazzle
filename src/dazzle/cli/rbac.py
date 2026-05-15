@@ -192,7 +192,7 @@ async def run_scope_verification(
 
     import httpx
 
-    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
         # Login as admin
         try:
             admin_cookies = await _login(client, base_url, admin_email, admin_password)

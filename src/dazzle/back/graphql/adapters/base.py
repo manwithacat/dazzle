@@ -660,9 +660,12 @@ class BaseExternalAdapter(ABC, Generic[ConfigT]):
         """Make request using httpx."""
         import httpx
 
+        from dazzle.core.http_client import async_retrying_request
+
         try:
-            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-                response = await client.request(
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:  # noqa: E501  see async_retrying_request below
+                response = await async_retrying_request(
+                    client,
                     method,
                     url,
                     json=json_body,

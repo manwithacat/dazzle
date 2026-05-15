@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.4] - 2026-05-15
+
+### Changed
+
+- **#1087: bare `httpx.AsyncClient` call sites in `back/`/`mcp/`/`cli/` now annotated for retry handling.** Pattern P4 from the 2026-05-15 smells run. The 20 `httpx.AsyncClient(` sites in the in-scope directories were triaged into three buckets:
+
+  - **Already wrapped with `async_retrying_request` — marker added so the gate stops flagging them.** `social_auth.py` (2 sites), `fragment_routes.py` (2), `integration_executor.py`, `mapping_executor.py`, `email/inbound.py` (1 of the 2 sites). Lines reflowed by ruff format use a `# noqa: DZ-HTTP-NORETRY` marker so the gate's per-line check passes.
+  - **Newly wrapped with `async_retrying_request`.** `back/graphql/adapters/base.py` GraphQL adapter — previously called `client.request(...)` bare; now routes through `async_retrying_request` so 502/503/504 and `ConnectError` transients retry with exponential backoff.
+  - **Intentionally unwrapped, explicitly exempted with reason.** Two health-check sites (`back/runtime/health_aggregator.py`, `back/email/inbound.py:304`) — retrying a health check would mask the transient failures the check exists to detect. One persistent-client site (`api_tracker.py`) — retry is the caller's responsibility on each `.request()` call. Nine one-shot CLI/MCP sites (`cli/feedback_impl.py` ×5, `cli/qa.py`, `cli/rbac.py`, `cli/ux.py`, `mcp/server/handlers/discovery/missions.py`) — user-invoked single-shot commands where fail-fast beats silent retry.
+
+  Done criteria from #1087:
+  ```
+  grep -rn 'httpx\.AsyncClient(' src/dazzle/back/ src/dazzle/mcp/ src/dazzle/cli/ --include='*.py' \
+    | grep -v 'async_retrying_request\|#.*noqa'
+  ```
+  returns empty.
+
+### Agent Guidance
+
+- New outbound `httpx.AsyncClient(...)` usage in `back/`, `mcp/`, or `cli/` must either route through `dazzle.core.http_client.async_retrying_request` (so transient errors retry) or carry a `# noqa: DZ-HTTP-NORETRY` marker with a one-line reason. The gate above is the enforcement mechanism. Ruff warns about the unrecognised `DZ-HTTP-NORETRY` code but does not fail the build — that's intentional, the marker name is for human readers and the smell-run gate.
+- Health checks must NOT retry — the whole point is detecting transient unavailability. Mark with `# noqa: DZ-HTTP-NORETRY  health check must not mask transient failures`.
+
 ## [0.70.3] - 2026-05-15
 
 ### Changed
