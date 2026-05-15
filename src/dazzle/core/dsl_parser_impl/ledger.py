@@ -43,6 +43,7 @@ DSL Syntax (v0.24.0):
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -50,6 +51,7 @@ from pydantic import ValidationError
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class LedgerParserMixin:
@@ -67,10 +69,17 @@ class LedgerParserMixin:
         _parse_construct_header: Any
 
     def parse_ledger(self) -> ir.LedgerSpec:
-        """
-        Parse a ledger block.
+        """Parse a ``ledger <name> "Label"?:`` block.
 
-        Grammar:
+        Refactored to dispatch-table style (follow-on to #1098). 9
+        token-keyed `_l_kw_*` parsers (intent/account_code/ledger_id/
+        account_type/currency/flags/sync_to/tenant_scoped/metadata_mapping)
+        + tolerant `_skip_unknown_ledger_field` on_unknown + a
+        `_build_ledger` builder that wraps pydantic ValidationError into
+        an actionable parse error.
+
+        Grammar::
+
             ledger IDENTIFIER STRING? COLON NEWLINE INDENT
               [intent COLON STRING NEWLINE]
               account_code COLON NUMBER NEWLINE
@@ -82,124 +91,23 @@ class LedgerParserMixin:
               [tenant_scoped COLON BOOL NEWLINE]
               [metadata_mapping COLON NEWLINE mapping_block]
             DEDENT
-
-        Returns:
-            LedgerSpec with parsed values
         """
         name, label, _ = self._parse_construct_header(TokenType.LEDGER, allow_keyword_name=True)
 
-        # Parse description/intent if present (docstring-style)
-        intent = None
+        # Parse description/intent if present (docstring-style).
+        state = _LedgerState()
         if self.match(TokenType.STRING):
-            intent = str(self.advance().value)
+            state.intent = str(self.advance().value)
             self.skip_newlines()
 
-        # Initialize required fields with defaults
-        account_code = 0
-        ledger_id = 0
-        account_type = ir.AccountType.ASSET
-        currency = "USD"
-        flags: list[ir.AccountFlag] = []
-        sync: ir.LedgerSyncSpec | None = None
-        tenant_scoped = True
-        metadata_mapping: dict[str, str] = {}
-
-        # Parse ledger fields
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            if self.match(TokenType.INTENT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                intent = str(self.expect(TokenType.STRING).value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.ACCOUNT_CODE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                account_code = int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.LEDGER_ID):
-                self.advance()
-                self.expect(TokenType.COLON)
-                ledger_id = int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.ACCOUNT_TYPE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                account_type_str = str(self.expect_identifier_or_keyword().value)
-                account_type = self._parse_account_type(account_type_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.CURRENCY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                currency = str(self.expect_identifier_or_keyword().value).upper()
-                self.skip_newlines()
-
-            elif self.match(TokenType.FLAGS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                flags = self._parse_account_flags()
-                self.skip_newlines()
-
-            elif self.match(TokenType.SYNC_TO):
-                self.advance()
-                self.expect(TokenType.COLON)
-                sync = self._parse_ledger_sync()
-                self.skip_newlines()
-
-            elif self.match(TokenType.TENANT_SCOPED):
-                self.advance()
-                self.expect(TokenType.COLON)
-                token = self.advance()
-                tenant_scoped = token.type == TokenType.TRUE
-                self.skip_newlines()
-
-            elif self.match(TokenType.METADATA_MAPPING):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                metadata_mapping = self._parse_metadata_mapping()
-
-            else:
-                # Skip unknown field
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                    self._skip_to_next_ledger_field()
-
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_LEDGER_KEYWORDS,
+            state=state,
+            on_unknown=_skip_unknown_ledger_field,
+        )
         self.expect(TokenType.DEDENT)
-
-        try:
-            return ir.LedgerSpec(
-                name=str(name),
-                label=label,
-                intent=intent,
-                account_code=account_code,
-                ledger_id=ledger_id,
-                account_type=account_type,
-                currency=currency,
-                flags=flags,
-                sync=sync,
-                tenant_scoped=tenant_scoped,
-                metadata_mapping=metadata_mapping,
-            )
-        except ValidationError as e:
-            # Surface Pydantic constraint failures (e.g. account_code < 1)
-            # as structured parse errors so malformed / fuzz-mutated DSL
-            # doesn't crash the caller with a raw pydantic traceback.
-            token = self.current_token()
-            raise make_parse_error(
-                f"Invalid ledger '{name}': {e.errors()[0]['msg']}",
-                self.file,
-                token.line,
-                token.column,
-            ) from e
+        return _build_ledger(self, str(name), label, state)
 
     def parse_transaction(self) -> ir.TransactionSpec:
         """
@@ -701,3 +609,160 @@ class LedgerParserMixin:
         ):
             self.advance()
             self.skip_newlines()
+
+
+# ============================================================ #
+# parse_ledger — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 133-line monolith was replaced (v0.70.24) with the dispatch
+# pattern shipped in #1097. 9 token-keyed `_l_kw_*` parsers + a
+# tolerant `_skip_unknown_ledger_field` on_unknown + a
+# `_build_ledger` builder that wraps pydantic ``ValidationError``
+# into an actionable parse error.
+
+
+@dataclass
+class _LedgerState:
+    """Accumulator for :meth:`LedgerParserMixin.parse_ledger`."""
+
+    intent: str | None = None
+    account_code: int = 0
+    ledger_id: int = 0
+    account_type: ir.AccountType = ir.AccountType.ASSET
+    currency: str = "USD"
+    flags: list[ir.AccountFlag] = field(default_factory=list)
+    sync: ir.LedgerSyncSpec | None = None
+    tenant_scoped: bool = True
+    metadata_mapping: dict[str, str] = field(default_factory=dict)
+
+
+# ---------- Keyword parsers ---------- #
+
+
+def _l_kw_intent(parser: Any, state: _LedgerState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.intent = str(parser.expect(TokenType.STRING).value)
+    parser.skip_newlines()
+
+
+def _l_kw_account_code(parser: Any, state: _LedgerState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.account_code = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _l_kw_ledger_id(parser: Any, state: _LedgerState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.ledger_id = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _l_kw_account_type(parser: Any, state: _LedgerState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    type_str = str(parser.expect_identifier_or_keyword().value)
+    state.account_type = parser._parse_account_type(type_str)
+    parser.skip_newlines()
+
+
+def _l_kw_currency(parser: Any, state: _LedgerState) -> None:
+    """``currency: ISO_CODE`` — uppercased at parse time for canonical form."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.currency = str(parser.expect_identifier_or_keyword().value).upper()
+    parser.skip_newlines()
+
+
+def _l_kw_flags(parser: Any, state: _LedgerState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.flags = parser._parse_account_flags()
+    parser.skip_newlines()
+
+
+def _l_kw_sync_to(parser: Any, state: _LedgerState) -> None:
+    """``sync_to: Entity.field`` — dotted-path target for cache sync."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.sync = parser._parse_ledger_sync()
+    parser.skip_newlines()
+
+
+def _l_kw_tenant_scoped(parser: Any, state: _LedgerState) -> None:
+    """``tenant_scoped: true|false`` — any non-TRUE token reads as False."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    token = parser.advance()
+    state.tenant_scoped = token.type == TokenType.TRUE
+    parser.skip_newlines()
+
+
+def _l_kw_metadata_mapping(parser: Any, state: _LedgerState) -> None:
+    """``metadata_mapping:`` — nested block delegating to the mixin helper."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.metadata_mapping = parser._parse_metadata_mapping()
+
+
+# ---------- Dispatch table + on_unknown + builder ---------- #
+
+
+_LEDGER_KEYWORDS: dict[TokenType, KeywordParser[_LedgerState]] = {
+    TokenType.INTENT: _l_kw_intent,
+    TokenType.ACCOUNT_CODE: _l_kw_account_code,
+    TokenType.LEDGER_ID: _l_kw_ledger_id,
+    TokenType.ACCOUNT_TYPE: _l_kw_account_type,
+    TokenType.CURRENCY: _l_kw_currency,
+    TokenType.FLAGS: _l_kw_flags,
+    TokenType.SYNC_TO: _l_kw_sync_to,
+    TokenType.TENANT_SCOPED: _l_kw_tenant_scoped,
+    TokenType.METADATA_MAPPING: _l_kw_metadata_mapping,
+}
+
+
+def _skip_unknown_ledger_field(parser: Any) -> None:
+    """Tolerate ``unknown: value`` lines (mirrors legacy else branch).
+
+    Advances past the unknown keyword + colon and delegates to the
+    mixin's ``_skip_to_next_ledger_field`` helper to skip the value.
+    """
+    parser.advance()
+    if parser.match(TokenType.COLON):
+        parser.advance()
+        parser._skip_to_next_ledger_field()
+
+
+def _build_ledger(parser: Any, name: str, label: str | None, state: _LedgerState) -> ir.LedgerSpec:
+    """Assemble the IR; wrap pydantic ValidationError as a parse error.
+
+    Pydantic constraints (e.g. ``account_code < 1``) raise ValidationError
+    on construction. Surface them as :func:`make_parse_error` so fuzzed
+    or malformed DSL gives a structured diagnostic, not a raw stack.
+    """
+    try:
+        return ir.LedgerSpec(
+            name=name,
+            label=label,
+            intent=state.intent,
+            account_code=state.account_code,
+            ledger_id=state.ledger_id,
+            account_type=state.account_type,
+            currency=state.currency,
+            flags=state.flags,
+            sync=state.sync,
+            tenant_scoped=state.tenant_scoped,
+            metadata_mapping=state.metadata_mapping,
+        )
+    except ValidationError as e:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Invalid ledger '{name}': {e.errors()[0]['msg']}",
+            parser.file,
+            token.line,
+            token.column,
+        ) from e

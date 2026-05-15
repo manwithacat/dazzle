@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.24] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_ledger` migrated to keyword-dispatch.** Eleventh consumer of the #1097 helper. The 133-line monolith in `src/dazzle/core/dsl_parser_impl/ledger.py` becomes a 39-line dispatch shell + 9 token-keyed `_l_kw_*` parsers + tolerant `_skip_unknown_ledger_field` on_unknown + a 28-line `_build_ledger` builder that wraps pydantic `ValidationError` (e.g. account_code < 1) into an actionable `make_parse_error`. Optional docstring-style ``intent`` STRING after the header preserved. Byte-identical IR verified against 2 `LedgerSpec`s in `examples/fieldtest_hub/dsl/app.dsl`. Drops 1 entry from the IR-reader-parity baseline.
+
+### Agent Guidance
+
+- When a `_build_*` constructor wraps pydantic `ValidationError` to surface as a parse error, the dataclass mirror in the accumulator state should match the IR field defaults exactly — otherwise constraint violations surface only when the values pass validation in a partial state. The pattern is in `ledger.py:_build_ledger`.
+
 ## [0.70.23] - 2026-05-15
 
 ### Changed

@@ -99,7 +99,6 @@
   "layout.WorkspaceLayout.stage_options",
   "ledgers.LedgerAccountRef.create_on_entity_create",
   "ledgers.LedgerAccountRef.ledger_name",
-  "ledgers.LedgerSpec.metadata_mapping",
   "ledgers.TransactionSpec.timeout_ms",
   "ledgers.TransferSpec.amount",
   "ledgers.TransferSpec.pending_id",
