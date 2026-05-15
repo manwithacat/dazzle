@@ -1,6 +1,6 @@
 """Cross-entity search endpoint (#782).
 
-Registers ``GET /api/search?q=<query>`` that fans out across every entity
+Registers ``GET /_dazzle/search?q=<query>`` that fans out across every entity
 with declared searchable fields and returns faceted results grouped by
 entity. Searchable fields are drawn from:
 
@@ -25,7 +25,7 @@ def create_search_routes(
     entity_search_fields: dict[str, list[str]],
     per_entity_limit: int = 10,
 ) -> APIRouter | None:
-    """Build an APIRouter with ``GET /api/search`` if any entity is searchable.
+    """Build an APIRouter with ``GET /_dazzle/search`` if any entity is searchable.
 
     Returns ``None`` when no entity declares searchable fields — in that
     case no endpoint is registered, keeping the OpenAPI surface clean.
@@ -38,9 +38,9 @@ def create_search_routes(
     if not searchable:
         return None
 
-    router = APIRouter(tags=["Search"])
+    router = APIRouter(prefix="/_dazzle/search", tags=["Search"])
 
-    @router.get("/api/search")
+    @router.get("")
     async def cross_entity_search(
         q: str = Query(..., description="Search query string", min_length=1),
         entity: str | None = Query(None, description="Restrict search to a single entity name"),

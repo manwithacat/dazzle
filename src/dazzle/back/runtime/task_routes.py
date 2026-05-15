@@ -22,7 +22,7 @@ from dazzle.core.process.adapter import ProcessTask, TaskStatus
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/_dazzle/tasks", tags=["tasks"])
 
 
 # Request/Response Models

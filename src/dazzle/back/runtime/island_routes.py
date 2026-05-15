@@ -2,7 +2,7 @@
 Island API routes — auto-generated CRUD endpoints for UI islands.
 
 When an island declares ``entity: SomeEntity``, the framework generates
-a lightweight data endpoint at ``/api/islands/{island_name}/data``
+a lightweight data endpoint at ``/_dazzle/islands/{island_name}/data``
 that proxies to the entity's CRUD service.
 """
 
@@ -51,9 +51,9 @@ def create_island_routes(
         optional_auth_dep: Optional auth dependency.
 
     Returns:
-        FastAPI APIRouter mounted at ``/api/islands``.
+        FastAPI APIRouter mounted at ``/_dazzle/islands``.
     """
-    router = APIRouter(prefix="/api/islands", tags=["Islands"])
+    router = APIRouter(prefix="/_dazzle/islands", tags=["Islands"])
 
     # Services are keyed by service name (e.g. "list_tasks"), not entity
     # name.  Build a reverse lookup from entity name → CRUDService.

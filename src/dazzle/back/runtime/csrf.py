@@ -47,9 +47,9 @@ class CSRFConfig:
             # banner unusable — buttons click, fetch 403s, banner never
             # dismisses. Same-origin is enforced by the fetch credentials
             # policy on the client side.
-            "/dz/consent",
-            "/dz/consent/banner",
-            "/dz/consent/state",
+            "/_dazzle/consent",
+            "/_dazzle/consent/banner",
+            "/_dazzle/consent/state",
         ]
     )
     exempt_path_prefixes: list[str] = field(
@@ -66,7 +66,7 @@ class CSRFConfig:
             # testers (Playwright, curl) can hit it without a session.
             "/qa/",
             # Locale switcher (#955 cycle 6). Same rationale as
-            # /dz/consent above: idempotent cookie-setter, no privilege
+            # /_dazzle/consent above: idempotent cookie-setter, no privilege
             # escalation, SameSite=Lax blocks cross-site form posts.
             # The endpoint validates the locale tag against the
             # project's supported_locales allow-list before writing

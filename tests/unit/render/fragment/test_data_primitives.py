@@ -551,11 +551,11 @@ def test_search_box_requires_non_empty_name() -> None:
     """`name` becomes part of the results-panel DOM id; empty name
     would produce a colliding/missing id."""
     with pytest.raises(ValueError, match="non-empty name"):
-        SearchBox(name="", fts_endpoint=URL("/api/fts/X"))
+        SearchBox(name="", fts_endpoint=URL("/_dazzle/fts/X"))
 
 
 def test_search_box_default_strings() -> None:
-    s = SearchBox(name="x", fts_endpoint=URL("/api/fts/X"))
+    s = SearchBox(name="x", fts_endpoint=URL("/_dazzle/fts/X"))
     assert s.placeholder == "Search…"
     assert s.coaching_message == "Type to search"
     assert s.label == ""

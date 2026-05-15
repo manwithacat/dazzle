@@ -105,7 +105,7 @@ class TestFormFieldSourceOption:
         assert field.name == "company_name"
         assert field.type == "search_select"
         assert field.source is not None
-        assert field.source.endpoint == "/api/_fragments/search"
+        assert field.source.endpoint == "/_dazzle/fragments/search"
         assert field.source.display_key == "company_name"
         assert field.source.value_key == "company_number"
 

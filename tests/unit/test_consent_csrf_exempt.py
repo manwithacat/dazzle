@@ -2,7 +2,7 @@
 
 The consent banner is served on anonymous marketing pages that don't carry
 a CSRF token — no `<meta name="csrf-token">` tag, no `dazzle_csrf` cookie
-issued to unauthenticated sessions. Before this fix, `POST /dz/consent`
+issued to unauthenticated sessions. Before this fix, `POST /_dazzle/consent`
 returned 403 on every banner click, leaving users stuck at a modal they
 couldn't dismiss.
 
@@ -24,9 +24,9 @@ from dazzle.back.runtime.csrf import CSRFConfig, CSRFMiddleware
 class TestCSRFExemptPaths:
     def test_default_config_exempts_consent_endpoints(self) -> None:
         config = CSRFConfig()
-        assert "/dz/consent" in config.exempt_paths
-        assert "/dz/consent/banner" in config.exempt_paths
-        assert "/dz/consent/state" in config.exempt_paths
+        assert "/_dazzle/consent" in config.exempt_paths
+        assert "/_dazzle/consent/banner" in config.exempt_paths
+        assert "/_dazzle/consent/state" in config.exempt_paths
 
 
 class TestConsentEndpointBehindCSRFMiddleware:
@@ -46,7 +46,7 @@ class TestConsentEndpointBehindCSRFMiddleware:
         cookie — pre-fix this was 403, post-fix it's 204 (consent stored)."""
         client = TestClient(self._make_app())
         response = client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             json={
                 "analytics": True,
                 "advertising": True,
@@ -58,12 +58,12 @@ class TestConsentEndpointBehindCSRFMiddleware:
 
     def test_get_consent_state_without_csrf_token_returns_200(self) -> None:
         client = TestClient(self._make_app())
-        response = client.get("/dz/consent/state")
+        response = client.get("/_dazzle/consent/state")
         assert response.status_code == 200
 
     def test_get_consent_banner_without_csrf_token_returns_200(self) -> None:
         client = TestClient(self._make_app())
-        response = client.get("/dz/consent/banner")
+        response = client.get("/_dazzle/consent/banner")
         # Endpoint returns HTML (or empty) — either way, NOT 403.
         assert response.status_code in (200, 204)
 

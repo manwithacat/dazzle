@@ -2,7 +2,7 @@
 Grant management API routes.
 
 Exposes CRUD endpoints for runtime RBAC grants so that ``has_grant()``
-transition guards become reachable.  Mounted at ``/api/grants/*``.
+transition guards become reachable.  Mounted at ``/_dazzle/grants/*``.
 
 Authorization: only roles listed in the matching ``GrantSchemaSpec.granted_by``
 field may create or manage grants.
@@ -40,7 +40,7 @@ def create_grant_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for grant routes")
 
-    router = APIRouter(prefix="/api/grants", tags=["Grants"])
+    router = APIRouter(prefix="/_dazzle/grants", tags=["Grants"])
 
     def _get_store() -> Any:
         from dazzle.back.runtime.grant_store import GrantStore

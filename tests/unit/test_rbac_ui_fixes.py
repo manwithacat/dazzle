@@ -275,7 +275,7 @@ class TestColumnVisibleCondition:
         shared_table = TableContext(
             entity_name="Task",
             title="Tasks",
-            api_endpoint="/api/tasks",
+            api_endpoint="/_dazzle/tasks",
             columns=[
                 ColumnContext(key="name", label="Name"),
                 ColumnContext(key="salary", label="Salary", visible_condition=vis),

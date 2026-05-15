@@ -387,7 +387,7 @@ document.addEventListener("alpine:init", () => {
       //
       // Wire alongside an htmx mutation:
       //
-      //   <button hx-delete="/api/tasks/{id}"
+      //   <button hx-delete="/_dazzle/tasks/{id}"
       //           hx-target="closest tr"
       //           hx-swap="outerHTML"
       //           x-optimistic="remove:closest tr">Delete</button>

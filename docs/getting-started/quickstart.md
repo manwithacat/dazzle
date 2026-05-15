@@ -70,7 +70,7 @@ This starts:
 Create a record via the API:
 
 ```bash
-curl -X POST http://localhost:8000/api/tasks \
+curl -X POST http://localhost:8000/_dazzle/tasks \
   -H "Content-Type: application/json" \
   -d '{"title": "Learn Dazzle", "status": "open"}'
 ```

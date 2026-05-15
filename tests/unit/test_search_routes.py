@@ -92,7 +92,7 @@ class TestCrossEntitySearchHandler:
         assert router is not None
 
         client = _mount(router)
-        response = client.get("/api/search", params={"q": "hello"})
+        response = client.get("/_dazzle/search", params={"q": "hello"})
         assert response.status_code == 200
         body = json.loads(response.content)
         assert body["query"] == "hello"
@@ -117,7 +117,7 @@ class TestCrossEntitySearchHandler:
         assert router is not None
 
         client = _mount(router)
-        response = client.get("/api/search", params={"q": "hello", "entity": "Work"})
+        response = client.get("/_dazzle/search", params={"q": "hello", "entity": "Work"})
         body = json.loads(response.content)
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
@@ -131,7 +131,7 @@ class TestCrossEntitySearchHandler:
         assert router is not None
 
         client = _mount(router)
-        response = client.get("/api/search", params={"q": "hello", "entity": "MysteryEntity"})
+        response = client.get("/_dazzle/search", params={"q": "hello", "entity": "MysteryEntity"})
         body = json.loads(response.content)
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
@@ -152,7 +152,7 @@ class TestCrossEntitySearchHandler:
         assert router is not None
 
         client = _mount(router)
-        response = client.get("/api/search", params={"q": "hello"})
+        response = client.get("/_dazzle/search", params={"q": "hello"})
         body = json.loads(response.content)
         # Broken entity is skipped silently, Work still produces results
         assert [r["entity"] for r in body["results"]] == ["Work"]
@@ -167,7 +167,7 @@ class TestCrossEntitySearchHandler:
         assert router is not None
 
         client = _mount(router)
-        response = client.get("/api/search", params={"q": "match", "limit": 5})
+        response = client.get("/_dazzle/search", params={"q": "match", "limit": 5})
         body = json.loads(response.content)
         assert body["results"][0]["total"] == 20
         assert len(body["results"][0]["items"]) == 5
@@ -182,7 +182,7 @@ class TestCrossEntitySearchHandler:
         assert router is not None
 
         client = _mount(router)
-        response = client.get("/api/search")
+        response = client.get("/_dazzle/search")
         assert response.status_code == 422  # Missing required q
 
 

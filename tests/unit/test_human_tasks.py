@@ -221,7 +221,7 @@ class TestTaskInboxConverter:
         assert spec["component"] == "TaskInbox"
         assert "filter" in spec["props"]
         assert "columns" in spec["props"]
-        assert spec["data_source"]["endpoint"] == "/api/tasks"
+        assert spec["data_source"]["endpoint"] == "/_dazzle/tasks"
 
     def test_convert_with_custom_filter(self) -> None:
         """Test converting with custom filter config."""

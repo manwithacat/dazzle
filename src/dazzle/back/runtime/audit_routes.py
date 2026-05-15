@@ -2,7 +2,7 @@
 Audit log query routes.
 
 Admin-only endpoints for querying access control audit trail.
-Mounted at /api/_audit/*.
+Mounted at /_dazzle/audit/*.
 """
 
 from typing import Any
@@ -34,7 +34,7 @@ def create_audit_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for audit routes")
 
-    router = APIRouter(prefix="/api/_audit", tags=["Audit"])
+    router = APIRouter(prefix="/_dazzle/audit", tags=["Audit"])
 
     def _require_admin(auth_context: AuthContext) -> None:
         """Check that the authenticated user is a superuser."""

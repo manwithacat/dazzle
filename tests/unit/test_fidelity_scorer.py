@@ -946,7 +946,7 @@ class TestSearchSelectErrorHandlerCheck:
         <div class="relative w-full" x-data="{{{{ open: false }}}}">
           <input type="hidden" name="company" id="field-company" {error_marker} />
           <input type="text" id="search-input-company" role="combobox"
-                 hx-get="/api/_fragments/search"
+                 hx-get="/_dazzle/fragments/search"
                  hx-trigger="keyup changed delay:400ms"
                  hx-target="#search-results-company"
                  hx-indicator="#search-spinner-company" />

@@ -16,11 +16,11 @@ class TestIslandContext:
             name="chart",
             src="/static/islands/chart/index.js",
             props_json='{"type":"bar"}',
-            api_base="/api/islands/chart",
+            api_base="/_dazzle/islands/chart",
         )
         assert ctx.name == "chart"
         assert ctx.src == "/static/islands/chart/index.js"
-        assert ctx.api_base == "/api/islands/chart"
+        assert ctx.api_base == "/_dazzle/islands/chart"
         assert ctx.fallback is None
 
     def test_props_json_is_valid(self):
@@ -30,7 +30,7 @@ class TestIslandContext:
             name="chart",
             src="/static/islands/chart/index.js",
             props_json=json.dumps(props),
-            api_base="/api/islands/chart",
+            api_base="/_dazzle/islands/chart",
         )
         parsed = json.loads(ctx.props_json)
         assert parsed == props
@@ -41,7 +41,7 @@ class TestIslandContext:
             name="chart",
             src="/static/islands/chart/index.js",
             props_json="{}",
-            api_base="/api/islands/chart",
+            api_base="/_dazzle/islands/chart",
             fallback="<p>Loading chart...</p>",
         )
         assert ctx.fallback == "<p>Loading chart...</p>"
@@ -54,7 +54,7 @@ class TestIslandContextCompilation:
     def compile_island(spec: IslandSpec) -> IslandContext:
         """Compile an IslandSpec into an IslandContext."""
         src = spec.src or f"/static/islands/{spec.name}/index.js"
-        api_base = f"/api/islands/{spec.name}" if spec.entity else ""
+        api_base = f"/_dazzle/islands/{spec.name}" if spec.entity else ""
         props = {p.name: p.default for p in spec.props if p.default is not None}
         return IslandContext(
             name=spec.name,
@@ -80,7 +80,7 @@ class TestIslandContextCompilation:
         """Test api_base is set when entity is bound."""
         spec = IslandSpec(name="task_chart", entity="Task")
         ctx = self.compile_island(spec)
-        assert ctx.api_base == "/api/islands/task_chart"
+        assert ctx.api_base == "/_dazzle/islands/task_chart"
 
     def test_api_base_without_entity(self):
         """Test api_base is empty when no entity is bound."""
@@ -167,7 +167,7 @@ class TestIslandRoutes:
         from dazzle.back.runtime.island_routes import create_island_routes
 
         router = create_island_routes(islands=[], services={})
-        assert router.prefix == "/api/islands"
+        assert router.prefix == "/_dazzle/islands"
 
     def test_create_routes_with_entity_island(self):
         """Test route creation for island with entity binding."""

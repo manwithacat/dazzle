@@ -306,7 +306,7 @@ class FragmentSurfaceAdapter:
             toolbar.append(
                 SearchBox(
                     name=f"{region_name or entity_name}_search",
-                    fts_endpoint=URL(f"/api/fts/{entity_name}?html=1"),
+                    fts_endpoint=URL(f"/_dazzle/fts/{entity_name}?html=1"),
                 )
             )
 

@@ -49,18 +49,18 @@ def _detail_with_all_actions() -> DetailContext:
         fields=[FieldContext(name="title", label="Title")],
         item={"title": "Buy ingredients"},
         edit_url="/tasks/abc/edit",
-        delete_url="/api/tasks/abc",
+        delete_url="/_dazzle/tasks/abc",
         back_url="/tasks",
         transitions=[
             TransitionContext(
                 to_state="in_progress",
                 label="Mark in progress",
-                api_url="/api/tasks/abc/transitions/in_progress",
+                api_url="/_dazzle/tasks/abc/transitions/in_progress",
             ),
             TransitionContext(
                 to_state="complete",
                 label="Mark complete",
-                api_url="/api/tasks/abc/transitions/complete",
+                api_url="/_dazzle/tasks/abc/transitions/complete",
             ),
         ],
         integration_actions=[
@@ -68,7 +68,7 @@ def _detail_with_all_actions() -> DetailContext:
                 label="Sync to Slack",
                 integration_name="slack",
                 mapping_name="task_sync",
-                api_url="/api/tasks/abc/integrations/slack/sync",
+                api_url="/_dazzle/tasks/abc/integrations/slack/sync",
             ),
         ],
         external_link_actions=[
@@ -91,7 +91,7 @@ def test_dispatch_ctx_threads_edit_delete_back_urls() -> None:
     detail = _detail_with_all_actions()
     ctx = _build_dispatch_ctx(_RC(detail), _Surface())
     assert ctx["edit_url"] == "/tasks/abc/edit"
-    assert ctx["delete_url"] == "/api/tasks/abc"
+    assert ctx["delete_url"] == "/_dazzle/tasks/abc"
     assert ctx["back_url"] == "/tasks"
     assert ctx["entity_name"] == "Task"
 
@@ -105,7 +105,7 @@ def test_dispatch_ctx_threads_transitions_with_full_shape() -> None:
     assert transitions[0] == {
         "to_state": "in_progress",
         "label": "Mark in progress",
-        "api_url": "/api/tasks/abc/transitions/in_progress",
+        "api_url": "/_dazzle/tasks/abc/transitions/in_progress",
     }
 
 
@@ -119,7 +119,7 @@ def test_view_renders_delete_button_with_hx_delete_and_confirm() -> None:
     """Delete button uses Button.hx_delete (added in this release)
     + an entity-name-aware confirm prompt."""
     html = _render_view(_detail_with_all_actions())
-    assert 'hx-delete="/api/tasks/abc"' in html
+    assert 'hx-delete="/_dazzle/tasks/abc"' in html
     assert 'hx-confirm="Delete this task?"' in html
     assert 'hx-target="body"' in html
 
@@ -128,8 +128,8 @@ def test_view_renders_one_button_per_state_machine_transition() -> None:
     """Each TransitionContext gets a Button with hx_post to its api_url
     and the transition label as button text."""
     html = _render_view(_detail_with_all_actions())
-    assert 'hx-post="/api/tasks/abc/transitions/in_progress"' in html
-    assert 'hx-post="/api/tasks/abc/transitions/complete"' in html
+    assert 'hx-post="/_dazzle/tasks/abc/transitions/in_progress"' in html
+    assert 'hx-post="/_dazzle/tasks/abc/transitions/complete"' in html
     assert "Mark in progress" in html
     assert "Mark complete" in html
 
@@ -139,7 +139,7 @@ def test_view_renders_integration_action_button() -> None:
     Button with hx_post pointing at the integration api_url."""
     html = _render_view(_detail_with_all_actions())
     assert "Sync to Slack" in html
-    assert 'hx-post="/api/tasks/abc/integrations/slack/sync"' in html
+    assert 'hx-post="/_dazzle/tasks/abc/integrations/slack/sync"' in html
 
 
 def test_view_renders_external_link_as_anchor() -> None:

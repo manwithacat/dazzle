@@ -155,7 +155,7 @@ class _BuildersMiscMixin:
 
         ctx shape (Phase 4B preferred):
             source_entity: str — entity name for the FTS endpoint URL
-                (e.g. "Manuscript" → /api/fts/Manuscript?html=1)
+                (e.g. "Manuscript" → /_dazzle/fts/Manuscript?html=1)
             name: optional results-id slug; defaults to region.name
             placeholder: optional input placeholder
             display_field: optional (for documentation; the endpoint owns
@@ -165,7 +165,7 @@ class _BuildersMiscMixin:
 
         ctx shape (Phase 4A fallback):
             placeholder + label only — produces a SearchBox with a
-            self-referential endpoint (`/api/fts/{region.name}?html=1`)
+            self-referential endpoint (`/_dazzle/fts/{region.name}?html=1`)
             so existing tests don't crash. The runtime should always
             supply `source_entity` ahead of the Phase 4B.2 translator.
         """
@@ -177,11 +177,11 @@ class _BuildersMiscMixin:
         label = str(ctx.get("label") or title or placeholder)
 
         if source_entity:
-            endpoint = URL(f"/api/fts/{source_entity}?html=1")
+            endpoint = URL(f"/_dazzle/fts/{source_entity}?html=1")
         else:
             # Fallback: use the region's own name as the entity hint.
             # Mainly for tests; runtime will supply source_entity.
-            endpoint = URL(f"/api/fts/{name}?html=1")
+            endpoint = URL(f"/_dazzle/fts/{name}?html=1")
 
         body: Fragment = SearchBox(
             name=name,

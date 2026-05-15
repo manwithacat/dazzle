@@ -6,7 +6,7 @@ This module provides the route factory that returns the rendered
 fragment via cycle-9's ``render_audit_history_region``.
 
 Distinct from `audit_routes.py` — that's the compliance AuditLogger
-under `/api/_audit/...`. This is the user-visible change-history
+under `/_dazzle/audit/...`. This is the user-visible change-history
 primitive under `/_dazzle/audit-history/...`.
 """
 

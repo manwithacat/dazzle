@@ -108,7 +108,7 @@ def test_list_emits_search_box_when_search_configured() -> None:
     )
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert "/api/fts/Contact" in html
+    assert "/_dazzle/fts/Contact" in html
     assert "contact_table_search" in html
 
 
@@ -117,7 +117,7 @@ def test_list_omits_search_box_when_search_disabled() -> None:
     table = _table(search_enabled=False, search_fields=[])
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert "/api/fts/" not in html
+    assert "/_dazzle/fts/" not in html
 
 
 def test_list_omits_search_box_when_search_fields_empty() -> None:
@@ -126,7 +126,7 @@ def test_list_omits_search_box_when_search_fields_empty() -> None:
     table = _table(search_enabled=True, search_fields=[])
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert "/api/fts/" not in html
+    assert "/_dazzle/fts/" not in html
 
 
 def test_list_emits_filter_bar_when_any_column_filterable() -> None:
@@ -212,7 +212,7 @@ def test_list_search_and_filter_can_coexist() -> None:
     )
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    search_pos = html.find("/api/fts/")
+    search_pos = html.find("/_dazzle/fts/")
     filter_pos = html.find("filter-bar") if "filter-bar" in html else html.find("dz-filter-bar")
     assert search_pos > -1
     assert filter_pos > -1

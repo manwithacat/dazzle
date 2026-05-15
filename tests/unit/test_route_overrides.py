@@ -36,14 +36,14 @@ class TestDiscoverRouteOverrides:
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
         (routes_dir / "custom_submit.py").write_text(
-            "# dazzle:route-override POST /api/tasks\n"
+            "# dazzle:route-override POST /_dazzle/tasks\n"
             "async def handler(request):\n"
             "    return {'submitted': True}\n"
         )
         result = discover_route_overrides(routes_dir)
         assert len(result) == 1
         assert result[0].method == "POST"
-        assert result[0].path == "/api/tasks"
+        assert result[0].path == "/_dazzle/tasks"
 
     def test_case_insensitive_method(self, tmp_path: Path) -> None:
         from dazzle.back.runtime.route_overrides import discover_route_overrides

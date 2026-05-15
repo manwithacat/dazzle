@@ -40,7 +40,7 @@ class ColumnContext(BaseModel):
 class FieldSourceContext(BaseModel):
     """Dynamic data source for a form field (e.g. external API search)."""
 
-    endpoint: str  # "/api/_fragments/search?source=companieshouse"
+    endpoint: str  # "/_dazzle/fragments/search?source=companieshouse"
     display_key: str  # "company_name"
     value_key: str  # "company_number"
     secondary_key: str = ""  # "company_status"
@@ -455,7 +455,7 @@ def build_field_source_context(
         return None
 
     return FieldSourceContext(
-        endpoint=f"/api/_fragments/search?source={source_name}",
+        endpoint=f"/_dazzle/fragments/search?source={source_name}",
         display_key=config.get("display_key", "name"),
         value_key=config.get("value_key", "id"),
         secondary_key=config.get("secondary_key", ""),

@@ -114,7 +114,7 @@ class TaskInboxConverter:
                 "showQuickActions": config.show_quick_actions,
             },
             "data_source": {
-                "endpoint": "/api/tasks",
+                "endpoint": "/_dazzle/tasks",
                 "method": "GET",
                 "params": {
                     "status": ",".join(config.filter_status),

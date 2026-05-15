@@ -8,7 +8,7 @@
  *   - Consent Mode v2 update signalling (window.gtag when present)
  *   - Reopen-via-footer ("Manage cookies" link)
  *
- * The banner posts choices to POST /dz/consent. The server sets the cookie
+ * The banner posts choices to POST /_dazzle/consent. The server sets the cookie
  * and returns 204. On success the banner is dismissed and the page reloads
  * so scripts gated by consent can run.
  */
@@ -16,8 +16,8 @@
   "use strict";
 
   const BANNER_ID = "dz-consent-banner";
-  const CONSENT_ENDPOINT = "/dz/consent";
-  const REOPEN_ENDPOINT = "/dz/consent/banner";
+  const CONSENT_ENDPOINT = "/_dazzle/consent";
+  const REOPEN_ENDPOINT = "/_dazzle/consent/banner";
 
   function $(id) {
     return document.getElementById(id);
@@ -133,7 +133,7 @@
     try {
       const response = await postChoice(categories);
       if (!response.ok) {
-        console.error("[dz-consent] POST /dz/consent failed:", response.status);
+        console.error("[dz-consent] POST /_dazzle/consent failed:", response.status);
         return;
       }
       signalConsentModeUpdate(categories);

@@ -536,7 +536,7 @@ class TestSaveRuntimeCoverageHandler:
         coverage_data = {
             "timestamp": "2025-01-01T00:00:00Z",
             "entities_covered": ["Task"],
-            "endpoints_hit": ["/api/tasks", "/api/tasks/create"],
+            "endpoints_hit": ["/_dazzle/tasks", "/_dazzle/tasks/create"],
             "personas_tested": ["admin"],
         }
 

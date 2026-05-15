@@ -146,7 +146,7 @@ Open your browser:
 Try creating a task via the API:
 
 ```bash
-curl -X POST http://localhost:8000/api/tasks \
+curl -X POST http://localhost:8000/_dazzle/tasks \
   -H "Content-Type: application/json" \
   -d '{"title": "Learn Dazzle", "priority": "high"}'
 ```

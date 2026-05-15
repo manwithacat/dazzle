@@ -135,7 +135,7 @@ Fragments are the key interaction primitive. When HTMX fires a request, the serv
 
 ```python
 # In a FastAPI route handler
-@app.get("/api/tasks")
+@app.get("/_dazzle/tasks")
 async def list_tasks(request: Request, search: str = ""):
     rows = filter_tasks(search)
     return templates.TemplateResponse(

@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-05-15
+
+### Changed (BREAKING)
+
+- **#1078: runtime URL prefix normalised to `/_dazzle/<svc>` across all 10 framework route modules.** Pre-1.0 cleanup of API surface drift caught by `api_surface_audit` cycle 5 (#961). Before this release, 4 distinct prefix conventions were in play (`/api/<svc>`, `/api/_<svc>`, `/_dazzle/<svc>`, `/dz/<svc>`, bare `/<svc>`). Now: every framework-internal route lives under `/_dazzle/`. Mapping:
+
+  | Before | After |
+  |--------|-------|
+  | `/api/_audit/*` | `/_dazzle/audit/*` |
+  | `/api/_fragments/*` | `/_dazzle/fragments/*` |
+  | `/api/grants/*` | `/_dazzle/grants/*` |
+  | `/api/islands/*` | `/_dazzle/islands/*` |
+  | `/api/fts/{entity}` | `/_dazzle/fts/{entity}` |
+  | `/api/search` | `/_dazzle/search` |
+  | `/dz/consent*` | `/_dazzle/consent*` |
+  | `/api/tasks*` (framework task router) | `/_dazzle/tasks*` |
+  | `/_dazzle/audit-history/*` | unchanged (already correct) |
+  | `/_dazzle/i18n` | unchanged (already correct) |
+
+  Site-page routes (`/`, `/login`, `/signup`, `/forgot-password`, `/2fa/*`, `/site.js`, `/_site/*`, `/styles/dazzle.css`) stay where they are — they're the public marketing surface, not framework-internal.
+
+  This is a breaking change to URL paths. Any downstream code, JS bundles, or templates that hardcode framework URLs need to use the new paths. Per CLAUDE.md "No backward compat shims", no redirect aliases are provided.
+
+  Updated in lockstep: 11 route modules, 9 source-file callers (renderers, template-compiler, JS, CSRF exempt list, log strings), 10 test files, 5 reference docs, `docs/api-surface/runtime-urls.txt` baseline. The CRUD test `test_pluralized_endpoints` still expects `/api/tasks` because the entity-CRUD URL space is unaffected (the framework's task router moved away from that collision; the `/api/` namespace is now available for entity-CRUD generators if needed).
+
+  Companion to #1069 (DSL renames), #1074 (MCP tool consolidation), #1076 (public-helpers rename). With this release the pre-1.0 API normalisation pass is complete.
+
+### Agent Guidance
+
+- **Framework-internal routes live under `/_dazzle/`** as of v0.70.0. When writing or debugging HTMX templates, JS bundles, or test fixtures, use `/_dazzle/<svc>` paths — never `/api/_<svc>` or `/dz/<svc>` (those were the pre-#1078 patterns and are gone). The drift gate at `tests/unit/test_api_surface_drift.py` enforces this against `docs/api-surface/runtime-urls.txt`.
+
 ## [0.69.6] - 2026-05-15
 
 ### Fixed

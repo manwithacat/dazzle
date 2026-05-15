@@ -65,7 +65,7 @@ if hasattr(ctx.app.state, "services"):
 Task route handlers switch to `Depends(get_services)`:
 
 ```python
-@router.post("/api/tasks/{task_id}/start")
+@router.post("/_dazzle/tasks/{task_id}/start")
 async def start_task(task_id: str, services: RuntimeServices = Depends(get_services)):
     if services.process_manager is None:
         raise HTTPException(503, "Process subsystem not initialized")

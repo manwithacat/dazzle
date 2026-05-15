@@ -324,12 +324,12 @@ class TestHelpers:
     def test_create_audit_context_from_request(self) -> None:
         request = MagicMock()
         request.client.host = "127.0.0.1"
-        request.url.path = "/api/tasks"
+        request.url.path = "/_dazzle/tasks"
         request.method = "GET"
 
         ctx = create_audit_context_from_request(request)
         assert ctx["ip_address"] == "127.0.0.1"
-        assert ctx["request_path"] == "/api/tasks"
+        assert ctx["request_path"] == "/_dazzle/tasks"
         assert ctx["request_method"] == "GET"
 
     def test_create_audit_context_missing_client(self) -> None:
@@ -372,7 +372,7 @@ class TestHelpers:
         mock_logger = AsyncMock()
         mock_request = MagicMock()
         mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = "/api/tasks/1"
+        mock_request.url.path = "/_dazzle/tasks/1"
         mock_request.method = "GET"
 
         await _log_audit_decision(
@@ -514,7 +514,7 @@ class TestListAuditLogging:
 
         mock_request = MagicMock()
         mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = "/api/tasks"
+        mock_request.url.path = "/_dazzle/tasks"
         mock_request.method = "GET"
         mock_request.query_params = {}
 
@@ -550,7 +550,7 @@ class TestListAuditLogging:
 
         mock_request = MagicMock()
         mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = "/api/tasks"
+        mock_request.url.path = "/_dazzle/tasks"
         mock_request.method = "GET"
         mock_request.query_params = {}
 

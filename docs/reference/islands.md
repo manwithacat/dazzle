@@ -33,7 +33,7 @@ All fields except `name` are optional.
 |-------|----------|-------------|
 | `name` | Yes | Unique identifier. Used for mount points and API routes. |
 | `title` | No | Human-readable display name |
-| `entity` | No | Entity reference. Generates a data API at `/api/islands/{name}/data` |
+| `entity` | No | Entity reference. Generates a data API at `/_dazzle/islands/{name}/data` |
 | `src` | No | JavaScript entry point. Defaults to `/static/islands/{name}/index.js` |
 | `fallback` | No | HTML rendered server-side before JavaScript loads |
 
@@ -96,7 +96,7 @@ The framework renders each island as:
 <div data-island="task_chart"
      data-island-src="/static/islands/task-chart/index.js"
      data-island-props='{"chart_type":"bar","height":400}'
-     data-island-api-base="/api/islands/task_chart"
+     data-island-api-base="/_dazzle/islands/task_chart"
      class="dz-island">
   Loading task chart...
 </div>
@@ -114,7 +114,7 @@ The island loader (`dz-islands.js`) handles:
 When an island declares an `entity` binding, the framework generates:
 
 ```
-GET /api/islands/{island_name}/data?limit=100&offset=0
+GET /_dazzle/islands/{island_name}/data?limit=100&offset=0
 ```
 
 Response:

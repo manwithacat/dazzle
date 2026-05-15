@@ -2,13 +2,13 @@
 
 Exposes three endpoints:
 
-- ``POST /dz/consent`` — write the user's choices as the ``dz_consent_v2``
+- ``POST /_dazzle/consent`` — write the user's choices as the ``dz_consent_v2``
   cookie; returns 204. Accepts JSON ``{analytics, advertising, personalization,
   functional}`` with boolean values.
-- ``GET /dz/consent/banner`` — re-render just the banner HTML fragment for
+- ``GET /_dazzle/consent/banner`` — re-render just the banner HTML fragment for
   the Manage-cookies reopen flow. Returns 200 + the ``<div id="dz-consent-banner">``
   element or 204 if the banner is not applicable (e.g. analytics disabled).
-- ``GET /dz/consent/state`` — diagnostic/read endpoint returning the user's
+- ``GET /_dazzle/consent/state`` — diagnostic/read endpoint returning the user's
   current resolved consent state. Useful for server-side gating decisions in
   downstream integrations.
 
@@ -65,14 +65,14 @@ def create_consent_routes(
         cookie_policy_url: Href rendered into the banner's Cookie-policy link
             (optional — link omitted when None).
     """
-    router = APIRouter(tags=["Consent"])
+    router = APIRouter(prefix="/_dazzle/consent", tags=["Consent"])
 
     defaults = ConsentDefaults.for_jurisdiction(
         default_jurisdiction,
         override=consent_override if consent_override in ("granted", "denied") else None,  # type: ignore[arg-type]
     )
 
-    @router.post("/dz/consent", include_in_schema=False)
+    @router.post("", include_in_schema=False)
     async def post_consent(request: Request) -> Response:
         """Persist the user's consent choices as a cookie."""
         try:
@@ -111,7 +111,7 @@ def create_consent_routes(
         )
         return response
 
-    @router.get("/dz/consent/state", include_in_schema=False)
+    @router.get("/state", include_in_schema=False)
     async def get_consent_state(request: Request) -> JSONResponse:
         """Return the user's current resolved consent state as JSON."""
         raw = request.cookies.get(CONSENT_COOKIE_NAME)
@@ -127,7 +127,7 @@ def create_consent_routes(
             }
         )
 
-    @router.get("/dz/consent/banner", include_in_schema=False)
+    @router.get("/banner", include_in_schema=False)
     async def get_consent_banner(request: Request) -> Response:
         """Return the consent banner HTML fragment for reopen flows."""
         raw = request.cookies.get(CONSENT_COOKIE_NAME)

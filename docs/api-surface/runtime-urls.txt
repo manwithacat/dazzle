@@ -39,11 +39,11 @@ module: audit_routes
     handler: query_stats_noauth(entity: str | None = Query(None, description='Filter by entity name'), window: int = Query(24, ge=1, le=720, description='Window in hours')) -> dict[str, Any]
 
 module: consent_routes
-  POST | /dz/consent
+  POST | (root)
     handler: post_consent(request: Request) -> Response
-  GET | /dz/consent/banner
+  GET | /banner
     handler: get_consent_banner(request: Request) -> Response
-  GET | /dz/consent/state
+  GET | /state
     handler: get_consent_state(request: Request) -> JSONResponse
 
 module: fragment_routes
@@ -53,7 +53,7 @@ module: fragment_routes
     handler: fragment_select(request: Request, source: str = Query(..., description='Source integration name'), id: str = Query(..., description='Selected item ID')) -> Any
 
 module: fts_routes
-  GET | /api/fts/{entity}
+  GET | /{entity}
     handler: fts_search(entity: str, request: Request, q: str = Query(..., min_length=1, description='Search query'), page: int = Query(1, ge=1, description='1-indexed page number'), page_size: int = Query(20, ge=1, le=100, description='Per-page limit'), html: int = Query(0, description='When 1, return an HTML fragment instead of JSON (#954 cycle 4)'), auth_context: Any = Depends(auth_dep)) -> Any
 
 module: grant_routes
@@ -93,7 +93,7 @@ module: qa_routes
     handler: generate_qa_magic_link(body: MagicLinkRequest, request: Request) -> MagicLinkResponse
 
 module: search_routes
-  GET | /api/search
+  GET | (root)
     handler: cross_entity_search(q: str = Query(..., description='Search query string', min_length=1), entity: str | None = Query(None, description='Restrict search to a single entity name'), limit: int = Query(per_entity_limit, ge=1, le=100, description='Max results returned per entity')) -> JSONResponse
 
 module: site_routes

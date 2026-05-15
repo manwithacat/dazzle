@@ -198,7 +198,7 @@
           },
           "apiEndpoint": {
             "kind": "literal",
-            "value": "/api/tasks"
+            "value": "/_dazzle/tasks"
           },
           "dazzle": {
             "kind": "literal",

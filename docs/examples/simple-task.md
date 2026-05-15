@@ -119,11 +119,11 @@ When running, the following endpoints are available:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/tasks` | List all tasks |
-| POST | `/api/tasks` | Create a task |
-| GET | `/api/tasks/{id}` | Get task by ID |
-| PUT | `/api/tasks/{id}` | Update task |
-| DELETE | `/api/tasks/{id}` | Delete task |
+| GET | `/_dazzle/tasks` | List all tasks |
+| POST | `/_dazzle/tasks` | Create a task |
+| GET | `/_dazzle/tasks/{id}` | Get task by ID |
+| PUT | `/_dazzle/tasks/{id}` | Update task |
+| DELETE | `/_dazzle/tasks/{id}` | Delete task |
 
 ## Related Examples
 

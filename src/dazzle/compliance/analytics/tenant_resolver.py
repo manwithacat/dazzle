@@ -11,7 +11,7 @@ routing replace the default via ``set_tenant_analytics_resolver()`` at
 startup.
 
 The resolver is a **request → TenantAnalyticsConfig** callable. It runs
-on every analytics-touching request (site page render + /dz/consent
+on every analytics-touching request (site page render + /_dazzle/consent
 endpoints + CSP middleware). Implementations should be fast — cache
 tenant lookups behind their own in-process / Redis layer.
 

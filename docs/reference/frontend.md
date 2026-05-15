@@ -27,7 +27,7 @@ Declarative HTTP interaction layer for Dazzle-generated frontends. All interacti
 ```dsl
 <!-- Debounced search -->
 <input type="text"
-  hx-get="/api/search"
+  hx-get="/_dazzle/search"
   hx-target="#results"
   hx-trigger="keyup changed delay:400ms"
   hx-indicator="#search-spinner">
@@ -38,7 +38,7 @@ Declarative HTTP interaction layer for Dazzle-generated frontends. All interacti
     hx-push-url="true">
 
 <!-- Inline delete with confirmation -->
-<button hx-delete="/api/tasks/{{ id }}"
+<button hx-delete="/_dazzle/tasks/{{ id }}"
         hx-target="closest tr"
         hx-swap="outerHTML"
         hx-confirm="Delete this task?">

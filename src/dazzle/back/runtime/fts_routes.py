@@ -1,6 +1,6 @@
 """Full-text search endpoint (#954 cycle 3).
 
-Exposes ``GET /api/fts/{entity}?q=...`` backed by the cycle-2
+Exposes ``GET /_dazzle/fts/{entity}?q=...`` backed by the cycle-2
 ``search_vector`` GENERATED column. Builds the query via
 :meth:`Repository.fts_search` so all the indexed-FTS work happens
 in one place.
@@ -18,7 +18,7 @@ Cycle 3 scope:
   * Scope predicates honoured when present.
 
 Out of scope here (cycle 4+):
-  * Cross-entity / federated search (the legacy ``/api/search``
+  * Cross-entity / federated search (the legacy ``/_dazzle/search``
     endpoint covers the multi-entity ILIKE fallback).
   * Highlight / snippet rendering (``ts_headline``).
   * ``display: search_box`` workspace region wiring.
@@ -62,9 +62,9 @@ def create_fts_routes(
     # Index searches by entity for O(1) lookup at request time.
     spec_by_entity = {s.entity: s for s in searches}
 
-    router = APIRouter(tags=["Search"])
+    router = APIRouter(prefix="/_dazzle/fts", tags=["Search"])
 
-    @router.get("/api/fts/{entity}")
+    @router.get("/{entity}")
     async def fts_search(
         entity: str,
         request: Request,

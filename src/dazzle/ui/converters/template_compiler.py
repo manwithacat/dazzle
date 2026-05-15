@@ -509,7 +509,7 @@ def _resolve_field_source(
             if pack:
                 source_config = pack.generate_fragment_source(op_name)
                 source_ctx = FieldSourceContext(
-                    endpoint="/api/_fragments/search",
+                    endpoint="/_dazzle/fragments/search",
                     display_key=source_config.get("display_key", "name"),
                     value_key=source_config.get("value_key", "id"),
                     secondary_key=source_config.get("secondary_key", ""),

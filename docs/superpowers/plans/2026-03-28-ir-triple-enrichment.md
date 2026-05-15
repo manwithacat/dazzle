@@ -1239,7 +1239,7 @@ class TestReconcileActionMissing:
         contract.status = "failed"
         contract.error = "Expected DELETE to be absent but it was found"
         triple = _make_triple(persona="viewer", mode="list", actions=["list"])
-        html = '<div><button hx-delete="/api/tasks/1">Delete</button></div>'
+        html = '<div><button hx-delete="/_dazzle/tasks/1">Delete</button></div>'
         diagnosis = reconcile(contract, triple, html, [], [])
         assert diagnosis.kind == DiagnosisKind.ACTION_UNEXPECTED
 
@@ -1262,7 +1262,7 @@ class TestReconcileTemplateBug:
                 SurfaceFieldTriple(field_name="description", widget=WidgetKind.TEXTAREA, is_required=False, is_fk=False),
             ],
         )
-        html = '<form hx-post="/api/tasks"><button type="submit">Create</button></form>'
+        html = '<form hx-post="/_dazzle/tasks"><button type="submit">Create</button></form>'
         diagnosis = reconcile(contract, triple, html, [], [])
         assert diagnosis.kind == DiagnosisKind.TEMPLATE_BUG
         assert len(diagnosis.levers) == 0  # Not a DSL issue

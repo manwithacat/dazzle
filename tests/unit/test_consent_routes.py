@@ -1,4 +1,4 @@
-"""Tests for the /dz/consent route surface (v0.61.0 Phase 2)."""
+"""Tests for the /_dazzle/consent route surface (v0.61.0 Phase 2)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def us_app() -> FastAPI:
 class TestConsentStateEndpoint:
     def test_eu_unset_cookie_returns_denied_and_undecided(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
-        response = client.get("/dz/consent/state")
+        response = client.get("/_dazzle/consent/state")
         assert response.status_code == 200
         data = response.json()
         assert data["undecided"] is True
@@ -47,7 +47,7 @@ class TestConsentStateEndpoint:
 
     def test_us_unset_cookie_returns_granted_and_undecided(self, us_app: FastAPI) -> None:
         client = TestClient(us_app)
-        response = client.get("/dz/consent/state")
+        response = client.get("/_dazzle/consent/state")
         assert response.status_code == 200
         data = response.json()
         assert data["undecided"] is True
@@ -59,7 +59,7 @@ class TestPostConsent:
     def test_post_sets_cookie(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
         response = client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             json={
                 "analytics": True,
                 "advertising": False,
@@ -73,7 +73,7 @@ class TestPostConsent:
     def test_round_trip_post_then_get(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
         client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             json={
                 "analytics": True,
                 "advertising": True,
@@ -81,7 +81,7 @@ class TestPostConsent:
                 "functional": True,
             },
         )
-        response = client.get("/dz/consent/state")
+        response = client.get("/_dazzle/consent/state")
         data = response.json()
         assert data["undecided"] is False
         assert data["analytics"] == "granted"
@@ -90,8 +90,8 @@ class TestPostConsent:
 
     def test_missing_keys_default_to_denied(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
-        client.post("/dz/consent", json={"analytics": True})
-        response = client.get("/dz/consent/state")
+        client.post("/_dazzle/consent", json={"analytics": True})
+        response = client.get("/_dazzle/consent/state")
         data = response.json()
         assert data["analytics"] == "granted"
         assert data["advertising"] == "denied"
@@ -100,7 +100,7 @@ class TestPostConsent:
     def test_invalid_json_rejected(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
         response = client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             headers={"Content-Type": "application/json"},
             content=b"not-json",
         )
@@ -108,7 +108,7 @@ class TestPostConsent:
 
     def test_non_object_body_rejected(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
-        response = client.post("/dz/consent", json=[1, 2, 3])
+        response = client.post("/_dazzle/consent", json=[1, 2, 3])
         assert response.status_code == 400
 
     def test_functional_always_granted_regardless_of_input(self, eu_app: FastAPI) -> None:
@@ -116,7 +116,7 @@ class TestPostConsent:
         functional storage is essential and cannot be opted-out of."""
         client = TestClient(eu_app)
         client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             json={
                 "analytics": False,
                 "advertising": False,
@@ -124,7 +124,7 @@ class TestPostConsent:
                 "functional": False,
             },
         )
-        response = client.get("/dz/consent/state")
+        response = client.get("/_dazzle/consent/state")
         data = response.json()
         assert data["functional"] == "granted"
 
@@ -133,7 +133,7 @@ class TestCookieAttributes:
     def test_cookie_has_correct_attributes(self, eu_app: FastAPI) -> None:
         client = TestClient(eu_app)
         response = client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             json={
                 "analytics": True,
                 "advertising": False,
@@ -155,7 +155,7 @@ class TestCookieAttributes:
         quoting/unquoting path rather than trusting the client-side raw."""
         client = TestClient(eu_app)
         client.post(
-            "/dz/consent",
+            "/_dazzle/consent",
             json={
                 "analytics": True,
                 "advertising": False,
@@ -163,7 +163,7 @@ class TestCookieAttributes:
                 "functional": True,
             },
         )
-        state = client.get("/dz/consent/state").json()
+        state = client.get("/_dazzle/consent/state").json()
         assert state["analytics"] == "granted"
         assert state["advertising"] == "denied"
         assert state["undecided"] is False

@@ -3,7 +3,7 @@
 Surfaces Postgres FTS via a per-entity ``search`` DSL block. Cycle 1
 parses + propagates the spec; cycle 2 adds the Alembic migration that
 creates the tsvector + GIN index; cycle 3 adds the
-``/api/search/<entity>?q=...`` endpoint; cycle 4 wires
+``/_dazzle/search/<entity>?q=...`` endpoint; cycle 4 wires
 ``display: search_box`` regions.
 
 DSL shape::

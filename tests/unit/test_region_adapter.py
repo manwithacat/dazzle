@@ -1448,7 +1448,7 @@ def test_search_box_renders_typed_search_box_primitive() -> None:
     fragment = adapter.build(_FakeRegion("manuscript_search", display="search_box"), ctx)
     html = _render(fragment)
     assert "dz-search-box-region" in html
-    assert 'hx-get="/api/fts/Manuscript?html=1"' in html
+    assert 'hx-get="/_dazzle/fts/Manuscript?html=1"' in html
     assert 'hx-trigger="input changed delay:250ms, search"' in html
     assert 'aria-live="polite"' in html
     assert 'x-show="!q"' in html
@@ -1457,7 +1457,7 @@ def test_search_box_renders_typed_search_box_primitive() -> None:
 
 def test_search_box_uses_region_name_as_endpoint_fallback() -> None:
     """When `source_entity` is missing from ctx, the adapter falls
-    back to `/api/fts/<region.name>?html=1`. Mainly for tests; the
+    back to `/_dazzle/fts/<region.name>?html=1`. Mainly for tests; the
     runtime always supplies source_entity."""
     adapter = WorkspaceRegionAdapter()
     fragment = adapter.build(
@@ -1465,7 +1465,7 @@ def test_search_box_uses_region_name_as_endpoint_fallback() -> None:
         {"placeholder": "Find tickets…"},
     )
     html = _render(fragment)
-    assert 'hx-get="/api/fts/ticket_search?html=1"' in html
+    assert 'hx-get="/_dazzle/fts/ticket_search?html=1"' in html
     assert "Find tickets" in html
 
 

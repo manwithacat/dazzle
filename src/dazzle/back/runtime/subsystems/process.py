@@ -59,7 +59,7 @@ class ProcessSubsystem:
             # Store on RuntimeServices for dependency injection
             if hasattr(ctx.app.state, "services"):
                 ctx.app.state.services.process_manager = self._manager
-            ctx.app.include_router(task_router, prefix="/api")
+            ctx.app.include_router(task_router)
 
             self._wire_entity_events_to_processes(ctx)
 
