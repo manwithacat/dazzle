@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.18] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_persona_variant` migrated to keyword-dispatch.** Fifth consumer of the #1097 helper. The 161-line monolith in `src/dazzle/core/dsl_parser_impl/ux.py` becomes a 34-line dispatch shell (most of which is the docstring documenting the `as <persona>:` syntax) + 10 token-keyed `_pv_kw_*` functions + a 15-line `_build_persona_variant` builder. Byte-identical IR verified against the surface snapshot covering 54 `PersonaVariant`s across `examples/` + `fixtures/`. Drops 3 entries from the IR-reader-parity baseline (`action_primary`, `scope_all`, `show_aggregate`).
+
 ## [0.70.17] - 2026-05-15
 
 ### Changed

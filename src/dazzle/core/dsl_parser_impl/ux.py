@@ -5,11 +5,13 @@ Handles UX block parsing including attention signals, persona variants,
 and surface-level UX specifications.
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class UXParserMixin:
@@ -440,11 +442,17 @@ class UXParserMixin:
         )
 
     def parse_persona_variant(self) -> ir.PersonaVariant:
-        """
-        Parse persona variant block.
+        """Parse an ``as <persona>:`` persona variant block.
 
-        Syntax:
-            for persona_name:
+        Refactored to dispatch-table style (follow-on to #1098). Body is
+        a header parse → ``parse_block_with_dispatch`` → ``_build_persona_variant``
+        builder. The 10 keyword branches (scope/purpose/show/hide/
+        show_aggregate/action_primary/read_only/defaults/focus/empty)
+        live as ``_pv_kw_*`` module-level free functions.
+
+        Syntax::
+
+            as persona_name:
               scope: all | condition_expr
               purpose: "..."
               show: field1, field2
@@ -452,7 +460,7 @@ class UXParserMixin:
               show_aggregate: metric1, metric2
               action_primary: surface_name
               read_only: true|false
-              empty: "..."   # cycle 240, closes EX-046
+              empty: "..."
         """
         self.expect(TokenType.AS)
         persona = self.expect_identifier_or_keyword().value
@@ -460,144 +468,188 @@ class UXParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        scope = None
-        scope_all = False
-        purpose = None
-        show: list[str] = []
-        hide: list[str] = []
-        show_aggregate: list[str] = []
-        action_primary = None
-        read_only = False
-        defaults: dict[str, Any] = {}
-        focus: list[str] = []
-        empty_message: str | None = None
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # scope: all | condition_expr
-            if self.match(TokenType.SCOPE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.ALL):
-                    self.advance()
-                    scope_all = True
-                else:
-                    scope = self.parse_condition_expr()
-                self.skip_newlines()
-
-            # purpose: "..."
-            elif self.match(TokenType.PURPOSE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                purpose = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # show: field1, field2
-            elif self.match(TokenType.SHOW):
-                self.advance()
-                self.expect(TokenType.COLON)
-                show = self.parse_field_list()
-                self.skip_newlines()
-
-            # hide: field1, field2
-            elif self.match(TokenType.HIDE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                hide = self.parse_field_list()
-                self.skip_newlines()
-
-            # show_aggregate: metric1, metric2
-            elif self.match(TokenType.SHOW_AGGREGATE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                show_aggregate = self.parse_field_list()
-                self.skip_newlines()
-
-            # action_primary: surface_name
-            elif self.match(TokenType.ACTION_PRIMARY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                action_primary = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # read_only: true|false
-            elif self.match(TokenType.READ_ONLY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    read_only = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    read_only = False
-                else:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Expected true or false, got {token.type.value}",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # defaults:
-            elif self.match(TokenType.DEFAULTS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    # field_name: value
-                    field_name = self.expect_identifier_or_keyword().value
-                    self.expect(TokenType.COLON)
-                    # Parse value (could be identifier, string, etc.)
-                    if self.match(TokenType.STRING):
-                        defaults[field_name] = self.advance().value
-                    else:
-                        # For identifiers like current_user
-                        defaults[field_name] = self.expect_identifier_or_keyword().value
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-
-            # focus: region1, region2
-            elif self.match(TokenType.FOCUS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                focus = self.parse_field_list()
-                self.skip_newlines()
-
-            # empty: "..."  — per-persona empty-state copy override
-            # (cycle 240, closes EX-046)
-            elif self.match(TokenType.EMPTY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                empty_message = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            else:
-                break
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.PersonaVariant(
-            persona=persona,
-            scope=scope,
-            scope_all=scope_all,
-            purpose=purpose,
-            show=show,
-            hide=hide,
-            show_aggregate=show_aggregate,
-            action_primary=action_primary,
-            read_only=read_only,
-            defaults=defaults,
-            focus=focus,
-            empty_message=empty_message,
+        state = _PersonaVariantState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_PERSONA_VARIANT_KEYWORDS,
+            state=state,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_persona_variant(persona, state)
+
+
+# ================================================================ #
+# parse_persona_variant — keyword-dispatch decomposition (#1098 template) #
+# ================================================================ #
+#
+# The 161-line monolith was replaced (v0.70.18) with the dispatch
+# pattern shipped in #1097. Each former branch is a small ``_pv_kw_*``
+# free function below; the IR assembly lives in :func:`_build_persona_variant`.
+# Unknown keywords fall through to the dispatch helper's default —
+# strictly better diagnostics than the legacy ``else: break`` +
+# ``expect(DEDENT)`` produced.
+
+
+@dataclass
+class _PersonaVariantState:
+    """Accumulator for :meth:`UXParserMixin.parse_persona_variant`.
+
+    One field per legal keyword in an ``as <persona>:`` block.
+    """
+
+    scope: ir.ConditionExpr | None = None
+    scope_all: bool = False
+    purpose: str | None = None
+    show: list[str] = field(default_factory=list)
+    hide: list[str] = field(default_factory=list)
+    show_aggregate: list[str] = field(default_factory=list)
+    action_primary: str | None = None
+    read_only: bool = False
+    defaults: dict[str, Any] = field(default_factory=dict)
+    focus: list[str] = field(default_factory=list)
+    empty_message: str | None = None
+
+
+# ---------- Keyword parsers ---------- #
+
+
+def _pv_kw_scope(parser: Any, state: _PersonaVariantState) -> None:
+    """``scope: all`` OR ``scope: <condition_expr>``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.ALL):
+        parser.advance()
+        state.scope_all = True
+    else:
+        state.scope = parser.parse_condition_expr()
+    parser.skip_newlines()
+
+
+def _pv_kw_purpose(parser: Any, state: _PersonaVariantState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.purpose = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _pv_kw_show(parser: Any, state: _PersonaVariantState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.show = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _pv_kw_hide(parser: Any, state: _PersonaVariantState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.hide = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _pv_kw_show_aggregate(parser: Any, state: _PersonaVariantState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.show_aggregate = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _pv_kw_action_primary(parser: Any, state: _PersonaVariantState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.action_primary = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _pv_kw_read_only(parser: Any, state: _PersonaVariantState) -> None:
+    """``read_only: true|false``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.read_only = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.read_only = False
+    else:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Expected true or false, got {token.type.value}",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _pv_kw_defaults(parser: Any, state: _PersonaVariantState) -> None:
+    """``defaults:`` block — ``field_name: <STRING | IDENT>`` lines.
+
+    Identifier values like ``current_user`` are common — that's why we
+    accept either STRING or IDENT for each field's value.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        field_name = parser.expect_identifier_or_keyword().value
+        parser.expect(TokenType.COLON)
+        if parser.match(TokenType.STRING):
+            state.defaults[field_name] = parser.advance().value
+        else:
+            state.defaults[field_name] = parser.expect_identifier_or_keyword().value
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
+
+
+def _pv_kw_focus(parser: Any, state: _PersonaVariantState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.focus = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def _pv_kw_empty(parser: Any, state: _PersonaVariantState) -> None:
+    """``empty: "<msg>"`` — per-persona empty-state copy override (closes EX-046)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.empty_message = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+# ---------- Dispatch table + builder ---------- #
+
+
+_PERSONA_VARIANT_KEYWORDS: dict[TokenType, KeywordParser[_PersonaVariantState]] = {
+    TokenType.SCOPE: _pv_kw_scope,
+    TokenType.PURPOSE: _pv_kw_purpose,
+    TokenType.SHOW: _pv_kw_show,
+    TokenType.HIDE: _pv_kw_hide,
+    TokenType.SHOW_AGGREGATE: _pv_kw_show_aggregate,
+    TokenType.ACTION_PRIMARY: _pv_kw_action_primary,
+    TokenType.READ_ONLY: _pv_kw_read_only,
+    TokenType.DEFAULTS: _pv_kw_defaults,
+    TokenType.FOCUS: _pv_kw_focus,
+    TokenType.EMPTY: _pv_kw_empty,
+}
+
+
+def _build_persona_variant(persona: str, state: _PersonaVariantState) -> ir.PersonaVariant:
+    """Construct the frozen :class:`ir.PersonaVariant` from accumulated state."""
+    return ir.PersonaVariant(
+        persona=persona,
+        scope=state.scope,
+        scope_all=state.scope_all,
+        purpose=state.purpose,
+        show=state.show,
+        hide=state.hide,
+        show_aggregate=state.show_aggregate,
+        action_primary=state.action_primary,
+        read_only=state.read_only,
+        defaults=state.defaults,
+        focus=state.focus,
+        empty_message=state.empty_message,
+    )
