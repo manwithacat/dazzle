@@ -35,6 +35,63 @@ _NUMERIC_ROW_ID_RE = re.compile(r"^\|\s*(\d+)\s*\|", re.MULTILINE)
 
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
+# Content-signature stopwords. The Tier 2 subagent re-words the same
+# finding across runs ("Metrics and Team Metrics sections" vs "Metrics
+# and Team Metrics regions (top of page)"). Stripping these high-
+# frequency words from the token bag means we dedup on the semantic
+# content rather than the framing — see #1080 for the failure that
+# motivated this.
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "but",
+        "by",
+        "card",
+        "cards",
+        "for",
+        "from",
+        "has",
+        "have",
+        "in",
+        "is",
+        "it",
+        "its",
+        "no",
+        "not",
+        "of",
+        "on",
+        "or",
+        "page",
+        "region",
+        "regions",
+        "section",
+        "sections",
+        "the",
+        "this",
+        "to",
+        "top",
+        "bottom",
+        "was",
+        "were",
+        "with",
+        "without",
+    }
+)
+_TOKEN_RE = re.compile(r"[a-z0-9_]{2,}")
+# Jaccard threshold above which two content signatures are considered the
+# same finding. Tuned against cycle 144 data: the LLM frequently rewords
+# the same drift with substantially different surface vocab ("cards"
+# vs "regions", "empty" vs "blank"), so the threshold is set low (0.3).
+# The (app, category) filter applied upstream prevents cross-class
+# look-alikes from colliding even when the body words overlap.
+_DUP_JACCARD_THRESHOLD = 0.3
+
 
 @dataclass(frozen=True)
 class _DedupKey:
@@ -48,6 +105,19 @@ class _DedupKey:
     app: str
     category: str
     location_prefix: str  # location[:60].lower()
+
+
+def _content_signature(text: str) -> frozenset[str]:
+    """Lowercase, stopword-strip, tokenise. Used as a fuzzy-match key
+    when the exact ``(app, category, location_prefix)`` key misses."""
+    tokens = _TOKEN_RE.findall(text.lower())
+    return frozenset(t for t in tokens if t not in _STOPWORDS and len(t) > 2)
+
+
+def _jaccard(a: frozenset[str], b: frozenset[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
 
 
 @dataclass
@@ -94,6 +164,55 @@ def _existing_dedup_keys(section_text: str) -> set[_DedupKey]:
         location = match.group(3)
         keys.add(_DedupKey(app=app, category=category, location_prefix=location[:60].lower()))
     return keys
+
+
+def _existing_signatures(section_text: str) -> list[tuple[_DedupKey, frozenset[str]]]:
+    """Build (dedup_key, content_signature) pairs for every visual_quality
+    row. Used by the fuzzy-match second pass when the exact key misses —
+    see #1080."""
+    sigs: list[tuple[_DedupKey, frozenset[str]]] = []
+    for line in section_text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        if len(cells) < 5 or cells[3] != "visual_quality":
+            continue
+        app = cells[2]
+        description = cells[4]
+        match = re.match(r"^\[([a-z_]+)\]\s*(.*?)\s+at\s+(.+)$", description)
+        if not match:
+            continue
+        category = match.group(1)
+        body = match.group(2)
+        location = match.group(3)
+        key = _DedupKey(app=app, category=category, location_prefix=location[:60].lower())
+        sig = _content_signature(f"{body} {location}")
+        sigs.append((key, sig))
+    return sigs
+
+
+def _find_fuzzy_match(
+    sigs: list[tuple[_DedupKey, frozenset[str]]],
+    app: str,
+    category: str,
+    finding_sig: frozenset[str],
+) -> _DedupKey | None:
+    """Return the dedup key of the existing visual_quality row whose content
+    signature has the highest Jaccard overlap with *finding_sig* — but only
+    if the overlap clears :data:`_DUP_JACCARD_THRESHOLD` and the row's app +
+    category match the finding's. Categories are constrained so cross-class
+    look-alikes (e.g. an `alignment` row and an `empty_state` row that share
+    body words like "region" / "blank") don't collide."""
+    best_score = 0.0
+    best_key: _DedupKey | None = None
+    for key, sig in sigs:
+        if key.app != app or key.category != category:
+            continue
+        score = _jaccard(finding_sig, sig)
+        if score > best_score:
+            best_score = score
+            best_key = key
+    return best_key if best_score >= _DUP_JACCARD_THRESHOLD else None
 
 
 def _split_backlog_around_lane(backlog_text: str) -> tuple[str, str, str]:
@@ -242,6 +361,7 @@ def ingest_visual_findings(
     result.starting_row_id = next_id
 
     existing_keys = _existing_dedup_keys(section)
+    existing_signatures = _existing_signatures(section)
 
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     new_rows: list[str] = []
@@ -258,6 +378,17 @@ def ingest_visual_findings(
             if did_reinforce:
                 result.rows_reinforced += 1
             continue
+        # Fuzzy second-pass (#1080): same finding restated with different
+        # wording across runs. Match on stopword-stripped token-bag Jaccard
+        # within (app, category).
+        description = str(f.get("description", ""))
+        fuzzy_sig = _content_signature(f"{description} {location}")
+        fuzzy_match = _find_fuzzy_match(existing_signatures, app, category, fuzzy_sig)
+        if fuzzy_match is not None:
+            section, did_reinforce = _reinforce_existing_row(section, fuzzy_match)
+            if did_reinforce:
+                result.rows_reinforced += 1
+                continue
 
         # Prefer the screenshot path the subagent attached to this finding.
         # Fall back to a manifest lookup by (persona, workspace) if present,
@@ -276,6 +407,7 @@ def ingest_visual_findings(
 
         new_rows.append(_format_row(next_id, app, f, screenshot, timestamp))
         existing_keys.add(key)
+        existing_signatures.append((key, fuzzy_sig))
         next_id += 1
 
     if not new_rows:

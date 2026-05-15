@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.4] - 2026-05-15
+
+### Fixed
+
+- **#1080: visual_tier2 ingest now does fuzzy dedup on content signature.** The original ingest helper deduplicated on `(app, category, location[:60])` — exact-string prefix match. Cycle 144's re-verification run produced 5 duplicates of cycle 141 rows because the Tier 2 subagent rewords the same finding across runs ("admin_dashboard — Metrics and Team Metrics sections" → "Metrics and Team Metrics regions (top of page)"). Added a fuzzy second pass: stopword-stripped token-bag signature, Jaccard ≥ 0.3 within the same `(app, category)`. Categories are constrained so cross-class look-alikes (`alignment` vs `empty_state` rows that share body words) don't collide. Two regression tests pin the new behaviour.
+
 ## [0.69.3] - 2026-05-15
 
 ### Fixed

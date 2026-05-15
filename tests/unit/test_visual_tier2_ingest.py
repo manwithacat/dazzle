@@ -278,6 +278,107 @@ def test_screenshot_fallback_to_manifest_when_finding_omits_it(tmp_path: Path) -
     assert "screenshot=/tmp/x/my_work_member.png" in row
 
 
+def test_fuzzy_dedup_matches_semantic_equivalent_reword(tmp_path: Path) -> None:
+    """Regression #1080: cycle 141 used location 'admin_dashboard — Metrics
+    and Team Metrics sections'; cycle 144 used 'Metrics and Team Metrics
+    regions (top of page)' for the same finding. Exact dedup misses; the
+    fuzzy second pass should reinforce instead of creating a duplicate row."""
+    backlog = tmp_path / "improve-backlog.md"
+    manifest = tmp_path / "manifest.json"
+    findings = tmp_path / "findings.json"
+    _seed_manifest(manifest)
+    # Seed the backlog with an existing visual_quality row from "cycle 141".
+    backlog.write_text(
+        textwrap.dedent(
+            """\
+            # Backlog (test fixture)
+
+            ## Lane: example-apps
+
+            | # | App | Gap Type | Description | Status | Attempts | Notes |
+            |---|-----|----------|-------------|--------|----------|-------|
+            | 102 | simple_task | visual_quality | [empty_state] Both the Metrics and Team Metrics cards are completely empty — no chart, no data, no empty-state icon. at admin_dashboard — Metrics and Team Metrics sections | PENDING | 0 | seen=1 |
+
+            ---
+
+            ## Lane: trials
+
+            (other lane)
+            """
+        )
+    )
+    _write_findings(
+        findings,
+        [
+            {
+                "app": "simple_task",
+                "screenshot": "/tmp/x/admin_dashboard_admin.png",
+                "category": "empty_state",
+                "severity": "high",
+                "location": "Metrics and Team Metrics regions (top of page)",
+                "description": (
+                    "Both the Metrics and Team Metrics regions render as "
+                    "completely blank white boxes with no content or icon."
+                ),
+                "suggestion": "add empty-state copy + icon",
+            }
+        ],
+    )
+    result = ingest_visual_findings(findings, manifest, backlog)
+    assert result.rows_added == 0
+    assert result.rows_reinforced == 1, (
+        "fuzzy dedup should match the cycle-141 row despite different wording"
+    )
+    text = backlog.read_text()
+    assert "seen=2" in text
+    # No new row was added.
+    assert "| 103 |" not in text
+
+
+def test_fuzzy_dedup_does_not_collide_across_categories(tmp_path: Path) -> None:
+    """Same words appearing in different categories should NOT dedup —
+    e.g. an `alignment` row about a region header shouldn't suppress an
+    `empty_state` row about the same region."""
+    backlog = tmp_path / "improve-backlog.md"
+    manifest = tmp_path / "manifest.json"
+    findings = tmp_path / "findings.json"
+    _seed_manifest(manifest)
+    backlog.write_text(
+        textwrap.dedent(
+            """\
+            # Backlog (test fixture)
+
+            ## Lane: example-apps
+
+            | # | App | Gap Type | Description | Status | Attempts | Notes |
+            |---|-----|----------|-------------|--------|----------|-------|
+            | 50 | simple_task | visual_quality | [alignment] Region header alignment drifts on the admin dashboard metrics card. at admin_dashboard metrics | PENDING | 0 | seen=1 |
+
+            ---
+
+            ## Lane: trials
+            """
+        )
+    )
+    _write_findings(
+        findings,
+        [
+            {
+                "app": "simple_task",
+                "screenshot": "/tmp/x/admin_dashboard_admin.png",
+                "category": "empty_state",
+                "severity": "medium",
+                "location": "admin_dashboard metrics card",
+                "description": "Metrics card on admin dashboard is blank with no copy.",
+                "suggestion": "add empty-state treatment",
+            }
+        ],
+    )
+    result = ingest_visual_findings(findings, manifest, backlog)
+    assert result.rows_added == 1
+    assert result.rows_reinforced == 0
+
+
 def test_findings_with_missing_required_fields_skip(tmp_path: Path) -> None:
     backlog = tmp_path / "improve-backlog.md"
     manifest = tmp_path / "manifest.json"
