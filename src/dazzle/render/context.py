@@ -1,8 +1,9 @@
-"""
-Template context models for server-rendered pages.
+"""Render-time context models — pure data shapes shared by back/ + ui/.
 
-Pydantic models that represent the data needed to render Jinja2 templates.
-These replace UISpec as the bridge between IR and rendered HTML.
+Pydantic models representing the data needed to render a server-rendered
+page. Moved to `dazzle.render` in #1091 (parent #1086) to break the
+back↔ui import cycle: both `back/runtime/` and `ui/runtime/` import from
+here.
 """
 
 from __future__ import annotations  # required: forward reference

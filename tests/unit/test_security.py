@@ -147,7 +147,7 @@ def test_surface_access_combined() -> None:
     - deny_personas: denied persona always denied (precedence over allow).
     - redirect_unauthenticated provides redirect_url for UI requests.
     """
-    from dazzle.back.runtime.surface_access import (
+    from dazzle.render.surface_access import (
         SurfaceAccessConfig,
         SurfaceAccessDenied,
         check_surface_access,

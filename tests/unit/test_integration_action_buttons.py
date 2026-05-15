@@ -7,13 +7,13 @@ from dazzle.core.ir.integrations import (
     MappingTriggerSpec,
     MappingTriggerType,
 )
-from dazzle.ui.runtime.page_routes import _inject_integration_actions
-from dazzle.ui.runtime.template_context import (
+from dazzle.render.context import (
     DetailContext,
     FieldContext,
     IntegrationActionContext,
     PageContext,
 )
+from dazzle.ui.runtime.page_routes import _inject_integration_actions
 
 
 def _make_appspec_with_manual_trigger(

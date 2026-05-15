@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.7] - 2026-05-15
+
+### Changed (BREAKING)
+
+- **#1091: `PageContext` + surface-access pure types moved to `dazzle.render`.** Second workstream of the #1086 back↔ui cycle break.
+  - `dazzle.ui.runtime.template_context` → `dazzle.render.context`. The full module (all `*Context` Pydantic models — `PageContext`, `TableContext`, `FormContext`, `DetailContext`, `PdfViewerContext`, `ColumnContext`, `FieldContext`, `NavItemContext`, `RelatedTabContext`, `RelatedGroupContext`, etc.) moved without behavioural change. The old `template_context.py` deleted outright.
+  - `dazzle.ui.runtime.surface_access` → `dazzle.render.surface_access`. Pure types (`SurfaceAccessConfig`, `SurfaceAccessDenied`, `check_surface_access`) moved. The old `surface_access.py` under `ui/runtime/` deleted outright.
+  - `dazzle.back.runtime.surface_access` is **no longer a re-export wrapper** — it now only owns the FastAPI middleware (`create_access_check_handler`, `create_access_denied_handler`, `get_user_personas_from_membership`). The pure types it used to re-export must now be imported from `dazzle.render.surface_access`.
+  - All 36 import sites updated (4 in `back/`, 9 in `ui/`, 22 test files, 1 in `back/runtime/surface_access.py`).
+  - No backward-compat shim — downstream code importing from the old `dazzle.ui.runtime.template_context` or `dazzle.ui.runtime.surface_access` paths fails at import time.
+
+  Done criteria from #1091:
+  ```
+  grep -rn 'from dazzle.ui.runtime.template_context\|from dazzle.ui.runtime.surface_access' \
+          src/dazzle/back/ --include='*.py'
+  ```
+  returns empty.
+
+### Agent Guidance
+
+- `PageContext` (and the other context models) live in `dazzle.render.context` now. Don't re-export them under `ui/` — let consumers import from `render` directly.
+- `back/runtime/surface_access.py` is the FastAPI-middleware file only. For pure access types (config dataclass, exception, check function), import from `dazzle.render.surface_access`.
+
 ## [0.70.6] - 2026-05-15
 
 ### Changed

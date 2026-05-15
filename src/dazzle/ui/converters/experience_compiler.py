@@ -13,13 +13,13 @@ from typing import TYPE_CHECKING
 
 from dazzle.core.ir.experiences import StepKind
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-from dazzle.ui.converters.template_compiler import compile_surface_to_context
-from dazzle.ui.runtime.template_context import (
+from dazzle.render.context import (
     ExperienceContext,
     ExperienceStepContext,
     ExperienceTransitionContext,
     PageContext,
 )
+from dazzle.ui.converters.template_compiler import compile_surface_to_context
 from dazzle.ui.utils.expression_eval import evaluate_simple_condition, resolve_prefill_expression
 
 if TYPE_CHECKING:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.ui.runtime.template_context import FieldContext
+from dazzle.render.context import FieldContext
 from dazzle.ui.utils.expression_eval import evaluate_when_expr
 
 # =============================================================================

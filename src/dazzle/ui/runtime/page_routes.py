@@ -130,7 +130,7 @@ def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, An
     """Populate integration_actions on detail contexts from appspec integrations."""
     from dazzle.core.ir.integrations import MappingTriggerType
     from dazzle.core.strings import to_api_plural
-    from dazzle.ui.runtime.template_context import IntegrationActionContext
+    from dazzle.render.context import IntegrationActionContext
 
     # Build entity_name -> list of manual trigger actions
     manual_actions: dict[str, list[IntegrationActionContext]] = {}
@@ -586,7 +586,7 @@ def _dedupe_nav_items_against_groups(
 # changing access-check semantics.
 def _check_surface_access(prc: _PageRequestContext) -> Response | None:
     """Enforce surface-level access control. Returns a Response to abort, or None."""
-    from dazzle.ui.runtime.surface_access import (
+    from dazzle.render.surface_access import (
         SurfaceAccessDenied,
         check_surface_access,
     )
@@ -1715,7 +1715,7 @@ async def _workspace_handler(
     _ = (user_email, user_name, user_preferences, is_authenticated)
 
     from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
-    from dazzle.ui.runtime.template_context import NavItemContext, PageContext
+    from dazzle.render.context import NavItemContext, PageContext
     from dazzle.ui.runtime.workspace_renderer import (
         render_workspace_content_typed,
     )
@@ -1830,8 +1830,8 @@ def create_page_routes(
     if backend_url is None:
         backend_url = resolve_api_url()
 
+    from dazzle.render.surface_access import SurfaceAccessConfig
     from dazzle.ui.converters.template_compiler import compile_appspec_to_templates
-    from dazzle.ui.runtime.surface_access import SurfaceAccessConfig
 
     router = APIRouter()
 

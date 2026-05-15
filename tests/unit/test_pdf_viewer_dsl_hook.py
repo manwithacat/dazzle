@@ -176,12 +176,12 @@ class TestCompilerRouting:
 
 class TestTypedRenderer:
     def test_proxy_url_built_from_storage_and_file_field(self) -> None:
-        from dazzle.ui.runtime.pdf_viewer_renderer import render_pdf_viewer
-        from dazzle.ui.runtime.template_context import (
+        from dazzle.render.context import (
             DetailContext,
             FieldContext,
             PdfViewerContext,
         )
+        from dazzle.ui.runtime.pdf_viewer_renderer import render_pdf_viewer
 
         detail = DetailContext(
             entity_name="Document",
@@ -200,12 +200,12 @@ class TestTypedRenderer:
         assert 'data-dz-back-url="/app/document"' in html
 
     def test_empty_src_when_record_missing_file_value(self) -> None:
-        from dazzle.ui.runtime.pdf_viewer_renderer import render_pdf_viewer
-        from dazzle.ui.runtime.template_context import (
+        from dazzle.render.context import (
             DetailContext,
             FieldContext,
             PdfViewerContext,
         )
+        from dazzle.ui.runtime.pdf_viewer_renderer import render_pdf_viewer
 
         detail = DetailContext(
             entity_name="Doc",

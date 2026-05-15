@@ -156,13 +156,13 @@ class TestPreferenceRoutes:
 
 class TestPageContextPreferences:
     def test_default_empty(self) -> None:
-        from dazzle.ui.runtime.template_context import PageContext
+        from dazzle.render.context import PageContext
 
         ctx = PageContext(page_title="Test")
         assert ctx.user_preferences == {}
 
     def test_populated(self) -> None:
-        from dazzle.ui.runtime.template_context import PageContext
+        from dazzle.render.context import PageContext
 
         ctx = PageContext(
             page_title="Test",

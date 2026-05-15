@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dazzle.ui.runtime.template_context import PageContext
+    from dazzle.render.context import PageContext
 
 
 def _render_typed_body(context: PageContext) -> str:

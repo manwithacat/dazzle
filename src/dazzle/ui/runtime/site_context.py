@@ -7,7 +7,7 @@ that are passed to Jinja2 templates for rendering.
 from datetime import UTC, datetime
 from typing import Any
 
-from dazzle.ui.runtime.template_context import (
+from dazzle.render.context import (
     QAPersonaCardContext,
     SiteCTAContext,
     SiteFooterColumn,

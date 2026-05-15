@@ -15,6 +15,7 @@ from dazzle.back.runtime.renderers.fragment_adapter import (
     _build_column_header,
 )
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import (
     URL,
     FragmentRenderer,
@@ -22,7 +23,6 @@ from dazzle.render.fragment import (
     Table,
 )
 from dazzle.ui.runtime.page_routes import _build_dispatch_ctx
-from dazzle.ui.runtime.template_context import ColumnContext, TableContext
 
 
 class _Surface:

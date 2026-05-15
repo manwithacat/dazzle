@@ -144,7 +144,7 @@ class TestApplyPersonaFormOverrides:
         initial_values: dict | None = None,
         with_sections: bool = False,
     ):
-        from dazzle.ui.runtime.template_context import (
+        from dazzle.render.context import (
             FieldContext,
             FormContext,
             FormSectionContext,

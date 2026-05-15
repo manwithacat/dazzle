@@ -25,13 +25,13 @@ from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldType
 
 class TestDetailContextField:
     def test_default_false(self):
-        from dazzle.ui.runtime.template_context import DetailContext
+        from dazzle.render.context import DetailContext
 
         ctx = DetailContext(entity_name="Manuscript", title="M", fields=[])
         assert ctx.show_history is False
 
     def test_explicit_true(self):
-        from dazzle.ui.runtime.template_context import DetailContext
+        from dazzle.render.context import DetailContext
 
         ctx = DetailContext(entity_name="Manuscript", title="M", fields=[], show_history=True)
         assert ctx.show_history is True

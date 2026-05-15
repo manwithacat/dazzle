@@ -1264,7 +1264,7 @@ class TestRelatedGroupContext:
 
     def test_related_group_context_model(self):
         """RelatedGroupContext wraps RelatedTabContext with display mode."""
-        from dazzle.ui.runtime.template_context import RelatedGroupContext, RelatedTabContext
+        from dazzle.render.context import RelatedGroupContext, RelatedTabContext
 
         tab = RelatedTabContext(
             tab_id="tab-tax-return",

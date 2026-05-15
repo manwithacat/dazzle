@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.render.context import DetailContext, PdfViewerContext
 from dazzle.render.html import esc as _esc
-from dazzle.ui.runtime.template_context import DetailContext, PdfViewerContext
 
 _BACK_SVG = (
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" '

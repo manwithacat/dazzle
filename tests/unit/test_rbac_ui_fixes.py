@@ -227,7 +227,7 @@ class TestColumnVisibleCondition:
     """List columns respect visible: directive for per-role visibility (#585)."""
 
     def test_column_context_has_visible_condition(self) -> None:
-        from dazzle.ui.runtime.template_context import ColumnContext
+        from dazzle.render.context import ColumnContext
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         col = ColumnContext(key="salary", label="Salary", visible_condition=vis)
@@ -235,7 +235,7 @@ class TestColumnVisibleCondition:
         assert col.hidden is False
 
     def test_column_hidden_when_role_denied(self) -> None:
-        from dazzle.ui.runtime.template_context import ColumnContext
+        from dazzle.render.context import ColumnContext
         from dazzle.ui.utils.condition_eval import evaluate_condition
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
@@ -246,7 +246,7 @@ class TestColumnVisibleCondition:
         assert col.hidden is True
 
     def test_column_visible_when_role_allowed(self) -> None:
-        from dazzle.ui.runtime.template_context import ColumnContext
+        from dazzle.render.context import ColumnContext
         from dazzle.ui.utils.condition_eval import evaluate_condition
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
@@ -257,7 +257,7 @@ class TestColumnVisibleCondition:
         assert col.hidden is False
 
     def test_column_without_condition_always_visible(self) -> None:
-        from dazzle.ui.runtime.template_context import ColumnContext
+        from dazzle.render.context import ColumnContext
 
         col = ColumnContext(key="name", label="Name")
         assert col.visible_condition is None
@@ -269,7 +269,7 @@ class TestColumnVisibleCondition:
         The page handler deep-copies ctx.table before checking
         visibility — verify that the original columns stay unhidden.
         """
-        from dazzle.ui.runtime.template_context import ColumnContext, TableContext
+        from dazzle.render.context import ColumnContext, TableContext
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         shared_table = TableContext(

@@ -10,8 +10,8 @@ Fix: iterate `detail.fields` directly. This pins the contract."""
 
 from __future__ import annotations
 
+from dazzle.render.context import DetailContext, FieldContext
 from dazzle.ui.runtime.page_routes import _build_dispatch_ctx
-from dazzle.ui.runtime.template_context import DetailContext, FieldContext
 
 
 class _Surface:

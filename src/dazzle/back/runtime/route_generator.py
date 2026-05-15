@@ -2610,7 +2610,7 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
 
         # Direct browser navigation: wrap fragment in a typed Page (#349).
         from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
-        from dazzle.ui.runtime.template_context import PageContext
+        from dazzle.render.context import PageContext
 
         page_ctx = PageContext(
             page_title=f"{entity_name} Detail",

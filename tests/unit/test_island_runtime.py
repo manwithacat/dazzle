@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from dazzle.core.ir.islands import IslandPropSpec, IslandSpec
-from dazzle.ui.runtime.template_context import IslandContext
+from dazzle.render.context import IslandContext
 
 
 class TestIslandContext:

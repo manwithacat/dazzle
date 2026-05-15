@@ -256,7 +256,7 @@ class TestApplyPersonaOverrides:
         persona_hide: dict[str, list[str]] | None = None,
         base_empty: str = "No items found.",
     ):
-        from dazzle.ui.runtime.template_context import ColumnContext, TableContext
+        from dazzle.render.context import ColumnContext, TableContext
 
         col_pairs = columns or [("title", False), ("assigned_to", False), ("priority", False)]
         return TableContext(
@@ -369,7 +369,7 @@ class TestApplyPersonaOverrides:
         self,
         persona_read_only: set[str] | None = None,
     ):
-        from dazzle.ui.runtime.template_context import ColumnContext, TableContext
+        from dazzle.render.context import ColumnContext, TableContext
 
         return TableContext(
             entity_name="Task",
@@ -405,8 +405,8 @@ class TestApplyPersonaOverrides:
 
     def test_read_only_stacks_with_hide(self) -> None:
         """A persona can be both read-only AND have hide overrides."""
+        from dazzle.render.context import ColumnContext, TableContext
         from dazzle.ui.runtime.page_routes import _apply_persona_overrides
-        from dazzle.ui.runtime.template_context import ColumnContext, TableContext
 
         table = TableContext(
             entity_name="Task",

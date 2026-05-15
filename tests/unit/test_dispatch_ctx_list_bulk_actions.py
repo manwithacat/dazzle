@@ -20,13 +20,13 @@ import pytest
 
 from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import (
     BulkActionToolbar,
     FragmentRenderer,
     Table,
 )
 from dazzle.ui.runtime.page_routes import _build_dispatch_ctx
-from dazzle.ui.runtime.template_context import ColumnContext, TableContext
 
 
 class _Surface:

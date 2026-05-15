@@ -206,7 +206,7 @@ class TestRelatedTabVisibility:
 
     def test_tab_visible_condition_propagated(self):
         """Related tab picks up visible_condition from matching section."""
-        from dazzle.ui.runtime.template_context import RelatedTabContext
+        from dazzle.render.context import RelatedTabContext
 
         tab = RelatedTabContext(
             tab_id="tab-sen-record",
@@ -223,7 +223,7 @@ class TestRelatedTabVisibility:
     def test_tab_hidden_when_role_mismatch(self):
         """Tab with visible_condition is hidden for unauthorized roles."""
         from dazzle.back.runtime.condition_evaluator import evaluate_condition
-        from dazzle.ui.runtime.template_context import RelatedTabContext
+        from dazzle.render.context import RelatedTabContext
 
         cond = {"role_check": {"role_name": "admin"}}
         tab = RelatedTabContext(
@@ -247,7 +247,7 @@ class TestRelatedTabVisibility:
     def test_tab_visible_when_role_matches(self):
         """Tab with visible_condition stays visible for authorized roles."""
         from dazzle.back.runtime.condition_evaluator import evaluate_condition
-        from dazzle.ui.runtime.template_context import RelatedTabContext
+        from dazzle.render.context import RelatedTabContext
 
         cond = {"role_check": {"role_name": "admin"}}
         tab = RelatedTabContext(

@@ -22,6 +22,16 @@ Example usage:
     >>> generate_preview_files(appspec, "preview/")
 """
 
+from dazzle.render.context import (
+    ColumnContext,
+    DetailContext,
+    FieldContext,
+    FormContext,
+    NavItemContext,
+    PageContext,
+    PdfViewerContext,
+    TableContext,
+)
 from dazzle.ui.runtime.combined_server import (
     run_backend_only,
     run_unified_server,
@@ -35,16 +45,6 @@ from dazzle.ui.runtime.dev_server import (
 from dazzle.ui.runtime.realtime_client import (
     generate_realtime_init_js,
     get_realtime_client_js,
-)
-from dazzle.ui.runtime.template_context import (
-    ColumnContext,
-    DetailContext,
-    FieldContext,
-    FormContext,
-    NavItemContext,
-    PageContext,
-    PdfViewerContext,
-    TableContext,
 )
 from dazzle.ui.runtime.template_renderer import render_page
 

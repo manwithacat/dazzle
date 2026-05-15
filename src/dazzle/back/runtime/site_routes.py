@@ -570,8 +570,8 @@ def create_site_page_routes(
             TYPED_SECTION_TYPES,
             render_typed_section,
         )
+        from dazzle.render.context import PageContext
         from dazzle.render.fragment.renderer import FragmentRenderer
-        from dazzle.ui.runtime.template_context import PageContext
 
         sections = list(getattr(ctx, "sections", None) or [])
         if sections:

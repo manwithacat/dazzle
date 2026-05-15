@@ -1,13 +1,9 @@
-"""
-Surface access control types for Dazzle UI page routes.
+"""Surface access control types — pure, no FastAPI dependency.
 
-Pure Python types and check function — no FastAPI dependency.
-These are used by page_routes.py to enforce access control on
-server-rendered pages.
-
-The dazzle_back package imports the FastAPI-specific helpers
-(middleware factory, exception handler) from its own surface_access
-module, which may delegate to these types.
+Used by both `ui/runtime/page_routes.py` (for page-route access checks)
+and `back/runtime/surface_access.py` (which adds FastAPI middleware on
+top). Moved to `dazzle.render` in #1091 (parent #1086) to break the
+back↔ui import cycle.
 """
 
 from __future__ import annotations  # required: forward reference

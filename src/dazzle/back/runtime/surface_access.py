@@ -1,16 +1,10 @@
-"""
-Surface access control enforcement for DNR-Back applications.
+"""FastAPI-specific surface-access middleware.
 
-Enforces access control based on SurfaceAccessSpec:
-- Authentication checks
-- Persona-based authorization (allow_personas, deny_personas)
-- Unauthenticated user handling (401 for API, redirect for UI)
-
-The pure types (SurfaceAccessConfig, SurfaceAccessDenied, check_surface_access)
-live in dazzle_ui.runtime.surface_access so the UI package can enforce access
-control on page routes without importing dazzle_back.  This module re-exports
-those types and adds the FastAPI-specific helpers (middleware factory, exception
-handler) that are only needed in the backend.
+The pure types (``SurfaceAccessConfig``, ``SurfaceAccessDenied``,
+``check_surface_access``) live in ``dazzle.render.surface_access`` so
+both ``back/`` and ``ui/`` can enforce access control without crossing
+layer boundaries (#1086). This module owns only the FastAPI middleware:
+dependency factory + exception handler + the membership-lookup helper.
 """
 
 import logging
@@ -21,7 +15,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.responses import Response
 
-from dazzle.ui.runtime.surface_access import (
+from dazzle.render.surface_access import (
     SurfaceAccessConfig,
     SurfaceAccessDenied,
     check_surface_access,
@@ -30,9 +24,6 @@ from dazzle.ui.runtime.surface_access import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "SurfaceAccessConfig",
-    "SurfaceAccessDenied",
-    "check_surface_access",
     "get_user_personas_from_membership",
     "create_access_check_handler",
     "create_access_denied_handler",

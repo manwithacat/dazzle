@@ -124,7 +124,7 @@ def test_og_meta_renders_in_order() -> None:
 
 def test_build_page_threads_og_meta_kwarg() -> None:
     from dazzle.back.runtime.renderers.page_builder import build_page
-    from dazzle.ui.runtime.template_context import PageContext
+    from dazzle.render.context import PageContext
 
     ctx = PageContext(page_title="Tasks", app_name="Acme", current_route="/")
     page = build_page(
@@ -139,7 +139,7 @@ def test_build_page_threads_og_meta_kwarg() -> None:
 
 def test_build_page_default_og_meta_is_empty() -> None:
     from dazzle.back.runtime.renderers.page_builder import build_page
-    from dazzle.ui.runtime.template_context import PageContext
+    from dazzle.render.context import PageContext
 
     ctx = PageContext(page_title="Tasks", app_name="Acme", current_route="/")
     page = build_page(ctx, "<p>inner</p>")

@@ -30,7 +30,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.escape import RawHTML
 
 if TYPE_CHECKING:
-    from dazzle.ui.runtime.template_context import PageContext
+    from dazzle.render.context import PageContext
 
 
 def build_page(

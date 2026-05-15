@@ -384,7 +384,7 @@ async def _experience_step_get(
         # `Page` + `AppShell` via `dispatch_render_page` — same shape
         # used by the marketing-page + entity-surface routes.
         from dazzle.back.runtime.renderers.page_builder import dispatch_render_page
-        from dazzle.ui.runtime.template_context import NavItemContext, PageContext
+        from dazzle.render.context import NavItemContext, PageContext
 
         inner_html = render_experience_inner_html(exp_ctx)
         nav_items_ctx = [
