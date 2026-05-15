@@ -13,16 +13,18 @@ Evaluates EntityAccessSpec from BackendSpec at runtime, supporting:
 from typing import Any
 
 from dazzle.back.runtime._comparison import eval_comparison_op, normalize_for_comparison
-from dazzle.back.specs import (
+from dazzle.core.access import (
+    AccessAuthContext,
     AccessComparisonKind,
     AccessConditionSpec,
+    AccessDecision,
     AccessLogicalKind,
     AccessOperationKind,
     AccessPolicyEffect,
+    AccessRuntimeContext,
     EntityAccessSpec,
+    PermissionRuleSpec,
 )
-from dazzle.back.specs.auth import AccessAuthContext, PermissionRuleSpec
-from dazzle.core.access import AccessDecision, AccessRuntimeContext
 
 # =============================================================================
 # Condition Evaluation

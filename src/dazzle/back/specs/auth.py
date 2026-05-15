@@ -5,11 +5,45 @@ Defines auth rules, tenancy, permissions, roles, and entity access rules.
 """
 
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from dazzle.core.access import AccessOperationKind
+from dazzle.core.access import (
+    AccessAuthContext,
+    AccessComparisonKind,
+    AccessConditionSpec,
+    AccessLogicalKind,
+    AccessOperationKind,
+    AccessPolicyEffect,
+    EntityAccessSpec,
+    PermissionRuleSpec,
+    ScopeRuleSpec,
+    VisibilityRuleSpec,
+)
+
+# Re-exports for back-side callers — the access-rule spec types moved to
+# dazzle.core.access in #1096 to break the back↔ui cycle (#1086). Imports
+# of these names from `dazzle.back.specs.auth` or `dazzle.back.specs`
+# continue to work; new code should import directly from `dazzle.core.access`.
+__all__ = [
+    "AccessAuthContext",
+    "AccessComparisonKind",
+    "AccessConditionSpec",
+    "AccessLogicalKind",
+    "AccessOperationKind",
+    "AccessPolicyEffect",
+    "AuthRuleSpec",
+    "AuthScheme",
+    "EntityAccessSpec",
+    "PermissionRuleSpec",
+    "PermissionSpec",
+    "RoleSpec",
+    "ScopeRuleSpec",
+    "TenancyRuleSpec",
+    "TenancyStrategy",
+    "VisibilityRuleSpec",
+]
 
 # =============================================================================
 # Roles and Permissions
@@ -137,239 +171,3 @@ class TenancyRuleSpec(BaseModel):
     def is_multi_tenant(self) -> bool:
         """Check if multi-tenancy is enabled."""
         return self.strategy != TenancyStrategy.NONE
-
-
-# =============================================================================
-# Entity Access Rules (v0.7.0)
-# =============================================================================
-
-
-class AccessComparisonKind(StrEnum):
-    """Comparison operators for access rule conditions."""
-
-    EQUALS = "="
-    NOT_EQUALS = "!="
-    GREATER_THAN = ">"
-    LESS_THAN = "<"
-    GREATER_EQUAL = ">="
-    LESS_EQUAL = "<="
-    IN = "in"
-    NOT_IN = "not in"
-    IS = "is"
-    IS_NOT = "is not"
-
-
-class AccessLogicalKind(StrEnum):
-    """Logical operators for combining access conditions."""
-
-    AND = "and"
-    OR = "or"
-
-
-class AccessAuthContext(StrEnum):
-    """Authentication context for access rules."""
-
-    ANONYMOUS = "anonymous"
-    AUTHENTICATED = "authenticated"
-
-
-class AccessPolicyEffect(StrEnum):
-    """Policy effect for Cedar-style access rules."""
-
-    PERMIT = "permit"
-    FORBID = "forbid"
-
-
-class AccessConditionSpec(BaseModel):
-    """
-    Access condition specification.
-
-    Represents a node in the expression tree for access conditions.
-    Can be:
-    - comparison: field op value (e.g., owner_id = current_user)
-    - role_check: role(role_name) (e.g., role(admin))
-    - logical: left op right (combining conditions with AND/OR)
-
-    Examples:
-        - owner_id = current_user
-        - role(admin)
-        - owner_id = current_user or role(admin)
-        - owner.team_id = current_team and status = active
-    """
-
-    kind: Literal["comparison", "role_check", "logical", "grant_check", "via_check"] = Field(
-        description="Condition type"
-    )
-    # For comparison: field, operator, value
-    field: str | None = Field(
-        default=None,
-        description="Field path for comparison (supports dotted paths like owner.team_id)",
-    )
-    comparison_op: AccessComparisonKind | None = Field(
-        default=None, description="Comparison operator"
-    )
-    value: str | int | float | bool | None = Field(
-        default=None, description="Comparison value (literal or special like 'current_user')"
-    )
-    value_list: list[str | int | float | bool] | None = Field(
-        default=None, description="List of values for IN/NOT IN operators"
-    )
-    # For role_check: role name
-    role_name: str | None = Field(default=None, description="Role name for role() check")
-    # For grant_check: has_grant(relation, scope_field)
-    grant_relation: str | None = Field(
-        default=None, description="Grant relation name for has_grant() check"
-    )
-    grant_scope_field: str | None = Field(
-        default=None, description="Scope field for has_grant() check"
-    )
-    # For via_check: subquery through junction table (#530)
-    via_junction_entity: str | None = Field(
-        default=None, description="Junction entity name (e.g., 'AgentAssignment')"
-    )
-    via_bindings: list[dict[str, str]] | None = Field(
-        default=None, description="List of binding dicts with junction_field, target, operator"
-    )
-    # For logical: left, operator, right
-    logical_op: AccessLogicalKind | None = Field(
-        default=None, description="Logical operator (AND/OR)"
-    )
-    logical_left: "AccessConditionSpec | None" = Field(
-        default=None, description="Left operand for logical"
-    )
-    logical_right: "AccessConditionSpec | None" = Field(
-        default=None, description="Right operand for logical"
-    )
-
-    model_config = ConfigDict(frozen=True)
-
-
-class VisibilityRuleSpec(BaseModel):
-    """
-    Visibility rule for entity read access.
-
-    Defines when users can see/read entities.
-
-    Examples:
-        - Anonymous users can see if is_public = true
-        - Authenticated users can see if owner_id = current_user
-    """
-
-    context: AccessAuthContext = Field(description="Auth context (anonymous/authenticated)")
-    condition: AccessConditionSpec = Field(description="Condition for visibility")
-
-    model_config = ConfigDict(frozen=True)
-
-
-class PermissionRuleSpec(BaseModel):
-    """
-    Permission rule for entity access control (Cedar-style).
-
-    Defines when users can perform operations on entities.
-    Supports permit/forbid semantics for Cedar-style policy evaluation.
-
-    Examples:
-        - Only owner can update: owner_id = current_user
-        - Only admin can delete: role(admin)
-        - Interns cannot delete: effect=FORBID, role(intern)
-    """
-
-    operation: AccessOperationKind = Field(description="Operation type")
-    require_auth: bool = Field(default=True, description="Require authentication")
-    condition: AccessConditionSpec | None = Field(
-        default=None,
-        description="Condition for permission (None = always allowed if authenticated)",
-    )
-    effect: AccessPolicyEffect = Field(
-        default=AccessPolicyEffect.PERMIT,
-        description="Cedar-style effect (permit/forbid)",
-    )
-    personas: list[str] = Field(
-        default_factory=list,
-        description="Persona scope (empty = any authenticated user)",
-    )
-
-    model_config = ConfigDict(frozen=True)
-
-
-class ScopeRuleSpec(BaseModel):
-    """Row-filtering scope rule — converted from IR ScopeRule.
-
-    Defines which records a role can see after passing the permit gate.
-    condition=None means 'all' (no filter). personas=["*"] means all
-    authorized roles.
-
-    The ``predicate`` field carries the compiled :class:`ScopePredicate` tree
-    from the linker (typed as ``Any`` to avoid circular imports).  When present,
-    the runtime uses :func:`compile_predicate` to produce SQL directly, bypassing
-    the legacy condition-tree-to-filter-dict pipeline.
-    """
-
-    operation: AccessOperationKind = Field(description="Operation type")
-    condition: AccessConditionSpec | None = Field(
-        default=None,
-        description="Row-filter condition (None means 'all records')",
-    )
-    personas: list[str] = Field(
-        default_factory=list,
-        description="Persona scope (['*'] means all authorized roles)",
-    )
-    predicate: Any = Field(
-        default=None,
-        description="Compiled ScopePredicate tree (set by linker, used at runtime for SQL generation)",
-    )
-
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-
-
-class EntityAccessSpec(BaseModel):
-    """
-    Entity-level access control specification.
-
-    Combines visibility rules (read access), permission rules (write access),
-    and scope rules (row-level filtering after permit gate).
-
-    Example:
-        EntityAccessSpec(
-            visibility=[
-                VisibilityRuleSpec(
-                    context=AccessAuthContext.AUTHENTICATED,
-                    condition=AccessConditionSpec(
-                        kind="comparison",
-                        field="owner_id",
-                        comparison_op=AccessComparisonKind.EQUALS,
-                        value="current_user"
-                    )
-                )
-            ],
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.UPDATE,
-                    condition=AccessConditionSpec(...)
-                )
-            ],
-            scopes=[
-                ScopeRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    condition=AccessConditionSpec(...),
-                    personas=["manager"]
-                )
-            ]
-        )
-    """
-
-    visibility: list[VisibilityRuleSpec] = Field(
-        default_factory=list, description="Visibility rules (read access)"
-    )
-    permissions: list[PermissionRuleSpec] = Field(
-        default_factory=list, description="Permission rules (create/update/delete access)"
-    )
-    scopes: list[ScopeRuleSpec] = Field(
-        default_factory=list, description="Row-filtering scope rules (post-permit gate)"
-    )
-
-    model_config = ConfigDict(frozen=True)
-
-
-# Rebuild model for recursive types
-AccessConditionSpec.model_rebuild()

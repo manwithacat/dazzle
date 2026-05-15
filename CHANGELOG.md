@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.8] - 2026-05-15
+
+### Changed
+
+- **#1096: access-rule spec types moved from `back.specs.auth` to `dazzle.core.access`.** Prerequisite (a.k.a. workstream A-prime) for the #1094 `_PageDeps` shim removal. The 9 pure types — `AccessComparisonKind`, `AccessLogicalKind`, `AccessAuthContext`, `AccessPolicyEffect` (4 StrEnums) and `AccessConditionSpec`, `VisibilityRuleSpec`, `PermissionRuleSpec`, `ScopeRuleSpec`, `EntityAccessSpec` (5 BaseModels) — are all pure Pydantic value classes with no back-specific dependencies. They already imported `AccessOperationKind` from `dazzle.core.access`, so half the layering was already correct; they lived under `back/specs/` purely for historical reasons.
+
+  Now `dazzle.core.access` is the canonical home for the entire access-rule type vocabulary. `back/specs/auth.py` re-exports the names so existing `from dazzle.back.specs import …` / `from dazzle.back.specs.auth import …` imports continue to work — new code should import directly from `dazzle.core.access`.
+
+  Why now: `evaluate_permission` (in `back/runtime/access_evaluator.py`) couldn't move to a neutral location until these signature types lived in `core/`. With this landed, #1094 (kill `_PageDeps` callable-injection shim) is unblocked.
+
+  Done criteria from #1096:
+  - All 9 class definitions are in `dazzle/core/access.py`.
+  - None remain in `dazzle/back/specs/auth.py`.
+  - `dazzle/back/runtime/access_evaluator.py` no longer imports from `dazzle.back.specs.auth` — imports directly from `dazzle.core.access`.
+
+### Agent Guidance
+
+- The access-rule type vocabulary lives in `dazzle.core.access` now. When adding new condition kinds, comparison operators, or rule shapes, put them there — `back/specs/auth.py` is reserved for FastAPI-auth-specific concerns (`AuthScheme`, `AuthRuleSpec`, `TenancyStrategy`, `TenancyRuleSpec`).
+
 ## [0.70.7] - 2026-05-15
 
 ### Changed (BREAKING)
