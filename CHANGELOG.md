@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.17] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_surface` migrated to keyword-dispatch.** Fourth consumer of the #1097 helper (after `parse_workspace_region` in v0.70.14, `parse_stream` in v0.70.15, `parse_test` in v0.70.16). The 205-line monolith in `src/dazzle/core/dsl_parser_impl/surface.py` becomes a 19-line dispatch shell + 15 token-keyed `_kw_*` functions + 1 IDENT-text-matched (`show_history`) + a 47-line `_build_surface` builder that handles the surface-level persona-variant merge into `ux_spec`. Byte-identical IR verified against a 158-`SurfaceSpec` snapshot across 14 example/fixture files. Unknown-keyword fallthrough now produces ``Unknown keyword in block: 'X'`` (strictly better than the legacy ``Expected DEDENT, got X``).
+
+### Agent Guidance
+
+- The `_parse_construct_header` helper returns ``(name, title, SourceLocation)``. When passing the location into a module-level `_build_*` function, import `SourceLocation` from `dazzle.core.ir.location` (not `ir.SourceLoc` — there's no such alias). The pattern is in `surface.py:_build_surface`.
+
 ## [0.70.16] - 2026-05-15
 
 ### Changed

@@ -4,11 +4,14 @@ Surface parsing for DAZZLE DSL.
 Handles surface declarations including sections, actions, and outcomes.
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
+from ..ir.location import SourceLocation
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class SurfaceParserMixin:
@@ -37,211 +40,25 @@ class SurfaceParserMixin:
         _parse_construct_header: Any
 
     def parse_surface(self) -> ir.SurfaceSpec:
-        """Parse surface declaration."""
+        """Parse a ``surface:`` declaration.
+
+        Refactored to dispatch-table style (follow-on to #1098). The 16
+        outer keyword branches become module-level ``_kw_*`` functions
+        registered in :data:`_SURFACE_KEYWORDS` / :data:`_SURFACE_IDENT_KEYWORDS`;
+        the post-loop persona-variant merge + IR assembly live in
+        :func:`_build_surface`.
+        """
         name, title, loc = self._parse_construct_header(TokenType.SURFACE)
 
-        entity_ref = None
-        view_ref = None
-        mode = ir.SurfaceMode.CUSTOM
-        priority = ir.BusinessPriority.MEDIUM
-        sections = []
-        actions = []
-        ux_spec = None
-        access_spec = None
-        search_fields: list[str] = []
-        persona_variants: list[ir.PersonaVariant] = []
-        related_groups: list[ir.RelatedGroup] = []
-        layout = "wizard"  # v0.61.88 (#918): default render mode for create/edit
-        companions: list[ir.CompanionSpec] = []  # v0.61.102 (#923): Part D
-        display: str | None = None  # v0.61.126 (#942): VIEW-mode display override
-        show_history = False  # #956 cycle 8: opt-in audit-history region
-        render: str | None = None  # Plan 2: optional renderer name
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # uses entity EntityName
-            if self.match(TokenType.USES):
-                self.advance()
-                self.expect(TokenType.ENTITY)
-                entity_ref = self.expect(TokenType.IDENTIFIER).value
-                self.skip_newlines()
-
-            # mode: view|create|edit|list|custom
-            elif self.match(TokenType.MODE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                mode_token = self.expect_identifier_or_keyword()
-                mode = ir.SurfaceMode(mode_token.value)
-                self.skip_newlines()
-
-            # v0.61.88 (#918): layout: wizard|single_page — controls how
-            # multi-section create/edit surfaces render. wizard (default)
-            # = multi-step. single_page = stacked sections, one submit at end.
-            elif self.match(TokenType.LAYOUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                layout_token = self.expect_identifier_or_keyword()
-                if layout_token.value not in ("wizard", "single_page"):
-                    self.error(
-                        f"layout must be 'wizard' or 'single_page', got {layout_token.value!r}"
-                    )
-                layout = layout_token.value
-                self.skip_newlines()
-
-            # Plan 2: render: <renderer-name> — opt into a non-default renderer
-            elif self.match(TokenType.RENDER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                render_token = self.expect_identifier_or_keyword()
-                render = render_token.value
-                self.skip_newlines()
-
-            # source: ViewName (view reference for field projection)
-            elif self.match(TokenType.SOURCE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                view_ref = self.expect(TokenType.IDENTIFIER).value
-                self.skip_newlines()
-
-            # priority: critical|high|medium|low
-            elif self.match(TokenType.PRIORITY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                priority_token = self.expect_identifier_or_keyword()
-                priority = ir.BusinessPriority(priority_token.value)
-                self.skip_newlines()
-
-            # access: public | authenticated | persona(name1, name2)
-            elif self.match(TokenType.ACCESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                access_spec = self._parse_surface_access()
-                self.skip_newlines()
-
-            # section name ["title"]:
-            elif self.match(TokenType.SECTION):
-                section = self.parse_surface_section()
-                sections.append(section)
-
-            # action name ["label"]:
-            elif self.match(TokenType.ACTION):
-                action = self.parse_surface_action()
-                actions.append(action)
-
-            # ux: (UX Semantic Layer block)
-            elif self.match(TokenType.UX):
-                ux_spec = self.parse_ux_block()
-
-            # search: [field1, field2]
-            elif self.match(TokenType.SEARCH):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.LBRACKET):
-                    self.advance()
-                    while not self.match(TokenType.RBRACKET):
-                        search_fields.append(self.expect_identifier_or_keyword().value)
-                        if self.match(TokenType.COMMA):
-                            self.advance()
-                    self.expect(TokenType.RBRACKET)
-                else:
-                    search_fields.append(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            # as <persona>: persona variant at surface level. Renamed
-            # from `for <persona>:` — `as` is the canonical persona
-            # binding introducer.
-            elif self.match(TokenType.AS):
-                variant = self.parse_persona_variant()
-                persona_variants.append(variant)
-
-            # related name "title": (related display group)
-            elif self.match(TokenType.RELATED):
-                group = self._parse_related_group()
-                related_groups.append(group)
-
-            # v0.61.102 (#923): companion <name> ["title"] [position=<pos>]:
-            # — read-only panel rendered alongside the form.
-            elif self.match(TokenType.COMPANION):
-                companions.append(self._parse_companion())
-
-            # v0.61.126 (#942): display: pdf_viewer — surface-level
-            # display override that routes a VIEW-mode detail surface to
-            # the built-in PDF viewer chrome instead of the generic
-            # detail layout. Only "pdf_viewer" is recognised today.
-            elif self.match(TokenType.DISPLAY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                display_token = self.expect_identifier_or_keyword()
-                if display_token.value != "pdf_viewer":
-                    self.error(f"surface display must be 'pdf_viewer', got {display_token.value!r}")
-                display = display_token.value
-                self.skip_newlines()
-
-            # #956 cycle 8: show_history: true — opt-in audit-history
-            # region on detail surfaces. Cycle-9 region renderer uses
-            # the cycle-7 load_history loader; cycle-1 `audit on X:`
-            # block on the surface's entity must exist for the panel
-            # to actually render.
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "show_history":
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    show_history = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    show_history = False
-                else:
-                    self.error(
-                        f"show_history must be 'true' or 'false', got {self.current_token().value!r}"
-                    )
-                self.skip_newlines()
-
-            else:
-                break
-
-        self.expect(TokenType.DEDENT)
-
-        # Merge persona_variants into ux_spec (create one if needed)
-        if persona_variants:
-            if ux_spec is None:
-                ux_spec = ir.UXSpec(persona_variants=persona_variants)
-            else:
-                # Combine surface-level variants with ux block variants
-                ux_spec = ir.UXSpec(
-                    purpose=ux_spec.purpose,
-                    show=ux_spec.show,
-                    sort=ux_spec.sort,
-                    filter=ux_spec.filter,
-                    search=ux_spec.search,
-                    empty_message=ux_spec.empty_message,
-                    attention_signals=ux_spec.attention_signals,
-                    persona_variants=list(ux_spec.persona_variants) + persona_variants,
-                )
-
-        return ir.SurfaceSpec(
-            name=name,
-            title=title,
-            entity_ref=entity_ref,
-            view_ref=view_ref,
-            mode=mode,
-            priority=priority,
-            sections=sections,
-            actions=actions,
-            ux=ux_spec,
-            access=access_spec,
-            search_fields=search_fields,
-            related_groups=related_groups,
-            source=loc,
-            layout=layout,  # v0.61.88 (#918)
-            companions=companions,  # v0.61.102 (#923)
-            display=display,  # v0.61.126 (#942)
-            show_history=show_history,  # #956 cycle 8
-            render=render,  # Plan 2: optional renderer name
+        state = _SurfaceState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_SURFACE_KEYWORDS,
+            ident_keywords=_SURFACE_IDENT_KEYWORDS,
+            state=state,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_surface(name, title, loc, state)
 
     def _parse_related_group(self) -> ir.RelatedGroup:
         """Parse a related block inside a surface.
@@ -811,3 +628,272 @@ class SurfaceParserMixin:
                 token.line,
                 token.column,
             )
+
+
+# ============================================================ #
+# parse_surface — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 205-line monolith was replaced (v0.70.17) with the dispatch
+# pattern shipped in #1097. Each former branch is a small ``_kw_*``
+# free function below; the post-loop persona-variant merge into the
+# ``ux`` spec + IR assembly live in :func:`_build_surface`.
+
+
+@dataclass
+class _SurfaceState:
+    """Accumulator for :meth:`SurfaceParserMixin.parse_surface`.
+
+    One field per legal keyword in a ``surface:`` block, mirroring the
+    locals of the legacy monolith. ``persona_variants`` accumulates
+    surface-level ``as <persona>:`` variants which the builder folds
+    into ``ux_spec.persona_variants`` post-loop.
+    """
+
+    entity_ref: str | None = None
+    view_ref: str | None = None
+    mode: ir.SurfaceMode = ir.SurfaceMode.CUSTOM
+    priority: ir.BusinessPriority = ir.BusinessPriority.MEDIUM
+    sections: list[ir.SurfaceSection] = field(default_factory=list)
+    actions: list[ir.SurfaceAction] = field(default_factory=list)
+    ux_spec: ir.UXSpec | None = None
+    access_spec: ir.SurfaceAccessSpec | None = None
+    search_fields: list[str] = field(default_factory=list)
+    persona_variants: list[ir.PersonaVariant] = field(default_factory=list)
+    related_groups: list[ir.RelatedGroup] = field(default_factory=list)
+    layout: str = "wizard"  # v0.61.88 (#918)
+    companions: list[ir.CompanionSpec] = field(default_factory=list)  # v0.61.102 (#923)
+    display: str | None = None  # v0.61.126 (#942)
+    show_history: bool = False  # #956 cycle 8
+    render: str | None = None  # Plan 2
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _kw_uses(parser: Any, state: _SurfaceState) -> None:
+    """``uses entity EntityName`` — entity binding for the surface."""
+    parser.advance()
+    parser.expect(TokenType.ENTITY)
+    state.entity_ref = parser.expect(TokenType.IDENTIFIER).value
+    parser.skip_newlines()
+
+
+def _kw_mode(parser: Any, state: _SurfaceState) -> None:
+    """``mode: view|create|edit|list|custom``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.mode = ir.SurfaceMode(parser.expect_identifier_or_keyword().value)
+    parser.skip_newlines()
+
+
+def _kw_layout(parser: Any, state: _SurfaceState) -> None:
+    """``layout: wizard|single_page`` — multi-section render strategy (#918)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    layout_token = parser.expect_identifier_or_keyword()
+    if layout_token.value not in ("wizard", "single_page"):
+        parser.error(f"layout must be 'wizard' or 'single_page', got {layout_token.value!r}")
+    state.layout = layout_token.value
+    parser.skip_newlines()
+
+
+def _kw_render(parser: Any, state: _SurfaceState) -> None:
+    """``render: <renderer-name>`` — surface-level renderer override (Plan 2)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.render = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_source(parser: Any, state: _SurfaceState) -> None:
+    """``source: ViewName`` — view reference for field projection."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.view_ref = parser.expect(TokenType.IDENTIFIER).value
+    parser.skip_newlines()
+
+
+def _kw_priority(parser: Any, state: _SurfaceState) -> None:
+    """``priority: critical|high|medium|low``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.priority = ir.BusinessPriority(parser.expect_identifier_or_keyword().value)
+    parser.skip_newlines()
+
+
+def _kw_access(parser: Any, state: _SurfaceState) -> None:
+    """``access: public | authenticated | persona(name1, name2)``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.access_spec = parser._parse_surface_access()
+    parser.skip_newlines()
+
+
+def _kw_section(parser: Any, state: _SurfaceState) -> None:
+    """``section name ["title"]:`` — helper consumes its own keyword + body."""
+    state.sections.append(parser.parse_surface_section())
+
+
+def _kw_action(parser: Any, state: _SurfaceState) -> None:
+    """``action name ["label"]:`` — helper consumes its own keyword + body."""
+    state.actions.append(parser.parse_surface_action())
+
+
+def _kw_ux(parser: Any, state: _SurfaceState) -> None:
+    """``ux:`` — UX Semantic Layer block, helper consumes its own keyword."""
+    state.ux_spec = parser.parse_ux_block()
+
+
+def _kw_search(parser: Any, state: _SurfaceState) -> None:
+    """``search: field`` OR ``search: [f1, f2]``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.LBRACKET):
+        parser.advance()
+        while not parser.match(TokenType.RBRACKET):
+            state.search_fields.append(parser.expect_identifier_or_keyword().value)
+            if parser.match(TokenType.COMMA):
+                parser.advance()
+        parser.expect(TokenType.RBRACKET)
+    else:
+        state.search_fields.append(parser.expect_identifier_or_keyword().value)
+    parser.skip_newlines()
+
+
+def _kw_as(parser: Any, state: _SurfaceState) -> None:
+    """``as <persona>:`` — surface-level persona variant.
+
+    Renamed from ``for <persona>:`` in #998 — ``as`` is the canonical
+    persona binding introducer. The helper consumes its own keyword.
+    """
+    state.persona_variants.append(parser.parse_persona_variant())
+
+
+def _kw_related(parser: Any, state: _SurfaceState) -> None:
+    """``related name "title":`` — related display group block."""
+    state.related_groups.append(parser._parse_related_group())
+
+
+def _kw_companion(parser: Any, state: _SurfaceState) -> None:
+    """``companion <name> ["title"] [position=<pos>]:`` — read-only side panel (#923)."""
+    state.companions.append(parser._parse_companion())
+
+
+def _kw_display(parser: Any, state: _SurfaceState) -> None:
+    """``display: pdf_viewer`` — VIEW-mode display override (#942).
+
+    Only ``pdf_viewer`` is recognised today; the parser validates that.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    display_token = parser.expect_identifier_or_keyword()
+    if display_token.value != "pdf_viewer":
+        parser.error(f"surface display must be 'pdf_viewer', got {display_token.value!r}")
+    state.display = display_token.value
+    parser.skip_newlines()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _kw_show_history(parser: Any, state: _SurfaceState) -> None:
+    """``show_history: true|false`` — opt-in audit-history region (#956 cycle 8)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.show_history = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.show_history = False
+    else:
+        parser.error(
+            f"show_history must be 'true' or 'false', got {parser.current_token().value!r}"
+        )
+    parser.skip_newlines()
+
+
+# ---------- Dispatch tables + unknown handler ---------- #
+
+
+_SURFACE_KEYWORDS: dict[TokenType, KeywordParser[_SurfaceState]] = {
+    TokenType.USES: _kw_uses,
+    TokenType.MODE: _kw_mode,
+    TokenType.LAYOUT: _kw_layout,
+    TokenType.RENDER: _kw_render,
+    TokenType.SOURCE: _kw_source,
+    TokenType.PRIORITY: _kw_priority,
+    TokenType.ACCESS: _kw_access,
+    TokenType.SECTION: _kw_section,
+    TokenType.ACTION: _kw_action,
+    TokenType.UX: _kw_ux,
+    TokenType.SEARCH: _kw_search,
+    TokenType.AS: _kw_as,
+    TokenType.RELATED: _kw_related,
+    TokenType.COMPANION: _kw_companion,
+    TokenType.DISPLAY: _kw_display,
+}
+
+
+_SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
+    "show_history": _kw_show_history,
+}
+
+
+# ---------- Post-loop builder ---------- #
+#
+# Unknown keywords fall through to the dispatch helper's default —
+# a ``Unknown keyword in block: 'X'`` parse error, strictly better
+# diagnostics than the legacy ``Expected DEDENT, got X`` that the
+# original ``else: break`` + ``expect(DEDENT)`` produced.
+
+
+def _build_surface(
+    name: str,
+    title: str | None,
+    loc: SourceLocation,
+    state: _SurfaceState,
+) -> ir.SurfaceSpec:
+    """Merge surface-level persona variants into the ``ux`` spec, build IR.
+
+    If both an inline ``as <persona>:`` block and a ``ux: persona_variants:``
+    block are present, the surface-level variants are *appended* to the
+    block-level ones — order preserved from the legacy monolith.
+    """
+    ux_spec = state.ux_spec
+    if state.persona_variants:
+        if ux_spec is None:
+            ux_spec = ir.UXSpec(persona_variants=state.persona_variants)
+        else:
+            ux_spec = ir.UXSpec(
+                purpose=ux_spec.purpose,
+                show=ux_spec.show,
+                sort=ux_spec.sort,
+                filter=ux_spec.filter,
+                search=ux_spec.search,
+                empty_message=ux_spec.empty_message,
+                attention_signals=ux_spec.attention_signals,
+                persona_variants=list(ux_spec.persona_variants) + state.persona_variants,
+            )
+
+    return ir.SurfaceSpec(
+        name=name,
+        title=title,
+        entity_ref=state.entity_ref,
+        view_ref=state.view_ref,
+        mode=state.mode,
+        priority=state.priority,
+        sections=state.sections,
+        actions=state.actions,
+        ux=ux_spec,
+        access=state.access_spec,
+        search_fields=state.search_fields,
+        related_groups=state.related_groups,
+        source=loc,
+        layout=state.layout,
+        companions=state.companions,
+        display=state.display,
+        show_history=state.show_history,
+        render=state.render,
+    )
