@@ -555,7 +555,7 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
                     prc.ctx.nav_items, prc.ctx.nav_groups
                 )
     except Exception:
-        logger.debug("Failed to resolve auth context for page", exc_info=True)
+        logger.warning("Failed to resolve auth context for page", exc_info=True)
 
 
 def _dedupe_nav_items_against_groups(
@@ -1639,7 +1639,7 @@ async def _workspace_handler(
                     )
                 ]
         except Exception:
-            logger.debug("Failed to resolve auth for workspace nav", exc_info=True)
+            logger.warning("Failed to resolve auth for workspace nav", exc_info=True)
 
     # Enforce workspace persona access control (superusers bypass)
     is_superuser = (

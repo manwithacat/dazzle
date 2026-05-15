@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.5] - 2026-05-15
+
+### Changed
+
+- **#1083: keyword-filtered `except Exception → logger.debug` swallowed-error sites reclassified to WARNING.** Pattern P3 from the 2026-05-15 smells run. The done criteria targets sites whose log message references `auth`, `job`, `grant`, `seed`, `Failed to create`, or `Failed to update` — these are load-bearing failure modes where DEBUG-level logging hides real production problems. 20 sites moved to `logger.warning(..., exc_info=True)`:
+
+  **Production load-bearing (most security-impactful):**
+  - `ui/runtime/experience_routes.py:129`, `ui/runtime/page_routes.py:558,1642` — auth-context resolution failures (were invisible in prod).
+  - `back/runtime/workspace_region_prelude.py:70,112,151` — region auth, filter resolution, and grant pre-fetch (scope-bypass risk).
+  - `back/runtime/workspace_handlers.py:206` — batch auth context.
+  - `back/runtime/llm_queue.py:202,271` — AIJob status updates and LLM event emission (loses durable audit records).
+  - `back/runtime/auth/store.py:404,516,647` — user-attribute lookup, preferences load, schema migration. The store.py:404 log message was the literal placeholder `"ignored exception in store.py:403"` — replaced with a meaningful message.
+
+  **Cleanup + test/demo paths (bumped too — failures here should surface):**
+  - `back/runtime/service_generator.py:390` — grant_conn cleanup.
+  - `back/runtime/test_routes.py:240,343` — test-only auth-table mutation.
+  - `back/demo_data/seeder.py:74,110,155` — demo-data seeding (silent failure meant empty demo apps with no clue why).
+  - `testing/session_manager.py:418,492` — test-fixture login + auth.
+
+  Done criteria from #1083:
+  ```
+  grep -rn -A2 'except Exception' src/dazzle/ --include='*.py' \
+    | grep 'logger.debug' \
+    | grep -E 'auth|job|grant|seed|Failed to create|Failed to update'
+  ```
+  returns empty.
+
+  Scope note: this closes the keyword-filtered gate from the issue, not the full 207 `except Exception → logger.debug` sites. The keyword filter is the high-signal subset; remaining DEBUG-level sites (cosmetic enrichment, sidebar tooltips, optional metadata) are appropriately classified.
+
+### Agent Guidance
+
+- When adding `except Exception:` blocks, default to `logger.warning(msg, ..., exc_info=True)` if the failure changes security behaviour, drops a durable record, or alters the user-visible response. Reserve `logger.debug(...)` for genuinely optional enrichment paths whose failure makes no difference.
+- The placeholder `"ignored exception in <file>:<line>"` log message pattern is a code smell — it tells the reader nothing about what was actually swallowed. Always describe what operation failed.
+
 ## [0.70.4] - 2026-05-15
 
 ### Changed

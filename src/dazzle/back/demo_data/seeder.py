@@ -71,7 +71,7 @@ class DemoDataSeeder:
                 try:
                     conn.execute(f"DELETE FROM {entity.name}")
                 except Exception:
-                    logger.debug("Table %s might not exist yet", entity.name, exc_info=True)
+                    logger.warning("Table %s might not exist yet", entity.name, exc_info=True)
 
     async def seed_from_data(
         self,
@@ -107,7 +107,7 @@ class DemoDataSeeder:
                     await repo.create(record)
                     created_count += 1
                 except Exception:
-                    logger.debug("Failed to seed record for %s", entity_name, exc_info=True)
+                    logger.warning("Failed to seed record for %s", entity_name, exc_info=True)
 
             counts[entity_name] = created_count
 
@@ -152,7 +152,7 @@ class DemoDataSeeder:
                     await repo.create(record)
                     created_count += 1
                 except Exception:
-                    logger.debug(
+                    logger.warning(
                         "Failed to seed generated record for %s", entity_name, exc_info=True
                     )
 

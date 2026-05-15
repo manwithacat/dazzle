@@ -199,7 +199,7 @@ class LLMJobQueue:
                     data={"status": "running"},
                 )
             except Exception:
-                logger.debug("Failed to update AI job status", exc_info=True)
+                logger.warning("Failed to update AI job status", exc_info=True)
 
         # Acquire semaphore (concurrency limit)
         sem = self._semaphores.get(model_name) if model_name else None
@@ -268,7 +268,7 @@ class LLMJobQueue:
             for handler in self._event_bus._handlers:
                 await handler(event)
         except Exception:
-            logger.debug("Failed to emit LLM event for job %s", job.job_id)
+            logger.warning("Failed to emit LLM event for job %s", job.job_id, exc_info=True)
 
     async def _worker(self) -> None:
         """Background worker that processes queued jobs."""

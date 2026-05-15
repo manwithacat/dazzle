@@ -126,7 +126,7 @@ def _inject_auth(deps: _ExperienceDeps, request: Any) -> dict[str, Any]:
                     ctx["user_name"] = auth_ctx.user.username or ""
                     ctx["user_roles"] = list(getattr(auth_ctx.user, "roles", None) or [])
         except Exception:
-            logger.debug("Failed to resolve auth context for experience", exc_info=True)
+            logger.warning("Failed to resolve auth context for experience", exc_info=True)
     return ctx
 
 

@@ -401,7 +401,7 @@ class SessionStoreMixin:
                 (email,),
             )
         except Exception:
-            logger.debug("ignored exception in store.py:403", exc_info=True)
+            logger.warning("user_attributes lookup failed", exc_info=True)
             return {}
         if not rows:
             return {}
@@ -513,7 +513,7 @@ class SessionStoreMixin:
             )
             prefs = {r["key"]: r["value"] for r in rows}
         except Exception:
-            logger.debug("Could not load user preferences", exc_info=True)
+            logger.warning("Could not load user preferences", exc_info=True)
 
         # Merge domain attributes from DSL User entity (e.g. school, department)
         # so scope rules like `current_user.school` resolve correctly (#532).
@@ -644,7 +644,12 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                         f"{col} {col_type}{default_clause}"
                     )
                 except Exception:
-                    logger.debug("Column %s may already exist: %s", col, col_type)
+                    logger.warning(
+                        "Schema migration for users column %s (%s) raised — continuing",
+                        col,
+                        col_type,
+                        exc_info=True,
+                    )
 
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (

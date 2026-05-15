@@ -415,7 +415,7 @@ class SessionManager:
                     base_url=self.base_url,
                 )
         except Exception as e:
-            logger.debug("Test endpoint auth failed for '%s': %s", persona_id, e)
+            logger.warning("Test endpoint auth failed for %r: %s", persona_id, e, exc_info=True)
         return None
 
     async def _authenticate_via_login(
@@ -489,7 +489,7 @@ class SessionManager:
                     base_url=self.base_url,
                 )
         except Exception as e:
-            logger.debug("Login auth failed for '%s': %s", persona_id, e)
+            logger.warning("Login auth failed for %r: %s", persona_id, e, exc_info=True)
         return None
 
     def _save_session(self, session: PersonaSession) -> None:

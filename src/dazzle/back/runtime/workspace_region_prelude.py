@@ -67,7 +67,7 @@ async def resolve_request_user_context(
             try:
                 auth_ctx = ctx.auth_middleware.get_auth_context(request)
             except Exception:
-                logger.debug("Failed to get auth context for region", exc_info=True)
+                logger.warning("Failed to get auth context for region", exc_info=True)
         if not (auth_ctx and auth_ctx.is_authenticated):
             raise HTTPException(status_code=401, detail="Authentication required")
 
@@ -109,7 +109,7 @@ async def resolve_request_user_context(
                 if user_id and "entity_id" not in prefs:
                     prefs["entity_id"] = user_id
         except Exception:
-            logger.debug("Failed to get auth context for filter resolution", exc_info=True)
+            logger.warning("Failed to get auth context for filter resolution", exc_info=True)
 
     # Step 4: build filter context for attention signals + grant
     # evaluation. Carries the resolved entity, the entity id, and
@@ -148,7 +148,7 @@ async def resolve_request_user_context(
             else:
                 filter_context["active_grants"] = []
         except Exception:
-            logger.debug("Could not pre-fetch grants", exc_info=True)
+            logger.warning("Could not pre-fetch grants", exc_info=True)
             filter_context["active_grants"] = []
 
     return RequestUserContext(

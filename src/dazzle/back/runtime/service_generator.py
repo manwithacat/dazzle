@@ -387,7 +387,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                     try:
                         _grant_conn.__exit__(None, None, None)
                     except Exception:
-                        logger.debug("grant_conn cleanup failed", exc_info=True)
+                        logger.warning("grant_conn cleanup failed", exc_info=True)
 
         # Validate invariants after update (v0.14.2)
         if self.entity_spec and self.entity_spec.invariants:

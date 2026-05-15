@@ -203,7 +203,7 @@ async def _workspace_batch_handler(
                 if _batch_user_id and "entity_id" not in prefs:
                     prefs["entity_id"] = _batch_user_id
         except Exception:
-            logger.debug("Batch: failed to get auth context", exc_info=True)
+            logger.warning("Batch: failed to get auth context", exc_info=True)
 
     # Legacy filter context for backward compat
     _batch_filter_ctx: dict[str, Any] = {}

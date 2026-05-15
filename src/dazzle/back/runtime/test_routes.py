@@ -237,7 +237,7 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             with deps.db_manager.connection() as conn:
                 conn.execute('DELETE FROM "users"')
         except Exception:
-            logger.debug("Could not clear auth users table", exc_info=True)
+            logger.warning("Could not clear auth users table", exc_info=True)
 
     # Load project-specific credentials if available (#688)
     creds_personas: dict[str, dict[str, str]] = {}
@@ -340,7 +340,7 @@ def _mirror_auth_user_to_domain(
                 )
                 conn.commit()
         except Exception:
-            logger.debug("Could not mirror auth user %s into User entity", user_id, exc_info=True)
+            logger.warning("Could not mirror auth user %s into User entity", user_id, exc_info=True)
 
 
 async def _get_snapshot(deps: _TestDeps) -> SnapshotResponse:
