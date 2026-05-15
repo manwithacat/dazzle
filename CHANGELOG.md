@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.23] - 2026-05-15
+
+### Changed
+
+- **#1088 follow-on: `parse_llm_intent` migrated to keyword-dispatch.** Tenth consumer of the #1097 helper. The 140-line monolith in `src/dazzle/core/dsl_parser_impl/llm.py` becomes a 36-line dispatch shell + 9 token-keyed `_li_kw_*` parsers (prompt/description/output_schema/timeout/max_tokens/vision/retry/pii/trigger) + 1 IDENT-text-matched (`model` — IDENT-keyed because ``model`` is the lexer keyword for the top-level ``llm_model`` constructor) + a 13-line `_build_llm_intent` builder. Preserves the legacy "max_tokens at intent level is informational and discarded — authoritative value lives on the referenced llm_model" behaviour, now documented in `_li_kw_max_tokens`. Byte-identical IR verified against 24 `LLMIntentSpec`s across 3 files.
+
 ## [0.70.22] - 2026-05-15
 
 ### Changed

@@ -5,12 +5,14 @@ Handles parsing of llm_model, llm_config, and llm_intent blocks.
 Part of Issue #33: LLM Jobs as First-Class Events.
 """
 
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class LLMParserMixin:
@@ -380,29 +382,23 @@ class LLMParserMixin:
         return rate_limits
 
     def parse_llm_intent(self) -> ir.LLMIntentSpec:
-        """
-        Parse llm_intent declaration.
+        """Parse a ``llm_intent <name> "Title":`` declaration.
 
-        Syntax:
+        Refactored to dispatch-table style (follow-on to #1098). 9
+        token-keyed `_li_kw_*` parsers + 1 IDENT-text-matched (`model`
+        — IDENT-keyed because ``model`` is also a top-level
+        ``llm_model`` constructor) + a `_build_llm_intent` builder.
+
+        Syntax::
+
             llm_intent summarize_text "Summarize Text":
               model: claude_sonnet
               prompt: "Summarize the following: {{ input.text }}"
               timeout: 30
               output_schema: SummaryResult
-              retry:
-                max_attempts: 3
-                backoff: exponential
-              pii:
-                scan: true
-                action: redact
-              trigger:
-                on_entity: Ticket
-                on_event: created
-                input_map:
-                  title: entity.title
-                write_back:
-                  Ticket.category: output
-                when: "entity.category == null"
+              retry: ...
+              pii: ...
+              trigger: ...
         """
         self.expect(TokenType.LLM_INTENT)
         name = self.expect_identifier_or_keyword().value
@@ -412,114 +408,16 @@ class LLMParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        model_ref: str | None = None
-        prompt_template: str = ""
-        description: str | None = None
-        output_schema: str | None = None
-        timeout_seconds: int = 30
-        vision: bool = False
-        retry: ir.RetryPolicySpec | None = None
-        pii: ir.PIIPolicySpec | None = None
-        triggers: list[ir.LLMTriggerSpec] = []
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # model: model_name (note: 'model' is an identifier, not a keyword)
-            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "model":
-                self.advance()
-                self.expect(TokenType.COLON)
-                model_ref = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # prompt: "template string"
-            elif self.match(TokenType.PROMPT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                prompt_template = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # description: "text"
-            elif self.match(TokenType.DESCRIPTION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                description = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # output_schema: EntityName
-            elif self.match(TokenType.OUTPUT_SCHEMA):
-                self.advance()
-                self.expect(TokenType.COLON)
-                output_schema = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # timeout: 30
-            elif self.match(TokenType.TIMEOUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                timeout_seconds = int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            # max_tokens: 4096
-            elif self.match(TokenType.MAX_TOKENS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                # max_tokens on intent is informational — stored on the
-                # referenced model, but we accept it here for convenience
-                int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            # vision: true|false
-            elif self.match(TokenType.VISION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                vision = self._parse_boolean()
-                self.skip_newlines()
-
-            # retry: (nested block)
-            elif self.match(TokenType.RETRY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                retry = self._parse_retry_policy()
-
-            # pii: (nested block)
-            elif self.match(TokenType.PII):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                pii = self._parse_pii_policy()
-
-            # trigger: (nested block)
-            elif self.match(TokenType.TRIGGER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                trigger = self._parse_llm_trigger()
-                triggers.append(trigger)
-
-            else:
-                # Skip unknown fields
-                self.advance()
-                self.skip_newlines()
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.LLMIntentSpec(
-            name=name,
-            title=title,
-            description=description,
-            model_ref=model_ref,
-            prompt_template=prompt_template,
-            output_schema=output_schema,
-            timeout_seconds=timeout_seconds,
-            vision=vision,
-            retry=retry,
-            pii=pii,
-            triggers=triggers,
+        state = _LLMIntentState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_LLM_INTENT_KEYWORDS,
+            ident_keywords=_LLM_INTENT_IDENT_KEYWORDS,
+            state=state,
+            on_unknown=_on_unknown_llm_intent,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_llm_intent(name, title, state)
 
     def _parse_retry_policy(self) -> ir.RetryPolicySpec:
         """Parse retry policy block."""
@@ -840,3 +738,155 @@ class LLMParserMixin:
         self.expect(TokenType.DEDENT)
 
         return limits
+
+
+# ============================================================ #
+# parse_llm_intent — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 140-line monolith was replaced (v0.70.23) with the dispatch
+# pattern shipped in #1097. 9 token-keyed `_li_kw_*` parsers + 1
+# IDENT-text-matched (`model`) + a `_build_llm_intent` builder.
+
+
+@dataclass
+class _LLMIntentState:
+    """Accumulator for :meth:`LLMParserMixin.parse_llm_intent`."""
+
+    model_ref: str | None = None
+    prompt_template: str = ""
+    description: str | None = None
+    output_schema: str | None = None
+    timeout_seconds: int = 30
+    vision: bool = False
+    retry: ir.RetryPolicySpec | None = None
+    pii: ir.PIIPolicySpec | None = None
+    triggers: list[ir.LLMTriggerSpec] = field(default_factory=list)
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _li_kw_prompt(parser: Any, state: _LLMIntentState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.prompt_template = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _li_kw_description(parser: Any, state: _LLMIntentState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.description = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _li_kw_output_schema(parser: Any, state: _LLMIntentState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.output_schema = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _li_kw_timeout(parser: Any, state: _LLMIntentState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.timeout_seconds = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _li_kw_max_tokens(parser: Any, state: _LLMIntentState) -> None:
+    """``max_tokens: <int>`` — informational at the intent level.
+
+    Authoritative ``max_tokens`` lives on the referenced ``llm_model``;
+    accept and discard here for authoring convenience.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    int(parser.expect(TokenType.NUMBER).value)  # discarded
+    parser.skip_newlines()
+
+
+def _li_kw_vision(parser: Any, state: _LLMIntentState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.vision = parser._parse_boolean()
+    parser.skip_newlines()
+
+
+def _li_kw_retry(parser: Any, state: _LLMIntentState) -> None:
+    """``retry:`` — nested policy block (max_attempts/backoff/delays)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.retry = parser._parse_retry_policy()
+
+
+def _li_kw_pii(parser: Any, state: _LLMIntentState) -> None:
+    """``pii:`` — nested PII scan/action policy block."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.pii = parser._parse_pii_policy()
+
+
+def _li_kw_trigger(parser: Any, state: _LLMIntentState) -> None:
+    """``trigger:`` — nested entity/event-bound trigger block (multi-allowed)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    state.triggers.append(parser._parse_llm_trigger())
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _li_kw_model(parser: Any, state: _LLMIntentState) -> None:
+    """``model: model_name`` — IDENT-keyed because ``model`` is not a lexer keyword."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.model_ref = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+# ---------- Dispatch tables + on_unknown + builder ---------- #
+
+
+_LLM_INTENT_KEYWORDS: dict[TokenType, KeywordParser[_LLMIntentState]] = {
+    TokenType.PROMPT: _li_kw_prompt,
+    TokenType.DESCRIPTION: _li_kw_description,
+    TokenType.OUTPUT_SCHEMA: _li_kw_output_schema,
+    TokenType.TIMEOUT: _li_kw_timeout,
+    TokenType.MAX_TOKENS: _li_kw_max_tokens,
+    TokenType.VISION: _li_kw_vision,
+    TokenType.RETRY: _li_kw_retry,
+    TokenType.PII: _li_kw_pii,
+    TokenType.TRIGGER: _li_kw_trigger,
+}
+
+
+_LLM_INTENT_IDENT_KEYWORDS: dict[str, KeywordParser[_LLMIntentState]] = {
+    "model": _li_kw_model,
+}
+
+
+def _on_unknown_llm_intent(parser: Any) -> None:
+    """Silently skip unknown keywords + their newline (mirrors legacy else branch)."""
+    parser.advance()
+    parser.skip_newlines()
+
+
+def _build_llm_intent(name: str, title: str | None, state: _LLMIntentState) -> ir.LLMIntentSpec:
+    return ir.LLMIntentSpec(
+        name=name,
+        title=title,
+        description=state.description,
+        model_ref=state.model_ref,
+        prompt_template=state.prompt_template,
+        output_schema=state.output_schema,
+        timeout_seconds=state.timeout_seconds,
+        vision=state.vision,
+        retry=state.retry,
+        pii=state.pii,
+        triggers=state.triggers,
+    )
