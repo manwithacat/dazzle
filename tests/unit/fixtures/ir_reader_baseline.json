@@ -95,7 +95,6 @@
   "integrations.MatchRule.foreign_field",
   "islands.IslandEventSpec.detail_fields",
   "islands.IslandSpec.fallback",
-  "jobs.JobSpec.retry_backoff",
   "layout.WorkspaceLayout.stage_options",
   "ledgers.LedgerAccountRef.create_on_entity_create",
   "ledgers.LedgerAccountRef.ledger_name",

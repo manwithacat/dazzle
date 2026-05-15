@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.27] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_job` migrated to keyword-dispatch.** Fourteenth consumer of the #1097 helper. The 118-line monolith in `src/dazzle/core/dsl_parser_impl/job.py` becomes a 36-line dispatch shell + 6 token-keyed `_j_kw_*` parsers (trigger/schedule/retry/retry_backoff/dead_letter/timeout) + 1 IDENT-text-matched (`run`) + a 21-line `_build_job` builder enforcing at least one `trigger:` or `schedule:` clause. Preserves the legacy ``while not match(DEDENT, EOF)`` loop guard via a `_StopJobLoop` sentinel raised by `_on_unknown_job` when at EOF (the dispatch helper only checks DEDENT, so the sentinel bridges the gap when a top-level `job:` ends at file EOF without an explicit DEDENT). Byte-identical IR verified against 4 `JobSpec`s in `examples/support_tickets/dsl/runtime.dsl`. Drops 1 entry from the IR-reader-parity baseline.
+
+### Agent Guidance
+
+- When the legacy parser uses ``while not match(DEDENT, EOF)`` (i.e., is tolerant of missing DEDENT at EOF), the dispatch helper alone won't terminate cleanly. Add a sentinel exception (e.g., `_StopJobLoop`) and have your `on_unknown` raise it at EOF; the caller catches and continues. Pattern is in `job.py:_on_unknown_job`.
+
 ## [0.70.26] - 2026-05-16
 
 ### Changed

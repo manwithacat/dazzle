@@ -23,11 +23,13 @@ DSL shape::
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class JobParserMixin:
@@ -44,7 +46,15 @@ class JobParserMixin:
         _is_keyword_as_identifier: Any
 
     def parse_job(self) -> ir.JobSpec:
-        """Parse a `job <name> "title": ...` block."""
+        """Parse a ``job <name> "Title"?:`` block (#953).
+
+        Refactored to dispatch-table style (follow-on to #1098). 6
+        token-keyed `_j_kw_*` parsers + 1 IDENT-text-matched (`run`) +
+        a tolerant `_on_unknown_job` that also bails the loop on EOF
+        (mirrors the legacy ``DEDENT, EOF`` loop guard) + a
+        `_build_job` builder enforcing at least one ``trigger:`` or
+        ``schedule:`` clause.
+        """
         self.expect(TokenType.JOB)
         name = self.expect_identifier_or_keyword().value
 
@@ -56,112 +66,22 @@ class JobParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        triggers: list[ir.JobTrigger] = []
-        schedule: ir.JobSchedule | None = None
-        run = ""
-        retry = 3
-        retry_backoff = ir.JobBackoff.EXPONENTIAL
-        dead_letter = ""
-        timeout_seconds = 60
+        state = _JobState()
+        try:
+            parse_block_with_dispatch(
+                self,
+                first_class_keywords=_JOB_KEYWORDS,
+                ident_keywords=_JOB_IDENT_KEYWORDS,
+                state=state,
+                on_unknown=_on_unknown_job,
+            )
+        except _StopJobLoop:
+            pass
 
-        while not self.match(TokenType.DEDENT, TokenType.EOF):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT, TokenType.EOF):
-                break
-
-            tok = self.current_token()
-
-            # trigger: on_<event> <Entity> [when <condition>]
-            if self.match(TokenType.TRIGGER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                triggers.append(self._parse_job_trigger())
-                self.skip_newlines()
-
-            # schedule: cron("...")
-            elif self.match(TokenType.SCHEDULE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                schedule = self._parse_job_schedule()
-                self.skip_newlines()
-
-            # run: <path>
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "run":
-                self.advance()
-                self.expect(TokenType.COLON)
-                run = self._parse_path_value()
-                self.skip_newlines()
-
-            # retry: <int>
-            elif self.match(TokenType.RETRY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                retry_token = self.expect(TokenType.NUMBER)
-                retry = int(retry_token.value)
-                self.skip_newlines()
-
-            # retry_backoff: linear | exponential | none
-            elif self.match(TokenType.RETRY_BACKOFF):
-                self.advance()
-                self.expect(TokenType.COLON)
-                backoff_token = self.expect_identifier_or_keyword()
-                try:
-                    retry_backoff = ir.JobBackoff(backoff_token.value)
-                except ValueError as exc:
-                    raise make_parse_error(
-                        f"Invalid retry_backoff {backoff_token.value!r}; "
-                        f"must be one of: none, linear, exponential.",
-                        self.file,
-                        backoff_token.line,
-                        backoff_token.column,
-                    ) from exc
-                self.skip_newlines()
-
-            # dead_letter: <EntityName>
-            elif self.match(TokenType.DEAD_LETTER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                dead_letter = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # timeout: <duration> (10s, 5m, 1h)
-            elif self.match(TokenType.TIMEOUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                timeout_seconds = self._parse_job_timeout()
-                self.skip_newlines()
-
-            else:
-                # Unknown attribute — advance to keep parser making
-                # progress. The validator surfaces this separately;
-                # keeping the parser tolerant matches the existing
-                # convention in notification.py.
-                self.advance()
-                self.skip_newlines()
-
+        # Legacy tolerates a missing DEDENT at EOF — only consume when present.
         if self.match(TokenType.DEDENT):
             self.advance()
-
-        if not triggers and schedule is None:
-            tok = self.current_token()
-            raise make_parse_error(
-                f"Job '{name}' requires either a `trigger:` or a `schedule:` clause.",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-
-        return ir.JobSpec(
-            name=name,
-            title=title,
-            run=run,
-            triggers=triggers,
-            schedule=schedule,
-            retry=retry,
-            retry_backoff=retry_backoff,
-            dead_letter=dead_letter,
-            timeout_seconds=timeout_seconds,
-        )
+        return _build_job(self, name, title, state)
 
     def _parse_job_trigger(self) -> ir.JobTrigger:
         """Parse `on_<event> <Entity> [when <condition>]`.
@@ -327,3 +247,162 @@ def _duration_to_seconds(text: str, *, file: Any, line: int, column: int) -> int
     except ValueError as exc:
         raise make_parse_error(f"Invalid duration {text!r}.", file, line, column) from exc
     return magnitude * multipliers[suffix]
+
+
+# ============================================================ #
+# parse_job — keyword-dispatch decomposition (#1098 template)   #
+# ============================================================ #
+#
+# The 118-line monolith was replaced (v0.70.27) with the dispatch
+# pattern shipped in #1097. 6 token-keyed `_j_kw_*` + 1 IDENT-keyed
+# (`run`) + a tolerant on_unknown that also bails the loop on EOF
+# (mirrors the legacy ``DEDENT, EOF`` loop guard via a sentinel
+# exception caught in `parse_job`) + a `_build_job` builder.
+
+
+@dataclass
+class _JobState:
+    """Accumulator for :meth:`JobParserMixin.parse_job`."""
+
+    triggers: list[ir.JobTrigger] = field(default_factory=list)
+    schedule: ir.JobSchedule | None = None
+    run: str = ""
+    retry: int = 3
+    retry_backoff: ir.JobBackoff = ir.JobBackoff.EXPONENTIAL
+    dead_letter: str = ""
+    timeout_seconds: int = 60
+
+
+class _StopJobLoop(Exception):
+    """Sentinel raised by ``_on_unknown_job`` at EOF to bail the dispatch loop.
+
+    The dispatch helper's `while not match(DEDENT)` doesn't account for
+    files that end without an emitted DEDENT (legitimate at top level).
+    Raising here mirrors the legacy ``while not match(DEDENT, EOF)`` guard.
+    """
+
+
+# ---------- Keyword parsers ---------- #
+
+
+def _j_kw_trigger(parser: Any, state: _JobState) -> None:
+    """``trigger: on_<event> <Entity> [when <condition>]``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.triggers.append(parser._parse_job_trigger())
+    parser.skip_newlines()
+
+
+def _j_kw_schedule(parser: Any, state: _JobState) -> None:
+    """``schedule: cron("...")``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.schedule = parser._parse_job_schedule()
+    parser.skip_newlines()
+
+
+def _j_kw_retry(parser: Any, state: _JobState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.retry = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _j_kw_retry_backoff(parser: Any, state: _JobState) -> None:
+    """``retry_backoff: linear | exponential | none`` — enum-validated."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    backoff_token = parser.expect_identifier_or_keyword()
+    try:
+        state.retry_backoff = ir.JobBackoff(backoff_token.value)
+    except ValueError as exc:
+        raise make_parse_error(
+            f"Invalid retry_backoff {backoff_token.value!r}; "
+            f"must be one of: none, linear, exponential.",
+            parser.file,
+            backoff_token.line,
+            backoff_token.column,
+        ) from exc
+    parser.skip_newlines()
+
+
+def _j_kw_dead_letter(parser: Any, state: _JobState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.dead_letter = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _j_kw_timeout(parser: Any, state: _JobState) -> None:
+    """``timeout: <duration>`` (10s, 5m, 1h) via the mixin's duration parser."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.timeout_seconds = parser._parse_job_timeout()
+    parser.skip_newlines()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _j_kw_run(parser: Any, state: _JobState) -> None:
+    """``run: <path>`` — IDENT-keyed because ``run`` is not a lexer keyword."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.run = parser._parse_path_value()
+    parser.skip_newlines()
+
+
+# ---------- Dispatch tables + on_unknown + builder ---------- #
+
+
+_JOB_KEYWORDS: dict[TokenType, KeywordParser[_JobState]] = {
+    TokenType.TRIGGER: _j_kw_trigger,
+    TokenType.SCHEDULE: _j_kw_schedule,
+    TokenType.RETRY: _j_kw_retry,
+    TokenType.RETRY_BACKOFF: _j_kw_retry_backoff,
+    TokenType.DEAD_LETTER: _j_kw_dead_letter,
+    TokenType.TIMEOUT: _j_kw_timeout,
+}
+
+
+_JOB_IDENT_KEYWORDS: dict[str, KeywordParser[_JobState]] = {
+    "run": _j_kw_run,
+}
+
+
+def _on_unknown_job(parser: Any) -> None:
+    """Tolerate unknown keywords; bail the loop on EOF (mirrors legacy guard).
+
+    The original ``while not match(DEDENT, EOF)`` exited cleanly at end
+    of file; the dispatch helper only checks for DEDENT. Raise the
+    sentinel here so ``parse_job`` can catch and consume any trailing
+    DEDENT before assembling the IR.
+    """
+    if parser.match(TokenType.EOF):
+        raise _StopJobLoop()
+    parser.advance()
+    parser.skip_newlines()
+
+
+def _build_job(parser: Any, name: str, title: str | None, state: _JobState) -> ir.JobSpec:
+    """Enforce trigger OR schedule, then assemble the IR."""
+    if not state.triggers and state.schedule is None:
+        tok = parser.current_token()
+        raise make_parse_error(
+            f"Job '{name}' requires either a `trigger:` or a `schedule:` clause.",
+            parser.file,
+            tok.line,
+            tok.column,
+        )
+
+    return ir.JobSpec(
+        name=name,
+        title=title,
+        run=state.run,
+        triggers=state.triggers,
+        schedule=state.schedule,
+        retry=state.retry,
+        retry_backoff=state.retry_backoff,
+        dead_letter=state.dead_letter,
+        timeout_seconds=state.timeout_seconds,
+    )
