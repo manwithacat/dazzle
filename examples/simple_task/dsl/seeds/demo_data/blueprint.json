@@ -130,10 +130,31 @@
           },
           {
             "field_name": "title",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 3,
-              "max_words": 8
+              "values": [
+                "Review Q3 brand guidelines draft",
+                "Update homepage hero copy",
+                "Schedule client kickoff for retainer renewal",
+                "Audit asset library for outdated logos",
+                "Send weekly status to AcmeCo stakeholders",
+                "Prep moodboard for new product launch",
+                "Compile usability test findings into deck",
+                "Refresh case-study screenshots",
+                "QA mobile breakpoints on landing page",
+                "Pitch revised colour palette to client",
+                "Write retrospective summary for sprint 7",
+                "Source illustrator referrals for editorial work",
+                "Set up shared Figma library tokens",
+                "Track invoice for completed campaign assets",
+                "Plan Q4 content calendar with comms lead",
+                "Draft proposal for healthcare prospect",
+                "Coordinate photoshoot logistics with venue",
+                "Update freelancer onboarding checklist",
+                "Review portfolio site analytics dashboard",
+                "Schedule design crit for new packaging concept"
+              ],
+              "sampling": "random"
             }
           },
           {
