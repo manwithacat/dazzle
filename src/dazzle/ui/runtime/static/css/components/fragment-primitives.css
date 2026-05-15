@@ -33,6 +33,21 @@
     font-family: var(--font-sans, "Inter", system-ui, sans-serif);
   }
 
+  /* Bare-Page chrome: when the Page body is a single Stack (the
+   * shape used by `build_app_403_view` / `build_site_403_view` and
+   * their 404/500 cousins — see #1081) the typed view has no
+   * AppShell wrapper to provide padding or maximum width. Without
+   * these rules the content sits flush against the viewport edge
+   * as raw browser-default text. The `:only-child` selector
+   * deliberately narrows the rule so a normal Page → AppShell →
+   * Stack layout is unaffected — the AppShell intervenes between
+   * Page and Stack, so the selector doesn't match. */
+  .dz-page > .dz-stack:only-child {
+    max-width: 36rem;
+    margin: var(--space-xl) auto;
+    padding: var(--space-xl) var(--space-lg);
+  }
+
   /* ───────────────────────── AppShell ────────────────────────
    * Multi-slot application layout — sidebar / header / main / footer.
    * Mirrors the legacy app_shell.html structure so the same component

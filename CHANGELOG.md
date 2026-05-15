@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.3] - 2026-05-15
+
+### Fixed
+
+- **#1081: error-view pages now have padding + max-width + centering.** `build_app_403_view`, `build_app_404_view`, `build_app_500_view` and their marketing-site cousins render as Page → Stack with no AppShell wrapper. Before this fix, the resulting page sat flush against the viewport edge as raw browser-default text (cycle 144 visual-Tier 2 saw it on 6 of 15 simple_task screens). Added a targeted CSS rule `.dz-page > .dz-stack:only-child` that applies max-width, vertical margin, and padding using existing `--space-*` design tokens. The `:only-child` selector deliberately scopes the rule to the bare-Page shape — Page → AppShell → Stack layouts are unaffected (AppShell intervenes between Page and Stack). Regression test in `tests/unit/test_fragment_layout_css.py`.
+
 ## [0.69.2] - 2026-05-15
 
 ### Fixed

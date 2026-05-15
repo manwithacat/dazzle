@@ -47,3 +47,15 @@ def test_grid_base_and_all_column_modifiers_present() -> None:
     assert ".dz-grid {" in css
     for cols in range(1, 13):
         assert f".dz-grid--columns-{cols}" in css, f"missing .dz-grid--columns-{cols}"
+
+
+def test_bare_page_chrome_rule_present_for_error_views() -> None:
+    """Regression: error views (build_app_403_view etc.) render as Page →
+    Stack with no AppShell wrapper. Cycle 144 visual-Tier 2 (#1081) flagged
+    the resulting page as chromeless plain text. Cycle 145 added a
+    :only-child rule that gives the bare-Page shape reasonable padding,
+    max-width, and centering without affecting Page → AppShell renders."""
+    css = _text()
+    assert ".dz-page > .dz-stack:only-child" in css, (
+        "bare-Page error-view chrome rule missing — see #1081"
+    )

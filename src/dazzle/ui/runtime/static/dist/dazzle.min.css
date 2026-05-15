@@ -1,4 +1,4 @@
-/* dazzle v0.69.1 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.69.2 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2362,6 +2362,11 @@ min-height: 100vh;
 background: var(--colour-bg, var(--colour-surface));
 color: var(--colour-text);
 font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+}
+.dz-page > .dz-stack:only-child {
+max-width: 36rem;
+margin: var(--space-xl) auto;
+padding: var(--space-xl) var(--space-lg);
 }
 .dz-app-sidebar {
 flex: 0 0 auto;
