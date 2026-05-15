@@ -4,11 +4,13 @@ Scenario and Demo parsing for DAZZLE DSL.
 Handles parsing of scenario and demo blocks.
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 class ScenarioParserMixin:
@@ -52,10 +54,17 @@ class ScenarioParserMixin:
         self.skip_newlines()
 
     def parse_persona(self) -> ir.PersonaSpec:
-        """
-        Parse persona declaration.
+        """Parse a ``persona <id> ["Label"]:`` declaration.
 
-        Syntax:
+        Refactored to dispatch-table style (follow-on to #1098 — was the
+        #1099 spike target). 3 token-keyed (description/goals/proficiency)
+        + 5 IDENT-text-matched (default_workspace/default_route/backed_by/
+        link_via/interactive) per-keyword parsers. Unknown-keyword path
+        retains the renamed-keyword footgun guard (catches an unmigrated
+        ``for ...:`` and raises a #998-actionable error).
+
+        Syntax::
+
             persona teacher "Teacher":
               description: "A classroom teacher"
               goals: "Grade papers", "Track attendance"
@@ -71,118 +80,16 @@ class ScenarioParserMixin:
         if label is None:
             label = persona_id
 
-        description: str | None = None
-        goals: list[str] = []
-        proficiency: str = "intermediate"
-        default_workspace: str | None = None
-        default_route: str | None = None
-        backed_by: str | None = None
-        link_via: str = "email"
-        interactive: bool = True
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # description: "..."
-            if self.match(TokenType.DESCRIPTION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                description = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # goals: "goal1", "goal2"
-            elif self.match(TokenType.GOALS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                goals = self._parse_string_list()
-                self.skip_newlines()
-
-            # proficiency: novice | intermediate | expert
-            elif self.match(TokenType.PROFICIENCY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                proficiency = self.expect_identifier_or_keyword().value
-                if proficiency not in ("novice", "intermediate", "expert"):
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Invalid proficiency level: {proficiency}. "
-                        "Must be novice, intermediate, or expert",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # default_workspace: workspace_name
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "default_workspace"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                default_workspace = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # default_route: "/path"
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "default_route":
-                self.advance()
-                self.expect(TokenType.COLON)
-                default_route = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # backed_by: EntityName (cycle 248, closes EX-045)
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "backed_by":
-                self.advance()
-                self.expect(TokenType.COLON)
-                backed_by = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # link_via: field_name (cycle 248, closes EX-045)
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "link_via":
-                self.advance()
-                self.expect(TokenType.COLON)
-                link_via = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # interactive: true|false (closes #780)
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "interactive":
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    interactive = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    interactive = False
-                else:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"Expected true or false for interactive, got {token.value}",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            else:
-                self._skip_unknown_or_raise_for_renamed_keyword()
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.PersonaSpec(
-            id=persona_id,
-            label=label,
-            description=description,
-            goals=goals,
-            proficiency_level=proficiency,  # type: ignore[arg-type]
-            default_workspace=default_workspace,
-            default_route=default_route,
-            backed_by=backed_by,
-            link_via=link_via,
-            interactive=interactive,
+        state = _PersonaState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_PERSONA_KEYWORDS,
+            ident_keywords=_PERSONA_IDENT_KEYWORDS,
+            state=state,
+            on_unknown=_on_unknown_persona,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_persona(persona_id, label, state)
 
     def parse_scenario(self) -> ir.ScenarioSpec:
         """
@@ -534,3 +441,166 @@ class ScenarioParserMixin:
                 break
 
         return strings
+
+
+# ============================================================ #
+# parse_persona — keyword-dispatch decomposition (#1099 spike target) #
+# ============================================================ #
+#
+# The 131-line monolith was replaced (v0.70.20) with the dispatch
+# pattern shipped in #1097 — completing the spike's promise. Three
+# token-keyed parsers + five IDENT-text-matched parsers + the
+# renamed-keyword footgun guard for unknown keywords.
+
+
+_PROFICIENCY_VALUES = ("novice", "intermediate", "expert")
+
+
+@dataclass
+class _PersonaState:
+    """Accumulator for :meth:`ScenarioParserMixin.parse_persona`."""
+
+    description: str | None = None
+    goals: list[str] = field(default_factory=list)
+    proficiency: str = "intermediate"
+    default_workspace: str | None = None
+    default_route: str | None = None
+    backed_by: str | None = None
+    link_via: str = "email"
+    interactive: bool = True
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _p_kw_description(parser: Any, state: _PersonaState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.description = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _p_kw_goals(parser: Any, state: _PersonaState) -> None:
+    """``goals: "goal1", "goal2"`` — list of quoted strings."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.goals = parser._parse_string_list()
+    parser.skip_newlines()
+
+
+def _p_kw_proficiency(parser: Any, state: _PersonaState) -> None:
+    """``proficiency: novice|intermediate|expert`` — validated at parse time."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value = parser.expect_identifier_or_keyword().value
+    if value not in _PROFICIENCY_VALUES:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Invalid proficiency level: {value}. Must be novice, intermediate, or expert",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    state.proficiency = value
+    parser.skip_newlines()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _p_kw_default_workspace(parser: Any, state: _PersonaState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.default_workspace = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _p_kw_default_route(parser: Any, state: _PersonaState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.default_route = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _p_kw_backed_by(parser: Any, state: _PersonaState) -> None:
+    """``backed_by: EntityName`` — closes EX-045 (cycle 248)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.backed_by = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _p_kw_link_via(parser: Any, state: _PersonaState) -> None:
+    """``link_via: field_name`` — backed_by link column (cycle 248, EX-045)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.link_via = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _p_kw_interactive(parser: Any, state: _PersonaState) -> None:
+    """``interactive: true|false`` — flag the persona as interactive (#780)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.interactive = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.interactive = False
+    else:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Expected true or false for interactive, got {token.value}",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+# ---------- Dispatch tables ---------- #
+
+
+_PERSONA_KEYWORDS: dict[TokenType, KeywordParser[_PersonaState]] = {
+    TokenType.DESCRIPTION: _p_kw_description,
+    TokenType.GOALS: _p_kw_goals,
+    TokenType.PROFICIENCY: _p_kw_proficiency,
+}
+
+
+_PERSONA_IDENT_KEYWORDS: dict[str, KeywordParser[_PersonaState]] = {
+    "default_workspace": _p_kw_default_workspace,
+    "default_route": _p_kw_default_route,
+    "backed_by": _p_kw_backed_by,
+    "link_via": _p_kw_link_via,
+    "interactive": _p_kw_interactive,
+}
+
+
+def _on_unknown_persona(parser: Any) -> None:
+    """Defer to the mixin's renamed-keyword footgun guard.
+
+    Wrapped here so the dispatch-helper's ``_ParserLike`` Protocol
+    type doesn't need to know about the mixin-specific helper.
+    Parser argument is typed Any to bypass the Protocol.
+    """
+    parser._skip_unknown_or_raise_for_renamed_keyword()
+
+
+# ---------- Builder ---------- #
+
+
+def _build_persona(persona_id: str, label: str, state: _PersonaState) -> ir.PersonaSpec:
+    return ir.PersonaSpec(
+        id=persona_id,
+        label=label,
+        description=state.description,
+        goals=state.goals,
+        proficiency_level=state.proficiency,  # type: ignore[arg-type]
+        default_workspace=state.default_workspace,
+        default_route=state.default_route,
+        backed_by=state.backed_by,
+        link_via=state.link_via,
+        interactive=state.interactive,
+    )

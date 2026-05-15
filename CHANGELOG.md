@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.20] - 2026-05-15
+
+### Changed
+
+- **#1099 spike target shipped: `parse_persona` migrated to keyword-dispatch.** Seventh consumer of the #1097 helper — completes the #1099 spike's promise (the spike validated the pattern on `parse_persona` but didn't merge the migration). The 131-line monolith in `src/dazzle/core/dsl_parser_impl/scenario.py` becomes a 36-line dispatch shell + 3 token-keyed `_p_kw_*` (description/goals/proficiency) + 5 IDENT-text-matched (default_workspace/default_route/backed_by/link_via/interactive) + a 12-line `_build_persona` builder. Unknown-keyword path preserves the renamed-keyword footgun guard (`_on_unknown_persona` → `_skip_unknown_or_raise_for_renamed_keyword` — catches unmigrated ``for ...:`` from before #998 and raises an actionable error). Byte-identical IR verified against 56 `PersonaSpec`s across 13 files in `examples/` + `fixtures/`.
+
 ## [0.70.19] - 2026-05-15
 
 ### Changed
