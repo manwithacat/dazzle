@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.14] - 2026-05-15
+
+### Changed
+
+- **#1098 (1088b): `parse_workspace_region` pilot migration to keyword-dispatch.** The 859-line / depth-53 / 52-elif monolith in `src/dazzle/core/dsl_parser_impl/workspace.py` is replaced with a 23-line dispatch shell + 52 small `_kw_*` free functions + a 99-line `_build_workspace_region` constructor, all routed through the #1097 `parse_block_with_dispatch` helper. State accumulates on a new `_WorkspaceRegionState` dataclass; dispatch is split across `_WORKSPACE_REGION_KEYWORDS` (45 token-keyed) and `_WORKSPACE_REGION_IDENT_KEYWORDS` (7 IDENT-text-matched: `title`, `primary_action`, `secondary_action`, `cohort_strip_config`, `day_timeline_config`, `task_inbox_config`, `entity_card_config`). Byte-identical IR output verified against a snapshot of all 157 `WorkspaceRegion`s across `examples/` + `fixtures/`; the full 14,020-test unit suite passes. Per-keyword error messages preserved verbatim. The pattern is now production-validated for the per-parser sub-issue queue (#1088c, …).
+
+### Agent Guidance
+
+- New oversized-parser refactors should follow the #1098 template: one `_<Construct>State` dataclass mirroring the legacy locals, one `_kw_<keyword>` free function per branch, a `_WORKSPACE_*_KEYWORDS` (and optional `_*_IDENT_KEYWORDS`) dict, a `_build_<construct>(parser, name, state)` constructor for any post-loop invariants + IR assembly, and a ~25-line public method that calls `parse_block_with_dispatch`. Verify with a before/after snapshot of every `WorkspaceRegion`/equivalent IR shape across `examples/` + `fixtures/` — bit-for-bit identity is the contract; the full unit suite alone is not sufficient.
+
 ## [0.70.13] - 2026-05-15
 
 ### Added

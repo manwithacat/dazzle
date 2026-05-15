@@ -11,11 +11,13 @@ siblings in back/runtime/workspace_*.py).
 Handles workspace declarations including regions, aggregates, and display modes.
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 if TYPE_CHECKING:
     pass
@@ -2013,861 +2015,893 @@ class WorkspaceParserMixin:
         )
 
     def parse_workspace_region(self) -> ir.WorkspaceRegion:
-        """Parse workspace region."""
+        """Parse a workspace region declaration.
+
+        Refactored to dispatch-table style (#1098) — body collapses to a
+        header parse, a ``parse_block_with_dispatch`` call against
+        :data:`_WORKSPACE_REGION_KEYWORDS` / :data:`_WORKSPACE_REGION_IDENT_KEYWORDS`,
+        and a :func:`_build_workspace_region` call. The 50+ legacy
+        locals live on :class:`_WorkspaceRegionState`; each per-keyword
+        branch is now a small free function (see ``_kw_*`` below).
+        """
         name = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.COLON)
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        source = None
-        sources: list[str] = []
-        source_filters: dict[str, ir.ConditionExpr] = {}
-        filter_expr = None
-        sort: list[ir.SortSpec] = []
-        limit = None
-        display = ir.DisplayMode.LIST
-        action = None
-        empty_message = None
-        group_by: str | ir.BucketRef | None = None
-        group_by_dims: list[str | ir.BucketRef] | None = None
-        aggregates: dict[str, str] = {}
-        date_field: str | None = None
-        date_range: bool = False
-        heatmap_rows: str | None = None
-        heatmap_columns: str | None = None
-        heatmap_value: str | None = None
-        heatmap_thresholds: list[float] | ir.ParamRef = []
-        progress_stages: list[str] = []
-        progress_complete_at: str | None = None
-        delta: ir.DeltaSpec | None = None
-        reference_lines: list[ir.ReferenceLine] = []
-        reference_bands: list[ir.ReferenceBand] = []
-        bin_count: int | None = None  # None = "auto" (Sturges) when display=histogram
-        show_outliers: bool = True  # box plot toggle (#881)
-        bullet_label: str | None = None  # bullet chart label column (#880)
-        bullet_actual: str | None = None  # bullet chart actual-value column (#880)
-        bullet_target: str | None = None  # bullet chart target column (#880)
-        overlay_series: list[ir.OverlaySeriesSpec] = []  # line/area overlay series (#883)
-        css_class: str | None = None  # region wrapper CSS class hook (#894)
-        eyebrow: str | None = None  # kicker line above region title (v0.61.60)
-        title_override: str | None = None  # explicit region title override (v0.61.63 #903)
-        width: int | None = None  # explicit grid-column span (v0.61.83 #914)
-        tones: dict[str, str] = {}  # per-tile metric tones (v0.61.65)
-        notice: ir.NoticeSpec | None = None  # notice band (v0.61.68 #7)
-        track_max: float | None = None  # bar_track fill denominator (#893)
-        track_format: str | None = None  # bar_track value format string (#893)
-        action_cards: list[ir.ActionCardSpec] = []  # action_grid CTA cards (#891)
-        status_entries: list[ir.StatusListEntrySpec] = []  # status_list entries (#3, v0.61.69)
-        confirmations: list[ir.ConfirmationItemSpec] = []  # confirm_action_panel (#6, v0.61.72)
-        state_field: str | None = None  # confirm_action_panel state-binding column
-        revoke: str | None = None  # confirm_action_panel revoke action surface
-        primary_action: str | None = None  # confirm_action_panel primary action
-        secondary_action: str | None = None  # confirm_action_panel secondary action
-        avatar_field: str | None = None  # profile_card avatar source (#892)
-        primary: str | None = None  # profile_card primary identity (#892)
-        secondary: str | None = None  # profile_card meta line (#892)
-        profile_stats: list[ir.ProfileCardStatSpec] = []  # profile_card stats (#892)
-        facts: list[str] = []  # profile_card key-facts list (#892)
-        pipeline_stages: list[ir.PipelineStageSpec] = []  # pipeline_steps (#890)
-        # #1015–#1018 region primitives (v0.67.2–v0.67.10) — discriminated
-        # typed config blocks. Only one is populated per region, matched
-        # against `display`. Parser support for `cohort_strip_config:`
-        # lands in v0.67.11; the other three follow on the same shape.
-        cohort_strip_config: ir.CohortStripConfig | None = None  # #1018
-        day_timeline_config: ir.DayTimelineConfig | None = None  # #1016
-        task_inbox_config: ir.TaskInboxConfig | None = None  # #1015
-        entity_card_config: ir.EntityCardConfig | None = None  # #1017
-        render: str | None = None  # Plan 2: opt-in renderer name (typed-fragment integration)
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            # source: EntityName  OR  source: [Entity1, Entity2, ...]
-            if self.match(TokenType.SOURCE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.LBRACKET):
-                    # Multi-source: source: [Entity1, Entity2, Entity3]
-                    self.advance()  # consume [
-                    while not self.match(TokenType.RBRACKET):
-                        self.skip_newlines()
-                        if self.match(TokenType.RBRACKET):
-                            break
-                        entity_name = self.expect_identifier_or_keyword().value
-                        sources.append(entity_name)
-                        if self.match(TokenType.COMMA):
-                            self.advance()
-                        self.skip_newlines()
-                    self.expect(TokenType.RBRACKET)
-                else:
-                    source = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # filter_map: per-source filters for multi-source regions
-            elif self.match(TokenType.FILTER_MAP):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    entity_name = self.expect_identifier_or_keyword().value
-                    self.expect(TokenType.COLON)
-                    source_filters[entity_name] = self.parse_condition_expr()
-                    self.skip_newlines()
-                self.expect(TokenType.DEDENT)
-
-            # filter: condition_expr
-            elif self.match(TokenType.FILTER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                filter_expr = self.parse_condition_expr()
-                self.skip_newlines()
-
-            # sort: field desc
-            elif self.match(TokenType.SORT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                sort = self.parse_sort_list()
-                self.skip_newlines()
-
-            # limit: 10
-            elif self.match(TokenType.LIMIT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                limit = int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-
-            # display: list|grid|timeline|map
-            elif self.match(TokenType.DISPLAY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                display_token = self.expect_identifier_or_keyword()
-                display = ir.DisplayMode(display_token.value)
-                self.skip_newlines()
-
-            # Plan 2: render: <renderer-name> — opt into a non-default renderer at region level
-            elif self.match(TokenType.RENDER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                render_token = self.expect_identifier_or_keyword()
-                render = render_token.value
-                self.skip_newlines()
-
-            # action: surface_name
-            elif self.match(TokenType.ACTION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                action = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # empty: "..."
-            elif self.match(TokenType.EMPTY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                empty_message = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # group_by: field_name        (single-dim, bar_chart)
-            # group_by: [field_a, field_b] (multi-dim, pivot_table — cycle 25)
-            # group_by: bucket(field, unit) or [bucket(field, unit), scalar]
-            #                             (time-bucketing, line_chart — cycle 28)
-            elif self.match(TokenType.GROUP_BY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.LBRACKET):
-                    self.advance()  # consume [
-                    dims: list[str | ir.BucketRef] = []
-                    while not self.match(TokenType.RBRACKET):
-                        self.skip_newlines()
-                        if self.match(TokenType.RBRACKET):
-                            break
-                        dims.append(self._parse_group_by_element())
-                        if self.match(TokenType.COMMA):
-                            self.advance()
-                        self.skip_newlines()
-                    self.expect(TokenType.RBRACKET)
-                    group_by_dims = dims
-                else:
-                    group_by = self._parse_group_by_element()
-                self.skip_newlines()
-
-            # date_field: created_at
-            elif self.match(TokenType.DATE_FIELD):
-                self.advance()
-                self.expect(TokenType.COLON)
-                date_field = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # date_range (flag — no colon needed)
-            elif self.match(TokenType.DATE_RANGE):
-                self.advance()
-                date_range = True
-                self.skip_newlines()
-
-            # aggregate:
-            elif self.match(TokenType.AGGREGATE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    # metric_name: expr
-                    metric_name = self.expect_identifier_or_keyword().value
-                    self.expect(TokenType.COLON)
-                    # For now, capture aggregate expression as string until newline
-                    expr_parts = []
-                    while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                        expr_parts.append(self.advance().value)
-                    aggregates[metric_name] = " ".join(expr_parts)
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-
-            # rows: field.path (heatmap row grouping)
-            elif self.match(TokenType.ROWS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                heatmap_rows = self.expect_identifier_or_keyword().value
-                while self.match(TokenType.DOT):
-                    self.advance()
-                    heatmap_rows += "." + self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # columns: field.path (heatmap column grouping)
-            elif self.match(TokenType.COLUMNS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                heatmap_columns = self.expect_identifier_or_keyword().value
-                while self.match(TokenType.DOT):
-                    self.advance()
-                    heatmap_columns += "." + self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # value: expression (capture as string until newline)
-            elif self.match(TokenType.VALUE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                value_parts: list[str] = []
-                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                    value_parts.append(self.advance().value)
-                heatmap_value = " ".join(value_parts)
-                self.skip_newlines()
-
-            # thresholds: param("key") OR thresholds: [0.4, 0.6]
-            elif self.match(TokenType.THRESHOLDS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.PARAM):
-                    self.advance()  # consume 'param'
-                    self.expect(TokenType.LPAREN)
-                    ref_key = self.expect(TokenType.STRING).value
-                    self.expect(TokenType.RPAREN)
-                    heatmap_thresholds = ir.ParamRef(
-                        key=ref_key, param_type="list[float]", default=[]
-                    )
-                else:
-                    thresh_list: list[float] = []
-                    self.expect(TokenType.LBRACKET)
-                    while not self.match(TokenType.RBRACKET):
-                        self.skip_newlines()
-                        if self.match(TokenType.RBRACKET):
-                            break
-                        num_token = self.expect(TokenType.NUMBER)
-                        # Handle decimal: NUMBER DOT NUMBER
-                        num_str = num_token.value
-                        if self.match(TokenType.DOT):
-                            self.advance()
-                            frac = self.expect(TokenType.NUMBER).value
-                            num_str = num_str + "." + frac
-                        thresh_list.append(float(num_str))
-                        if self.match(TokenType.COMMA):
-                            self.advance()
-                        self.skip_newlines()
-                    self.expect(TokenType.RBRACKET)
-                    heatmap_thresholds = thresh_list
-                self.skip_newlines()
-
-            # stages: shape-dispatch
-            #   - bracketed list (`stages: [a, b, c]`) → progress mode (legacy)
-            #   - indented dash-list                     → pipeline_steps (#890)
-            elif self.match(TokenType.STAGES):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.LBRACKET):
-                    # Legacy progress shape — bracketed list of identifiers
-                    self.advance()  # consume [
-                    while not self.match(TokenType.RBRACKET):
-                        self.skip_newlines()
-                        if self.match(TokenType.RBRACKET):
-                            break
-                        progress_stages.append(self.expect_identifier_or_keyword().value)
-                        if self.match(TokenType.COMMA):
-                            self.advance()
-                        self.skip_newlines()
-                    self.expect(TokenType.RBRACKET)
-                    self.skip_newlines()
-                else:
-                    # pipeline_steps shape — indented dash-list of stage dicts
-                    self.skip_newlines()
-                    self.expect(TokenType.INDENT)
-                    pipeline_stages = self._parse_pipeline_stages_block()
-                    self.expect(TokenType.DEDENT)
-
-            # complete_at: reviewed
-            elif self.match(TokenType.COMPLETE_AT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                progress_complete_at = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # delta: { period: 1 day, sentiment: positive_up, field: created_at } (#884)
-            elif self.match(TokenType.DELTA):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                delta = self._parse_delta_block()
-                self.expect(TokenType.DEDENT)
-
-            # reference_lines / reference_bands — line/area chart overlays (#883)
-            elif self.match(TokenType.REFERENCE_LINES):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                reference_lines = self._parse_reference_lines_block()
-                self.expect(TokenType.DEDENT)
-
-            elif self.match(TokenType.REFERENCE_BANDS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                reference_bands = self._parse_reference_bands_block()
-                self.expect(TokenType.DEDENT)
-
-            # bullet_label / bullet_actual / bullet_target — bullet chart
-            # row column references (#880). Each names a column on the source
-            # entity that the bullet template reads off every item.
-            elif self.match(TokenType.BULLET_LABEL):
-                self.advance()
-                self.expect(TokenType.COLON)
-                bullet_label = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            elif self.match(TokenType.BULLET_ACTUAL):
-                self.advance()
-                self.expect(TokenType.COLON)
-                bullet_actual = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            elif self.match(TokenType.BULLET_TARGET):
-                self.advance()
-                self.expect(TokenType.COLON)
-                bullet_target = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # class: <css-class-string> — project CSS hook on the region's
-            # outer wrapper (#894). Pure presentation; no data semantics.
-            # Accepts a quoted string OR a bare identifier (single class
-            # name). Multiple classes via the quoted-string form
-            # (`class: "metrics-strip dense"`).
-            elif self.match(TokenType.CSS_CLASS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.STRING):
-                    css_class = self.advance().value
-                else:
-                    css_class = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # eyebrow: "<text>" — kicker line above region title.
-            # Quoted string only (typically a short label like "Data flow"
-            # or "Legal basis" — likely contains spaces).
-            # See dev_docs/2026-04-27-aegismark-ux-patterns.md item #1.
-            elif self.match(TokenType.EYEBROW):
-                self.advance()
-                self.expect(TokenType.COLON)
-                eyebrow = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # width: <int 1..12> — explicit grid-column span override.
-            # v0.61.83 (#914). Project-supplied integer literal; values
-            # outside 1..12 are clamped at parse time. Saved layouts
-            # (drag-resize via the dashboard builder) still win — this
-            # is the DSL-author hint for the default position.
-            elif self.match(TokenType.WIDTH):
-                self.advance()
-                self.expect(TokenType.COLON)
-                _w_token = self.expect(TokenType.NUMBER)
-                try:
-                    _w_raw = int(_w_token.value)
-                except (TypeError, ValueError):
-                    _w_raw = 12
-                if _w_raw < 1:
-                    _w_raw = 1
-                elif _w_raw > 12:
-                    _w_raw = 12
-                width = _w_raw
-                self.skip_newlines()
-
-            # tones:
-            #   <metric_name>: <tone_token>
-            # Per-tile palette tokens for `display: metrics` (v0.61.65,
-            # AegisMark UX patterns roadmap item #2). Mirrors the
-            # `aggregate:` block shape — name → token. Tone tokens are
-            # bare identifiers from the action_grid vocabulary
-            # (positive / warning / destructive / accent / neutral).
-            elif self.match(TokenType.TONES):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    metric_name = self.expect_identifier_or_keyword().value
-                    self.expect(TokenType.COLON)
-                    tone_token = self.expect_identifier_or_keyword().value
-                    tones[metric_name] = tone_token
-                    self.skip_newlines()
-
-                self.expect(TokenType.DEDENT)
-
-            # notice: "<title>"            — shorthand: title-only band
-            # notice:                      — block: title + body + tone
-            #   title: "..."
-            #   body: "..."
-            #   tone: warning
-            #
-            # v0.61.68 (AegisMark UX patterns roadmap item #7) — region-
-            # level prominent banner above the data body. Reuses the
-            # action_grid + metrics tones vocabulary.
-            elif self.match(TokenType.NOTICE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.STRING):
-                    notice = ir.NoticeSpec(title=self.advance().value)
-                    self.skip_newlines()
-                else:
-                    self.skip_newlines()
-                    self.expect(TokenType.INDENT)
-                    n_title = ""
-                    n_body = ""
-                    n_tone = "neutral"
-                    while not self.match(TokenType.DEDENT):
-                        self.skip_newlines()
-                        if self.match(TokenType.DEDENT):
-                            break
-                        key_tok = self.current_token()
-                        key = key_tok.value
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        if key == "title":
-                            n_title = self.expect(TokenType.STRING).value
-                            self.skip_newlines()
-                        elif key == "body":
-                            n_body = self.expect(TokenType.STRING).value
-                            self.skip_newlines()
-                        elif key == "tone":
-                            n_tone = self.expect_identifier_or_keyword().value
-                            self.skip_newlines()
-                        else:
-                            raise make_parse_error(
-                                f"Unknown notice key {key!r}. Expected one of: title, body, tone.",
-                                self.file,
-                                key_tok.line,
-                                key_tok.column,
-                            )
-                    self.expect(TokenType.DEDENT)
-                    if not n_title:
-                        tok = self.current_token()
-                        raise make_parse_error(
-                            "notice block requires `title:`",
-                            self.file,
-                            tok.line,
-                            tok.column,
-                        )
-                    notice = ir.NoticeSpec(title=n_title, body=n_body, tone=n_tone)
-
-            # title: "<text>" — explicit region title override (#903).
-            # `title` is intentionally NOT a lexer keyword (would break
-            # every `expect(IDENTIFIER)` site that expects `title` as a
-            # plain identifier — flow assertions, demo blocks, etc.).
-            # Instead we string-match the IDENTIFIER value here. When
-            # omitted, runtime auto-derives from the snake_case region
-            # key. Empty string treated as omitted (falls back).
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "title":
-                self.advance()
-                self.expect(TokenType.COLON)
-                title_override = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # track_max: <number> — bar_track fill denominator (#893).
-            # When omitted, runtime computes `auto` (max of bucketed values).
-            elif self.match(TokenType.TRACK_MAX):
-                self.advance()
-                self.expect(TokenType.COLON)
-                num_token = self.expect(TokenType.NUMBER)
-                track_max = float(num_token.value)
-                self.skip_newlines()
-
-            # track_format: "<python-format-spec>" — bar_track value
-            # format string (#893). Quoted string only — format specs
-            # commonly contain `:` and `{}` that don't tokenise as bare
-            # identifiers.
-            elif self.match(TokenType.TRACK_FORMAT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                track_format = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # actions: indented dash-list of CTA card entries (#891).
-            # Each entry: label/icon/count_aggregate/action/tone.
-            elif self.match(TokenType.ACTIONS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                action_cards = self._parse_action_cards_block()
-                self.expect(TokenType.DEDENT)
-
-            # entries: indented dash-list of status_list entries (#3).
-            # Each entry: title/copy/icon/state. v0.61.69 (AegisMark UX
-            # patterns roadmap item #3).
-            elif self.match(TokenType.ENTRIES):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                status_entries = self._parse_status_entries_block()
-                self.expect(TokenType.DEDENT)
-
-            # confirmations: indented dash-list of confirm_action_panel
-            # checklist items (#6, v0.61.72).
-            elif self.match(TokenType.CONFIRMATIONS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                confirmations = self._parse_confirmations_block()
-                self.expect(TokenType.DEDENT)
-
-            # state_field: <field> — entity column driving the
-            # confirm_action_panel render mode (#6).
-            elif self.match(TokenType.STATE_FIELD):
-                self.advance()
-                self.expect(TokenType.COLON)
-                state_field = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # revoke: <surface> — action surface shown when the panel
-            # is in `live`/`active` state (#6).
-            elif self.match(TokenType.REVOKE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.STRING):
-                    revoke = self.advance().value
-                else:
-                    revoke = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # primary_action: <surface> / secondary_action: <surface>
-            # — confirm_action_panel commit + draft buttons (#6).
-            # String-matched on IDENTIFIER (not lexer keyword) to avoid
-            # clashing with profile_card's `primary:` / `secondary:`
-            # which mean entity-field names there. Same dodge as #903's
-            # `title:` handling.
-            elif (
-                self.match(TokenType.IDENTIFIER) and self.current_token().value == "primary_action"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.STRING):
-                    primary_action = self.advance().value
-                else:
-                    primary_action = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "secondary_action"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.STRING):
-                    secondary_action = self.advance().value
-                else:
-                    secondary_action = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # avatar_field: <field> — profile_card avatar source (#892)
-            elif self.match(TokenType.AVATAR_FIELD):
-                self.advance()
-                self.expect(TokenType.COLON)
-                avatar_field = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # primary: <field> — profile_card primary identity field (#892)
-            elif self.match(TokenType.PRIMARY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                primary = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # secondary: "<template>" — profile_card meta line (#892).
-            # Quoted-string only — supports `{{ field }}` interpolation
-            # which doesn't tokenise as a bare identifier.
-            elif self.match(TokenType.SECONDARY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                secondary = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # stats: indented dash-list of {label, value} (#892)
-            elif self.match(TokenType.STATS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                profile_stats = self._parse_profile_stats_block()
-                self.expect(TokenType.DEDENT)
-
-            # facts: indented dash-list of "<template>" strings (#892)
-            elif self.match(TokenType.FACTS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                facts = self._parse_facts_block()
-                self.expect(TokenType.DEDENT)
-
-            # overlay_series: indented dash-list of {label, source?,
-            # filter?, aggregate} entries — additional line/area chart
-            # series with their own scope (#883).
-            elif self.match(TokenType.OVERLAY_SERIES):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                overlay_series = self._parse_overlay_series_block()
-                self.expect(TokenType.DEDENT)
-
-            # show_outliers: true|false  — box plot outlier toggle (#881)
-            elif self.match(TokenType.SHOW_OUTLIERS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    show_outliers = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    show_outliers = False
-                else:
-                    token = self.current_token()
-                    raise make_parse_error(
-                        f"show_outliers must be true or false; got {token.value!r}",
-                        self.file,
-                        token.line,
-                        token.column,
-                    )
-                self.skip_newlines()
-
-            # bins: auto | <int>  — histogram bin count (#882)
-            elif self.match(TokenType.BINS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.NUMBER):
-                    bin_count = int(self.advance().value)
-                    if bin_count < 1:
-                        token = self.current_token()
-                        raise make_parse_error(
-                            f"bins must be a positive integer or 'auto'; got {bin_count}",
-                            self.file,
-                            token.line,
-                            token.column,
-                        )
-                else:
-                    word_tok = self.expect_identifier_or_keyword()
-                    if word_tok.value != "auto":
-                        raise make_parse_error(
-                            f"bins must be 'auto' or a positive integer; got {word_tok.value!r}",
-                            self.file,
-                            word_tok.line,
-                            word_tok.column,
-                        )
-                    bin_count = None  # auto via Sturges
-                self.skip_newlines()
-
-            # cohort_strip_config: indented block — typed config for
-            # #1018 cohort_strip region (v0.67.11). Mirrors the IDENT-
-            # value-match pattern used for `title:` above (no dedicated
-            # TokenType — `cohort_strip_config` is a domain identifier
-            # that doesn't need to crowd the token enum).
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "cohort_strip_config"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                cohort_strip_config = self._parse_cohort_strip_config_block()
-                self.expect(TokenType.DEDENT)
-
-            # day_timeline_config: indented block — typed config for
-            # #1016 day_timeline region (v0.67.12). Mirrors the
-            # cohort_strip_config IDENT-value-match pattern.
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "day_timeline_config"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                day_timeline_config = self._parse_day_timeline_config_block()
-                self.expect(TokenType.DEDENT)
-
-            # task_inbox_config: indented block — typed config for #1015
-            # task_inbox region (v0.67.13).
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "task_inbox_config"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                task_inbox_config = self._parse_task_inbox_config_block()
-                self.expect(TokenType.DEDENT)
-
-            # entity_card_config: indented block — typed config for #1017
-            # entity_card region (v0.67.13).
-            elif (
-                self.match(TokenType.IDENTIFIER)
-                and self.current_token().value == "entity_card_config"
-            ):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                entity_card_config = self._parse_entity_card_config_block()
-                self.expect(TokenType.DEDENT)
-
-            else:
-                break
-
-        self.expect(TokenType.DEDENT)
-
-        # v0.9.5: Allow aggregate-only regions without source
-        # Traditional regions require source, but pure metric regions don't
-        # v0.61.54 (#891): action_grid regions are also bodyless from the
-        # source/aggregate perspective — `actions:` IS the body.
-        # v0.61.56 (#890): pipeline_steps similarly — `stages:` IS the body
-        # (each stage carries its own aggregate).
-        # v0.61.69 (#3): status_list — `entries:` IS the body (authored
-        # list, no source/aggregate required).
-        # v0.61.72 (#6): confirm_action_panel — `confirmations:` IS the
-        # body. The panel may bind to an entity field via state_field
-        # but doesn't require source/aggregate at the region level.
-        if (
-            source is None
-            and not sources
-            and not aggregates
-            and not action_cards
-            and not pipeline_stages
-            and not status_entries
-            and not confirmations
-        ):
-            token = self.current_token()
-            raise make_parse_error(
-                f"Workspace region '{name}' requires 'source:' or 'aggregate:' block",
-                self.file,
-                token.line,
-                token.column,
-            )
-
-        # Cannot have both source and sources
-        if source and sources:
-            token = self.current_token()
-            raise make_parse_error(
-                f"Workspace region '{name}' cannot have both 'source:' (single) and multi-source list",
-                self.file,
-                token.line,
-                token.column,
-            )
-
-        # Multi-source regions default to tabbed_list display
-        if sources and display == ir.DisplayMode.LIST:
-            display = ir.DisplayMode.TABBED_LIST
-
-        return ir.WorkspaceRegion(
-            name=name,
-            source=source,
-            sources=sources,
-            source_filters=source_filters,
-            filter=filter_expr,
-            sort=sort,
-            limit=limit,
-            display=display,
-            action=action,
-            empty_message=empty_message,
-            group_by=group_by,
-            group_by_dims=group_by_dims,
-            aggregates=aggregates,
-            date_field=date_field,
-            date_range=date_range,
-            heatmap_rows=heatmap_rows,
-            heatmap_columns=heatmap_columns,
-            heatmap_value=heatmap_value,
-            heatmap_thresholds=heatmap_thresholds,
-            progress_stages=progress_stages,
-            progress_complete_at=progress_complete_at,
-            delta=delta,
-            reference_lines=reference_lines,
-            reference_bands=reference_bands,
-            bin_count=bin_count,
-            show_outliers=show_outliers,
-            bullet_label=bullet_label,
-            bullet_actual=bullet_actual,
-            bullet_target=bullet_target,
-            overlay_series=overlay_series,
-            css_class=css_class,
-            track_max=track_max,
-            track_format=track_format,
-            action_cards=action_cards,
-            avatar_field=avatar_field,
-            primary=primary,
-            secondary=secondary,
-            profile_stats=profile_stats,
-            facts=facts,
-            pipeline_stages=pipeline_stages,
-            eyebrow=eyebrow,
-            title=title_override or None,  # #903: empty string → None for fallback
-            width=width,  # #914: explicit grid-column span override (1..12)
-            tones=tones,
-            notice=notice,
-            status_entries=status_entries,
-            confirmations=confirmations,
-            state_field=state_field,
-            revoke=revoke,
-            primary_action=primary_action,
-            secondary_action=secondary_action,
-            render=render,
-            cohort_strip_config=cohort_strip_config,  # #1018 (v0.67.11)
-            day_timeline_config=day_timeline_config,  # #1016 (v0.67.12)
-            task_inbox_config=task_inbox_config,  # #1015 (v0.67.13)
-            entity_card_config=entity_card_config,  # #1017 (v0.67.13)
+        state = _WorkspaceRegionState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_WORKSPACE_REGION_KEYWORDS,
+            ident_keywords=_WORKSPACE_REGION_IDENT_KEYWORDS,
+            state=state,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_workspace_region(self, name, state)
+
+
+# ============================================================== #
+# parse_workspace_region (#1098) — keyword-dispatch decomposition #
+# ============================================================== #
+#
+# The 859-line monolith above was replaced (v0.70.14) with the
+# dispatch-table pattern shipped in #1097. Each former elif branch
+# is now a small ``_kw_*`` free function below; the post-loop
+# discriminated-union assembly lives in :func:`_build_workspace_region`.
+# Per-keyword error messages match the original byte-for-byte.
+
+
+@dataclass
+class _WorkspaceRegionState:
+    """Accumulator for :meth:`WorkspaceParserMixin.parse_workspace_region`.
+
+    One field per legal keyword in a workspace ``region:`` block — mirrors
+    the locals of the legacy monolith. :func:`_build_workspace_region`
+    reads this and constructs the frozen :class:`ir.WorkspaceRegion`.
+    """
+
+    source: str | None = None
+    sources: list[str] = field(default_factory=list)
+    source_filters: dict[str, ir.ConditionExpr] = field(default_factory=dict)
+    filter_expr: ir.ConditionExpr | None = None
+    sort: list[ir.SortSpec] = field(default_factory=list)
+    limit: int | None = None
+    display: ir.DisplayMode = ir.DisplayMode.LIST
+    render: str | None = None
+    action: str | None = None
+    empty_message: str | None = None
+    group_by: str | ir.BucketRef | None = None
+    group_by_dims: list[str | ir.BucketRef] | None = None
+    aggregates: dict[str, str] = field(default_factory=dict)
+    date_field: str | None = None
+    date_range: bool = False
+    heatmap_rows: str | None = None
+    heatmap_columns: str | None = None
+    heatmap_value: str | None = None
+    heatmap_thresholds: list[float] | ir.ParamRef = field(default_factory=list)
+    progress_stages: list[str] = field(default_factory=list)
+    progress_complete_at: str | None = None
+    delta: ir.DeltaSpec | None = None
+    reference_lines: list[ir.ReferenceLine] = field(default_factory=list)
+    reference_bands: list[ir.ReferenceBand] = field(default_factory=list)
+    bin_count: int | None = None
+    show_outliers: bool = True
+    bullet_label: str | None = None
+    bullet_actual: str | None = None
+    bullet_target: str | None = None
+    overlay_series: list[ir.OverlaySeriesSpec] = field(default_factory=list)
+    css_class: str | None = None
+    eyebrow: str | None = None
+    title_override: str | None = None
+    width: int | None = None
+    tones: dict[str, str] = field(default_factory=dict)
+    notice: ir.NoticeSpec | None = None
+    track_max: float | None = None
+    track_format: str | None = None
+    action_cards: list[ir.ActionCardSpec] = field(default_factory=list)
+    status_entries: list[ir.StatusListEntrySpec] = field(default_factory=list)
+    confirmations: list[ir.ConfirmationItemSpec] = field(default_factory=list)
+    state_field: str | None = None
+    revoke: str | None = None
+    primary_action: str | None = None
+    secondary_action: str | None = None
+    avatar_field: str | None = None
+    primary: str | None = None
+    secondary: str | None = None
+    profile_stats: list[ir.ProfileCardStatSpec] = field(default_factory=list)
+    facts: list[str] = field(default_factory=list)
+    pipeline_stages: list[ir.PipelineStageSpec] = field(default_factory=list)
+    cohort_strip_config: ir.CohortStripConfig | None = None
+    day_timeline_config: ir.DayTimelineConfig | None = None
+    task_inbox_config: ir.TaskInboxConfig | None = None
+    entity_card_config: ir.EntityCardConfig | None = None
+
+
+# ---------- Simple keyword-value branches ---------- #
+
+
+def _kw_source(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``source: EntityName`` OR ``source: [Entity1, Entity2, ...]``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.LBRACKET):
+        parser.advance()  # consume [
+        while not parser.match(TokenType.RBRACKET):
+            parser.skip_newlines()
+            if parser.match(TokenType.RBRACKET):
+                break
+            state.sources.append(parser.expect_identifier_or_keyword().value)
+            if parser.match(TokenType.COMMA):
+                parser.advance()
+            parser.skip_newlines()
+        parser.expect(TokenType.RBRACKET)
+    else:
+        state.source = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_filter_map(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``filter_map:`` — per-source filters for multi-source regions."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        entity_name = parser.expect_identifier_or_keyword().value
+        parser.expect(TokenType.COLON)
+        state.source_filters[entity_name] = parser.parse_condition_expr()
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_filter(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.filter_expr = parser.parse_condition_expr()
+    parser.skip_newlines()
+
+
+def _kw_sort(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.sort = parser.parse_sort_list()
+    parser.skip_newlines()
+
+
+def _kw_limit(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.limit = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _kw_display(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.display = ir.DisplayMode(parser.expect_identifier_or_keyword().value)
+    parser.skip_newlines()
+
+
+def _kw_render(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.render = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_action(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.action = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_empty(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.empty_message = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_group_by(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``group_by: field`` (single-dim) or ``group_by: [a, b]`` (multi-dim)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.LBRACKET):
+        parser.advance()  # consume [
+        dims: list[str | ir.BucketRef] = []
+        while not parser.match(TokenType.RBRACKET):
+            parser.skip_newlines()
+            if parser.match(TokenType.RBRACKET):
+                break
+            dims.append(parser._parse_group_by_element())
+            if parser.match(TokenType.COMMA):
+                parser.advance()
+            parser.skip_newlines()
+        parser.expect(TokenType.RBRACKET)
+        state.group_by_dims = dims
+    else:
+        state.group_by = parser._parse_group_by_element()
+    parser.skip_newlines()
+
+
+def _kw_date_field(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.date_field = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_date_range(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``date_range`` — flag (no colon)."""
+    parser.advance()
+    state.date_range = True
+    parser.skip_newlines()
+
+
+def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``aggregate:`` block — ``metric_name: expr`` per line (expr captured raw)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        metric_name = parser.expect_identifier_or_keyword().value
+        parser.expect(TokenType.COLON)
+        expr_parts: list[str] = []
+        while not parser.match(TokenType.NEWLINE, TokenType.DEDENT):
+            expr_parts.append(parser.advance().value)
+        state.aggregates[metric_name] = " ".join(expr_parts)
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_rows(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    rows = parser.expect_identifier_or_keyword().value
+    while parser.match(TokenType.DOT):
+        parser.advance()
+        rows += "." + parser.expect_identifier_or_keyword().value
+    state.heatmap_rows = rows
+    parser.skip_newlines()
+
+
+def _kw_columns(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    cols = parser.expect_identifier_or_keyword().value
+    while parser.match(TokenType.DOT):
+        parser.advance()
+        cols += "." + parser.expect_identifier_or_keyword().value
+    state.heatmap_columns = cols
+    parser.skip_newlines()
+
+
+def _kw_value(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``value: <expression>`` — captured as a raw string until newline."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_parts: list[str] = []
+    while not parser.match(TokenType.NEWLINE, TokenType.DEDENT):
+        value_parts.append(parser.advance().value)
+    state.heatmap_value = " ".join(value_parts)
+    parser.skip_newlines()
+
+
+def _kw_thresholds(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``thresholds: param("k")`` OR ``thresholds: [0.4, 0.6]``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.PARAM):
+        parser.advance()  # consume 'param'
+        parser.expect(TokenType.LPAREN)
+        ref_key = parser.expect(TokenType.STRING).value
+        parser.expect(TokenType.RPAREN)
+        state.heatmap_thresholds = ir.ParamRef(key=ref_key, param_type="list[float]", default=[])
+    else:
+        thresh_list: list[float] = []
+        parser.expect(TokenType.LBRACKET)
+        while not parser.match(TokenType.RBRACKET):
+            parser.skip_newlines()
+            if parser.match(TokenType.RBRACKET):
+                break
+            num_token = parser.expect(TokenType.NUMBER)
+            num_str = num_token.value
+            if parser.match(TokenType.DOT):
+                parser.advance()
+                frac = parser.expect(TokenType.NUMBER).value
+                num_str = num_str + "." + frac
+            thresh_list.append(float(num_str))
+            if parser.match(TokenType.COMMA):
+                parser.advance()
+            parser.skip_newlines()
+        parser.expect(TokenType.RBRACKET)
+        state.heatmap_thresholds = thresh_list
+    parser.skip_newlines()
+
+
+def _kw_stages(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``stages: [a, b]`` → progress (legacy); indented dash-list → pipeline_steps (#890)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.LBRACKET):
+        parser.advance()  # consume [
+        while not parser.match(TokenType.RBRACKET):
+            parser.skip_newlines()
+            if parser.match(TokenType.RBRACKET):
+                break
+            state.progress_stages.append(parser.expect_identifier_or_keyword().value)
+            if parser.match(TokenType.COMMA):
+                parser.advance()
+            parser.skip_newlines()
+        parser.expect(TokenType.RBRACKET)
+        parser.skip_newlines()
+    else:
+        parser.skip_newlines()
+        parser.expect(TokenType.INDENT)
+        state.pipeline_stages = parser._parse_pipeline_stages_block()
+        parser.expect(TokenType.DEDENT)
+
+
+def _kw_complete_at(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.progress_complete_at = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_delta(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.delta = parser._parse_delta_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_reference_lines(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.reference_lines = parser._parse_reference_lines_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_reference_bands(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.reference_bands = parser._parse_reference_bands_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_bullet_label(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.bullet_label = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_bullet_actual(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.bullet_actual = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_bullet_target(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.bullet_target = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_css_class(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``class:`` accepts a quoted string or a bare identifier (#894)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.css_class = parser.advance().value
+    else:
+        state.css_class = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_eyebrow(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.eyebrow = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_width(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``width: <int 1..12>`` — grid-column span override (#914). Clamped at parse."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    w_token = parser.expect(TokenType.NUMBER)
+    try:
+        w_raw = int(w_token.value)
+    except (TypeError, ValueError):
+        w_raw = 12
+    if w_raw < 1:
+        w_raw = 1
+    elif w_raw > 12:
+        w_raw = 12
+    state.width = w_raw
+    parser.skip_newlines()
+
+
+def _kw_tones(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``tones:`` block — ``metric_name: tone_token`` per line (v0.61.65)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        metric_name = parser.expect_identifier_or_keyword().value
+        parser.expect(TokenType.COLON)
+        tone_token = parser.expect_identifier_or_keyword().value
+        state.tones[metric_name] = tone_token
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_notice(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``notice: "..."`` (title-only) OR block form (title/body/tone)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.notice = ir.NoticeSpec(title=parser.advance().value)
+        parser.skip_newlines()
+        return
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    n_title = ""
+    n_body = ""
+    n_tone = "neutral"
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        key_tok = parser.current_token()
+        key = key_tok.value
+        parser.advance()
+        parser.expect(TokenType.COLON)
+        if key == "title":
+            n_title = parser.expect(TokenType.STRING).value
+            parser.skip_newlines()
+        elif key == "body":
+            n_body = parser.expect(TokenType.STRING).value
+            parser.skip_newlines()
+        elif key == "tone":
+            n_tone = parser.expect_identifier_or_keyword().value
+            parser.skip_newlines()
+        else:
+            raise make_parse_error(
+                f"Unknown notice key {key!r}. Expected one of: title, body, tone.",
+                parser.file,
+                key_tok.line,
+                key_tok.column,
+            )
+    parser.expect(TokenType.DEDENT)
+    if not n_title:
+        tok = parser.current_token()
+        raise make_parse_error(
+            "notice block requires `title:`",
+            parser.file,
+            tok.line,
+            tok.column,
+        )
+    state.notice = ir.NoticeSpec(title=n_title, body=n_body, tone=n_tone)
+
+
+def _kw_track_max(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.track_max = float(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _kw_track_format(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.track_format = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_actions(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.action_cards = parser._parse_action_cards_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_entries(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.status_entries = parser._parse_status_entries_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_confirmations(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.confirmations = parser._parse_confirmations_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_state_field(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.state_field = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_revoke(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``revoke: surface`` (IDENT) or ``revoke: "surface"`` (STRING) (#6)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.revoke = parser.advance().value
+    else:
+        state.revoke = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_avatar_field(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.avatar_field = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_primary(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.primary = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_secondary(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``secondary: "<template>"`` — quoted only ({{ field }} interpolation)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.secondary = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_stats(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.profile_stats = parser._parse_profile_stats_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_facts(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.facts = parser._parse_facts_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_overlay_series(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.overlay_series = parser._parse_overlay_series_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_show_outliers(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``show_outliers: true|false`` — box plot toggle (#881)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.show_outliers = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.show_outliers = False
+    else:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"show_outliers must be true or false; got {token.value!r}",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
+def _kw_bins(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``bins: auto`` or ``bins: <positive int>`` — histogram (#882)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.NUMBER):
+        bin_count = int(parser.advance().value)
+        if bin_count < 1:
+            token = parser.current_token()
+            raise make_parse_error(
+                f"bins must be a positive integer or 'auto'; got {bin_count}",
+                parser.file,
+                token.line,
+                token.column,
+            )
+        state.bin_count = bin_count
+    else:
+        word_tok = parser.expect_identifier_or_keyword()
+        if word_tok.value != "auto":
+            raise make_parse_error(
+                f"bins must be 'auto' or a positive integer; got {word_tok.value!r}",
+                parser.file,
+                word_tok.line,
+                word_tok.column,
+            )
+        state.bin_count = None  # auto via Sturges
+    parser.skip_newlines()
+
+
+# ---------- IDENT-text-matched branches ---------- #
+#
+# These keywords are intentionally not lexer tokens — they share a name
+# with bare identifiers used elsewhere in the grammar (`title` as an
+# identifier in flow/demo blocks; `primary` / `secondary` as field
+# names in profile_card; the `*_config` blocks as domain identifiers).
+# Dispatched on IDENTIFIER value via _WORKSPACE_REGION_IDENT_KEYWORDS.
+
+
+def _kw_title(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``title: "..."`` — explicit region title override (#903)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.title_override = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_primary_action(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``primary_action: surface`` (IDENT/STRING) — confirm_action_panel commit (#6)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.primary_action = parser.advance().value
+    else:
+        state.primary_action = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_secondary_action(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``secondary_action: surface`` (IDENT/STRING) — confirm_action_panel draft (#6)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.secondary_action = parser.advance().value
+    else:
+        state.secondary_action = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_cohort_strip_config(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.cohort_strip_config = parser._parse_cohort_strip_config_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_day_timeline_config(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.day_timeline_config = parser._parse_day_timeline_config_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_task_inbox_config(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.task_inbox_config = parser._parse_task_inbox_config_block()
+    parser.expect(TokenType.DEDENT)
+
+
+def _kw_entity_card_config(parser: Any, state: _WorkspaceRegionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.entity_card_config = parser._parse_entity_card_config_block()
+    parser.expect(TokenType.DEDENT)
+
+
+# ---------- Dispatch tables ---------- #
+
+
+_WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]] = {
+    TokenType.SOURCE: _kw_source,
+    TokenType.FILTER_MAP: _kw_filter_map,
+    TokenType.FILTER: _kw_filter,
+    TokenType.SORT: _kw_sort,
+    TokenType.LIMIT: _kw_limit,
+    TokenType.DISPLAY: _kw_display,
+    TokenType.RENDER: _kw_render,
+    TokenType.ACTION: _kw_action,
+    TokenType.EMPTY: _kw_empty,
+    TokenType.GROUP_BY: _kw_group_by,
+    TokenType.DATE_FIELD: _kw_date_field,
+    TokenType.DATE_RANGE: _kw_date_range,
+    TokenType.AGGREGATE: _kw_aggregate,
+    TokenType.ROWS: _kw_rows,
+    TokenType.COLUMNS: _kw_columns,
+    TokenType.VALUE: _kw_value,
+    TokenType.THRESHOLDS: _kw_thresholds,
+    TokenType.STAGES: _kw_stages,
+    TokenType.COMPLETE_AT: _kw_complete_at,
+    TokenType.DELTA: _kw_delta,
+    TokenType.REFERENCE_LINES: _kw_reference_lines,
+    TokenType.REFERENCE_BANDS: _kw_reference_bands,
+    TokenType.BULLET_LABEL: _kw_bullet_label,
+    TokenType.BULLET_ACTUAL: _kw_bullet_actual,
+    TokenType.BULLET_TARGET: _kw_bullet_target,
+    TokenType.CSS_CLASS: _kw_css_class,
+    TokenType.EYEBROW: _kw_eyebrow,
+    TokenType.WIDTH: _kw_width,
+    TokenType.TONES: _kw_tones,
+    TokenType.NOTICE: _kw_notice,
+    TokenType.TRACK_MAX: _kw_track_max,
+    TokenType.TRACK_FORMAT: _kw_track_format,
+    TokenType.ACTIONS: _kw_actions,
+    TokenType.ENTRIES: _kw_entries,
+    TokenType.CONFIRMATIONS: _kw_confirmations,
+    TokenType.STATE_FIELD: _kw_state_field,
+    TokenType.REVOKE: _kw_revoke,
+    TokenType.AVATAR_FIELD: _kw_avatar_field,
+    TokenType.PRIMARY: _kw_primary,
+    TokenType.SECONDARY: _kw_secondary,
+    TokenType.STATS: _kw_stats,
+    TokenType.FACTS: _kw_facts,
+    TokenType.OVERLAY_SERIES: _kw_overlay_series,
+    TokenType.SHOW_OUTLIERS: _kw_show_outliers,
+    TokenType.BINS: _kw_bins,
+}
+
+
+_WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]] = {
+    "title": _kw_title,
+    "primary_action": _kw_primary_action,
+    "secondary_action": _kw_secondary_action,
+    "cohort_strip_config": _kw_cohort_strip_config,
+    "day_timeline_config": _kw_day_timeline_config,
+    "task_inbox_config": _kw_task_inbox_config,
+    "entity_card_config": _kw_entity_card_config,
+}
+
+
+# ---------- Post-loop builder ---------- #
+
+
+def _build_workspace_region(
+    parser: Any, name: str, state: _WorkspaceRegionState
+) -> ir.WorkspaceRegion:
+    """Construct the frozen :class:`ir.WorkspaceRegion` from parser state.
+
+    Replicates the post-loop invariants of the legacy monolith:
+      - Reject regions without ``source:`` AND any body-shape (aggregates,
+        action_cards, pipeline_stages, status_entries, confirmations).
+      - Reject combined single ``source:`` + multi-source list.
+      - Auto-bump multi-source LIST display → TABBED_LIST.
+      - Empty ``title`` string normalised to ``None`` (#903 fallback).
+    """
+    if (
+        state.source is None
+        and not state.sources
+        and not state.aggregates
+        and not state.action_cards
+        and not state.pipeline_stages
+        and not state.status_entries
+        and not state.confirmations
+    ):
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Workspace region '{name}' requires 'source:' or 'aggregate:' block",
+            parser.file,
+            token.line,
+            token.column,
+        )
+
+    if state.source and state.sources:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Workspace region '{name}' cannot have both 'source:' (single) and multi-source list",
+            parser.file,
+            token.line,
+            token.column,
+        )
+
+    display = state.display
+    if state.sources and display == ir.DisplayMode.LIST:
+        display = ir.DisplayMode.TABBED_LIST
+
+    return ir.WorkspaceRegion(
+        name=name,
+        source=state.source,
+        sources=state.sources,
+        source_filters=state.source_filters,
+        filter=state.filter_expr,
+        sort=state.sort,
+        limit=state.limit,
+        display=display,
+        action=state.action,
+        empty_message=state.empty_message,
+        group_by=state.group_by,
+        group_by_dims=state.group_by_dims,
+        aggregates=state.aggregates,
+        date_field=state.date_field,
+        date_range=state.date_range,
+        heatmap_rows=state.heatmap_rows,
+        heatmap_columns=state.heatmap_columns,
+        heatmap_value=state.heatmap_value,
+        heatmap_thresholds=state.heatmap_thresholds,
+        progress_stages=state.progress_stages,
+        progress_complete_at=state.progress_complete_at,
+        delta=state.delta,
+        reference_lines=state.reference_lines,
+        reference_bands=state.reference_bands,
+        bin_count=state.bin_count,
+        show_outliers=state.show_outliers,
+        bullet_label=state.bullet_label,
+        bullet_actual=state.bullet_actual,
+        bullet_target=state.bullet_target,
+        overlay_series=state.overlay_series,
+        css_class=state.css_class,
+        track_max=state.track_max,
+        track_format=state.track_format,
+        action_cards=state.action_cards,
+        avatar_field=state.avatar_field,
+        primary=state.primary,
+        secondary=state.secondary,
+        profile_stats=state.profile_stats,
+        facts=state.facts,
+        pipeline_stages=state.pipeline_stages,
+        eyebrow=state.eyebrow,
+        title=state.title_override or None,
+        width=state.width,
+        tones=state.tones,
+        notice=state.notice,
+        status_entries=state.status_entries,
+        confirmations=state.confirmations,
+        state_field=state.state_field,
+        revoke=state.revoke,
+        primary_action=state.primary_action,
+        secondary_action=state.secondary_action,
+        render=state.render,
+        cohort_strip_config=state.cohort_strip_config,
+        day_timeline_config=state.day_timeline_config,
+        task_inbox_config=state.task_inbox_config,
+        entity_card_config=state.entity_card_config,
+    )
