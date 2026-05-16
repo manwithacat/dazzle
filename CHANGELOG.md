@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.33] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_experience_step` refactored via sequential-phase extraction.** First post-dispatch-sweep refactor on a *non*-dispatch-shaped parser. The 184-line monolith in `src/dazzle/core/dsl_parser_impl/service.py` becomes a 25-line orchestration shell + 9 mixin-level phase helpers (`_parse_step_kind_and_target`, `_parse_step_creates`, `_parse_step_fields`, `_parse_step_defaults`, `_parse_step_saves_to`, `_parse_step_prefill`, `_parse_step_when`, `_parse_step_access`, `_parse_step_transitions`) + a module-level `_StepState` dataclass + 16-line `_build_experience_step` builder. Each phase conditionally consumes its keyword (`if not self.match(X): return`) — order-dependent but optional, matching the legacy semantics. Byte-identical IR verified against 5 `ExperienceSpec`s containing 25 steps across `examples/ops_dashboard` + `fixtures/pra/`.
+
+### Agent Guidance
+
+- **When the candidate parser has fixed-order, optional, sequential phases** (not keyword-dispatch — see `elif self.match` density audit), extract each phase as a private mixin method that conditionally consumes its keyword and mutates the state accumulator. The public function becomes a thin orchestration sequence + a builder call. Pattern is in `service.py:parse_experience_step` + `_parse_step_*` helpers.
+
 ## [0.70.32] - 2026-05-16
 
 ### Changed

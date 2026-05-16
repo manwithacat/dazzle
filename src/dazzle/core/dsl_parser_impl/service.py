@@ -4,6 +4,7 @@ Service parsing for DAZZLE DSL.
 Handles external API and domain service declarations.
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
@@ -478,187 +479,231 @@ class ServiceParserMixin:
         )
 
     def parse_experience_step(self) -> ir.ExperienceStep:
-        """Parse experience step."""
+        """Parse a ``step <name>:`` block inside an ``experience`` declaration.
+
+        Refactored from the 184-line monolith into a sequential phase-helper
+        composition (not dispatch-table — the phases have a fixed order and
+        each is optional, so the #1097 helper doesn't apply). Each phase
+        below conditionally consumes its keyword and mutates the
+        :class:`_StepState` accumulator; the public function is a thin
+        sequence of phase calls + a final builder.
+        """
         self.expect(TokenType.STEP)
-
         name = self.expect_identifier_or_keyword().value
-
         self.expect(TokenType.COLON)
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        surface = None
-        entity_ref = None
-        integration = None
-        action = None
-        access_spec = None
-        saves_to: str | None = None
-        prefills: list[ir.StepPrefill] = []
-        when: str | None = None
+        state = _StepState()
+        self._parse_step_kind_and_target(state)
+        self._parse_step_creates(state)
+        self._parse_step_fields(state)
+        self._parse_step_defaults(state)
+        self._parse_step_saves_to(state)
+        self._parse_step_prefill(state)
+        self._parse_step_when(state)
+        self._parse_step_access(state)
+        self._parse_step_transitions(state)
+        self.expect(TokenType.DEDENT)
+        return _build_experience_step(name, state)
 
-        # entity: EntityName (shorthand — infers kind=surface, auto-generates form)
+    # ---------- parse_experience_step phase helpers ---------- #
+
+    def _parse_step_kind_and_target(self, state: "_StepState") -> None:
+        """Phase 1: ``entity: X`` shorthand OR ``kind: ...`` + target.
+
+        Mutually exclusive — `entity:` infers ``kind=SURFACE`` and skips
+        the explicit ``kind:`` + ``surface:`` / ``integration: action:``
+        target pair. The first branch is the shorthand path.
+        """
         if self.match(TokenType.ENTITY):
             self.advance()
             self.expect(TokenType.COLON)
-            entity_ref = self.expect(TokenType.IDENTIFIER).value
-            kind = ir.StepKind.SURFACE
+            state.entity_ref = self.expect(TokenType.IDENTIFIER).value
+            state.kind = ir.StepKind.SURFACE
             self.skip_newlines()
-        else:
-            # kind: surface|process|integration (existing syntax)
-            self.expect(TokenType.KIND)
-            self.expect(TokenType.COLON)
-            kind_token = self.expect_identifier_or_keyword()
-            kind = ir.StepKind(kind_token.value)
+            return
+
+        # Long form: kind: <enum> followed by target.
+        self.expect(TokenType.KIND)
+        self.expect(TokenType.COLON)
+        kind_token = self.expect_identifier_or_keyword()
+        state.kind = ir.StepKind(kind_token.value)
+        self.skip_newlines()
+
+        if state.kind == ir.StepKind.SURFACE:
+            self.expect(TokenType.SURFACE)
+            state.surface = self.expect(TokenType.IDENTIFIER).value
+            self.skip_newlines()
+        elif state.kind == ir.StepKind.INTEGRATION:
+            self.expect(TokenType.INTEGRATION)
+            state.integration = self.expect(TokenType.IDENTIFIER).value
+            self.expect(TokenType.ACTION)
+            state.action = self.expect(TokenType.IDENTIFIER).value
             self.skip_newlines()
 
-            # Parse step target based on kind
-            if kind == ir.StepKind.SURFACE:
-                self.expect(TokenType.SURFACE)
-                surface = self.expect(TokenType.IDENTIFIER).value
-                self.skip_newlines()
+    def _parse_step_creates(self, state: "_StepState") -> None:
+        """``creates: varname`` — shorthand for ``saves_to: context.varname``."""
+        if not self.match(TokenType.CREATES):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        creates_var = self.expect(TokenType.IDENTIFIER).value
+        state.saves_to = f"context.{creates_var}"
+        self.skip_newlines()
 
-            elif kind == ir.StepKind.INTEGRATION:
-                self.expect(TokenType.INTEGRATION)
-                integration = self.expect(TokenType.IDENTIFIER).value
-                self.expect(TokenType.ACTION)
-                action = self.expect(TokenType.IDENTIFIER).value
-                self.skip_newlines()
-
-        # creates: varname (shorthand for saves_to: context.varname)
-        if self.match(TokenType.CREATES):
+    def _parse_step_fields(self, state: "_StepState") -> None:
+        """``fields: f1, f2, ...`` — restrict the auto-form to a subset."""
+        if not self.match(TokenType.FIELDS):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        fields_list: list[str] = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.COMMA):
             self.advance()
-            self.expect(TokenType.COLON)
-            creates_var = self.expect(TokenType.IDENTIFIER).value
-            saves_to = f"context.{creates_var}"
-            self.skip_newlines()
+            fields_list.append(self.expect_identifier_or_keyword().value)
+        state.fields = fields_list
+        self.skip_newlines()
 
-        # fields: field1, field2, ... (restrict form to listed entity fields)
-        step_fields: list[str] | None = None
-        if self.match(TokenType.FIELDS):
-            self.advance()
+    def _parse_step_defaults(self, state: "_StepState") -> None:
+        """``defaults:`` block — shorthand prefills with ``$var`` → ``context.var.id``."""
+        if not self.match(TokenType.DEFAULTS):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
-            step_fields = []
-            step_fields.append(self.expect_identifier_or_keyword().value)
-            while self.match(TokenType.COMMA):
+            if self.match(TokenType.STRING):
+                expr = f'"{self.advance().value}"'
+            elif self.match(TokenType.DOLLAR):
                 self.advance()
-                step_fields.append(self.expect_identifier_or_keyword().value)
+                var_name = self.expect(TokenType.IDENTIFIER).value
+                expr = f"context.{var_name}.id"
+            else:
+                expr = self._parse_dotted_path()
+            state.prefills.append(ir.StepPrefill(field=field_name, expression=expr))
             self.skip_newlines()
+        self.expect(TokenType.DEDENT)
+        self.skip_newlines()
 
-        # defaults: block (shorthand for prefill with $var → context.var.id)
-        if self.match(TokenType.DEFAULTS):
-            self.advance()
+    def _parse_step_saves_to(self, state: "_StepState") -> None:
+        """``saves_to: <dotted.path>`` — explicit context-binding."""
+        if not self.match(TokenType.SAVES_TO):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        state.saves_to = self._parse_dotted_path()
+        self.skip_newlines()
+
+    def _parse_step_prefill(self, state: "_StepState") -> None:
+        """``prefill:`` block — explicit field → expression list."""
+        if not self.match(TokenType.PREFILL):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
+            if self.match(TokenType.STRING):
+                expr = f'"{self.advance().value}"'
+            else:
+                expr = self._parse_dotted_path()
+            state.prefills.append(ir.StepPrefill(field=field_name, expression=expr))
             self.skip_newlines()
-            self.expect(TokenType.INDENT)
+        self.expect(TokenType.DEDENT)
+        self.skip_newlines()
 
-            while not self.match(TokenType.DEDENT):
-                self.skip_newlines()
-                if self.match(TokenType.DEDENT):
-                    break
-                field_name = self.expect_identifier_or_keyword().value
-                self.expect(TokenType.COLON)
-                if self.match(TokenType.STRING):
-                    expr = f'"{self.advance().value}"'
-                elif self.match(TokenType.DOLLAR):
-                    # $varname → context.varname.id
-                    self.advance()
-                    var_name = self.expect(TokenType.IDENTIFIER).value
-                    expr = f"context.{var_name}.id"
-                else:
-                    expr = self._parse_dotted_path()
-                prefills.append(ir.StepPrefill(field=field_name, expression=expr))
-                self.skip_newlines()
-
-            self.expect(TokenType.DEDENT)
-            self.skip_newlines()
-
-        # saves_to: context.varname (optional, existing syntax)
-        if self.match(TokenType.SAVES_TO):
+    def _parse_step_when(self, state: "_StepState") -> None:
+        """``when: <expression>`` — raw token stream up to newline/dedent/EOF."""
+        if not self.match(TokenType.WHEN):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        parts: list[str] = []
+        while not self.match(TokenType.NEWLINE) and not self.match(TokenType.DEDENT):
+            tok = self.current_token()
+            if tok.type == TokenType.EOF:
+                break
+            parts.append(tok.value)
             self.advance()
-            self.expect(TokenType.COLON)
-            saves_to = self._parse_dotted_path()
-            self.skip_newlines()
+        state.when = " ".join(parts)
+        self.skip_newlines()
 
-        # prefill: block (optional, existing syntax)
-        if self.match(TokenType.PREFILL):
-            self.advance()
-            self.expect(TokenType.COLON)
-            self.skip_newlines()
-            self.expect(TokenType.INDENT)
+    def _parse_step_access(self, state: "_StepState") -> None:
+        """``access: public | authenticated | persona(...)``"""
+        if not self.match(TokenType.ACCESS):
+            return
+        self.advance()
+        self.expect(TokenType.COLON)
+        state.access = self._parse_surface_access()
+        self.skip_newlines()
 
-            while not self.match(TokenType.DEDENT):
-                self.skip_newlines()
-                if self.match(TokenType.DEDENT):
-                    break
-                field_name = self.expect_identifier_or_keyword().value
-                self.expect(TokenType.COLON)
-                # Expression can be a string literal or dotted path
-                if self.match(TokenType.STRING):
-                    expr = f'"{self.advance().value}"'
-                else:
-                    expr = self._parse_dotted_path()
-                prefills.append(ir.StepPrefill(field=field_name, expression=expr))
-                self.skip_newlines()
-
-            self.expect(TokenType.DEDENT)
-            self.skip_newlines()
-
-        # when: condition (optional)
-        if self.match(TokenType.WHEN):
-            self.advance()
-            self.expect(TokenType.COLON)
-            # Consume tokens to end of line as raw condition string
-            parts: list[str] = []
-            while not self.match(TokenType.NEWLINE) and not self.match(TokenType.DEDENT):
-                tok = self.current_token()
-                if tok.type == TokenType.EOF:
-                    break
-                parts.append(tok.value)
-                self.advance()
-            when = " ".join(parts)
-            self.skip_newlines()
-
-        # access: public | authenticated | persona(name1, name2) (optional)
-        if self.match(TokenType.ACCESS):
-            self.advance()
-            self.expect(TokenType.COLON)
-            access_spec = self._parse_surface_access()
-            self.skip_newlines()
-
-        # Parse transitions
-        transitions = []
+    def _parse_step_transitions(self, state: "_StepState") -> None:
+        """``on <event> -> step <name>`` — zero or more transitions."""
         while self.match(TokenType.ON):
             self.advance()
-
-            event_token = self.expect_identifier_or_keyword()
-            event = event_token.value  # Arbitrary event names supported
-
+            event = self.expect_identifier_or_keyword().value
             self.expect(TokenType.ARROW)
             self.expect(TokenType.STEP)
             next_step = self.expect_identifier_or_keyword().value
-
-            transitions.append(
-                ir.StepTransition(
-                    event=event,
-                    next_step=next_step,
-                )
+            state.transitions.append(
+                ir.StepTransition(event=event, next_step=next_step),
             )
-
             self.skip_newlines()
 
-        self.expect(TokenType.DEDENT)
 
-        return ir.ExperienceStep(
-            name=name,
-            kind=kind,
-            surface=surface,
-            entity_ref=entity_ref,
-            integration=integration,
-            action=action,
-            saves_to=saves_to,
-            fields=step_fields,
-            prefills=prefills,
-            when=when,
-            transitions=transitions,
-            access=access_spec,
-        )
+# ============================================================ #
+# parse_experience_step — sequential-phase decomposition       #
+# ============================================================ #
+#
+# Unlike the dispatch-table refactors (#1097), an experience step
+# has a *fixed-order* sequence of optional phases. The 184-line
+# monolith was split (v0.70.33) into a `_StepState` accumulator,
+# 9 phase helpers on the mixin (each conditionally consumes its
+# keyword + mutates state), and this builder. The public function
+# becomes ~25 lines of orchestration.
+
+
+@dataclass
+class _StepState:
+    """Accumulator for :meth:`ServiceParserMixin.parse_experience_step`."""
+
+    kind: ir.StepKind = ir.StepKind.SURFACE
+    surface: str | None = None
+    entity_ref: str | None = None
+    integration: str | None = None
+    action: str | None = None
+    saves_to: str | None = None
+    fields: list[str] | None = None
+    prefills: list[ir.StepPrefill] = field(default_factory=list)
+    when: str | None = None
+    access: ir.SurfaceAccessSpec | None = None
+    transitions: list[ir.StepTransition] = field(default_factory=list)
+
+
+def _build_experience_step(name: str, state: _StepState) -> ir.ExperienceStep:
+    return ir.ExperienceStep(
+        name=name,
+        kind=state.kind,
+        surface=state.surface,
+        entity_ref=state.entity_ref,
+        integration=state.integration,
+        action=state.action,
+        saves_to=state.saves_to,
+        fields=state.fields,
+        prefills=state.prefills,
+        when=state.when,
+        transitions=state.transitions,
+        access=state.access,
+    )
