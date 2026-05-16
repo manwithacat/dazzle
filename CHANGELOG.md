@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.48] - 2026-05-16
+
+### Added
+
+- **#1106 Proposal 3: strict spec-drift guard for the agent loop.** Closes the third and deepest layer of the drift problem — agents can no longer ship a DSL change that introduces a new entity without naming it in `SPEC.md`'s Domain map table.
+- **`dazzle spec status --fail-on-strict`** — new CLI flag. Parses the markdown table under the `## Domain map` heading in `SPEC.md`, requires every DSL entity to appear as an entity name in some row, exits non-zero on drift. Substring mentions in prose don't satisfy the check — the entity must be in a table row. Framework-injected entities (`AIJob`, `DeployHistory`, `FeedbackReport`, `SystemHealth`, `SystemMetric`) are excluded by default.
+- **`[spec]` block in `dazzle.toml`** — new `SpecConfig` dataclass on `ProjectManifest` with a single `strict: bool = False` field. When set to `true`, the strict guard fires on any `dazzle spec status` invocation, not just `--fail-on-strict`.
+- **`/ship` skill wired** to call `dazzle spec status --fail-on-strict` as part of pre-flight when `[spec] strict` is on. `/improve` and `/issues` hand off to `/ship` for commits, so the guard covers all three loops.
+- **`_extract_domain_map_entities(spec_text)`** — markdown-table parser that pulls comma-separated identifier-shaped tokens from the Entities column of each row. Ignores the `(populated as you add entities)` placeholder row laid down by `dazzle init` (#1106 Prop 2), stops at the next `##` heading, strips backticks and asterisks.
+
+### Agent Guidance
+
+- When adding a new DSL entity in a project with `[spec] strict = true`, also add a row to the `## Domain map` table in `SPEC.md` (Domain | Entities | Design doc). Three options for the Design doc cell: (a) point at a new `docs/specs/<date>-<slug>.md` design doc for non-trivial domain concepts, (b) point at an existing doc when extending a known domain, (c) leave the cell blank for a simple addition. The guard only checks the Entities column.
+
 ## [0.70.47] - 2026-05-16
 
 ### Added

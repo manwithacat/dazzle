@@ -48,7 +48,15 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 
   Pre-ship gap that motivated this list (v0.65.11 → v0.65.12): the chaos-monkey work added 3 `except Exception: pass` patterns to `src/dazzle/testing/fuzz_runtime/runner.py`; the pre-ship cycle ran only drift gates and missed `test_no_bare_except_pass.py`. Any new `test_no_*.py` file should be appended here.
 
-- If lint, type, drift, or policy errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
+- **Run the spec-drift strict guard** if the project opts in via `[spec] strict = true` in `dazzle.toml` (#1106 Prop 3):
+
+  ```bash
+  dazzle spec status --fail-on-strict
+  ```
+
+  Fails when a DSL entity isn't named in any row of the `## Domain map` table in `SPEC.md`. Substring prose mentions don't satisfy this — the entity has to appear in a table row, optionally pointing at a `docs/specs/<topic>.md` design doc. Fix by adding the row (and, if the entity introduces a new domain concept, the design doc) before re-running. The guard only fires when the project opts in via the manifest flag; framework-injected entities (AIJob, DeployHistory, FeedbackReport, SystemHealth, SystemMetric) are excluded by default.
+
+- If lint, type, drift, policy, or spec-strict errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
 
 ## 2. Commit
 

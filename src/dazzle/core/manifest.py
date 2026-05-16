@@ -409,6 +409,31 @@ class I18nConfig:
 
 
 @dataclass
+class SpecConfig:
+    """Spec-drift guard configuration (#1106 Proposal 3).
+
+    Reads ``[spec]`` from ``dazzle.toml``:
+
+        [spec]
+        strict = true   # fail agent loops on undocumented entities
+
+    When ``strict`` is True, ``dazzle spec status --fail-on-strict``
+    refuses to pass unless every DSL entity appears as an entity name
+    in a row of the ``## Domain map`` table inside ``SPEC.md``. The
+    /ship and /improve agent loops invoke this check before commit,
+    so an agent that adds an entity without updating the spec index
+    can't ship.
+
+    The match is intentionally stricter than the loose substring
+    check in ``dazzle spec status`` (which accepts mentions anywhere
+    in prose) — table-row presence forces the index-maintenance
+    discipline that ``[spec.strict]`` is opting into.
+    """
+
+    strict: bool = False
+
+
+@dataclass
 class ExtensionsConfig:
     """Registration of project-supplied extensions (closes #786).
 
@@ -506,6 +531,7 @@ class ProjectManifest:
     tenant: TenantConfig = field(default_factory=TenantConfig)
     i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)  # #952
+    spec: SpecConfig = field(default_factory=SpecConfig)  # #1106 Prop 3
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     # Asset bundling mode. Resolved at request time by `should_bundle_assets()`:
@@ -873,6 +899,10 @@ def load_manifest(path: Path) -> ProjectManifest:
     # Parse [storage.<name>] blocks (v0.61.104, #932)
     storage_defs = _parse_storage_configs(data)
 
+    # Parse [spec] block (#1106 Prop 3)
+    spec_data = data.get("spec", {}) if isinstance(data.get("spec"), dict) else {}
+    spec_config = SpecConfig(strict=bool(spec_data.get("strict", False)))
+
     return ProjectManifest(
         name=project.get("name", "unnamed"),
         version=project.get("version", "0.0.0"),
@@ -890,6 +920,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         tenant=tenant_config,
         i18n=i18n_config,
         notifications=notifications_config,
+        spec=spec_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
         assets=assets_mode,

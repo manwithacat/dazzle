@@ -13,8 +13,9 @@ DSL. ``sync`` (Proposal 2) and a commit-guard (Proposal 3) live in
 follow-up PRs.
 """
 
+import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import typer
@@ -23,6 +24,8 @@ from dazzle.core import ir
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.spec_loader import load_spec
 from dazzle.core.strings import to_api_plural
+
+logger = logging.getLogger(__name__)
 
 spec_app = typer.Typer(
     help="Compare narrative product spec against DSL state — drift detection.",
@@ -270,6 +273,83 @@ _NON_ENTITY_TITLECASE = frozenset(
 _TITLECASE_TOKEN = re.compile(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b")
 
 
+# ---------------------------------------------------------------------------
+# Domain-map parsing (#1106 Proposal 3 — strict guard)
+# ---------------------------------------------------------------------------
+#
+# The Domain map is a markdown table under a ``## Domain map`` heading in
+# ``SPEC.md`` (laid down by ``dazzle init`` since v0.70.46). The strict
+# guard requires every DSL entity to appear as an entity name in some row
+# of that table — substring matches in prose don't count.
+#
+# The "Entities" column is the second column by convention; cell values
+# are comma-separated entity names. Whitespace and code-fences are stripped.
+
+
+_DOMAIN_MAP_HEADING = re.compile(r"^##\s+Domain\s+map\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def _extract_domain_map_entities(spec_text: str) -> set[str]:
+    """Return the set of entity names listed in ``## Domain map`` rows.
+
+    Scans for the ``## Domain map`` heading, then reads the following
+    markdown table. The second column ("Entities") holds comma-separated
+    entity names; the function strips whitespace, backticks, and the
+    leading/trailing pipes.
+
+    Returns an empty set when:
+    - No ``## Domain map`` heading is found.
+    - The heading exists but has no following table (e.g. placeholder row).
+    - The table's second column is the literal placeholder
+      ``(populated as you add entities — start in docs/specs/)``.
+    """
+    match = _DOMAIN_MAP_HEADING.search(spec_text)
+    if not match:
+        return set()
+
+    # Walk lines after the heading; collect table rows (lines starting
+    # with `|`) until we hit a non-table line or another heading.
+    tail = spec_text[match.end() :]
+    rows: list[list[str]] = []
+    for raw in tail.splitlines():
+        line = raw.rstrip()
+        if line.startswith("##"):
+            break
+        if not line.startswith("|"):
+            # Allow blank lines and the table-separator row to live before
+            # the first data row, but bail out the moment we hit prose.
+            if line.strip() == "" or set(line.strip()) <= {"-", "|", " ", ":"}:
+                continue
+            if rows:
+                break
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        # Skip header row (`Domain | Entities | Design doc`) and
+        # alignment row (`---|---|---`).
+        if cells and all(c == "" or set(c) <= {"-", ":"} for c in cells):
+            continue
+        rows.append(cells)
+
+    entities: set[str] = set()
+    for cells in rows:
+        if len(cells) < 2:
+            continue
+        # Header row check: skip if the second column literally reads
+        # ``Entities`` (case-insensitive).
+        if cells[1].lower() == "entities":
+            continue
+        ent_cell = cells[1]
+        # The init-scaffold placeholder is "(populated as you add ..."
+        if ent_cell.startswith("(populated") or ent_cell.startswith("_(populated"):
+            continue
+        # Comma-separated entity names; strip surrounding code-fences/asterisks.
+        for token in ent_cell.split(","):
+            name = token.strip().strip("`*_ ")
+            if name and re.match(r"^[A-Z][A-Za-z0-9_]*$", name):
+                entities.add(name)
+    return entities
+
+
 @dataclass(frozen=True)
 class _DriftReport:
     """One-shot result of comparing the spec to the DSL."""
@@ -281,6 +361,16 @@ class _DriftReport:
     missing_from_dsl: list[str]
     """Capitalized nouns in spec that don't map to a DSL entity."""
     spec_present: bool
+    # #1106 Prop 3 — strict guard fields
+    domain_map_entities: list[str] = field(default_factory=list)
+    """Entity names parsed from rows of ``## Domain map`` in SPEC.md."""
+    missing_from_domain_map: list[str] = field(default_factory=list)
+    """DSL entities NOT named in any Domain map table row.
+
+    The strict guard fails on this list (when ``[spec] strict = true``).
+    Substring mentions elsewhere in SPEC.md don't satisfy the check —
+    the entity must be in a row of the Domain map table.
+    """
 
 
 def _extract_entity_candidates(spec_text: str) -> set[str]:
@@ -370,12 +460,18 @@ def _compute_drift(
         dsl_forms_lower.add(to_api_plural(name).lower())
     missing_from_dsl = [c for c in sorted(spec_candidates) if c.lower() not in dsl_forms_lower]
 
+    # #1106 Prop 3 — Domain-map row check (strict mode).
+    domain_map_entities = _extract_domain_map_entities(spec_text)
+    missing_from_domain_map = sorted(n for n in dsl_entities if n not in domain_map_entities)
+
     return _DriftReport(
         dsl_entities=sorted(dsl_entities),
         spec_candidates=sorted(spec_candidates),
         missing_from_spec=sorted(missing_from_spec),
         missing_from_dsl=missing_from_dsl,
         spec_present=spec_present,
+        domain_map_entities=sorted(domain_map_entities),
+        missing_from_domain_map=missing_from_domain_map,
     )
 
 
@@ -423,6 +519,23 @@ def _format_report(report: _DriftReport) -> str:
         lines.append(
             "  (none — every capitalised entity-shaped noun in the spec maps to a DSL entity)"
         )
+
+    # #1106 Prop 3 — strict-mode Domain map check
+    lines.append("")
+    lines.append(
+        f"Domain map entities ({len(report.domain_map_entities)} listed, "
+        f"{len(report.missing_from_domain_map)} DSL entities not in any row):"
+    )
+    if report.missing_from_domain_map:
+        for name in report.missing_from_domain_map:
+            lines.append(f"  - {name}")
+        lines.append(
+            "  → Add each to a row of the `## Domain map` table in SPEC.md. "
+            "Strict-mode (`[spec] strict = true` in dazzle.toml) fails when "
+            "this list is non-empty."
+        )
+    else:
+        lines.append("  (clean — every DSL entity appears in a Domain map row)")
     return "\n".join(lines)
 
 
@@ -438,6 +551,19 @@ def spec_status(
         False,
         "--fail-on-drift",
         help="Exit non-zero when any drift is reported. Use in CI gates.",
+    ),
+    fail_on_strict: bool = typer.Option(
+        False,
+        "--fail-on-strict",
+        help=(
+            "Strict guard (#1106 Prop 3). Exits non-zero when any DSL "
+            "entity is missing from the `## Domain map` table in SPEC.md, "
+            "OR when `[spec] strict = true` is set in dazzle.toml and "
+            "the same condition holds. The /ship and /improve agent "
+            "loops invoke this before commit so agents can't ship an "
+            "undocumented entity. Substring mentions in prose don't "
+            "satisfy this check — entity must appear in a table row."
+        ),
     ),
     include_framework_entities: bool = typer.Option(
         False,
@@ -481,3 +607,42 @@ def spec_status(
 
     if fail_on_drift and (report.missing_from_spec or report.missing_from_dsl):
         raise typer.Exit(code=1)
+
+    # #1106 Prop 3 — strict guard. Activated by --fail-on-strict OR by
+    # `[spec] strict = true` in the project's dazzle.toml. The agent
+    # loop wiring in /ship + /improve uses the CLI flag form; humans
+    # who set the manifest flag get the same enforcement on any direct
+    # `dazzle spec status` invocation.
+    strict_enabled = fail_on_strict or _manifest_strict_enabled(project_dir)
+    if strict_enabled and report.missing_from_domain_map:
+        typer.echo(
+            f"\nSTRICT FAIL: {len(report.missing_from_domain_map)} DSL "
+            "entity(ies) not in the Domain map table — add a row in "
+            "SPEC.md before commit.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+def _manifest_strict_enabled(project_dir: Path) -> bool:
+    """Return True iff ``[spec] strict = true`` in ``project_dir/dazzle.toml``.
+
+    Silently returns False when the manifest is missing or unreadable —
+    the manifest flag is an opt-in convenience; the CLI flag is the
+    authoritative gate.
+    """
+    manifest_path = project_dir / "dazzle.toml"
+    if not manifest_path.is_file():
+        return False
+    try:
+        from dazzle.core.manifest import load_manifest
+
+        manifest = load_manifest(manifest_path)
+        return bool(getattr(manifest.spec, "strict", False))
+    except Exception:
+        logger.debug(
+            "Failed to read [spec] strict from %s — treating as off",
+            manifest_path,
+            exc_info=True,
+        )
+        return False
