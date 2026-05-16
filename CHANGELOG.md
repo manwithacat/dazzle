@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.29] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `parse_flow` migrated to keyword-dispatch.** Sixteenth consumer of the #1097 helper. The 118-line monolith in `src/dazzle/core/dsl_parser_impl/flow.py` becomes a 46-line dispatch shell + 4 `_f_kw_*` parsers (priority/tags/preconditions/steps) + an 8-line `_build_flow` builder. The legacy dual-tokenisation path for ``priority`` (which appears as ``TokenType.PRIORITY`` in some lexer contexts and as a plain IDENTIFIER in others) is preserved by registering `_f_kw_priority` in both `_FLOW_KEYWORDS` (token-keyed) AND `_FLOW_IDENT_KEYWORDS["priority"]` (text-keyed) — same fn from both routes. Byte-identical IR verified against a synthetic 2-`FlowSpec` fixture covering all 4 keyword branches plus nested preconditions and steps (no real `.dsl` file uses ``flow`` blocks today; ``frag.e2e_flows`` is the IR slot — not `frag.flows`).
+
+### Agent Guidance
+
+- When a keyword can tokenise either as a lexer token OR as a plain IDENTIFIER (lexer-mode-dependent), register the same `_kw_*` function in both the token-keyed and IDENT-keyed dispatch dicts. Pattern is in `flow.py:_f_kw_priority` / `_FLOW_KEYWORDS` + `_FLOW_IDENT_KEYWORDS`.
+
 ## [0.70.28] - 2026-05-16
 
 ### Changed
