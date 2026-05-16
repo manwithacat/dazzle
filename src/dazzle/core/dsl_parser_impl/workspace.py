@@ -422,6 +422,9 @@ class WorkspaceParserMixin:
     def _parse_pipeline_stages_block(self) -> list[ir.PipelineStageSpec]:
         """Parse the indented body of a pipeline_steps ``stages:`` block (#890).
 
+        Refactored to extract one helper per stage entry, leaving the
+        outer block as a thin dash-list loop.
+
         Same dash-list shape as ``actions:``. Each entry leads with
         ``label:`` and carries optional ``caption:`` + ``value:``::
 
@@ -437,8 +440,8 @@ class WorkspaceParserMixin:
         either an aggregate expression (same vocabulary as region-level
         ``aggregate:``) OR a quoted literal string. The runtime
         distinguishes via `_AGGREGATE_RE` — matches fire a query,
-        non-matches render verbatim. Replaces the v0.61.56 ``aggregate:``
-        key (clean break, no shim per project policy).
+        non-matches render verbatim. v0.61.78 (#911): ``progress:`` shares
+        the same acceptor — literal numeric or aggregate expression.
 
         Distinct from the legacy ``stages: [a, b, c]`` bracketed list
         used by ``progress`` mode — the calling parser branch shape-
@@ -450,85 +453,99 @@ class WorkspaceParserMixin:
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    'pipeline stages entries must start with `- label: "..."`',
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()
-            label_kw = self.expect_identifier_or_keyword().value
-            if label_kw != "label":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"pipeline stages entry must start with `label:`, got {label_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            label_str = self.expect(TokenType.STRING).value
-            self.skip_newlines()
-
-            caption_str = ""
-            value_str = ""
-            progress_str = ""
-
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "caption":
-                        caption_str = self.expect(TokenType.STRING).value
-                        self.skip_newlines()
-                    elif key in ("value", "progress"):
-                        # v0.61.66: accept either a quoted literal
-                        # string or an unquoted aggregate expression.
-                        # Quoted shape — common for flow-card labels
-                        # like "Daily 02:00 UTC". Unquoted shape — same
-                        # as region-level `aggregate:` parser.
-                        # v0.61.78 (#911): `progress:` shares the same
-                        # acceptor — literal numeric ("74") or aggregate
-                        # expression. Runtime clamps 0-100.
-                        if self.match(TokenType.STRING):
-                            payload = self.advance().value
-                        else:
-                            parts: list[str] = []
-                            while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                                parts.append(self.advance().value)
-                            payload = " ".join(parts)
-                        if key == "value":
-                            value_str = payload
-                        else:
-                            progress_str = payload
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown pipeline stages key {key!r}. "
-                            f"Expected one of: caption, value, progress.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            stages.append(
-                ir.PipelineStageSpec(
-                    label=label_str,
-                    caption=caption_str,
-                    value=value_str,
-                    progress=progress_str,
-                )
-            )
+            stages.append(self._parse_pipeline_stage_entry())
         return stages
+
+    def _parse_pipeline_stage_entry(self) -> ir.PipelineStageSpec:
+        """Parse one ``- label: "..." [caption/value/progress: ...]`` entry."""
+        if not self.match(TokenType.MINUS):
+            tok = self.current_token()
+            raise make_parse_error(
+                'pipeline stages entries must start with `- label: "..."`',
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume `-`
+        label_str = self._parse_pipeline_stage_label()
+        caption_str, value_str, progress_str = self._parse_pipeline_stage_kv_block()
+        return ir.PipelineStageSpec(
+            label=label_str,
+            caption=caption_str,
+            value=value_str,
+            progress=progress_str,
+        )
+
+    def _parse_pipeline_stage_label(self) -> str:
+        """Consume ``label: "<str>"`` — the required first key after the dash."""
+        label_kw = self.expect_identifier_or_keyword().value
+        if label_kw != "label":
+            tok = self.current_token()
+            raise make_parse_error(
+                f"pipeline stages entry must start with `label:`, got {label_kw!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.expect(TokenType.COLON)
+        label_str: str = self.expect(TokenType.STRING).value
+        self.skip_newlines()
+        return label_str
+
+    def _parse_pipeline_stage_kv_block(self) -> tuple[str, str, str]:
+        """Consume the optional indented ``caption/value/progress`` continuation.
+
+        Returns ``(caption, value, progress)`` — each empty when omitted.
+        """
+        caption_str = ""
+        value_str = ""
+        progress_str = ""
+        if not self.match(TokenType.INDENT):
+            return caption_str, value_str, progress_str
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "caption":
+                caption_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key in ("value", "progress"):
+                payload = self._parse_pipeline_stage_payload()
+                if key == "value":
+                    value_str = payload
+                else:
+                    progress_str = payload
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown pipeline stages key {key!r}. "
+                    f"Expected one of: caption, value, progress.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+        self.expect(TokenType.DEDENT)
+        return caption_str, value_str, progress_str
+
+    def _parse_pipeline_stage_payload(self) -> str:
+        """Consume a quoted literal OR unquoted aggregate expression.
+
+        Quoted shape — common for flow-card labels like ``"Daily 02:00 UTC"``.
+        Unquoted shape — token stream up to NEWLINE/DEDENT, joined with
+        spaces (same shape as region-level ``aggregate:`` parser).
+        """
+        if self.match(TokenType.STRING):
+            payload: str = self.advance().value
+            return payload
+        parts: list[str] = []
+        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+            parts.append(self.advance().value)
+        return " ".join(parts)
 
     def _parse_profile_stats_block(self) -> list[ir.ProfileCardStatSpec]:
         """Parse the indented body of a profile_card ``stats:`` block (#892).

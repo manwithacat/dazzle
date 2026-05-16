@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.34] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `_parse_via_condition` refactored via phase-helper extraction.** Second non-dispatch-shape refactor. The 153-line flat function in `src/dazzle/core/dsl_parser_impl/entity.py` becomes a 21-line orchestration shell + 7 mixin helpers (`_parse_via_junction_name`, `_expect_via_lparen`, `_parse_via_bindings`, `_parse_via_binding`, `_parse_via_field_path`, `_parse_via_operator`, `_parse_via_target`, `_validate_via_bindings`). Each helper handles one phase of the ``via JunctionEntity(field = target, ...)`` grammar. Byte-identical IR verified against the 1 real ViaCondition in `fixtures/shapes_validation/dsl/entities.dsl` and a synthetic 3-via fixture covering dotted-path bindings, ``!=`` operator, ``null`` target, and ``current_user.attr`` form.
+- **#1088 follow-on: `_parse_pipeline_stages_block` refactored via per-entry helper extraction.** Third non-dispatch-shape refactor. The 109-line dash-list parser in `src/dazzle/core/dsl_parser_impl/workspace.py` becomes a 9-line outer loop + 4 helpers (`_parse_pipeline_stage_entry` for one entry, `_parse_pipeline_stage_label`, `_parse_pipeline_stage_kv_block`, `_parse_pipeline_stage_payload` for the quoted-literal-vs-aggregate value dispatch). The two-level nesting (outer dash-list × inner key/value block) collapses to single-level per helper. Byte-identical IR verified against the 1 real pipeline_steps block in `examples/ops_dashboard/dsl/app.dsl` (4 stages) via the 157-WorkspaceRegion snapshot.
+
 ## [0.70.33] - 2026-05-16
 
 ### Changed

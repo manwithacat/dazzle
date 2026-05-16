@@ -1150,20 +1150,32 @@ class EntityParserMixin:
         )
 
     def _parse_via_condition(self) -> ir.ConditionExpr:
-        """Parse a via clause inside a scope: rule.
+        """Parse a ``via JunctionEntity(...)`` clause inside a ``scope:`` rule.
 
-        Syntax:
+        Refactored from a 153-line flat function into a thin orchestration
+        sequence + four extracted helpers (junction name, binding loop,
+        post-loop validation, and the per-binding parser).
+
+        Syntax::
+
             via JunctionEntity(field = current_user.attr, field = id, field = null)
 
-        Returns:
-            ConditionExpr with via_condition populated.
-
-        Raises:
-            ParseError: If syntax is invalid or bindings are missing required types.
+        Returns a :class:`ir.ConditionExpr` with ``via_condition`` populated.
         """
         self.expect(TokenType.VIA)
+        junction_entity = self._parse_via_junction_name()
+        self._expect_via_lparen(junction_entity)
+        bindings = self._parse_via_bindings()
+        self.expect(TokenType.RPAREN)
+        self._validate_via_bindings(bindings)
+        return ir.ConditionExpr(
+            via_condition=ir.ViaCondition(junction_entity=junction_entity, bindings=bindings)
+        )
 
-        # Expect the junction entity name
+    # ---------- _parse_via_condition phase helpers ---------- #
+
+    def _parse_via_junction_name(self) -> str:
+        """Phase: consume the ``JunctionEntity`` IDENT after ``via``."""
         junction_token = self.current_token()
         if junction_token.type != TokenType.IDENTIFIER:
             raise make_parse_error(
@@ -1172,10 +1184,12 @@ class EntityParserMixin:
                 junction_token.line,
                 junction_token.column,
             )
-        junction_entity = junction_token.value
         self.advance()
+        name: str = junction_token.value
+        return name
 
-        # Expect opening paren
+    def _expect_via_lparen(self, junction_entity: str) -> None:
+        """Phase: consume the ``(`` after the junction-entity name."""
         lparen_token = self.current_token()
         if not self.match(TokenType.LPAREN):
             raise make_parse_error(
@@ -1186,94 +1200,106 @@ class EntityParserMixin:
             )
         self.advance()
 
-        # Parse comma-separated bindings until RPAREN
+    def _parse_via_bindings(self) -> list[ir.ViaBinding]:
+        """Phase: consume the comma-separated bindings up to (but not past) ``)``."""
         bindings: list[ir.ViaBinding] = []
         while not self.match(TokenType.RPAREN):
-            # Parse junction_field
-            field_token = self.current_token()
-            if field_token.type != TokenType.IDENTIFIER and not self._is_keyword_as_identifier():
-                raise make_parse_error(
-                    f"Expected field name in via binding, got {field_token.type.value!r}",
-                    self.file,
-                    field_token.line,
-                    field_token.column,
-                )
-            junction_field = field_token.value
-            self.advance()
-
-            # Accumulate dotted path segments (#858): `teaching_group.teacher.user`
-            # resolves at compile time via a JOIN chain through the junction's
-            # FK graph. The IR stores the full dotted string in junction_field.
-            while self.match(TokenType.DOT):
-                self.advance()
-                segment_token = self.current_token()
-                if segment_token.type != TokenType.IDENTIFIER:
-                    raise make_parse_error(
-                        f"Expected field name after '.' in via binding, got {segment_token.type.value!r}",
-                        self.file,
-                        segment_token.line,
-                        segment_token.column,
-                    )
-                junction_field = f"{junction_field}.{segment_token.value}"
-                self.advance()
-
-            # Parse operator: = or !=
-            op_token = self.current_token()
-            if self.match(TokenType.EQUALS):
-                operator = "="
-                self.advance()
-            elif self.match(TokenType.NOT_EQUALS):
-                operator = "!="
-                self.advance()
-            else:
-                raise make_parse_error(
-                    f"Expected '=' or '!=' in via binding, got {op_token.type.value!r}",
-                    self.file,
-                    op_token.line,
-                    op_token.column,
-                )
-
-            # Parse target: current_user[.attr], null, None, or field name
-            target_token = self.current_token()
-            if target_token.type != TokenType.IDENTIFIER:
-                raise make_parse_error(
-                    f"Expected target value in via binding, got {target_token.type.value!r}",
-                    self.file,
-                    target_token.line,
-                    target_token.column,
-                )
-            target = target_token.value
-            self.advance()
-
-            # If target is "current_user" and next token is DOT, parse dotted attribute
-            if target == "current_user" and self.match(TokenType.DOT):
-                self.advance()
-                attr_token = self.current_token()
-                if attr_token.type != TokenType.IDENTIFIER:
-                    raise make_parse_error(
-                        f"Expected attribute name after 'current_user.', got {attr_token.type.value!r}",
-                        self.file,
-                        attr_token.line,
-                        attr_token.column,
-                    )
-                target = f"current_user.{attr_token.value}"
-                self.advance()
-
-            # Normalise None → null
-            if target == "None":
-                target = "null"
-
-            bindings.append(
-                ir.ViaBinding(junction_field=junction_field, target=target, operator=operator)
-            )
-
-            # Consume comma between bindings
+            bindings.append(self._parse_via_binding())
             if self.match(TokenType.COMMA):
                 self.advance()
+        return bindings
 
-        self.expect(TokenType.RPAREN)
+    def _parse_via_binding(self) -> ir.ViaBinding:
+        """Phase: parse one ``<field[.path]> <op> <target>`` binding."""
+        junction_field = self._parse_via_field_path()
+        operator = self._parse_via_operator()
+        target = self._parse_via_target()
+        return ir.ViaBinding(junction_field=junction_field, target=target, operator=operator)
 
-        # Validate: must have at least one entity binding and one user binding
+    def _parse_via_field_path(self) -> str:
+        """Phase: parse ``field`` or ``field.path.segments`` (#858)."""
+        field_token = self.current_token()
+        if field_token.type != TokenType.IDENTIFIER and not self._is_keyword_as_identifier():
+            raise make_parse_error(
+                f"Expected field name in via binding, got {field_token.type.value!r}",
+                self.file,
+                field_token.line,
+                field_token.column,
+            )
+        path: str = field_token.value
+        self.advance()
+        # Dotted continuation: #858 — JOIN-chain through the junction's FK graph.
+        while self.match(TokenType.DOT):
+            self.advance()
+            segment_token = self.current_token()
+            if segment_token.type != TokenType.IDENTIFIER:
+                raise make_parse_error(
+                    f"Expected field name after '.' in via binding, "
+                    f"got {segment_token.type.value!r}",
+                    self.file,
+                    segment_token.line,
+                    segment_token.column,
+                )
+            path = f"{path}.{segment_token.value}"
+            self.advance()
+        return path
+
+    def _parse_via_operator(self) -> str:
+        """Phase: consume ``=`` or ``!=`` between field and target."""
+        op_token = self.current_token()
+        if self.match(TokenType.EQUALS):
+            self.advance()
+            return "="
+        if self.match(TokenType.NOT_EQUALS):
+            self.advance()
+            return "!="
+        raise make_parse_error(
+            f"Expected '=' or '!=' in via binding, got {op_token.type.value!r}",
+            self.file,
+            op_token.line,
+            op_token.column,
+        )
+
+    def _parse_via_target(self) -> str:
+        """Phase: parse ``current_user[.attr]`` / ``null`` / field name target.
+
+        Normalises ``None`` → ``null`` (legacy lenient form).
+        """
+        target_token = self.current_token()
+        if target_token.type != TokenType.IDENTIFIER:
+            raise make_parse_error(
+                f"Expected target value in via binding, got {target_token.type.value!r}",
+                self.file,
+                target_token.line,
+                target_token.column,
+            )
+        target: str = target_token.value
+        self.advance()
+        # current_user.attr form
+        if target == "current_user" and self.match(TokenType.DOT):
+            self.advance()
+            attr_token = self.current_token()
+            if attr_token.type != TokenType.IDENTIFIER:
+                raise make_parse_error(
+                    f"Expected attribute name after 'current_user.', got {attr_token.type.value!r}",
+                    self.file,
+                    attr_token.line,
+                    attr_token.column,
+                )
+            target = f"current_user.{attr_token.value}"
+            self.advance()
+        # Normalise None → null
+        if target == "None":
+            target = "null"
+        return target
+
+    def _validate_via_bindings(self, bindings: list[ir.ViaBinding]) -> None:
+        """Phase: require at least one entity binding and one user binding.
+
+        Entity bindings link the junction table back to the scoped entity
+        (e.g. ``contact = id``). User bindings tie the rule to the requester
+        (e.g. ``agent = current_user`` or ``agent = current_user.contact``).
+        """
         entity_bindings = [
             b
             for b in bindings
@@ -1300,9 +1326,6 @@ class EntityParserMixin:
                 tok.line,
                 tok.column,
             )
-
-        via = ir.ViaCondition(junction_entity=junction_entity, bindings=bindings)
-        return ir.ConditionExpr(via_condition=via)
 
     def _parse_bulk_config(self) -> ir.BulkConfig:
         """
