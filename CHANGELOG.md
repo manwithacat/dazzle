@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.42] - 2026-05-16
+
+### Fixed
+
+- **#1111: Redis consumer loop hammers Redis on idle streams.** Two related bugs in `RedisBus._consumer_loop` produced a per-second log + retry cycle on every idle subscription:
+  - `socket_timeout=5.0` raced against `block_ms=5000` — the redis-py socket timer fired *just before* the legitimate blocking `XREADGROUP` read would have completed, raising `TimeoutError` every loop. `connect()` now derives `socket_timeout = block_ms/1000 + 2.0` so the blocking read always wins.
+  - The broad `except Exception` clause caught those timeouts (the normal happy path on an idle stream) and logged at ERROR + slept 1s. The loop now has a dedicated `except TimeoutError` branch that logs at DEBUG and re-enters with no sleep, AND the genuine-transport-error path uses exponential backoff (1s base, 30s cap, reset on any successful read).
+- Net effect on Heroku Redis Streams: 1 log/sec on idle subscriptions → ~0; failed-Redis retry cadence: fixed 1s → exponential with cap.
+
+### Added
+
+- **`tests/unit/test_redis_consumer_backoff.py`** — 4 regression gates pinning the `block_s + 2.0` socket-timeout relationship, the dedicated `TimeoutError` branch, the backoff doubling-with-cap, and the success-resets-backoff contract.
+
 ## [0.70.41] - 2026-05-16
 
 ### Fixed

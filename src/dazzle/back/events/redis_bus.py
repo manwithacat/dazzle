@@ -156,13 +156,19 @@ class RedisBus(BaseEventBus):
         runs where the whole ``dazzle serve --local`` boot appeared to
         freeze at "Waiting for application startup".
         """
+        # socket_timeout MUST be strictly greater than block_ms (default
+        # 5000ms) — otherwise the redis-py socket timeout races against
+        # legitimate blocking XREADGROUP reads on idle streams and fires
+        # a spurious TimeoutError every cycle (#1111).
+        block_s = self._config.block_ms / 1000.0
         kwargs: dict[str, Any] = {
             "decode_responses": False,  # We handle encoding ourselves
-            # Connect/read timeouts — tight enough to fail a dev/test
-            # server fast (<5s) but loose enough to tolerate transient
-            # slowness on production-grade Redis.
+            # Connect timeout stays tight (fast-fail unreachable Redis).
             "socket_connect_timeout": 3.0,
-            "socket_timeout": 5.0,
+            # Read timeout = blocking-read budget + 2s slack so an idle
+            # stream's XREADGROUP can complete its full block_ms before
+            # the socket layer gets involved.
+            "socket_timeout": block_s + 2.0,
         }
         # Heroku Redis uses self-signed certs — skip verification for rediss:// URLs
         if self._config.url.startswith("rediss://"):
@@ -615,6 +621,13 @@ class RedisBus(BaseEventBus):
         stream_key = self._stream_key(topic)
         offset_key = self._offset_key(topic, group_id)
 
+        # Exponential backoff state for transport errors (#1111).
+        # Reset to base delay after any successful read so a transient
+        # network blip doesn't permanently slow the consumer.
+        _BACKOFF_BASE_S = 1.0
+        _BACKOFF_MAX_S = 30.0
+        backoff_s = _BACKOFF_BASE_S
+
         while self._running:
             try:
                 # First, try to recover any pending messages that timed out
@@ -628,6 +641,10 @@ class RedisBus(BaseEventBus):
                     count=self._config.batch_size,
                     block=self._config.block_ms,
                 )
+
+                # Successful read (even an empty one) clears the
+                # transport-error backoff window (#1111).
+                backoff_s = _BACKOFF_BASE_S
 
                 if not messages:
                     continue
@@ -659,9 +676,29 @@ class RedisBus(BaseEventBus):
 
             except asyncio.CancelledError:
                 break
+            except TimeoutError as e:
+                # Empty-stream blocking-read timeout — the happy path on
+                # an idle stream, not an error. Re-enter the loop with
+                # no sleep so XREADGROUP can re-arm immediately (#1111).
+                logger.debug(
+                    "Consumer XREADGROUP timeout (idle stream) for %s/%s: %s",
+                    topic,
+                    group_id,
+                    e,
+                )
+                backoff_s = _BACKOFF_BASE_S
             except Exception as e:
-                logger.error("Consumer loop error for %s/%s: %s", topic, group_id, e)
-                await asyncio.sleep(1)
+                # Genuine transport error — exponential backoff with cap
+                # so a stuck Redis doesn't get hammered (#1111).
+                logger.error(
+                    "Consumer loop error for %s/%s (retry in %.1fs): %s",
+                    topic,
+                    group_id,
+                    backoff_s,
+                    e,
+                )
+                await asyncio.sleep(backoff_s)
+                backoff_s = min(backoff_s * 2, _BACKOFF_MAX_S)
 
     async def _recover_pending(
         self,
