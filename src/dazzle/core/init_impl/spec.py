@@ -325,6 +325,94 @@ _Tips for collaborating with LLM agents to turn this spec into DAZZLE DSL:_
 
 **Remember**: Start simple! You can always add more features later.
 Better to have a working v1 than a perfect plan that never ships. 🚀
+
+---
+
+## Domain map
+
+> **Convention**: as the DSL grows, list each domain → its entities → the
+> per-feature design doc that describes the *why*. Run `dazzle spec status`
+> to see which DSL entities are mentioned here vs missing.
+
+| Domain | Entities | Design doc |
+|---|---|---|
+| _(populated as you add entities — start in `docs/specs/`)_ | | |
+
+## Keeping spec and DSL in sync
+
+The DSL is the executable spec — Dazzle generates the API, schema, and
+UI from `dsl/*.dsl`. This `SPEC.md` is the *index over* the DSL: it
+explains *why* the domain looks the way it does, *what's intentional vs
+accidental*, *what's planned vs implemented*. A new contributor (or a
+fresh agent session) should be able to land here and understand the
+shape of the project before reading any code.
+
+Drift between the DSL and this index is the structural failure mode of
+agent-driven iteration. Two affordances ship with Dazzle to catch it:
+
+- **`dazzle spec status`** — read-only drift report. Lists DSL entities
+  not mentioned in `SPEC.md` and (heuristically) TitleCase candidates
+  in `SPEC.md` that don't map to a DSL entity. Run before commit when
+  you've added or renamed an entity.
+- **`docs/specs/`** — per-feature design-doc convention. One markdown
+  file per non-trivial domain change, describing motivation + decisions
+  the DSL alone doesn't capture. Linked from the Domain map above.
 """
 
     spec_path.write_text(spec_content)
+
+
+_DOCS_SPECS_README = """# Per-feature design docs
+
+This directory is the per-feature design-doc home for the project.
+One markdown file per non-trivial domain change (a new entity family,
+a workflow with multi-surface state, a non-obvious access-control
+shape, etc.).
+
+## Convention
+
+- **File name**: `YYYY-MM-DD-<slug>.md` (date-prefixed for chronological
+  scan; slug describes the change).
+- **Content**: motivation + decisions the DSL alone doesn't capture.
+  The DSL is the *what*; this doc is the *why*.
+- **Link from SPEC.md**: add a row to the Domain map table pointing at
+  this doc so a fresh reader can find it.
+
+## When to write one
+
+- Adding a new entity that introduces a new domain concept (not just
+  another CRUD table).
+- Changing the shape of an existing entity in a way that affects how
+  callers / personas / workflows interact with it.
+- Workflow / state-machine changes that span multiple entities or
+  surfaces.
+- Access-control / scope changes whose intent isn't obvious from the
+  `permit:`/`scope:` block alone.
+
+## When NOT to write one
+
+- One-line bug fixes or rename refactors — the commit message is enough.
+- Pure UX tweaks that don't change the domain model.
+- Framework upgrades.
+
+## Drift detection
+
+Run `dazzle spec status` from the project root to see which DSL
+entities are mentioned in `SPEC.md` vs missing. Combine with
+`--fail-on-drift` in CI to gate on freshness.
+"""
+
+
+def create_specs_scaffold(target_dir: Path) -> None:
+    """Create the ``docs/specs/`` directory + a convention README (#1106).
+
+    Lays down the per-feature design-doc home referenced by the
+    Domain map section in ``SPEC.md``. Idempotent — silently skips
+    when the directory or README already exists so re-running
+    ``dazzle init`` on a partially-populated tree is safe.
+    """
+    specs_dir = target_dir / "docs" / "specs"
+    specs_dir.mkdir(parents=True, exist_ok=True)
+    readme = specs_dir / "README.md"
+    if not readme.exists():
+        readme.write_text(_DOCS_SPECS_README)

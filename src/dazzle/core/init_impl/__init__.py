@@ -12,7 +12,7 @@ This package contains modular implementations for project initialization:
 
 from .project import create_mcp_config, init_project, list_examples
 from .reset import reset_project, verify_project
-from .spec import create_spec_template
+from .spec import create_spec_template, create_specs_scaffold
 from .templates import (
     GENERATED_DIRECTORIES,
     copy_template,
@@ -38,6 +38,7 @@ __all__ = [
     "copy_template",
     # Spec
     "create_spec_template",
+    "create_specs_scaffold",
     # Project init
     "list_examples",
     "create_mcp_config",

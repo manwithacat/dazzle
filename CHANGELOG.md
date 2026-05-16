@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.46] - 2026-05-16
+
+### Added
+
+- **#1106 Proposal 2: `dazzle init` scaffolds the spec-index convention from day one.** Builds on Proposal 1 (`dazzle spec status`) by making the Domain map a first-class artifact at project creation time, not a thing someone might think to add later. Two pieces:
+  - `SPEC.md` template now includes a `## Domain map` placeholder table (Domain → Entities → Design doc) AND a `## Keeping spec and DSL in sync` section that explains the drift failure mode and points at `dazzle spec status`.
+  - `docs/specs/` directory scaffolded with a `README.md` describing the per-feature design-doc convention (`YYYY-MM-DD-<slug>.md`, when-to-write / when-not-to, link from SPEC.md Domain map). `create_specs_scaffold(target_dir)` is idempotent — re-running `dazzle init` on a partially-populated tree won't clobber a custom README.
+
+### Agent Guidance
+
+- When adding a new entity to a project, also add a row to `SPEC.md`'s Domain map (and, for non-trivial new domains, a `docs/specs/<date>-<slug>.md` design doc linked from that row). `dazzle spec status` will surface missing rows; `dazzle spec status --fail-on-drift` in CI makes the gap loud.
+
 ## [0.70.45] - 2026-05-16
 
 ### Added

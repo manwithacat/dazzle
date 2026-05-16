@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..llm_context import create_llm_instrumentation
-from .spec import create_spec_template
+from .spec import create_spec_template, create_specs_scaffold
 from .templates import copy_template
 from .validation import InitError, sanitize_name
 
@@ -163,6 +163,8 @@ def init_project(
     if not from_example:
         log("  Creating SPEC.md template...")
         create_spec_template(target_dir, project_name, title)
+        log("  Creating docs/specs/ scaffold...")
+        create_specs_scaffold(target_dir)
 
     # Create .mcp.json if it doesn't exist
     mcp_path = target_dir / ".mcp.json"
