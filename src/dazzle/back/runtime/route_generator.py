@@ -4019,6 +4019,7 @@ class RouteGenerator:
         self,
         endpoints: list[EndpointSpec],
         service_specs: dict[str, ServiceSpec] | None = None,
+        claimed_routes: set[tuple[str, str]] | None = None,
     ) -> APIRouter:
         """
         Generate routes for all endpoints.
@@ -4031,11 +4032,17 @@ class RouteGenerator:
         Args:
             endpoints: List of endpoint specifications
             service_specs: Optional dictionary mapping service names to specs
+            claimed_routes: ``(method, path)`` pairs already mounted by a
+                project override or extension router. Endpoints matching one
+                of these are skipped — the override is the intended handler
+                and the generic CRUD mount would only trip the conflict
+                warning on every boot (#1101).
 
         Returns:
             FastAPI router with all routes
         """
         service_specs = service_specs or {}
+        claimed_routes = claimed_routes or set()
 
         # Register /{plural}/create guard routes BEFORE main routes so
         # FastAPI doesn't match "create" as a UUID {id} parameter (#598).
@@ -4066,6 +4073,16 @@ class RouteGenerator:
             return (-ep.path.count("/"), 0 if "{" not in ep.path else 1)
 
         for endpoint in sorted(endpoints, key=_route_sort_key):
+            method = (
+                endpoint.method.value if hasattr(endpoint.method, "value") else str(endpoint.method)
+            )
+            if (method, endpoint.path) in claimed_routes:
+                logger.info(
+                    "Skipping generic CRUD %s %s — already provided by a project override",
+                    method,
+                    endpoint.path,
+                )
+                continue
             service_spec = service_specs.get(endpoint.service)
             self.generate_route(endpoint, service_spec)
 

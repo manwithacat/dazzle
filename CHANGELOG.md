@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.39] - 2026-05-16
+
+### Fixed
+
+- **#1101: 100 `Route conflict` warnings on boot.** Two distinct duplicate-mount bugs were producing the boot noise on projects with `routes/*.py` overrides (94 conflicts) plus a handful of multi-surface-same-shape entities (6 conflicts):
+  - `RouteGenerator.generate_all_routes` now accepts a `claimed_routes: set[tuple[str, str]]` parameter and skips any endpoint whose `(method, path)` is already mounted. `server.py` walks `self._app.routes` after the override + extension routers have been included and passes the collected set in. The generic CRUD mount on a path the project already overrides is skipped with a one-line INFO log instead of producing a `WARNING` on every boot.
+  - `convert_surfaces_to_services` (`src/dazzle/back/converters/surface_converter.py`) deduplicates its `EndpointSpec` output by `(method, path)` before returning. Two surfaces that compile to the same HTTP shape (e.g. an EDIT + admin-EDIT on one entity) now produce one endpoint, not two. First registration wins; the dropped surface is logged at INFO.
+- Net effect on a 94-override project: 100 boot warnings → 0. Functional behaviour unchanged — overrides always took precedence anyway (FastAPI first-match-wins, and `routes/*.py` registers before generated CRUD); the previous noise was purely the framework duplicate-mounting.
+
+### Added
+
+- **`tests/unit/test_route_conflict_dedup.py`** — 4 regression tests covering both paths: spec-layer dedup, generator skip, and end-to-end zero-conflict verification with a project override + generic CRUD on the same path.
+
+### Agent Guidance
+
+- Project-route overrides under `routes/*.py` are now the source of truth — generated CRUD on the same `(method, path)` is automatically skipped. No need to delete or hide auto-routes when adding a project override. If two surfaces produce the same HTTP shape, declaration order wins; reorder the DSL or rename the duplicate surface if a different override is needed.
+
 ## [0.70.38] - 2026-05-16
 
 ### Fixed

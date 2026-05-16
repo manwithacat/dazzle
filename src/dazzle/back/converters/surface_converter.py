@@ -5,6 +5,8 @@ This module infers backend services from surface definitions, creating
 CRUD operations based on surface modes.
 """
 
+import logging
+
 from dazzle.back.specs import (
     DomainOperation,
     EndpointSpec,
@@ -16,6 +18,8 @@ from dazzle.back.specs import (
 )
 from dazzle.core import ir
 from dazzle.core.strings import to_api_plural
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Service Generation
@@ -401,4 +405,31 @@ def convert_surfaces_to_services(
             )
             endpoints.append(list_endpoint)
 
-    return services, endpoints
+    return services, _dedupe_endpoints(endpoints)
+
+
+def _dedupe_endpoints(endpoints: list[EndpointSpec]) -> list[EndpointSpec]:
+    """Drop duplicate ``(method, path)`` endpoints, keeping the first.
+
+    Two surfaces can map to the same HTTP shape — two EDIT surfaces on the
+    same entity, or a non-CRUD mode that falls through to ``/<surface-name>``
+    and happens to match another surface's path. FastAPI silently keeps the
+    first registration; the second mount fires `route_validator`'s
+    ``Route conflict`` warning on every boot (#1101). De-dupe at the spec
+    layer so the warning channel stays useful for genuine conflicts.
+    """
+    seen: set[tuple[str, str]] = set()
+    deduped: list[EndpointSpec] = []
+    for ep in endpoints:
+        key = (ep.method.value if hasattr(ep.method, "value") else str(ep.method), ep.path)
+        if key in seen:
+            logger.info(
+                "Dropping duplicate endpoint %s %s (%s) — first registration wins",
+                key[0],
+                key[1],
+                ep.name,
+            )
+            continue
+        seen.add(key)
+        deduped.append(ep)
+    return deduped

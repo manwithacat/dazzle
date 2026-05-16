@@ -1209,9 +1209,23 @@ class DazzleBackendApp:
                         persona.link_via,
                     )
 
+        # Collect (method, path) pairs already claimed by project overrides
+        # and extension routers so the generic CRUD generator can skip
+        # them — first-match still wins at request time, but a skipped
+        # mount means no boot-time "Route conflict" warning (#1101).
+        claimed_routes: set[tuple[str, str]] = set()
+        for _route in self._app.routes:
+            _methods = getattr(_route, "methods", None)
+            _path = getattr(_route, "path", None)
+            if not _methods or not _path:
+                continue
+            for _m in _methods:
+                claimed_routes.add((_m, _path))
+
         router = route_generator.generate_all_routes(
             self._endpoint_specs,
             service_specs,
+            claimed_routes=claimed_routes,
         )
         self._app.include_router(router)
 
