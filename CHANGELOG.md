@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.43] - 2026-05-16
+
+### Fixed
+
+- **#1105: JWT auth routes wired through `AuthSubsystem`.** `create_jwt_auth_routes` was implemented + tested but never invoked after #536 extracted it from the monolithic auth module — `_init_social_auth` built a `JWTService` only when OAuth providers were configured and never mounted the bearer-token endpoints. `AuthSubsystem.startup` now calls a new `_register_jwt_routes` after social auth, mounting the 6 OAuth2-compatible endpoints (`/auth/token`, `/auth/token/refresh`, `/auth/token/revoke`, `/auth/me/jwt`, `/auth/sessions` GET+DELETE) for every deployment with `DATABASE_URL` set. Routes 401 when `JWT_SECRET` is unset (auto-generated secret is fine for dev — warning is logged on startup).
+
+### Changed
+
+- **`AuthSubsystem._init_social_auth` refactored.** JWT-service construction extracted to a shared `_ensure_jwt_service` helper so the standalone JWT path and the OAuth/social path use the SAME `JWTService` + `TokenStore` instance — refresh tokens issued through either path now validate against the same key material. `_ensure_jwt_service` is idempotent; calling it after social auth already built the service is a no-op.
+
+### Added
+
+- **`tests/unit/test_auth_subsystem_jwt_wiring.py`** — 8 regression tests pinning the standalone mount, the DB-URL gate, idempotency, service-reuse, and the startup-call sequencing + enable-auth/auth-store gates.
+
+### Agent Guidance
+
+- When introducing a new auth flow that issues JWTs (e.g. email verification, magic link mobile callback), call `self._ensure_jwt_service(ctx)` to lazily build (or reuse) the framework's shared `JWTService`/`TokenStore`. Do not instantiate `JWTService(JWTConfig(...))` directly inside a new subsystem method — that bypasses `JWT_SECRET` handling and produces a service that won't validate tokens minted by other paths.
+
 ## [0.70.42] - 2026-05-16
 
 ### Fixed

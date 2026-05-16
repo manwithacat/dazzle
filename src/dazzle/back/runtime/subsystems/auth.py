@@ -26,6 +26,11 @@ class AuthSubsystem:
             return
         self._register_auth_routes(ctx)
         self._init_social_auth(ctx)
+        # JWT bearer-token routes — mounted after social auth so we can
+        # reuse the JWTService/TokenStore it built when OAuth is enabled.
+        # Standalone JWT (no OAuth) also works — this method constructs
+        # the service if social auth didn't (#1105).
+        self._register_jwt_routes(ctx)
 
     def _register_auth_routes(self, ctx: SubsystemContext) -> None:
         """Register login/register/logout, 2FA, and JWT auth routes."""
@@ -148,35 +153,39 @@ class AuthSubsystem:
         except Exception:
             logger.info("SES webhooks not available, skipping registration")
 
-    def _init_social_auth(self, ctx: SubsystemContext) -> None:
-        """Initialize social auth (OAuth2) if providers are configured."""
-        if not ctx.auth_config or not ctx.auth_store:
-            return
+    def _ensure_jwt_service(self, ctx: SubsystemContext) -> bool:
+        """Build (or reuse) JWTService + TokenStore, idempotently.
 
-        # Check if OAuth providers are configured
-        oauth_providers = getattr(ctx.auth_config, "oauth_providers", None)
-        if not oauth_providers:
-            return
+        Sets ``self._jwt_service`` and ``self._token_store`` on success.
+        Returns ``True`` if both are now populated, ``False`` if a hard
+        prerequisite is missing (e.g. no DATABASE_URL — TokenStore is
+        Postgres-only). Safe to call multiple times.
+
+        Used by both ``_init_social_auth`` and ``_register_jwt_routes``
+        so the two paths share a single JWTService instance — refresh
+        tokens issued via password login + ``/auth/token`` and via
+        OAuth callback validate against the same key material (#1105).
+        """
+        if self._jwt_service is not None and self._token_store is not None:
+            return True
+        if not ctx.auth_config or not ctx.auth_store:
+            return False
+        if not ctx.database_url:
+            return False
 
         import os
 
         try:
             from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
-            from dazzle.back.runtime.social_auth import (
-                SocialAuthService,
-                create_social_auth_routes,
-            )
             from dazzle.back.runtime.token_store import TokenStore
         except ImportError as e:
-            logger.warning("Social auth dependencies not available: %s", e)
-            return
+            logger.warning("JWT auth dependencies not available: %s", e)
+            return False
 
-        # Get JWT config from auth_config
         jwt_cfg = getattr(ctx.auth_config, "jwt", None)
         access_minutes = getattr(jwt_cfg, "access_token_minutes", 15) if jwt_cfg else 15
         refresh_days = getattr(jwt_cfg, "refresh_token_days", 7) if jwt_cfg else 7
 
-        # Create JWT service
         jwt_secret = os.getenv("JWT_SECRET")
         jwt_config_kwargs: dict[str, Any] = {
             "access_token_expire_minutes": access_minutes,
@@ -190,16 +199,77 @@ class AuthSubsystem:
                 "Sessions will be invalidated on server restart. "
                 "Set JWT_SECRET in your environment for production use."
             )
-        self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
 
-        # Create token store (PostgreSQL-only)
-        if not ctx.database_url:
+        if self._jwt_service is None:
+            self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
+        if self._token_store is None:
+            self._token_store = TokenStore(
+                database_url=ctx.database_url,
+                token_lifetime_days=refresh_days,
+            )
+        return True
+
+    def _register_jwt_routes(self, ctx: SubsystemContext) -> None:
+        """Mount bearer-token auth routes (#1105).
+
+        ``create_jwt_auth_routes`` was implemented and tested but never
+        wired through the auth subsystem after #536 extracted it from
+        the monolithic ``auth.py``. This method closes that gap: it
+        ensures a ``JWTService`` + ``TokenStore`` exist (reusing the
+        ones built by social auth when available) and registers the
+        6 OAuth2-compatible endpoints (``/auth/token``,
+        ``/auth/token/refresh``, ``/auth/token/revoke``,
+        ``/auth/me/jwt``, ``/auth/sessions`` GET+DELETE).
+
+        Gated on DATABASE_URL because TokenStore is Postgres-only.
+        Routes 401 when ``JWT_SECRET`` is unset (auto-generated secret
+        is fine for dev but the warning is logged on startup).
+        """
+        if not ctx.auth_config or not ctx.auth_store:
+            return
+        if not self._ensure_jwt_service(ctx):
+            logger.info("JWT auth routes not mounted — DATABASE_URL or auth_store is missing")
+            return
+
+        try:
+            from dazzle.back.runtime.auth import create_jwt_auth_routes
+        except ImportError as e:
+            logger.warning("JWT auth dependencies not available: %s", e)
+            return
+
+        assert self._jwt_service is not None  # narrowed by _ensure_jwt_service
+        assert self._token_store is not None
+        ctx.app.include_router(
+            create_jwt_auth_routes(ctx.auth_store, self._jwt_service, self._token_store)
+        )
+        logger.info(
+            "JWT auth routes mounted: /auth/token, /auth/token/refresh, "
+            "/auth/token/revoke, /auth/me/jwt, /auth/sessions"
+        )
+
+    def _init_social_auth(self, ctx: SubsystemContext) -> None:
+        """Initialize social auth (OAuth2) if providers are configured."""
+        if not ctx.auth_config or not ctx.auth_store:
+            return
+
+        # Check if OAuth providers are configured
+        oauth_providers = getattr(ctx.auth_config, "oauth_providers", None)
+        if not oauth_providers:
+            return
+
+        try:
+            from dazzle.back.runtime.social_auth import (
+                SocialAuthService,
+                create_social_auth_routes,
+            )
+        except ImportError as e:
+            logger.warning("Social auth dependencies not available: %s", e)
+            return
+
+        # JWT + TokenStore are shared with _register_jwt_routes via _ensure_jwt_service.
+        if not self._ensure_jwt_service(ctx):
             logger.warning("Social auth requires DATABASE_URL for token storage")
             return
-        self._token_store = TokenStore(
-            database_url=ctx.database_url,
-            token_lifetime_days=refresh_days,
-        )
 
         # Build social auth config from manifest + environment
         social_config = self._build_social_auth_config(oauth_providers)
@@ -208,6 +278,8 @@ class AuthSubsystem:
             return
 
         # Create social auth service
+        assert self._jwt_service is not None  # narrowed by _ensure_jwt_service
+        assert self._token_store is not None
         self._social_auth_service = SocialAuthService(
             auth_store=ctx.auth_store,
             jwt_service=self._jwt_service,
