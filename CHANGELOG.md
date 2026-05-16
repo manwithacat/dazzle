@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.30] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `_parse_grant_relation` migrated to keyword-dispatch.** Seventeenth consumer of the #1097 helper. The 124-line monolith in `src/dazzle/core/dsl_parser_impl/grant.py` becomes a 25-line dispatch shell + 9 `_gr_kw_*` parsers (description/principal_label/confirmation/revoke_verb/granted_by/approved_by/approval/expiry/max_duration) + a tolerant `_skip_unknown_grant_relation_field` on_unknown + a 30-line `_build_grant_relation` builder enforcing the required `granted_by` field. **Critical caveat caught during snapshot diff**: 2 of the 9 keywords (`description`, `approval`) tokenise as dedicated lexer tokens (`TokenType.DESCRIPTION`, `TokenType.APPROVAL`) — they must go in the *token-keyed* dispatch table, not the IDENT-keyed one. The legacy monolith side-stepped this by dispatching on `token.value` directly without checking `token.type`. Byte-identical IR verified against a synthetic 2-relation fixture. Drops 6 entries from the IR-reader-parity baseline.
+
+### Agent Guidance
+
+- When migrating a parser that dispatches on `token.value` regardless of type, audit each keyword: lexer-token keywords (e.g. `description`, `approval`) must register in the token-keyed dispatch table; only true IDENT-text keywords belong in `*_IDENT_KEYWORDS`. The dispatch helper only checks the IDENT table when `tok.type == TokenType.IDENTIFIER`, so lexer-keyword entries in the IDENT table are unreachable. Caught in `grant.py` — first relation's `description` and second relation's `approval` were silently falling through to the unknown-skip path until both were moved to `_GRANT_RELATION_KEYWORDS`.
+
 ## [0.70.29] - 2026-05-16
 
 ### Changed
