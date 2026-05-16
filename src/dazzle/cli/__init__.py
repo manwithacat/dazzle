@@ -298,6 +298,7 @@ from dazzle.cli.quality import quality_app  # noqa: E402
 from dazzle.cli.rbac import rbac_app  # noqa: E402
 from dazzle.cli.rhythm import rhythm_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
+from dazzle.cli.spec import spec_app  # noqa: E402
 from dazzle.cli.specs import specs_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.stubs import stubs_app  # noqa: E402
@@ -332,6 +333,7 @@ app.add_typer(tenant_app, name="tenant")
 app.add_typer(theme_app, name="theme")
 app.add_typer(test_app, name="test")
 app.add_typer(e2e_app, name="e2e")
+app.add_typer(spec_app, name="spec")
 app.add_typer(specs_app, name="specs")
 app.add_typer(deploy_app, name="deploy")
 app.add_typer(events_app, name="events")

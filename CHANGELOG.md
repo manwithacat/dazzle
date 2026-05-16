@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.44] - 2026-05-16
+
+### Added
+
+- **#1106 Proposal 1: `dazzle spec status` CLI** — read-only narrative-spec ↔ DSL drift report. New `spec_app` typer group registered at `dazzle spec status` (distinct from `dazzle specs` which generates API specifications). Two drift directions:
+  - **Missing from spec** — DSL entities never mentioned (in any singular or plural form) in `spec/*.md` / `SPEC.md`. Signals the narrative is out of date relative to what the code models.
+  - **Missing from DSL — review candidates** — TitleCase entity-shaped nouns in the spec that don't map to any DSL entity. Heuristic; capped at 30 in the rendered report; backed by a curated false-positive skip list (~140 prose/state/verb words) to keep noise down.
+  - Framework-injected entities (`AIJob`, `DeployHistory`, `FeedbackReport`, `SystemHealth`, `SystemMetric`) are excluded by default — they exist on every project and don't need spec coverage. `--include-framework-entities` opts in.
+  - `--fail-on-drift` exits non-zero when any drift is reported. Wire it into CI to gate on spec freshness.
+
+### Agent Guidance
+
+- After adding a new DSL entity, run `dazzle spec status` from the project root. If the entity appears under "Missing from spec", add a description to `spec/*.md` before shipping the DSL change — this is the cheapest moment to keep the narrative spec aligned with the code.
+
 ## [0.70.43] - 2026-05-16
 
 ### Fixed
