@@ -665,7 +665,7 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
         roles=[r.removeprefix("role_") for r in _raw_roles],
         is_superuser=getattr(_user, "is_superuser", False) if _user else False,
     )
-    _decision = prc.evaluate_permission(
+    _decision = evaluate_permission(
         _cedar_spec,
         _op,
         None,

@@ -31,9 +31,7 @@ import logging
 import re
 from typing import Any
 
-from dazzle.back.runtime.workspace_card_data import (
-    _resolve_display_name,
-)
+from dazzle.render.display_names import _resolve_display_name
 
 logger = logging.getLogger(__name__)
 

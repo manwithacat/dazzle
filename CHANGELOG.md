@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.35] - 2026-05-16
+
+### Fixed
+
+- **CI mypy gate: 6 long-standing errors resolved.** Local `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp` (per CLAUDE.md ship discipline) missed them; CI runs `mypy src/dazzle` (broader scope) and had been red since v0.70.10's `_PageDeps` refactor (#1094). Specifics:
+  - `src/dazzle/back/runtime/{workspace_aggregation,workspace_region_computes,workspace_handlers,workspace_region_fetch}.py`: replaced `from dazzle.back.runtime.workspace_card_data import _resolve_display_name / _inject_display_names` with direct imports from `dazzle.render.display_names`. The underscore-prefixed re-exports through `workspace_card_data` tripped mypy's implicit-reexport check — sourcing them directly from the defining module is the cleaner contract anyway.
+  - `src/dazzle/render/dispatch.py:74`: pinned the `handler.render` return type as `str` via an intermediate annotation (the protocol callsite's `Any` return needed narrowing for the function's `str` declaration).
+  - `src/dazzle/ui/runtime/page_routes.py:668`: removed stray `prc.` prefix on `evaluate_permission` — module-level function, not a `_PageRequestContext` method. Pre-existing typo bug, not just a mypy false-positive.
+
+### Agent Guidance
+
+- Pre-ship mypy MUST use `mypy src/dazzle` (the CI command), not the narrower `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp` from CLAUDE.md. The 4-month-old narrower invocation in the ship instructions is a bug — update the local pre-ship discipline accordingly.
+
 ## [0.70.34] - 2026-05-16
 
 ### Changed

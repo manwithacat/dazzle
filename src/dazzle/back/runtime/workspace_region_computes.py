@@ -16,9 +16,9 @@ from typing import Any
 from dazzle.back.runtime.workspace_card_data import (
     _initials_from,
     _interpolate_card_template,
-    _resolve_display_name,
     _resolve_path,
 )
+from dazzle.render.display_names import _resolve_display_name
 
 
 def compute_heatmap(

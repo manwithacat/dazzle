@@ -33,10 +33,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from dazzle.back.runtime.workspace_card_data import _inject_display_names
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.back.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters
+from dazzle.render.display_names import _inject_display_names
 
 logger = logging.getLogger(__name__)
 

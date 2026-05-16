@@ -18,10 +18,10 @@ import logging
 from typing import Any
 
 from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
-from dazzle.back.runtime.workspace_card_data import _inject_display_names
 from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters
 from dazzle.back.runtime.workspace_user import _resolve_workspace_user
+from dazzle.render.display_names import _inject_display_names
 
 logger = logging.getLogger(__name__)
 

@@ -71,7 +71,8 @@ def dispatch_render(
             f"registered renderers: {sorted(services.renderer_registry.registered_names())}"
         )
 
-    return handler.render(surface, ctx)
+    html: str = handler.render(surface, ctx)
+    return html
 
 
 def build_page(
