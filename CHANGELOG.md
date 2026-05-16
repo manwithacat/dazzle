@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.2] - 2026-05-17
+
+### Added
+
+- **Guide-step renderer** (`src/dazzle/back/runtime/onboarding/renderer.py`) — `render_step(step, *, guide_name) -> str`. v0.71.2 ships the **popover** kind only; spotlight/inline_card/empty_state/banner/checklist_item are deferred to v0.71.3 (same dispatcher, additive). Other kinds raise `UnknownStepKindError` with the supported-list in the message; callers should pre-filter via `has_builder(kind)`. Popover emits a self-contained `<dz-onboarding-step>` custom element with htmx hooks for completion (`POST /api/onboarding/<guide>/<step>/complete`) and dismissal (`POST .../dismiss`); both swap `outerHTML` so the overlay removes itself on response. Title + body + cta_label HTML-escaped; CTA href derived from `cta_target` when set.
+- **Active-step resolver** (`src/dazzle/back/runtime/onboarding/resolver.py`) — `resolve_active_step(*, user_id, user_persona, surface_name, app, repo) -> (GuideSpec, GuideStep) | None`. Walks guides in declaration order; first audience-matching guide whose next un-resolved step targets the current surface wins. v0.71.2 audience matcher recognises the `persona = <id>` shape (full predicate compilation in v0.71.x); predicates without persona clauses match conservatively. Skips guides where progression is complete.
+- **Completion + dismissal routes** (`src/dazzle/back/runtime/onboarding/routes.py`) — `create_onboarding_routes()` returns an `APIRouter` with `POST /api/onboarding/{guide}/{step}/complete` and `POST .../dismiss`. Both 401 on anonymous traffic; 503 when the repository isn't configured. Auto-mounted by `AuthSubsystem` when the AppSpec declares guides AND `DATABASE_URL` is set.
+- Re-exports added to `dazzle.back.runtime.onboarding`: `render_step`, `has_builder`, `UnknownStepKindError`, `resolve_active_step`, `create_onboarding_routes`.
+
+### Tests
+
+- **`tests/unit/test_onboarding_renderer.py`** (10 tests) — supported-kinds whitelist, custom-element data attrs, htmx complete/dismiss hooks, XSS-escape behaviour on title/body, CTA href + label handling, placement threading.
+- **`tests/unit/test_onboarding_resolver.py`** (16 tests) — persona matcher (single/multi-clause/missing), target-vs-surface matcher (whole surface / action / field / mismatch), next-step picker (skips completed + dismissed), top-level resolver (audience match, target match, completed-guide skip, declaration-order priority).
+- **`tests/unit/test_onboarding_routes.py`** (4 tests) — complete/dismiss happy paths, 401 anonymous, 503 unconfigured repository.
+
+### Agent Guidance
+
+- Page-routes wiring is NOT in v0.71.2 — guides won't render to the user until v0.71.3 plumbs the resolver into `_render_typed_body`. v0.71.2 ships the consumable building blocks so the v0.71.3 slice can be small.
+- New step kinds (`spotlight`, `inline_card`, `empty_state`, `banner`, `checklist_item`) — add a `_build_<kind>_step` function in `renderer.py`, register in `_SUPPORTED_KINDS`, add a branch in `render_step`. No IR changes needed; the IR already defines all 8 kinds.
+- The completion route accepts ANY `(guide, step)` pair from the URL without first checking the guide actually declares the step. This is intentional: the route's job is record-the-event, not validate-the-DSL. Concordance is the linker's job — by the time a step name reaches the route, it was authored in a real DSL guide that linked clean.
+
 ## [0.71.1] - 2026-05-16
 
 ### Added

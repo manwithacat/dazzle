@@ -15,6 +15,17 @@ auto-injected by the linker when at least one ``guide`` block is
 declared.
 """
 
+from .renderer import UnknownStepKindError, has_builder, render_step
+from .resolver import resolve_active_step
+from .routes import create_onboarding_routes
 from .state_repository import OnboardingProgress, OnboardingStateRepository
 
-__all__ = ["OnboardingProgress", "OnboardingStateRepository"]
+__all__ = [
+    "OnboardingProgress",
+    "OnboardingStateRepository",
+    "UnknownStepKindError",
+    "create_onboarding_routes",
+    "has_builder",
+    "render_step",
+    "resolve_active_step",
+]

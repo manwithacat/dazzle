@@ -75,6 +75,25 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_email_verification_routes())
 
+        # Onboarding routes (v0.71.2) — completion + dismissal hooks
+        # for guide-step overlays. Mounted only when the AppSpec
+        # actually declares guides AND a DATABASE_URL is configured;
+        # the route handlers reach for a repository on
+        # `app.state.onboarding_state` which we populate in the same
+        # block.
+        # Defensive getattr — older AppSpec snapshots (and test fixtures
+        # using SimpleNamespace stand-ins) may not carry the field yet.
+        if getattr(ctx.appspec, "guides", None) and ctx.database_url:
+            from dazzle.back.runtime.onboarding import (
+                OnboardingStateRepository,
+                create_onboarding_routes,
+            )
+
+            ctx.app.state.onboarding_state = OnboardingStateRepository(
+                database_url=ctx.database_url,
+            )
+            ctx.app.include_router(create_onboarding_routes())
+
         # Form-encoded password-reset routes (Phase 1.B.2, v0.67.31) —
         # typed-Fragment views in `auth_views.py` post to these endpoints
         # rather than the JSON ones in `routes.py`.
