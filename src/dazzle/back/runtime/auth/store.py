@@ -98,6 +98,7 @@ class UserStoreMixin:
             totp_enabled=bool(row.get("totp_enabled", False)),
             email_otp_enabled=bool(row.get("email_otp_enabled", False)),
             recovery_codes_generated=bool(row.get("recovery_codes_generated", False)),
+            email_verified=bool(row.get("email_verified", False)),
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )
@@ -124,6 +125,21 @@ class UserStoreMixin:
             return user
 
         return None
+
+    def mark_email_verified(self, user_id: str | UUID) -> bool:
+        """Flip ``email_verified=true`` for ``user_id``.
+
+        Idempotent — if the row is already verified, the UPDATE is a
+        no-op (PostgreSQL still reports 1 affected row because the
+        WHERE matched). Returns True iff a row was touched (i.e. the
+        user exists). Bookkeeping for the audit trail lives at the
+        route layer via ``emit_user_email_verified``.
+        """
+        rowcount: int = self._execute_modify(
+            "UPDATE users SET email_verified = TRUE, updated_at = %s WHERE id = %s",
+            (datetime.now(UTC).isoformat(), str(user_id)),
+        )
+        return rowcount > 0
 
     def update_password(self, user_id: UUID, new_password: str) -> bool:
         """Update user password."""
@@ -630,12 +646,16 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     updated_at TEXT NOT NULL
                 )
             """)
-            # Add 2FA columns if they don't exist (idempotent migration)
+            # Add 2FA + email-verification columns if they don't exist
+            # (idempotent migration). ``email_verified`` defaults to FALSE so
+            # existing deployments don't suddenly grant verified status to
+            # rows that pre-date the column.
             for col, col_type, default in [
                 ("totp_secret", "TEXT", None),
                 ("totp_enabled", "BOOLEAN", "FALSE"),
                 ("email_otp_enabled", "BOOLEAN", "FALSE"),
                 ("recovery_codes_generated", "BOOLEAN", "FALSE"),
+                ("email_verified", "BOOLEAN", "FALSE"),
             ]:
                 try:
                     default_clause = f" DEFAULT {default}" if default else ""
@@ -674,6 +694,17 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             from dazzle.back.runtime.auth.magic_link import MAGIC_LINKS_DDL
 
             cursor.execute(MAGIC_LINKS_DDL)
+
+            # Email-verification tokens (#1109).
+            from dazzle.back.runtime.auth.email_verification import (
+                EMAIL_VERIFICATION_TOKENS_DDL,
+            )
+
+            cursor.execute(EMAIL_VERIFICATION_TOKENS_DDL)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS "
+                "idx_email_verify_user ON email_verification_tokens(user_id)"
+            )
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
             cursor.execute(

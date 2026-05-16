@@ -54,6 +54,7 @@ def configure_auth_events(framework: Any) -> None:
 AUTH_USER_REGISTERED = "auth.user.registered"
 AUTH_USER_LOGGED_IN = "auth.user.logged_in"
 AUTH_USER_PASSWORD_CHANGED = "auth.user.password_changed"
+AUTH_USER_EMAIL_VERIFIED = "auth.user.email_verified"
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +118,27 @@ async def emit_user_password_changed(user: UserRecord) -> None:
         key=str(user.id),
         payload={
             "user_id": str(user.id),
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+        producer="dazzle-auth",
+    )
+    await _publish(envelope)
+
+
+async def emit_user_email_verified(user_id: str, *, email: str) -> None:
+    """Emit ``auth.user.email_verified`` after a successful verification (#1109).
+
+    Downstream apps subscribe to gate features on a verified email
+    (send welcome mail, unlock paid tiers, surface a "verified" badge).
+    Payload mirrors the registered-event shape so the consumer pattern
+    is consistent.
+    """
+    envelope = EventEnvelope.create(
+        event_type=AUTH_USER_EMAIL_VERIFIED,
+        key=str(user_id),
+        payload={
+            "user_id": str(user_id),
+            "email": email,
             "timestamp": datetime.now(UTC).isoformat(),
         },
         producer="dazzle-auth",

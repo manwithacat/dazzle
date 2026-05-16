@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.45] - 2026-05-16
+
+### Added
+
+- **#1109: First-class email-verification flow.** Sibling to the existing magic-link, password-reset, 2FA, and SSO flows. The framework now ships:
+  - `auth/email_verification.py` — DB-backed token primitive (mirrors `magic_link.py`). One-shot, 24h TTL by default, atomic consume.
+  - `auth/email_verification_routes.py` — 3 endpoints: `GET /auth/verify-email?token=...` (validate + flip `email_verified=true`), `POST /auth/resend-verification` (rate-limited, account-enumeration-guarded), `POST /auth/send-verification` (initial-send shape).
+  - `VerificationMailer` protocol + `get_verification_mailer` helper. Distinct from `MagicLinkMailer` so existing magic-link-only mailers don't have to implement verification — the route detects the capability and falls back to `LogMailer` when absent. `LogMailer` implements both.
+  - `AUTH_USER_EMAIL_VERIFIED` event + `emit_user_email_verified` helper — downstream apps subscribe to gate features on verification (welcome mail, paid-tier unlock, verified-badge).
+  - `email_verified` column on `auth_store`'s users table (idempotent migration: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`); `email_verification_tokens` table; `AuthStore.mark_email_verified(user_id)` method; `UserRecord.email_verified` field.
+  - `AuthSubsystem._register_auth_routes` mounts the verification router unconditionally — endpoints carry an account-enumeration guard and a no-op for already-verified emails, so they're safe to expose on deployments that don't actively use verification yet.
+
+### Agent Guidance
+
+- For a new password-signup flow that wants email verification: (1) set `[auth] require_email_verification = true` in `dazzle.toml` (parser already handles this), (2) `POST /auth/send-verification` with the user's email after signup, (3) gate post-login features on `user.email_verified`. Don't roll your own HMAC token machinery — the DB-backed primitive in `email_verification.py` mirrors `magic_link.py` and gets the consume-atomicity right.
+
 ## [0.70.44] - 2026-05-16
 
 ### Added

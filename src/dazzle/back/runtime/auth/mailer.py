@@ -45,6 +45,27 @@ class MagicLinkMailer(Protocol):
         ...
 
 
+@runtime_checkable
+class VerificationMailer(Protocol):
+    """Optional add-on contract for delivering email-verification URLs (#1109).
+
+    Kept distinct from :class:`MagicLinkMailer` so downstream mailer
+    implementations that only support magic links don't have to also
+    implement verification — the email-verification route detects the
+    method's presence via ``hasattr`` and falls back to log-only
+    delivery when the registered mailer is magic-link-only.
+
+    Semantically distinct from ``send_magic_link``: a magic link
+    creates a session on click; a verification link merely flips
+    the user's ``email_verified=true`` flag. Both transports may
+    share the same SMTP/SES integration but the message body
+    should differ — verification mail should NOT promise a
+    login on click.
+    """
+
+    def send_verification_email(self, *, to_email: str, verify_url: str) -> None: ...
+
+
 class LogMailer:
     """Default `MagicLinkMailer` impl: writes the link URL to the
     application log at INFO level.
@@ -61,6 +82,9 @@ class LogMailer:
     def send_magic_link(self, *, to_email: str, link_url: str) -> None:
         _logger.info("Magic-link issued for %s: %s", to_email, link_url)
 
+    def send_verification_email(self, *, to_email: str, verify_url: str) -> None:
+        _logger.info("Email-verification issued for %s: %s", to_email, verify_url)
+
 
 def get_mailer(app_state: object) -> MagicLinkMailer:
     """Look up the registered mailer on `app.state.magic_link_mailer`,
@@ -75,3 +99,19 @@ def get_mailer(app_state: object) -> MagicLinkMailer:
     # Runtime-checkable Protocol — narrow to MagicLinkMailer for mypy.
     assert isinstance(mailer, MagicLinkMailer)
     return mailer
+
+
+def get_verification_mailer(app_state: object) -> VerificationMailer:
+    """Look up a verification-capable mailer on `app.state.magic_link_mailer`.
+
+    Falls back to :class:`LogMailer` when either (a) no mailer is
+    registered or (b) the registered mailer only implements
+    :class:`MagicLinkMailer` — verification email is an additive
+    capability, not a hard requirement (#1109)."""
+    mailer = getattr(app_state, "magic_link_mailer", None)
+    if mailer is None or not isinstance(mailer, VerificationMailer):
+        return LogMailer()
+    # isinstance() narrowed mailer to VerificationMailer above; the
+    # explicit annotation keeps mypy happy with the typed return.
+    typed: VerificationMailer = mailer
+    return typed

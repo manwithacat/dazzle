@@ -18,10 +18,13 @@ from .dependencies import (
     create_deny_dependency,
     create_optional_auth_dependency,
 )
+from .email_verification_routes import create_email_verification_routes
 from .events import (
+    AUTH_USER_EMAIL_VERIFIED,
     AUTH_USER_LOGGED_IN,
     AUTH_USER_PASSWORD_CHANGED,
     AUTH_USER_REGISTERED,
+    emit_user_email_verified,
     emit_user_logged_in,
     emit_user_password_changed,
     emit_user_registered,
@@ -48,6 +51,7 @@ from .routes_jwt import create_jwt_auth_routes
 from .store import AuthStore, TwoFactorMixin
 
 __all__ = [
+    "AUTH_USER_EMAIL_VERIFIED",
     "AUTH_USER_LOGGED_IN",
     "AUTH_USER_PASSWORD_CHANGED",
     "AUTH_USER_REGISTERED",
@@ -71,6 +75,7 @@ __all__ = [
     "create_auth_dependency",
     "create_auth_routes",
     "create_deny_dependency",
+    "create_email_verification_routes",
     "create_jwt_auth_routes",
     "create_optional_auth_dependency",
     "current_auth",
@@ -78,6 +83,7 @@ __all__ = [
     "current_user_id",
     "register_auth_store",
     "require_auth",
+    "emit_user_email_verified",
     "emit_user_logged_in",
     "emit_user_password_changed",
     "emit_user_registered",

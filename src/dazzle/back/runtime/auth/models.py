@@ -27,6 +27,7 @@ class UserRecord(BaseModel):
     totp_enabled: bool = False
     email_otp_enabled: bool = False
     recovery_codes_generated: bool = False
+    email_verified: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

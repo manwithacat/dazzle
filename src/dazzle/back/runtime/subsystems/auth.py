@@ -63,6 +63,18 @@ class AuthSubsystem:
         magic_link_router = create_magic_link_routes()
         ctx.app.include_router(magic_link_router)
 
+        # Mount the email-verification router (#1109). Unconditionally
+        # mounted — the endpoints carry an account-enumeration guard, so
+        # they're safe to expose on deployments that don't actively
+        # use verification yet. Apps opt in by setting
+        # ``auth.require_email_verification`` and sending users through
+        # ``POST /auth/send-verification`` after signup.
+        from dazzle.back.runtime.auth.email_verification_routes import (
+            create_email_verification_routes,
+        )
+
+        ctx.app.include_router(create_email_verification_routes())
+
         # Form-encoded password-reset routes (Phase 1.B.2, v0.67.31) —
         # typed-Fragment views in `auth_views.py` post to these endpoints
         # rather than the JSON ones in `routes.py`.
