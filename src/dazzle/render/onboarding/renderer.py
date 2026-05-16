@@ -1,32 +1,32 @@
-"""Typed Fragment renderer for guide steps (v0.71.2).
+"""Typed Fragment renderer for guide steps (v0.71.4).
 
 Pure HTML emission — each builder is a ``GuideStep -> str`` function.
 The renderer doesn't fetch state, doesn't compose with surfaces, and
-doesn't know about routing; that's the caller's job (the v0.71.3
-page-routes wiring computes the active step + state then hands the
-result here for HTML).
+doesn't know about routing; that's the caller's job (the page-routes
+wiring computes the active step + state then hands the result here).
 
-Only the ``popover`` step kind has a builder in v0.71.2. Other kinds
-(spotlight, inline_card, empty_state, banner, checklist_item) get
-their builders in v0.71.3+ — same dispatcher shape so adding one is
-purely additive.
+v0.71.4 ships five kinds: ``popover``, ``spotlight``, ``inline_card``,
+``empty_state``, ``banner``. Remaining kinds (``checklist_item``,
+``blocking_task``, ``nudge``) are deferred — they have additional
+runtime semantics (checklists need a parent component; blocking_task
+needs a focus trap; nudge auto-dismisses on a timer) that warrant
+their own slice.
 
-The popover HTML carries htmx hooks for completion + dismissal:
+Every step kind emits the same outer ``<dz-onboarding-step>`` custom
+element with ``data-guide``/``data-step``/``data-kind``/``data-placement``
+attributes — client CSS/JS scope to it. Both the CTA (when present)
+and the dismiss button carry htmx hooks pointing at the routes
+shipped in v0.71.2:
 
-- ``POST /api/onboarding/<guide>/<step>/complete`` — fires on the
-  primary CTA click. The step is marked completed; the popover is
-  swapped out via ``hx-swap=outerHTML`` returning empty content.
+- ``POST /api/onboarding/<guide>/<step>/complete`` — marks the step
+  completed; ``hx-swap=outerHTML`` removes the overlay from the DOM.
 - ``POST /api/onboarding/<guide>/<step>/dismiss`` — same shape but
-  marks the step dismissed instead. Used by the ✕ button.
-
-Both endpoints live in ``onboarding/routes.py``; the renderer just
-points hx-post at them.
+  records dismissal instead.
 
 Card-safety invariants (per docs/reference/card-safety-invariants.md):
-the popover emits zero chrome and zero title at the region level —
-the overlay primitive carries its own visual treatment. Renders to
-a self-contained ``<dz-onboarding-step>`` custom element so CSS
-specificity stays local.
+overlays carry their own chrome + title. The ``<dz-onboarding-step>``
+wrapper keeps CSS specificity local so dropping an overlay into any
+page is composition-safe.
 """
 
 from __future__ import annotations
@@ -47,10 +47,11 @@ class UnknownStepKindError(ValueError):
     """
 
 
-# Step kinds with a builder shipped in this version. v0.71.2 ships
-# popover only; v0.71.3+ adds the others. ``has_builder`` is the
-# stable predicate callers should use.
-_SUPPORTED_KINDS: frozenset[str] = frozenset({"popover"})
+# Step kinds with a builder shipped in this version. ``has_builder``
+# is the stable predicate callers should use to pre-check.
+_SUPPORTED_KINDS: frozenset[str] = frozenset(
+    {"popover", "spotlight", "inline_card", "empty_state", "banner"}
+)
 
 
 def has_builder(kind: str) -> bool:
@@ -72,6 +73,14 @@ def render_step(step: ir.GuideStep, *, guide_name: str) -> str:
     kind = step.kind.value if hasattr(step.kind, "value") else str(step.kind)
     if kind == "popover":
         return _build_popover_step(step, guide_name=guide_name)
+    if kind == "spotlight":
+        return _build_spotlight_step(step, guide_name=guide_name)
+    if kind == "inline_card":
+        return _build_inline_card_step(step, guide_name=guide_name)
+    if kind == "empty_state":
+        return _build_empty_state_step(step, guide_name=guide_name)
+    if kind == "banner":
+        return _build_banner_step(step, guide_name=guide_name)
     raise UnknownStepKindError(
         f"No renderer for guide step kind {kind!r}; supported in this "
         f"version: {sorted(_SUPPORTED_KINDS)}"
@@ -79,81 +88,195 @@ def render_step(step: ir.GuideStep, *, guide_name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Popover builder
+# Shared helpers — every kind uses the same outer element + htmx hooks
 # ---------------------------------------------------------------------------
 
 
-def _build_popover_step(step: ir.GuideStep, *, guide_name: str) -> str:
-    """Emit the HTML for a ``kind: popover`` step.
+def _outer_attrs(step: ir.GuideStep, *, guide_name: str, kind: str, css_class: str) -> str:
+    """Build the ``<dz-onboarding-step …>`` attribute string.
 
-    Composition:
-
-    - Outer ``<dz-onboarding-step>`` carries ``data-guide`` +
-      ``data-step`` so client JS (v0.71.3) and CSS can scope to it.
-    - ``data-placement`` mirrors the DSL setting; the v0.71.3 Alpine
-      controller reads this to position the popover against its
-      target element. v0.71.2 uses a fallback bottom-of-page slot via
-      CSS — sufficient to verify end-to-end behaviour even before the
-      positioning JS ships.
-    - Title + body get HTML-escaped.
-    - Two htmx-backed buttons: a primary CTA that posts to the
-      ``/complete`` endpoint, and a ✕ dismiss button that posts to
-      ``/dismiss``. Both use ``hx-target=closest dz-onboarding-step``
-      + ``hx-swap=outerHTML`` so the response (empty body) removes the
-      overlay from the DOM.
+    Shared so adding a new kind doesn't drift the data-* names. Single
+    source of truth for how guides + steps map to DOM attributes.
     """
+    return (
+        f' class="{css_class}"'
+        f' data-guide="{_html.escape(guide_name, quote=True)}"'
+        f' data-step="{_html.escape(step.name, quote=True)}"'
+        f' data-kind="{kind}"'
+        f' data-placement="{_html.escape(step.placement or "bottom", quote=True)}"'
+    )
+
+
+def _hx_urls(step: ir.GuideStep, *, guide_name: str) -> tuple[str, str]:
+    """Return ``(complete_url, dismiss_url)`` for htmx hooks."""
     guide_attr = _html.escape(guide_name, quote=True)
     step_attr = _html.escape(step.name, quote=True)
-    placement_attr = _html.escape(step.placement or "bottom", quote=True)
-    title = _html.escape(step.title or "", quote=False)
-    body = _html.escape(step.body or "", quote=False)
-    cta_label = _html.escape(step.cta_label or "Got it", quote=False)
+    return (
+        f"/api/onboarding/{guide_attr}/{step_attr}/complete",
+        f"/api/onboarding/{guide_attr}/{step_attr}/dismiss",
+    )
 
-    # CTA href takes precedence over the htmx complete-post if the DSL
-    # sets cta_target — pointing the user at a real surface is the
-    # designed-for next action; the complete event fires server-side
-    # via the cta_target page-load (page_routes.py wiring in v0.71.3
-    # will emit the completion event when the target surface loads).
-    cta_href = (
+
+def _dismiss_button(dismiss_url: str, *, css_class: str, label: str = "&times;") -> str:
+    """The shared ✕ dismiss button. ``hx-swap=outerHTML`` so the
+    server's empty response removes the overlay from the DOM."""
+    return (
+        f'<button type="button"'
+        f' class="{css_class}"'
+        f' aria-label="Dismiss"'
+        f' hx-post="{dismiss_url}"'
+        f' hx-target="closest dz-onboarding-step"'
+        f' hx-swap="outerHTML">{label}</button>'
+    )
+
+
+def _cta_anchor(
+    step: ir.GuideStep, *, complete_url: str, css_class: str, default_label: str = "Got it"
+) -> str:
+    """Shared CTA anchor. Posts to ``/complete`` via htmx; navigates to
+    ``cta_target`` when set so the user lands on the next surface."""
+    label = _html.escape(step.cta_label or default_label, quote=False)
+    href = (
         f' href="/{_html.escape(step.cta_target.removeprefix("surface."), quote=True)}"'
         if step.cta_target
         else ""
     )
-    cta_extra = (
-        # If we have an explicit CTA href, click goes there; mark the
-        # step complete via htmx before the navigation by adding
-        # hx-post + hx-trigger=click.
-        f' hx-post="/api/onboarding/{guide_attr}/{step_attr}/complete"'
+    return (
+        f"<a"
+        f' class="{css_class}"'
+        f"{href}"
+        f' hx-post="{complete_url}"'
         f' hx-target="closest dz-onboarding-step"'
         f' hx-swap="outerHTML"'
+        f' data-complete-url="{complete_url}">{label}</a>'
     )
 
-    complete_url = f"/api/onboarding/{guide_attr}/{step_attr}/complete"
-    dismiss_url = f"/api/onboarding/{guide_attr}/{step_attr}/dismiss"
 
+# ---------------------------------------------------------------------------
+# Individual builders
+# ---------------------------------------------------------------------------
+
+
+def _build_popover_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: popover`` — floating overlay anchored against a target element."""
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
     return (
-        f"<dz-onboarding-step"
-        f' class="dz-onboarding-popover"'
-        f' data-guide="{guide_attr}"'
-        f' data-step="{step_attr}"'
-        f' data-kind="popover"'
-        f' data-placement="{placement_attr}">'
+        f"<dz-onboarding-step{_outer_attrs(step, guide_name=guide_name, kind='popover', css_class='dz-onboarding-popover')}>"
         f'<div class="dz-onboarding-popover__chrome">'
         f'<h3 class="dz-onboarding-popover__title">{title}</h3>'
-        f'<button type="button"'
-        f' class="dz-onboarding-popover__dismiss"'
-        f' aria-label="Dismiss"'
-        f' hx-post="{dismiss_url}"'
-        f' hx-target="closest dz-onboarding-step"'
-        f' hx-swap="outerHTML">&times;</button>'
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-popover__dismiss')}"
         f"</div>"
         f'<p class="dz-onboarding-popover__body">{body}</p>'
         f'<div class="dz-onboarding-popover__actions">'
-        f"<a"
-        f' class="dz-onboarding-popover__cta"'
-        f"{cta_href}"
-        f"{cta_extra}"
-        f' data-complete-url="{complete_url}">{cta_label}</a>'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-popover__cta')}"
+        f"</div>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _build_spotlight_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: spotlight`` — dims the page + halos the target element.
+
+    Two visual layers:
+    - Full-viewport backdrop that scrims everything outside the spotlight.
+    - Highlight ring positioned around the target element (client JS
+      reads ``data-step`` + the target attached via the surface element
+      to compute coords; v0.71.4 ships a fallback centred ring via CSS).
+
+    The callout card sits adjacent to the spotlight with title/body/CTA.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
+    return (
+        f"<dz-onboarding-step{_outer_attrs(step, guide_name=guide_name, kind='spotlight', css_class='dz-onboarding-spotlight')}>"
+        f'<div class="dz-onboarding-spotlight__backdrop" aria-hidden="true"></div>'
+        f'<div class="dz-onboarding-spotlight__ring" aria-hidden="true"></div>'
+        f'<div class="dz-onboarding-spotlight__card" role="dialog" aria-labelledby="dz-spot-title-{_html.escape(step.name, quote=True)}">'
+        f'<h3 id="dz-spot-title-{_html.escape(step.name, quote=True)}"'
+        f' class="dz-onboarding-spotlight__title">{title}</h3>'
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-spotlight__dismiss')}"
+        f'<p class="dz-onboarding-spotlight__body">{body}</p>'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-spotlight__cta')}"
+        f"</div>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _build_inline_card_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: inline_card`` — solid card embedded in the page flow.
+
+    Not a floating overlay — sits in the document flow above the
+    surface body. Page content below scrolls underneath if the card
+    is tall. Designed for contextual guidance that doesn't need to
+    grab full attention.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
+    return (
+        f"<dz-onboarding-step{_outer_attrs(step, guide_name=guide_name, kind='inline_card', css_class='dz-onboarding-inline-card')}>"
+        f'<div class="dz-onboarding-inline-card__chrome">'
+        f'<h3 class="dz-onboarding-inline-card__title">{title}</h3>'
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-inline-card__dismiss')}"
+        f"</div>"
+        f'<p class="dz-onboarding-inline-card__body">{body}</p>'
+        f'<div class="dz-onboarding-inline-card__actions">'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-inline-card__cta')}"
+        f"</div>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _build_empty_state_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: empty_state`` — large-format prompt for empty list/region.
+
+    Higher visual weight than inline_card. Designed to fill the screen
+    space normally occupied by a list when that list is empty (zero
+    Tasks, zero Workspaces, etc.). Title uses ``<h2>`` because it's
+    the dominant element on the page. Includes a Skip button alongside
+    the dismiss for explicit user agency.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
+    return (
+        f"<dz-onboarding-step{_outer_attrs(step, guide_name=guide_name, kind='empty_state', css_class='dz-onboarding-empty-state')}>"
+        f'<div class="dz-onboarding-empty-state__icon" aria-hidden="true"></div>'
+        f'<h2 class="dz-onboarding-empty-state__title">{title}</h2>'
+        f'<p class="dz-onboarding-empty-state__body">{body}</p>'
+        f'<div class="dz-onboarding-empty-state__actions">'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-empty-state__cta')}"
+        # Empty-state gets a labelled Skip rather than a bare ✕ — the
+        # surface IS empty, so dismiss is the explicit decline.
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-empty-state__dismiss', label='Skip')}"
+        f"</div>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _build_banner_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: banner`` — full-width strip across the top of the page.
+
+    Persistent until dismissed. Title + body share a single line in
+    bold-prefix form ("**Title** — body text") to keep the strip
+    compact. CTA + dismiss live at the right edge.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
+    return (
+        f"<dz-onboarding-step{_outer_attrs(step, guide_name=guide_name, kind='banner', css_class='dz-onboarding-banner')}>"
+        f'<div class="dz-onboarding-banner__message">'
+        f'<strong class="dz-onboarding-banner__title">{title}</strong>'
+        f'<span class="dz-onboarding-banner__separator" aria-hidden="true"> — </span>'
+        f'<span class="dz-onboarding-banner__body">{body}</span>'
+        f"</div>"
+        f'<div class="dz-onboarding-banner__actions">'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-banner__cta')}"
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-banner__dismiss')}"
         f"</div>"
         f"</dz-onboarding-step>"
     )

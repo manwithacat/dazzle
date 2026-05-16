@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.4] - 2026-05-17
+
+### Added
+
+- **Four new guide-step renderer kinds** in `dazzle.render.onboarding`: `spotlight`, `inline_card`, `empty_state`, `banner`. All additive — same `render_step(step, *, guide_name)` dispatcher, same `<dz-onboarding-step>` outer wrapper with `data-guide`/`data-step`/`data-kind`/`data-placement`, same htmx hooks pointing at the routes shipped in v0.71.2.
+  - `spotlight` — dimmed-page backdrop + halo ring + callout card. Card uses `role="dialog"` + `aria-labelledby` for screen-reader announcement.
+  - `inline_card` — solid card embedded in the page flow (not floating). Contextual guidance that doesn't grab full attention.
+  - `empty_state` — large-format prompt for empty list/region. `<h2>` title (not `<h3>`) because it dominates the page; dismiss button labelled "Skip" rather than ✕ since the surface is intentionally empty.
+  - `banner` — full-width strip across the top with bold-prefix title + body separator + edge-aligned CTA + dismiss.
+- **Shared renderer helpers** factored out (`_outer_attrs`, `_hx_urls`, `_dismiss_button`, `_cta_anchor`) so adding the next kind (`checklist_item`, `blocking_task`, `nudge`) becomes a one-function PR without drifting attribute names or htmx hooks.
+
+### Tests
+
+- **22 new renderer tests**: parametrised invariants across all five supported kinds (outer wrapper shape, htmx hooks, XSS escape), plus kind-specific shape pins (spotlight backdrop+ring+dialog role, empty_state `<h2>`+Skip, banner separator layout, inline_card class structure).
+- **Updated** `has_builder` / page-wiring tests to point at the still-unsupported kinds (`checklist_item`, `blocking_task`, `nudge`).
+
+### Agent Guidance
+
+- Picking the right step kind: `popover` for floating callouts anchored to an action; `spotlight` for first-time onboarding moments that need full attention; `inline_card` for in-page contextual reminders; `empty_state` to replace an empty list with a setup prompt; `banner` for cross-page persistent messages.
+- Three kinds remain (`checklist_item`, `blocking_task`, `nudge`) — they need additional runtime support (parent checklist component, focus trap, auto-dismiss timer) and will land in a follow-up slice. `has_builder()` is the stable predicate for checking what the current Dazzle version actually renders.
+
 ## [0.71.3] - 2026-05-17
 
 ### Added

@@ -161,13 +161,14 @@ def test_inject_renders_popover_on_happy_path() -> None:
 
 
 def test_inject_skips_unsupported_kind() -> None:
-    """A guide with a kind v0.71.3 doesn't render yet (spotlight)
-    must NOT crash the page — overlay stays empty."""
+    """A guide with a kind the current Dazzle release doesn't yet
+    render (e.g. ``checklist_item`` as of v0.71.4) must NOT crash the
+    page — overlay stays empty."""
     from dazzle.core import ir
 
     step = ir.GuideStep(
         name="spot",
-        kind=ir.GuideStepKind.SPOTLIGHT,
+        kind=ir.GuideStepKind.CHECKLIST_ITEM,
         title="x",
         body="y",
         target="surface.task_list",

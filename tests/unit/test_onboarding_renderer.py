@@ -42,24 +42,25 @@ def _step(
 # ---------------------------------------------------------------------------
 
 
-def test_has_builder_reports_popover_supported() -> None:
-    assert has_builder("popover") is True
+@pytest.mark.parametrize("kind", ["popover", "spotlight", "inline_card", "empty_state", "banner"])
+def test_has_builder_reports_v0_71_4_kinds_supported(kind: str) -> None:
+    """v0.71.4 ships builders for these five kinds."""
+    assert has_builder(kind) is True
 
 
-@pytest.mark.parametrize(
-    "kind", ["spotlight", "inline_card", "empty_state", "banner", "checklist_item"]
-)
-def test_has_builder_reports_other_kinds_not_yet_supported(kind: str) -> None:
-    """All non-popover kinds are deferred to v0.71.3+ — keep the
-    failure mode of ``render_step`` predictable."""
+@pytest.mark.parametrize("kind", ["checklist_item", "blocking_task", "nudge"])
+def test_has_builder_reports_remaining_kinds_not_yet_supported(kind: str) -> None:
+    """These three kinds have additional runtime semantics (checklists
+    need a parent component; blocking_task needs a focus trap; nudge
+    auto-dismisses). Deferred to a follow-up slice."""
     assert has_builder(kind) is False
 
 
 def test_render_step_unknown_kind_raises_with_helpful_message() -> None:
-    step = _step(kind=ir.GuideStepKind.SPOTLIGHT)
+    step = _step(kind=ir.GuideStepKind.CHECKLIST_ITEM)
     with pytest.raises(UnknownStepKindError) as exc:
         render_step(step, guide_name="g1")
-    assert "spotlight" in str(exc.value)
+    assert "checklist_item" in str(exc.value)
     assert "popover" in str(exc.value)  # lists what IS supported
 
 
@@ -139,3 +140,121 @@ def test_popover_placement_threads_into_data_attr() -> None:
     step = _step(placement="top")
     html = render_step(step, guide_name="g1")
     assert 'data-placement="top"' in html
+
+
+# ---------------------------------------------------------------------------
+# Shared invariants — every kind carries the same outer wrapper + htmx hooks
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        ir.GuideStepKind.POPOVER,
+        ir.GuideStepKind.SPOTLIGHT,
+        ir.GuideStepKind.INLINE_CARD,
+        ir.GuideStepKind.EMPTY_STATE,
+        ir.GuideStepKind.BANNER,
+    ],
+)
+def test_every_supported_kind_emits_outer_wrapper_with_data_attrs(
+    kind: ir.GuideStepKind,
+) -> None:
+    """Outer ``<dz-onboarding-step>`` + ``data-guide``/``data-step``/
+    ``data-kind`` are invariant across every kind. Client CSS/JS scope
+    to these — drift breaks every overlay at once."""
+    step = _step(kind=kind, title=f"{kind} title", body=f"{kind} body")
+    html = render_step(step, guide_name="g1")
+    assert "<dz-onboarding-step" in html
+    assert 'data-guide="g1"' in html
+    assert 'data-step="s1"' in html
+    expected_kind = kind.value if hasattr(kind, "value") else str(kind)
+    assert f'data-kind="{expected_kind}"' in html
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        ir.GuideStepKind.POPOVER,
+        ir.GuideStepKind.SPOTLIGHT,
+        ir.GuideStepKind.INLINE_CARD,
+        ir.GuideStepKind.EMPTY_STATE,
+        ir.GuideStepKind.BANNER,
+    ],
+)
+def test_every_supported_kind_emits_htmx_complete_and_dismiss(
+    kind: ir.GuideStepKind,
+) -> None:
+    """Every kind has to point at the same complete + dismiss routes
+    shipped in v0.71.2 — that's the runtime contract."""
+    step = _step(kind=kind)
+    html = render_step(step, guide_name="g1")
+    assert 'hx-post="/api/onboarding/g1/s1/complete"' in html
+    assert 'hx-post="/api/onboarding/g1/s1/dismiss"' in html
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        ir.GuideStepKind.POPOVER,
+        ir.GuideStepKind.SPOTLIGHT,
+        ir.GuideStepKind.INLINE_CARD,
+        ir.GuideStepKind.EMPTY_STATE,
+        ir.GuideStepKind.BANNER,
+    ],
+)
+def test_every_supported_kind_escapes_title_and_body(kind: ir.GuideStepKind) -> None:
+    """XSS-escape on every kind. Common helper means it's hard to drift
+    but pin it anyway — the renderer is the only XSS surface."""
+    step = _step(kind=kind, title="<script>", body="<img onerror=x>")
+    html = render_step(step, guide_name="g1")
+    assert "<script>" not in html
+    assert "<img onerror" not in html
+    assert "&lt;script&gt;" in html
+    assert "&lt;img onerror" in html
+
+
+# ---------------------------------------------------------------------------
+# Kind-specific shape (one assertion per builder so the CSS class name
+# can't silently drift)
+# ---------------------------------------------------------------------------
+
+
+def test_spotlight_has_backdrop_and_ring_layers() -> None:
+    html = render_step(_step(kind=ir.GuideStepKind.SPOTLIGHT), guide_name="g1")
+    assert "dz-onboarding-spotlight__backdrop" in html
+    assert "dz-onboarding-spotlight__ring" in html
+    assert "dz-onboarding-spotlight__card" in html
+    # Dialog role + aria-labelledby on the card so screen readers can
+    # announce the step properly.
+    assert 'role="dialog"' in html
+    assert "aria-labelledby" in html
+
+
+def test_inline_card_uses_inline_card_class() -> None:
+    html = render_step(_step(kind=ir.GuideStepKind.INLINE_CARD), guide_name="g1")
+    assert "dz-onboarding-inline-card" in html
+    assert "dz-onboarding-inline-card__title" in html
+    assert "dz-onboarding-inline-card__body" in html
+
+
+def test_empty_state_uses_h2_for_higher_visual_weight() -> None:
+    """Empty-state takes over the visual space normally occupied by the
+    surface body, so the title gets ``<h2>`` rather than ``<h3>``."""
+    html = render_step(_step(kind=ir.GuideStepKind.EMPTY_STATE), guide_name="g1")
+    assert '<h2 class="dz-onboarding-empty-state__title"' in html
+
+
+def test_empty_state_dismiss_button_labeled_skip() -> None:
+    """The empty-state surface IS empty by definition, so the dismiss
+    is an explicit Skip rather than a bare ✕."""
+    html = render_step(_step(kind=ir.GuideStepKind.EMPTY_STATE), guide_name="g1")
+    assert ">Skip</button>" in html
+
+
+def test_banner_uses_horizontal_message_layout() -> None:
+    html = render_step(_step(kind=ir.GuideStepKind.BANNER), guide_name="g1")
+    assert "dz-onboarding-banner__message" in html
+    assert "dz-onboarding-banner__separator" in html
+    # Title is bold-prefix (strong tag) so it reads as a single-line callout.
+    assert '<strong class="dz-onboarding-banner__title"' in html
