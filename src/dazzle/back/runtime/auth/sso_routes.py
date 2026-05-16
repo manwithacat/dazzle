@@ -20,8 +20,6 @@ via the same `_is_safe_redirect_path` helper used in the magic-link
 routes. Unsafe values silently fall back to `/app`.
 """
 
-from __future__ import annotations
-
 import logging
 import secrets
 from typing import Annotated, Any

@@ -17,8 +17,6 @@ Usage:
     )
 """
 
-from __future__ import annotations  # required: forward reference
-
 import html
 import re
 from dataclasses import dataclass, field

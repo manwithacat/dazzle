@@ -10,8 +10,6 @@ under `/_dazzle/audit/...`. This is the user-visible change-history
 primitive under `/_dazzle/audit-history/...`.
 """
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Callable
 from typing import Any

@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.38] - 2026-05-16
+
+### Fixed
+
+- **#1102: `/openapi.json` 500 — `TypeAdapter has no _type_adapter for ForwardRef`.** Removed `from __future__ import annotations` from 17 files under `src/dazzle/back/runtime/` that define Depends-injected callables or route handlers. The future import made every annotation a string at runtime, so FastAPI's `Depends(...)` saw `ForwardRef('Request')` instead of the real class and the openapi schema build crashed. Files touched: `app_factory`, `audit_history_routes`, `device_registry`, `email_templates`, `integration_manager`, `llm_routes`, `rate_limit`, `realtime_routes`, `social_auth`, `services`, `locale_routes`, `test_routes`, `task_routes`, `fts_routes`, `consent_routes`, `jwt_middleware`, `auth/sso_routes`. TYPE_CHECKING-only references (FastAPI, IR specs, vendor modules) are now string-quoted at the annotation site so the future import isn't needed to defer them.
+
+### Added
+
+- **`tests/unit/test_no_future_annotations_in_routes.py`** — ADR-0014 drift gate. Any file under `src/dazzle/back/runtime/` that defines a `Depends(` call site OR a route-handler decorator MUST NOT use `from __future__ import annotations`. Scoping is intentional: ADR-0014 only targets the specific failure mode (#1102); pure type-only modules can keep the future import.
+
+### Agent Guidance
+
+- When adding a new route file under `src/dazzle/back/runtime/`, do NOT use `from __future__ import annotations`. Python 3.12+ supports `X | Y` and `list[X]` natively. If you hit a circular-import problem with a TYPE_CHECKING-only import, use a string-literal annotation (`foo: "EntitySpec"`) on the specific parameter — not module-wide deferred evaluation.
+
 ## [0.70.37] - 2026-05-16
 
 ### Added

@@ -26,8 +26,6 @@ Until Phase 6, step 2 reads ``analytics.consent_default`` from the project
 TOML if present, or falls back to EU defaults.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from typing import Any

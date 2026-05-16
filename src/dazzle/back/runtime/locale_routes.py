@@ -15,8 +15,6 @@ when the request is HTMX so the page re-renders against the new
 locale without losing the URL.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 

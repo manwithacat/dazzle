@@ -4,8 +4,6 @@ Houses ``IntegrationManager`` and the ``_convert_channels`` helper that were
 previously defined inline in ``server.py``.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -90,10 +88,10 @@ class IntegrationManager:
     def __init__(
         self,
         *,
-        app: FastAPI,
+        app: "FastAPI",
         appspec: AppSpec,
         channels: list[Any],
-        db_manager: PostgresBackend | None,
+        db_manager: "PostgresBackend | None",
         fragment_sources: dict[str, dict[str, Any]],
     ) -> None:
         self._app = app

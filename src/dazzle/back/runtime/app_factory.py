@@ -4,8 +4,6 @@ Convenience functions for creating and running Dazzle backend applications,
 including the production ASGI factory for deployment.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 from pathlib import Path
@@ -34,7 +32,7 @@ def create_app(
     enable_dev_mode: bool = False,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
-) -> FastAPI:
+) -> "FastAPI":
     """
     Create a FastAPI application from an AppSpec.
 
@@ -142,9 +140,9 @@ def _expand_money_field(fname: str) -> list[str]:
 
 
 def build_entity_list_projections(
-    entities: list[EntitySpec],
-    surfaces: list[SurfaceSpec],
-    views: list[ViewSpec],
+    entities: "list[EntitySpec]",
+    surfaces: "list[SurfaceSpec]",
+    views: "list[ViewSpec]",
 ) -> dict[str, list[str]]:
     """Pre-plan column projections for list surfaces (query pre-planning).
 
@@ -224,7 +222,7 @@ def build_entity_list_projections(
 
 
 def build_entity_search_fields(
-    surfaces: list[SurfaceSpec],
+    surfaces: "list[SurfaceSpec]",
     entities: list[Any] | None = None,
 ) -> dict[str, list[str]]:
     """Pre-plan search fields for each entity.
@@ -264,7 +262,7 @@ def build_entity_search_fields(
 
 
 def build_entity_filter_fields(
-    surfaces: list[SurfaceSpec],
+    surfaces: "list[SurfaceSpec]",
 ) -> dict[str, list[str]]:
     """Pre-plan filter fields for each entity from surface UX declarations.
 
@@ -340,7 +338,7 @@ def build_server_config(
     project_root: Path | None = None,
     fragment_sources: dict[str, dict[str, Any]] | None = None,
     storage_defs: Any = None,  # dict[str, StorageConfig] from manifest (#932)
-) -> ServerConfig:
+) -> "ServerConfig":
     """Build a fully-populated ``ServerConfig`` from an AppSpec.
 
     Computes derived config (projections, search fields, auto-includes,
@@ -454,9 +452,9 @@ def build_server_config(
 
 
 def assemble_post_build_routes(
-    app: FastAPI,
+    app: "FastAPI",
     appspec: AppSpec,
-    builder: DazzleBackendApp,
+    builder: "DazzleBackendApp",
     *,
     project_root: Path | None = None,
     sitespec_data: dict[str, Any] | None = None,
@@ -716,7 +714,7 @@ def assemble_post_build_routes(
 
 def create_app_factory(
     process_adapter_class: type | None = None,
-) -> FastAPI:
+) -> "FastAPI":
     """
     ASGI factory for production deployment.
 

@@ -5,8 +5,6 @@ Manages device tokens for mobile push notifications.
 Uses PostgreSQL (psycopg v3) exclusively.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -82,7 +80,7 @@ class DeviceRegistry:
         self._database_url = database_url
         self._init_db()
 
-    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
+    def _get_connection(self) -> "psycopg.Connection[dict[str, Any]]":
         """Get a PostgreSQL database connection."""
         import psycopg
         from psycopg.rows import dict_row
@@ -420,7 +418,7 @@ class DeviceRegistry:
 def create_device_routes(
     device_registry: DeviceRegistry,
     get_current_user: Any,  # Auth dependency
-) -> APIRouter:
+) -> "APIRouter":
     """
     Create device registration routes.
 

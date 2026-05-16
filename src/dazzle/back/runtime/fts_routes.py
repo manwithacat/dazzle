@@ -24,8 +24,6 @@ Out of scope here (cycle 4+):
   * ``display: search_box`` workspace region wiring.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

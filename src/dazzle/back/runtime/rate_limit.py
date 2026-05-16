@@ -12,8 +12,6 @@ Usage in route modules::
     async def login(request: Request, ...): ...
 """
 
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -95,7 +93,7 @@ def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
         )
 
 
-def apply_rate_limiting(app: FastAPI, profile: str) -> None:
+def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
     """Apply rate limiting to a FastAPI application.
 
     Creates a slowapi Limiter and stores it on app.state for use by
