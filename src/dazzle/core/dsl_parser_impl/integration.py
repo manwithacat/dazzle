@@ -6,11 +6,13 @@ v0.30.0: Added declarative mapping blocks with triggers, HTTP requests, and erro
 v0.33.1: Added transform blocks, function-call expressions, source/target directives.
 """
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 # HTTP method identifiers mapped to enum
 _HTTP_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH"})
@@ -217,9 +219,15 @@ class IntegrationParserMixin:
         return key
 
     def _parse_mapping_block(self) -> ir.IntegrationMapping:
-        """Parse a mapping block.
+        """Parse a ``mapping <name> [on Entity]:`` block.
 
-        Syntax (original — with ``on Entity``):
+        Refactored to dispatch-table style (follow-on to #1098). 3
+        token-keyed (trigger/source/target) + 7 IDENT-text-matched
+        (request/cache/map_request/map_response/transform/on_conflict/
+        on_error) + a `_build_mapping` builder.
+
+        Syntax (original — with ``on Entity``)::
+
             mapping fetch_company on Company:
               trigger: on_create when company_number != null
               request: GET "/company/{self.company_number}"
@@ -227,7 +235,8 @@ class IntegrationParserMixin:
                 field <- source
               on_error: ignore
 
-        Syntax (v0.33.1 — with source/target/transform):
+        Syntax (v0.33.1 — with source/target/transform)::
+
             mapping financial_snapshot:
               source: Reports.ProfitAndLoss
               target: XeroIntegration
@@ -238,7 +247,7 @@ class IntegrationParserMixin:
         self.expect(TokenType.MAPPING)
         mapping_name = self.expect_identifier_or_keyword().value
 
-        # Optional ``on Entity`` — if absent, entity_ref set via ``target:``
+        # Optional ``on Entity`` — if absent, entity_ref set via ``target:``.
         entity_ref = ""
         if self.match(TokenType.ON):
             self.advance()
@@ -248,121 +257,15 @@ class IntegrationParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        source_ref = ""
-        triggers: list[ir.MappingTriggerSpec] = []
-        request: ir.HttpRequestSpec | None = None
-        request_mapping: list[ir.MappingRule] = []
-        response_mapping: list[ir.MappingRule] = []
-        transform: list[ir.MappingRule] = []
-        on_error: ir.ErrorStrategy | None = None
-        on_conflict = ""
-        cache_ttl: int | None = None
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            tok = self.current_token()
-
-            # trigger: on_create when condition
-            if self.match(TokenType.TRIGGER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                trigger = self._parse_mapping_trigger()
-                triggers.append(trigger)
-                self.skip_newlines()
-
-            # source: DottedName (v0.33.1)
-            elif self.match(TokenType.SOURCE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                source_ref = self._parse_dotted_name()
-                self.skip_newlines()
-
-            # target: EntityName (v0.33.1)
-            elif self.match(TokenType.TARGET):
-                self.advance()
-                self.expect(TokenType.COLON)
-                entity_ref = self.expect(TokenType.IDENTIFIER).value
-                self.skip_newlines()
-
-            # request: GET "/path/{self.field}"
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "request":
-                self.advance()
-                self.expect(TokenType.COLON)
-                request = self._parse_http_request()
-                self.skip_newlines()
-
-            # cache: "24h"
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "cache":
-                self.advance()
-                self.expect(TokenType.COLON)
-                duration_tok = self.expect(TokenType.STRING)
-                from .process import parse_duration
-
-                cache_ttl = parse_duration(duration_tok.value)
-                self.skip_newlines()
-
-            # map_request: (indented block of field <- source)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "map_request":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                request_mapping = self._parse_larrow_mapping_rules()
-                self.expect(TokenType.DEDENT)
-
-            # map_response: (indented block of field <- source)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "map_response":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                response_mapping = self._parse_larrow_mapping_rules()
-                self.expect(TokenType.DEDENT)
-
-            # transform: (indented block of field: expr — v0.33.1)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "transform":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                transform = self._parse_colon_mapping_rules()
-                self.expect(TokenType.DEDENT)
-
-            # on_conflict: field_name (v0.33.1)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "on_conflict":
-                self.advance()
-                self.expect(TokenType.COLON)
-                on_conflict = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # on_error: ignore | set field = "value", log_warning
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "on_error":
-                self.advance()
-                self.expect(TokenType.COLON)
-                on_error = self._parse_error_strategy()
-                self.skip_newlines()
-
-            else:
-                break
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.IntegrationMapping(
-            name=mapping_name,
-            entity_ref=entity_ref,
-            source_ref=source_ref,
-            triggers=triggers,
-            request=request,
-            request_mapping=request_mapping,
-            response_mapping=response_mapping,
-            transform=transform,
-            on_error=on_error,
-            on_conflict=on_conflict,
-            cache_ttl=cache_ttl,
+        state = _MappingState(entity_ref=entity_ref)
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_MAPPING_KEYWORDS,
+            ident_keywords=_MAPPING_IDENT_KEYWORDS,
+            state=state,
         )
+        self.expect(TokenType.DEDENT)
+        return _build_mapping(mapping_name, state)
 
     def _parse_mapping_trigger(self) -> ir.MappingTriggerSpec:
         """Parse a mapping trigger.
@@ -865,3 +768,165 @@ class IntegrationParserMixin:
             token.line,
             token.column,
         )
+
+
+# ================================================================ #
+# _parse_mapping_block — keyword-dispatch decomposition (#1098 template) #
+# ================================================================ #
+#
+# The 146-line monolith was replaced (v0.70.31) with the dispatch
+# pattern shipped in #1097. 3 token-keyed (trigger/source/target)
+# + 7 IDENT-text-matched (request/cache/map_request/map_response/
+# transform/on_conflict/on_error) + a `_build_mapping` builder.
+
+
+@dataclass
+class _MappingState:
+    """Accumulator for :meth:`IntegrationParserMixin._parse_mapping_block`.
+
+    ``entity_ref`` is pre-populated from the optional ``on Entity``
+    header clause and may be overwritten by a later ``target:`` keyword.
+    """
+
+    entity_ref: str = ""
+    source_ref: str = ""
+    triggers: list[ir.MappingTriggerSpec] = field(default_factory=list)
+    request: ir.HttpRequestSpec | None = None
+    request_mapping: list[ir.MappingRule] = field(default_factory=list)
+    response_mapping: list[ir.MappingRule] = field(default_factory=list)
+    transform: list[ir.MappingRule] = field(default_factory=list)
+    on_error: ir.ErrorStrategy | None = None
+    on_conflict: str = ""
+    cache_ttl: int | None = None
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _m_kw_trigger(parser: Any, state: _MappingState) -> None:
+    """``trigger: on_<event> [when <expr>]`` — appended to ``triggers``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.triggers.append(parser._parse_mapping_trigger())
+    parser.skip_newlines()
+
+
+def _m_kw_source(parser: Any, state: _MappingState) -> None:
+    """``source: DottedName`` (v0.33.1)"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.source_ref = parser._parse_dotted_name()
+    parser.skip_newlines()
+
+
+def _m_kw_target(parser: Any, state: _MappingState) -> None:
+    """``target: EntityName`` (v0.33.1) — overrides any ``on Entity`` header."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.entity_ref = parser.expect(TokenType.IDENTIFIER).value
+    parser.skip_newlines()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _m_kw_request(parser: Any, state: _MappingState) -> None:
+    """``request: <METHOD> "/path"`` — HTTP request specification."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.request = parser._parse_http_request()
+    parser.skip_newlines()
+
+
+def _m_kw_cache(parser: Any, state: _MappingState) -> None:
+    """``cache: "<duration>"`` — TTL string parsed via process.parse_duration."""
+    from .process import parse_duration
+
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    duration_tok = parser.expect(TokenType.STRING)
+    state.cache_ttl = parse_duration(duration_tok.value)
+    parser.skip_newlines()
+
+
+def _m_kw_map_request(parser: Any, state: _MappingState) -> None:
+    """``map_request:`` — indented block of ``target <- source`` rules."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.request_mapping = parser._parse_larrow_mapping_rules()
+    parser.expect(TokenType.DEDENT)
+
+
+def _m_kw_map_response(parser: Any, state: _MappingState) -> None:
+    """``map_response:`` — indented block of ``target <- source`` rules."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.response_mapping = parser._parse_larrow_mapping_rules()
+    parser.expect(TokenType.DEDENT)
+
+
+def _m_kw_transform(parser: Any, state: _MappingState) -> None:
+    """``transform:`` — indented block of ``target: expr`` rules (v0.33.1)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.transform = parser._parse_colon_mapping_rules()
+    parser.expect(TokenType.DEDENT)
+
+
+def _m_kw_on_conflict(parser: Any, state: _MappingState) -> None:
+    """``on_conflict: field_name`` (v0.33.1)"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.on_conflict = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _m_kw_on_error(parser: Any, state: _MappingState) -> None:
+    """``on_error: ignore | set f = "v", log_warning | ...``"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.on_error = parser._parse_error_strategy()
+    parser.skip_newlines()
+
+
+# ---------- Dispatch tables + builder ---------- #
+
+
+_MAPPING_KEYWORDS: dict[TokenType, KeywordParser[_MappingState]] = {
+    TokenType.TRIGGER: _m_kw_trigger,
+    TokenType.SOURCE: _m_kw_source,
+    TokenType.TARGET: _m_kw_target,
+}
+
+
+_MAPPING_IDENT_KEYWORDS: dict[str, KeywordParser[_MappingState]] = {
+    "request": _m_kw_request,
+    "cache": _m_kw_cache,
+    "map_request": _m_kw_map_request,
+    "map_response": _m_kw_map_response,
+    "transform": _m_kw_transform,
+    "on_conflict": _m_kw_on_conflict,
+    "on_error": _m_kw_on_error,
+}
+
+
+def _build_mapping(mapping_name: str, state: _MappingState) -> ir.IntegrationMapping:
+    return ir.IntegrationMapping(
+        name=mapping_name,
+        entity_ref=state.entity_ref,
+        source_ref=state.source_ref,
+        triggers=state.triggers,
+        request=state.request,
+        request_mapping=state.request_mapping,
+        response_mapping=state.response_mapping,
+        transform=state.transform,
+        on_error=state.on_error,
+        on_conflict=state.on_conflict,
+        cache_ttl=state.cache_ttl,
+    )

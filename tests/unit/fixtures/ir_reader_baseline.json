@@ -80,8 +80,6 @@
   "integrations.Expression.func_args",
   "integrations.Expression.func_name",
   "integrations.IntegrationAction.response_foreign_model",
-  "integrations.IntegrationMapping.on_conflict",
-  "integrations.IntegrationMapping.source_ref",
   "integrations.IntegrationSync.from_foreign_model",
   "integrations.IntegrationSync.from_operation",
   "integrations.IntegrationSync.from_service",

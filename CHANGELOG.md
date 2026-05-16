@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.31] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `_parse_mapping_block` migrated to keyword-dispatch.** Eighteenth consumer of the #1097 helper. The 146-line integration-mapping monolith in `src/dazzle/core/dsl_parser_impl/integration.py` becomes a 47-line dispatch shell (most of which is the dual-syntax docstring) + 3 token-keyed `_m_kw_*` (trigger/source/target) + 7 IDENT-text-matched (request/cache/map_request/map_response/transform/on_conflict/on_error) + a 13-line `_build_mapping` builder. The `_MappingState` accumulator's `entity_ref` field is pre-populated from the optional ``on Entity`` header clause and may be overwritten by a later ``target:`` keyword (preserves the dual-shape syntax). Byte-identical IR verified against the 1 real mapping in `examples/ops_dashboard/dsl/app.dsl` plus a 2-mapping synthetic fixture covering all 10 branches. Drops 2 entries from the IR-reader-parity baseline.
+
 ## [0.70.30] - 2026-05-16
 
 ### Changed
