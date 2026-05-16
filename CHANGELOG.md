@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.37] - 2026-05-16
+
+### Added
+
+- **`tests/unit/test_dazzle_validate_drift.py`** — per-project bidirectional baseline gate for `dazzle validate` output. Runs `lint_appspec()` against every project under `examples/` and `fixtures/` (12 today) and compares the resulting errors/warnings counts to `tests/unit/fixtures/dazzle_validate_baseline.json`. Fails on:
+  - **Regressions** — actual errors > baseline (new validation error introduced).
+  - **Silent fixes** — actual errors < baseline (issue fixed; baseline now stale, remove the entry).
+  - **Pattern drift** — any string in `expected_error_patterns` must appear in the actual error list (so a fixture's deliberate failure can't be silently masked by a refactor).
+  - **New warnings** — warnings beyond `expected_warnings_min + 10` grace.
+- **`fixtures/pra` baselined** — kitchen-sink fixture's 7 expected `'decimal' type for monetary value` errors (#1061 money-only rule firing on intentional decimal stream-schema fields) + 335-warning floor are now tracked instead of polluting validation-sweep output. The rationale is recorded inline in the baseline file. Future refactors that silently fix or break the kitchen-sink intent will trip the gate.
+
+### Agent Guidance
+
+- When a fixture deliberately exercises grammar shapes the validator rejects, prefer baselining over editing the fixture. Add it to `tests/unit/fixtures/dazzle_validate_baseline.json` with `expected_errors`, `expected_warnings_min`, and one or more `expected_error_patterns` substrings that pin the deliberate failures. Drift in either direction (more errors OR fewer) fails the gate.
+
 ## [0.70.36] - 2026-05-16
 
 ### Closed
