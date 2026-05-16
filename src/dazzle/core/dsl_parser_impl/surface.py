@@ -338,20 +338,23 @@ class SurfaceParserMixin:
         return stages
 
     def parse_surface_section(self) -> ir.SurfaceSection:
-        """Parse surface section."""
+        """Parse a ``section <name> ["title"]:`` block inside a surface.
+
+        Refactored from a 132-line monolith — the inline ``field``
+        element parse moved to :meth:`_parse_surface_field_element`.
+
+        Optional section-level keys (``visible:``, ``note:``) are
+        consumed first, then the body is a list of ``field`` element
+        declarations until the closing DEDENT.
+        """
         self.expect(TokenType.SECTION)
-
         name = self.expect_identifier_or_keyword().value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
+        title = self.advance().value if self.match(TokenType.STRING) else None
 
         self.expect(TokenType.COLON)
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # v0.42.0: Optional section-level visible: condition
         visible_condition = None
         if self.match(TokenType.VISIBLE):
             self.advance()
@@ -359,101 +362,22 @@ class SurfaceParserMixin:
             visible_condition = self.parse_condition_expr()
             self.skip_newlines()
 
-        # v0.61.88 (#918): optional section-level note: "<text>"
         note: str | None = None
         if self.match(TokenType.NOTE):
+            # v0.61.88 (#918): optional muted section-level note line.
             self.advance()
             self.expect(TokenType.COLON)
             note = self.expect(TokenType.STRING).value
             self.skip_newlines()
 
-        elements = []
-
+        elements: list[ir.SurfaceElement] = []
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            # field field_name ["label"] [key=value ...] [visible: cond] [when: expr]
             if self.match(TokenType.FIELD):
-                self.advance()
-                field_name = self.expect_identifier_or_keyword().value
-                label = None
-
-                if self.match(TokenType.STRING):
-                    label = self.advance().value
-
-                # Parse optional key=value options (e.g. source=pack.operation)
-                options: dict[str, Any] = {}
-                while self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
-                    opt_key = self.advance().value
-                    self.expect(TokenType.EQUALS)
-                    # Value can be identifier.identifier (dotted) or a string
-                    if self.match(TokenType.STRING):
-                        opt_val = self.advance().value
-                    else:
-                        opt_val = self.expect_identifier_or_keyword().value
-                        # Support dotted values: pack_name.operation
-                        while self.match(TokenType.DOT):
-                            self.advance()
-                            opt_val += "." + self.expect_identifier_or_keyword().value
-                    options[opt_key] = opt_val
-
-                # Parse optional visible:, when:, help:, and trailing
-                # key=value options in any order.  This allows e.g.:
-                #   field x "X" visible: role(admin) widget=picker
-                #   field x "X" widget=picker visible: role(admin)
-                #   field x "X" help: "Pick from the cohort roster" widget=combobox
-                field_visible = None
-                when_expr = None
-                help_text: str | None = None  # v0.61.88 (#918)
-                while True:
-                    if self.match(TokenType.VISIBLE):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        field_visible = self.parse_condition_expr()
-                    elif self.match(TokenType.WHEN):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        when_expr = self.collect_line_as_expr()
-                    elif self.match(TokenType.HELP):
-                        # v0.61.88 (#918): help: "<string>" — muted help
-                        # text rendered below the field label.
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        help_text = self.expect(TokenType.STRING).value
-                    elif self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
-                        # Trailing key=value option (e.g. widget=picker after visible:)
-                        peek = self.peek_token()
-                        if peek and peek.type == TokenType.EQUALS:
-                            opt_key = self.advance().value
-                            self.expect(TokenType.EQUALS)
-                            if self.match(TokenType.STRING):
-                                opt_val = self.advance().value
-                            else:
-                                opt_val = self.expect_identifier_or_keyword().value
-                                while self.match(TokenType.DOT):
-                                    self.advance()
-                                    opt_val += "." + self.expect_identifier_or_keyword().value
-                            options[opt_key] = opt_val
-                        else:
-                            break
-                    else:
-                        break
-
-                elements.append(
-                    ir.SurfaceElement(
-                        field_name=field_name,
-                        label=label,
-                        options=options,
-                        when_expr=when_expr,
-                        visible=field_visible,
-                        help=help_text,  # v0.61.88 (#918)
-                    )
-                )
-
+                elements.append(self._parse_surface_field_element())
                 self.skip_newlines()
-
             else:
                 token = self.current_token()
                 self.error(
@@ -462,14 +386,106 @@ class SurfaceParserMixin:
                 )
 
         self.expect(TokenType.DEDENT)
-
         return ir.SurfaceSection(
             name=name,
             title=title,
             elements=elements,
             visible=visible_condition,
-            note=note,  # v0.61.88 (#918)
+            note=note,
         )
+
+    def _parse_surface_field_element(self) -> ir.SurfaceElement:
+        """Parse one ``field <name> ["label"] [k=v ...] [visible:/when:/help:]`` row.
+
+        The field shape allows mixed-order trailing modifiers
+        (visible:/when:/help: + ``key=value`` options) so projects can
+        write e.g. ``field x "X" visible: role(admin) widget=picker`` or
+        ``field x "X" widget=picker visible: role(admin)``.
+        """
+        self.advance()  # consume `field`
+        field_name = self.expect_identifier_or_keyword().value
+        label = self.advance().value if self.match(TokenType.STRING) else None
+
+        # Initial run of ``key=value`` options before any visible/when/help.
+        options = self._parse_field_key_value_options()
+        # Then any mix of trailing visible:/when:/help: + more key=value pairs.
+        field_visible, when_expr, help_text = self._parse_field_trailing_modifiers(options)
+
+        return ir.SurfaceElement(
+            field_name=field_name,
+            label=label,
+            options=options,
+            when_expr=when_expr,
+            visible=field_visible,
+            help=help_text,
+        )
+
+    def _parse_field_key_value_options(self) -> dict[str, Any]:
+        """Consume the leading run of ``key=value`` field options.
+
+        Value may be a STRING or a dotted-identifier path
+        (``pack_name.operation``).
+        """
+        options: dict[str, Any] = {}
+        while self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
+            opt_key = self.advance().value
+            self.expect(TokenType.EQUALS)
+            options[opt_key] = self._parse_field_option_value()
+        return options
+
+    def _parse_field_option_value(self) -> str:
+        """Consume one ``key=`` value — STRING or dotted-identifier path."""
+        if self.match(TokenType.STRING):
+            return str(self.advance().value)
+        opt_val: str = self.expect_identifier_or_keyword().value
+        while self.match(TokenType.DOT):
+            self.advance()
+            opt_val += "." + self.expect_identifier_or_keyword().value
+        return opt_val
+
+    def _parse_field_trailing_modifiers(
+        self, options: dict[str, Any]
+    ) -> tuple["ir.ConditionExpr | None", Any, str | None]:
+        """Consume any mix of trailing ``visible:`` / ``when:`` / ``help:``
+        / ``key=value`` modifiers in arbitrary order.
+
+        Mutates ``options`` in-place for any trailing key=value pairs.
+        Returns ``(visible, when_expr, help)``. ``when_expr`` is typed
+        Any because ``collect_line_as_expr`` returns a forward-referenced
+        ``Expr`` union not re-exported via ``ir.``.
+        """
+        field_visible: ir.ConditionExpr | None = None
+        when_expr: Any = None
+        help_text: str | None = None
+
+        while True:
+            if self.match(TokenType.VISIBLE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                field_visible = self.parse_condition_expr()
+            elif self.match(TokenType.WHEN):
+                self.advance()
+                self.expect(TokenType.COLON)
+                when_expr = self.collect_line_as_expr()
+            elif self.match(TokenType.HELP):
+                # v0.61.88 (#918): help: "<string>" — muted help text
+                # rendered below the field label.
+                self.advance()
+                self.expect(TokenType.COLON)
+                help_text = self.expect(TokenType.STRING).value
+            elif self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
+                # Trailing key=value option (e.g. widget=picker after visible:).
+                peek = self.peek_token()
+                if peek and peek.type == TokenType.EQUALS:
+                    opt_key = self.advance().value
+                    self.expect(TokenType.EQUALS)
+                    options[opt_key] = self._parse_field_option_value()
+                else:
+                    break
+            else:
+                break
+
+        return field_visible, when_expr, help_text
 
     def parse_surface_action(self) -> ir.SurfaceAction:
         """Parse surface action."""

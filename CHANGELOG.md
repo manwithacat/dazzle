@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.36] - 2026-05-16
+
+### Closed
+
+- **#1088: Monolithic parsers — done-criterion met.** `python3 -c "import ast; src=open('src/dazzle/core/dsl_parser_impl/workspace.py').read(); ..."` now reports max function length 99 (issue's bar: ≤ 100). The function-length pytest gate from the issue's "Enforcement" section is wired up at `tests/unit/test_parser_impl_function_length.py` — every function in `dsl_parser_impl/` is now ≤ 120 lines and the gate keeps it that way.
+
+### Changed
+
+- **6 final workspace.py refactors land** to clear the strict #1088 done-criterion:
+  - `_parse_action_cards_block` (#891): 112 → 25-line outer + 3 helpers via per-entry extraction (label-required, key/value block, kv-block helper). Introduces a `_parse_dash_required_label` helper shared with `_parse_overlay_series_block`.
+  - `_parse_task_inbox_sources_block` (#1015): 101 → 17-line outer + 4 helpers (entry, head, kv-block, mutex validator).
+  - `_parse_entity_card_sections_block`: 123 → 16-line outer + 4 helpers (entry, head, kv-block, required-mode check). Introduces `_parse_bracketed_ident_list` for `fields:` + `actions:`.
+  - `_parse_status_entries_block` (#3): 101 → 22-line outer + 3 helpers.
+  - `_parse_overlay_series_block` (#883): 101 → 23-line outer + 3 helpers.
+  - `parse_workspace`: 104-line dispatch + 7-elif chain → 36-line orchestration + a `_dispatch_workspace_keyword` returning a bool sentinel for legacy `else: break` semantics. Adds the `_WorkspaceState` outer-state accumulator (distinct from the existing inner `_WorkspaceRegionState`).
+- **2 supporting refactors** to satisfy the function-length gate's 120-line budget:
+  - `parse_module_header` (base.py): 153 → 49-line orchestration + 3 helpers (`_parse_app_config_body`, `_parse_theme_value`, `_parse_app_config_feature`).
+  - `parse_surface_section` (surface.py): 132 → 56-line orchestration + 3 helpers (`_parse_surface_field_element`, `_parse_field_key_value_options`, `_parse_field_option_value`, `_parse_field_trailing_modifiers`) — preserves the mixed-order modifier shape (``visible:`` / ``when:`` / ``help:`` / trailing ``key=value`` in any order).
+
+### Added
+
+- **`tests/unit/test_parser_impl_function_length.py`** — drift gate enforcing the 120-line function-length budget on every `def` in `dsl_parser_impl/`. The error message lists every offender with file:line + the refactor patterns proven during the v0.70.14 → v0.70.35 sweep, so the fix target is obvious. Matches the existing `test_no_*.py` policy-gate pattern.
+
+### Agent Guidance
+
+- The function-length gate at `tests/unit/test_parser_impl_function_length.py` will catch new oversized parsers automatically. **Do not bypass** — use the dispatch / phase-helper / dash-entry patterns documented in the gate's docstring.
+
 ## [0.70.35] - 2026-05-16
 
 ### Fixed

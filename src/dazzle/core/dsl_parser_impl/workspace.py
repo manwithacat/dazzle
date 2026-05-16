@@ -647,6 +647,9 @@ class WorkspaceParserMixin:
     def _parse_action_cards_block(self) -> list[ir.ActionCardSpec]:
         """Parse the indented body of an ``actions:`` block (#891).
 
+        Refactored to per-entry helper extraction. Outer loop drives the
+        dash-list; ``_parse_action_card_entry`` consumes one entry.
+
         Syntax (each entry uses the same dash-list shape as
         ``overlay_series:`` — leading dash carries the inline ``label:``,
         then an INDENT block holds icon/count_aggregate/action/tone)::
@@ -661,102 +664,118 @@ class WorkspaceParserMixin:
         Only ``label:`` is required. ``tone:`` defaults to ``neutral``.
         """
         cards: list[ir.ActionCardSpec] = []
-        _VALID_TONES = {"positive", "warning", "destructive", "neutral", "accent"}
-        _VALID_KEYS = {"label", "icon", "count_aggregate", "action", "tone"}
-
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    'actions entries must start with `- label: "..."`',
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()  # consume MINUS
-            label_kw = self.expect_identifier_or_keyword().value
-            if label_kw != "label":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"actions entry must start with `label:`, got {label_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            label_str = self.expect(TokenType.STRING).value
-            self.skip_newlines()
-
-            icon_str = ""
-            count_aggregate = ""
-            action_str = ""
-            tone_str = "neutral"
-
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "icon":
-                        icon_str = self.expect(TokenType.STRING).value
-                        self.skip_newlines()
-                    elif key == "count_aggregate":
-                        # Same approach as `aggregate:` parser — capture
-                        # tokens until newline/dedent and join.
-                        parts: list[str] = []
-                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                            parts.append(self.advance().value)
-                        count_aggregate = " ".join(parts)
-                        self.skip_newlines()
-                    elif key == "action":
-                        # Accept STRING (for URLs with `/`, `?`, `=`) OR
-                        # IDENT (bare surface name). Required for examples
-                        # like `action: "marking_result_list?status=flagged"`
-                        # whose `?` and `=` don't tokenise as identifiers.
-                        if self.match(TokenType.STRING):
-                            action_str = self.advance().value
-                        else:
-                            action_str = self.expect_identifier_or_keyword().value
-                        self.skip_newlines()
-                    elif key == "tone":
-                        tone_val = self.expect_identifier_or_keyword().value
-                        if tone_val not in _VALID_TONES:
-                            raise make_parse_error(
-                                f"actions entry {label_str!r}: tone must be one of "
-                                f"{sorted(_VALID_TONES)}; got {tone_val!r}",
-                                self.file,
-                                key_tok.line,
-                                key_tok.column,
-                            )
-                        tone_str = tone_val
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown actions key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            cards.append(
-                ir.ActionCardSpec(
-                    label=label_str,
-                    icon=icon_str,
-                    count_aggregate=count_aggregate,
-                    action=action_str,
-                    tone=tone_str,
-                )
-            )
+            cards.append(self._parse_action_card_entry())
         return cards
+
+    def _parse_action_card_entry(self) -> ir.ActionCardSpec:
+        """Parse one ``- label: "..."`` action-card entry + its kv block."""
+        if not self.match(TokenType.MINUS):
+            tok = self.current_token()
+            raise make_parse_error(
+                'actions entries must start with `- label: "..."`',
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume MINUS
+        label_str = self._parse_dash_required_label("actions")
+        icon_str, count_aggregate, action_str, tone_str = self._parse_action_card_kv_block(
+            label_str
+        )
+        return ir.ActionCardSpec(
+            label=label_str,
+            icon=icon_str,
+            count_aggregate=count_aggregate,
+            action=action_str,
+            tone=tone_str,
+        )
+
+    def _parse_action_card_kv_block(self, label_str: str) -> tuple[str, str, str, str]:
+        """Consume the optional indented icon/count_aggregate/action/tone block.
+
+        Returns ``(icon, count_aggregate, action, tone)`` — empty strings
+        (or ``"neutral"`` for tone) when omitted.
+        """
+        valid_tones = {"positive", "warning", "destructive", "neutral", "accent"}
+        valid_keys = {"label", "icon", "count_aggregate", "action", "tone"}
+
+        icon_str = ""
+        count_aggregate = ""
+        action_str = ""
+        tone_str = "neutral"
+
+        if not self.match(TokenType.INDENT):
+            return icon_str, count_aggregate, action_str, tone_str
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "icon":
+                icon_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "count_aggregate":
+                parts: list[str] = []
+                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                    parts.append(self.advance().value)
+                count_aggregate = " ".join(parts)
+                self.skip_newlines()
+            elif key == "action":
+                # STRING (URL with `/`, `?`, `=`) OR IDENT (bare surface name).
+                if self.match(TokenType.STRING):
+                    action_str = self.advance().value
+                else:
+                    action_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "tone":
+                tone_val = self.expect_identifier_or_keyword().value
+                if tone_val not in valid_tones:
+                    raise make_parse_error(
+                        f"actions entry {label_str!r}: tone must be one of "
+                        f"{sorted(valid_tones)}; got {tone_val!r}",
+                        self.file,
+                        key_tok.line,
+                        key_tok.column,
+                    )
+                tone_str = tone_val
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown actions key {key!r}. Expected one of: {sorted(valid_keys)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+        self.expect(TokenType.DEDENT)
+        return icon_str, count_aggregate, action_str, tone_str
+
+    def _parse_dash_required_label(self, block_name: str) -> str:
+        """Common helper: consume the required ``label: "<str>"`` first key.
+
+        Shared across dash-list parsers (actions, overlay_series, etc.) —
+        each entry's first key must be ``label``.
+        """
+        label_kw = self.expect_identifier_or_keyword().value
+        if label_kw != "label":
+            tok = self.current_token()
+            raise make_parse_error(
+                f"{block_name} entry must start with `label:`, got {label_kw!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.expect(TokenType.COLON)
+        label_str: str = self.expect(TokenType.STRING).value
+        self.skip_newlines()
+        return label_str
 
     def _parse_cohort_strip_config_block(self) -> ir.CohortStripConfig:
         """Parse the indented body of a ``cohort_strip_config:`` block (#1018).
@@ -1101,105 +1120,126 @@ class WorkspaceParserMixin:
     def _parse_task_inbox_sources_block(self) -> list[ir.TaskSource]:
         """Parse the indented dash-list body of a ``sources:`` block (#1015).
 
+        Refactored to per-entry helper extraction. Outer loop drives the
+        dash-list; ``_parse_task_inbox_source_entry`` consumes one entry.
+
         Each entry leads with ``- source: <EntityName>``; the rest of
         the entry's keys land in its INDENT block. Exactly one of
         ``as_task`` (nested template block) or ``count_as`` (string)
         must be set per entry.
         """
         sources: list[ir.TaskSource] = []
-        _VALID_KEYS = {"source", "filter", "as_task", "count_as"}
-
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    "sources entries must start with `- source: <EntityName>`",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()  # consume MINUS
-            head_kw = self.expect_identifier_or_keyword().value
-            if head_kw != "source":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"sources entry must start with `source:`, got {head_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            source_str = self.expect_identifier_or_keyword().value
-            self.skip_newlines()
-
-            filter_expr: ir.ConditionExpr | None = None
-            as_task: ir.TaskSourceTemplate | None = None
-            count_as_str: str = ""
-
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "filter":
-                        filter_expr = self.parse_condition_expr()
-                        self.skip_newlines()
-                    elif key == "as_task":
-                        self.skip_newlines()
-                        self.expect(TokenType.INDENT)
-                        as_task = self._parse_task_source_template_block()
-                        self.expect(TokenType.DEDENT)
-                    elif key == "count_as":
-                        count_as_str = self.expect(TokenType.STRING).value
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown sources entry key {key!r}. "
-                            f"Expected one of: {sorted(_VALID_KEYS)}.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            # Mutex enforcement: as_task XOR count_as.
-            if as_task is None and not count_as_str:
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"sources entry source={source_str!r} requires exactly "
-                    "one of `as_task:` (per-row template) or `count_as:` "
-                    "(collapsed-summary chip).",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            if as_task is not None and count_as_str:
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"sources entry source={source_str!r}: `as_task:` and "
-                    "`count_as:` are mutually exclusive.",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            sources.append(
-                ir.TaskSource(
-                    source=source_str,
-                    filter=filter_expr,
-                    as_task=as_task,
-                    count_as=count_as_str,
-                )
-            )
-
+            sources.append(self._parse_task_inbox_source_entry())
         return sources
+
+    def _parse_task_inbox_source_entry(self) -> ir.TaskSource:
+        """Parse one ``- source: EntityName`` entry + its kv block + mutex check."""
+        if not self.match(TokenType.MINUS):
+            tok = self.current_token()
+            raise make_parse_error(
+                "sources entries must start with `- source: <EntityName>`",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume MINUS
+        source_str = self._parse_task_inbox_source_head()
+        filter_expr, as_task, count_as_str = self._parse_task_inbox_source_kv_block()
+        self._validate_task_inbox_source_mutex(source_str, as_task, count_as_str)
+        return ir.TaskSource(
+            source=source_str,
+            filter=filter_expr,
+            as_task=as_task,
+            count_as=count_as_str,
+        )
+
+    def _parse_task_inbox_source_head(self) -> str:
+        """Consume the required ``source: <EntityName>`` first key after the dash."""
+        head_kw = self.expect_identifier_or_keyword().value
+        if head_kw != "source":
+            tok = self.current_token()
+            raise make_parse_error(
+                f"sources entry must start with `source:`, got {head_kw!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.expect(TokenType.COLON)
+        source_str: str = self.expect_identifier_or_keyword().value
+        self.skip_newlines()
+        return source_str
+
+    def _parse_task_inbox_source_kv_block(
+        self,
+    ) -> tuple["ir.ConditionExpr | None", "ir.TaskSourceTemplate | None", str]:
+        """Consume the optional indented filter / as_task / count_as block."""
+        valid_keys = {"source", "filter", "as_task", "count_as"}
+        filter_expr: ir.ConditionExpr | None = None
+        as_task: ir.TaskSourceTemplate | None = None
+        count_as_str: str = ""
+
+        if not self.match(TokenType.INDENT):
+            return filter_expr, as_task, count_as_str
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "filter":
+                filter_expr = self.parse_condition_expr()
+                self.skip_newlines()
+            elif key == "as_task":
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                as_task = self._parse_task_source_template_block()
+                self.expect(TokenType.DEDENT)
+            elif key == "count_as":
+                count_as_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown sources entry key {key!r}. Expected one of: {sorted(valid_keys)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+        self.expect(TokenType.DEDENT)
+        return filter_expr, as_task, count_as_str
+
+    def _validate_task_inbox_source_mutex(
+        self,
+        source_str: str,
+        as_task: "ir.TaskSourceTemplate | None",
+        count_as_str: str,
+    ) -> None:
+        """Enforce the as_task XOR count_as mutex on each sources entry."""
+        if as_task is None and not count_as_str:
+            tok = self.current_token()
+            raise make_parse_error(
+                f"sources entry source={source_str!r} requires exactly "
+                "one of `as_task:` (per-row template) or `count_as:` "
+                "(collapsed-summary chip).",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        if as_task is not None and count_as_str:
+            tok = self.current_token()
+            raise make_parse_error(
+                f"sources entry source={source_str!r}: `as_task:` and "
+                "`count_as:` are mutually exclusive.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
 
     def _parse_task_source_template_block(self) -> ir.TaskSourceTemplate:
         """Parse a per-row ``as_task:`` template block (#1015).
@@ -1326,230 +1366,263 @@ class WorkspaceParserMixin:
     def _parse_entity_card_sections_block(self) -> list[ir.EntityCardSection]:
         """Parse the dash-list body of an entity_card ``sections:`` block.
 
-        Each entry must lead with ``- name:``. Required keys after
-        ``name``: ``mode`` (one of halo / flags / mini_bars / stamps
-        / thread_summary / quick_actions). Optional: source, filter,
-        limit (1..100), fields (bracketed identifier list), actions
-        (bracketed identifier list).
+        Refactored to per-entry helper extraction. Each entry must lead
+        with ``- name:``. Required keys after ``name``: ``mode`` (one of
+        halo / flags / mini_bars / stamps / thread_summary / quick_actions).
+        Optional: source, filter, limit (1..100), fields (bracketed
+        identifier list), actions (bracketed identifier list).
         """
         sections: list[ir.EntityCardSection] = []
-        _VALID_MODES = {mode.value for mode in ir.EntityCardSectionMode}
-        _VALID_KEYS = {"name", "mode", "source", "filter", "limit", "fields", "actions"}
-
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    "sections entries must start with `- name: <id>`",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()
-            head_kw = self.expect_identifier_or_keyword().value
-            if head_kw != "name":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"sections entry must start with `name:`, got {head_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            name_str = self.expect_identifier_or_keyword().value
-            self.skip_newlines()
-
-            mode_val: str | None = None
-            source_str: str | None = None
-            filter_expr: ir.ConditionExpr | None = None
-            limit_val: int | None = None
-            fields_list: list[str] = []
-            actions_list: list[str] = []
-
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "mode":
-                        mode_val = self.expect_identifier_or_keyword().value
-                        if mode_val not in _VALID_MODES:
-                            raise make_parse_error(
-                                f"sections entry name={name_str!r}: mode "
-                                f"must be one of {sorted(_VALID_MODES)}; "
-                                f"got {mode_val!r}",
-                                self.file,
-                                key_tok.line,
-                                key_tok.column,
-                            )
-                        self.skip_newlines()
-                    elif key == "source":
-                        source_str = self.expect_identifier_or_keyword().value
-                        self.skip_newlines()
-                    elif key == "filter":
-                        filter_expr = self.parse_condition_expr()
-                        self.skip_newlines()
-                    elif key == "limit":
-                        limit_val = int(self.expect(TokenType.NUMBER).value)
-                        self.skip_newlines()
-                    elif key == "fields":
-                        self.expect(TokenType.LBRACKET)
-                        while not self.match(TokenType.RBRACKET):
-                            fields_list.append(self.expect_identifier_or_keyword().value)
-                            if self.match(TokenType.COMMA):
-                                self.advance()
-                        self.expect(TokenType.RBRACKET)
-                        self.skip_newlines()
-                    elif key == "actions":
-                        self.expect(TokenType.LBRACKET)
-                        while not self.match(TokenType.RBRACKET):
-                            actions_list.append(self.expect_identifier_or_keyword().value)
-                            if self.match(TokenType.COMMA):
-                                self.advance()
-                        self.expect(TokenType.RBRACKET)
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown sections entry key {key!r}. "
-                            f"Expected one of: {sorted(_VALID_KEYS)}.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            if mode_val is None:
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"sections entry name={name_str!r} requires `mode:`.",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            sections.append(
-                ir.EntityCardSection(
-                    name=name_str,
-                    mode=ir.EntityCardSectionMode(mode_val),
-                    source=source_str,
-                    filter=filter_expr,
-                    limit=limit_val,
-                    fields=fields_list,
-                    actions=actions_list,
-                )
-            )
-
+            sections.append(self._parse_entity_card_section_entry())
         return sections
+
+    def _parse_entity_card_section_entry(self) -> ir.EntityCardSection:
+        """Parse one ``- name: <id>`` entity-card section entry + its kv block."""
+        if not self.match(TokenType.MINUS):
+            tok = self.current_token()
+            raise make_parse_error(
+                "sections entries must start with `- name: <id>`",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()
+        name_str = self._parse_entity_card_section_head()
+        kv = self._parse_entity_card_section_kv_block(name_str)
+        mode_val, source_str, filter_expr, limit_val, fields_list, actions_list = kv
+        if mode_val is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                f"sections entry name={name_str!r} requires `mode:`.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.EntityCardSection(
+            name=name_str,
+            mode=ir.EntityCardSectionMode(mode_val),
+            source=source_str,
+            filter=filter_expr,
+            limit=limit_val,
+            fields=fields_list,
+            actions=actions_list,
+        )
+
+    def _parse_entity_card_section_head(self) -> str:
+        """Consume the required ``name: <id>`` first key after the dash."""
+        head_kw = self.expect_identifier_or_keyword().value
+        if head_kw != "name":
+            tok = self.current_token()
+            raise make_parse_error(
+                f"sections entry must start with `name:`, got {head_kw!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.expect(TokenType.COLON)
+        name_str: str = self.expect_identifier_or_keyword().value
+        self.skip_newlines()
+        return name_str
+
+    def _parse_entity_card_section_kv_block(
+        self, name_str: str
+    ) -> tuple[
+        str | None,
+        str | None,
+        "ir.ConditionExpr | None",
+        int | None,
+        list[str],
+        list[str],
+    ]:
+        """Consume the optional indented mode/source/filter/limit/fields/actions block.
+
+        Returns ``(mode, source, filter, limit, fields, actions)``. ``mode``
+        is None if omitted — the caller raises a required-field error.
+        """
+        valid_modes = {mode.value for mode in ir.EntityCardSectionMode}
+        valid_keys = {"name", "mode", "source", "filter", "limit", "fields", "actions"}
+
+        mode_val: str | None = None
+        source_str: str | None = None
+        filter_expr: ir.ConditionExpr | None = None
+        limit_val: int | None = None
+        fields_list: list[str] = []
+        actions_list: list[str] = []
+
+        if not self.match(TokenType.INDENT):
+            return mode_val, source_str, filter_expr, limit_val, fields_list, actions_list
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "mode":
+                mode_val = self.expect_identifier_or_keyword().value
+                if mode_val not in valid_modes:
+                    raise make_parse_error(
+                        f"sections entry name={name_str!r}: mode "
+                        f"must be one of {sorted(valid_modes)}; "
+                        f"got {mode_val!r}",
+                        self.file,
+                        key_tok.line,
+                        key_tok.column,
+                    )
+                self.skip_newlines()
+            elif key == "source":
+                source_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "filter":
+                filter_expr = self.parse_condition_expr()
+                self.skip_newlines()
+            elif key == "limit":
+                limit_val = int(self.expect(TokenType.NUMBER).value)
+                self.skip_newlines()
+            elif key == "fields":
+                fields_list = self._parse_bracketed_ident_list()
+                self.skip_newlines()
+            elif key == "actions":
+                actions_list = self._parse_bracketed_ident_list()
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown sections entry key {key!r}. Expected one of: {sorted(valid_keys)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+        self.expect(TokenType.DEDENT)
+        return mode_val, source_str, filter_expr, limit_val, fields_list, actions_list
+
+    def _parse_bracketed_ident_list(self) -> list[str]:
+        """Consume ``[ident1, ident2, ...]`` and return the identifier list."""
+        out: list[str] = []
+        self.expect(TokenType.LBRACKET)
+        while not self.match(TokenType.RBRACKET):
+            out.append(self.expect_identifier_or_keyword().value)
+            if self.match(TokenType.COMMA):
+                self.advance()
+        self.expect(TokenType.RBRACKET)
+        return out
 
     def _parse_status_entries_block(self) -> list[ir.StatusListEntrySpec]:
         """Parse the indented body of a status_list ``entries:`` block (#3).
 
-        Each entry is a dash-list dict with ``title`` (required) plus
-        optional ``copy`` / ``icon`` / ``state``::
+        Refactored to per-entry helper extraction. Each entry is a
+        dash-list dict with ``title`` (required) plus optional
+        ``caption`` / ``icon`` / ``state``::
 
             entries:
               - title: "Verified"
-                copy: "Identity confirmed via SSO"
+                caption: "Identity confirmed via SSO"
                 icon: "check-circle"
                 state: positive
-              - title: "Pending review"
-                copy: "Awaiting school admin sign-off"
-                icon: "clock"
-                state: warning
 
         ``state`` reuses the action_grid + metrics + notice tone
         vocabulary (positive / warning / destructive / accent / neutral).
-        v0.61.69 (AegisMark UX patterns roadmap item #3). Source-bound
-        variant deferred to a later cycle.
         """
         entries: list[ir.StatusListEntrySpec] = []
-        _VALID_STATES = {"positive", "warning", "destructive", "neutral", "accent"}
-        _VALID_KEYS = {"title", "caption", "icon", "state"}
-
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    'status_list entries must start with `- title: "..."`',
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()  # consume MINUS
-            title_kw = self.expect_identifier_or_keyword().value
-            if title_kw != "title":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"status_list entry must start with `title:`, got {title_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            title_str = self.expect(TokenType.STRING).value
-            self.skip_newlines()
-
-            caption_str = ""
-            icon_str = ""
-            state_str = "neutral"
-
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "caption":
-                        caption_str = self.expect(TokenType.STRING).value
-                        self.skip_newlines()
-                    elif key == "icon":
-                        icon_str = self.expect(TokenType.STRING).value
-                        self.skip_newlines()
-                    elif key == "state":
-                        state_val = self.expect_identifier_or_keyword().value
-                        if state_val not in _VALID_STATES:
-                            raise make_parse_error(
-                                f"status_list entry {title_str!r}: state must be one of "
-                                f"{sorted(_VALID_STATES)}; got {state_val!r}",
-                                self.file,
-                                key_tok.line,
-                                key_tok.column,
-                            )
-                        state_str = state_val
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown status_list entry key {key!r}. "
-                            f"Expected one of: {sorted(_VALID_KEYS)}.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            entries.append(
-                ir.StatusListEntrySpec(
-                    title=title_str,
-                    caption=caption_str,
-                    icon=icon_str,
-                    state=state_str,
-                )
-            )
+            entries.append(self._parse_status_entry())
         return entries
+
+    def _parse_status_entry(self) -> ir.StatusListEntrySpec:
+        """Parse one ``- title: "..."`` status_list entry + its kv block."""
+        if not self.match(TokenType.MINUS):
+            tok = self.current_token()
+            raise make_parse_error(
+                'status_list entries must start with `- title: "..."`',
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume MINUS
+        title_str = self._parse_status_entry_title()
+        caption_str, icon_str, state_str = self._parse_status_entry_kv_block(title_str)
+        return ir.StatusListEntrySpec(
+            title=title_str,
+            caption=caption_str,
+            icon=icon_str,
+            state=state_str,
+        )
+
+    def _parse_status_entry_title(self) -> str:
+        """Consume the required ``title: "<str>"`` first key after the dash."""
+        title_kw = self.expect_identifier_or_keyword().value
+        if title_kw != "title":
+            tok = self.current_token()
+            raise make_parse_error(
+                f"status_list entry must start with `title:`, got {title_kw!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.expect(TokenType.COLON)
+        title_str: str = self.expect(TokenType.STRING).value
+        self.skip_newlines()
+        return title_str
+
+    def _parse_status_entry_kv_block(self, title_str: str) -> tuple[str, str, str]:
+        """Consume the optional indented caption/icon/state block.
+
+        Returns ``(caption, icon, state)``. ``state`` defaults to ``"neutral"``.
+        """
+        valid_states = {"positive", "warning", "destructive", "neutral", "accent"}
+        valid_keys = {"title", "caption", "icon", "state"}
+
+        caption_str = ""
+        icon_str = ""
+        state_str = "neutral"
+
+        if not self.match(TokenType.INDENT):
+            return caption_str, icon_str, state_str
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "caption":
+                caption_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "icon":
+                icon_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "state":
+                state_val = self.expect_identifier_or_keyword().value
+                if state_val not in valid_states:
+                    raise make_parse_error(
+                        f"status_list entry {title_str!r}: state must be one of "
+                        f"{sorted(valid_states)}; got {state_val!r}",
+                        self.file,
+                        key_tok.line,
+                        key_tok.column,
+                    )
+                state_str = state_val
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown status_list entry key {key!r}. "
+                    f"Expected one of: {sorted(valid_keys)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+        self.expect(TokenType.DEDENT)
+        return caption_str, icon_str, state_str
 
     def _parse_confirmations_block(self) -> list[ir.ConfirmationItemSpec]:
         """Parse the indented body of a confirm_action_panel
@@ -1649,6 +1722,8 @@ class WorkspaceParserMixin:
     def _parse_overlay_series_block(self) -> list[ir.OverlaySeriesSpec]:
         """Parse the indented body of an ``overlay_series:`` block (#883).
 
+        Refactored to per-entry helper extraction.
+
         Syntax (each entry uses YAML-style indented sub-keys — the
         leading dash carries the inline ``label:``, then an INDENT
         block holds source/filter/aggregate)::
@@ -1667,193 +1742,176 @@ class WorkspaceParserMixin:
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    'overlay_series entries must start with `- label: "..."`',
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()  # consume MINUS
-            # Inline `label: "..."` on the dash line
-            label_kw = self.expect_identifier_or_keyword().value
-            if label_kw != "label":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"overlay_series entry must start with `label:`, got {label_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            label_str = self.expect(TokenType.STRING).value
-            self.skip_newlines()
-
-            source_name: str | None = None
-            filter_expr: ir.ConditionExpr | None = None
-            aggregate_expr: str = ""
-
-            # Sub-block — INDENT after the dash line carries source /
-            # filter / aggregate keys.
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "source":
-                        source_name = self.expect_identifier_or_keyword().value
-                        self.skip_newlines()
-                    elif key == "filter":
-                        filter_expr = self.parse_condition_expr()
-                        self.skip_newlines()
-                    elif key == "aggregate":
-                        # Capture as joined token string until newline —
-                        # same shape as the region-level `aggregate:` parser.
-                        parts: list[str] = []
-                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                            parts.append(self.advance().value)
-                        aggregate_expr = " ".join(parts)
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown overlay_series key {key!r}. "
-                            f"Expected one of: source, filter, aggregate.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            if not aggregate_expr:
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"overlay_series entry {label_str!r} requires `aggregate:`",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-
-            series.append(
-                ir.OverlaySeriesSpec(
-                    label=label_str,
-                    source=source_name,
-                    filter=filter_expr,
-                    aggregate_expr=aggregate_expr,
-                )
-            )
+            series.append(self._parse_overlay_series_entry())
         return series
 
-    def parse_workspace(self) -> ir.WorkspaceSpec:
-        """
-        Parse workspace declaration.
+    def _parse_overlay_series_entry(self) -> ir.OverlaySeriesSpec:
+        """Parse one ``- label: "..."`` overlay_series entry + its kv block."""
+        if not self.match(TokenType.MINUS):
+            tok = self.current_token()
+            raise make_parse_error(
+                'overlay_series entries must start with `- label: "..."`',
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume MINUS
+        label_str = self._parse_dash_required_label("overlay_series")
+        source_name, filter_expr, aggregate_expr = self._parse_overlay_series_kv_block()
+        if not aggregate_expr:
+            tok = self.current_token()
+            raise make_parse_error(
+                f"overlay_series entry {label_str!r} requires `aggregate:`",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.OverlaySeriesSpec(
+            label=label_str,
+            source=source_name,
+            filter=filter_expr,
+            aggregate_expr=aggregate_expr,
+        )
 
-        Syntax:
-            workspace name "Title":
-              purpose: "..."
-              region_name:
-                source: EntityName
-                filter: condition_expr
-                sort: field desc
-                limit: 10
-                display: list|grid|timeline|map
-                action: surface_name
-                empty: "..."
-                aggregate:
-                  metric_name: expr
-              ux:
-                ...
+    def _parse_overlay_series_kv_block(
+        self,
+    ) -> tuple[str | None, "ir.ConditionExpr | None", str]:
+        """Consume the optional indented source/filter/aggregate block.
+
+        Returns ``(source, filter, aggregate)``. ``aggregate`` is required
+        by the caller — empty string here signals omission.
+        """
+        source_name: str | None = None
+        filter_expr: ir.ConditionExpr | None = None
+        aggregate_expr: str = ""
+
+        if not self.match(TokenType.INDENT):
+            return source_name, filter_expr, aggregate_expr
+        self.advance()  # consume INDENT
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "source":
+                source_name = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "filter":
+                filter_expr = self.parse_condition_expr()
+                self.skip_newlines()
+            elif key == "aggregate":
+                # Joined token string until newline — same shape as
+                # the region-level `aggregate:` parser.
+                parts: list[str] = []
+                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                    parts.append(self.advance().value)
+                aggregate_expr = " ".join(parts)
+                self.skip_newlines()
+            else:
+                raise make_parse_error(
+                    f"Unknown overlay_series key {key!r}. "
+                    f"Expected one of: source, filter, aggregate.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+        self.expect(TokenType.DEDENT)
+        return source_name, filter_expr, aggregate_expr
+
+    def parse_workspace(self) -> ir.WorkspaceSpec:
+        """Parse a ``workspace <name> "Title":`` declaration.
+
+        Refactored from a 104-line monolith into a thin orchestration
+        sequence + 6 phase helpers. The outer loop dispatches on the
+        next token type and falls through to the IDENTIFIER → region
+        fallback for any unrecognised keyword.
         """
         name, title, loc = self._parse_construct_header(
             TokenType.WORKSPACE, allow_keyword_name=True
         )
-
-        purpose = None
-        stage = None
-        regions: list[ir.WorkspaceRegion] = []
-        nav_groups: list[ir.NavGroupSpec] = []
-        nav_ref: str | None = None
-        ux_spec = None
-        access_spec = None
-        context_selector = None
+        state = _WorkspaceState()
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            # access: public | authenticated | persona(name1, name2)
-            if self.match(TokenType.ACCESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                access_spec = self._parse_workspace_access()
-                self.skip_newlines()
-
-            # purpose: "..."
-            elif self.match(TokenType.PURPOSE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                purpose = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # stage: "stage_name" (v0.8.0) - preferred
-            # engine_hint: "archetype_name" (v0.3.1) - deprecated, use stage instead
-            elif self.match(TokenType.STAGE) or self.match(TokenType.ENGINE_HINT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                stage = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # context_selector:
-            elif self.match(TokenType.CONTEXT_SELECTOR):
-                context_selector = self._parse_context_selector()
-
-            # uses nav <name> — bind a shared nav definition (v0.61.95, #926)
-            elif self.match(TokenType.USES) and self.peek_token().type == TokenType.NAV:
-                self.advance()  # consume `uses`
-                self.advance()  # consume `nav`
-                nav_ref = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # nav_group "Label" [icon=name] [collapsed]:
-            # group "Label" [icon=name] [collapsed]: (same shape, lighter
-            # visual weight inside `nav <name>:` blocks but also accepted
-            # inline so projects can use the shorter keyword everywhere)
-            elif self.match(TokenType.NAV_GROUP, TokenType.GROUP):
-                nav_groups.append(self._parse_nav_group())
-
-            # ux: (optional workspace-level UX)
-            elif self.match(TokenType.UX):
-                ux_spec = self.parse_ux_block()
-
-            # region_name: (workspace region)
-            elif self.match(TokenType.IDENTIFIER):
-                region = self.parse_workspace_region()
-                regions.append(region)
-
-            else:
+            if not self._dispatch_workspace_keyword(state):
+                # Legacy `else: break` — unrecognised non-region token bails
+                # the loop; surrounding expect(DEDENT) then raises if the
+                # cursor isn't on a DEDENT.
                 break
 
         self.expect(TokenType.DEDENT)
-
         return ir.WorkspaceSpec(
             name=name,
             title=title,
-            purpose=purpose,
-            stage=stage,
-            regions=regions,
-            nav_groups=nav_groups,
-            nav_ref=nav_ref,
-            ux=ux_spec,
-            access=access_spec,
-            context_selector=context_selector,
+            purpose=state.purpose,
+            stage=state.stage,
+            regions=state.regions,
+            nav_groups=state.nav_groups,
+            nav_ref=state.nav_ref,
+            ux=state.ux_spec,
+            access=state.access_spec,
+            context_selector=state.context_selector,
             source=loc,
         )
+
+    # ---------- parse_workspace phase helpers ---------- #
+
+    def _dispatch_workspace_keyword(self, state: "_WorkspaceState") -> bool:
+        """One workspace-loop dispatch tick. Returns False to bail the loop.
+
+        The `parse_block_with_dispatch` helper doesn't apply cleanly here:
+        the legacy parser falls through to ``IDENTIFIER → region`` for
+        ANY identifier (the region name), and breaks on anything else.
+        Encoding both in a custom dispatch keeps the legacy semantics
+        without a sentinel exception.
+        """
+        if self.match(TokenType.ACCESS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            state.access_spec = self._parse_workspace_access()
+            self.skip_newlines()
+            return True
+        if self.match(TokenType.PURPOSE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            state.purpose = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+            return True
+        if self.match(TokenType.STAGE) or self.match(TokenType.ENGINE_HINT):
+            # ENGINE_HINT is the deprecated v0.3.1 form of STAGE (v0.8.0+).
+            self.advance()
+            self.expect(TokenType.COLON)
+            state.stage = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+            return True
+        if self.match(TokenType.CONTEXT_SELECTOR):
+            state.context_selector = self._parse_context_selector()
+            return True
+        if self.match(TokenType.USES) and self.peek_token().type == TokenType.NAV:
+            # `uses nav <name>` — bind a shared nav definition (#926).
+            self.advance()  # consume `uses`
+            self.advance()  # consume `nav`
+            state.nav_ref = self.expect_identifier_or_keyword().value
+            self.skip_newlines()
+            return True
+        if self.match(TokenType.NAV_GROUP, TokenType.GROUP):
+            # Both keywords accepted at workspace top-level (lighter
+            # visual weight inside `nav <name>:` blocks).
+            state.nav_groups.append(self._parse_nav_group())
+            return True
+        if self.match(TokenType.UX):
+            state.ux_spec = self.parse_ux_block()
+            return True
+        if self.match(TokenType.IDENTIFIER):
+            # Fallback: any unrecognised identifier names a workspace region.
+            state.regions.append(self.parse_workspace_region())
+            return True
+        return False
 
     # Parsed access specs are enforced at request time in
     # src/dazzle/ui/runtime/surface_access.py:check_surface_access().
@@ -2066,6 +2124,24 @@ class WorkspaceParserMixin:
 # is now a small ``_kw_*`` free function below; the post-loop
 # discriminated-union assembly lives in :func:`_build_workspace_region`.
 # Per-keyword error messages match the original byte-for-byte.
+
+
+@dataclass
+class _WorkspaceState:
+    """Accumulator for :meth:`WorkspaceParserMixin.parse_workspace`.
+
+    Outer-workspace state — distinct from :class:`_WorkspaceRegionState`,
+    which is the inner per-region accumulator.
+    """
+
+    purpose: str | None = None
+    stage: str | None = None
+    regions: list[ir.WorkspaceRegion] = field(default_factory=list)
+    nav_groups: list[ir.NavGroupSpec] = field(default_factory=list)
+    nav_ref: str | None = None
+    ux_spec: ir.UXSpec | None = None
+    access_spec: ir.WorkspaceAccessSpec | None = None
+    context_selector: ir.ContextSelectorSpec | None = None
 
 
 @dataclass

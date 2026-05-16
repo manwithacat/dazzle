@@ -318,157 +318,148 @@ class BaseParser:
     def parse_module_header(
         self,
     ) -> tuple[str | None, str | None, str | None, "ir.AppConfigSpec | None", list[str]]:
-        """
-        Parse module header (module, app, use declarations).
+        """Parse module header (module, app, use declarations).
 
-        Returns:
-            Tuple of (module_name, app_name, app_title, app_config, uses)
-        """
-        from .. import ir
+        Refactored from a 153-line monolith — the inline app-config
+        body parsing moved to :meth:`_parse_app_config_body`.
 
+        Returns ``(module_name, app_name, app_title, app_config, uses)``.
+        """
         module_name = None
         app_name = None
         app_title = None
         app_config = None
-        uses = []
+        uses: list[str] = []
 
         self.skip_newlines()
 
-        # Parse module declaration
         if self.match(TokenType.MODULE):
             self.advance()
             module_name = self.parse_module_name()
             self.skip_newlines()
 
-        # Parse use declarations
+        # `use foo.bar [as alias]` declarations.
         while self.match(TokenType.USE):
             self.advance()
-            use_name = self.parse_module_name()
-            uses.append(use_name)
-
-            # Optional "as alias" - ignore for now
+            uses.append(self.parse_module_name())
             if self.match(TokenType.AS):
                 self.advance()
                 self.expect(TokenType.IDENTIFIER)
-
             self.skip_newlines()
 
-        # Parse app declaration (v0.9.5: with optional body)
+        # `app <name> ["title"] [:body]` — body is optional (v0.9.5).
         if self.match(TokenType.APP):
             self.advance()
             app_name = self.expect_identifier_or_keyword().value
-
             if self.match(TokenType.STRING):
                 app_title = self.advance().value
-
-            # v0.9.5: Optional app config body
             if self.match(TokenType.COLON):
                 self.advance()
                 self.skip_newlines()
                 self.expect(TokenType.INDENT)
-
-                description = None
-                multi_tenant = False
-                audit_trail = False
-                security_profile = "basic"  # v0.11.0
-                theme: str | None = None  # v0.61.43 (Phase B Patch 2)
-                features: dict[str, str | bool] = {}
-
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-
-                    # description: "..."
-                    if self.match(TokenType.DESCRIPTION):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        description = self.expect(TokenType.STRING).value
-                        self.skip_newlines()
-
-                    # multi_tenant: true|false
-                    elif self.match(TokenType.MULTI_TENANT):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        token = self.advance()
-                        multi_tenant = token.type == TokenType.TRUE
-                        self.skip_newlines()
-
-                    # audit_trail: true|false
-                    elif self.match(TokenType.AUDIT_TRAIL):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        token = self.advance()
-                        audit_trail = token.type == TokenType.TRUE
-                        self.skip_newlines()
-
-                    # security_profile: basic|standard|strict (v0.11.0)
-                    elif self.match(TokenType.SECURITY_PROFILE):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        # Accept identifier (basic, standard, strict) or string
-                        token = self.advance()
-                        if token.type == TokenType.STRING:
-                            security_profile = token.value
-                        else:
-                            security_profile = token.value
-                        self.skip_newlines()
-
-                    # theme: <name>  (v0.61.43, #design-system Phase B Patch 2)
-                    # Resolves via the registry at link time. DSL value
-                    # wins over [ui] theme in dazzle.toml. Theme names
-                    # commonly contain hyphens (linear-dark, my-brand)
-                    # which the lexer splits into IDENT-MINUS-IDENT —
-                    # rejoin them here so unquoted hyphenated names work.
-                    elif self.match(TokenType.THEME):
-                        self.advance()
-                        self.expect(TokenType.COLON)
-                        token = self.advance()
-                        if token.type == TokenType.STRING:
-                            theme = token.value
-                        else:
-                            parts = [token.value]
-                            while self.match(TokenType.MINUS):
-                                self.advance()
-                                parts.append("-")
-                                next_tok = self.advance()
-                                parts.append(next_tok.value)
-                            theme = "".join(parts)
-                        self.skip_newlines()
-
-                    # Any other identifier: value (for extensibility)
-                    elif self.match(TokenType.IDENTIFIER):
-                        key = self.advance().value
-                        self.expect(TokenType.COLON)
-                        if self.match(TokenType.STRING):
-                            features[key] = self.advance().value
-                        elif self.match(TokenType.TRUE):
-                            self.advance()
-                            features[key] = True
-                        elif self.match(TokenType.FALSE):
-                            self.advance()
-                            features[key] = False
-                        else:
-                            features[key] = self.advance().value
-                        self.skip_newlines()
-
-                    else:
-                        break
-
-                self.expect(TokenType.DEDENT)
-
-                app_config = ir.AppConfigSpec(
-                    description=description,
-                    multi_tenant=multi_tenant,
-                    audit_trail=audit_trail,
-                    security_profile=security_profile,
-                    theme=theme,
-                    features=features,
-                )
+                app_config = self._parse_app_config_body()
             else:
                 self.skip_newlines()
 
         return module_name, app_name, app_title, app_config, uses
+
+    def _parse_app_config_body(self) -> "ir.AppConfigSpec":
+        """Parse the indented body of an ``app <name>:`` declaration.
+
+        Dispatches on each known keyword (description / multi_tenant /
+        audit_trail / security_profile / theme); any other identifier
+        lands in the ``features`` extensibility map. Consumes through
+        the closing DEDENT.
+        """
+        from .. import ir
+
+        description: str | None = None
+        multi_tenant = False
+        audit_trail = False
+        security_profile = "basic"  # v0.11.0
+        theme: str | None = None  # v0.61.43
+        features: dict[str, str | bool] = {}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            if self.match(TokenType.DESCRIPTION):
+                self.advance()
+                self.expect(TokenType.COLON)
+                description = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif self.match(TokenType.MULTI_TENANT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                multi_tenant = self.advance().type == TokenType.TRUE
+                self.skip_newlines()
+            elif self.match(TokenType.AUDIT_TRAIL):
+                self.advance()
+                self.expect(TokenType.COLON)
+                audit_trail = self.advance().type == TokenType.TRUE
+                self.skip_newlines()
+            elif self.match(TokenType.SECURITY_PROFILE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                # Accept identifier (basic / standard / strict) or string.
+                security_profile = self.advance().value
+                self.skip_newlines()
+            elif self.match(TokenType.THEME):
+                theme = self._parse_theme_value()
+                self.skip_newlines()
+            elif self.match(TokenType.IDENTIFIER):
+                # Extensibility: any other `<key>: <value>` lands in features.
+                self._parse_app_config_feature(features)
+                self.skip_newlines()
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+        return ir.AppConfigSpec(
+            description=description,
+            multi_tenant=multi_tenant,
+            audit_trail=audit_trail,
+            security_profile=security_profile,
+            theme=theme,
+            features=features,
+        )
+
+    def _parse_theme_value(self) -> str:
+        """Consume ``theme: <name>`` — handles hyphenated names (#design-system).
+
+        Theme names commonly contain hyphens (``linear-dark``, ``my-brand``)
+        which the lexer splits into IDENT-MINUS-IDENT — rejoin them here
+        so unquoted hyphenated names work. DSL value wins over ``[ui]
+        theme`` in dazzle.toml (v0.61.43, Phase B Patch 2).
+        """
+        self.advance()  # consume `theme`
+        self.expect(TokenType.COLON)
+        token = self.advance()
+        if token.type == TokenType.STRING:
+            return str(token.value)
+        parts = [str(token.value)]
+        while self.match(TokenType.MINUS):
+            self.advance()
+            parts.append("-")
+            parts.append(str(self.advance().value))
+        return "".join(parts)
+
+    def _parse_app_config_feature(self, features: dict[str, "str | bool"]) -> None:
+        """Consume one ``<key>: <value>`` line into the extensibility map."""
+        key = self.advance().value
+        self.expect(TokenType.COLON)
+        if self.match(TokenType.STRING):
+            features[key] = self.advance().value
+        elif self.match(TokenType.TRUE):
+            self.advance()
+            features[key] = True
+        elif self.match(TokenType.FALSE):
+            self.advance()
+            features[key] = False
+        else:
+            features[key] = self.advance().value
 
     def parse_module_name(self) -> str:
         """Parse dotted module name (e.g., foo.bar.baz)."""
