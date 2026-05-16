@@ -1516,4 +1516,8 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         event_model=_first_scalar("event_model"),
         hless_pragma=_first_scalar("hless_pragma"),
         data_products=_first_scalar("data_products"),
+        # Guided onboarding (v0.71.0) — flatten across modules, no
+        # symbol-table tracking yet (guides reference surfaces/entities
+        # by name; the concordance pass handles cross-module refs).
+        guides=_flatten_list("guides"),
     )

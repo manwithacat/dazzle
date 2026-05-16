@@ -81,6 +81,10 @@ construct: grant_schema
   fragment_fields: grant_schemas
   ir_classes: GrantSchemaSpec
 
+construct: guide
+  fragment_fields: guides
+  ir_classes: GuideSpec
+
 construct: hless
   fragment_fields: hless_pragma
   ir_classes: HLESSPragma

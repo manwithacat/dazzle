@@ -573,6 +573,13 @@ class TokenType(Enum):
     # Feedback Widget
     FEEDBACK_WIDGET = "feedback_widget"
 
+    # Guided onboarding (v0.71.0 — design doc 2026-05-16). ONBOARDING
+    # and HINT tokens are deferred to v0.71.1+ when the inline-annotation
+    # surface (`onboarding step:` inside `action create:` blocks) and
+    # the `hint:` field-level primitive land — reserving them now would
+    # collide with valid identifier usage (e.g. `experience onboarding`).
+    GUIDE = "guide"
+
     # v0.61.0 Analytics / Privacy / Compliance
     SUBPROCESSOR = "subprocessor"
     ANALYTICS = "analytics"

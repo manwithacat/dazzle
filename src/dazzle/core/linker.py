@@ -190,6 +190,22 @@ def build_appspec(
     if known_renderers is not None:
         _validate_render_references(surfaces, workspaces, known_renderers)
 
+    # 10d. Guide concordance — every guide step's target / completion /
+    # cta must resolve against the actual DSL state (#1106 follow-up,
+    # v0.71.0). Drift becomes a compile error, not a runtime surprise.
+    from .guide_concordance import check_guide_concordance
+
+    guide_errors, _guide_warnings = check_guide_concordance(
+        merged_fragment.guides,
+        surfaces=surfaces,
+        entities=entities,
+        personas=merged_fragment.personas,
+        streams=merged_fragment.streams,
+    )
+    if guide_errors:
+        error_msg = "Guide concordance failed:\n" + "\n".join(f"  - {e}" for e in guide_errors)
+        raise LinkError(error_msg)
+
     # 11. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
@@ -252,6 +268,7 @@ def build_appspec(
         grant_schemas=merged_fragment.grant_schemas,  # v0.42.0 Runtime RBAC
         params=merged_fragment.params,  # v0.44.0 Runtime Parameters
         feedback_widget=merged_fragment.feedback_widget,  # Feedback Widget
+        guides=merged_fragment.guides,  # Guided onboarding (v0.71.0)
         subprocessors=merged_fragment.subprocessors,  # v0.61.0 Analytics / Privacy
         analytics=merged_fragment.analytics,  # v0.61.0 Phase 3
         audit_trail=root_module.app_config.audit_trail if root_module.app_config else False,

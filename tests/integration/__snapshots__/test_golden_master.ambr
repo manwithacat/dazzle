@@ -925,6 +925,8 @@
     ]),
     'grant_schemas': list([
     ]),
+    'guides': list([
+    ]),
     'hless_mode': <HLESSMode.STRICT: 'strict'>,
     'hless_pragma': None,
     'integrations': list([

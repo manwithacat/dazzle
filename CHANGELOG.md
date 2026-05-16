@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-05-16
+
+### Added
+
+- **Guided onboarding MVP** — new top-level `guide` DSL construct, IR, parser, and concordance linker pass. Per the design doc at `dev_docs/2026-05-16-guided-onboarding-dazzle-native-design.md`. v0.71.0 is the IR + validate-time slice; runtime renderer + state persistence + inline-annotation sugar follow in v0.71.1+.
+- **IR types** (`src/dazzle/core/ir/onboarding.py`): `GuideSpec`, `GuideStep`, `GuideStepKind` (popover, spotlight, inline_card, empty_state, banner, checklist_item, blocking_task, nudge), `GuideCompleteOn`, `GuideCompleteOnKind` (click, event, dismiss, field_filled), `GuideOnComplete`, `HintSpec`, `HintDismiss`. Re-exported from `dazzle.core.ir.__all__`. `ModuleFragment.guides` + `AppSpec.guides` flow through `merge_fragments`.
+- **Parser** (`src/dazzle/core/dsl_parser_impl/onboarding.py`): top-level `guide` block with `audience`, repeated `step <name>:` blocks, `step_order` (bracket or dash-list), `on_complete`. Lexer reserves `guide` as a keyword; `onboarding` and `hint` are intentionally deferred to v0.71.1+ to avoid colliding with current identifier usage (`experience onboarding`).
+- **Concordance linker pass** (`src/dazzle/core/guide_concordance.py`): `check_guide_concordance` validates four things at `dazzle validate` time — target attachment (surface/action/section/field resolves), completion criterion (entity-lifecycle events use a known entity + valid lifecycle; hless events appear in a declared stream; field_filled paths resolve), CTA target (real surface), step-order integrity (every name resolves, no duplicates, orphans → warning). Audience persona references checked against `personas:`. Drift becomes a `LinkError` from `build_appspec`.
+- **Worked example** in `examples/simple_task/dsl/onboarding.dsl` — 3-step `workspace_setup` guide demonstrating popover / empty_state / inline_card kinds, event + field_filled + dismiss completion criteria, CTA cross-references. Validates clean under `dazzle validate`.
+- **`tests/unit/test_simple_task_guide_concordance.py`** — end-to-end coverage of the user-named success criterion: committed guide links clean; six intentional-drift scenarios (unknown target surface, unknown action, unknown entity, unknown lifecycle, unknown persona, unknown CTA surface, unknown field on `field_filled`) all fail with concordance errors.
+- **`tests/unit/test_guide_parser.py`** — 8 parser tests; **`tests/unit/test_guide_concordance.py`** — 12 linker-pass unit tests.
+
+### Agent Guidance
+
+- A `guide` block decorates existing surfaces — distinct from `experience`, which owns route segments and state arcs. Use `guide` for overlays / checklists / empty-state prompts; use `experience` for multi-page wizards.
+- Every step's `target`, `cta_target`, and `complete_on` is validated against the DSL at parse time. Renaming an action / surface / field that a guide references → compile error, not a runtime surprise. This is by design (the success criterion of #1106 follow-up): guide content must demonstrate concordance with the DSL's definition of user experience.
+- `audience` predicates use the same algebra as `scope:` rules; v0.71.0 only checks persona existence — full predicate compilation is in v0.71.1.
+- Runtime renderer is NOT in v0.71.0. Guides parse + validate but don't yet render to overlays. Tracking IR fields (placement, cta_label, audience_when, on_complete.redirect, HintSpec.dismiss) are in `tests/unit/fixtures/ir_reader_baseline.json` until v0.71.1 wires them through.
+
 ## [0.70.48] - 2026-05-16
 
 ### Added

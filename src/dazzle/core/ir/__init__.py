@@ -482,6 +482,18 @@ from .notifications import (
     NotificationTrigger,
 )
 
+# Guided onboarding (#1106 follow-up, v0.71.0)
+from .onboarding import (
+    GuideCompleteOn,
+    GuideCompleteOnKind,
+    GuideOnComplete,
+    GuideSpec,
+    GuideStep,
+    GuideStepKind,
+    HintDismiss,
+    HintSpec,
+)
+
 # Runtime Parameters (v0.44.0)
 from .params import ParamConstraints, ParamRef, ParamSpec
 
@@ -1278,6 +1290,15 @@ __all__ = [
     # Feedback Widget
     "FEEDBACK_REPORT_FIELDS",
     "FeedbackWidgetSpec",
+    # Guided onboarding (v0.71.0)
+    "GuideCompleteOn",
+    "GuideCompleteOnKind",
+    "GuideOnComplete",
+    "GuideSpec",
+    "GuideStep",
+    "GuideStepKind",
+    "HintDismiss",
+    "HintSpec",
     # Shared Enums (v0.25.0)
     "EnumSpec",
     "EnumValueSpec",

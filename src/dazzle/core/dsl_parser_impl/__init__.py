@@ -40,6 +40,7 @@ from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
 from .nav import NavParserMixin
 from .notification import NotificationParserMixin
+from .onboarding import OnboardingParserMixin
 from .params import ParamParserMixin
 from .process import ProcessParserMixin
 from .question import QuestionParserMixin
@@ -100,6 +101,7 @@ class Parser(
     FeedbackWidgetParserMixin,
     SubprocessorParserMixin,
     AnalyticsParserMixin,
+    OnboardingParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -622,6 +624,16 @@ class Parser(
             }
         )
 
+    def _dispatch_guide(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        # parse_guide() consumes the GUIDE token via _parse_construct_header.
+        spec = self.parse_guide()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "guides": [*fragment.guides, spec],
+            }
+        )
+
     def _dispatch_subprocessor(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         # parse_subprocessor consumes the SUBPROCESSOR token itself.
         spec = self.parse_subprocessor()
@@ -708,6 +720,7 @@ class Parser(
             TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
             TokenType.PARAM: self._dispatch_param,
             TokenType.FEEDBACK_WIDGET: self._dispatch_feedback_widget,
+            TokenType.GUIDE: self._dispatch_guide,
             TokenType.SUBPROCESSOR: self._dispatch_subprocessor,
             TokenType.ANALYTICS: self._dispatch_analytics,
         }

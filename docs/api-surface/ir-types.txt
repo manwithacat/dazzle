@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 340 BaseModels, 140 Enums, 21 other (functions / typealiases / constants)
+# Counts: 345 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -120,6 +120,7 @@ ir_class: AppSpec
     - fk_graph: Any = None
     - foreign_models: list[ForeignModelSpec] = []
     - grant_schemas: list[GrantSchemaSpec] = []
+    - guides: list[GuideSpec] = []
     - hless_mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
     - hless_pragma: HLESSPragma | None = None
     - integrations: list[IntegrationSpec] = []
@@ -1092,6 +1093,43 @@ ir_class: GraphNodeSpec
     - display: str | None = None
     - parent_field: str | None = None
 
+ir_class: GuideCompleteOn
+  required:
+    - kind: GuideCompleteOnKind
+  optional:
+    - event_ref: str | None = None
+    - field_filled: str | None = None
+
+ir_class: GuideOnComplete
+  required: (none)
+  optional:
+    - emit: str | None = None
+    - redirect: str | None = None
+
+ir_class: GuideSpec
+  required:
+    - audience: str
+    - name: str
+    - title: str
+  optional:
+    - on_complete: GuideOnComplete | None = None
+    - step_order: list[str] = []
+    - steps: list[GuideStep] = []
+
+ir_class: GuideStep
+  required:
+    - body: str
+    - complete_on: GuideCompleteOn
+    - kind: GuideStepKind
+    - name: str
+    - target: str
+    - title: str
+  optional:
+    - audience_when: str | None = None
+    - cta_label: str | None = None
+    - cta_target: str | None = None
+    - placement: str = 'bottom'
+
 ir_class: HLESSPragma
   required: (none)
   optional:
@@ -1107,6 +1145,12 @@ ir_class: HLESSViolation
     - severity: Literal[error, warning] = 'error'
     - stream_name: str | None = None
     - suggestion: str | None = None
+
+ir_class: HintSpec
+  required:
+    - body: str
+  optional:
+    - dismiss: HintDismiss = <HintDismiss.PERSIST: 'persist'>
 
 ir_class: HttpRequestSpec
   required:
@@ -1611,6 +1655,7 @@ ir_class: ModuleFragment
     - fixtures: list[FixtureSpec] = []
     - foreign_models: list[ForeignModelSpec] = []
     - grant_schemas: list[GrantSchemaSpec] = []
+    - guides: list[GuideSpec] = []
     - hless_pragma: HLESSPragma | None = None
     - integrations: list[IntegrationSpec] = []
     - interfaces: InterfacesSpec | None = None
@@ -3623,11 +3668,35 @@ enum: GrantExpiryMode
     - OPTIONAL = 'optional'
     - REQUIRED = 'required'
 
+enum: GuideCompleteOnKind
+  members:
+    - CLICK = 'click'
+    - DISMISS = 'dismiss'
+    - EVENT = 'event'
+    - FIELD_FILLED = 'field_filled'
+
+enum: GuideStepKind
+  members:
+    - BANNER = 'banner'
+    - BLOCKING_TASK = 'blocking_task'
+    - CHECKLIST_ITEM = 'checklist_item'
+    - EMPTY_STATE = 'empty_state'
+    - INLINE_CARD = 'inline_card'
+    - NUDGE = 'nudge'
+    - POPOVER = 'popover'
+    - SPOTLIGHT = 'spotlight'
+
 enum: HLESSMode
   members:
     - OFF = 'off'
     - STRICT = 'strict'
     - WARN = 'warn'
+
+enum: HintDismiss
+  members:
+    - NEVER = 'never'
+    - PERSIST = 'persist'
+    - SESSION = 'session'
 
 enum: HttpMethod
   members:

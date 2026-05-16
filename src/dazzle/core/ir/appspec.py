@@ -60,6 +60,7 @@ from .messaging import (
 )
 from .module import AppConfigSpec
 from .notifications import NotificationSpec
+from .onboarding import GuideSpec
 from .params import ParamSpec
 from .personas import PersonaSpec
 from .process import (
@@ -198,6 +199,8 @@ class AppSpec(BaseModel):
     params: list[ParamSpec] = Field(default_factory=list)
     # Feedback Widget
     feedback_widget: FeedbackWidgetSpec | None = None
+    # Guided onboarding (v0.71.0) — top-level `guide` blocks
+    guides: list[GuideSpec] = Field(default_factory=list)
     # Global audit trail (v0.34.0) — when True, all entities are audited by default
     audit_trail: bool = False
     # FK graph built at link time (Task 5 predicate algebra).

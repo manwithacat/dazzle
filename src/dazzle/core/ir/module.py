@@ -56,6 +56,7 @@ from .messaging import (
     TemplateSpec,
 )
 from .notifications import NotificationSpec
+from .onboarding import GuideSpec
 from .params import ParamSpec
 from .personas import PersonaSpec
 from .process import (
@@ -211,6 +212,10 @@ class ModuleFragment(BaseModel):
     params: list[ParamSpec] = Field(default_factory=list)
     # Feedback Widget
     feedback_widget: FeedbackWidgetSpec | None = None
+    # Guided onboarding (v0.71.0). Top-level `guide` blocks parsed
+    # in this module. ``AppSpec.guides`` flattens these from all
+    # merged modules.
+    guides: list[GuideSpec] = Field(default_factory=list)
     # Subprocessors (v0.61.0 Analytics / Privacy / Compliance)
     subprocessors: list[SubprocessorSpec] = Field(default_factory=list)
     # Analytics block (v0.61.0 Phase 3)
