@@ -394,9 +394,19 @@ def create_site_page_routes(
     Returns:
         FastAPI router with HTML page routes
     """
+    from dazzle.back.runtime.renderers.site_section_override_loader import (
+        discover_section_overrides,
+    )
     from dazzle.ui.runtime.css_loader import get_bundled_css
     from dazzle.ui.runtime.site_context import build_site_page_context
     from dazzle.ui.runtime.site_renderer import get_site_js
+
+    # Discover project-local section overrides once at build time
+    # (#1110 Part A). Empty registry when the project doesn't have a
+    # `site_sections/` directory — falls through to framework defaults.
+    _section_overrides = (
+        discover_section_overrides(project_root) if project_root is not None else None
+    )
 
     def _render_site_inner_html(request: Request, ctx: Any) -> str:
         """Inline-render the marketing-page body (Phase 4, v0.67.69).
@@ -519,8 +529,10 @@ def create_site_page_routes(
             stype = str(section.get("type", "") or "")
             if stype == "_typed":
                 section_html = str(section.get("_typed_html", "") or "")
-            elif stype in TYPED_SECTION_TYPES:
-                section_html = render_typed_section(section)
+            elif stype in TYPED_SECTION_TYPES or (
+                _section_overrides is not None and _section_overrides.get(stype) is not None
+            ):
+                section_html = render_typed_section(section, overrides=_section_overrides)
             else:
                 # Unknown / non-typed section: skip per v0.67.69 directive.
                 continue
@@ -598,11 +610,17 @@ def create_site_page_routes(
                     replaced.append(section)
                     continue
                 section_type = str(section.get("type", "") or "")
-                if section_type in TYPED_SECTION_TYPES:
+                has_override = (
+                    _section_overrides is not None
+                    and _section_overrides.get(section_type) is not None
+                )
+                if section_type in TYPED_SECTION_TYPES or has_override:
                     replaced.append(
                         {
                             "type": "_typed",
-                            "_typed_html": render_typed_section(section),
+                            "_typed_html": render_typed_section(
+                                section, overrides=_section_overrides
+                            ),
                         }
                     )
                 else:

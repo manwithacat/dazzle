@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.47] - 2026-05-16
+
+### Added
+
+- **#1110: Overridable sitespec section fragments + 5 new SaaS marketing primitives.** Shipped as a single release (Parts A + B together).
+- **Part A — Override loader.** New `src/dazzle/back/runtime/renderers/site_section_override_loader.py` mirrors the proven `pitch/generators/plugin_loader.py` pattern. Drop `build_<type>_section(section: dict) -> str` callables under `<project_root>/site_sections/*.py`; the registry discovers them at boot and shadows the framework default at dispatch time. Falls through when no override is registered. `render_typed_section(section, *, overrides=…)` accepts the registry; `site_routes.py` wires it through both render paths. Broken plugin files log a warning and skip without crashing the boot. `write_section_overrides_readme(project_root)` lays down the convention README — idempotent.
+- **Part B — 5 new section types.** All registered in `TYPED_SECTION_TYPES`:
+  - `social_proof_strip` — horizontal count + label items (e.g. "10,000+ active users", "$2M ARR"). Denser than `stats`.
+  - `integration_grid` — rectangular tiles with logo + name + optional href.
+  - `compliance_badge_row` — badges with union-shaped tooltip: either a plain string OR `{body, link?, link_text?}` for enriched tooltips that point at a trust page. Unknown shapes fall through silently.
+  - `before_after_comparison` — paired columns with headline + bullet list. Missing column renders the present column cleanly.
+  - `mid_page_cta_band` — short callout band (headline + subhead + single CTA), visually denser than the full `cta` section.
+
+### Agent Guidance
+
+- To override a framework section builder for a single project: create `site_sections/<topic>.py` with `def build_<type>_section(section: dict) -> str` and the runtime will pick it up. To register an entirely **new** section type, the same trick works — the dispatch consults the override registry before falling back to the framework's typed whitelist. The framework defaults stay declarative-only inside `site_section_builder.py`; project-specific divergence belongs in `site_sections/`.
+- `compliance_badge_row` tooltips accept either a plain string (simple case) or an object `{body, link, link_text}` (enriched). Pick the simplest shape that conveys the intent — don't reach for the object form when a string would do.
+
 ## [0.70.46] - 2026-05-16
 
 ### Added

@@ -24,7 +24,12 @@ from __future__ import annotations
 
 import html as _html
 import re as _re
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dazzle.back.runtime.renderers.site_section_override_loader import (
+        SectionOverrideRegistry,
+    )
 
 # Section types this module knows how to render via the typed path.
 # Unmigrated types fall through to their Jinja partials in the
@@ -49,18 +54,34 @@ TYPED_SECTION_TYPES: frozenset[str] = frozenset(
         "features",
         "pricing",
         "faq",
+        # #1110 Part B — SaaS marketing primitives
+        "social_proof_strip",
+        "integration_grid",
+        "compliance_badge_row",
+        "before_after_comparison",
+        "mid_page_cta_band",
     }
 )
 
 
-def render_typed_section(section: dict[str, Any]) -> str:
+def render_typed_section(
+    section: dict[str, Any],
+    *,
+    overrides: SectionOverrideRegistry | None = None,
+) -> str:
     """Dispatch to the right builder for a typed-section dict.
 
-    Raises KeyError when the section type isn't in
-    `TYPED_SECTION_TYPES` — callers should check membership first
-    and fall through to the Jinja partial when the type isn't
-    registered."""
+    Project-local overrides win when ``overrides`` is supplied and
+    carries a builder for the section type (#1110 Part A). Falls back
+    to the framework default. Raises ``KeyError`` when neither path
+    knows how to render the type — callers should check
+    ``TYPED_SECTION_TYPES`` (or the registry) before dispatching.
+    """
     section_type = str(section.get("type", "") or "")
+    if overrides is not None:
+        override_builder = overrides.get(section_type)
+        if override_builder is not None:
+            return override_builder(section)
     if section_type == "hero":
         return _build_hero_section(section)
     if section_type == "cta":
@@ -95,6 +116,16 @@ def render_typed_section(section: dict[str, Any]) -> str:
         return _build_pricing_section(section)
     if section_type == "faq":
         return _build_faq_section(section)
+    if section_type == "social_proof_strip":
+        return _build_social_proof_strip_section(section)
+    if section_type == "integration_grid":
+        return _build_integration_grid_section(section)
+    if section_type == "compliance_badge_row":
+        return _build_compliance_badge_row_section(section)
+    if section_type == "before_after_comparison":
+        return _build_before_after_comparison_section(section)
+    if section_type == "mid_page_cta_band":
+        return _build_mid_page_cta_band_section(section)
     raise KeyError(f"No typed builder for section type {section_type!r}")
 
 
@@ -813,5 +844,224 @@ def _build_faq_section(section: dict[str, Any]) -> str:
         )
     inner.append(f'<div class="dz-faq-list">{"".join(item_parts)}</div>')
     parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# #1110 Part B — SaaS marketing primitives
+# ---------------------------------------------------------------------------
+
+
+def _build_social_proof_strip_section(section: dict[str, Any]) -> str:
+    """`type: social_proof_strip` — horizontal strip of count + label items.
+
+    Each item: ``count`` (str, e.g. ``"10,000+"``), ``label`` (str,
+    e.g. ``"active users"``), optional ``icon`` (lucide name).
+    Rendered as a flex row of count/label pairs — denser than
+    ``stats`` (which is a centred grid with descriptions)."""
+    parts: list[str] = []
+    parts.append(
+        f'<section{_section_id_attr(section)} class="dz-section dz-section-social-proof-strip">'
+    )
+    inner: list[str] = [_section_header(section)]
+    items = list(section.get("items") or [])
+    item_parts: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        count = str(item.get("count", "") or "")
+        label = str(item.get("label", "") or "")
+        icon = item.get("icon")
+        bits: list[str] = []
+        if icon:
+            bits.append(f'<i data-lucide="{_html.escape(str(icon), quote=True)}"></i>')
+        bits.append(f'<strong class="dz-social-proof-count">{_html.escape(count)}</strong>')
+        bits.append(f'<span class="dz-social-proof-label">{_html.escape(label)}</span>')
+        item_parts.append(f'<div class="dz-social-proof-item">{"".join(bits)}</div>')
+    inner.append(f'<div class="dz-social-proof-strip">{"".join(item_parts)}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _build_integration_grid_section(section: dict[str, Any]) -> str:
+    """`type: integration_grid` — grid of integration tiles.
+
+    Each item: ``name`` (str), ``logo`` (str, url to image), optional
+    ``href`` (str, link target — wraps the tile when present).
+    Visually a rectangular card with a logo above the integration's
+    display name; semantically distinct from ``logo_cloud`` which is
+    a denser visual marker without per-tile naming."""
+    parts: list[str] = []
+    parts.append(
+        f'<section{_section_id_attr(section)} class="dz-section dz-section-integration-grid">'
+    )
+    inner: list[str] = [_section_header(section)]
+    items = list(section.get("items") or [])
+    item_parts: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "") or "")
+        logo = str(item.get("logo", "") or "")
+        href = item.get("href")
+        tile_inner = (
+            f'<img class="dz-integration-logo" '
+            f'src="{_html.escape(logo, quote=True)}" '
+            f'alt="{_html.escape(name, quote=True)}">'
+            f'<span class="dz-integration-name">{_html.escape(name)}</span>'
+        )
+        if href:
+            item_parts.append(
+                f'<a class="dz-integration-tile" '
+                f'href="{_html.escape(str(href), quote=True)}">{tile_inner}</a>'
+            )
+        else:
+            item_parts.append(f'<div class="dz-integration-tile">{tile_inner}</div>')
+    inner.append(f'<div class="dz-integration-grid">{"".join(item_parts)}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _build_compliance_badge_row_section(section: dict[str, Any]) -> str:
+    """`type: compliance_badge_row` — row of compliance badges with tooltips.
+
+    Each badge: ``label`` (str, e.g. ``"SOC 2 Type II"``), ``logo``
+    (str, image url), and a ``tooltip`` field that is **either**:
+
+    - a plain string (the tooltip text), **or**
+    - an object ``{body: str, link?: str, link_text?: str}`` for
+      enriched tooltips that link to a trust page.
+
+    The union shape lets simple cases stay terse without forcing the
+    rich shape on every badge (#1110 design call)."""
+    parts: list[str] = []
+    parts.append(
+        f'<section{_section_id_attr(section)} class="dz-section dz-section-compliance-badges">'
+    )
+    inner: list[str] = [_section_header(section)]
+    badges = list(section.get("badges") or [])
+    badge_parts: list[str] = []
+    for badge in badges:
+        if not isinstance(badge, dict):
+            continue
+        label = str(badge.get("label", "") or "")
+        logo = str(badge.get("logo", "") or "")
+        tooltip = badge.get("tooltip")
+        tooltip_html = _render_compliance_tooltip(tooltip)
+        badge_parts.append(
+            f'<div class="dz-compliance-badge">'
+            f'<img class="dz-compliance-logo" '
+            f'src="{_html.escape(logo, quote=True)}" '
+            f'alt="{_html.escape(label, quote=True)}">'
+            f'<span class="dz-compliance-label">{_html.escape(label)}</span>'
+            f"{tooltip_html}"
+            f"</div>"
+        )
+    inner.append(f'<div class="dz-compliance-row">{"".join(badge_parts)}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _render_compliance_tooltip(tooltip: Any) -> str:
+    """Render the union-shaped tooltip on a compliance badge.
+
+    ``None`` → empty string. ``str`` → simple plaintext tooltip
+    wrapped in ``.dz-compliance-tooltip``. ``dict`` → rich tooltip
+    with ``body`` paragraph + optional ``link``/``link_text`` anchor.
+    Unknown shapes fall through silently — we don't want a typo to
+    crash the whole sitespec render."""
+    if tooltip is None or tooltip == "":
+        return ""
+    if isinstance(tooltip, str):
+        return f'<div class="dz-compliance-tooltip" role="tooltip">{_html.escape(tooltip)}</div>'
+    if isinstance(tooltip, dict):
+        body = str(tooltip.get("body", "") or "")
+        if not body:
+            return ""
+        link = tooltip.get("link")
+        link_text = str(tooltip.get("link_text", "Learn more") or "Learn more")
+        link_html = ""
+        if link:
+            link_html = (
+                f'<a class="dz-compliance-tooltip-link" '
+                f'href="{_html.escape(str(link), quote=True)}">'
+                f"{_html.escape(link_text)}</a>"
+            )
+        return (
+            f'<div class="dz-compliance-tooltip" role="tooltip">'
+            f'<p class="dz-compliance-tooltip-body">{_html.escape(body)}</p>'
+            f"{link_html}"
+            f"</div>"
+        )
+    return ""
+
+
+def _build_before_after_comparison_section(section: dict[str, Any]) -> str:
+    """`type: before_after_comparison` — paired "before vs after" columns.
+
+    Inputs: ``before`` (dict with ``headline`` + ``items`` list of
+    strings), ``after`` (same shape). Renders as a two-column
+    comparison with a divider — semantically distinct from
+    ``comparison`` (which compares two products/plans, not states).
+    """
+    parts: list[str] = []
+    parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-before-after">')
+    inner: list[str] = [_section_header(section)]
+    before = section.get("before") or {}
+    after = section.get("after") or {}
+    before_html = _render_before_after_column(before, kind="before")
+    after_html = _render_before_after_column(after, kind="after")
+    inner.append(f'<div class="dz-before-after-grid">{before_html}{after_html}</div>')
+    parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _render_before_after_column(column: Any, *, kind: str) -> str:
+    if not isinstance(column, dict) or not column:
+        return ""
+    headline = str(column.get("headline", "") or "")
+    items = list(column.get("items") or [])
+    items_html = "".join(f"<li>{_html.escape(str(it))}</li>" for it in items)
+    cls = f"dz-before-after-column dz-before-after-{kind}"
+    return (
+        f'<div class="{cls}">'
+        f'<h3 class="dz-before-after-heading">{_html.escape(headline)}</h3>'
+        f'<ul class="dz-before-after-list">{items_html}</ul>'
+        f"</div>"
+    )
+
+
+def _build_mid_page_cta_band_section(section: dict[str, Any]) -> str:
+    """`type: mid_page_cta_band` — short callout band with a single CTA.
+
+    Inputs: ``headline`` (str), optional ``subhead`` (str), ``cta``
+    ({``label``, ``href``}). Smaller and visually denser than the
+    full ``cta`` section — designed to break up long marketing pages
+    without claiming a full block."""
+    parts: list[str] = []
+    parts.append(
+        f'<section{_section_id_attr(section)} class="dz-section dz-section-mid-page-cta-band">'
+    )
+    inner: list[str] = []
+    headline = str(section.get("headline", "") or "")
+    if headline:
+        inner.append(f'<h3 class="dz-mid-cta-headline">{_html.escape(headline)}</h3>')
+    subhead = section.get("subhead")
+    if subhead:
+        inner.append(f'<p class="dz-mid-cta-subhead">{_html.escape(str(subhead))}</p>')
+    cta = section.get("cta") or {}
+    if isinstance(cta, dict) and cta:
+        href = str(cta.get("href", "#") or "#")
+        label = str(cta.get("label", "Get Started") or "Get Started")
+        inner.append(
+            f'<a class="dz-button dz-button-primary dz-mid-cta-button" '
+            f'href="{_html.escape(href, quote=True)}">{_html.escape(label)}</a>'
+        )
+    parts.append(f'<div class="dz-mid-cta-content">{"".join(inner)}</div>')
     parts.append("</section>")
     return "".join(parts)
