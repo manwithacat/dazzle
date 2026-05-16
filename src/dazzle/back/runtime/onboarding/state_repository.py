@@ -19,32 +19,15 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from dazzle.render.onboarding.state import OnboardingProgress
+
 logger = logging.getLogger("dazzle.onboarding")
 
-
-@dataclass(frozen=True)
-class OnboardingProgress:
-    """In-memory view of one ``onboarding_state`` row."""
-
-    id: str
-    user_id: str
-    guide_name: str
-    guide_version: int
-    current_step: str | None
-    completed_steps: list[str] = field(default_factory=list)
-    dismissed_steps: list[str] = field(default_factory=list)
-    started_at: datetime | None = None
-    completed_at: datetime | None = None
-    metadata: dict[str, Any] | None = None
-
-    @property
-    def is_complete(self) -> bool:
-        return self.completed_at is not None
+__all__ = ["OnboardingProgress", "OnboardingStateRepository"]
 
 
 class OnboardingStateRepository:

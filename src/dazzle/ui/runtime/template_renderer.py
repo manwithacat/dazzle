@@ -24,7 +24,20 @@ def _render_typed_body(context: PageContext) -> str:
     Post-#1044: every framework surface lands here. The dispatch order
     matters — ``pdf_viewer`` is set in addition to ``detail`` on
     ``display: pdf_viewer`` surfaces, so it must branch first.
+
+    v0.71.3: a non-empty ``active_guide_html`` (set by
+    ``page_routes._inject_onboarding_step``) is prepended to whatever
+    body the typed dispatch produces. The overlay sits before the
+    surface body so it's the first thing the user lands on; the
+    actual surface content stays below.
     """
+    overlay = context.active_guide_html or ""
+    body = _render_body_inner(context)
+    return overlay + body
+
+
+def _render_body_inner(context: PageContext) -> str:
+    """Typed-body dispatch (no guide overlay)."""
     if context.form is not None:
         from html import escape
 

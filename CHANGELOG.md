@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.3] - 2026-05-17
+
+### Added
+
+- **Page-routes integration for guided onboarding.** Closes the v0.71.x runtime loop — guides now actually render to the user.
+- **`PageContext.active_guide_html: str = ""`** field — pre-rendered HTML fragment for the active guide step on this page-load. Computed at request time by the new helper; consumed by the typed-body renderer.
+- **`page_routes._inject_onboarding_step(prc)`** — runs after `_inject_auth_context` in the request pipeline. No-ops cleanly under each of: no guides declared, anonymous request, no repository configured, no `view_name` on the page, resolver returns no match, step kind not yet rendered. Repository errors (e.g. transient DB blip) are caught and swallowed so the user still sees their page.
+- **`template_renderer._render_typed_body`** prepends `context.active_guide_html` to the typed surface body. Inner dispatch moved to a new `_render_body_inner` helper; outer keeps the prepend logic.
+
+### Changed
+
+- **Pure-Python onboarding code relocated to `dazzle.render.onboarding`.** The architectural boundary check (#1086) forbids `dazzle.ui.*` from importing `dazzle.back.*`. To let `page_routes.py` reach the renderer + resolver cleanly:
+  - `renderer.py`, `resolver.py`, and the new `state.py` (containing the `OnboardingProgress` dataclass) now live under `src/dazzle/render/onboarding/`.
+  - The DB-bound `state_repository.py` and FastAPI `routes.py` stay under `src/dazzle/back/runtime/onboarding/`.
+  - `back.runtime.onboarding.__init__` re-exports the render helpers for backwards-compatibility — existing imports keep working.
+  - The resolver no longer types `repo` as `OnboardingStateRepository`; instead it accepts an `OnboardingStateLookup` `Protocol` defined locally, so the render layer carries no back-imports even at type-check time.
+
+### Tests
+
+- **`tests/unit/test_onboarding_page_wiring.py`** (11 tests) — `PageContext` field present + settable, `_render_typed_body` prepend (overlay + empty), `_inject_onboarding_step` skip conditions (no guides, anonymous, no repo, no view_name), happy-path render, unsupported-kind silent skip, repository-error swallow.
+- Existing onboarding-renderer + resolver tests updated to import from `dazzle.render.onboarding` (re-exports keep `back.runtime.onboarding` callers working but new test code uses the canonical path).
+
+### Agent Guidance
+
+- The v0.71.x guided-onboarding loop is now end-to-end functional. A project that declares any `guide` block + has `DATABASE_URL` set will see popover overlays render to authenticated users on the matching surface, with htmx-backed complete + dismiss endpoints. v0.71.4+ adds the other step kinds (spotlight, inline_card, empty_state, banner, checklist_item — all additive renderer builders), MCP `guide` tool, and `dazzle guide narrate` CLI.
+- New pure-Python onboarding code goes under `dazzle.render.onboarding/`. DB/FastAPI-bound code goes under `dazzle.back.runtime.onboarding/`. The split is what lets `ui/` import the rendering pieces without violating the architectural boundary.
+
 ## [0.71.2] - 2026-05-17
 
 ### Added

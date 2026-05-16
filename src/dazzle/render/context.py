@@ -385,6 +385,13 @@ class PageContext(BaseModel):
     user_roles: list[str] = Field(default_factory=list)
     user_preferences: dict[str, str] = Field(default_factory=dict)
 
+    # Pre-rendered HTML fragment for the active guide step (v0.71.3).
+    # Computed by page_routes._inject_onboarding_step from the active
+    # guide + step the user should see on this page; consumed by
+    # template_renderer._render_typed_body which prepends it to the
+    # rendered body. Empty string = no guide active.
+    active_guide_html: str = ""
+
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)
 

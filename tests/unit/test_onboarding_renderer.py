@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.onboarding.renderer import (
+from dazzle.core import ir
+from dazzle.render.onboarding.renderer import (
     UnknownStepKindError,
     has_builder,
     render_step,
 )
-from dazzle.core import ir
 
 
 def _step(

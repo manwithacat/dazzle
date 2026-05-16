@@ -559,6 +559,105 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
         logger.warning("Failed to resolve auth context for page", exc_info=True)
 
 
+def _inject_onboarding_step(prc: _PageRequestContext) -> None:
+    """Resolve + render the active guide step for the current user/surface (v0.71.3).
+
+    No-op when:
+    - The AppSpec declares no guides.
+    - The user isn't authenticated (the popover overlay only makes
+      sense for logged-in users — the audience predicate references
+      personas).
+    - The repository isn't configured on ``app.state.onboarding_state``
+      (no DATABASE_URL → the auth subsystem skipped wiring it).
+    - The resolver returns no active step for this (user, surface).
+    - The active step's kind isn't supported in this Dazzle version
+      (v0.71.3 ships popover only; others raise UnknownStepKindError
+      which we treat as "render nothing rather than crash the page").
+
+    On success, sets ``prc.ctx.active_guide_html`` to the rendered
+    fragment. ``template_renderer._render_typed_body`` prepends it
+    to the surface body.
+    """
+    appspec = prc.deps.appspec
+    if not getattr(appspec, "guides", None):
+        return
+    if prc.auth_ctx is None or not prc.auth_ctx.is_authenticated:
+        return
+    user = getattr(prc.auth_ctx, "user", None)
+    if user is None:
+        return
+    user_id = getattr(user, "id", None)
+    if user_id is None:
+        return
+
+    repo = getattr(prc.request.app.state, "onboarding_state", None)
+    if repo is None:
+        return
+
+    # Pick the persona to match against the audience predicate. Roles
+    # are stored as ``role_<persona>`` strings (see _inject_auth_context
+    # above); strip the prefix and pick the first one — guides target
+    # one persona at a time and the user's primary role is the first
+    # entry by convention.
+    user_persona = ""
+    roles = list(getattr(user, "roles", None) or [])
+    if roles:
+        user_persona = roles[0].removeprefix("role_")
+
+    surface_name = prc.ctx.view_name or ""
+    if not surface_name:
+        return
+
+    try:
+        from dazzle.render.onboarding import (
+            UnknownStepKindError,
+            has_builder,
+            render_step,
+            resolve_active_step,
+        )
+    except ImportError:
+        # Onboarding package missing — defensive; shouldn't happen
+        # since it ships with the framework. Don't crash the page.
+        return
+
+    try:
+        result = resolve_active_step(
+            user_id=str(user_id),
+            user_persona=user_persona,
+            surface_name=surface_name,
+            app=appspec,
+            repo=repo,
+        )
+    except Exception:
+        # Repository errors are non-fatal — log and skip the overlay.
+        # The user still sees their page.
+        import logging
+
+        logging.getLogger(__name__).debug(
+            "onboarding resolve failed for user=%s surface=%s",
+            user_id,
+            surface_name,
+            exc_info=True,
+        )
+        return
+
+    if result is None:
+        return
+    guide, step = result
+
+    kind = step.kind.value if hasattr(step.kind, "value") else str(step.kind)
+    if not has_builder(kind):
+        # Kind shipped in a future Dazzle release but the runtime
+        # doesn't have a builder for it yet. Skip silently — the
+        # user still sees their page.
+        return
+    try:
+        prc.ctx.active_guide_html = render_step(step, guide_name=guide.name)
+    except UnknownStepKindError:
+        # Race: has_builder said yes but render_step raised. Defensive.
+        return
+
+
 def _dedupe_nav_items_against_groups(
     nav_items: list[Any], nav_groups: list[dict[str, Any]]
 ) -> list[Any]:
@@ -1443,6 +1542,11 @@ async def _page_handler(
 
     # Phase 1: Auth + access control
     _inject_auth_context(prc)
+    # v0.71.3 — resolve any active onboarding step + render its HTML.
+    # No-op for anonymous users / projects without guides / unsupported
+    # step kinds. The rendered overlay is prepended to the body by
+    # template_renderer._render_typed_body.
+    _inject_onboarding_step(prc)
 
     denied = _check_surface_access(prc)
     if denied is not None:

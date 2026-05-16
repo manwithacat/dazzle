@@ -5,14 +5,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.onboarding.resolver import (
+from dazzle.core import ir
+from dazzle.render.onboarding.resolver import (
     _audience_matches_persona,
     _select_next_step,
     _step_target_matches_surface,
     resolve_active_step,
 )
-from dazzle.back.runtime.onboarding.state_repository import OnboardingProgress
-from dazzle.core import ir
+from dazzle.render.onboarding.state import OnboardingProgress
 
 # ---------------------------------------------------------------------------
 # Persona matcher

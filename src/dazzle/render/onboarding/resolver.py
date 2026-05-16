@@ -35,12 +35,27 @@ to get the HTML.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
+
+from .state import OnboardingProgress
 
 if TYPE_CHECKING:
     from dazzle.core import ir
 
-    from .state_repository import OnboardingProgress, OnboardingStateRepository
+
+class OnboardingStateLookup(Protocol):
+    """Subset of ``OnboardingStateRepository`` the resolver needs.
+
+    Protocol-typed so the render layer doesn't have to import the
+    concrete repository class (which lives in ``dazzle.back``). Any
+    object with a matching ``get`` method satisfies this contract —
+    the real repository, an in-memory test double, or a mock.
+    """
+
+    def get(
+        self, user_id: str, guide_name: str, guide_version: int = 1
+    ) -> OnboardingProgress | None: ...
+
 
 _PERSONA_CLAUSE = re.compile(r"\bpersona\s*=\s*([A-Za-z_][A-Za-z0-9_]*)")
 
@@ -103,7 +118,7 @@ def resolve_active_step(
     user_persona: str,
     surface_name: str,
     app: ir.AppSpec,
-    repo: OnboardingStateRepository,
+    repo: OnboardingStateLookup,
 ) -> tuple[ir.GuideSpec, ir.GuideStep] | None:
     """Walk the guides, find the one applicable to (user, surface).
 
