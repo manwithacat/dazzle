@@ -311,6 +311,15 @@ def _check_form_structure(
     """Check CREATE/EDIT surface: form, inputs, method, types."""
     gaps: list[FidelityGap] = []
     forms = root.find_all("form")
+    # #1103: also accept Fragment FormStack markers — any element carrying
+    # ``data-dazzle-form`` or class containing ``dz-form-stack`` counts as a
+    # form container even if the literal ``<form>`` tag is wrapped inside a
+    # custom element.
+    if not forms:
+        for el in root.find_all("div") + root.find_all("dz-region"):
+            if el.has_attr("data-dazzle-form") or "dz-form-stack" in (el.get_attr("class") or ""):
+                forms = [el]
+                break
     if not forms:
         gaps.append(
             FidelityGap(

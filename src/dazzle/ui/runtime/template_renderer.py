@@ -26,9 +26,25 @@ def _render_typed_body(context: PageContext) -> str:
     ``display: pdf_viewer`` surfaces, so it must branch first.
     """
     if context.form is not None:
+        from html import escape
+
         from dazzle.ui.runtime.form_renderer import render_form_field
 
-        return "".join(render_form_field(f) for f in context.form.fields)
+        form = context.form
+        fields_html = "".join(render_form_field(f) for f in form.fields)
+        # Wrap in a real <form> matching the Fragment FormStack shape so
+        # downstream consumers (notably the fidelity scorer, #1103) see
+        # the same structural markers users do at runtime.
+        method = "put" if form.mode == "edit" else "post"
+        action = escape(form.action_url, quote=True)
+        entity = escape(form.entity_name, quote=True)
+        return (
+            f'<form class="dz-form-stack" hx-{method}="{action}" '
+            f'hx-target="body" hx-swap="innerHTML" hx-ext="json-enc" '
+            f'data-dazzle-form="{entity}" data-dazzle-form-mode="{escape(form.mode, quote=True)}">'
+            f"{fields_html}"
+            f"</form>"
+        )
     if context.pdf_viewer is not None:
         from dazzle.ui.runtime.pdf_viewer_renderer import render_pdf_viewer
 

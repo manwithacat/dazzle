@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.40] - 2026-05-16
+
+### Fixed
+
+- **#1103: Fidelity scorer 99.46% → 91.05% drop on Fragment-chrome apps.** Two-pronged fix:
+  - `template_renderer._render_typed_body` now wraps form fields in a real `<form class="dz-form-stack" hx-post=… hx-target=body hx-swap=innerHTML hx-ext=json-enc data-dazzle-form=<Entity> data-dazzle-form-mode=create|edit>` matching the Fragment FormStack shape. Previously it returned bare `<label>`+`<input>` per field, so consumers (notably the fidelity scorer) saw no `<form>` element and reported 99 `missing_field` critical gaps per `*_create` / `*_edit` surface.
+  - `fidelity_scorer._check_form_structure` now also accepts any `div` or `dz-region` carrying `data-dazzle-form` or class `dz-form-stack` as satisfying the "has a form" structural assertion. Defence in depth — if a future renderer wraps fields in a custom element, the scorer still recognises the Fragment marker.
+- Net effect: structural axis recovers from 0.5-flat → 1.0 for all form surfaces, restoring the pre-v0.70.x fidelity baseline.
+
+### Added
+
+- **`tests/unit/test_form_fidelity_fragment_chrome.py`** — 4 regression tests: the renderer emits the wrapping `<form>`, the scorer accepts both FormStack `<form>` and bare `<div data-dazzle-form>`, and bare-fields HTML still produces the "missing form" gap.
+
+### Agent Guidance
+
+- When adding a new form-surface render path, emit a `<form class="dz-form-stack" hx-{method}=… data-dazzle-form=…>` wrapper or carry `data-dazzle-form` on the inner container. The fidelity scorer recognises either shape — pure `<input>` lists without one of these markers count as "no form".
+
 ## [0.70.39] - 2026-05-16
 
 ### Fixed
