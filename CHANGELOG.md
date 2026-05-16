@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.32] - 2026-05-16
+
+### Changed
+
+- **#1088 follow-on: `_parse_companion` migrated to keyword-dispatch.** Nineteenth consumer of the #1097 helper. The 130-line companion-block monolith in `src/dazzle/core/dsl_parser_impl/surface.py` becomes a 55-line dispatch shell (most of which is grammar docstring + the optional ``position=...`` inline-attribute parse) + 8 token-keyed `_c_kw_*` (eyebrow/display/source/limit/filter/aggregate/entries/stages) + 1 IDENT-text-matched (``title``) + a `_StopCompanionLoop` sentinel for the legacy ``DEDENT, EOF`` loop guard + a 19-line `_build_companion` builder. The body-form ``title:`` keyword may override the header STRING — preserved verbatim. Byte-identical IR verified against a 4-companion synthetic fixture exercising every keyword branch (no real `.dsl` files use companion blocks today).
+
 ## [0.70.31] - 2026-05-16
 
 ### Changed

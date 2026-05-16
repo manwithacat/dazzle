@@ -159,7 +159,14 @@ class SurfaceParserMixin:
         )
 
     def _parse_companion(self) -> ir.CompanionSpec:
-        """Parse a `companion <name> ["title"] [position=<pos>]:` block.
+        """Parse a ``companion <name> ["title"] [position=<pos>]:`` block.
+
+        Refactored to dispatch-table style (follow-on to #1098). 8
+        token-keyed `_c_kw_*` parsers (eyebrow/display/source/limit/
+        filter/aggregate/entries/stages) + 1 IDENT-text-matched
+        (``title``) + a tolerant on_unknown that bails at EOF (mirrors
+        the legacy ``DEDENT, EOF`` loop guard via a sentinel) + a
+        `_build_companion` builder.
 
         Companion syntax (v0.61.102, #923 — Part D of #918)::
 
@@ -168,13 +175,6 @@ class SurfaceParserMixin:
               display: summary_row
               aggregate:
                 pages: max(page_count)
-                strands: count(AssessmentObjective)
-
-            companion job_plan "What this upload creates" position=below_section[automation]:
-              display: status_list
-              entries:
-                - title: "Classify the batch"
-                  caption: "Match paper, subject, year group..."
 
             companion roster_preview "Cohort roster":
               source: StudentProfile
@@ -184,15 +184,12 @@ class SurfaceParserMixin:
         """
         self.advance()  # consume `companion`
         name = self.expect_identifier_or_keyword().value
-        title: str | None = None
+        header_title: str | None = None
         if self.match(TokenType.STRING):
-            title = self.advance().value
+            header_title = self.advance().value
 
         position = ir.CompanionPosition.BOTTOM
         section_anchor: str | None = None
-
-        # Optional inline `position=<top|bottom|below_section[<name>]>`
-        # before the colon.
         if self.match(TokenType.POSITION):
             self.advance()
             self.expect(TokenType.EQUALS)
@@ -202,93 +199,21 @@ class SurfaceParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        eyebrow: str | None = None
-        display: str | None = None
-        source: str | None = None
-        filter_expr: ir.ConditionExpr | None = None
-        limit: int | None = None
-        aggregate: dict[str, str] = {}
-        entries: list[ir.CompanionEntrySpec] = []
-        stages: list[ir.CompanionStageSpec] = []
-
-        while not self.match(TokenType.DEDENT, TokenType.EOF):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT, TokenType.EOF):
-                break
-
-            tok = self.current_token()
-            key = tok.value
-
-            if key == "title":
-                self.advance()
-                self.expect(TokenType.COLON)
-                title = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            elif key == "eyebrow":
-                self.advance()
-                self.expect(TokenType.COLON)
-                eyebrow = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            elif key == "display":
-                self.advance()
-                self.expect(TokenType.COLON)
-                display = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-            elif key == "source":
-                self.advance()
-                self.expect(TokenType.COLON)
-                source = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-            elif key == "limit":
-                self.advance()
-                self.expect(TokenType.COLON)
-                limit = int(self.expect(TokenType.NUMBER).value)
-                self.skip_newlines()
-            elif key == "filter":
-                self.advance()
-                self.expect(TokenType.COLON)
-                filter_expr = self.parse_condition_expr()
-                self.skip_newlines()
-            elif key == "aggregate":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                aggregate = self._parse_companion_aggregate()
-            elif key == "entries":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                entries = self._parse_companion_entries()
-            elif key == "stages":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                stages = self._parse_companion_stages()
-            else:
-                # Unknown key — advance defensively rather than abort.
-                self.advance()
-                self.skip_newlines()
+        state = _CompanionState(title=header_title)
+        try:
+            parse_block_with_dispatch(
+                self,
+                first_class_keywords=_COMPANION_KEYWORDS,
+                ident_keywords=_COMPANION_IDENT_KEYWORDS,
+                state=state,
+                on_unknown=_on_unknown_companion,
+            )
+        except _StopCompanionLoop:
+            pass
 
         if self.match(TokenType.DEDENT):
             self.advance()
-
-        return ir.CompanionSpec(
-            name=name,
-            title=title,
-            eyebrow=eyebrow,
-            display=display,
-            position=position,
-            section_anchor=section_anchor,
-            source=source,
-            filter=filter_expr,
-            limit=limit,
-            aggregate=aggregate,
-            entries=entries,
-            stages=stages,
-        )
+        return _build_companion(name, position, section_anchor, state)
 
     def _parse_companion_position(self) -> tuple[ir.CompanionPosition, str | None]:
         """Parse the value of a companion `position=...` attribute.
@@ -896,4 +821,171 @@ def _build_surface(
         display=state.display,
         show_history=state.show_history,
         render=state.render,
+    )
+
+
+# ============================================================ #
+# _parse_companion — keyword-dispatch decomposition (#1098 template) #
+# ============================================================ #
+#
+# The 130-line monolith was replaced (v0.70.32) with the dispatch
+# pattern shipped in #1097. 8 token-keyed `_c_kw_*` + 1 IDENT-keyed
+# (`title`) + a `_StopCompanionLoop` sentinel for the legacy
+# ``DEDENT, EOF`` loop guard + a `_build_companion` builder.
+
+
+@dataclass
+class _CompanionState:
+    """Accumulator for :meth:`SurfaceParserMixin._parse_companion`.
+
+    ``title`` is pre-populated from the optional header STRING and
+    may be overwritten by a later ``title:`` keyword in the body.
+    """
+
+    title: str | None = None
+    eyebrow: str | None = None
+    display: str | None = None
+    source: str | None = None
+    filter: ir.ConditionExpr | None = None
+    limit: int | None = None
+    aggregate: dict[str, str] = field(default_factory=dict)
+    entries: list[ir.CompanionEntrySpec] = field(default_factory=list)
+    stages: list[ir.CompanionStageSpec] = field(default_factory=list)
+
+
+class _StopCompanionLoop(Exception):
+    """Sentinel — raised by ``_on_unknown_companion`` at EOF to bail
+    the dispatch loop. Mirrors the legacy ``while not match(DEDENT, EOF)``
+    guard (the helper only checks DEDENT)."""
+
+
+# ---------- Token-keyed keyword parsers ---------- #
+
+
+def _c_kw_eyebrow(parser: Any, state: _CompanionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.eyebrow = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _c_kw_display(parser: Any, state: _CompanionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.display = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _c_kw_source(parser: Any, state: _CompanionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.source = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _c_kw_limit(parser: Any, state: _CompanionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.limit = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def _c_kw_filter(parser: Any, state: _CompanionState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.filter = parser.parse_condition_expr()
+    parser.skip_newlines()
+
+
+def _c_kw_aggregate(parser: Any, state: _CompanionState) -> None:
+    """``aggregate:`` — INDENT then mixin's metric-map helper."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.aggregate = parser._parse_companion_aggregate()
+
+
+def _c_kw_entries(parser: Any, state: _CompanionState) -> None:
+    """``entries:`` — INDENT then mixin's dash-list-of-entries helper."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.entries = parser._parse_companion_entries()
+
+
+def _c_kw_stages(parser: Any, state: _CompanionState) -> None:
+    """``stages:`` — INDENT then mixin's dash-list-of-stages helper."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.stages = parser._parse_companion_stages()
+
+
+# ---------- IDENT-text-matched keyword parsers ---------- #
+
+
+def _c_kw_title(parser: Any, state: _CompanionState) -> None:
+    """``title: "..."`` — body override of the header-form title."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.title = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+# ---------- Dispatch tables + on_unknown + builder ---------- #
+
+
+_COMPANION_KEYWORDS: dict[TokenType, KeywordParser[_CompanionState]] = {
+    TokenType.EYEBROW: _c_kw_eyebrow,
+    TokenType.DISPLAY: _c_kw_display,
+    TokenType.SOURCE: _c_kw_source,
+    TokenType.LIMIT: _c_kw_limit,
+    TokenType.FILTER: _c_kw_filter,
+    TokenType.AGGREGATE: _c_kw_aggregate,
+    TokenType.ENTRIES: _c_kw_entries,
+    TokenType.STAGES: _c_kw_stages,
+}
+
+
+_COMPANION_IDENT_KEYWORDS: dict[str, KeywordParser[_CompanionState]] = {
+    "title": _c_kw_title,
+}
+
+
+def _on_unknown_companion(parser: Any) -> None:
+    """Tolerate unknown keywords; bail the loop on EOF.
+
+    Mirrors the legacy ``while not match(DEDENT, EOF)`` guard — the
+    dispatch helper only checks DEDENT, so we raise the sentinel here
+    when at EOF. The caller catches it and consumes any trailing
+    DEDENT before assembly.
+    """
+    if parser.match(TokenType.EOF):
+        raise _StopCompanionLoop()
+    parser.advance()
+    parser.skip_newlines()
+
+
+def _build_companion(
+    name: str,
+    position: ir.CompanionPosition,
+    section_anchor: str | None,
+    state: _CompanionState,
+) -> ir.CompanionSpec:
+    return ir.CompanionSpec(
+        name=name,
+        title=state.title,
+        eyebrow=state.eyebrow,
+        display=state.display,
+        position=position,
+        section_anchor=section_anchor,
+        source=state.source,
+        filter=state.filter,
+        limit=state.limit,
+        aggregate=state.aggregate,
+        entries=state.entries,
+        stages=state.stages,
     )
