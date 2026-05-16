@@ -43,6 +43,7 @@ _FRAMEWORK_INJECTED_ENTITIES = frozenset(
         "AIJob",
         "DeployHistory",
         "FeedbackReport",
+        "OnboardingState",  # v0.71.1 — auto-injected when any `guide` is declared
         "SystemHealth",
         "SystemMetric",
     }

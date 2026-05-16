@@ -6,6 +6,7 @@ from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from .ir.jobs import JOB_RUN_FIELDS
 from .ir.llm import AI_JOB_FIELDS
+from .ir.onboarding_state import ONBOARDING_STATE_FIELDS
 from .ir.security import SecurityConfig, SecurityProfile
 from .linker_impl import (
     build_symbol_table,
@@ -157,6 +158,12 @@ def build_appspec(
             _build_feedback_admin_surface(),
             _build_feedback_edit_surface(),
         ]
+
+    # 9b.1 Auto-generate OnboardingState entity when any `guide` block is
+    # declared (v0.71.1). Per-(user, guide, version) progression rows.
+    # Apps with no guides don't pay the table cost.
+    if merged_fragment.guides and not any(e.name == "OnboardingState" for e in entities):
+        entities = [*entities, _build_onboarding_state_entity()]
 
     # 9c. Auto-generate admin platform entities, surfaces, and workspaces (#686)
     from .admin_builder import build_admin_infrastructure
@@ -635,6 +642,70 @@ def _build_job_run_admin_surface() -> ir.SurfaceSpec:
         sections=[ir.SurfaceSection(name="main", title="Jobs", elements=elements)],
         access=ir.SurfaceAccessSpec(require_auth=True),
         ux=ux,
+    )
+
+
+def _build_onboarding_state_entity() -> ir.EntitySpec:
+    """Build the auto-generated ``OnboardingState`` entity (v0.71.1).
+
+    Auto-injected when the project declares any ``guide`` block. Stores
+    one row per ``(user_id, guide_name, guide_version)`` — the
+    repository layer (``dazzle.back.runtime.onboarding``) owns the
+    UPSERT logic that enforces the composite uniqueness.
+
+    Access policy: a user reads / writes only their own rows; admins
+    see everything (mirrors the FeedbackReport scope split). The entity
+    is excluded by default from ``dazzle spec status`` since it's
+    framework-injected — same treatment as AIJob, FeedbackReport, etc.
+    """
+    fields: list[FieldSpec] = []
+    for name, type_str, modifiers, default in ONBOARDING_STATE_FIELDS:
+        field_type = _parse_field_type(type_str)
+        mods = [_MODIFIER_MAP[m] for m in modifiers]
+        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    _ops = (
+        ir.PermissionKind.CREATE,
+        ir.PermissionKind.READ,
+        ir.PermissionKind.LIST,
+        ir.PermissionKind.UPDATE,
+        ir.PermissionKind.DELETE,
+    )
+    # Self-only scope: user_id = current_user.id (string column).
+    _self_cond = ir.ConditionExpr(
+        comparison=ir.Comparison(
+            field="user_id",
+            operator=ir.ComparisonOperator.EQUALS,
+            value=ir.ConditionValue(literal="current_user.id"),
+        )
+    )
+    _scope_rules: list[ir.ScopeRule] = []
+    for op in _ops:
+        _scope_rules.append(ir.ScopeRule(operation=op, condition=_self_cond, personas=["*"]))
+        _scope_rules.append(
+            ir.ScopeRule(
+                operation=op,
+                condition=None,
+                personas=["admin", "super_admin"],
+            )
+        )
+
+    access = ir.AccessSpec(
+        permissions=[
+            ir.PermissionRule(operation=op, require_auth=True, effect=ir.PolicyEffect.PERMIT)
+            for op in _ops
+        ],
+        scopes=_scope_rules,
+    )
+
+    return ir.EntitySpec(
+        name="OnboardingState",
+        title="Onboarding State",
+        intent="Per-user progression state for guided onboarding flows",
+        domain="platform",
+        patterns=["lifecycle", "audit"],
+        fields=fields,
+        access=access,
     )
 
 

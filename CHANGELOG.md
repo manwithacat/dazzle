@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.1] - 2026-05-16
+
+### Added
+
+- **`OnboardingState` framework entity** — auto-injected when the project declares any `guide` block. One row per `(user_id, guide_name, guide_version)`. Self-only `scope:` (user reads/writes own rows; admins see all). Excluded from `dazzle spec status` by default (added to the framework-injected list, same treatment as `AIJob`/`FeedbackReport`/etc.). Schema flows through the standard Dazzle migration pipeline — projects run `dazzle db revision -m "add onboarding state"` then `dazzle db upgrade` per ADR-0017.
+- **`OnboardingStateRepository`** at `src/dazzle/back/runtime/onboarding/state_repository.py`. Five operations: `get`, `upsert` (INSERT ... ON CONFLICT on the composite natural key), `mark_step_completed` (idempotent append to `completed_steps`), `mark_step_dismissed`, `mark_completed`. All writes are idempotent — repeating an operation leaves the row stable. Postgres-only per ADR-0008. Table name inlined in every SQL string (semgrep's SQL-injection rule flags f-string interpolation even on class constants — design note in the module).
+- **`OnboardingProgress` dataclass** + `is_complete` property — in-memory view of one row. JSON columns (`completed_steps`/`dismissed_steps`/`metadata`) parse defensively: malformed/empty values default to empty list / `None` rather than raising.
+
+### Tests
+
+- **`tests/unit/test_onboarding_state_repository.py`** (23 tests) — SQL shapes (`SELECT`/`INSERT … ON CONFLICT`/`UPDATE`), idempotency of `mark_step_completed`/`mark_step_dismissed`, JSON round-trip helpers (`_parse_json_list`/`_parse_json_dict`) against 14 parametrised shapes including `None`, empty string, malformed JSON, already-decoded payloads.
+
+### Agent Guidance
+
+- New project with a guide: run `dazzle db revision -m "add onboarding state"` followed by `dazzle db upgrade` to materialise the `onboarding_state` table. The framework entity is auto-declared; you don't write the Alembic file by hand.
+- v0.71.2 will add the runtime renderer + page wiring that consumes `OnboardingStateRepository`. v0.71.1 ships the data layer alone so the renderer in the next slice has a stable contract to write against.
+
 ## [0.71.0] - 2026-05-16
 
 ### Added
