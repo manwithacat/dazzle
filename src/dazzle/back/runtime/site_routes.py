@@ -494,6 +494,23 @@ def create_site_page_routes(
             "</div></nav></header>"
         )
 
+        # --- Page <h1> (#1108) ---------------------------------------
+        # Pages without a `type: hero` section had no <h1> at all, since
+        # all other section types use _section_header() which emits <h2>.
+        # Auto-inject one from page.title when no hero is present so every
+        # page satisfies the single-<h1> WCAG rule.
+        has_hero = any(
+            isinstance(s, dict) and str(s.get("type", "") or "") == "hero" for s in sections
+        )
+        page_h1_html = ""
+        if not has_hero:
+            page_title_text = _html_mod.escape(
+                str(getattr(ctx, "page_title", "") or ""),
+                quote=False,
+            )
+            if page_title_text:
+                page_h1_html = f'<h1 class="dz-page-title">{page_title_text}</h1>'
+
         # --- Section dispatch (only typed sections survive) ---------
         section_parts: list[str] = []
         for section in sections:
@@ -526,7 +543,7 @@ def create_site_page_routes(
         main_class = ' class="dz-page-legal"' if page_type == "legal" else ""
         main_html = (
             f'<main id="dz-site-main"{main_class} data-route="{current_route}">'
-            f"{sections_html}{qa_html}"
+            f"{page_h1_html}{sections_html}{qa_html}"
             "</main>"
         )
 
@@ -597,7 +614,9 @@ def create_site_page_routes(
         inner_html = _render_site_inner_html(request, ctx)
         page_ctx = PageContext(
             page_title=getattr(ctx, "page_title", "") or "",
-            app_name=getattr(ctx, "app_name", None) or "Dazzle",
+            app_name=(
+                getattr(ctx, "product_name", None) or getattr(ctx, "app_name", None) or "Dazzle"
+            ),
             current_route=getattr(ctx, "current_route", "") or "/",
         )
         app_state = request.app.state

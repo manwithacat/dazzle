@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.41] - 2026-05-16
+
+### Fixed
+
+- **#1107: sitespec page titles now use the product name.** `site_routes.py::_render_site_page_chromed` was probing `ctx.app_name` on the `SitePageContext` namespace, but the field is actually called `product_name` — so every sitespec page rendered as `"<page> — Dazzle"` regardless of the spec. Lookup chain is now `product_name` → `app_name` → `"Dazzle"`.
+- **#1108: sitespec pages now emit an `<h1>` from `page.title` when no hero section is present.** Pages without a `type: hero` section (pricing, legal, contact, etc.) had no `<h1>` at all because all non-hero section types use `_section_header()` which emits `<h2>`. `_render_site_inner_html` now auto-injects `<h1 class="dz-page-title">{page.title}</h1>` before `sections_html` when no hero section exists; hero pages stay untouched (hero owns the h1 already, second h1 would break WCAG).
+
+### Added
+
+- **`tests/unit/test_sitespec_title_and_h1.py`** — 4 source-content regression gates pinning the `product_name` probe, the h1 injection, and the order of h1 vs sections inside `<main>`.
+
 ## [0.70.40] - 2026-05-16
 
 ### Fixed
