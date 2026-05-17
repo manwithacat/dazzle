@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.13] - 2026-05-17
+
+### Fixed
+
+- **`mcp__dazzle__dsl(operation="fidelity")` no longer returns a misleading "`dazzle.ui not installed`" error with a phantom `pip install -e '.[dazzle-ui]'` hint — closes #1114.** The handler in `src/dazzle/mcp/server/handlers/fidelity.py` wrapped `from dazzle.ui.converters.template_compiler import compile_appspec_to_templates` and `from dazzle.ui.runtime.template_renderer import render_page` in a bare `except ImportError`. Any ImportError from anywhere inside `dazzle.ui.*` — a renamed sibling symbol, stale bytecode after a Dazzle bump, a broken transitive dep — got reported as "dazzle.ui not installed", and the remediation hint pointed at an extras key (`dazzle-ui`) that doesn't exist in `pyproject.toml`. Downstream apps following the hint got an `Extras 'dazzle-ui' not provided` warning from pip and concluded the framework was broken when the actual problem was usually a stale in-memory module. The handler now splits the `except` into two branches: if `importlib.util.find_spec("dazzle.ui")` returns None **and** the ImportError names a `dazzle.ui[.*]` module, it hints at `pip install --force-reinstall dazzle-dsl`; otherwise it surfaces the real `ImportError` text in a `raw` field plus hints at restarting the MCP server (the most common real cause).
+
+### Tests
+
+- Two new tests in `tests/unit/mcp/test_fidelity_handlers.py::TestScoreFidelityHandler`:
+  - `test_internal_import_error_surfaces_real_cause_not_phantom_extras` — pokes `sys.modules` to make a sub-module raise on import, asserts the returned payload contains a `raw` field with the actual exception text and the "Restart the MCP server" hint, and asserts the phantom `[dazzle-ui]` extras string is absent from the payload.
+  - `test_ui_root_missing_uses_reinstall_hint` — monkeypatches `importlib.util.find_spec` so `dazzle.ui` reads as absent, asserts the payload uses the `force-reinstall dazzle-dsl` hint rather than the phantom extras hint.
+
+### Agent Guidance
+
+- When wrapping a feature-gated import in `except ImportError`, distinguish "root package missing" from "internal import broke" via `importlib.util.find_spec` + `exc.name` — a broad `except` mis-attributes every internal failure as a missing dep and produces bad remediation hints. Surface the real `exc` text in a `raw` field so users have something to grep for. See `src/dazzle/mcp/server/handlers/fidelity.py` for the pattern.
+
 ## [0.71.12] - 2026-05-17
 
 ### Removed

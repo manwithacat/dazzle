@@ -198,6 +198,79 @@ paths = ["./dsl"]
 
         assert "error" in data
 
+    # ------------------------------------------------------------------
+    # #1114 — ImportError branching
+    # ------------------------------------------------------------------
+
+    def test_internal_import_error_surfaces_real_cause_not_phantom_extras(
+        self, temp_project, monkeypatch
+    ) -> None:
+        """When dazzle.ui is installed but a nested import inside it
+        breaks (e.g. stale bytecode after a rename), the handler must
+        report the real ImportError instead of the misleading
+        `pip install '.[dazzle-ui]'` hint (#1114).
+
+        Simulated by poisoning sys.modules for one of the modules the
+        handler imports — the next `from … import …` raises ImportError
+        with a name that points inside dazzle.ui.*, not at the root."""
+        # Sanity-check dazzle.ui is actually importable in this env —
+        # without that, this test wouldn't be exercising the branch we
+        # care about.
+        import importlib.util
+
+        assert importlib.util.find_spec("dazzle.ui") is not None, (
+            "test precondition: dazzle.ui must be installed"
+        )
+
+        # Force the second import to fail at a sub-symbol level —
+        # mimics the stale-bytecode-after-rename failure mode from the
+        # AegisMark repro.
+        target = "dazzle.ui.runtime.template_renderer"
+        monkeypatch.setitem(sys.modules, target, None)
+
+        result = score_fidelity_handler(temp_project, {})
+        data = json.loads(result)
+
+        # Real cause exposed (ModuleNotFoundError subclasses ImportError;
+        # either spelling counts).
+        assert "raw" in data, f"expected raw ImportError detail surfaced, got {data!r}"
+        assert "ImportError" in data["raw"] or "ModuleNotFoundError" in data["raw"]
+        # Phantom extras hint NOT present
+        assert "[dazzle-ui]" not in json.dumps(data), (
+            f"phantom extras hint leaked back into payload: {data!r}"
+        )
+        # MCP restart hint IS present
+        assert "Restart the MCP server" in data["hint"]
+
+    def test_ui_root_missing_uses_reinstall_hint(self, temp_project, monkeypatch) -> None:
+        """When `dazzle.ui` itself is genuinely absent (find_spec
+        returns None AND the ImportError names dazzle.ui as the
+        missing module), the handler must hint at a reinstall — not
+        the phantom `.[dazzle-ui]` extras."""
+        # Pretend find_spec can't locate dazzle.ui.
+        import importlib.util as _il
+
+        real_find_spec = _il.find_spec
+
+        def _fake_find_spec(name, *args, **kwargs):
+            if name == "dazzle.ui":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(_il, "find_spec", _fake_find_spec)
+        # Force the actual import to raise with a name pointing at
+        # dazzle.ui — sys.modules trick again, but at the root.
+        monkeypatch.setitem(sys.modules, "dazzle.ui.converters.template_compiler", None)
+
+        result = score_fidelity_handler(temp_project, {})
+        data = json.loads(result)
+
+        assert "error" in data
+        assert "subpackage missing" in data["error"]
+        assert "force-reinstall" in data["hint"]
+        # Still no phantom extras hint
+        assert "[dazzle-ui]" not in json.dumps(data)
+
 
 class TestBuildNextSteps:
     """Tests for _build_next_steps helper."""

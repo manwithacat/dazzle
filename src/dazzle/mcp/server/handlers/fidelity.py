@@ -44,15 +44,41 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             }
         )
 
-    # Try to compile and render surfaces
+    # Try to compile and render surfaces. Distinguish "ui subpackage
+    # genuinely absent" from "internal import broke" — #1114. A stale
+    # MCP server process across a Dazzle bump is the common real cause
+    # (e.g. a renamed sibling symbol fires an ImportError deep inside
+    # dazzle.ui.* and the broad except swallows it as 'ui not installed').
     try:
         from dazzle.ui.converters.template_compiler import compile_appspec_to_templates
         from dazzle.ui.runtime.template_renderer import render_page
-    except ImportError:
+    except ImportError as exc:
+        import importlib.util
+
+        ui_root_missing = (
+            importlib.util.find_spec("dazzle.ui") is None
+            and exc.name is not None
+            and (exc.name == "dazzle.ui" or exc.name.startswith("dazzle.ui."))
+        )
+        if ui_root_missing:
+            return json.dumps(
+                {
+                    "error": "dazzle.ui subpackage missing — reinstall dazzle-dsl.",
+                    "hint": "pip install --force-reinstall dazzle-dsl",
+                    "raw": f"{type(exc).__name__}: {exc}",
+                }
+            )
+        # ui is present but an internal import broke — surface the real
+        # cause instead of the phantom 'install dazzle-ui' message
+        # (`dazzle-ui` is not an extras key in pyproject.toml).
         return json.dumps(
             {
-                "error": "dazzle.ui not installed. Install it to enable fidelity scoring.",
-                "hint": "pip install -e '.[dazzle-ui]'",
+                "error": "Fidelity scoring dependency failed to import.",
+                "raw": f"{type(exc).__name__}: {exc}",
+                "hint": (
+                    "Restart the MCP server after bumping Dazzle; stale bytecode "
+                    "or stale in-memory modules can cause sub-symbol ImportErrors here."
+                ),
             }
         )
 
