@@ -131,16 +131,27 @@ def test_cli_narrate_rejects_unknown_guide_with_exit_1() -> None:
 
 
 def test_cli_list_empty_project_message(tmp_path: Path) -> None:
-    """No guides declared → friendly empty message, exit 0."""
-    # Use simple_task's dazzle.toml + dsl but copy nothing — actually,
-    # use a guides-less project. contact_manager works.
-    contact = EXAMPLE_ROOT.parent / "contact_manager"
-    if not contact.is_dir():
-        # Skip — environment doesn't have the example. Test still
-        # passes for projects that do have it.
-        return
-    result = _runner.invoke(guide_app, ["list", "--project", str(contact)])
-    assert result.exit_code == 0
+    """No guides declared → friendly empty message, exit 0.
+
+    All shipped examples now declare guides (see
+    ``test_example_guides_concordance``), so this test builds a minimal
+    guideless project inline.
+    """
+    (tmp_path / "dazzle.toml").write_text(
+        '[project]\nname = "tinyapp"\nroot = "tinyapp.core"\nversion = "0.1.0"\n'
+        '[modules]\npaths = ["./dsl"]\n'
+    )
+    (tmp_path / "dsl").mkdir()
+    (tmp_path / "dsl" / "app.dsl").write_text(
+        "module tinyapp.core\n\n"
+        'app tinyapp "Tiny App":\n'
+        "  security_profile: basic\n\n"
+        'entity Widget "Widget":\n'
+        "  id: uuid pk\n"
+        "  name: str(100) required\n"
+    )
+    result = _runner.invoke(guide_app, ["list", "--project", str(tmp_path)])
+    assert result.exit_code == 0, result.output
     assert "No guides declared" in result.output
 
 

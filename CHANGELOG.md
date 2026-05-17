@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.8] - 2026-05-17
+
+### Added
+
+- **Onboarding guides for every example app.** Exercises the v0.71.x feature against the four remaining canonical examples (simple_task already had one). Six new guides total across four `dsl/onboarding.dsl` files — all linker-validated:
+  - **`contact_manager`** — `contacts_onboarding` (admin): empty list → name first contact → banner congratulating the first save. Uses `empty_state` → `popover` → `banner`.
+  - **`support_tickets`** — `customer_onboarding` (customer): file the first ticket end-to-end with `empty_state` → `popover` (title) → `inline_card` (description) → `banner` (await agent). Plus `agent_onboarding` (agent OR manager): `spotlight` introduces the queue → `popover` to claim → `inline_card` to write the first comment.
+  - **`ops_dashboard`** — `ops_first_run` (ops_engineer): register first System → name it consistently with CI → discover the Alert queue → `nudge` explaining the "ack means I'm on it" social contract. Uses `empty_state` → `popover` → `inline_card` → `nudge`.
+  - **`fieldtest_hub`** — `engineer_onboarding` (engineer): register Device → name with batch/serial → cut Firmware Release → closing banner. Plus `tester_onboarding` (tester): `spotlight` welcome → `empty_state` to start a Session → `inline_card` on filing IssueReports → `nudge` reminding to close the session.
+- **Demonstrates six of the eight step kinds across the corpus.** Only `checklist_item` and `blocking_task` are absent from the worked examples (no current example app has a multi-step setup that suits a checklist; no flow has a hard gate that suits a blocking modal).
+
+### Tests
+
+- **`tests/unit/test_example_guides_concordance.py`** — breadth gate across all five examples that ship guides. Three parametrised checks: every listed example actually declares a guide (no silent skips), every guide passes concordance against its app's surfaces/entities/personas/streams, and the documented example list stays in sync with the filesystem (`onboarding.dsl` files under `examples/*/dsl/`). 11 tests.
+- **Updated** `test_guide_mcp_and_cli.py::test_cli_list_empty_project_message` — `contact_manager` is no longer guide-less, so the test builds a tiny inline project to exercise the empty-state CLI message.
+
+### Agent Guidance
+
+- The five committed example guides are reference material for how to compose the eight step kinds against real DSL shapes. When authoring a guide for a new project, browse `examples/*/dsl/onboarding.dsl` for patterns that match the journey you're trying to script — customer-self-service (support_tickets), operator-onboarding (ops_dashboard), team-setup-then-handoff (fieldtest_hub).
+- The breadth gate at `tests/unit/test_example_guides_concordance.py` keeps every example's guides linker-clean as the DSL evolves. Renaming a surface in any example app fails CI until the matching guide step's `target` / `cta_target` / `complete_on` is updated.
+
 ## [0.71.7] - 2026-05-17
 
 ### Added
