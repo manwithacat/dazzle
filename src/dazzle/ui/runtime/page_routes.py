@@ -53,22 +53,21 @@ def _collect_request_params(request: Any) -> dict[str, str]:
     Path params win on key collision because they're more specific
     (the route declared them; the query string is opportunistic).
     Both attributes are documented stable on
-    ``starlette.requests.Request``; defensive ``getattr`` calls so
-    test fixtures that pass a bare ``MagicMock`` don't crash here.
+    ``starlette.requests.Request``; ``hasattr`` guards so test
+    fixtures that pass a bare ``MagicMock`` (no attribute set)
+    don't crash here. We accept any mapping shape — production
+    callers pass starlette's ``QueryParams`` / ``ImmutableMultiDict``,
+    tests pass plain dicts — and require ``.items()``. Anything
+    that has the attribute but isn't iterable is a contract
+    violation the caller will see on the next access.
     """
     out: dict[str, str] = {}
     qp = getattr(request, "query_params", None)
-    if qp is not None:
-        try:
-            out.update({str(k): str(v) for k, v in qp.items()})
-        except Exception:
-            pass
+    if qp is not None and hasattr(qp, "items"):
+        out.update({str(k): str(v) for k, v in qp.items()})
     pp = getattr(request, "path_params", None)
-    if pp is not None:
-        try:
-            out.update({str(k): str(v) for k, v in pp.items()})
-        except Exception:
-            pass
+    if pp is not None and hasattr(pp, "items"):
+        out.update({str(k): str(v) for k, v in pp.items()})
     return out
 
 

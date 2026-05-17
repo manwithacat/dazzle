@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.33] - 2026-05-17
+
+### Fixed
+- **Policy-gate violation in `_collect_request_params` (#1129 follow-up).**
+  v0.71.31's `_collect_request_params` helper used two
+  `try/except Exception: pass` patterns to defend against test
+  fixtures with non-iterable `query_params` / `path_params`. The
+  `test_no_bare_except_pass` policy gate (rightly) forbids silent
+  exception swallowing. Replaced with explicit `hasattr(x, "items")`
+  guards — same defensive shape, no silent failures. CI was red on
+  v0.71.31 / v0.71.32 because of this gate violation.
+
 ## [0.71.32] - 2026-05-17
 
 ### Added
