@@ -114,8 +114,6 @@
   "messaging.ThrottleSpec.on_exceed",
   "money.MoneyWithScale.scale_override",
   "notifications.NotificationSpec.preference",
-  "onboarding.GuideOnComplete.redirect",
-  "onboarding.GuideStep.audience_when",
   "onboarding.HintSpec.dismiss",
   "process.HumanTaskOutcome.sets",
   "process.HumanTaskSpec.escalation_timeout_seconds",

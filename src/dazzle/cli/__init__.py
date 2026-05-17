@@ -282,6 +282,7 @@ from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
 from dazzle.cli.feedback import feedback_app  # noqa: E402
 from dazzle.cli.fitness import fitness_app  # noqa: E402
+from dazzle.cli.guide import guide_app  # noqa: E402
 from dazzle.cli.kg import kg_app  # noqa: E402
 from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
@@ -333,6 +334,7 @@ app.add_typer(tenant_app, name="tenant")
 app.add_typer(theme_app, name="theme")
 app.add_typer(test_app, name="test")
 app.add_typer(e2e_app, name="e2e")
+app.add_typer(guide_app, name="guide")
 app.add_typer(spec_app, name="spec")
 app.add_typer(specs_app, name="specs")
 app.add_typer(deploy_app, name="deploy")

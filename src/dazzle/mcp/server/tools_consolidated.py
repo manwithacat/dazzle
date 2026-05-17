@@ -1466,6 +1466,41 @@ def _tool_param() -> Tool:
     )
 
 
+def _tool_guide() -> Tool:
+    """Guide (guided-onboarding introspection — v0.71.7)."""
+    return Tool(
+        name="guide",
+        description=(
+            "Inspect declared onboarding guides. Stateless reads only; "
+            "writes (mark step complete/dismissed) stay on the HTTP "
+            "routes. Operations: "
+            "list (every guide with audience + step count), "
+            "get (full IR for one guide by name), "
+            "concordance (run the linker's concordance check in "
+            "isolation — verifies target / completion / cta refs "
+            "resolve against the DSL), "
+            "narrate (linear ordered narrative of one guide's steps — "
+            "agent-readable equivalent of the rendered overlay sequence)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["list", "get", "concordance", "narrate"],
+                    "description": "Operation to perform",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Guide name (for 'get' / 'narrate')",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def _tool_conformance() -> Tool:
     """Conformance (DSL conformance testing)."""
     return Tool(
@@ -1603,6 +1638,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_sentinel(),
         _tool_llm(),
         _tool_param(),
+        _tool_guide(),
         _tool_conformance(),
         _tool_compliance(),
         _tool_agent_commands(),

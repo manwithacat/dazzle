@@ -1226,6 +1226,23 @@ handle_param: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Guide Handler (v0.71.7 — guided-onboarding inspection)
+# =============================================================================
+
+_MOD_GUIDE = "dazzle.mcp.server.handlers.guide"
+
+handle_guide: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "guide",
+    {
+        "list": f"{_MOD_GUIDE}:guide_list_handler",
+        "get": f"{_MOD_GUIDE}:guide_get_handler",
+        "concordance": f"{_MOD_GUIDE}:guide_concordance_handler",
+        "narrate": f"{_MOD_GUIDE}:guide_narrate_handler",
+    },
+)
+
+
+# =============================================================================
 # Conformance Handler
 # =============================================================================
 
@@ -1311,6 +1328,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "test_intelligence": handle_test_intelligence,
     "llm": handle_llm,
     "param": handle_param,
+    "guide": handle_guide,
     "conformance": handle_conformance,
     "compliance": handle_compliance,
     "agent_commands": handle_agent_commands,

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.7] - 2026-05-17
+
+### Added
+
+- **MCP `guide` tool** for agent-side guide introspection. Four operations, stateless reads only (writes stay on the HTTP routes per ADR-0002):
+  - `list` — every guide with name, title, audience, step count, step order.
+  - `get` — full IR for one guide (steps, completion criteria, CTA targets, on_complete).
+  - `concordance` — runs the linker's concordance check in isolation against the AppSpec; returns `{ok, errors, warnings}`. Lets agents verify a guide they're authoring before committing.
+  - `narrate` — linear ordered narrative as `{steps_in_order, orphan_steps, on_complete}` rows. Each row carries name/kind/title/body/target/placement/cta/audience_when/complete_on. Agent-readable equivalent of the rendered overlay sequence.
+- **`dazzle guide` CLI** at `src/dazzle/cli/guide.py` with two commands. Same data as the MCP tool but rendered as human-readable text for DSL authoring + documentation:
+  - `dazzle guide list` — bullet summary per guide.
+  - `dazzle guide narrate <name>` — markdown-shaped per-step blocks with title, body, target, CTA, completion criterion. Orphan steps flagged with ⚠. `on_complete` rendered as its own section.
+  - Concordance is already part of `dazzle validate` (the linker pass shipped in v0.71.0); no separate command needed.
+
+### Tests
+
+- **`tests/unit/test_guide_mcp_and_cli.py`** (12 tests) — MCP handlers (list/get/concordance/narrate happy paths + error shapes), CLI commands (list/narrate render + exit codes), cross-check that MCP and CLI agree on step ordering against `examples/simple_task`.
+
+### Updated
+
+- `docs/api-surface/mcp-tools.txt` baseline regenerated — 33 → 34 tools.
+- `.claude/CLAUDE.md` MCP tool listing adds the `guide` row.
+- Test reader baseline drops `onboarding.GuideOnComplete.redirect` + `onboarding.GuideStep.audience_when` (both now have readers — the CLI narrate command emits them).
+
+### Agent Guidance
+
+- Use `mcp__dazzle__guide` (operations: `list`, `get`, `concordance`, `narrate`) for read-only inspection in an agent context. Use `dazzle guide list` / `dazzle guide narrate <name>` for human-readable terminal output. Concordance failures already surface via `dazzle validate`; the MCP `concordance` operation is for ad-hoc verification mid-authoring.
+
 ## [0.71.6] - 2026-05-17
 
 ### Added

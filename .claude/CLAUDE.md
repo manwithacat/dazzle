@@ -223,6 +223,7 @@ MCP = stateless reads, CLI = process/writes (ADR-0002). Use `dazzle search <keyw
 | `status` | mcp, logs, telemetry, activity |
 | `bootstrap` | entry point for "build me an app" requests |
 | `spec_analyze` | discover_entities, identify_lifecycles, extract_personas |
+| `guide` | list, get, concordance, narrate |
 | `user_management` | list, create, get, update, deactivate |
 | `user_profile` | observe, observe_message, get, reset |
 | `llm` | ask |
@@ -308,4 +309,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.71.6 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.71.7 | **Python**: 3.12+ | **Status**: Production Ready

@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 33 tools
+# Count: 34 tools
 
 tool: agent_commands
   description_hash: 21ccbeb48222
@@ -637,6 +637,36 @@ tool: graph
       "transitive": {
         "description": "Include transitive deps (for dependencies, dependents)",
         "type": "boolean"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: guide
+  description_hash: f7e119240953
+  description_len: 463
+  {
+    "properties": {
+      "name": {
+        "description": "Guide name (for 'get' / 'narrate')",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "list",
+          "get",
+          "concordance",
+          "narrate"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
       }
     },
     "required": [
