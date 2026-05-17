@@ -503,9 +503,32 @@ class _PageRequestContext:
 # =============================================================================
 
 
+def _apply_anon_nav(prc: _PageRequestContext) -> None:
+    """#1127: swap the sidebar to the anon-safe variants.
+
+    Compile-time builds two parallel nav lists per page: ``nav_items``
+    (everything) and ``nav_items_anon`` (only items from workspaces
+    that declared no persona gate). This helper switches to the anon
+    variants whenever the request has no auth, no user, or no role
+    that matches any persona — closing the leak where anon visitors
+    were seeing more workspaces than authenticated users.
+    """
+    prc.ctx.nav_items = list(prc.ctx.nav_items_anon)
+    prc.ctx.nav_groups = list(prc.ctx.nav_groups_anon)
+
+
 def _inject_auth_context(prc: _PageRequestContext) -> None:
-    """Resolve auth context from request and inject into page context."""
+    """Resolve auth context from request and inject into page context.
+
+    Anon nav contract (#1127): when no auth context is configured, the
+    request has no user, or the user matches no compiled persona, the
+    sidebar collapses to ``nav_items_anon`` — items whose underlying
+    workspace declared no persona gate. Workspaces with
+    ``access: persona(...)`` are never exposed in the anon sidebar.
+    """
     if prc.deps.get_auth_context is None:
+        # No auth wiring at all — every request is anonymous.
+        _apply_anon_nav(prc)
         return
     try:
         prc.auth_ctx = prc.deps.get_auth_context(prc.request)
@@ -518,12 +541,14 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
             # per-persona nav variants compiled from workspace access.
             roles = getattr(prc.auth_ctx.user, "roles", None) or []
             prc.ctx.user_roles = list(roles)
+            matched_persona = False
             if prc.ctx.nav_by_persona and roles:
                 for role in roles:
                     # Roles use "role_" prefix; persona IDs don't
                     persona_nav = prc.ctx.nav_by_persona.get(role.removeprefix("role_"))
                     if persona_nav is not None:
                         prc.ctx.nav_items = persona_nav
+                        matched_persona = True
                         break
 
             # v0.61.5 (#863): mirror the per-persona resolution for nav_groups
@@ -535,6 +560,13 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
                     if persona_groups is not None:
                         prc.ctx.nav_groups = persona_groups
                         break
+
+            # #1127: authenticated but no persona match → anon-safe view.
+            # An authed user with a role the app doesn't recognise has
+            # the same nav reach as an anon visitor; without this they'd
+            # see the unfiltered flat nav and leak persona-gated entries.
+            if prc.ctx.nav_by_persona and not matched_persona:
+                _apply_anon_nav(prc)
 
             # Filter out nav items for entities the user cannot LIST (#583).
             # This catches entities that appear in an allowed workspace but
@@ -554,8 +586,15 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
                 prc.ctx.nav_items = _dedupe_nav_items_against_groups(
                     prc.ctx.nav_items, prc.ctx.nav_groups
                 )
+        else:
+            # #1127: auth wiring present but request is anon (no user or
+            # not authenticated) — apply the anon-safe nav.
+            _apply_anon_nav(prc)
     except Exception:
         logger.warning("Failed to resolve auth context for page", exc_info=True)
+        # Fail closed: an exception while resolving auth must not leave
+        # the full unfiltered nav exposed (#1127).
+        _apply_anon_nav(prc)
 
 
 def _inject_onboarding_step(prc: _PageRequestContext) -> None:

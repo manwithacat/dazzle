@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.25] - 2026-05-17
+
+### Fixed
+- **Sidebar nav leaked persona-gated workspaces to anon visitors (#1127).**
+  `_inject_auth_context` only ran its persona filter when an authenticated
+  user had a non-empty role list — so unauthenticated requests (and authed
+  requests whose role matched no compiled persona) fell through to the
+  unfiltered flat `nav_items`, exposing every workspace including those
+  declared `access: persona(...)`. Reproduced in production
+  (penny_dreadful Heroku v25): anon GETs saw 40 sidebar links, admin saw 26.
+  Fix: compile-time builds parallel `nav_items_anon` / `nav_groups_anon`
+  fields on `PageContext` containing only items from workspaces with no
+  persona gate; `_inject_auth_context` swaps to those variants on every
+  anon path (no auth wiring, no user, unmatched role, resolver raised) —
+  fail-closed semantics for the security boundary.
+
+### Agent Guidance
+- When wiring a UI surface that filters by authenticated user state, the
+  default behaviour must be the *most restrictive* view, not the most
+  permissive. The #1127 leak was a "filter only fires when X is true"
+  pattern — write the conditional the other way (assume restricted,
+  open up when X is true) so the anon path is the inherently safe one.
+
 ## [0.71.24] - 2026-05-17
 
 ### Added

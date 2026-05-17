@@ -347,6 +347,13 @@ class PageContext(BaseModel):
     template: str = "components/filterable_table.html"
     nav_items: list[NavItemContext] = Field(default_factory=list)
     nav_by_persona: dict[str, list[NavItemContext]] = Field(default_factory=dict)
+    # #1127: anon-safe variants. Items whose underlying workspace declared
+    # ``access: None`` (no persona gate). When the request has no auth
+    # context or the user matches no persona, ``_inject_auth_context``
+    # swaps ``nav_items``/``nav_groups`` for these so anon visitors never
+    # see persona-gated workspaces in the sidebar.
+    nav_items_anon: list[NavItemContext] = Field(default_factory=list)
+    nav_groups_anon: list[dict[str, Any]] = Field(default_factory=list)
     # v0.61.5 (#863): collapsible workspace-declared nav groups. Entity-list
     # pages (/app/<entity>) now populate this the same way workspace pages do,
     # so the sidebar stays continuous as the user navigates between them.

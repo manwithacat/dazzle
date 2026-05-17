@@ -1376,6 +1376,11 @@ def compile_appspec_to_templates(
     # and per-persona variants using workspace access declarations.
     nav_items: list[NavItemContext] = []
     nav_by_persona: dict[str, list[NavItemContext]] = {}
+    # #1127: routes that are anon-safe (workspace declared ``access: None``).
+    # Used at runtime to swap the sidebar for unauthenticated visitors so
+    # ``access: persona(...)`` workspaces don't leak into the nav.
+    _anon_safe_routes: set[str] = set()
+    _anon_safe_ws_names: set[str] = set()
     # Track which personas each workspace allows (for entity nav below)
     _ws_personas: dict[str, list[str]] = {}
     # Delegate workspace-access resolution to the shared helper so the sidebar
@@ -1403,6 +1408,12 @@ def compile_appspec_to_templates(
         _ws_personas[ws.name] = pids_for_this_ws
         for pid in pids_for_this_ws:
             nav_by_persona.setdefault(pid, []).append(item)
+        # #1127: anon-safe iff the workspace declared no persona gate
+        # (``allowed is None``). ``access: persona(...)`` workspaces are
+        # never anon-safe regardless of which personas they target.
+        if allowed is None:
+            _anon_safe_routes.add(route)
+            _anon_safe_ws_names.add(ws.name)
 
     # Add entity surface links derived from workspace regions so that
     # entity pages show the same nav items as workspace pages.
@@ -1452,6 +1463,11 @@ def compile_appspec_to_templates(
                 persona_nav = nav_by_persona.setdefault(pid, [])
                 if entity_item not in persona_nav:
                     persona_nav.append(entity_item)
+            # #1127: entity nav inherits the workspace's anon visibility.
+            # Once any anon-safe workspace surfaces this entity, the link
+            # is anon-safe — gated workspaces can't retract it.
+            if ws.name in _anon_safe_ws_names:
+                _anon_safe_routes.add(entity_item.route)
 
     # v0.61.5 (#863): build nav_groups from each workspace's nav_group
     # declarations — mirrors the logic in page_routes.py line 1676. Entity-
@@ -1460,7 +1476,10 @@ def compile_appspec_to_templates(
     # navigate between the two page types.
     nav_groups_all: list[dict[str, Any]] = []
     nav_groups_by_persona: dict[str, list[dict[str, Any]]] = {}
+    # #1127: groups declared in anon-safe workspaces inherit anon visibility.
+    nav_groups_anon: list[dict[str, Any]] = []
     _seen_group_labels: set[str] = set()
+    _seen_anon_group_labels: set[str] = set()
     for ws in appspec.workspaces:
         ws_pids = _ws_personas.get(ws.name, [])
         for ng in getattr(ws, "nav_groups", None) or []:
@@ -1503,6 +1522,10 @@ def compile_appspec_to_templates(
                 persona_groups = nav_groups_by_persona.setdefault(pid, [])
                 if not any(g["label"] == ng.label for g in persona_groups):
                     persona_groups.append(group)
+            # #1127: anon visitors only see groups from open workspaces.
+            if ws.name in _anon_safe_ws_names and ng.label not in _seen_anon_group_labels:
+                nav_groups_anon.append(group)
+                _seen_anon_group_labels.add(ng.label)
 
     # Build reverse-ref map: for each entity, find other entities that have
     # ref fields pointing to it.  Used to populate related-entity tabs on
@@ -1570,6 +1593,9 @@ def compile_appspec_to_templates(
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
         ctx.nav_by_persona = nav_by_persona
+        # #1127: anon-safe variants — items from workspaces with no persona gate.
+        ctx.nav_items_anon = [i for i in nav_items if i.route in _anon_safe_routes]
+        ctx.nav_groups_anon = nav_groups_anon
         # v0.61.5 (#863): entity-list pages inherit workspace nav groups.
         ctx.nav_groups = nav_groups_all
         ctx.nav_groups_by_persona = nav_groups_by_persona
@@ -1633,6 +1659,9 @@ def compile_appspec_to_templates(
             root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
             root_ctx.nav_items = nav_items
             root_ctx.nav_by_persona = nav_by_persona
+            # #1127: anon-safe variants for the simple-app "/" fallback too.
+            root_ctx.nav_items_anon = [i for i in nav_items if i.route in _anon_safe_routes]
+            root_ctx.nav_groups_anon = nav_groups_anon
             root_ctx.nav_groups = nav_groups_all
             root_ctx.nav_groups_by_persona = nav_groups_by_persona
             root_ctx.view_name = first_list.name
