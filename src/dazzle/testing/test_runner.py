@@ -963,6 +963,24 @@ class TestRunner:
             result.completed_at = datetime.now()
             return result
 
+        # #1133 preflight: scan every design's steps for action types the
+        # runner can't dispatch and surface them as a single ERROR-level
+        # line. Pre-fix, each unknown action emitted a per-step WARNING
+        # that flooded logs (hundreds per run) and silently degraded
+        # tests whose setup depended on the skipped step. Failing loud
+        # at the design boundary is the fix the issue asks for —
+        # "either add a handler or stop emitting it".
+        unknown_actions = self._scan_unknown_actions(designs)
+        if unknown_actions:
+            logger.error(
+                "DSL test runner: %d unknown action type(s) found in %d design(s) — "
+                "add a handler in test_runner._STEP_DISPATCH_* or update the "
+                "designer to stop emitting them: %s",
+                len(unknown_actions),
+                len(designs),
+                ", ".join(sorted(unknown_actions)),
+            )
+
         # Initialize client
         self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
 
@@ -1684,6 +1702,114 @@ class TestRunner:
             duration_ms=(time.time() - start_time) * 1000,
         )
 
+    def _execute_create_expect_error_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        **_kw: Any,
+    ) -> StepResult:
+        """#1133: POST to the entity create endpoint expecting a 4xx response.
+
+        Validation tests emit this action to assert that an entity
+        creation request with missing/invalid data is rejected. The
+        complementary ``assert_error`` step then introspects
+        ``context['last_response']`` to verify the error shape.
+
+        Stores the response in ``context['last_response']`` regardless
+        of outcome so downstream steps can introspect it. PASSES iff
+        the server returns 4xx; FAILS on 2xx/3xx (a request that
+        succeeded was supposed to be rejected) and on 5xx (a server
+        crash is not the same as a validation error).
+        """
+        assert self.client is not None
+        entity_name = target.replace("entity:", "")
+        endpoint = self.client._entity_endpoint(entity_name)
+        try:
+            resp = self.client._request(
+                "POST",
+                f"{self.client.api_url}{endpoint}",
+                json=resolved_data,
+                headers=self.client._auth_headers(),
+            )
+        except Exception as e:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message=f"Request failed: {e}",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        context["last_response"] = resp
+        is_client_error = 400 <= resp.status_code < 500
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if is_client_error else TestResult.FAILED,
+            message=f"Expected 4xx, got {resp.status_code}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_error_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        **_kw: Any,
+    ) -> StepResult:
+        """#1133: assert the previous response carries an error indicator.
+
+        Accepts either a 4xx status OR a JSON body containing a
+        ``detail`` / ``errors`` / ``error`` field — the union of
+        FastAPI's default validation-error shape (`{detail: [...]}`)
+        and common project-side custom error payloads.
+
+        When ``resolved_data`` contains ``field``, the body is also
+        checked for a reference to that field name (matches the
+        FastAPI ``detail[].loc`` convention).
+        """
+        last_resp = context.get("last_response")
+        if last_resp is None:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message="No previous response to inspect for error",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        is_client_error = 400 <= last_resp.status_code < 500
+        body_has_error_key = False
+        body_repr = ""
+        try:
+            body = last_resp.json()
+            if isinstance(body, dict):
+                body_has_error_key = any(k in body for k in ("detail", "errors", "error"))
+                body_repr = json.dumps(body)[:200]
+        except Exception:
+            body_repr = (last_resp.text or "")[:200]
+
+        success = is_client_error or body_has_error_key
+        expected_field = resolved_data.get("field")
+        if success and expected_field:
+            success = expected_field in body_repr
+
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message=(
+                f"status={last_resp.status_code} has_error_key={body_has_error_key} "
+                f"body={body_repr!r}"
+            ),
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
     # Dispatch table mapping action names to handler methods.
     # Multi-action entries (tuples) are expanded in _get_step_handler().
     _STEP_DISPATCH_SINGLE: dict[str, str] = {
@@ -1707,12 +1833,23 @@ class TestRunner:
         "assert_cookie_cleared": "_execute_assert_cookie_cleared_step",
         "assert_redirect_url": "_execute_assert_redirect_url_step",
         "assert_unauthenticated": "_execute_assert_unauthenticated_step",
+        # #1133: validation-test actions emitted by ValidationTestBuilder.
+        # Previously fell through to the "Unknown test action" warning
+        # branch and skipped silently — the most common cause of TD-*
+        # tests failing with "UI check failed" and no further detail.
+        "create_expect_error": "_execute_create_expect_error_step",
+        "assert_error": "_execute_assert_error_step",
     }
     _STEP_DISPATCH_MULTI: dict[str, str] = {
         "click": "_execute_ui_only_step",
         "fill": "_execute_ui_only_step",
         "select": "_execute_ui_only_step",
         "wait_for": "_execute_ui_only_step",
+        # #1133: UI-only form actions emitted by user-authored / LLM-generated
+        # designs. They require a browser; in API-only test mode they skip
+        # cleanly rather than emitting an "Unknown test action" warning.
+        "fill_form": "_execute_ui_only_step",
+        "submit_form": "_execute_ui_only_step",
         "assert_not_visible": "_execute_ui_assertion_step",
         "assert_text": "_execute_ui_assertion_step",
         "wait_for_load": "_execute_e2e_only_step",
@@ -1728,6 +1865,23 @@ class TestRunner:
             return None
         handler: Callable[..., StepResult] = getattr(self, method_name)
         return handler
+
+    def _scan_unknown_actions(self, designs: list[dict[str, Any]]) -> set[str]:
+        """#1133: collect every action name referenced by ``designs`` that
+        has no entry in ``_STEP_DISPATCH_SINGLE`` / ``_STEP_DISPATCH_MULTI``.
+
+        Pure introspection — no side effects. The runner's main entry
+        point uses this to log one ERROR-level line up front instead
+        of per-step WARNING-level skip noise.
+        """
+        known = set(self._STEP_DISPATCH_SINGLE) | set(self._STEP_DISPATCH_MULTI)
+        unknown: set[str] = set()
+        for design in designs:
+            for step in design.get("steps", []) or []:
+                action = step.get("action")
+                if action and action not in known:
+                    unknown.add(action)
+        return unknown
 
     def execute_step(
         self, step: dict[str, Any], design: dict[str, Any], context: dict[str, Any] | None = None

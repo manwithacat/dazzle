@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.30] - 2026-05-17
+
+### Added
+- **DSL test runner: 4 previously-silent actions now dispatch (#1133).**
+  `create_expect_error` and `assert_error` (validation tests) and
+  `fill_form` / `submit_form` (UI-only) used to fall through to a
+  per-step WARNING and silently SKIP — generating hundreds of
+  `Unknown test action 'X' — step skipped` lines per
+  `dazzle test dsl-run` and silently breaking TD-* tests whose setup
+  depended on them. Now:
+  - `create_expect_error` POSTs to the entity endpoint, stores the
+    response, PASSes on 4xx and FAILs on 2xx/5xx (a request that
+    succeeded was supposed to be rejected; a server crash is not the
+    same as a validation error).
+  - `assert_error` inspects `context["last_response"]` and passes on
+    either a 4xx status or a `detail`/`errors`/`error` body key
+    (FastAPI's default error shape + common project conventions).
+    Optional `field` data narrows the check to references to a
+    specific field name.
+  - `fill_form` / `submit_form` alias to `_execute_ui_only_step`
+    (SKIP in API-only mode, same as `click` / `fill`).
+- **Preflight unknown-action discovery** — `run_tests_from_designs`
+  scans every design's steps up front and surfaces unknown action
+  types as a single ERROR-level log line instead of per-step WARNING
+  noise. The 12 remaining unimplemented actions (`achieve_goal`,
+  `transition`, `trigger_process`, …) now fail loud at the design
+  boundary, matching the issue's ask #2.
+
 ## [0.71.29] - 2026-05-17
 
 ### Fixed
