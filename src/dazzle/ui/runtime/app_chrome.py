@@ -192,6 +192,12 @@ def resolve_app_chrome(
     ):
         feedback_enabled = True
 
+    # Onboarding overlay JS (v0.71.6) — auto-mount when the project
+    # declares any `guide` block. Apps without guides don't pay the
+    # ~2 KB script cost.
+    if appspec is not None and getattr(appspec, "guides", None):
+        js_scripts.append("/static/js/dz-onboarding.js")
+
     return AppChrome(
         css_links=tuple(css_links),
         js_scripts=tuple(js_scripts),

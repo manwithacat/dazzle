@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.6] - 2026-05-17
+
+### Added
+
+- **`dz-onboarding.js` client-side runtime** at `src/dazzle/ui/runtime/static/js/dz-onboarding.js` — vanilla JS (zero deps beyond htmx), ~2 KB minified. Wires up the four behaviours the renderer can't express declaratively:
+  - **Auto-dismiss timer** for `data-kind="nudge"` — reads `data-autodismiss-ms`, fires the dismiss POST (`fetch` with `credentials: same-origin`) after the delay, removes the DOM node either way. Network errors are non-fatal.
+  - **Focus management** for `data-kind="blocking_task"` — moves focus to the first tabbable element inside the `<dialog>` so screen-reader users land in-context. Native `<dialog open>` does this on most browsers; this is defense-in-depth.
+  - **Optional anchored positioning** for `popover` and `spotlight` — when a page element carries `data-onboarding-anchor="<guide>.<step>"`, the overlay's primary card positions against its bounding rect (top/bottom/left/right/center placements). Anchors are opt-in; surfaces that don't emit them fall back to the CSS-default position (no JS errors, just static placement).
+  - **htmx swap re-arming** — re-runs init on `htmx:afterSwap`. Fragment-injected overlays get wired the same as initial-render siblings. `data-dz-wired` guard prevents double-arming the same element.
+  - CSS.escape polyfill for older browsers + the anchor-selector path.
+- **Chrome auto-mount** in `dazzle.ui.runtime.app_chrome.resolve_app_chrome` — when an AppSpec declares any `guide` block, `/static/js/dz-onboarding.js` is appended to `chrome.js_scripts` AFTER the framework bundle (so htmx is defined before our `afterSwap` listener registers). Apps without guides don't pay the ~2 KB cost.
+
+### Tests
+
+- **`tests/unit/test_onboarding_client_js.py`** (11 tests) — content gate on the JS (lifecycle events, nudge URL shape, blocking_task focus selectors, anchor positioning, double-arm guard, fetch credentials, CSS.escape fallback) + chrome-wiring gate (omits when no guides, mounts when guides declared, ordering vs framework bundle).
+
+### Agent Guidance
+
+- Pages that want a `popover` or `spotlight` to anchor against a specific element should add `data-onboarding-anchor="<guide_name>.<step_name>"` to that element. Without it, the overlay still renders + works (CSS-default position); the anchor is purely opt-in upgrade.
+- Same-origin cookie credentials are required on the auto-dismiss fetch — the onboarding routes' 401 guard reads the auth session. Custom JS that fires the dismiss/complete POSTs manually should use `credentials: "same-origin"` too.
+
 ## [0.71.5] - 2026-05-17
 
 ### Added
