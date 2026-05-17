@@ -54,6 +54,8 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("components", STATIC / "css" / "components" / "mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor.
     ("components", STATIC / "css" / "components" / "richtext.css"),
+    # v0.71.x guided onboarding (overlay primitives for the eight step kinds).
+    ("components", STATIC / "css" / "components" / "onboarding.css"),
     ("components", STATIC / "css" / "dazzle-layer.css"),
     ("components", STATIC / "css" / "site-sections.css"),
 ]

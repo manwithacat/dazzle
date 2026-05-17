@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.9] - 2026-05-17
+
+### Added
+
+- **Onboarding overlay CSS (`src/dazzle/ui/runtime/static/css/components/onboarding.css`).** All eight step kinds — `popover`, `spotlight`, `inline_card`, `empty_state`, `banner`, `checklist_item`, `blocking_task`, `nudge` — now have styling. Prior releases shipped the renderer + DSL + linker without CSS, so the overlays rendered unstyled. Wired into the bundled stylesheet via `css_loader.py` (layered `components`) and `scripts/build_dist.py` (the dist-bundle manifest).
+- **Playwright visual smoke test (`tests/visual/test_onboarding_visual_smoke.py`, marker `visual`).** Renders each of the eight kinds standalone, loads them in Chromium, asserts bounding box + non-transparent background + dismiss + CTA + no console errors, and captures one PNG per kind for human review. Marker registered in `pyproject.toml`. Artifacts written to `tests/visual/_artifacts/` (gitignored).
+
+### Fixed
+
+- **Banner CTA chrome inversion.** The shared `[class*="dz-onboarding-"][class$="__cta"]` selector had specificity (0,2,0), which beat the per-kind `.dz-onboarding-banner__cta` override (0,1,0) — banner CTAs rendered as text-only against the brand-ground instead of inverting to a white pill with brand-blue text. Wrapped the shared baselines in `:where(...)` so they have (0,0,0) specificity; per-kind class overrides now win as intended.
+- **Spotlight ring / card clearance.** Card offset was `calc(-50% + 6rem)`, only ~3rem clear of the ring's bottom edge — visually the ring and card fused. Bumped to `calc(-50% + 8rem)` for breathing room.
+- **Nudge title runs into body.** Renderer emits inline `<strong>` + inline `<span>`, which read as one continuous sentence. Made `__title` and `__body` `display: block` with a small bottom margin so they stack into two clearly separated lines.
+
+### Agent Guidance
+
+- When adding a new `dz-onboarding-*` step kind, put the shared/baseline appearance behind `:where(...)` so per-kind classes can override on a single-class selector. Attribute-pair selectors (0,2,0) silently outrank class overrides (0,1,0) — `:where()` neutralises that.
+- Visual smoke tests live under `tests/visual/` and only run with `-m visual`. They need Chromium installed (`python -m playwright install chromium`). The harness renders each kind via the real `OnboardingRenderer` against an inline HTML page — drift between renderer and CSS shows up in the captured screenshots.
+
 ## [0.71.8] - 2026-05-17
 
 ### Added

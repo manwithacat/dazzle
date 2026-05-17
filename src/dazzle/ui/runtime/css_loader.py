@@ -58,6 +58,8 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("components", "css/components/mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor (replaces Quill in cycle 4).
     ("components", "css/components/richtext.css"),
+    # v0.71.x guided onboarding (overlay primitives for the eight step kinds).
+    ("components", "css/components/onboarding.css"),
     ("components", "css/dazzle-layer.css"),
     ("components", "css/site-sections.css"),
 )
