@@ -9,7 +9,14 @@ the test_fragment_exhaustiveness test to fail.
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.errors import FragmentError
-from dazzle.render.fragment.escape import RawHTML, Slot
+from dazzle.render.fragment.escape import (
+    RawHTML,
+    Script,
+    Slot,
+    Stylesheet,
+    _attr_escape,
+    _close_script_tag_safe,
+)
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
@@ -158,6 +165,11 @@ class FragmentRenderer(
                     f"unfilled slot {name!r} reached the renderer; "
                     f"slots must be substituted before render() is called"
                 )
+            # Assets (#1130)
+            case Script():
+                return self._emit_script(fragment, ctx)
+            case Stylesheet():
+                return self._emit_stylesheet(fragment, ctx)
             # Content
             case Text():
                 return self._emit_text(fragment, ctx)
@@ -362,3 +374,48 @@ class FragmentRenderer(
                 )
 
     # --- per-primitive emitters ---
+
+    def _emit_script(self, script: Script, ctx: RenderContext) -> str:
+        """#1130: render ``<script>`` with optional src/inline-body + CSP nonce.
+
+        ``__post_init__`` already validated mutual exclusivity of
+        ``src`` / ``body``, so the branches here are exhaustive.
+        Nonce auto-fill from ``ctx.csp_nonce`` when the primitive's own
+        ``nonce`` is None — projects that thread a per-request nonce
+        through ``RenderContext`` get strict-CSP compliance for free.
+        """
+        attrs: list[str] = []
+        if script.type:
+            attrs.append(f'type="{_attr_escape(script.type)}"')
+        if script.defer:
+            attrs.append("defer")
+        if script.async_:
+            attrs.append("async")
+        nonce = script.nonce if script.nonce is not None else getattr(ctx, "csp_nonce", None)
+        if nonce:
+            attrs.append(f'nonce="{_attr_escape(nonce)}"')
+
+        if script.src is not None:
+            attrs.append(f'src="{_attr_escape(script.src)}"')
+            return f"<script {' '.join(attrs)}></script>"
+
+        assert script.body is not None  # by __post_init__
+        safe_body = _close_script_tag_safe(script.body)
+        return f"<script {' '.join(attrs)}>{safe_body}</script>"
+
+    def _emit_stylesheet(self, sheet: Stylesheet, ctx: RenderContext) -> str:
+        """#1130: render ``<link rel="stylesheet">`` (external) or
+        ``<style>`` (inline). Media attribute emitted when not the
+        default ``"all"``."""
+        media_attr = ""
+        if sheet.media and sheet.media != "all":
+            media_attr = f' media="{_attr_escape(sheet.media)}"'
+
+        if sheet.href is not None:
+            return f'<link rel="stylesheet" href="{_attr_escape(sheet.href)}"{media_attr}>'
+
+        assert sheet.body is not None  # by __post_init__
+        # Inline CSS: closing-tag injection isn't as load-bearing as
+        # </script>, but parallel the defensive replace for consistency.
+        safe_body = sheet.body.replace("</style>", "<\\/style>")
+        return f"<style{media_attr}>{safe_body}</style>"

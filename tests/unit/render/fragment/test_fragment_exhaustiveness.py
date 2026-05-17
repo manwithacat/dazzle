@@ -101,6 +101,7 @@ from dazzle.render.fragment import (
     RefPicker,
     Region,
     Row,
+    Script,
     SearchBox,
     Sequence,
     Sidebar,
@@ -114,6 +115,7 @@ from dazzle.render.fragment import (
     StageBar,
     StatusList,
     StatusListEntry,
+    Stylesheet,
     Submit,
     Surface,
     Table,
@@ -441,6 +443,10 @@ def _sample_for(primitive_type: type) -> object:
     if primitive_type is Slot:
         # Slot is special-cased below — it raises at render time.
         return Slot(name="s")
+    if primitive_type is Script:
+        return Script(body="console.log('test');")
+    if primitive_type is Stylesheet:
+        return Stylesheet(body="body { color: red; }")
     raise AssertionError(f"no sample defined for {primitive_type!r}")
 
 

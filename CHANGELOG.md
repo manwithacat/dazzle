@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.32] - 2026-05-17
+
+### Added
+- **`Script` and `Stylesheet` Fragment primitives (#1130).** Typed
+  replacement for the `RawHTML("<script>…</script>")` pattern that
+  bypassed escaping AND CSP-nonce injection on every page render.
+  Both are frozen dataclasses with `__post_init__` mutual-exclusion
+  enforcement (exactly one of `src`/`body` for `Script`,
+  `href`/`body` for `Stylesheet`). `Script` supports `type` /
+  `defer` / `async_` / `nonce` and renders safe attribute escapes
+  + `</script>` injection-resistant inline-body escaping.
+  `Stylesheet` emits `<link rel="stylesheet">` for external `href`
+  or `<style>` for inline `body`, with optional `media` attribute.
+- **`RenderContext.csp_nonce` field** — projects on a strict CSP
+  thread a per-request nonce through middleware, and `Script`
+  primitives that didn't supply their own `nonce` inherit it
+  automatically. Explicit per-primitive nonce wins over the context
+  default for per-fragment override cases. Stays `None` for
+  projects without a CSP layer; `<script>` tags emit without a
+  `nonce` attribute in that case.
+
+### Agent Guidance
+- **Stop reaching for `RawHTML("<script>…")` in custom renderers.**
+  Prefer `Script(body=...)` — it integrates with the framework's
+  CSP-nonce machinery, escapes `</script>` inside string literals,
+  and counts as one primitive instead of one `RawHTML` instance in
+  the migration-progress metric. `RawHTML` remains the trapdoor
+  for genuinely bespoke HTML (Jinja interop, pre-rendered output).
+
 ## [0.71.31] - 2026-05-17
 
 ### Added

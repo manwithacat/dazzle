@@ -18,9 +18,19 @@ class RenderContext:
     Not frozen — the renderer may replace `tokens` when descending into a
     primitive that overrides them. Frozen-ness is a property of Fragments,
     not the rendering machinery.
+
+    Attributes:
+        tokens: Design tokens for the active render.
+        csp_nonce: Optional per-request CSP nonce (#1130). When set,
+            ``Script`` primitives that didn't supply their own
+            ``nonce`` inherit it automatically — projects on a strict
+            CSP get nonce injection without per-primitive plumbing.
+            Stays ``None`` for projects with no CSP layer; the
+            renderer emits plain ``<script>`` tags in that case.
     """
 
     tokens: Tokens = field(default_factory=Tokens)
+    csp_nonce: str | None = None
 
     def escape(self, text: str) -> str:
         """HTML-escape text content (between tags). Does NOT escape quotes —

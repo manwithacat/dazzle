@@ -4,7 +4,7 @@ Importers should prefer `from dazzle.render.fragment import Fragment` over
 reaching into this module directly.
 """
 
-from dazzle.render.fragment.escape import RawHTML, Slot
+from dazzle.render.fragment.escape import RawHTML, Script, Slot, Stylesheet
 from dazzle.render.fragment.primitives.containers import (
     AppShell,
     Card,
@@ -210,4 +210,7 @@ Fragment = (
     # Escape hatches
     | RawHTML
     | Slot
+    # Assets (#1130)
+    | Script
+    | Stylesheet
 )

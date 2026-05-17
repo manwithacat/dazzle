@@ -111,5 +111,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         # escape
         "RawHTML",
         "Slot",
+        # assets (#1130)
+        "Script",
+        "Stylesheet",
     }
     assert names == expected, f"missing: {expected - names}; extra: {names - expected}"
