@@ -219,3 +219,152 @@ def test_inject_swallows_repository_errors() -> None:
     prc = _prc(guides=[guide], repo=repo, view_name="task_list")
     _inject_onboarding_step(prc)  # must not raise
     assert prc.ctx.active_guide_html == ""
+
+
+# ---------------------------------------------------------------------------
+# #1118 — tagged INFO logs at every skip branch. Each `onboarding.inject:`
+# tag must be emitted by exactly the branch it names so production-log
+# `grep onboarding.inject:` answers "why didn't my guide render?"
+# without needing source-level debugging.
+# ---------------------------------------------------------------------------
+
+
+def _capture_logs(caplog, level: str = "INFO") -> list[str]:
+    """Return the messages emitted to the page_routes logger at or above
+    the given level."""
+    caplog.set_level(level, logger="dazzle.ui.runtime.page_routes")
+    return [r.getMessage() for r in caplog.records if r.name == "dazzle.ui.runtime.page_routes"]
+
+
+def test_inject_logs_no_repo_branch(caplog) -> None:
+    """The most likely production skip path — guides declared, user
+    authenticated, but `app.state.onboarding_state` is None because
+    AuthSubsystem.startup didn't wire it. Was silent before #1118."""
+    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    prc = _prc(guides=[MagicMock()], repo=None)
+    _inject_onboarding_step(prc)
+    msgs = _capture_logs(caplog)
+    assert any("onboarding.inject:no-repo" in m for m in msgs), (
+        f"expected 'onboarding.inject:no-repo' tag, got: {msgs}"
+    )
+
+
+def test_inject_logs_not_authenticated_branch(caplog) -> None:
+    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    prc = _prc(guides=[MagicMock()], is_authenticated=False)
+    _inject_onboarding_step(prc)
+    msgs = _capture_logs(caplog)
+    assert any("onboarding.inject:not-authenticated" in m for m in msgs), (
+        f"expected 'onboarding.inject:not-authenticated' tag, got: {msgs}"
+    )
+
+
+def test_inject_logs_no_surface_name_branch(caplog) -> None:
+    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    prc = _prc(guides=[MagicMock()], repo=MagicMock(), view_name="")
+    _inject_onboarding_step(prc)
+    msgs = _capture_logs(caplog)
+    assert any("onboarding.inject:no-surface-name" in m for m in msgs), (
+        f"expected 'onboarding.inject:no-surface-name' tag, got: {msgs}"
+    )
+
+
+def test_inject_logs_no_active_step_branch(caplog) -> None:
+    """Most-likely-cause-once-no-repo-is-ruled-out: resolver returns
+    None because the audience predicate doesn't match, or all steps
+    are already completed/dismissed. Was silent before #1118."""
+    from dazzle.core import ir
+
+    step = ir.GuideStep(
+        name="welcome",
+        kind=ir.GuideStepKind.POPOVER,
+        title="x",
+        body="y",
+        target="surface.task_list",
+        complete_on=ir.GuideCompleteOn(kind=ir.GuideCompleteOnKind.CLICK),
+    )
+    guide = ir.GuideSpec(
+        name="g",
+        title="g",
+        # Audience predicate intentionally mismatches the user's role
+        # so the resolver returns None.
+        audience="persona = manager",
+        steps=[step],
+        step_order=["welcome"],
+    )
+    repo = MagicMock()
+    repo.get = MagicMock(return_value=None)
+
+    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    prc = _prc(guides=[guide], repo=repo, view_name="task_list", user_roles=["role_admin"])
+    _inject_onboarding_step(prc)
+    msgs = _capture_logs(caplog)
+    assert any("onboarding.inject:no-active-step" in m for m in msgs), (
+        f"expected 'onboarding.inject:no-active-step' tag, got: {msgs}"
+    )
+
+
+def test_inject_logs_resolve_failed_branch_at_info_level(caplog) -> None:
+    """Repository errors are non-fatal but must surface at INFO so
+    production can see them (was DEBUG, swallowed by default config)."""
+    from dazzle.core import ir
+
+    step = ir.GuideStep(
+        name="welcome",
+        kind=ir.GuideStepKind.POPOVER,
+        title="x",
+        body="y",
+        target="surface.task_list",
+        complete_on=ir.GuideCompleteOn(kind=ir.GuideCompleteOnKind.CLICK),
+    )
+    guide = ir.GuideSpec(
+        name="g",
+        title="g",
+        audience="persona = admin",
+        steps=[step],
+        step_order=["welcome"],
+    )
+    repo = MagicMock()
+    repo.get = MagicMock(side_effect=RuntimeError("postgres down"))
+
+    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    prc = _prc(guides=[guide], repo=repo, view_name="task_list")
+    _inject_onboarding_step(prc)
+    msgs = _capture_logs(caplog)
+    assert any("onboarding.inject:resolve-failed" in m for m in msgs), (
+        f"expected 'onboarding.inject:resolve-failed' tag, got: {msgs}"
+    )
+
+
+def test_inject_logs_rendered_on_happy_path(caplog) -> None:
+    """Success path also emits a tagged log line — operators can grep
+    for `onboarding.inject:rendered` to confirm the guide IS firing."""
+    from dazzle.core import ir
+
+    step = ir.GuideStep(
+        name="welcome",
+        kind=ir.GuideStepKind.POPOVER,
+        title="Welcome",
+        body="Get started",
+        target="surface.task_list",
+        complete_on=ir.GuideCompleteOn(kind=ir.GuideCompleteOnKind.CLICK),
+    )
+    guide = ir.GuideSpec(
+        name="workspace_setup",
+        title="Setup",
+        audience="persona = admin",
+        steps=[step],
+        step_order=["welcome"],
+    )
+    repo = MagicMock()
+    repo.get = MagicMock(return_value=None)
+
+    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    prc = _prc(guides=[guide], repo=repo, user_roles=["role_admin"], view_name="task_list")
+    _inject_onboarding_step(prc)
+    msgs = _capture_logs(caplog)
+    assert any("onboarding.inject:rendered" in m for m in msgs), (
+        f"expected 'onboarding.inject:rendered' tag on happy path, got: {msgs}"
+    )
+    assert any("guide=workspace_setup" in m for m in msgs)
+    assert any("step=welcome" in m for m in msgs)

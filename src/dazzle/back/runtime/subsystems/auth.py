@@ -83,7 +83,14 @@ class AuthSubsystem:
         # block.
         # Defensive getattr — older AppSpec snapshots (and test fixtures
         # using SimpleNamespace stand-ins) may not carry the field yet.
-        if getattr(ctx.appspec, "guides", None) and ctx.database_url:
+        #
+        # Tagged startup logs (#1118) — operators can grep
+        # `onboarding.startup:` at deploy time to confirm whether the
+        # repo got wired. Pairs with the `onboarding.inject:` tag
+        # family in `_inject_onboarding_step`.
+        guides_present = bool(getattr(ctx.appspec, "guides", None))
+        db_url_present = bool(ctx.database_url)
+        if guides_present and db_url_present:
             from dazzle.back.runtime.onboarding import (
                 OnboardingStateRepository,
                 create_onboarding_routes,
@@ -93,6 +100,20 @@ class AuthSubsystem:
                 database_url=ctx.database_url,
             )
             ctx.app.include_router(create_onboarding_routes())
+            logger.info(
+                "onboarding.startup:repo-wired guides=%d database_url=set",
+                len(getattr(ctx.appspec, "guides", []) or []),
+            )
+        else:
+            # Don't wire repo or mount routes. If the deploy expected
+            # guides to work, this log will say why they don't.
+            logger.info(
+                "onboarding.startup:repo-not-wired guides_present=%s "
+                "database_url_present=%s (both must be true for the "
+                "guide overlay to render at request time)",
+                guides_present,
+                db_url_present,
+            )
 
         # Form-encoded password-reset routes (Phase 1.B.2, v0.67.31) —
         # typed-Fragment views in `auth_views.py` post to these endpoints

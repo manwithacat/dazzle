@@ -561,36 +561,55 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
 def _inject_onboarding_step(prc: _PageRequestContext) -> None:
     """Resolve + render the active guide step for the current user/surface (v0.71.3).
 
-    No-op when:
-    - The AppSpec declares no guides.
-    - The user isn't authenticated (the popover overlay only makes
-      sense for logged-in users — the audience predicate references
-      personas).
-    - The repository isn't configured on ``app.state.onboarding_state``
-      (no DATABASE_URL → the auth subsystem skipped wiring it).
-    - The resolver returns no active step for this (user, surface).
-    - The active step's kind isn't supported in this Dazzle version
-      (v0.71.3 ships popover only; others raise UnknownStepKindError
-      which we treat as "render nothing rather than crash the page").
+    No-op when any of 11 branches fail — see the ``onboarding.inject:``
+    tagged log lines below for the full list and what each one means
+    in production (#1118). Every skip path emits one INFO line tagged
+    ``onboarding.inject:<reason>`` so production-log grep can answer
+    "why isn't my guide rendering?" without source-level debugging.
 
     On success, sets ``prc.ctx.active_guide_html`` to the rendered
     fragment. ``template_renderer._render_typed_body`` prepends it
     to the surface body.
     """
     appspec = prc.deps.appspec
+    surface_name = prc.ctx.view_name or ""
+
     if not getattr(appspec, "guides", None):
+        # AppSpec has no guides — the most common skip path. INFO
+        # noise here would dominate logs on apps without guides; keep
+        # at DEBUG.
+        logger.debug("onboarding.inject:no-guides surface=%s", surface_name)
         return
+
     if prc.auth_ctx is None or not prc.auth_ctx.is_authenticated:
+        logger.info(
+            "onboarding.inject:not-authenticated surface=%s auth_ctx=%s",
+            surface_name,
+            "None" if prc.auth_ctx is None else "unauthenticated",
+        )
         return
     user = getattr(prc.auth_ctx, "user", None)
     if user is None:
+        logger.info("onboarding.inject:no-user surface=%s", surface_name)
         return
     user_id = getattr(user, "id", None)
     if user_id is None:
+        logger.info("onboarding.inject:no-user-id surface=%s", surface_name)
         return
 
     repo = getattr(prc.request.app.state, "onboarding_state", None)
     if repo is None:
+        # The most likely "wired in dev, missing in prod" path —
+        # AuthSubsystem.startup only attaches the repo when
+        # ctx.appspec has guides AND ctx.database_url is set. INFO so
+        # an operator can grep for this exact tag to confirm.
+        logger.info(
+            "onboarding.inject:no-repo surface=%s user_id=%s "
+            "(app.state.onboarding_state is None — check that "
+            "AuthSubsystem.startup ran with guides + database_url)",
+            surface_name,
+            user_id,
+        )
         return
 
     # Pick the persona to match against the audience predicate. Roles
@@ -603,8 +622,14 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
     if roles:
         user_persona = roles[0].removeprefix("role_")
 
-    surface_name = prc.ctx.view_name or ""
     if not surface_name:
+        logger.info(
+            "onboarding.inject:no-surface-name user_id=%s persona=%s "
+            "(prc.ctx.view_name is empty — usually a route that "
+            "doesn't correspond to a DSL surface)",
+            user_id,
+            user_persona,
+        )
         return
 
     try:
@@ -614,9 +639,15 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
             render_step,
             resolve_active_step,
         )
-    except ImportError:
+    except ImportError as exc:
         # Onboarding package missing — defensive; shouldn't happen
         # since it ships with the framework. Don't crash the page.
+        logger.warning(
+            "onboarding.inject:import-error surface=%s user_id=%s exc=%r",
+            surface_name,
+            user_id,
+            exc,
+        )
         return
 
     try:
@@ -627,20 +658,31 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
             app=appspec,
             repo=repo,
         )
-    except Exception:
-        # Repository errors are non-fatal — log and skip the overlay.
-        # The user still sees their page.
-        import logging
-
-        logging.getLogger(__name__).debug(
-            "onboarding resolve failed for user=%s surface=%s",
-            user_id,
+    except Exception as exc:
+        # Repository or resolver errors are non-fatal — log and skip
+        # the overlay. The user still sees their page. Bumped from
+        # DEBUG to INFO in #1118 so production can see when this
+        # silently catches.
+        logger.info(
+            "onboarding.inject:resolve-failed surface=%s user_id=%s persona=%s exc=%r",
             surface_name,
+            user_id,
+            user_persona,
+            exc,
             exc_info=True,
         )
         return
 
     if result is None:
+        logger.info(
+            "onboarding.inject:no-active-step surface=%s user_id=%s persona=%s "
+            "(resolver returned None — audience predicate didn't match, "
+            "all steps already completed/dismissed, or no guide targets "
+            "this surface)",
+            surface_name,
+            user_id,
+            user_persona,
+        )
         return
     guide, step = result
 
@@ -649,12 +691,36 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
         # Kind shipped in a future Dazzle release but the runtime
         # doesn't have a builder for it yet. Skip silently — the
         # user still sees their page.
+        logger.info(
+            "onboarding.inject:no-builder surface=%s guide=%s step=%s kind=%s",
+            surface_name,
+            guide.name,
+            step.name,
+            kind,
+        )
         return
     try:
         prc.ctx.active_guide_html = render_step(step, guide_name=guide.name)
     except UnknownStepKindError:
         # Race: has_builder said yes but render_step raised. Defensive.
+        logger.warning(
+            "onboarding.inject:render-failed surface=%s guide=%s step=%s "
+            "kind=%s (has_builder=True but render_step raised)",
+            surface_name,
+            guide.name,
+            step.name,
+            kind,
+        )
         return
+
+    logger.info(
+        "onboarding.inject:rendered surface=%s guide=%s step=%s kind=%s user_id=%s",
+        surface_name,
+        guide.name,
+        step.name,
+        kind,
+        user_id,
+    )
 
 
 def _dedupe_nav_items_against_groups(

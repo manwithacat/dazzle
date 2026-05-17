@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.16] - 2026-05-17
+
+### Changed
+
+- **`_inject_onboarding_step` now emits a tagged INFO log at every skip branch — addresses #1118.** Prior to this release, the 11 conditions under which the guide overlay silently skips (no guides, not authenticated, no user, no user_id, no repo, no surface name, ImportError, resolver exception, resolver returned None, no builder for kind, render_step race) all returned without logging — or logged at DEBUG (one branch). Production-log grep for "why isn't my guide rendering?" had no answer beyond attaching a debugger. Every skip path now emits one `logger.info("onboarding.inject:<reason>", ...)` line with the relevant context (surface, user_id, persona, guide, step, kind) so operators can grep `onboarding.inject:` in Heroku/CloudWatch logs and immediately see which branch fired. The success path emits `onboarding.inject:rendered` so the absence of skip lines is also confirmable.
+- **`AuthSubsystem.startup` now emits a paired `onboarding.startup:repo-wired` / `onboarding.startup:repo-not-wired` log at boot.** The repo is only wired when `ctx.appspec.guides` AND `ctx.database_url` are both truthy — pre-#1118 the `else` was silent, so an operator couldn't tell from boot logs whether the wiring would succeed. The new log surfaces both flags so the deploy-time check is one grep away.
+
+### Tests
+
+- **`tests/unit/test_onboarding_page_wiring.py`** extended (6 new tests) — each pins the new `onboarding.inject:<reason>` tag at one specific skip branch: `no-repo`, `not-authenticated`, `no-surface-name`, `no-active-step`, `resolve-failed` (asserts INFO level — was DEBUG), and the `rendered` success-path tag with `guide=` / `step=` fields populated. Drift here would defeat the production debuggability story, so the tags are now contract-pinned at the unit level.
+
+### Agent Guidance
+
+- The `onboarding.inject:<reason>` tag family is the canonical production-debug surface for guide-overlay issues. When a guide doesn't render, grep `onboarding.inject:` in production logs to identify which of the 11 skip branches fired. The most likely two are `onboarding.inject:no-repo` (auth subsystem didn't wire the repository — check `onboarding.startup:` at boot) and `onboarding.inject:no-active-step` (resolver returned None — usually an audience-predicate mismatch or all steps already completed).
+- The fix shape from #1118 is "instrument first, fix root cause once one branch is identified" — adding a tagged log line at each silent skip path is cheap and a future analogous DX win wherever the framework currently swallows conditions. Keep an eye out.
+
 ## [0.71.15] - 2026-05-17
 
 ### Added
