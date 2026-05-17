@@ -56,7 +56,9 @@ def test_render_typed_section_dispatches_each_new_type() -> None:
 def test_stats_emits_section_class_and_stats_wrapper() -> None:
     out = _build_stats_section({"type": "stats"})
     assert 'class="dz-section dz-section-stats"' in out
-    assert "stats stats-vertical lg:stats-horizontal shadow" in out
+    # #1113 — Dazzle-native grid replaces DaisyUI `stats stats-vertical
+    # lg:stats-horizontal shadow` (CDN-only styling).
+    assert 'class="dz-stats-grid"' in out
 
 
 def test_stats_renders_one_stat_per_item() -> None:
@@ -69,7 +71,9 @@ def test_stats_renders_one_stat_per_item() -> None:
             ],
         }
     )
-    assert out.count('class="stat"') == 2
+    assert out.count('class="dz-stat"') == 2
+    assert out.count('class="dz-stat-value"') == 2
+    assert out.count('class="dz-stat-title"') == 2
     assert ">99.9%<" in out
     assert ">Uptime<" in out
     # < in <1ms must be escaped.
@@ -80,8 +84,8 @@ def test_stats_renders_one_stat_per_item() -> None:
 
 def test_stats_handles_empty_items() -> None:
     out = _build_stats_section({"type": "stats"})
-    assert "stats stats-vertical" in out
-    assert 'class="stat"' not in out
+    assert 'class="dz-stats-grid"' in out
+    assert 'class="dz-stat"' not in out
 
 
 # ───────────────── steps ────────────────────

@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.12] - 2026-05-17
+
+### Removed
+
+- **DaisyUI 5 + Tailwind 4 CDN dependency dropped from `site_renderer.get_shared_head_html` — closes #1113.** Every site/marketing page and every task-surface page used to unconditionally load `cdn.jsdelivr.net/npm/daisyui@5/daisyui.css` and `cdn.jsdelivr.net/npm/@tailwindcss/browser@4` from a `<link>`/`<script>` pair in the shared `<head>` block. The workspace runtime moved off both during the v0.62 CSS refactor, but site/marketing pages and task surfaces still depended on the CDN load because `site_section_builder` was emitting DaisyUI's `stat-value` / `stat-title` semantic classes and `response_helpers` was emitting `alert alert-{level}`. Both emitters now produce Dazzle-native class names (see Changed); the CDN tags are gone.
+- **DaisyUI theme-bridge variable block in `design-system.css`.** The `--b1` / `--b2` / `--b3` / `--p` / `--s` / `--n` / `--su` / `--in` / `--wa` / `--er` mappings (~80 lines) existed solely to feed DaisyUI's component CSS; with DaisyUI no longer loaded they were dead weight. Selectors lower in the file that style our own DOM continue to work — they use locally-defined `--card` / `--border` / `--foreground` tokens, not the deleted DaisyUI bridge vars.
+
+### Changed
+
+- **`site_section_builder._build_stats_section`** now emits `<div class="dz-stats-grid">` / `<div class="dz-stat">` / `<div class="dz-stat-value">` / `<div class="dz-stat-title">` instead of DaisyUI's `stats stats-vertical lg:stats-horizontal shadow` / `stat` / `stat-value` / `stat-title`. The `.dz-stats-grid` rule in `static/css/site-sections.css` was upgraded from layout-only to a token-driven card primitive (flex column → row at `64rem`, surface background, soft border, drop shadow, tabular-nums on value text).
+- **`response_helpers.with_toast`** now emits `<div class="dz-toast" data-dz-toast-level="…">` instead of `<div class="alert alert-{level}">`. Tone keys off the `data-dz-toast-level` attribute and tints via `color-mix(in oklch, …)` against the four semantic colour tokens (`brand` / `success` / `warning` / `danger`) — mirrors the `.dz-alert-banner[data-dz-alert-level=…]` pattern already in `fragments.css`. The level string is now properly HTML-escaped on the way into the attribute.
+- **`site_renderer.render_task_surface_page`** body class is now just `class="dz-site"` (was `class="dz-site bg-base-100"`). The `.dz-site` rule already paints `var(--colour-bg)` directly — `bg-base-100` was only ever providing that fill via DaisyUI's class.
+- **`static/css/site-sections.css`** gained the new `.dz-stat` / `.dz-stat-title` / `.dz-toast[data-dz-toast-level=…]` rules and reshaped `.dz-stats-grid` + `.dz-stat-value` + `.dz-stat-label` to use design tokens (no more literal `2.5rem` / `0.875rem` / `2rem` / `1rem`).
+
+### Tests
+
+- **`tests/visual/test_site_primitives_visual_smoke.py`** (new) — Playwright-driven harness that renders the three migrated primitives standalone against the real bundled CSS, asserts non-transparent computed backgrounds, asserts toast left-border tone varies per level, asserts stat values use `tabular-nums`, and captures one PNG per case into `tests/visual/_artifacts/` for human review. 6 tests pass (1 stats, 4 toast levels, 1 site background). Run with `pytest tests/visual/ -m visual`.
+- **`tests/unit/test_response_helpers.py`** and **`tests/unit/test_site_section_medium_builders.py`** updated to pin the new class names (`dz-toast` + `data-dz-toast-level="…"`, `dz-stats-grid` + `dz-stat` + `dz-stat-value` + `dz-stat-title`). The full unit run is green for everything that doesn't need PostgreSQL.
+- **`tests/integration/test_runtime_e2e.py`** server-rendered-marker probe no longer accepts `"daisyui"` as a positive signal; replaced with `"/styles/dazzle.css"` (the bundled stylesheet link is the new universal marker on a real Dazzle response).
+
+### Agent Guidance
+
+- The workspace runtime is Dazzle-native CSS only. Site/marketing pages and task-surface pages are now ALSO Dazzle-native — no third-party CSS framework is loaded at runtime anywhere. When adding a new component, emit class names defined in `static/css/components/*.css` or `static/css/site-sections.css` using tokens from `tokens.css`; never reach for Tailwind utilities (`md:flex`, `bg-base-*`, `text-error`) or DaisyUI semantic classes (`stat-value`, `alert alert-*`, `btn-primary`) — they have no styling rules anywhere in the bundle.
+- For tone-tinted elements (toasts, alert banners, status pills), key off a `data-dz-*-level="info|success|warning|error"` attribute and provide one `color-mix(in oklch, var(--colour-{brand,success,warning,danger}) 6%, var(--colour-surface))` background per level. This is the established pattern across `dz-alert-banner` (fragments.css) and now `dz-toast` (site-sections.css).
+- The visual smoke harness in `tests/visual/` is opt-in (`-m visual`) and renders against the real bundled CSS. Use it when adding a new visible primitive — it catches the "class emitted but no rule defined" failure mode that unit tests can't see.
+
 ## [0.71.11] - 2026-05-17
 
 ### Fixed

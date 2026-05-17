@@ -19,12 +19,14 @@ def get_shared_head_html(
     """
     Return shared <head> content for marketing/site pages and task-surface pages.
 
-    Site pages and task-surface pages still depend on DaisyUI + Tailwind for
-    legacy class names (``bg-base-100``, ``stat-value``, ``stat-title`` —
-    emitted by ``site_section_builder``). The workspace runtime no longer
-    loads either library: it ships the Dazzle-native design system bundled
-    in ``/styles/dazzle.css``. Migrating site pages to the native CSS is a
-    pending cleanup — when that happens the two CDN tags below can come out.
+    Loads the bundled Dazzle stylesheet (``/styles/dazzle.css``) and nothing
+    else from a third-party CDN besides the Inter webfont and Lucide icons.
+    Pre-#1113 this also loaded DaisyUI 5 + Tailwind 4 via jsdelivr to style
+    legacy classes (`bg-base-100`, `stat-value`, `stat-title`, `alert
+    alert-*`) emitted by `site_section_builder` / `site_renderer` /
+    `response_helpers` — all of those emitters now produce Dazzle-native
+    classes defined in `static/css/site-sections.css`, so the CDN load
+    is no longer needed.
 
     Args:
         title: Page title
@@ -48,10 +50,6 @@ def get_shared_head_html(
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- DaisyUI - semantic component classes (same as workspace) -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
-    <!-- Tailwind Browser - minimal utilities for layout -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- DAZZLE design system layer -->
     <link rel="stylesheet" href="/styles/dazzle.css">{custom_css_link}
     <!-- Lucide icons for feature/section icons -->
@@ -119,7 +117,7 @@ def render_task_surface_page(
 <head>
     {get_shared_head_html(title)}
 </head>
-<body class="dz-site bg-base-100">
+<body class="dz-site">
     <header class="dz-site-header">
         <nav class="dz-site-nav">
             <a href="/workspaces/tasks" class="dz-site-logo">{product_name}</a>

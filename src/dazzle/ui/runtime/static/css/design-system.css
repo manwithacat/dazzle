@@ -300,82 +300,16 @@
 }
 
 /* =============================================================================
-   2. DaisyUI Theme Bridge
+   2. (DaisyUI theme bridge removed in #1113.)
 
-   Maps our design tokens to DaisyUI's internal CSS variables so existing
-   templates using DaisyUI classes (btn, card, badge, etc.) pick up the
-   new colour palette automatically.
+   This block previously mapped our design tokens to DaisyUI's internal
+   --b1/--b2/--p/--s/etc. variables. DaisyUI is no longer loaded — the
+   CDN tags were dropped from `site_renderer.get_shared_head_html` in
+   the same release — so those variable mappings became dead weight.
+   Any selector below that uses `bg-base-100` etc. as a class name is
+   now styled by our own rules (drawer-side block in section 5), not
+   by DaisyUI's component CSS.
    ============================================================================= */
-
-:root,
-[data-theme="light"] {
-  /* DaisyUI base colours → zinc neutrals */
-  --b1: 0 0% 100%;         /* base-100: white */
-  --b2: 240 4.8% 95.9%;    /* base-200: zinc-100 */
-  --b3: 240 5.9% 90%;      /* base-300: zinc-200 */
-  --bc: 240 10% 3.9%;      /* base-content: zinc-950 */
-
-  /* DaisyUI semantic colours */
-  --p: 240 5.9% 10%;       /* primary: zinc-900 */
-  --pf: 240 5.2% 16%;      /* primary-focus: zinc-800 */
-  --pc: 0 0% 98%;           /* primary-content */
-
-  --s: 240 4.8% 95.9%;     /* secondary: zinc-100 */
-  --sf: 240 5.9% 90%;      /* secondary-focus: zinc-200 */
-  --sc: 240 5.9% 10%;      /* secondary-content */
-
-  --a: 240 4.8% 95.9%;     /* accent */
-  --af: 240 5.9% 90%;
-  --ac: 240 5.9% 10%;
-
-  --n: 240 5.9% 10%;       /* neutral: zinc-900 */
-  --nf: 240 3.7% 15.9%;
-  --nc: 0 0% 98%;
-
-  /* State colours */
-  --su: 142 76% 36%;       /* success: green */
-  --in: 217 91% 60%;       /* info: blue */
-  --wa: 38 92% 50%;        /* warning: amber */
-  --er: 0 84.2% 60.2%;     /* error: red */
-
-  /* DaisyUI rounded */
-  --rounded-box: var(--radius-lg);
-  --rounded-btn: var(--radius-md);
-  --rounded-badge: var(--radius-full);
-
-  /* DaisyUI animation */
-  --animation-btn: var(--duration-fast);
-  --animation-input: var(--duration-fast);
-  --btn-focus-scale: 0.98;
-}
-
-[data-theme="dark"] {
-  --b1: 240 10% 3.9%;
-  --b2: 240 3.7% 10%;
-  --b3: 240 3.7% 15.9%;
-  --bc: 0 0% 98%;
-
-  --p: 0 0% 98%;
-  --pf: 0 0% 90%;
-  --pc: 240 5.9% 10%;
-
-  --s: 240 3.7% 15.9%;
-  --sf: 240 3.7% 20%;
-  --sc: 0 0% 98%;
-
-  --a: 240 3.7% 15.9%;
-  --af: 240 3.7% 20%;
-  --ac: 0 0% 98%;
-
-  --n: 0 0% 98%;
-  --nf: 0 0% 90%;
-  --nc: 240 5.9% 10%;
-
-  --su: 142 76% 36%;
-  --in: 217 91% 60%;
-  --wa: 38 92% 50%;
-  --er: 0 62.8% 30.6%;
-}
 
 /* =============================================================================
    3. Typography

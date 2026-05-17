@@ -426,7 +426,7 @@ class TestSimpleTaskE2E:
                         "hx-get",
                         "hx-post",
                         "<table",
-                        "daisyui",
+                        "/styles/dazzle.css",
                         "<!DOCTYPE",
                         "<!doctype",
                     ]

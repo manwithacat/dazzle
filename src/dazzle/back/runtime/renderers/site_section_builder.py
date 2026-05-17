@@ -436,11 +436,11 @@ def _section_media(section: dict[str, Any]) -> str:
 def _build_stats_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: stats` — vertical/horizontal stat row.
 
-    Emits the legacy `stats` / `stat` / `stat-value` / `stat-title`
-    class names consumed by site pages (matches stats.html). These
-    classes are still styled by the third-party CSS loaded in
-    ``site_renderer.get_shared_head_html`` — the workspace runtime
-    uses its own Dazzle-native classes."""
+    Emits Dazzle-native `.dz-stats-grid` / `.dz-stat` / `.dz-stat-value`
+    / `.dz-stat-title` classes (defined in `site-sections.css`). Pre-#1113
+    this used DaisyUI's `stats` / `stat` / `stat-value` / `stat-title`
+    classes which required the third-party CDN bundle loaded via
+    `site_renderer.get_shared_head_html`."""
     parts: list[str] = []
     parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-stats">')
     inner: list[str] = [_section_header(section)]
@@ -452,14 +452,12 @@ def _build_stats_section(section: dict[str, Any]) -> str:
         value = str(item.get("value", "") or "")
         label = str(item.get("label", "") or "")
         item_parts.append(
-            f'<div class="stat">'
-            f'<div class="stat-value">{_html.escape(value)}</div>'
-            f'<div class="stat-title">{_html.escape(label)}</div>'
+            f'<div class="dz-stat">'
+            f'<div class="dz-stat-value">{_html.escape(value)}</div>'
+            f'<div class="dz-stat-title">{_html.escape(label)}</div>'
             f"</div>"
         )
-    inner.append(
-        f'<div class="stats stats-vertical lg:stats-horizontal shadow">{"".join(item_parts)}</div>'
-    )
+    inner.append(f'<div class="dz-stats-grid">{"".join(item_parts)}</div>')
     parts.append(f'<div class="dz-section-content">{"".join(inner)}</div>')
     parts.append("</section>")
     return "".join(parts)

@@ -1243,26 +1243,48 @@
   line-height: var(--dz-line-height-body, 1.6);
 }
 
+/* #1113 — replaces DaisyUI's `stats stats-vertical lg:stats-horizontal
+ * shadow` grid emitted by `site_section_builder._build_stats_section`.
+ * Vertical stack on narrow viewports, horizontal row from --breakpoint-lg
+ * upward. Tokens-only, no hardcoded values. */
 .dz-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 2rem;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+}
+
+@media (min-width: 64rem) {
+  .dz-stats-grid {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: var(--space-lg);
+  }
 }
 
 .dz-stat-item {
-  padding: 1rem;
+  padding: var(--space-md);
 }
 
 .dz-stat-value {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
   display: block;
+  font-variant-numeric: tabular-nums;
 }
 
 .dz-stat-label {
-  font-size: 0.875rem;
-  opacity: 0.8;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
 }
 
 /* =============================================================================
@@ -1823,4 +1845,70 @@
     width: auto;
     align-self: center;
   }
+}
+
+/* =============================================================================
+   #1113 — Per-stat wrapper + native toast. The `.dz-stats-grid` /
+   `.dz-stat-value` / `.dz-stat-label` rules above (modernised in the
+   same release) cover the section-level layout; `.dz-stat` here is the
+   per-item flex column the section-builder emits. `.dz-stat-title` is
+   the per-item label kept distinct from `.dz-stat-label` (the latter is
+   used by the legacy `dz-stat-item` shape in templated marketing pages).
+   Tokens-only — no literal hsl/hex.
+   ============================================================================= */
+
+.dz-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dz-stat-title {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+/* Toast — replaces `alert alert-{level}` emitted by
+ * `response_helpers.append_toast`. Tone keyed off `data-dz-toast-level`,
+ * mirroring the `.dz-alert-banner[data-dz-alert-level=…]` pattern in
+ * fragments.css. Slide-in/out animation inherited from the existing
+ * `.dz-toast-enter` / `.dz-toast-leave` rules in dz.css. */
+.dz-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  max-width: min(28rem, calc(100vw - var(--space-xl) * 2));
+}
+
+.dz-toast[data-dz-toast-level="info"] {
+  border-left-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 6%, var(--colour-surface));
+}
+
+.dz-toast[data-dz-toast-level="success"] {
+  border-left-color: var(--colour-success);
+  background: color-mix(in oklch, var(--colour-success) 6%, var(--colour-surface));
+}
+
+.dz-toast[data-dz-toast-level="warning"] {
+  border-left-color: var(--colour-warning);
+  background: color-mix(in oklch, var(--colour-warning) 6%, var(--colour-surface));
+}
+
+.dz-toast[data-dz-toast-level="error"] {
+  border-left-color: var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
 }

@@ -14,13 +14,16 @@ class TestWithToast:
         assert 'id="dz-toast-container"' in body
         assert "hx-swap-oob" in body
         assert "Saved successfully" in body
-        assert "alert-success" in body
+        # #1113 — tone driven by data attribute instead of DaisyUI
+        # `alert-{level}` class.
+        assert 'class="dz-toast"' in body
+        assert 'data-dz-toast-level="success"' in body
 
     def test_default_level_is_info(self):
         resp = HTMLResponse("<p>OK</p>")
         result = with_toast(resp, "Hello")
         body = result.body.decode()
-        assert "alert-info" in body
+        assert 'data-dz-toast-level="info"' in body
 
     def test_includes_remove_me_attribute(self):
         resp = HTMLResponse("<p>OK</p>")
