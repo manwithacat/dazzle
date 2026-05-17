@@ -182,7 +182,7 @@ def snapshot_dsl_constructs() -> str:
     lines.append("# DAZZLE DSL Constructs — API Surface (cycle 1 of #961)")
     lines.append("#")
     lines.append("# Source of truth: parser dispatch table + ModuleFragment.model_fields.")
-    lines.append("# Regenerate: dazzle inspect-api dsl-constructs --write")
+    lines.append("# Regenerate: dazzle inspect api dsl-constructs --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")
     lines.append("# This snapshot pins the construct → IR-class mapping. Field-level")
@@ -223,7 +223,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
         snapshot = snapshot_dsl_constructs()
     if not BASELINE_PATH.exists():
         return (
-            f"(no baseline at {BASELINE_PATH} — run `dazzle inspect-api dsl-constructs --write`)\n"
+            f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api dsl-constructs --write`)\n"
         )
     baseline = BASELINE_PATH.read_text()
     if baseline == snapshot:

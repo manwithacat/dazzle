@@ -1,7 +1,7 @@
 # DAZZLE IR Types — API Surface (cycle 2 of #961)
 #
 # Source of truth: dazzle.core.ir.__all__
-# Regenerate: dazzle inspect-api ir-types --write
+# Regenerate: dazzle inspect api ir-types --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
 # Every IR type re-exported from `dazzle.core.ir` is part of the public

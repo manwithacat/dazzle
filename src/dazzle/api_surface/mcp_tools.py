@@ -50,7 +50,7 @@ def snapshot_mcp_tools() -> str:
     lines.append(
         "# Source of truth: dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()"
     )
-    lines.append("# Regenerate: dazzle inspect-api mcp-tools --write")
+    lines.append("# Regenerate: dazzle inspect api mcp-tools --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")
     lines.append("# Each tool's input schema is the load-bearing public API. The description")
@@ -81,7 +81,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
     if snapshot is None:
         snapshot = snapshot_mcp_tools()
     if not BASELINE_PATH.exists():
-        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect-api mcp-tools --write`)\n"
+        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api mcp-tools --write`)\n"
     baseline = BASELINE_PATH.read_text()
     if baseline == snapshot:
         return ""

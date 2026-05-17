@@ -1,7 +1,7 @@
 # DAZZLE DSL Constructs — API Surface (cycle 1 of #961)
 #
 # Source of truth: parser dispatch table + ModuleFragment.model_fields.
-# Regenerate: dazzle inspect-api dsl-constructs --write
+# Regenerate: dazzle inspect api dsl-constructs --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
 # This snapshot pins the construct → IR-class mapping. Field-level

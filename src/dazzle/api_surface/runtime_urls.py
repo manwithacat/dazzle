@@ -118,7 +118,7 @@ def snapshot_runtime_urls() -> str:
     lines.append("# DAZZLE Runtime URLs — API Surface (cycle 5 of #961)")
     lines.append("#")
     lines.append("# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py")
-    lines.append("# Regenerate: dazzle inspect-api runtime-urls --write")
+    lines.append("# Regenerate: dazzle inspect api runtime-urls --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")
     lines.append("# Static analysis — no app build, no DB connection. Captures every")
@@ -151,7 +151,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
     if snapshot is None:
         snapshot = snapshot_runtime_urls()
     if not BASELINE_PATH.exists():
-        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect-api runtime-urls --write`)\n"
+        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api runtime-urls --write`)\n"
     baseline = BASELINE_PATH.read_text()
     if baseline == snapshot:
         return ""

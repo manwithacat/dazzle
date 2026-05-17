@@ -1,0 +1,610 @@
+"""``dazzle inspect <ext-point>`` — introspect framework extension points.
+
+Closes #1120. The framework has clean extension points for renderers,
+primitives, route overrides, and OAuth providers — but until v0.71.23
+there was no way to ask "what does this app know about right now?"
+without attaching a debugger to ``app.state.services.*_registry._handlers``.
+
+This module surfaces the four ext-points (plus the existing api-surface
+introspection from v0.66.x #961) under a unified ``dazzle inspect``
+command group. Each subcommand has two modes:
+
+- **Manifest-only (default, ~50ms)** — parses ``dazzle.toml`` plus the
+  AppSpec, lists everything DECLARED. Fast, no app boot, suitable for
+  CI checks and quick inspection. Shows what the framework's link-time
+  validator would accept.
+- **``--runtime`` (slow, ~3-10s)** — additionally boots the app,
+  reaches into ``app.state.services`` (or the equivalent registry),
+  and cross-references the declared set against what's actually
+  registered at runtime. This is the only mode that catches the
+  "declared in TOML but no handler registered" mismatch class —
+  exactly the failure mode Penny Dreadful's renderer spike hit
+  before #1116 + #1117 shipped.
+
+Output: human pretty-print by default; ``--json`` for agent
+consumption (same shape, mechanical JSON).
+
+Per #1120's "rename inspect-api" decision, the existing api-surface
+introspection lives under ``dazzle inspect api`` rather than the old
+top-level ``dazzle inspect-api``. Clean break — no alias is kept.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import typer
+
+from dazzle.api_surface import (
+    dsl_constructs_module,
+    ir_types_module,
+    mcp_tools_module,
+    public_helpers_module,
+    runtime_urls_module,
+)
+
+# =============================================================================
+# Group: dazzle inspect <ext-point>
+# =============================================================================
+
+inspect_app = typer.Typer(
+    help=(
+        "Introspect framework extension points (renderers, primitives, "
+        "routes, oauth-providers) and the public API surface (api). "
+        "Defaults to a manifest-only view; pass --runtime to boot the "
+        "app and cross-reference what's registered at request time."
+    ),
+    no_args_is_help=True,
+)
+
+
+# =============================================================================
+# Result types — uniform shape across ext-points so the JSON output is
+# machine-comparable and the human output can share a printer.
+# =============================================================================
+
+
+@dataclass
+class InspectEntry:
+    """One inspectable thing — a renderer, primitive, route, OAuth provider.
+
+    ``source`` is one of:
+      - ``"framework"`` — built-in default (e.g. the `fragment` renderer)
+      - ``"manifest"`` — declared in dazzle.toml
+      - ``"runtime"`` — registered at runtime but NOT declared (drift!)
+    """
+
+    name: str
+    source: str
+    detail: str = ""
+    registered: bool | None = None
+    declared: bool | None = None
+
+
+@dataclass
+class InspectResult:
+    """The unified report shape every subcommand returns."""
+
+    ext_point: str
+    entries: list[InspectEntry] = field(default_factory=list)
+    mismatches: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+
+# =============================================================================
+# Common helpers
+# =============================================================================
+
+
+def _resolve_project_root(project_path: Path | None) -> Path:
+    """Resolve the project root from the optional CLI arg, falling back
+    to the current directory if --project isn't passed."""
+    root = (project_path or Path.cwd()).resolve()
+    if not (root / "dazzle.toml").exists():
+        typer.echo(
+            f"No dazzle.toml at {root} — pass --project or cd into a Dazzle project.",
+            err=True,
+        )
+        raise typer.Exit(2)
+    return root
+
+
+def _load_manifest(project_root: Path) -> Any:
+    """Load the project manifest. Imported lazily to avoid paying the
+    parser cost on `--help`."""
+    from dazzle.core.manifest import load_manifest
+
+    return load_manifest(project_root / "dazzle.toml")
+
+
+def _load_appspec(project_root: Path) -> Any:
+    """Load and link the full AppSpec. ~50ms for typical projects."""
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    return load_project_appspec(project_root)
+
+
+def _emit(result: InspectResult, output_json: bool) -> None:
+    """Serialise + emit the result, then exit non-zero if any mismatches."""
+    if output_json:
+        payload = {
+            "ext_point": result.ext_point,
+            "entries": [
+                {
+                    "name": e.name,
+                    "source": e.source,
+                    "detail": e.detail,
+                    "registered": e.registered,
+                    "declared": e.declared,
+                }
+                for e in result.entries
+            ],
+            "mismatches": result.mismatches,
+            "notes": result.notes,
+        }
+        typer.echo(json.dumps(payload, indent=2))
+    else:
+        _print_human(result)
+
+    if result.mismatches:
+        sys.exit(1)
+
+
+def _print_human(result: InspectResult) -> None:
+    """Plain-text rendering. No rich dependency; matches the inspect-api
+    style so the output works in any terminal."""
+    typer.echo(f"{result.ext_point} ({len(result.entries)}):")
+    if not result.entries:
+        typer.echo("  (none)")
+    else:
+        name_width = max(len(e.name) for e in result.entries)
+        for e in result.entries:
+            marker = ""
+            if e.declared is True and e.registered is False:
+                marker = "  ⚠️  declared in manifest but no runtime handler"
+            elif e.declared is False and e.registered is True:
+                marker = "  ⚠️  registered at runtime but not declared in manifest"
+            typer.echo(f"  - {e.name:<{name_width}}  {e.source:<10}  {e.detail}{marker}")
+
+    for note in result.notes:
+        typer.echo(f"\nnote: {note}")
+
+    if result.mismatches:
+        typer.echo("")
+        typer.echo(f"FAIL: {len(result.mismatches)} mismatch(es):", err=True)
+        for m in result.mismatches:
+            typer.echo(f"  - {m}", err=True)
+
+
+# =============================================================================
+# inspect renderers
+# =============================================================================
+
+
+@inspect_app.command("renderers")
+def renderers_command(
+    project: Path | None = typer.Option(
+        None, "--project", "-p", help="Project root (default: cwd)"
+    ),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of human text"),
+    runtime: bool = typer.Option(
+        False,
+        "--runtime",
+        help=(
+            "Boot the app and cross-reference declared vs registered renderers. "
+            "~3-10s instead of ~50ms; catches the 'declared but not registered' "
+            "mismatch class. Off by default."
+        ),
+    ),
+) -> None:
+    """List renderers declared in dazzle.toml + framework defaults.
+
+    With ``--runtime``, also lists what's registered at request time
+    on ``services.renderer_registry`` and flags any mismatches.
+    """
+    project_root = _resolve_project_root(project)
+    manifest = _load_manifest(project_root)
+    from dazzle.core.renderer_registry import _DEFAULT_RENDERERS
+
+    declared = set(manifest.renderers.extra)
+    framework_defaults = set(_DEFAULT_RENDERERS)
+
+    entries: list[InspectEntry] = []
+    for name in sorted(framework_defaults):
+        entries.append(
+            InspectEntry(
+                name=name,
+                source="framework",
+                detail="framework default",
+                declared=True,
+                registered=True if not runtime else None,
+            )
+        )
+    for name in sorted(declared):
+        entries.append(
+            InspectEntry(
+                name=name,
+                source="manifest",
+                detail="declared in [renderers] extra",
+                declared=True,
+            )
+        )
+
+    result = InspectResult(ext_point="renderers", entries=entries)
+    if not runtime:
+        result.notes.append(
+            "Manifest-only view — pass --runtime to cross-reference what's actually "
+            "registered on services.renderer_registry at request time."
+        )
+
+    if runtime:
+        registered_names, boot_error = _boot_and_get_registered_names("renderer_registry")
+        if boot_error:
+            result.notes.append(f"--runtime boot failed: {boot_error}")
+        else:
+            _cross_reference(entries, result, registered_names, framework_defaults | declared)
+
+    _emit(result, output_json)
+
+
+# =============================================================================
+# inspect primitives
+# =============================================================================
+
+
+@inspect_app.command("primitives")
+def primitives_command(
+    project: Path | None = typer.Option(None, "--project", "-p", help="Project root"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of human text"),
+    runtime: bool = typer.Option(
+        False, "--runtime", help="Boot the app to introspect registered primitives"
+    ),
+) -> None:
+    """List primitives registered on the PrimitiveRegistry.
+
+    Primitives don't have a manifest table (yet) — the declaration
+    surface is the ``@primitive`` decorator applied at import time.
+    Without ``--runtime`` this command can only show what the
+    framework ships built-in.
+    """
+    project_root = _resolve_project_root(project)
+
+    entries: list[InspectEntry] = []
+    result = InspectResult(ext_point="primitives", entries=entries)
+
+    if not runtime:
+        result.notes.append(
+            "Primitives are registered via the @primitive decorator at import "
+            "time — there's no manifest table for them. Pass --runtime to boot "
+            "the app and list what's actually registered."
+        )
+        _emit(result, output_json)
+        return
+
+    registered_names, boot_error = _boot_and_get_registered_names("primitive_registry")
+    if boot_error:
+        result.notes.append(f"--runtime boot failed: {boot_error}")
+    else:
+        for name in sorted(registered_names):
+            entries.append(
+                InspectEntry(
+                    name=name,
+                    source="runtime",
+                    detail="registered via @primitive",
+                    registered=True,
+                )
+            )
+
+    _ = project_root  # currently unused; manifest plumbing for primitive declarations is a follow-up
+    _emit(result, output_json)
+
+
+# =============================================================================
+# inspect routes
+# =============================================================================
+
+
+@inspect_app.command("routes")
+def routes_command(
+    project: Path | None = typer.Option(None, "--project", "-p", help="Project root"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of human text"),
+    runtime: bool = typer.Option(
+        False, "--runtime", help="Boot the app and list mounted route paths"
+    ),
+) -> None:
+    """List project route extensions declared in dazzle.toml.
+
+    Per ``[extensions] routers = [...]`` — each entry is a dotted
+    ``module:attr`` spec the runtime mounts at app boot. With
+    ``--runtime``, also lists every mounted route path on the live app.
+    """
+    project_root = _resolve_project_root(project)
+    manifest = _load_manifest(project_root)
+    declared = list(manifest.extensions.routers)
+
+    entries: list[InspectEntry] = []
+    for spec in declared:
+        entries.append(
+            InspectEntry(
+                name=spec,
+                source="manifest",
+                detail="declared in [extensions] routers",
+                declared=True,
+            )
+        )
+
+    result = InspectResult(ext_point="routes", entries=entries)
+    if not runtime:
+        result.notes.append(
+            "Manifest-only view — pass --runtime to list all mounted route paths "
+            "on the live FastAPI app (slower, but cross-references against "
+            "what actually responded at boot)."
+        )
+        _emit(result, output_json)
+        return
+
+    app_or_error = _boot_app(project_root)
+    if isinstance(app_or_error, str):
+        result.notes.append(f"--runtime boot failed: {app_or_error}")
+        _emit(result, output_json)
+        return
+
+    app = app_or_error
+    for route in app.routes:
+        path = getattr(route, "path", None)
+        if not path:
+            continue
+        methods = sorted(getattr(route, "methods", None) or ())
+        entries.append(
+            InspectEntry(
+                name=path,
+                source="runtime",
+                detail=" ".join(methods) if methods else "",
+                registered=True,
+            )
+        )
+
+    _emit(result, output_json)
+
+
+# =============================================================================
+# inspect oauth-providers
+# =============================================================================
+
+
+@inspect_app.command("oauth-providers")
+def oauth_providers_command(
+    project: Path | None = typer.Option(None, "--project", "-p", help="Project root"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of human text"),
+) -> None:
+    """List OAuth providers declared in dazzle.toml.
+
+    Per ``[[auth.oauth_providers]]`` blocks. Manifest-only — there's
+    no runtime registry for OAuth providers; the framework reads the
+    manifest at app boot and wires the routes deterministically.
+    """
+    project_root = _resolve_project_root(project)
+    manifest = _load_manifest(project_root)
+    providers = list(manifest.auth.oauth_providers)
+
+    entries = [
+        InspectEntry(
+            name=p.provider,
+            source="manifest",
+            detail=(
+                f"client_id_env={p.client_id_env} "
+                f"client_secret_env={p.client_secret_env} "
+                f"scopes={','.join(p.scopes) or '(none)'}"
+            ),
+            declared=True,
+        )
+        for p in providers
+    ]
+
+    result = InspectResult(ext_point="oauth-providers", entries=entries)
+    _emit(result, output_json)
+
+
+# =============================================================================
+# inspect api — rehosts the existing inspect-api subcommands (#961)
+# =============================================================================
+
+api_app = typer.Typer(
+    help="Inspect / snapshot the framework's public API surface (renamed from `dazzle inspect-api` in #1120).",
+    no_args_is_help=True,
+)
+
+
+def _emit_api_snapshot(snapshot: str, baseline_path: Path, write: bool, diff: bool) -> None:
+    """Re-implementation of the original inspect_api._emit helper —
+    kept local so the rename doesn't need a back-import from the old
+    module (which now just re-exports for compat-shim-free clean break)."""
+    if write:
+        baseline_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline_path.write_text(snapshot)
+        typer.echo(f"Wrote {baseline_path.relative_to(baseline_path.parents[2])}")
+        return
+
+    if diff:
+        if not baseline_path.exists():
+            typer.echo(f"(no baseline at {baseline_path} — run with --write)")
+            sys.exit(1)
+        baseline = baseline_path.read_text()
+        if baseline == snapshot:
+            typer.echo("No drift.")
+            return
+        import difflib
+
+        diff_text = "".join(
+            difflib.unified_diff(
+                baseline.splitlines(keepends=True),
+                snapshot.splitlines(keepends=True),
+                fromfile=str(baseline_path),
+                tofile="(live)",
+                n=3,
+            )
+        )
+        typer.echo(diff_text, nl=False)
+        sys.exit(1)
+
+    typer.echo(snapshot, nl=False)
+
+
+@api_app.command("dsl-constructs")
+def api_dsl_constructs(
+    write: bool = typer.Option(False, "--write", help="Overwrite the on-disk baseline"),
+    diff: bool = typer.Option(False, "--diff", help="Print unified diff vs baseline"),
+) -> None:
+    """Snapshot the DSL constructs surface (cycle 1, #961)."""
+    _emit_api_snapshot(
+        dsl_constructs_module.snapshot_dsl_constructs(),
+        dsl_constructs_module.BASELINE_PATH,
+        write,
+        diff,
+    )
+
+
+@api_app.command("ir-types")
+def api_ir_types(
+    write: bool = typer.Option(False, "--write"),
+    diff: bool = typer.Option(False, "--diff"),
+) -> None:
+    """Snapshot the IR types surface (cycle 2, #961)."""
+    _emit_api_snapshot(
+        ir_types_module.snapshot_ir_types(), ir_types_module.BASELINE_PATH, write, diff
+    )
+
+
+@api_app.command("mcp-tools")
+def api_mcp_tools(
+    write: bool = typer.Option(False, "--write"),
+    diff: bool = typer.Option(False, "--diff"),
+) -> None:
+    """Snapshot the MCP tool schemas (cycle 3, #961)."""
+    _emit_api_snapshot(
+        mcp_tools_module.snapshot_mcp_tools(), mcp_tools_module.BASELINE_PATH, write, diff
+    )
+
+
+@api_app.command("public-helpers")
+def api_public_helpers(
+    write: bool = typer.Option(False, "--write"),
+    diff: bool = typer.Option(False, "--diff"),
+) -> None:
+    """Snapshot the public helpers re-exported from `dazzle.__init__` (cycle 4, #961)."""
+    _emit_api_snapshot(
+        public_helpers_module.snapshot_public_helpers(),
+        public_helpers_module.BASELINE_PATH,
+        write,
+        diff,
+    )
+
+
+@api_app.command("runtime-urls")
+def api_runtime_urls(
+    write: bool = typer.Option(False, "--write"),
+    diff: bool = typer.Option(False, "--diff"),
+) -> None:
+    """Snapshot the runtime URL surface (cycle 5, #961)."""
+    _emit_api_snapshot(
+        runtime_urls_module.snapshot_runtime_urls(),
+        runtime_urls_module.BASELINE_PATH,
+        write,
+        diff,
+    )
+
+
+inspect_app.add_typer(api_app, name="api")
+
+
+# =============================================================================
+# Runtime helpers (--runtime path)
+# =============================================================================
+
+
+def _boot_app(project_root: Path) -> Any:
+    """Boot the project's FastAPI app for runtime introspection.
+
+    Returns the app instance on success, or a string error message on
+    failure (typically when the project can't reach Postgres in the
+    inspect environment).
+    """
+    try:
+        appspec = _load_appspec(project_root)
+    except Exception as exc:
+        return f"failed to load AppSpec: {exc!r}"
+
+    try:
+        from dazzle.back.runtime.app_factory import create_app
+
+        # database_url=None lets the factory default to env / fallbacks;
+        # boot may still fail if PG isn't reachable, in which case we
+        # return the exception to the caller.
+        return create_app(appspec, database_url=None)
+    except Exception as exc:
+        return (
+            f"failed to boot app: {type(exc).__name__}: {exc} "
+            "(--runtime needs a reachable database; for manifest-only "
+            "inspection, omit --runtime)"
+        )
+
+
+def _boot_and_get_registered_names(registry_attr: str) -> tuple[set[str], str | None]:
+    """Boot the app and return ``services.<registry_attr>.registered_names()``.
+
+    On failure returns ``(set(), error_message)`` so the caller can fold
+    the error into the report rather than crash.
+    """
+    project_root = _resolve_project_root(None)
+    app_or_error = _boot_app(project_root)
+    if isinstance(app_or_error, str):
+        return set(), app_or_error
+    services = getattr(getattr(app_or_error, "state", None), "services", None)
+    if services is None:
+        return set(), "app booted but services not attached to app.state"
+    registry = getattr(services, registry_attr, None)
+    if registry is None:
+        return set(), f"app booted but services.{registry_attr} not present"
+    names = registry.registered_names() if hasattr(registry, "registered_names") else set()
+    return set(names), None
+
+
+def _cross_reference(
+    entries: list[InspectEntry],
+    result: InspectResult,
+    registered_names: set[str],
+    declared_names: set[str],
+) -> None:
+    """After the manifest-only entries are built and we've fetched the
+    runtime-registered names, fold the runtime state in: mark declared
+    entries as registered=True/False, add any registered-but-not-
+    declared entries, and record mismatches."""
+    declared_by_name = {e.name: e for e in entries}
+    for entry in entries:
+        entry.registered = entry.name in registered_names
+
+    for name in sorted(registered_names - declared_names):
+        entries.append(
+            InspectEntry(
+                name=name,
+                source="runtime",
+                detail="registered at runtime but not declared in manifest",
+                declared=False,
+                registered=True,
+            )
+        )
+        result.mismatches.append(
+            f"`{name}` is registered at runtime but not declared in dazzle.toml"
+        )
+
+    for name in sorted(declared_names - registered_names):
+        # Only flag if the entry was actually declared (not framework default).
+        declared_entry = declared_by_name.get(name)
+        if declared_entry is not None and declared_entry.source == "manifest":
+            result.mismatches.append(
+                f"`{name}` is declared in dazzle.toml but no runtime handler is registered"
+            )

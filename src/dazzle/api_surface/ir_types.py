@@ -104,7 +104,7 @@ def snapshot_ir_types() -> str:
     lines.append("# DAZZLE IR Types — API Surface (cycle 2 of #961)")
     lines.append("#")
     lines.append("# Source of truth: dazzle.core.ir.__all__")
-    lines.append("# Regenerate: dazzle inspect-api ir-types --write")
+    lines.append("# Regenerate: dazzle inspect api ir-types --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")
     lines.append("# Every IR type re-exported from `dazzle.core.ir` is part of the public")
@@ -157,7 +157,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
     if snapshot is None:
         snapshot = snapshot_ir_types()
     if not BASELINE_PATH.exists():
-        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect-api ir-types --write`)\n"
+        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api ir-types --write`)\n"
     baseline = BASELINE_PATH.read_text()
     if baseline == snapshot:
         return ""

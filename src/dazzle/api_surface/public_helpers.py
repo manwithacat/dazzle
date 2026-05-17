@@ -117,7 +117,7 @@ def snapshot_public_helpers() -> str:
     lines.append("# DAZZLE Public Helpers — API Surface (cycle 4 of #961)")
     lines.append("#")
     lines.append("# Source of truth: top-level `__init__.py` of each public package.")
-    lines.append("# Regenerate: dazzle inspect-api public-helpers --write")
+    lines.append("# Regenerate: dazzle inspect api public-helpers --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")
     lines.append("# Resolution order per package:")
@@ -162,7 +162,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
         snapshot = snapshot_public_helpers()
     if not BASELINE_PATH.exists():
         return (
-            f"(no baseline at {BASELINE_PATH} — run `dazzle inspect-api public-helpers --write`)\n"
+            f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api public-helpers --write`)\n"
         )
     baseline = BASELINE_PATH.read_text()
     if baseline == snapshot:

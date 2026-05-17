@@ -144,7 +144,7 @@ The single most useful habit when contributing: **before writing code, find the 
 
 ## What this document is not
 
-It is not a reference. It will be wrong about a method signature within weeks. The reference docs and the `dazzle inspect-api` baselines are authoritative for mechanics; this doc is authoritative for *intent*. If they disagree, the reference wins for what the code does and this doc wins for what the code is trying to be — and one of them needs updating.
+It is not a reference. It will be wrong about a method signature within weeks. The reference docs and the `dazzle inspect api` baselines are authoritative for mechanics; this doc is authoritative for *intent*. If they disagree, the reference wins for what the code does and this doc wins for what the code is trying to be — and one of them needs updating.
 
 It is also not a roadmap. Where Dazzle is going lives in `ROADMAP.md` and the open issues. Here we describe only the system as it stands.
 

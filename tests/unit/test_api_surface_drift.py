@@ -5,10 +5,14 @@ Each on-disk baseline under `docs/api-surface/` pins one lens of the public
 surface. Any deviation between live state and baseline is caught here.
 
 To accept drift on any cycle:
-  1. Run: `dazzle inspect-api <subcommand> --write`
+  1. Run: `dazzle inspect api <subcommand> --write`
   2. Review the diff
   3. Add a CHANGELOG entry under Added / Changed / Removed
   4. Commit the regenerated baseline
+
+(Renamed from `dazzle inspect-api` in #1120 — see `dazzle inspect --help` for
+the full inspect command tree, which now also covers renderers / primitives /
+routes / oauth-providers.)
 """
 
 import pytest
@@ -37,7 +41,7 @@ def test_baseline_exists(mod) -> None:
     """Every API-surface module must have a committed baseline file."""
     assert mod.BASELINE_PATH.exists(), (
         f"Missing baseline at {mod.BASELINE_PATH}. "
-        f"Run `dazzle inspect-api {mod.BASELINE_PATH.stem} --write` to create it."
+        f"Run `dazzle inspect api {mod.BASELINE_PATH.stem} --write` to create it."
     )
 
 
@@ -49,7 +53,7 @@ def test_surface_matches_baseline(mod) -> None:
         f"API surface drifted from the baseline ({mod.BASELINE_PATH.name}).\n\n"
         f"{diff}\n\n"
         "If this drift is intentional:\n"
-        f"  1. Run: dazzle inspect-api {mod.BASELINE_PATH.stem} --write\n"
+        f"  1. Run: dazzle inspect api {mod.BASELINE_PATH.stem} --write\n"
         "  2. Review the diff above\n"
         "  3. Add a CHANGELOG entry under Added / Changed / Removed\n"
         f"  4. Commit the regenerated {mod.BASELINE_PATH}\n"

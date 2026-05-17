@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.23] - 2026-05-17
+
+### Added
+
+- **`dazzle inspect <ext-point>` — unified introspection CLI for framework extension points (closes #1120).** Five subcommands under one group:
+  - `dazzle inspect renderers` — `[renderers] extra` declarations + framework defaults
+  - `dazzle inspect primitives` — primitives registered via `@primitive` (manifest-only is empty; use `--runtime`)
+  - `dazzle inspect routes` — `[extensions] routers` declarations + (with `--runtime`) all mounted route paths
+  - `dazzle inspect oauth-providers` — `[[auth.oauth_providers]]` entries with env-var + scope detail
+  - `dazzle inspect api <surface>` — the existing five public-API-surface snapshots from #961 (rehosted from `dazzle inspect-api`)
+- **Two modes per subcommand**, per the design conversation in #1120:
+  - **Manifest-only (default, ~50ms)** — parses `dazzle.toml` + AppSpec, lists everything declared. Fast, no app boot, suitable for CI checks and quick inspection.
+  - **`--runtime` (slow, ~3-10s)** — additionally boots the app, reaches into `app.state.services` registries, and cross-references the declared set against what's registered at runtime. The only mode that catches the "declared in TOML but no runtime handler registered" mismatch class — the exact failure mode Penny Dreadful's renderer spike hit before #1116/#1117 shipped. Exits non-zero on any mismatch; CI gates can pin "no drift" as a contract.
+- **Two output formats per subcommand**: human pretty-print (default, plain text — no `rich` dependency) and `--json` for agent consumption. JSON shape is uniform across ext-points (`{ext_point, entries: [{name, source, detail, registered, declared}], mismatches, notes}`) so a single agent parser can consume all five subcommands.
+
+### Changed — **BREAKING** (CLI rename)
+
+- **`dazzle inspect-api ...` → `dazzle inspect api ...`** per the project's clean-break policy. The old top-level command is gone. All five subcommands (`dsl-constructs`, `ir-types`, `mcp-tools`, `public-helpers`, `runtime-urls`) are unchanged — just relocated. CI scripts, hooks, and helper text that called `dazzle inspect-api` must update to `dazzle inspect api`. The framework's own helper text in `tests/unit/test_api_surface_drift.py`, the "regenerate" comments in `docs/api-surface/*.txt` baselines + their snapshot generators, `.claude/CLAUDE.md`, and `docs/philosophy.md` all updated in this commit.
+
+### Removed
+
+- `src/dazzle/cli/inspect_api.py` — replaced by `src/dazzle/cli/inspect.py`'s `api_app` subgroup. The subcommands moved verbatim; the module rehoming is mechanical.
+
+### Tests
+
+- **`tests/unit/test_cli_inspect.py`** (new, 13 tests) — covers all five subcommands' manifest-only paths: smoke (`inspect --help` lists every subcommand), renderers (framework + manifest declarations + JSON shape + the helpful `--runtime` note), routes (declared + empty-manifest fallback), oauth-providers (multi-provider + JSON), primitives (the @primitive note), api (rename — `inspect api` lists the same five subcommands; the old `inspect-api` top-level is gone).
+
+### Agent Guidance
+
+- **For "what does this app know about right now?" questions**, reach for `dazzle inspect <ext-point>`. Manifest-only by default — fast enough to call from scripts and CI. For the cross-reference against the live registry, add `--runtime`.
+- **Mismatch detection requires `--runtime`.** A declared-but-not-registered renderer (e.g. Penny Dreadful's `branch_compare` after the v0.71.15 `[renderers] extra` declaration landed but before the registration call was added) only surfaces in the runtime cross-check. Without `--runtime` you get the static manifest view, no enforcement.
+- **JSON output is uniform across all five ext-points** — build agent tooling against the `{ext_point, entries, mismatches, notes}` shape; it won't drift between ext-points.
+- **The `inspect-api` top-level command is removed.** Update any scripts that called it to `dazzle inspect api ...` (insert a space). No alias is preserved per the project's clean-break policy.
+
 ## [0.71.22] - 2026-05-17
 
 ### Added — **BREAKING** (write-op authorization, continued)

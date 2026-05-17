@@ -1,7 +1,7 @@
 # DAZZLE Public Helpers — API Surface (cycle 4 of #961)
 #
 # Source of truth: top-level `__init__.py` of each public package.
-# Regenerate: dazzle inspect-api public-helpers --write
+# Regenerate: dazzle inspect api public-helpers --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
 # Resolution order per package:

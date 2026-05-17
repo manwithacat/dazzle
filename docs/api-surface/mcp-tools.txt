@@ -1,7 +1,7 @@
 # DAZZLE MCP Tools — API Surface (cycle 3 of #961)
 #
 # Source of truth: dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()
-# Regenerate: dazzle inspect-api mcp-tools --write
+# Regenerate: dazzle inspect api mcp-tools --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
 # Each tool's input schema is the load-bearing public API. The description

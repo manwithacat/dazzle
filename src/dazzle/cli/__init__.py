@@ -361,9 +361,14 @@ app.add_typer(test_design_app, name="test-design")
 app.add_typer(param_app, name="param")
 
 from dazzle.cli.i18n import i18n_app  # noqa: E402
-from dazzle.cli.inspect_api import inspect_api_app  # noqa: E402
+from dazzle.cli.inspect import inspect_app  # noqa: E402
 
-app.add_typer(inspect_api_app, name="inspect-api")
+# v0.71.23 (#1120): the old `dazzle inspect-api` is renamed to
+# `dazzle inspect api` under the new top-level inspect group. The
+# inspect group also adds renderers / primitives / routes / oauth-
+# providers subcommands. Clean break — no alias is kept for the old
+# top-level name per the project's clean-break policy.
+app.add_typer(inspect_app, name="inspect")
 app.add_typer(i18n_app, name="i18n")
 
 

@@ -172,12 +172,21 @@ Proposals land at `.dazzle/fitness-proposals/`. See `docs/reference/fitness-inve
 Five committed baselines under `docs/api-surface/` pin the framework's public API:
 
 ```bash
-dazzle inspect-api dsl-constructs        # parser → IR class mapping
-dazzle inspect-api ir-types              # 485 entries from dazzle.core.ir.__all__
-dazzle inspect-api mcp-tools             # 32 MCP tool schemas
-dazzle inspect-api public-helpers        # top-level __init__ exports
-dazzle inspect-api runtime-urls          # AST walk of *_routes.py
+dazzle inspect api dsl-constructs        # parser → IR class mapping
+dazzle inspect api ir-types              # 485 entries from dazzle.core.ir.__all__
+dazzle inspect api mcp-tools             # 32 MCP tool schemas
+dazzle inspect api public-helpers        # top-level __init__ exports
+dazzle inspect api runtime-urls          # AST walk of *_routes.py
 ```
+
+`dazzle inspect <ext-point>` also covers project-extension points (#1120):
+- `dazzle inspect renderers` — `[renderers] extra` in dazzle.toml + framework defaults
+- `dazzle inspect primitives` — @primitive registry (manifest-only is empty; use `--runtime`)
+- `dazzle inspect routes` — `[extensions] routers` + mounted route paths (`--runtime`)
+- `dazzle inspect oauth-providers` — `[[auth.oauth_providers]]` entries
+
+Each subcommand defaults to manifest-only (~50ms); pass `--runtime` to boot the
+app and cross-reference what's actually registered at request time.
 
 Drift gate: `tests/unit/test_api_surface_drift.py` (21 tests). Adding `--write` regenerates the baseline; `--diff` prints unified-diff vs baseline. Any drift requires a CHANGELOG entry under Added/Changed/Removed. The improve loop's `framework-ux` lane has an `api_surface_audit` sub-strategy that walks one baseline per cycle asking "is this what we'd design today?" — the recurring 1.0-prep walkthrough.
 
@@ -309,4 +318,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.71.22 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.71.23 | **Python**: 3.12+ | **Status**: Production Ready
