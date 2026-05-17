@@ -36,6 +36,24 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+def _resolve_param_ref(value: Any) -> Any:
+    """Unwrap a ParamRef to its default (#1131 — sibling of #841).
+
+    ScheduleSpec fields like ``cron`` and ``interval_seconds`` are
+    typed ``Any`` so they accept either a literal or a ``ParamRef``.
+    The scheduler loop calls ``str.split`` / arithmetic on these
+    values; passing a raw ``ParamRef`` raises
+    ``AttributeError: 'ParamRef' object has no attribute 'split'``
+    (same shape as the original #841 SLA bug). Mirrors the
+    ``_tier_seconds`` resolution pattern in
+    ``dazzle.back.runtime.sla_manager``.
+    """
+    if hasattr(value, "default"):
+        return value.default
+    return value
+
+
 # Event type constants
 PROCESS_EXECUTE = "process.execution.requested"
 PROCESS_RESUME = "process.execution.resume"
@@ -116,8 +134,8 @@ class EventBusProcessAdapter(ProcessAdapter):
         self._schedules[spec.name] = {
             "name": spec.name,
             "process_name": getattr(spec, "process_name", spec.name),
-            "cron": getattr(spec, "cron", None),
-            "interval_seconds": getattr(spec, "interval_seconds", None),
+            "cron": _resolve_param_ref(getattr(spec, "cron", None)),
+            "interval_seconds": _resolve_param_ref(getattr(spec, "interval_seconds", None)),
         }
         logger.debug("Registered schedule: %s", spec.name)
 
@@ -330,8 +348,8 @@ class EventBusProcessAdapter(ProcessAdapter):
             self._schedules[schedule.name] = {
                 "name": schedule.name,
                 "process_name": getattr(schedule, "process_name", schedule.name),
-                "cron": getattr(schedule, "cron", None),
-                "interval_seconds": getattr(schedule, "interval_seconds", None),
+                "cron": _resolve_param_ref(getattr(schedule, "cron", None)),
+                "interval_seconds": _resolve_param_ref(getattr(schedule, "interval_seconds", None)),
             }
             logger.info("Registered schedule '%s'", schedule.name)
             count += 1
@@ -535,7 +553,11 @@ class EventBusProcessAdapter(ProcessAdapter):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.warning("Scheduler loop error: %s", e)
+                # #1131: log the traceback so production can pinpoint which
+                # schedule entry blew up and on which field. Bare-message
+                # logging hid the call site for the v0.71.23 ParamRef
+                # regression for hours of consumer log triage.
+                logger.warning("Scheduler loop error: %s", e, exc_info=True)
                 await asyncio.sleep(60.0)
 
         logger.info("Process scheduler loop stopped")

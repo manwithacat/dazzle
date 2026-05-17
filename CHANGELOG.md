@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.26] - 2026-05-17
+
+### Fixed
+- **EventBus scheduler crashed on `ParamRef` cron values (#1131, regression of #841).**
+  `EventBusProcessAdapter.register_schedule` and `sync_schedules_from_appspec`
+  stored `ScheduleSpec.cron` verbatim (typed `Any` to accept either a
+  literal or a `ParamRef`); the scheduler loop then called `str.split`
+  on it and raised `AttributeError: 'ParamRef' object has no attribute
+  'split'` every tick. CyFuture nightly logs (v0.71.23 prod) flagged
+  this as a sibling of the original #841 SLA bug — the eventbus adapter
+  was introduced after #841 landed and copied the pre-fix pattern.
+  Fix: new `_resolve_param_ref` helper (mirrors the `_tier_seconds`
+  pattern in `dazzle.back.runtime.sla_manager`) applied at both
+  storage call sites. Also upgraded the bare
+  `logger.warning("Scheduler loop error: %s", e)` to log with
+  `exc_info=True` (issue ask #1) so the next regression of this class
+  has a stack instead of a one-line mystery.
+
 ## [0.71.25] - 2026-05-17
 
 ### Fixed
