@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.21] - 2026-05-17
+
+### Changed
+
+- **`RuntimeServices` docstring rewritten as the public contract for extension authors (closes #1121).** The previous one-line docstring forced renderer / primitive / route-override authors to read the source to figure out what they could legitimately reach for through the `services` parameter. The new docstring documents every public attribute (type, purpose, required-vs-optional split, when extension authors should reach for it) and explicitly links to `examples/custom_renderer/` so authors land on a real implementation rather than an abstract attribute list. The alternative shape — a separate `RendererServices` Protocol — was considered but deferred: the docstring covers the discoverability gap without adding a new abstraction; revisit if extension authors signal IDE help on the type surface matters more than the narrative.
+
+### Tests
+
+- **`tests/unit/test_runtime_services_doc.py`** (new, 3 tests) — pins the docstring contract: every dataclass field on `RuntimeServices` must be mentioned in the docstring, the required-vs-optional split must be labelled explicitly, and the worked-example link must be present. Adding a new attribute without documenting it fails the doc-contract test — the framework's commitment is that what's surfaced IS the public API, not "whatever happens to be in `__init__`".
+
+### Agent Guidance
+
+- When writing a custom renderer / primitive / route override and unsure what's reachable through `services`, **read the `RuntimeServices` class docstring** (in `src/dazzle/back/runtime/services.py`) — that's the authoritative public-contract reference now. Don't reach for attributes not listed there; if you need to, file an issue rather than depending on framework internals.
+- The required-vs-optional split matters for portability: `event_framework`, `metrics_collector`, `system_collector`, `metrics_emitter`, `process_manager` may all be `None` depending on how the host configured the deployment. Branch on `None` before using them.
+
 ## [0.71.20] - 2026-05-17
 
 ### Added
