@@ -446,6 +446,32 @@ class ExtensionsConfig:
     routers: list[str] = field(default_factory=list)
 
 
+@dataclass
+class RenderersConfig:
+    """Declaration of project-supplied renderer names (closes #1116).
+
+    The DSL's ``render:`` clause on a surface is link-time validated
+    against a known-renderer set. The framework ships exactly one
+    renderer (``fragment``); projects that register custom renderers
+    against the runtime ``RendererRegistry`` must also declare those
+    names here so the link-time validator accepts them.
+
+    Example ``dazzle.toml``::
+
+        [renderers]
+        extra = ["branch_compare", "cytoscape_graph"]
+
+    The names are merged with the framework defaults at validation
+    time via ``dazzle.core.renderer_registry.known_renderer_names``.
+    Runtime registration (handler attached to a name) is a separate
+    step — done in app code via
+    ``services.renderer_registry.register(name=…, handler=…)``.
+    See ``examples/custom_renderer/`` for a worked example.
+    """
+
+    extra: list[str] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class StorageConfig:
     """One ``[storage.<name>]`` block from ``dazzle.toml`` (#932).
@@ -565,6 +591,9 @@ class ProjectManifest:
     # deprecation notice but does NOT toggle anything.
     environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
     extensions: ExtensionsConfig = field(default_factory=ExtensionsConfig)
+    # v0.71.x #1116 — project-side renderer-name allowlist. Merged with
+    # framework defaults via known_renderer_names() for link-time validation.
+    renderers: RenderersConfig = field(default_factory=RenderersConfig)
     # v0.61.104 (#932): per-name `[storage.<name>]` blocks. Keyed by the
     # storage name. Empty when no storage blocks are declared.
     storage_defs: dict[str, StorageConfig] = field(default_factory=dict)
@@ -885,6 +914,16 @@ def load_manifest(path: Path) -> ProjectManifest:
         routers=[str(r) for r in raw_routers if isinstance(r, str)],
     )
 
+    # Parse [renderers] section (#1116) — project-side renderer-name
+    # allowlist for the DSL's `render:` clause.
+    renderers_data = data.get("renderers", {})
+    raw_renderer_extra = renderers_data.get("extra", []) if isinstance(renderers_data, dict) else []
+    if not isinstance(raw_renderer_extra, list):
+        raw_renderer_extra = []
+    renderers_config = RenderersConfig(
+        extra=[str(r) for r in raw_renderer_extra if isinstance(r, str)],
+    )
+
     # Parse environment profiles
     env_data = data.get("environments", {})
     environments: dict[str, EnvironmentProfile] = {}
@@ -930,6 +969,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         haptic=haptic_enabled,
         environments=environments,
         extensions=extensions_config,
+        renderers=renderers_config,
         storage_defs=storage_defs,
     )
 

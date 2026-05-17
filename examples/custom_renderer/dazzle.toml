@@ -1,0 +1,35 @@
+[project]
+name = "custom_renderer_example"
+version = "0.1.0"
+root = "custom_renderer.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+# Auth is intentionally disabled — this example is about renderer
+# registration, not authentication. The simple_task / contact_manager
+# examples cover the auth path.
+enabled = false
+
+[ui]
+assets = "auto"
+
+# ─────────────────────────────────────────────────────────────────────
+# #1116 — Project-side renderer-name allowlist.
+#
+# The link-time validator (`build_appspec(..., known_renderers=...)`)
+# rejects any `render:` clause whose name isn't in this set, MERGED
+# with the framework defaults ({"fragment"}). The runtime registry
+# is a separate step — see `app/render/word_cloud.py` for the
+# handler registration.
+#
+# Without this declaration, `dazzle validate` (and every other CLI
+# that runs the linker) would reject `render: word_cloud` on the
+# surface in `dsl/app.dsl` with a `RenderValidationError`.
+# ─────────────────────────────────────────────────────────────────────
+[renderers]
+extra = ["word_cloud"]

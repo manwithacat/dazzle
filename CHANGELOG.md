@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.15] - 2026-05-17
+
+### Added
+
+- **Project-side renderer-name allowlist via `[renderers] extra` in `dazzle.toml` — closes #1116.** Before this release, the DSL's `render:` clause was link-time validated against a frozen `_DEFAULT_RENDERERS = ("fragment",)` set with no project-extension path. Projects that registered custom renderers against the runtime registry (`services.renderer_registry.register(name=…, handler=…)`) couldn't satisfy `dazzle validate` / `dazzle db upgrade` / hot-reload / LSP — every CLI that ran the linker rejected the DSL. The mechanism is now manifest-aware:
+
+  ```toml
+  [renderers]
+  extra = ["branch_compare", "cytoscape_graph"]
+  ```
+
+  Names declared in `[renderers] extra` are merged with the framework defaults at link time. Runtime handler registration is unchanged — same `services.renderer_registry.register(...)` call as before. The two halves of the contract are decoupled by design.
+
+- **`known_renderer_names(manifest)`** — new helper in `dazzle.core.renderer_registry`. Returns the union of `_DEFAULT_RENDERERS` and `manifest.renderers.extra`. Use this in any code path that has a manifest reachable; `default_renderer_names()` is kept as a backstop for the rare no-manifest case (tests, isolated parser invocations).
+
+- **`RenderersConfig`** dataclass on `ProjectManifest` — mirrors the `ExtensionsConfig` / `StorageConfig` shape already used in `manifest.py`.
+
+- **`examples/custom_renderer/`** — first worked example of project-side renderer extension. ~120 lines of `WordCloudRenderer` (one entity, two surfaces, one custom renderer that aggregates feedback into a token-driven tag cloud) plus a README that walks through the two halves of the extension contract end-to-end. The README is the missing on-ramp for `#1117`'s discoverability gap — agents and humans hitting the `RenderValidationError` are now linked here.
+
+### Changed
+
+- **Migrated 11 call sites of `default_renderer_names()` to `known_renderer_names(manifest)`** — `core/project.py`, `core/appspec_loader.py`, `back/runtime/app_factory.py`, `back/alembic/env.py`, `ui/runtime/hot_reload.py`, `lsp/server.py`, `cli/fragment_audit.py`, `cli/deploy.py`, `cli/project.py`, `cli/migrate.py`, `process/worker.py`. Every consumer already had a `manifest` reachable in scope; the migration was a 1–3 line edit per file.
+
+- **`RenderValidationError` and `FragmentError` messages rewritten to be agent-actionable (#1117).** The link-time error (`linker.py`) and the runtime error (`dispatch.py`) now hand-feed the full extension recipe: the `[renderers] extra` TOML snippet (templated with the actual name the agent wrote, ready to paste), the `services.renderer_registry.register(...)` call (same shape), and a pointer to `examples/custom_renderer/`. Both error sites coordinate so an agent hitting either sees the same shape — preventing the divergence that let the old "registered renderers: ['fragment']" message survive across two refactors.
+
+- **`register_default_renderers` assert message rewritten** — the previous message read as instructions to project authors (`"register_default_renderers must be updated when _DEFAULT_RENDERERS changes"`), which led downstream agents to conclude they needed to fork the framework. The new message distinguishes the framework-internal invariant from the project-side extension path and points at `examples/custom_renderer/`.
+
+### Tests
+
+- **`tests/unit/test_manifest_renderers.py`** (new, 11 tests) — manifest-parse coverage for the new `[renderers]` table (no-section default, list-shape, non-list fallback, non-string filter) plus `known_renderer_names` merge/no-mutate/no-manifest paths.
+- **`tests/unit/core/test_render_clause_linking.py`** extended (5 new tests) — pin the agent-actionable shape of `RenderValidationError`: must mention `[renderers]` + `extra` + `dazzle.toml`, must mention `services.renderer_registry.register` + `handler=`, must quote the offending name verbatim (templated, not placeholder), must point at `examples/custom_renderer/`, must still list currently-known renderers for typo recovery.
+
+### Agent Guidance
+
+- **The two halves of the renderer extension contract** — manifest allowlist (`[renderers] extra` in `dazzle.toml`) AND runtime registration (`services.renderer_registry.register(...)`) — are validated at different times and surface different errors when one is missing. The error messages from #1117 are templated with both halves of the recipe so following the error is sufficient; you don't need to read framework source to extend the renderer system.
+- **Use `known_renderer_names(manifest)` not `default_renderer_names()`** in any code path that has a manifest reachable. The legacy function is retained only for the rare no-manifest case (tests, isolated parser invocations) — it always returns the bare framework defaults.
+- **When writing a custom renderer**, the worked example at `examples/custom_renderer/` is the canonical reference for protocol shape (`render(surface, ctx) -> str`), `mode: custom` ctx handling, and `register_with_app(services)` wiring choices. Read its README first — the framework's error messages link to it.
+
 ## [0.71.14] - 2026-05-17
 
 ### Fixed

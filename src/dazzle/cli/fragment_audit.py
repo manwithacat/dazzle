@@ -46,7 +46,7 @@ def fragment_audit_command(
     from dazzle.core.linker import build_appspec
     from dazzle.core.manifest import load_manifest
     from dazzle.core.parser import parse_modules
-    from dazzle.core.renderer_registry import default_renderer_names
+    from dazzle.core.renderer_registry import known_renderer_names
 
     manifest_path = (project_path / "dazzle.toml").resolve()
     if not manifest_path.exists():
@@ -67,7 +67,7 @@ def fragment_audit_command(
     appspec = build_appspec(
         modules,
         manifest.project_root,
-        known_renderers=default_renderer_names(),
+        known_renderers=known_renderer_names(manifest),
     )
     report = audit_appspec(appspec)
 

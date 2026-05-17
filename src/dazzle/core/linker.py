@@ -300,17 +300,42 @@ def _validate_render_references(
     for s in surfaces:
         if s.render is not None and s.render not in known:
             raise RenderValidationError(
-                f"surface {s.name!r}: unknown renderer {s.render!r}; "
-                f"registered renderers: {sorted(known)}"
+                _unknown_renderer_message(s.render, known, f"surface {s.name!r}")
             )
     for ws in workspaces:
         for r in ws.regions:
             if r.render is not None and r.render not in known:
                 raise RenderValidationError(
-                    f"workspace {ws.name!r} region {r.name!r}: "
-                    f"unknown renderer {r.render!r}; "
-                    f"registered renderers: {sorted(known)}"
+                    _unknown_renderer_message(
+                        r.render, known, f"workspace {ws.name!r} region {r.name!r}"
+                    )
                 )
+
+
+def _unknown_renderer_message(name: str, known: set[str], location: str) -> str:
+    """Format the agent-actionable error for an unknown renderer name (#1117).
+
+    Pre-#1117 this was a one-line "unknown renderer X; registered: [...]"
+    that said what was wrong but not how to fix it. Project authors saw
+    the wall but not the door. The new shape names both halves of the
+    extension contract — manifest allowlist + runtime registration — so
+    an LLM agent reading the error knows exactly which two places need
+    edits.
+    """
+    return (
+        f"{location} declares render: {name!r}, but that name isn't in the "
+        f"known-renderers set (currently: {sorted(known)}).\n\n"
+        "To register a project-side renderer, two steps are required:\n"
+        f"  1. Declare the name in dazzle.toml so the link-time validator accepts it:\n"
+        "       [renderers]\n"
+        f"       extra = [{name!r}]\n"
+        "  2. Register the runtime handler in app code (typically in your\n"
+        "     app factory or a startup hook):\n"
+        "       services.renderer_registry.register(\n"
+        f"           name={name!r}, handler=MyRendererClass()\n"
+        "       )\n\n"
+        "See examples/custom_renderer/ for a worked end-to-end example."
+    )
 
 
 def _compile_scope_predicates(

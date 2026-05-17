@@ -11,7 +11,7 @@ from .fileset import discover_dsl_files
 from .linker import build_appspec
 from .manifest import ProjectManifest, load_manifest
 from .parser import parse_modules
-from .renderer_registry import default_renderer_names
+from .renderer_registry import known_renderer_names
 
 
 def load_project(
@@ -55,7 +55,9 @@ def load_project(
     manifest = load_manifest(manifest_path)
     dsl_files = discover_dsl_files(project_dir, manifest)
     modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root, known_renderers=default_renderer_names())
+    return build_appspec(
+        modules, manifest.project_root, known_renderers=known_renderer_names(manifest)
+    )
 
 
 def load_project_with_manifest(
@@ -91,6 +93,6 @@ def load_project_with_manifest(
     dsl_files = discover_dsl_files(project_dir, manifest)
     modules = parse_modules(dsl_files)
     appspec = build_appspec(
-        modules, manifest.project_root, known_renderers=default_renderer_names()
+        modules, manifest.project_root, known_renderers=known_renderer_names(manifest)
     )
     return appspec, manifest

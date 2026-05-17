@@ -78,7 +78,7 @@ async def main() -> None:
 
     logger.info("Found %s DSL files", len(dsl_files))
 
-    from dazzle.core.renderer_registry import default_renderer_names
+    from dazzle.core.renderer_registry import known_renderer_names
 
     modules = parse_modules(dsl_files)
     # build_appspec wants the module name from manifest (e.g.
@@ -86,7 +86,7 @@ async def main() -> None:
     app_spec = build_appspec(
         modules,
         manifest.project_root,
-        known_renderers=default_renderer_names(),
+        known_renderers=known_renderer_names(manifest),
     )
 
     # Get process specs

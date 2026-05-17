@@ -51,7 +51,7 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.core.renderer_registry import default_renderer_names
+from dazzle.core.renderer_registry import known_renderer_names
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -197,7 +197,7 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
 
         modules = parse_modules(dsl_files)
         ls.appspec = build_appspec(
-            modules, mf.project_root, known_renderers=default_renderer_names()
+            modules, mf.project_root, known_renderers=known_renderer_names(mf)
         )
         logger.info(
             "Loaded project from %s with %s entities",

@@ -32,7 +32,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_site_url
 from dazzle.core.parser import parse_modules
-from dazzle.core.renderer_registry import default_renderer_names
+from dazzle.core.renderer_registry import known_renderer_names
 
 if TYPE_CHECKING:
     from dazzle.core import ir
@@ -506,7 +506,7 @@ def lint_command(
                 return
 
         modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root, known_renderers=default_renderer_names())
+        appspec = build_appspec(modules, mf.project_root, known_renderers=known_renderer_names(mf))
         errors, warnings, relevance = lint_appspec(appspec, extended=True)
 
         if format == "vscode":

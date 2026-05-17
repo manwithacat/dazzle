@@ -101,3 +101,68 @@ workspace ops "Ops":
 """,
             known_renderers={"jinja", "fragment"},
         )
+
+
+# ---------------------------------------------------------------------------
+# #1117 — agent-actionable error message. The error must name both
+# halves of the extension contract (manifest allowlist + runtime
+# registration) so an LLM agent reading it knows exactly which two
+# places need edits. Pre-#1117 the error was "unknown renderer X;
+# registered: [Y]" — said what was wrong but not how to fix it.
+# ---------------------------------------------------------------------------
+
+
+def _surface_error_message() -> str:
+    try:
+        _link(
+            """
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  render: word_cloud
+""",
+            known_renderers={"fragment"},
+        )
+    except RenderValidationError as e:
+        return str(e)
+    raise AssertionError("expected RenderValidationError")
+
+
+def test_unknown_renderer_error_mentions_dazzle_toml_allowlist() -> None:
+    """The error must point at the `[renderers]` manifest table — the
+    first half of the extension contract."""
+    msg = _surface_error_message()
+    assert "[renderers]" in msg
+    assert "extra" in msg
+    assert "dazzle.toml" in msg
+
+
+def test_unknown_renderer_error_mentions_runtime_registration() -> None:
+    """The error must point at the runtime registration call — the
+    second half of the extension contract."""
+    msg = _surface_error_message()
+    assert "services.renderer_registry.register" in msg
+    assert "handler=" in msg
+
+
+def test_unknown_renderer_error_quotes_the_offending_name() -> None:
+    """Both halves of the recipe should be templated with the actual
+    name the agent wrote — not a placeholder. Cuts the read-write-fix
+    loop in half."""
+    msg = _surface_error_message()
+    # Quoted in `[renderers] extra = ['word_cloud']`
+    assert "'word_cloud'" in msg
+
+
+def test_unknown_renderer_error_points_at_worked_example() -> None:
+    """The error must mention the worked example so the agent knows
+    there's a reference implementation to look at."""
+    msg = _surface_error_message()
+    assert "examples/custom_renderer" in msg
+
+
+def test_unknown_renderer_error_lists_currently_known_set() -> None:
+    """Keep the "registered renderers: [...]" hint so agents who
+    typo'd a real renderer name see it spelled correctly."""
+    msg = _surface_error_message()
+    assert "fragment" in msg

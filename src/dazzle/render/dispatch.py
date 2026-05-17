@@ -66,9 +66,23 @@ def dispatch_render(
     renderer_name = surface.render or "fragment"
     handler = services.renderer_registry.resolve(renderer_name)
     if handler is None:
+        # Mirror the link-time error from `linker._unknown_renderer_message`
+        # so an agent encountering either site sees the same two-step
+        # remediation recipe (#1117). The link-time error fires before
+        # this one in normal boot; this site catches the case where the
+        # DSL was accepted (the name is in `[renderers] extra`) but no
+        # runtime handler was registered for it.
+        registered = sorted(services.renderer_registry.registered_names())
         raise FragmentError(
-            f"surface {surface.name!r}: unknown renderer {renderer_name!r}; "
-            f"registered renderers: {sorted(services.renderer_registry.registered_names())}"
+            f"surface {surface.name!r}: renderer {renderer_name!r} is "
+            f"declared in the DSL but no runtime handler is registered "
+            f"for that name (registered: {registered}).\n\n"
+            "Register a handler at runtime in your app factory or a "
+            "startup hook:\n"
+            "  services.renderer_registry.register(\n"
+            f"      name={renderer_name!r}, handler=MyRendererClass()\n"
+            "  )\n\n"
+            "See examples/custom_renderer/ for a worked example."
         )
 
     html: str = handler.render(surface, ctx)

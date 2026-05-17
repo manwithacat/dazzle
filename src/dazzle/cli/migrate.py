@@ -240,7 +240,7 @@ def deploy_command(
     # Validate DSL
     console.print("Validating DSL...")
     try:
-        from dazzle.core.renderer_registry import default_renderer_names
+        from dazzle.core.renderer_registry import known_renderer_names
 
         modules = parse_modules(dsl_files)
         # build_appspec wants the module name (e.g. "myapp.core") not
@@ -248,7 +248,7 @@ def deploy_command(
         build_appspec(
             modules,
             manifest.project_root,
-            known_renderers=default_renderer_names(),
+            known_renderers=known_renderer_names(manifest),
         )
     except Exception as e:
         console.print(f"[red]DSL validation failed: {e}[/red]")

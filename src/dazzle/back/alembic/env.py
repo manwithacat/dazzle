@@ -65,12 +65,12 @@ def _load_target_metadata() -> sqlalchemy.MetaData:
                 # is misleadingly named — it holds the module string,
                 # not a Path. Passing the cwd here raises LinkError on
                 # every db migrate / revision (#886).
-                from dazzle.core.renderer_registry import default_renderer_names
+                from dazzle.core.renderer_registry import known_renderer_names
 
                 appspec = build_appspec(
                     modules,
                     manifest.project_root,
-                    known_renderers=default_renderer_names(),
+                    known_renderers=known_renderer_names(manifest),
                 )
                 from dazzle.back.converters.entity_converter import convert_entities
 
