@@ -1,16 +1,29 @@
-"""Typed Fragment renderer for guide steps (v0.71.4).
+"""Typed Fragment renderer for guide steps (v0.71.5).
 
 Pure HTML emission — each builder is a ``GuideStep -> str`` function.
 The renderer doesn't fetch state, doesn't compose with surfaces, and
 doesn't know about routing; that's the caller's job (the page-routes
 wiring computes the active step + state then hands the result here).
 
-v0.71.4 ships five kinds: ``popover``, ``spotlight``, ``inline_card``,
-``empty_state``, ``banner``. Remaining kinds (``checklist_item``,
-``blocking_task``, ``nudge``) are deferred — they have additional
-runtime semantics (checklists need a parent component; blocking_task
-needs a focus trap; nudge auto-dismisses on a timer) that warrant
-their own slice.
+v0.71.5 ships all eight kinds: ``popover``, ``spotlight``,
+``inline_card``, ``empty_state``, ``banner``, ``checklist_item``,
+``blocking_task``, ``nudge``.
+
+Three of these (added in v0.71.5) carry additional runtime semantics
+that the renderer expresses declaratively:
+
+- ``checklist_item`` is one row of a parent checklist. The renderer
+  emits the row in isolation; the page-routes wiring (a future slice)
+  can group multiple checklist_item overlays into a single
+  ``<dz-onboarding-checklist>`` container.
+- ``blocking_task`` is a modal — uses the native ``<dialog open>``
+  element so browsers get keyboard trap + escape handling without
+  client JS.
+- ``nudge`` is a transient toast — carries
+  ``data-autodismiss-ms="<int>"`` so client JS can fire the dismiss
+  POST after a delay. The default delay is read from the step's
+  ``placement`` field as a fallback channel (e.g. ``placement: "5000"``
+  → 5-second nudge); when not set it defaults to 6000ms.
 
 Every step kind emits the same outer ``<dz-onboarding-step>`` custom
 element with ``data-guide``/``data-step``/``data-kind``/``data-placement``
@@ -50,8 +63,23 @@ class UnknownStepKindError(ValueError):
 # Step kinds with a builder shipped in this version. ``has_builder``
 # is the stable predicate callers should use to pre-check.
 _SUPPORTED_KINDS: frozenset[str] = frozenset(
-    {"popover", "spotlight", "inline_card", "empty_state", "banner"}
+    {
+        "popover",
+        "spotlight",
+        "inline_card",
+        "empty_state",
+        "banner",
+        "checklist_item",
+        "blocking_task",
+        "nudge",
+    }
 )
+
+
+# Default auto-dismiss timer for ``nudge`` steps (ms). The client JS
+# reads ``data-autodismiss-ms`` off the rendered element and fires the
+# dismiss POST after this delay.
+_DEFAULT_NUDGE_DISMISS_MS = 6000
 
 
 def has_builder(kind: str) -> bool:
@@ -81,6 +109,12 @@ def render_step(step: ir.GuideStep, *, guide_name: str) -> str:
         return _build_empty_state_step(step, guide_name=guide_name)
     if kind == "banner":
         return _build_banner_step(step, guide_name=guide_name)
+    if kind == "checklist_item":
+        return _build_checklist_item_step(step, guide_name=guide_name)
+    if kind == "blocking_task":
+        return _build_blocking_task_step(step, guide_name=guide_name)
+    if kind == "nudge":
+        return _build_nudge_step(step, guide_name=guide_name)
     raise UnknownStepKindError(
         f"No renderer for guide step kind {kind!r}; supported in this "
         f"version: {sorted(_SUPPORTED_KINDS)}"
@@ -280,3 +314,139 @@ def _build_banner_step(step: ir.GuideStep, *, guide_name: str) -> str:
         f"</div>"
         f"</dz-onboarding-step>"
     )
+
+
+def _build_checklist_item_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: checklist_item`` — one row in a parent onboarding checklist.
+
+    Each item renders independently. A page-routes follow-up will
+    group multiple checklist_item overlays from the same guide into a
+    single ``<dz-onboarding-checklist>`` container; until then each
+    item is self-contained.
+
+    Visual shape: a list item with a (currently-unchecked) checkbox
+    indicator on the left, title + body in the middle, CTA on the
+    right. Dismiss button hidden by default — checklist items
+    typically aren't dismissable individually; users dismiss the
+    parent guide or complete the item to advance.
+
+    Semantics: ``role="listitem"`` so the parent
+    ``<dz-onboarding-checklist>`` (when added) can wrap items as a
+    proper list. ``aria-checked="false"`` advertises the pending
+    state; the CTA click flips it via htmx outer-swap.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
+    return (
+        f"<dz-onboarding-step"
+        f"{_outer_attrs(step, guide_name=guide_name, kind='checklist_item', css_class='dz-onboarding-checklist-item')}"
+        f' role="listitem"'
+        f' aria-checked="false">'
+        # Unchecked indicator — CSS draws the checkbox shape.
+        f'<span class="dz-onboarding-checklist-item__indicator" aria-hidden="true"></span>'
+        f'<div class="dz-onboarding-checklist-item__content">'
+        f'<h4 class="dz-onboarding-checklist-item__title">{title}</h4>'
+        f'<p class="dz-onboarding-checklist-item__body">{body}</p>'
+        f"</div>"
+        f'<div class="dz-onboarding-checklist-item__actions">'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-checklist-item__cta', default_label='Do this')}"
+        # Dismiss exists but is visually de-emphasised by the
+        # ``--hidden`` modifier class; client CSS can toggle it on
+        # via a parent ``[data-allow-dismiss]`` if a deployment
+        # wants individual-item dismissal.
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-checklist-item__dismiss dz-onboarding-checklist-item__dismiss--hidden')}"
+        f"</div>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _build_blocking_task_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: blocking_task`` — modal dialog that blocks page interaction.
+
+    Uses the native ``<dialog open>`` element so browsers provide
+    keyboard trap + Escape handling without client JS. Backdrop is
+    rendered server-side as a sibling layer (older browsers that
+    don't support the dialog ::backdrop pseudo-element still get a
+    visual scrim).
+
+    No bare ✕ dismiss — blocking tasks are designed to NOT be
+    dismissable; the only way past is the CTA. Apps that genuinely
+    need an escape hatch should declare a regular ``popover`` or
+    ``inline_card`` instead.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, _dismiss_url = _hx_urls(step, guide_name=guide_name)
+    step_id = _html.escape(step.name, quote=True)
+    return (
+        f"<dz-onboarding-step"
+        f"{_outer_attrs(step, guide_name=guide_name, kind='blocking_task', css_class='dz-onboarding-blocking-task')}>"
+        f'<div class="dz-onboarding-blocking-task__backdrop" aria-hidden="true"></div>'
+        f"<dialog open"
+        f' class="dz-onboarding-blocking-task__dialog"'
+        f' aria-labelledby="dz-blocking-title-{step_id}"'
+        f' aria-modal="true">'
+        f'<h2 id="dz-blocking-title-{step_id}"'
+        f' class="dz-onboarding-blocking-task__title">{title}</h2>'
+        f'<p class="dz-onboarding-blocking-task__body">{body}</p>'
+        f'<div class="dz-onboarding-blocking-task__actions">'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-blocking-task__cta', default_label='Continue')}"
+        f"</div>"
+        f"</dialog>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _build_nudge_step(step: ir.GuideStep, *, guide_name: str) -> str:
+    """``kind: nudge`` — small unobtrusive toast that auto-dismisses.
+
+    Carries ``data-autodismiss-ms`` so client JS can fire the dismiss
+    POST after a delay. The default is 6000ms; deployments can override
+    by parsing ``placement`` as an integer (e.g. ``placement: "3000"``
+    → 3-second nudge). This piggybacks on the existing field to avoid
+    a DSL-grammar change for the timer; a future slice can split it
+    out into a dedicated ``autodismiss_ms`` field if needed.
+
+    Server-rendered shape stays the same with or without JS — the
+    dismiss button is always present so keyboard users can clear the
+    nudge explicitly. The CTA, when set, navigates the user to
+    ``cta_target`` and posts the completion event.
+    """
+    title = _html.escape(step.title or "", quote=False)
+    body = _html.escape(step.body or "", quote=False)
+    complete_url, dismiss_url = _hx_urls(step, guide_name=guide_name)
+    autodismiss_ms = _parse_autodismiss_ms(step.placement)
+    return (
+        f"<dz-onboarding-step"
+        f"{_outer_attrs(step, guide_name=guide_name, kind='nudge', css_class='dz-onboarding-nudge')}"
+        f' data-autodismiss-ms="{autodismiss_ms}"'
+        f' role="status"'
+        f' aria-live="polite">'
+        f'<div class="dz-onboarding-nudge__content">'
+        f'<strong class="dz-onboarding-nudge__title">{title}</strong>'
+        f'<span class="dz-onboarding-nudge__body">{body}</span>'
+        f"</div>"
+        f'<div class="dz-onboarding-nudge__actions">'
+        f"{_cta_anchor(step, complete_url=complete_url, css_class='dz-onboarding-nudge__cta', default_label='OK')}"
+        f"{_dismiss_button(dismiss_url, css_class='dz-onboarding-nudge__dismiss')}"
+        f"</div>"
+        f"</dz-onboarding-step>"
+    )
+
+
+def _parse_autodismiss_ms(placement: str | None) -> int:
+    """Pull a nudge auto-dismiss timer out of the ``placement`` field.
+
+    Falls back to ``_DEFAULT_NUDGE_DISMISS_MS`` when ``placement`` is
+    empty, missing, or not a positive integer. Negative + zero are
+    rejected to avoid pathological values that fire instantly and
+    confuse the user.
+    """
+    if not placement:
+        return _DEFAULT_NUDGE_DISMISS_MS
+    try:
+        value = int(str(placement).strip())
+    except (TypeError, ValueError):
+        return _DEFAULT_NUDGE_DISMISS_MS
+    return value if value > 0 else _DEFAULT_NUDGE_DISMISS_MS

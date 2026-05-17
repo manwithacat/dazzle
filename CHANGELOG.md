@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.5] - 2026-05-17
+
+### Added
+
+- **Final three guide-step renderer kinds** — `checklist_item`, `blocking_task`, `nudge`. All eight kinds defined in the IR (`GuideStepKind` enum) now have renderer builders.
+  - **`checklist_item`** — one row of a parent onboarding checklist. Renders with `role="listitem"`, `aria-checked="false"`, a checkbox-shaped indicator on the left, title + body in the middle, CTA on the right. Default CTA label is "Do this" (action-oriented). Individual-item dismissal hidden by default (the `--hidden` modifier class); deployments can toggle visibility via parent `[data-allow-dismiss]`. A future page-routes slice can group multiple checklist_item overlays into a parent `<dz-onboarding-checklist>` container.
+  - **`blocking_task`** — modal that blocks page interaction until resolved. Uses the **native `<dialog open>` element** so browsers provide focus trap + Escape handling without client JS. `role="dialog"` + `aria-modal="true"` + `aria-labelledby`. Backdrop renders as a sibling layer for browsers without `::backdrop` support. **No dismiss button by design** — the only way past is the CTA (default label: "Continue"). Apps needing an escape hatch should use `popover` or `inline_card` instead.
+  - **`nudge`** — small transient toast. Carries `data-autodismiss-ms="<int>"` so client JS can fire the dismiss POST after a delay. Default 6000ms; configurable via the `placement` field as a numeric string (`placement: "3000"` → 3-second nudge). Invalid / zero / negative values fall back to the default. `role="status"` + `aria-live="polite"` for screen-reader announcement. Default CTA label is "OK".
+- **`_parse_autodismiss_ms` helper** — defensive integer parser for the nudge timer that rejects pathological values.
+
+### Tests
+
+- **11 new renderer tests** — per-kind shape pins (checklist_item indicator + listitem role + hidden-dismiss; blocking_task native `<dialog>` + no-dismiss invariant; nudge `data-autodismiss-ms` with default + custom + fallback paths).
+- **Updated** parametrised invariants to run across all 8 kinds; split the `complete + dismiss` invariant into separate tests since `blocking_task` is the one kind without a dismiss by design.
+
+### Agent Guidance
+
+- All eight step kinds defined in `GuideStepKind` now render. Pick by intent: `popover` (anchored callout) / `spotlight` (full attention) / `inline_card` (in-flow context) / `empty_state` (replace empty list) / `banner` (cross-page persistent) / `checklist_item` (multi-step setup row) / `blocking_task` (must-resolve modal) / `nudge` (transient toast).
+- **`blocking_task` has no dismiss button** — that's the design. If users need to be able to defer, use `popover` or `inline_card`. The CTA is the only exit.
+- **`nudge` timer** rides on the `placement` field for the v0.71.x slice (e.g. `placement: "3000"`). A future Dazzle release may introduce a dedicated `autodismiss_ms` IR field; the renderer will accept both forms during the transition.
+
 ## [0.71.4] - 2026-05-17
 
 ### Added

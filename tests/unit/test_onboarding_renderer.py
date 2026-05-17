@@ -42,25 +42,44 @@ def _step(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("kind", ["popover", "spotlight", "inline_card", "empty_state", "banner"])
-def test_has_builder_reports_v0_71_4_kinds_supported(kind: str) -> None:
-    """v0.71.4 ships builders for these five kinds."""
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "popover",
+        "spotlight",
+        "inline_card",
+        "empty_state",
+        "banner",
+        "checklist_item",
+        "blocking_task",
+        "nudge",
+    ],
+)
+def test_has_builder_reports_all_v0_71_5_kinds_supported(kind: str) -> None:
+    """v0.71.5 ships builders for all eight defined step kinds."""
     assert has_builder(kind) is True
 
 
-@pytest.mark.parametrize("kind", ["checklist_item", "blocking_task", "nudge"])
-def test_has_builder_reports_remaining_kinds_not_yet_supported(kind: str) -> None:
-    """These three kinds have additional runtime semantics (checklists
-    need a parent component; blocking_task needs a focus trap; nudge
-    auto-dismisses). Deferred to a follow-up slice."""
-    assert has_builder(kind) is False
-
-
 def test_render_step_unknown_kind_raises_with_helpful_message() -> None:
-    step = _step(kind=ir.GuideStepKind.CHECKLIST_ITEM)
+    """A future Dazzle release might add a new IR kind; an older
+    runtime should raise with the supported list in the message rather
+    than silently render nothing. Simulate via a SimpleNamespace that
+    bypasses the IR enum."""
+    from types import SimpleNamespace
+
+    step = SimpleNamespace(
+        kind=SimpleNamespace(value="future_kind"),
+        name="s1",
+        title="",
+        body="",
+        target="surface.task_list",
+        placement="bottom",
+        cta_label=None,
+        cta_target=None,
+    )
     with pytest.raises(UnknownStepKindError) as exc:
         render_step(step, guide_name="g1")
-    assert "checklist_item" in str(exc.value)
+    assert "future_kind" in str(exc.value)
     assert "popover" in str(exc.value)  # lists what IS supported
 
 
@@ -147,16 +166,19 @@ def test_popover_placement_threads_into_data_attr() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        ir.GuideStepKind.POPOVER,
-        ir.GuideStepKind.SPOTLIGHT,
-        ir.GuideStepKind.INLINE_CARD,
-        ir.GuideStepKind.EMPTY_STATE,
-        ir.GuideStepKind.BANNER,
-    ],
-)
+_ALL_SUPPORTED_KINDS = [
+    ir.GuideStepKind.POPOVER,
+    ir.GuideStepKind.SPOTLIGHT,
+    ir.GuideStepKind.INLINE_CARD,
+    ir.GuideStepKind.EMPTY_STATE,
+    ir.GuideStepKind.BANNER,
+    ir.GuideStepKind.CHECKLIST_ITEM,
+    ir.GuideStepKind.BLOCKING_TASK,
+    ir.GuideStepKind.NUDGE,
+]
+
+
+@pytest.mark.parametrize("kind", _ALL_SUPPORTED_KINDS)
 def test_every_supported_kind_emits_outer_wrapper_with_data_attrs(
     kind: ir.GuideStepKind,
 ) -> None:
@@ -172,37 +194,38 @@ def test_every_supported_kind_emits_outer_wrapper_with_data_attrs(
     assert f'data-kind="{expected_kind}"' in html
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        ir.GuideStepKind.POPOVER,
-        ir.GuideStepKind.SPOTLIGHT,
-        ir.GuideStepKind.INLINE_CARD,
-        ir.GuideStepKind.EMPTY_STATE,
-        ir.GuideStepKind.BANNER,
-    ],
-)
-def test_every_supported_kind_emits_htmx_complete_and_dismiss(
-    kind: ir.GuideStepKind,
-) -> None:
-    """Every kind has to point at the same complete + dismiss routes
-    shipped in v0.71.2 — that's the runtime contract."""
+@pytest.mark.parametrize("kind", _ALL_SUPPORTED_KINDS)
+def test_every_supported_kind_emits_htmx_complete(kind: ir.GuideStepKind) -> None:
+    """Every kind has a CTA that posts to the complete route — that's
+    the runtime contract for progression."""
     step = _step(kind=kind)
     html = render_step(step, guide_name="g1")
     assert 'hx-post="/api/onboarding/g1/s1/complete"' in html
+
+
+# blocking_task is the only kind WITHOUT a dismiss button by design —
+# users can't dismiss a blocking task, only complete it. Every other
+# kind has both a complete CTA and a dismiss escape hatch.
+_DISMISSABLE_KINDS = [k for k in _ALL_SUPPORTED_KINDS if k != ir.GuideStepKind.BLOCKING_TASK]
+
+
+@pytest.mark.parametrize("kind", _DISMISSABLE_KINDS)
+def test_every_dismissable_kind_emits_htmx_dismiss(kind: ir.GuideStepKind) -> None:
+    step = _step(kind=kind)
+    html = render_step(step, guide_name="g1")
     assert 'hx-post="/api/onboarding/g1/s1/dismiss"' in html
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        ir.GuideStepKind.POPOVER,
-        ir.GuideStepKind.SPOTLIGHT,
-        ir.GuideStepKind.INLINE_CARD,
-        ir.GuideStepKind.EMPTY_STATE,
-        ir.GuideStepKind.BANNER,
-    ],
-)
+def test_blocking_task_has_no_dismiss_button() -> None:
+    """blocking_task is designed to NOT be dismissable — the only way
+    past is the CTA. Apps that need an escape hatch should declare a
+    popover or inline_card instead."""
+    step = _step(kind=ir.GuideStepKind.BLOCKING_TASK)
+    html = render_step(step, guide_name="g1")
+    assert "/dismiss" not in html
+
+
+@pytest.mark.parametrize("kind", _ALL_SUPPORTED_KINDS)
 def test_every_supported_kind_escapes_title_and_body(kind: ir.GuideStepKind) -> None:
     """XSS-escape on every kind. Common helper means it's hard to drift
     but pin it anyway — the renderer is the only XSS surface."""
@@ -258,3 +281,80 @@ def test_banner_uses_horizontal_message_layout() -> None:
     assert "dz-onboarding-banner__separator" in html
     # Title is bold-prefix (strong tag) so it reads as a single-line callout.
     assert '<strong class="dz-onboarding-banner__title"' in html
+
+
+def test_checklist_item_has_listitem_role_and_indicator() -> None:
+    """A checklist_item renders as a list row with a checkbox-shaped
+    indicator on the left + content in the middle + CTA on the right."""
+    html = render_step(_step(kind=ir.GuideStepKind.CHECKLIST_ITEM), guide_name="g1")
+    assert 'role="listitem"' in html
+    assert 'aria-checked="false"' in html
+    assert "dz-onboarding-checklist-item__indicator" in html
+    assert "dz-onboarding-checklist-item__content" in html
+
+
+def test_checklist_item_dismiss_hidden_by_default() -> None:
+    """checklist items hide individual-item dismissal by default; the
+    parent guide owns the dismiss escape hatch."""
+    html = render_step(_step(kind=ir.GuideStepKind.CHECKLIST_ITEM), guide_name="g1")
+    assert "dz-onboarding-checklist-item__dismiss--hidden" in html
+
+
+def test_checklist_item_default_cta_label_is_do_this() -> None:
+    """checklist items use 'Do this' as the action prompt rather than
+    'Got it' — they're action-oriented."""
+    step = _step(kind=ir.GuideStepKind.CHECKLIST_ITEM, cta_label=None)
+    html = render_step(step, guide_name="g1")
+    assert ">Do this</a>" in html
+
+
+def test_blocking_task_uses_native_dialog_element() -> None:
+    """blocking_task uses <dialog open> so browsers provide focus
+    trap + Escape handling natively, without client JS."""
+    html = render_step(_step(kind=ir.GuideStepKind.BLOCKING_TASK), guide_name="g1")
+    assert "<dialog open" in html
+    assert 'aria-modal="true"' in html
+    assert 'aria-labelledby="dz-blocking-title-s1"' in html
+    # Backdrop renders as a separate layer for browsers that don't
+    # implement the ::backdrop pseudo-element.
+    assert "dz-onboarding-blocking-task__backdrop" in html
+
+
+def test_blocking_task_default_cta_label_is_continue() -> None:
+    step = _step(kind=ir.GuideStepKind.BLOCKING_TASK, cta_label=None)
+    html = render_step(step, guide_name="g1")
+    assert ">Continue</a>" in html
+
+
+def test_nudge_carries_autodismiss_data_attr() -> None:
+    """nudge advertises its auto-dismiss timer via data attribute so
+    client JS can fire the dismiss POST after the delay."""
+    html = render_step(_step(kind=ir.GuideStepKind.NUDGE), guide_name="g1")
+    assert 'data-autodismiss-ms="6000"' in html  # default
+    # Toast semantics for screen readers.
+    assert 'role="status"' in html
+    assert 'aria-live="polite"' in html
+
+
+def test_nudge_autodismiss_ms_pulled_from_placement_when_numeric() -> None:
+    """A nudge with ``placement: "3000"`` should auto-dismiss in 3s."""
+    step = _step(kind=ir.GuideStepKind.NUDGE, placement="3000")
+    html = render_step(step, guide_name="g1")
+    assert 'data-autodismiss-ms="3000"' in html
+
+
+def test_nudge_autodismiss_falls_back_when_placement_invalid() -> None:
+    """Non-numeric / zero / negative placement falls back to the
+    default — protects against pathological values that fire instantly."""
+    for placement in ["nonsense", "0", "-100", ""]:
+        step = _step(kind=ir.GuideStepKind.NUDGE, placement=placement)
+        html = render_step(step, guide_name="g1")
+        assert 'data-autodismiss-ms="6000"' in html, (
+            f"placement={placement!r} should fall back to default"
+        )
+
+
+def test_nudge_default_cta_label_is_ok() -> None:
+    step = _step(kind=ir.GuideStepKind.NUDGE, cta_label=None)
+    html = render_step(step, guide_name="g1")
+    assert ">OK</a>" in html

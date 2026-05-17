@@ -160,15 +160,17 @@ def test_inject_renders_popover_on_happy_path() -> None:
     assert 'data-step="welcome"' in prc.ctx.active_guide_html
 
 
-def test_inject_skips_unsupported_kind() -> None:
-    """A guide with a kind the current Dazzle release doesn't yet
-    render (e.g. ``checklist_item`` as of v0.71.4) must NOT crash the
-    page — overlay stays empty."""
+def test_inject_skips_unsupported_kind(monkeypatch) -> None:
+    """A guide with a kind the current Dazzle release doesn't render
+    must NOT crash the page — overlay stays empty. v0.71.5 ships all
+    eight defined kinds, so this test simulates a future kind by
+    monkey-patching the has_builder check."""
     from dazzle.core import ir
+    from dazzle.render.onboarding import renderer as renderer_module
 
     step = ir.GuideStep(
-        name="spot",
-        kind=ir.GuideStepKind.CHECKLIST_ITEM,
+        name="future",
+        kind=ir.GuideStepKind.POPOVER,  # real kind for IR validation
         title="x",
         body="y",
         target="surface.task_list",
@@ -179,10 +181,14 @@ def test_inject_skips_unsupported_kind() -> None:
         title="g",
         audience="persona = admin",
         steps=[step],
-        step_order=["spot"],
+        step_order=["future"],
     )
     repo = MagicMock()
     repo.get = MagicMock(return_value=None)
+
+    # Pretend this kind isn't shipped — exercises the has_builder
+    # bail-out branch in _inject_onboarding_step.
+    monkeypatch.setattr(renderer_module, "_SUPPORTED_KINDS", frozenset())
 
     prc = _prc(guides=[guide], repo=repo, view_name="task_list")
     _inject_onboarding_step(prc)
