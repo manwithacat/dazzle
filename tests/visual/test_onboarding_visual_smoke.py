@@ -25,16 +25,24 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, sync_playwright
 
-from dazzle.core.ir.onboarding import (
+# Playwright is an opt-in test dep; the default CI runner doesn't
+# install it. Use importorskip so collection short-circuits cleanly
+# when the module is missing — the @pytest.mark.visual gate only
+# applies AFTER collection, so the bare `from playwright...` import
+# below would crash pytest collection before the marker fires.
+sync_playwright_module = pytest.importorskip("playwright.sync_api")
+sync_playwright = sync_playwright_module.sync_playwright
+Page = sync_playwright_module.Page
+
+from dazzle.core.ir.onboarding import (  # noqa: E402  (after importorskip)
     GuideCompleteOn,
     GuideCompleteOnKind,
     GuideStep,
     GuideStepKind,
 )
-from dazzle.render.onboarding.renderer import render_step
-from dazzle.ui.runtime.css_loader import get_bundled_css
+from dazzle.render.onboarding.renderer import render_step  # noqa: E402
+from dazzle.ui.runtime.css_loader import get_bundled_css  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS_DIR = REPO_ROOT / "tests" / "visual" / "_artifacts"

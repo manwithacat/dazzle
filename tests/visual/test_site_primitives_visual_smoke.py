@@ -26,9 +26,17 @@ from html import escape as _escape
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, sync_playwright
 
-from dazzle.ui.runtime.css_loader import get_bundled_css
+# Playwright is an opt-in test dep; the default CI runner doesn't
+# install it. importorskip short-circuits collection cleanly — the
+# `@pytest.mark.visual` marker fires too late to dodge an
+# unconditional top-level import. Same shape as
+# test_onboarding_visual_smoke.py.
+sync_playwright_module = pytest.importorskip("playwright.sync_api")
+sync_playwright = sync_playwright_module.sync_playwright
+Page = sync_playwright_module.Page
+
+from dazzle.ui.runtime.css_loader import get_bundled_css  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS_DIR = REPO_ROOT / "tests" / "visual" / "_artifacts"
