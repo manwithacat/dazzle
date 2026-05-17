@@ -32,14 +32,25 @@ class TestIntrospectionCompleteness:
     """Verify every known command is discovered."""
 
     # fmt: off
+    # v0.71.23 (#1120): `inspect` moved from a top-level command to a
+    # typer group with subcommands (renderers / primitives / routes /
+    # oauth-providers / api / project). The introspection helper only
+    # captures leaves, not groups, so `inspect` no longer shows up at
+    # the top level — its subcommands live in SUB_COMMANDS below.
     TOP_LEVEL = [
-        "serve", "init", "validate", "lint", "inspect", "layout-plan",
+        "serve", "init", "validate", "lint", "layout-plan",
         "analyze-spec", "example", "doctor", "grammar",
         "build", "info", "stop", "rebuild", "logs", "status",
     ]
     # fmt: on
 
     SUB_COMMANDS = [
+        # v0.71.23 (#1120): inspect subcommands.
+        "inspect project",
+        "inspect renderers",
+        "inspect primitives",
+        "inspect routes",
+        "inspect oauth-providers",
         "test generate",
         "test run",
         "test list",
