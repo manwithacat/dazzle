@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.29] - 2026-05-17
+
+### Fixed
+- **Anon-nav swap was too aggressive when no auth wiring at all (#1127 follow-up).**
+  v0.71.25's #1127 fix collapsed the sidebar to anon-only items even
+  when `get_auth_context is None` — i.e. the app had opted out of
+  access control entirely. Example apps + integration fixtures that
+  use the no-auth-wiring shape (simple_task,
+  `test_fragment_chrome_sidebar_active_state_keys_off_current_route`)
+  rendered with empty sidebars and broke CI. Correct semantics: the
+  anon-nav swap fires only when auth IS configured but the request
+  has no session (or matches no persona) — the actual production leak
+  shape penny_dreadful reported. With no auth wiring, persona gates
+  have no enforcement layer, so the compile-time nav stays as
+  declared.
+
 ## [0.71.28] - 2026-05-17
 
 ### Fixed

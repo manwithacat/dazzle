@@ -557,8 +557,12 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
     sync callables continue to work unchanged.
     """
     if prc.deps.get_auth_context is None:
-        # No auth wiring at all — every request is anonymous.
-        _apply_anon_nav(prc)
+        # No auth wiring at all — the app has opted out of access
+        # control. Persona gates have no enforcement layer in this
+        # mode, so leave the compile-time nav as declared rather
+        # than collapsing the sidebar to nothing. The anon-leak path
+        # closed by #1127 is the production shape: auth IS configured,
+        # but the request has no session yet (handled below).
         return
     try:
         prc.auth_ctx = await _resolve_auth_context(prc.deps.get_auth_context, prc.request)

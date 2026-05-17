@@ -158,9 +158,16 @@ _NAV_GATED = NavItemContext(label="Admin", route="/app/workspaces/admin_dash")
 
 
 @pytest.mark.asyncio
-async def test_inject_no_auth_context_swaps_to_anon_nav() -> None:
-    """``get_auth_context is None`` — every request is anon; persona-gated
-    workspaces must be hidden, not exposed via the unfiltered flat list."""
+async def test_inject_no_auth_wiring_preserves_full_nav() -> None:
+    """``get_auth_context is None`` is the "developer opted out of
+    access control" mode — persona gates have no enforcement layer
+    here, so the nav stays as declared rather than collapsing to an
+    empty sidebar in example apps that have no auth fixture wired up.
+
+    The anon-leak this issue closes is the production shape where
+    auth IS configured but the request has no session — see the
+    next three tests.
+    """
     prc = _make_prc(
         get_auth_context=None,
         nav_items=[_NAV_PUBLIC, _NAV_GATED],
@@ -168,7 +175,7 @@ async def test_inject_no_auth_context_swaps_to_anon_nav() -> None:
     )
     await _inject_auth_context(prc)
     routes = {i.route for i in prc.ctx.nav_items}
-    assert routes == {"/app/workspaces/public_dash"}
+    assert routes == {"/app/workspaces/public_dash", "/app/workspaces/admin_dash"}
 
 
 @pytest.mark.asyncio
