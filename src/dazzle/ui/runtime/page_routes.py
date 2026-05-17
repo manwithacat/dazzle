@@ -20,7 +20,6 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from functools import partial
 from typing import Any
 
 from dazzle.core import ir
@@ -1867,6 +1866,24 @@ async def _workspace_handler(
     return HTMLResponse(content=html)  # nosemgrep
 
 
+def _make_root_redirect_handler(
+    deps: _PageRouterConfig,
+    persona_ws_routes: dict[str, str],
+    fallback_ws_route: str,
+) -> Any:
+    """Closure factory for `/` — same rationale as `_make_page_handler` /
+    `_make_workspace_handler` (issue #1034, follow-up #1112).
+    `partial(_root_redirect, deps, ...)` strips the `request: Request`
+    annotation, FastAPI sees an unannotated `request` parameter, pydantic
+    builds an invalid `TypeAdapter[Annotated[Request, Query(...)]]` and
+    poisons the shared adapter cache, cascading 422s to every other route."""
+
+    async def handler(request: Request) -> Response:
+        return await _root_redirect(deps, persona_ws_routes, fallback_ws_route, request)
+
+    return handler
+
+
 async def _root_redirect(
     deps: _PageRouterConfig,
     persona_ws_routes: dict[str, str],
@@ -2298,7 +2315,7 @@ def create_page_routes(
             _fallback_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
 
             router.get("/", response_class=HTMLResponse)(
-                partial(_root_redirect, deps, _persona_ws_routes, _fallback_ws_route)
+                _make_root_redirect_handler(deps, _persona_ws_routes, _fallback_ws_route)
             )
 
     return router

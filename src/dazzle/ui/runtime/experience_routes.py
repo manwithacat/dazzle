@@ -13,7 +13,6 @@ import logging
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -201,6 +200,41 @@ def _persist_progress(
 # =============================================================================
 # Module-level handler functions
 # =============================================================================
+
+
+def _make_experience_entry_handler(deps: _ExperienceDeps) -> Any:
+    """Closure factory — preserves the `request: Request` annotation through
+    FastAPI's `inspect.signature` pass. Mirrors `_make_page_handler` /
+    `_make_workspace_handler` in `page_routes.py` (issue #1034, follow-up
+    #1112). `partial(_experience_entry, deps)` strips the annotation; pydantic
+    then defaults `request` to `Query(...)` and hard-fails building a
+    TypeAdapter for the `Request` forward-ref, poisoning the shared adapter
+    cache for every other route in the app."""
+
+    async def handler(request: Request, name: str) -> Response:
+        return await _experience_entry(deps, request, name)
+
+    return handler
+
+
+def _make_experience_step_get_handler(deps: _ExperienceDeps) -> Any:
+    """Closure factory for GET /experiences/{name}/{step} — see
+    `_make_experience_entry_handler` for rationale (#1034 / #1112)."""
+
+    async def handler(request: Request, name: str, step: str) -> Response:
+        return await _experience_step_get(deps, request, name, step)
+
+    return handler
+
+
+def _make_experience_step_post_handler(deps: _ExperienceDeps) -> Any:
+    """Closure factory for POST /experiences/{name}/{step} — see
+    `_make_experience_entry_handler` for rationale (#1034 / #1112)."""
+
+    async def handler(request: Request, name: str, step: str) -> Response:
+        return await _experience_step_post(deps, request, name, step)
+
+    return handler
 
 
 async def _experience_entry(deps: _ExperienceDeps, request: Request, name: str) -> Response:
@@ -737,13 +771,16 @@ def create_experience_routes(
         progress_store=progress_store,
     )
 
-    # Register routes
-    router.get("/experiences/{name}", response_class=HTMLResponse)(partial(_experience_entry, deps))
+    # Register routes — closure factories preserve the `request: Request`
+    # annotation through FastAPI's signature introspection. See #1112.
+    router.get("/experiences/{name}", response_class=HTMLResponse)(
+        _make_experience_entry_handler(deps)
+    )
     router.get("/experiences/{name}/{step}", response_class=HTMLResponse)(
-        partial(_experience_step_get, deps)
+        _make_experience_step_get_handler(deps)
     )
     router.post("/experiences/{name}/{step}", response_class=HTMLResponse)(
-        partial(_experience_step_post, deps)
+        _make_experience_step_post_handler(deps)
     )
 
     return router

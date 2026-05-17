@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.11] - 2026-05-17
+
+### Fixed
+
+- **Workspace 422 / OpenAPI 500 regression — closes #1112 (follow-up to #1034).** The v0.67.1 closure-factory fix landed for `_workspace_handler` + `_page_handler` but missed four sibling `functools.partial(_h, deps)` bindings where `_h` had a `request: Request` parameter: three in `src/dazzle/ui/runtime/experience_routes.py` (`_experience_entry`, `_experience_step_get`, `_experience_step_post`) and one in `src/dazzle/ui/runtime/page_routes.py` (`_root_redirect`). `functools.partial` strips type annotations from `inspect.signature`, so FastAPI saw `request` as unannotated, defaulted it to `Query(...)`, and pydantic >= 2.13 then hard-failed building a `TypeAdapter[Annotated[Request, Query(...)]]` — poisoning the shared adapter cache and cascading 422s onto every workspace landing plus 500s on `/openapi.json`, even when the DSL had no `experience` blocks (the router is mounted unconditionally). Replaced all four bindings with `_make_experience_entry_handler` / `_make_experience_step_get_handler` / `_make_experience_step_post_handler` / `_make_root_redirect_handler` closure factories that wrap the inner handler in an `async def handler(request: Request, ...)` preserving the annotation through introspection. Removed the now-unused `from functools import partial` import from both files.
+
+### Tests
+
+- **`tests/unit/test_workspace_handler_signature.py`** extended with four signature-preservation tests for the new factories plus a durable AST-based lint gate (`test_no_partial_bound_request_handlers`) that walks `src/dazzle/ui/runtime/` and `src/dazzle/back/runtime/` for `partial(_handler, ...)` calls where `_handler`'s signature has `request: Request`. AST-based rather than regex so docstring references explaining the historical bug don't trip the gate. This is the gate v0.67.1 lacked, which is why #1112 was needed at all.
+
+### Agent Guidance
+
+- When binding a handler with `request: Request` (or any other annotated parameter that FastAPI needs to introspect at registration time), use a closure factory — `def _make_X_handler(...): async def handler(request: Request, ...): ...; return handler` — rather than `functools.partial(handler, ...)`. `partial` strips annotations from `inspect.signature` and pydantic >= 2.13 turns that into a hard TypeAdapter build failure that poisons the shared adapter cache across all routes in the app. The pattern is enforced by `tests/unit/test_workspace_handler_signature.py::test_no_partial_bound_request_handlers`.
+
 ## [0.71.10] - 2026-05-17
 
 ### Fixed
