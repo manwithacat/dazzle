@@ -202,8 +202,9 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "Generate incrementally: entities first, then surfaces, then workspaces",
                 (
                     "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
-                    "(field conditions with for: clauses). No field conditions inside permit: — "
-                    "that is a parser error. After all entities are defined, run "
+                    "(field conditions with as: clauses binding the rule to one or more personas). "
+                    "No field conditions inside permit: — that is a parser error. "
+                    "After all entities are defined, run "
                     "policy(operation='access_matrix') to verify zero PERMIT_UNPROTECTED cells."
                 ),
                 "After generating list surfaces, add ux blocks with sort/filter/search/empty",
@@ -253,12 +254,14 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 (
                     "7b. Add scope: blocks for row filtering — these control what rows each role "
                     "sees, not whether they may access the endpoint. Use field conditions with "
-                    "a for: clause: 'scope: for role(teacher): school = current_user.school'. "
+                    "an as: clause naming the persona(s) the rule binds to: "
+                    "'scope: school = current_user.school as: teacher'. "
                     "Every role permitted in step 7a MUST have a matching scope: rule unless "
                     "the intent is to grant unrestricted row access, in which case use "
-                    "'scope: for role(admin): all'. The '*' wildcard grants all rows to all "
-                    "permitted roles when no per-role scoping is needed. "
-                    "scope: and permit: are separate DSL blocks — never mix them."
+                    "'scope: all as: admin'. The '*' wildcard grants all rows to all "
+                    "permitted personas when no per-persona scoping is needed. "
+                    "scope: and permit: are separate DSL blocks — never mix them. "
+                    "(`as:` was renamed from `for:` in #998.)"
                 ),
                 # --- UI ---
                 "8. Generate surfaces (CRUD views) for each entity",
@@ -316,8 +319,9 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "Generate incrementally and validate frequently",
                 (
                     "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
-                    "(field conditions with for: clauses). Field conditions inside permit: are a "
-                    "parser error. After all entities are defined, run "
+                    "(field conditions with as: clauses binding the rule to one or more personas). "
+                    "Field conditions inside permit: are a parser error. "
+                    "After all entities are defined, run "
                     "policy(operation='access_matrix') — zero PERMIT_UNPROTECTED cells required."
                 ),
                 "Do NOT copy from example projects - generate from first principles",

@@ -42,7 +42,7 @@ _ROUNDED_CLASSES = (
 def _is_rounded_class(cls: str) -> bool:
     """Return True if a class represents a rounded-corner utility.
 
-    Accepts both Tailwind's fixed-scale forms (``rounded``, ``rounded-md``,
+    Accepts both fixed-scale forms (``rounded``, ``rounded-md``,
     ``rounded-full``) and arbitrary-value forms (``rounded-[4px]``,
     ``rounded-[12px]``) which Dazzle's own templates use via
     ``rounded-[6px]`` in the ``region_card`` macro. Side-scoped rounded

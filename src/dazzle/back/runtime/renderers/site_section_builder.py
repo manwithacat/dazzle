@@ -436,8 +436,11 @@ def _section_media(section: dict[str, Any]) -> str:
 def _build_stats_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: stats` — vertical/horizontal stat row.
 
-    Uses DaisyUI's `stats` / `stat` / `stat-value` / `stat-title`
-    classes (matches stats.html)."""
+    Emits the legacy `stats` / `stat` / `stat-value` / `stat-title`
+    class names consumed by site pages (matches stats.html). These
+    classes are still styled by the third-party CSS loaded in
+    ``site_renderer.get_shared_head_html`` — the workspace runtime
+    uses its own Dazzle-native classes."""
     parts: list[str] = []
     parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-stats">')
     inner: list[str] = [_section_header(section)]

@@ -27,7 +27,8 @@ def with_toast(
     Args:
         response: The original HTMLResponse to augment.
         message: Toast message text (HTML-escaped automatically).
-        level: DaisyUI alert level — ``success``, ``error``, ``warning``, ``info``.
+        level: Toast severity — ``success``, ``error``, ``warning``, ``info``.
+            Drives the ``alert-{level}`` class on the rendered toast.
         duration: Auto-dismiss delay (e.g., ``"5s"``).
     """
     safe_message = escape(message)

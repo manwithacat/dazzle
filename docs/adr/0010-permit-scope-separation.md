@@ -3,6 +3,12 @@
 **Status:** Accepted
 **Date:** 2026-03-18
 
+> **Note added 2026-05-17:** the persona-binding keyword on `scope:`
+> rules was renamed from `for:` to `as:` in #998 to remove the
+> overloaded `for` keyword from the grammar. Wherever this document
+> refers to a `for:` clause, the current syntax is `as:`. The semantics
+> are unchanged.
+
 ## Context
 
 Before this decision, Dazzle's access control used a single `permit:` block that mixed two distinct concerns:

@@ -118,12 +118,13 @@ This means:
   (no scope: blocks)         → viewer sees ALL rows
 
 To restrict:
-  scope list: owner = current_user for: viewer
+  scope list: owner = current_user as: viewer
 """
 important_notes = [
     "permit: without scope: means ALL rows visible (not zero rows)",
     "scope: blocks are optional — their absence means no row-level filter",
-    "scope: all for: * is redundant when no scope blocks exist, but documents intent",
+    "scope: all as: * is redundant when no scope blocks exist, but documents intent",
+    "the persona binding keyword is `as:` (renamed from `for:` in #998)",
 ]
 
 # =============================================================================

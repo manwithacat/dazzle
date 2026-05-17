@@ -42,9 +42,9 @@ Given a parsed AppSpec, compute the complete access matrix without running the a
 |----------|---------|
 | `PERMIT` | Explicitly allowed by a `permit:` rule; no `scope:` restriction applies |
 | `DENY` | Forbidden by a `forbid:` rule, or no matching `permit:` (default-deny) |
-| `PERMIT_FILTERED` | Allowed by `permit:`; row-filtered by a matching `scope: for role(X):` condition |
-| `PERMIT_SCOPED` | Allowed by `permit:`; `scope:` block present with a named `for:` clause for this role |
-| `PERMIT_NO_SCOPE` | Allowed by `permit:`; no matching `scope:` entry and no `*` wildcard — role sees zero rows |
+| `PERMIT_FILTERED` | Allowed by `permit:`; row-filtered by a matching `scope: ... as: <persona>` condition |
+| `PERMIT_SCOPED` | Allowed by `permit:`; `scope:` block present with a named `as:` clause binding the rule to this persona |
+| `PERMIT_NO_SCOPE` | Allowed by `permit:`; no matching `scope:` entry and no `*` wildcard — persona sees zero rows |
 | `PERMIT_UNPROTECTED` | No access rules defined on the entity (backward-compat allows all; flagged as a warning) |
 
 This is pure computation over the IR — no server, no database, sub-second for any app.

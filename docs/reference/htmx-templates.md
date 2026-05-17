@@ -220,13 +220,19 @@ surface contact_edit           → components/form_edit.html
 
 ---
 
-## CDN Dependencies
+## Dependencies
+
+The workspace runtime ships HTMX inline and links a single bundled
+stylesheet from the server:
 
 ```html
-<script src="https://unpkg.com/htmx.org@2.0.3"></script>
-<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="/static/vendor/htmx.min.js"></script>
+<link rel="stylesheet" href="/styles/dazzle.css">
 ```
+
+Site/marketing pages additionally load DaisyUI + Tailwind via CDN for
+legacy `stat-value` / `bg-base-*` class names emitted by
+`site_section_builder` — see `docs/CSS_MIGRATION_GUIDE.md`.
 
 ### Vanilla JS Scope (Limited)
 

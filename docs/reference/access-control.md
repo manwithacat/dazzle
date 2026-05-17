@@ -93,7 +93,7 @@ Row-level filtering rules on entities. `scope:` blocks control **what rows** a p
 The two-block pattern is mandatory:
 
 - `permit:` — authorization gate. Contains **only** `role()` checks. Field conditions inside `permit:` are a parser error.
-- `scope:` — row filter. Contains field conditions with `for:` clauses. Evaluated at query time, not at the gate.
+- `scope:` — row filter. Contains field conditions bound to one or more personas via an `as:` clause (renamed from `for:` in #998). Evaluated at query time, not at the gate.
 
 Every role that passes a `permit:` gate must have a matching `scope:` rule, or `scope: all` for unrestricted row access.
 
@@ -101,13 +101,13 @@ Every role that passes a `permit:` gate must have a matching `scope:` rule, or `
 
 ```dsl
 scope:
-  for role(<name>): <field_condition>
-  for role(<name>): all
+  <field_condition>  as: <persona>[, <persona>...]
+  all                as: <persona>[, <persona>...]
   *
 
-# for role(<name>): <condition>  — rows matching condition are visible to role
-# for role(<name>): all          — all rows are visible to role (unrestricted)
-# *                              — all rows visible to every permitted role (wildcard)
+# <condition>  as: <persona>   — rows matching condition are visible to persona(s)
+# all          as: <persona>   — all rows are visible to persona(s) (unrestricted)
+# *                            — all rows visible to every permitted persona (wildcard)
 
 # Field conditions use standard ConditionExpr:
 #   field = current_user
@@ -134,11 +134,11 @@ entity Task "Task":
     update: role(admin) or role(manager) or role(member)
     delete: role(admin)
 
-  # Row filtering: what each permitted role sees
+  # Row filtering: what each permitted persona sees
   scope:
-    for role(admin): all
-    for role(manager): team = current_user.team
-    for role(member): owner = current_user
+    all                            as: admin
+    team = current_user.team       as: manager
+    owner = current_user           as: member
 
 entity Shape "Shape":
   id: uuid pk
@@ -149,27 +149,28 @@ entity Shape "Shape":
     list: role(oracle) or role(sovereign)
     read: role(oracle) or role(sovereign)
 
-  # Wildcard: all permitted roles see all rows
+  # Wildcard: all permitted personas see all rows
   scope:
     *
 ```
 
 ### The `all` keyword and `*` wildcard
 
-- `for role(admin): all` — the named role sees every row, no filter applied.
-- `*` on its own line — every permitted role sees every row. Use when no per-role scoping is needed. Equivalent to writing `all` for each permitted role individually.
+- `all as: admin` — the named persona sees every row, no filter applied.
+- `*` on its own line — every permitted persona sees every row. Use when no per-persona scoping is needed. Equivalent to writing `all` for each permitted persona individually.
 
 ### Default-deny at both layers
 
 - If a role has no matching `permit:` rule, the endpoint gate rejects it with HTTP 403.
-- If a role passes the gate but has no `scope:` rule (and no `*`), it sees zero rows. This is intentional default-deny at the row level.
+- If a persona passes the gate but has no `scope:` rule (and no `*`), it sees zero rows. This is intentional default-deny at the row level.
 
 ### Best Practices
 
 - Never put field conditions inside `permit:` — they are a parser error.
-- Every permitted role needs an explicit `scope:` entry or a `*` wildcard.
-- Use `for role(admin): all` to grant unrestricted access to administrative roles.
-- Prefer named `for:` clauses over `*` when different roles need different row visibility.
+- Every permitted persona needs an explicit `scope:` entry or a `*` wildcard.
+- Use `all as: admin` to grant unrestricted access to administrative personas.
+- Prefer named `as:` clauses over `*` when different personas need different row visibility.
+- `as:` is the canonical persona-binding keyword (renamed from `for:` in #998 to remove the overloaded `for` keyword from the grammar).
 
 **Related:** [Access Rules](access-control.md#access-rules), [Entity](entities.md#entity), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model)
 
@@ -378,10 +379,10 @@ Request arrives
   │
   ├─ Build SQL filters
   │   ├─ Visibility filters (visible: blocks)
-  │   └─ Scope filters (scope: blocks — for role(<name>): <condition>)
-  │       ├─ Matching for: clause found → apply field condition as WHERE clause
-  │       ├─ for role(<name>): all → no WHERE clause added (all rows)
-  │       └─ * wildcard → no WHERE clause for any role (all rows)
+  │   └─ Scope filters (scope: blocks — <condition> as: <persona>)
+  │       ├─ Matching as: clause found → apply field condition as WHERE clause
+  │       ├─ all as: <persona> → no WHERE clause added (all rows)
+  │       └─ * wildcard → no WHERE clause for any persona (all rows)
   │
   ├─ Execute query with merged filters
   │

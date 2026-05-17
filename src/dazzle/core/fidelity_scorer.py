@@ -893,8 +893,8 @@ def _check_interaction_fidelity(
         )
 
     # Check for error handling elements. Accept any of:
-    #   - DaisyUI legacy class `text-error`
-    #   - Design-token destructive class (post-DaisyUI migration)
+    #   - Legacy class `text-error` (still emitted on site pages)
+    #   - Design-token `destructive` class (Dazzle-native, used by workspace)
     #   - ARIA invalid wiring (the canonical a11y signal for input errors)
     if "text-error" not in html and "destructive" not in html and "aria-invalid" not in html:
         gaps.append(

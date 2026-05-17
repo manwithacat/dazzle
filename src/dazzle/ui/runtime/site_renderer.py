@@ -17,10 +17,14 @@ def get_shared_head_html(
     title: str, *, custom_css: bool = False, favicon: str | None = None
 ) -> str:
     """
-    Return shared <head> content for all DNR pages.
+    Return shared <head> content for marketing/site pages and task-surface pages.
 
-    Provides unified styling between site pages and workspace pages by including
-    the same DaisyUI + Tailwind CSS/JS as the workspace renderer.
+    Site pages and task-surface pages still depend on DaisyUI + Tailwind for
+    legacy class names (``bg-base-100``, ``stat-value``, ``stat-title`` —
+    emitted by ``site_section_builder``). The workspace runtime no longer
+    loads either library: it ships the Dazzle-native design system bundled
+    in ``/styles/dazzle.css``. Migrating site pages to the native CSS is a
+    pending cleanup — when that happens the two CDN tags below can come out.
 
     Args:
         title: Page title

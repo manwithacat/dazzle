@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.10] - 2026-05-17
+
+### Fixed
+
+- **Validator warning and bootstrap handler instructions used the deprecated `for:` scope keyword.** The persona-binding keyword on `scope:` rules was renamed from `for:` to `as:` in #998, but several agent-facing surfaces still pointed at the old syntax: `src/dazzle/core/validator.py` (the warning emitted when an entity has `permit:` but no `scope:` blocks told users to write `scope: all for: *`), `src/dazzle/mcp/server/handlers/bootstrap.py` (three of the LLM-facing step descriptions referenced `for:` clauses, leading agents to generate broken DSL), and `src/dazzle/mcp/semantics_kb/runtime.toml` (the runtime-rules knowledge note showed `for:` syntax). All four now reference the canonical `as:` keyword and call out the rename history.
+- **`src/dazzle/core/llm_context.py` told LLM agents "DaisyUI provides Tailwind CSS components".** The workspace runtime moved off both DaisyUI and Tailwind during the v0.62 CSS refactor; this line was direct hallucination-feeder. Replaced with an accurate description of the Dazzle-native design system (`/styles/dazzle.css`, tokens + components in @layer order) plus a pointer to ADR-0011.
+
+### Changed
+
+- **`src/dazzle/ui/runtime/site_renderer.get_shared_head_html` docstring now describes its actual responsibilities honestly:** the function still emits DaisyUI + Tailwind CDN tags because `site_section_builder` continues to emit legacy class names (`stat-value`, `stat-title`, `bg-base-*`) used by site/marketing pages. The workspace runtime no longer loads either library. Removing the CDN tags is a pending cleanup tracked alongside the broader site-pages migration.
+- **`.claude/CLAUDE.md` ADR-0008 gloss now scopes the SQLite ban correctly:** the ADR forbids SQLite in `src/dazzle_back/` (the FastAPI app runtime). The MCP server's knowledge-graph DB and `src/dazzle/core/process/version_manager.py` are outside that scope and legitimately use SQLite. Previous gloss read as a blanket project-wide ban.
+- **Stale docstrings cleaned across `back/runtime/response_helpers.py`, `back/runtime/renderers/site_section_builder.py`, `core/fidelity_scorer.py`, `testing/ux/contract_checker.py`** — references to DaisyUI/Tailwind that no longer reflect the implementation.
+- **`src/dazzle/layout/variants.py` and `src/dazzle/testing/viewport_suggestions.py`** now carry a `DEPRECATED (concept-drift sweep)` note in their module docstrings — both modules still expose Tailwind class strings (`variants.py` carries them in `VariantConfig.tailwind_classes`, `viewport_suggestions.py` returns them as `suggest_fix` hints) that no longer apply because the runtime has moved off Tailwind. `variants.py` has no consumers outside its own package; `viewport_suggestions.py` is still called by `viewport_runner` but its hints are inert. A follow-up cycle should either delete them or repurpose them onto the Dazzle-native primitives.
+- **`docs/reference/access-control.md`, `docs/reference/rbac-verification.md`, `docs/adr/0010-permit-scope-separation.md` updated to the post-#998 `as:` syntax.** ADR-0010 gets a 2026-05-17 note clarifying the rename without rewriting the historical decision text.
+- **`docs/architecture/overview.md`** technology-stack table no longer lists DaisyUI; describes Dazzle CSS as the active stylesheet and notes the legacy site-page carve-out.
+- **`docs/reference/htmx-templates.md`** CDN-dependencies section replaced with the actual runtime dependency list (server-bundled HTMX + `/styles/dazzle.css`) plus a note about the legacy site-page carve-out.
+
+### Agent Guidance
+
+- The persona-binding keyword on `scope:` rules is **`as:`**, not `for:`. The rename happened in #998 and has been documented inconsistently since. When generating DSL, always write `scope: <condition> as: <persona>` — `for:` will fail at parse time.
+- ADR-0008's SQLite ban applies to `src/dazzle_back/` specifically. The MCP server (knowledge-graph DB) and `core/process/version_manager.py` legitimately use SQLite — those are not app-data paths.
+- The workspace runtime uses Dazzle-native CSS (tokens + components from `/styles/dazzle.css`); site/marketing pages still load DaisyUI + Tailwind via CDN for back-compat (`stat-value`, `bg-base-*` class names emitted by `site_section_builder`). When adding new UI primitives, target the workspace runtime path and the Dazzle-native token vocabulary in `docs/CSS_MIGRATION_GUIDE.md`.
+
 ## [0.71.9] - 2026-05-17
 
 ### Added

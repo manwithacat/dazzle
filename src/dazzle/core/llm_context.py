@@ -158,12 +158,12 @@ The DSL is parsed into an immutable IR called `AppSpec`:
 - Single source consumed by all backends
 
 ### 3. DNR Frontend
-The Dazzle Runtime uses server-rendered HTMX templates:
+The Dazzle Runtime uses server-rendered HTMX templates (ADR-0011):
 - Jinja2 templates produce HTML with `hx-*` attributes
 - HTMX handles server interactions (search, forms, pagination)
 - dz.js micro-runtime manages ephemeral UI state (toggles, selections, transitions)
-- DaisyUI provides Tailwind CSS components
-- No build step — three CDN script tags, zero node_modules
+- Dazzle-native design system (`static/css/`) — tokens + components, no third-party CSS framework
+- No SPA frameworks (React/Vue/Svelte), no node_modules
 
 ### 4. Backends
 Backends generate concrete artifacts from AppSpec:

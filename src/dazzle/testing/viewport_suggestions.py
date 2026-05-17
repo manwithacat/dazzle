@@ -1,6 +1,14 @@
 """Auto-fix suggestions for viewport assertion failures.
 
 When a CSS assertion fails, suggests the Tailwind class that would fix it.
+
+DEPRECATED (concept-drift sweep, 2026-05-17): the Dazzle runtime no
+longer emits Tailwind classes, so suggested fixes like ``md:hidden``
+are inert — adding them to a template does nothing. The viewport_runner
+still calls ``suggest_fix`` when ``include_suggestions=True``, and the
+return value is attached to failed assertions as a hint, but a future
+cycle should either remap suggestions onto Dazzle's @media-based
+responsive primitives or remove the module outright.
 """
 
 from __future__ import annotations

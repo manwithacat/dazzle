@@ -312,7 +312,8 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
         # v0.45.0: Entities with permit: blocks must also have scope: blocks (#595).
         # Without scope: blocks, the API list endpoint default-denies all rows.
-        # Use `scope: all for: *` for intentionally public entities.
+        # Use `scope: all as: *` for intentionally public entities (`as:`
+        # renamed from `for:` in #998).
         # Skip framework-generated entities (e.g. AIJob) — users can't add scope
         # blocks to them, and their access rules are set by the framework.
         is_system = "system" in (getattr(entity, "patterns", None) or [])
@@ -324,7 +325,7 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 warnings.append(
                     f"Entity '{entity.name}' has permit: rules but no scope: blocks — "
                     f"API list endpoint will default-deny (return 0 rows). "
-                    f"Add scope: blocks or use 'scope: all for: *' for public access."
+                    f"Add scope: blocks or use 'scope: all as: *' for public access."
                 )
 
     return errors, warnings

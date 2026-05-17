@@ -110,9 +110,14 @@ HTMX swaps partial HTML from server
 | Technology | Role |
 |-----------|------|
 | **HTMX** | Declarative server interactions (`hx-get`, `hx-post`, `hx-swap`) |
-| **DaisyUI** | Tailwind CSS component library for consistent styling |
-| **Vanilla JS** | Lightweight client-side state (modals, toggles, transitions) |
+| **Dazzle CSS** | Bundled native stylesheet (`/styles/dazzle.css`) — tokens + components in @layer order, no third-party CSS framework |
+| **dz.js** | Lightweight client-side state (modals, toggles, transitions) |
 | **Jinja2** | Server-side template rendering |
+
+> The workspace runtime no longer loads Tailwind or DaisyUI. Site/marketing
+> pages still consume the legacy CDN tags via `site_renderer.get_shared_head_html`
+> for back-compat with `stat-value` / `bg-base-*` class names — see
+> `docs/CSS_MIGRATION_GUIDE.md` for the rename map.
 
 ### Template Structure
 

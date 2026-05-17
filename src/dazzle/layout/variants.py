@@ -9,6 +9,13 @@ Available variants:
 - classic: Default balanced layout (1.0x spacing)
 - dense: Higher information density for power users (0.75x spacing)
 - comfortable: More whitespace for readability (1.25x spacing)
+
+DEPRECATED (concept-drift sweep, 2026-05-17): the `tailwind_classes` field
+holds Tailwind utility strings that no longer style anything — the
+workspace runtime moved off Tailwind. This module is currently dead code
+(no consumers outside `dazzle.layout`), kept exported for back-compat.
+A future cycle should either delete it or repurpose `tailwind_classes`
+to carry Dazzle-native semantic class strings.
 """
 
 from __future__ import annotations  # required: forward reference
