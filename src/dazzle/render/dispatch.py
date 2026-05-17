@@ -44,13 +44,13 @@ from dazzle.render.fragment.escape import RawHTML
 
 if TYPE_CHECKING:
     from dazzle.core.ir.protocols import SurfaceLike
-    from dazzle.render.context import PageContext
+    from dazzle.render.context import CustomRenderCtx, PageContext
 
 
 def dispatch_render(
     surface: SurfaceLike,
     *,
-    ctx: dict[str, Any],
+    ctx: dict[str, Any] | CustomRenderCtx,
     services: Any,
 ) -> str:
     """Render ``surface`` using the renderer named by ``surface.render``,

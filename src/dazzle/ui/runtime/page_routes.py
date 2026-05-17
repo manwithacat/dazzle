@@ -46,6 +46,32 @@ except ImportError:
 # =============================================================================
 
 
+def _collect_request_params(request: Any) -> dict[str, str]:
+    """#1129: merge ``request.path_params`` + ``request.query_params``
+    into a flat ``{name: str}`` dict for ``CustomRenderCtx.params``.
+
+    Path params win on key collision because they're more specific
+    (the route declared them; the query string is opportunistic).
+    Both attributes are documented stable on
+    ``starlette.requests.Request``; defensive ``getattr`` calls so
+    test fixtures that pass a bare ``MagicMock`` don't crash here.
+    """
+    out: dict[str, str] = {}
+    qp = getattr(request, "query_params", None)
+    if qp is not None:
+        try:
+            out.update({str(k): str(v) for k, v in qp.items()})
+        except Exception:
+            pass
+    pp = getattr(request, "path_params", None)
+    if pp is not None:
+        try:
+            out.update({str(k): str(v) for k, v in pp.items()})
+        except Exception:
+            pass
+    return out
+
+
 async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, request: Any) -> Any:
     """Call ``get_auth_context`` and await the result if it's a coroutine (#1128).
 
@@ -1512,9 +1538,24 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
         return overlay + inner if overlay else inner
 
     if surface.mode == SurfaceMode.CUSTOM:
-        ctx_dict = _build_dispatch_ctx(render_ctx, surface)
+        # #1129: hand custom-mode renderers a typed CustomRenderCtx
+        # instead of the empty dict the previous build path produced.
+        # Existing renderers that take ``ctx: dict`` keep working —
+        # CustomRenderCtx is a sibling shape, not a replacement, so
+        # isinstance-aware renderers can opt into the typed form
+        # without breaking the registered Protocol contract.
+        from dazzle.render.context import CustomRenderCtx
+
+        custom_ctx = CustomRenderCtx(
+            request=prc.request,
+            params=_collect_request_params(prc.request),
+            services=services,
+            auth_ctx=prc.auth_ctx,
+            surface_name=surface.name,
+            workspace_name=getattr(surface, "workspace", None),
+        )
         try:
-            return _compose(dispatch_render(surface, ctx=ctx_dict, services=services))
+            return _compose(dispatch_render(surface, ctx=custom_ctx, services=services))
         except FragmentError as e:
             logger.warning(
                 "dispatch_render failed for custom-mode surface %r (render=%r); "

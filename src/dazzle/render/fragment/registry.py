@@ -31,9 +31,23 @@ class Renderer(Protocol):
     nothing from this module — but the dependency direction across the
     package boundary is one we don't want to invert). The dispatcher's
     call site uses the typed SurfaceSpec; the protocol just structurally
-    requires the right arity."""
+    requires the right arity.
 
-    def render(self, surface: Any, ctx: dict[str, Any]) -> str: ...
+    The ``ctx`` argument is the dispatched render context:
+
+    - For ``mode: list / view / create / edit`` the dispatcher passes
+      ``dict[str, Any]`` with the existing ``table`` / ``detail`` /
+      ``form`` sub-dicts (built by ``_build_dispatch_ctx``).
+    - For ``mode: custom`` the dispatcher passes a typed
+      ``CustomRenderCtx`` (#1129) — frozen dataclass exposing
+      ``request`` / ``params`` / ``services`` / ``auth_ctx`` /
+      ``surface_name`` / ``workspace_name``. Custom renderers can
+      ``isinstance(ctx, CustomRenderCtx)`` to opt into the typed
+      shape; the bare ``dict`` form remains accepted for back-compat
+      with existing renderers that haven't migrated.
+    """
+
+    def render(self, surface: Any, ctx: Any) -> str: ...
 
 
 class PrimitiveRegistry:

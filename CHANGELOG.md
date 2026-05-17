@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.31] - 2026-05-17
+
+### Added
+- **`CustomRenderCtx` for `mode: custom` renderers (#1129).** New frozen
+  dataclass in `dazzle.render.context` that custom-mode renderers
+  receive instead of a sparse dict. Exposes `request` / `params` /
+  `services` / `auth_ctx` / `surface_name` / `workspace_name` — the
+  set every project-side renderer was reaching for via defensive
+  `ctx.get(...)` calls against an undocumented shape. The
+  dispatcher's call site for `mode: custom` now constructs a
+  `CustomRenderCtx` from the page request context; LIST/VIEW/CREATE/
+  EDIT modes keep their existing `dict[str, Any]` shape. Renderers
+  that take `ctx: dict[str, Any]` keep working unchanged — Option A
+  from the issue (sibling shape, not a replacement). Migration:
+  add `isinstance(ctx, CustomRenderCtx)` to the renderer for IDE
+  completion + typed access.
+
+### Changed
+- `Renderer.render`'s `ctx` parameter is now typed `Any` (was
+  `dict[str, Any]`) in the structural protocol — opens the slot for
+  the `CustomRenderCtx` union without breaking renderers that
+  declare narrower types.
+
 ## [0.71.30] - 2026-05-17
 
 ### Added

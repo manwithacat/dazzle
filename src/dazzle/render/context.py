@@ -8,6 +8,7 @@ here.
 
 from __future__ import annotations  # required: forward reference
 
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -326,6 +327,47 @@ class PdfViewerContext(BaseModel):
 
     storage_name: str
     file_field: str
+
+
+@dataclass(frozen=True)
+class CustomRenderCtx:
+    """#1129: typed context passed to ``mode: custom`` renderers.
+
+    For LIST / VIEW / CREATE / EDIT modes the dispatcher populates
+    typed sub-dicts (``table`` / ``detail`` / ``form``) and renderers
+    consume them via the existing ``dict[str, Any]`` shape. For
+    ``mode: custom`` there's no analogous typed payload — the
+    dispatcher previously handed renderers an empty dict, so every
+    renderer reached into framework internals (cookies, query
+    params, request headers) via defensive ``ctx.get(...)`` calls
+    against an undocumented shape.
+
+    This dataclass is the contract: a frozen, IDE-completable shape
+    listing exactly what custom renderers can rely on. Future fields
+    can be added without breaking existing renderers (they ignore
+    unknown attributes).
+
+    Attributes:
+        request: The live ``starlette.requests.Request``. Renderers
+            that need cookies, headers, or htmx markers reach through
+            this directly.
+        params: Merged path + query params as ``str: str``. Path
+            params win on collision (path is more specific than query).
+        services: The ``RuntimeServices`` instance — entry point for
+            ``repository.aggregate()``, ``renderer_registry``, etc.
+        auth_ctx: Resolved auth context (or ``None`` for anonymous
+            requests). Renderers must treat ``None`` as anonymous.
+        surface_name: ``surface.name`` from the DSL.
+        workspace_name: Parent workspace name, or ``None`` for
+            surfaces not mounted under a workspace.
+    """
+
+    request: Any  # starlette Request — typed Any to avoid back→render arrow
+    params: dict[str, str]
+    services: Any  # RuntimeServices — typed Any for the same reason
+    auth_ctx: Any  # AuthContext | None
+    surface_name: str
+    workspace_name: str | None
 
 
 class PageContext(BaseModel):

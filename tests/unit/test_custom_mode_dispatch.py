@@ -63,10 +63,14 @@ def _make_prc(
     app_state = SimpleNamespace(services=services)
     request = SimpleNamespace(app=SimpleNamespace(state=app_state))
 
+    # `auth_ctx` is read by the #1129 CustomRenderCtx construction
+    # path and threaded into the typed ctx as-is. None is the anon
+    # default the production helper handles the same way.
     return SimpleNamespace(
         surface_name=surface.name,
         deps=SimpleNamespace(appspec=appspec),
         request=request,
+        auth_ctx=None,
         render_ctx=render_ctx,
         # The helper reads `prc.surface_name`; render_ctx is passed as
         # a separate argument.
@@ -88,21 +92,31 @@ def test_custom_mode_with_render_dispatches_even_with_empty_ctx() -> None:
 
     assert result == "<section>cloud-html</section>"
     handler.render.assert_called_once()
-    # Renderer received the surface AND a dict ctx (sparse, but a dict).
+    # #1129: renderer received the surface AND a typed CustomRenderCtx
+    # (was a sparse dict pre-#1129). The dict ctx remains the contract
+    # for non-custom modes via _build_dispatch_ctx.
+    from dazzle.render.context import CustomRenderCtx
+
     call_args = handler.render.call_args
     assert call_args[0][0] is surface
-    assert isinstance(call_args[0][1], dict)
+    assert isinstance(call_args[0][1], CustomRenderCtx)
+    assert call_args[0][1].surface_name == "tag_cloud"
 
 
-def test_custom_mode_dispatch_passes_sparse_ctx_when_no_table_or_detail() -> None:
-    """The renderer is expected to fetch its own data — the dispatched
-    ctx should reflect that (no spurious `table`/`detail`/`form` keys)."""
+def test_custom_mode_dispatch_passes_typed_custom_render_ctx() -> None:
+    """#1129: the renderer is expected to fetch its own data — the
+    dispatched ctx is now a typed ``CustomRenderCtx`` exposing
+    ``request`` / ``params`` / ``services`` / ``auth_ctx`` /
+    ``surface_name`` / ``workspace_name``, instead of the pre-#1129
+    sparse-dict shape."""
+    from dazzle.render.context import CustomRenderCtx
+
     surface = _make_surface("tag_cloud", SurfaceMode.CUSTOM, "word_cloud")
-    captured: dict = {}
+    captured: list = []
     handler = MagicMock()
 
     def _capture(_surface, ctx):
-        captured.update(ctx)
+        captured.append(ctx)
         return "ok"
 
     handler.render = MagicMock(side_effect=_capture)
@@ -110,8 +124,13 @@ def test_custom_mode_dispatch_passes_sparse_ctx_when_no_table_or_detail() -> Non
 
     _maybe_dispatch_inner_html(prc, prc.render_ctx)
 
-    # `_build_dispatch_ctx` returns {} when nothing populated.
-    assert captured == {}
+    assert len(captured) == 1
+    ctx = captured[0]
+    assert isinstance(ctx, CustomRenderCtx)
+    assert ctx.surface_name == "tag_cloud"
+    assert ctx.auth_ctx is None
+    # params merges path + query; both are absent in this fixture
+    assert ctx.params == {}
 
 
 def test_custom_mode_dispatch_falls_back_to_legacy_on_fragment_error() -> None:
