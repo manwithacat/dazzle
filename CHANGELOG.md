@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.17] - 2026-05-17
+
+### Fixed
+
+- **`mode: custom` surfaces with `render:` set now actually invoke the registered renderer — closes #1119.** Pre-#1119, `_maybe_dispatch_inner_html` in `page_routes.py` guarded against the no-table/no-detail/no-form case and returned `None` before reaching the renderer registry. This was intended to protect against the framework's own fragment adapter raising `NotImplementedError` on CREATE/EDIT modes, but it also dead-lettered `mode: custom` surfaces (which intentionally have no table/detail/form ctx — that's the point of custom mode). Penny Dreadful would have registered a renderer per the v0.71.15 contract, declared the name in `[renderers] extra` per the same release's manifest table, and the renderer would still not have fired. The guard now carves `mode: custom` out: when the surface's mode is `CUSTOM` and `render:` is set, dispatch unconditionally with the sparse ctx (`{}`) and let the renderer fetch its own data via `services`. CREATE/EDIT/etc. modes retain the legacy fallback behaviour.
+
+### Tests
+
+- **`tests/unit/test_custom_mode_dispatch.py`** (new, 5 tests) — pins both halves of the new contract: (1) custom-mode + `render:` set → renderer fires with empty ctx and the HTML is threaded through, (2) renderer exceptions still fall back to legacy, (3) non-custom modes (CREATE/etc.) with empty ctx still fall back as before (regression guard), (4) custom-mode without `render:` returns None at the top (existing behaviour, no change). Plus an end-to-end exercise of the v0.71.15 `examples/custom_renderer/` `WordCloudRenderer` shape against a real `_maybe_dispatch_inner_html` call — confirmed the worked example now dispatches.
+
+### Agent Guidance
+
+- **The `mode: custom` + `render:` combination is now load-bearing.** Combined with the manifest allowlist + registry registration from #1116/#1117, a project-defined renderer for a custom-mode surface fires end-to-end: TOML declares the name, app code registers the handler, the DSL declares the surface, and request-time dispatch invokes the handler with a sparse ctx. The `examples/custom_renderer/` worked example was already authored for this shape — pre-#1119 it would have been silently inert; v0.71.17 makes the example actually demonstrate dispatch.
+- **When adding a new `SurfaceMode`** that intentionally dispatches without table/detail/form ctx (analogous to `CUSTOM`), add a carve-out at the same place in `_maybe_dispatch_inner_html`. The existing legacy-fallback guard is conservative — it explicitly assumes ctx is populated. The carve-out pattern is small (`if surface.mode == NEW_MODE: dispatch and return`); the absence of a carve-out is what made #1119 a silent failure rather than a noisy one.
+
 ## [0.71.16] - 2026-05-17
 
 ### Changed

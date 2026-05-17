@@ -1409,16 +1409,41 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
 
     # Plans 3+8 wire LIST and VIEW through dispatch. If the surface
     # has render: set but neither table nor detail context (e.g. CREATE/
-    # EDIT/CUSTOM), the adapter would raise NotImplementedError — fall
-    # back to legacy. Plan 9 will extend this when form modes land.
+    # EDIT), the framework fragment adapter would raise
+    # NotImplementedError — fall back to legacy. Plan 9 will extend this
+    # when form modes land.
+    #
+    # `mode: custom` is the carve-out (#1119): the project-registered
+    # renderer is intentionally invoked with a sparse ctx — that's the
+    # whole point of custom mode. Pre-#1119, the guard below treated
+    # the empty ctx as "no dispatch needed" and silently fell back to
+    # legacy rendering, so a registered custom renderer for a
+    # mode: custom surface was never actually called. The early-return
+    # for CUSTOM mode below dispatches unconditionally and lets the
+    # renderer fetch its own data via `services`.
+    from dazzle.core.ir.surfaces import SurfaceMode
+    from dazzle.render.dispatch import dispatch_render
+    from dazzle.render.fragment.errors import FragmentError
+
+    if surface.mode == SurfaceMode.CUSTOM:
+        ctx_dict = _build_dispatch_ctx(render_ctx, surface)
+        try:
+            return dispatch_render(surface, ctx=ctx_dict, services=services)
+        except FragmentError as e:
+            logger.warning(
+                "dispatch_render failed for custom-mode surface %r (render=%r); "
+                "falling back to legacy path: %s",
+                surface.name,
+                surface.render,
+                e,
+            )
+            return None
+
     has_table = getattr(render_ctx, "table", None) is not None
     has_detail = getattr(render_ctx, "detail", None) is not None
     has_form = getattr(render_ctx, "form", None) is not None
     if not (has_table or has_detail or has_form):
         return None
-
-    from dazzle.render.dispatch import dispatch_render
-    from dazzle.render.fragment.errors import FragmentError
 
     ctx_dict = _build_dispatch_ctx(render_ctx, surface)
     try:
