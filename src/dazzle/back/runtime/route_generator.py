@@ -116,6 +116,15 @@ class HandlerConfig:
     entity_name: str = "Item"
     cedar_access_spec: "EntityAccessSpec | None" = None
     audit_logger: "AuditLogger | None" = None
+    # v0.71.19 (#1123): inputs the scope-filter resolver needs at write
+    # time so UPDATE/DELETE handlers can enforce `scope: <op>:` rules
+    # the same way LIST does. `fk_graph` lets the predicate compiler
+    # follow FK-path predicates; `admin_personas` carries the
+    # tenancy-admin bypass list (#957 cycle 5). Both come from the
+    # active AppSpec at route-construction time — alongside
+    # `cedar_access_spec` which is the parsed scope/permit rules.
+    fk_graph: "FKGraph | None" = None
+    admin_personas: list[str] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1429,6 +1438,10 @@ def _wrap_with_auth(
     audit_logger: "AuditLogger | None",
     include_field_changes: bool = False,
     needs_pre_read: bool = False,
+    # v0.71.19 (#1123): write-op scope enforcement plumbing — see
+    # `_build_cedar_handler` for the per-op enforcement logic.
+    fk_graph: "FKGraph | None" = None,
+    admin_personas: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Wrap a core handler with cedar / auth / noauth variant selection.
 
@@ -1461,6 +1474,8 @@ def _wrap_with_auth(
             include_field_changes=include_field_changes,
             needs_pre_read=needs_pre_read,
             is_create=_is_create,
+            fk_graph=fk_graph,
+            admin_personas=admin_personas,
         )
 
     if require_auth_by_default and auth_dep:
@@ -1491,6 +1506,11 @@ def _build_cedar_handler(
     include_field_changes: bool,
     needs_pre_read: bool,
     is_create: bool,
+    # v0.71.19 (#1123): inputs the scope-filter resolver needs for the
+    # UPDATE/DELETE enforcement path. None on legacy/test paths that
+    # don't pass them — falls through to the pre-#1123 behaviour.
+    fk_graph: "FKGraph | None" = None,
+    admin_personas: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Build a Cedar-policy-checked handler (with or without id param)."""
     from dazzle.core.access import AccessOperationKind
@@ -1506,10 +1526,26 @@ def _build_cedar_handler(
         from dazzle.core.access import AccessDecision
         from dazzle.render.access_evaluator import evaluate_permission
 
-        # Pre-read for operations that need existing record for policy eval
+        # Pre-read for operations that need existing record for policy eval.
+        # v0.71.19 (#1123): for UPDATE/DELETE, the pre-read now applies the
+        # scope predicate via list(filters={"id": id, **scope_result}) when
+        # `scope: <op>:` rules exist for the operation. Default-deny
+        # (no matching scope rule) returns 404 — same shape as LIST default-
+        # deny, prevents row-existence leaks. The unscoped read path is
+        # preserved when no scope rules apply to this op (back-compat) or
+        # when fk_graph is missing (legacy callers / tests).
         existing = None
         if needs_pre_read and id is not None:
-            existing = await service.execute(operation="read", id=id)
+            existing = await _scoped_pre_read(
+                service=service,
+                operation=operation,
+                id=id,
+                cedar_access_spec=cedar_access_spec,
+                auth_context=auth_context,
+                entity_name=entity_name,
+                fk_graph=fk_graph,
+                admin_personas=admin_personas,
+            )
             if existing is None:
                 raise HTTPException(status_code=404, detail="Not found")
 
@@ -2013,6 +2049,100 @@ def _resolve_scope_filters(
                 return None
 
     return {}  # Matched but no resolvable condition — treat as no filter
+
+
+async def _scoped_pre_read(
+    *,
+    service: "BaseService[Any]",
+    operation: str,
+    id: Any,
+    cedar_access_spec: "EntityAccessSpec",
+    auth_context: "AuthContext",
+    entity_name: str,
+    fk_graph: "FKGraph | None",
+    admin_personas: list[str] | None,
+) -> Any:
+    """Pre-read with `scope: <operation>:` enforcement applied (#1123).
+
+    For UPDATE/DELETE, this replaces the bare ``service.execute(operation=
+    "read", id=id)`` with a scope-validated lookup. Three outcomes match
+    the LIST handler's default-deny shape:
+
+    - **No `scope:` rules for this operation** → unscoped read (back-
+      compat with pre-#1123 behaviour and tests that don't construct
+      scope rules).
+    - **`scope:` matched with `all`** → unscoped read (no filter).
+    - **`scope:` matched with field condition / predicate** → scoped
+      read via ``service.list(filters={"id": id, **scope_result})``;
+      if no row comes back, returns ``None`` (handler raises 404).
+    - **`scope:` exists but no rule matches this role/op** → returns
+      ``None`` (handler raises 404 — same default-deny shape as LIST).
+
+    The 404 shape is deliberate: it makes scope-denied rows
+    indistinguishable from non-existent rows, preventing row-existence
+    leaks via IDOR-style probing.
+
+    `fk_graph` may be None on legacy/test paths — in that case we
+    fall through to the unscoped read (the predicate compiler path
+    requires fk_graph; without it we cannot compile a scope predicate
+    so we treat it as "no enforcement available here").
+    """
+    if not getattr(cedar_access_spec, "scopes", None):
+        return await service.execute(operation="read", id=id)
+
+    if fk_graph is None:
+        # Predicate compiler needs fk_graph; without it we can't compile
+        # the scope predicate. Fall back to unscoped pre-read so we don't
+        # silently default-deny on test fixtures lacking the FK graph.
+        return await service.execute(operation="read", id=id)
+
+    user_roles: set[str] = set()
+    user_id: str | None = None
+    if auth_context is not None and getattr(auth_context, "is_authenticated", False):
+        user = getattr(auth_context, "user", None)
+        if user is not None:
+            user_id = str(user.id) if getattr(user, "id", None) is not None else None
+            for r in getattr(user, "roles", []) or []:
+                r_name = r if isinstance(r, str) else getattr(r, "name", str(r))
+                user_roles.add(_normalize_role(r_name))
+
+    if user_id is None:
+        # Unauthenticated path — fall back to unscoped (the permit gate
+        # has already rejected unauth users with cedar_access_spec set;
+        # this branch is defensive).
+        return await service.execute(operation="read", id=id)
+
+    scope_result = _resolve_scope_filters(
+        cedar_access_spec,
+        operation,
+        user_roles,
+        user_id,
+        auth_context,
+        entity_name=entity_name,
+        fk_graph=fk_graph,
+        admin_personas=admin_personas,
+    )
+
+    if scope_result is None:
+        # No matching scope rule for this role/op — default-deny.
+        return None
+
+    if not scope_result:
+        # `scope: all` for this op — no filter, unscoped read.
+        return await service.execute(operation="read", id=id)
+
+    # Scope predicate compiled to a filter dict. Fold {"id": id} on top
+    # and use the list path's existing filter handling (which already
+    # understands the `__scope_predicate` special key emitted by the
+    # predicate compiler). page_size=1 short-circuits at the DB.
+    list_result = await service.execute(
+        operation="list",
+        page=1,
+        page_size=1,
+        filters={"id": id, **scope_result},
+    )
+    items = list_result.get("items") if isinstance(list_result, dict) else []
+    return items[0] if items else None
 
 
 def _should_bypass_tenant_filter(
@@ -3054,6 +3184,9 @@ def create_update_handler(spec: RouteSpec) -> Callable[..., Any]:
         audit_logger=audit_logger,
         include_field_changes=include_field_changes,
         needs_pre_read=True,
+        # #1123 — scope: update: enforcement at request time.
+        fk_graph=spec.handler.fk_graph,
+        admin_personas=spec.handler.admin_personas,
     )
 
 
@@ -3102,6 +3235,9 @@ def create_delete_handler(spec: RouteSpec) -> Callable[..., Any]:
         audit_logger=audit_logger,
         include_field_changes=include_field_changes,
         needs_pre_read=True,
+        # #1123 — scope: delete: enforcement at request time.
+        fk_graph=spec.handler.fk_graph,
+        admin_personas=spec.handler.admin_personas,
     )
 
 
@@ -3751,6 +3887,8 @@ class RouteGenerator:
             require_auth_by_default=self.require_auth_by_default,
             entity_name=entity_name or "Item",
             cedar_access_spec=_cedar_spec,
+            fk_graph=self.fk_graph,
+            admin_personas=self.admin_personas,
         )
 
         # POST -> CREATE

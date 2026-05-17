@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.19] - 2026-05-17
+
+### Added — **BREAKING** (write-op authorization)
+
+- **`scope:` rules on `update` and `delete` operations now enforce at runtime — closes #1123.** Pre-v0.71.19, `scope: update:` and `scope: delete:` rules were parsed, validated, and stored in IR — but never consulted at request time. The only runtime call site for `_resolve_scope_filters` was the LIST handler. This silently turned a documented capability into dead DSL: apps with `scope: update: created_by = current_user as: member` rules saw no enforcement, and the pre-ADR-0010 `permissions:` block style (which had enforced field conditions on writes) was a regression hiding behind the new split. SOC2 CC6.1 / ISO 27001 A.9.4.1 both require row-level authorization on write ops in multi-tenant systems; v0.71.19 closes that capability gap.
+
+  The runtime now applies the scope predicate as part of the pre-read SELECT that already runs for the permit-gate's `evaluate_permission` step. If the predicate rejects the target row, the request returns 404 (matching the LIST handler's default-deny shape — prevents row-existence leaks via IDOR-style probing). If no `scope:` rule matches the user's role for this operation, default-deny: 404.
+
+  **This is a breaking change.** Apps that previously had `scope: update:` / `scope: delete:` rules expecting them to be no-ops will start enforcing those rules. Audit your DSL with `dazzle lint --format=json | jq '.warnings[] | select(.kind == "no_scope_rule")'` before upgrading — the lint message is now op-differentiated and tells you exactly what each missing rule will do at runtime.
+
+- **`docs/reference/rbac-scope.md`** (new) — canonical reference for what `scope:` does for each operation, with a decision table, four canonical patterns (public-read / per-user-ownership / per-tenant-partition / append-only), default-deny semantics, and a v0.71.19 migration checklist.
+
+- **`scope: create:` enforcement deferred to v0.72.x** (#1124). Create-time scope rules are parsed and stored in IR as before, and the lint flags them with an explicit "not yet enforced" message. Express create-time row constraints via `invariant:` blocks or service-layer hooks until the v0.72.x design lands.
+
+### Changed
+
+- **`no_scope_rule` lint message differentiated by operation.** Pre-v0.71.19 the same "will see 0 records" message fired for every op — misleading for write ops (no row is "seen"; the request is rejected). Now:
+  - `read` / `list` → unchanged "will see 0 records".
+  - `update` / `delete` → "the request will 404 at runtime (scope predicate will reject every row for this role; add a `scope: <op>:` rule or `scope: all as: <persona>`)".
+  - `create` → "`scope: create:` is parsed but not yet enforced at runtime (see #1124 — deferred to v0.72.x). Field-level constraints on inserted rows should be expressed via invariants or service-layer checks for now."
+
+- **Every framework example dogfoods the new pattern.** `simple_task`, `support_tickets`, `ops_dashboard`, and `fieldtest_hub` all declare full `scope: read/create/update/delete` rules per the canonical patterns. The 56 `no_scope_rule` warnings the user surfaced in #1123 across these 4 examples are now zero. The `contact_manager` and `support_tickets` entities the user flagged as intentionally `unprotected_entity` for tutorial brevity now carry explicit comments saying so + pointer to `docs/reference/rbac-scope.md`. The `fieldtest_hub.IssueReport.update: reported_by_id = current_user as: tester` precedent — formerly dead DSL — now enforces.
+
+### Tests
+
+- **`tests/unit/test_scoped_pre_read.py`** (new, 5 tests) — pins all five branches of the new `_scoped_pre_read` helper (no-scope-rules fall-through, no-fk-graph fall-through, `scope: all` fall-through, no-matching-rule default-deny, unauthenticated fall-through).
+- **`tests/unit/test_rbac_matrix.py`** extended (4 new tests) — pin the new per-op lint message shapes for read/update/delete/create.
+- **`tests/unit/test_examples_rbac_lint_clean.py`** (new, 7 tests) — dogfood gate. Every framework example must pass its own RBAC lint with zero `no_scope_rule` warnings; new examples added to `examples/` are auto-discovered (gate fails if not declared).
+
+### Agent Guidance
+
+- **Write-op scope rules are now load-bearing.** When generating DSL with role-restricted entities, include `scope: update:` and `scope: delete:` rules alongside the `scope: list:` and `scope: read:` ones. The `read`-only or `list`-only fallback patterns from pre-v0.71.19 templates will silently default-deny on writes after the upgrade.
+- **The canonical patterns are documented in `docs/reference/rbac-scope.md`** — read that before writing scope rules from scratch. Pattern B (per-user ownership) is the most common for multi-tenant SaaS; Pattern C (per-tenant partition) for school/org/workspace partitioning.
+- **For `create`-time constraints**, the runtime path is currently `invariant:` (predicate-only, no auth context) or service-layer pre-create hooks (full auth context). `scope: create:` declarations are parsed but inert until #1124 lands.
+- **ADR-0010** got a 2026-05-17 amendment note for the write-op enforcement. The original ADR's "scope rules… applied only after permit:" language is preserved; the amendment clarifies it now applies to update/delete as well as list/read.
+
 ## [0.71.18] - 2026-05-17
 
 ### Fixed

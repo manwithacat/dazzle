@@ -86,6 +86,19 @@ entity Device "Device":
       as: tester
     list: all
       as: engineer, manager
+    read: assigned_tester_id = current_user
+      as: tester
+    read: all
+      as: engineer, manager
+    # v0.71.19 (#1123): engineers manage the device fleet. Testers see
+    # but don't mutate the device record itself (they file IssueReports
+    # against it instead). All write ops are engineer-only.
+    create: all
+      as: engineer
+    update: all
+      as: engineer
+    delete: all
+      as: engineer
 
   index batch_number
   index status
@@ -122,6 +135,15 @@ entity Tester "Tester":
   scope:
     list: all
       as: engineer, manager, tester
+    read: all
+      as: engineer, manager, tester
+    # v0.71.19 (#1123): tester management is engineer-controlled.
+    create: all
+      as: engineer
+    update: all
+      as: engineer
+    delete: all
+      as: engineer
 
   index email
   index location
@@ -179,6 +201,20 @@ entity IssueReport "Issue Report":
       as: tester
     list: all
       as: engineer, manager
+    read: reported_by_id = current_user
+      as: tester
+    read: all
+      as: engineer, manager
+    # v0.71.19 (#1123): testers update only their own reports (the
+    # `reported_by_id = current_user as: tester` rule above enforces
+    # this at runtime now — previously was dead DSL). Engineers
+    # update any. Delete is engineer-only (audit trail).
+    create: all
+      as: tester, engineer
+    update: all
+      as: engineer
+    delete: all
+      as: engineer
 
   index device_id
   index severity, status
@@ -217,6 +253,21 @@ entity TestSession "Test Session":
       as: tester
     list: all
       as: engineer, manager
+    read: tester_id = current_user
+      as: tester
+    read: all
+      as: engineer, manager
+    # v0.71.19 (#1123): testers see only their own sessions (list/read)
+    # and update only their own (tester_id = current_user enforcement).
+    # Engineers update any session.
+    create: all
+      as: tester, engineer
+    update: tester_id = current_user
+      as: tester
+    update: all
+      as: engineer
+    delete: all
+      as: engineer
 
   index device_id
   index tester_id
@@ -257,6 +308,15 @@ entity FirmwareRelease "Firmware Release":
   scope:
     list: all
       as: engineer, manager, tester
+    read: all
+      as: engineer, manager, tester
+    # v0.71.19 (#1123): firmware management is engineer-only.
+    create: all
+      as: engineer
+    update: all
+      as: engineer
+    delete: all
+      as: engineer
 
   index status
   index version
@@ -303,6 +363,20 @@ entity Task "Task":
       as: tester
     list: all
       as: engineer, manager
+    read: assigned_to_id = current_user
+      as: tester
+    read: all
+      as: engineer, manager
+    # v0.71.19 (#1123): testers update only tasks assigned to them.
+    # Engineers/managers create + update + delete any task.
+    create: all
+      as: engineer, manager
+    update: assigned_to_id = current_user
+      as: tester
+    update: all
+      as: engineer, manager
+    delete: all
+      as: engineer
 
   index status
   index assigned_to_id

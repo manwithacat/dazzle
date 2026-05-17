@@ -8,6 +8,22 @@
 > overloaded `for` keyword from the grammar. Wherever this document
 > refers to a `for:` clause, the current syntax is `as:`. The semantics
 > are unchanged.
+>
+> **Note added 2026-05-17 (v0.71.19):** `scope:` rules now enforce at
+> runtime for `update` and `delete` operations as well as `list` and
+> `read` (#1123). Pre-v0.71.19, write-op scope rules were parsed-but-
+> not-enforced — a regression in expressive power from the
+> pre-ADR-0010 `permissions:` block style that this ADR's split
+> introduced without anyone noticing. SOC2 CC6.1 / ISO 27001 A.9.4.1
+> require row-level authorization on write ops in multi-tenant
+> systems; the v0.71.19 fix closes that capability gap.
+>
+> `scope: create:` is parsed and stored in IR but **not yet** enforced
+> at runtime — see #1124 for the deferred design work. Until that
+> lands, express create-time row constraints via `invariant:` blocks
+> (predicate-only) or service-layer pre-create hooks (need auth
+> context). The runtime semantics for each operation are documented
+> in `docs/reference/rbac-scope.md`.
 
 ## Context
 

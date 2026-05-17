@@ -30,7 +30,15 @@ archetype Auditable:
 # ENTITIES
 # =============================================================================
 
-# User entity with role-based access
+# User entity with role-based access.
+#
+# Tutorial-only: permit:/scope: blocks intentionally omitted on User —
+# this app's primary access surface is on Ticket / Comment (which DO
+# declare full permit + scope rules). Adding permit/scope here would
+# also require deciding whether end-users can list/edit other users,
+# which is out of scope for the support-flow demo. Production DSL
+# would declare these — see `docs/reference/rbac-scope.md` (#1123)
+# and `examples/simple_task/`'s User entity for the canonical shape.
 entity User "User":
   display_field: name
   intent: "Authenticate users and define their access level for ticket operations"
@@ -124,6 +132,20 @@ entity Ticket "Support Ticket":
       as: customer
     list: all
       as: agent, manager
+    read: created_by = current_user
+      as: customer
+    read: all
+      as: agent, manager
+    # v0.71.19 (#1123): customers can read but not update their own
+    # tickets (filed-and-forget model). Agents/managers update any
+    # ticket. Delete is manager-only (matches permit). Customer creates
+    # are allowed; create-time scope deferred (#1124).
+    create: all
+      as: customer, agent, manager
+    update: all
+      as: agent, manager
+    delete: all
+      as: manager
 
   fitness:
     repr_fields: [title, status, priority, category, assigned_to]
@@ -158,6 +180,21 @@ entity Comment "Comment":
       as: customer
     list: all
       as: agent, manager
+    read: is_internal = false
+      as: customer
+    read: all
+      as: agent, manager
+    # v0.71.19 (#1123): customers never see internal-note rows
+    # (list/read scope blocks them); on the write side, customers can
+    # still create comments (no internal-flag enforcement on insert
+    # yet — that's the create-time scope work deferred to #1124).
+    # Agents/managers update any comment; manager-only deletes.
+    create: all
+      as: customer, agent, manager
+    update: all
+      as: agent, manager
+    delete: all
+      as: manager
 
   fitness:
     repr_fields: [ticket, author, content, is_internal]

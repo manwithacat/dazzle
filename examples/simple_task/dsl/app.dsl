@@ -49,6 +49,18 @@ entity User "Team Member":
   scope:
     list: all
       as: admin, manager
+    read: all
+      as: admin, manager
+    # v0.71.19 (#1123): write-op scope rules enforce at runtime for
+    # update/delete; create is parsed-but-not-enforced (#1124, v0.72.x).
+    # User management is admin-only — `all as: admin` matches the permit
+    # gate so the lint passes and downstream policy walks stay clean.
+    create: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
   fitness:
     repr_fields: [name, email, role, department, is_active]
@@ -101,6 +113,22 @@ entity Task "Task":
       as: member
     list: all
       as: admin, manager
+    read: assigned_to = current_user or created_by = current_user
+      as: member
+    read: all
+      as: admin, manager
+    # v0.71.19 (#1123): members can update tasks they created or are
+    # assigned to. Managers/admins update any task. Delete is admin-
+    # only (matches permit). `create: all` keeps the lint clean —
+    # create-time scope enforcement deferred to v0.72.x (#1124).
+    create: all
+      as: admin, manager, member
+    update: assigned_to = current_user or created_by = current_user
+      as: member
+    update: all
+      as: admin, manager
+    delete: all
+      as: admin
 
   fitness:
     repr_fields: [title, status, priority, assigned_to, due_date]
@@ -140,6 +168,19 @@ entity TaskComment "Task Comment":
   scope:
     list: all
       as: admin, manager, member
+    read: all
+      as: admin, manager, member
+    # v0.71.19 (#1123): comments are append-only for members (their
+    # own); admins edit/delete any. `update: author = current_user
+    # as: member` would enforce author-only updates at runtime — but
+    # the permit gate currently rejects member updates, so the scope
+    # rule only fires for admin (where `all` is right).
+    create: all
+      as: admin, manager, member
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
   fitness:
     repr_fields: [task, author, content]

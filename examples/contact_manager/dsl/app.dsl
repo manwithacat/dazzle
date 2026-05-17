@@ -16,7 +16,13 @@ persona admin "Administrator":
 persona user "User":
   default_workspace: contacts
 
-# Entity for contact information with LLM cognition metadata
+# Entity for contact information with LLM cognition metadata.
+#
+# Tutorial-only: permit:/scope: blocks intentionally omitted to keep
+# the minimal-demo entity focused on LLM cognition metadata. Production
+# DSL would declare permit + scope rules per ADR-0010 — see
+# `docs/reference/rbac-scope.md` (#1123) and `examples/simple_task/`
+# for the canonical write-op scope pattern.
 entity Contact "Contact":
   intent: "Store professional and personal contact information for relationship management"
   domain: crm

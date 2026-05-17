@@ -60,6 +60,16 @@ entity System "System":
   scope:
     list: all
       as: ops_engineer, admin
+    read: all
+      as: ops_engineer, admin
+    # v0.71.19 (#1123): System management is admin-only — `all as: admin`
+    # mirrors the permit gate. Ops engineers can list/read but not mutate.
+    create: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
   fitness:
     repr_fields: [name, service_type, status, response_time_ms, error_rate]
@@ -98,6 +108,16 @@ entity Alert "Alert":
   scope:
     list: all
       as: ops_engineer, admin
+    read: all
+      as: ops_engineer, admin
+    # v0.71.19 (#1123): Alerts are operational records — engineers can
+    # create + ack + resolve (update). Delete is admin-only (audit trail).
+    create: all
+      as: ops_engineer, admin
+    update: all
+      as: ops_engineer, admin
+    delete: all
+      as: admin
 
   fitness:
     repr_fields: [system, severity, message, status, triggered_at]
@@ -121,6 +141,19 @@ entity Integration "Integration":
     create: role(admin)
     update: role(admin)
     delete: role(admin)
+
+  scope:
+    list: all
+      as: ops_engineer, admin
+    read: all
+      as: ops_engineer, admin
+    # v0.71.19 (#1123): single-row admin-managed config — admin-only on writes.
+    create: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
 # =============================================================================
 # Persona

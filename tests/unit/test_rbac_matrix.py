@@ -591,3 +591,90 @@ def test_list_scope_falls_back_for_read_op() -> None:
     assert m.get("admin", "Task", "update") == PolicyDecision.PERMIT_NO_SCOPE
     assert m.get("admin", "Task", "delete") == PolicyDecision.PERMIT_NO_SCOPE
     assert m.get("admin", "Task", "create") == PolicyDecision.PERMIT_NO_SCOPE
+
+
+# ---------------------------------------------------------------------------
+# #1123 — `no_scope_rule` lint message differentiated per operation.
+# Pre-v0.71.19 the same "will see 0 records" message fired for every
+# op, which was misleading for create/update/delete (no row is "seen"
+# on write ops; the request is rejected). The message now matches each
+# op's actual runtime behaviour.
+# ---------------------------------------------------------------------------
+
+
+def test_no_scope_rule_message_list_says_will_see_zero_records() -> None:
+    """List operations: scope rejection yields an empty result set,
+    so the original "will see 0 records" message is accurate. Note:
+    we exercise list (not read) — the matrix has a READ→LIST scope
+    fallback (matrix.py:222) that masks the test condition for read."""
+    access = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.LIST, personas=["admin"])],
+        # Scope rule for `editor` only — admin has no matching scope.
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["editor"], condition=None)],
+    )
+    matrix = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=access)], [_make_persona("admin")])
+    )
+    w = next(
+        x
+        for x in matrix.warnings
+        if x.kind == "no_scope_rule" and x.entity == "Task" and x.operation == "list"
+    )
+    assert "will see 0 records" in w.message
+
+
+def test_no_scope_rule_message_update_describes_404() -> None:
+    """Update operations: scope rejection yields a 404 at request
+    time. Message must mention the 404 outcome + the fix."""
+    access = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.UPDATE, personas=["admin"])],
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["admin"], condition=None)],
+    )
+    matrix = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=access)], [_make_persona("admin")])
+    )
+    w = next(
+        x
+        for x in matrix.warnings
+        if x.kind == "no_scope_rule" and x.entity == "Task" and x.operation == "update"
+    )
+    assert "404" in w.message
+    assert "scope: update:" in w.message
+
+
+def test_no_scope_rule_message_delete_describes_404() -> None:
+    access = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.DELETE, personas=["admin"])],
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["admin"], condition=None)],
+    )
+    matrix = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=access)], [_make_persona("admin")])
+    )
+    w = next(
+        x
+        for x in matrix.warnings
+        if x.kind == "no_scope_rule" and x.entity == "Task" and x.operation == "delete"
+    )
+    assert "404" in w.message
+    assert "scope: delete:" in w.message
+
+
+def test_no_scope_rule_message_create_mentions_deferred_enforcement() -> None:
+    """Create operations: scope rules are parsed but NOT yet enforced
+    at runtime (#1124, deferred to v0.72.x). The message must say so
+    explicitly so adopters know to use invariants or service hooks
+    for create-time constraints in the meantime."""
+    access = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.CREATE, personas=["admin"])],
+        scopes=[_scope_rule(PermissionKind.LIST, personas=["admin"], condition=None)],
+    )
+    matrix = generate_access_matrix(
+        _make_appspec([_make_entity("Task", access=access)], [_make_persona("admin")])
+    )
+    w = next(
+        x
+        for x in matrix.warnings
+        if x.kind == "no_scope_rule" and x.entity == "Task" and x.operation == "create"
+    )
+    assert "not yet enforced" in w.message
+    assert "#1124" in w.message or "v0.72" in w.message
