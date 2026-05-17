@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.20] - 2026-05-17
+
+### Added
+
+- **`dazzle.log_setup.ensure_dazzle_logging_configured()` — default StreamHandler for `dazzle.*` loggers on bare-uvicorn boots (closes #1122).** The framework's INFO-level diagnostic tags (`onboarding.inject:*`, `onboarding.startup:*` from #1118 and the new `_no_scope_rule_message` per-op shapes from #1123) emit into a void when projects boot via plain `uvicorn app:app` without `logging.basicConfig`. CyFuture had to add their own basicConfig call during #1118 root-cause investigation before the tags reached Heroku logs. Now the framework's `create_app` calls this helper at boot — it conservatively attaches one StreamHandler to the `dazzle` logger only if NEITHER the root logger NOR `dazzle` already has handlers configured. Projects that already configure logging keep their config untouched. Idempotent across repeated calls. Level resolves from explicit arg → `DAZZLE_LOG_LEVEL` env var → `INFO` default.
+
+### Tests
+
+- **`tests/unit/test_log_setup.py`** (new, 11 tests) — pins all the contract requirements: attaches when nothing configured, no-ops when root or `dazzle` already has handlers, idempotent across repeated calls, level resolution arg→env→default, `propagate=False` to avoid double-emit when project later adds a root handler, end-to-end smoke that records reach stderr.
+
+### Agent Guidance
+
+- The `dazzle.*` logger family has a default handler attached at framework boot (since v0.71.20). Production-debug grep on framework tags works without any project-side `logging.basicConfig()` call — the absence of debug output now means "no event fired", not "handler not attached".
+- Other entry points (CLI commands, MCP server, LSP server, alembic env) should call `ensure_dazzle_logging_configured()` themselves at boot — only `create_app` does today. Filing this as a small follow-up could pick up the `dazzle inspect <ext-point>` introspector design conversation from #1120 too (CLI gets a default handler so introspection output looks consistent).
+- Set `DAZZLE_LOG_LEVEL=DEBUG` in your deployment env to drop the framework verbosity — the helper reads it on first call. Useful when debugging issues that require seeing the DEBUG-level `onboarding.inject:no-guides` skip path (common on apps without `guide` blocks declared).
+
 ## [0.71.19] - 2026-05-17
 
 ### Added — **BREAKING** (write-op authorization)

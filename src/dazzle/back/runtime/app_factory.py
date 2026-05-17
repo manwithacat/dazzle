@@ -59,6 +59,16 @@ def create_app(
         >>> app = create_app(appspec, database_url="postgresql://...")
         >>> # Run with uvicorn: uvicorn mymodule:app
     """
+    # #1122 — attach a default StreamHandler to `dazzle.*` loggers if
+    # the project hasn't configured logging itself. Otherwise the
+    # framework's INFO-level diagnostic tags (onboarding.inject:*,
+    # onboarding.startup:*, etc.) silently drop on bare uvicorn boots.
+    # Idempotent + conservative — does nothing if root or dazzle.*
+    # already has a handler attached. See `dazzle.log_setup`.
+    from dazzle.log_setup import ensure_dazzle_logging_configured
+
+    ensure_dazzle_logging_configured()
+
     from dazzle.back.runtime.server import DazzleBackendApp
 
     builder = DazzleBackendApp(
