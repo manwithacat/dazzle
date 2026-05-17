@@ -279,10 +279,11 @@ def _no_scope_rule_message(entity_name: str, role: str, op: str) -> str:
         )
     if op == "create":
         return (
-            f"{common} `scope: create:` is parsed but not yet enforced at "
-            "runtime (see #1124 — deferred to v0.72.x). Field-level "
-            "constraints on inserted rows should be expressed via "
-            "invariants or service-layer checks for now."
+            f"{common} the inserted row will 403 at runtime (predicate "
+            f"is evaluated against the payload after framework defaulting; "
+            f"see docs/reference/rbac-scope.md for the v1 supported shapes "
+            f"— ColumnCheck / UserAttrCheck / BoolComposite — and #1124 "
+            f"for the FK-path / EXISTS roadmap)"
         )
     # Future-proof: unknown op falls through to the generic message.
     return f"{common} this operation may default-deny at runtime"

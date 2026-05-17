@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.22] - 2026-05-17
+
+### Added — **BREAKING** (write-op authorization, continued)
+
+- **`scope: create:` v1 enforcement at runtime (closes #1124).** Closes the remaining gap from v0.71.19's update/delete enforcement. The framework now evaluates `scope: create:` predicates against the post-default payload (after `inject_current_user_refs` runs) and rejects with 403 if the predicate fails. The 403 carries `{"error": "scope_create_denied", "entity": ..., "reason": ...}` so debug surfaces can grep on it. v1 supports the simple-predicate subset only — ColumnCheck, UserAttrCheck, PathCheck depth 1, Tautology / Contradiction, and BoolComposite (and/or/not) over those. FK-path (depth > 1) and ExistsCheck / NotExistsCheck are rejected at link time with a clear message pointing at `docs/reference/rbac-scope.md` and #1124 for the v2 roadmap.
+
+  Per the design conversation (#1124), evaluation runs **post-default**: the predicate sees the row as it lands in DB, so `scope: create: created_by = current_user as: member` resolves against the auto-injected `created_by` field. Members can submit `{"title": "X"}` without a `created_by` and the framework's #774 injection brings the predicate to True.
+
+  **Breaking.** Apps with `scope: create:` rules previously parsed-but-not-enforced (the entire pre-v0.71.22 corpus, since enforcement was never live) will start enforcing. The v0.71.19 migration checklist in `docs/reference/rbac-scope.md` applies to create rules now too.
+
+### Added — Module
+
+- **`dazzle.back.runtime.scope_create_eval`** — narrow Python walker over the predicate algebra. No SQL, no DB roundtrip; pure IR introspection against a payload dict. Public API: `check_create_predicate(predicate, payload, user_id=, user_attrs=) -> bool` and `ScopeCreateUnsupportedError` (defensive backstop for shapes that bypassed the linker).
+
+### Changed
+
+- **Link-time rejection for unsupported scope-create shapes.** `dazzle.core.linker._assert_scope_create_predicate_is_v1_supported` walks every `scope: create:` predicate at link time and raises `RenderValidationError` if any node is `ExistsCheck` or `PathCheck` depth > 1. Users see the rejection at `dazzle validate` rather than at request time.
+- **`no_scope_rule` lint message for `create` op rewritten.** Pre-v0.71.22 said "parsed but not yet enforced … see #1124, deferred to v0.72.x". Now says "the inserted row will 403 at runtime …" with a pointer to the docs and #1124 (now scoped to the v2 FK-path / EXISTS roadmap rather than the whole feature).
+- **`docs/reference/rbac-scope.md`** decision-table row for `create` flipped from `⚠️ Deferred — see #1124` to `✅ Enforced since v0.71.22 (simple predicates)`. The "Why `create` is deferred" section rewritten as "How `create` enforcement works" with the v1 supported-shape list and a clear note that FK-path / EXISTS are deferred to #1124 v2.
+
+### Tests
+
+- **`tests/unit/test_scope_create_eval.py`** (new, 18 tests) — UserAttrCheck (id + named-attr), ColumnCheck (literal + current_user ValueRef), PathCheck depth-1, Tautology / Contradiction, BoolComposite and/or/not, defensive backstops for FK-path and ExistsCheck at runtime.
+- **`tests/unit/test_scope_create_link_time.py`** (new, 6 tests) — three v1-supported shapes that must link cleanly (ColumnCheck, UserAttrCheck, BoolComposite); two v1-unsupported shapes that must be rejected by the linker (FK-path, ExistsCheck); one regression test that the rejection is `create`-specific (the same FK-path on `update:` still links).
+- **`tests/unit/test_rbac_matrix.py`** updated — the create-op lint-message test was pinned to the pre-v0.71.22 "not yet enforced" wording; flipped to assert the new "will 403 at runtime" wording.
+
+### Agent Guidance
+
+- **`scope: create:` rules are now load-bearing.** When generating DSL with role-restricted entities, declare create-time row constraints via the supported predicate shapes (ColumnCheck, UserAttrCheck, BoolComposite). For FK-path or EXISTS-based constraints, fall back to `invariant:` blocks (predicate-only) or service-layer pre-create hooks (full auth context) until #1124 v2 lands.
+- The link-time rejection happens during `_compile_scope_predicates` in `dazzle.core.linker`. If you see `RenderValidationError: ... scope: create: does not yet support ...` during `dazzle validate`, that's the framework directing you to a simpler shape — not a bug.
+- **All five operations now enforce.** Read, list, update, delete, and create scope rules are all live at runtime. The v0.71.x line closes the full write-op authorization gap that motivated #1123 + #1124. Use `dazzle lint --format=json | jq '.warnings[] | select(.kind == "no_scope_rule")'` to audit any remaining gaps on your DSL.
+
 ## [0.71.21] - 2026-05-17
 
 ### Changed

@@ -2145,6 +2145,151 @@ async def _scoped_pre_read(
     return items[0] if items else None
 
 
+def _enforce_create_scope(
+    *,
+    cedar_access_spec: "EntityAccessSpec | None",
+    payload: dict[str, Any],
+    user_id: str | None,
+    user_roles: list[str],
+    entity_name: str,
+    request: "Request",
+) -> None:
+    """`scope: create:` enforcement (#1124, v0.71.22).
+
+    Walks any matching ``scope: create:`` rules against the post-default
+    payload and raises HTTPException(403) if any matching rule rejects
+    it. Three outcomes:
+
+    - **No `scope:` rules** → no check (back-compat with apps that
+      don't declare scope).
+    - **No matching scope-create rule for the user's role** → if other
+      `scope:` rules exist for this entity, default-deny (403); this
+      matches the LIST handler's default-deny semantic. If the
+      `scope:` block has no `create` rules at all, fall through (the
+      RBAC lint surfaces this as a `no_scope_rule` warning).
+    - **Matching rule with predicate** → walk the predicate; 403 if
+      it rejects.
+
+    The 403 carries a ``detail`` body naming the entity + operation so
+    debug surfaces can grep on it. We don't leak the exact field that
+    failed (avoids handing attackers a payload-tuning oracle).
+    """
+    if cedar_access_spec is None:
+        return
+    scopes = getattr(cedar_access_spec, "scopes", None)
+    if not scopes:
+        return
+
+    # Look for any `scope: create:` rules; bail out if none declared
+    # for this entity at all (RBAC lint warns about this separately;
+    # default-deny only applies when create rules exist but none match
+    # the user's role).
+    create_rules: list[Any] = []
+    for r in scopes:
+        rule_op = getattr(r, "operation", None)
+        if rule_op is None:
+            continue
+        rule_op_val = rule_op.value if hasattr(rule_op, "value") else str(rule_op)
+        if rule_op_val == "create":
+            create_rules.append(r)
+    if not create_rules:
+        return
+
+    normalised_roles = {_normalize_role(r) for r in (user_roles or [])}
+    matched: list[Any] = []
+    for r in create_rules:
+        rule_personas = list(getattr(r, "personas", []) or [])
+        if "*" in rule_personas or (normalised_roles & set(rule_personas)):
+            matched.append(r)
+
+    if not matched:
+        # Create rules exist but none matches this role — default-deny.
+        # Same shape as `_resolve_scope_filters` returning None on
+        # list/read/update/delete.
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "scope_create_denied",
+                "entity": entity_name,
+                "reason": (
+                    "No matching scope: create: rule for this role. "
+                    "See docs/reference/rbac-scope.md."
+                ),
+            },
+        )
+
+    # Any matched rule with `all` (no predicate) → unrestricted.
+    for r in matched:
+        if getattr(r, "predicate", None) is None and getattr(r, "condition", None) is None:
+            return
+
+    # Build the user-attr resolver from the auth context. The auth
+    # context carries `current_user.school` / etc. on the User entity;
+    # we pull them off `request.state.auth_context.user` (set by the
+    # _build_cedar_handler upstream).
+    user_attrs: dict[str, Any] = {}
+    auth_ctx = getattr(request.state, "auth_context", None) if hasattr(request, "state") else None
+    auth_user = getattr(auth_ctx, "user", None) if auth_ctx is not None else None
+    if auth_user is not None:
+        # Common cross-tenant attribute names; the framework's auth
+        # user model doesn't expose a generic .attrs dict so we copy
+        # known shapes. Any missing key resolves to None and the
+        # predicate naturally rejects.
+        for attr_name in ("school", "school_id", "org_id", "tenant_id", "team_id"):
+            val = getattr(auth_user, attr_name, None)
+            if val is not None:
+                user_attrs[attr_name] = val
+
+    # Run the v1-supported walker against the predicate. Any matched
+    # rule passing the walker is enough to allow the insert (OR of
+    # matched rules). If none pass → 403.
+    from dazzle.back.runtime.scope_create_eval import (
+        ScopeCreateUnsupportedError,
+        check_create_predicate,
+    )
+
+    for r in matched:
+        predicate = getattr(r, "predicate", None)
+        if predicate is None:
+            # Condition-tree fallback (legacy path). Not supported on
+            # create v1 — the linker rejects this case too. Defensive:
+            # default-deny if we hit it at runtime.
+            continue
+        try:
+            if check_create_predicate(
+                predicate,
+                payload,
+                user_id=str(user_id) if user_id else "",
+                user_attrs=user_attrs,
+            ):
+                return  # at least one matched rule passes — allow
+        except ScopeCreateUnsupportedError:
+            # Should have been caught at link time. Log + default-deny.
+            logger.warning(
+                "scope: create: predicate has an unsupported shape at "
+                "runtime — link-time validation should have caught this. "
+                "entity=%s",
+                entity_name,
+            )
+            continue
+
+    from fastapi import HTTPException
+
+    raise HTTPException(
+        status_code=403,
+        detail={
+            "error": "scope_create_denied",
+            "entity": entity_name,
+            "reason": (
+                "The inserted row does not satisfy the scope: create: "
+                "predicate for this role. See docs/reference/rbac-scope.md."
+            ),
+        },
+    )
+
+
 def _should_bypass_tenant_filter(
     auth_context: "AuthContext | None",
     admin_personas: list[str] | None,
@@ -3075,6 +3220,25 @@ def create_create_handler(
             )
 
         data = input_schema.model_validate(body)
+
+        # v0.71.22 (#1124): scope: create: enforcement. Predicate is
+        # evaluated AFTER current_user / persona-backed-ref injection
+        # (so `created_by = current_user as: member` evaluates against
+        # the resolved payload) but BEFORE service.execute, so a
+        # predicate rejection 403s without ever touching the DB. v1
+        # supports simple predicates only (ColumnCheck, UserAttrCheck,
+        # PathCheck depth 1, BoolComposite); FK-path and EXISTS are
+        # rejected at link time by the linker. See
+        # docs/reference/rbac-scope.md.
+        _scope_user_roles = list(_extra.get("user_roles") or [])
+        _enforce_create_scope(
+            cedar_access_spec=cedar_access_spec,
+            payload=data.model_dump(),
+            user_id=current_user,
+            user_roles=_scope_user_roles,
+            entity_name=entity_name,
+            request=request,
+        )
 
         # Handle idempotent duplicate: unique constraint on idempotency_key
         # returns a 200 instead of the normal 422 constraint error.

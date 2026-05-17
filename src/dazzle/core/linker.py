@@ -352,6 +352,12 @@ def _compile_scope_predicates(
     Because Pydantic models are frozen, this reconstructs the ScopeRule,
     AccessSpec, and EntitySpec using model_copy(update={...}).
 
+    Also (v0.71.22, #1124) walks every ``scope: create:`` predicate to
+    reject shapes the v1 runtime evaluator can't handle (FK-path
+    depth > 1, ExistsCheck / NotExistsCheck). Surfacing the rejection
+    at link time gives users the error during ``dazzle validate``
+    rather than at request time.
+
     Args:
         entities:             List of entity specifications.
         fk_graph:             FKGraph built from the entities.
@@ -360,6 +366,8 @@ def _compile_scope_predicates(
     Returns:
         Updated list of entity specifications with predicates attached.
     """
+    from dazzle.core.ir.domain import PermissionKind
+
     result: list[ir.EntitySpec] = []
     for entity in entities:
         if entity.access is None or not entity.access.scopes:
@@ -369,12 +377,72 @@ def _compile_scope_predicates(
         compiled_scopes: list[ir.ScopeRule] = []
         for rule in entity.access.scopes:
             predicate = build_scope_predicate(rule.condition, entity.name, fk_graph)  # type: ignore[operator]
+            # #1124 v1: reject unsupported predicate shapes on `scope: create:`
+            # at link time. The runtime evaluator only handles
+            # ColumnCheck / UserAttrCheck / PathCheck depth 1 /
+            # BoolComposite / Tautology / Contradiction — FK-path and
+            # EXISTS need a payload-time SQL probe that v1 doesn't
+            # implement yet.
+            if predicate is not None and rule.operation == PermissionKind.CREATE:
+                _assert_scope_create_predicate_is_v1_supported(predicate, entity.name, rule)
             compiled_scopes.append(rule.model_copy(update={"predicate": predicate}))
 
         new_access = entity.access.model_copy(update={"scopes": compiled_scopes})
         result.append(entity.model_copy(update={"access": new_access}))
 
     return result
+
+
+def _assert_scope_create_predicate_is_v1_supported(
+    predicate: object,
+    entity_name: str,
+    rule: ir.ScopeRule,
+) -> None:
+    """Walk a scope:create: predicate and raise on shapes v1 can't handle.
+
+    The v1 runtime evaluator (``dazzle.back.runtime.scope_create_eval``)
+    supports the simple-predicate subset: ColumnCheck, UserAttrCheck,
+    PathCheck depth 1, Tautology / Contradiction, and BoolComposite
+    over those. FK-path predicates (depth > 1) and junction-table
+    predicates (ExistsCheck / NotExistsCheck) need a payload-time SQL
+    probe that v1 doesn't implement.
+
+    Raised as RenderValidationError so it propagates through the same
+    error path as the other link-time DSL validation issues — users
+    see it at ``dazzle validate`` time, not at request time.
+    """
+    from dazzle.core.ir.predicates import (
+        BoolComposite,
+        ExistsCheck,
+        PathCheck,
+    )
+
+    personas = ", ".join(getattr(rule, "personas", []) or []) or "(no personas)"
+    location = f"entity {entity_name!r} scope: create: as: {personas}"
+
+    if isinstance(predicate, ExistsCheck):
+        raise RenderValidationError(
+            f"{location}: `scope: create:` does not yet support "
+            f"`via <junction>(...)` (ExistsCheck) predicates in v1. "
+            f"Express the constraint as an `invariant:` block or a "
+            f"service-layer pre-create hook for now. See "
+            f"docs/reference/rbac-scope.md and #1124 for the design "
+            f"conversation."
+        )
+    if isinstance(predicate, PathCheck) and len(predicate.path) > 1:
+        raise RenderValidationError(
+            f"{location}: `scope: create:` does not yet support FK-path "
+            f"predicates (depth > 1) in v1 (got path={predicate.path!r}). "
+            f"The framework would need a SELECT to resolve the FK chain "
+            f"at payload time; deferred until adoption signal indicates "
+            f"the per-create roundtrip is worth it. Express the "
+            f"constraint as an `invariant:` block or a service-layer "
+            f"pre-create hook for now. See docs/reference/rbac-scope.md "
+            f"and #1124."
+        )
+    if isinstance(predicate, BoolComposite):
+        for child in predicate.children:
+            _assert_scope_create_predicate_is_v1_supported(child, entity_name, rule)
 
 
 def _build_security_config(app_config: ir.AppConfigSpec | None) -> SecurityConfig:

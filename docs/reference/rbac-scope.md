@@ -21,7 +21,7 @@ when it enforces at runtime, and what the canonical idiom looks like.
 | `read` | Pre-query — folded into the WHERE of the read-by-id query. (Plumbed via the same path as `list` in v0.71.19.) | "will see 0 records" | ✅ Enforced since v0.71.19 |
 | `update` | Pre-write — folded into the WHERE of the pre-read that the permit-gate uses; if the predicate rejects the target row, the request 404s before the update SQL runs. | "the request will 404 at runtime — add a `scope: update:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.19 |
 | `delete` | Same as `update`. | Same as `update`. | ✅ Enforced since v0.71.19 |
-| `create` | Parsed and stored in IR, but **not yet enforced at runtime.** | "`scope: create:` is parsed but not yet enforced at runtime (see #1124 — deferred to v0.72.x)" | ⚠️  Deferred — see #1124 |
+| `create` | Pre-write — predicate is evaluated against the payload AFTER framework defaulting (`current_user` injection, persona-backed refs) but BEFORE service insert. 403 with `scope_create_denied` detail if the predicate rejects. v1 supports ColumnCheck / UserAttrCheck / PathCheck depth 1 / BoolComposite; FK-path (depth > 1) and ExistsCheck are rejected at link time (see #1124 for the v2 roadmap). | "the inserted row will 403 at runtime — add a `scope: create:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.22 (simple predicates) |
 
 The `update` / `delete` enforcement landed in v0.71.19 as part of
 closing #1123 ("RBAC no_scope_rule lint fires 56× across own
@@ -31,25 +31,41 @@ expressiveness it didn't deliver. SOC2 CC6.1 / ISO 27001 A.9.4.1
 require row-level authorization on write ops in multi-tenant
 systems; this release closes that gap for `update` and `delete`.
 
-## Why `create` is deferred
+## How `create` enforcement works
 
-`create` scope predicates are conceptually different from `read` /
-`list` / `update` / `delete`: there's no existing row to filter
-against. The natural semantic — "the inserted row must satisfy the
-predicate" — needs a separate evaluation path (the predicate is
-checked against the request payload, not against any row in the
-database). That's tracked separately as #1124 and will land in
-v0.72.x. Until then, the lint flags `create:` rules that are
-declared in DSL but not enforced, so adopters aren't surprised.
+`create` predicates are conceptually different from `read` / `list` /
+`update` / `delete`: there's no existing row to filter against —
+there's a payload waiting to become a row. v0.71.22 (#1124) ships
+enforcement for the simple-predicate subset:
 
-For now, express create-time constraints via:
+- **What's supported:** `ColumnCheck` (`field op literal`),
+  `UserAttrCheck` (`field op current_user[.attr]`), `PathCheck`
+  depth 1, `Tautology` / `Contradiction`, and `BoolComposite`
+  (`and` / `or` / `not`) over those. This covers ~80% of real-world
+  scope-create rules.
+- **What's rejected at link time:** `PathCheck` with depth > 1
+  (FK-path predicates like `manuscript.school_id = current_user.school`)
+  and `ExistsCheck` / `NotExistsCheck` (junction-table predicates
+  like `via TeamMembership(...)`). These need a payload-time SQL
+  probe that v1 doesn't implement; tracked under #1124 v2.
+
+Predicate evaluation runs AFTER framework defaulting — specifically
+after `inject_current_user_refs` (#774) has filled `current_user`
+into any missing `ref User` columns. This means
+`scope: create: created_by = current_user as: member` evaluates
+against the resolved payload, so members can omit `created_by` from
+the request body and the framework's auto-injection brings the
+predicate to True.
+
+When the v1 supported set isn't enough, express the constraint via:
 
 - **`invariant:` blocks** — predicate-style checks the framework
   evaluates at insert time. Good for "the new row's `X` must equal
   `Y`" rules that don't depend on user context.
 - **Service-layer hooks** — register a pre-create hook on the
   service that rejects payloads failing your check. Good for rules
-  that need the auth context (`current_user.school`, etc.).
+  that need FK-path or junction-table semantics until #1124 v2
+  lands.
 
 ## Syntax
 

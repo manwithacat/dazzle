@@ -659,11 +659,10 @@ def test_no_scope_rule_message_delete_describes_404() -> None:
     assert "scope: delete:" in w.message
 
 
-def test_no_scope_rule_message_create_mentions_deferred_enforcement() -> None:
-    """Create operations: scope rules are parsed but NOT yet enforced
-    at runtime (#1124, deferred to v0.72.x). The message must say so
-    explicitly so adopters know to use invariants or service hooks
-    for create-time constraints in the meantime."""
+def test_no_scope_rule_message_create_says_will_403() -> None:
+    """Create operations: scope rules now enforce at runtime as of
+    v0.71.22 (#1124). The message must say so — pre-v0.71.22 message
+    said "not yet enforced" which is no longer accurate."""
     access = AccessSpec(
         permissions=[_permit_rule(PermissionKind.CREATE, personas=["admin"])],
         scopes=[_scope_rule(PermissionKind.LIST, personas=["admin"], condition=None)],
@@ -676,5 +675,6 @@ def test_no_scope_rule_message_create_mentions_deferred_enforcement() -> None:
         for x in matrix.warnings
         if x.kind == "no_scope_rule" and x.entity == "Task" and x.operation == "create"
     )
-    assert "not yet enforced" in w.message
-    assert "#1124" in w.message or "v0.72" in w.message
+    assert "403" in w.message
+    # No longer says "not yet enforced" — that was the pre-v0.71.22 message.
+    assert "not yet enforced" not in w.message
