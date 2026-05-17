@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.24] - 2026-05-17
+
+### Added
+
+- **Public policy gate for route overrides — closes #1126.** Closes the remaining write-op authorisation gap: framework-generated CRUD routes have evaluated `permit:` + `scope:` rules since v0.71.19/v0.71.22, but `# dazzle:route-override` handlers had no public path back into the same machinery. AegisMark's security audit of their 10 override files found 5 that hand-rolled the textbook ownership check (correct, but drifts independently of the DSL) and 5 with real gaps including two HIGH-severity IDORs. This release exposes the framework's enforcement primitives so overrides can declare "this route implements `<Entity>.<op>`" and inherit the same gate.
+- **Declarative form — `# dazzle:implements <Entity>.<op> via <param>`.** Companion header to `# dazzle:route-override`. Framework wraps the handler so permit + scope evaluation runs BEFORE dispatch against the row at the named path parameter. Drift-free: when the DSL rule changes, the gate's behaviour changes automatically.
+- **Imperative form — `dazzle.back.runtime.policy.check_entity_op(request, entity, op, row_id=...)`.** Same primitive, called from the handler body for routes that don't fit the `via <path_param>` shape (body-bound IDs, payload-conditional auth, multi-entity writes). For `create`, pass `payload=` instead of `row_id=`.
+- **`PolicyRegistry` on `app.state.policy_registry`** — per-entity bundle of (access_spec, fk_graph, admin_personas, service) built once at app boot from the same inputs the route generator consumes. Both surfaces above use this; project code can reach it directly when the public helpers don't cover a use case.
+
+### Changed
+
+- **`route_overrides.RouteOverrideDescriptor`** gained three new fields (`implements_entity`, `implements_op`, `implements_via`), all `None` by default. Legacy overrides without the annotation register unchanged; only those with `# dazzle:implements ...` get wrapped.
+- **`server.py` app-boot path** now constructs `PolicyRegistry` after `RouteGenerator` and attaches it to `app.state.policy_registry`. ~25 LOC; no impact on apps not using overrides.
+
+### Tests
+
+- **`tests/unit/test_policy_check_entity_op.py`** (new, 10 tests) — wiring guards (RuntimeError when registry missing, 401 when unauth), permit gate (403 on deny), scope gate for read/update/delete (404 when row missing or scope rejects), create-mode permit + payload requirement, op validation.
+- **`tests/unit/test_route_override_implements.py`** (new, 7 tests) — annotation parser (populates / leaves None / ignores invalid op), wrapper behaviour (invokes underlying on pass, short-circuits 403 on deny, defensive 500s when wrapper can't reach the registry or path param).
+
+### Agent Guidance
+
+- **For ownership-checked overrides** (the 80% case — a single row identified by path param), add `# dazzle:implements <Entity>.<op> via <param>` alongside the existing `# dazzle:route-override` header. The handler body becomes "authorised by construction": you can write the side-effects without re-checking authorisation.
+- **For body-shaped or multi-entity overrides** (the 20% case), call `check_entity_op(request, entity, op, row_id=...)` (for read/update/delete) or `check_entity_op(request, entity, "create", payload=...)` (for create) from the handler body. Same primitive, imperative form.
+- **Read `docs/reference/rbac-scope.md` § Route overrides** for failure modes (401/403/404/500 shapes), v1 supported predicate shapes on create-mode wrapping, and the legacy-preserved unguarded path for intentionally-auth-free overrides (e.g. HMAC-verified webhooks).
+- **Compliance evidence chain.** ISO 27001 A.9.4.1 / SOC 2 CC6.1 audits prefer "policy declared, framework enforced" over "policy declared, project hand-checked". v0.71.24 lets adopters strengthen the evidence chain from override files without re-encoding the DSL.
+
 ## [0.71.23] - 2026-05-17
 
 ### Added

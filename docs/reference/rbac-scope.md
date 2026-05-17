@@ -291,6 +291,83 @@ gap.
 3. Test write paths against role-restricted users to confirm the
    new 404s match expectations.
 
+## Route overrides — opting back into framework enforcement (#1126)
+
+Project route overrides (`# dazzle:route-override` files under your
+project's `routes/` directory) are arbitrary code: they bypass the
+framework's permit/scope machinery by default. v0.71.24 adds two ways
+to opt back in.
+
+### Declarative — `# dazzle:implements`
+
+Add a companion header to the route-override declaration:
+
+```python
+# dazzle:route-override POST /api/cohort-assessment/{assessment_id}/delete
+# dazzle:implements CohortAssessment.delete via assessment_id
+
+async def handler(request: Request, assessment_id: str):
+    # Framework has already, before dispatch:
+    #   1. authenticated the user (401 if not)
+    #   2. resolved the row at `assessment_id` (404 if not found)
+    #   3. evaluated `permit: delete` against the role (403 if denied)
+    #   4. evaluated `scope: delete:` against the row (404 if denied)
+    # Handler is authorised by construction.
+    ...
+```
+
+Semantics: `implements: <Entity>.<op> via <path_param>` tells the
+framework which DSL entity + operation this route logically implements
+and which path parameter holds the target row's primary key. The
+framework wraps the handler so the same permit + scope pipeline runs
+that the framework-generated CRUD route would.
+
+Drift-free: when the DSL rule changes, the gate's behaviour changes
+automatically. Adopters get the textbook ownership check with zero
+hand-rolled SQL.
+
+### Imperative — `check_entity_op`
+
+For overrides that take the ID in the body, write to multiple entities,
+or need authorisation after some payload computation:
+
+```python
+from dazzle.back.runtime.policy import check_entity_op
+
+async def handler(request: Request):
+    body = await request.json()
+    # Permit + scope evaluation; raises HTTPException(403/404) on denial.
+    row = await check_entity_op(
+        request, "StudentProfile", "update", row_id=body["pupil_id"],
+    )
+    # `row` is the framework-fetched record (no need to re-query).
+    ...
+```
+
+Same primitive as the declarative form. For `create`, pass `payload`
+instead of `row_id` — the framework walks the `scope: create:`
+predicate against the post-default payload.
+
+### Failure modes
+
+- **Annotation absent** → handler runs unguarded (legacy behaviour
+  preserved for overrides that intentionally take their own
+  authorisation, e.g. webhook endpoints with HMAC verification).
+- **Permit denies** → 403 before the handler body.
+- **Scope denies / row missing** → 404 before the handler body
+  (default-deny shape; mirrors LIST handler).
+- **Unauthenticated** → 401 (the override use case assumes auth has
+  run upstream).
+- **Wrapper can't find Request or named path param** → 500 with
+  diagnostic detail. Framework-bug-shaped, not user-error-shaped.
+
+### v1 supported predicate shapes for `scope: create:` enforcement
+
+Same as the framework's own create-route enforcement (#1124):
+ColumnCheck, UserAttrCheck, PathCheck depth 1, BoolComposite over
+those. FK-path (depth > 1) and ExistsCheck/NotExistsCheck are rejected
+at link time.
+
 ## Further reading
 
 - **ADR-0009** — predicate algebra (`docs/adr/0009-predicate-algebra.md`)

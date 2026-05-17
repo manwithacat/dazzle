@@ -34,6 +34,17 @@ _ROUTE_OVERRIDE_RE = re.compile(
     r"#\s*dazzle:route-override\s+(GET|POST|PUT|PATCH|DELETE)\s+(\S+)", re.IGNORECASE
 )
 
+# v0.71.24 (#1126) — declarative policy gate. Project overrides opt
+# back into DSL permit/scope enforcement by naming the entity + op the
+# handler logically implements, plus the path parameter that holds the
+# target row's PK. The framework wraps the handler so permit/scope
+# evaluation runs BEFORE dispatch. See `policy.check_entity_op` for
+# the imperative form (body-shaped ops).
+_IMPLEMENTS_RE = re.compile(
+    r"#\s*dazzle:implements\s+([A-Za-z_][A-Za-z0-9_]*)\.([a-z]+)\s+via\s+([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+
 # Valid Python module path: dotted identifier segments only.
 # Enforces that extension router specs from dazzle.toml resolve to
 # real package paths and prevents injection via the config value.
@@ -49,6 +60,13 @@ class RouteOverrideDescriptor:
     path: str  # Route path (e.g. /app/tasks/create)
     source_path: Path
     handler: Callable[..., Any]
+    # v0.71.24 (#1126) — declarative policy-gate annotation. When set,
+    # the framework wraps `handler` so permit + scope evaluation runs
+    # against the row at `kwargs[implements_via]` before dispatch.
+    # All three are populated together or all None.
+    implements_entity: str | None = None
+    implements_op: str | None = None  # one of: list, read, create, update, delete
+    implements_via: str | None = None  # path-param name holding the row's PK
 
 
 def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
@@ -86,15 +104,53 @@ def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
             logger.warning("No callable 'handler' function found in %s", py_file)
             continue
 
+        # v0.71.24 (#1126) — optional `# dazzle:implements <Entity>.<op>
+        # via <param>` annotation. When present, the route is wrapped
+        # at registration time with the framework's permit + scope
+        # policy gate. Absent → handler runs unguarded (legacy
+        # behaviour preserved for overrides that intentionally take
+        # their own authorisation).
+        impl_match = _IMPLEMENTS_RE.search(content)
+        implements_entity: str | None = None
+        implements_op: str | None = None
+        implements_via: str | None = None
+        if impl_match:
+            implements_entity = impl_match.group(1)
+            implements_op = impl_match.group(2).lower()
+            implements_via = impl_match.group(3)
+            if implements_op not in {"list", "read", "create", "update", "delete"}:
+                logger.warning(
+                    "Route override %s: `# dazzle:implements` op must be one of "
+                    "list/read/create/update/delete, got %r — annotation ignored",
+                    py_file.name,
+                    implements_op,
+                )
+                implements_entity = implements_op = implements_via = None
+
         overrides.append(
             RouteOverrideDescriptor(
                 method=method,
                 path=path,
                 source_path=py_file,
                 handler=handler,
+                implements_entity=implements_entity,
+                implements_op=implements_op,
+                implements_via=implements_via,
             )
         )
-        logger.info("Discovered route override: %s %s from %s", method, path, py_file)
+        if implements_entity:
+            logger.info(
+                "Discovered route override: %s %s from %s — implements "
+                "%s.%s via %s (framework policy gate active)",
+                method,
+                path,
+                py_file,
+                implements_entity,
+                implements_op,
+                implements_via,
+            )
+        else:
+            logger.info("Discovered route override: %s %s from %s", method, path, py_file)
 
     return overrides
 
@@ -278,7 +334,20 @@ def build_override_router(routes_dir: Path) -> APIRouter | None:
     for override in overrides:
         decorator = method_map.get(override.method)
         if decorator:
-            decorator(override.path)(override.handler)
+            # v0.71.24 (#1126): when the override declared
+            # `# dazzle:implements`, wrap the handler so permit + scope
+            # evaluation runs against the row at `kwargs[via]` before
+            # the user's code sees the request. Otherwise register the
+            # bare handler — legacy override behaviour preserved.
+            handler = override.handler
+            if override.implements_entity:
+                handler = _wrap_with_policy_gate(
+                    handler,
+                    entity=override.implements_entity,
+                    op=override.implements_op or "",
+                    via=override.implements_via or "",
+                )
+            decorator(override.path)(handler)
             logger.info(
                 "Registered route override: %s %s -> %s",
                 override.method,
@@ -287,3 +356,98 @@ def build_override_router(routes_dir: Path) -> APIRouter | None:
             )
 
     return router
+
+
+def _wrap_with_policy_gate(
+    handler: Callable[..., Any],
+    *,
+    entity: str,
+    op: str,
+    via: str,
+) -> Callable[..., Any]:
+    """Wrap an override handler so permit + scope evaluation runs first.
+
+    Closes #1126. The wrapper calls
+    ``dazzle.back.runtime.policy.check_entity_op`` against the row at
+    ``kwargs[via]`` BEFORE invoking the underlying handler. On reject
+    the wrapped call raises ``HTTPException(403 or 404)`` and the
+    handler body never runs — matching the framework's own CRUD-route
+    semantics.
+
+    Limitations of v1:
+
+    - The path param named ``via`` must hold the row's PK directly. If
+      the override extracts the row identity from the body or composes
+      it from multiple path params, use the imperative form
+      ``check_entity_op(request, ..., row_id=...)`` from the handler
+      body instead.
+    - ``op == "create"`` is supported but ``via`` is unused (the payload
+      lives on the request body, which the handler should parse and
+      pass to the imperative form). v1 wraps create-mode declarations
+      with a permit-gate only; for full create-time scope enforcement
+      use the imperative form.
+
+    Async-only: the wrapper is async, and the underlying handler must
+    be too (or be a sync function that returns an awaitable). FastAPI
+    rejects sync route handlers in the override path — this is the
+    same constraint the unwrapped path enforced.
+    """
+    import functools
+
+    from fastapi import HTTPException, Request
+
+    @functools.wraps(handler)
+    async def gated_handler(*args: Any, **kwargs: Any) -> Any:
+        # Locate the Request positional/keyword. FastAPI passes it by
+        # name when the handler's signature annotates it; some hand-
+        # rolled overrides take it positionally.
+        request: Request | None = kwargs.get("request")
+        if request is None:
+            for arg in args:
+                if isinstance(arg, Request):
+                    request = arg
+                    break
+        if request is None:
+            # Defensive: if the override doesn't take a Request, we
+            # can't reach app.state.policy_registry. Surface a clear
+            # 500 rather than silently dropping the policy check.
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "policy_gate_missing_request",
+                    "reason": (
+                        "Route override declared `# dazzle:implements` but "
+                        "the handler signature has no `request: Request` "
+                        "parameter — the framework can't reach the policy "
+                        "registry without it."
+                    ),
+                },
+            )
+
+        # Resolve the row identifier from the path-param kwargs.
+        row_id = kwargs.get(via) if op != "create" else None
+        if op != "create" and row_id is None:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "policy_gate_missing_path_param",
+                    "reason": (
+                        f"Route override declared `# dazzle:implements ... "
+                        f"via {via}` but no path parameter named {via!r} was "
+                        "found on the request — check the route path."
+                    ),
+                },
+            )
+
+        from dazzle.back.runtime.policy import check_entity_op
+
+        # `check_entity_op` raises HTTPException on denial; the
+        # underlying handler runs only when the gate passes.
+        await check_entity_op(request, entity, op, row_id=row_id)
+
+        result = handler(*args, **kwargs)
+        if hasattr(result, "__await__"):
+            return await result
+        return result
+
+    return gated_handler

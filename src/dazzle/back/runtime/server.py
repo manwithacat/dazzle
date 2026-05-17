@@ -1229,6 +1229,31 @@ class DazzleBackendApp:
         )
         self._app.include_router(router)
 
+        # v0.71.24 (#1126) — build the public policy registry from the
+        # same inputs the route generator just consumed. Project route
+        # overrides reach it via `app.state.policy_registry` (or, more
+        # commonly, indirectly via the public `dazzle.back.runtime.
+        # policy.check_entity_op` helper). Closes the "route overrides
+        # bypass permit/scope" gap surfaced by #1126.
+        from dazzle.back.runtime.policy import EntityPolicyInfo, PolicyRegistry
+
+        policy_registry = PolicyRegistry(
+            entities={
+                entity_name: EntityPolicyInfo(
+                    entity_name=entity_name,
+                    cedar_access_spec=cedar_access_specs.get(entity_name),
+                    fk_graph=_fk_graph,
+                    admin_personas=list(_admin_personas),
+                    service=self._services.get(entity_name),
+                )
+                for entity_name in {
+                    *cedar_access_specs.keys(),
+                    *self._services.keys(),
+                }
+            }
+        )
+        self._app.state.policy_registry = policy_registry
+
         # v0.61.106 (#932 cycle 3): storage upload-ticket auto-routes.
         # Validates `field foo: file storage=<name>` references against
         # the loaded `[storage.<name>]` blocks, then registers
