@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.28] - 2026-05-17
+
+### Fixed
+- **KG seed FK constraint failure on every MCP/CLI startup (#1134).**
+  `_seed_semantic_kb` deliberately falls through to "point at concept
+  anyway" when an alias's canonical name resolves neither to a
+  concept nor a pattern entity. Pre-fix, `create_alias` then fired
+  `sqlite3.IntegrityError: FOREIGN KEY constraint failed`, the whole
+  seed rolled back, and the catch-all in `seed_framework_knowledge`
+  logged an ERROR-level traceback — dominating ERROR-filtered log
+  views on every `dazzle` CLI invocation. Fix: `KnowledgeGraph.create_alias`
+  now self-defends — checks `get_entity(canonical_id)` first and
+  returns `False` + DEBUG-logs the skip when the row is missing,
+  independent of whether `PRAGMA foreign_keys` is currently on
+  (file-backed KGs reset it per-connection). Also lowered the
+  seed-failure log to WARNING (still has the traceback via
+  `exc_info=True`) per issue ask #2.
+
+### Changed
+- `KnowledgeGraph.create_alias` now returns `bool` (was `None`) —
+  `True` on insert, `False` on skip. Internal-only API; the one
+  call site in `seed.py` updated to use the return for accurate
+  alias counts.
+
 ## [0.71.27] - 2026-05-17
 
 ### Fixed

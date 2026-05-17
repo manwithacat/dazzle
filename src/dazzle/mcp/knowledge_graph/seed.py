@@ -115,7 +115,11 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
             stats["relations"],
         )
     except Exception:
-        logger.exception("KG seeding failed — skipping (non-critical)")
+        # #1134: this is non-critical (caller can still do all queries
+        # against an unseeded KG); WARNING + traceback is the right
+        # level. Previously logged at ERROR with stack trace and
+        # dominated ERROR-filtered log views on every CLI invocation.
+        logger.warning("KG seeding failed — skipping (non-critical)", exc_info=True)
     finally:
         # Re-enable FK enforcement
         conn = graph._get_connection()
@@ -226,8 +230,12 @@ def _seed_semantic_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
                 canonical_id = pattern_id
             # else: point to concept anyway (it may get created by related_concept auto-create)
 
-        graph.create_alias(alias_term, canonical_id)
-        stats["aliases"] += 1
+        # #1134: create_alias self-defends against missing canonical
+        # entities — returns False on skip so the alias count stays
+        # accurate. Previously this raised FK IntegrityError and
+        # aborted the entire semantic-KB seed on every CLI invocation.
+        if graph.create_alias(alias_term, canonical_id):
+            stats["aliases"] += 1
 
 
 def seed_scene_story_relations(graph: KnowledgeGraph, app_spec: AppSpec) -> int:

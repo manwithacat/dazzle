@@ -7,12 +7,15 @@ by metadata key, and concept/inference lookup for the unified KG.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from .models import Entity
 
 if TYPE_CHECKING:
     from ._protocol import KGStoreProtocol
+
+logger = logging.getLogger(__name__)
 
 
 class KnowledgeGraphMetadata:
@@ -22,8 +25,33 @@ class KnowledgeGraphMetadata:
     # Alias Management
     # =========================================================================
 
-    def create_alias(self: KGStoreProtocol, alias: str, canonical_id: str) -> None:
-        """Create an alias mapping to a canonical entity ID."""
+    def create_alias(self: KGStoreProtocol, alias: str, canonical_id: str) -> bool:
+        """Create an alias mapping to a canonical entity ID.
+
+        Returns ``True`` if the alias was inserted, ``False`` if it was
+        skipped because ``canonical_id`` has no matching entity row
+        (would have raised ``sqlite3.IntegrityError: FOREIGN KEY
+        constraint failed`` and aborted the caller's batch — #1134).
+
+        Aliases pointing at non-existent entities are skipped + logged
+        at DEBUG rather than crashing: aliases are best-effort
+        navigation aids, not load-bearing constraints, and the seed
+        loop has historically tried to point a handful of them at
+        canonical names that turn out not to exist as concept *or*
+        pattern entities (the `# else: point to concept anyway`
+        fallback at ``seed.py``).
+        """
+        # Self-defending FK check — independent of whether
+        # ``PRAGMA foreign_keys`` is currently on (file-backed KGs
+        # reset it per-connection, so the seed loop's batch-level
+        # disable doesn't persist across the create_alias call).
+        if self.get_entity(canonical_id) is None:
+            logger.debug(
+                "create_alias: skipping %r → %r (canonical entity missing)",
+                alias,
+                canonical_id,
+            )
+            return False
         conn = self._get_connection()
         try:
             conn.execute(
@@ -33,6 +61,7 @@ class KnowledgeGraphMetadata:
             conn.commit()
         finally:
             self._close_connection(conn)
+        return True
 
     def resolve_alias(self: KGStoreProtocol, alias: str) -> str | None:
         """Resolve an alias to its canonical entity ID, or None if not found."""
