@@ -1,7 +1,7 @@
 """Postgres data layer for per-user guide progression (v0.71.1).
 
 One row per ``(user_id, guide_name, guide_version)`` in the
-``onboarding_state`` table. The repository owns the UPSERT semantics
+``"OnboardingState"`` table. The repository owns the UPSERT semantics
 that enforce composite uniqueness — the IR entity has a UUID primary
 key (matches the framework convention) but the natural key is the
 triple.
@@ -31,7 +31,7 @@ __all__ = ["OnboardingProgress", "OnboardingStateRepository"]
 
 
 class OnboardingStateRepository:
-    """Postgres data layer for ``onboarding_state``.
+    """Postgres data layer for ``"OnboardingState"``.
 
     Five operations:
 
@@ -55,6 +55,16 @@ class OnboardingStateRepository:
     # via a class constant trips semgrep's SQL-injection rule even when
     # the value is a literal. Inlining keeps the queries flagged as
     # plain strings.
+    #
+    # Identifier is `"OnboardingState"` (double-quoted PascalCase),
+    # matching the framework's table-naming convention — entity names
+    # flow through the migration pipeline (sa.Table(entity.name, ...))
+    # without case-folding, so a Postgres DDL identifier of
+    # `"OnboardingState"` results. Unquoted `onboarding_state` in SQL
+    # would be folded to lowercase by Postgres and fail to resolve.
+    # Mirrors the convention used by surface_access.py / predicate_compiler.py
+    # for other framework entities ("UserMembership", "Manuscript", etc.).
+    # See #1115 for the silent-failure mode this addresses.
 
     def __init__(self, database_url: str):
         self._database_url = database_url
@@ -91,7 +101,7 @@ class OnboardingStateRepository:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT * FROM onboarding_state "
+                    'SELECT * FROM "OnboardingState" '
                     "WHERE user_id = %s AND guide_name = %s AND guide_version = %s "
                     "LIMIT 1",
                     (user_id, guide_name, guide_version),
@@ -133,7 +143,7 @@ class OnboardingStateRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO onboarding_state (
+                    INSERT INTO "OnboardingState" (
                         id, user_id, guide_name, guide_version,
                         current_step, completed_steps, dismissed_steps,
                         started_at, metadata
@@ -233,7 +243,7 @@ class OnboardingStateRepository:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE onboarding_state SET completed_at = %s, current_step = NULL "
+                    'UPDATE "OnboardingState" SET completed_at = %s, current_step = NULL '
                     "WHERE user_id = %s AND guide_name = %s AND guide_version = %s",
                     (now, user_id, guide_name, guide_version),
                 )

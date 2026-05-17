@@ -152,10 +152,14 @@ def test_get_returns_none_when_no_row() -> None:
     with patch.object(repo, "_get_connection", return_value=conn):
         result = repo.get("u1", "g1", 1)
     assert result is None
-    # Verify SELECT shape — no f-string interpolation.
+    # Verify SELECT shape — no f-string interpolation. Table identifier
+    # must be the double-quoted PascalCase form (#1115); unquoted
+    # `onboarding_state` would be folded to lowercase by Postgres and
+    # fail to resolve against the migration's `"OnboardingState"` DDL.
     assert cur.execute.call_count == 1
     sql, params = cur.execute.call_args[0]
-    assert "SELECT * FROM onboarding_state" in sql
+    assert 'SELECT * FROM "OnboardingState"' in sql
+    assert "onboarding_state" not in sql.lower().replace('"onboardingstate"', "")
     assert "WHERE user_id = %s AND guide_name = %s AND guide_version = %s" in sql
     assert params == ("u1", "g1", 1)
 
@@ -205,7 +209,8 @@ def test_upsert_uses_on_conflict_clause() -> None:
             current_step="s1",
         )
     sql = cur.execute.call_args[0][0]
-    assert "INSERT INTO onboarding_state" in sql
+    # Quoted PascalCase per #1115 — see test_get_returns_none_when_no_row.
+    assert 'INSERT INTO "OnboardingState"' in sql
     assert "ON CONFLICT (user_id, guide_name, guide_version)" in sql
     assert "DO UPDATE SET" in sql
     assert result.current_step == "s1"
@@ -280,7 +285,8 @@ def test_mark_completed_uses_update_with_now() -> None:
         ok = repo.mark_completed(user_id="u1", guide_name="g1", guide_version=1)
     assert ok is True
     sql, params = cur.execute.call_args[0]
-    assert "UPDATE onboarding_state" in sql
+    # Quoted PascalCase per #1115.
+    assert 'UPDATE "OnboardingState"' in sql
     assert "completed_at = %s" in sql
     assert "current_step = NULL" in sql
     # First param is the ISO timestamp.
@@ -293,3 +299,82 @@ def test_mark_completed_returns_false_when_no_row_touched() -> None:
     with patch.object(repo, "_get_connection", return_value=conn):
         ok = repo.mark_completed(user_id="ghost", guide_name="g1", guide_version=1)
     assert ok is False
+
+
+# ---------------------------------------------------------------------------
+# #1115 — table-identifier convention. Every SQL statement the
+# repository issues must reference `"OnboardingState"` (double-quoted
+# PascalCase). Unquoted `onboarding_state` would be folded to lowercase
+# by Postgres and fail to resolve against the migration-created
+# `"OnboardingState"` DDL. The bug presents as a silent guide-overlay
+# failure: page renders, ImportError-class exception swallowed by
+# `_inject_onboarding_step`, no overlay visible.
+# ---------------------------------------------------------------------------
+
+
+def _capture_all_sql_strings() -> list[str]:
+    """Exercise every write+read path through the repository against
+    a mock cursor and return the SQL strings that hit cur.execute()."""
+    repo = OnboardingStateRepository("postgresql://test")
+    captured: list[str] = []
+
+    minimal_row = {
+        "id": "r",
+        "user_id": "u1",
+        "guide_name": "g",
+        "guide_version": 1,
+        "current_step": None,
+        "completed_steps": "[]",
+        "dismissed_steps": "[]",
+        "started_at": "2026-05-16T10:00:00+00:00",
+        "completed_at": None,
+        "metadata": None,
+    }
+
+    for op in ("get", "upsert", "mark_step_completed", "mark_step_dismissed", "mark_completed"):
+        conn, cur = _mock_conn(fetchone_returns=minimal_row, rowcount=1)
+        # Mark_step_*: get() runs first, then upsert() — both return rows.
+        cur.fetchone = MagicMock(side_effect=[minimal_row, minimal_row, minimal_row])
+        with patch.object(repo, "_get_connection", return_value=conn):
+            if op == "get":
+                repo.get("u1", "g", 1)
+            elif op == "upsert":
+                repo.upsert(user_id="u1", guide_name="g", guide_version=1)
+            elif op == "mark_step_completed":
+                repo.mark_step_completed(
+                    user_id="u1", guide_name="g", guide_version=1, step_name="s1"
+                )
+            elif op == "mark_step_dismissed":
+                repo.mark_step_dismissed(
+                    user_id="u1", guide_name="g", guide_version=1, step_name="s1"
+                )
+            elif op == "mark_completed":
+                repo.mark_completed(user_id="u1", guide_name="g", guide_version=1)
+        for call in cur.execute.call_args_list:
+            captured.append(call[0][0])
+    return captured
+
+
+def test_every_sql_statement_quotes_the_table_name_as_pascalcase() -> None:
+    """Regression for #1115. Every SQL statement issued by the
+    repository must reference the table as `"OnboardingState"` (quoted
+    PascalCase). Any unquoted `onboarding_state` substring is a bug —
+    Postgres folds unquoted identifiers to lowercase, which would miss
+    the migration-created `"OnboardingState"` DDL and produce silent
+    `relation "onboarding_state" does not exist` errors that the
+    onboarding injector swallows."""
+    sql_strings = _capture_all_sql_strings()
+    assert sql_strings, "expected at least one SQL statement"
+
+    for sql in sql_strings:
+        assert '"OnboardingState"' in sql, (
+            f"SQL statement does not quote the table identifier: {sql!r}"
+        )
+        # The unquoted form must not appear anywhere. Strip the
+        # quoted form first so an incidental substring match inside
+        # `"OnboardingState"` doesn't false-positive.
+        without_quoted = sql.replace('"OnboardingState"', "")
+        assert "onboarding_state" not in without_quoted.lower(), (
+            f"SQL statement contains unquoted lowercase `onboarding_state` "
+            f"(case-folded by PG → unresolved): {sql!r}"
+        )

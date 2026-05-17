@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.14] - 2026-05-17
+
+### Fixed
+
+- **Guide overlays silently swallowed on Postgres apps with the framework's PascalCase table convention — closes #1115.** `OnboardingStateRepository` issued SQL with the unquoted lowercase form `onboarding_state` in three statements (`SELECT * FROM onboarding_state`, `INSERT INTO onboarding_state`, `UPDATE onboarding_state`). Postgres folds unquoted identifiers to lowercase, but the entity flows through the migration pipeline as `sa.Table(entity.name, ...)` — entity name is `OnboardingState`, so the DDL creates `"OnboardingState"` (quoted PascalCase). Result: every state lookup raised `relation "onboarding_state" does not exist`, the `_inject_onboarding_step` hook in `page_routes.py` caught the exception (correctly — repository errors are non-fatal for page rendering), logged it at DEBUG, and the page rendered with no overlay. From the user's perspective the guide just didn't exist. The three SQL statements now reference `"OnboardingState"` (double-quoted PascalCase), matching the framework convention already used by `surface_access.py` (`"UserMembership"`) and `predicate_compiler.py` (`"Manuscript"`, `"AssessmentEvent"`). Apps with snake_case tables (if any) regress with this change, but the documented convention has always been PascalCase quoted — see `docs/CSS_MIGRATION_GUIDE.md` and the existing inspect outputs.
+
+### Tests
+
+- **`tests/unit/test_onboarding_state_repository.py`** — existing SQL-shape assertions in `test_get_returns_none_when_no_row`, `test_upsert_uses_on_conflict_clause`, and `test_mark_completed_uses_update_with_now` updated to pin the corrected `"OnboardingState"` form (had been pinning the broken `onboarding_state` form, which is why the unit suite passed while production broke). Added `test_every_sql_statement_quotes_the_table_name_as_pascalcase` — exercises all five repository methods (`get` / `upsert` / `mark_step_completed` / `mark_step_dismissed` / `mark_completed`) against a mock cursor, captures every SQL string sent through `cur.execute`, and asserts each one contains `"OnboardingState"` and does NOT contain an unquoted `onboarding_state` substring outside the quoted form. The bug class can't drift back without this gate failing.
+
+### Agent Guidance
+
+- Framework-injected entity table names follow the project-wide PascalCase quoted convention (`"OnboardingState"`, `"FeedbackReport"`, `"UserMembership"`). When writing hand-rolled SQL in a repository, **always quote the table identifier and use the entity's `.name` verbatim** — Postgres folds unquoted identifiers to lowercase, so unquoted `onboarding_state` will silently fail to resolve against the migration-created `"OnboardingState"` DDL. Same applies to column identifiers when they're PascalCase (though most framework entities use snake_case columns, which fold safely). Mirror the patterns in `surface_access.py` and `predicate_compiler.py`.
+
 ## [0.71.13] - 2026-05-17
 
 ### Fixed
