@@ -23,6 +23,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.ir.personas import PersonaSpec
 from dazzle.core.ir.workspaces import (
@@ -155,7 +157,8 @@ _NAV_PUBLIC = NavItemContext(label="Public", route="/app/workspaces/public_dash"
 _NAV_GATED = NavItemContext(label="Admin", route="/app/workspaces/admin_dash")
 
 
-def test_inject_no_auth_context_swaps_to_anon_nav() -> None:
+@pytest.mark.asyncio
+async def test_inject_no_auth_context_swaps_to_anon_nav() -> None:
     """``get_auth_context is None`` — every request is anon; persona-gated
     workspaces must be hidden, not exposed via the unfiltered flat list."""
     prc = _make_prc(
@@ -163,12 +166,13 @@ def test_inject_no_auth_context_swaps_to_anon_nav() -> None:
         nav_items=[_NAV_PUBLIC, _NAV_GATED],
         nav_items_anon=[_NAV_PUBLIC],
     )
-    _inject_auth_context(prc)
+    await _inject_auth_context(prc)
     routes = {i.route for i in prc.ctx.nav_items}
     assert routes == {"/app/workspaces/public_dash"}
 
 
-def test_inject_unauthenticated_user_swaps_to_anon_nav() -> None:
+@pytest.mark.asyncio
+async def test_inject_unauthenticated_user_swaps_to_anon_nav() -> None:
     """Auth wiring is configured, but the request has no authenticated
     user — should still get the anon-safe sidebar."""
 
@@ -180,12 +184,13 @@ def test_inject_unauthenticated_user_swaps_to_anon_nav() -> None:
         nav_items=[_NAV_PUBLIC, _NAV_GATED],
         nav_items_anon=[_NAV_PUBLIC],
     )
-    _inject_auth_context(prc)
+    await _inject_auth_context(prc)
     routes = {i.route for i in prc.ctx.nav_items}
     assert routes == {"/app/workspaces/public_dash"}
 
 
-def test_inject_authenticated_unmatched_role_swaps_to_anon_nav() -> None:
+@pytest.mark.asyncio
+async def test_inject_authenticated_unmatched_role_swaps_to_anon_nav() -> None:
     """Authed user with a role that matches no compiled persona must not
     fall through to the unfiltered nav (this was the original leak)."""
     user = SimpleNamespace(email="x@y", username="x", roles=["role_unknown"], is_superuser=False)
@@ -200,12 +205,13 @@ def test_inject_authenticated_unmatched_role_swaps_to_anon_nav() -> None:
         nav_items_anon=[_NAV_PUBLIC],
         nav_by_persona={"admin": [_NAV_PUBLIC, _NAV_GATED]},
     )
-    _inject_auth_context(prc)
+    await _inject_auth_context(prc)
     routes = {i.route for i in prc.ctx.nav_items}
     assert routes == {"/app/workspaces/public_dash"}
 
 
-def test_inject_authenticated_matched_role_uses_persona_nav() -> None:
+@pytest.mark.asyncio
+async def test_inject_authenticated_matched_role_uses_persona_nav() -> None:
     """Happy path — authed admin gets the admin persona's nav, not anon."""
     user = SimpleNamespace(email="a@b", username="admin", roles=["role_admin"], is_superuser=False)
     auth_ctx = SimpleNamespace(is_authenticated=True, user=user, preferences={})
@@ -219,12 +225,13 @@ def test_inject_authenticated_matched_role_uses_persona_nav() -> None:
         nav_items_anon=[_NAV_PUBLIC],
         nav_by_persona={"admin": [_NAV_PUBLIC, _NAV_GATED]},
     )
-    _inject_auth_context(prc)
+    await _inject_auth_context(prc)
     routes = {i.route for i in prc.ctx.nav_items}
     assert routes == {"/app/workspaces/public_dash", "/app/workspaces/admin_dash"}
 
 
-def test_inject_resolver_exception_falls_back_to_anon_nav() -> None:
+@pytest.mark.asyncio
+async def test_inject_resolver_exception_falls_back_to_anon_nav() -> None:
     """A raising auth resolver must not leave the unfiltered nav exposed
     — fail-closed semantics for the security boundary."""
 
@@ -236,6 +243,6 @@ def test_inject_resolver_exception_falls_back_to_anon_nav() -> None:
         nav_items=[_NAV_PUBLIC, _NAV_GATED],
         nav_items_anon=[_NAV_PUBLIC],
     )
-    _inject_auth_context(prc)
+    await _inject_auth_context(prc)
     routes = {i.route for i in prc.ctx.nav_items}
     assert routes == {"/app/workspaces/public_dash"}

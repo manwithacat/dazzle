@@ -13,6 +13,7 @@ Each workspace+surface combination gets a GET route that:
 """
 
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -43,6 +44,29 @@ except ImportError:
 # =============================================================================
 # Helpers (module-level, no closure state)
 # =============================================================================
+
+
+async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, request: Any) -> Any:
+    """Call ``get_auth_context`` and await the result if it's a coroutine (#1128).
+
+    Page routes are FastAPI handlers (always async), but the
+    ``get_auth_context`` seam was originally declared sync-only.
+    Projects on async auth stacks (async DB session, async permission
+    lookup, FastAPI's idiomatic ``Depends``-style flow) hit silent
+    ``AttributeError: 'coroutine' object has no attribute
+    'is_authenticated'`` on every page load because the returned
+    coroutine was assigned to ``auth_ctx`` and treated as the
+    resolved value.
+
+    This helper accepts either signature: sync callables return
+    their value unchanged; async callables are awaited.
+    """
+    if get_auth_context is None:
+        return None
+    result = get_auth_context(request)
+    if inspect.iscoroutine(result):
+        result = await result
+    return result
 
 
 def _sync_fetch(url: str, cookies: dict[str, str] | None = None, timeout: int = 5) -> bytes:
@@ -517,7 +541,7 @@ def _apply_anon_nav(prc: _PageRequestContext) -> None:
     prc.ctx.nav_groups = list(prc.ctx.nav_groups_anon)
 
 
-def _inject_auth_context(prc: _PageRequestContext) -> None:
+async def _inject_auth_context(prc: _PageRequestContext) -> None:
     """Resolve auth context from request and inject into page context.
 
     Anon nav contract (#1127): when no auth context is configured, the
@@ -525,13 +549,19 @@ def _inject_auth_context(prc: _PageRequestContext) -> None:
     sidebar collapses to ``nav_items_anon`` — items whose underlying
     workspace declared no persona gate. Workspaces with
     ``access: persona(...)`` are never exposed in the anon sidebar.
+
+    Async (#1128): ``get_auth_context`` may be either sync or async.
+    The resolver call goes through ``_resolve_auth_context`` which
+    awaits the returned coroutine when the project wires up an
+    ``async def`` auth dependency (FastAPI-idiomatic). Pre-async
+    sync callables continue to work unchanged.
     """
     if prc.deps.get_auth_context is None:
         # No auth wiring at all — every request is anonymous.
         _apply_anon_nav(prc)
         return
     try:
-        prc.auth_ctx = prc.deps.get_auth_context(prc.request)
+        prc.auth_ctx = await _resolve_auth_context(prc.deps.get_auth_context, prc.request)
         prc.ctx.is_authenticated = bool(prc.auth_ctx and prc.auth_ctx.is_authenticated)
         if prc.auth_ctx and prc.auth_ctx.user:
             prc.ctx.user_email = prc.auth_ctx.user.email or ""
@@ -1683,7 +1713,7 @@ async def _page_handler(
     )
 
     # Phase 1: Auth + access control
-    _inject_auth_context(prc)
+    await _inject_auth_context(prc)
     # v0.71.3 — resolve any active onboarding step + render its HTML.
     # No-op for anonymous users / projects without guides / unsupported
     # step kinds. The rendered overlay is prepended to the body by
@@ -1859,7 +1889,8 @@ async def _workspace_handler(
 
     if deps.get_auth_context is not None:
         try:
-            auth_ctx = deps.get_auth_context(request)
+            # #1128: await coroutine when get_auth_context is async.
+            auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
             if auth_ctx and auth_ctx.is_authenticated:
                 is_authenticated = True
                 user_email = auth_ctx.user.email if auth_ctx.user else ""
@@ -2036,7 +2067,8 @@ async def _root_redirect(
     """Redirect app root to the appropriate workspace for the user's persona."""
     if deps.get_auth_context is not None:
         try:
-            auth_ctx = deps.get_auth_context(request)
+            # #1128: await coroutine when get_auth_context is async.
+            auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
             if auth_ctx and auth_ctx.is_authenticated and auth_ctx.roles:
                 for role in auth_ctx.roles:
                     route = persona_ws_routes.get(role)

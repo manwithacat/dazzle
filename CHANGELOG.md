@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.27] - 2026-05-17
+
+### Fixed
+- **`create_page_routes` now accepts async `get_auth_context` (#1128).**
+  The seam was sync-only; projects on async auth stacks (async DB
+  sessions, `Depends`-style FastAPI auth) silently hit
+  `AttributeError: 'coroutine' object has no attribute 'is_authenticated'`
+  every page load because the returned coroutine was assigned to
+  `auth_ctx` and read as the resolved value. Fix: new
+  `_resolve_auth_context` async helper that awaits the result when
+  it's a coroutine and passes through otherwise. Applied at all
+  three call sites in `page_routes.py` (`_inject_auth_context`,
+  `_workspace_handler`, `_root_redirect`). Sync callables continue
+  to work unchanged.
+
+### Agent Guidance
+- **Auth/security seams must accept both sync and async callables.**
+  FastAPI handlers are always async, so a sync-only seam silently
+  breaks any project that follows the framework's own idiomatic
+  async-dependency pattern. New seams that take a `Callable` should
+  go through a coroutine-aware helper like `_resolve_auth_context`
+  from day one — the cost is one `inspect.iscoroutine` check, the
+  cost of *not* doing it is a class of silent `AttributeError` on
+  every request.
+
 ## [0.71.26] - 2026-05-17
 
 ### Fixed
