@@ -1425,10 +1425,23 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     from dazzle.render.dispatch import dispatch_render
     from dazzle.render.fragment.errors import FragmentError
 
+    # The legacy direct-template path composes overlay + body via
+    # `_render_typed_body`. The dispatch path bypasses that composer,
+    # so we have to apply the same overlay prepend here. Otherwise the
+    # guide overlay (set by `_inject_onboarding_step` onto
+    # `render_ctx.active_guide_html`) is rendered but never reaches
+    # `<body>` — #1118. The composition shape matches
+    # `template_renderer._render_typed_body` exactly so the overlay
+    # behaviour is identical across both paths.
+    overlay = getattr(render_ctx, "active_guide_html", "") or ""
+
+    def _compose(inner: str) -> str:
+        return overlay + inner if overlay else inner
+
     if surface.mode == SurfaceMode.CUSTOM:
         ctx_dict = _build_dispatch_ctx(render_ctx, surface)
         try:
-            return dispatch_render(surface, ctx=ctx_dict, services=services)
+            return _compose(dispatch_render(surface, ctx=ctx_dict, services=services))
         except FragmentError as e:
             logger.warning(
                 "dispatch_render failed for custom-mode surface %r (render=%r); "
@@ -1447,7 +1460,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
 
     ctx_dict = _build_dispatch_ctx(render_ctx, surface)
     try:
-        return dispatch_render(surface, ctx=ctx_dict, services=services)
+        return _compose(dispatch_render(surface, ctx=ctx_dict, services=services))
     except FragmentError as e:
         logger.warning(
             "dispatch_render failed for surface %r (render=%r); falling back to legacy path: %s",

@@ -159,3 +159,75 @@ def test_custom_mode_without_render_clause_falls_back_to_legacy() -> None:
 
     assert result is None
     handler.render.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# #1118 — overlay composition at the dispatch layer
+# ---------------------------------------------------------------------------
+
+
+def test_custom_mode_dispatch_prepends_active_guide_overlay() -> None:
+    """When `_inject_onboarding_step` has populated
+    `render_ctx.active_guide_html`, the dispatch path MUST prepend
+    that overlay to the renderer's inner HTML — matching the legacy
+    path's `_render_typed_body` composition. Pre-#1118, the dispatch
+    path bypassed the only call site that read `active_guide_html`,
+    so guide overlays silently dropped on any surface that declared
+    `render:` (including the default `render: fragment` on typed
+    entity surfaces). The fix puts the composition at the same layer
+    that produces the inner HTML."""
+    surface = _make_surface("tag_cloud", SurfaceMode.CUSTOM, "word_cloud")
+    handler = MagicMock()
+    handler.render = MagicMock(return_value="<section>cloud</section>")
+    prc = _make_prc(surface, handler=handler)
+    prc.render_ctx.active_guide_html = (
+        '<dz-onboarding-step data-guide="g" data-step="s"></dz-onboarding-step>'
+    )
+
+    result = _maybe_dispatch_inner_html(prc, prc.render_ctx)
+
+    assert result is not None
+    # Overlay first, body after — matches `_render_typed_body` order
+    # so the user lands on the overlay.
+    assert result.index("dz-onboarding-step") < result.index("<section>")
+    assert result.endswith("<section>cloud</section>")
+
+
+def test_dispatch_path_without_overlay_returns_inner_html_unchanged() -> None:
+    """If no overlay is set, the dispatch path returns the raw inner
+    HTML — no extra prefix, no whitespace, byte-for-byte the renderer
+    output. Regression guard: the overlay-prepend must be a no-op when
+    `active_guide_html` is empty."""
+    surface = _make_surface("tag_cloud", SurfaceMode.CUSTOM, "word_cloud")
+    handler = MagicMock()
+    handler.render = MagicMock(return_value="<section>cloud</section>")
+    prc = _make_prc(surface, handler=handler)
+    prc.render_ctx.active_guide_html = ""  # explicitly empty
+
+    result = _maybe_dispatch_inner_html(prc, prc.render_ctx)
+
+    assert result == "<section>cloud</section>"
+
+
+def test_non_custom_dispatch_path_also_prepends_overlay() -> None:
+    """The bug surfaced on `render: fragment` LIST surfaces, not just
+    custom mode — anywhere the dispatch path fires, the overlay must
+    compose. Pin the LIST-mode-with-table-ctx branch too."""
+    surface = _make_surface("user_list", SurfaceMode.LIST, "fragment")
+    handler = MagicMock()
+    handler.render = MagicMock(return_value="<table>rows</table>")
+    # Populated table ctx so we go through the non-custom dispatch path.
+    render_ctx = SimpleNamespace(
+        table=SimpleNamespace(rows=[], columns=[], total=0, page=1),
+        detail=None,
+        form=None,
+        active_guide_html='<dz-onboarding-step data-guide="g" data-step="s"></dz-onboarding-step>',
+    )
+    prc = _make_prc(surface, handler=handler, render_ctx=render_ctx)
+
+    result = _maybe_dispatch_inner_html(prc, prc.render_ctx)
+
+    assert result is not None
+    assert "dz-onboarding-step" in result
+    assert "<table>rows</table>" in result
+    assert result.index("dz-onboarding-step") < result.index("<table>")

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.18] - 2026-05-17
+
+### Fixed
+
+- **Guide overlay HTML now reaches `<body>` on surfaces that go through the dispatch path — closes #1118.** Production-log instrumentation from v0.71.16 surfaced the real root cause: `_inject_onboarding_step` worked correctly and set `render_ctx.active_guide_html`, but `_maybe_dispatch_inner_html` returned the dispatched inner HTML directly, **bypassing `_render_typed_body` — the only call site that read `active_guide_html` and prepended it to the body**. Any surface with an explicit `render:` clause (including the default `render: fragment` on typed-Fragment entity surfaces, and every `mode: custom` surface after v0.71.17) silently dropped the overlay. The dispatch path now performs the same overlay composition as the legacy path (`overlay + body`), so the overlay survives both rendering paths and the foot-gun is gone.
+
+### Tests
+
+- **`tests/unit/test_custom_mode_dispatch.py`** extended (3 new tests):
+  - `test_custom_mode_dispatch_prepends_active_guide_overlay` — pins the new composition contract on the custom-mode branch with overlay set; asserts overlay markup appears before the inner HTML.
+  - `test_dispatch_path_without_overlay_returns_inner_html_unchanged` — regression guard for the empty-overlay case (the prepend must be a no-op when `active_guide_html` is empty; the raw renderer output is returned byte-for-byte).
+  - `test_non_custom_dispatch_path_also_prepends_overlay` — pins the same contract on the LIST/VIEW dispatch branch (the actual production failure mode in CyFuture — `render: fragment` was the trigger, not `mode: custom`).
+
+### Agent Guidance
+
+- **Overlay composition is now done at every layer that produces inner HTML.** When adding a new code path that builds inner-page HTML, mirror the `overlay + body` shape used by both `_render_typed_body` (legacy) and `_maybe_dispatch_inner_html` (dispatch). The pattern: read `render_ctx.active_guide_html` defensively (it may be empty), prepend if non-empty, return. The pre-#1118 silent-drop bug is exactly the class of failure that happens when a new render path forgets this step — keep the symmetric pattern in mind when wiring future renderers.
+- **Three open production-logging suggestions** from #1118's side-note are filed separately as follow-ups: (1) a default `StreamHandler` on `dazzle.*` loggers so the new `onboarding.inject:` and `onboarding.startup:` tags reach a log drain without a project-side `logging.basicConfig()` call, (2) a docs entry on "wiring up logging" for new projects, (3) a generalised "production-log debug tags" pattern that mirrors `onboarding.inject:<reason>` for other framework code paths that currently swallow conditions silently. None of those block the #1118 fix; they're DX improvements that benefit the next analogous debug cycle.
+
 ## [0.71.17] - 2026-05-17
 
 ### Fixed
