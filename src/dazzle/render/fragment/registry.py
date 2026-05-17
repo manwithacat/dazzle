@@ -7,8 +7,9 @@ up). The DSL `render: <name>` clause resolves through the registry.
 """
 
 import dataclasses
+import pathlib
 from collections.abc import Callable
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, Literal, Protocol, TypeVar, runtime_checkable
 
 from dazzle.render.fragment.errors import PrimitiveRegistrationError
 
@@ -48,6 +49,12 @@ class Renderer(Protocol):
     """
 
     def render(self, surface: Any, ctx: Any) -> str: ...
+
+    # ``assets`` is intentionally NOT declared on the Protocol — it's
+    # an OPTIONAL method (#1132). ``RendererRegistry.collect_assets``
+    # uses ``getattr(handler, "assets", None)`` to discover it; the
+    # bare structural Protocol stays minimal so existing renderers
+    # remain compliant without an empty no-op method.
 
 
 class PrimitiveRegistry:
@@ -107,6 +114,55 @@ def primitive(
     return decorator
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class RendererAsset:
+    """#1132: declarative dependency from a renderer to a static file.
+
+    Custom renderers that need to ship client-side JS/CSS used to
+    inline it via ``RawHTML("<script>…</script>")`` (or, since
+    #1130, via ``Script(body=…)``). Both shapes re-emit the same
+    bytes on every page render — no browser caching, no CSP
+    fingerprinting, no dedup across renderers that share a
+    dependency.
+
+    A ``Renderer`` implementation can declare ``assets() -> list[RendererAsset]``
+    to register file-backed dependencies with the framework. The
+    registry collects them at app boot via ``collect_assets``;
+    server-side mount + URL generation is the project's
+    responsibility for now (a future iteration can auto-mount under
+    ``/static/dazzle-renderers/<renderer>/<filename>`` and inject
+    the URLs into the page chrome).
+
+    Attributes:
+        path: Absolute or package-relative ``Path`` to the asset
+            file on disk. The bundler reads from this path.
+        kind: Asset kind — drives where the URL is emitted in the
+            page chrome (``js`` → ``<script>`` deferred; ``css`` →
+            ``<link rel="stylesheet">`` in head; ``wasm`` / ``json``
+            are renderer-fetched, no head injection).
+        cache: Caching strategy. ``fingerprint`` adds a content-hash
+            query string for cache-busting; ``immutable`` adds a
+            ``Cache-Control: immutable`` header at serve time;
+            ``no-store`` opts out of caching entirely (dev mode).
+        where: Whether the script/stylesheet URL lands in ``<head>``
+            or just before ``</body>`` when auto-injected by the
+            page chrome.
+    """
+
+    path: pathlib.Path
+    kind: Literal["js", "css", "wasm", "json"]
+    cache: Literal["fingerprint", "immutable", "no-store"] = "fingerprint"
+    where: Literal["head", "body-end"] = "head"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.path, pathlib.Path):
+            raise TypeError(
+                f"RendererAsset.path expects pathlib.Path, got {type(self.path).__name__}"
+            )
+        if self.kind not in ("js", "css", "wasm", "json"):
+            raise ValueError(f"RendererAsset.kind invalid: {self.kind!r}")
+
+
 class RendererRegistry:
     """Mutable registry mapping renderer names to handler instances.
 
@@ -136,3 +192,53 @@ class RendererRegistry:
 
     def registered_names(self) -> list[str]:
         return list(self._handlers.keys())
+
+    def collect_assets(self) -> list[tuple[str, RendererAsset]]:
+        """#1132: walk every registered renderer, call ``assets()`` if
+        defined, and return ``(renderer_name, asset)`` pairs.
+
+        Renderers that don't implement ``assets()`` are skipped — the
+        method is optional on the Protocol. Order is deterministic:
+        registration order × declared-asset order. Deduplication is
+        the caller's responsibility (the bundler dedups by content
+        hash, not by ``Path`` identity — two renderers might declare
+        different copies of the same library).
+        """
+        collected: list[tuple[str, RendererAsset]] = []
+        for name, handler in self._handlers.items():
+            assets_fn = getattr(handler, "assets", None)
+            if assets_fn is None:
+                continue
+            try:
+                declared = assets_fn()
+            except TypeError:
+                # ``assets`` exists on the instance but isn't callable
+                # the way we expect — log and skip. A renderer with
+                # a malformed assets attribute shouldn't crash the
+                # whole app boot.
+                continue
+            for asset in declared:
+                if not isinstance(asset, RendererAsset):
+                    raise TypeError(
+                        f"renderer {name!r}.assets() returned a non-RendererAsset "
+                        f"entry: {asset!r}. Use the RendererAsset dataclass "
+                        f"from dazzle.render.fragment."
+                    )
+                collected.append((name, asset))
+        return collected
+
+
+def asset_url(renderer_name: str, filename: str) -> str:
+    """#1132: well-known URL for a renderer-declared asset.
+
+    Renderers reference their declared assets in the rendered output
+    via this helper, then either (a) project code mounts them under
+    ``/static/dazzle-renderers/`` matching this convention, or (b) a
+    future framework iteration auto-mounts them at boot.
+
+    The path is deliberately lowercase / underscore-free / single-
+    segment-per-name so it composes cleanly with FastAPI's
+    ``StaticFiles`` mount points. Filename is interpolated raw —
+    callers must not pass user-controllable input here.
+    """
+    return f"/static/dazzle-renderers/{renderer_name}/{filename}"

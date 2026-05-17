@@ -140,7 +140,9 @@ from dazzle.render.fragment.registry import (
     DEFAULT_REGISTRY,
     PrimitiveRegistry,
     Renderer,
+    RendererAsset,
     RendererRegistry,
+    asset_url,
     primitive,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -176,6 +178,8 @@ __all__ = [
     # registry
     "primitive",
     "PrimitiveRegistry",
+    "RendererAsset",
+    "asset_url",
     "Renderer",
     "RendererRegistry",
     "DEFAULT_REGISTRY",

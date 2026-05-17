@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.34] - 2026-05-17
+
+### Added
+- **Asset bundler hook for custom renderers — `RendererAsset` + `Renderer.assets()` (#1132).**
+  Custom renderers can now declare file-backed JS / CSS / WASM /
+  JSON dependencies via an optional `assets() -> list[RendererAsset]`
+  method on the `Renderer` Protocol. `RendererRegistry.collect_assets()`
+  walks every registered handler at app boot, calls `assets()` if
+  defined, and returns the ordered `(renderer_name, asset)` pairs.
+  Handlers without `assets()` are skipped — the method is optional
+  on the structural Protocol, so existing renderers stay compliant
+  without an empty no-op.
+- **`asset_url(renderer_name, filename)` helper** — well-known URL
+  shape (`/static/dazzle-renderers/<renderer>/<filename>`) for
+  renderers that need to reference their own declared assets inside
+  the rendered HTML, e.g. `Script(src=asset_url("word_cloud", "wc.js"))`.
+
+### Notes
+- The mount/serve side (auto-mounting collected assets under
+  `/static/dazzle-renderers/` and auto-injecting JS/CSS into the
+  `Page` chrome) is **deferred** to a follow-up. The structural
+  contract — declaration + collection + URL convention — lands now
+  so renderers can adopt the pattern; project code can mount the
+  files at the expected URL until the framework auto-mount lands.
+  Filing the follow-up as the second half of #1132's rollout.
+
 ## [0.71.33] - 2026-05-17
 
 ### Fixed
