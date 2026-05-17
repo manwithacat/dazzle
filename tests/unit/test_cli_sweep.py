@@ -112,9 +112,11 @@ class TestSweepIntegration:
         # example would fail), but we can assert the command runs and
         # produces the header.
         assert "Dazzle example-app sweep" in result.stdout
-        # Every example app name appears in the table.
+        # Every example app name appears in the table. `custom_renderer`
+        # was added in v0.71.15 (#1117 worked example).
         for name in (
             "contact_manager",
+            "custom_renderer",
             "fieldtest_hub",
             "ops_dashboard",
             "simple_task",
@@ -127,4 +129,6 @@ class TestSweepIntegration:
         payload = json.loads(result.stdout)
         assert "apps" in payload
         assert "coverage" in payload
-        assert len(payload["apps"]) == 5  # every example app
+        # 6 examples as of v0.71.15: contact_manager, custom_renderer,
+        # fieldtest_hub, ops_dashboard, simple_task, support_tickets.
+        assert len(payload["apps"]) == 6

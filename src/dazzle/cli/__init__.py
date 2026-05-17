@@ -84,7 +84,13 @@ from dazzle.cli.project import (  # noqa: E402
 app.command(name="init")(init_command)
 app.command(name="validate")(validate_command)
 app.command(name="lint")(lint_command)
-app.command(name="inspect")(inspect_command)
+# `inspect_command` (project entities/surfaces dumper) is registered
+# as `dazzle inspect project` under the new inspect typer group —
+# see the `app.add_typer(inspect_app, name="inspect")` registration
+# below. Pre-v0.71.23 it lived at the top-level `dazzle inspect`;
+# the rename moves it under the inspect group alongside `inspect
+# renderers` / `inspect primitives` / etc. so the command tree has
+# a single owner for the `inspect` namespace (#1120 fallout).
 app.command(name="layout-plan")(layout_plan_command)
 app.command(name="analyze-spec")(analyze_spec_command)
 app.command(name="example")(example_command)
@@ -368,6 +374,12 @@ from dazzle.cli.inspect import inspect_app  # noqa: E402
 # inspect group also adds renderers / primitives / routes / oauth-
 # providers subcommands. Clean break — no alias is kept for the old
 # top-level name per the project's clean-break policy.
+#
+# v0.71.24 fixup: the previous top-level `dazzle inspect` command
+# (project entities/surfaces dumper from `cli/project.py`) is
+# rehosted as `dazzle inspect project` to free the `inspect`
+# namespace for the new group.
+inspect_app.command(name="project")(inspect_command)
 app.add_typer(inspect_app, name="inspect")
 app.add_typer(i18n_app, name="i18n")
 

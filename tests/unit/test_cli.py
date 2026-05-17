@@ -135,8 +135,15 @@ def test_lint_command(cli_runner: CliRunner, test_project: Path):
 
 
 def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
-    """Test inspect command with default options."""
-    result = cli_runner.invoke(app, ["inspect", "--manifest", str(test_project / "dazzle.toml")])
+    """Test inspect command with default options.
+
+    Pre-v0.71.23 this was at `dazzle inspect`; v0.71.23 moved it
+    under the new inspect group as `dazzle inspect project`
+    alongside the other introspection subcommands (#1120).
+    """
+    result = cli_runner.invoke(
+        app, ["inspect", "project", "--manifest", str(test_project / "dazzle.toml")]
+    )
 
     assert result.exit_code == 0
     # Should show project structure with entities and surfaces
