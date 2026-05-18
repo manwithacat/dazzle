@@ -615,20 +615,32 @@ class _RenderTablesMixin:
             )
             return f'<div class="dz-list-region">{actions_row}{empty_html}</div>'
 
-        thead = (
-            "<thead><tr>"
-            + "".join(f"<th>{ctx.escape(c.label)}</th>" for c in lst.columns)
-            + "</tr></thead>"
-        )
+        has_actions = bool(lst.row_actions)
+        thead_cells = [f"<th>{ctx.escape(c.label)}</th>" for c in lst.columns]
+        if has_actions:
+            # #1148: trailing action column header. ``row_action_label``
+            # is the visible label authored in DSL — usually short
+            # (e.g. "Approve", "Resolve") so the table doesn't grow
+            # excessively wide.
+            thead_cells.append(
+                f'<th class="dz-list-row-action-col">{ctx.escape(lst.row_action_label)}</th>'
+            )
+        thead = "<thead><tr>" + "".join(thead_cells) + "</tr></thead>"
 
         tbody_rows: list[str] = []
-        for row in lst.rows:
+        for i, row in enumerate(lst.rows):
             cells_html = ""
             for cell in row:
                 if isinstance(cell, str):
                     cells_html += f"<td>{ctx.escape(cell)}</td>"
                 else:
                     cells_html += f"<td>{self._emit(cell, ctx)}</td>"  # type: ignore[arg-type]
+            if has_actions:
+                # #1148: per-row action button HTML is pre-rendered by
+                # the data builder (already-escaped attributes, hx-post
+                # URL, JSON-encoded bound args). Trust contract: builder
+                # owns escape for the values it pulls off row dicts.
+                cells_html += f'<td class="dz-list-row-action">{lst.row_actions[i]}</td>'
             # Trailing space on `class="dz-list-row "` mirrors legacy
             # `class="dz-list-row {{ attention_classes(...) }}{% if action_url %} is-clickable{% endif %}"`
             # for the no-attention, no-action_url case.

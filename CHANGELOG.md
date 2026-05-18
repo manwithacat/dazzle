@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.46] - 2026-05-18
+
+### Added
+- **`row_action:` renderer wiring for `display: list` (#1148, part 2).**
+  Workspace regions with `display: list` now actually render the
+  per-row action button declared in `row_action:`. The list builder
+  resolves each row's button HTML through two new helpers in
+  `_builders_tables.py`:
+  - `_eval_row_condition(visible_when, row_dict)` — evaluates the
+    `ConditionExpr` against the already-fetched row. Supports
+    simple comparisons (=, !=, <, >, <=, >=, in, not in, is, is not)
+    and compound AND/OR. Role checks, grant checks, via-conditions,
+    function calls, and date arithmetic on rows fall back to
+    "visible" (those are server-side scope concepts, not row-data
+    predicates).
+  - `_render_row_action_button(action_id, label, item, bind)` —
+    emits `<button data-dz-row-action="<id>" data-dz-row-args="<json>">`
+    carrying the bound row values as JSON. Client-side surface-action
+    machinery hooks `[data-dz-row-action]` the same way it already
+    handles `[data-dz-action]` for `entity_card.quick_actions`.
+
+  `ListRegion` gains two optional fields (`row_action_label`,
+  `row_actions`) — when set, the renderer emits a trailing action
+  column header and one `<td>` per row. Rows whose `visible_when`
+  evaluated falsy emit an empty cell so column arity stays stable.
+
+  **Status:** list-mode renderer wired end-to-end. Cohort_strip /
+  day_timeline / status_list renderer plumbing is still follow-up
+  work — those region types continue to ignore `row_action:` until
+  their per-row builders land. Issue #1148 stays open until all 4
+  display modes are wired.
+
+### Agent Guidance
+- For row-oriented displays: `row_action:` is now functional in
+  `display: list` regions — no need for a Python route override
+  to add a per-row primary-action button. Authoring example in
+  the issue and in the IR docstring on `RowActionSpec`.
+
 ## [0.71.45] - 2026-05-18
 
 ### Added

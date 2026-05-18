@@ -377,6 +377,13 @@ class ListRegion:
     csv_filename: str = "export.csv"
     total: int = 0
     empty_message: str = ""
+    # #1148: optional per-row action column. When ``row_actions`` is
+    # non-empty it must have the same arity as ``rows`` (one button
+    # HTML string per row, ``""`` for rows whose ``visible_when``
+    # evaluated falsy — the renderer emits an empty cell so column
+    # arity stays stable). ``row_action_label`` is the column header.
+    row_action_label: str = ""
+    row_actions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for i, row in enumerate(self.rows):
@@ -385,6 +392,11 @@ class ListRegion:
                     f"ListRegion row {i} arity mismatch: "
                     f"row has {len(row)} cells, expected {len(self.columns)}"
                 )
+        if self.row_actions and len(self.row_actions) != len(self.rows):
+            raise ValueError(
+                f"ListRegion row_actions arity mismatch: "
+                f"{len(self.row_actions)} actions, {len(self.rows)} rows"
+            )
 
 
 @dataclass(frozen=True, slots=True)
