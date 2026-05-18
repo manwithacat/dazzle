@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 345 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
+# Counts: 346 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -2194,6 +2194,15 @@ ir_class: RoleCheck
     - role_name: str
   optional: (none)
 
+ir_class: RowActionSpec
+  required:
+    - action_id: str
+    - label: str
+  optional:
+    - bind: dict[str, str] = {}
+    - confirm: ConfirmationItemSpec | None = None
+    - visible_when: ConditionExpr | None = None
+
 ir_class: RuleSpec
   required:
     - rule_id: str
@@ -3152,6 +3161,7 @@ ir_class: WorkspaceRegion
     - reference_lines: list[ReferenceLine] = []
     - render: str | None = None
     - revoke: str | None = None
+    - row_action: RowActionSpec | None = None
     - secondary: str | None = None
     - secondary_action: str | None = None
     - show_outliers: bool = True

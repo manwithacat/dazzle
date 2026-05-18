@@ -1719,6 +1719,153 @@ class WorkspaceParserMixin:
             )
         return items
 
+    def _parse_row_action_block(self) -> ir.RowActionSpec:
+        """#1148: parse a typed ``row_action:`` block.
+
+        Per-row click-to-POST action for row-oriented region displays
+        (``list``, ``cohort_strip``, ``day_timeline``, ``status_list``).
+        ``action_id`` references a project-declared surface action;
+        the runtime resolves the POST URL via the same machinery
+        ``entity_card.quick_actions`` uses at the card level.
+
+        Syntax::
+
+            row_action:
+              label: "Approve & release"
+              action_id: feedback_release
+              bind:
+                id: id
+              visible_when: status != released
+              confirm:
+                title: "Release to school?"
+                caption: "School admins will see the audit trail"
+
+        ``label`` and ``action_id`` are required. ``bind:`` defaults
+        to ``{}``. ``visible_when:`` parses as a standard condition
+        expression. ``confirm:`` reuses the :class:`ir.ConfirmationItemSpec`
+        shape from #1072.
+        """
+        _VALID_KEYS = {"label", "action_id", "bind", "visible_when", "confirm"}
+        label: str | None = None
+        action_id: str | None = None
+        bind: dict[str, str] = {}
+        visible_when: ir.ConditionExpr | None = None
+        confirm: ir.ConfirmationItemSpec | None = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            if key not in _VALID_KEYS:
+                raise make_parse_error(
+                    f"Unknown row_action key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "label":
+                label = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "action_id":
+                action_id = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "bind":
+                bind = self._parse_row_action_bind_block()
+            elif key == "visible_when":
+                visible_when = self.parse_condition_expr()
+                self.skip_newlines()
+            elif key == "confirm":
+                confirm = self._parse_row_action_confirm_block(key_tok)
+
+        if label is None or action_id is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                "row_action requires both `label:` and `action_id:`",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.RowActionSpec(
+            label=label,
+            action_id=action_id,
+            bind=bind,
+            visible_when=visible_when,
+            confirm=confirm,
+        )
+
+    def _parse_row_action_bind_block(self) -> dict[str, str]:
+        """#1148: parse the indented ``bind:`` sub-block of row_action."""
+        bind: dict[str, str] = {}
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            bind_key = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+            bind_val = self.expect_identifier_or_keyword().value
+            bind[bind_key] = bind_val
+            self.skip_newlines()
+        self.expect(TokenType.DEDENT)
+        return bind
+
+    def _parse_row_action_confirm_block(self, key_tok: Any) -> ir.ConfirmationItemSpec:
+        """#1148: parse the indented ``confirm:`` sub-block of row_action.
+
+        Same shape as one entry in a ``confirmations:`` block — title
+        required, caption + required optional.
+        """
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        title: str | None = None
+        caption = ""
+        required = True
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            c_key_tok = self.current_token()
+            c_key = c_key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+            if c_key == "title":
+                title = self.expect(TokenType.STRING).value
+            elif c_key == "caption":
+                caption = self.expect(TokenType.STRING).value
+            elif c_key == "required":
+                bool_val = self.expect_identifier_or_keyword().value
+                if bool_val not in ("true", "false"):
+                    raise make_parse_error(
+                        f"row_action confirm.required must be `true` or `false`; got {bool_val!r}",
+                        self.file,
+                        c_key_tok.line,
+                        c_key_tok.column,
+                    )
+                required = bool_val == "true"
+            else:
+                raise make_parse_error(
+                    f"Unknown row_action confirm key {c_key!r}. "
+                    "Expected one of: title, caption, required.",
+                    self.file,
+                    c_key_tok.line,
+                    c_key_tok.column,
+                )
+            self.skip_newlines()
+        self.expect(TokenType.DEDENT)
+        if title is None:
+            raise make_parse_error(
+                "row_action confirm requires a `title:` field",
+                self.file,
+                key_tok.line,
+                key_tok.column,
+            )
+        return ir.ConfirmationItemSpec(title=title, caption=caption, required=required)
+
     def _parse_overlay_series_block(self) -> list[ir.OverlaySeriesSpec]:
         """Parse the indented body of an ``overlay_series:`` block (#883).
 
@@ -2208,6 +2355,7 @@ class _WorkspaceRegionState:
     day_timeline_config: ir.DayTimelineConfig | None = None
     task_inbox_config: ir.TaskInboxConfig | None = None
     entity_card_config: ir.EntityCardConfig | None = None
+    row_action: ir.RowActionSpec | None = None  # #1148
 
 
 # ---------- Simple keyword-value branches ---------- #
@@ -2641,6 +2789,16 @@ def _kw_confirmations(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
+def _kw_row_action(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1148: ``row_action:`` block — per-row click-to-POST action."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.row_action = parser._parse_row_action_block()
+    parser.expect(TokenType.DEDENT)
+
+
 def _kw_state_field(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -2892,6 +3050,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "day_timeline_config": _kw_day_timeline_config,
     "task_inbox_config": _kw_task_inbox_config,
     "entity_card_config": _kw_entity_card_config,
+    "row_action": _kw_row_action,  # #1148
 }
 
 
@@ -2997,4 +3156,5 @@ def _build_workspace_region(
         day_timeline_config=state.day_timeline_config,
         task_inbox_config=state.task_inbox_config,
         entity_card_config=state.entity_card_config,
+        row_action=state.row_action,
     )

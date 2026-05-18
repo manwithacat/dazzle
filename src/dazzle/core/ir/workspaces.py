@@ -365,6 +365,49 @@ class ConfirmationItemSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class RowActionSpec(BaseModel):
+    """#1148: per-row click-to-POST action on row-oriented region displays.
+
+    Closes the "every workflow surface needs a custom Python route for
+    its primary per-row action" gap that overrides in AegisMark, the
+    Manuscript review queue, the Behaviour incident inbox, and the
+    Fastmark starter-pack picker all worked around. One typed block
+    covers `list`, `cohort_strip`, `day_timeline`, and `status_list`
+    rows — `action_id` resolves against the project's declared
+    surface actions (same machinery `entity_card.quick_actions` uses
+    at the card level), CSRF + route binding inherited.
+
+    Attributes:
+        label: Button copy shown on each row (e.g. "Approve & release").
+        action_id: Reference to a declared surface action. The runtime
+            resolves the POST URL via the same machinery as
+            ``entity_card.quick_actions`` — projects don't manage
+            URLs by hand.
+        bind: Row-field → action-arg mapping. The simple case is
+            ``{id: id}`` (row's id → action's id param). Multi-key
+            forms compose URL-encoded bodies. Empty dict means the
+            action takes no row-derived args.
+        visible_when: Optional per-row predicate. When set, the row's
+            action button only renders when the condition evaluates
+            truthy against the row dict (e.g. ``status != released``
+            hides the button on already-released rows). ``None`` =
+            always visible.
+        confirm: Optional confirmation step that pops a panel before
+            the POST fires. Reuses the v0.61.72 (#1072)
+            confirm_action_panel item shape — same shape across the
+            framework. ``None`` = no confirmation (action fires
+            immediately on click).
+    """
+
+    label: str
+    action_id: str
+    bind: dict[str, str] = Field(default_factory=dict)
+    visible_when: ConditionExpr | None = None
+    confirm: ConfirmationItemSpec | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class NoticeSpec(BaseModel):
     """v0.61.68: prominent notice band rendered above the region body
     inside the dashboard slot. AegisMark's SIMS-sync-opt-in prototype
@@ -775,6 +818,13 @@ class WorkspaceRegion(BaseModel):
     day_timeline_config: DayTimelineConfig | None = None  # #1016 (v0.67.3)
     task_inbox_config: TaskInboxConfig | None = None  # #1015 (v0.67.4)
     entity_card_config: EntityCardConfig | None = None  # #1017 (v0.67.5)
+    # #1148: per-row click-to-POST action for row-oriented displays
+    # (list, cohort_strip, day_timeline, status_list). One typed block,
+    # one renderer contract; supersedes #1146's `slot_action:` proposal.
+    # Renderer plumbing per-display landed incrementally — projects can
+    # author `row_action:` ahead of full renderer support, the IR is
+    # ready and the parser locks the shape.
+    row_action: RowActionSpec | None = None
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

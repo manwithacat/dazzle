@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.45] - 2026-05-18
+
+### Added
+- **Typed `row_action:` IR + DSL parser (#1148, part 1).** New
+  `RowActionSpec` Pydantic IR model and `WorkspaceRegion.row_action`
+  field for per-row click-to-POST actions on row-oriented displays
+  (`list`, `cohort_strip`, `day_timeline`, `status_list`). The DSL
+  block reuses the established surface-action machinery —
+  `action_id:` references a declared surface action, `bind:` maps
+  row fields → action args, `visible_when:` is a per-row predicate,
+  `confirm:` reuses `ConfirmationItemSpec` from #1072. Supersedes
+  the per-display `slot_action:` proposal in #1146.
+
+  Syntax:
+  ```dsl
+  my_pending_reviews:
+    source: ManuscriptFeedback
+    display: list
+    row_action:
+      label: "Approve & release"
+      action_id: feedback_release
+      bind:
+        id: id
+      visible_when: status != released
+      confirm:
+        title: "Release to school?"
+  ```
+
+  **Status:** IR + parser shipped. Renderer plumbing per-display
+  mode is the follow-up (list-mode first as biggest win, then
+  cohort_strip / day_timeline / status_list). Projects can author
+  `row_action:` ahead of full renderer support — the IR is ready
+  and the parser locks the design shape.
+
+### Agent Guidance
+- `row_action:` is the canonical way to express a per-row primary
+  action across the 4 row-oriented region displays. Don't author
+  custom Python route overrides for the "row with primary action"
+  pattern — write `row_action:` in DSL and the renderer wire-up
+  (follow-up PR) will resolve to the POST URL + CSRF automatically.
+
 ## [0.71.44] - 2026-05-18
 
 ### Fixed
