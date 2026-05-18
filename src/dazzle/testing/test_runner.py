@@ -1230,6 +1230,13 @@ class TestRunner:
         success = result is not None
         if success and store_result and result:
             context[store_result] = result
+        if success:
+            # #1139: stash the actually-sent payload so a following
+            # create_expect_error step can reproduce the unique-field
+            # collision. generate_entity_data regenerates unique fields
+            # whose literal values from the test design would otherwise
+            # diverge between the two POSTs.
+            context[f"_last_created_data:{entity_name}"] = entity_data
         return StepResult(
             action=action,
             target=target,
@@ -1809,11 +1816,17 @@ class TestRunner:
         assert self.client is not None
         entity_name = target.replace("entity:", "")
         endpoint = self.client._entity_endpoint(entity_name)
+        # #1139: prefer the payload actually sent by the preceding
+        # create step (which has post-generation unique-field values)
+        # over the raw resolved_data literal — otherwise a "duplicate
+        # email" scenario sends two different emails and never trips
+        # the unique constraint.
+        payload = context.get(f"_last_created_data:{entity_name}", resolved_data)
         try:
             resp = self.client._request(
                 "POST",
                 f"{self.client.api_url}{endpoint}",
-                json=resolved_data,
+                json=payload,
                 headers=self.client._auth_headers(),
             )
         except Exception as e:

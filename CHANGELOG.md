@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.36] - 2026-05-18
+
+### Fixed
+- **`create_expect_error` now reproduces the actually-sent payload
+  (#1139).** Pre-fix the runner's `_execute_create_step` regenerated
+  unique fields via `generate_entity_data` (design-time literals go
+  stale across runs), but the follow-up `_execute_create_expect_error_step`
+  POSTed the raw `resolved_data` literal — two different values, no
+  duplicate, the unique constraint was never tripped, and every
+  `VAL_*_UNIQUE` test failed with "Expected 4xx, got 200". The
+  create step now stashes the post-generation payload under
+  `context["_last_created_data:<Entity>"]`; the expect-error step
+  reuses it when present. CyFuture nightly: 8 false-failure
+  `VAL_*_UNIQUE` tests recovered.
+
 ## [0.71.35] - 2026-05-18
 
 ### Added
