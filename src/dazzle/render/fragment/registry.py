@@ -7,6 +7,7 @@ up). The DSL `render: <name>` clause resolves through the registry.
 """
 
 import dataclasses
+import hashlib
 import pathlib
 from collections.abc import Callable
 from typing import Any, Literal, Protocol, TypeVar, runtime_checkable
@@ -193,6 +194,65 @@ class RendererRegistry:
     def registered_names(self) -> list[str]:
         return list(self._handlers.keys())
 
+    def asset_url(
+        self,
+        renderer_name: str,
+        filename: str,
+        *,
+        cache: Literal["fingerprint", "immutable", "no-store"] = "fingerprint",
+    ) -> str:
+        """#1137: registry-aware asset URL with cache-strategy resolution.
+
+        When ``cache="fingerprint"`` (the default), looks up the
+        registered ``RendererAsset`` by ``(renderer_name, filename)``,
+        reads the file, hashes the contents to 8 hex chars, and
+        appends ``?v=<hash>``. The hash is memoised module-level
+        keyed by ``(renderer_name, filename)`` so request-time cost
+        is O(1) after first access.
+
+        When ``cache="immutable"`` or ``"no-store"``, returns the
+        bare URL. ``immutable``'s ``Cache-Control: immutable`` header
+        is the auto-mount's responsibility (future iteration).
+
+        Falls back to the bare URL when the asset isn't registered
+        (the caller may be referencing a manually-mounted file) or
+        when the file is missing — neither should hard-fail page
+        rendering. Missing files do trigger a stderr warning so the
+        operator sees it in dev.
+        """
+        base = asset_url(renderer_name, filename)
+        if cache != "fingerprint":
+            return base
+        key = (renderer_name, filename)
+        if key in _fingerprint_cache:
+            return f"{base}?v={_fingerprint_cache[key]}"
+        path = self._asset_path(renderer_name, filename)
+        if path is None or not path.exists():
+            # Unknown asset or missing file — return bare URL. A
+            # registered asset whose file vanishes is an operator
+            # error, but it shouldn't crash render.
+            return base
+        digest = _content_hash(path)
+        _fingerprint_cache[key] = digest
+        return f"{base}?v={digest}"
+
+    def _asset_path(self, renderer_name: str, filename: str) -> pathlib.Path | None:
+        """Look up the on-disk path for a (renderer, filename) pair."""
+        handler = self._handlers.get(renderer_name)
+        if handler is None:
+            return None
+        assets_fn = getattr(handler, "assets", None)
+        if assets_fn is None:
+            return None
+        try:
+            declared = assets_fn()
+        except TypeError:
+            return None
+        for asset in declared:
+            if isinstance(asset, RendererAsset) and asset.path.name == filename:
+                return asset.path
+        return None
+
     def collect_assets(self) -> list[tuple[str, RendererAsset]]:
         """#1132: walk every registered renderer, call ``assets()`` if
         defined, and return ``(renderer_name, asset)`` pairs.
@@ -240,5 +300,44 @@ def asset_url(renderer_name: str, filename: str) -> str:
     segment-per-name so it composes cleanly with FastAPI's
     ``StaticFiles`` mount points. Filename is interpolated raw —
     callers must not pass user-controllable input here.
+
+    This is the registry-free shape (bare URL, no fingerprinting).
+    Renderers that want content-hash cache-busting per the asset's
+    declared ``cache="fingerprint"`` strategy should call
+    ``RendererRegistry.asset_url(...)`` instead (#1137) — it has the
+    registry context needed to look up the asset's on-disk path.
     """
     return f"/static/dazzle-renderers/{renderer_name}/{filename}"
+
+
+# #1137: module-level memoisation. Keyed by (renderer_name, filename)
+# so a renderer's first request hashes the file once; every subsequent
+# request returns the cached digest. Cache is process-lifetime — assets
+# don't change without a restart.
+_fingerprint_cache: dict[tuple[str, str], str] = {}
+
+
+def _content_hash(path: pathlib.Path) -> str:
+    """SHA-256 of file contents, truncated to 8 hex chars.
+
+    8 chars (32 bits) is enough collision resistance for cache-
+    busting query strings — the goal is "different file → different
+    URL", not cryptographic identity. Matches the
+    ``asset_fingerprint`` helper's truncation length used elsewhere
+    in the UI runtime.
+    """
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()[:8]
+
+
+def reset_fingerprint_cache() -> None:
+    """Test-only: clear the module-level hash memoisation.
+
+    Useful when a test mutates a fixture file and needs the next
+    ``asset_url`` call to re-hash. Production code should never
+    call this — asset content doesn't change without a restart.
+    """
+    _fingerprint_cache.clear()

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.38] - 2026-05-18
+
+### Added
+- **`RendererRegistry.asset_url(name, file, cache=...)` honours
+  fingerprinting (#1137).** Pre-fix `RendererAsset(cache="fingerprint")`
+  (the default) was a no-op — the standalone `asset_url()` returned a
+  bare path so the declared content-hash cache-busting never reached
+  the URL. The new registry-aware method looks up the registered
+  asset's on-disk path, hashes contents to 8 hex chars, memoises the
+  result module-level, and appends `?v=<hash>`. Unknown renderers and
+  missing files fall back to the bare URL — page rendering never
+  hard-fails on a misconfigured asset. Standalone `asset_url(name, file)`
+  remains unchanged (always bare URL); renderers wanting fingerprinting
+  should switch to the registry-aware shape.
+
+### Agent Guidance
+- Custom renderers that need cache-busting on local assets must call
+  `services.renderer_registry.asset_url("name", "file.js")` (or
+  threaded equivalent), not the module-level `asset_url()` import —
+  only the registry has the path/hash context. The bare-import form
+  stays available for static-mount scenarios where the operator owns
+  cache invalidation.
+
 ## [0.71.37] - 2026-05-18
 
 ### Added
