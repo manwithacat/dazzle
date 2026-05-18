@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.40] - 2026-05-18
+
+### Fixed
+- **Auto-routes no longer shadow project overrides and CRUD lists
+  (#1140).** Four cleanups to the boot-time route pipeline:
+  - `create_page_routes` accepts a new `claimed_paths: set[tuple[str, str]]`
+    arg. `assemble_post_build_routes` snapshots already-mounted
+    `(method, path)` pairs from `app.routes` before calling, so
+    workspace auto-handlers skip when an override is already at
+    `/app/workspaces/<name>`, and plural redirects skip when the
+    CRUD list already serves the plural path (e.g.
+    `AssessmentEvent` → `/assessmentevents`).
+  - `generate_all_routes` deduplicates by `(method, path)` as a
+    backstop — if an entity is referenced by both `analytics:` and
+    a regular workspace surface and ends up in the endpoint list
+    twice, only one CRUD handler registers (the second logs a
+    WARNING so the upstream double-visit stays visible).
+  - `validate_routes` short-circuits on its second call via an
+    `app.state.dazzle_routes_validated` flag — both
+    `server._setup_routes` and `app_factory.assemble_post_build_routes`
+    used to call it, double-emitting every conflict line.
+  - Conflict descriptions now carry endpoint provenance
+    (`module.qualname` per duplicate), so closure-factory handlers
+    with identical `name="handler"` are distinguishable without
+    monkey-patching `APIRouter.add_api_route`.
+
+### Agent Guidance
+- `create_page_routes` is no longer registry-only — when calling it
+  outside `assemble_post_build_routes` (custom assembly paths,
+  tests), pass `claimed_paths` if any overrides or CRUD endpoints
+  already live at the same workspace/plural URLs. Omit the arg to
+  keep pre-#1140 behaviour.
+
 ## [0.71.39] - 2026-05-18
 
 ### Added

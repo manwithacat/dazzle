@@ -2141,6 +2141,7 @@ def create_page_routes(
     app_prefix: str = "",
     *,
     convert_entity_fn: Callable[..., Any] | None = None,
+    claimed_paths: set[tuple[str, str]] | None = None,
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -2156,6 +2157,13 @@ def create_page_routes(
             Callers mounting under a prefix MUST pass this explicitly
             so that nav items, href attributes, and hx-get URLs are
             generated with the correct prefix.
+        claimed_paths: ``(method, registration_path)`` pairs already
+            mounted on the app — e.g. project overrides at
+            ``/app/workspaces/<name>`` or CRUD lists at ``/<plural>``.
+            Workspace handlers and plural-redirects whose target is in
+            this set are skipped so the framework's auto-route doesn't
+            shadow the explicit override (#1140). Paths here are the
+            REGISTRATION paths (stripped of ``app_prefix``).
 
     Returns:
         FastAPI router with page routes.
@@ -2165,6 +2173,8 @@ def create_page_routes(
 
     if backend_url is None:
         backend_url = resolve_api_url()
+
+    claimed_paths = claimed_paths or set()
 
     from dazzle.render.surface_access import SurfaceAccessConfig
     from dazzle.ui.converters.template_compiler import compile_appspec_to_templates
@@ -2288,6 +2298,14 @@ def create_page_routes(
         plural_reg_path = f"/{plural_slug}"
         if plural_reg_path in _registered_reg_paths:
             # Something real already lives here — don't shadow it.
+            continue
+        # #1140: also skip when the CRUD list (registered earlier by
+        # route_generator) already serves the plural path. Pre-fix, an
+        # entity whose canonical API path IS the plural (e.g.
+        # AssessmentEvent → /assessmentevents) triggered the redirect
+        # to register on top of the list endpoint, causing a real
+        # conflict that resolved as redirect-to-self at request time.
+        if ("GET", plural_reg_path) in claimed_paths:
             continue
         # #1004 — only register the plural redirect when the singular
         # canonical target exists. When an entity has no surfaces, the
@@ -2476,6 +2494,19 @@ def create_page_routes(
             # forward-ref TypeAdapter build fails). The closure binds
             # the per-workspace state and exposes a clean
             # `(request: Request)` signature.
+            # #1140: project overrides at /app/workspaces/<name> beat
+            # the framework's auto-handler in FastAPI's first-match
+            # dispatch — so the auto-route is dead weight that just
+            # pollutes /openapi.json and the conflict log. Skip it
+            # when the override is already mounted.
+            _ws_reg_path = f"/workspaces/{workspace.name}"
+            if ("GET", _ws_reg_path) in claimed_paths:
+                logger.info(
+                    "Skipping framework auto-workspace-route GET %s — project override "
+                    "already mounted (#1140).",
+                    _ws_route,
+                )
+                continue
             handler = _make_workspace_handler(
                 deps=deps,
                 ws_ctx=ws_ctx,
@@ -2487,7 +2518,7 @@ def create_page_routes(
                 ws_app_name=ws_app_name,
                 primary_action_candidates=_ws_primary,
             )
-            router.get(f"/workspaces/{workspace.name}", response_class=HTMLResponse)(handler)
+            router.get(_ws_reg_path, response_class=HTMLResponse)(handler)
 
         # When workspaces exist and "/" is not already registered as a page,
         # add a redirect so users landing at the app root reach a real page.

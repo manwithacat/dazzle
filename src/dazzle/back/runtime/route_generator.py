@@ -4374,6 +4374,15 @@ class RouteGenerator:
             # More segments first, then static before dynamic at same depth.
             return (-ep.path.count("/"), 0 if "{" not in ep.path else 1)
 
+        # #1140: backstop dedup. AegisMark hit a case where AssessmentEvent
+        # (referenced by both an `analytics:` block and regular workspace
+        # surfaces) produced two `EndpointSpec` entries for each of GET
+        # /assessmentevents and POST /assessmentevents, so the CRUD list +
+        # create handlers double-registered. Tracking emitted (method, path)
+        # here catches the duplicate regardless of upstream cause — the
+        # generic CRUD shape doesn't accept two different handlers for the
+        # same operation anyway.
+        emitted: set[tuple[str, str]] = set()
         for endpoint in sorted(endpoints, key=_route_sort_key):
             method = (
                 endpoint.method.value if hasattr(endpoint.method, "value") else str(endpoint.method)
@@ -4385,6 +4394,16 @@ class RouteGenerator:
                     endpoint.path,
                 )
                 continue
+            if (method, endpoint.path) in emitted:
+                logger.warning(
+                    "Skipping duplicate CRUD endpoint %s %s — already emitted earlier "
+                    "in this generate_all_routes pass (#1140). Check upstream endpoint "
+                    "discovery for double-visitation.",
+                    method,
+                    endpoint.path,
+                )
+                continue
+            emitted.add((method, endpoint.path))
             service_spec = service_specs.get(endpoint.service)
             self.generate_route(endpoint, service_spec)
 

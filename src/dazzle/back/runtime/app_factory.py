@@ -554,6 +554,23 @@ def assemble_post_build_routes(
         # into the ui page_routes module via a callable-injection shim
         # (#679 workaround); since #1094 they live in dazzle.render and
         # ui imports them directly. No longer threaded through this call.
+        #
+        # #1140: snapshot already-registered (method, path) pairs so
+        # create_page_routes can skip workspace auto-handlers and
+        # plural redirects that would shadow project overrides or
+        # collide with CRUD list endpoints. Paths are stripped of the
+        # `/app` prefix to match the router's registration path shape.
+        claimed_paths: set[tuple[str, str]] = set()
+        for _route in app.routes:
+            _methods = getattr(_route, "methods", None) or set()
+            _path = getattr(_route, "path", None)
+            if not _methods or not _path:
+                continue
+            _rel = _path[len("/app") :] if _path.startswith("/app") else _path
+            if not _rel:
+                _rel = "/"
+            for _m in _methods:
+                claimed_paths.add((_m, _rel))
         page_router = create_page_routes(
             appspec,
             backend_url=backend_url,
@@ -561,6 +578,7 @@ def assemble_post_build_routes(
             get_auth_context=get_auth_context,
             app_prefix="/app",
             convert_entity_fn=convert_entity,
+            claimed_paths=claimed_paths,
         )
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
