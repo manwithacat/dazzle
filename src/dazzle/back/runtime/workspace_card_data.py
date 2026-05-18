@@ -182,9 +182,11 @@ def _build_day_timeline_slots(
     ``WorkspaceRegion.day_timeline_config``.
 
     Slot label uses a sensible default: "{starts_at_value} — {ends_at_value}"
-    for time-bucketed display. Body is left empty in the IR-pure
-    path; richer composite-card rendering against `config.card`
-    is deferred until composite-card lookup wires up.
+    for time-bucketed display. Slot body is the
+    ``_interpolate_card_template`` expansion of ``config.card`` against
+    the row dict — same ``{{ field }}`` / ``{{ field.path }}`` grammar
+    as ``profile_card`` / ``task_inbox`` use (#1146 part 1). Empty
+    ``config.card`` keeps the body empty (minimal slot rendering).
 
     Defensive paths: rows missing the configured starts_at field
     are skipped; rows whose timestamps don't parse as datetime are
@@ -249,16 +251,21 @@ def _build_day_timeline_slots(
         elif starts is not None and (ends or starts) < now_aware:
             position = "before"
         # Human-readable label: prefer name/title field, fall back
-        # to the ISO timestamp range. The composite `card:` template
-        # would render richer content; deferred ship.
+        # to the ISO timestamp range.
         label_raw = item.get("name") or item.get("title") or item.get("message") or ""
         label = str(label_raw) if label_raw else f"{starts.isoformat() if starts else ''}"
+        # #1146 part 1: composite-card body interpolation. `config.card`
+        # is a `{{ field }}` template (same grammar as profile_card,
+        # task_inbox). Empty template → empty body (no regression for
+        # configs that don't set `card:`).
+        card_template = str(getattr(config, "card", "") or "")
+        body = _interpolate_card_template(card_template, item) if card_template else ""
         slots.append(
             {
                 "slot_id": slot_id,
                 "label": label,
                 "position": position,
-                "body": "",
+                "body": body,
                 "drill_url": "",
             }
         )

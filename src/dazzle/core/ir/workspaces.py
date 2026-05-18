@@ -679,10 +679,13 @@ class DayTimelineConfig(BaseModel):
             active slot.
         ends_at: Field on the source entity holding the slot's end
             timestamp.
-        card: Name of the composite card template that renders each
-            slot's body. Resolved by the renderer at adapt time. When
-            empty, slots render with a minimal default body
-            (start/end label only).
+        card: ``{{ field }}`` / ``{{ field.path }}`` template
+            rendered against each slot's source row to produce the
+            slot body (#1146 part 1). Same grammar as
+            ``profile_card`` / ``task_inbox`` templates — graceful
+            degradation when a path is unresolved (renders as empty
+            string). When ``card == ""`` slots render with a minimal
+            default body (start/end label only).
     """
 
     starts_at: str

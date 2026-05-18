@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.47] - 2026-05-18
+
+### Added
+- **`day_timeline` composite-card body interpolation (#1146 part 1).**
+  Pre-fix the per-slot body was hard-coded to `""` with a TODO
+  ("deferred until composite-card lookup wires up"). The slot body
+  is now the `_interpolate_card_template` expansion of
+  `DayTimelineConfig.card` against each row dict — same
+  `{{ field }}` / `{{ field.path }}` grammar `profile_card` /
+  `task_inbox` already use. Empty `card:` keeps the body empty
+  (no regression for configs that don't declare a card template).
+
+  #1146's other two sub-asks (`as_of:` computed datetime, and
+  per-slot action affordance) remain open. The action affordance
+  is superseded by #1148's `row_action:` — that wiring lands when
+  the day_timeline renderer gains row_action support.
+
 ## [0.71.46] - 2026-05-18
 
 ### Added
