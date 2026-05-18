@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.37] - 2026-05-18
+
+### Added
+- **`Script.integrity` + `Script.crossorigin` for SRI-pinned CDN
+  scripts (#1136).** Custom renderers loading external CDN scripts
+  with subresource integrity hashes can now stay on the typed
+  `Script` primitive instead of dropping to `RawHTML`:
+  `Script(src=CHARTJS_CDN, integrity="sha384-...", crossorigin="anonymous", defer=True)`.
+  Both fields are rejected on inline `body=` scripts (SRI on inline
+  is meaningless); `crossorigin` is `Literal["anonymous", "use-credentials"]`.
+  Attribute values flow through the same `_attr_escape` pipeline so
+  a pathological hash can't break out of the attribute.
+
 ## [0.71.36] - 2026-05-18
 
 ### Fixed

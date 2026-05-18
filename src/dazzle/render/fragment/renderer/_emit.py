@@ -397,6 +397,12 @@ class FragmentRenderer(
 
         if script.src is not None:
             attrs.append(f'src="{_attr_escape(script.src)}"')
+            # #1136: SRI + CORS on external scripts only (Script
+            # __post_init__ rejects them on inline bodies).
+            if script.integrity is not None:
+                attrs.append(f'integrity="{_attr_escape(script.integrity)}"')
+            if script.crossorigin is not None:
+                attrs.append(f'crossorigin="{_attr_escape(script.crossorigin)}"')
             return f"<script {' '.join(attrs)}></script>"
 
         assert script.body is not None  # by __post_init__

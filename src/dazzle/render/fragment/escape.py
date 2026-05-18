@@ -21,6 +21,9 @@ nonce injection on every page render.
 import html as _html_module
 import re
 from dataclasses import dataclass
+from typing import Literal
+
+CrossOrigin = Literal["anonymous", "use-credentials"]
 
 _VALID_SLOT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -86,6 +89,13 @@ class Script:
         async_: Emit the ``async`` attribute. Named with trailing
             underscore to avoid the Python keyword collision.
         nonce: Optional CSP nonce; rendered as ``nonce="..."`` when set.
+        integrity: Subresource integrity hash (e.g. ``"sha384-..."``).
+            Only valid with ``src=`` — SRI on inline scripts is
+            meaningless. The primitive passes the string through
+            verbatim; the caller owns hash format validation.
+        crossorigin: CORS mode for external scripts. Only valid with
+            ``src=``. Must be ``"anonymous"`` or ``"use-credentials"``
+            when set.
     """
 
     src: str | None = None
@@ -94,6 +104,8 @@ class Script:
     defer: bool = False
     async_: bool = False
     nonce: str | None = None
+    integrity: str | None = None
+    crossorigin: CrossOrigin | None = None
 
     def __post_init__(self) -> None:
         has_src = self.src is not None
@@ -107,6 +119,23 @@ class Script:
             raise TypeError(f"Script.src expects str, got {type(self.src).__name__}")
         if self.body is not None and not isinstance(self.body, str):
             raise TypeError(f"Script.body expects str, got {type(self.body).__name__}")
+        # #1136: integrity + crossorigin only meaningful on external
+        # scripts. Reject early so a renderer can't silently drop a
+        # SRI hash by attaching it to an inline <script>.
+        if has_body and self.integrity is not None:
+            raise ValueError("Script.integrity is only valid with src= (not inline body=)")
+        if has_body and self.crossorigin is not None:
+            raise ValueError("Script.crossorigin is only valid with src= (not inline body=)")
+        if self.integrity is not None and not isinstance(self.integrity, str):
+            raise TypeError(f"Script.integrity expects str, got {type(self.integrity).__name__}")
+        if self.crossorigin is not None and self.crossorigin not in (
+            "anonymous",
+            "use-credentials",
+        ):
+            raise ValueError(
+                f"Script.crossorigin must be 'anonymous' or 'use-credentials'; "
+                f"got {self.crossorigin!r}"
+            )
 
 
 @dataclass(frozen=True, slots=True)
