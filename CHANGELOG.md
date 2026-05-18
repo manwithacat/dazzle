@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.41] - 2026-05-18
+
+### Fixed
+- **`rbac verify-scope` posts JSON to `/auth/login` (#1141).**
+  Pre-fix the verifier sent `data={"email": ..., "password": ...}`
+  (form-encoded) but the framework's own `/auth/login` accepts
+  `application/json` only — every persona row reported
+  "Admin login failed (422)" against a vanilla Dazzle project.
+  Switched to `json=`. Error message also now includes the
+  response body excerpt (capped at 200 chars) so a 422 from a
+  project requiring extra fields (2FA, captcha) actually tells
+  the operator what to fix.
+
 ## [0.71.40] - 2026-05-18
 
 ### Fixed

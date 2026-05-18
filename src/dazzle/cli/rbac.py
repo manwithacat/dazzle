@@ -144,14 +144,24 @@ async def _login(
     """Login via the app's auth endpoint and return session cookies."""
     from dazzle.core.http_client import async_retrying_request
 
+    # #1141: framework's /auth/login expects application/json, not
+    # form-encoded. The pre-fix `data=` shape produced a 422 against
+    # vanilla Dazzle projects, surfacing as "Admin login failed" on
+    # every persona row with no signal that the verifier and the
+    # framework auth endpoint disagreed on encoding.
     resp = await async_retrying_request(
         client,
         "POST",
         f"{base_url}/auth/login",
-        data={"email": email, "password": password},
+        json={"email": email, "password": password},
     )
     if resp.status_code >= 400:
-        raise RuntimeError(f"Login failed ({resp.status_code}): {email}")
+        # #1141: include the response body excerpt so a 422 from a
+        # project that required extra fields (2FA, captcha) gives the
+        # operator something to act on. Pre-fix the error was bare
+        # `Login failed (422): <email>` with no hint of the cause.
+        body = (getattr(resp, "text", "") or "")[:200]
+        raise RuntimeError(f"Login failed ({resp.status_code}): {email} — {body!r}")
     return dict(resp.cookies)
 
 
