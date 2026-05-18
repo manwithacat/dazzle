@@ -55,6 +55,34 @@ class StepResult:
 
 
 @dataclass
+class UICheckResult:
+    """#1135: structured result from ``DazzleClient.check_ui_loads``.
+
+    Pre-#1135, ``check_ui_loads`` returned a bare ``bool`` and the
+    ``assert_visible`` step surfaced only "UI check failed" — no
+    URL, no HTTP status, no body excerpt. Triage of 18 simultaneous
+    ``WS_*_NAV`` failures across AegisMark cost ~an hour before
+    the operator deduced the no-op ``navigate_to`` from source.
+
+    Attributes:
+        ok: True iff the page loaded (200 + ``<title>`` present).
+        status: HTTP status code, or ``None`` if the request raised
+            before getting a response.
+        url: The URL actually fetched. Distinguishes the
+            workspace-specific case (``navigate_to`` route resolved)
+            from the bare ``ui_url`` fallback.
+        excerpt: First 200 chars of the response body, OR
+            ``repr(exception)`` if the request raised before a body
+            was available.
+    """
+
+    ok: bool
+    status: int | None
+    url: str
+    excerpt: str
+
+
+@dataclass
 class TestCaseResult:
     """Result of executing a complete test case."""
 
@@ -731,14 +759,34 @@ class DazzleClient:
         """Generate a test value for a field type, respecting max_length."""
         return generate_field_value_from_str(name, field_type, unique=unique, max_length=max_length)
 
-    def check_ui_loads(self) -> bool:
-        """Check if the UI loads successfully."""
+    def check_ui_loads(self, url: str | None = None) -> UICheckResult:
+        """Check if the UI loads successfully (#1135).
+
+        Returns a ``UICheckResult`` with the URL fetched, HTTP status,
+        and body excerpt — enough for the operator to diagnose a
+        failure without reading framework source. Pre-#1135, returned
+        a bare ``bool`` and the caller had no way to surface context.
+
+        Args:
+            url: URL to fetch. Defaults to ``self.ui_url`` — the
+                workspace-aware caller (``_execute_assert_visible_step``)
+                resolves a per-step URL from the preceding
+                ``navigate_to`` step and passes it here.
+        """
+        target = url or self.ui_url
         try:
-            resp = self._request("GET", self.ui_url)
-            return resp.status_code == 200 and "<title>" in resp.text
-        except Exception:
-            logger.debug("ignored exception in test_runner.py:730", exc_info=True)
-            return False
+            resp = self._request("GET", target)
+        except Exception as exc:
+            logger.debug("check_ui_loads: GET %s raised %r", target, exc, exc_info=True)
+            return UICheckResult(ok=False, status=None, url=target, excerpt=repr(exc))
+        body = resp.text or ""
+        ok = resp.status_code == 200 and "<title>" in body
+        return UICheckResult(
+            ok=ok,
+            status=resp.status_code,
+            url=target,
+            excerpt=body[:200],
+        )
 
     def _auth_headers(self) -> dict[str, str]:
         """Get authentication headers."""
@@ -1136,7 +1184,28 @@ class TestRunner:
         start_time: float,
         **_kw: Any,
     ) -> StepResult:
-        # Navigation is conceptual in API tests
+        """#1135: stash the resolved route into the step context so a
+        subsequent ``assert_visible`` actually checks the navigated
+        workspace, not the bare ``ui_url``.
+
+        Pre-#1135 this was a no-op stub — comment said "navigation is
+        conceptual in API tests" — but the test design **does** carry
+        the workspace route in ``data.route`` and the operator expects
+        the next ``assert_visible`` to inspect that page. The no-op
+        meant every ``WS_*_NAV`` test smoke-tested the same base URL
+        with different cookies; failures couldn't be diagnosed because
+        the message didn't say which URL was checked.
+        """
+        from urllib.parse import urljoin
+
+        assert self.client is not None
+        route = resolved_data.get("route") if resolved_data else None
+        if route:
+            # Resolve relative to the client's ui_url. urljoin handles
+            # both absolute (``http://...``) and relative (``/app/x``)
+            # forms; ``ui_url + "/"`` ensures the base is treated as a
+            # directory so ``/app/x`` overrides cleanly.
+            context["_current_ui_url"] = urljoin(self.client.ui_url + "/", route.lstrip("/"))
         return StepResult(
             action=action,
             target=target,
@@ -1197,13 +1266,25 @@ class TestRunner:
         start_time: float,
         **_kw: Any,
     ) -> StepResult:
+        """#1135: include URL + HTTP status + body excerpt in the
+        failure message so the operator can diagnose without reading
+        framework source."""
         assert self.client is not None
-        success = self.client.check_ui_loads()
+        # The preceding navigate_to step stashes the workspace URL in
+        # context; fall back to the client's base ui_url when no
+        # navigate happened.
+        check_url = context.get("_current_ui_url")
+        result = self.client.check_ui_loads(url=check_url)
+        message = (
+            ""
+            if result.ok
+            else f"UI check failed: GET {result.url} → {result.status} | {result.excerpt!r}"
+        )
         return StepResult(
             action=action,
             target=target,
-            result=TestResult.PASSED if success else TestResult.FAILED,
-            message="" if success else "UI check failed",
+            result=TestResult.PASSED if result.ok else TestResult.FAILED,
+            message=message,
             duration_ms=(time.time() - start_time) * 1000,
         )
 

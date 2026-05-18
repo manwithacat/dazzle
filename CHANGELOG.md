@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.35] - 2026-05-18
+
+### Added
+- **`UICheckResult` + structured `assert_visible` failures (#1135).**
+  `DazzleClient.check_ui_loads` now returns a `UICheckResult` dataclass
+  (`ok` / `status` / `url` / `excerpt`) instead of a bare `bool`, and
+  the `assert_visible` step surfaces the URL + HTTP status + first-200-
+  char body excerpt in `StepResult.message` on failure. Pre-fix message
+  was the literal string `"UI check failed"` — operators couldn't
+  distinguish 30x / 404 / JSON-instead-of-HTML / connection refused.
+  Triage of 18 simultaneous `WS_*_NAV` failures in AegisMark cost
+  ~an hour before the no-op `navigate_to` was deduced from source.
+
+### Fixed
+- **`navigate_to` now actually navigates (#1135).** Pre-fix
+  `_execute_navigate_to_step` was a no-op stub (comment: "Navigation
+  is conceptual in API tests"), so every `WS_*_NAV` test smoke-tested
+  the same base URL with only the persona cookie varying — testing
+  one thing 18 times instead of 18 different workspaces. Now the
+  step stashes the resolved route into `context["_current_ui_url"]`;
+  the subsequent `assert_visible` reads that and checks the navigated
+  workspace. `urljoin`-based URL resolution handles both absolute
+  (`http://other-host/x`) and relative (`/app/workspaces/team`)
+  forms.
+
+### Changed
+- `DazzleClient.check_ui_loads` signature: returns `UICheckResult`
+  (was `bool`), accepts optional `url` argument. Single internal call
+  site in `_execute_assert_visible_step` updated.
+
 ## [0.71.34] - 2026-05-17
 
 ### Added
