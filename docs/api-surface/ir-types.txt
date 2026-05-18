@@ -1920,6 +1920,7 @@ ir_class: PersonaSpec
     - interactive: bool = True
     - link_via: str = 'email'
     - proficiency_level: Literal[novice, intermediate, expert] = 'intermediate'
+    - role: str | None = None
 
 ir_class: PersonaVariant
   required:

@@ -432,7 +432,8 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
     """Generate the complete static access matrix for *appspec*.
 
     Algorithm:
-    1. Extract roles from appspec.personas (using .id).
+    1. Extract roles from appspec.personas (using .effective_role,
+       which is .role when set else .id — see #1147).
     2. For each entity × operation × role:
        - No access spec → PERMIT_UNPROTECTED (+ warning).
        - No matching permit rule → DENY.
@@ -440,8 +441,24 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
        - PERMIT rule with field condition → PERMIT_FILTERED.
        - PERMIT rule without field condition → PERMIT.
     3. Emit diagnostics for unprotected entities and orphan roles.
+       The orphan check operates on resolved role names, so a persona
+       with ``role: brand_owner`` is considered referenced whenever
+       ``brand_owner`` appears in a permit/scope rule — even if the
+       persona id is ``commercial``.
     """
-    roles: list[str] = [p.id for p in appspec.personas]
+    # #1147: build a persona-id → effective-role map so warnings can
+    # mention both the persona name (what the user sees) and the role
+    # they map to (what the lint actually checks).
+    persona_roles: dict[str, str] = {p.id: p.effective_role for p in appspec.personas}
+    # Deduplicate while preserving order — two personas sharing one
+    # role should produce a single matrix column, not two.
+    seen_roles: set[str] = set()
+    roles: list[str] = []
+    for p in appspec.personas:
+        r = p.effective_role
+        if r not in seen_roles:
+            seen_roles.add(r)
+            roles.append(r)
     entities: list[str] = [e.name for e in appspec.domain.entities]
     operations: list[str] = list(OPERATIONS)
 
@@ -530,17 +547,35 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
                         )
                     )
 
-    # Warn about roles defined in personas but never referenced in any rule.
+    # #1147: warn about roles defined in personas but never referenced
+    # in any rule. The diff is now over *role names* (resolved via
+    # PersonaSpec.effective_role), so a persona named ``commercial``
+    # with ``role: brand_owner`` no longer trips orphan_role when
+    # ``brand_owner`` is referenced. The warning message names the
+    # persona id AND the role so the operator can find both quickly.
     role_set = set(roles)
     orphan_roles = role_set - referenced_roles
+    # Build inverse map (role → personas mapped to it) for the message.
+    role_to_personas: dict[str, list[str]] = {}
+    for pid, prole in persona_roles.items():
+        role_to_personas.setdefault(prole, []).append(pid)
     for orphan in sorted(orphan_roles):
+        persona_ids = role_to_personas.get(orphan, [])
+        if persona_ids and persona_ids != [orphan]:
+            persona_label = ", ".join(f"'{pid}'" for pid in sorted(persona_ids))
+            message = (
+                f"Role '{orphan}' (used by persona {persona_label}) "
+                f"is not referenced in any permission rule"
+            )
+        else:
+            message = f"Persona '{orphan}' is not referenced in any permission rule"
         warnings.append(
             PolicyWarning(
                 kind="orphan_role",
                 entity="*",
                 role=orphan,
                 operation="*",
-                message=(f"Persona '{orphan}' is not referenced in any permission rule"),
+                message=message,
             )
         )
 

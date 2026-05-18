@@ -468,6 +468,7 @@ class _PersonaState:
     backed_by: str | None = None
     link_via: str = "email"
     interactive: bool = True
+    role: str | None = None  # #1147: explicit role override
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -538,6 +539,19 @@ def _p_kw_link_via(parser: Any, state: _PersonaState) -> None:
     parser.skip_newlines()
 
 
+def _p_kw_role(parser: Any, state: _PersonaState) -> None:
+    """``role: <identifier>`` — RBAC role this persona maps to (#1147).
+
+    Decouples persona display identity (``id``, ``label``) from the
+    role name used in ``permit:``/``scope:``/``as:`` clauses. Lets
+    two personas share a role while keeping distinct UX presence.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.role = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
 def _p_kw_interactive(parser: Any, state: _PersonaState) -> None:
     """``interactive: true|false`` — flag the persona as interactive (#780)."""
     parser.advance()
@@ -575,6 +589,7 @@ _PERSONA_IDENT_KEYWORDS: dict[str, KeywordParser[_PersonaState]] = {
     "backed_by": _p_kw_backed_by,
     "link_via": _p_kw_link_via,
     "interactive": _p_kw_interactive,
+    "role": _p_kw_role,
 }
 
 
@@ -603,4 +618,5 @@ def _build_persona(persona_id: str, label: str, state: _PersonaState) -> ir.Pers
         backed_by=state.backed_by,
         link_via=state.link_via,
         interactive=state.interactive,
+        role=state.role,
     )

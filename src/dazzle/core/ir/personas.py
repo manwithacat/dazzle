@@ -45,6 +45,12 @@ class PersonaSpec(BaseModel):
             persona for background processes) so the test generator
             skips auth lifecycle tests that would always fail with
             401/403.
+        role: Underlying authorisation role this persona maps to
+            (#1147). Lets multiple personas share one role (e.g.
+            ``commercial`` and ``agency`` both ``role: brand_owner``)
+            while keeping distinct UX identities (default workspace,
+            label). When ``None``, the persona ``id`` itself is used
+            as the role name — preserving the pre-#1147 convention.
     """
 
     id: str
@@ -57,6 +63,18 @@ class PersonaSpec(BaseModel):
     backed_by: str | None = None  # Entity name (e.g. "Tester")
     link_via: str = "email"  # Join field (default: email)
     interactive: bool = True
+    role: str | None = None  # #1147: explicit role; falls back to .id
+
+    @property
+    def effective_role(self) -> str:
+        """The role name this persona maps to in RBAC rules (#1147).
+
+        Returns ``self.role`` when set, else ``self.id`` — preserving
+        the pre-#1147 convention where the persona id WAS the role.
+        Use this anywhere the role identity is what matters (matrix
+        orphan checks, scope resolution, permit-rule diffs).
+        """
+        return self.role or self.id
 
     model_config = ConfigDict(frozen=True)
 

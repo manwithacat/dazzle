@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.43] - 2026-05-18
+
+### Added
+- **`PersonaSpec.role` decouples persona identity from RBAC role
+  (#1147).** Personas can now declare `role: <name>` in DSL so two
+  personas (e.g. `commercial` and `agency`) can share one role
+  (`brand_owner`) while keeping distinct labels and default
+  workspaces. The IR exposes `PersonaSpec.effective_role` (returns
+  `.role` when set, else `.id`) so callers don't have to handle
+  the fallback. Pre-fix the `role:` keyword inside a persona block
+  was silently dropped by `_on_unknown_persona`.
+
+### Fixed
+- **`orphan_role` lint no longer false-positives on persona-role
+  name mismatches (#1147).** `generate_access_matrix` now resolves
+  each persona to its `effective_role` before building the roles
+  list AND the orphan diff. The warning message names both the
+  role and the persona id(s) when they differ, so the operator
+  doesn't have to grep two files to find both. Roles shared across
+  multiple personas collapse to a single matrix column (the unit
+  of authorisation is the role, not the display identity).
+
+### Agent Guidance
+- In DSL: when two user types differ only by workspace/label but
+  share authorisation, give them distinct personas with the same
+  `role:`. Pre-#1147 you had to invent compound role names or
+  duplicate permit rules; both convey less intent than the typed
+  separation.
+
 ## [0.71.42] - 2026-05-18
 
 ### Fixed
