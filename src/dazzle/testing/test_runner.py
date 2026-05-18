@@ -1827,24 +1827,39 @@ class TestRunner:
         start_time: float,
         **_kw: Any,
     ) -> StepResult:
-        """#1138: positive inverse of ``assert_unauthenticated``.
+        """#1138 / #1142: assert the current session is authenticated.
 
-        PASSES when ``last_response.status_code`` is in 2xx. Used by
-        designs that ``login_as`` then probe a protected endpoint and
-        want to assert the session is in fact authenticated, rather
-        than rejected. The default expected list mirrors the
-        ``assert_unauthenticated`` convention: ``expect`` override
-        lets a design pin a narrower set (e.g. ``[200]``).
+        The canonical ACL test pattern emitted by ``dsl_test_generator``
+        is ``login_as`` immediately followed by ``assert_authenticated``,
+        so we cannot rely on ``context['last_response']`` — login_as
+        doesn't populate it. Self-bootstrap with ``GET /auth/me``
+        instead: a 2xx response with the auth headers in force means
+        the session is valid; 401/403 means the server rejected it.
+        Stash the response in ``context['last_response']`` so any
+        following ``assert_error``-style step can introspect it too.
+
+        Falls back to inspecting a pre-existing ``last_response`` when
+        present, which keeps the alternative "login_as → probe → assert"
+        pattern working.
         """
+        assert self.client is not None
         last_resp = context.get("last_response")
         if last_resp is None:
-            return StepResult(
-                action=action,
-                target=target,
-                result=TestResult.FAILED,
-                message="No previous response to check",
-                duration_ms=(time.time() - start_time) * 1000,
-            )
+            try:
+                last_resp = self.client._request(
+                    "GET",
+                    f"{self.client.api_url}/auth/me",
+                    headers=self.client._auth_headers(),
+                )
+            except Exception as e:
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.FAILED,
+                    message=f"/auth/me probe failed: {e}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+            context["last_response"] = last_resp
         expected_codes = resolved_data.get("expect", list(range(200, 300)))
         actual = last_resp.status_code
         success = actual in expected_codes

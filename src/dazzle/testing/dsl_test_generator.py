@@ -522,6 +522,20 @@ class CRUDTestBuilder:
                 unique_data = _generate_entity_data_with_refs(
                     entity, required_refs, self._entity_map
                 )
+                # #1143: explicitly populate the target unique field even
+                # when it's nullable. _generate_entity_data only emits
+                # required fields, so a `xero_invoice_id: str(100) unique`
+                # (not required) was absent from both POSTs — Postgres
+                # stores two NULLs (standard UNIQUE allows multiple NULLs)
+                # and the constraint never trips. Forcing a concrete value
+                # in both create steps guarantees the duplicate is a real
+                # duplicate.
+                from dazzle.core.ir.fields import FieldTypeKind
+
+                if uf.type.kind != FieldTypeKind.REF and uf.name not in unique_data:
+                    unique_data[uf.name] = _generate_field_value(
+                        uf, int(datetime.now().timestamp() * 1000) % 100000
+                    )
                 tests.append(
                     _create_test(
                         test_id=f"VAL_{entity.name.upper()}_{uf.name.upper()}_UNIQUE",

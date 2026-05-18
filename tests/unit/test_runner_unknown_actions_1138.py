@@ -110,14 +110,30 @@ def test_assert_authenticated_fails_on_401() -> None:
     assert result.result is TestResult.FAILED
 
 
-def test_assert_authenticated_fails_with_no_response() -> None:
+def test_assert_authenticated_self_bootstraps_via_auth_me_when_no_response() -> None:
+    """#1142: the canonical ACL pattern is `login_as` then
+    `assert_authenticated`. login_as doesn't populate last_response,
+    so the handler now probes `/auth/me` directly. 2xx → PASS."""
     runner = _runner()
     runner.client = MagicMock()
+    runner.client.api_url = "http://x"
+    runner.client._auth_headers = MagicMock(return_value={"Authorization": "Bearer t"})
+    probe_resp = MagicMock(status_code=200, json=lambda: {"id": "u1"}, text="")
+    runner.client._request = MagicMock(return_value=probe_resp)
+
+    ctx: dict = {}
     result = runner.execute_step(
-        {"action": "assert_authenticated", "target": ""}, design={}, context={}
+        {"action": "assert_authenticated", "target": "customer"},
+        design={},
+        context=ctx,
     )
-    assert result.result is TestResult.FAILED
-    assert "No previous response" in result.message
+    assert result.result is TestResult.PASSED
+    # The probe target is /auth/me, called with the auth headers.
+    call = runner.client._request.call_args
+    assert call.args[0] == "GET"
+    assert call.args[1] == "http://x/auth/me"
+    # Response is stashed for downstream assert_error introspection.
+    assert ctx["last_response"] is probe_resp
 
 
 def test_assert_authenticated_honours_explicit_expect() -> None:

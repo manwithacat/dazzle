@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.42] - 2026-05-18
+
+### Fixed
+- **`assert_authenticated` self-bootstraps via `/auth/me` (#1142).**
+  Follow-up to #1138 v0.71.39. The canonical ACL pattern emitted by
+  `dsl_test_generator` is `login_as` immediately followed by
+  `assert_authenticated`, but `login_as` doesn't populate
+  `context["last_response"]` — so every `ACL_*_ACCESS` test failed
+  with "No previous response to check". The handler now issues
+  `GET /auth/me` with the current auth headers when no response is
+  in context; the existing "login_as → probe → assert" pattern
+  keeps working because a pre-populated `last_response` still
+  short-circuits the probe. CyFuture nightly: 6 false-failure
+  ACL tests recovered.
+- **`VAL_*_UNIQUE` tests populate nullable unique fields (#1143).**
+  Follow-up to #1139 v0.71.36. `_generate_entity_data` only emits
+  required fields, so a `xero_invoice_id: str(100) unique` (not
+  required) was absent from both POSTs — Postgres stores two NULLs
+  (standard `UNIQUE` allows multiple NULLs) and the constraint
+  never trips. The generator now explicitly injects a concrete
+  value for the target unique field into both create steps. 3
+  false-failure VAL tests recovered (`xero_invoice_id`, `name`,
+  `code` on `FiscalYear` / `SubscriptionInvoice`).
+
 ## [0.71.41] - 2026-05-18
 
 ### Fixed
