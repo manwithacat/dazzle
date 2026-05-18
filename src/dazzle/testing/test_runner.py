@@ -1273,19 +1273,51 @@ class TestRunner:
         start_time: float,
         **_kw: Any,
     ) -> StepResult:
-        """#1135: include URL + HTTP status + body excerpt in the
-        failure message so the operator can diagnose without reading
-        framework source."""
+        """#1135 / #1149: include URL + HTTP status + body excerpt in
+        the failure message, plus a fix hint when the failure shape
+        matches a known design omission (missing login_as or
+        navigate_to).
+
+        Pre-#1135 the message was the literal "UI check failed" —
+        no URL, no status, no body. #1135 added the URL + status +
+        excerpt. #1149 adds the fix hint: when the check hit the
+        base UI URL (no preceding ``navigate_to``) AND got a 30x
+        redirect, the design almost certainly needs ``login_as`` +
+        ``navigate_to`` before this step. Rather than make the
+        operator guess, the failure message names the missing
+        steps explicitly.
+        """
         assert self.client is not None
         # The preceding navigate_to step stashes the workspace URL in
         # context; fall back to the client's base ui_url when no
         # navigate happened.
         check_url = context.get("_current_ui_url")
         result = self.client.check_ui_loads(url=check_url)
+        # #1149: synthesise a fix hint from the failure shape.
+        hint = ""
+        if not result.ok:
+            had_navigate = check_url is not None
+            had_login = self.client._auth_token is not None or bool(
+                self.client.client.cookies.get("dazzle_session")
+            )
+            hints: list[str] = []
+            if result.status in (301, 302, 303, 307, 308) and not had_login:
+                hints.append(
+                    "GET → 3xx + no auth session: design is probably missing a "
+                    "`login_as <persona>` step before this `assert_visible`."
+                )
+            if not had_navigate:
+                hints.append(
+                    "No preceding `navigate_to` — check hit the base UI url, not a "
+                    "specific surface. Add `{action: navigate_to, target: workspace:<name>, "
+                    "data: {route: '/app/...'}}` before this step."
+                )
+            if hints:
+                hint = " | hint: " + " ".join(hints)
         message = (
             ""
             if result.ok
-            else f"UI check failed: GET {result.url} → {result.status} | {result.excerpt!r}"
+            else f"UI check failed: GET {result.url} → {result.status} | {result.excerpt!r}{hint}"
         )
         return StepResult(
             action=action,

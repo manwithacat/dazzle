@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.44] - 2026-05-18
+
+### Fixed
+- **`assert_visible` failures hint at the missing design step
+  (#1149).** Pre-#1149 a TD-* test that hit the base UI URL with
+  no auth surfaced as `UI check failed: GET <url> → 302 | ''` —
+  accurate but opaque. The operator had to read framework source
+  to learn that 302 + no auth meant the design needed `login_as`.
+  Now the failure message synthesises a fix hint:
+  - 30x + no auth session → suggest `login_as <persona>`.
+  - No preceding `navigate_to` → suggest the explicit step shape.
+  Both hints fire when both are missing — so a one-line design
+  fix is visible from the test output.
+
 ## [0.71.43] - 2026-05-18
 
 ### Added
