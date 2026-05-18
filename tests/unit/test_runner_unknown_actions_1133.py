@@ -171,7 +171,11 @@ def test_assert_error_fails_when_no_last_response() -> None:
 
 
 def test_scan_unknown_actions_returns_only_truly_unknown() -> None:
-    """Action names with dispatch entries are NOT reported; novel ones are."""
+    """Action names with dispatch entries are NOT reported; novel ones are.
+
+    Note: ``achieve_goal`` was wired up in #1138 — it is now KNOWN.
+    The truly-unknown actions in this test are deliberately invented.
+    """
     runner = _runner()
     designs = [
         {
@@ -179,15 +183,15 @@ def test_scan_unknown_actions_returns_only_truly_unknown() -> None:
             "title": "t",
             "steps": [
                 {"action": "login_as", "target": "admin"},  # known
-                {"action": "fill_form", "target": "x"},  # known (now)
-                {"action": "create_expect_error", "target": "y"},  # known (now)
-                {"action": "achieve_goal", "target": "z"},  # unknown
+                {"action": "fill_form", "target": "x"},  # known
+                {"action": "create_expect_error", "target": "y"},  # known
                 {"action": "trigger_process", "target": "z"},  # unknown
+                {"action": "wave_magic_wand", "target": "z"},  # unknown
             ],
         }
     ]
     unknown = runner._scan_unknown_actions(designs)
-    assert unknown == {"achieve_goal", "trigger_process"}
+    assert unknown == {"trigger_process", "wave_magic_wand"}
 
 
 def test_scan_unknown_actions_returns_empty_when_all_known() -> None:
@@ -216,7 +220,7 @@ def test_run_emits_preflight_error_for_unknown_actions(caplog, monkeypatch) -> N
             "test_id": "TD-X",
             "title": "x",
             "tags": [],
-            "steps": [{"action": "achieve_goal", "target": "z"}],
+            "steps": [{"action": "wave_magic_wand", "target": "z"}],
         }
     ]
     # Stub the wait_for_ready 20s server probe — preflight fires before
@@ -236,4 +240,4 @@ def test_run_emits_preflight_error_for_unknown_actions(caplog, monkeypatch) -> N
     assert matches, (
         f"Expected ERROR-level preflight log; got {[r.getMessage() for r in caplog.records]}"
     )
-    assert "achieve_goal" in matches[0].getMessage()
+    assert "wave_magic_wand" in matches[0].getMessage()

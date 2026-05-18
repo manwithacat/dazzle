@@ -1790,6 +1790,96 @@ class TestRunner:
             duration_ms=(time.time() - start_time) * 1000,
         )
 
+    def _execute_assert_state_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        **_kw: Any,
+    ) -> StepResult:
+        """#1138: SM_* state-machine assertion.
+
+        Today the runner can't reliably resolve "which entity id" to
+        re-fetch without a stable cross-step entity-context contract
+        (see #1138 follow-up). Skipping cleanly here is strictly
+        better than the pre-fix "Unknown test action — step skipped"
+        warning + opaque downstream failure: a SKIP doesn't move the
+        FAIL pile and surfaces a clear message in the run log.
+        """
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="assert_state requires entity-id context (not yet wired)",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_authenticated_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        **_kw: Any,
+    ) -> StepResult:
+        """#1138: positive inverse of ``assert_unauthenticated``.
+
+        PASSES when ``last_response.status_code`` is in 2xx. Used by
+        designs that ``login_as`` then probe a protected endpoint and
+        want to assert the session is in fact authenticated, rather
+        than rejected. The default expected list mirrors the
+        ``assert_unauthenticated`` convention: ``expect`` override
+        lets a design pin a narrower set (e.g. ``[200]``).
+        """
+        last_resp = context.get("last_response")
+        if last_resp is None:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message="No previous response to check",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        expected_codes = resolved_data.get("expect", list(range(200, 300)))
+        actual = last_resp.status_code
+        success = actual in expected_codes
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message=f"Status {actual} {'matches' if success else 'not in'} {expected_codes}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_transition_expect_error_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        **_kw: Any,
+    ) -> StepResult:
+        """#1138: sibling of ``create_expect_error`` for invalid state
+        transitions. Currently SKIP — like ``trigger_transition``,
+        the entity-id context contract isn't standardised yet, so a
+        real PATCH-and-expect-4xx implementation would have a
+        higher-than-acceptable false-fail rate. Stub clears the
+        unknown-action warning."""
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="transition_expect_error requires entity-id context (not yet wired)",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
     def _execute_create_expect_error_step(
         self,
         action: str,
@@ -1914,6 +2004,12 @@ class TestRunner:
         "assert_visible": "_execute_assert_visible_step",
         "assert_count": "_execute_assert_count_step",
         "trigger_transition": "_execute_trigger_transition_step",
+        # #1138: alias — designs emit `transition` as the shorter form of
+        # `trigger_transition`. Routes to the same SKIP stub.
+        "transition": "_execute_trigger_transition_step",
+        "transition_expect_error": "_execute_transition_expect_error_step",
+        "assert_state": "_execute_assert_state_step",
+        "assert_authenticated": "_execute_assert_authenticated_step",
         "check_route": "_execute_check_route_step",
         "read_list": "_execute_read_list_step",
         "post": "_execute_post_step",
@@ -1944,6 +2040,10 @@ class TestRunner:
         # cleanly rather than emitting an "Unknown test action" warning.
         "fill_form": "_execute_ui_only_step",
         "submit_form": "_execute_ui_only_step",
+        # #1138: persona goal recipes are inherently multi-step UI flows;
+        # API-only mode SKIPs cleanly rather than emitting "Unknown
+        # test action".
+        "achieve_goal": "_execute_ui_only_step",
         "assert_not_visible": "_execute_ui_assertion_step",
         "assert_text": "_execute_ui_assertion_step",
         "wait_for_load": "_execute_e2e_only_step",

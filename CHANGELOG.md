@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.39] - 2026-05-18
+
+### Added
+- **Dispatch entries for 5 more action types (#1138).** Follow-up to
+  #1133: the DSL test runner now routes `transition`,
+  `transition_expect_error`, `assert_state`, `assert_authenticated`,
+  and `achieve_goal` instead of falling through to the "Unknown test
+  action" preflight ERROR (453 skipped steps in CyFuture's 517-design
+  run). `assert_authenticated` is a real handler (positive inverse of
+  `assert_unauthenticated`, PASSES on 2xx, FAILS on 4xx/redirect);
+  `achieve_goal` aliases the UI-only SKIP since persona goal recipes
+  are inherently multi-step browser flows; the three state-machine
+  actions (`transition`, `transition_expect_error`, `assert_state`)
+  SKIP cleanly with explicit messages — the cross-step entity-id
+  context contract isn't standardised yet, so a real implementation
+  would have a higher-than-acceptable false-fail rate. A SKIP with a
+  named reason is strictly better than an unknown-action WARNING +
+  opaque downstream failure.
+
 ## [0.71.38] - 2026-05-18
 
 ### Added
