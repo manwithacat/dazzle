@@ -986,7 +986,8 @@ class WorkspaceParserMixin:
         starts_at_str: str | None = None
         ends_at_str: str | None = None
         card_str: str = ""
-        _VALID_KEYS = {"starts_at", "ends_at", "card"}
+        as_of_str: str = ""
+        _VALID_KEYS = {"starts_at", "ends_at", "card", "as_of"}
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1006,6 +1007,12 @@ class WorkspaceParserMixin:
                 self.skip_newlines()
             elif key == "card":
                 card_str = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+            elif key == "as_of":
+                # #1146 part 2: date anchor for HH:MM timetables.
+                # Bare identifier — either the literal `today` or a
+                # row field name holding the date component.
+                as_of_str = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
             else:
                 raise make_parse_error(
@@ -1030,6 +1037,7 @@ class WorkspaceParserMixin:
             starts_at=starts_at_str,
             ends_at=ends_at_str,
             card=card_str,
+            as_of=as_of_str,
         )
 
     def _parse_task_inbox_config_block(self) -> ir.TaskInboxConfig:

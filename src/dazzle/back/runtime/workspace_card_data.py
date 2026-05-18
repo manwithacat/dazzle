@@ -199,31 +199,74 @@ def _build_day_timeline_slots(
     ends_at_field = str(getattr(config, "ends_at", "") or "")
     if not starts_at_field or not ends_at_field:
         return []
+    as_of_spec = str(getattr(config, "as_of", "") or "")
 
-    def _to_dt(value: Any) -> _dt.datetime | None:
-        """Coerce a row value to an aware datetime. Accepts
-        datetime instances and ISO-8601 strings."""
+    def _resolve_date_anchor(item: dict[str, Any]) -> _dt.date | None:
+        """#1146 part 2: resolve the date anchor for HH:MM timetables.
+
+        ``as_of_spec`` is ``""`` (no composition), ``"today"`` (current
+        UTC date), or a row field name. Returns ``None`` when the
+        spec resolves to something unparseable — caller falls back
+        to the pre-composition path.
+        """
+        if not as_of_spec:
+            return None
+        if as_of_spec == "today":
+            return _dt.datetime.now(tz=_dt.UTC).date()
+        raw = item.get(as_of_spec)
+        if isinstance(raw, _dt.date) and not isinstance(raw, _dt.datetime):
+            return raw
+        if isinstance(raw, _dt.datetime):
+            return raw.date()
+        if isinstance(raw, str) and raw:
+            try:
+                return _dt.date.fromisoformat(raw[:10])
+            except ValueError:
+                return None
+        return None
+
+    def _to_dt(value: Any, *, anchor: _dt.date | None = None) -> _dt.datetime | None:
+        """Coerce a row value to an aware datetime. Accepts:
+
+        - ``datetime`` instances
+        - ISO-8601 datetime strings
+        - ``time`` instances or ``HH:MM[:SS]`` strings when ``anchor``
+          is set (composes ``anchor`` + the time-of-day)
+        """
         if isinstance(value, _dt.datetime):
             return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
+        if isinstance(value, _dt.time) and anchor is not None:
+            return _dt.datetime.combine(anchor, value, tzinfo=_dt.UTC)
         if isinstance(value, str) and value:
+            # Full datetime first (handles existing rows).
             try:
-                # Strip trailing Z and treat as UTC; otherwise rely on
-                # fromisoformat to handle offset suffixes.
                 stripped = value.rstrip("Z")
                 if stripped.endswith("+00:00") or "T" in stripped or " " in stripped:
                     parsed = _dt.datetime.fromisoformat(stripped)
                     return parsed if parsed.tzinfo else parsed.replace(tzinfo=_dt.UTC)
             except ValueError:
-                return None
+                pass
+            # HH:MM / HH:MM:SS — only with an anchor.
+            if anchor is not None:
+                try:
+                    return _dt.datetime.combine(
+                        anchor, _dt.time.fromisoformat(value), tzinfo=_dt.UTC
+                    )
+                except ValueError:
+                    return None
+            return None
         return None
 
     # Pre-compute (item, starts, ends) tuples and sort chronologically.
     rows: list[tuple[dict[str, Any], _dt.datetime | None, _dt.datetime | None]] = []
     for item in items:
-        starts = _to_dt(item.get(starts_at_field))
+        # #1146 part 2: resolve a per-row date anchor when `as_of` is
+        # set so HH:MM `time` values can compose to a full datetime.
+        anchor = _resolve_date_anchor(item)
+        starts = _to_dt(item.get(starts_at_field), anchor=anchor)
         if starts is None:
             continue  # row without a parseable starts_at is unrenderable
-        ends = _to_dt(item.get(ends_at_field))
+        ends = _to_dt(item.get(ends_at_field), anchor=anchor)
         rows.append((item, starts, ends))
     rows.sort(key=lambda triple: triple[1] or _dt.datetime.min.replace(tzinfo=_dt.UTC))
 

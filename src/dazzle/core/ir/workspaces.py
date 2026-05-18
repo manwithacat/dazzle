@@ -686,11 +686,27 @@ class DayTimelineConfig(BaseModel):
             degradation when a path is unresolved (renders as empty
             string). When ``card == ""`` slots render with a minimal
             default body (start/end label only).
+        as_of: Optional date anchor for ``HH:MM`` timetables
+            (#1146 part 2). When ``starts_at`` / ``ends_at`` resolve
+            to a ``time`` value (or ``HH:MM`` string) rather than a
+            full datetime, the runtime composes them with the date
+            from ``as_of``:
+
+            - ``""`` (default) → no composition; the field values
+              must parse as datetimes on their own.
+            - ``"today"`` → compose with today's date (UTC).
+            - any other identifier → field name on the row holding
+              the date component (e.g. ``schedule_date``).
+
+            One ``as_of`` applies to both ``starts_at`` and
+            ``ends_at`` — the typical timetable case is one date
+            per row.
     """
 
     starts_at: str
     ends_at: str
     card: str = ""
+    as_of: str = ""
 
     model_config = ConfigDict(frozen=True)
 

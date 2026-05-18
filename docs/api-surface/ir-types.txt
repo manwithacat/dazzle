@@ -556,6 +556,7 @@ ir_class: DayTimelineConfig
     - ends_at: str
     - starts_at: str
   optional:
+    - as_of: str = ''
     - card: str = ''
 
 ir_class: DeltaSpec

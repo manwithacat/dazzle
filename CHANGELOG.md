@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.48] - 2026-05-19
+
+### Added
+- **`day_timeline_config: as_of:` date anchor for HH:MM timetables
+  (#1146 part 2).** Schools' timetable rows often store TIME (e.g.
+  `15:30`) + DATE in separate fields. Pre-fix the runtime's `_to_dt`
+  only accepted full datetimes — every HH:MM row was silently
+  dropped. New `DayTimelineConfig.as_of` field (parser keyword
+  `as_of:`) names the date anchor:
+  - `""` (default) — no composition; full datetimes required as before.
+  - `"today"` — compose with today's UTC date.
+  - any other identifier — read the date component from that row field.
+
+  `_to_dt` now also accepts `datetime.time` instances and `HH:MM[:SS]`
+  strings, composing them with the resolved anchor. Full-datetime
+  rows continue to parse the same way even when `as_of:` is set —
+  the composition path only fires when the value is a time-of-day.
+
+  #1146's remaining sub-ask (per-slot action affordance) stays
+  superseded by #1148's `row_action:`; #1146 closes when day_timeline
+  gets row_action renderer plumbing.
+
 ## [0.71.47] - 2026-05-18
 
 ### Added
