@@ -1,5 +1,6 @@
 # DAZZLE
 
+**A semantic substrate for AI-collaborative software.**
 **Model your business. Ship your product. Pass your audit.**
 
 <!-- Versions & Compatibility -->
@@ -17,13 +18,43 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/manwithacat/dazzle.svg?style=social)](https://github.com/manwithacat/dazzle)
 
-Dazzle is a declarative framework for building SaaS applications. You describe your business — its data, its users, its rules, its workflows — in structured `.dsl` files. Dazzle gives you a working web application with a database, API, UI, authentication, role-based access control, and compliance evidence. No code generation, no build step, no scaffold to maintain.
+Dazzle is a declarative framework for building SaaS applications — and a research project exploring what software architecture looks like when AI collaborators are treated as first-class readers and writers of the codebase. You describe your business in structured `.dsl` files: entities, roles, rules, workflows, events. The runtime executes that description directly. There is no code generation step, no scaffold to maintain, and no second source of truth.
 
 ```bash
 cd examples/simple_task && dazzle serve
 # UI:  http://localhost:3000
 # API: http://localhost:8000/docs
 ```
+
+---
+
+## The thesis
+
+Traditional software architecture is optimized for humans. Files, modules, conventions, and abstractions are arranged to fit a programmer's working memory.
+
+That optimization is no longer the only one that matters. An increasing share of software work — exploration, modification, review, refactor, test — happens with an AI collaborator in the loop. Codebases that scatter meaning across controllers, models, migrations, and templates burn context window on plumbing the model already understands. Codebases whose intent is encoded in a typed, inspectable graph let the model spend its attention on the actual problem.
+
+Dazzle is a bet that **semantic compression** — putting your application's meaning in one inspectable, machine-readable form — produces software that is easier to evolve, easier to audit, and easier to collaborate on with both humans and machines. The DSL is not a shortcut to a generated codebase. It *is* the codebase.
+
+---
+
+## Design principles
+
+Eleven stated positions, defended in the [ADRs](docs/adr/INDEX.md):
+
+1. **The DSL is the source of truth.** API specs, tests, compliance evidence, and runtime behaviour are all derived from the same IR.
+2. **No code generation.** The runtime executes the IR directly. No regeneration drift, no generated files to maintain.
+3. **Anti-Turing by design.** The DSL has no arbitrary computation. Everything is statically inspectable, lintable, and verifiable.
+4. **PostgreSQL only.** One capable relational database plus disciplined semantics beats distributed-systems sprawl for the workloads Dazzle targets.
+5. **Server-rendered HTML + HTMX.** No SPA framework, no build toolchain, no client-state fragmentation.
+6. **Fragments as the only escape hatch.** When the DSL can't express it, you reach for a *fragment* — a constrained, named, semantically-tagged piece of custom rendering. Not arbitrary frontend.
+7. **Append-oriented history.** Events, decisions, and grants are logged. Auditors don't need to spelunk; the trail is part of the substrate.
+8. **Provable RBAC.** Scope rules compile to a formal predicate algebra and are statically validated against the FK graph.
+9. **No hidden singletons.** Dependencies are explicit (`RuntimeServices`, `ServerState`) — readable by both humans and agents.
+10. **No backwards-compat shims.** Pre-1.0, clean breaks beat layered workarounds. Callers are updated in the same commit.
+11. **Bump on every fix.** Every push gets a unique semantic version — deployment traceability over release ceremony.
+
+If you disagree with one of these, you'll probably disagree with the rest. That's the point of stating them up front.
 
 ---
 
@@ -75,11 +106,11 @@ Save this as `app.dsl`, run `dazzle serve`, and you have:
 - OpenAPI documentation at `/docs`
 - A health endpoint with deployment integrity verification
 
-That's a todo app. But the same language scales to 39-entity accountancy platforms with double-entry ledgers, multi-step onboarding wizards, and role-based dashboards. You add complexity only where your business needs it.
+That's a todo app. The same language scales to 39-entity accountancy platforms with double-entry ledgers, multi-step onboarding wizards, and role-based dashboards. You add complexity only where your business needs it.
 
 ---
 
-## What You Can Model
+## What you can model
 
 | Capability | What it does | Why it matters |
 |-----------|-------------|---------------|
@@ -93,15 +124,31 @@ That's a todo app. But the same language scales to 39-entity accountancy platfor
 | **Experiences** | Onboarding wizards, checkout flows | Guided multi-step user journeys |
 | **Ledgers** | TigerBeetle-backed double-entry accounting | Financial-grade transaction integrity |
 | **Graphs** | Entity relationships with CTE traversal and algorithms | Network analysis, shortest paths, community detection |
+| **HLESS Events** | Intent/Fact/Observation/Derivation event semantics | Replay correctness, audit lineage, no "events as a vague bucket" |
+| **Fragments** | Constrained custom rendering inside generated surfaces | Differentiated UX without losing semantic integrity |
 | **Integrations** | Declarative API bindings with triggers and mappings | Connect to Stripe, HMRC, Xero, and more |
 | **LLM Jobs** | Classification, extraction, generation tasks | AI capabilities without prompt engineering sprawl |
 | **Compliance** | Automated evidence extraction for ISO 27001 and SOC 2 | Audit-ready from day one |
 
 For the full DSL reference, see [docs/reference/index.md](docs/reference/index.md).
 
+### Vocabulary glossary
+
+A few Dazzle keywords don't map one-to-one onto industry terms. If you're skim-reading the DSL for the first time:
+
+| Dazzle term | What other communities call this |
+|-------------|----------------------------------|
+| **surface** | view, page, screen — a UI/API endpoint with one entity and one mode |
+| **workspace** | dashboard, role home, console |
+| **experience** | wizard, flow, multi-step form |
+| **rhythm** | recurring cadence, scheduled review, periodic ritual |
+| **archetype** | persona pattern, role family |
+| **hless** | event-stream semantics (HLESS = High-Level Event Semantics Specification — [why this name](docs/architecture/hless-deep-dive.md)) |
+| **fragment** | escape-hatch component, custom partial |
+
 ---
 
-## Compliance and Security
+## Compliance and security
 
 Dazzle treats compliance as a first-class concern, not an afterthought.
 
@@ -137,6 +184,20 @@ See [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](do
 
 ---
 
+## What Dazzle is *not* for
+
+Stating this directly because it matters:
+
+- **Real-time collaborative editing.** No CRDT layer, no client-state model.
+- **Graphics-heavy or canvas-based interfaces.** Server-rendered HTML is not the right substrate.
+- **Local-first or offline-first applications.** Authority lives on the server and in PostgreSQL.
+- **General-purpose programming.** The DSL is deliberately not Turing-complete. If you need arbitrary computation, you need a different tool — or you write a fragment.
+- **Replacing your existing codebase wholesale.** Dazzle is most useful for new applications where governance, workflow, and audit are first-class concerns from day one.
+
+The framework is strongest for **enterprise SaaS, workflow systems, operational tooling, and governance-heavy applications.** That's the bet.
+
+---
+
 ## Quick Start
 
 ```bash
@@ -154,70 +215,6 @@ dazzle serve
 
 ---
 
-## AI-Assisted Development
-
-Dazzle ships as both a runtime and an AI development environment. When used with Claude Code (via MCP), you get access to **26 tools with 170+ operations** that span the full lifecycle:
-
-| Stage | What the tools do |
-|-------|------------------|
-| **Spec to DSL** | Turn a natural-language idea into validated DSL — entity discovery, lifecycle identification, persona extraction |
-| **Test and Verify** | Generate stories, design tests, execute at three tiers (API, browser, LLM-guided), seed demo data |
-| **Analyze and Audit** | Quality pipeline, agent-powered gap discovery, visual composition analysis, RBAC policy verification |
-| **Site and Brand** | Manage public site structure, copy, theme, and design tokens from spec files |
-| **Stakeholder Ops** | Launch readiness scores, investor pitch generation, user/session management |
-
-The agent framework uses an **observe-decide-act-record** loop to autonomously explore running applications, discover gaps, and propose DSL fixes. Discovery modes include persona-based exploration, CRUD completeness analysis, workflow coherence checks, and headless DSL/KG analysis.
-
-For the full MCP tool reference, see [Architecture: MCP Server](docs/architecture/mcp-server.md).
-
-### Claude Code Integration
-
-```bash
-# Homebrew: MCP server auto-registered during installation
-brew install manwithacat/tap/dazzle
-
-# PyPI: Register manually
-pip install dazzle-dsl
-dazzle mcp setup
-
-# Verify
-dazzle mcp check
-```
-
-### Autonomous development harness
-
-Dazzle ships a set of Claude Code slash commands that, together, form an
-autonomous harness: point Claude Code at the repo, invoke a command
-(often inside a `/loop`), and it iterates until there's nothing left to
-do. Most cycles take ~15 minutes; a weekend-long run produces a tree of
-small, reviewable commits rather than one giant patch.
-
-The common entry points:
-
-| Command | What it does | Typical invocation |
-|---------|-------------|--------------------|
-| `/improve` | Fix the next lint/validate/fidelity/conformance gap in an example app. Falls through to `/issues` when the backlog is clean. | `/loop 15m /improve` |
-| `/issues` | Triage, investigate, implement, ship, and close open GitHub issues. Parallel subagents per issue. | `/issues` |
-| `/ux-cycle` | One UX component per cycle through ux-architect governance + agent QA. | `/loop 30m /ux-cycle` |
-| `/ux-converge` | Drive DSL-driven UX contract failures to zero against a running app. | `/ux-converge` |
-| `/check` | Parallel lint + mypy + tests on modified files. Read-only quality gate. | `/check` |
-| `/smells` | Parallel code-smell analysis across four categories. Writes `agent/smells-report.md`. | `/smells` |
-| `/xproject` | Cross-project quality scan across every sibling app that uses Dazzle. | `/xproject` |
-| `/cimonitor` | CI badge watchdog. Fetches logs for failed jobs and categorises the failure. | `/cimonitor` |
-| `/bump [major/minor/patch]` | Semantic version bump, CHANGELOG roll, no tag yet. | `/bump patch` |
-| `/ship` | Commit + push gate: ruff, mypy, tag-if-version-bumped, push. | `/ship` |
-| `/docs-update [since]` | Scan recently-closed issues and propose doc edits. | `/docs-update v0.57.0` |
-
-Productive loops persist state in `dev_docs/` (gitignored). `/improve` and
-`/ux-cycle` commit every green cycle but never push — pushes are always
-explicit via `/ship` or `/issues`, which keeps long autonomous runs
-recoverable with a single `git reset`.
-
-For the methodology, termination conditions, and state-file conventions
-behind these commands, see [**docs/autonomous-harness.md**](docs/autonomous-harness.md).
-
----
-
 ## Architecture
 
 ```
@@ -232,9 +229,41 @@ The DSL is parsed into a typed intermediate representation (AppSpec IR). The run
 
 This architecture is deliberately **anti-Turing**: the DSL has no arbitrary computation, which means Dazzle can statically validate, lint, measure fidelity, and reason about your application. What you declare is what runs.
 
-The frontend uses server-rendered HTML with HTMX — zero build toolchain, stable technology, and full visibility into what the runtime produces.
+The frontend uses server-rendered HTML with HTMX — zero build toolchain, stable technology, and full visibility into what the runtime produces. For UX that the generated surfaces can't express, **fragments** provide a constrained escape hatch: named, semantically-tagged custom rendering that remains connected to the entity and surface graph.
 
-For the full architecture, see [docs/architecture/overview.md](docs/architecture/overview.md).
+For the full architecture, see [docs/architecture/overview.md](docs/architecture/overview.md). For the event-semantics rationale, see [docs/architecture/hless-deep-dive.md](docs/architecture/hless-deep-dive.md).
+
+---
+
+## AI-assisted development
+
+Dazzle ships as both a runtime and an AI development environment. When used with Claude Code (via MCP), you get access to **26 tools with 170+ operations** that span the full lifecycle:
+
+| Stage | What the tools do |
+|-------|------------------|
+| **Spec to DSL** | Turn a natural-language idea into validated DSL — entity discovery, lifecycle identification, persona extraction |
+| **Test and Verify** | Generate stories, design tests, execute at three tiers (API, browser, LLM-guided), seed demo data |
+| **Analyze and Audit** | Quality pipeline, agent-powered gap discovery, visual composition analysis, RBAC policy verification |
+| **Site and Brand** | Manage public site structure, copy, theme, and design tokens from spec files |
+| **Stakeholder Ops** | Launch readiness scores, investor pitch generation, user/session management |
+
+The agent framework uses an **observe-decide-act-record** loop to autonomously explore running applications, discover gaps, and propose DSL fixes. Discovery modes include persona-based exploration, CRUD completeness analysis, workflow coherence checks, and headless DSL/KG analysis.
+
+For the full MCP tool reference, see [Architecture: MCP Server](docs/architecture/mcp-server.md). For how the autonomous slash-command harness drives day-to-day development on the framework itself, see [Autonomous Harness](docs/autonomous-harness.md).
+
+### Claude Code integration
+
+```bash
+# Homebrew: MCP server auto-registered during installation
+brew install manwithacat/tap/dazzle
+
+# PyPI: Register manually
+pip install dazzle-dsl
+dazzle mcp setup
+
+# Verify
+dazzle mcp check
+```
 
 ---
 
@@ -251,7 +280,7 @@ For the full architecture, see [docs/architecture/overview.md](docs/architecture
 
 ---
 
-## IDE Support
+## IDE support
 
 Full LSP implementation: real-time diagnostics, hover docs, go-to-definition, auto-completion, document symbols.
 
@@ -268,20 +297,26 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 ## Documentation
 
 - **[DSL Reference](docs/reference/index.md)** — complete guide to all DSL constructs
+- **[HLESS deep dive](docs/architecture/hless-deep-dive.md)** — event semantics and why they're named this way
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
 - **[Autonomous Harness](docs/autonomous-harness.md)** — Claude Code slash commands + methodology
+- **[ADRs](docs/adr/INDEX.md)** — architectural decisions, defended
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
 - **[Examples](examples/)** — runnable example applications
 
 ---
 
+## About this project
+
+Dazzle is a research project exploring what application substrates look like when AI collaborators are treated as first-class readers and writers. It is developed in the open, primarily by a single author, with heavy AI assistance — both in the framework itself and in the example apps built on top of it. Release cadence is high (every fix gets a unique version for deployment traceability) and pre-1.0 breaks are intentional rather than apologetic. If you're evaluating Dazzle for production use, talk to us first.
+
 ## Contributing
 
-All contributions require AI co-authorship. See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT - see [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)
