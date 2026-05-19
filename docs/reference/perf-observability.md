@@ -25,6 +25,29 @@ exporter writes a self-contained trace file per run.
    alive for `--duration` seconds so any background traffic (HTMX
    prefetch, websocket pings) also lands.
 
+### Authenticated traces
+
+Most Dazzle apps gate the interesting paths behind login. To unlock
+those during a trace, pass credentials:
+
+```bash
+dazzle perf trace --url /tasks --duration 10 --login user@example.com:hunter2
+```
+
+The runner POSTs to `/auth/login/password` (Dazzle's standard form-mode
+endpoint), captures the `dazzle_session` cookie, and threads it through
+every subsequent `--url` hit.
+
+For OAuth/SSO flows where `--login` can't model the auth dance, pass
+the session cookie directly:
+
+```bash
+dazzle perf trace --url /tasks --cookie "dazzle_session=<session-id>"
+```
+
+`--cookie` is repeatable and works alongside (or instead of) `--login`.
+When both are supplied, `--login` wins; the explicit cookie is ignored.
+
 2. **Read findings**:
    ```bash
    dazzle perf report                 # Markdown, paste into Claude

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.72] - 2026-05-19
+
+### Added
+
+- **`dazzle perf trace --login EMAIL:PASSWORD`** (#1160) — authenticates
+  via `POST /auth/login/password` before firing `--url` hits. The
+  captured `dazzle_session` cookie threads through every subsequent
+  GET, so production-shaped traces now reach auth-gated paths.
+
+- **`dazzle perf trace --cookie NAME=VALUE` (repeatable)** — cookie
+  passthrough for OAuth/SSO flows that `--login` can't model.
+
 ## [0.71.71] - 2026-05-19
 
 ### Fixed

@@ -14,6 +14,7 @@ runner that:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import typer
@@ -34,6 +35,19 @@ def trace_command(
     report: bool = typer.Option(
         False, "--report", help="Run `dazzle perf report` against the new run when done."
     ),
+    login: str | None = typer.Option(
+        None,
+        "--login",
+        help="EMAIL:PASSWORD — authenticate before firing URL hits. "
+        "Hits POST /auth/login/password and threads the session cookie "
+        "through subsequent --url GETs.",
+    ),
+    cookie: list[str] = typer.Option(
+        [],
+        "--cookie",
+        help="NAME=VALUE cookie to set on every --url hit (repeatable). "
+        "Use when --login can't model your auth (OAuth/SSO).",
+    ),
 ) -> None:
     """Boot the app under tracing and capture a single run."""
     if not urls and duration <= 0:
@@ -42,6 +56,15 @@ def trace_command(
             "Run `dazzle perf trace --help` for usage."
         )
         raise typer.Exit(1)
+
+    if login is not None and ":" not in login:
+        typer.echo("Error: --login value must be in EMAIL:PASSWORD format (colon-separated).")
+        raise typer.Exit(1)
+
+    for c in cookie:
+        if "=" not in c:
+            typer.echo(f"Error: --cookie value {c!r} must be in NAME=VALUE format.")
+            raise typer.Exit(1)
 
     perf_dir = Path.cwd() / ".dazzle" / "perf"
     perf_dir.mkdir(parents=True, exist_ok=True)
@@ -53,6 +76,8 @@ def trace_command(
         db_path=db_path,
         urls=tuple(urls),
         duration=duration,
+        login=login,
+        cookies=tuple(cookie),
     )
 
     typer.echo(f"Trace saved: {db_path}")
@@ -63,12 +88,39 @@ def trace_command(
         report_command(run=run_id, fmt="md", top=10, baseline=None)
 
 
+def _parse_set_cookie_value(set_cookie_header: str, name: str) -> str | None:
+    """Extract a named cookie value from a Set-Cookie header.
+
+    Tolerates multi-cookie headers separated by ``, `` (comma-space) —
+    Set-Cookie is allowed to repeat, but Python's http.client may
+    concatenate them with ``, `` per RFC 7230.
+    """
+    if not set_cookie_header:
+        return None
+    # http.client doesn't natively split multiple Set-Cookies; the
+    # value comes back as a comma-separated string. Split on `, ` only
+    # when followed by a name= pattern so commas inside dates (Expires)
+    # don't trip us.
+    pieces = re.split(r",\s+(?=[a-zA-Z][\w-]*=)", set_cookie_header)
+    for piece in pieces:
+        # First segment is the cookie itself; rest are attrs (HttpOnly, etc.)
+        first = piece.split(";", 1)[0]
+        if "=" not in first:
+            continue
+        k, _, v = first.partition("=")
+        if k.strip() == name:
+            return v.strip()
+    return None
+
+
 def _execute_trace_run(
     *,
     run_id: str,
     db_path: Path,
     urls: tuple[str, ...],
     duration: int,
+    login: str | None = None,
+    cookies: tuple[str, ...] = (),
 ) -> None:
     """Spawn uvicorn under tracing, drive the URLs, return on shutdown."""
     import http.client
@@ -76,6 +128,7 @@ def _execute_trace_run(
     import subprocess
     import sys
     import time
+    import urllib.parse
 
     # Force the dev server onto known ports so the URL hits below can
     # reach it. ``dazzle serve`` auto-assigns ports when not specified,
@@ -124,6 +177,33 @@ def _execute_trace_run(
                 time.sleep(0.5)
         return False
 
+    # Build the session cookies dict from --login and/or --cookie.
+    cookies_dict: dict[str, str] = {}
+
+    def _do_login(email: str, password: str) -> None:
+        """POST to /auth/login/password and capture the session cookie."""
+        body = urllib.parse.urlencode({"email": email, "password": password})
+        try:
+            conn = http.client.HTTPConnection(_TRACE_HOST, _TRACE_PORT, timeout=10)
+            conn.request(
+                "POST",
+                "/auth/login/password",
+                body=body,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            response = conn.getresponse()
+            # 303 redirect on success; we don't follow — we just need the cookie.
+            set_cookie = response.getheader("Set-Cookie") or ""
+            conn.close()
+        except OSError as exc:
+            typer.echo(f"  --login failed: connection error — {exc}")
+            return
+        session_value = _parse_set_cookie_value(set_cookie, "dazzle_session")
+        if session_value is None:
+            typer.echo("  --login failed: no dazzle_session cookie returned")
+        else:
+            cookies_dict["dazzle_session"] = session_value
+
     def _fetch_path(raw: str) -> None:
         """GET a single path from the local dev server."""
         if raw.startswith("http://") or raw.startswith("https://"):
@@ -132,9 +212,12 @@ def _execute_trace_run(
             path = urlparse(raw).path or "/"
         else:
             path = raw if raw.startswith("/") else f"/{raw}"
+        headers: dict[str, str] = {}
+        if cookies_dict:
+            headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies_dict.items())
         try:
             conn = http.client.HTTPConnection(_TRACE_HOST, _TRACE_PORT, timeout=10)
-            conn.request("GET", path)
+            conn.request("GET", path, headers=headers)
             conn.getresponse().read()
             conn.close()
         except OSError as exc:
@@ -148,6 +231,21 @@ def _execute_trace_run(
                 "URL hits skipped. Boot-phase traces will still land."
             )
         else:
+            # Resolve auth cookies before hitting URLs.
+            if login is not None:
+                # --login wins; warn if --cookie also supplied.
+                if cookies:
+                    typer.echo(
+                        "  warning: --login and --cookie both supplied; "
+                        "--login wins. Explicit cookies ignored."
+                    )
+                email, _, password = login.partition(":")
+                _do_login(email, password)
+            elif cookies:
+                for entry in cookies:
+                    k, _, v = entry.partition("=")
+                    cookies_dict[k.strip()] = v.strip()
+
             # Server is up. Hit each URL once. Failures are non-fatal —
             # the trace captures the error span and the report surfaces it.
             for url in urls:
