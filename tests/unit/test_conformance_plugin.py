@@ -10,7 +10,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
-_SHAPES_VALIDATION = Path("/Volumes/SSD/Dazzle/fixtures/shapes_validation")
+_SHAPES_VALIDATION = Path(__file__).resolve().parents[2] / "fixtures" / "shapes_validation"
 
 
 def _make_case(
