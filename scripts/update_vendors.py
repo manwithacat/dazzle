@@ -49,9 +49,41 @@ def _gh_request(url: str) -> bytes:
         return resp.read()
 
 
-def _latest_release(owner: str, repo: str) -> dict:
-    url = GITHUB_API.format(owner=owner, repo=repo)
-    return json.loads(_gh_request(url))
+def _latest_stable_release(owner: str, repo: str, tag_prefix: str) -> dict:
+    """Return the latest stable release whose tag starts with *tag_prefix*.
+
+    Why this exists (not /releases/latest):
+      - GitHub's /releases/latest sometimes returns a pre-release. htmx
+        4.0.0-beta3 is currently marked prerelease=false despite the
+        -beta3 suffix, which makes the bare prerelease flag unreliable
+        on its own.
+      - Auto-update PRs across a major version are higher-risk than
+        the cron is designed for (assumes patch/minor on a stable
+        major). Per-vendor major pin caps the blast radius.
+
+    Filters applied here:
+      - prerelease=true / draft=true → skip
+      - tag contains '-' (catches -beta / -rc / -alpha) → skip
+      - tag does not start with *tag_prefix* → skip
+
+    Releases come back from /releases newest-first, so the first
+    surviving entry is the latest stable within the major.
+    """
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=30"
+    releases = json.loads(_gh_request(url))
+    for r in releases:
+        if r.get("prerelease") or r.get("draft"):
+            continue
+        tag = r["tag_name"]
+        if "-" in tag:  # belt-and-braces against mislabelled prereleases
+            continue
+        if not tag.startswith(tag_prefix):
+            continue
+        return r
+    raise RuntimeError(
+        f"No stable release found in {owner}/{repo} matching prefix {tag_prefix!r}. "
+        f"Inspected {len(releases)} recent releases."
+    )
 
 
 def _download(url: str) -> bytes:
@@ -113,8 +145,12 @@ def _tag_version(tag: str) -> str:
 
 
 def update_htmx(*, check_only: bool) -> None:
-    """Update htmx core and extensions."""
-    release = _latest_release("bigskysoftware", "htmx")
+    """Update htmx core and extensions.
+
+    Pin: htmx v2.x. v4 reorganised dist/ext/ and warrants a deliberate
+    migration; the cron isn't the right place for that decision.
+    """
+    release = _latest_stable_release("bigskysoftware", "htmx", "v2.")
     tag = release["tag_name"]
     latest = _tag_version(tag)
     current = _detect_htmx_version()
@@ -164,8 +200,12 @@ def update_htmx(*, check_only: bool) -> None:
 
 
 def update_idiomorph(*, check_only: bool) -> None:
-    """Update idiomorph extension."""
-    release = _latest_release("bigskysoftware", "idiomorph")
+    """Update idiomorph extension.
+
+    Pin: 0.7.x. 0.x semver treats the minor as the breaking-change
+    axis, so jumping to 0.8 should also be intentional.
+    """
+    release = _latest_stable_release("bigskysoftware", "idiomorph", "v0.7.")
     tag = release["tag_name"]
     latest = _tag_version(tag)
     current = _detect_idiomorph_version()
@@ -191,8 +231,12 @@ def update_idiomorph(*, check_only: bool) -> None:
 
 
 def update_lucide(*, check_only: bool) -> None:
-    """Update lucide icons."""
-    release = _latest_release("lucide-icons", "lucide")
+    """Update lucide icons.
+
+    Pin: 0.x (no leading 'v' in lucide's tags). The 0.x → 1.x bump
+    in May 2026 wants verification before adopting.
+    """
+    release = _latest_stable_release("lucide-icons", "lucide", "0.")
     tag = release["tag_name"]
     latest = _tag_version(tag)
     current = _detect_lucide_version()
