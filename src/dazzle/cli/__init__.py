@@ -296,6 +296,7 @@ from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.mock import mock_app  # noqa: E402
 from dazzle.cli.nightly import nightly_app  # noqa: E402
 from dazzle.cli.param import param_app  # noqa: E402
+from dazzle.cli.perf import perf_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.process_cli import process_app  # noqa: E402
@@ -350,6 +351,7 @@ app.add_typer(outbox_app, name="outbox")
 app.add_typer(migrate_app, name="process-migrate")
 app.add_typer(nightly_app, name="nightly")
 app.add_typer(pipeline_app, name="pipeline")
+app.add_typer(perf_app, name="perf")
 app.add_typer(pitch_app, name="pitch")
 app.add_typer(pulse_app, name="pulse")
 app.add_typer(quality_app, name="quality")
