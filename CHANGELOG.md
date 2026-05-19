@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.61] - 2026-05-19
+
+### Changed
+
+- **`tigerbeetle.yml`: all 4 jobs now use the setup-dazzle composite.**
+  Same checkout → setup-python → pip-install pattern was duplicated
+  four times with slightly different extras (`[dev]`, `[dev,tigerbeetle]`).
+  Replaced with `uses: ./.github/actions/setup-dazzle` + `extras:`
+  input. tigerbeetle.yml: 379 → 361 lines. Pip caching now applies to
+  these jobs too.
+
+  Also unwound a doubled `pip install -e` in `tigerbeetle-deploy-validation`
+  (composite did it; the inline "Install dependencies" step then did
+  it again before the `npm install -g aws-cdk`). Step renamed to
+  "Install AWS CDK CLI" so its single remaining responsibility is
+  explicit.
+
+### Not Done (intentionally)
+
+- **No `workflow_call` extraction from `release-cli.yml`.** Audit
+  found the 476 lines are mostly the Homebrew formula heredoc — per-
+  release content, not workflow plumbing. The 4 jobs have distinct
+  responsibilities (release create, formula generate, mac verify,
+  repository dispatch). Forcing a reusable-workflow split would add
+  indirection without removing real duplication.
+
+### Known Issue
+
+- **`update-vendors.yml` has failed every Monday for 3+ weeks**
+  (2026-05-04, -11, -18 scheduled runs all red). Not in scope for
+  this release — flagged as separate follow-up. The workflow runs
+  `python scripts/update_vendors.py` on a cron; needs an actual log
+  investigation to fix.
+
 ## [0.71.60] - 2026-05-19
 
 ### Changed

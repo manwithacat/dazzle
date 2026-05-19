@@ -29,15 +29,10 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        extras: dev
+        optional-pip: ""
 
     - name: Run TigerBeetle unit tests
       run: |
@@ -51,15 +46,10 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,tigerbeetle]"
+        extras: dev,tigerbeetle
+        optional-pip: ""
 
     - name: Start TigerBeetle
       run: |
@@ -171,21 +161,18 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
+        extras: dev
+        optional-pip: ""
 
     - name: Set up Node.js
       uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
       with:
         node-version: "20"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
-        npm install -g aws-cdk
+    - name: Install AWS CDK CLI
+      run: npm install -g aws-cdk
 
     - name: Generate TigerBeetle stack
       run: |
@@ -251,15 +238,10 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,tigerbeetle]"
+        extras: dev,tigerbeetle
+        optional-pip: ""
 
     - name: Start TigerBeetle
       run: |
