@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 34 tools
+# Count: 35 tools
 
 tool: agent_commands
   description_hash: 21ccbeb48222
@@ -838,6 +838,31 @@ tool: param
       },
       "project_path": {
         "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: perf
+  description_hash: 15180df6ec4c
+  description_len: 228
+  {
+    "properties": {
+      "operation": {
+        "description": "Which read operation to perform.",
+        "enum": [
+          "list",
+          "report",
+          "show"
+        ],
+        "type": "string"
+      },
+      "run": {
+        "description": "Run id (default: latest).",
         "type": "string"
       }
     },

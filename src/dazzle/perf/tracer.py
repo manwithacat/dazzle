@@ -19,6 +19,7 @@ when tracing is disabled.
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -79,7 +80,15 @@ def configure_tracer(
     try:
         trace.set_tracer_provider(provider)
     except Exception:  # noqa: BLE001
-        pass
+        # OTel emits a warning when the global is re-set; that's the only
+        # observable side-effect, and we already keep our own reference
+        # in ``_provider`` for the dazzle_span path. Swallowing is safe.
+        import logging
+
+        logging.getLogger(__name__).debug(
+            "OTel set_tracer_provider rejected re-assignment (already set)",
+            exc_info=True,
+        )
     return provider
 
 
@@ -94,7 +103,7 @@ def reset_tracer() -> None:
 
 
 @contextlib.contextmanager
-def dazzle_span(name: str, **attrs: Any):  # type: ignore[return]
+def dazzle_span(name: str, **attrs: Any) -> Iterator[Any]:
     """Open a span on the ``dazzle`` tracer.
 
     ``attrs`` accept any mix of scalar OTel attribute values and

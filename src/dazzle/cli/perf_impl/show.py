@@ -23,7 +23,9 @@ def show_command(
         typer.echo(f"No trace file for run {run_id}")
         raise typer.Exit(1)
 
-    children: dict[str | None, list] = {}
+    from dazzle.perf.storage import Span as _Span
+
+    children: dict[str | None, list[_Span]] = {}
     for span in iter_spans(db_path, run_id):
         children.setdefault(span.parent_span_id, []).append(span)
 
