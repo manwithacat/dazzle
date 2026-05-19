@@ -27,10 +27,9 @@ from dazzle.rbac.matrix import generate_access_matrix
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES_DIR = REPO_ROOT / "examples"
 
-# All 5 framework examples that ship as part of the canonical
-# adopter-facing demo set. Each must pass its own lint as part of
-# the dogfood gate. New examples added to `examples/` are caught
-# by `test_every_examples_dir_under_lint`.
+# Framework examples that ship as part of the canonical adopter-facing
+# demo set. Each must pass its own lint as part of the dogfood gate.
+# New examples added to `examples/` are caught by `test_every_examples_dir_under_lint`.
 _KNOWN_EXAMPLES = [
     "simple_task",
     "support_tickets",
@@ -42,6 +41,30 @@ _KNOWN_EXAMPLES = [
     # included to keep the discovery gate honest.
     "custom_renderer",
 ]
+
+# Examples that live under `examples/` but are NOT covered by the dogfood
+# gate — usually because they're topic-focused demos or kitchen-sink
+# fixtures rather than canonical RBAC teaching apps. v0.71.57 moved the
+# previously-fixture demos into examples/; they keep their original purpose
+# (showcase one capability) and don't claim to teach the write-op scope
+# idiom. Each entry needs a one-line rationale.
+_DOGFOOD_EXEMPT = {
+    # Largest app in the repo; deliberate kitchen-sink corpus exercising
+    # every DSL form including grammar shapes the validator rejects
+    # (7 errors, 335+ warnings pinned in dazzle_validate_baseline.json).
+    # The example's README calls this out explicitly.
+    "pra",
+    # Widget gallery on a single Showcase entity — RBAC is incidental, the
+    # example exists to render every component, not to teach scope rules.
+    "component_showcase",
+    # UX component expansion demo (Quill/Flatpickr/Tom Select). RBAC is
+    # standard but the focus is widget integration, not the scope idiom.
+    "project_tracker",
+    # Brand/asset management demo. Same shape as project_tracker.
+    "design_studio",
+    # LLM intent demo — focus is classification + extraction, not RBAC.
+    "llm_ticket_classifier",
+}
 
 
 @pytest.mark.parametrize("example_name", _KNOWN_EXAMPLES)
@@ -78,9 +101,13 @@ def test_every_examples_dir_under_lint() -> None:
     discovered = [
         d.name for d in EXAMPLES_DIR.iterdir() if d.is_dir() and (d / "dazzle.toml").exists()
     ]
-    missing = sorted(set(discovered) - set(_KNOWN_EXAMPLES))
+    accounted_for = set(_KNOWN_EXAMPLES) | _DOGFOOD_EXEMPT
+    missing = sorted(set(discovered) - accounted_for)
     assert not missing, (
         f"New examples added to `examples/` are not covered by the RBAC "
-        f"dogfood gate: {missing}. Add them to `_KNOWN_EXAMPLES` in this "
-        f"file, then ensure each passes the per-example test."
+        f"dogfood gate: {missing}. Either add them to `_KNOWN_EXAMPLES` "
+        f"in this file (and ensure each passes the per-example test), "
+        f"or — if the example is a topic-focused demo that doesn't claim "
+        f"to teach the canonical write-op scope idiom — add it to "
+        f"`_DOGFOOD_EXEMPT` with a one-line rationale."
     )

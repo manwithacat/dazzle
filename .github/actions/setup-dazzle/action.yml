@@ -1,13 +1,18 @@
 name: Setup Dazzle
 description: |
-  Checkout repo, set up Python with pip cache, and install Dazzle editable
-  with the requested extras. Centralises the 8× duplication previously in
+  Set up Python with pip cache and install Dazzle editable with the
+  requested extras. Centralises the 8× duplication previously in
   ci.yml so that drift between jobs (missing `mcp` extra in one place,
   missing `mobile` in another) can't happen.
 
-  Use from a job's first step:
+  IMPORTANT: this is a *local* composite action, so the calling job
+  MUST check out the repo before invoking it — otherwise the runner
+  can't find this action.yml file (the chicken-and-egg gotcha for
+  every local composite):
 
-    - uses: ./.github/actions/setup-dazzle
+    steps:
+      - uses: actions/checkout@v6     # required FIRST
+      - uses: ./.github/actions/setup-dazzle
 
   Override extras when a job needs a different superset:
 
@@ -37,8 +42,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v6
-
     - name: Set up Python ${{ inputs.python-version }}
       uses: actions/setup-python@v6
       with:

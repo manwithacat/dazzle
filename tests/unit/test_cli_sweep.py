@@ -129,6 +129,8 @@ class TestSweepIntegration:
         payload = json.loads(result.stdout)
         assert "apps" in payload
         assert "coverage" in payload
-        # 6 examples as of v0.71.15: contact_manager, custom_renderer,
-        # fieldtest_hub, ops_dashboard, simple_task, support_tickets.
-        assert len(payload["apps"]) == 6
+        # 11 examples as of v0.71.57: contact_manager, custom_renderer,
+        # fieldtest_hub, ops_dashboard, simple_task, support_tickets,
+        # plus the 5 reclassified from fixtures/ (component_showcase,
+        # design_studio, llm_ticket_classifier, pra, project_tracker).
+        assert len(payload["apps"]) == 11

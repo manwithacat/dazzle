@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.59] - 2026-05-19
+
+### Fixed
+
+- **`setup-dazzle` composite couldn't load on CI.** The local action
+  (introduced in v0.71.58) had `actions/checkout` as its *first* step,
+  but a local composite action can't run at all until the repo is
+  checked out first — the runner can't even find `action.yml`. Moved
+  the checkout back into every calling job and removed it from the
+  composite. The composite's docs now flag the chicken-and-egg
+  explicitly. Caught by red CI on every push since 06ee7b9d.
+
+- **Three tests broke on the fixture → examples reclassification (v0.71.57):**
+  - `test_examples_rbac_lint_clean.py` auto-discovered 5 new examples
+    that weren't in `_KNOWN_EXAMPLES`. Added a `_DOGFOOD_EXEMPT` set
+    (with per-entry rationale) for the topic-focused demos and the
+    kitchen-sink `pra` corpus that don't claim to teach the canonical
+    write-op scope idiom.
+  - `test_cli_sweep.py::test_json_output_is_valid_json` pinned `len == 6`;
+    the sweep now sees 11. Updated.
+  - `test_ir_field_reader_parity.py` reported
+    `workspaces.LensAggregatePrimary.via` as a resolved baseline orphan —
+    the field gained a reader in v0.71.55–56 but the baseline wasn't
+    cleaned at the time. Removed.
+
 ## [0.71.58] - 2026-05-19
 
 ### Added

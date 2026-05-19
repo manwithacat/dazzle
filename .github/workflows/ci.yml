@@ -51,6 +51,8 @@ jobs:
         python-version: ["3.12"]
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         python-version: "${{ matrix.python-version }}"
@@ -77,6 +79,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         extras: dev,mobile,postgres
@@ -135,6 +139,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         extras: dev,llm,mcp,postgres
@@ -226,6 +232,8 @@ jobs:
     # + `warn_unused_ignores` flags fire on functions that wrap them.
     # Matching the dev-install superset keeps the type-check env
     # identical to local mypy.
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport
@@ -242,6 +250,8 @@ jobs:
     needs: [python-tests, lint, security-tests]
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         extras: dev,llm,mcp,mobile
@@ -266,6 +276,8 @@ jobs:
     needs: [python-tests, lint]
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         extras: dev,llm,mcp,mobile
@@ -334,6 +346,8 @@ jobs:
           --health-retries 5
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
 
     - name: Build asset bundles
@@ -373,6 +387,8 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         optional-pip: ""
@@ -467,6 +483,8 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         optional-pip: ""
@@ -583,6 +601,8 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
+    - uses: actions/checkout@v6
+
     - uses: ./.github/actions/setup-dazzle
       with:
         optional-pip: ""
