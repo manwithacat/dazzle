@@ -31,3 +31,51 @@ def test_instrumentation_runs_when_env_set() -> None:
         with patch("dazzle.perf.instrument.instrument_app", side_effect=fake_instrument):
             _maybe_instrument_for_perf(app)
     assert called == [app]
+
+
+def test_tracer_initialised_when_perf_db_env_set(tmp_path) -> None:
+    import os
+    from unittest.mock import patch
+
+    from dazzle.back.runtime.server import _maybe_configure_tracer
+
+    db = tmp_path / "run.db"
+    env = {
+        "DAZZLE_PERF_ENABLED": "1",
+        "DAZZLE_PERF_DB": str(db),
+        "DAZZLE_PERF_RUN_ID": "r1",
+    }
+    called: dict[str, object] = {}
+
+    def fake_configure(**kwargs):
+        called.update(kwargs)
+
+    with (
+        patch.dict(os.environ, env),
+        patch("dazzle.perf.tracer.configure_tracer", side_effect=fake_configure),
+    ):
+        _maybe_configure_tracer()
+
+    assert called["run_id"] == "r1"
+    assert called["db_path"] == db
+
+
+def test_tracer_skipped_when_env_unset() -> None:
+    import os
+    from unittest.mock import patch
+
+    from dazzle.back.runtime.server import _maybe_configure_tracer
+
+    called = False
+
+    def fake_configure(**kwargs):
+        nonlocal called
+        called = True
+
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch("dazzle.perf.tracer.configure_tracer", side_effect=fake_configure),
+    ):
+        _maybe_configure_tracer()
+
+    assert not called

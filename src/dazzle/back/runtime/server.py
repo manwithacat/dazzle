@@ -148,6 +148,31 @@ class ServerConfig:
     storage_defs: "dict[str, StorageConfig]" = field(default_factory=dict)
 
 
+def _maybe_configure_tracer() -> None:
+    """Configure the OTel tracer when ``dazzle perf trace`` set the env.
+
+    Runs before ``_create_app`` so the tracer is live when FastAPI's
+    instrumentation attaches.
+    """
+    import os
+    from pathlib import Path
+
+    if os.environ.get("DAZZLE_PERF_ENABLED") != "1":
+        return
+    db_str = os.environ.get("DAZZLE_PERF_DB")
+    run_id = os.environ.get("DAZZLE_PERF_RUN_ID")
+    if not db_str or not run_id:
+        return
+    from dazzle.perf.tracer import configure_tracer
+
+    configure_tracer(
+        run_id=run_id,
+        db_path=Path(db_str),
+        batch=True,
+        command_line=" ".join(__import__("sys").argv),
+    )
+
+
 def _maybe_instrument_for_perf(app: Any) -> None:
     """Apply ``dazzle perf`` instrumentation when ``DAZZLE_PERF_ENABLED``
     is set. The env var is the only signal — `dazzle perf trace` sets
@@ -414,6 +439,7 @@ class DazzleBackendApp:
 
     def _create_app(self) -> None:
         """Create the FastAPI app instance and apply middleware."""
+        _maybe_configure_tracer()
         self._app = _FastAPI(
             title=self._appspec.name,
             description=self._appspec.title or f"Dazzle Backend: {self._appspec.name}",
