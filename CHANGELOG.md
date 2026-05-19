@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.62] - 2026-05-19
+
+### Added
+
+- **Vendor hash manifest + CI drift gate** for supply-chain defense
+  on bundled JS/CSS. New `scripts/vendor_hashes.json` pins a SHA-256
+  for every file under `src/dazzle/ui/runtime/static/vendor/` (21
+  files at v0.71.62 — htmx + 4 htmx extensions, idiomorph, lucide,
+  alpine + 4 alpine plugins, flatpickr, tom-select, etc.). The
+  drift gate at `tests/unit/test_vendor_hash_drift.py` recomputes
+  every file's hash on every CI run and fails on divergence. Picked
+  up by the existing `test_*_drift.py` glob in `/ship`.
+
+  Why this matters: most vendored files are *not* auto-updated by
+  `scripts/update_vendors.py` (only htmx + idiomorph + lucide are).
+  Without this gate, a malicious change to e.g. `alpine.min.js`
+  between vendor-update PRs would have no detection path.
+
+- **`scripts/vendor_manifest.py`** — shared helper for hashing + JSON
+  manifest I/O. Consumed by `update_vendors.py` (auto-update path),
+  `update_vendor_hashes.py` (manual rebuild for files outside the
+  auto-update set), and the drift gate.
+
+- **`scripts/update_vendor_hashes.py`** — manual rebuilder. Use when
+  you've deliberately replaced an alpine/flatpickr/tom-select file
+  by hand: `python scripts/update_vendor_hashes.py` rewrites the
+  manifest entries to match disk. Supports `--check` for dry-run.
+
+### Changed
+
+- **`scripts/update_vendors.py`** now goes through a `_save_vendor`
+  helper for every byte written to `vendor/`. Each write:
+  (a) computes SHA-256, (b) writes the file, (c) updates the in-
+  memory manifest, (d) records the (filename, old, new) tuple for
+  end-of-run reporting. The manifest is rewritten to disk in the
+  same commit as the vendored files, so the drift gate accepts the
+  new state immediately.
+
+- **`update-vendors.yml` PR body** now includes a structured hash
+  diff and a reviewer checklist explicitly asking for independent
+  verification of each new SHA-256. The auto-update script emits
+  the diff between `=== VENDOR_HASH_DIFF ===` sentinels; the
+  workflow seds it out and substitutes into a heredoc template.
+
+### Agent Guidance
+
+- **Never edit a file under `src/dazzle/ui/runtime/static/vendor/`
+  without updating the manifest.** Either go through
+  `scripts/update_vendors.py` (auto-update set) or
+  `scripts/update_vendor_hashes.py` (manual). The CI drift gate
+  will reject any drift either way.
+
+- **Verify each new hash in vendor-update PRs against an independent
+  source.** The cron downloads from GitHub releases; that's TOFU on
+  the upstream's release artefacts. Cross-checking against the
+  upstream release page, a published checksum (where available), or
+  npm provenance closes the trust loop.
+
 ## [0.71.61] - 2026-05-19
 
 ### Changed

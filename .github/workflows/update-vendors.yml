@@ -20,7 +20,9 @@ jobs:
       - name: Check for vendor updates
         run: python scripts/update_vendors.py --check
       - name: Update vendors
-        run: python scripts/update_vendors.py
+        # Tee stdout so the next step can sed out the VENDOR_HASH_DIFF
+        # block the script emits between sentinels for PR body capture.
+        run: python scripts/update_vendors.py | tee /tmp/update-vendors.log
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Rebuild dist bundles
@@ -42,15 +44,45 @@ jobs:
           git commit -m "Update vendor JS dependencies"
           git push -u origin "$BRANCH" --force
 
-          # Create or update PR
+          # Extract the structured hash diff between the sentinels
+          # update_vendors.py prints. Falls back gracefully if absent.
+          HASH_DIFF=$(sed -n '/=== VENDOR_HASH_DIFF ===/,/=== \/VENDOR_HASH_DIFF ===/p' /tmp/update-vendors.log | sed -e '1d' -e '$d')
+          if [ -z "$HASH_DIFF" ]; then
+            HASH_DIFF="_No hash diff captured; update_vendors.py output may have changed format._"
+          fi
+
+          # Single-quoted heredoc means no $-interpolation and no backtick
+          # command substitution — safe to embed code references literally.
+          # We assemble the body by replacing a __HASH_DIFF__ placeholder
+          # after the heredoc runs.
+          PR_BODY_TEMPLATE=$(cat <<'BODY'
+          Automated vendor dependency update.
+
+          __HASH_DIFF__
+
+          ## Reviewer checklist
+
+          1. **Verify each new SHA-256** in the table above against an
+             independent source — the upstream release page, a separate
+             download, npm provenance, or a checksum file (where the
+             publisher provides one).
+          2. Run `python scripts/build_dist.py` locally and smoke-test
+             at least one example app.
+          3. The CI drift gate `tests/unit/test_vendor_hash_drift.py` accepts
+             this state because the manifest was rewritten in the same
+             commit. If you re-roll the vendored files outside this
+             workflow, run `python scripts/update_vendor_hashes.py`.
+          BODY
+          )
+          PR_BODY=${PR_BODY_TEMPLATE//__HASH_DIFF__/$HASH_DIFF}
+
           EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
-            echo "PR #$EXISTING already exists"
+            gh pr edit "$EXISTING" --body "$PR_BODY"
+            echo "Updated PR #$EXISTING body"
           else
             gh pr create \
               --title "Update vendor JS dependencies" \
-              --body "Automated vendor dependency update.
-
-          Run \`python scripts/build_dist.py\` to verify bundles." \
+              --body "$PR_BODY" \
               --head "$BRANCH"
           fi
