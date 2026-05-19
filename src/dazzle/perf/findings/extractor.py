@@ -18,6 +18,7 @@ from dazzle.perf.findings.types import (
     FindingsReport,
     NPlusOne,
     SlowEndpoint,
+    SlowPhase,
     SlowQuery,
 )
 
@@ -34,6 +35,53 @@ def normalise_statement(stmt: str) -> str:
     for pattern in _LITERAL_PATTERNS:
         out = pattern.sub("?", out)
     return re.sub(r"\s+", " ", out).strip()
+
+
+DAZZLE_PHASE_NAMES: tuple[str, ...] = (
+    "dsl.parse",
+    "predicate.compile",
+    "aggregate.expression.compile",
+    "aggregate.build_sql",
+    "repo.aggregate",
+    "region.render",
+    "fragment.emit",
+)
+
+
+def slow_phases(db_path: Path, run_id: str, *, top: int = 10) -> list[SlowPhase]:
+    """Aggregate the manually-instrumented Dazzle spans by name and rank
+    by total wall time. Span names outside :data:`DAZZLE_PHASE_NAMES`
+    are excluded so this finding stays focused on framework hot paths."""
+    known_phases = set(DAZZLE_PHASE_NAMES)
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT
+                name,
+                COUNT(*) AS calls,
+                SUM(duration_ns) / 1e6 AS total_ms,
+                MAX(duration_ns) / 1e6 AS max_ms
+            FROM spans
+            WHERE run_id = ? AND kind = 'internal'
+            GROUP BY name
+            ORDER BY total_ms DESC
+            """,
+            (run_id,),
+        ).fetchall()
+
+    # Filter to known Dazzle phases and rank by total_ms.
+    findings = [
+        SlowPhase(
+            name=row["name"],
+            calls=int(row["calls"]),
+            total_ms=float(row["total_ms"]),
+            max_ms=float(row["max_ms"]),
+        )
+        for row in rows
+        if row["name"] in known_phases
+    ]
+    return findings[:top]
 
 
 def slow_queries(db_path: Path, run_id: str, *, top: int = 10) -> list[SlowQuery]:
@@ -165,7 +213,8 @@ def detect_n_plus_one(db_path: Path, run_id: str, *, threshold: int = 3) -> list
 def build_findings(db_path: Path, run_id: str) -> FindingsReport:
     """Run every heuristic and assemble the FindingsReport.
 
-    Currently wires :func:`slow_endpoints` and :func:`slow_queries`.
+    Currently wires :func:`slow_endpoints`, :func:`slow_queries`,
+    :func:`detect_n_plus_one`, and :func:`slow_phases`.
     Subsequent tasks add the other heuristics and append them here.
     """
     from dazzle.perf.storage import get_run
@@ -181,4 +230,5 @@ def build_findings(db_path: Path, run_id: str) -> FindingsReport:
         slow_endpoints=slow_endpoints(db_path, run_id),
         slow_queries=slow_queries(db_path, run_id),
         n_plus_one=detect_n_plus_one(db_path, run_id),
+        slow_phases=slow_phases(db_path, run_id),
     )
