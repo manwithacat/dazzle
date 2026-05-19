@@ -5,48 +5,30 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Run `git status` (never use `-uall`) and `git diff --stat` to understand what changed.
 - If the worktree is already clean and there is nothing to commit, say so and stop.
 - Run `ruff check src/ tests/ --fix && ruff format src/ tests/` to auto-fix lint issues.
-- Run `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports` to catch type errors (matches CI).
-- **Run drift gates** — fast (~2s, no DB), catches the recurring Python ↔ htmx/Alpine boundary regressions (#949 / #963 / #966 / #968 class):
+- Run `mypy src/dazzle --ignore-missing-imports --exclude 'eject'` to catch type errors (matches CI).
+- **Run drift + policy gates** — fast (~10s, no DB), catches the recurring Python ↔ htmx/Alpine boundary regressions (#949 / #963 / #966 / #968 class) plus CI-class violations that ruff/mypy don't see (bare excepts, abandoned shims, parser-regex sneaks, etc.):
 
   ```bash
-  pytest tests/unit/test_api_surface_drift.py \
-         tests/unit/test_card_picker_attributes.py \
+  pytest tests/unit/test_*_drift.py \
+         tests/unit/test_no_*.py \
          tests/unit/test_idiomorph_alpine_patch.py \
-         tests/unit/test_inline_edit_escape.py \
          tests/unit/test_htmx_preload_silence.py \
-         tests/unit/test_preload_extension_disabled.py \
-         tests/unit/test_filter_bar_no_xfor.py \
          tests/unit/test_filter_ref_select_cancellation.py \
-         tests/unit/test_template_xfor_alpine_children.py \
-         tests/unit/test_table_loading_overlay.py \
          tests/unit/test_delete_preference_idempotent.py \
          tests/unit/test_alpine_error_handler.py \
          tests/unit/test_view_transition_swap.py \
-         tests/unit/test_bulk_count_via_data_attr.py \
          tests/unit/test_action_url_surface_resolution.py \
          tests/unit/test_htmx_undefined_guards.py \
-         tests/unit/test_back_button_url_safety.py \
-         tests/unit/test_show_picker_via_data_attr.py \
-         tests/unit/test_workspace_cls_reservation.py \
-         tests/unit/test_list_surface_cls_reservation.py \
-         -q
-  ```
-
-  If any drift gate fails, **fix the regression** (or regenerate the baseline + add a CHANGELOG entry for API-surface drift). Never bypass.
-- **Run policy gates** — fast (~4s, no DB), catches CI-class violations that ruff/mypy don't see (bare excepts, vendored-lib residuals, abandoned shims, etc.). These are the `test_no_*.py` and a handful of similar invariant tests:
-
-  ```bash
-  pytest tests/unit/test_no_bare_except_pass.py \
-         tests/unit/test_no_daisyui_residuals.py \
-         tests/unit/test_no_shims.py \
-         tests/unit/test_no_stale_quill_refs.py \
-         tests/unit/test_docs_drift.py \
          tests/unit/test_forbidden_detail.py \
          tests/unit/test_typed_runtime_no_jinja.py \
          -q
   ```
 
-  Pre-ship gap that motivated this list (v0.65.11 → v0.65.12): the chaos-monkey work added 3 `except Exception: pass` patterns to `src/dazzle/testing/fuzz_runtime/runner.py`; the pre-ship cycle ran only drift gates and missed `test_no_bare_except_pass.py`. Any new `test_no_*.py` file should be appended here.
+  Globs (`test_*_drift.py`, `test_no_*.py`) auto-pick up new gates so this list doesn't rot. The trailing explicit files are the htmx/Alpine boundary regressions that don't follow either naming convention.
+
+  If a drift gate fails, **fix the regression** — or, if it's a deliberate API-surface change, regenerate the baseline with `--write` and add a CHANGELOG entry under Added/Changed/Removed. Never bypass.
+
+  Pre-ship gap that motivated keeping the policy gates in here (v0.65.11 → v0.65.12): the chaos-monkey work added 3 `except Exception: pass` patterns to `src/dazzle/testing/fuzz_runtime/runner.py`; the pre-ship cycle ran only drift gates and missed `test_no_bare_except_pass.py`.
 
 - **Run the spec-drift strict guard** if the project opts in via `[spec] strict = true` in `dazzle.toml` (#1106 Prop 3):
 
@@ -63,7 +45,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Stage only the relevant changed files by name (never `git add -A` or `git add .`).
 - Do NOT stage files that look like secrets (.env, credentials, tokens).
 - Write a concise commit message that explains *why* the change was made, following the conventional commit style used in recent history (`git log --oneline -10`).
-- End the commit message with: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+- End the commit message with: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` (matches the signature on recent commits — bump this when the upstream model changes).
 - Use a HEREDOC to pass the message to `git commit -m`.
 
 ## 3. Tag (if version was bumped)
