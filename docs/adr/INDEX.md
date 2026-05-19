@@ -20,8 +20,8 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0016](0016-vendor-integration-workflow.md) — API Packs for vendor integration. TOML-driven mocks, webhook testing, DSL generation.
 - [0017](0017-schema-migrations-via-alembic.md) — All schema changes via Alembic, including framework entities. No raw DDL at startup.
 - [0018](0018-project-local-file-writes.md) — All file writes go to the project directory. Never write to the Python package directory.
-- [0019](ADR-0019-surface-triple-as-atomic-unit.md) — (Entity, Surface, Persona) triple is the atomic unit of verifiable behaviour.
-- [0020](ADR-0020-lifecycle-evidence-predicates.md) — Lifecycle evidence predicates are orthogonal to state machines.
+- [0019](0019-surface-triple-as-atomic-unit.md) — (Entity, Surface, Persona) triple is the atomic unit of verifiable behaviour.
+- [0020](0020-lifecycle-evidence-predicates.md) — Lifecycle evidence predicates are orthogonal to state machines.
 - [0021](0021-marketing-via-sitespec.md) — Marketing pages via `sitespec.yaml`. No `# dazzle:route-override` on public paths.
 - [0022](0022-alpine-bindings-vs-idiomorph.md) — Don't put Alpine bindings on idiomorph-morphed elements. Server-render or use `x-init` helpers with direct DOM manipulation.
 - [0023](0023-template-emission-patterns.md) — Two-pattern template-emission model post-jinja2. Pattern A (framework writes HTML) uses f-strings + `dazzle.render.html.esc`; Pattern B (framework executes user-authored templates) uses `string.Template`. Choice is mechanical: who writes the template.

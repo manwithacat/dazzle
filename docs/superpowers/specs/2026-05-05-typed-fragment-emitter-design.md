@@ -3,7 +3,7 @@
 > **Status:** Approved for implementation planning
 > **Author:** James Cyfuture / Claude (brainstorming session 2026-05-05)
 > **Last reviewed:** 2026-05-05
-> **Related ADRs:** [0004](../../adr/0004-dsl-agent-first.md), [0006](../../adr/0006-frozen-ir.md), [0011](../../adr/0011-ssr-htmx.md), [0019](../../adr/ADR-0019-surface-triple-as-atomic-unit.md), [0022](../../adr/0022-alpine-bindings-vs-idiomorph.md)
+> **Related ADRs:** [0004](../../adr/0004-dsl-agent-first.md), [0006](../../adr/0006-frozen-ir.md), [0011](../../adr/0011-ssr-htmx.md), [0019](../../adr/0019-surface-triple-as-atomic-unit.md), [0022](../../adr/0022-alpine-bindings-vs-idiomorph.md)
 > **Related docs:** [docs/philosophy.md](../../philosophy.md)
 
 ---

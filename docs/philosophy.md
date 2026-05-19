@@ -63,7 +63,7 @@ The DSL has two dozen constructs (full list in `CLAUDE.md`). The shortlist below
 A row type and its constraints. Compiles to a Postgres table via Alembic ([ADR-0017](adr/0017-schema-migrations-via-alembic.md)). The novelty is that an entity is also a *node in the FK graph* used by the predicate algebra (see `scope`) and by the chart compiler. This is why entities are not just "tables we generate" — they are the typed substrate on which all later analysis runs.
 
 ### `surface`
-A UI view bound to an entity in a particular mode (list, detail, form, dashboard, report). Surfaces matter more than entities for determining behaviour: the *(Entity, Surface, Persona)* triple is the atomic unit of verifiable behaviour ([ADR-0019](adr/ADR-0019-surface-triple-as-atomic-unit.md)). Two apps with identical entities can ship completely different products by having different surface compositions, so audits, fidelity checks, and trial scenarios all index on surfaces rather than entities.
+A UI view bound to an entity in a particular mode (list, detail, form, dashboard, report). Surfaces matter more than entities for determining behaviour: the *(Entity, Surface, Persona)* triple is the atomic unit of verifiable behaviour ([ADR-0019](adr/0019-surface-triple-as-atomic-unit.md)). Two apps with identical entities can ship completely different products by having different surface compositions, so audits, fidelity checks, and trial scenarios all index on surfaces rather than entities.
 
 ### `permit` and `scope`
 Authorisation is two layers, never one ([ADR-0010](adr/0010-permit-scope-separation.md)):

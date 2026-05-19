@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, Pydantic v2 for IR models, pytest, existing scope-rule predicate parser.
 
-**Reference:** `docs/adr/ADR-0020-lifecycle-evidence-predicates.md` — the authoritative design. Also: the fitness methodology spec `docs/superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md` §6.1 for consumer requirements.
+**Reference:** `docs/adr/0020-lifecycle-evidence-predicates.md` — the authoritative design. Also: the fitness methodology spec `docs/superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md` §6.1 for consumer requirements.
 
 ---
 

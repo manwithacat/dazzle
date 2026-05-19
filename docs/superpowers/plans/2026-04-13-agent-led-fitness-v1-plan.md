@@ -4399,7 +4399,7 @@ entity Ticket "Support Ticket":
 v1 emits a non-fatal lint warning if this is missing. v1.1 makes it fatal.
 
 Entities with lifecycles must also declare a `lifecycle:` block (see
-[ADR-0020](../adr/ADR-0020-lifecycle-evidence-predicates.md)).
+[ADR-0020](../adr/0020-lifecycle-evidence-predicates.md)).
 
 ## Findings
 
