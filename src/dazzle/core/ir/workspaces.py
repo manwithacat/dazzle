@@ -645,11 +645,22 @@ class TaskSourceTemplate(BaseModel):
             FK-resolved targets.
         meta: Template string for the secondary copy (period,
             deadline, age). Optional.
+        via_joins: Cross-entity alias map (#1145 part 2). Each key
+            is an alias usable in ``title``/``meta`` templates; each
+            value is a dotted path resolved against the source row
+            (typically walking through FK-hydrated sub-dicts). At
+            render time the runtime resolves each path and injects
+            the result under ``row[alias]`` before template
+            interpolation, so ``{{ student.forename }}`` can reach
+            ``BehaviourIncident → BehaviourStudent → StudentProfile``
+            without route overrides. Empty dict (default) preserves
+            pre-#1145-part-2 behaviour.
     """
 
     icon: str
     title: str
     meta: str = ""
+    via_joins: dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
 

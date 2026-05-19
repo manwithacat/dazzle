@@ -2717,6 +2717,7 @@ ir_class: TaskSourceTemplate
     - title: str
   optional:
     - meta: str = ''
+    - via_joins: dict[str, str] = {}
 
 ir_class: Tautology
   required: (none)

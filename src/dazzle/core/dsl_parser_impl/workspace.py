@@ -1351,7 +1351,8 @@ class WorkspaceParserMixin:
         icon_str: str = ""
         title_str: str = ""
         meta_str: str = ""
-        _VALID_KEYS = {"icon", "title", "meta"}
+        via_joins: dict[str, str] = {}
+        _VALID_KEYS = {"icon", "title", "meta", "via"}
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -1377,6 +1378,26 @@ class WorkspaceParserMixin:
             elif key == "meta":
                 meta_str = self.expect(TokenType.STRING).value
                 self.skip_newlines()
+            elif key == "via":
+                # #1145 part 2: alias → dotted-path map. Indented
+                # `alias: dotted.path` lines, no string quoting (paths
+                # are bare identifier chains, same shape as scope
+                # field refs).
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    alias = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.COLON)
+                    path_parts: list[str] = [self.expect_identifier_or_keyword().value]
+                    while self.match(TokenType.DOT):
+                        self.advance()
+                        path_parts.append(self.expect_identifier_or_keyword().value)
+                    via_joins[alias] = ".".join(path_parts)
+                    self.skip_newlines()
+                self.expect(TokenType.DEDENT)
             else:
                 raise make_parse_error(
                     f"Unknown as_task key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
@@ -1393,7 +1414,9 @@ class WorkspaceParserMixin:
                 tok.line,
                 tok.column,
             )
-        return ir.TaskSourceTemplate(icon=icon_str, title=title_str, meta=meta_str)
+        return ir.TaskSourceTemplate(
+            icon=icon_str, title=title_str, meta=meta_str, via_joins=via_joins
+        )
 
     def _parse_entity_card_config_block(self) -> ir.EntityCardConfig:
         """Parse the indented body of an ``entity_card_config:`` block (#1017).

@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.53] - 2026-05-19
+
+### Added
+- **`as_task.via:` cross-entity alias map (#1145 part 2,
+  closes #1145).** Pre-fix `{{ student.forename }}` couldn't reach
+  across FK joins — the template grammar resolved paths against the
+  source row only, so a `BehaviourIncident → BehaviourStudent →
+  StudentProfile` chain forced a route override. New
+  `TaskSourceTemplate.via_joins: dict[str, str]` maps aliases to
+  dotted paths; the runtime resolves each path against the
+  FK-hydrated row dict and injects the value under the alias key
+  before template interpolation:
+  ```dsl
+  as_task:
+    icon: behaviour
+    title: "Follow up with {{ student.forename }}"
+    meta: "{{ incident_type }}"
+    via:
+      student: behaviour_student.student_profile
+  ```
+  No extra DB queries — relies on rows arriving with FK-hydrated
+  sub-dicts (which they already do via `fk_display_only=True` for
+  display name resolution). Empty `via_joins` (default) preserves
+  pre-#1145-part-2 behaviour.
+
+  **Closes #1145.** Combined with part 1 (`{{ field | transform }}`
+  time-arithmetic in v0.71.49), the AegisMark `teacher_workspace_today`
+  route override can now retire — every `as_task` chip shape it
+  needs (time-relative meta lines + cross-entity title fields) is
+  expressible in DSL.
+
 ## [0.71.52] - 2026-05-19
 
 ### Added

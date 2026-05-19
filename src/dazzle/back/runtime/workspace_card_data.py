@@ -605,15 +605,27 @@ def _items_from_template(
     icon = str(getattr(template, "icon", "") or "")
     title_tmpl = str(getattr(template, "title", "") or "")
     meta_tmpl = str(getattr(template, "meta", "") or "")
+    via_joins = dict(getattr(template, "via_joins", {}) or {})
     out: list[dict[str, Any]] = []
     for item in items:
         row_id = str(item.get("id", "") or "")
         if not row_id:
             continue
         item_id = f"{prefix}{row_id}" if prefix else row_id
-        title = _interpolate_card_template(title_tmpl, item) if title_tmpl else ""
-        meta = _interpolate_card_template(meta_tmpl, item) if meta_tmpl else ""
-        urgency_raw = item.get("urgency") or item.get("severity") or item.get("priority") or "later"
+        # #1145 part 2: resolve each via_joins alias against the row
+        # (walking FK-hydrated sub-dicts) and stash under that alias
+        # so the template can reference `{{ alias.field }}`. Pure
+        # local-row resolution — no extra queries. Resolved values
+        # written to a shallow copy so the input row isn't mutated.
+        if via_joins:
+            row = dict(item)
+            for alias, path in via_joins.items():
+                row[alias] = _resolve_path(item, path)
+        else:
+            row = item
+        title = _interpolate_card_template(title_tmpl, row) if title_tmpl else ""
+        meta = _interpolate_card_template(meta_tmpl, row) if meta_tmpl else ""
+        urgency_raw = row.get("urgency") or row.get("severity") or row.get("priority") or "later"
         urgency = _coerce_urgency(str(urgency_raw))
         out.append(
             {
