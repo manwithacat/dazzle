@@ -136,6 +136,17 @@ dev = [
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
 ]
+# On-demand local OpenTelemetry tracing for `dazzle perf` (#1153 follow-on).
+# Local-only by design — the bundled SQLite span exporter writes traces to
+# `.dazzle/perf/<run-id>.db`. No OTLP collector required; users who want
+# upstream collectors can pair this extra with their own exporter config.
+perf = [
+    "opentelemetry-api>=1.27,<2",
+    "opentelemetry-sdk>=1.27,<2",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-psycopg>=0.48b0",
+    "opentelemetry-instrumentation-asyncio>=0.48b0",
+]
 # Runtime server dependencies for `dazzle serve --local` (v0.34.3 — Issue #388)
 serve = [
     "fastapi>=0.100.0",
