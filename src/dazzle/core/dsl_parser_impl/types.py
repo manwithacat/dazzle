@@ -4,7 +4,6 @@ Type parsing for DAZZLE DSL.
 Handles field type specifications and field modifiers.
 """
 
-import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -348,12 +347,13 @@ class TypeParserMixin:
         Returns:
             DurationLiteral with value and unit
         """
+        from ._lexical import split_duration_token
+
         token = self.expect(TokenType.DURATION_LITERAL)
         value_str = token.value
 
-        # Extract numeric part and suffix
-        match = re.match(r"(\d+)(min|h|d|w|m|y)", value_str)
-        if not match:
+        parts = split_duration_token(value_str)
+        if parts is None:
             raise make_parse_error(
                 f"Invalid duration literal: {value_str}",
                 self.file,
@@ -361,8 +361,7 @@ class TypeParserMixin:
                 token.column,
             )
 
-        value = int(match.group(1))
-        suffix = match.group(2)
+        value, suffix = parts
         unit = DURATION_SUFFIX_MAP[suffix]
 
         return ir.DurationLiteral(value=value, unit=unit)

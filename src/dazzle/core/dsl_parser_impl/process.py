@@ -39,7 +39,6 @@ DSL Syntax (v0.23.0):
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -86,25 +85,16 @@ def parse_duration(s: str) -> int:
 
     Examples: "30s", "5m", "2h", "7d", "24h"
     """
-    match = re.match(r"^(\d+)([smhd])$", s.strip())
-    if not match:
+    from ._lexical import short_duration_seconds
+
+    seconds = short_duration_seconds(s)
+    if seconds is None:
         from dazzle.core.errors import ParseError
 
         raise ParseError(
             f"Invalid duration format: '{s}' — expected format like '30s', '5m', '2h', '7d'"
         )
-
-    value = int(match.group(1))
-    unit = match.group(2)
-
-    multipliers = {
-        "s": 1,
-        "m": 60,
-        "h": 3600,
-        "d": 86400,
-    }
-
-    return value * multipliers[unit]
+    return seconds
 
 
 def format_duration(seconds: int) -> str:
@@ -1539,11 +1529,12 @@ class ProcessParserMixin:
 
     def _parse_duration_or_signal(self) -> int | str:
         """Parse either a duration or a signal name."""
+        from ._lexical import is_short_duration_token
+
         token = self.current_token()
         val = str(token.value)
 
-        # Try to parse as duration
-        if re.match(r"^\d+[smhd]$", val):
+        if is_short_duration_token(val):
             self.advance()
             return parse_duration(val)
 

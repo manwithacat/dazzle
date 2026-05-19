@@ -254,13 +254,9 @@ class StoryParserMixin:
             "Invoice.status is 'draft'" -> "Invoice.status"
             "User submits form" -> None
         """
-        # Simple pattern: look for Entity.field at start
-        import re
+        from ._lexical import extract_entity_field_prefix
 
-        match = re.match(r"([A-Z][a-zA-Z0-9_]*\.[a-z][a-zA-Z0-9_]*)", expression)
-        if match:
-            return match.group(1)
-        return None
+        return extract_entity_field_prefix(expression)
 
     def _parse_unless_list(self) -> list[ir.StoryException]:
         """

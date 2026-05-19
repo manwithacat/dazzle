@@ -24,21 +24,11 @@ from pathlib import Path
 # Each entry is (relative_path, line_number, rationale). A regex call on
 # a line listed here is allowed; any other regex call fails the test.
 #
-# Goal: drive this list to empty. Adding an entry requires a paired
-# migration plan (see the issue tracker, label `adr-0024`).
-_ALLOWLIST: frozenset[tuple[str, int]] = frozenset(
-    [
-        # Entity.field path recognition in story narratives.
-        # Grammar shape, NOT lexical — should migrate to tokenised path parsing.
-        ("src/dazzle/core/dsl_parser_impl/story.py", 260),
-        # Duration literal recognition ("5m", "10h", "1d").
-        # Lexical-shape; arguably acceptable indefinitely, but a token
-        # category would be cleaner.
-        ("src/dazzle/core/dsl_parser_impl/types.py", 355),
-        ("src/dazzle/core/dsl_parser_impl/process.py", 89),
-        ("src/dazzle/core/dsl_parser_impl/process.py", 1546),
-    ]
-)
+# Drained to zero in #1155 — the previous four entries (Entity.field
+# probe + three duration-literal splits) now route through char-walk
+# helpers in ``dsl_parser_impl/_lexical.py``. Adding an entry requires
+# a paired migration plan (see the issue tracker, label `adr-0024`).
+_ALLOWLIST: frozenset[tuple[str, int]] = frozenset()
 
 # The directories scanned. Add new parser surfaces here, not new
 # allowlist entries.

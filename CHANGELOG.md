@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.64] - 2026-05-19
+
+### Changed
+
+- **ADR-0024 allowlist drained to zero** (#1155). The four
+  pre-existing `re.*` calls in `dsl_parser_impl/` — the `Entity.field`
+  prefix probe in story narratives and the three duration-literal
+  shape splits — now route through char-walk helpers in the new
+  module `src/dazzle/core/dsl_parser_impl/_lexical.py`. The
+  enforcement test `tests/unit/test_no_regex_in_parser.py` carries an
+  empty allowlist; any new `re.*` call inside the parser surface
+  fails CI.
+
+- Removed unused top-level `import re` from
+  `dsl_parser_impl/process.py` and `dsl_parser_impl/types.py`.
+
+### Agent Guidance
+
+- For new parser-surface lexical shape recognition (durations,
+  identifier patterns, etc.), add a small char-walk helper to
+  `dsl_parser_impl/_lexical.py` rather than reaching for `re`.
+  The ADR-0024 allowlist is now zero — extending it requires
+  paired migration plan.
+- The helper module's docstring documents the four current
+  functions (`split_duration_token`, `short_duration_seconds`,
+  `is_short_duration_token`, `extract_entity_field_prefix`).
+  Follow the same naming pattern (verb-noun, returns `None` on
+  shape mismatch) when adding more.
+
 ## [0.71.63] - 2026-05-19
 
 ### Added
