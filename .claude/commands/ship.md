@@ -11,20 +11,21 @@ Commit all current changes and push to the remote. Follow these steps exactly:
   ```bash
   pytest tests/unit/test_*_drift.py \
          tests/unit/test_no_*.py \
-         tests/unit/test_idiomorph_alpine_patch.py \
-         tests/unit/test_htmx_preload_silence.py \
-         tests/unit/test_filter_ref_select_cancellation.py \
-         tests/unit/test_delete_preference_idempotent.py \
-         tests/unit/test_alpine_error_handler.py \
-         tests/unit/test_view_transition_swap.py \
-         tests/unit/test_action_url_surface_resolution.py \
-         tests/unit/test_htmx_undefined_guards.py \
-         tests/unit/test_forbidden_detail.py \
-         tests/unit/test_typed_runtime_no_jinja.py \
+         $(ls tests/unit/test_idiomorph_alpine_patch.py \
+              tests/unit/test_htmx_preload_silence.py \
+              tests/unit/test_filter_ref_select_cancellation.py \
+              tests/unit/test_delete_preference_idempotent.py \
+              tests/unit/test_alpine_error_handler.py \
+              tests/unit/test_view_transition_swap.py \
+              tests/unit/test_action_url_surface_resolution.py \
+              tests/unit/test_htmx_undefined_guards.py \
+              tests/unit/test_forbidden_detail.py \
+              tests/unit/test_typed_runtime_no_jinja.py \
+              2>/dev/null) \
          -q
   ```
 
-  Globs (`test_*_drift.py`, `test_no_*.py`) auto-pick up new gates so this list doesn't rot. The trailing explicit files are the htmx/Alpine boundary regressions that don't follow either naming convention.
+  Globs (`test_*_drift.py`, `test_no_*.py`) auto-pick up new gates so this list doesn't rot. The trailing explicit files are the htmx/Alpine boundary regressions that don't follow either naming convention; the `ls ... 2>/dev/null` wrapper drops any entry whose file has been deleted upstream so pre-flight survives drift (#1156). When you delete a pinned-regression test, remove its line here in the same commit.
 
   If a drift gate fails, **fix the regression** — or, if it's a deliberate API-surface change, regenerate the baseline with `--write` and add a CHANGELOG entry under Added/Changed/Removed. Never bypass.
 

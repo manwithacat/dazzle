@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.65] - 2026-05-19
+
+### Changed
+
+- **`/ship` drift-gate command drift-resistant** (#1156). The
+  explicit-file tail (htmx/Alpine boundary regressions not picked up
+  by the glob patterns) is now wrapped in
+  `$(ls ... 2>/dev/null)`, so the pre-flight check survives when a
+  pinned-regression test file is deleted upstream. Previously the
+  invocation failed with `ERROR: file or directory not found` on the
+  first missing entry, forcing every ship to manually filter.
+
+  When you delete a pinned-regression test, still remove its line
+  from the list in the same commit — the guard is a safety net,
+  not a license to leave stale references.
+
 ## [0.71.64] - 2026-05-19
 
 ### Changed
