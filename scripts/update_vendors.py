@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-VENDOR_DIR = REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "vendor"
+VENDOR_DIR = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "vendor"
 
 GITHUB_API = "https://api.github.com/repos/{owner}/{repo}/releases/latest"
 GITHUB_RAW = "https://raw.githubusercontent.com/{owner}/{repo}/{tag}/{path}"
@@ -30,9 +30,22 @@ def _gh_headers() -> dict[str, str]:
     return headers
 
 
+def _assert_https(url: str) -> None:
+    """Reject anything that isn't an https:// URL.
+
+    All URLs in this script come from GitHub API responses or our own
+    hardcoded constants; both should always be https. Defending against
+    `file://`, `http://`, or other schemes — which urllib will happily
+    open — costs one line and shuts the semgrep warning correctly.
+    """
+    if not url.startswith("https://"):
+        raise ValueError(f"Refusing non-https URL: {url!r}")
+
+
 def _gh_request(url: str) -> bytes:
+    _assert_https(url)  # validates scheme — semgrep can't trace this
     req = urllib.request.Request(url, headers=_gh_headers())
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req) as resp:  # nosem
         return resp.read()
 
 
@@ -42,8 +55,9 @@ def _latest_release(owner: str, repo: str) -> dict:
 
 
 def _download(url: str) -> bytes:
+    _assert_https(url)  # validates scheme — semgrep can't trace this
     req = urllib.request.Request(url, headers=_gh_headers())
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req) as resp:  # nosem
         return resp.read()
 
 
