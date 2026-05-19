@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.50] - 2026-05-19
+
+### Added
+- **`tone_bands:` multi-threshold tone mapping on cohort_strip
+  lenses (#1144 part 1).** New `ToneBandSpec(at, tone)` IR model
+  and `CohortStripLens.tone_bands: list[ToneBandSpec]` field
+  supersede the hardcoded scalar-threshold trichotomy. Each band
+  fires when `value >= at`; the renderer sorts bands descending so
+  the highest band a value clears determines its tone:
+  ```dsl
+  lenses:
+    - id: score
+      label: Score
+      primary: score
+      tone_bands:
+        - at: 90
+          tone: good
+        - at: 70
+          tone: warn
+        - at: 0
+          tone: bad
+  ```
+  Mutually exclusive with `threshold:` — the IR validator raises
+  at construction so DSL authors see the conflict at parse time.
+  Lenses with neither set stay neutral (no implicit catch-all).
+
+  #1144's remaining sub-asks (expression `primary:` + composite
+  display for tuple metrics) untouched.
+
 ## [0.71.49] - 2026-05-19
 
 ### Added

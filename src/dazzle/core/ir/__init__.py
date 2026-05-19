@@ -822,6 +822,7 @@ from .workspaces import (
     TaskInboxConfig,
     TaskSource,
     TaskSourceTemplate,
+    ToneBandSpec,
     WorkspaceAccessLevel,
     WorkspaceAccessSpec,
     WorkspaceRegion,
@@ -940,6 +941,7 @@ __all__ = [
     "ReferenceLine",
     "RowActionSpec",
     "StatusListEntrySpec",
+    "ToneBandSpec",
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences

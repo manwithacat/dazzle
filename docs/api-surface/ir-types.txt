@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 346 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
+# Counts: 347 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -399,6 +399,7 @@ ir_class: CohortStripLens
     - primary: str
   optional:
     - threshold: float | None = None
+    - tone_bands: list[ToneBandSpec] = []
 
 ir_class: ColumnCheck
   required:
@@ -2897,6 +2898,12 @@ ir_class: TimeSemantics
   optional:
     - t_log_field: str = '_t_log'
     - t_process_field: str | None = None
+
+ir_class: ToneBandSpec
+  required:
+    - at: float
+    - tone: str
+  optional: (none)
 
 ir_class: TopicSpec
   required:

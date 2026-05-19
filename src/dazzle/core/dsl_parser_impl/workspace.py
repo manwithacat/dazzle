@@ -874,16 +874,98 @@ class WorkspaceParserMixin:
             default_lens=default_lens_str,
         )
 
+    def _parse_tone_bands_block(self) -> list[ir.ToneBandSpec]:
+        """#1144 part 1: parse the indented dash-list body of a
+        ``tone_bands:`` block.
+
+        Each entry leads with ``- at: <number>`` carrying the threshold
+        value, then a ``tone:`` sub-key on the same line or in an
+        INDENT block::
+
+            tone_bands:
+              - at: 90
+                tone: good
+              - at: 70
+                tone: warn
+              - at: 0
+                tone: bad
+
+        Caller validates that ``threshold:`` and ``tone_bands:`` aren't
+        both set on the same lens — the IR-level validator raises a
+        clear error message on conflict.
+        """
+        bands: list[ir.ToneBandSpec] = []
+        _VALID_KEYS = {"at", "tone"}
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "tone_bands entries must start with `- at: <number>`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            head_kw = self.expect_identifier_or_keyword().value
+            if head_kw != "at":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"tone_bands entry must start with `at:`, got {head_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            at_val = float(self.expect(TokenType.NUMBER).value)
+            self.skip_newlines()
+            tone_str: str | None = None
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "tone":
+                        tone_str = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown tone_bands entry key {key!r}. "
+                            f"Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+            if tone_str is None:
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"tone_bands entry at:{at_val} requires a `tone:` field",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            bands.append(ir.ToneBandSpec(at=at_val, tone=tone_str))
+        return bands
+
     def _parse_cohort_strip_lenses_block(self) -> list[ir.CohortStripLens]:
         """Parse the indented dash-list body of a ``lenses:`` block (#1018).
 
         Each entry must lead with ``- id:`` (the stable lens identifier
         used in URL params). The remaining keys land in the entry's
         INDENT block. ``label`` and ``primary`` are required;
-        ``threshold`` is optional.
+        ``threshold`` and ``tone_bands`` are optional and mutually
+        exclusive (#1144 part 1).
         """
         lenses: list[ir.CohortStripLens] = []
-        _VALID_KEYS = {"id", "label", "primary", "threshold"}
+        _VALID_KEYS = {"id", "label", "primary", "threshold", "tone_bands"}
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -914,6 +996,7 @@ class WorkspaceParserMixin:
             label_str: str | None = None
             primary_str: str | None = None
             threshold_val: float | None = None
+            tone_bands_list: list[ir.ToneBandSpec] = []
 
             if self.match(TokenType.INDENT):
                 self.advance()
@@ -939,6 +1022,14 @@ class WorkspaceParserMixin:
                     elif key == "threshold":
                         threshold_val = float(self.expect(TokenType.NUMBER).value)
                         self.skip_newlines()
+                    elif key == "tone_bands":
+                        # #1144 part 1: dash-list of `- at: <num>` +
+                        # `tone: <ident>` sub-entries. See the IR docstring
+                        # on ``ToneBandSpec`` for semantics.
+                        self.skip_newlines()
+                        self.expect(TokenType.INDENT)
+                        tone_bands_list = self._parse_tone_bands_block()
+                        self.expect(TokenType.DEDENT)
                     else:
                         raise make_parse_error(
                             f"Unknown lenses key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
@@ -962,6 +1053,7 @@ class WorkspaceParserMixin:
                     label=label_str,
                     primary=primary_str,
                     threshold=threshold_val,
+                    tone_bands=tone_bands_list,
                 )
             )
 

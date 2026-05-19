@@ -263,6 +263,11 @@ def _build_cohort_cells(
     )
     primary_field = str(getattr(active_lens, "primary", "") or "")
     threshold = getattr(active_lens, "threshold", None)
+    # #1144 part 1: multi-band tone mapping (supersedes scalar
+    # threshold when non-empty). Pre-sorted descending by `at` so
+    # the highest band a value clears determines its tone.
+    raw_bands = list(getattr(active_lens, "tone_bands", []) or [])
+    tone_bands = sorted(raw_bands, key=lambda b: float(getattr(b, "at", 0.0)), reverse=True)
 
     cells: list[dict[str, Any]] = []
     for item in items:
@@ -280,21 +285,35 @@ def _build_cohort_cells(
         # Primary value extraction.
         primary_raw = _resolve_path(item, primary_field) if primary_field else None
         primary_value = "" if primary_raw is None else str(primary_raw)
-        # Tone derivation when threshold is configured.
+        # Tone derivation. #1144 part 1 path takes precedence: walk
+        # the sorted bands, take first whose `at` the value clears.
+        # Fall back to the scalar `threshold:` trichotomy when bands
+        # are empty (the pre-#1144 contract). Neutral when neither is
+        # set or the value can't be coerced to a number.
         tone = "neutral"
-        if threshold is not None and primary_raw is not None:
+        if primary_raw is not None:
             try:
                 primary_num = float(primary_raw)
-                threshold_num = float(threshold)
             except (TypeError, ValueError):
-                pass
-            else:
-                if primary_num >= threshold_num:
-                    tone = "good"
-                elif primary_num >= threshold_num * 0.9:
-                    tone = "warn"
-                else:
-                    tone = "bad"
+                primary_num = None
+            if primary_num is not None:
+                if tone_bands:
+                    for band in tone_bands:
+                        if primary_num >= float(getattr(band, "at", 0.0)):
+                            tone = str(getattr(band, "tone", "neutral"))
+                            break
+                elif threshold is not None:
+                    try:
+                        threshold_num = float(threshold)
+                    except (TypeError, ValueError):
+                        pass
+                    else:
+                        if primary_num >= threshold_num:
+                            tone = "good"
+                        elif primary_num >= threshold_num * 0.9:
+                            tone = "warn"
+                        else:
+                            tone = "bad"
         cells.append(
             {
                 "member_id": member_id,

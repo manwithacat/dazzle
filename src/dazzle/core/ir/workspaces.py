@@ -9,7 +9,7 @@ from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .conditions import ConditionExpr
 from .location import SourceLocation
@@ -438,6 +438,34 @@ class NoticeSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ToneBandSpec(BaseModel):
+    """#1144 part 1: one tone band on a ``cohort_strip`` lens.
+
+    Multi-band threshold replacement for the scalar `threshold:`
+    field — gives DSL authors explicit control over the value→tone
+    mapping instead of inheriting the hardcoded "≥threshold = good,
+    ≥90% threshold = warn, else bad" trichotomy.
+
+    A band fires when ``value >= at`` AND no earlier band (higher
+    ``at`` value, evaluated first) already matched. Bands are
+    walked in *descending* order of ``at`` regardless of authoring
+    order — the renderer sorts them — so the highest threshold
+    a value clears determines its tone.
+
+    Attributes:
+        at: Threshold value the row's primary must clear. Float so
+            percentages, scores, and absolute counts all compose.
+        tone: Palette token from the framework's tone vocabulary
+            (``good`` / ``warn`` / ``bad`` / ``neutral`` / ``accent``
+            etc) — same set the existing scalar-threshold path uses.
+    """
+
+    at: float
+    tone: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class CohortStripLens(BaseModel):
     """One lens in a `cohort_strip` region's lens toggle (#1018).
 
@@ -453,17 +481,37 @@ class CohortStripLens(BaseModel):
         label: Human-readable text on the lens-toggle button.
         primary: Field on the resolved member record that supplies
             the value rendered as the visual primary.
-        threshold: Optional RAG threshold. When set, the renderer tints
-            the primary value relative to it. Polarity (above-good vs
-            below-good) is encoded in the adapter's tone-mapping helper.
+        threshold: Optional scalar RAG threshold. When set (and
+            ``tone_bands`` is empty), the renderer tints the primary
+            value relative to it via the hardcoded above/warn/below
+            trichotomy. Mutually exclusive with ``tone_bands``.
+        tone_bands: Optional multi-band tone mapping (#1144 part 1).
+            When non-empty, supersedes ``threshold:`` — the row's
+            primary value is matched against the highest band whose
+            ``at`` it clears. Empty list → fall back to ``threshold:``
+            (or neutral if neither is set).
     """
 
     id: str
     label: str
     primary: str
     threshold: float | None = None
+    tone_bands: list[ToneBandSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def _validate_threshold_or_bands(self) -> CohortStripLens:
+        """#1144 part 1: scalar threshold and tone_bands are mutually
+        exclusive — surface the conflict at IR construction so DSL
+        authors see it at parse time rather than rendering surprises."""
+        if self.threshold is not None and self.tone_bands:
+            raise ValueError(
+                f"cohort_strip lens {self.id!r}: `threshold:` and "
+                "`tone_bands:` are mutually exclusive — use one or "
+                "the other (tone_bands supersedes the scalar)."
+            )
+        return self
 
 
 class CohortStripConfig(BaseModel):
