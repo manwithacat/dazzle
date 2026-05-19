@@ -48,7 +48,7 @@ class SQLiteSpanExporter(SpanExporter):
         self._manifest_path = manifest_path
         self._command_line = command_line
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self._db_path, isolation_level=None)
+        self._conn = sqlite3.connect(self._db_path, isolation_level=None, check_same_thread=False)
         self._conn.executescript(_SCHEMA_PATH.read_text())
         self._ensure_run_row()
 

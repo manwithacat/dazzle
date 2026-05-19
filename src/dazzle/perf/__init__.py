@@ -13,3 +13,8 @@ not by framework callers.
 """
 
 from __future__ import annotations
+
+from dazzle.perf.instrument import instrument_app
+from dazzle.perf.tracer import configure_tracer, dazzle_span
+
+__all__ = ["configure_tracer", "dazzle_span", "instrument_app"]
