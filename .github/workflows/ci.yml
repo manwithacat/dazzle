@@ -18,19 +18,9 @@ jobs:
         python-version: ["3.12"]
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
         python-version: "${{ matrix.python-version }}"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile,postgres]"
-        # Install optional LSP dependencies
-        pip install pygls || true
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.{css,js} + dazzle-icons.min.js are
@@ -54,17 +44,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,mobile,postgres]"
+        extras: dev,mobile,postgres
+        optional-pip: ""
 
     - name: Run JWT security tests
       run: |
@@ -119,19 +102,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,postgres]"
-        # Install optional LSP dependencies
-        pip install pygls || true
+        extras: dev,llm,mcp,postgres
 
     - name: Run ruff linter
       run: |
@@ -214,25 +187,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    # type-check needs the maximal extras superset — when babel /
+    # python-pptx / Pillow aren't installed, mypy treats their imports
+    # as `Any` (ignore_missing_imports=true) and the `warn_return_any`
+    # + `warn_unused_ignores` flags fire on functions that wrap them.
+    # Matching the dev-install superset keeps the type-check env
+    # identical to local mypy.
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        # Install ALL optional extras for type checking — when babel /
-        # python-pptx / Pillow aren't installed, mypy treats their
-        # imports as `Any` (ignore_missing_imports=true) and the
-        # `warn_return_any` + `warn_unused_ignores` flags fire on
-        # functions that wrap them. Matching the dev-install superset
-        # keeps the type-check env identical to local mypy.
-        pip install -e ".[dev,llm,mcp,mobile,postgres,pitch,i18n,viewport]"
-        # Install optional dependencies for type checking
-        pip install pygls bleach || true
+        extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport
+        optional-pip: pygls bleach
 
     - name: Run mypy
       # #1056 (v0.67.99): full mypy check across the merged dazzle/
@@ -245,19 +209,9 @@ jobs:
     needs: [python-tests, lint, security-tests]
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile]"
-        # Install optional LSP dependencies
-        pip install pygls || true
+        extras: dev,llm,mcp,mobile
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.* are gitignored — built here for tests.
@@ -279,17 +233,10 @@ jobs:
     needs: [python-tests, lint]
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile]"
+        extras: dev,llm,mcp,mobile
+        optional-pip: ""
 
     - name: Validate all example and fixture projects
       run: |
@@ -354,18 +301,7 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile,postgres]"
-        pip install pygls || true
+    - uses: ./.github/actions/setup-dazzle
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.* are gitignored — built here for tests.
@@ -404,17 +340,9 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile,postgres]"
+        optional-pip: ""
 
     - name: Run E2E runtime tests
       run: |
@@ -506,21 +434,17 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
+        optional-pip: ""
 
-    - name: Install dependencies
+    - name: Install playwright (E2E harness)
+      shell: bash
+      # playwright is not in any extras (yet — see #800 step 7 / open
+      # follow-up to add an `e2e` extra). Install it separately here.
+      # Pin at least 1.40 for the sync API shape we use in
+      # dazzle/cli/ux_interactions.py.
       run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile,postgres]"
-        # playwright is not in any extras (yet — see #800 step 7 / open
-        # follow-up to add an `e2e` extra). Install it directly for
-        # the interaction harness. Pin at least 1.40 for the sync API
-        # shape we use in dazzle/cli/ux_interactions.py.
         pip install "playwright>=1.40"
         # Capture the resolved playwright version so the cache key
         # invalidates whenever the wheel pin moves. Coming from a
@@ -626,17 +550,9 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - uses: ./.github/actions/setup-dazzle
       with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp,mobile,postgres]"
+        optional-pip: ""
 
     - name: Run contracts check (managed server)
       run: |
