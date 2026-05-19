@@ -641,38 +641,45 @@ class Repository(Generic[T]):
             no matches or unsupported measures.
         """
         from dazzle.back.runtime.aggregate import build_aggregate_sql, rows_to_buckets
+        from dazzle.perf.tracer import dazzle_span
 
-        sql, params = build_aggregate_sql(
-            table_name=self.table_name,
-            placeholder_style=self.db.placeholder,
-            dimensions=dimensions,
-            measures=measures,
-            filters=filters,
-            limit=limit,
-            measure_expressions=measure_expressions,
-        )
-        if not sql:
-            return []
+        with dazzle_span(
+            "repo.aggregate",
+            entity=self.table_name,
+            dimension_count=len(dimensions),
+            measure_count=len(measures),
+        ):
+            sql, params = build_aggregate_sql(
+                table_name=self.table_name,
+                placeholder_style=self.db.placeholder,
+                dimensions=dimensions,
+                measures=measures,
+                filters=filters,
+                limit=limit,
+                measure_expressions=measure_expressions,
+            )
+            if not sql:
+                return []
 
-        start = time.perf_counter()
-        with self.db.connection() as conn:
-            cursor = conn.cursor()
-            # build_aggregate_sql composes identifiers via quote_identifier
-            # and only ever passes user values as bound parameters — same
-            # safety contract as Repository.list. Semgrep can't trace that.
-            cursor.execute(
-                sql, params
-            )  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
-            rows = cursor.fetchall()
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("aggregate", latency_ms, rows=len(rows))
+            start = time.perf_counter()
+            with self.db.connection() as conn:
+                cursor = conn.cursor()
+                # build_aggregate_sql composes identifiers via quote_identifier
+                # and only ever passes user values as bound parameters — same
+                # safety contract as Repository.list. Semgrep can't trace that.
+                cursor.execute(
+                    sql, params
+                )  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
+                rows = cursor.fetchall()
+            latency_ms = (time.perf_counter() - start) * 1000
+            self._record_query("aggregate", latency_ms, rows=len(rows))
 
-        return rows_to_buckets(
-            [dict(r) if hasattr(r, "keys") else r for r in rows],
-            dimensions=dimensions,
-            measures=measures,
-            measure_expressions=measure_expressions,
-        )
+            return rows_to_buckets(
+                [dict(r) if hasattr(r, "keys") else r for r in rows],
+                dimensions=dimensions,
+                measures=measures,
+                measure_expressions=measure_expressions,
+            )
 
     def explain_aggregate(
         self,

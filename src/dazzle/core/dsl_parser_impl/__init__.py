@@ -785,15 +785,18 @@ def parse_dsl(
     Returns:
         Tuple of (module_name, app_name, app_title, app_config, uses, fragment)
     """
-    # Tokenize
-    tokens = tokenize(text, file)
+    from dazzle.perf.tracer import dazzle_span
 
-    # Parse
-    parser = Parser(tokens, file)
-    module_name, app_name, app_title, app_config, uses = parser.parse_module_header()
-    fragment = parser.parse()
+    with dazzle_span("dsl.parse", path=str(file)):
+        # Tokenize
+        tokens = tokenize(text, file)
 
-    return module_name, app_name, app_title, app_config, uses, fragment
+        # Parse
+        parser = Parser(tokens, file)
+        module_name, app_name, app_title, app_config, uses = parser.parse_module_header()
+        fragment = parser.parse()
+
+        return module_name, app_name, app_title, app_config, uses, fragment
 
 
 __all__ = [

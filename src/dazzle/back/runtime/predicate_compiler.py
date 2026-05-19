@@ -539,6 +539,19 @@ def compile_predicate(
         Marker objects (:class:`UserAttrRef`, :class:`CurrentUserRef`) appear
         in *params* wherever the route handler must substitute a runtime value.
     """
+    from dazzle.perf.tracer import dazzle_span
+
+    with dazzle_span("predicate.compile", source_entity=entity_name):
+        return _compile_predicate_impl(predicate, entity_name, fk_graph, schema=schema)
+
+
+def _compile_predicate_impl(
+    predicate: ScopePredicate,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
     match predicate:
         case Tautology():
             return "", []

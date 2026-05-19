@@ -195,6 +195,35 @@ def build_aggregate_sql(
     placed in the SELECT-clause position of the final param list, ahead
     of the WHERE-clause parameters.
     """
+    from dazzle.perf.tracer import dazzle_span
+
+    with dazzle_span(
+        "aggregate.build_sql",
+        table_name=table_name,
+        dimension_count=len(dimensions),
+        measure_count=len(measures),
+    ):
+        return _build_aggregate_sql_impl(
+            table_name=table_name,
+            placeholder_style=placeholder_style,
+            dimensions=dimensions,
+            measures=measures,
+            filters=filters,
+            limit=limit,
+            measure_expressions=measure_expressions,
+        )
+
+
+def _build_aggregate_sql_impl(
+    *,
+    table_name: str,
+    placeholder_style: str,
+    dimensions: list[Dimension],
+    measures: dict[str, str],
+    filters: dict[str, Any] | None,
+    limit: int = 200,
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
+) -> tuple[str, list[Any]]:
     src = quote_identifier(table_name)
 
     # WHERE via QueryBuilder so __scope_predicate + standard filters

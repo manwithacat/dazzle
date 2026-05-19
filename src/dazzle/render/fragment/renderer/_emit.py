@@ -152,8 +152,11 @@ class FragmentRenderer(
     """
 
     def render(self, fragment: Fragment, ctx: RenderContext | None = None) -> str:
+        from dazzle.perf.tracer import dazzle_span
+
         ctx = ctx if ctx is not None else RenderContext()
-        return self._emit(fragment, ctx)
+        with dazzle_span("fragment.emit", fragment_kind=type(fragment).__name__):
+            return self._emit(fragment, ctx)
 
     def _emit(self, fragment: Fragment, ctx: RenderContext) -> str:
         match fragment:

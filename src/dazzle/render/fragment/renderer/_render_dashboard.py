@@ -52,6 +52,12 @@ class _RenderDashboardMixin:
         optional `hx-ext="sse" sse-connect="..."` when the workspace
         declared an `sse_url`. Cards inside are rendered as
         DashboardCard primitives."""
+        from dazzle.perf.tracer import dazzle_span
+
+        with dazzle_span("region.render", region_kind=type(g).__name__):
+            return self._emit_dashboard_grid_impl(g, ctx)
+
+    def _emit_dashboard_grid_impl(self, g: DashboardGrid, ctx: RenderContext) -> str:
         sse_attrs = ""
         if g.sse_url:
             sse_attrs = f' hx-ext="sse" sse-connect="{ctx.escape_attr(g.sse_url)}"'
