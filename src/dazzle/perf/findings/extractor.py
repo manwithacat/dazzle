@@ -8,13 +8,65 @@ individually so tests can pin each heuristic in isolation.
 
 from __future__ import annotations
 
+import json
+import re
 import sqlite3
+from collections import defaultdict
 from pathlib import Path
 
 from dazzle.perf.findings.types import (
     FindingsReport,
     SlowEndpoint,
+    SlowQuery,
 )
+
+_LITERAL_PATTERNS = [
+    re.compile(r"'(?:[^']|'')*'"),  # single-quoted strings
+    re.compile(r'"(?:[^"]|"")*"'),  # double-quoted strings
+    re.compile(r"\b\d+(?:\.\d+)?\b"),  # numeric literals
+]
+
+
+def normalise_statement(stmt: str) -> str:
+    """Replace string + numeric literals with ``?`` and collapse whitespace."""
+    out = stmt
+    for pattern in _LITERAL_PATTERNS:
+        out = pattern.sub("?", out)
+    return re.sub(r"\s+", " ", out).strip()
+
+
+def slow_queries(db_path: Path, run_id: str, *, top: int = 10) -> list[SlowQuery]:
+    """Top-N SQL statements by total wall time, clustered by normalised form."""
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT duration_ns, attributes_json
+            FROM spans
+            WHERE run_id = ? AND kind = 'client'
+              AND attributes_json LIKE '%"db.statement"%'
+            """,
+            (run_id,),
+        ).fetchall()
+
+    buckets: dict[str, list[int]] = defaultdict(list)
+    for row in rows:
+        attrs = json.loads(row["attributes_json"])
+        raw = attrs.get("db.statement")
+        if not isinstance(raw, str):
+            continue
+        buckets[normalise_statement(raw)].append(int(row["duration_ns"]))
+
+    findings = [
+        SlowQuery(
+            statement=stmt,
+            calls=len(durations),
+            total_ms=sum(durations) / 1e6,
+        )
+        for stmt, durations in buckets.items()
+    ]
+    findings.sort(key=lambda f: f.total_ms, reverse=True)
+    return findings[:top]
 
 
 def slow_endpoints(db_path: Path, run_id: str, *, top: int = 10) -> list[SlowEndpoint]:
@@ -74,8 +126,8 @@ def slow_endpoints(db_path: Path, run_id: str, *, top: int = 10) -> list[SlowEnd
 def build_findings(db_path: Path, run_id: str) -> FindingsReport:
     """Run every heuristic and assemble the FindingsReport.
 
-    Currently wires :func:`slow_endpoints`. Subsequent tasks add the
-    other heuristics and append them here.
+    Currently wires :func:`slow_endpoints` and :func:`slow_queries`.
+    Subsequent tasks add the other heuristics and append them here.
     """
     from dazzle.perf.storage import get_run
 
@@ -88,4 +140,5 @@ def build_findings(db_path: Path, run_id: str) -> FindingsReport:
         started_at=run.started_at,
         ended_at=run.ended_at,
         slow_endpoints=slow_endpoints(db_path, run_id),
+        slow_queries=slow_queries(db_path, run_id),
     )
