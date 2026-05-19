@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.60] - 2026-05-19
+
+### Changed
+
+- **SHA-pinned every external GitHub Action across all 12 workflows
+  and the setup-dazzle composite.** Replaced moving major-version tags
+  (`@v6`, `@v9`, `@release/v1`, etc.) with the exact commit SHA the
+  tag currently points to, with the tag preserved as an inline comment
+  for human readability:
+
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+  Why: tag-pinning is a supply-chain risk — `@v6` is mutable from the
+  action author's side and silently picks up whatever they publish
+  under that tag. SHA pinning makes the dependency immutable.
+  Dependabot was already configured for the `github-actions`
+  ecosystem; it will now open PRs that update these SHAs (with the
+  release-tag comment refreshed) on its weekly schedule.
+
+  14 unique action references pinned:
+  - `actions/{cache@v4, checkout@v6, deploy-pages@v5, download-artifact@v8,
+    github-script@v9, setup-node@v6, setup-python@v6, upload-artifact@v7,
+    upload-pages-artifact@v5}`
+  - `codecov/codecov-action@v6`
+  - `anthropics/claude-code-action@v1`
+  - `peter-evans/repository-dispatch@v4`
+  - `pypa/gh-action-pypi-publish@release/v1`
+  - `softprops/action-gh-release@v3`
+
+  Also unified the stray `actions/checkout@v4` in `claude.yml` and
+  `claude-code-review.yml` to `@v6` (now SHA-pinned alongside the
+  rest).
+
+### Agent Guidance
+
+- **Don't add a new action with a bare tag** (`uses: actions/foo@v3`).
+  Resolve the SHA via `gh api repos/actions/foo/commits/v3 --jq .sha`
+  and use `uses: actions/foo@<sha>  # v3`. Dependabot will keep it
+  current after that.
+
 ## [0.71.59] - 2026-05-19
 
 ### Fixed

@@ -51,7 +51,7 @@ jobs:
         python-version: ["3.12"]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -68,7 +68,7 @@ jobs:
         pytest -v --cov=src/dazzle --cov-report=xml --cov-report=term-missing -m "not e2e"
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6
       with:
         files: ./coverage.xml
         flags: unittests
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -232,7 +232,7 @@ jobs:
     # + `warn_unused_ignores` flags fire on functions that wrap them.
     # Matching the dev-install superset keeps the type-check env
     # identical to local mypy.
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -250,7 +250,7 @@ jobs:
     needs: [python-tests, lint, security-tests]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -276,7 +276,7 @@ jobs:
     needs: [python-tests, lint]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -346,7 +346,7 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
 
@@ -387,7 +387,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -429,7 +429,7 @@ jobs:
 
     - name: Upload test artifacts on failure
       if: failure()
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
       with:
         name: e2e-runtime-failure
         path: |
@@ -483,7 +483,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -514,7 +514,7 @@ jobs:
     # network pull.
     - name: Cache Playwright chromium browser
       id: playwright-cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
       with:
         path: ~/.cache/ms-playwright
         key: playwright-chromium-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
@@ -601,7 +601,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -641,7 +641,7 @@ jobs:
     runs-on: macos-14  # Need macOS for brew commands
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
     - name: Extract expected version
       id: version
