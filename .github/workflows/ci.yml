@@ -3,8 +3,41 @@ name: CI
 on:
   push:
     branches: [ main, develop ]
+    # Skip CI for pure-docs changes. Anything that touches runtime/code/
+    # test paths still triggers the full matrix. `.claude/CLAUDE.md` is
+    # NOT in this list because test_docs_drift.py reads it and would
+    # regress silently. Same caution for homebrew/ which is gated by
+    # homebrew-validation here in CI.
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - 'docs/**'
+      - 'dev_docs/**'
+      - 'examples/**/README.md'
+      - 'fixtures/**/README.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - 'docs/**'
+      - 'dev_docs/**'
+      - 'examples/**/README.md'
+      - 'fixtures/**/README.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+
+# Cancel previously-running CI when a new commit arrives on the same ref.
+# Pushing three commits in a minute previously ran three full matrices
+# in parallel; now only the latest survives. Matches the pattern already
+# in ai-coauthor-check.yml.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
