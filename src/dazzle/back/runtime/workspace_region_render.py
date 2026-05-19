@@ -453,6 +453,9 @@ async def _build_dashboard_adapter_ctx(
                 items=inputs.items,
                 config=cohort_cfg,
                 active_lens_id=active_lens_id,
+                # #1148: thread the IR-declared row_action through so
+                # each cell can carry a per-row click-to-POST button.
+                row_action=getattr(ir_region, "row_action", None),
             )
     elif display_upper == "DAY_TIMELINE":
         day_cfg = getattr(ir_region, "day_timeline_config", None)

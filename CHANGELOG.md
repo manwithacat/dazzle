@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.52] - 2026-05-19
+
+### Added
+- **`row_action:` renderer wiring for `display: cohort_strip`
+  (#1148 part 4, closes #1148).** Each cell in a cohort_strip
+  region now carries a pre-rendered per-cell button when the
+  region declares `row_action:`, using the same
+  `_eval_row_condition` + `_render_row_action_button` contract
+  as list + day_timeline:
+  - `CohortStripCell` gains optional `action_html: str` field.
+  - `_build_cohort_cells` accepts a `row_action` kwarg and
+    populates `action_html` per cell (empty when `visible_when`
+    falsy).
+  - Renderer emits the button inside a `dz-cohort-strip-cell-action`
+    div after the primary value when non-empty.
+  - Button class `dz-cohort-strip-cell-action-btn` so CSS can
+    position it inside the member halo card.
+
+  **Closes #1148.** The three row-oriented region displays (list,
+  day_timeline, cohort_strip) all share one typed primitive
+  contract and one HTML emission pattern. `status_list` was
+  excluded from scope — its entries are static IR declarations
+  (no source-bound rows), so the per-row click-to-POST pattern
+  doesn't apply.
+
 ## [0.71.51] - 2026-05-19
 
 ### Added

@@ -218,6 +218,7 @@ def _build_cohort_cells(
     items: list[dict[str, Any]],
     config: Any,
     active_lens_id: str,
+    row_action: Any = None,
 ) -> list[dict[str, Any]]:
     """Build cohort_strip cell dicts from already-scoped source rows (#1018).
 
@@ -314,6 +315,26 @@ def _build_cohort_cells(
                             tone = "warn"
                         else:
                             tone = "bad"
+        # #1148: pre-render the per-cell action button HTML when the
+        # region declares `row_action:`. Same predicate semantics as
+        # the list and day_timeline paths.
+        action_html = ""
+        if row_action is not None:
+            from dazzle.back.runtime.workspace_card_bodies import (
+                _eval_row_condition,
+                _render_row_action_button,
+            )
+
+            vw = getattr(row_action, "visible_when", None)
+            visible = True if vw is None else _eval_row_condition(vw, item)
+            if visible:
+                action_html = _render_row_action_button(
+                    action_id=str(getattr(row_action, "action_id", "")),
+                    label=str(getattr(row_action, "label", "")),
+                    item=item,
+                    bind=dict(getattr(row_action, "bind", {}) or {}),
+                    extra_class="dz-cohort-strip-cell-action-btn",
+                )
         cells.append(
             {
                 "member_id": member_id,
@@ -323,6 +344,7 @@ def _build_cohort_cells(
                 "avatar_initials": _initials_from(member_name),
                 "tone": tone,
                 "drill_url": "",  # entity_card drill-down lands once that ship adds the route
+                "action_html": action_html,
             }
         )
     return cells

@@ -1760,6 +1760,11 @@ class CohortStripCell:
     avatar_initials: str = ""
     tone: str = "neutral"  # neutral | good | warn | bad — RAG tint
     drill_url: str = ""
+    # #1148: optional pre-rendered action button HTML (from
+    # `_render_row_action_button`). Empty string means no action on
+    # this cell — either the region has no `row_action:` or the
+    # cell's `visible_when` evaluated falsy.
+    action_html: str = ""
 
     def __post_init__(self) -> None:
         if not self.member_id:

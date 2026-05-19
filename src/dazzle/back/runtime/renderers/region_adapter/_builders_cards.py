@@ -404,6 +404,7 @@ class _BuildersCardsMixin:
                     avatar_initials=str(entry.get("avatar_initials") or ""),
                     tone=tone,
                     drill_url=str(entry.get("drill_url") or ""),
+                    action_html=str(entry.get("action_html") or ""),
                 )
             )
 
