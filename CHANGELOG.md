@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.68] - 2026-05-19
+
+### Changed
+
+- **ADR file naming aligned.** `ADR-0019-...` and `ADR-0020-...`
+  renamed to `0019-...` and `0020-...` to match the bare-number
+  convention used by the other 22 ADRs. Six referencing
+  files updated in the same commit (INDEX.md, philosophy.md,
+  fitness-methodology.md, two superpowers plans, one design spec).
+
 ## [0.71.67] - 2026-05-19
 
 ### Changed
