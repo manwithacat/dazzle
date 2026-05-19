@@ -126,7 +126,7 @@ def get_example_metadata() -> dict[str, Any]:
         },
         "pra": {
             "name": "pra",
-            "path": "fixtures/pra",
+            "path": "examples/pra",
             "title": "PRA Reference App",
             "description": "Comprehensive reference app demonstrating experiences (wizards), "
             "processes, services, state machines, and advanced DSL features",

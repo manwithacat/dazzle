@@ -293,14 +293,14 @@ jobs:
 
     - name: Validate all example and fixture projects
       run: |
-        # fixtures/pra is the parser-conformance corpus — intentionally
+        # examples/pra is the parser-conformance corpus — intentionally
         # contains validation-failing shapes (HLESS decimal-on-monetary,
         # unreachable entities, broken FK chains, etc.) used to exercise
         # the parser/validator paths. It MUST fail `dazzle validate`.
         # Same convention as the example-apps `/improve` lane which
-        # excludes pra. The other fixtures (shapes_validation,
-        # rbac_validation, project_tracker, ...) are real-app-shaped
-        # and DO pass validate.
+        # excludes pra. The remaining fixtures (shapes_validation,
+        # rbac_validation, investigator_smoke) are framework-validation
+        # probes, not user-facing apps.
         for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then
             example=$(basename "$dir")

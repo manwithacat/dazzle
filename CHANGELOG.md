@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.57] - 2026-05-19
+
+### Changed
+
+- **Reclassified five framework fixtures as examples.** `pra`,
+  `component_showcase`, `project_tracker`, `design_studio`, and
+  `llm_ticket_classifier` moved from `fixtures/` to `examples/`. The
+  remaining `fixtures/` entries (`rbac_validation`, `shapes_validation`,
+  `investigator_smoke`) are framework-validation probes — abstract
+  domains used only by tests, not user-facing apps.
+
+  Motivation: an external evaluator flagged that the fixtures/ vs
+  examples/ split was incoherent — items with READMEs, domain narratives,
+  and teaching purpose were sitting in fixtures/ alongside abstract
+  test probes. The new line: a *fixture* is a framework-validation
+  asset with no outside-reader story; everything else is an *example*.
+
+  Updated references: `tests/unit/fixtures/dazzle_validate_baseline.json`
+  baselines re-keyed; `src/dazzle/mcp/examples.py` path; `ci.yml`
+  comment; `examples/README.md` extended with a "Topic-focused demos"
+  section covering the relocated apps and the previously-orphan
+  `custom_renderer`.
+
+### Added
+
+- **`fixtures/rbac_validation/README.md` and `fixtures/shapes_validation/README.md`.**
+  Document what each fixture probes (NIST 800-162 ABAC patterns vs
+  multi-tenant scope shapes), the design rules for adding entities or
+  personas, and what does NOT belong (no UI, no domain realism, no
+  performance probes). Closes the "this looks orphaned" signal that
+  rotted both fixtures into hand-curated thin coverage.
+
+- **`TestAccessMatrixCoverage` in `test_rbac_validation.py`.** Adds a
+  dense coverage layer over the public `dazzle.rbac.matrix.generate_access_matrix`
+  surface — 320 cells (8 entities × 8 personas × 5 ops) asserted as
+  well-formed `PolicyDecision` values, plus pinned allow-sets for
+  personas with exact specifications (currently `intern`), an
+  `AuditLog`-append-only invariant across every persona, and a
+  no-`PERMIT_UNPROTECTED` scan. Test count grows 22 → 345, runtime
+  stays under a second.
+
+  Rationale: the previous test exercised only the MCP policy handler's
+  private `_analyze`/`_simulate` helpers. The new layer hits the same
+  surface the publicly-documented `dazzle rbac matrix` CLI emits, so
+  matrix-shape regressions get caught before they reach the field.
+
 ## [0.71.56] - 2026-05-19
 
 ### Added

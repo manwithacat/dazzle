@@ -17,6 +17,8 @@ Open http://localhost:3000 to see the running app.
 
 The examples are organized in a progressive learning sequence. Each builds on concepts from the previous level.
 
+### Learning sequence
+
 | Level | Example | Entities | Key Concepts |
 |-------|---------|----------|--------------|
 | 1. **Beginner** | [simple_task](simple_task/) | 1 | Entity basics, CRUD surfaces, workspaces, attention signals |
@@ -24,6 +26,19 @@ The examples are organized in a progressive learning sequence. Each builds on co
 | 3. **Intermediate** | [support_tickets](support_tickets/) | 3 | Entity relationships (refs), indexes, multi-entity surfaces |
 | 4. **Intermediate+** | [ops_dashboard](ops_dashboard/) | 2 | Personas, COMMAND_CENTER archetype, engine hints |
 | 5. **Advanced** | [fieldtest_hub](fieldtest_hub/) | 6 | Complex domain, persona scoping, access rules, attention signals |
+| 6. **Reference** | [pra](pra/) | 132 | Kitchen-sink corpus exercising every DSL construct — ledgers, processes, services, LLM, state machines |
+
+### Topic-focused demos
+
+These apps each foreground one capability rather than building toward a complete domain. Use them as live references when you reach for a specific construct.
+
+| Demo | Showcases |
+|------|-----------|
+| [component_showcase](component_showcase/) | Every widget type on a single entity — visual regression target |
+| [project_tracker](project_tracker/) | UX component expansion (Quill, Flatpickr, Tom Select) on a project-management domain |
+| [design_studio](design_studio/) | Color pickers, rich text, asset management |
+| [llm_ticket_classifier](llm_ticket_classifier/) | LLM intents (classification + extraction) with deterministic-first integration |
+| [custom_renderer](custom_renderer/) | Project-side renderer extension — the link-time allowlist + runtime registration contract |
 
 ---
 

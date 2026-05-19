@@ -1,7 +1,17 @@
 """NIST SP 800-162 (ABAC) compliance validation harness.
 
-Loads the rbac_validation example DSL and runs 7 compliance checks
-using the policy handler functions and role-condition-aware evaluation.
+Loads the rbac_validation fixture DSL and runs compliance checks at two layers:
+
+  1. **Public RBAC framework** — `dazzle.rbac.matrix.generate_access_matrix`
+     is the canonical access-matrix generator (Layer 1 of the verification
+     framework we publicly document). The TestAccessMatrixCoverage class
+     exercises the full (persona × entity × operation) grid against it,
+     giving dense signal across ~320 cells.
+  2. **NIST 800-162 structural checks** — the remaining test classes use the
+     policy MCP handler's analysis helpers for conflict detection, trace
+     reasoning, and least-privilege budgeting. These reach into private
+     helpers (`_analyze`, `_find_conflicts`, `_simulate`) because the
+     reasoning surface is finer-grained than the matrix output.
 
 NIST Reference: https://csrc.nist.gov/publications/detail/sp/800-162/final
 """
@@ -23,12 +33,14 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
-# Reuse policy handler internals for structural analysis
+# Reuse policy handler internals for structural analysis (conflict
+# detection + simulate-trace are finer-grained than matrix decisions).
 from dazzle.mcp.server.handlers.policy import (
     _analyze,
     _find_conflicts,
     _simulate,
 )
+from dazzle.rbac.matrix import AccessMatrix, PolicyDecision, generate_access_matrix
 
 # ---------------------------------------------------------------------------
 # Fixture: load the rbac_validation example once per module
@@ -76,6 +88,99 @@ def entity_map(appspec):
     focus on user-declared business entities.
     """
     return {e.name: e for e in appspec.domain.entities if e.domain != "platform"}
+
+
+@pytest.fixture(scope="module")
+def access_matrix(appspec) -> AccessMatrix:
+    """Public RBAC access matrix — the same surface `dazzle rbac matrix` emits.
+
+    This is the canonical Layer-1 verification artefact documented in
+    docs/reference/rbac-verification.md. Tests built on this fixture
+    exercise the actual product surface, not implementation internals.
+    """
+    return generate_access_matrix(appspec)
+
+
+ALL_OPERATIONS = ["create", "read", "update", "delete", "list"]
+
+
+# Personas with allow-sets specific enough to pin exactly. Anything in the set
+# must resolve to PERMIT or PERMIT_FILTERED; anything outside must be DENY.
+# Other personas have their privileges pinned via PRIVILEGE_BUDGET further down.
+EXPECTED_ALLOWS: dict[str, set[tuple[str, str]]] = {
+    # intern: explicit FORBID-driven design — Staff read + list and nothing else.
+    "intern": {("Staff", "read"), ("Staff", "list")},
+}
+
+
+# ---------------------------------------------------------------------------
+# Coverage layer: public AccessMatrix probed across the full grid
+# ---------------------------------------------------------------------------
+
+
+class TestAccessMatrixCoverage:
+    """Exercise the public RBAC matrix across (persona × entity × op) — 320 cells.
+
+    Anything that escapes here would also escape `dazzle rbac matrix` /
+    `dazzle rbac verify` in the field. Dense parametrisation is on purpose:
+    each cell is a single assertion so the failure message names the exact
+    triple that regressed.
+    """
+
+    @pytest.mark.parametrize("persona", ALL_PERSONAS)
+    @pytest.mark.parametrize("entity", ALL_ENTITIES)
+    @pytest.mark.parametrize("op", ALL_OPERATIONS)
+    def test_matrix_decision_is_well_formed(
+        self, access_matrix: AccessMatrix, persona: str, entity: str, op: str
+    ) -> None:
+        """Every cell must resolve to a known PolicyDecision (no UNSET / None)."""
+        decision = access_matrix.get(persona, entity, op)
+        assert isinstance(decision, PolicyDecision), (
+            f"({persona}, {entity}, {op}) returned {decision!r}, not a PolicyDecision"
+        )
+
+    @pytest.mark.parametrize("persona", sorted(EXPECTED_ALLOWS))
+    def test_persona_allow_set_matches_design(
+        self, access_matrix: AccessMatrix, persona: str
+    ) -> None:
+        """Personas with exactly-pinned allow-sets stay pinned (see EXPECTED_ALLOWS)."""
+        actual_allows: set[tuple[str, str]] = {
+            (entity, op)
+            for entity in ALL_ENTITIES
+            for op in ALL_OPERATIONS
+            if access_matrix.get(persona, entity, op)
+            in (PolicyDecision.PERMIT, PolicyDecision.PERMIT_FILTERED)
+        }
+        expected = EXPECTED_ALLOWS[persona]
+        assert actual_allows == expected, (
+            f"{persona} allow-set drift.\n"
+            f"  unexpected allows: {sorted(actual_allows - expected)}\n"
+            f"  missing allows:    {sorted(expected - actual_allows)}"
+        )
+
+    def test_audit_log_mutations_denied_for_everyone(self, access_matrix: AccessMatrix) -> None:
+        """AuditLog update/delete must DENY for every persona — append-only invariant."""
+        for persona in ALL_PERSONAS:
+            for op in ("update", "delete"):
+                decision = access_matrix.get(persona, "AuditLog", op)
+                assert decision == PolicyDecision.DENY, (
+                    f"AuditLog.{op} for {persona} = {decision}, expected DENY"
+                )
+
+    def test_no_unprotected_entities(self, access_matrix: AccessMatrix) -> None:
+        """No (persona, entity, op) cell should land on PERMIT_UNPROTECTED.
+
+        PERMIT_UNPROTECTED indicates an entity with no access spec at all —
+        a regression that would silently expose data. Caught here in addition
+        to the structural check below.
+        """
+        unprotected: list[tuple[str, str, str]] = []
+        for persona in ALL_PERSONAS:
+            for entity in ALL_ENTITIES:
+                for op in ALL_OPERATIONS:
+                    if access_matrix.get(persona, entity, op) == PolicyDecision.PERMIT_UNPROTECTED:
+                        unprotected.append((persona, entity, op))
+        assert not unprotected, f"Unprotected cells found: {unprotected}"
 
 
 # ---------------------------------------------------------------------------

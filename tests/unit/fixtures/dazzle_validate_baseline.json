@@ -29,27 +29,27 @@
       "expected_errors": 0,
       "expected_warnings_min": 17
     },
-    "fixtures/component_showcase": {
+    "examples/component_showcase": {
       "expected_errors": 0,
       "expected_warnings_min": 8
     },
-    "fixtures/design_studio": {
+    "examples/design_studio": {
       "expected_errors": 0,
       "expected_warnings_min": 27
     },
-    "fixtures/llm_ticket_classifier": {
+    "examples/llm_ticket_classifier": {
       "expected_errors": 0,
       "expected_warnings_min": 8
     },
-    "fixtures/pra": {
+    "examples/pra": {
       "expected_errors": 7,
       "expected_warnings_min": 335,
       "expected_error_patterns": [
         "uses 'decimal' type for monetary value. Use 'money' type instead"
       ],
-      "rationale": "pra is a kitchen-sink fixture exercising every DSL form including decimal stream-schema fields. The 7 errors are the validator's money-only rule (#1061) firing on the 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. The 335+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design \u2014 fixing these would lose the fixture's coverage."
+      "rationale": "pra is the largest example, kept as a kitchen-sink exercise of every DSL form including decimal stream-schema fields. The 7 errors are the validator's money-only rule (#1061) firing on the 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. The 335+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design \u2014 fixing these would lose the example's coverage."
     },
-    "fixtures/project_tracker": {
+    "examples/project_tracker": {
       "expected_errors": 0,
       "expected_warnings_min": 37
     },

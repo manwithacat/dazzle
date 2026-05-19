@@ -192,9 +192,9 @@ Drift gate: `tests/unit/test_api_surface_drift.py` (21 tests). Adding `--write` 
 
 ## Examples
 
-Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`
+Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`, `custom_renderer`, `pra`, `component_showcase`, `project_tracker`, `design_studio`, `llm_ticket_classifier`
 
-Internal fixtures in `fixtures/`: `shapes_validation`, `rbac_validation`, `pra`, `component_showcase`, `design_studio`, `project_tracker`, `llm_ticket_classifier`
+Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`
 
 ## LSP Server
 
