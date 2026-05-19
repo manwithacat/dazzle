@@ -148,6 +148,21 @@ class ServerConfig:
     storage_defs: "dict[str, StorageConfig]" = field(default_factory=dict)
 
 
+def _maybe_instrument_for_perf(app: Any) -> None:
+    """Apply ``dazzle perf`` instrumentation when ``DAZZLE_PERF_ENABLED``
+    is set. The env var is the only signal — `dazzle perf trace` sets
+    it before spawning the runtime; humans starting the server directly
+    don't pay the instrumentation cost.
+    """
+    import os
+
+    if os.environ.get("DAZZLE_PERF_ENABLED") != "1":
+        return
+    from dazzle.perf.instrument import instrument_app
+
+    instrument_app(app)
+
+
 # =============================================================================
 # Application Builder
 # =============================================================================
@@ -404,6 +419,7 @@ class DazzleBackendApp:
             description=self._appspec.title or f"Dazzle Backend: {self._appspec.name}",
             version=self._appspec.version,
         )
+        _maybe_instrument_for_perf(self._app)
 
         # Attach runtime service container (v0.49.0, #673)
         from dazzle.back.runtime.renderers.init import register_default_renderers
