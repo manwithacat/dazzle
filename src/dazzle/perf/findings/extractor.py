@@ -16,6 +16,7 @@ from pathlib import Path
 
 from dazzle.perf.findings.types import (
     FindingsReport,
+    NPlusOne,
     SlowEndpoint,
     SlowQuery,
 )
@@ -123,6 +124,44 @@ def slow_endpoints(db_path: Path, run_id: str, *, top: int = 10) -> list[SlowEnd
     ]
 
 
+def detect_n_plus_one(db_path: Path, run_id: str, *, threshold: int = 3) -> list[NPlusOne]:
+    """Flag every (parent_span, normalised_child_statement) pair whose
+    repetition count meets ``threshold``."""
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT
+                parent.name           AS parent_name,
+                child.attributes_json AS child_attrs
+            FROM spans AS child
+            JOIN spans AS parent
+              ON parent.span_id = child.parent_span_id
+             AND parent.run_id  = child.run_id
+            WHERE child.run_id = ?
+              AND child.kind = 'client'
+              AND child.attributes_json LIKE '%"db.statement"%'
+            """,
+            (run_id,),
+        ).fetchall()
+
+    buckets: dict[tuple[str, str], int] = defaultdict(int)
+    for row in rows:
+        attrs = json.loads(row["child_attrs"])
+        raw = attrs.get("db.statement")
+        if not isinstance(raw, str):
+            continue
+        buckets[(row["parent_name"], normalise_statement(raw))] += 1
+
+    findings = [
+        NPlusOne(parent_span=parent, child_statement=stmt, repetitions=count)
+        for (parent, stmt), count in buckets.items()
+        if count >= threshold
+    ]
+    findings.sort(key=lambda f: f.repetitions, reverse=True)
+    return findings
+
+
 def build_findings(db_path: Path, run_id: str) -> FindingsReport:
     """Run every heuristic and assemble the FindingsReport.
 
@@ -141,4 +180,5 @@ def build_findings(db_path: Path, run_id: str) -> FindingsReport:
         ended_at=run.ended_at,
         slow_endpoints=slow_endpoints(db_path, run_id),
         slow_queries=slow_queries(db_path, run_id),
+        n_plus_one=detect_n_plus_one(db_path, run_id),
     )
