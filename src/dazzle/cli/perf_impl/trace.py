@@ -77,10 +77,12 @@ def _execute_trace_run(
     import sys
     import time
 
-    # The trace runner always targets the local Dazzle dev server.
-    # Host is hardcoded; only the path component comes from user input.
+    # Force the dev server onto known ports so the URL hits below can
+    # reach it. ``dazzle serve`` auto-assigns ports when not specified,
+    # which would otherwise leave us guessing where to send traffic.
     _TRACE_HOST = "127.0.0.1"
     _TRACE_PORT = 3000
+    _API_PORT = 8000
 
     env = {
         **os.environ,
@@ -92,13 +94,38 @@ def _execute_trace_run(
     # Boot `dazzle serve --local` in a subprocess. Local mode skips
     # Docker spin-up so the trace run starts in seconds.
     proc = subprocess.Popen(
-        [sys.executable, "-m", "dazzle.cli", "serve", "--local"],
+        [
+            sys.executable,
+            "-m",
+            "dazzle.cli",
+            "serve",
+            "--local",
+            "--port",
+            str(_TRACE_PORT),
+            "--api-port",
+            str(_API_PORT),
+        ],
         env=env,
     )
 
+    def _wait_for_server(timeout: float = 20.0) -> bool:
+        """Poll the dev server until it answers, or give up."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                return False  # subprocess exited before becoming ready
+            try:
+                conn = http.client.HTTPConnection(_TRACE_HOST, _TRACE_PORT, timeout=1)
+                conn.request("GET", "/")
+                conn.getresponse().read()
+                conn.close()
+                return True
+            except OSError:
+                time.sleep(0.5)
+        return False
+
     def _fetch_path(raw: str) -> None:
-        """GET a single path from the hardcoded local server."""
-        # Strip any accidental absolute URL prefix — only the path is used.
+        """GET a single path from the local dev server."""
         if raw.startswith("http://") or raw.startswith("https://"):
             from urllib.parse import urlparse
 
@@ -114,10 +141,17 @@ def _execute_trace_run(
             typer.echo(f"  path {path} failed: {exc}")
 
     try:
-        # Hit each URL once. Failures are non-fatal — the trace captures
-        # the error span and the report surfaces it.
-        for url in urls:
-            _fetch_path(url)
+        if not _wait_for_server():
+            typer.echo(
+                "  warning: dev server didn't answer on "
+                f"http://{_TRACE_HOST}:{_TRACE_PORT}/ within 20s — "
+                "URL hits skipped. Boot-phase traces will still land."
+            )
+        else:
+            # Server is up. Hit each URL once. Failures are non-fatal —
+            # the trace captures the error span and the report surfaces it.
+            for url in urls:
+                _fetch_path(url)
         if duration > 0:
             typer.echo(f"Server up; collecting traces for {duration}s. Hit Ctrl-C to stop early.")
             time.sleep(duration)
