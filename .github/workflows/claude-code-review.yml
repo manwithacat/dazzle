@@ -12,11 +12,14 @@ concurrency:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # Skip on Dependabot PRs. GitHub deliberately scopes secrets down for
+    # Dependabot-authored workflow runs, so CLAUDE_CODE_OAUTH_TOKEN /
+    # ANTHROPIC_API_KEY arrive empty and the action exits with an
+    # "Internal error: directory mismatch" log line. The fix isn't to
+    # leak secrets to Dependabot — it's to skip the review for it.
+    # Dependabot PRs are small mechanical bumps; Dependabot's own
+    # changelog summary in the PR body is the right review surface.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
 
     runs-on: ubuntu-latest
     permissions:
