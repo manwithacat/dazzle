@@ -143,9 +143,9 @@ dev = [
 perf = [
     "opentelemetry-api>=1.27,<2",
     "opentelemetry-sdk>=1.27,<2",
-    "opentelemetry-instrumentation-fastapi>=0.48b0",
-    "opentelemetry-instrumentation-psycopg>=0.48b0",
-    "opentelemetry-instrumentation-asyncio>=0.48b0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0,<1",
+    "opentelemetry-instrumentation-psycopg>=0.48b0,<1",
+    "opentelemetry-instrumentation-asyncio>=0.48b0,<1",
 ]
 # Runtime server dependencies for `dazzle serve --local` (v0.34.3 — Issue #388)
 serve = [
