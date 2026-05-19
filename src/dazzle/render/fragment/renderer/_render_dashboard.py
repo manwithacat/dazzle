@@ -283,6 +283,11 @@ class _RenderDashboardMixin:
                     f'<div class="dz-day-timeline-slot-label">{ctx.escape(slot.label)}</div>'
                     f'<div class="dz-day-timeline-slot-body">{slot.body}</div>'
                 )
+                # #1148: pre-rendered row_action button HTML, when
+                # present, is emitted after the body. Adapter pre-
+                # escaped attributes; renderer just passes through.
+                if slot.action_html:
+                    inner += f'<div class="dz-day-timeline-slot-action">{slot.action_html}</div>'
                 if slot.drill_url:
                     slot_parts.append(
                         f'<a class="{cls}" '

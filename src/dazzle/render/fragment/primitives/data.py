@@ -1828,6 +1828,12 @@ class DayTimelineSlot:
     position: Literal["before", "active", "after"] = "after"
     body: str = ""  # pre-rendered card body (escape responsibility on adapter)
     drill_url: str = ""
+    # #1148: optional pre-rendered action button HTML (from
+    # `_render_row_action_button`). Empty string means no action
+    # button on this slot — either the region has no `row_action:`
+    # or the slot's `visible_when` evaluated falsy. Adapter owns
+    # escape responsibility (the helper does the HTML-escape).
+    action_html: str = ""
 
     def __post_init__(self) -> None:
         if not self.slot_id:

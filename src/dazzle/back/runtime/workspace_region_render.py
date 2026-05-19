@@ -461,6 +461,9 @@ async def _build_dashboard_adapter_ctx(
                 items=inputs.items,
                 config=day_cfg,
                 now=_dt.datetime.now(_dt.UTC),
+                # #1148: thread the IR-declared row_action through so
+                # each slot can carry a per-row click-to-POST button.
+                row_action=getattr(ir_region, "row_action", None),
             )
     elif display_upper == "TASK_INBOX":
         inbox_cfg = getattr(ir_region, "task_inbox_config", None)

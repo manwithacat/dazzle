@@ -333,6 +333,7 @@ def _build_day_timeline_slots(
     items: list[dict[str, Any]],
     config: Any,
     now: _dt.datetime,
+    row_action: Any = None,
 ) -> list[dict[str, Any]]:
     """Build day_timeline slot dicts from already-scoped source rows (#1016).
 
@@ -468,6 +469,26 @@ def _build_day_timeline_slots(
         # configs that don't set `card:`).
         card_template = str(getattr(config, "card", "") or "")
         body = _interpolate_card_template(card_template, item) if card_template else ""
+        # #1148: pre-render the per-slot action button HTML when the
+        # region declares `row_action:`. Same predicate semantics as
+        # the list display — visible_when false → empty action_html.
+        action_html = ""
+        if row_action is not None:
+            from dazzle.back.runtime.workspace_card_bodies import (
+                _eval_row_condition,
+                _render_row_action_button,
+            )
+
+            vw = getattr(row_action, "visible_when", None)
+            visible = True if vw is None else _eval_row_condition(vw, item)
+            if visible:
+                action_html = _render_row_action_button(
+                    action_id=str(getattr(row_action, "action_id", "")),
+                    label=str(getattr(row_action, "label", "")),
+                    item=item,
+                    bind=dict(getattr(row_action, "bind", {}) or {}),
+                    extra_class="dz-day-timeline-slot-action-btn",
+                )
         slots.append(
             {
                 "slot_id": slot_id,
@@ -475,6 +496,7 @@ def _build_day_timeline_slots(
                 "position": position,
                 "body": body,
                 "drill_url": "",
+                "action_html": action_html,
             }
         )
     return slots

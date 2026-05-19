@@ -220,6 +220,7 @@ class _BuildersTimelineMixin:
                     position=position,  # type: ignore[arg-type]
                     body=str(entry.get("body") or ""),
                     drill_url=str(entry.get("drill_url") or ""),
+                    action_html=str(entry.get("action_html") or ""),
                 )
             )
 

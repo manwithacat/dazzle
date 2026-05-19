@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.51] - 2026-05-19
+
+### Added
+- **`row_action:` renderer wiring for `display: day_timeline`
+  (#1148 part 3; also closes #1146's remaining sub-ask).**
+  Each slot in a day_timeline region now carries a pre-rendered
+  per-slot button when the region declares `row_action:`, using
+  the same `_eval_row_condition` + `_render_row_action_button`
+  contract as the list path:
+  - `DayTimelineSlot` gains an optional `action_html: str` field.
+  - `_build_day_timeline_slots` accepts a `row_action` kwarg and
+    populates `action_html` per row (empty when `visible_when`
+    evaluates falsy — same predicate semantics as list).
+  - Renderer emits the button inside a `dz-day-timeline-slot-action`
+    div after the slot body when non-empty.
+  - Button class is `dz-day-timeline-slot-action-btn` so CSS can
+    position it inside the slot card (different layout from the
+    table-cell button in list mode).
+
+  Replaces #1146's `slot_action:` proposal with the unified
+  `row_action:` primitive — one DSL, two rendering paths.
+
+### Changed
+- **`_eval_row_condition` + `_render_row_action_button` moved**
+  from `back/runtime/renderers/region_adapter/_builders_tables.py`
+  to `back/runtime/workspace_card_bodies.py` so both list and
+  day_timeline (and the future cohort_strip wiring) share one
+  implementation. No behaviour change.
+
 ## [0.71.50] - 2026-05-19
 
 ### Added

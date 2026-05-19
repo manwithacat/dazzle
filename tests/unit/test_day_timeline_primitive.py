@@ -255,6 +255,7 @@ def test_renderer_unknown_position_falls_through_to_after() -> None:
     object.__setattr__(slot, "position", "weird")
     object.__setattr__(slot, "body", "")
     object.__setattr__(slot, "drill_url", "")
+    object.__setattr__(slot, "action_html", "")
     region = DayTimelineRegion(region_name="day", slots=(slot,))
     html = _render(region)
     assert "is-after" in html

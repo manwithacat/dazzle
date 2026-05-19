@@ -1,4 +1,4 @@
-"""Entity-card section body renderers (#1017).
+"""Entity-card section body renderers (#1017) + row-action helper (#1148).
 
 Extracted from workspace_rendering.py in #1057 cut 2 (v0.67.101).
 Pure HTML-string builders for the four `entity_card` section
@@ -11,10 +11,118 @@ section's `body` slot. The typed-primitive renderer pipes this
 into the `body` field of `EntityCardSection` verbatim — these
 helpers own escape responsibility for the raw row values they
 read (via `_dazzle_html_escape`).
+
+The `_eval_row_condition` + `_render_row_action_button` helpers
+support #1148's `row_action:` primitive across the row-oriented
+displays (list, cohort_strip, day_timeline). Each consumer
+imports from here so the predicate + button HTML stay consistent.
 """
 
 import datetime as _dt
+import html as _html_module
+import json as _json_module
 from typing import Any
+
+from dazzle.core.ir.conditions import (
+    ComparisonOperator,
+    ConditionExpr,
+    LogicalOperator,
+)
+
+
+def _eval_row_condition(cond: ConditionExpr, row: dict[str, Any]) -> bool:
+    """#1148: evaluate a row-level ConditionExpr against an item dict.
+
+    Used by ``row_action.visible_when`` (and any other per-row
+    predicate that operates on already-fetched row data). Supports:
+    simple ``Comparison`` (field op literal) and compound
+    ``AND`` / ``OR`` (recursive).
+
+    Role checks, grant checks, via-conditions, function calls, and
+    date arithmetic on rows fall back to ``True`` — those are
+    server-side scope concepts, not row-data predicates. Better to
+    over-show than silently hide a row-level action.
+    """
+    if cond.is_compound:
+        if cond.left is None or cond.right is None or cond.operator is None:
+            return True
+        left = _eval_row_condition(cond.left, row)
+        right = _eval_row_condition(cond.right, row)
+        if cond.operator == LogicalOperator.AND:
+            return left and right
+        if cond.operator == LogicalOperator.OR:
+            return left or right
+        return True
+    cmp = cond.comparison
+    if cmp is None:
+        return True
+    if cmp.field is None or cmp.function is not None or cmp.value.is_date_expr:
+        return True
+    actual = row.get(cmp.field)
+    op = cmp.operator
+    if cmp.value.is_list:
+        vals = cmp.value.values or []
+        if op == ComparisonOperator.IN:
+            return actual in vals
+        if op == ComparisonOperator.NOT_IN:
+            return actual not in vals
+        return True
+    expected = cmp.value.literal
+    if op == ComparisonOperator.EQUALS or op == ComparisonOperator.IS:
+        return actual == expected
+    if op == ComparisonOperator.NOT_EQUALS or op == ComparisonOperator.IS_NOT:
+        return actual != expected
+    if actual is None or expected is None:
+        return False
+    try:
+        if op == ComparisonOperator.GREATER_THAN:
+            return bool(actual > expected)
+        if op == ComparisonOperator.LESS_THAN:
+            return bool(actual < expected)
+        if op == ComparisonOperator.GREATER_EQUAL:
+            return bool(actual >= expected)
+        if op == ComparisonOperator.LESS_EQUAL:
+            return bool(actual <= expected)
+    except TypeError:
+        return True
+    return True
+
+
+def _render_row_action_button(
+    action_id: str,
+    label: str,
+    item: dict[str, Any],
+    bind: dict[str, str],
+    *,
+    extra_class: str = "dz-list-row-action-btn",
+) -> str:
+    """#1148: build the per-row action button HTML.
+
+    Emits a ``<button data-dz-row-action="<id>" data-dz-row-args="...">``
+    carrying the bound row values as JSON. Client-side surface-action
+    machinery hooks ``[data-dz-row-action]`` to compose the POST,
+    inheriting CSRF + route binding the same way ``data-dz-action``
+    does for ``entity_card.quick_actions``.
+
+    ``bind`` maps action-arg-name → row-field-name. The button's
+    ``data-dz-row-args`` JSON encodes ``{arg: row[field]}`` per entry.
+    Missing row fields become ``null`` — the action handler validates.
+
+    ``extra_class`` lets each display family tone its button (list
+    uses the table-cell class; day_timeline gets a slot-action class
+    so CSS can position it inside the card).
+    """
+    bound: dict[str, Any] = {}
+    for arg_name, field_name in bind.items():
+        bound[arg_name] = item.get(field_name)
+    args_json = _json_module.dumps(bound, default=str, sort_keys=True)
+    return (
+        f'<button type="button" class="{_html_module.escape(extra_class, quote=True)}" '
+        f'data-dz-row-action="{_html_module.escape(action_id, quote=True)}" '
+        f'data-dz-row-args="{_html_module.escape(args_json, quote=True)}">'
+        f"{_html_module.escape(label)}"
+        f"</button>"
+    )
 
 
 def _render_thread_summary_body(

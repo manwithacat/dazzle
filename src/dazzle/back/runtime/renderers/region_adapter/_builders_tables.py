@@ -18,8 +18,6 @@ class shell + dispatch tables + `build()`.
 
 from __future__ import annotations
 
-import html as _html_module
-import json as _json_module
 from typing import Any
 
 from dazzle.back.runtime.renderers.region_adapter._shared import (
@@ -27,10 +25,9 @@ from dazzle.back.runtime.renderers.region_adapter._shared import (
     _render_typed_value,
     _wrap_surface,
 )
-from dazzle.core.ir.conditions import (
-    ComparisonOperator,
-    ConditionExpr,
-    LogicalOperator,
+from dazzle.back.runtime.workspace_card_bodies import (
+    _eval_row_condition,
+    _render_row_action_button,
 )
 from dazzle.render.fragment import (
     URL,
@@ -57,96 +54,6 @@ from dazzle.render.fragment import (
     Surface,
     Tabs,
 )
-
-
-def _eval_row_condition(cond: ConditionExpr, row: dict[str, Any]) -> bool:
-    """#1148: evaluate a row-level ConditionExpr against an item dict.
-
-    Used by ``row_action.visible_when`` to decide whether to render
-    the per-row button. Supports the subset of ConditionExpr that
-    makes sense on already-fetched row data: simple ``Comparison``
-    (field op literal) and compound ``AND`` / ``OR`` (recursive).
-
-    Role checks, grant checks, via-conditions, function calls, and
-    date arithmetic are not applicable on a raw row dict — they're
-    server-side scope concepts. If a ``visible_when`` carries one
-    of those, fall back to **visible** (better to over-show than
-    silently hide a row-level action the author thought would work).
-    """
-    if cond.is_compound:
-        if cond.left is None or cond.right is None or cond.operator is None:
-            return True
-        left = _eval_row_condition(cond.left, row)
-        right = _eval_row_condition(cond.right, row)
-        if cond.operator == LogicalOperator.AND:
-            return left and right
-        if cond.operator == LogicalOperator.OR:
-            return left or right
-        return True
-    cmp = cond.comparison
-    if cmp is None:
-        return True
-    if cmp.field is None or cmp.function is not None or cmp.value.is_date_expr:
-        return True
-    actual = row.get(cmp.field)
-    op = cmp.operator
-    if cmp.value.is_list:
-        vals = cmp.value.values or []
-        if op == ComparisonOperator.IN:
-            return actual in vals
-        if op == ComparisonOperator.NOT_IN:
-            return actual not in vals
-        return True
-    expected = cmp.value.literal
-    if op == ComparisonOperator.EQUALS or op == ComparisonOperator.IS:
-        return actual == expected
-    if op == ComparisonOperator.NOT_EQUALS or op == ComparisonOperator.IS_NOT:
-        return actual != expected
-    if actual is None or expected is None:
-        return False
-    try:
-        if op == ComparisonOperator.GREATER_THAN:
-            return bool(actual > expected)
-        if op == ComparisonOperator.LESS_THAN:
-            return bool(actual < expected)
-        if op == ComparisonOperator.GREATER_EQUAL:
-            return bool(actual >= expected)
-        if op == ComparisonOperator.LESS_EQUAL:
-            return bool(actual <= expected)
-    except TypeError:
-        return True
-    return True
-
-
-def _render_row_action_button(
-    action_id: str,
-    label: str,
-    item: dict[str, Any],
-    bind: dict[str, str],
-) -> str:
-    """#1148: build the per-row action button HTML.
-
-    Emits a ``<button data-dz-row-action="<id>" data-dz-row-args="...">``
-    carrying the bound row values as JSON. Client-side surface-action
-    machinery hooks ``[data-dz-row-action]`` to compose the POST,
-    inheriting CSRF + route binding the same way ``data-dz-action``
-    does for ``entity_card.quick_actions``.
-
-    ``bind`` maps action-arg-name → row-field-name. The button's
-    ``data-dz-row-args`` JSON encodes ``{arg: row[field]}`` per entry.
-    Missing row fields become ``null`` — the action handler validates.
-    """
-    bound: dict[str, Any] = {}
-    for arg_name, field_name in bind.items():
-        bound[arg_name] = item.get(field_name)
-    args_json = _json_module.dumps(bound, default=str, sort_keys=True)
-    return (
-        f'<button type="button" class="dz-list-row-action-btn" '
-        f'data-dz-row-action="{_html_module.escape(action_id, quote=True)}" '
-        f'data-dz-row-args="{_html_module.escape(args_json, quote=True)}">'
-        f"{_html_module.escape(label)}"
-        f"</button>"
-    )
 
 
 class _BuildersTablesMixin:
