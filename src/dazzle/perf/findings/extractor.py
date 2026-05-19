@@ -15,8 +15,11 @@ from collections import defaultdict
 from pathlib import Path
 
 from dazzle.perf.findings.types import (
+    BootCost,
+    ExceptionFinding,
     FindingsReport,
     NPlusOne,
+    RenderFanOut,
     SlowEndpoint,
     SlowPhase,
     SlowQuery,
@@ -210,13 +213,83 @@ def detect_n_plus_one(db_path: Path, run_id: str, *, threshold: int = 3) -> list
     return findings
 
 
-def build_findings(db_path: Path, run_id: str) -> FindingsReport:
-    """Run every heuristic and assemble the FindingsReport.
+def render_fanout(db_path: Path, run_id: str, *, top: int = 10) -> list[RenderFanOut]:
+    """For each request span, count its descendant ``region.render`` spans
+    and sum their durations."""
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT
+                parent.name                AS route,
+                COUNT(child.span_id)       AS region_renders,
+                SUM(child.duration_ns) / 1e6 AS total_ms
+            FROM spans AS child
+            JOIN spans AS parent
+              ON parent.span_id = child.parent_span_id
+             AND parent.run_id  = child.run_id
+            WHERE child.run_id = ?
+              AND child.name   = 'region.render'
+              AND parent.kind  = 'server'
+            GROUP BY parent.name
+            ORDER BY region_renders DESC
+            LIMIT ?
+            """,
+            (run_id, top),
+        ).fetchall()
+    return [
+        RenderFanOut(
+            route=row["route"],
+            region_renders=int(row["region_renders"]),
+            total_ms=float(row["total_ms"] or 0.0),
+        )
+        for row in rows
+    ]
 
-    Currently wires :func:`slow_endpoints`, :func:`slow_queries`,
-    :func:`detect_n_plus_one`, and :func:`slow_phases`.
-    Subsequent tasks add the other heuristics and append them here.
-    """
+
+def boot_cost(db_path: Path, run_id: str) -> BootCost | None:
+    """Sum the parse + route-generation cost from well-known boot span
+    names. Returns ``None`` when neither span fired."""
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT name, SUM(duration_ns) / 1e6 AS ms
+            FROM spans
+            WHERE run_id = ? AND name IN ('dsl.parse', 'route.gen')
+            GROUP BY name
+            """,
+            (run_id,),
+        ).fetchall()
+    if not rows:
+        return None
+    by_name = {row["name"]: float(row["ms"]) for row in rows}
+    parse = by_name.get("dsl.parse", 0.0)
+    route = by_name.get("route.gen", 0.0)
+    return BootCost(parse_dsl_ms=parse, route_gen_ms=route, total_ms=parse + route)
+
+
+def exceptions_from_errors(db_path: Path, run_id: str) -> list[ExceptionFinding]:
+    """Cluster ``status='error'`` spans by ``(span name, error message)``."""
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT name, attributes_json FROM spans WHERE run_id = ? AND status = 'error'",
+            (run_id,),
+        ).fetchall()
+    buckets: dict[tuple[str, str], int] = defaultdict(int)
+    for row in rows:
+        attrs = json.loads(row["attributes_json"])
+        message = str(attrs.get("error.message", "<no message>"))
+        buckets[(row["name"], message)] += 1
+    return [
+        ExceptionFinding(span_name=name, message=msg, count=count)
+        for (name, msg), count in sorted(buckets.items(), key=lambda kv: kv[1], reverse=True)
+    ]
+
+
+def build_findings(db_path: Path, run_id: str) -> FindingsReport:
+    """Run every heuristic and assemble the FindingsReport."""
     from dazzle.perf.storage import get_run
 
     run = get_run(db_path, run_id)
@@ -231,4 +304,7 @@ def build_findings(db_path: Path, run_id: str) -> FindingsReport:
         slow_queries=slow_queries(db_path, run_id),
         n_plus_one=detect_n_plus_one(db_path, run_id),
         slow_phases=slow_phases(db_path, run_id),
+        render_fanout=render_fanout(db_path, run_id),
+        boot_cost=boot_cost(db_path, run_id),
+        exceptions=exceptions_from_errors(db_path, run_id),
     )
