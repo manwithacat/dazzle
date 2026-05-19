@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.55] - 2026-05-19
+
+### Added
+- **`primary_aggregate:` IR + parser shell for cohort_strip lenses
+  (#1144 Gap 1 phase 1).** New `LensAggregatePrimary(aggregate,
+  via, where)` IR model + parser keyword for cross-entity aggregate
+  primaries:
+  ```dsl
+  lenses:
+    - id: attainment
+      label: "Attainment"
+      primary_aggregate:
+        aggregate: "avg(MarkingResult.score)"
+        via: ClassEnrolment(student_profile = id)
+        where: latest_for_event = true
+  ```
+  - `aggregate:` is a quoted SQL-like expression (mirrors bar_chart
+    `aggregate:` syntax; runtime parsing lands in phase 2).
+  - `via:` reuses the scope-rule junction-binding grammar (#530).
+    Note: the scope validator's `current_user` requirement is NOT
+    enforced here — aggregate joins bind the member row to the
+    junction, not the current user.
+  - `where:` accepts a standard `ConditionExpr`.
+
+  **Phase 1 status:** IR + parser locked in. Runtime execution
+  (Repository.aggregate wiring + RBAC scope composition + per-cell
+  batching) lands in subsequent slices. The renderer raises a clear
+  `NotImplementedError("primary_aggregate runtime not wired yet")`
+  on any cell that resolves to an aggregate-primary lens, so DSL
+  authors learn the limitation at request time rather than seeing
+  empty values.
+
+  Mutually exclusive with `primary:` (scalar) and `primary_composite:`
+  (tuple display) — the IR validator enforces exactly-one-primary-
+  form. Issue #1144 stays open pending phase 2.
+
 ## [0.71.54] - 2026-05-19
 
 ### Added

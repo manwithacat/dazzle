@@ -97,7 +97,7 @@ def test_primary_and_primary_composite_rejected() -> None:
 def test_lens_with_neither_primary_form_rejected() -> None:
     """A lens declaring neither `primary:` nor `primary_composite:`
     is rejected at parse time."""
-    with pytest.raises(ParseError, match="requires either"):
+    with pytest.raises(ParseError, match="requires exactly one"):
         _parse_lens("""""")
 
 

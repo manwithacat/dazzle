@@ -267,6 +267,18 @@ def _build_cohort_cells(
     # #1144 part 2: composite primary (tuple display). When set, the
     # cell's primary_value is the join of each part's resolved field.
     composite_primary = getattr(active_lens, "primary_composite", None)
+    # #1144 part 3 phase 1: aggregate primary IR shipped, runtime
+    # execution is the next slice. Detect it and raise a clear
+    # message so authors learn the limitation at request time rather
+    # than seeing empty cells.
+    aggregate_primary = getattr(active_lens, "primary_aggregate", None)
+    if aggregate_primary is not None:
+        raise NotImplementedError(
+            "cohort_strip lens primary_aggregate runtime not wired yet "
+            "(#1144 part 3 phase 1 shipped IR + parser; Repository.aggregate "
+            "execution lands in a follow-up slice). DSL can be authored "
+            "today against the locked-in shape."
+        )
     # #1144 part 1: multi-band tone mapping (supersedes scalar
     # threshold when non-empty). Pre-sorted descending by `at` so
     # the highest band a value clears determines its tone.

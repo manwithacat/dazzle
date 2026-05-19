@@ -874,6 +874,79 @@ class WorkspaceParserMixin:
             default_lens=default_lens_str,
         )
 
+    def _parse_primary_aggregate_block(self) -> ir.LensAggregatePrimary:
+        """#1144 part 3 phase 1: parse the indented body of a
+        ``primary_aggregate:`` block.
+
+        Syntax::
+
+            primary_aggregate:
+              aggregate: "avg(MarkingResult.score)"
+              via: ClassEnrolment(student_profile = id)
+              where: latest_for_event = true
+
+        ``aggregate`` is required and quoted (SQL-like expressions
+        contain operators/parens/commas that don't fit bare-ident
+        grammar). ``via:`` and ``where:`` are optional. The via
+        value reuses the existing junction-binding grammar from
+        scope rules (#530) — same ``Junction(field = expr, ...)``
+        shape, just without the leading ``via`` keyword since the
+        block key already disambiguates intent.
+        """
+        _VALID_KEYS = {"aggregate", "via", "where"}
+        aggregate_str: str | None = None
+        via_cond: ir.ViaCondition | None = None
+        where_cond: ir.ConditionExpr | None = None
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            if key not in _VALID_KEYS:
+                raise make_parse_error(
+                    f"Unknown primary_aggregate key {key!r}. "
+                    f"Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "aggregate":
+                aggregate_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "via":
+                # Reuse the scope-rule via-binding grammar shape:
+                # `JunctionEntity(field = expr, ...)`. The helpers
+                # live on EntityParserMixin; both mixins compose
+                # into the same parser class at runtime, so the
+                # attr-defined ignores reflect mypy's mixin-aware
+                # limitation, not a real attribute gap.
+                # NOTE: skip `_validate_via_bindings` — that
+                # validator enforces a `current_user` binding for
+                # scope semantics, which doesn't apply to aggregate
+                # joins (the join binds the member row to the
+                # junction, not the current user).
+                junction_entity = self._parse_via_junction_name()  # type: ignore[attr-defined]
+                self._expect_via_lparen(junction_entity)  # type: ignore[attr-defined]
+                bindings = self._parse_via_bindings()  # type: ignore[attr-defined]
+                self.expect(TokenType.RPAREN)
+                via_cond = ir.ViaCondition(junction_entity=junction_entity, bindings=bindings)
+                self.skip_newlines()
+            else:  # where
+                where_cond = self.parse_condition_expr()
+                self.skip_newlines()
+        if aggregate_str is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                "primary_aggregate requires an `aggregate:` expression",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.LensAggregatePrimary(aggregate=aggregate_str, via=via_cond, where=where_cond)
+
     def _parse_primary_composite_block(self) -> ir.CompositePrimarySpec:
         """#1144 part 2: parse the indented body of a
         ``primary_composite:`` block.
@@ -1123,12 +1196,14 @@ class WorkspaceParserMixin:
             "threshold",
             "tone_bands",
             "primary_composite",
+            "primary_aggregate",
         }
         label_str: str | None = None
         primary_str: str | None = None
         threshold_val: float | None = None
         tone_bands_list: list[ir.ToneBandSpec] = []
         primary_composite: ir.CompositePrimarySpec | None = None
+        primary_aggregate: ir.LensAggregatePrimary | None = None
 
         if self.match(TokenType.INDENT):
             self.advance()
@@ -1164,6 +1239,14 @@ class WorkspaceParserMixin:
                     self.expect(TokenType.INDENT)
                     primary_composite = self._parse_primary_composite_block()
                     self.expect(TokenType.DEDENT)
+                elif key == "primary_aggregate":
+                    # #1144 part 3: aggregate-expression primary. IR
+                    # + parser shipped here; runtime execution lands
+                    # in subsequent slices.
+                    self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    primary_aggregate = self._parse_primary_aggregate_block()
+                    self.expect(TokenType.DEDENT)
                 else:
                     raise make_parse_error(
                         f"Unknown lenses key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
@@ -1181,11 +1264,12 @@ class WorkspaceParserMixin:
                 tok.line,
                 tok.column,
             )
-        if primary_str is None and primary_composite is None:
+        if primary_str is None and primary_composite is None and primary_aggregate is None:
             tok = self.current_token()
             raise make_parse_error(
-                f"lens {id_str!r} requires either `primary:` (scalar) "
-                "or `primary_composite:` (tuple display)",
+                f"lens {id_str!r} requires exactly one of `primary:` "
+                "(scalar), `primary_composite:` (tuple display), or "
+                "`primary_aggregate:` (cross-join aggregate)",
                 self.file,
                 tok.line,
                 tok.column,
@@ -1197,6 +1281,7 @@ class WorkspaceParserMixin:
             threshold=threshold_val,
             tone_bands=tone_bands_list,
             primary_composite=primary_composite,
+            primary_aggregate=primary_aggregate,
         )
 
     def _parse_day_timeline_config_block(self) -> ir.DayTimelineConfig:

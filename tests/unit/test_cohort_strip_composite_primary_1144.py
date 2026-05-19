@@ -137,7 +137,7 @@ def test_scalar_and_composite_mutually_exclusive() -> None:
 def test_lens_requires_some_primary_form() -> None:
     """A lens with neither `primary:` nor `primary_composite:` is
     rejected at IR construction."""
-    with pytest.raises(ValueError, match="requires either"):
+    with pytest.raises(ValueError, match="requires exactly one"):
         CohortStripLens(id="x", label="X")
 
 

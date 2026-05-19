@@ -158,5 +158,6 @@
   "views.ViewSpec.time_bucket",
   "webhooks.WebhookAuthSpec.secret_ref",
   "webhooks.WebhookPayloadSpec.include_fields",
-  "workspaces.EntityCardConfig.scope_param"
+  "workspaces.EntityCardConfig.scope_param",
+  "workspaces.LensAggregatePrimary.via"
 ]

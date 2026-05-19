@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 349 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
+# Counts: 350 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -398,6 +398,7 @@ ir_class: CohortStripLens
     - label: str
   optional:
     - primary: str = ''
+    - primary_aggregate: LensAggregatePrimary | None = None
     - primary_composite: CompositePrimarySpec | None = None
     - threshold: float | None = None
     - tone_bands: list[ToneBandSpec] = []
@@ -1517,6 +1518,13 @@ ir_class: LegalPagesSpec
   optional:
     - privacy: LegalPageSpec | None = None
     - terms: LegalPageSpec | None = None
+
+ir_class: LensAggregatePrimary
+  required:
+    - aggregate: str
+  optional:
+    - via: ViaCondition | None = None
+    - where: ConditionExpr | None = None
 
 ir_class: LifecycleReport
   required:

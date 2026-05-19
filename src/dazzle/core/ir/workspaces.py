@@ -11,7 +11,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .conditions import ConditionExpr
+from .conditions import ConditionExpr, ViaCondition
 from .location import SourceLocation
 from .params import ParamRef
 from .ux import SortSpec, UXSpec
@@ -438,6 +438,49 @@ class NoticeSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class LensAggregatePrimary(BaseModel):
+    """#1144 Gap 1 / part 3: aggregate-expression primary for
+    cohort_strip lenses.
+
+    Pre-fix `primary:` could only name a field already on the
+    resolved member record. Cross-entity metrics (attainment %
+    across `MarkingResult` rows joined through `ClassEnrolment`,
+    behaviour counts in a 7-day window, MRR per CRM cohort, etc.)
+    forced a Python route override. This shape lets a lens declare
+    an aggregate expression evaluated by the framework's
+    ``Repository.aggregate`` machinery, joined through an optional
+    junction table, filtered by an optional predicate.
+
+    **Status:** IR + parser shipped this slice (#1144 part 3 phase 1).
+    Runtime execution (Repository.aggregate wiring + RBAC scope
+    composition) lands in subsequent slices. DSL authoring works
+    today; rendering raises ``NotImplementedError`` with a clear
+    "aggregate primary runtime not wired yet" message until the
+    next phase ships.
+
+    Attributes:
+        aggregate: Aggregate expression — same grammar bar_chart
+            ``aggregate:`` accepts. Examples:
+            ``avg(MarkingResult.score)``,
+            ``sum(BehaviourIncident.weight)``,
+            ``count(ManuscriptFeedback)``.
+        via: Optional junction-table join. Reuses the
+            :class:`ViaCondition` shape from #530 — same parser, same
+            SQL compiler. ``None`` means no junction (aggregate
+            operates against the source-entity directly, scoped by
+            the member's FK relationship).
+        where: Optional row-level predicate on the *aggregated*
+            entity (not on the member). Same ``ConditionExpr`` shape
+            as a region ``filter:``.
+    """
+
+    aggregate: str
+    via: ViaCondition | None = None
+    where: ConditionExpr | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class CompositePrimaryPart(BaseModel):
     """#1144 part 2: one part of a composite cohort_strip primary.
 
@@ -560,6 +603,12 @@ class CohortStripLens(BaseModel):
             counters (``+12 / -3``). Mutually exclusive with a
             non-empty ``primary``; setting both is a parse-time
             error.
+        primary_aggregate: Optional aggregate-expression primary
+            (#1144 part 3). When set, supersedes the scalar
+            ``primary`` and ``primary_composite`` — the framework's
+            ``Repository.aggregate`` machinery computes the value
+            against the joined entity per member. Mutually exclusive
+            with both scalar and composite forms.
     """
 
     id: str
@@ -568,16 +617,18 @@ class CohortStripLens(BaseModel):
     threshold: float | None = None
     tone_bands: list[ToneBandSpec] = Field(default_factory=list)
     primary_composite: CompositePrimarySpec | None = None
+    primary_aggregate: LensAggregatePrimary | None = None
 
     model_config = ConfigDict(frozen=True)
 
     @model_validator(mode="after")
     def _validate_threshold_or_bands(self) -> CohortStripLens:
-        """#1144 parts 1+2: mutual-exclusion validators.
+        """#1144 parts 1/2/3: mutual-exclusion validators.
 
         - ``threshold:`` and ``tone_bands:`` can't both be set.
-        - Exactly one of ``primary:`` / ``primary_composite:`` must
-          carry a value — both empty rejects, both set rejects.
+        - Exactly one of ``primary:`` / ``primary_composite:`` /
+          ``primary_aggregate:`` must carry a value. All-empty
+          rejects; more-than-one-set rejects.
         """
         if self.threshold is not None and self.tone_bands:
             raise ValueError(
@@ -585,19 +636,23 @@ class CohortStripLens(BaseModel):
                 "`tone_bands:` are mutually exclusive — use one or "
                 "the other (tone_bands supersedes the scalar)."
             )
-        has_scalar = bool(self.primary)
-        has_composite = self.primary_composite is not None
-        if has_scalar and has_composite:
+        primary_forms = [
+            ("primary", bool(self.primary)),
+            ("primary_composite", self.primary_composite is not None),
+            ("primary_aggregate", self.primary_aggregate is not None),
+        ]
+        set_forms = [name for name, present in primary_forms if present]
+        if len(set_forms) > 1:
             raise ValueError(
-                f"cohort_strip lens {self.id!r}: `primary:` (scalar) "
-                "and `primary_composite:` are mutually exclusive — "
-                "use one or the other."
+                f"cohort_strip lens {self.id!r}: {', '.join(set_forms)} "
+                "are mutually exclusive — use exactly one primary form."
             )
-        if not has_scalar and not has_composite:
+        if not set_forms:
             raise ValueError(
-                f"cohort_strip lens {self.id!r} requires either "
-                "`primary:` (scalar field) or `primary_composite:` "
-                "(tuple display)."
+                f"cohort_strip lens {self.id!r} requires exactly one of "
+                "`primary:` (scalar field), `primary_composite:` "
+                "(tuple display), or `primary_aggregate:` (cross-join "
+                "aggregate expression)."
             )
         return self
 
