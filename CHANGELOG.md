@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.54] - 2026-05-19
+
+### Added
+- **`primary_composite:` tuple-display on cohort_strip lenses
+  (#1144 part 2).** New `CompositePrimarySpec(parts, separator)`
+  and `CompositePrimaryPart(field, tone)` IR models +
+  `CohortStripLens.primary_composite` field for rendering tuple
+  metrics like `45 / 52 / 38` (AO breakdown) or `+12 / -3`
+  (behaviour counter) in one cell:
+  ```dsl
+  lenses:
+    - id: ao
+      label: "AO breakdown"
+      primary_composite:
+        separator: " / "
+        parts:
+          - field: ao1_score
+          - field: ao2_score
+          - field: ao3_score
+  ```
+  Mutually exclusive with the scalar `primary:` — IR validator
+  rejects both-set or neither-set. Each part can carry an
+  optional `tone:` for per-part tinting (`+pos` green / `-neg`
+  red side-by-side). Missing field values render as empty
+  segments (graceful degradation; separator still appears).
+
+### Changed
+- `CohortStripLens.primary` default changed from required `str` to
+  `""`. Lenses MUST now declare either `primary:` (the existing
+  scalar shape) or `primary_composite:` (new). The validator
+  surfaces the contract violation at IR construction so DSL
+  authors see it at parse time.
+
+### Agent Guidance
+- For AO-style breakdowns or +pos/-neg counters in cohort_strip
+  lenses, declare `primary_composite:` with multiple `field:`
+  parts. The scalar `primary:` is still the right choice when one
+  field per lens covers the metric. Both forms compose with the
+  multi-band `tone_bands:` from #1144 part 1 — scalar lenses can
+  apply bands to their single value; composite lenses use
+  per-part `tone:` instead (cell-level tone applies to scalars
+  only).
+
+### Known follow-up
+- #1144 Gap 1 (`lens.primary` cross-join *aggregate* expression
+  support, requiring Repository.aggregate integration + `via:`
+  join contract) is still open. The composite shape this release
+  ships handles tuples of already-fetched row fields; cross-join
+  aggregates that the row doesn't carry remain route-override
+  territory until that lands.
+
 ## [0.71.53] - 2026-05-19
 
 ### Added

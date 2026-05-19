@@ -874,6 +874,119 @@ class WorkspaceParserMixin:
             default_lens=default_lens_str,
         )
 
+    def _parse_primary_composite_block(self) -> ir.CompositePrimarySpec:
+        """#1144 part 2: parse the indented body of a
+        ``primary_composite:`` block.
+
+        Syntax::
+
+            primary_composite:
+              separator: " / "
+              parts:
+                - field: ao1_score
+                - field: ao2_score
+                  tone: positive
+                - field: ao3_score
+
+        ``parts:`` is required and must be non-empty; the IR
+        validator enforces. ``separator:`` defaults to ``" / "``.
+        """
+        _VALID_KEYS = {"separator", "parts"}
+        separator = " / "
+        parts: list[ir.CompositePrimaryPart] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            if key not in _VALID_KEYS:
+                raise make_parse_error(
+                    f"Unknown primary_composite key {key!r}. "
+                    f"Expected one of: {sorted(_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            self.advance()
+            self.expect(TokenType.COLON)
+            if key == "separator":
+                separator = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            else:  # parts
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                parts = self._parse_composite_parts_block()
+                self.expect(TokenType.DEDENT)
+        if not parts:
+            tok = self.current_token()
+            raise make_parse_error(
+                "primary_composite requires a non-empty `parts:` list",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.CompositePrimarySpec(parts=parts, separator=separator)
+
+    def _parse_composite_parts_block(self) -> list[ir.CompositePrimaryPart]:
+        """#1144 part 2: parse the dash-list body of a
+        ``primary_composite.parts:`` block. Each entry leads with
+        ``- field: <ident>`` and may carry an optional ``tone:``
+        sub-key.
+        """
+        parts: list[ir.CompositePrimaryPart] = []
+        _VALID_KEYS = {"field", "tone"}
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            if not self.match(TokenType.MINUS):
+                tok = self.current_token()
+                raise make_parse_error(
+                    "primary_composite parts entries must start with `- field: <name>`",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()  # consume MINUS
+            head_kw = self.expect_identifier_or_keyword().value
+            if head_kw != "field":
+                tok = self.current_token()
+                raise make_parse_error(
+                    f"parts entry must start with `field:`, got {head_kw!r}",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.expect(TokenType.COLON)
+            field_val = self.expect_identifier_or_keyword().value
+            self.skip_newlines()
+            tone_val = ""
+            if self.match(TokenType.INDENT):
+                self.advance()
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    key_tok = self.current_token()
+                    key = key_tok.value
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    if key == "tone":
+                        tone_val = self.expect_identifier_or_keyword().value
+                        self.skip_newlines()
+                    else:
+                        raise make_parse_error(
+                            f"Unknown parts entry key {key!r}. "
+                            f"Expected one of: {sorted(_VALID_KEYS)}.",
+                            self.file,
+                            key_tok.line,
+                            key_tok.column,
+                        )
+                self.expect(TokenType.DEDENT)
+            parts.append(ir.CompositePrimaryPart(field=field_val, tone=tone_val))
+        return parts
+
     def _parse_tone_bands_block(self) -> list[ir.ToneBandSpec]:
         """#1144 part 1: parse the indented dash-list body of a
         ``tone_bands:`` block.
@@ -960,13 +1073,12 @@ class WorkspaceParserMixin:
 
         Each entry must lead with ``- id:`` (the stable lens identifier
         used in URL params). The remaining keys land in the entry's
-        INDENT block. ``label`` and ``primary`` are required;
-        ``threshold`` and ``tone_bands`` are optional and mutually
-        exclusive (#1144 part 1).
+        INDENT block. ``label`` is required; the lens must declare
+        either ``primary:`` (scalar) or ``primary_composite:`` (tuple
+        display, #1144 part 2). ``threshold`` and ``tone_bands`` are
+        optional and mutually exclusive (#1144 part 1).
         """
         lenses: list[ir.CohortStripLens] = []
-        _VALID_KEYS = {"id", "label", "primary", "threshold", "tone_bands"}
-
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
@@ -992,72 +1104,100 @@ class WorkspaceParserMixin:
             self.expect(TokenType.COLON)
             id_str = self.expect_identifier_or_keyword().value
             self.skip_newlines()
-
-            label_str: str | None = None
-            primary_str: str | None = None
-            threshold_val: float | None = None
-            tone_bands_list: list[ir.ToneBandSpec] = []
-
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "label":
-                        # Quoted-string preferred (handles spaces, punctuation);
-                        # bare identifier accepted for single-word labels.
-                        if self.match(TokenType.STRING):
-                            label_str = self.advance().value
-                        else:
-                            label_str = self.expect_identifier_or_keyword().value
-                        self.skip_newlines()
-                    elif key == "primary":
-                        primary_str = self.expect_identifier_or_keyword().value
-                        self.skip_newlines()
-                    elif key == "threshold":
-                        threshold_val = float(self.expect(TokenType.NUMBER).value)
-                        self.skip_newlines()
-                    elif key == "tone_bands":
-                        # #1144 part 1: dash-list of `- at: <num>` +
-                        # `tone: <ident>` sub-entries. See the IR docstring
-                        # on ``ToneBandSpec`` for semantics.
-                        self.skip_newlines()
-                        self.expect(TokenType.INDENT)
-                        tone_bands_list = self._parse_tone_bands_block()
-                        self.expect(TokenType.DEDENT)
-                    else:
-                        raise make_parse_error(
-                            f"Unknown lenses key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-
-            if label_str is None or primary_str is None:
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"lens {id_str!r} requires both `label:` and `primary:`",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            lenses.append(
-                ir.CohortStripLens(
-                    id=id_str,
-                    label=label_str,
-                    primary=primary_str,
-                    threshold=threshold_val,
-                    tone_bands=tone_bands_list,
-                )
-            )
-
+            lenses.append(self._parse_cohort_strip_lens_entry_body(id_str))
         return lenses
+
+    def _parse_cohort_strip_lens_entry_body(self, id_str: str) -> ir.CohortStripLens:
+        """Parse the INDENT-block body of one ``lenses:`` entry.
+
+        Extracted from :meth:`_parse_cohort_strip_lenses_block` so the
+        outer dispatch loop stays within the per-function line cap.
+        Handles ``label`` / ``primary`` / ``threshold`` / ``tone_bands``
+        / ``primary_composite`` keys; validates the required-fields
+        and mutex contracts at the end.
+        """
+        _VALID_KEYS = {
+            "id",
+            "label",
+            "primary",
+            "threshold",
+            "tone_bands",
+            "primary_composite",
+        }
+        label_str: str | None = None
+        primary_str: str | None = None
+        threshold_val: float | None = None
+        tone_bands_list: list[ir.ToneBandSpec] = []
+        primary_composite: ir.CompositePrimarySpec | None = None
+
+        if self.match(TokenType.INDENT):
+            self.advance()
+            while not self.match(TokenType.DEDENT):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT):
+                    break
+                key_tok = self.current_token()
+                key = key_tok.value
+                self.advance()
+                self.expect(TokenType.COLON)
+                if key == "label":
+                    # Quoted preferred (handles spaces, punctuation);
+                    # bare identifier accepted for single-word labels.
+                    if self.match(TokenType.STRING):
+                        label_str = self.advance().value
+                    else:
+                        label_str = self.expect_identifier_or_keyword().value
+                    self.skip_newlines()
+                elif key == "primary":
+                    primary_str = self.expect_identifier_or_keyword().value
+                    self.skip_newlines()
+                elif key == "threshold":
+                    threshold_val = float(self.expect(TokenType.NUMBER).value)
+                    self.skip_newlines()
+                elif key == "tone_bands":
+                    self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    tone_bands_list = self._parse_tone_bands_block()
+                    self.expect(TokenType.DEDENT)
+                elif key == "primary_composite":
+                    self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    primary_composite = self._parse_primary_composite_block()
+                    self.expect(TokenType.DEDENT)
+                else:
+                    raise make_parse_error(
+                        f"Unknown lenses key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
+                        self.file,
+                        key_tok.line,
+                        key_tok.column,
+                    )
+            self.expect(TokenType.DEDENT)
+
+        if label_str is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                f"lens {id_str!r} requires a `label:` field",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        if primary_str is None and primary_composite is None:
+            tok = self.current_token()
+            raise make_parse_error(
+                f"lens {id_str!r} requires either `primary:` (scalar) "
+                "or `primary_composite:` (tuple display)",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.CohortStripLens(
+            id=id_str,
+            label=label_str,
+            primary=primary_str or "",
+            threshold=threshold_val,
+            tone_bands=tone_bands_list,
+            primary_composite=primary_composite,
+        )
 
     def _parse_day_timeline_config_block(self) -> ir.DayTimelineConfig:
         """Parse the indented body of a ``day_timeline_config:`` block (#1016).

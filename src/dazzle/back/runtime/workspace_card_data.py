@@ -264,6 +264,9 @@ def _build_cohort_cells(
     )
     primary_field = str(getattr(active_lens, "primary", "") or "")
     threshold = getattr(active_lens, "threshold", None)
+    # #1144 part 2: composite primary (tuple display). When set, the
+    # cell's primary_value is the join of each part's resolved field.
+    composite_primary = getattr(active_lens, "primary_composite", None)
     # #1144 part 1: multi-band tone mapping (supersedes scalar
     # threshold when non-empty). Pre-sorted descending by `at` so
     # the highest band a value clears determines its tone.
@@ -283,9 +286,19 @@ def _build_cohort_cells(
             member_name = str(item.get(f"{member_via}_display", "") or "")
             if not member_name:
                 member_name = str(fk_value or "") or str(item.get("name", "") or "")
-        # Primary value extraction.
-        primary_raw = _resolve_path(item, primary_field) if primary_field else None
-        primary_value = "" if primary_raw is None else str(primary_raw)
+        # Primary value extraction. Composite path wins when set
+        # (parser + IR validator guarantee mutex with scalar).
+        if composite_primary is not None:
+            parts_rendered: list[str] = []
+            for part in composite_primary.parts:
+                part_field = str(getattr(part, "field", "") or "")
+                part_raw = _resolve_path(item, part_field) if part_field else None
+                parts_rendered.append("" if part_raw is None else str(part_raw))
+            primary_value = composite_primary.separator.join(parts_rendered)
+            primary_raw = None  # tone derivation N/A for composites
+        else:
+            primary_raw = _resolve_path(item, primary_field) if primary_field else None
+            primary_value = "" if primary_raw is None else str(primary_raw)
         # Tone derivation. #1144 part 1 path takes precedence: walk
         # the sorted bands, take first whose `at` the value clears.
         # Fall back to the scalar `threshold:` trichotomy when bands

@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 347 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
+# Counts: 349 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -396,8 +396,9 @@ ir_class: CohortStripLens
   required:
     - id: str
     - label: str
-    - primary: str
   optional:
+    - primary: str = ''
+    - primary_composite: CompositePrimarySpec | None = None
     - threshold: float | None = None
     - tone_bands: list[ToneBandSpec] = []
 
@@ -461,6 +462,18 @@ ir_class: CompensationSpec
     - inputs: list[InputMapping] = []
     - service: str | None = None
     - timeout_seconds: int = 30
+
+ir_class: CompositePrimaryPart
+  required:
+    - field: str
+  optional:
+    - tone: str = ''
+
+ir_class: CompositePrimarySpec
+  required:
+    - parts: list[CompositePrimaryPart]
+  optional:
+    - separator: str = ' / '
 
 ir_class: ComputedFieldSpec
   required:

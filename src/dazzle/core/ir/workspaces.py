@@ -438,6 +438,68 @@ class NoticeSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class CompositePrimaryPart(BaseModel):
+    """#1144 part 2: one part of a composite cohort_strip primary.
+
+    Lets a lens render tuple metrics — e.g. AO1/AO2/AO3 breakdown
+    as ``45 / 52 / 38`` in one cell, or +pos/-neg behaviour
+    counters as ``+12 / -3`` side-by-side. Each part resolves to
+    a single row-field value at render time (matching the existing
+    `primary: <field>` semantics, just one slot of a multi-value
+    composite).
+
+    Attributes:
+        field: Field name on the resolved member record (same
+            resolution rules as `CohortStripLens.primary` for the
+            scalar case).
+        tone: Optional palette token applied to this part only
+            (``good`` / ``warn`` / ``bad`` / ``neutral`` / ``accent``).
+            Useful for the +pos green / -neg red case — different
+            parts of the same composite carry different tints.
+            Empty means inherit the cell-level tone.
+    """
+
+    field: str
+    tone: str = ""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CompositePrimarySpec(BaseModel):
+    """#1144 part 2: composite primary for cohort_strip lenses.
+
+    Renders a tuple of values joined by a separator instead of a
+    single scalar — matches the ``45 / 52 / 38`` AO breakdown or
+    ``+12 / -3`` behaviour counter shape.
+
+    The renderer resolves each part's ``field`` against the row,
+    converts to string (empty for missing/None — graceful
+    degradation), and joins with ``separator``. When any part
+    declares a ``tone``, the renderer emits per-part spans so CSS
+    can tint each value independently.
+
+    Attributes:
+        parts: Ordered list of value slots. Empty list is rejected
+            (use the scalar ``primary:`` form for a single value).
+        separator: String inserted between rendered parts.
+            Defaults to ``" / "`` matching the AegisMark contract.
+    """
+
+    parts: list[CompositePrimaryPart]
+    separator: str = " / "
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def _validate_non_empty(self) -> CompositePrimarySpec:
+        if not self.parts:
+            raise ValueError(
+                "CompositePrimarySpec requires at least one part — "
+                "use the scalar `primary:` form for a single value."
+            )
+        return self
+
+
 class ToneBandSpec(BaseModel):
     """#1144 part 1: one tone band on a ``cohort_strip`` lens.
 
@@ -490,26 +552,52 @@ class CohortStripLens(BaseModel):
             primary value is matched against the highest band whose
             ``at`` it clears. Empty list → fall back to ``threshold:``
             (or neutral if neither is set).
+        primary_composite: Optional tuple-display primary (#1144
+            part 2). When set, supersedes the scalar ``primary``
+            field — the renderer resolves each part's field against
+            the row and joins them with the spec's separator. Use
+            this for AO breakdowns (``45 / 52 / 38``) or +pos/-neg
+            counters (``+12 / -3``). Mutually exclusive with a
+            non-empty ``primary``; setting both is a parse-time
+            error.
     """
 
     id: str
     label: str
-    primary: str
+    primary: str = ""
     threshold: float | None = None
     tone_bands: list[ToneBandSpec] = Field(default_factory=list)
+    primary_composite: CompositePrimarySpec | None = None
 
     model_config = ConfigDict(frozen=True)
 
     @model_validator(mode="after")
     def _validate_threshold_or_bands(self) -> CohortStripLens:
-        """#1144 part 1: scalar threshold and tone_bands are mutually
-        exclusive — surface the conflict at IR construction so DSL
-        authors see it at parse time rather than rendering surprises."""
+        """#1144 parts 1+2: mutual-exclusion validators.
+
+        - ``threshold:`` and ``tone_bands:`` can't both be set.
+        - Exactly one of ``primary:`` / ``primary_composite:`` must
+          carry a value — both empty rejects, both set rejects.
+        """
         if self.threshold is not None and self.tone_bands:
             raise ValueError(
                 f"cohort_strip lens {self.id!r}: `threshold:` and "
                 "`tone_bands:` are mutually exclusive — use one or "
                 "the other (tone_bands supersedes the scalar)."
+            )
+        has_scalar = bool(self.primary)
+        has_composite = self.primary_composite is not None
+        if has_scalar and has_composite:
+            raise ValueError(
+                f"cohort_strip lens {self.id!r}: `primary:` (scalar) "
+                "and `primary_composite:` are mutually exclusive — "
+                "use one or the other."
+            )
+        if not has_scalar and not has_composite:
+            raise ValueError(
+                f"cohort_strip lens {self.id!r} requires either "
+                "`primary:` (scalar field) or `primary_composite:` "
+                "(tuple display)."
             )
         return self
 
