@@ -53,7 +53,7 @@ def _make_aggregated_repo(per_member: dict[str, float]):
     repo = MagicMock()
     repo.entity_spec = spec
 
-    async def _aggregate(*, dimensions, measures, filters=None, limit=1):
+    async def _aggregate(*, dimensions, measures, filters=None, limit=1, measure_expressions=None):
         member_id = filters.get("student") if filters else None
         if member_id not in per_member:
             return []

@@ -604,6 +604,7 @@ class Repository(Generic[T]):
         measures: dict[str, str],
         filters: dict[str, Any] | None = None,
         limit: int = 200,
+        measure_expressions: dict[str, tuple[str, _list[Any]]] | None = None,
     ) -> _list[Any]:
         """Run a single multi-dimension GROUP BY aggregation against this entity.
 
@@ -648,6 +649,7 @@ class Repository(Generic[T]):
             measures=measures,
             filters=filters,
             limit=limit,
+            measure_expressions=measure_expressions,
         )
         if not sql:
             return []
@@ -669,6 +671,7 @@ class Repository(Generic[T]):
             [dict(r) if hasattr(r, "keys") else r for r in rows],
             dimensions=dimensions,
             measures=measures,
+            measure_expressions=measure_expressions,
         )
 
     def explain_aggregate(

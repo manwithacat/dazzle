@@ -18,6 +18,12 @@ Five legacy consumers migrate to ``AggregateRef``:
 
 The DSL surface syntax does not change. The parser desugars
 ``count(Entity)`` / ``avg(field)`` / ``avg(Entity.column)`` into typed IR.
+
+L3 (#1152): nested expression form populates ``AggregateRef.expression``
+instead of ``column``. Expressions support column refs, number literals,
+casts, binary arithmetic, and a whitelist of safe SQL functions. The
+column shape stays for the trivial case so simple aggregates remain
+cheap to compile and reason about.
 """
 
 from __future__ import annotations  # required: forward reference
@@ -30,11 +36,158 @@ from .conditions import ConditionExpr
 
 AggregateFunc = Literal["count", "sum", "avg", "min", "max"]
 
+# Whitelisted cast targets. The runtime compiler emits these verbatim into
+# the SQL, so the set is closed (Postgres types only). Adding a new entry
+# is a deliberate ADR-class decision — not a parser ergonomics tweak.
+CastTarget = Literal["float", "int", "numeric", "text"]
+
+# Whitelisted binary operators. Same closed-set rationale as CastTarget.
+# Renamed from BinaryOp to avoid clashing with ``expressions.BinaryOp``
+# (a StrEnum used by predicate compilation).
+AggregateBinaryOp = Literal["+", "-", "*", "/"]
+
+# Whitelisted aggregate-expression function calls. Each function must have
+# a known SQL surface and arity validated by the IR. Keep this tight; the
+# expression IR is for arithmetic on aggregated columns, not arbitrary
+# SQL composition.
+AggregateFunctionName = Literal["nullif", "coalesce", "abs"]
+
+# Arity for each whitelisted function — checked in the IR validator so
+# the runtime compiler can trust the shape.
+_FUNCTION_ARITY: dict[str, tuple[int, int | None]] = {
+    "nullif": (2, 2),
+    "coalesce": (1, None),  # variadic — at least 1 arg
+    "abs": (1, 1),
+}
+
+
+class AggregateExpr(BaseModel):
+    """A nested expression inside an L3 aggregate.
+
+    Tagged-union pattern: exactly one variant is populated per node, and
+    the model validator enforces that. The five variants:
+
+    1. **Column reference** — ``score`` or ``MarkingResult.score``.
+       Populate ``column_name`` (required) and optionally ``column_entity``
+       (cross-entity prefix). All column refs within a single
+       :class:`AggregateRef.expression` must reference the same entity
+       (validated at parse time, not at IR construction).
+
+    2. **Number literal** — ``0``, ``0.5``, ``-1``. Populate
+       ``number_literal``. Compiled to a parametrised bind, never
+       interpolated into the SQL string.
+
+    3. **Cast** — ``score::float``. Populate ``cast_target`` and
+       ``cast_operand``. The target is a whitelisted Postgres type.
+
+    4. **Binary op** — ``a / b``. Populate ``binary_op``, ``binary_left``,
+       ``binary_right``. Operators are arithmetic only; comparisons live
+       in :class:`ConditionExpr` and aren't valid inside an aggregate
+       expression.
+
+    5. **Function call** — ``nullif(a, b)``. Populate ``function_name``
+       and ``function_args``. Functions are whitelisted with known
+       arities; the validator enforces both.
+
+    All field combinations not matching one of those variants raise
+    :class:`pydantic.ValidationError` at construction.
+    """
+
+    column_entity: str | None = None
+    column_name: str | None = None
+
+    number_literal: int | float | None = None
+
+    cast_target: CastTarget | None = None
+    cast_operand: AggregateExpr | None = None
+
+    binary_op: AggregateBinaryOp | None = None
+    binary_left: AggregateExpr | None = None
+    binary_right: AggregateExpr | None = None
+
+    function_name: AggregateFunctionName | None = None
+    function_args: tuple[AggregateExpr, ...] | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def _check_variant(self) -> AggregateExpr:
+        is_column = self.column_name is not None
+        is_number = self.number_literal is not None
+        is_cast = self.cast_target is not None
+        is_binary = self.binary_op is not None
+        is_function = self.function_name is not None
+
+        populated = sum([is_column, is_number, is_cast, is_binary, is_function])
+        if populated == 0:
+            raise ValueError(
+                "AggregateExpr must populate exactly one variant "
+                "(column ref, number literal, cast, binary op, or function call)"
+            )
+        if populated > 1:
+            raise ValueError(
+                "AggregateExpr variants are mutually exclusive — got multiple populated at once"
+            )
+
+        if is_column:
+            if self.column_name and "." in self.column_name:
+                raise ValueError(
+                    f"column_name must be a single identifier, not a dotted "
+                    f"path: {self.column_name!r}. Use column_entity= for "
+                    f"cross-entity refs."
+                )
+        elif is_cast:
+            if self.cast_operand is None:
+                raise ValueError("cast requires cast_operand")
+        elif is_binary:
+            if self.binary_left is None or self.binary_right is None:
+                raise ValueError("binary op requires both binary_left and binary_right")
+        elif is_function:
+            if self.function_args is None or len(self.function_args) == 0:
+                raise ValueError(f"function {self.function_name!r} requires at least one argument")
+            # is_function == True implies self.function_name is set; narrow
+            # for the dict lookup below.
+            assert self.function_name is not None
+            arity_min, arity_max = _FUNCTION_ARITY[self.function_name]
+            n = len(self.function_args)
+            if n < arity_min or (arity_max is not None and n > arity_max):
+                expected = (
+                    f"{arity_min}"
+                    if arity_max == arity_min
+                    else f"{arity_min}+"
+                    if arity_max is None
+                    else f"{arity_min}..{arity_max}"
+                )
+                raise ValueError(
+                    f"function {self.function_name!r} expects {expected} arguments, got {n}"
+                )
+        return self
+
+    @property
+    def is_column_ref(self) -> bool:
+        return self.column_name is not None
+
+    @property
+    def is_number_literal(self) -> bool:
+        return self.number_literal is not None
+
+    @property
+    def is_cast(self) -> bool:
+        return self.cast_target is not None
+
+    @property
+    def is_binary_op(self) -> bool:
+        return self.binary_op is not None
+
+    @property
+    def is_function_call(self) -> bool:
+        return self.function_name is not None
+
 
 class AggregateRef(BaseModel):
     """A single aggregate computation.
 
-    Three shapes covered by named fields rather than func-disambiguation:
+    Four shapes covered by named fields rather than func-disambiguation:
 
     1. **Row count on an entity.** ``count(Entity)`` —
        ``func="count", entity="Entity", column=None``.
@@ -51,6 +204,13 @@ class AggregateRef(BaseModel):
        unrepresentable in the legacy regex grammar; cross-entity aggregates
        were the original driver for #1144 Gap 1 phase 2.
 
+    4. **L3 expression.** ``avg(score::float / nullif(max_score, 0))`` —
+       ``func="avg", expression=AggregateExpr(...)``. ``column`` is None;
+       ``entity`` is optional (cross-entity expressions are valid when
+       every column ref inside ``expression`` shares the same prefix).
+       Compiled to safe SQL with parametrised literals — see
+       :func:`dazzle.back.runtime.aggregate_expression.compile_aggregate_expression`.
+
     The ``where:`` clause is a structured :class:`ConditionExpr` — the same
     type scope rules and view filters compile to — not a string. The legacy
     ``parse_aggregate_where`` indirection retires once every consumer reads
@@ -60,9 +220,10 @@ class AggregateRef(BaseModel):
 
     - ``count`` requires either ``entity`` or no positional argument
       (``count(Entity)`` or — once a parent context is available —
-      a bare ``count`` over the source).
-    - ``sum`` / ``avg`` / ``min`` / ``max`` require ``column``. ``entity``
-      is optional (cross-entity vs source-relative).
+      a bare ``count`` over the source). ``count`` rejects both ``column``
+      and ``expression``.
+    - ``sum`` / ``avg`` / ``min`` / ``max`` require exactly one of
+      ``column`` or ``expression``. ``entity`` is optional.
     - ``column`` must be a single field name (no dotted paths). Multi-hop
       FK traversals are deferred to a future ``path`` field.
     """
@@ -70,6 +231,7 @@ class AggregateRef(BaseModel):
     func: AggregateFunc
     entity: str | None = None
     column: str | None = None
+    expression: AggregateExpr | None = None
     where: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
@@ -82,11 +244,22 @@ class AggregateRef(BaseModel):
                     f"count() does not take a column (got {self.column!r}); "
                     "use count(Entity) for row-count or count(Entity where ...)"
                 )
-        else:
-            if self.column is None:
+            if self.expression is not None:
                 raise ValueError(
-                    f"{self.func}() requires a column (e.g. avg(score), avg(Entity.score))"
+                    "count() does not take an expression; "
+                    "use count(Entity) for row-count or count(Entity where ...)"
                 )
+        else:
+            has_column = self.column is not None
+            has_expression = self.expression is not None
+            if not has_column and not has_expression:
+                raise ValueError(
+                    f"{self.func}() requires a column or expression "
+                    f"(e.g. avg(score), avg(Entity.score), "
+                    f"avg(score / max_score))"
+                )
+            if has_column and has_expression:
+                raise ValueError(f"{self.func}() takes a column OR an expression, not both")
         if self.column is not None and "." in self.column:
             raise ValueError(
                 f"column must be a single field name, not a dotted path: "
@@ -101,3 +274,8 @@ class AggregateRef(BaseModel):
         runtime dispatcher to pick the right repository.
         """
         return self.entity is None
+
+    @property
+    def is_expression(self) -> bool:
+        """True when this aggregate uses the L3 nested-expression form."""
+        return self.expression is not None

@@ -9,6 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.63] - 2026-05-19
+
+### Added
+
+- **AggregateRef L3 expressions** (#1152) — nested column arithmetic,
+  casts, and whitelisted function calls inside `count(...)` /
+  `avg(...)` / `sum(...)` / `min(...)` / `max(...)` aggregates. Closes
+  the AegisMark canonical lens originally filed against #1144 Gap 1.
+
+  Example DSL:
+
+      primary_aggregate:
+        aggregate: avg(MarkingResult.score::float / nullif(MarkingResult.max_score, 0))
+        via: ClassEnrolment(student_profile = id)
+
+  New IR: `AggregateExpr` is a tagged sum-type with five variants
+  (column ref, number literal, cast, binary op, function call). Each
+  variant is validated at construction; mutually-exclusive fields
+  raise `ValidationError`. Function arity is whitelisted (`nullif/2`,
+  `coalesce/1+`, `abs/1`) and cast targets are closed (`float`, `int`,
+  `numeric`, `text`).
+
+  `AggregateRef` gains an `expression: AggregateExpr | None = None`
+  field. `column` / `expression` are mutually exclusive for non-count
+  funcs; `count` rejects both.
+
+  The parser extends `parse_aggregate_ref` with a precedence-climbing
+  expression sub-parser. Simple column refs continue to populate
+  `column` so the legacy fast path is unchanged; anything containing
+  `::`, `+`, `-`, `*`, `/`, or a function call routes through
+  `expression` instead. The parse enforces a single shared
+  entity-prefix across all column refs inside one expression —
+  `avg(A.x / B.y)` and `avg(A.x / y)` are rejected at parse time
+  with a precise diagnostic.
+
+- **`dazzle.back.runtime.aggregate_expression.compile_aggregate_expression`** —
+  compiles an `AggregateExpr` to `(sql_fragment, params)`. Every
+  column identifier is wrapped in `quote_identifier` (rejected at
+  compile if the name fails `validate_sql_identifier`); every numeric
+  literal is bound as a parameter. Cast targets and function names
+  are taken from closed Literal-typed enums on the IR — there is no
+  path where caller-controlled text reaches the SQL string verbatim.
+
+- **`Repository.aggregate(..., measure_expressions=...)`** — optional
+  per-measure precompiled SQL fragments, threaded through
+  `build_aggregate_sql`. Measure-clause params are placed ahead of
+  WHERE params in the final binding list. Used by both the
+  region-scalar metric path (`_fetch_scalar_metric`) and the
+  cohort_strip per-member dispatch (`compute_cohort_aggregate_primary`).
+
+### Agent Guidance
+
+- For an aggregate that needs arithmetic, casts, or `nullif/coalesce/abs`,
+  populate `AggregateRef.expression` instead of `AggregateRef.column`.
+  The two are mutually exclusive at the IR layer.
+- L3 expressions must keep one entity prefix across every column
+  reference (or none at all). Mixed-prefix forms like
+  `avg(A.x / B.y)` are intentionally rejected — pick the right
+  `entity:` for the aggregate and qualify every column the same way.
+- New SQL functions or cast targets need a deliberate change to
+  the whitelists in `src/dazzle/core/ir/aggregates.py` and
+  `src/dazzle/back/runtime/aggregate_expression.py`. The parser will
+  reject anything outside the current sets with a precise error
+  message; do not work around this by stringifying the SQL.
+
 ## [0.71.62] - 2026-05-19
 
 ### Added

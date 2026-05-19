@@ -721,8 +721,30 @@ async def compute_cohort_aggregate_primary(
             return out
 
     # Build the shared measure spec — same for every per-member call.
+    # L3 (#1152): when the AggregateRef carries an ``expression`` the
+    # measure spec uses the outer aggregate func name and pairs it with
+    # a precompiled SQL fragment in ``measure_expressions``. The runtime
+    # builder slots the fragment into ``<FUNC>(<fragment>)`` and binds
+    # the inner parameters ahead of the WHERE-clause ones.
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None = None
     if ref.func == "count":
         measures = {"primary": "count"}
+    elif ref.expression is not None:
+        from dazzle.back.runtime.aggregate_expression import (
+            compile_aggregate_expression,
+        )
+
+        # Cross-entity expressions take the aggregated entity's table
+        # as the implicit alias; source-relative ones pass None so the
+        # column refs stay unqualified.
+        alias: str | None = ref.entity
+        expr_sql, expr_params = compile_aggregate_expression(
+            ref.expression,
+            placeholder=agg_repo.db.placeholder,
+            table_alias=alias,
+        )
+        measures = {"primary": ref.func}
+        measure_expressions = {"primary": (expr_sql, expr_params)}
     else:
         measures = {"primary": f"{ref.func}:{ref.column}"}
 
@@ -756,6 +778,7 @@ async def compute_cohort_aggregate_primary(
                 measures=measures,
                 filters=merged,
                 limit=1,
+                measure_expressions=measure_expressions,
             )
         except Exception:
             logger.warning(

@@ -14,6 +14,7 @@ All types are re-exported from this package for backward compatibility.
 # Approvals (v0.25.0)
 # Analytics (v0.61.0 Phase 3 + Phase 5)
 from .aggregates import (
+    AggregateExpr,
     AggregateFunc,
     AggregateRef,
 )
@@ -838,6 +839,7 @@ from .workspaces import (
 
 __all__ = [
     # Aggregate expression IR (ADR-0024)
+    "AggregateExpr",
     "AggregateFunc",
     "AggregateRef",
     # Fidelity Scoring

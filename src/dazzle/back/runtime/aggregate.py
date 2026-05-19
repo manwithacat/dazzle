@@ -163,6 +163,7 @@ def build_aggregate_sql(
     measures: dict[str, str],
     filters: dict[str, Any] | None,
     limit: int = 200,
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
 ) -> tuple[str, list[Any]]:
     """Compose the multi-dimension GROUP BY SELECT statement.
 
@@ -183,6 +184,16 @@ def build_aggregate_sql(
         single bucket with empty `dimensions` and the measure values.
         This is the path `_fetch_scalar_metric` uses for region-level
         ``avg/sum/min/max`` summary tiles.
+
+    L3 expressions (#1152): ``measure_expressions`` carries precompiled
+    measure SQL fragments produced by
+    :func:`dazzle.back.runtime.aggregate_expression.compile_aggregate_expression`
+    for each L3 measure. The fragment is the inner argument to the SQL
+    aggregate (``AVG(<fragment>)``); the ``measures`` mapping carries
+    the outer function name as ``"<func>:__expr__"`` so the inner SQL
+    can be picked up by key. Parameters for the inner expression are
+    placed in the SELECT-clause position of the final param list, ahead
+    of the WHERE-clause parameters.
     """
     src = quote_identifier(table_name)
 
@@ -196,7 +207,25 @@ def build_aggregate_sql(
     # Measure SELECT clauses. Skip unsupported measures silently
     # (caller will see a missing key in AggregateBucket.measures).
     measure_sql_parts: list[str] = []
+    measure_params: list[Any] = []
+    measure_expressions = measure_expressions or {}
     for metric_name, expr in measures.items():
+        if metric_name in measure_expressions:
+            # L3: outer function name + precompiled inner SQL fragment.
+            # ``expr`` here carries the aggregate function (``avg`` /
+            # ``sum`` / ``min`` / ``max``) as a bare keyword — caller
+            # constructs ``measures[name] = ref.func`` for L3 entries.
+            func = expr.lower()
+            if func in _UNARY_MEASURES:
+                inner_sql, inner_params = measure_expressions[metric_name]
+                measure_sql_parts.append(
+                    f"{func.upper()}({inner_sql}) AS {quote_identifier(metric_name)}"
+                )
+                measure_params.extend(inner_params)
+                continue
+            # Fall through — unrecognised L3 outer func is silently dropped,
+            # mirroring the legacy measure_to_sql behaviour.
+            continue
         sql = measure_to_sql(expr)
         if sql is None:
             continue
@@ -214,7 +243,7 @@ def build_aggregate_sql(
         if where_sql:
             sql_parts.append(where_sql)
         sql_parts.append(f"LIMIT {int(limit)}")
-        return " ".join(sql_parts), where_params
+        return " ".join(sql_parts), measure_params + where_params
 
     # Per-dimension SELECT + GROUP BY + ORDER BY parts. Indexed aliases
     # for FK joins guard against duplicate-target collisions.
@@ -266,7 +295,7 @@ def build_aggregate_sql(
     sql_parts.append("ORDER BY " + ", ".join(order_parts))
     sql_parts.append(f"LIMIT {int(limit)}")
 
-    return " ".join(sql_parts), where_params
+    return " ".join(sql_parts), measure_params + where_params
 
 
 def rows_to_buckets(
@@ -274,6 +303,7 @@ def rows_to_buckets(
     *,
     dimensions: list[Dimension],
     measures: dict[str, str],
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
 ) -> list[AggregateBucket]:
     """Convert raw cursor rows into typed :class:`AggregateBucket` records.
 
@@ -281,8 +311,15 @@ def rows_to_buckets(
     to positional access for tuple rows. Measures with unsupported
     specs (per :func:`measure_to_sql`) are silently skipped — same
     contract as ``build_aggregate_sql``.
+
+    ``measure_expressions`` mirrors the same dict passed to
+    :func:`build_aggregate_sql` — its keys are also valid measure-result
+    columns and survive the unsupported-measure filter.
     """
-    measure_keys = [k for k, v in measures.items() if measure_to_sql(v) is not None]
+    measure_expressions = measure_expressions or {}
+    measure_keys = [
+        k for k, v in measures.items() if k in measure_expressions or measure_to_sql(v) is not None
+    ]
 
     # Reconstruct the column ordering the SQL emits when row is a tuple.
     positional_keys: list[str] = []

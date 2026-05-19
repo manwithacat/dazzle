@@ -217,21 +217,48 @@ async def _fetch_count_metric(
 async def _fetch_scalar_metric(
     metric_name: str,
     func: str,
-    field_name: str,
+    field_name: str | None,
     agg_repo: Any,
     where: Any,  # ConditionExpr | str | None — typed post-Slice 2
     scope_filters: dict[str, Any] | None = None,
     *,
     source_entity: str = "",
+    expression: Any = None,  # ir.AggregateExpr | None — L3 (#1152)
+    expression_alias: str | None = None,
 ) -> tuple[str, Any]:
-    """Fetch a sum/avg/min/max aggregate metric (#888 Phase 1)."""
+    """Fetch a sum/avg/min/max aggregate metric (#888 Phase 1).
+
+    L3 (#1152): when ``expression`` is set, ``field_name`` is ignored
+    and the inner aggregate argument comes from the precompiled
+    expression IR. ``expression_alias`` is the table-prefix applied to
+    bare column refs inside the expression (typically the aggregated
+    entity name for cross-entity expressions; ``None`` for
+    source-relative ones).
+    """
     try:
         agg_filters = _build_aggregate_filters(where, scope_filters, agg_repo, source_entity)
+        measures: dict[str, str] = {metric_name: ""}
+        measure_expressions: dict[str, tuple[str, list[Any]]] | None = None
+        if expression is not None:
+            from dazzle.back.runtime.aggregate_expression import (
+                compile_aggregate_expression,
+            )
+
+            expr_sql, expr_params = compile_aggregate_expression(
+                expression,
+                placeholder=agg_repo.db.placeholder,
+                table_alias=expression_alias,
+            )
+            measures[metric_name] = func
+            measure_expressions = {metric_name: (expr_sql, expr_params)}
+        else:
+            measures[metric_name] = f"{func}:{field_name}"
         buckets = await agg_repo.aggregate(
             dimensions=[],
-            measures={metric_name: f"{func}:{field_name}"},
+            measures=measures,
             filters=agg_filters,
             limit=1,
+            measure_expressions=measure_expressions,
         )
         if buckets:
             value = buckets[0].measures.get(metric_name, 0)
@@ -1139,11 +1166,13 @@ async def _compute_aggregate_metrics(
                 )
             )
         else:
-            # Scalar aggregate: column required (IR validator enforces).
-            # Cross-entity (ref.entity is not None) routes to that entity's
-            # repo — the shape that was unrepresentable in the regex
-            # grammar pre-ADR-0024.
-            if ref.column is None:
+            # Scalar aggregate: needs either a column OR an L3 expression
+            # (IR validator enforces exactly-one).  Cross-entity
+            # (ref.entity is not None) routes to that entity's repo —
+            # the shape that was unrepresentable in the regex grammar
+            # pre-ADR-0024. #1152 adds the expression branch for
+            # arithmetic / casts / function calls inside the aggregate.
+            if ref.column is None and ref.expression is None:
                 sync_results[metric_name] = 0
                 continue
             agg_entity = ref.entity if ref.entity is not None else source_entity
@@ -1165,6 +1194,8 @@ async def _compute_aggregate_metrics(
                         ref.where,
                         scope_filters,
                         source_entity=agg_entity,
+                        expression=ref.expression,
+                        expression_alias=ref.entity,
                     ),
                 )
             )

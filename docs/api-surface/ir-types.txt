@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 351 BaseModels, 143 Enums, 22 other (functions / typealiases / constants)
+# Counts: 352 BaseModels, 143 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -58,12 +58,27 @@ ir_class: AggregateCall
     - function: AggregateFunction
   optional: (none)
 
+ir_class: AggregateExpr
+  required: (none)
+  optional:
+    - binary_left: AggregateExpr | None = None
+    - binary_op: Literal[+, -, *, /] | None = None
+    - binary_right: AggregateExpr | None = None
+    - cast_operand: AggregateExpr | None = None
+    - cast_target: Literal[float, int, numeric, text] | None = None
+    - column_entity: str | None = None
+    - column_name: str | None = None
+    - function_args: tuple[AggregateExpr, Ellipsis] | None = None
+    - function_name: Literal[nullif, coalesce, abs] | None = None
+    - number_literal: int | float | None = None
+
 ir_class: AggregateRef
   required:
     - func: Literal[count, sum, avg, min, max]
   optional:
     - column: str | None = None
     - entity: str | None = None
+    - expression: AggregateExpr | None = None
     - where: ConditionExpr | None = None
 
 ir_class: AnalyticsConsentSpec
