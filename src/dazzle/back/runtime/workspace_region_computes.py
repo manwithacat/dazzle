@@ -616,23 +616,18 @@ async def compute_cohort_aggregate_primary(
 ) -> dict[str, Any]:
     """Compute per-member aggregate values for a cohort_strip primary_aggregate lens.
 
-    Phase 2 of #1144 Gap 1: closes the runtime gap where the IR was
-    typed but the rendering raised ``NotImplementedError``. Per ADR-0024
-    the aggregate is a typed :class:`AggregateRef`; the runtime
-    dispatches on its fields.
+    Batched (#1153): one ``Repository.aggregate`` GROUP BY query for the
+    whole cohort. The no-via case adds a ``Dimension`` on the FK column
+    so each result row carries its member id; the via-junction case
+    runs a bespoke ``JOIN`` query because the GROUP BY column lives on
+    the junction, not the aggregated entity.
 
-    **Scope of phase 2:** the **no-via** case. The aggregated entity
-    must declare a direct FK to the source entity; per-member filters
-    are ``aggregated_entity.<source_fk> = <member_id>``. The ``via:``
-    junction-binding case is deferred to phase 3 — that needs a
-    parameter-binding via-subquery compiler that's semantically
-    distinct from the scope-rule via reused at the IR layer.
-
-    When ``lens.primary_aggregate.via`` is set, this helper logs a
-    warning and returns an empty dict (cells will render as no-value).
-
-    N+1 fan-out — one ``Repository.aggregate`` call per cohort member.
-    Phase 3 batches into one GROUP BY query.
+    Two link strategies (#1144 Gap 1 phases 2-3):
+      - Without ``via:`` — direct FK from aggregated entity → source
+        entity. Batched as ``GROUP BY aggregated.<fk_col>`` with
+        ``aggregated.<fk_col> IN (...member_ids)``.
+      - With ``via:`` — junction-binding subquery. Batched as a JOIN
+        through the junction with ``GROUP BY junction.<member_binding_col>``.
 
     Args:
         items: Cohort source rows (already RBAC-scoped upstream).
@@ -654,7 +649,6 @@ async def compute_cohort_aggregate_primary(
         query failed or returned no rows are absent from the mapping
         (the cell renders without a value).
     """
-    import asyncio as _asyncio
     import logging
 
     from dazzle.core.ir import AggregateRef
@@ -720,7 +714,7 @@ async def compute_cohort_aggregate_primary(
             )
             return out
 
-    # Build the shared measure spec — same for every per-member call.
+    # Build the shared measure spec.
     # L3 (#1152): when the AggregateRef carries an ``expression`` the
     # measure spec uses the outer aggregate func name and pairs it with
     # a precompiled SQL fragment in ``measure_expressions``. The runtime
@@ -748,50 +742,6 @@ async def compute_cohort_aggregate_primary(
     else:
         measures = {"primary": f"{ref.func}:{ref.column}"}
 
-    async def _fetch_for(member_id: str) -> tuple[str, Any]:
-        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
-
-        if via_link is not None and via is not None:
-            # Phase 3: build the junction subquery as a __scope_predicate.
-            subq_select_field, agg_filter_col, _direction = via_link
-            via_sql, via_params = _build_cohort_via_subquery(
-                via=via,
-                member_id=member_id,
-                junction_select_field=subq_select_field,
-                aggregated_filter_col=agg_filter_col,
-            )
-            per_member_filters: dict[str, Any] = {"__scope_predicate": (via_sql, via_params)}
-        else:
-            # Phase 2: direct-FK per-member filter.
-            assert fk_col is not None  # narrowed by the else branch above
-            per_member_filters = {fk_col: member_id}
-
-        merged = _build_aggregate_filters(
-            ref.where,
-            per_member_filters,
-            agg_repo,
-            aggregated_entity,
-        )
-        try:
-            buckets = await agg_repo.aggregate(
-                dimensions=[],
-                measures=measures,
-                filters=merged,
-                limit=1,
-                measure_expressions=measure_expressions,
-            )
-        except Exception:
-            logger.warning(
-                "cohort_strip lens %r aggregate query failed for member %r",
-                getattr(lens, "id", "<unknown>"),
-                member_id,
-                exc_info=True,
-            )
-            return member_id, None
-        if not buckets:
-            return member_id, None
-        return member_id, buckets[0].measures.get("primary")
-
     member_ids: list[str] = []
     for item in items:
         # Cohort member key — uses the source row's `id` field, matching
@@ -802,12 +752,240 @@ async def compute_cohort_aggregate_primary(
     if not member_ids:
         return out
 
-    results = await _asyncio.gather(
-        *(_fetch_for(mid) for mid in member_ids), return_exceptions=False
+    try:
+        if via_link is not None and via is not None:
+            return await _batched_via_cohort_aggregate(
+                agg_repo=agg_repo,
+                via=via,
+                via_link=via_link,
+                aggregated_entity=aggregated_entity,
+                member_ids=member_ids,
+                measures=measures,
+                measure_expressions=measure_expressions,
+                where=ref.where,
+                scope_filters=scope_only_filters,
+            )
+        assert fk_col is not None  # narrowed by the else branch above
+        return await _batched_fk_cohort_aggregate(
+            agg_repo=agg_repo,
+            fk_col=fk_col,
+            aggregated_entity=aggregated_entity,
+            member_ids=member_ids,
+            measures=measures,
+            measure_expressions=measure_expressions,
+            where=ref.where,
+            scope_filters=scope_only_filters,
+        )
+    except Exception:
+        logger.warning(
+            "cohort_strip lens %r batched aggregate query failed",
+            getattr(lens, "id", "<unknown>"),
+            exc_info=True,
+        )
+        return {}
+
+
+async def _batched_fk_cohort_aggregate(
+    *,
+    agg_repo: Any,
+    fk_col: str,
+    aggregated_entity: str,
+    member_ids: list[str],
+    measures: dict[str, str],
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None,
+    where: Any,
+    scope_filters: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Batched no-via cohort aggregate (#1153).
+
+    One GROUP BY query keyed on the aggregated entity's FK to the
+    source. Each result row carries its member id under the FK column.
+    Members not present in the result (no rows matched) are absent
+    from the returned dict — cells render without a value, same
+    semantics as the old N+1 path.
+
+    ``where`` is the typed ``ConditionExpr`` from the AggregateRef.
+    ``measure_expressions`` carries L3 (#1152) precompiled SQL
+    fragments. Scope filters merge in via
+    :func:`workspace_aggregation._build_aggregate_filters` so the
+    aggregated entity's RBAC predicate is composed pre-GROUP BY.
+    """
+    from dazzle.back.runtime.aggregate import Dimension
+    from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
+
+    per_cohort_filters: dict[str, Any] = {**scope_filters} if scope_filters else {}
+    # ``field__in`` syntax — QueryBuilder.FilterCondition.parse converts
+    # this to a SQL ``IN (?, ?, ...)`` clause.
+    per_cohort_filters[f"{fk_col}__in"] = list(member_ids)
+    merged = _build_aggregate_filters(where, per_cohort_filters, agg_repo, aggregated_entity)
+    buckets = await agg_repo.aggregate(
+        dimensions=[Dimension(name=fk_col)],
+        measures=measures,
+        filters=merged,
+        # Cohort size + headroom — every member should fit. We don't
+        # want a silent truncation when the result row count exceeds
+        # the default limit.
+        limit=len(member_ids) + 10,
+        measure_expressions=measure_expressions,
     )
-    for mid, value in results:
+    out: dict[str, Any] = {}
+    for bucket in buckets:
+        member = bucket.dimensions.get(fk_col)
+        if member is None:
+            continue
+        value = bucket.measures.get("primary")
         if value is not None:
-            out[mid] = value
+            out[str(member)] = value
+    return out
+
+
+async def _batched_via_cohort_aggregate(
+    *,
+    agg_repo: Any,
+    via: Any,  # ViaCondition
+    via_link: tuple[str, str, str],
+    aggregated_entity: str,
+    member_ids: list[str],
+    measures: dict[str, str],
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None,
+    where: Any,
+    scope_filters: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Batched via-junction cohort aggregate (#1153).
+
+    Composes a JOIN-aware GROUP BY query. The dimension lives on the
+    junction (the via binding with ``target == "id"``), not on the
+    aggregated entity — so this can't go through ``build_aggregate_sql``,
+    which assumes the dimension column is on the source table.
+
+    SQL shape::
+
+        SELECT j.<member_binding_col> AS member_id,
+               <agg>(<measure>) AS primary
+        FROM   <aggregated_table> a
+        INNER JOIN <junction> j
+               ON a.<aggregated_filter_col> = j.<junction_select_field>
+        WHERE  j.<member_binding_col> IN (...)
+          AND  <non-id bindings>
+          AND  <where + scope predicates against a>
+        GROUP BY j.<member_binding_col>
+        LIMIT N+10
+
+    The ``aggregated_filter_col`` / ``junction_select_field`` pair
+    comes from :func:`_resolve_via_link_direction` — same direction
+    discovery the N+1 path uses, so the two paths agree on the link
+    shape.
+    """
+    from dazzle.back.runtime.aggregate import measure_to_sql
+    from dazzle.back.runtime.query_builder import QueryBuilder, quote_identifier
+    from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
+
+    subq_select_field, agg_filter_col, _direction = via_link
+
+    # Locate the binding whose target is the cohort member id — that
+    # column becomes the GROUP BY dimension. Other bindings (e.g.
+    # ``revoked_at = null``) compose into the WHERE clause.
+    member_binding_col: str | None = None
+    static_bindings: list[Any] = []
+    for binding in via.bindings:
+        if binding.target == "id" and member_binding_col is None:
+            member_binding_col = binding.junction_field
+        else:
+            static_bindings.append(binding)
+    if member_binding_col is None:
+        # Without an ``id``-target binding there's no member key to
+        # group on — fall back to empty so cells render without
+        # values rather than fabricating ones.
+        return {}
+
+    placeholder = agg_repo.db.placeholder
+    agg_table = quote_identifier(agg_repo.table_name)
+    junction_table = quote_identifier(via.junction_entity)
+    member_col_q = quote_identifier(member_binding_col)
+    agg_filter_q = quote_identifier(agg_filter_col)
+    subq_select_q = quote_identifier(subq_select_field)
+
+    # Measure SQL (one measure — "primary"). Either via the precompiled
+    # expression (L3) or the simple ``func:col`` shape that
+    # ``measure_to_sql`` understands.
+    measure_sql: str
+    measure_params: list[Any] = []
+    if measure_expressions and "primary" in measure_expressions:
+        outer_func = measures["primary"].lower()
+        inner_sql, inner_params = measure_expressions["primary"]
+        measure_sql = f"{outer_func.upper()}({inner_sql})"
+        measure_params = list(inner_params)
+    else:
+        compiled = measure_to_sql(measures["primary"])
+        if compiled is None:
+            return {}
+        measure_sql = compiled
+
+    # Member-id IN clause for the junction.
+    in_placeholders = ", ".join(placeholder for _ in member_ids)
+    where_clauses: list[str] = [f"j.{member_col_q} IN ({in_placeholders})"]
+    where_params: list[Any] = list(member_ids)
+
+    # Non-id bindings translate to junction-side WHERE filters.
+    for binding in static_bindings:
+        col = quote_identifier(binding.junction_field)
+        op = getattr(binding, "operator", "=") or "="
+        if binding.target == "null":
+            where_clauses.append(f"j.{col} IS NULL" if op == "=" else f"j.{col} IS NOT NULL")
+        elif binding.target == "id":
+            # Already handled above as the dimension binding.
+            continue
+        # Other targets (current_user.*, literals) are out of scope —
+        # mirrors the N+1 helper's reach.
+
+    # AggregateRef.where + scope_filters → reuse the existing builder
+    # so the typed ConditionExpr → SQL path stays single-sourced.
+    composed_filters = _build_aggregate_filters(where, scope_filters, agg_repo, aggregated_entity)
+    if composed_filters:
+        sub_builder = QueryBuilder(table_name=agg_repo.table_name, placeholder_style=placeholder)
+        sub_builder.add_filters(composed_filters)
+        sub_sql, sub_params = sub_builder.build_where_clause()
+        # ``build_where_clause`` returns ``"WHERE ..."`` (uppercased).
+        # Strip the leading WHERE so we can compose with AND.
+        if sub_sql.lower().startswith("where "):
+            sub_sql_body = sub_sql[6:].strip()
+            if sub_sql_body:
+                where_clauses.append(sub_sql_body)
+                where_params.extend(sub_params)
+
+    sql_parts: list[str] = [
+        f"SELECT j.{member_col_q} AS member_id, {measure_sql} AS {quote_identifier('primary')}",
+        f"FROM {agg_table} a",
+        f"INNER JOIN {junction_table} j ON a.{agg_filter_q} = j.{subq_select_q}",
+        "WHERE " + " AND ".join(where_clauses),
+        f"GROUP BY j.{member_col_q}",
+        f"LIMIT {len(member_ids) + 10}",
+    ]
+    sql = " ".join(sql_parts)
+    params = measure_params + where_params
+
+    with agg_repo.db.connection() as conn:
+        cursor = conn.cursor()
+        # Composition path above quotes every identifier via
+        # ``quote_identifier`` and passes all literals as bound
+        # parameters; same safety contract as ``Repository.aggregate``.
+        cursor.execute(  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
+            sql, params
+        )
+        rows = cursor.fetchall()
+
+    out: dict[str, Any] = {}
+    for row in rows:
+        if hasattr(row, "keys"):
+            row_dict = dict(row)
+        else:
+            row_dict = {"member_id": row[0], "primary": row[1]}
+        member = row_dict.get("member_id")
+        if member is None:
+            continue
+        value = row_dict.get("primary")
+        if value is not None:
+            out[str(member)] = value
     return out
 
 
@@ -858,69 +1036,6 @@ def _entity_name_of(repo: Any) -> str | None:
     if spec is None:
         return None
     return getattr(spec, "name", None)
-
-
-def _build_cohort_via_subquery(
-    *,
-    via: Any,  # ViaCondition
-    member_id: str,
-    junction_select_field: str,
-    aggregated_filter_col: str,
-) -> tuple[str, list[Any]]:
-    """Build a __scope_predicate SQL fragment from a cohort-aggregate
-    ``via:`` clause + the current member's id.
-
-    Distinct from the scope-rule via compiler (route_generator
-    ``_build_via_subquery``) because the binding semantics differ:
-
-    - Scope-rule via: ``target="id"`` refers to the **scoped entity's
-      ``id`` column** — produces ``entity.id IN (SELECT ...)``.
-    - Cohort-aggregate via: ``target="id"`` refers to the **current
-      cohort member's id** — produces ``junction.field = <literal
-      member_id>``.
-
-    Shape:
-
-      WHERE <aggregated_filter_col> IN (
-          SELECT <junction_select_field>
-          FROM <Junction>
-          WHERE <each binding>
-      )
-
-    Binding interpretations:
-      - ``target="id"`` → ``junction.field <op> <member_id literal>``
-      - ``target="null"`` → ``junction.field IS NULL`` / ``IS NOT NULL``
-      - Other targets (``current_user.*``, etc.) → not yet supported;
-        skipped (the binding has no effect on the subquery).
-
-    Returns ``(sql, params)`` ready to be plugged into a
-    QueryBuilder ``__scope_predicate`` slot.
-    """
-    from dazzle.back.runtime.query_builder import quote_identifier
-
-    junction_table = quote_identifier(via.junction_entity)
-    where_clauses: list[str] = []
-    params: list[Any] = []
-    for binding in via.bindings:
-        jf = quote_identifier(binding.junction_field)
-        op = getattr(binding, "operator", "=") or "="
-        target = binding.target
-        if target == "null":
-            if op == "=":
-                where_clauses.append(f"{jf} IS NULL")
-            else:
-                where_clauses.append(f"{jf} IS NOT NULL")
-        elif target == "id":
-            where_clauses.append(f"{jf} {op} %s")
-            params.append(member_id)
-        # Other binding targets (current_user.*, literals) are not
-        # part of the phase 3 surface — the cohort aggregate's only
-        # parameter is the member id. Future phases can extend.
-    where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
-    agg_col = quote_identifier(aggregated_filter_col)
-    select_col = quote_identifier(junction_select_field)
-    sql = f"{agg_col} IN (SELECT {select_col} FROM {junction_table} WHERE {where_sql})"
-    return sql, params
 
 
 def _find_fk_to(repo: Any, target_entity: str) -> str | None:

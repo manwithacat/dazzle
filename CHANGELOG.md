@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.67] - 2026-05-19
+
+### Changed
+
+- **cohort_strip primary_aggregate retires N+1 fan-out** (#1153).
+  ``compute_cohort_aggregate_primary`` now fires one batched query
+  for the whole cohort instead of one ``Repository.aggregate`` call
+  per member. Two dispatch paths:
+
+  - **Direct-FK** (no ``via:``) — single ``Repository.aggregate`` call
+    with ``Dimension(name=<fk_col>)`` + ``{<fk_col>__in: [...member_ids]}``
+    filter; the existing ``build_aggregate_sql`` machinery does the
+    work. Each result row carries its member id under the FK column.
+  - **Via-junction** — bespoke JOIN query: ``SELECT
+    j.<member_binding_col> AS member_id, <AGG>(<measure>) AS primary
+    FROM <agg> a INNER JOIN <junction> j ON a.<col> = j.<col> WHERE
+    j.<member_binding_col> IN (...) GROUP BY j.<member_binding_col>``.
+    Composed via ``QueryBuilder`` for the WHERE half so the typed
+    ``ConditionExpr`` from ``ref.where`` and any scope filters still
+    route through the standard predicate compiler.
+
+  For a 30-member cohort this drops the page-load query count from
+  30 to 1.
+
+### Removed
+
+- ``_build_cohort_via_subquery`` helper — only called by the old
+  per-member loop. The batched via path composes the JOIN inline.
+
+### Agent Guidance
+
+- For new cohort_strip-style "per-cohort-member aggregate" features,
+  start from the batched shape: one GROUP BY query keyed on a member
+  identifier column. The two helpers in
+  ``workspace_region_computes.py`` (``_batched_fk_cohort_aggregate``
+  / ``_batched_via_cohort_aggregate``) are the templates.
+- The via-junction batched query is hand-composed SQL (not routed
+  through ``build_aggregate_sql``) because the GROUP BY column lives
+  on the junction, not on the source table — ``Dimension`` doesn't
+  yet model that join shape. Adding a new ``Dimension`` kind is the
+  natural follow-up when a second JOIN-aware cohort-style query
+  surfaces.
+
 ## [0.71.66] - 2026-05-19
 
 ### Changed
