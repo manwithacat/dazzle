@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.70] - 2026-05-19
+
+### Fixed
+
+- **`dazzle perf` tracer initialises at CLI entry, not in `_create_app`** (#1158).
+  Previously, framework-boot spans (`dsl.parse`, route generation) fired
+  against OTel's no-op tracer because `_maybe_configure_tracer` ran
+  inside the FastAPI app constructor — *after* the DSL had already
+  been parsed during CLI boot. Tracer init moved to
+  `src/dazzle/perf/bootstrap.py` and called once at `dazzle/cli/__init__.py`
+  load time, before any command dispatch. Boot-phase findings now
+  populate as designed.
+
 ## [0.71.69] - 2026-05-19
 
 ### Added

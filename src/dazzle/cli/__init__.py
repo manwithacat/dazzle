@@ -27,6 +27,9 @@ from pathlib import Path
 import typer
 
 from dazzle.cli.utils import version_callback
+from dazzle.perf.bootstrap import maybe_configure_tracer
+
+maybe_configure_tracer()
 
 # =============================================================================
 # Main Application

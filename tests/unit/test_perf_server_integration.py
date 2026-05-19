@@ -1,5 +1,12 @@
 """Verify ``instrument_app`` is called on the FastAPI app when the
-``DAZZLE_PERF_ENABLED`` env var is set, and not otherwise."""
+``DAZZLE_PERF_ENABLED`` env var is set, and not otherwise.
+
+After #1158 the tracer bootstrap lives in ``dazzle.perf.bootstrap``
+so it can be called at CLI entry (before DSL parse).  The server-side
+``_maybe_configure_tracer`` now delegates there; these tests cover both
+the bootstrap module directly and the ``_maybe_instrument_for_perf``
+helper that still lives in server.py.
+"""
 
 from __future__ import annotations
 
@@ -34,10 +41,8 @@ def test_instrumentation_runs_when_env_set() -> None:
 
 
 def test_tracer_initialised_when_perf_db_env_set(tmp_path) -> None:
-    import os
-    from unittest.mock import patch
-
-    from dazzle.back.runtime.server import _maybe_configure_tracer
+    """Bootstrap module configures tracer when all env vars are present."""
+    from dazzle.perf.bootstrap import maybe_configure_tracer
 
     db = tmp_path / "run.db"
     env = {
@@ -54,17 +59,15 @@ def test_tracer_initialised_when_perf_db_env_set(tmp_path) -> None:
         patch.dict(os.environ, env),
         patch("dazzle.perf.tracer.configure_tracer", side_effect=fake_configure),
     ):
-        _maybe_configure_tracer()
+        maybe_configure_tracer()
 
     assert called["run_id"] == "r1"
     assert called["db_path"] == db
 
 
 def test_tracer_skipped_when_env_unset() -> None:
-    import os
-    from unittest.mock import patch
-
-    from dazzle.back.runtime.server import _maybe_configure_tracer
+    """Bootstrap module is a no-op when DAZZLE_PERF_ENABLED is absent."""
+    from dazzle.perf.bootstrap import maybe_configure_tracer
 
     called = False
 
@@ -76,6 +79,21 @@ def test_tracer_skipped_when_env_unset() -> None:
         patch.dict(os.environ, {}, clear=True),
         patch("dazzle.perf.tracer.configure_tracer", side_effect=fake_configure),
     ):
-        _maybe_configure_tracer()
+        maybe_configure_tracer()
 
     assert not called
+
+
+def test_server_maybe_configure_tracer_delegates_to_bootstrap() -> None:
+    """server._maybe_configure_tracer delegates to perf.bootstrap."""
+    from dazzle.back.runtime.server import _maybe_configure_tracer
+
+    called: list[bool] = []
+
+    def fake_bootstrap() -> None:
+        called.append(True)
+
+    with patch("dazzle.perf.bootstrap.maybe_configure_tracer", side_effect=fake_bootstrap):
+        _maybe_configure_tracer()
+
+    assert called, "_maybe_configure_tracer did not delegate to bootstrap"
