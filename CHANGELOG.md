@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.69] - 2026-05-19
+
+### Added
+
+- **`dazzle perf` toolkit** — local, on-demand OpenTelemetry tracing.
+  Captures a single run to `.dazzle/perf/<run-id>.db` via the bundled
+  SQLite span exporter; emits agent-ergonomic findings on slow
+  endpoints, slow queries, suspected N+1 patterns, slow framework
+  phases, render fan-out, boot cost, and exceptions.
+
+  CLI:
+  - `dazzle perf trace [--url URL ...] [--duration N]` — boot under
+    tracing and capture.
+  - `dazzle perf report [--run ID] [--format md|json]` — emit findings.
+  - `dazzle perf list` / `dazzle perf show [--run ID]` — inspect runs.
+
+  MCP: new `perf` tool with read-only `list` / `report` / `show`
+  operations. `trace` stays CLI-only (ADR-0002).
+
+  Hot paths newly instrumented as named spans: `dsl.parse`,
+  `predicate.compile`, `aggregate.expression.compile`,
+  `aggregate.build_sql`, `repo.aggregate`, `region.render`,
+  `fragment.emit`.
+
+  Install: `pip install -e ".[perf]"` (new optional extra).
+
+### Agent Guidance
+
+- Treat `dazzle perf report` as the canonical "what's slow / what's
+  buggy" probe for any Dazzle project. The Markdown output is stable;
+  the JSON schema is pinned in `docs/reference/perf-findings-schema.md`.
+- When a Dazzle user reports a perf complaint, the right first step
+  is to ask them to run `dazzle perf trace --url <complaint-URL>`
+  followed by `dazzle perf report`, then paste the Markdown back.
+  Findings categories are stable: slow_endpoints, slow_queries,
+  n_plus_one, slow_phases, render_fanout, boot_cost, exceptions.
+- New framework hot paths must be wrapped with
+  `dazzle_span("<name>", ...)` and added to `DAZZLE_PHASE_NAMES` in
+  `src/dazzle/perf/findings/extractor.py` so they appear in the
+  "Dazzle hot phases" section.
+
 ## [0.71.68] - 2026-05-19
 
 ### Changed

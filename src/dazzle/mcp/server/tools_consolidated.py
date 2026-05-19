@@ -1598,6 +1598,34 @@ def _tool_agent_commands() -> Tool:
     )
 
 
+def _tool_perf() -> Tool:
+    """Local OpenTelemetry trace findings (read-only)."""
+    return Tool(
+        name="perf",
+        description=(
+            "Local OpenTelemetry trace findings for the current project (read-only). "
+            "list: enumerate past runs in .dazzle/perf/. "
+            "report: return heuristic findings (slow endpoints, N+1, etc.) as JSON. "
+            "show: return the raw span tree for a run."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["list", "report", "show"],
+                    "description": "Which read operation to perform.",
+                },
+                "run": {
+                    "type": "string",
+                    "description": "Run id (default: latest).",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def get_consolidated_tools() -> list[Tool]:
     """
     Get consolidated tools (knowledge/query operations only).
@@ -1642,6 +1670,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_conformance(),
         _tool_compliance(),
         _tool_agent_commands(),
+        _tool_perf(),
     ]
 
 

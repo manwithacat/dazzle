@@ -1294,6 +1294,18 @@ handle_agent_commands: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Perf Handler (read-only)
+# =============================================================================
+
+
+def handle_perf(arguments: dict[str, Any]) -> dict[str, Any]:
+    """Handle perf tool — read-only access to local OpenTelemetry trace data."""
+    from .handlers.perf import handle_perf as _handle
+
+    return _handle(arguments)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1332,6 +1344,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "conformance": handle_conformance,
     "compliance": handle_compliance,
     "agent_commands": handle_agent_commands,
+    "perf": handle_perf,
 }
 
 

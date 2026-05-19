@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.71.68"
+version = "0.71.69"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -135,6 +135,17 @@ dev = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
+]
+# On-demand local OpenTelemetry tracing for `dazzle perf` (#1153 follow-on).
+# Local-only by design — the bundled SQLite span exporter writes traces to
+# `.dazzle/perf/<run-id>.db`. No OTLP collector required; users who want
+# upstream collectors can pair this extra with their own exporter config.
+perf = [
+    "opentelemetry-api>=1.27,<2",
+    "opentelemetry-sdk>=1.27,<2",
+    "opentelemetry-instrumentation-fastapi>=0.48b0,<1",
+    "opentelemetry-instrumentation-psycopg>=0.48b0,<1",
+    "opentelemetry-instrumentation-asyncio>=0.48b0,<1",
 ]
 # Runtime server dependencies for `dazzle serve --local` (v0.34.3 — Issue #388)
 serve = [

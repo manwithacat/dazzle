@@ -84,9 +84,17 @@ def compile_aggregate_expression(
         ``<func>(<sql_fragment>)`` regardless of internal precedence.
         ``params`` is the ordered list of placeholder bindings.
     """
-    params: list[Any] = []
-    sql = _compile(expr, params, placeholder, table_alias)
-    return f"({sql})", params
+    from dazzle.perf.tracer import dazzle_span
+
+    with dazzle_span(
+        "aggregate.expression.compile",
+        placeholder=placeholder,
+        table_alias=table_alias,
+        expr=expr,
+    ):
+        params: list[Any] = []
+        sql = _compile(expr, params, placeholder, table_alias)
+        return f"({sql})", params
 
 
 def _compile(
