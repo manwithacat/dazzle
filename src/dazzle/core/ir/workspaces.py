@@ -11,6 +11,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .aggregates import AggregateRef
 from .conditions import ConditionExpr, ViaCondition
 from .location import SourceLocation
 from .params import ParamRef
@@ -178,16 +179,16 @@ class OverlaySeriesSpec(BaseModel):
             parent region's source".
         filter: Optional ``ConditionExpr`` for the overlay's own scope
             (e.g. cohort vs individual student).
-        aggregate_expr: A single aggregate expression string —
-            ``count(<Entity>)`` / ``avg(<col>)`` / ``sum(<col>)`` etc.
-            Same vocabulary as the region's ``aggregate:`` block; one
-            measure per overlay series.
+        aggregate: A typed :class:`AggregateRef` driving the overlay's
+            single measure. Same vocabulary as the region's
+            ``aggregate:`` block; one measure per overlay series.
+            ADR-0024.
     """
 
     label: str
     source: str | None = None
     filter: ConditionExpr | None = None
-    aggregate_expr: str
+    aggregate: AggregateRef
 
     model_config = ConfigDict(frozen=True)
 
@@ -212,26 +213,23 @@ class PipelineStageSpec(BaseModel):
     Attributes:
         label: Human-readable stage name (e.g. "Scanned", "Rubric pass").
         caption: Optional sub-text describing what's at this stage.
-        value: Either an aggregate expression — same vocabulary as
-            region-level ``aggregate:``: ``count(<Entity> where <pred>)``,
-            ``avg(<col>)``, etc. — OR a literal string rendered as-is.
-            Detected by `_AGGREGATE_RE` match in the runtime: matches
-            fire a query, non-matches render verbatim. Empty string
-            means no value (renders as ``—``). v0.61.66: generalised
-            from `aggregate_expr` to support flow-card descriptive
-            stages (AegisMark UX patterns roadmap item #4).
-        progress: Per-stage progress bar fraction (0-100). Same shape as
-            `value:` — either a literal numeric string ("74") or an
-            aggregate expression that resolves to a number. Empty string
-            means no bar rendered (preserves pre-#911 behaviour).
+        value: Either a typed :class:`AggregateRef` (fires a query) OR a
+            literal string (rendered verbatim — used for descriptive flow
+            labels like "Daily 02:00 UTC"). ``None`` means no value
+            (renders as ``—``). Per ADR-0024 the parser shape-detects on
+            the token stream — if the next tokens form an aggregate call,
+            ``parse_aggregate_ref()`` consumes them; otherwise the input
+            is captured as a literal string.
+        progress: Per-stage progress bar fraction (0-100). Same union
+            shape as ``value:``. ``None`` means no bar rendered.
             Clamped to 0-100 at render time; values >100 set
             ``data-dz-progress-overshoot="true"`` so themes can flag.
     """
 
     label: str
     caption: str = ""
-    value: str = ""
-    progress: str = ""
+    value: AggregateRef | str | None = None
+    progress: AggregateRef | str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -264,9 +262,10 @@ class ActionCardSpec(BaseModel):
         label: Human-readable CTA text rendered prominently on the card.
         icon: Lucide icon name (e.g. "file-text", "clipboard-check"). Empty
             string means no icon.
-        count_aggregate: Optional aggregate expression — ``count(<Entity>
-            where <pred>)`` / ``avg(<col>)`` etc. Same vocabulary as
-            region-level ``aggregate:``. Empty string means no count badge.
+        count: Optional :class:`AggregateRef` driving the count badge —
+            same vocabulary as any other aggregate consumer (ADR-0024).
+            ``None`` means no count badge. DSL key remains
+            ``count_aggregate:`` for familiarity.
         action: Surface name to navigate to on click — same resolution
             path as region-level ``action:``. Empty string means no
             click-through (informational card).
@@ -276,7 +275,7 @@ class ActionCardSpec(BaseModel):
 
     label: str
     icon: str = ""
-    count_aggregate: str = ""
+    count: AggregateRef | None = None
     action: str = ""
     tone: str = "neutral"
 
@@ -459,24 +458,20 @@ class LensAggregatePrimary(BaseModel):
     next phase ships.
 
     Attributes:
-        aggregate: Aggregate expression — same grammar bar_chart
-            ``aggregate:`` accepts. Examples:
-            ``avg(MarkingResult.score)``,
-            ``sum(BehaviourIncident.weight)``,
-            ``count(ManuscriptFeedback)``.
+        aggregate: Typed :class:`AggregateRef` driving the lens
+            computation. Any of the three AggregateRef shapes work:
+            ``count(Entity)``, ``avg(column)``, ``avg(Entity.column)``.
+            Row-level predicates ride inside the AggregateRef's own
+            ``where:`` clause (ADR-0024).
         via: Optional junction-table join. Reuses the
             :class:`ViaCondition` shape from #530 — same parser, same
             SQL compiler. ``None`` means no junction (aggregate
             operates against the source-entity directly, scoped by
             the member's FK relationship).
-        where: Optional row-level predicate on the *aggregated*
-            entity (not on the member). Same ``ConditionExpr`` shape
-            as a region ``filter:``.
     """
 
-    aggregate: str
+    aggregate: AggregateRef
     via: ViaCondition | None = None
-    where: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -961,7 +956,10 @@ class WorkspaceRegion(BaseModel):
     # resolved display field. Mutually exclusive with group_by — when
     # both are set, group_by_dims wins.
     group_by_dims: list[str | BucketRef] | None = None
-    aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
+    # ADR-0024: aggregate metrics are typed AggregateRef IR. Parser
+    # desugars `count(Entity [where ...])` / `avg(col)` / `avg(Entity.col)`
+    # into the structured shape at parse time.
+    aggregates: dict[str, AggregateRef] = Field(default_factory=dict)
     # v0.61.68: optional notice band rendered above the region body
     # inside the dashboard slot. Authors declare title (strong),
     # body (secondary copy), and tone (positive/warning/destructive/

@@ -25,3 +25,4 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0021](0021-marketing-via-sitespec.md) — Marketing pages via `sitespec.yaml`. No `# dazzle:route-override` on public paths.
 - [0022](0022-alpine-bindings-vs-idiomorph.md) — Don't put Alpine bindings on idiomorph-morphed elements. Server-render or use `x-init` helpers with direct DOM manipulation.
 - [0023](0023-template-emission-patterns.md) — Two-pattern template-emission model post-jinja2. Pattern A (framework writes HTML) uses f-strings + `dazzle.render.html.esc`; Pattern B (framework executes user-authored templates) uses `string.Template`. Choice is mechanical: who writes the template.
+- [0024](0024-no-regex-in-dsl-parser.md) — No regex for DSL grammar. A regex parsing DSL is a signal for missing grammar, not an end solution. Lexical-shape regex (identifiers, numerics) is fine; matching call shapes / keywords / sub-expressions is not.

@@ -26,6 +26,7 @@ from dazzle.back.runtime.workspace_aggregation import (
     _aggregate_via_groupby,
     _compute_bucketed_aggregates,
 )
+from tests.unit._aggregate_test_helpers import agg
 
 
 def _make_aggregate_repo(buckets: list[dict]) -> MagicMock:
@@ -140,7 +141,7 @@ class TestComputeBucketedAggregatesMultiMeasure:
             ]
         )
         result = await _compute_bucketed_aggregates(
-            {"avg_mark": "avg(scaled_mark)"},
+            {"avg_mark": agg("avg(scaled_mark)")},
             {"MarkingResult": repo},
             "ao",
             items=[],
@@ -168,8 +169,8 @@ class TestComputeBucketedAggregatesMultiMeasure:
         )
         result = await _compute_bucketed_aggregates(
             {
-                "actual": "avg(scaled_mark)",
-                "target": "avg(target_mark)",
+                "actual": agg("avg(scaled_mark)"),
+                "target": agg("avg(target_mark)"),
             },
             {"MarkingResult": repo},
             "ao",
@@ -195,7 +196,7 @@ class TestComputeBucketedAggregatesMultiMeasure:
             ]
         )
         result = await _compute_bucketed_aggregates(
-            {"n": "count(MarkingResult)", "avg": "avg(scaled_mark)"},
+            {"n": agg("count(MarkingResult)"), "avg": agg("avg(scaled_mark)")},
             {"MarkingResult": repo},
             "ao",
             items=[],
@@ -217,9 +218,9 @@ class TestComputeBucketedAggregatesMultiMeasure:
         )
         result = await _compute_bucketed_aggregates(
             {
-                "total": "sum(scaled_mark)",
-                "lo": "min(scaled_mark)",
-                "hi": "max(scaled_mark)",
+                "total": agg("sum(scaled_mark)"),
+                "lo": agg("min(scaled_mark)"),
+                "hi": agg("max(scaled_mark)"),
             },
             {"MarkingResult": repo},
             "ao",

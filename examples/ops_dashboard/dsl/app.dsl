@@ -225,8 +225,8 @@ workspace command_center "Command Center":
       tone: accent
     aggregate:
       total_systems: count(System)
-      healthy_count: count(System WHERE status = 'healthy')
-      critical_count: count(System WHERE status = 'critical')
+      healthy_count: count(System where status = healthy)
+      critical_count: count(System where status = critical)
       avg_response_time: avg(response_time_ms)
     tones:
       healthy_count: positive
@@ -553,8 +553,8 @@ workspace incident_review "Incident Review":
     source: Alert
     display: metrics
     aggregate:
-      active: count(Alert WHERE status = active)
-      resolved: count(Alert WHERE status = 'resolved')
+      active: count(Alert where status = active)
+      resolved: count(Alert where status = resolved)
     tones:
       active: warning
       resolved: positive
@@ -570,7 +570,7 @@ workspace incident_review "Incident Review":
     display: metrics
     aggregate:
       total: count(System)
-      critical: count(System WHERE status = 'critical')
+      critical: count(System where status = critical)
     tones:
       critical: destructive
 

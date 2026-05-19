@@ -10,8 +10,15 @@ The module is scope-aware: scope filters are merged into every
 aggregate query so RBAC pre-aggregation can never leak across
 tenants.
 
+Per ADR-0024 the top-level entry points (``_compute_aggregate_metrics``,
+``_compute_bucketed_aggregates``, ``_compute_pivot_buckets``) accept
+``dict[str, AggregateRef]`` and dispatch on the typed IR fields
+directly — no regex. The where-clause is still stringified at the
+boundary to the existing ``_fetch_*`` helpers (Slice 2 retires that
+string round-trip by folding ``parse_aggregate_where`` into the main
+predicate parser).
+
 Contents:
-- `_AGGREGATE_RE`: parser regex for `count(Entity where ...)` exprs.
 - `_format_bucket_label`: human label for a date_trunc bucket value.
 - `_build_aggregate_filters`: merge scope + WHERE filters for a query.
 - `_fetch_count_metric`, `_fetch_scalar_metric`: single-metric paths.
@@ -28,16 +35,36 @@ Contents:
 import asyncio
 import datetime as _dt
 import logging
-import re
 from typing import Any
 
 from dazzle.render.display_names import _resolve_display_name
 
 logger = logging.getLogger(__name__)
 
-# Regex for aggregate expressions like count(Task) or count(Task where status = open)
-# Tolerates whitespace around parens and entity name (DSL parser joins tokens with spaces).
-_AGGREGATE_RE = re.compile(r"\s*(count|sum|avg|min|max)\s*\(\s*(\w+)\s*(?:where\s+(.+?))?\s*\)")
+
+def _condition_references_current_bucket(expr: Any) -> bool:
+    """Detect whether a :class:`ConditionExpr` references the
+    ``current_bucket`` sentinel used by bar_chart's per-bucket
+    aggregate path. Walks compound conditions recursively.
+
+    Used by the pivot fast-path gate (which only handles aggregates
+    that don't substitute per-bucket values).
+    """
+    from dazzle.core.ir import ConditionExpr
+
+    if not isinstance(expr, ConditionExpr):
+        return False
+    if expr.is_compound:
+        return _condition_references_current_bucket(
+            expr.left
+        ) or _condition_references_current_bucket(expr.right)
+    cmp = expr.comparison
+    if cmp is None:
+        return False
+    val = cmp.value
+    if val.is_list and val.values is not None:
+        return any(v == "current_bucket" for v in val.values)
+    return val.literal == "current_bucket"
 
 
 def _format_bucket_label(value: Any, unit: str) -> str:
@@ -80,7 +107,7 @@ def _format_bucket_label(value: Any, unit: str) -> str:
 
 
 def _build_aggregate_filters(
-    where_clause: str | None,
+    where: Any,  # ConditionExpr | str | None — strings retire when current_bucket migrates
     scope_filters: dict[str, Any] | None,
     agg_repo: Any,
     source_entity: str,
@@ -88,53 +115,67 @@ def _build_aggregate_filters(
     """Compose aggregate where-clause + scope into a filter dict for
     ``Repository.list`` / ``Repository.aggregate``.
 
-    Phase 1 of the reporting predicate algebra unification (#888) — the
-    where-clause is parsed via the structured ``parse_aggregate_where``
-    and compiled to SQL via the existing ``compile_predicate``. When
-    ``scope_filters`` already carries a ``__scope_predicate`` (from the
-    route generator's RBAC compiler), the two SQL fragments are
-    AND-combined into a single slot — QueryBuilder needs zero changes.
+    Per ADR-0024 / Slice 2 of the aggregate migration, ``where`` is
+    typed as :class:`ConditionExpr` (translated to ``ScopePredicate``
+    via :func:`condition_expr_to_scope_predicate`, then compiled to
+    SQL via :func:`compile_predicate`). The string path remains as a
+    deprecated fallback for the bar_chart fast-path which substitutes
+    a ``current_bucket`` sentinel into the where-clause text before
+    re-parsing — that consumer migrates separately when the sentinel
+    moves to an IR-level marker.
 
-    On parse failure, returns a sentinel always-false filter so the
-    metric resolves to 0 rather than (worse) running the query without
-    the where-clause and producing a misleading larger number.
+    When ``scope_filters`` already carries a ``__scope_predicate``
+    (from the route generator's RBAC compiler or upstream callers),
+    the two SQL fragments are AND-combined into a single slot.
     """
+    from dazzle.core.ir import ConditionExpr
+
     base: dict[str, Any] = dict(scope_filters) if scope_filters else {}
-    if not where_clause:
+    if where is None or (isinstance(where, str) and not where):
         return base or None
 
-    from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
     from dazzle.back.runtime.predicate_compiler import compile_predicate
     from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
 
-    spec = getattr(agg_repo, "entity_spec", None)
-    known_cols: frozenset[str] = (
-        frozenset(f.name for f in getattr(spec, "fields", [])) if spec is not None else frozenset()
-    )
+    if isinstance(where, ConditionExpr):
+        # Typed path — no string round-trip, no parse step.
+        from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
 
-    try:
-        pred = parse_aggregate_where(where_clause, known_columns=known_cols)
-    except ValueError as exc:
-        # Fall back to the legacy `_parse_simple_where` for clauses the
-        # new algebra grammar doesn't accept — most commonly hyphenated
-        # UUIDs (e.g. `target = t-1` from `current_bucket` substitution)
-        # which the new tokeniser splits as IDENT-OP-NUMBER. The legacy
-        # parser treats RHS as a string literal token, so it round-trips
-        # those values correctly. Logged at debug since this is the
-        # expected path for substituted current_bucket clauses.
-        logger.debug(
-            "Aggregate where-clause %r didn't parse via algebra (%s) — "
-            "falling back to legacy _parse_simple_where",
-            where_clause,
-            exc,
+        try:
+            pred = condition_expr_to_scope_predicate(where)
+        except ValueError:
+            logger.debug(
+                "ConditionExpr translation to ScopePredicate failed; skipping where-clause",
+                exc_info=True,
+            )
+            return base or None
+    else:
+        # Legacy string path — used by bar_chart's `current_bucket`
+        # sentinel substitution. Once that substitution moves to the
+        # ConditionExpr layer this branch can delete.
+        from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
+
+        spec = getattr(agg_repo, "entity_spec", None)
+        known_cols: frozenset[str] = (
+            frozenset(f.name for f in getattr(spec, "fields", []))
+            if spec is not None
+            else frozenset()
         )
-        legacy = _parse_simple_where(where_clause)
-        base.update(legacy)
-        return base or None
+        try:
+            pred = parse_aggregate_where(where, known_columns=known_cols)
+        except ValueError as exc:
+            logger.debug(
+                "Aggregate where-clause %r didn't parse via algebra (%s) — "
+                "falling back to legacy _parse_simple_where",
+                where,
+                exc,
+            )
+            legacy = _parse_simple_where(where)
+            base.update(legacy)
+            return base or None
 
     where_sql, where_params = compile_predicate(pred, source_entity, _FKGraph())
     if not where_sql:
-        # Tautology — predicate always true, no extra filter needed.
         return base or None
 
     existing_pred = base.get("__scope_predicate")
@@ -152,14 +193,19 @@ def _build_aggregate_filters(
 async def _fetch_count_metric(
     metric_name: str,
     agg_repo: Any,
-    where_clause: str | None,
+    where: Any,  # ConditionExpr | str | None — typed post-Slice 2
     scope_filters: dict[str, Any] | None = None,
     *,
     source_entity: str = "",
 ) -> tuple[str, Any]:
-    """Fetch a single count aggregate metric from a repository."""
+    """Fetch a single count aggregate metric from a repository.
+
+    Per ADR-0024 / Slice 2 ``where`` is typed as :class:`ConditionExpr`
+    in the main aggregate paths; the string branch remains for the
+    bar_chart fast-path that substitutes ``current_bucket`` text.
+    """
     try:
-        agg_filters = _build_aggregate_filters(where_clause, scope_filters, agg_repo, source_entity)
+        agg_filters = _build_aggregate_filters(where, scope_filters, agg_repo, source_entity)
         agg_result = await agg_repo.list(page=1, page_size=1, filters=agg_filters)
         if isinstance(agg_result, dict):
             return metric_name, agg_result.get("total", 0)
@@ -173,19 +219,14 @@ async def _fetch_scalar_metric(
     func: str,
     field_name: str,
     agg_repo: Any,
-    where_clause: str | None,
+    where: Any,  # ConditionExpr | str | None — typed post-Slice 2
     scope_filters: dict[str, Any] | None = None,
     *,
     source_entity: str = "",
 ) -> tuple[str, Any]:
-    """Fetch a sum/avg/min/max aggregate metric (#888 Phase 1).
-
-    Routes through ``Repository.aggregate`` with no dimensions and a
-    single non-count measure. Pre-fix, sum/avg/min/max with a where
-    clause silently resolved to 0 in ``_compute_aggregate_metrics``.
-    """
+    """Fetch a sum/avg/min/max aggregate metric (#888 Phase 1)."""
     try:
-        agg_filters = _build_aggregate_filters(where_clause, scope_filters, agg_repo, source_entity)
+        agg_filters = _build_aggregate_filters(where, scope_filters, agg_repo, source_entity)
         buckets = await agg_repo.aggregate(
             dimensions=[],
             measures={metric_name: f"{func}:{field_name}"},
@@ -254,16 +295,20 @@ async def _compute_pivot_buckets(
         return [], []
 
     from dazzle.back.runtime.aggregate import Dimension, resolve_fk_display_field
+    from dazzle.core.ir import AggregateRef
+    from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
 
     # Only the simple case (count(<source_entity>) with no current_bucket)
     # routes through the pivot fast path. Other shapes fall through.
-    metric_name, expr = next(iter(aggregates.items()))
-    agg_match = _AGGREGATE_RE.match(expr)
-    if not agg_match or agg_match.group(1) != "count":
+    metric_name, ref = next(iter(aggregates.items()))
+    if not isinstance(ref, AggregateRef) or ref.func != "count":
         return [], []
-    _, entity_name, where_clause = agg_match.groups()
-    if entity_name != source_entity or (where_clause and "current_bucket" in where_clause):
+    entity_name = ref.entity or ""
+    if entity_name != source_entity or _condition_references_current_bucket(ref.where):
         return [], []
+    # Stringify for the legacy `_parse_simple_where` filter merge below
+    # — the pivot path retains string-based merge until a future cleanup.
+    where_clause = condition_expr_to_legacy_where(ref.where)
 
     source_repo = repositories.get(source_entity)
     if source_repo is None:
@@ -280,7 +325,7 @@ async def _compute_pivot_buckets(
             # Time-bucketed dim — no FK, no enum, just date_trunc on the
             # timestamp column. The label generator in _format_bucket_label
             # handles the display format.
-            dimensions.append(Dimension(name=dim_entry.field, truncate=dim_entry.unit))  # type: ignore[arg-type]
+            dimensions.append(Dimension(name=dim_entry.field, truncate=dim_entry.unit))
             dim_specs.append(
                 {
                     "name": dim_entry.field,
@@ -735,7 +780,7 @@ def _compute_histogram_bins(
 
 
 async def _compute_bucketed_aggregates(
-    aggregates: dict[str, str],
+    aggregates: dict[str, Any],
     repositories: dict[str, Any] | None,
     group_by: Any,  # str | BucketRef
     items: list[dict[str, Any]],
@@ -778,17 +823,24 @@ async def _compute_bucketed_aggregates(
     if not aggregates:
         return []
 
-    # v0.61.32 (#879/#883 enabling): parse ALL aggregates upfront so the
-    # fast path can fire them as one multi-measure GROUP BY. Each entry
-    # becomes (name, func, arg, where) where ``arg`` is an entity name
-    # for ``count(...)`` and a column name for ``avg/sum/min/max(...)``.
+    # Per ADR-0024 the aggregates dict values are typed AggregateRef.
+    # Flatten each to the (name, func, arg, where_str) tuple the
+    # downstream dispatch already handles. ``arg`` is the entity name
+    # for ``count(...)`` and the column name for ``avg/sum/min/max(...)``.
+    # The where-clause is stringified here ONLY for the bucketed path's
+    # ``current_bucket`` sentinel substitution — the fetcher paths
+    # consume the typed ConditionExpr directly via Slice 2 of the
+    # migration.
+    from dazzle.core.ir import AggregateRef
+    from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
+
     parsed_aggs: list[tuple[str, str, str, str | None]] = []
-    for name, expr in aggregates.items():
-        m = _AGGREGATE_RE.match(expr)
-        if not m:
+    for name, ref in aggregates.items():
+        if not isinstance(ref, AggregateRef):
             continue
-        func, arg, where = m.groups()
-        parsed_aggs.append((name, func, arg, where))
+        arg = ref.entity or "" if ref.func == "count" else ref.column or ""
+        where_str = condition_expr_to_legacy_where(ref.where)
+        parsed_aggs.append((name, ref.func, arg, where_str))
     if not parsed_aggs:
         return []
 
@@ -1033,7 +1085,7 @@ def _bucket_key_label(value: Any) -> tuple[str, str]:
 
 
 async def _compute_aggregate_metrics(
-    aggregates: dict[str, str],
+    aggregates: dict[str, Any],
     repositories: dict[str, Any] | None,
     total: int,
     items: list[dict[str, Any]],
@@ -1045,80 +1097,77 @@ async def _compute_aggregate_metrics(
 ) -> list[dict[str, Any]]:
     """Compute aggregate metrics, batching independent DB queries concurrently.
 
+    Per ADR-0024 the ``aggregates`` dict values are typed
+    :class:`dazzle.core.ir.AggregateRef` instances — the runtime
+    dispatches on ``ref.func`` / ``ref.entity`` / ``ref.column`` directly
+    rather than re-parsing a string with a regex.
+
     When ``delta`` is set (#884), each metric also gets a prior-period value
     computed via a second aggregate query with date-range filters on
     ``delta.date_field`` (defaults to ``created_at``). The metric dict gains
     ``delta`` (current - prior), ``delta_pct``, ``delta_direction``
     (up|down|flat), ``delta_sentiment`` (positive_up|positive_down|neutral),
-    and ``delta_period_label`` keys. Renderer uses these to emit the trend
-    arrow + comparison line on summary/metrics tiles.
+    and ``delta_period_label`` keys.
     """
-    # Separate metrics into async (need DB query) and sync (computed from existing data)
-    async_tasks: list[tuple[str, Any]] = []  # (metric_name, coroutine)
-    sync_results: dict[str, Any] = {}  # metric_name -> value
+    from dazzle.core.ir import AggregateRef
+
+    async_tasks: list[tuple[str, Any]] = []
+    sync_results: dict[str, Any] = {}
     metric_order: list[str] = []
 
-    for metric_name, expr in aggregates.items():
+    for metric_name, ref in aggregates.items():
         metric_order.append(metric_name)
-        agg_match = _AGGREGATE_RE.match(expr)
-        if agg_match:
-            func, entity_name, where_clause = agg_match.groups()
-            agg_repo = repositories.get(entity_name) if repositories else None
-            if func == "count" and agg_repo:
-                async_tasks.append(
-                    (
-                        metric_name,
-                        _fetch_count_metric(
-                            metric_name,
-                            agg_repo,
-                            where_clause,
-                            scope_filters,
-                            source_entity=entity_name,
-                        ),
-                    )
-                )
-            elif func in ("sum", "avg", "min", "max"):
-                # #888 Phase 1: route scalar aggregates (sum/avg/min/max)
-                # to `_fetch_scalar_metric`. The regex's second capture
-                # (`entity_name`) is actually the *field* on the region's
-                # source entity for these forms — the language is
-                # `avg(<field>)`, not `avg(<Entity>)`. Disambiguation:
-                # if the captured token matches a known repository it's
-                # treated as an entity (and dropped to 0 — the author
-                # should use `avg(<column>)` instead); otherwise it's a
-                # column on `source_entity`.
-                if agg_repo is not None or source_entity is None:
-                    # Author wrote `avg(EntityName)` (unsupported) or
-                    # we have no source_entity to evaluate against.
-                    sync_results[metric_name] = 0
-                else:
-                    src_repo = repositories.get(source_entity) if repositories else None
-                    if src_repo is None:
-                        sync_results[metric_name] = 0
-                    else:
-                        async_tasks.append(
-                            (
-                                metric_name,
-                                _fetch_scalar_metric(
-                                    metric_name,
-                                    func,
-                                    entity_name,  # actually the field name here
-                                    src_repo,
-                                    where_clause,
-                                    scope_filters,
-                                    source_entity=source_entity,
-                                ),
-                            )
-                        )
-            else:
-                sync_results[metric_name] = 0
-        elif expr == "count":
-            sync_results[metric_name] = total
-        elif expr.startswith("sum:") and items:
-            field_name = expr.split(":", 1)[1]
-            sync_results[metric_name] = sum(float(i.get(field_name, 0) or 0) for i in items)
-        else:
+        if not isinstance(ref, AggregateRef):
             sync_results[metric_name] = 0
+            continue
+        if ref.func == "count":
+            entity_name = ref.entity or ""
+            agg_repo = repositories.get(entity_name) if repositories else None
+            if agg_repo is None:
+                sync_results[metric_name] = 0
+                continue
+            async_tasks.append(
+                (
+                    metric_name,
+                    _fetch_count_metric(
+                        metric_name,
+                        agg_repo,
+                        ref.where,
+                        scope_filters,
+                        source_entity=entity_name,
+                    ),
+                )
+            )
+        else:
+            # Scalar aggregate: column required (IR validator enforces).
+            # Cross-entity (ref.entity is not None) routes to that entity's
+            # repo — the shape that was unrepresentable in the regex
+            # grammar pre-ADR-0024.
+            if ref.column is None:
+                sync_results[metric_name] = 0
+                continue
+            agg_entity = ref.entity if ref.entity is not None else source_entity
+            if agg_entity is None:
+                sync_results[metric_name] = 0
+                continue
+            agg_repo = repositories.get(agg_entity) if repositories else None
+            if agg_repo is None:
+                sync_results[metric_name] = 0
+                continue
+            async_tasks.append(
+                (
+                    metric_name,
+                    _fetch_scalar_metric(
+                        metric_name,
+                        ref.func,
+                        ref.column,
+                        agg_repo,
+                        ref.where,
+                        scope_filters,
+                        source_entity=agg_entity,
+                    ),
+                )
+            )
 
     # Fire all async queries concurrently
     if async_tasks:
@@ -1156,22 +1205,31 @@ async def _compute_aggregate_metrics(
 
         prior_tasks: list[Any] = []
         prior_metric_names: list[str] = []
-        for metric_name, expr in aggregates.items():
-            agg_match = _AGGREGATE_RE.match(expr)
-            if not agg_match:
+        for metric_name, ref in aggregates.items():
+            if not isinstance(ref, AggregateRef) or ref.func != "count":
                 continue
-            func, entity_name, where_clause = agg_match.groups()
+            entity_name = ref.entity or ""
             agg_repo = repositories.get(entity_name)
-            if func != "count" or not agg_repo:
+            if not agg_repo:
                 continue
-            prior_filters: dict[str, Any] = {}
-            if where_clause:
-                prior_filters.update(_parse_simple_where(where_clause))
+            # Prior-period delta: AND-compose the typed where with the
+            # date-window filter via _build_aggregate_filters, which
+            # routes the ConditionExpr through compile_predicate.
+            prior_window = {
+                f"{date_field}__gte": prior_start.isoformat(),
+                f"{date_field}__lt": prior_end.isoformat(),
+            }
             if scope_filters:
-                prior_filters.update(scope_filters)
-            prior_filters[f"{date_field}__gte"] = prior_start.isoformat()
-            prior_filters[f"{date_field}__lt"] = prior_end.isoformat()
-            prior_tasks.append(_fetch_count_metric(metric_name, agg_repo, None, prior_filters))
+                prior_window = {**scope_filters, **prior_window}
+            prior_tasks.append(
+                _fetch_count_metric(
+                    metric_name,
+                    agg_repo,
+                    ref.where,
+                    prior_window,
+                    source_entity=entity_name,
+                )
+            )
             prior_metric_names.append(metric_name)
 
         prior_map: dict[str, Any] = {}

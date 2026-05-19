@@ -34,7 +34,6 @@ from dazzle.back.runtime.repository import RepositoryFactory
 from dazzle.back.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle.back.runtime.service_loader import ServiceLoader
 from dazzle.back.runtime.workspace_aggregation import (  # noqa: F401
-    _AGGREGATE_RE,
     _compute_aggregate_metrics,
     _fetch_count_metric,
     _parse_simple_where,

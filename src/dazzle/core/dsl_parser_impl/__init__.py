@@ -19,6 +19,7 @@ from pathlib import Path
 
 from .. import ir
 from ..lexer import tokenize
+from .aggregate import AggregateParserMixin
 from .analytics import AnalyticsParserMixin
 from .approval import ApprovalParserMixin
 from .audit import AuditParserMixin
@@ -65,6 +66,7 @@ class Parser(
     BaseParser,
     TypeParserMixin,
     ConditionParserMixin,
+    AggregateParserMixin,
     EntityParserMixin,
     SurfaceParserMixin,
     ServiceParserMixin,
@@ -800,6 +802,7 @@ __all__ = [
     "BaseParser",
     "TypeParserMixin",
     "ConditionParserMixin",
+    "AggregateParserMixin",
     "EntityParserMixin",
     "SurfaceParserMixin",
     "ServiceParserMixin",

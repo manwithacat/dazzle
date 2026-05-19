@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 
+from dazzle.core.ir import AggregateRef
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 
 # ---------------------------------------------------------------------------
@@ -1263,7 +1264,7 @@ class TestWorkspaceStatsHandler:
 
         ctx = self._make_ctx(
             region_name="overview",
-            aggregates={"total_work": "count(Work)"},
+            aggregates={"total_work": AggregateRef(func="count", entity="Work")},
             repositories={"Work": FakeRepo()},
         )
         result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
@@ -1282,12 +1283,12 @@ class TestWorkspaceStatsHandler:
 
         ctx1 = self._make_ctx(
             region_name="kpis",
-            aggregates={"active_works": "count(Work)"},
+            aggregates={"active_works": AggregateRef(func="count", entity="Work")},
             repositories={"Work": FakeRepo(10)},
         )
         ctx2 = self._make_ctx(
             region_name="campaigns",
-            aggregates={"running": "count(Campaign)"},
+            aggregates={"running": AggregateRef(func="count", entity="Campaign")},
             repositories={"Campaign": FakeRepo(3)},
         )
         result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx1, ctx2])
@@ -1304,7 +1305,7 @@ class TestWorkspaceStatsHandler:
         plain = self._make_ctx(region_name="plain", aggregates={})
         with_agg = self._make_ctx(
             region_name="with_agg",
-            aggregates={"n": "count(Task)"},
+            aggregates={"n": AggregateRef(func="count", entity="Task")},
             repositories={"Task": FakeRepo()},
         )
         result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [plain, with_agg])
@@ -1322,7 +1323,7 @@ class TestWorkspaceStatsHandler:
 
         ctx = self._make_ctx(
             region_name="kpis",
-            aggregates={"n": "count(Task)"},
+            aggregates={"n": AggregateRef(func="count", entity="Task")},
             require_auth=True,
             auth_middleware=FailingAuth(),
         )

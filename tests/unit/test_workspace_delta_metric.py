@@ -19,6 +19,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.ir import AggregateRef
+from dazzle.core.ir.conditions import (
+    Comparison,
+    ComparisonOperator,
+    ConditionExpr,
+    ConditionValue,
+)
 from dazzle.core.ir.module import ModuleFragment
 from dazzle.core.ir.workspaces import DeltaSpec
 
@@ -219,7 +226,19 @@ class TestComputeAggregateMetricsDelta:
         delta = DeltaSpec(period_seconds=86400, sentiment=sentiment, period_label="yesterday")
         result = asyncio.run(
             _compute_aggregate_metrics(
-                aggregates={"manuscripts_marked": "count(Manuscript where status = marked)"},
+                aggregates={
+                    "manuscripts_marked": AggregateRef(
+                        func="count",
+                        entity="Manuscript",
+                        where=ConditionExpr(
+                            comparison=Comparison(
+                                field="status",
+                                operator=ComparisonOperator.EQUALS,
+                                value=ConditionValue(literal="marked"),
+                            )
+                        ),
+                    ),
+                },
                 repositories={"Manuscript": repo},
                 total=0,
                 items=[],
@@ -264,7 +283,7 @@ class TestComputeAggregateMetricsDelta:
         repo = self._make_repo(current_total=42, prior_total=999)
         result = asyncio.run(
             _compute_aggregate_metrics(
-                aggregates={"items": "count(Item)"},
+                aggregates={"items": AggregateRef(func="count", entity="Item")},
                 repositories={"Item": repo},
                 total=0,
                 items=[],

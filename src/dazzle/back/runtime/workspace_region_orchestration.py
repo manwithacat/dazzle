@@ -166,7 +166,9 @@ async def compute_region_render_inputs(
         for overlay in ir_overlays:
             ovl_source = overlay.source or ctx.source
             try:
-                overlay_aggregates = {overlay.label: overlay.aggregate_expr}
+                # Per ADR-0024 _compute_bucketed_aggregates consumes typed
+                # AggregateRef directly — no stringification.
+                overlay_aggregates = {overlay.label: overlay.aggregate}
                 overlay_buckets = await _compute_bucketed_aggregates(
                     overlay_aggregates,
                     ctx.repositories,
@@ -323,6 +325,41 @@ async def compute_region_render_inputs(
     if display == "TREE" and group_by and items:
         tree_items = compute_tree(items, group_by)
 
+    # #1144 Gap 1 phase 2: cohort_strip primary_aggregate lens runtime.
+    # When the active lens carries `primary_aggregate:`, fire per-member
+    # aggregate queries (N+1 fan-out; phase 3 will batch via GROUP BY).
+    # No-via case only — `via:` is phase 3.
+    cohort_aggregate_values: dict[str, Any] = {}
+    if display == "COHORT_STRIP" and items and not scope_denied:
+        cohort_cfg = getattr(ctx.ir_region, "cohort_strip_config", None)
+        if cohort_cfg is not None:
+            from dazzle.back.runtime.workspace_region_computes import (
+                compute_cohort_aggregate_primary,
+            )
+
+            active_lens_id = (
+                request.query_params.get("lens")
+                or getattr(cohort_cfg, "default_lens", "")
+                or (getattr(cohort_cfg.lenses[0], "id", "") if cohort_cfg.lenses else "")
+            )
+            active_lens = next(
+                (
+                    lens
+                    for lens in (cohort_cfg.lenses or [])
+                    if str(getattr(lens, "id", "")) == active_lens_id
+                ),
+                cohort_cfg.lenses[0] if cohort_cfg.lenses else None,
+            )
+            if active_lens is not None and getattr(active_lens, "primary_aggregate", None):
+                cohort_aggregate_values = await compute_cohort_aggregate_primary(
+                    items=items,
+                    lens=active_lens,
+                    source_entity=ctx.source,
+                    repositories=ctx.repositories,
+                    scope_only_filters=scope_only_filters,
+                    member_via=str(getattr(cohort_cfg, "member_via", "") or ""),
+                )
+
     return RegionRenderInputs(
         items=items,
         columns=columns,
@@ -358,4 +395,5 @@ async def compute_region_render_inputs(
         group_by=group_by,
         filter_columns=filter_columns,
         active_filters=active_filters,
+        cohort_aggregate_values=cohort_aggregate_values,
     )

@@ -1,6 +1,7 @@
 """Tests for DSL to Layout IR converter."""
 
 from dazzle.core.ir import (
+    AggregateRef,
     AppSpec,
     AttentionSignalKind,
     DomainSpec,
@@ -54,7 +55,7 @@ class TestWorkspaceConversion:
                 WorkspaceRegion(
                     name="total_tasks",
                     source="Task",
-                    aggregates={"count": "Task"},
+                    aggregates={"count": AggregateRef(func="count", entity="Task")},
                 )
             ],
         )
@@ -181,7 +182,7 @@ class TestSignalInference:
                 WorkspaceRegion(
                     name="metrics",
                     source="Task",
-                    aggregates={"total": "count(Task)"},
+                    aggregates={"total": AggregateRef(func="count", entity="Task")},
                 )
             ],
         )
@@ -203,7 +204,7 @@ class TestSignalInference:
                     name="critical",
                     source="Task",
                     limit=1,
-                    aggregates={"count": "count(Task)"},
+                    aggregates={"count": AggregateRef(func="count", entity="Task")},
                 )
             ],
         )

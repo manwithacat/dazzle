@@ -100,6 +100,10 @@ class RegionRenderInputs:
     group_by: Any = None  # str | BucketRef | None
     filter_columns: list[dict[str, Any]] = field(default_factory=list)
     active_filters: dict[str, str] = field(default_factory=dict)
+    # #1144 Gap 1 phase 2: per-member resolved values for cohort_strip
+    # lenses with `primary_aggregate:`. Keyed by member id (the source
+    # row's `id` field). Empty when no aggregate-primary lens is active.
+    cohort_aggregate_values: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -456,6 +460,9 @@ async def _build_dashboard_adapter_ctx(
                 # #1148: thread the IR-declared row_action through so
                 # each cell can carry a per-row click-to-POST button.
                 row_action=getattr(ir_region, "row_action", None),
+                # #1144 Gap 1 phase 2: per-member aggregate values
+                # resolved upstream in orchestration phase 4.
+                cohort_aggregate_values=inputs.cohort_aggregate_values,
             )
     elif display_upper == "DAY_TIMELINE":
         day_cfg = getattr(ir_region, "day_timeline_config", None)

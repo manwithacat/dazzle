@@ -43,6 +43,8 @@ class WorkspaceParserMixin:
         skip_newlines: Any
         expect_identifier_or_keyword: Any
         parse_condition_expr: Any
+        parse_aggregate_ref: Any
+        peek_is_aggregate_call: Any
         parse_sort_list: Any
         parse_ux_block: Any
         current_token: Any
@@ -438,10 +440,12 @@ class WorkspaceParserMixin:
 
         v0.61.66 (AegisMark UX patterns #4): the ``value:`` key accepts
         either an aggregate expression (same vocabulary as region-level
-        ``aggregate:``) OR a quoted literal string. The runtime
-        distinguishes via `_AGGREGATE_RE` — matches fire a query,
-        non-matches render verbatim. v0.61.78 (#911): ``progress:`` shares
-        the same acceptor — literal numeric or aggregate expression.
+        ``aggregate:``) OR a quoted literal string. Per ADR-0024 the
+        parser shape-detects at parse time — :meth:`peek_is_aggregate_call`
+        routes aggregate-shaped tokens through :meth:`parse_aggregate_ref`,
+        otherwise the payload is captured as a literal string.
+        v0.61.78 (#911): ``progress:`` shares the same acceptor —
+        literal numeric or aggregate expression.
 
         Distinct from the legacy ``stages: [a, b, c]`` bracketed list
         used by ``progress`` mode — the calling parser branch shape-
@@ -468,12 +472,12 @@ class WorkspaceParserMixin:
             )
         self.advance()  # consume `-`
         label_str = self._parse_pipeline_stage_label()
-        caption_str, value_str, progress_str = self._parse_pipeline_stage_kv_block()
+        caption_str, value_payload, progress_payload = self._parse_pipeline_stage_kv_block()
         return ir.PipelineStageSpec(
             label=label_str,
             caption=caption_str,
-            value=value_str,
-            progress=progress_str,
+            value=value_payload,
+            progress=progress_payload,
         )
 
     def _parse_pipeline_stage_label(self) -> str:
@@ -492,16 +496,21 @@ class WorkspaceParserMixin:
         self.skip_newlines()
         return label_str
 
-    def _parse_pipeline_stage_kv_block(self) -> tuple[str, str, str]:
+    def _parse_pipeline_stage_kv_block(
+        self,
+    ) -> tuple[str, "ir.AggregateRef | str | None", "ir.AggregateRef | str | None"]:
         """Consume the optional indented ``caption/value/progress`` continuation.
 
-        Returns ``(caption, value, progress)`` — each empty when omitted.
+        Returns ``(caption, value, progress)`` where ``value`` /
+        ``progress`` are either an :class:`AggregateRef` (when the
+        payload tokens form an aggregate call), a literal string (quoted
+        literal or non-aggregate token sequence), or ``None`` when omitted.
         """
         caption_str = ""
-        value_str = ""
-        progress_str = ""
+        value_payload: ir.AggregateRef | str | None = None
+        progress_payload: ir.AggregateRef | str | None = None
         if not self.match(TokenType.INDENT):
-            return caption_str, value_str, progress_str
+            return caption_str, value_payload, progress_payload
         self.advance()  # consume INDENT
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -517,9 +526,9 @@ class WorkspaceParserMixin:
             elif key in ("value", "progress"):
                 payload = self._parse_pipeline_stage_payload()
                 if key == "value":
-                    value_str = payload
+                    value_payload = payload
                 else:
-                    progress_str = payload
+                    progress_payload = payload
                 self.skip_newlines()
             else:
                 raise make_parse_error(
@@ -530,18 +539,29 @@ class WorkspaceParserMixin:
                     key_tok.column,
                 )
         self.expect(TokenType.DEDENT)
-        return caption_str, value_str, progress_str
+        return caption_str, value_payload, progress_payload
 
-    def _parse_pipeline_stage_payload(self) -> str:
+    def _parse_pipeline_stage_payload(self) -> "ir.AggregateRef | str":
         """Consume a quoted literal OR unquoted aggregate expression.
 
-        Quoted shape — common for flow-card labels like ``"Daily 02:00 UTC"``.
-        Unquoted shape — token stream up to NEWLINE/DEDENT, joined with
-        spaces (same shape as region-level ``aggregate:`` parser).
+        Three shapes:
+          - **Quoted literal** (``"Daily 02:00 UTC"``) — returned as a
+            ``str``, rendered verbatim by the template.
+          - **Aggregate call** (``count(Task where ...)``) — returned as
+            a typed :class:`AggregateRef` via :meth:`parse_aggregate_ref`
+            (ADR-0024). Detected by shape-peeking on the token stream.
+          - **Bare literal token sequence** (``"74"`` as a number, or
+            an unquoted descriptive string) — joined with spaces and
+            returned as a ``str``.
         """
         if self.match(TokenType.STRING):
-            payload: str = self.advance().value
-            return payload
+            literal_str: str = self.advance().value
+            return literal_str
+        if self.peek_is_aggregate_call():
+            agg_ref: ir.AggregateRef = self.parse_aggregate_ref()
+            return agg_ref
+        # Bare token sequence — captured as a literal string. Templates
+        # render numeric values like "74" verbatim.
         parts: list[str] = []
         while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
             parts.append(self.advance().value)
@@ -683,33 +703,36 @@ class WorkspaceParserMixin:
             )
         self.advance()  # consume MINUS
         label_str = self._parse_dash_required_label("actions")
-        icon_str, count_aggregate, action_str, tone_str = self._parse_action_card_kv_block(
-            label_str
-        )
+        icon_str, count_ref, action_str, tone_str = self._parse_action_card_kv_block(label_str)
         return ir.ActionCardSpec(
             label=label_str,
             icon=icon_str,
-            count_aggregate=count_aggregate,
+            count=count_ref,
             action=action_str,
             tone=tone_str,
         )
 
-    def _parse_action_card_kv_block(self, label_str: str) -> tuple[str, str, str, str]:
+    def _parse_action_card_kv_block(
+        self, label_str: str
+    ) -> tuple[str, ir.AggregateRef | None, str, str]:
         """Consume the optional indented icon/count_aggregate/action/tone block.
 
-        Returns ``(icon, count_aggregate, action, tone)`` — empty strings
-        (or ``"neutral"`` for tone) when omitted.
+        Returns ``(icon, count_ref, action, tone)`` — empty strings
+        (or ``"neutral"`` for tone, ``None`` for count) when omitted.
+        The ``count_aggregate:`` DSL key parses through
+        :meth:`parse_aggregate_ref` (ADR-0024) into a typed
+        :class:`AggregateRef`.
         """
         valid_tones = {"positive", "warning", "destructive", "neutral", "accent"}
         valid_keys = {"label", "icon", "count_aggregate", "action", "tone"}
 
         icon_str = ""
-        count_aggregate = ""
+        count_ref: ir.AggregateRef | None = None
         action_str = ""
         tone_str = "neutral"
 
         if not self.match(TokenType.INDENT):
-            return icon_str, count_aggregate, action_str, tone_str
+            return icon_str, count_ref, action_str, tone_str
         self.advance()  # consume INDENT
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -723,10 +746,7 @@ class WorkspaceParserMixin:
                 icon_str = self.expect(TokenType.STRING).value
                 self.skip_newlines()
             elif key == "count_aggregate":
-                parts: list[str] = []
-                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                    parts.append(self.advance().value)
-                count_aggregate = " ".join(parts)
+                count_ref = self.parse_aggregate_ref()
                 self.skip_newlines()
             elif key == "action":
                 # STRING (URL with `/`, `?`, `=`) OR IDENT (bare surface name).
@@ -755,7 +775,7 @@ class WorkspaceParserMixin:
                     key_tok.column,
                 )
         self.expect(TokenType.DEDENT)
-        return icon_str, count_aggregate, action_str, tone_str
+        return icon_str, count_ref, action_str, tone_str
 
     def _parse_dash_required_label(self, block_name: str) -> str:
         """Common helper: consume the required ``label: "<str>"`` first key.
@@ -878,25 +898,21 @@ class WorkspaceParserMixin:
         """#1144 part 3 phase 1: parse the indented body of a
         ``primary_aggregate:`` block.
 
-        Syntax::
+        Syntax (ADR-0024 typed form)::
 
             primary_aggregate:
-              aggregate: "avg(MarkingResult.score)"
+              aggregate: avg(MarkingResult.score where latest_for_event = true)
               via: ClassEnrolment(student_profile = id)
-              where: latest_for_event = true
 
-        ``aggregate`` is required and quoted (SQL-like expressions
-        contain operators/parens/commas that don't fit bare-ident
-        grammar). ``via:`` and ``where:`` are optional. The via
-        value reuses the existing junction-binding grammar from
-        scope rules (#530) — same ``Junction(field = expr, ...)``
-        shape, just without the leading ``via`` keyword since the
-        block key already disambiguates intent.
+        ``aggregate:`` is required and parsed structurally via
+        :meth:`parse_aggregate_ref` into a typed :class:`AggregateRef`
+        — any row-level predicate rides inside the aggregate's own
+        ``where:`` clause. ``via:`` is optional and reuses the
+        junction-binding grammar from scope rules (#530).
         """
-        _VALID_KEYS = {"aggregate", "via", "where"}
-        aggregate_str: str | None = None
+        _VALID_KEYS = {"aggregate", "via"}
+        aggregate_ref: ir.AggregateRef | None = None
         via_cond: ir.ViaCondition | None = None
-        where_cond: ir.ConditionExpr | None = None
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
@@ -914,9 +930,9 @@ class WorkspaceParserMixin:
             self.advance()
             self.expect(TokenType.COLON)
             if key == "aggregate":
-                aggregate_str = self.expect(TokenType.STRING).value
+                aggregate_ref = self.parse_aggregate_ref()
                 self.skip_newlines()
-            elif key == "via":
+            else:  # via
                 # Reuse the scope-rule via-binding grammar shape:
                 # `JunctionEntity(field = expr, ...)`. The helpers
                 # live on EntityParserMixin; both mixins compose
@@ -934,10 +950,7 @@ class WorkspaceParserMixin:
                 self.expect(TokenType.RPAREN)
                 via_cond = ir.ViaCondition(junction_entity=junction_entity, bindings=bindings)
                 self.skip_newlines()
-            else:  # where
-                where_cond = self.parse_condition_expr()
-                self.skip_newlines()
-        if aggregate_str is None:
+        if aggregate_ref is None:
             tok = self.current_token()
             raise make_parse_error(
                 "primary_aggregate requires an `aggregate:` expression",
@@ -945,7 +958,7 @@ class WorkspaceParserMixin:
                 tok.line,
                 tok.column,
             )
-        return ir.LensAggregatePrimary(aggregate=aggregate_str, via=via_cond, where=where_cond)
+        return ir.LensAggregatePrimary(aggregate=aggregate_ref, via=via_cond)
 
     def _parse_primary_composite_block(self) -> ir.CompositePrimarySpec:
         """#1144 part 2: parse the indented body of a
@@ -2252,8 +2265,8 @@ class WorkspaceParserMixin:
             )
         self.advance()  # consume MINUS
         label_str = self._parse_dash_required_label("overlay_series")
-        source_name, filter_expr, aggregate_expr = self._parse_overlay_series_kv_block()
-        if not aggregate_expr:
+        source_name, filter_expr, aggregate_ref = self._parse_overlay_series_kv_block()
+        if aggregate_ref is None:
             tok = self.current_token()
             raise make_parse_error(
                 f"overlay_series entry {label_str!r} requires `aggregate:`",
@@ -2265,23 +2278,25 @@ class WorkspaceParserMixin:
             label=label_str,
             source=source_name,
             filter=filter_expr,
-            aggregate_expr=aggregate_expr,
+            aggregate=aggregate_ref,
         )
 
     def _parse_overlay_series_kv_block(
         self,
-    ) -> tuple[str | None, "ir.ConditionExpr | None", str]:
+    ) -> tuple[str | None, "ir.ConditionExpr | None", "ir.AggregateRef | None"]:
         """Consume the optional indented source/filter/aggregate block.
 
         Returns ``(source, filter, aggregate)``. ``aggregate`` is required
-        by the caller — empty string here signals omission.
+        by the caller — ``None`` here signals omission. Per ADR-0024 the
+        ``aggregate:`` value parses through :meth:`parse_aggregate_ref`
+        into a typed :class:`AggregateRef`.
         """
         source_name: str | None = None
         filter_expr: ir.ConditionExpr | None = None
-        aggregate_expr: str = ""
+        aggregate_ref: ir.AggregateRef | None = None
 
         if not self.match(TokenType.INDENT):
-            return source_name, filter_expr, aggregate_expr
+            return source_name, filter_expr, aggregate_ref
         self.advance()  # consume INDENT
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -2298,12 +2313,7 @@ class WorkspaceParserMixin:
                 filter_expr = self.parse_condition_expr()
                 self.skip_newlines()
             elif key == "aggregate":
-                # Joined token string until newline — same shape as
-                # the region-level `aggregate:` parser.
-                parts: list[str] = []
-                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                    parts.append(self.advance().value)
-                aggregate_expr = " ".join(parts)
+                aggregate_ref = self.parse_aggregate_ref()
                 self.skip_newlines()
             else:
                 raise make_parse_error(
@@ -2314,7 +2324,7 @@ class WorkspaceParserMixin:
                     key_tok.column,
                 )
         self.expect(TokenType.DEDENT)
-        return source_name, filter_expr, aggregate_expr
+        return source_name, filter_expr, aggregate_ref
 
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """Parse a ``workspace <name> "Title":`` declaration.
@@ -2660,7 +2670,7 @@ class _WorkspaceRegionState:
     empty_message: str | None = None
     group_by: str | ir.BucketRef | None = None
     group_by_dims: list[str | ir.BucketRef] | None = None
-    aggregates: dict[str, str] = field(default_factory=dict)
+    aggregates: dict[str, ir.AggregateRef] = field(default_factory=dict)
     date_field: str | None = None
     date_range: bool = False
     heatmap_rows: str | None = None
@@ -2832,7 +2842,11 @@ def _kw_date_range(parser: Any, state: _WorkspaceRegionState) -> None:
 
 
 def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``aggregate:`` block — ``metric_name: expr`` per line (expr captured raw)."""
+    """``aggregate:`` block — ``metric_name: <AggregateRef>`` per line.
+
+    Per ADR-0024 each entry is parsed structurally via
+    :meth:`parse_aggregate_ref` into a typed :class:`AggregateRef`.
+    """
     parser.advance()
     parser.expect(TokenType.COLON)
     parser.skip_newlines()
@@ -2843,10 +2857,7 @@ def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
             break
         metric_name = parser.expect_identifier_or_keyword().value
         parser.expect(TokenType.COLON)
-        expr_parts: list[str] = []
-        while not parser.match(TokenType.NEWLINE, TokenType.DEDENT):
-            expr_parts.append(parser.advance().value)
-        state.aggregates[metric_name] = " ".join(expr_parts)
+        state.aggregates[metric_name] = parser.parse_aggregate_ref()
         parser.skip_newlines()
     parser.expect(TokenType.DEDENT)
 

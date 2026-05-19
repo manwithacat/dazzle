@@ -132,7 +132,7 @@ class RegionContext(BaseModel):
     limit: int | None = None
     empty_message: str = "No data available."
     group_by: str = ""
-    aggregates: dict[str, str] = Field(default_factory=dict)
+    aggregates: dict[str, Any] = Field(default_factory=dict)  # str→AggregateRef (ADR-0024)
     action: str = ""  # Surface name for row-click navigation
     action_url: str = ""  # Resolved URL pattern for the action surface
     action_id_field: str = "id"  # Field on the item to use as the URL ID (#614)
@@ -205,7 +205,7 @@ class RegionContext(BaseModel):
     # per aggregate-shaped value, and renders literal-string values
     # verbatim (v0.61.66 #4). The render-ready list with resolved
     # values is built at request time as `pipeline_stage_data`.
-    pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
+    pipeline_stages: list[dict[str, Any]] = Field(default_factory=list)
     # v0.61.69 (#3): status_list entries — vertical icon + title + copy +
     # state-pill list. Each entry is a plain dict (title/copy/icon/state)
     # so the template iterates without IR-import dance. Empty list = no
@@ -646,7 +646,7 @@ def build_workspace_context(
                     {
                         "label": c.label,
                         "icon": c.icon,
-                        "count_aggregate": c.count_aggregate,
+                        "count": c.count,  # AggregateRef | None (ADR-0024)
                         "url": _action_to_url(c.action, app_spec),  # #979
                         "tone": c.tone,
                     }

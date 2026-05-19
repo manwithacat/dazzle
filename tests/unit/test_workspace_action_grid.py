@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.ir import DisplayMode
+from dazzle.core.ir import AggregateRef, DisplayMode
 from dazzle.core.ir.module import ModuleFragment
 from dazzle.core.ir.workspaces import ActionCardSpec
 
@@ -58,7 +58,13 @@ class TestActionGridParser:
         card = region.action_cards[0]
         assert card.label == "Triage open tasks"
         assert card.icon == "clipboard-check"
-        assert card.count_aggregate == "count ( Task where status = todo )"
+        # Per ADR-0024: count_aggregate parses into a typed AggregateRef.
+        assert card.count is not None
+        assert card.count.func == "count"
+        assert card.count.entity == "Task"
+        assert card.count.where is not None
+        assert card.count.where.comparison is not None
+        assert card.count.where.comparison.field == "status"
         assert card.action == "task_list"
         assert card.tone == "warning"
 
@@ -77,7 +83,7 @@ workspace dash "Dash":
         c = region.action_cards[0]
         assert c.label == "Just a label"
         assert c.icon == ""
-        assert c.count_aggregate == ""
+        assert c.count is None
         assert c.action == ""
         assert c.tone == "neutral"
 
@@ -233,7 +239,7 @@ class TestActionGridContext:
                 {
                     "label": "Test",
                     "icon": "clock",
-                    "count_aggregate": "count(Task)",
+                    "count": AggregateRef(func="count", entity="Task"),
                     "url": "/app/task",
                     "tone": "accent",
                 }
@@ -245,7 +251,7 @@ class TestActionGridContext:
     def test_action_card_spec_defaults(self) -> None:
         c = ActionCardSpec(label="Hello")
         assert c.icon == ""
-        assert c.count_aggregate == ""
+        assert c.count is None
         assert c.action == ""
         assert c.tone == "neutral"
 
@@ -305,9 +311,14 @@ class TestActionGridIsCountOnly:
     aggregates, not avg/sum/min/max. The runtime branch silently skips
     non-count expressions (card renders without a count badge)."""
 
-    def test_action_card_spec_accepts_any_aggregate_text(self) -> None:
+    def test_action_card_spec_accepts_any_aggregate(self) -> None:
         """The IR doesn't reject avg/sum/min/max — the runtime branch
         gates count-only support. That keeps the IR forward-compatible
         for when scalar aggregates land."""
-        c = ActionCardSpec(label="X", count_aggregate="avg(score)")
-        assert c.count_aggregate == "avg(score)"
+        c = ActionCardSpec(
+            label="X",
+            count=AggregateRef(func="avg", column="score"),
+        )
+        assert c.count is not None
+        assert c.count.func == "avg"
+        assert c.count.column == "score"

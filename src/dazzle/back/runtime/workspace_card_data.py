@@ -219,6 +219,7 @@ def _build_cohort_cells(
     config: Any,
     active_lens_id: str,
     row_action: Any = None,
+    cohort_aggregate_values: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Build cohort_strip cell dicts from already-scoped source rows (#1018).
 
@@ -267,18 +268,14 @@ def _build_cohort_cells(
     # #1144 part 2: composite primary (tuple display). When set, the
     # cell's primary_value is the join of each part's resolved field.
     composite_primary = getattr(active_lens, "primary_composite", None)
-    # #1144 part 3 phase 1: aggregate primary IR shipped, runtime
-    # execution is the next slice. Detect it and raise a clear
-    # message so authors learn the limitation at request time rather
-    # than seeing empty cells.
+    # #1144 Gap 1 phase 2: aggregate-primary lens. The per-member values
+    # have been resolved upstream by ``compute_cohort_aggregate_primary``
+    # and threaded through as ``cohort_aggregate_values``. The
+    # ``via:`` junction-binding case is phase 3 — when set, the
+    # upstream helper logs a warning and returns an empty dict, so
+    # the cells below render without a value.
     aggregate_primary = getattr(active_lens, "primary_aggregate", None)
-    if aggregate_primary is not None:
-        raise NotImplementedError(
-            "cohort_strip lens primary_aggregate runtime not wired yet "
-            "(#1144 part 3 phase 1 shipped IR + parser; Repository.aggregate "
-            "execution lands in a follow-up slice). DSL can be authored "
-            "today against the locked-in shape."
-        )
+    aggregate_values = cohort_aggregate_values or {}
     # #1144 part 1: multi-band tone mapping (supersedes scalar
     # threshold when non-empty). Pre-sorted descending by `at` so
     # the highest band a value clears determines its tone.
@@ -298,8 +295,8 @@ def _build_cohort_cells(
             member_name = str(item.get(f"{member_via}_display", "") or "")
             if not member_name:
                 member_name = str(fk_value or "") or str(item.get("name", "") or "")
-        # Primary value extraction. Composite path wins when set
-        # (parser + IR validator guarantee mutex with scalar).
+        # Primary value extraction. Three mutually-exclusive shapes
+        # (IR validator enforces): composite, aggregate, scalar.
         if composite_primary is not None:
             parts_rendered: list[str] = []
             for part in composite_primary.parts:
@@ -308,6 +305,12 @@ def _build_cohort_cells(
                 parts_rendered.append("" if part_raw is None else str(part_raw))
             primary_value = composite_primary.separator.join(parts_rendered)
             primary_raw = None  # tone derivation N/A for composites
+        elif aggregate_primary is not None:
+            # #1144 Gap 1 phase 2: per-member value resolved upstream
+            # by compute_cohort_aggregate_primary. Missing key →
+            # query failed / returned no rows → cell renders empty.
+            primary_raw = aggregate_values.get(member_id)
+            primary_value = "" if primary_raw is None else str(primary_raw)
         else:
             primary_raw = _resolve_path(item, primary_field) if primary_field else None
             primary_value = "" if primary_raw is None else str(primary_raw)

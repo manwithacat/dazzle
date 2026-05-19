@@ -380,19 +380,20 @@ async def compute_action_grid(
     """Build action-card payloads with optional aggregate counts (#891).
 
     Each card carries label/icon/url/tone (already resolved at context
-    build time) plus an optional ``count_aggregate`` expression. When
-    parseable, fires one ``_fetch_count_metric`` per card concurrently
-    via ``asyncio.gather``. Cross-entity counts run unscoped with a
-    warning, mirroring the source-entity scope gate (#901). When
+    build time) plus an optional ``count`` :class:`AggregateRef`. When
+    set with a ``count`` func and a resolvable entity, fires one
+    ``_fetch_count_metric`` per card concurrently via ``asyncio.gather``.
+    Cross-entity counts run unscoped with a warning (#901). When
     ``scope_denied`` is True, all cards render without counts.
+
+    Per ADR-0024 the aggregate is a typed IR object, not a string —
+    no regex dispatch.
     """
     import asyncio as _asyncio
     import logging
 
-    from dazzle.back.runtime.workspace_aggregation import (
-        _AGGREGATE_RE,
-        _fetch_count_metric,
-    )
+    from dazzle.back.runtime.workspace_aggregation import _fetch_count_metric
+    from dazzle.core.ir import AggregateRef
 
     logger = logging.getLogger(__name__)
     out: list[dict[str, Any]] = []
@@ -416,15 +417,16 @@ async def compute_action_grid(
     count_tasks: list[Any] = []
     count_indices: list[int] = []
     for idx, card in enumerate(cards):
-        expr = card.get("count_aggregate") or ""
-        if not expr:
+        count_ref = card.get("count")
+        # Only count() with a resolvable entity drives a badge — scalar
+        # aggregates on action cards have no defined render path yet.
+        if not isinstance(count_ref, AggregateRef) or count_ref.func != "count":
             continue
-        m = _AGGREGATE_RE.match(expr)
-        if not m:
+        entity_name = count_ref.entity
+        if not entity_name:
             continue
-        func, entity_name, where = m.groups()
         agg_repo = repositories.get(entity_name) if repositories else None
-        if func != "count" or agg_repo is None:
+        if agg_repo is None:
             continue
         card_scope = scope_only_filters if entity_name == source_entity else None
         if card_scope is None and scope_only_filters is not None:
@@ -441,7 +443,7 @@ async def compute_action_grid(
             _fetch_count_metric(
                 f"action_card_{idx}",
                 agg_repo,
-                where,
+                count_ref.where,
                 card_scope,
                 source_entity=entity_name,
             )
@@ -479,10 +481,10 @@ async def compute_pipeline_steps(
 ) -> list[dict[str, Any]]:
     """Build pipeline-stage data with aggregate value/progress per stage (#890).
 
-    Each stage's ``value`` and ``progress`` fields are either:
-    - an aggregate expression (matches ``_AGGREGATE_RE``, fires a count
-      query),
-    - or a literal string (renders verbatim — v0.61.66 #4).
+    Each stage's ``value`` and ``progress`` fields are a discriminated
+    union (ADR-0024): a typed :class:`AggregateRef` (fires a count
+    query) OR a literal string (renders verbatim — v0.61.66 #4).
+    ``None`` means the field was omitted.
 
     Cross-entity aggregates run unscoped with a warning (#901). When
     ``scope_denied`` is True, aggregate stages render without values
@@ -491,11 +493,9 @@ async def compute_pipeline_steps(
     import asyncio as _asyncio
     import logging
 
-    from dazzle.back.runtime.workspace_aggregation import (
-        _AGGREGATE_RE,
-        _fetch_count_metric,
-    )
+    from dazzle.back.runtime.workspace_aggregation import _fetch_count_metric
     from dazzle.back.runtime.workspace_card_data import _coerce_pipeline_progress
+    from dazzle.core.ir import AggregateRef
 
     logger = logging.getLogger(__name__)
     out: list[dict[str, Any]] = []
@@ -505,17 +505,17 @@ async def compute_pipeline_steps(
 
     if scope_denied:
         for stage in stages:
-            expr = stage.get("value") or ""
-            is_literal = bool(expr) and not _AGGREGATE_RE.match(expr)
-            prog_expr = stage.get("progress") or ""
-            prog_is_literal = bool(prog_expr) and not _AGGREGATE_RE.match(prog_expr)
-            prog_raw: Any = prog_expr if prog_is_literal else None
+            val = stage.get("value")
+            prog_val = stage.get("progress")
+            # Literal strings preserve; AggregateRef renders as None.
+            value_out = val if isinstance(val, str) else None
+            prog_raw = prog_val if isinstance(prog_val, str) else None
             prog_clamped, prog_overshoot = _coerce_pipeline_progress(prog_raw)
             out.append(
                 {
                     "label": stage.get("label", ""),
                     "caption": stage.get("caption", ""),
-                    "value": expr if is_literal else None,
+                    "value": value_out,
                     "progress": prog_clamped,
                     "progress_overshoot": prog_overshoot,
                 }
@@ -526,16 +526,24 @@ async def compute_pipeline_steps(
     stage_task_keys: list[tuple[int, str]] = []
     stage_literals: dict[tuple[int, str], str] = {}
 
-    def queue_stage_field(sidx: int, field: str, expr: str) -> None:
-        if not expr:
+    def queue_stage_field(sidx: int, field: str, payload: Any) -> None:
+        # Three shapes per ADR-0024:
+        #   - None      → field omitted, nothing to do
+        #   - str       → literal, render verbatim
+        #   - AggregateRef → fire a query (count only for now)
+        if payload is None:
             return
-        m = _AGGREGATE_RE.match(expr)
-        if not m:
-            stage_literals[(sidx, field)] = expr
+        if isinstance(payload, str):
+            if payload:
+                stage_literals[(sidx, field)] = payload
             return
-        func, entity_name, where = m.groups()
+        if not isinstance(payload, AggregateRef) or payload.func != "count":
+            return
+        entity_name = payload.entity
+        if not entity_name:
+            return
         agg_repo = repositories.get(entity_name) if repositories else None
-        if func != "count" or agg_repo is None:
+        if agg_repo is None:
             return
         stage_scope = scope_only_filters if entity_name == source_entity else None
         if stage_scope is None and scope_only_filters is not None:
@@ -554,7 +562,7 @@ async def compute_pipeline_steps(
             _fetch_count_metric(
                 f"pipeline_stage_{sidx}_{field}",
                 agg_repo,
-                where,
+                payload.where,
                 stage_scope,
                 source_entity=entity_name,
             )
@@ -562,8 +570,8 @@ async def compute_pipeline_steps(
         stage_task_keys.append((sidx, field))
 
     for sidx, stage in enumerate(stages):
-        queue_stage_field(sidx, "value", stage.get("value") or "")
-        queue_stage_field(sidx, "progress", stage.get("progress") or "")
+        queue_stage_field(sidx, "value", stage.get("value"))
+        queue_stage_field(sidx, "progress", stage.get("progress"))
 
     stage_results: dict[tuple[int, str], Any] = {}
     if stage_tasks:
@@ -580,7 +588,7 @@ async def compute_pipeline_steps(
                 )
 
     for sidx, stage in enumerate(stages):
-        val: Any = stage_literals.get((sidx, "value"), stage_results.get((sidx, "value")))
+        resolved_val: Any = stage_literals.get((sidx, "value"), stage_results.get((sidx, "value")))
         prog_raw_resolved: Any = stage_literals.get(
             (sidx, "progress"), stage_results.get((sidx, "progress"))
         )
@@ -589,12 +597,328 @@ async def compute_pipeline_steps(
             {
                 "label": stage.get("label", ""),
                 "caption": stage.get("caption", ""),
-                "value": val,
+                "value": resolved_val,
                 "progress": prog_clamped,
                 "progress_overshoot": prog_overshoot,
             }
         )
     return out
+
+
+async def compute_cohort_aggregate_primary(
+    *,
+    items: list[dict[str, Any]],
+    lens: Any,  # CohortStripLens with primary_aggregate
+    source_entity: str,
+    repositories: dict[str, Any] | None,
+    scope_only_filters: dict[str, Any] | None,
+    member_via: str,
+) -> dict[str, Any]:
+    """Compute per-member aggregate values for a cohort_strip primary_aggregate lens.
+
+    Phase 2 of #1144 Gap 1: closes the runtime gap where the IR was
+    typed but the rendering raised ``NotImplementedError``. Per ADR-0024
+    the aggregate is a typed :class:`AggregateRef`; the runtime
+    dispatches on its fields.
+
+    **Scope of phase 2:** the **no-via** case. The aggregated entity
+    must declare a direct FK to the source entity; per-member filters
+    are ``aggregated_entity.<source_fk> = <member_id>``. The ``via:``
+    junction-binding case is deferred to phase 3 — that needs a
+    parameter-binding via-subquery compiler that's semantically
+    distinct from the scope-rule via reused at the IR layer.
+
+    When ``lens.primary_aggregate.via`` is set, this helper logs a
+    warning and returns an empty dict (cells will render as no-value).
+
+    N+1 fan-out — one ``Repository.aggregate`` call per cohort member.
+    Phase 3 batches into one GROUP BY query.
+
+    Args:
+        items: Cohort source rows (already RBAC-scoped upstream).
+        lens: The active :class:`CohortStripLens` carrying
+            ``primary_aggregate``.
+        source_entity: Name of the cohort source entity (used to
+            resolve the FK from aggregated entity → source).
+        repositories: Repository registry keyed by entity name.
+        scope_only_filters: Source-entity scope filters (applied to
+            the *aggregated* entity only when ``ref.entity ==
+            source_entity``; for cross-entity aggregates the
+            aggregated entity's RBAC must be composed separately —
+            phase 3).
+        member_via: The cohort_strip ``member_via:`` field (typically
+            ``id`` or an FK column).
+
+    Returns:
+        Mapping of cohort member id → aggregate value. Members whose
+        query failed or returned no rows are absent from the mapping
+        (the cell renders without a value).
+    """
+    import asyncio as _asyncio
+    import logging
+
+    from dazzle.core.ir import AggregateRef
+
+    logger = logging.getLogger(__name__)
+    out: dict[str, Any] = {}
+
+    primary_aggregate = getattr(lens, "primary_aggregate", None)
+    if primary_aggregate is None:
+        return out
+    ref = primary_aggregate.aggregate
+    if not isinstance(ref, AggregateRef):
+        return out
+
+    # Resolve the aggregated entity's repository. Cross-entity scalars
+    # (ref.entity set) and source-relative scalars (ref.entity is None)
+    # both supported.
+    aggregated_entity = ref.entity if ref.entity is not None else source_entity
+    if not repositories or aggregated_entity not in repositories:
+        return out
+    agg_repo = repositories[aggregated_entity]
+
+    # Two link strategies, in priority order (#1144 Gap 1 phases 2-3):
+    #   - With `via:` set → junction-binding subquery (phase 3, this slice).
+    #     The cohort member's id is substituted as a literal parameter into
+    #     the junction WHERE clause.
+    #   - Without `via:` → direct FK from aggregated entity → source entity
+    #     (phase 2). Per-member filter is `aggregated_entity.<fk> = member_id`.
+    via = primary_aggregate.via
+    junction_repo = repositories.get(via.junction_entity) if (via and repositories) else None
+    via_link: tuple[str, str, str] | None = None  # (subq_select_field, agg_filter_col, direction)
+    if via is not None:
+        if junction_repo is None:
+            logger.warning(
+                "cohort_strip lens %r: junction entity %r not in repositories — "
+                "cells will render without a value.",
+                getattr(lens, "id", "<unknown>"),
+                via.junction_entity,
+            )
+            return out
+        via_link = _resolve_via_link_direction(agg_repo, junction_repo, via.junction_entity)
+        if via_link is None:
+            logger.warning(
+                "cohort_strip lens %r: no FK between aggregated entity %r and "
+                "junction %r — declare a direct reference or use the no-via "
+                "case. Cells will render without a value.",
+                getattr(lens, "id", "<unknown>"),
+                aggregated_entity,
+                via.junction_entity,
+            )
+            return out
+        fk_col = None
+    else:
+        fk_col = _find_fk_to(agg_repo, source_entity)
+        if fk_col is None:
+            logger.warning(
+                "cohort_strip lens %r: aggregated entity %r has no FK to "
+                "source entity %r — per-member filtering not possible. "
+                "Cells will render without a value.",
+                getattr(lens, "id", "<unknown>"),
+                aggregated_entity,
+                source_entity,
+            )
+            return out
+
+    # Build the shared measure spec — same for every per-member call.
+    if ref.func == "count":
+        measures = {"primary": "count"}
+    else:
+        measures = {"primary": f"{ref.func}:{ref.column}"}
+
+    async def _fetch_for(member_id: str) -> tuple[str, Any]:
+        from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
+
+        if via_link is not None and via is not None:
+            # Phase 3: build the junction subquery as a __scope_predicate.
+            subq_select_field, agg_filter_col, _direction = via_link
+            via_sql, via_params = _build_cohort_via_subquery(
+                via=via,
+                member_id=member_id,
+                junction_select_field=subq_select_field,
+                aggregated_filter_col=agg_filter_col,
+            )
+            per_member_filters: dict[str, Any] = {"__scope_predicate": (via_sql, via_params)}
+        else:
+            # Phase 2: direct-FK per-member filter.
+            assert fk_col is not None  # narrowed by the else branch above
+            per_member_filters = {fk_col: member_id}
+
+        merged = _build_aggregate_filters(
+            ref.where,
+            per_member_filters,
+            agg_repo,
+            aggregated_entity,
+        )
+        try:
+            buckets = await agg_repo.aggregate(
+                dimensions=[],
+                measures=measures,
+                filters=merged,
+                limit=1,
+            )
+        except Exception:
+            logger.warning(
+                "cohort_strip lens %r aggregate query failed for member %r",
+                getattr(lens, "id", "<unknown>"),
+                member_id,
+                exc_info=True,
+            )
+            return member_id, None
+        if not buckets:
+            return member_id, None
+        return member_id, buckets[0].measures.get("primary")
+
+    member_ids: list[str] = []
+    for item in items:
+        # Cohort member key — uses the source row's `id` field, matching
+        # the `_build_cohort_cells` resolution.
+        mid = str(item.get("id", "") or "")
+        if mid:
+            member_ids.append(mid)
+    if not member_ids:
+        return out
+
+    results = await _asyncio.gather(
+        *(_fetch_for(mid) for mid in member_ids), return_exceptions=False
+    )
+    for mid, value in results:
+        if value is not None:
+            out[mid] = value
+    return out
+
+
+def _resolve_via_link_direction(
+    aggregated_repo: Any,
+    junction_repo: Any,
+    junction_entity_name: str,
+) -> tuple[str, str, str] | None:
+    """Discover how the aggregated entity links to the junction.
+
+    Two directions are supported (phase 3 of #1144):
+
+    - **Junction → Aggregated** (most common for true M2M junctions):
+      the junction has a FK column pointing at the aggregated entity.
+      The subquery selects that FK column; the aggregated entity is
+      filtered on its primary key ``id``.
+
+    - **Aggregated → Junction**: the aggregated entity has a FK
+      column pointing at the junction. The subquery selects the
+      junction's ``id``; the aggregated entity is filtered on its
+      FK column.
+
+    Junction-to-aggregated is checked first because it's the natural
+    shape of declarative junction tables. Returns ``None`` when no FK
+    in either direction can be discovered — caller logs a clear
+    warning and skips the lens.
+
+    Returns ``(subquery_select_field, aggregated_filter_col, direction)``
+    where ``direction`` is ``"junction_to_agg"`` or ``"agg_to_junction"``.
+    """
+    aggregated_entity_name = _entity_name_of(aggregated_repo)
+    # Direction A: junction has FK to aggregated entity.
+    if aggregated_entity_name:
+        col = _find_fk_to(junction_repo, aggregated_entity_name)
+        if col is not None:
+            return col, "id", "junction_to_agg"
+    # Direction B: aggregated entity has FK to junction.
+    col = _find_fk_to(aggregated_repo, junction_entity_name)
+    if col is not None:
+        return "id", col, "agg_to_junction"
+    return None
+
+
+def _entity_name_of(repo: Any) -> str | None:
+    """Read the entity name from a repository's spec. Returns None when
+    the spec doesn't carry a ``name`` attribute (e.g. test mocks)."""
+    spec = getattr(repo, "entity_spec", None)
+    if spec is None:
+        return None
+    return getattr(spec, "name", None)
+
+
+def _build_cohort_via_subquery(
+    *,
+    via: Any,  # ViaCondition
+    member_id: str,
+    junction_select_field: str,
+    aggregated_filter_col: str,
+) -> tuple[str, list[Any]]:
+    """Build a __scope_predicate SQL fragment from a cohort-aggregate
+    ``via:`` clause + the current member's id.
+
+    Distinct from the scope-rule via compiler (route_generator
+    ``_build_via_subquery``) because the binding semantics differ:
+
+    - Scope-rule via: ``target="id"`` refers to the **scoped entity's
+      ``id`` column** — produces ``entity.id IN (SELECT ...)``.
+    - Cohort-aggregate via: ``target="id"`` refers to the **current
+      cohort member's id** — produces ``junction.field = <literal
+      member_id>``.
+
+    Shape:
+
+      WHERE <aggregated_filter_col> IN (
+          SELECT <junction_select_field>
+          FROM <Junction>
+          WHERE <each binding>
+      )
+
+    Binding interpretations:
+      - ``target="id"`` → ``junction.field <op> <member_id literal>``
+      - ``target="null"`` → ``junction.field IS NULL`` / ``IS NOT NULL``
+      - Other targets (``current_user.*``, etc.) → not yet supported;
+        skipped (the binding has no effect on the subquery).
+
+    Returns ``(sql, params)`` ready to be plugged into a
+    QueryBuilder ``__scope_predicate`` slot.
+    """
+    from dazzle.back.runtime.query_builder import quote_identifier
+
+    junction_table = quote_identifier(via.junction_entity)
+    where_clauses: list[str] = []
+    params: list[Any] = []
+    for binding in via.bindings:
+        jf = quote_identifier(binding.junction_field)
+        op = getattr(binding, "operator", "=") or "="
+        target = binding.target
+        if target == "null":
+            if op == "=":
+                where_clauses.append(f"{jf} IS NULL")
+            else:
+                where_clauses.append(f"{jf} IS NOT NULL")
+        elif target == "id":
+            where_clauses.append(f"{jf} {op} %s")
+            params.append(member_id)
+        # Other binding targets (current_user.*, literals) are not
+        # part of the phase 3 surface — the cohort aggregate's only
+        # parameter is the member id. Future phases can extend.
+    where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
+    agg_col = quote_identifier(aggregated_filter_col)
+    select_col = quote_identifier(junction_select_field)
+    sql = f"{agg_col} IN (SELECT {select_col} FROM {junction_table} WHERE {where_sql})"
+    return sql, params
+
+
+def _find_fk_to(repo: Any, target_entity: str) -> str | None:
+    """Find the column on ``repo``'s entity that's a FK referencing
+    ``target_entity``. Returns the column name or None when no such
+    FK exists.
+
+    Used by ``compute_cohort_aggregate_primary`` to discover the
+    per-member filter column without requiring authors to declare it.
+    """
+    spec = getattr(repo, "entity_spec", None)
+    if spec is None:
+        return None
+    for fld in getattr(spec, "fields", []):
+        ftype = getattr(fld, "type", None)
+        if ftype is None or getattr(ftype, "kind", None) != "ref":
+            continue
+        if getattr(ftype, "ref_entity", None) == target_entity:
+            name = fld.name
+            return str(name) if name is not None else None
+    return None
 
 
 def compute_columns_for_persona(

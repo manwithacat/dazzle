@@ -63,11 +63,12 @@ def main():
         if len(lines) > 15:
             issues = "\n".join(lines[:15]) + f"\n... and {len(lines) - 15} more issues"
 
+        # Stop-hook output schema doesn't include `hookSpecificOutput`
+        # (that field is only for PreToolUse / UserPromptSubmit /
+        # PostToolUse / PostToolBatch). Use `systemMessage` to surface
+        # lint warnings to the agent without blocking the turn.
         output = {
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": f"Lint issues in modified files:\n{issues}",
-            }
+            "systemMessage": f"Lint issues in modified files:\n{issues}",
         }
         print(json.dumps(output))
 

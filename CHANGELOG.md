@@ -9,6 +9,155 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.56] - 2026-05-19
+
+### Added
+
+- **`AggregateRef` typed IR + parser helper (ADR-0024, Slices 1a–1f).**
+  Aggregate expressions across the framework — region `aggregate:`
+  blocks, action-card `count_aggregate:`, pipeline-step `value:` /
+  `progress:`, overlay-series `aggregate:`, and cohort-strip
+  `primary_aggregate:` — now parse structurally into
+  `AggregateRef(func, entity, column, where)` instead of being stashed
+  as strings for a runtime regex.
+
+  - New IR module `dazzle.core.ir.aggregates` with `AggregateRef` and
+    `AggregateFunc` Literal alias.
+  - New parser helper `AggregateParserMixin` (`parse_aggregate_ref` +
+    `peek_is_aggregate_call`) in `dsl_parser_impl/aggregate.py`.
+  - **The previously-unrepresentable `avg(Entity.column)` shape now
+    parses cleanly** — direct unblock for #1144 Gap 1 phase 2.
+  - DSL surface syntax unchanged — users continue to write
+    `count(Task where status = open)` / `avg(MarkingResult.score)`.
+
+- **ADR-0024 — no regex for DSL grammar.** New enforcement test
+  `tests/unit/test_no_regex_in_parser.py` scans the parser surface
+  for `re.*` calls and fails on hits outside an explicit allowlist
+  (current allowlist: 4 lexical-shape regexes for duration literals
+  + Entity.field recognition; intended to shrink, not grow).
+
+### Changed
+
+- `WorkspaceRegion.aggregates`: `dict[str, str]` → `dict[str, AggregateRef]`.
+- `ActionCardSpec.count_aggregate: str` → `ActionCardSpec.count: AggregateRef | None`.
+  DSL key remains `count_aggregate:` for familiarity.
+- `OverlaySeriesSpec.aggregate_expr: str` → `OverlaySeriesSpec.aggregate: AggregateRef`.
+- `PipelineStageSpec.value` / `.progress`: `str` → `AggregateRef | str | None`
+  (discriminated union — typed aggregate fires a query, literal string
+  renders verbatim for descriptive flow-card stages).
+- `LensAggregatePrimary.aggregate: str` → `LensAggregatePrimary.aggregate: AggregateRef`.
+  The top-level `where:` key is gone — row predicates ride inside the
+  AggregateRef's own `where:` clause. DSL shape simplifies from a
+  quoted string to a structural call:
+  ```dsl
+  primary_aggregate:
+    aggregate: avg(MarkingResult.score where latest_for_event = true)
+    via: ClassEnrolment(student_profile = id)
+  ```
+- Runtime fetchers (`_compute_aggregate_metrics`,
+  `_compute_bucketed_aggregates`, `_compute_pivot_buckets`) now consume
+  `dict[str, AggregateRef]` and dispatch on typed fields. **`_AGGREGATE_RE`
+  is deleted** — the regex that powered five years of aggregate parsing
+  is gone. The internal `where_clause` argument to `_fetch_count_metric`
+  / `_fetch_scalar_metric` is still string-typed (bridged by
+  `condition_expr_to_legacy_where`); Slice 2 retires that last string
+  boundary by folding `parse_aggregate_where` into the main predicate
+  parser.
+
+### Removed
+
+- `_AGGREGATE_RE` regex (`workspace_aggregation.py`). All
+  aggregate-string consumers retired in favour of typed IR dispatch.
+
+- The legacy string round-trip through ``parse_aggregate_where`` is
+  retired for the main fetcher paths (Slice 2). Aggregate
+  where-clauses now flow as typed ``ConditionExpr`` from parser to
+  ``compile_predicate`` via a new
+  ``dazzle.core.ir.condition_to_predicate.condition_expr_to_scope_predicate``
+  translator. ``_fetch_count_metric`` / ``_fetch_scalar_metric`` /
+  ``_build_aggregate_filters`` consume ``ConditionExpr`` directly.
+  ``parse_aggregate_where`` remains only for bar_chart's
+  ``current_bucket`` sentinel substitution path (which still
+  manipulates the where-clause as text); that final retirement is its
+  own cleanup gated on the sentinel migrating to an IR-level marker.
+
+### Closed
+
+- **#1144 Gap 1 phase 2 + 3 — `cohort_strip` `primary_aggregate:`
+  runtime execution including `via:` junction binding.**
+  `LensAggregatePrimary` no longer raises `NotImplementedError` at
+  render time. New `compute_cohort_aggregate_primary()` fires
+  per-member `Repository.aggregate` queries during orchestration phase
+  4 and threads the resolved values through to `_build_cohort_cells`
+  via the new `RegionRenderInputs.cohort_aggregate_values` field.
+
+  Two link strategies (both auto-discovered via the FK graph):
+  - **No-via** (phase 2): aggregated entity has a direct FK to the
+    cohort source entity. Per-member filter is
+    `aggregated_entity.<fk> = <member_id>`.
+  - **With-via** (phase 3): a junction entity sits between the
+    aggregated entity and the cohort member. Two sub-directions are
+    supported — junction→aggregated (most common M2M shape) and
+    aggregated→junction (fallback). The cohort member's id is bound
+    as a literal parameter to the junction WHERE clause. Distinct
+    from scope-rule `via:` (whose `target="id"` means the scoped
+    entity's id column, not a literal parameter — see spike Q1).
+
+  ```dsl
+  lenses:
+    - id: attainment
+      label: Attainment
+      primary_aggregate:
+        aggregate: avg(MarkingResult.score where latest_for_event = true)
+        via: ClassEnrolment(student_profile = id)
+  ```
+
+  ```dsl
+  lenses:
+    - id: total_marks
+      label: "Total marks"
+      primary_aggregate:
+        aggregate: count(MarkingResult where reviewed = true)
+        # MarkingResult.student → StudentProfile FK auto-resolves
+  ```
+
+  11 new tests pin the dispatch shape: direct-FK lookup, per-member
+  fan-out, where-clause propagation through `__scope_predicate`,
+  count-vs-scalar measure spec, graceful no-FK degradation, both
+  via-link directions (junction→aggregated and aggregated→junction),
+  null-binding rendering, and missing-junction-repo warning.
+
+  Phase 4 (batched GROUP BY through the junction path) remains
+  deferred — gated on a real perf complaint per the spike doc.
+
+### Fixed
+
+- `examples/ops_dashboard/dsl/app.dsl`: aggregate where-clauses used
+  uppercase `WHERE` and single-quoted enum values, which the legacy
+  regex tolerated (silently dropped the clause) but the typed parser
+  catches. Corrected to lowercase `where` and bare-identifier enum
+  values. Latent runtime bug surfaced exactly as ADR-0024 predicted.
+
+### Agent Guidance
+
+- **Reach for IR types, not regex.** When parsing any DSL shape
+  (call form, keyword, sub-expression), use the token-driven
+  recursive-descent pattern + a typed IR field — never `re.compile`.
+  Lexical-shape regex (identifier shape, duration literals) is the
+  only legitimate use; see ADR-0024.
+- **`AggregateRef` is the canonical shape** for any new aggregate
+  consumer. Call `parser.parse_aggregate_ref()` from your parser
+  mixin and store the result in your IR field.
+  `peek_is_aggregate_call()` supports union-with-literal cases
+  (`AggregateRef | str`).
+- **Transitional `condition_expr_to_legacy_where`** in
+  `dazzle.core.ir.aggregate_legacy` is the last string boundary
+  remaining. The internal `_fetch_count_metric` /
+  `_fetch_scalar_metric` interfaces still take a string `where_clause`
+  (consumed by `parse_aggregate_where`). Slice 2 retires the
+  stringifier by folding `parse_aggregate_where` into the main
+  predicate parser. Don't extend it.
+
 ## [0.71.55] - 2026-05-19
 
 ### Added

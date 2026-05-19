@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 350 BaseModels, 143 Enums, 21 other (functions / typealiases / constants)
+# Counts: 351 BaseModels, 143 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -42,7 +42,7 @@ ir_class: ActionCardSpec
     - label: str
   optional:
     - action: str = ''
-    - count_aggregate: str = ''
+    - count: AggregateRef | None = None
     - icon: str = ''
     - tone: str = 'neutral'
 
@@ -57,6 +57,14 @@ ir_class: AggregateCall
     - field: FieldReference
     - function: AggregateFunction
   optional: (none)
+
+ir_class: AggregateRef
+  required:
+    - func: Literal[count, sum, avg, min, max]
+  optional:
+    - column: str | None = None
+    - entity: str | None = None
+    - where: ConditionExpr | None = None
 
 ir_class: AnalyticsConsentSpec
   required: (none)
@@ -1521,10 +1529,9 @@ ir_class: LegalPagesSpec
 
 ir_class: LensAggregatePrimary
   required:
-    - aggregate: str
+    - aggregate: AggregateRef
   optional:
     - via: ViaCondition | None = None
-    - where: ConditionExpr | None = None
 
 ir_class: LifecycleReport
   required:
@@ -1817,7 +1824,7 @@ ir_class: Outcome
 
 ir_class: OverlaySeriesSpec
   required:
-    - aggregate_expr: str
+    - aggregate: AggregateRef
     - label: str
   optional:
     - filter: ConditionExpr | None = None
@@ -1976,8 +1983,8 @@ ir_class: PipelineStageSpec
     - label: str
   optional:
     - caption: str = ''
-    - progress: str = ''
-    - value: str = ''
+    - progress: AggregateRef | str | None = None
+    - value: AggregateRef | str | None = None
 
 ir_class: PoliciesSpec
   required: (none)
@@ -3153,7 +3160,7 @@ ir_class: WorkspaceRegion
   optional:
     - action: str | None = None
     - action_cards: list[ActionCardSpec] = []
-    - aggregates: dict[str, str] = {}
+    - aggregates: dict[str, AggregateRef] = {}
     - avatar_field: str | None = None
     - bin_count: int | None = None
     - bullet_actual: str | None = None
@@ -4405,6 +4412,7 @@ category: constant
   - MONEY_FIELD_PATTERNS: frozenset (len=24)
 
 category: function
+  - AggregateFunc (callable, type=_LiteralGenericAlias)
   - DateExpr (callable, type=_AnnotatedAlias)
   - ScopePredicate (callable, type=_AnnotatedAlias)
   - create_default_sitespec (callable, type=function)

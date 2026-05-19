@@ -21,6 +21,7 @@ from dazzle.back.runtime.workspace_aggregation import (
     _bucket_key_label,
     _compute_bucketed_aggregates,
 )
+from tests.unit._aggregate_test_helpers import agg
 
 
 def _make_repo_returning(*totals: int) -> MagicMock:
@@ -40,7 +41,7 @@ class TestBucketedAggregates:
     @pytest.mark.asyncio()
     async def test_no_repo_returns_empty(self) -> None:
         result = await _compute_bucketed_aggregates(
-            {"students": "count(Manuscript where computed_grade = current_bucket)"},
+            {"students": agg("count(Manuscript where computed_grade = current_bucket)")},
             None,
             "grade",
             [{"grade": "9"}],
@@ -52,7 +53,7 @@ class TestBucketedAggregates:
         """When no bucket_values supplied, derive from distinct items[group_by]."""
         repo = _make_repo_returning(12, 7, 3)
         result = await _compute_bucketed_aggregates(
-            {"students": "count(Manuscript where computed_grade = current_bucket)"},
+            {"students": agg("count(Manuscript where computed_grade = current_bucket)")},
             {"Manuscript": repo},
             "computed_grade",
             [{"computed_grade": "9"}, {"computed_grade": "8"}, {"computed_grade": "7"}],
@@ -70,7 +71,7 @@ class TestBucketedAggregates:
         """Pre-supplied buckets (from enum/state-machine) come first."""
         repo = _make_repo_returning(0, 5, 0)
         result = await _compute_bucketed_aggregates(
-            {"students": "count(Manuscript where computed_grade = current_bucket)"},
+            {"students": agg("count(Manuscript where computed_grade = current_bucket)")},
             {"Manuscript": repo},
             "computed_grade",
             [],
@@ -84,7 +85,7 @@ class TestBucketedAggregates:
         """Author can omit `current_bucket` — runtime adds `group_by = bucket`."""
         repo = _make_repo_returning(11, 4)
         await _compute_bucketed_aggregates(
-            {"students": "count(Manuscript)"},
+            {"students": agg("count(Manuscript)")},
             {"Manuscript": repo},
             "computed_grade",
             [{"computed_grade": "9"}, {"computed_grade": "8"}],
@@ -102,7 +103,7 @@ class TestBucketedAggregates:
         """Only count(Entity where ...) expressions are bucketed today."""
         repo = MagicMock()
         result = await _compute_bucketed_aggregates(
-            {"avg_score": "avg(Manuscript)"},
+            {"avg_score": agg("avg(Manuscript)")},
             {"Manuscript": repo},
             "computed_grade",
             [{"computed_grade": "9"}],
@@ -114,7 +115,7 @@ class TestBucketedAggregates:
         """Per-bucket queries must include scope filters (security gate, #574)."""
         repo = _make_repo_returning(1, 2)
         await _compute_bucketed_aggregates(
-            {"students": "count(Manuscript where computed_grade = current_bucket)"},
+            {"students": agg("count(Manuscript where computed_grade = current_bucket)")},
             {"Manuscript": repo},
             "computed_grade",
             [{"computed_grade": "9"}, {"computed_grade": "8"}],
@@ -171,7 +172,7 @@ class TestBucketedAggregatesWithFK:
             {"assessment_objective": {"id": "ao-2", "code": "AO2", "label": "Application"}},
         ]
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": repo},
             "assessment_objective",
             items,
@@ -198,7 +199,7 @@ class TestBucketedAggregatesWithFK:
             {"target": {"id": "t-1", "label": "T", "extra": "noise"}},
         ]
         result = await _compute_bucketed_aggregates(
-            {"count": "count(Other)"},
+            {"count": agg("count(Other)")},
             {"Other": repo},
             "target",
             items,
@@ -213,7 +214,7 @@ class TestBucketedAggregatesWithFK:
         repo = _make_repo_returning(5)
         items = [{"target": {"id": "t-1", "label": "T"}}]
         await _compute_bucketed_aggregates(
-            {"count": "count(Other where target = current_bucket)"},
+            {"count": agg("count(Other where target = current_bucket)")},
             {"Other": repo},
             "target",
             items,
@@ -278,7 +279,7 @@ class TestSourceEntityBucketEnumeration:
             [],
         )
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "Source": source_repo},
             "target",
             items=[{"target": {"id": "A", "label": "A"}}],  # only A on first page
@@ -298,7 +299,7 @@ class TestSourceEntityBucketEnumeration:
             [],
         )
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "Source": source_repo},
             "target",
             items=[],
@@ -313,7 +314,7 @@ class TestSourceEntityBucketEnumeration:
         """Without source_entity, the items-page fallback still works."""
         agg_repo, _ = _make_capturing_repo(7)
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "computed_grade",
             [{"computed_grade": "9"}],
@@ -327,7 +328,7 @@ class TestSourceEntityBucketEnumeration:
         agg_repo, _ = _make_capturing_repo(0, 0)
         source_repo = _make_source_repo_returning([{"target": {"id": "ignored"}}])
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "Source": source_repo},
             "target",
             items=[],
@@ -344,7 +345,7 @@ class TestSourceEntityBucketEnumeration:
         source_repo = MagicMock()
         source_repo.list = AsyncMock(side_effect=RuntimeError("DB down"))
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "Source": source_repo},
             "computed_grade",
             [{"computed_grade": "9"}],
@@ -363,7 +364,7 @@ class TestPerBucketFilterShape:
         """The repo must receive {group_by: bucket} as a dict, no parser detour."""
         agg_repo, captured = _make_capturing_repo(1560)
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "assessment_objective",
             items=[{"assessment_objective": {"id": "55a15a5d-be5e-4abc-9def-aabbccddeeff"}}],
@@ -376,7 +377,7 @@ class TestPerBucketFilterShape:
     async def test_auto_augment_merges_scope_filters(self) -> None:
         agg_repo, captured = _make_capturing_repo(42)
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "assessment_objective",
             items=[{"assessment_objective": {"id": "ao-1"}}],
@@ -390,7 +391,7 @@ class TestPerBucketFilterShape:
         agg_repo = MagicMock()
         agg_repo.list = AsyncMock(side_effect=RuntimeError("connection lost"))
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "assessment_objective",
             items=[{"assessment_objective": {"id": "ao-1"}}],
@@ -436,7 +437,7 @@ class TestSourceEnumerationSuccessFlag:
         agg_repo, _ = _make_capturing_repo()
         source_repo, _ = _make_capturing_source_repo([])  # zero rows, no exception
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "Source": source_repo},
             "criterion",
             # items has stale data but enum succeeded → must NOT fall back.
@@ -453,7 +454,7 @@ class TestSourceEnumerationSuccessFlag:
         source_repo = MagicMock()
         source_repo.list = AsyncMock(side_effect=RuntimeError("DB down"))
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "Source": source_repo},
             "criterion",
             items=[{"criterion": {"id": "fallback", "label": "FB"}}],
@@ -473,7 +474,7 @@ class TestSourceEnumerationFKExpansion:
             [],
         )
         await _compute_bucketed_aggregates(
-            {"count": "count(Review)"},
+            {"count": agg("count(Review)")},
             {"Review": agg_repo, "Source": source_repo},
             "criterion",
             items=[],
@@ -495,7 +496,7 @@ class TestSourceEnumerationFKExpansion:
             [],
         )
         await _compute_bucketed_aggregates(
-            {"count": "count(Review)"},
+            {"count": agg("count(Review)")},
             {"Review": agg_repo, "Source": source_repo},
             "criterion",
             items=[],
@@ -532,7 +533,7 @@ class TestPerBucketIncludesGroupBy:
     async def test_per_bucket_passes_include(self) -> None:
         agg_repo, captured = _make_capturing_agg_repo(7)
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "assessment_objective",
             items=[{"assessment_objective": {"id": "ao-1", "label": "AO1"}}],
@@ -545,7 +546,7 @@ class TestPerBucketIncludesGroupBy:
         """The new include arg must not perturb the filter dict shape."""
         agg_repo, captured = _make_capturing_agg_repo(42)
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "assessment_objective",
             items=[{"assessment_objective": {"id": "ao-1"}}],
@@ -629,7 +630,7 @@ class TestStrategyCGroupByFastPath:
         )
         target_repo = _make_target_repo_with_label_field()
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "AssessmentObjective": target_repo},
             "assessment_objective",
             items=[],
@@ -656,7 +657,7 @@ class TestStrategyCGroupByFastPath:
         agg_repo = _make_aggregate_repo([])
         target_repo = _make_target_repo_with_label_field()
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo, "AssessmentObjective": target_repo},
             "assessment_objective",
             items=[],
@@ -680,7 +681,7 @@ class TestStrategyCGroupByFastPath:
 
         agg_repo.list = AsyncMock(side_effect=_list)
         result = await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "assessment_objective",
             items=[],
@@ -696,7 +697,7 @@ class TestStrategyCGroupByFastPath:
         agg_repo = _make_aggregate_repo([])
         agg_repo.list = AsyncMock(return_value={"total": 5})
         await _compute_bucketed_aggregates(
-            {"count": "count(MarkingResult)"},
+            {"count": agg("count(MarkingResult)")},
             {"MarkingResult": agg_repo},
             "status",
             items=[],
@@ -715,7 +716,7 @@ class TestStrategyCGroupByFastPath:
         source_repo = _make_aggregate_repo([])
         source_repo.list = AsyncMock(return_value={"items": [], "total": 0})
         await _compute_bucketed_aggregates(
-            {"count": "count(Manuscript where assessment_objective = current_bucket)"},
+            {"count": agg("count(Manuscript where assessment_objective = current_bucket)")},
             {"MarkingResult": source_repo, "Manuscript": agg_repo},
             "assessment_objective",
             items=[],
@@ -775,7 +776,7 @@ class TestPivotBuckets:
         )
 
         rows, dim_specs = await _compute_pivot_buckets(
-            {"count": "count(Alert)"},
+            {"count": agg("count(Alert)")},
             {"Alert": source_repo, "System": target_repo},
             ["system", "severity"],
             source_entity="Alert",
@@ -828,7 +829,7 @@ class TestPivotBuckets:
         source_repo.entity_spec = SimpleNamespace(name="Alert", fields=[])
         source_repo.aggregate = AsyncMock()
         rows, specs = await _compute_pivot_buckets(
-            {"count": "count(Manuscript)"},
+            {"count": agg("count(Manuscript)")},
             {"Alert": source_repo},
             ["system", "severity"],
             source_entity="Alert",
@@ -851,7 +852,7 @@ class TestPivotBuckets:
         )
         source_repo.aggregate = AsyncMock(side_effect=RuntimeError("DB down"))
         rows, specs = await _compute_pivot_buckets(
-            {"count": "count(Alert)"},
+            {"count": agg("count(Alert)")},
             {"Alert": source_repo},
             ["severity"],
             source_entity="Alert",
@@ -953,7 +954,7 @@ class TestTimeBucketedAggregates:
         )
 
         rows, specs = await _compute_pivot_buckets(
-            {"count": "count(Alert)"},
+            {"count": agg("count(Alert)")},
             {"Alert": source_repo},
             [BucketRef(field="created_at", unit="week"), "severity"],
             source_entity="Alert",
@@ -991,7 +992,7 @@ class TestTimeBucketedAggregates:
 
         with caplog.at_level(logging.ERROR, logger="dazzle.back.runtime.workspace_aggregation"):
             rows, specs = await _compute_pivot_buckets(
-                {"count": "count(MarkingResult)"},
+                {"count": agg("count(MarkingResult)")},
                 {"MarkingResult": source_repo},
                 ["score", "status"],
                 source_entity="MarkingResult",
