@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.71] - 2026-05-19
+
+### Fixed
+
+- **`route.gen` span now actually emitted** (#1159). The `boot_cost`
+  finding's `route_gen_ms` reads from this span; previously nothing
+  in the framework called it and the field was always 0. Wrapped
+  `generate_all_routes` in `src/dazzle/back/runtime/route_generator.py`
+  to fix.
+
 ## [0.71.70] - 2026-05-19
 
 ### Fixed
