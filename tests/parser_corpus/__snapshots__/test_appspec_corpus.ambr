@@ -395,6 +395,7 @@
                   'field': 'status',
                   'operator': '!=',
                   'value': dict({
+                    'current_bucket': False,
                     'literal': 'done',
                   }),
                 }),
@@ -423,6 +424,7 @@
                   'field': 'status',
                   'operator': '!=',
                   'value': dict({
+                    'current_bucket': False,
                     'literal': 'done',
                   }),
                 }),

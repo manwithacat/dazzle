@@ -520,6 +520,7 @@ ir_class: ConditionExpr
 ir_class: ConditionValue
   required: (none)
   optional:
+    - current_bucket: bool = False
     - date_expr: DateLiteral | DateArithmeticExpr | None = None
     - literal: str | int | float | bool | None = None
     - values: list[str | int | float | bool] | None = None

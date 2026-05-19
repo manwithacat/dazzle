@@ -271,6 +271,15 @@ class ConditionParserMixin:
             date_expr = self._parse_date_expr()
             return ir.ConditionValue(date_expr=date_expr)
 
+        # #1154: typed sentinel for bar_chart per-bucket aggregates. The
+        # parser emits ConditionValue(current_bucket=True) so the runtime
+        # can substitute the current bucket key at the IR layer instead
+        # of stringifying the whole condition and text-mutating.
+        cur = self.current_token()
+        if cur.type == TokenType.IDENTIFIER and cur.value == "current_bucket":
+            self.advance()
+            return ir.ConditionValue(current_bucket=True)
+
         # Single value
         value = self._parse_literal_value()
         return ir.ConditionValue(literal=value)

@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.66] - 2026-05-19
+
+### Changed
+
+- **`current_bucket` sentinel is now typed IR** (#1154). The
+  bar_chart per-bucket aggregate sentinel (used by expressions
+  like `count(Manuscript where computed_grade = current_bucket)`)
+  is now represented structurally as a new
+  `ConditionValue.current_bucket: bool = False` flag rather than the
+  string literal `"current_bucket"`. The parser emits the typed flag
+  when it sees the bare identifier `current_bucket` on the RHS of a
+  comparison; the runtime substitutes the bucket key at the IR layer
+  via the new `_substitute_current_bucket` helper.
+
+- **`_compute_bucketed_aggregates` slow path retires its string
+  round-trip.** The per-bucket WHERE clause is now compiled directly
+  from the typed `ConditionExpr` through `_build_aggregate_filters`,
+  eliminating the `_parse_simple_where` re-parse and the
+  text-substitute-then-re-parse hack for the sentinel. The fast path
+  (multi-measure GROUP BY) is unchanged; the in-place stringification
+  for fast-path eligibility detection remains until that path is
+  also re-typed.
+
+- The legacy literal-string detection in
+  `_condition_references_current_bucket` is preserved as a
+  fallback for hand-built fixtures, but the parser no longer emits
+  that shape — production IR carries the typed flag end-to-end.
+
+### Agent Guidance
+
+- For new per-bucket / per-iteration sentinels in `ConditionValue`,
+  follow the `current_bucket` pattern: add a typed bool flag, teach
+  the parser to detect the bare identifier, walk + rebuild the IR
+  at the runtime substitution point. Do not stringify-then-text-mutate
+  — the slow path is now typed end-to-end.
+- The full retirement of `parse_aggregate_where` /
+  `aggregate_legacy.py` / `_parse_simple_where` is the next step in
+  this thread. Those modules still serve the bar_chart fast-path
+  eligibility check (string `current_bucket` substring scan) and the
+  pivot fast-path filter merge; both can move to typed walks now
+  that the sentinel itself is typed.
+
 ## [0.71.65] - 2026-05-19
 
 ### Changed

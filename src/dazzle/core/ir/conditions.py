@@ -44,17 +44,32 @@ class ConditionValue(BaseModel):
     A value in a condition expression.
 
     Can be a literal (string, number, boolean, null), a list of values,
-    or a date expression (v0.10.2).
+    a date expression (v0.10.2), or the ``current_bucket`` sentinel
+    used by bar_chart per-bucket aggregates (#1154).
 
     v0.10.2: Added date_expr for date arithmetic in conditions:
         - due_date < today + 7d
         - created_at > now - 24h
+
+    #1154: ``current_bucket`` is now a structural sentinel rather than
+    a string literal ``"current_bucket"`` — the runtime substitutes the
+    typed flag with a ``literal`` value of the current bucket key per
+    iteration. Previously the substitution happened textually on the
+    stringified WHERE clause, requiring a parser round-trip.
     """
 
     literal: str | int | float | bool | None = None
     values: list[str | int | float | bool] | None = None  # For 'in' operator
     # v0.10.2: Date expression support
     date_expr: DateLiteral | DateArithmeticExpr | None = None
+    # #1154: bar_chart per-bucket aggregate sentinel. When True, the
+    # runtime substitutes the current group_by bucket key into this
+    # value slot before the condition compiles. Exactly one variant
+    # of (literal, values, date_expr, current_bucket=True) should be
+    # populated; the validator doesn't enforce it because the existing
+    # codebase has shapes (e.g. ``literal=None`` representing ``is null``)
+    # that overlap.
+    current_bucket: bool = False
 
     model_config = ConfigDict(frozen=True)
 
@@ -67,6 +82,11 @@ class ConditionValue(BaseModel):
     def is_date_expr(self) -> bool:
         """Check if this is a date expression value."""
         return self.date_expr is not None
+
+    @property
+    def is_current_bucket(self) -> bool:
+        """Check if this is the per-bucket aggregate sentinel (#1154)."""
+        return self.current_bucket
 
 
 class FunctionCall(BaseModel):

@@ -49,6 +49,11 @@ def _condition_references_current_bucket(expr: Any) -> bool:
 
     Used by the pivot fast-path gate (which only handles aggregates
     that don't substitute per-bucket values).
+
+    Reads the typed :attr:`ConditionValue.current_bucket` flag (#1154);
+    falls back to the legacy literal-string detection for ConditionExpr
+    instances that haven't been re-parsed since the flag landed
+    (e.g. unit fixtures constructed by hand).
     """
     from dazzle.core.ir import ConditionExpr
 
@@ -62,9 +67,55 @@ def _condition_references_current_bucket(expr: Any) -> bool:
     if cmp is None:
         return False
     val = cmp.value
+    if val.current_bucket:
+        return True
     if val.is_list and val.values is not None:
         return any(v == "current_bucket" for v in val.values)
     return val.literal == "current_bucket"
+
+
+def _substitute_current_bucket(expr: Any, bucket_key: str) -> Any:
+    """Return a copy of ``expr`` with every ``current_bucket`` sentinel
+    replaced by a typed literal ``ConditionValue(literal=bucket_key)``.
+
+    The IR is frozen, so substitution rebuilds nodes via ``model_copy``.
+    Walks compound conditions recursively. Used by the bar_chart
+    bucketed-aggregate slow path (#1154) to evaluate each bucket's
+    where-clause with a typed ConditionExpr rather than a stringified
+    one.
+
+    Non-sentinel values pass through unchanged. ``ConditionExpr``
+    inputs that aren't a comparison/compound (role_check / grant_check
+    / via_condition) also pass through — those shapes can't legally
+    contain the sentinel.
+    """
+    from dazzle.core.ir import ConditionExpr, ConditionValue
+
+    if not isinstance(expr, ConditionExpr):
+        return expr
+    if expr.is_compound:
+        return expr.model_copy(
+            update={
+                "left": _substitute_current_bucket(expr.left, bucket_key),
+                "right": _substitute_current_bucket(expr.right, bucket_key),
+            }
+        )
+    cmp = expr.comparison
+    if cmp is None:
+        return expr
+    val = cmp.value
+    if val.current_bucket:
+        new_val = ConditionValue(literal=bucket_key)
+        new_cmp = cmp.model_copy(update={"value": new_val})
+        return expr.model_copy(update={"comparison": new_cmp})
+    if val.is_list and val.values is not None and any(v == "current_bucket" for v in val.values):
+        new_values: list[str | int | float | bool] = [
+            bucket_key if v == "current_bucket" else v for v in val.values
+        ]
+        new_val = ConditionValue(values=new_values)
+        new_cmp = cmp.model_copy(update={"value": new_val})
+        return expr.model_copy(update={"comparison": new_cmp})
+    return expr
 
 
 def _format_bucket_label(value: Any, unit: str) -> str:
@@ -861,17 +912,17 @@ async def _compute_bucketed_aggregates(
     from dazzle.core.ir import AggregateRef
     from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
 
-    parsed_aggs: list[tuple[str, str, str, str | None]] = []
+    parsed_aggs: list[tuple[str, str, str, str | None, Any]] = []
     for name, ref in aggregates.items():
         if not isinstance(ref, AggregateRef):
             continue
         arg = ref.entity or "" if ref.func == "count" else ref.column or ""
         where_str = condition_expr_to_legacy_where(ref.where)
-        parsed_aggs.append((name, ref.func, arg, where_str))
+        parsed_aggs.append((name, ref.func, arg, where_str, ref.where))
     if not parsed_aggs:
         return []
 
-    first_name, first_func, first_arg, first_where = parsed_aggs[0]
+    first_name, first_func, first_arg, first_where, first_typed_where = parsed_aggs[0]
     # The "count entity" the legacy single-measure code resolved against —
     # used as the fallback for the slow per-bucket path. For multi-measure
     # the source entity drives the agg_repo (since avg/sum apply to columns
@@ -892,7 +943,9 @@ async def _compute_bucketed_aggregates(
 
     is_bucket_ref = isinstance(group_by, _BucketRef)
 
-    def _fast_path_eligible(name: str, func: str, arg: str, where: str | None) -> bool:
+    def _fast_path_eligible(
+        name: str, func: str, arg: str, where: str | None, _typed: Any = None
+    ) -> bool:
         if where and "current_bucket" in where:
             return False
         if func == "count":
@@ -907,12 +960,12 @@ async def _compute_bucketed_aggregates(
     if is_simple_distribution or (is_bucket_ref and all_fast):
         # Build measures dict for the multi-measure GROUP BY call.
         measures: dict[str, str] = {}
-        for name, func, arg, _w in parsed_aggs:
+        for name, func, arg, _w, _tw in parsed_aggs:
             measures[name] = "count" if func == "count" else f"{func}:{arg}"
         # When multiple aggregates share a where clause they must all be
         # the same; otherwise the fast path can't represent it. Fall back
         # to slow path if they diverge.
-        unique_wheres = {w for _n, _f, _a, w in parsed_aggs}
+        unique_wheres = {w for _n, _f, _a, w, _tw in parsed_aggs}
         if len(unique_wheres) == 1:
             shared_where = next(iter(unique_wheres))
             try:
@@ -942,11 +995,14 @@ async def _compute_bucketed_aggregates(
 
     # Below this point: slow per-bucket path. Multi-measure not yet
     # supported here — only the first parsed aggregate is evaluated.
-    metric_name, func, entity_name, where_clause = (
+    # ``first_where`` (the legacy stringified form) is intentionally
+    # dropped here — the typed ``first_typed_where`` is the canonical
+    # input post-#1154.
+    metric_name, func, entity_name, typed_where = (
         first_name,
         first_func,
         first_arg,
-        first_where,
+        first_typed_where,
     )
     if func != "count":
         # Slow path is count-only today; non-count aggregates that didn't
@@ -999,55 +1055,51 @@ async def _compute_bucketed_aggregates(
     if not buckets:
         return []
 
+    has_sentinel = _condition_references_current_bucket(typed_where)
+
     async def _per_bucket(bucket_key: str, bucket_label: str) -> tuple[str, int]:
-        # When the expression has no current_bucket sentinel, build the
-        # filter dict directly — bypassing _parse_simple_where avoids any
-        # parser quirks around UUIDs / dashes / whitespace (#849 Bug A).
-        if not where_clause or "current_bucket" not in where_clause:
-            try:
-                base_filters: dict[str, Any] = {}
-                if where_clause:
-                    base_filters = _parse_simple_where(where_clause)
-                base_filters[group_by] = bucket_key
-                if scope_filters:
-                    base_filters = {**scope_filters, **base_filters}
-                # Mirror the items list call exactly (#851): pass
-                # include=[group_by] so the FK column is loaded the same
-                # way the items endpoint does. Some repo backends only
-                # apply column-type coercion (UUID etc.) on relations
-                # they're aware of via include — without it the WHERE
-                # filter against an FK UUID column can silently match
-                # zero rows.
-                agg_result = await agg_repo.list(
-                    page=1,
-                    page_size=1,
-                    filters=base_filters,
-                    include=[group_by],
-                )
-                value = agg_result.get("total", 0) if isinstance(agg_result, dict) else 0
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(
-                        "bucketed-aggregate %s[%s=%s] → total=%s (filters=%r)",
-                        metric_name,
-                        group_by,
-                        bucket_key,
-                        value,
-                        base_filters,
-                    )
-                return bucket_label, value
-            except Exception:
-                logger.warning(
-                    "Per-bucket query failed for %s = %s",
+        # #1154: both sentinel and non-sentinel paths now use typed
+        # ConditionExpr through ``_build_aggregate_filters``. The
+        # sentinel substitution rebuilds the IR with the bucket key
+        # bound; the bucket-key filter is then merged in as an extra
+        # scope-side filter so the existing predicate compiler handles
+        # both halves through the same code path. Mirrors the items
+        # list call's ``include=[group_by]`` to keep #851's UUID-coercion
+        # fix in scope.
+        try:
+            per_bucket_where = (
+                _substitute_current_bucket(typed_where, bucket_key) if has_sentinel else typed_where
+            )
+            bucket_scope: dict[str, Any] = {**scope_filters} if scope_filters else {}
+            bucket_scope[group_by] = bucket_key
+            base_filters = _build_aggregate_filters(
+                per_bucket_where, bucket_scope, agg_repo, entity_name
+            )
+            agg_result = await agg_repo.list(
+                page=1,
+                page_size=1,
+                filters=base_filters,
+                include=[group_by],
+            )
+            value = agg_result.get("total", 0) if isinstance(agg_result, dict) else 0
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "bucketed-aggregate %s[%s=%s] → total=%s (filters=%r)",
+                    metric_name,
                     group_by,
                     bucket_key,
-                    exc_info=True,
+                    value,
+                    base_filters,
                 )
-                return bucket_label, 0
-
-        # Sentinel path: substitute and round-trip through _parse_simple_where.
-        sub_clause = where_clause.replace("current_bucket", str(bucket_key))
-        _, value = await _fetch_count_metric(metric_name, agg_repo, sub_clause, scope_filters)
-        return bucket_label, value
+            return bucket_label, value
+        except Exception:
+            logger.warning(
+                "Per-bucket query failed for %s = %s",
+                group_by,
+                bucket_key,
+                exc_info=True,
+            )
+            return bucket_label, 0
 
     results = await asyncio.gather(
         *(_per_bucket(key, label) for key, label in buckets),
