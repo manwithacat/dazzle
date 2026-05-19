@@ -189,16 +189,24 @@ class TestInterpolateCardTemplate:
         assert _interpolate_card_template(template, item) == expected
 
     def test_unsafe_expression_left_as_literal(self) -> None:
-        """Expressions / filters / function calls aren't supported —
-        they don't match the strict IDENT.IDENT* shape so they're
-        left as literal `{{ ... }}` placeholders for the author to
-        notice. Critically: never eval'd."""
+        """Expressions / function calls aren't supported — they
+        don't match the strict IDENT.IDENT* shape so they're left
+        as literal `{{ ... }}` placeholders for the author to
+        notice. Critically: never eval'd.
+
+        Note: as of #1145 part 1 the grammar accepts an optional
+        `| transform_name` suffix and applies it via the
+        ``_TIME_TRANSFORMS`` registry. Unknown transform names fall
+        back to the raw value (still never eval'd) — see
+        ``test_card_template_transforms_1145.py`` for the
+        registered-transform contract.
+        """
         from dazzle.back.runtime.workspace_card_data import _interpolate_card_template
 
         item = {"a": 1}
-        # Pipe filter — not matched, stays literal
-        assert _interpolate_card_template("{{ a | upper }}", item) == "{{ a | upper }}"
-        # Arithmetic — not matched
+        # Unknown transform — value rendered raw, transform not applied.
+        assert _interpolate_card_template("{{ a | upper }}", item) == "1"
+        # Arithmetic — not matched, stays literal
         assert _interpolate_card_template("{{ a + 1 }}", item) == "{{ a + 1 }}"
 
 

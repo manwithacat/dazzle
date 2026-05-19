@@ -26,11 +26,157 @@ from typing import Any
 from dazzle.render.display_names import _inject_display_names, _resolve_display_name  # noqa: F401
 
 # v0.61.55 (#892): profile_card template-string interpolation. Matches
-# `{{ field }}` and `{{ field.path.with.dots }}` only — no expressions,
-# no filters, no Jinja eval. Anything that doesn't match the strict
-# IDENT(.IDENT)* shape is left as a literal `{{ ... }}` placeholder so
-# the author notices.
-_CARD_TEMPLATE_RE = re.compile(r"\{\{\s*([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)\s*\}\}")
+# `{{ field }}` and `{{ field.path.with.dots }}` — and (#1145 part 1)
+# an optional ``| transform`` suffix that runs the resolved value
+# through a registered helper (see ``_TIME_TRANSFORMS``). No
+# expressions, no Jinja eval. Anything that doesn't match the strict
+# shape is left as a literal `{{ ... }}` placeholder so the author
+# notices.
+_CARD_TEMPLATE_RE = re.compile(
+    r"\{\{\s*([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)\s*"
+    r"(?:\|\s*([A-Za-z_][\w]*)\s*)?\}\}"
+)
+
+
+def _now_utc() -> _dt.datetime:
+    """#1145 part 1: indirect ``now`` for time-transform helpers.
+
+    Tests monkeypatch this in the module namespace to control the
+    "current time" against which ``minutes_until`` / ``age`` /
+    ``until`` resolve. Production code reads the wall clock.
+    """
+    return _dt.datetime.now(tz=_dt.UTC)
+
+
+def _coerce_to_datetime(value: Any) -> _dt.datetime | None:
+    """Best-effort coercion of a row value to an aware datetime.
+
+    Accepts ``datetime`` instances (assumed UTC when naive),
+    ``date`` instances (midnight UTC), and ISO-8601 strings. HH:MM
+    strings compose against today's UTC date — matches the
+    day_timeline ``as_of: today`` shape so the same row value
+    works in both places.
+    """
+    if isinstance(value, _dt.datetime):
+        return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
+    if isinstance(value, _dt.date):
+        return _dt.datetime.combine(value, _dt.time(0, 0), tzinfo=_dt.UTC)
+    if isinstance(value, _dt.time):
+        return _dt.datetime.combine(_now_utc().date(), value, tzinfo=_dt.UTC)
+    if isinstance(value, str) and value:
+        try:
+            stripped = value.rstrip("Z")
+            if stripped.endswith("+00:00") or "T" in stripped or " " in stripped:
+                parsed = _dt.datetime.fromisoformat(stripped)
+                return parsed if parsed.tzinfo else parsed.replace(tzinfo=_dt.UTC)
+        except ValueError:
+            pass
+        # HH:MM[:SS] compose with today's date — same shape as
+        # day_timeline's `as_of: today` resolver.
+        try:
+            return _dt.datetime.combine(
+                _now_utc().date(), _dt.time.fromisoformat(value), tzinfo=_dt.UTC
+            )
+        except ValueError:
+            return None
+    return None
+
+
+def _transform_minutes_until(value: Any) -> str:
+    """``minutes_until`` — render the gap between a target time and now.
+
+    Output shape (matches AegisMark's `pipeline/views/today.py`
+    `_minutes_until` contract):
+
+    - target == now (within a minute) → ``"now"``
+    - 1 ≤ delta < 60 minutes → ``"in {N} minutes"`` / ``"in 1 minute"``
+    - 1 ≤ delta_hours < 24 → ``"in {N} hours"`` / ``"in 1 hour"``
+    - past, same calendar day (UTC) → ``"earlier today"``
+    - past, earlier than today → ``"overdue"``
+    - future, later than today (≥24h) → ``"in {N} days"``
+    """
+    target = _coerce_to_datetime(value)
+    if target is None:
+        return ""
+    now = _now_utc()
+    delta = (target - now).total_seconds()
+    minutes = int(round(delta / 60))
+    if minutes == 0:
+        return "now"
+    if minutes > 0:
+        if minutes < 60:
+            return f"in {minutes} minute{'s' if minutes != 1 else ''}"
+        hours = minutes // 60
+        if hours < 24:
+            return f"in {hours} hour{'s' if hours != 1 else ''}"
+        days = hours // 24
+        return f"in {days} day{'s' if days != 1 else ''}"
+    # Past.
+    if target.date() == now.date():
+        return "earlier today"
+    return "overdue"
+
+
+def _transform_age(value: Any) -> str:
+    """``age`` — render how long ago a timestamp occurred.
+
+    - within a minute → ``"just now"``
+    - < 1 hour → ``"{N} minutes ago"``
+    - < 1 day → ``"{N} hours ago"``
+    - else → ``"{N} days ago"``
+
+    Future timestamps render as ``"just now"`` (clock skew / data
+    entry off-by-one is more common than a genuine future event).
+    """
+    target = _coerce_to_datetime(value)
+    if target is None:
+        return ""
+    delta = (_now_utc() - target).total_seconds()
+    if delta < 60:
+        return "just now"
+    minutes = int(delta // 60)
+    if minutes < 60:
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    days = hours // 24
+    return f"{days} day{'s' if days != 1 else ''} ago"
+
+
+def _transform_until(value: Any) -> str:
+    """``until`` — render due-by relative to today.
+
+    Day-granularity (vs ``minutes_until`` which is clock-granularity).
+    Matches the typical "due_at | until" shape for inbox surfaces:
+
+    - target.date() == today → ``"due today"``
+    - target.date() == tomorrow → ``"due tomorrow"``
+    - future → ``"due in {N} days"``
+    - past → ``"overdue by {N} days"`` (or ``"overdue"`` at 1 day)
+    """
+    target = _coerce_to_datetime(value)
+    if target is None:
+        return ""
+    today = _now_utc().date()
+    delta_days = (target.date() - today).days
+    if delta_days == 0:
+        return "due today"
+    if delta_days == 1:
+        return "due tomorrow"
+    if delta_days > 0:
+        return f"due in {delta_days} days"
+    overdue = -delta_days
+    if overdue == 1:
+        return "overdue"
+    return f"overdue by {overdue} days"
+
+
+_TIME_TRANSFORMS: dict[str, Any] = {
+    "minutes_until": _transform_minutes_until,
+    "age": _transform_age,
+    "until": _transform_until,
+}
 
 
 def _resolve_path(item: Any, path: str) -> Any:
@@ -436,7 +582,8 @@ def _coerce_urgency(value: str) -> str:
 
 
 def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
-    """Substitute `{{ field }}` / `{{ field.path }}` against an item (#892).
+    """Substitute `{{ field }}` / `{{ field.path }}` / `{{ field | transform }}`
+    against an item (#892, transform suffix added in #1145 part 1).
 
     The grammar is intentionally minimal — see ``_CARD_TEMPLATE_RE``.
     Unresolved paths render as empty string (graceful degradation —
@@ -444,18 +591,31 @@ def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
     The output is a plain string emitted by the typed renderer's body
     slot after the caller has html-escaped it — no template injection
     surface.
+
+    Registered transforms live in ``_TIME_TRANSFORMS`` —
+    ``minutes_until``, ``age``, ``until``. Unknown transform names
+    fall back to the raw value (string-rendered), matching the
+    "graceful degradation" convention.
     """
     if not template:
         return ""
 
     def _sub(m: re.Match[str]) -> str:
         path = m.group(1)
+        transform_name = m.group(2)  # None when no `| transform` suffix
         value = _resolve_path(item, path)
         if isinstance(value, dict):
             for key in ("__display__", "name", "title", "code", "label"):
                 if key in value and value[key] is not None:
-                    return str(value[key])
-            return ""
+                    value = value[key]
+                    break
+            else:
+                value = None
+        if transform_name is not None:
+            transform = _TIME_TRANSFORMS.get(transform_name)
+            if transform is not None:
+                return str(transform(value))
+            # Unknown transform — fall through to raw value rendering.
         return "" if value is None else str(value)
 
     return _CARD_TEMPLATE_RE.sub(_sub, template)

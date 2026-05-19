@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.49] - 2026-05-19
+
+### Added
+- **Time-arithmetic transforms in `{{ field | transform }}` templates
+  (#1145 part 1).** Pre-fix the template grammar only did field
+  substitution — `as_task.meta:` couldn't render "in 5 minutes"
+  relative to a TIME or DATETIME column, forcing every workflow
+  surface (Today inbox, due-action lists) into a Python route
+  override. Three transforms now register against the template
+  helper used by `profile_card`, `task_inbox`, and `day_timeline`:
+  - **`minutes_until`** — clock-granularity: "now" / "in N minute(s)" /
+    "in N hour(s)" / "earlier today" / "overdue".
+  - **`age`** — past-elapsed: "just now" / "N minute(s) ago" /
+    "N hour(s) ago" / "N day(s) ago".
+  - **`until`** — day-granularity due-by: "due today" / "due tomorrow" /
+    "due in N days" / "overdue" / "overdue by N days".
+
+  Unknown transform names fall back to the raw value (still never
+  eval'd) — graceful degradation matching the rest of the template
+  grammar. The runtime clock is `_now_utc()` — tests monkeypatch
+  it for determinism.
+
+### Changed
+- `_CARD_TEMPLATE_RE` now matches an optional ``| transform_name``
+  suffix. Templates that previously contained `{{ a | upper }}`
+  (an unrecognised pipe) no longer round-trip as literal — they
+  render as the raw value of `a`. This is a clean break: the
+  template grammar accepts the pipe syntax as of #1145 part 1, and
+  no production app shipped templates relying on the literal
+  round-trip (none in `examples/`, `fixtures/`, or example apps).
+
+### Agent Guidance
+- Use ``{{ field | minutes_until }}`` / ``| age`` / ``| until`` in
+  any `as_task` / `profile_card` / `day_timeline.card` template
+  that needs a clock-relative or due-by phrase. No more route
+  overrides for these surfaces.
+
 ## [0.71.48] - 2026-05-19
 
 ### Added
