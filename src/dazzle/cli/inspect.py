@@ -356,6 +356,30 @@ def _categorise_route(path: str, workspace_names: frozenset[str]) -> str:
     return "surface"
 
 
+def _walk_runtime_routes(routes: Any, workspace_names: frozenset[str]) -> list[InspectEntry]:
+    """Turn a booted app's route objects into categorised, sorted
+    :class:`InspectEntry` rows.
+
+    Accepts anything iterable yielding objects with ``.path`` and
+    ``.methods`` (Starlette routes, or test doubles). HEAD/OPTIONS are
+    dropped — Starlette auto-adds them, so the method column shows only
+    the verb that matters. Page routes sort ahead of framework plumbing.
+    """
+    entries: list[InspectEntry] = []
+    for route in routes:
+        path = getattr(route, "path", None)
+        if not path:
+            continue
+        methods = sorted(
+            m for m in (getattr(route, "methods", None) or ()) if m not in ("HEAD", "OPTIONS")
+        )
+        category = _categorise_route(path, workspace_names)
+        detail = f"{category}  {' '.join(methods)}".strip() if methods else category
+        entries.append(InspectEntry(name=path, source="runtime", detail=detail, registered=True))
+    entries.sort(key=lambda e: (_ROUTE_CATEGORY_ORDER.get(e.detail.split()[0], 9), e.name))
+    return entries
+
+
 @inspect_app.command("routes")
 def routes_command(
     project: Path | None = typer.Option(None, "--project", "-p", help="Project root"),
@@ -426,24 +450,7 @@ def routes_command(
         # through to the "surface" bucket without the AppSpec.
         workspace_names = frozenset()
 
-    runtime_entries: list[InspectEntry] = []
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        if not path:
-            continue
-        # HEAD/OPTIONS are auto-added by Starlette — drop them so the
-        # method column shows the verb that actually matters.
-        methods = sorted(
-            m for m in (getattr(route, "methods", None) or ()) if m not in ("HEAD", "OPTIONS")
-        )
-        category = _categorise_route(path, workspace_names)
-        detail = f"{category}  {' '.join(methods)}".strip() if methods else category
-        runtime_entries.append(
-            InspectEntry(name=path, source="runtime", detail=detail, registered=True)
-        )
-
-    runtime_entries.sort(key=lambda e: (_ROUTE_CATEGORY_ORDER.get(e.detail.split()[0], 9), e.name))
-    entries.extend(runtime_entries)
+    entries.extend(_walk_runtime_routes(app.routes, workspace_names))
 
     _emit(result, output_json)
 

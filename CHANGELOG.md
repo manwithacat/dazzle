@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.79] - 2026-05-20
+
+### Changed
+
+- **`inspect routes --runtime` route-walk extracted to a testable
+  helper.** `_walk_runtime_routes` is now a pure function (route
+  objects → categorised, sorted entries), unit-tested with route
+  doubles instead of a live app. No behaviour change — closes the
+  coverage gap the v0.71.78 diff opened, where the `--runtime` success
+  path was only reachable with a database (`codecov/patch` red).
+
 ## [0.71.78] - 2026-05-20
 
 ### Changed

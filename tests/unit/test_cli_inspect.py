@@ -200,6 +200,36 @@ def test_categorise_route_buckets_each_route_kind() -> None:
     assert _categorise_route("/command_center/alerts", frozenset()) == "surface"
 
 
+def test_walk_runtime_routes_categorises_sorts_and_strips_head_options() -> None:
+    """The runtime walk buckets routes, sorts page-routes-first, drops
+    pathless routes, and strips Starlette's auto-added HEAD/OPTIONS."""
+    from types import SimpleNamespace
+
+    from dazzle.cli.inspect import _walk_runtime_routes
+
+    routes = [
+        SimpleNamespace(path="/api/workspaces/x", methods={"GET"}),
+        SimpleNamespace(path="/alerts", methods={"GET", "HEAD"}),
+        SimpleNamespace(path="/command_center/alerts", methods={"GET", "POST", "OPTIONS"}),
+        SimpleNamespace(path="/login", methods={"GET"}),
+        SimpleNamespace(path="", methods={"GET"}),  # pathless — dropped
+        SimpleNamespace(path=None, methods=None),  # pathless — dropped
+    ]
+    entries = _walk_runtime_routes(routes, frozenset({"command_center"}))
+
+    # Pathless routes dropped; rest sorted workspace < surface < auth < api.
+    assert [e.name for e in entries] == [
+        "/command_center/alerts",
+        "/alerts",
+        "/login",
+        "/api/workspaces/x",
+    ]
+    assert [e.detail.split()[0] for e in entries] == ["workspace", "surface", "auth", "api"]
+    # HEAD/OPTIONS stripped, real verbs kept.
+    assert entries[0].detail == "workspace  GET POST"
+    assert entries[1].detail == "surface  GET"
+
+
 def test_inspect_routes_runtime_without_db_hints_at_database_url(
     runner: CliRunner, project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
