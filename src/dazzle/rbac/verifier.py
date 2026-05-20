@@ -12,6 +12,8 @@ from __future__ import annotations  # required: forward reference
 
 import json
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -314,6 +316,121 @@ class _DisposableDatabase:
         with psycopg.connect(self._admin_url(), autocommit=True) as conn:
             # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             conn.execute(f'DROP DATABASE IF EXISTS "{self._db_name}" WITH (FORCE)')
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap superuser credentials used by _verifier_app_context.
+# These are the credentials injected into the scratch DB so the verifier
+# can log in as a superuser and probe entity endpoints.
+# ---------------------------------------------------------------------------
+
+_SUPERUSER_EMAIL: str = "verifier-admin@dazzle.internal"
+_SUPERUSER_PASSWORD: str = "verifier-bootstrap-secret"  # nosec B105 — scratch DB only
+
+
+@dataclass
+class _VerifierContext:
+    """Holds the booted AppSpec and an authenticated httpx client."""
+
+    appspec: Any
+    client: Any  # httpx.AsyncClient, authenticated as superuser
+
+
+def _build_asgi_app(root: Path, database_url: str) -> Any:
+    """Build the Dazzle ASGI app for `root` against `database_url`.
+
+    Thin adapter over `DazzleBackendApp.build()`.  Enables test-mode so
+    entity tables are created on first boot (no prior Alembic migration
+    needed) and `enable_auth=True` so `/auth/login` is mounted.
+
+    The caller is responsible for creating the bootstrap superuser in the
+    auth store before the first authenticated request.
+    """
+    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.back.runtime.server import DazzleBackendApp
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.core.manifest import load_manifest
+
+    manifest = load_manifest(root / "dazzle.toml")
+    appspec = load_project_appspec(root)
+    config = build_server_config(
+        appspec,
+        database_url=database_url,
+        enable_auth=manifest.auth.enabled,
+        auth_config=manifest.auth if manifest.auth.enabled else None,
+        enable_test_mode=True,
+        project_root=root,
+    )
+    builder = DazzleBackendApp(appspec, config=config)
+    app = builder.build()
+    # Stash builder on app.state so _verifier_app_context can reach auth_store.
+    app.state.verifier_builder = builder
+    return app
+
+
+@asynccontextmanager
+async def _verifier_app_context(
+    project_root: str | Path,
+    database_url: str,
+) -> AsyncIterator[_VerifierContext]:
+    """Boot the Dazzle app in-process against `database_url`, yield an
+    httpx client bound to it via ASGITransport and logged in as the
+    bootstrap superuser.  Schema + auth tables are created on boot
+    (empty scratch DB).
+
+    Usage::
+
+        async with _verifier_app_context("fixtures/rbac_validation", db_url) as ctx:
+            resp = await ctx.client.get("/health")
+            assert resp.status_code == 200
+    """
+    import httpx
+
+    from dazzle.cli.rbac import _login
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    root = Path(project_root)
+    appspec = load_project_appspec(root)
+
+    # Build the ASGI app — entity + auth tables are created synchronously
+    # during DazzleBackendApp.build() because enable_test_mode=True sets
+    # _should_create_schema_on_startup() → True.
+    app = _build_asgi_app(root, database_url)
+
+    # Retrieve the AuthStore wired during build() and seed the bootstrap
+    # superuser.  AuthStore._init_db() already ran inside build(); calling
+    # AuthStore(database_url) a second time is safe (IF NOT EXISTS DDL).
+    builder = app.state.verifier_builder
+    auth_store = builder.auth_store
+    if auth_store is None:
+        # Auth not enabled for this project — boot without login.
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://verifier.local",
+            follow_redirects=True,
+        ) as client:
+            yield _VerifierContext(appspec=appspec, client=client)
+        return
+
+    # Create the bootstrap superuser (idempotent — skip if already exists).
+    existing = auth_store.get_user_by_email(_SUPERUSER_EMAIL)
+    if existing is None:
+        auth_store.create_user(
+            email=_SUPERUSER_EMAIL,
+            password=_SUPERUSER_PASSWORD,
+            is_superuser=True,
+            roles=[],
+        )
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://verifier.local",
+        follow_redirects=True,
+    ) as client:
+        await _login(client, "http://verifier.local", _SUPERUSER_EMAIL, _SUPERUSER_PASSWORD)
+        yield _VerifierContext(appspec=appspec, client=client)
 
 
 async def verify(

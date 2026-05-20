@@ -29,3 +29,20 @@ async def test_disposable_database_creates_and_drops() -> None:
     assert created_url is not None
     with pytest.raises(psycopg.OperationalError):
         psycopg.connect(created_url).close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _PG_URL, reason="no TEST_DATABASE_URL / DATABASE_URL")
+async def test_verifier_app_context_boots_and_authenticates() -> None:
+    """The verifier context boots the Dazzle app in-process, creates a
+    bootstrap superuser, and returns an authenticated httpx client."""
+    from dazzle.rbac.verifier import _DisposableDatabase, _verifier_app_context
+
+    async with _DisposableDatabase(_PG_URL) as db_url:
+        async with _verifier_app_context("fixtures/rbac_validation", db_url) as ctx:
+            assert ctx.appspec is not None
+            # The app booted — /health is always registered by SystemRoutesSubsystem.
+            resp = await ctx.client.get("/health")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "healthy"
