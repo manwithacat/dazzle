@@ -79,10 +79,19 @@ CREATE TABLE IF NOT EXISTS _dazzle_event_outbox (
 );
 """
 
-CREATE_OUTBOX_INDEXES = [
-    "CREATE INDEX IF NOT EXISTS idx_outbox_status ON _dazzle_event_outbox(status)",
-    "CREATE INDEX IF NOT EXISTS idx_outbox_created ON _dazzle_event_outbox(created_at)",
-    "CREATE INDEX IF NOT EXISTS idx_outbox_topic ON _dazzle_event_outbox(topic)",
+CREATE_OUTBOX_INDEXES: list[tuple[str, str]] = [
+    (
+        "idx_outbox_status",
+        "CREATE INDEX IF NOT EXISTS idx_outbox_status ON _dazzle_event_outbox(status)",
+    ),
+    (
+        "idx_outbox_created",
+        "CREATE INDEX IF NOT EXISTS idx_outbox_created ON _dazzle_event_outbox(created_at)",
+    ),
+    (
+        "idx_outbox_topic",
+        "CREATE INDEX IF NOT EXISTS idx_outbox_topic ON _dazzle_event_outbox(topic)",
+    ),
 ]
 
 
@@ -114,15 +123,19 @@ class EventOutbox:
         self._table = table_name
 
     async def create_table(self, conn: OutboxConnection) -> None:
-        """Create the outbox table if it doesn't exist.
+        """Create the outbox table and its indexes if they don't exist.
 
-        Uses a short `lock_timeout` so that `CREATE INDEX IF NOT EXISTS`
-        does not block startup when an orphan `dazzle serve` subprocess
-        from a prior run still holds `idle in transaction` on the same
-        table (#1072 Bug A — diagnosed cycle 134). If the timeout fires,
-        the index must already exist (these are all `IF NOT EXISTS`
-        statements), so we swallow the error and continue: the worst
-        case is a missing index, which the next clean boot will create.
+        `CREATE INDEX` — even `IF NOT EXISTS` — takes a brief schema lock
+        that queues behind a concurrent Dazzle process's row locks on the
+        same table, stalling startup ~5s per index (#1161). So we probe
+        `pg_indexes` first and skip the DDL entirely when the index
+        already exists, which is the common case on every re-boot. The
+        probe is a plain catalog read and never blocks.
+
+        The `lock_timeout` guard (#1072) stays as a safety net for the
+        rare genuine first-boot-into-contention case: if the timeout
+        fires the error is swallowed, since a missing index is non-fatal
+        and the next clean boot will create it.
         """
         await conn.execute(
             CREATE_OUTBOX_TABLE
@@ -131,7 +144,9 @@ class EventOutbox:
         # a stuck startup surfaces fast rather than hanging the contract
         # runner / test harness indefinitely.
         await conn.execute("SET lock_timeout = '5s'")
-        for index_sql in CREATE_OUTBOX_INDEXES:
+        for index_name, index_sql in CREATE_OUTBOX_INDEXES:
+            if await self._index_exists(conn, index_name):
+                continue
             try:
                 await conn.execute(
                     index_sql
@@ -151,6 +166,20 @@ class EventOutbox:
                 await conn.execute("SET lock_timeout = '5s'")
         await conn.execute("SET lock_timeout = '0'")
         await conn.commit()
+
+    @staticmethod
+    async def _index_exists(conn: OutboxConnection, index_name: str) -> bool:
+        """Return True if `index_name` is already present in `pg_indexes`.
+
+        A catalog read — never takes a lock on the outbox table, so it
+        can't stall behind a concurrent poller the way `CREATE INDEX`
+        does. This lets `create_table` skip the DDL on every re-boot.
+        """
+        cur = await conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            "SELECT 1 FROM pg_indexes WHERE indexname = %s",
+            (index_name,),
+        )
+        return await cur.fetchone() is not None
 
     async def append(
         self,

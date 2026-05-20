@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.76] - 2026-05-20
+
 ### Fixed
 
 - **Outbox `create_table` no longer stalls startup behind a concurrent
