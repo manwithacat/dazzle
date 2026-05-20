@@ -284,9 +284,11 @@ class _DisposableDatabase:
     def __init__(self, server_url: str) -> None:
         self._server_url = server_url
         self._db_name = f"dazzle_verify_{uuid.uuid4().hex}"
-        self._db_url = ""
 
     def _admin_url(self) -> str:
+        # Uses the standard 'postgres' maintenance DB — present on every
+        # standard PostgreSQL install; may need adjusting for non-standard
+        # setups (e.g. RDS with a different superuser database).
         parts = urlparse(self._server_url)
         return urlunparse(parts._replace(path="/postgres"))
 
@@ -301,12 +303,14 @@ class _DisposableDatabase:
             # _db_name is a server-generated hex identifier (uuid4().hex) — not user input.
             # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             conn.execute(f'CREATE DATABASE "{self._db_name}"')
-        self._db_url = self._scratch_url()
-        return self._db_url
+        return self._scratch_url()
 
     async def __aexit__(self, *exc: object) -> None:
         import psycopg
 
+        # If the DROP fails (e.g. admin DB unreachable) that error
+        # propagates and may shadow a body exception — acceptable; a
+        # leaked scratch DB is always worth surfacing.
         with psycopg.connect(self._admin_url(), autocommit=True) as conn:
             # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             conn.execute(f'DROP DATABASE IF EXISTS "{self._db_name}" WITH (FORCE)')

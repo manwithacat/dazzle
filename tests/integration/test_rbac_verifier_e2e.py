@@ -22,8 +22,8 @@ async def test_disposable_database_creates_and_drops() -> None:
     async with _DisposableDatabase(_PG_URL) as db_url:
         created_url = db_url
         # The scratch DB exists and is connectable.
-        conn = psycopg.connect(db_url)
-        conn.close()
+        with psycopg.connect(db_url):
+            pass  # verify the scratch DB is connectable
 
     # After exit the scratch DB is gone.
     assert created_url is not None
