@@ -1456,8 +1456,13 @@ class DazzleBackendApp:
             from dazzle.back.runtime.bulk_routes import create_bulk_routes
 
             bulk_router = create_bulk_routes(
-                surfaces=list(self._appspec.surfaces),
+                list(self._appspec.surfaces),
                 repositories=self._repositories,
+                services=self._services,
+                cedar_access_specs=cedar_access_specs,
+                fk_graph=_fk_graph,
+                optional_auth_dep=optional_auth_dep,
+                admin_personas=_admin_personas,
             )
             if bulk_router is not None:
                 self._app.include_router(bulk_router)

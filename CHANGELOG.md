@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.86] - 2026-05-20
+
+### Fixed
+
+- **Bulk-action endpoint now enforces RBAC and row-level scope** (#1170).
+  `POST /api/{entity}/bulk` (mounted for any list surface with a
+  `ux: bulk_actions:` block) was registered with no auth dependency and
+  called `repo.update()` directly — a bare `UPDATE ... WHERE id = ?` with
+  no permit gate and no scope predicate. Any caller who could reach the
+  route could flip the declared field on *any* record of that entity by
+  id, cross-tenant. The handler now requires authentication, applies the
+  same Cedar permit gate as the generated single-record UPDATE route, and
+  runs each id through `_scoped_pre_read` — ids outside the caller's
+  `scope:` are reported as `not_found` (the IDOR-safe shape), never
+  mutated. Apps with no auth configured keep the unenforced behaviour.
+
+### Agent Guidance
+
+- **`create_bulk_routes` is RBAC-aware.** It now requires `services`,
+  `cedar_access_specs`, `fk_graph`, and `optional_auth_dep` alongside
+  `repositories`. Any non-CRUD route that mutates entity rows must apply
+  the permit gate + `_scoped_pre_read` per id — `repo.update()` issues an
+  unscoped `WHERE id = ?` and is not safe to call on caller-supplied ids
+  without a scope check first.
+
 ## [0.71.85] - 2026-05-20
 
 ### Changed
