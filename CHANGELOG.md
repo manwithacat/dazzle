@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.88] - 2026-05-20
+
+### Added
+
+- **Adversarial RBAC scope-enforcement tests** (#1173). First-class
+  negative tests for the runtime scope path, exercising attack/failure
+  cases rather than the happy path: a scope predicate that fails to
+  compile (fail-closed -> deny), the legacy condition-tree path failing
+  (fail-closed), and IDOR resistance (a scoped re-fetch that finds
+  nothing returns None -> 404, indistinguishable from an absent row).
+  Complements the bulk-endpoint scope-bypass test added in v0.71.86.
+  Custom-route privilege-escalation, nullable-FK dotted-path, and
+  overbroad-admin cases need the canonical RBAC walkthrough app (#1174)
+  and are tracked there.
+
+## [0.71.87] - 2026-05-20
+
 ### Changed
 
 - **Python version metadata aligned on 3.12** (#1175). The README badge

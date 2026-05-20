@@ -25,7 +25,7 @@ from "row exists but is out of scope."
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -211,3 +211,136 @@ async def test_unauthenticated_falls_through_to_unscoped_read() -> None:
     )
 
     assert result == record
+
+
+# ---------------------------------------------------------------------------
+# Adversarial / negative scope-enforcement tests (#1173)
+#
+# These exercise the *attack* paths, not the happy path: a scope predicate
+# that fails to compile, and an IDOR probe against a row outside the
+# caller's scope. The contract under test is fail-closed — a broken or
+# unsatisfied scope rule must deny, never widen access.
+# ---------------------------------------------------------------------------
+
+
+class TestAdversarialScopeEnforcement:
+    """Negative-path coverage for runtime scope enforcement (#1173)."""
+
+    @pytest.mark.asyncio
+    async def test_predicate_compilation_failure_denies(self) -> None:
+        """If the scope predicate raises during resolution (malformed FK
+        path, null EXISTS binding, etc.), the resolver catches it and
+        returns None — the handler then 404s. Fail-closed: a broken
+        predicate must never fall through to an unscoped read."""
+        service = _make_service(read_result={"id": "row-1"})
+        spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=False)
+
+        with patch(
+            "dazzle.back.runtime.route_generator._resolve_predicate_filters",
+            side_effect=RuntimeError("predicate boom"),
+        ):
+            result = await _scoped_pre_read(
+                service=service,
+                operation="update",
+                id="row-1",
+                cedar_access_spec=spec,
+                auth_context=_auth_context(["role_admin"]),
+                entity_name="Task",
+                fk_graph=MagicMock(),
+                admin_personas=None,
+            )
+
+        assert result is None
+        # Denied before any DB access — never reached read or list.
+        service.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_legacy_condition_failure_denies(self) -> None:
+        """The legacy condition-tree path is equally fail-closed: if
+        `_extract_condition_filters` raises, the resolver returns None
+        rather than falling through to an unscoped read."""
+        service = _make_service(read_result={"id": "row-1"})
+        # predicate=None forces the legacy condition path.
+        rule = SimpleNamespace(
+            operation=SimpleNamespace(value="update"),
+            personas=["admin"],
+            condition=SimpleNamespace(kind="comparison"),
+            predicate=None,
+        )
+        spec = SimpleNamespace(scopes=[rule])
+
+        with patch(
+            "dazzle.back.runtime.route_generator._extract_condition_filters",
+            side_effect=RuntimeError("condition boom"),
+        ):
+            result = await _scoped_pre_read(
+                service=service,
+                operation="update",
+                id="row-1",
+                cedar_access_spec=spec,
+                auth_context=_auth_context(["role_admin"]),
+                entity_name="Task",
+                fk_graph=MagicMock(),
+                admin_personas=None,
+            )
+
+        assert result is None
+        service.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_idor_foreign_row_filtered_returns_none(self) -> None:
+        """IDOR resistance: the scope predicate resolves to a real row
+        filter, but the scoped re-fetch finds nothing — the target id
+        belongs to another scope. The helper returns None → handler
+        404s, indistinguishable from a genuinely non-existent row.
+
+        `read` would happily return the row; only the scope-filtered
+        `list` gates it. A handler that skipped the scoped pre-read
+        (or trusted `read`) would leak another tenant's record."""
+        service = _make_service(
+            read_result={"id": "row-1", "owner_id": "someone-else"},
+            list_items=[],  # scoped re-fetch finds nothing
+        )
+        spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=False)
+
+        with patch(
+            "dazzle.back.runtime.route_generator._resolve_predicate_filters",
+            return_value={"owner_id": "u-1"},
+        ):
+            result = await _scoped_pre_read(
+                service=service,
+                operation="update",
+                id="row-1",
+                cedar_access_spec=spec,
+                auth_context=_auth_context(["role_admin"], user_id="u-1"),
+                entity_name="Task",
+                fk_graph=MagicMock(),
+                admin_personas=None,
+            )
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_idor_owned_row_passes_scope(self) -> None:
+        """Counterpart to the IDOR test: when the scoped re-fetch finds
+        the row, the caller is in scope and the helper returns it."""
+        record = {"id": "row-1", "owner_id": "u-1"}
+        service = _make_service(read_result=record, list_items=[record])
+        spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=False)
+
+        with patch(
+            "dazzle.back.runtime.route_generator._resolve_predicate_filters",
+            return_value={"owner_id": "u-1"},
+        ):
+            result = await _scoped_pre_read(
+                service=service,
+                operation="update",
+                id="row-1",
+                cedar_access_spec=spec,
+                auth_context=_auth_context(["role_admin"], user_id="u-1"),
+                entity_name="Task",
+                fk_graph=MagicMock(),
+                admin_personas=None,
+            )
+
+        assert result == record
