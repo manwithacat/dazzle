@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.90] - 2026-05-20
+
+### Changed
+
+- **Audit logging is fail-closed at boot** (#1172). An app with
+  access-controlled or audited entities must boot with a working audit
+  trail or not boot at all: the server-boot path now raises rather than
+  silently leaving `audit_logger = None` when there is no database to
+  persist the trail. `_setup_database` already raises without a
+  `database_url`, so in practice this is belt-and-suspenders — but it
+  makes the invariant explicit and survives future boot refactors. The
+  runtime `AuditLogger`, the `AuditDecision` event schema, and the
+  verification-seam `dazzle.rbac.audit` module gained docstrings stating
+  the guarantees precisely: the prior wording let an external review
+  mistake the verification seam's `NullAuditSink` default for "auditing
+  is off", when the production trail in fact runs through `AuditLogger`.
+
+### Agent Guidance
+
+- **Two audit modules, one production trail.**
+  `dazzle.back.runtime.audit_log.AuditLogger` is the production
+  access-decision trail — `_dazzle_audit_log` table, fail-open bounded
+  queue, wired into every CRUD route via `_log_audit_decision`.
+  `dazzle.rbac.audit` is a *verification-layer observability seam*
+  (`set_audit_sink` / `InMemoryAuditSink` for the ConformanceMonitor and
+  the RBAC verifier); its `NullAuditSink` production default is
+  intentional, not a gap. Don't conflate the two.
+
 ## [0.71.89] - 2026-05-20
 
 ### Changed

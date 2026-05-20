@@ -1058,7 +1058,10 @@ class DazzleBackendApp:
             if entity.access:
                 cedar_access_specs[entity.name] = entity.access
 
-        # Audit logger
+        # Audit logger (#1172). The runtime AuditLogger writes every
+        # access-control decision to `_dazzle_audit_log`. It is the
+        # production audit trail — distinct from the verification-layer
+        # observability seam in `dazzle.rbac.audit`.
         audit_logger = None
         _has_auditable_entities = any(
             (entity.metadata and "access" in entity.metadata)
@@ -1066,7 +1069,20 @@ class DazzleBackendApp:
             or entity.access
             for entity in self._entities
         )
-        if _has_auditable_entities and self._database_url:
+        if _has_auditable_entities:
+            # Fail-closed audit invariant (#1172): an app with access-
+            # controlled or audited entities MUST boot with a working
+            # audit trail, or not boot at all — a silently-absent trail
+            # is a compliance hole. `_setup_database` already raises
+            # without a database_url, so this is belt-and-suspenders: if
+            # a future refactor reorders boot or makes the DB optional,
+            # the server refuses to start rather than run un-audited.
+            if not self._database_url:
+                raise RuntimeError(
+                    "Audit logging required: this app has access-controlled "
+                    "or audited entities but no database_url to persist the "
+                    "audit trail. Set DATABASE_URL or ServerConfig.database_url."
+                )
             from dazzle.back.runtime.audit_log import AuditLogger
 
             audit_logger = AuditLogger(database_url=self._database_url)

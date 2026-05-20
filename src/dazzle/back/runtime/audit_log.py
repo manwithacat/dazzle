@@ -17,7 +17,16 @@ logger = logging.getLogger("dazzle.audit")
 
 @dataclass
 class AuditDecision:
-    """Parameters for an audit log decision entry, replacing 14 individual parameters."""
+    """The audit event schema — one access-control decision (#1172).
+
+    Every field below is persisted as a column of `_dazzle_audit_log`:
+    who (`user_id` / `user_email` / `user_roles` / `tenant_id`), what
+    (`operation` / `entity_name` / `entity_id` / `field_changes`), the
+    outcome (`decision` / `matched_policy` / `policy_effect`), and the
+    request context (`ip_address` / `request_path` / `request_method` /
+    `evaluation_time_us`). This dataclass is the canonical shape; the
+    table DDL in `AuditLogger._init_db` mirrors it.
+    """
 
     operation: str
     entity_name: str
@@ -42,14 +51,26 @@ class AuditDecision:
 
 
 class AuditLogger:
-    """
-    Async audit logger with bounded queue.
+    """Production access-decision audit trail (#1172).
 
-    Writes access control decisions to the _dazzle_audit_log table.
-    Non-blocking — entries are queued and flushed in background.
-    Dropped entries are counted and logged to stderr.
+    The durable audit trail for the running app: writes every
+    access-control decision (and CRUD field-change diff) to the
+    `_dazzle_audit_log` PostgreSQL table, wired into every generated
+    route via `_log_audit_decision`. Distinct from the verification
+    seam in `dazzle.rbac.audit` — that one *observes* decisions for the
+    conformance / verifier tooling; this one is the real trail.
 
-    Requires PostgreSQL (psycopg). Raises RuntimeError if unavailable.
+    **Fail-open by design.** Writes go through a bounded async queue
+    (`max_queue_size`, default 10000) flushed in the background. If the
+    queue is full the entry is dropped and `_dropped_count` is
+    incremented and logged — a slow database degrades audit
+    completeness but never blocks or fails a request. Callers needing
+    fail-*closed* semantics must add that explicitly.
+
+    Requires PostgreSQL (psycopg); raises RuntimeError if unavailable.
+    The boot path enforces a matching fail-closed invariant: a server
+    with auditable entities refuses to start without a database_url
+    (see `DazzleServer._setup_routes`).
     """
 
     def __init__(

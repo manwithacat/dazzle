@@ -1,7 +1,17 @@
-"""Access decision audit trail — types, sinks, and global sink management.
+"""Access-decision observability seam for the RBAC *verification* layer.
 
-Layer 3 of the RBAC verification framework. Instruments evaluate_permission()
-to emit structured records of every access decision.
+This module is the Layer-3 hook the RBAC verification framework uses to
+*observe* `evaluate_permission()` decisions — for the `ConformanceMonitor`
+and the dynamic RBAC verifier (`InMemoryAuditSink`), or for offline
+analysis (`JsonFileAuditSink`). `set_audit_sink()` swaps the active sink.
+
+It is **not** the production audit trail. In production the sink is
+`NullAuditSink` *by design* (zero overhead) — the durable access-decision
+audit trail is the runtime `AuditLogger` (`dazzle.back.runtime.audit_log`),
+which writes every CRUD-route decision to the `_dazzle_audit_log`
+PostgreSQL table. A `NullAuditSink` default here therefore does **not**
+mean "auditing is off"; it means this verification seam is idle while the
+production trail runs elsewhere (#1172).
 """
 
 from __future__ import annotations  # required: forward reference
@@ -40,7 +50,12 @@ class AccessAuditSink(Protocol):
 
 
 class NullAuditSink:
-    """No-op sink — default in production (zero overhead)."""
+    """No-op sink — the default, and what production runs with.
+
+    Production auditing is *not* off: the durable access-decision trail
+    is the runtime `AuditLogger` (`_dazzle_audit_log` table), not this
+    verification seam. See the module docstring. Zero overhead.
+    """
 
     def emit(self, record: AccessDecisionRecord) -> None:
         pass
