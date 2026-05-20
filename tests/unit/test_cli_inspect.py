@@ -180,6 +180,37 @@ def test_inspect_routes_empty_when_no_extensions_declared(
     assert "(none)" in result.stdout
 
 
+def test_categorise_route_buckets_each_route_kind() -> None:
+    """The --runtime walk buckets every live route so an agent can tell
+    a traceable page route from framework plumbing."""
+    from dazzle.cli.inspect import _categorise_route
+
+    ws = frozenset({"command_center"})
+    assert _categorise_route("/api/workspaces/x/regions/y", ws) == "api"
+    assert _categorise_route("/_dazzle/health", ws) == "internal"
+    assert _categorise_route("/static/app.css", ws) == "internal"
+    assert _categorise_route("/docs", ws) == "docs"
+    assert _categorise_route("/openapi.json", ws) == "docs"
+    assert _categorise_route("/login", ws) == "auth"
+    assert _categorise_route("/auth/login/password", ws) == "auth"
+    assert _categorise_route("/command_center/alerts", ws) == "workspace"
+    assert _categorise_route("/alerts", ws) == "surface"
+    assert _categorise_route("/alerts/{id}", ws) == "surface"
+    # Without the AppSpec, workspace routes degrade to "surface" — never crash.
+    assert _categorise_route("/command_center/alerts", frozenset()) == "surface"
+
+
+def test_inspect_routes_runtime_without_db_hints_at_database_url(
+    runner: CliRunner, project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """--runtime can't boot without a database — the failure note must
+    tell the agent to set DATABASE_URL rather than fail silently."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    result = runner.invoke(app, ["inspect", "routes", "--project", str(project_root), "--runtime"])
+    assert result.exit_code == 0
+    assert "DATABASE_URL" in result.stdout
+
+
 # ---------------------------------------------------------------------------
 # inspect oauth-providers
 # ---------------------------------------------------------------------------

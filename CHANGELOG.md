@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.78] - 2026-05-20
+
+### Changed
+
+- **`dazzle inspect routes --runtime` now buckets the live route table**
+  (#1163). Agents pointing `dazzle perf trace` at an app need to know
+  which URLs actually resolve — the framework auto-generates workspace
+  and surface page routes that aren't knowable from `dazzle.toml`.
+  `--runtime` walks the booted app's routes; it now categorises every
+  route (workspace / surface / auth / api / docs / internal) and sorts
+  page routes first, so the traceable URLs are obvious. When the app
+  can't boot, the failure note now explicitly says to set
+  `DATABASE_URL` instead of silently reporting `routes (0): (none)`.
+  (An AppSpec-only derivation was prototyped and rejected: a drift test
+  booting a real app showed 0/18 derived URLs matched — the route
+  surface comes from `route_generator.py`'s emergent CRUD logic, not a
+  copyable compiler, so the live walk is the only non-drifting source.)
+
 ## [0.71.77] - 2026-05-20
 
 ### Fixed

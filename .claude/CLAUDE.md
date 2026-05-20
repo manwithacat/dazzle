@@ -182,7 +182,7 @@ dazzle inspect api runtime-urls          # AST walk of *_routes.py
 `dazzle inspect <ext-point>` also covers project-extension points (#1120):
 - `dazzle inspect renderers` — `[renderers] extra` in dazzle.toml + framework defaults
 - `dazzle inspect primitives` — @primitive registry (manifest-only is empty; use `--runtime`)
-- `dazzle inspect routes` — `[extensions] routers` + mounted route paths (`--runtime`)
+- `dazzle inspect routes` — `[extensions] routers` + mounted route paths (`--runtime`, bucketed by workspace/surface/auth/api/docs/internal)
 - `dazzle inspect oauth-providers` — `[[auth.oauth_providers]]` entries
 
 Each subcommand defaults to manifest-only (~50ms); pass `--runtime` to boot the
@@ -318,4 +318,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.71.77 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.71.78 | **Python**: 3.12+ | **Status**: Production Ready

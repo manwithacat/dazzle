@@ -307,6 +307,54 @@ def primitives_command(
 # inspect routes
 # =============================================================================
 
+# Exact paths and prefixes used to bucket a live route. Buckets exist so an
+# agent scanning the --runtime output can tell a traceable page route apart
+# from framework plumbing (api fragments, health probes, docs).
+_DOCS_ROUTES: frozenset[str] = frozenset(
+    {"/docs", "/redoc", "/openapi.json", "/spec", "/health", "/db-info"}
+)
+_AUTH_ROUTES: frozenset[str] = frozenset(
+    {"/login", "/signup", "/logout", "/forgot-password", "/reset-password"}
+)
+_AUTH_PREFIXES: tuple[str, ...] = (
+    "/auth/",
+    "/2fa/",
+    "/login/",
+    "/signup/",
+    "/forgot-password/",
+    "/reset-password/",
+)
+
+# Human/JSON output groups routes in this order — page routes (the ones an
+# agent traces) first, framework plumbing last.
+_ROUTE_CATEGORY_ORDER: dict[str, int] = {
+    "workspace": 0,
+    "surface": 1,
+    "auth": 2,
+    "api": 3,
+    "docs": 4,
+    "internal": 5,
+}
+
+
+def _categorise_route(path: str, workspace_names: frozenset[str]) -> str:
+    """Bucket a live route path into workspace / surface / auth / api /
+    docs / internal. ``workspace_names`` comes from the AppSpec so a
+    ``/<workspace>/<entity>`` route is told apart from a top-level
+    ``/<entity>`` surface route."""
+    if path.startswith("/api/"):
+        return "api"
+    if path.startswith(("/_dazzle/", "/__", "/static")):
+        return "internal"
+    if path in _DOCS_ROUTES or path.startswith("/docs/"):
+        return "docs"
+    if path in _AUTH_ROUTES or path.startswith(_AUTH_PREFIXES):
+        return "auth"
+    segments = [s for s in path.split("/") if s]
+    if segments and segments[0] in workspace_names:
+        return "workspace"
+    return "surface"
+
 
 @inspect_app.command("routes")
 def routes_command(
@@ -319,8 +367,16 @@ def routes_command(
     """List project route extensions declared in dazzle.toml.
 
     Per ``[extensions] routers = [...]`` — each entry is a dotted
-    ``module:attr`` spec the runtime mounts at app boot. With
-    ``--runtime``, also lists every mounted route path on the live app.
+    ``module:attr`` spec the runtime mounts at app boot.
+
+    With ``--runtime``, boots the app and lists every mounted route
+    path, bucketed by category (workspace / surface / auth / api / docs
+    / internal). This is how an agent discovers which URLs are worth
+    pointing ``dazzle perf trace`` at — the page routes the framework
+    auto-generates from workspaces and surfaces aren't knowable from
+    ``dazzle.toml`` alone. ``--runtime`` needs a reachable database
+    (set ``DATABASE_URL``); the route table is only complete on a
+    booted app.
     """
     project_root = _resolve_project_root(project)
     manifest = _load_manifest(project_root)
@@ -340,33 +396,54 @@ def routes_command(
     result = InspectResult(ext_point="routes", entries=entries)
     if not runtime:
         result.notes.append(
-            "Manifest-only view — pass --runtime to list all mounted route paths "
-            "on the live FastAPI app (slower, but cross-references against "
-            "what actually responded at boot)."
+            "Manifest-only view — pass --runtime to list every mounted route "
+            "path on the live FastAPI app, bucketed by category. That's the "
+            "only complete view of the workspace / surface page routes the "
+            "framework auto-generates (needs DATABASE_URL set to boot)."
         )
         _emit(result, output_json)
         return
 
     app_or_error = _boot_app(project_root)
     if isinstance(app_or_error, str):
-        result.notes.append(f"--runtime boot failed: {app_or_error}")
+        note = f"--runtime boot failed: {app_or_error}"
+        if "database_url" in app_or_error.lower():
+            note += (
+                " — set DATABASE_URL to a reachable Postgres instance so "
+                "--runtime can boot the app and enumerate every workspace / "
+                "surface / auth route."
+            )
+        result.notes.append(note)
         _emit(result, output_json)
         return
 
     app = app_or_error
+    try:
+        appspec = _load_appspec(project_root)
+        workspace_names = frozenset(ws.name for ws in (getattr(appspec, "workspaces", None) or []))
+    except Exception:
+        # Categorisation degrades gracefully — workspace routes just fall
+        # through to the "surface" bucket without the AppSpec.
+        workspace_names = frozenset()
+
+    runtime_entries: list[InspectEntry] = []
     for route in app.routes:
         path = getattr(route, "path", None)
         if not path:
             continue
-        methods = sorted(getattr(route, "methods", None) or ())
-        entries.append(
-            InspectEntry(
-                name=path,
-                source="runtime",
-                detail=" ".join(methods) if methods else "",
-                registered=True,
-            )
+        # HEAD/OPTIONS are auto-added by Starlette — drop them so the
+        # method column shows the verb that actually matters.
+        methods = sorted(
+            m for m in (getattr(route, "methods", None) or ()) if m not in ("HEAD", "OPTIONS")
         )
+        category = _categorise_route(path, workspace_names)
+        detail = f"{category}  {' '.join(methods)}".strip() if methods else category
+        runtime_entries.append(
+            InspectEntry(name=path, source="runtime", detail=detail, registered=True)
+        )
+
+    runtime_entries.sort(key=lambda e: (_ROUTE_CATEGORY_ORDER.get(e.detail.split()[0], 9), e.name))
+    entries.extend(runtime_entries)
 
     _emit(result, output_json)
 
