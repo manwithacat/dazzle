@@ -102,6 +102,20 @@ def reset_tracer() -> None:
     _provider = None
 
 
+def current_provider() -> TracerProvider | None:
+    """Return the provider set by :func:`configure_tracer`, or ``None``.
+
+    Callers that need a tracer — :func:`dazzle_span` and the OTel
+    auto-instrumentors wired up in :mod:`dazzle.perf.instrument` — must
+    resolve it through this rather than OTel's global provider.
+    ``trace.set_tracer_provider`` is a one-shot per process: across a
+    test session (or any process that reconfigures) the global stays
+    frozen to the first provider, so auto-instrumentation would write
+    spans to a stale exporter.
+    """
+    return _provider
+
+
 @contextlib.contextmanager
 def dazzle_span(name: str, **attrs: Any) -> Iterator[Any]:
     """Open a span on the ``dazzle`` tracer.

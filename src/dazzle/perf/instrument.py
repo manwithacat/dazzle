@@ -17,11 +17,22 @@ def instrument_app(app: Any) -> None:
 
     Idempotent — repeated calls are tolerated by the underlying OTel
     instrumentation packages.
+
+    The instrumentors are pinned to the provider from
+    :func:`dazzle.perf.tracer.configure_tracer` rather than OTel's
+    global. ``trace.set_tracer_provider`` is a one-shot per process, so
+    a reconfigured tracer (e.g. across a test session) leaves the global
+    frozen to the first provider — auto-instrumented spans would then
+    land in a stale exporter. Passing ``tracer_provider`` explicitly
+    keeps them on the live exporter.
     """
     from opentelemetry.instrumentation.asyncio import AsyncioInstrumentor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 
-    FastAPIInstrumentor.instrument_app(app)
-    PsycopgInstrumentor().instrument()
-    AsyncioInstrumentor().instrument()
+    from dazzle.perf.tracer import current_provider
+
+    provider = current_provider()
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
+    PsycopgInstrumentor().instrument(tracer_provider=provider)
+    AsyncioInstrumentor().instrument(tracer_provider=provider)

@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Outbox `create_table` no longer stalls startup behind a concurrent
+  poller** (#1161). `CREATE INDEX IF NOT EXISTS` — even when the index
+  already exists — takes a brief schema lock that queues behind a
+  running Dazzle process's row locks on `_dazzle_event_outbox`, adding
+  ~5s per index to every re-boot. `create_table` now probes `pg_indexes`
+  first and skips the DDL entirely when the index is already present
+  (the common case on every restart). The `lock_timeout` guard (#1072)
+  stays as a safety net for genuine first-boot-into-contention.
+
+## [0.71.75] - 2026-05-20
+
+### Fixed
+
+- **`dazzle perf` auto-instrumentation pinned to the live tracer
+  provider.** `instrument_app` resolved the tracer from OTel's global
+  provider, but `trace.set_tracer_provider` is a one-shot per process —
+  once the tracer is reconfigured (e.g. across a test session) the
+  global stays frozen to the first provider and FastAPI / psycopg /
+  asyncio spans land in a stale exporter. `instrument_app` now passes
+  the provider from `configure_tracer` explicitly via `tracer_provider=`
+  (new `tracer.current_provider()` accessor). Surfaced by the v0.71.74
+  CI recovery, which let the perf suite run for the first time.
+
+## [0.71.74] - 2026-05-20
+
+### Fixed
+
 - **CI: `perf` extra now installed in every test job.** `dazzle.cli`
   imports `dazzle.perf` at module load (tracer init at CLI entry,
   #1158), so opentelemetry is required for the test suite to even
