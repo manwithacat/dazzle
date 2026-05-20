@@ -452,7 +452,10 @@ def _load_appspec_and_subsystems(ctx: _ServeContext) -> None:
     try:
         ctx.appspec = load_project_appspec(ctx.project_root)
 
-        errors, _, _relevance = lint_appspec(ctx.appspec)
+        # suggest=False: the serve path only needs validation errors.
+        # Capability suggestion parses every bundled example app's DSL —
+        # ~40 redundant file parses on every boot (#1168).
+        errors, _, _ = lint_appspec(ctx.appspec, suggest=False)
         if errors:
             typer.echo("Cannot serve; spec has validation errors:", err=True)
             for err in errors:

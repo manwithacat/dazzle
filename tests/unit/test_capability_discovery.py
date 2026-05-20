@@ -115,3 +115,47 @@ surface task_create "Create Task":
         _errors, _warnings, relevance = lint_appspec(appspec)
         for item in relevance:
             assert isinstance(item, Relevance)
+
+    def test_lint_appspec_suggest_false_skips_capability_discovery(self, tmp_path: Path):
+        """`suggest=False` skips `suggest_capabilities` — that pass parses
+        every bundled example app's DSL, pure overhead for the serve-boot
+        validation path (#1168). `relevance` comes back empty."""
+        from unittest.mock import patch
+
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.lint import lint_appspec
+        from dazzle.core.parser import parse_modules
+
+        dsl_file = tmp_path / "app.dsl"
+        dsl_file.write_text(
+            'module t.core\n\napp t "T"\n\nentity Task "Task":\n'
+            "  id: uuid pk\n  title: str(200) required\n"
+        )
+        appspec = build_appspec(parse_modules([dsl_file]), "t.core")
+
+        with patch("dazzle.core.lint.suggest_capabilities") as spy:
+            _errors, _warnings, relevance = lint_appspec(appspec, suggest=False)
+
+        spy.assert_not_called()
+        assert relevance == []
+
+    def test_lint_appspec_suggest_true_is_the_default(self, tmp_path: Path):
+        """The default path still computes capability suggestions, so
+        `dazzle lint` keeps its hints."""
+        from unittest.mock import patch
+
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.lint import lint_appspec
+        from dazzle.core.parser import parse_modules
+
+        dsl_file = tmp_path / "app.dsl"
+        dsl_file.write_text(
+            'module t.core\n\napp t "T"\n\nentity Task "Task":\n'
+            "  id: uuid pk\n  title: str(200) required\n"
+        )
+        appspec = build_appspec(parse_modules([dsl_file]), "t.core")
+
+        with patch("dazzle.core.lint.suggest_capabilities", return_value=[]) as spy:
+            lint_appspec(appspec)
+
+        spy.assert_called_once()

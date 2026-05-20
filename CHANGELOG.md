@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.84] - 2026-05-20
+
+### Fixed
+
+- **`dazzle serve` boot no longer re-parses every example app's DSL**
+  (#1168). The serve boot calls `lint_appspec` purely for validation
+  errors — but `lint_appspec` unconditionally ran `suggest_capabilities`,
+  which parses the DSL of *every bundled example app* to build a
+  capability-comparison index. A `perf trace` of `examples/simple_task`
+  showed 49 `dsl.parse` spans per boot (~225ms) where only 8 were the
+  app's own files; the serve path discarded the suggestion result
+  entirely. `lint_appspec` gains a keyword-only `suggest=` flag
+  (default `True`, so `dazzle lint` is unchanged); the serve boot
+  passes `suggest=False`. Boot drops to 8 `dsl.parse` spans (~21ms).
+
+### Agent Guidance
+
+- **`lint_appspec(appspec, suggest=False)` for non-authoring callers.**
+  The `suggest=True` default runs capability discovery, which parses
+  the whole example corpus — appropriate for `dazzle lint`, pure
+  overhead for any path that only consumes validation `errors`.
+
 ## [0.71.83] - 2026-05-20
 
 ### Fixed
