@@ -16,10 +16,69 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 
 from dazzle.perf.run_id import make_run_id
+
+if TYPE_CHECKING:
+    from dazzle.cli.inspect import InspectEntry
+
+
+def _traceable_page_urls(entries: list[InspectEntry]) -> list[str]:
+    """Pick the GET-able workspace + surface page routes worth tracing
+    from a categorised route list.
+
+    Drops parameterised detail routes (``/x/{id}`` — no real id to
+    substitute) and anything that isn't a workspace or surface page.
+    """
+    urls: list[str] = []
+    for entry in entries:
+        parts = entry.detail.split()
+        category = parts[0] if parts else ""
+        if category not in ("workspace", "surface"):
+            continue
+        if "{" in entry.name:
+            continue
+        if "GET" not in parts[1:]:
+            continue
+        urls.append(entry.name)
+    return sorted(set(urls))
+
+
+def _derive_surface_urls() -> list[str]:
+    """Boot the app in-process to enumerate its workspace + surface page
+    routes for ``--all-surfaces``.
+
+    Reuses the same route walk as ``dazzle inspect routes --runtime``.
+    Needs a reachable database (the route table is only complete on a
+    booted app); returns ``[]`` with a note when boot fails.
+    """
+    from dazzle.cli.inspect import (
+        _boot_app,
+        _load_appspec,
+        _resolve_project_root,
+        _walk_runtime_routes,
+    )
+
+    project_root = _resolve_project_root(None)
+    app_or_error = _boot_app(project_root)
+    if isinstance(app_or_error, str):
+        typer.echo(f"  --all-surfaces: could not enumerate routes — {app_or_error}")
+        return []
+
+    workspace_names: frozenset[str] = frozenset()
+    try:
+        appspec = _load_appspec(project_root)
+        workspace_names = frozenset(ws.name for ws in (getattr(appspec, "workspaces", None) or []))
+    except Exception:
+        # Categorisation degrades gracefully without the AppSpec —
+        # workspace routes just land in the "surface" bucket.
+        pass
+
+    entries = _walk_runtime_routes(app_or_error.routes, workspace_names)
+    return _traceable_page_urls(entries)
 
 
 def trace_command(
@@ -48,15 +107,15 @@ def trace_command(
         help="NAME=VALUE cookie to set on every --url hit (repeatable). "
         "Use when --login can't model your auth (OAuth/SSO).",
     ),
+    all_surfaces: bool = typer.Option(
+        False,
+        "--all-surfaces",
+        help="Auto-trace every workspace + surface page route the app "
+        "declares, on top of any explicit --url. Enumerates routes by "
+        "booting the app once; pair with --login for auth-gated pages.",
+    ),
 ) -> None:
     """Boot the app under tracing and capture a single run."""
-    if not urls and duration <= 0:
-        typer.echo(
-            "Provide at least one --url or a non-zero --duration. "
-            "Run `dazzle perf trace --help` for usage."
-        )
-        raise typer.Exit(1)
-
     if login is not None and ":" not in login:
         typer.echo("Error: --login value must be in EMAIL:PASSWORD format (colon-separated).")
         raise typer.Exit(1)
@@ -66,6 +125,24 @@ def trace_command(
             typer.echo(f"Error: --cookie value {c!r} must be in NAME=VALUE format.")
             raise typer.Exit(1)
 
+    # --all-surfaces enumerates page routes by booting the app once, then
+    # folds them into the URL set the trace run drives.
+    all_urls = list(urls)
+    if all_surfaces:
+        derived = _derive_surface_urls()
+        if derived:
+            typer.echo(f"  --all-surfaces: added {len(derived)} page route(s) to the trace.")
+            all_urls.extend(derived)
+        else:
+            typer.echo("  --all-surfaces: no page routes discovered to trace.")
+
+    if not all_urls and duration <= 0:
+        typer.echo(
+            "Provide at least one --url, --all-surfaces, or a non-zero "
+            "--duration. Run `dazzle perf trace --help` for usage."
+        )
+        raise typer.Exit(1)
+
     perf_dir = Path.cwd() / ".dazzle" / "perf"
     perf_dir.mkdir(parents=True, exist_ok=True)
     run_id = make_run_id()
@@ -74,7 +151,7 @@ def trace_command(
     _execute_trace_run(
         run_id=run_id,
         db_path=db_path,
-        urls=tuple(urls),
+        urls=tuple(all_urls),
         duration=duration,
         login=login,
         cookies=tuple(cookie),

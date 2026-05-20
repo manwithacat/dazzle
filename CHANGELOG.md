@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.80] - 2026-05-20
+
+### Added
+
+- **`dazzle perf trace --all-surfaces`** (#1165) — auto-traces every
+  workspace + surface page route the app declares, on top of any
+  explicit `--url`. Enumerates routes by booting the app once (the same
+  walk as `dazzle inspect routes --runtime`), keeps GET-able
+  workspace/surface pages, and skips parameterised detail routes
+  (`/x/{id}` — no id to substitute). Composes with `--login` /
+  `--cookie` for auth-gated pages, turning a trace into a one-command
+  full-surface sweep.
+
 ## [0.71.79] - 2026-05-20
 
 ### Changed

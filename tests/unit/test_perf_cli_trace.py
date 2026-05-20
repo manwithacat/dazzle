@@ -135,6 +135,62 @@ def test_trace_login_malformed_rejected(cwd: Path) -> None:
     assert "login" in combined.lower()
 
 
+def test_traceable_page_urls_filters_to_getable_pages() -> None:
+    """--all-surfaces keeps GET-able workspace/surface pages, drops
+    parameterised detail routes and framework plumbing."""
+    from types import SimpleNamespace
+
+    from dazzle.cli.perf_impl.trace import _traceable_page_urls
+
+    entries = [
+        SimpleNamespace(name="/command_center/alerts", detail="workspace  GET POST"),
+        SimpleNamespace(name="/alerts", detail="surface  GET"),
+        SimpleNamespace(name="/alerts/{id}", detail="surface  GET"),  # param — dropped
+        SimpleNamespace(name="/alerts", detail="surface  POST"),  # no GET — dropped
+        SimpleNamespace(name="/api/workspaces/x", detail="api  GET"),  # api — dropped
+        SimpleNamespace(name="/docs", detail="docs  GET"),  # docs — dropped
+    ]
+    assert _traceable_page_urls(entries) == ["/alerts", "/command_center/alerts"]
+
+
+def test_trace_all_surfaces_merges_derived_urls(cwd: Path) -> None:
+    """--all-surfaces folds discovered page routes into the trace URL set."""
+    captured: dict[str, object] = {}
+
+    def fake_runner(*, urls: tuple[str, ...], **_: object) -> None:
+        captured["urls"] = urls
+
+    with (
+        patch("dazzle.cli.perf_impl.trace._execute_trace_run", side_effect=fake_runner),
+        patch(
+            "dazzle.cli.perf_impl.trace._derive_surface_urls",
+            return_value=["/alerts", "/systems"],
+        ),
+    ):
+        result = CliRunner().invoke(app, ["perf", "trace", "--url", "/", "--all-surfaces"])
+    assert result.exit_code == 0
+    assert captured["urls"] == ("/", "/alerts", "/systems")
+
+
+def test_trace_all_surfaces_alone_is_valid(cwd: Path) -> None:
+    """--all-surfaces needs no --url/--duration when routes are discovered."""
+    with (
+        patch("dazzle.cli.perf_impl.trace._execute_trace_run", side_effect=lambda **_: None),
+        patch("dazzle.cli.perf_impl.trace._derive_surface_urls", return_value=["/alerts"]),
+    ):
+        result = CliRunner().invoke(app, ["perf", "trace", "--all-surfaces"])
+    assert result.exit_code == 0
+
+
+def test_trace_all_surfaces_empty_still_requires_url_or_duration(cwd: Path) -> None:
+    """--all-surfaces that discovers nothing falls back to the usual guard."""
+    with patch("dazzle.cli.perf_impl.trace._derive_surface_urls", return_value=[]):
+        result = CliRunner().invoke(app, ["perf", "trace", "--all-surfaces"])
+    assert result.exit_code != 0
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "url" in combined.lower() or "duration" in combined.lower()
+
+
 def test_parse_set_cookie_value() -> None:
     from dazzle.cli.perf_impl.trace import _parse_set_cookie_value
 
