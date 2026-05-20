@@ -9,37 +9,44 @@ Exposes two public entry points:
   model attributes; models are flattened via
   :func:`dazzle.perf.serializer.pydantic_attrs`.
 
-When ``configure_tracer`` hasn't been called, ``dazzle_span`` resolves
-the tracer from OTel's global provider (the default ``NoOpTracer``)
-and silently does nothing — the framework can keep its
-``dazzle_span(...)`` decorators in place without a runtime penalty
-when tracing is disabled.
+When ``configure_tracer`` hasn't been called, ``dazzle_span`` is a
+zero-cost no-op — the framework keeps its ``dazzle_span(...)``
+decorators in place without a runtime penalty when tracing is off.
+
+``opentelemetry`` is the optional ``perf`` extra: this module must be
+importable without it (``dazzle.cli`` imports ``dazzle.perf`` at boot).
+The OTel imports are therefore deferred into :func:`configure_tracer`,
+which is only reached when tracing is explicitly requested.
 """
 
 from __future__ import annotations
 
 import contextlib
 from collections.abc import Iterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    SimpleSpanProcessor,
-)
 from pydantic import BaseModel
 
-from dazzle.perf.exporter import SQLiteSpanExporter
 from dazzle.perf.serializer import pydantic_attrs
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from opentelemetry.sdk.trace import TracerProvider
 
 _TRACER_NAME = "dazzle"
 
-# Module-level provider reference.  ``dazzle_span`` always calls
+_PERF_EXTRA_HINT = (
+    "dazzle perf tracing requires the optional 'perf' extra. "
+    "Install it with:  pip install 'dazzle-dsl[perf]'"
+)
+
+# Module-level provider reference.  ``dazzle_span`` calls
 # ``_provider.get_tracer()`` directly so it bypasses OTel's frozen
 # global (``set_tracer_provider`` is a one-shot after the first call).
-# ``None`` means unconfigured → fall back to OTel global (no-op).
+# ``None`` means unconfigured → ``dazzle_span`` is a no-op. Only
+# :func:`configure_tracer` ever sets it, so a non-``None`` value
+# guarantees the ``perf`` extra is installed.
 _provider: TracerProvider | None = None
 
 
@@ -62,7 +69,23 @@ def configure_tracer(
             back inside the test body.
         app_name / manifest_path / command_line: Metadata persisted to
             the ``runs`` row.
+
+    Raises:
+        RuntimeError: when the optional ``perf`` extra (opentelemetry)
+            is not installed.
     """
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import (
+            BatchSpanProcessor,
+            SimpleSpanProcessor,
+        )
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(_PERF_EXTRA_HINT) from exc
+
+    from dazzle.perf.exporter import SQLiteSpanExporter
+
     global _provider
     provider = TracerProvider()
     exporter = SQLiteSpanExporter(
@@ -129,14 +152,16 @@ def dazzle_span(name: str, **attrs: Any) -> Iterator[Any]:
         with dazzle_span("aggregate.expression.compile", expr=ref.expression):
             ...
 
-    When the tracer hasn't been configured, this is effectively a
-    no-op — OTel's ``NoOpTracer`` returns a non-recording span.
+    When the tracer hasn't been configured — or the optional ``perf``
+    extra isn't installed — this is a zero-cost no-op that yields
+    ``None``.
     """
-    # Use the module-level provider directly to avoid OTel's frozen global.
-    if _provider is not None:
-        tracer = _provider.get_tracer(_TRACER_NAME)
-    else:
-        tracer = trace.get_tracer(_TRACER_NAME)
+    # ``_provider`` is set only by ``configure_tracer``, which requires
+    # opentelemetry; ``None`` means tracing is off → no-op.
+    if _provider is None:
+        yield None
+        return
+    tracer = _provider.get_tracer(_TRACER_NAME)
     flat: dict[str, Any] = {}
     for key, value in attrs.items():
         if value is None:

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.77] - 2026-05-20
+
+### Fixed
+
+- **`dazzle` CLI no longer crashes without the `perf` extra** (#1164).
+  `dazzle.cli` imports `dazzle.perf` at boot (tracer init at CLI entry,
+  #1158), and `dazzle.perf.tracer` imported `opentelemetry` at module
+  scope — so `pip install dazzle-dsl` without `[perf]` produced a CLI
+  that died with `ModuleNotFoundError` on every invocation, and the
+  v0.71.75 / v0.71.76 PyPI + Homebrew release smoke tests failed. The
+  OTel imports are now deferred into `configure_tracer` (which raises a
+  clear "install `dazzle-dsl[perf]`" error when the extra is absent);
+  `dazzle_span` is a zero-cost no-op when tracing is off.
+
+### Agent Guidance
+
+- **Keep `opentelemetry` imports out of `dazzle.perf` module scope.**
+  `perf` is an optional extra, but `dazzle.cli` imports `dazzle.perf`
+  at boot — so any `import opentelemetry...` must be deferred inside
+  the function that needs it (see `tracer.configure_tracer`). The
+  regression guard is `tests/unit/test_perf_optional_extra.py`, which
+  imports the CLI in a subprocess with `opentelemetry` masked.
+
 ## [0.71.76] - 2026-05-20
 
 ### Fixed
