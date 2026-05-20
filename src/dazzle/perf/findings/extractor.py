@@ -270,18 +270,38 @@ def boot_cost(db_path: Path, run_id: str) -> BootCost | None:
 
 
 def exceptions_from_errors(db_path: Path, run_id: str) -> list[ExceptionFinding]:
-    """Cluster ``status='error'`` spans by ``(span name, error message)``."""
+    """Cluster ``status='error'`` spans by ``(span name, error message)``.
+
+    OpenTelemetry records exceptions as span *events* named ``exception``
+    (carrying ``exception.message``), not as top-level span attributes. We
+    LEFT JOIN the ``events`` table to read the real message, falling back
+    to the span's own ``error.message`` attribute when no event is present.
+    """
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
-            "SELECT name, attributes_json FROM spans WHERE run_id = ? AND status = 'error'",
+            """
+            SELECT
+                spans.name             AS span_name,
+                spans.attributes_json  AS span_attrs,
+                events.attributes_json AS event_attrs
+            FROM spans
+            LEFT JOIN events ON events.span_id = spans.span_id
+                            AND events.run_id  = spans.run_id
+                            AND events.name    = 'exception'
+            WHERE spans.run_id = ? AND spans.status = 'error'
+            """,
             (run_id,),
         ).fetchall()
     buckets: dict[tuple[str, str], int] = defaultdict(int)
     for row in rows:
-        attrs = json.loads(row["attributes_json"])
-        message = str(attrs.get("error.message", "<no message>"))
-        buckets[(row["name"], message)] += 1
+        if row["event_attrs"] is not None:
+            event_attrs = json.loads(row["event_attrs"])
+            message = str(event_attrs.get("exception.message", "<no message>"))
+        else:
+            span_attrs = json.loads(row["span_attrs"])
+            message = str(span_attrs.get("error.message", "<no message>"))
+        buckets[(row["span_name"], message)] += 1
     return [
         ExceptionFinding(span_name=name, message=msg, count=count)
         for (name, msg), count in sorted(buckets.items(), key=lambda kv: kv[1], reverse=True)

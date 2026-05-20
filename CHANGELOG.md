@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.73] - 2026-05-20
+
+### Fixed
+
+- **`dazzle perf` exception messages now resolve** (#1162). The
+  `## Errors / exceptions` section reported every finding as
+  `<no message>` because `exceptions_from_errors` read `error.message`
+  from the span's own attributes. OpenTelemetry records exceptions as
+  span *events* named `exception` (carrying `exception.message`), so the
+  heuristic now LEFT JOINs the `events` table to read the real message,
+  falling back to the span attribute when no event is present.
+
 ## [0.71.72] - 2026-05-19
 
 ### Added
