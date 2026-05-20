@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.82] - 2026-05-20
+
+### Fixed
+
+- **`perf report` slow-query section keeps table names** (#1166).
+  `normalise_statement` treated double-quoted text as a string literal
+  and collapsed it to `?`. In PostgreSQL double quotes delimit
+  identifiers, so `SELECT COUNT(*) FROM "tasks"` became
+  `SELECT COUNT(*) FROM ?` — erasing the table name and over-clustering
+  unrelated tables into one bucket. Dropped the double-quote pattern
+  from `_LITERAL_PATTERNS`; quoted identifiers now survive
+  normalisation while single-quoted strings + numeric literals are
+  still parameterised.
+
 ## [0.71.81] - 2026-05-20
 
 ### Fixed

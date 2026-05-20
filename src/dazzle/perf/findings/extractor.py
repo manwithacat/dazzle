@@ -25,15 +25,21 @@ from dazzle.perf.findings.types import (
     SlowQuery,
 )
 
+# Only single-quoted strings and numeric literals are normalised.
+# Double-quoted text is NOT a string literal in PostgreSQL — it's a
+# quoted identifier (table / column name), and SQLAlchemy emits them
+# routinely. Collapsing those to ``?`` would erase the table name from
+# the slow-query report and over-cluster unrelated tables (#1166).
 _LITERAL_PATTERNS = [
     re.compile(r"'(?:[^']|'')*'"),  # single-quoted strings
-    re.compile(r'"(?:[^"]|"")*"'),  # double-quoted strings
     re.compile(r"\b\d+(?:\.\d+)?\b"),  # numeric literals
 ]
 
 
 def normalise_statement(stmt: str) -> str:
-    """Replace string + numeric literals with ``?`` and collapse whitespace."""
+    """Replace single-quoted string + numeric literals with ``?`` and
+    collapse whitespace. Double-quoted identifiers are left intact so
+    the slow-query report keeps table names."""
     out = stmt
     for pattern in _LITERAL_PATTERNS:
         out = pattern.sub("?", out)

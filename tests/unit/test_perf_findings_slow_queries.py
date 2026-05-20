@@ -21,7 +21,13 @@ def test_normalise_statement_strips_literals_and_collapses_whitespace() -> None:
     assert (
         normalise_statement("UPDATE t SET x = 42 WHERE y = 1") == "UPDATE t SET x = ? WHERE y = ?"
     )
-    assert normalise_statement('INSERT INTO t VALUES ("a", "b")') == "INSERT INTO t VALUES (?, ?)"
+    # Double-quoted text is a Postgres identifier, not a string literal —
+    # it must survive normalisation so the slow-query report keeps the
+    # table / column name (#1166).
+    assert (
+        normalise_statement('SELECT count(*) FROM "task" WHERE "id" = \'x\'')
+        == 'SELECT count(*) FROM "task" WHERE "id" = ?'
+    )
 
 
 def _seed_query_spans(db: Path, queries: list[tuple[str, int]]) -> None:
