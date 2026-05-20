@@ -16,6 +16,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.strings import to_api_plural
 from dazzle.rbac.audit import AccessDecisionRecord
 from dazzle.rbac.matrix import AccessMatrix, PolicyDecision
 
@@ -216,6 +217,61 @@ def compare_cell(
         return CellResult.WARNING
 
     return CellResult.WARNING
+
+
+@dataclass
+class _ProbeResult:
+    """Observed outcome of probing one (role, entity, operation) cell."""
+
+    status: int
+    count: int | None
+
+
+# operation -> (HTTP method, needs_id, has_body)
+_PROBE_VERBS: dict[str, tuple[str, bool, bool]] = {
+    "list": ("GET", False, False),
+    "read": ("GET", True, False),
+    "create": ("POST", False, True),
+    "update": ("PATCH", True, True),
+    "delete": ("DELETE", True, False),
+}
+
+
+async def _probe_cell(
+    client: Any,
+    *,
+    entity: str,
+    operation: str,
+    baseline_id: str | None,
+    body: dict[str, Any] | None = None,
+) -> _ProbeResult:
+    """Issue the HTTP request for one matrix cell and capture status + count.
+
+    `client` is an authenticated httpx.AsyncClient (cookies already set).
+    `baseline_id` is the seeded row for read/update/delete; ignored for
+    list/create. `count` is the item count of a list response, else None.
+    """
+    method, needs_id, has_body = _PROBE_VERBS[operation]
+    plural = to_api_plural(entity)
+    url = f"/api/{plural}/{baseline_id}" if needs_id else f"/api/{plural}"
+
+    kwargs: dict[str, Any] = {}
+    if has_body:
+        kwargs["json"] = body or {}
+
+    response = await client.request(method, url, **kwargs)
+
+    count: int | None = None
+    if operation == "list" and response.status_code == 200:
+        try:
+            payload = response.json()
+            items = payload.get("items") if isinstance(payload, dict) else payload
+            if isinstance(items, list):
+                count = len(items)
+        except Exception:
+            count = None
+
+    return _ProbeResult(status=response.status_code, count=count)
 
 
 async def verify(
