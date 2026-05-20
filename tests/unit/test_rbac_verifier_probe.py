@@ -21,7 +21,7 @@ class _FakeResponse:
 
 
 class _FakeClient:
-    """Records the last request and returns a queued response."""
+    """Records all requests issued and returns a queued response."""
 
     def __init__(self, response: _FakeResponse) -> None:
         self._response = response
@@ -72,3 +72,21 @@ async def test_list_count_none_when_body_not_json() -> None:
     result = await _probe_cell(client, entity="Task", operation="list", baseline_id=None)
     assert result.status == 200
     assert result.count is None
+
+
+@pytest.mark.asyncio
+async def test_update_probe_issues_patch_with_body() -> None:
+    client = _FakeClient(_FakeResponse(200, {"id": "abc"}))
+    result = await _probe_cell(
+        client, entity="Task", operation="update", baseline_id="abc", body={"title": "x"}
+    )
+    assert client.calls == [("PATCH", "/api/tasks/abc")]
+    assert result.status == 200
+
+
+@pytest.mark.asyncio
+async def test_list_count_handles_root_array_payload() -> None:
+    client = _FakeClient(_FakeResponse(200, [{"id": "1"}]))
+    result = await _probe_cell(client, entity="Task", operation="list", baseline_id=None)
+    assert result.status == 200
+    assert result.count == 1
