@@ -4285,8 +4285,14 @@ class RouteGenerator:
         if not router_method:
             raise ValueError(f"Unsupported HTTP method: {endpoint.method}")
 
-        # Convert path parameters from {id} to FastAPI format
-        path = endpoint.path
+        # Detail / update / delete routes register their `{id}` segment
+        # with Starlette's `uuid` path convertor. A literal segment like
+        # `create` is not uuid-shaped, so it simply won't match the
+        # detail route and falls through — no sentinel guard route
+        # needed (this retired the `_create_guard` hack from #598).
+        # Dazzle entity PKs are uuids and the generated handlers already
+        # type `id: UUID`, so the convertor and the signature agree.
+        path = endpoint.path.replace("{id}", "{id:uuid}")
 
         # Build route decorator kwargs
         route_kwargs: dict[str, Any] = {
@@ -4349,29 +4355,12 @@ class RouteGenerator:
         from dazzle.perf.tracer import dazzle_span
 
         with dazzle_span("route.gen", endpoint_count=len(endpoints)):
-            # Register /{plural}/create guard routes BEFORE main routes so
-            # FastAPI doesn't match "create" as a UUID {id} parameter (#598).
-            # FastAPI uses first-match-wins, so /tasks/create must be
-            # registered before /tasks/{id}.
-            _guarded: set[str] = set()
-            for ep in endpoints:
-                if ep.method == HttpMethod.GET and ep.path.endswith("/{id}"):
-                    prefix = ep.path[: -len("/{id}")]
-                    if prefix and prefix not in _guarded:
-                        _guarded.add(prefix)
-                        create_path = f"{prefix}/create"
-
-                        async def _create_guard(request: Request) -> Any:
-                            raise HTTPException(
-                                status_code=404,
-                                detail="Use the UI create form or POST to the collection endpoint",
-                            )
-
-                        self._router.get(
-                            create_path,
-                            tags=["Guard"],
-                            include_in_schema=False,
-                        )(_create_guard)
+            # Detail routes register as `/{plural}/{id:uuid}` (see
+            # `_add_route`), so a literal segment like `create` can't be
+            # mistaken for an `{id}` — it doesn't match the uuid
+            # convertor and falls through to a clean router 404. The old
+            # `_create_guard` sentinel routes (#598) are no longer
+            # needed and have been removed.
 
             def _route_sort_key(ep: EndpointSpec) -> tuple[int, int]:
                 # More segments first, then static before dynamic at same depth.

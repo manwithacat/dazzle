@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.83] - 2026-05-20
+
+### Fixed
+
+- **Detail routes use a typed `{id}` path convertor; the `create`
+  guard-route hack is retired** (#1167). `route_generator` registered
+  `/{plural}/create` sentinel routes whose only job was to return 404,
+  so `GET /tasks/create` wouldn't fall through to `/tasks/{id}` and be
+  parsed as a malformed UUID (#598). Detail / update / delete routes
+  now register their `{id}` segment with Starlette's `uuid` convertor
+  (`/{plural}/{id:uuid}`) — a literal segment like `create` isn't
+  uuid-shaped, so it no longer matches the detail route and falls
+  through to a clean router 404. The generated handlers already type
+  `id: UUID`, so the convertor and the signature agree; the
+  `_create_guard` registration is removed.
+
+  Note: a malformed id (`/tasks/not-a-uuid`) now returns 404 rather
+  than 422 — the path simply doesn't match a route.
+
+### Agent Guidance
+
+- **Auto-generated detail routes register as `/{plural}/{id:uuid}`.**
+  The Starlette `uuid` path convertor resolves the `/{plural}/create`
+  vs `/{plural}/{id}` collision at the routing layer — don't
+  reintroduce literal-segment "guard" routes (routes that exist only
+  to return 404). See `RouteGenerator._add_route`.
+
 ## [0.71.82] - 2026-05-20
 
 ### Fixed
