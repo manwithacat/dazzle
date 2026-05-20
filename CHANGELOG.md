@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI: `perf` extra now installed in every test job.** `dazzle.cli`
+  imports `dazzle.perf` at module load (tracer init at CLI entry,
+  #1158), so opentelemetry is required for the test suite to even
+  collect — but the `perf` extra was never added to CI's install
+  set. CI had been red on every push since v0.71.69 with
+  `ModuleNotFoundError: No module named 'opentelemetry'`. Added `perf`
+  to the `setup-dazzle` default extras and to all five explicit
+  per-job overrides.
+
 ## [0.71.73] - 2026-05-20
 
 ### Fixed

@@ -83,7 +83,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,mobile,postgres
+        extras: dev,mobile,postgres,perf
         optional-pip: ""
 
     - name: Run JWT security tests
@@ -143,7 +143,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,postgres
+        extras: dev,llm,mcp,postgres,perf
 
     - name: Run ruff linter
       run: |
@@ -236,7 +236,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport
+        extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf
         optional-pip: pygls bleach
 
     - name: Run mypy
@@ -254,7 +254,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile
+        extras: dev,llm,mcp,mobile,perf
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.* are gitignored — built here for tests.
@@ -280,7 +280,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile
+        extras: dev,llm,mcp,mobile,perf
         optional-pip: ""
 
     - name: Validate all example and fixture projects
