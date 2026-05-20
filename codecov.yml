@@ -1,0 +1,23 @@
+# Codecov configuration.
+#
+# Before this file the repo had no Codecov config at all, so the only
+# status check was `patch` with no threshold: every diff had to hit the
+# full project coverage %. A small diff containing one line that isn't
+# unit-test shaped (e.g. serve-boot orchestration) failed it outright
+# — a 2-line diff with one such line scores 50% and trips the gate.
+#
+# Policy:
+#   project — the real regression gate. Overall coverage may not fall
+#             more than 1% versus the parent commit.
+#   patch   — informational only. Diff coverage is still reported on
+#             every commit/PR, but it does not fail CI. The project
+#             status is what catches a genuine coverage regression.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        informational: true

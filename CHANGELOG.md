@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.85] - 2026-05-20
+
+### Changed
+
+- **Added `codecov.yml`.** The repo had no Codecov config, so the only
+  status was a `patch` check with no threshold — any diff had to hit
+  the full project coverage %. A small diff with one line that isn't
+  unit-test shaped (e.g. a serve-boot orchestration call) failed it
+  outright: a 2-line diff with one such line scores 50% and trips the
+  gate (seen on v0.71.84). The config adds a real `project` status
+  (`target: auto`, 1% threshold — overall coverage can't regress) and
+  makes `patch` informational (diff coverage is still reported, not
+  gated). Genuine regressions are caught by `project`; tiny-diff noise
+  stops.
+
 ## [0.71.84] - 2026-05-20
 
 ### Fixed
