@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Python version metadata aligned on 3.12** (#1175). The README badge
+  said "Python 3.11+" and the Ruff `target-version` was `py311`, while
+  `requires-python`, the package classifiers, the mypy config, and the
+  CI matrix all already required/tested 3.12. The badge, the Ruff target,
+  and the bug-report template's environment example now all say 3.12,
+  and the README Quick Start gains a "Supported runtime" line. Moving the
+  Ruff target to `py312` surfaced 16 PEP 695 modernisation suggestions
+  (UP046/UP047/UP040) — those rules are suppressed for now; adopting the
+  `class C[T]` / `def fn[T]()` / `type X =` syntax is a deliberate
+  follow-up refactor, not a metadata-bump side effect.
+
 ## [0.71.86] - 2026-05-20
 
 ### Fixed

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.71.86"
+version = "0.71.87"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -432,7 +432,7 @@ disable_error_code = ["valid-type"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 src = ["src"]
 # Exclude bundled examples from linting (they may have auto-generated code)
 exclude = [
@@ -473,6 +473,14 @@ ignore = [
     "B904",  # raise from err - style preference, not critical
     "B027",  # empty method in abstract class - intentional default implementations
     "B011",  # assert False in tests - pytest uses -O mode differently
+    # PEP 695 modernisation — surfaced when target-version moved to
+    # py312 (#1175). The codebase uses classic TypeVar / Generic /
+    # TypeAlias throughout; adopting the `class C[T]` / `def fn[T]()` /
+    # `type X =` syntax is a deliberate, reviewed refactor, not a
+    # metadata-bump side effect. Drop these to enable that work.
+    "UP046",  # non-pep695-generic-class
+    "UP047",  # non-pep695-generic-function
+    "UP040",  # non-pep695-type-alias
 ]
 
 [tool.ruff.lint.isort]

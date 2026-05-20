@@ -4,7 +4,7 @@
 **Model your business. Ship your product. Pass your audit.**
 
 <!-- Versions & Compatibility -->
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Homebrew](https://img.shields.io/badge/homebrew-manwithacat%2Ftap-orange)](https://github.com/manwithacat/homebrew-tap)
 
 <!-- Build & Quality -->
@@ -212,6 +212,8 @@ dazzle serve
 # Open http://localhost:3000 for the UI
 # Open http://localhost:8000/docs for the API
 ```
+
+**Supported runtime:** Python **3.12+** · PostgreSQL · macOS / Linux. CI exercises Python 3.12 — the project's single supported minor version.
 
 ---
 
