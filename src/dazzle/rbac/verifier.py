@@ -11,10 +11,12 @@ pieces for unit testing.
 from __future__ import annotations  # required: forward reference
 
 import json
+import uuid
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 from dazzle.core.strings import to_api_plural
 from dazzle.rbac.audit import AccessDecisionRecord
@@ -272,6 +274,42 @@ async def _probe_cell(
             count = None
 
     return _ProbeResult(status=response.status_code, count=count)
+
+
+class _DisposableDatabase:
+    """Async context manager: create a scratch PostgreSQL database, yield
+    its URL, drop it on exit. The scratch DB never leaks — the drop runs
+    in `__aexit__` even when the body raises."""
+
+    def __init__(self, server_url: str) -> None:
+        self._server_url = server_url
+        self._db_name = f"dazzle_verify_{uuid.uuid4().hex}"
+        self._db_url = ""
+
+    def _admin_url(self) -> str:
+        parts = urlparse(self._server_url)
+        return urlunparse(parts._replace(path="/postgres"))
+
+    def _scratch_url(self) -> str:
+        parts = urlparse(self._server_url)
+        return urlunparse(parts._replace(path=f"/{self._db_name}"))
+
+    async def __aenter__(self) -> str:
+        import psycopg
+
+        with psycopg.connect(self._admin_url(), autocommit=True) as conn:
+            # _db_name is a server-generated hex identifier (uuid4().hex) — not user input.
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(f'CREATE DATABASE "{self._db_name}"')
+        self._db_url = self._scratch_url()
+        return self._db_url
+
+    async def __aexit__(self, *exc: object) -> None:
+        import psycopg
+
+        with psycopg.connect(self._admin_url(), autocommit=True) as conn:
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(f'DROP DATABASE IF EXISTS "{self._db_name}" WITH (FORCE)')
 
 
 async def verify(
