@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.81] - 2026-05-20
+
+### Fixed
+
+- **`dazzle perf trace` no longer loses every span on short runs.**
+  `maybe_configure_tracer` configured a `BatchSpanProcessor`, which
+  only flushes on a ~5s timer or an explicit `provider.shutdown()` —
+  neither fires when the traced server is SIGTERM'd after a quick run
+  (e.g. `perf trace --all-surfaces` with no `--duration`). Every span
+  was silently dropped and `perf report` rendered an empty report.
+  `perf trace` now uses `SimpleSpanProcessor` (synchronous per-span
+  SQLite writes), so capture is immune to how the server exits.
+
+- **`perf report` header no longer always reads `Ended: (running)`.**
+  The traced server is terminated rather than cleanly shut down, so the
+  exporter's `runs.ended_at` write never ran. The trace runner now
+  stamps `ended_at` itself once the server has stopped.
+
+- Fixed a bare `except Exception: pass` in `_derive_surface_urls`
+  (v0.71.80) that tripped the no-silent-swallow lint gate.
+
+### Agent Guidance
+
+- **`perf trace` capture must stay synchronous.** `maybe_configure_tracer`
+  uses `SimpleSpanProcessor` (`batch=False`) deliberately — the traced
+  server is SIGTERM'd, so a `BatchSpanProcessor` would need a reliable
+  flush hook the process topology doesn't afford. Don't switch it back
+  to batched without one.
+
 ## [0.71.80] - 2026-05-20
 
 ### Added

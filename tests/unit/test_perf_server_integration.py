@@ -63,6 +63,10 @@ def test_tracer_initialised_when_perf_db_env_set(tmp_path) -> None:
 
     assert called["run_id"] == "r1"
     assert called["db_path"] == db
+    # batch=False → SimpleSpanProcessor: spans persist synchronously, so
+    # a short trace run can't lose them when the server is terminated
+    # before BatchSpanProcessor's flush timer fires.
+    assert called["batch"] is False
 
 
 def test_tracer_skipped_when_env_unset() -> None:

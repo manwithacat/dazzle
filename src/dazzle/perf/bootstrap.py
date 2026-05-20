@@ -28,9 +28,17 @@ def maybe_configure_tracer() -> None:
         return
     from dazzle.perf.tracer import configure_tracer
 
+    # batch=False → SimpleSpanProcessor, which exports each span to
+    # SQLite synchronously as it ends. BatchSpanProcessor only flushes
+    # on a ~5s timer or an explicit provider.shutdown(); a trace run
+    # shorter than that (e.g. `perf trace --all-surfaces` with no
+    # `--duration`) loses every span when the server is terminated, and
+    # the traced server's process topology makes a reliable
+    # shutdown-flush hook impractical. Synchronous writes are cheap for
+    # a local profiling run and immune to how the process exits.
     configure_tracer(
         run_id=run_id,
         db_path=Path(db_str),
-        batch=True,
+        batch=False,
         command_line=" ".join(sys.argv),
     )

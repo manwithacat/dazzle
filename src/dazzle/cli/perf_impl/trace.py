@@ -15,6 +15,7 @@ runner that:
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -68,14 +69,13 @@ def _derive_surface_urls() -> list[str]:
         typer.echo(f"  --all-surfaces: could not enumerate routes — {app_or_error}")
         return []
 
+    # Categorisation degrades gracefully without the AppSpec — workspace
+    # routes just land in the "surface" bucket — so an AppSpec load
+    # failure here is non-fatal.
     workspace_names: frozenset[str] = frozenset()
-    try:
+    with suppress(Exception):
         appspec = _load_appspec(project_root)
         workspace_names = frozenset(ws.name for ws in (getattr(appspec, "workspaces", None) or []))
-    except Exception:
-        # Categorisation degrades gracefully without the AppSpec —
-        # workspace routes just land in the "surface" bucket.
-        pass
 
     entries = _walk_runtime_routes(app_or_error.routes, workspace_names)
     return _traceable_page_urls(entries)
@@ -336,3 +336,32 @@ def _execute_trace_run(
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc.kill()
+
+    # The traced server is SIGTERM'd, never cleanly shut down, so the
+    # exporter's own `ended_at` write (in SQLiteSpanExporter.shutdown())
+    # never fires. Stamp it from the runner instead — robust to how the
+    # child exits.
+    _stamp_run_ended(db_path, run_id)
+
+
+def _stamp_run_ended(db_path: Path, run_id: str) -> None:
+    """Record run-completion time on the ``runs`` row.
+
+    Without this the row's ``ended_at`` stays NULL and every
+    ``perf report`` header reads ``Ended: (running)``.
+    """
+    import sqlite3
+    from datetime import UTC, datetime
+
+    if not db_path.exists():
+        return
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            "UPDATE runs SET ended_at = ? WHERE run_id = ? AND ended_at IS NULL",
+            (datetime.now(UTC).isoformat(), run_id),
+        )
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as exc:
+        typer.echo(f"  warning: could not stamp run end time — {exc}")

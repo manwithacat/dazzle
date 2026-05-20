@@ -191,6 +191,56 @@ def test_trace_all_surfaces_empty_still_requires_url_or_duration(cwd: Path) -> N
     assert "url" in combined.lower() or "duration" in combined.lower()
 
 
+def test_stamp_run_ended_sets_ended_at(tmp_path: Path) -> None:
+    """The runner stamps runs.ended_at — the traced server is SIGTERM'd,
+    so the exporter's own shutdown write never fires."""
+    import sqlite3
+
+    from dazzle.cli.perf_impl.trace import _stamp_run_ended
+
+    db = tmp_path / "run.db"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE runs (run_id TEXT, started_at TEXT, ended_at TEXT)")
+    conn.execute("INSERT INTO runs VALUES ('r1', '2026-01-01T00:00:00Z', NULL)")
+    conn.commit()
+    conn.close()
+
+    _stamp_run_ended(db, "r1")
+
+    ended = (
+        sqlite3.connect(db).execute("SELECT ended_at FROM runs WHERE run_id = 'r1'").fetchone()[0]
+    )
+    assert ended is not None
+
+
+def test_stamp_run_ended_does_not_overwrite(tmp_path: Path) -> None:
+    """A run that did get a clean exporter shutdown keeps its ended_at."""
+    import sqlite3
+
+    from dazzle.cli.perf_impl.trace import _stamp_run_ended
+
+    db = tmp_path / "run.db"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE runs (run_id TEXT, started_at TEXT, ended_at TEXT)")
+    conn.execute("INSERT INTO runs VALUES ('r1', '2026-01-01T00:00:00Z', 'ORIGINAL')")
+    conn.commit()
+    conn.close()
+
+    _stamp_run_ended(db, "r1")
+
+    ended = (
+        sqlite3.connect(db).execute("SELECT ended_at FROM runs WHERE run_id = 'r1'").fetchone()[0]
+    )
+    assert ended == "ORIGINAL"
+
+
+def test_stamp_run_ended_missing_db_is_silent(tmp_path: Path) -> None:
+    """No DB file (server never booted) — stamping is a quiet no-op."""
+    from dazzle.cli.perf_impl.trace import _stamp_run_ended
+
+    _stamp_run_ended(tmp_path / "absent.db", "r1")  # must not raise
+
+
 def test_parse_set_cookie_value() -> None:
     from dazzle.cli.perf_impl.trace import _parse_set_cookie_value
 
