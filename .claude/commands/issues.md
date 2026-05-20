@@ -1,6 +1,29 @@
-Iterative GitHub issue resolver. Run continuously: triage, implement, ship, repeat — until all open issues are resolved or the user stops you.
+Iterative GitHub issue resolver. Run continuously: triage, investigate, implement, ship, repeat — until all open issues are resolved or the user stops you.
 
 **This command uses parallel subagents** for investigation — dispatching one per issue to analyze root causes concurrently before picking which to implement.
+
+## Modes
+
+Parse `ARGUMENTS`: if it contains the word `auto`, run in **auto mode**; otherwise run the **default** loop.
+
+- **`/issues`** (default) — standard loop. The decision gate (Step 3) pauses for user input on genuine ambiguity; the loop stops when the remaining backlog is all large/blocked (Step 8).
+- **`/issues auto`** — *as-autonomous-as-possible* mode. The loop does **not** stop on a large backlog: it works through **every** open issue, escalating per-issue via the three intervention tiers below. It halts only when no open issues remain or the user stops it. Tier-2/3 pauses surface as prompts — this pairs with `/remote-control`, so design questions can be answered from anywhere and the loop resumes on the reply. This is a high-velocity, high-risk strategy *by intent*: a degree of imperfection and rework is expected and acceptable.
+
+## Intervention tiers (auto mode)
+
+Every issue is classified into one tier during investigation (Step 2). The classification is the agent's own call — **bias toward Tier 1**. Escalate only for a *specific, nameable* reason, never on vague unease.
+
+**The tier-2 / tier-3 discriminator:** *Can I write the design question right now with 2-4 concrete, mutually-exclusive options?* If yes → Tier 2. If the option space itself needs exploring before the question can even be posed → Tier 3.
+
+| Tier | When | Loop behaviour |
+|------|------|----------------|
+| **Tier 1 — Autonomous** | Clear root cause; one correct approach, or the codebase convention dictates the choice. Reversible (code + tests, locally verifiable). Does **not** change a public claim, a default behaviour, a dependency, or architecture. *Bug fixes, metadata alignment, added tests, internal refactors with one obvious shape.* | Implement → ship → close → next. No pause. |
+| **Tier 2 — Design decision** | 2-4 nameable options with real trade-offs the codebase does not settle; **or** the change touches a user-visible contract, a default, a public/marketing claim, a dependency, or anything not cheaply reversible (data migrations, etc.). The decision is bounded — once made, implementation is clear. *"Implement X vs defer X", "strict default vs opt-in flag".* | Pause: `AskUserQuestion` with the options. Implement per the answer → ship → close → next. |
+| **Tier 3 — Needs brainstorming** | The *shape* of the solution is unclear — the issue is a goal, not a spec; a new subsystem / new example app / cross-cutting design; you cannot crisply enumerate the options. | Invoke the `brainstorming` skill (`superpowers:brainstorming`) with the user. Outcome: a written spec/plan. If the resulting work is small/medium → implement it in-loop → ship → close. If large → save the plan (issue comment or `dev_docs/`), comment on the issue, leave it **open**, → next. |
+
+**Front-loading (auto mode):** after Step 2 classifies all issues, you MAY batch every Tier-2 question into a single `AskUserQuestion` round (up to 4 questions) *before* implementing anything — so design decisions are answered once and the implementation phase then runs uninterrupted. Tier-3 brainstorms are still handled one at a time, when their issue comes up in priority order.
+
+**When torn:** Tier 1 vs 2 — lean Tier 1 if the change is reversible and internal; lean Tier 2 if it touches a public contract or claim. Tier 2 vs 3 — lean Tier 2 (a focused question is cheap, and the user can always answer "let's brainstorm this").
 
 ## Backward Compatibility Policy
 
@@ -51,6 +74,16 @@ Issue title: <title>
 2. Search the codebase for relevant files using Grep/Glob
 3. Read the key files that would need to change
 4. Determine: root cause (bugs) or design approach (features), files to modify, scope (small/medium/large)
+5. Classify the intervention tier:
+   - tier1 — you could implement this correctly without user input (clear root
+     cause / one correct approach / codebase convention dictates the choice;
+     reversible; no change to a public claim, default, dependency, or architecture).
+   - tier2 — there is a bounded design choice: 2-4 concrete, mutually-exclusive
+     options with real trade-offs, OR the change touches a user-visible contract,
+     a default, a public/marketing claim, a dependency, or something not cheaply
+     reversible. If tier2, you MUST be able to list the 2-4 options.
+   - tier3 — the shape of the solution is unclear; you cannot crisply enumerate
+     the options without exploring the problem first.
 
 Return your analysis in this format:
 ISSUE: #<number> — <title>
@@ -60,9 +93,11 @@ FILES: <comma-separated list of files to modify>
 APPROACH: <2-3 sentence fix description>
 COMPLEXITY: <estimated lines changed>
 DEPENDENCIES: <any issues this depends on or blocks>
+INTERVENTION: tier1|tier2|tier3 — <one-line reason>
+OPTIONS: <tier2 only — 2-4 concrete options, each one line; omit for tier1/tier3>
 ```
 
-When there is only **1 issue**, skip parallel dispatch and investigate directly.
+When there is only **1 issue**, skip parallel dispatch and investigate directly (still classify the tier).
 
 ### Step 3: Prioritise and pick
 
@@ -74,7 +109,13 @@ When there is only **1 issue**, skip parallel dispatch and investigate directly.
 - Display your reasoning briefly.
 - Remove the `needs-triage` label: `gh issue edit <number> --remove-label "needs-triage"`.
 
-**Decision gate**: If the issue has genuine ambiguity — multiple valid approaches with real trade-offs, unclear requirements, or would benefit from user input — ask the user before proceeding. Otherwise, pick the most sensible approach following existing codebase patterns and continue.
+**Decision gate — dispatch on the intervention tier:**
+
+- **Default mode:** if the issue has genuine ambiguity — multiple valid approaches with real trade-offs, unclear requirements, or would benefit from user input — ask the user before proceeding. Otherwise pick the most sensible approach following existing codebase patterns and continue.
+- **Auto mode:** act on the tier from Step 2:
+  - **Tier 1** → go straight to Step 4.
+  - **Tier 2** → `AskUserQuestion` with the `OPTIONS` from investigation (one question per issue; or a batched front-loaded round per the front-loading note above). Record the answer, then Step 4 implementing that choice.
+  - **Tier 3** → invoke the `brainstorming` skill with the user to produce a written spec. If the spec's work is small/medium, proceed to Step 4. If large, post the spec as an issue comment (or save to `dev_docs/`), leave the issue open, and loop back to Step 3 for the next issue.
 
 ### Step 4: Implement
 
@@ -90,6 +131,7 @@ When there is only **1 issue**, skip parallel dispatch and investigate directly.
 
 ### Step 6: Ship
 
+- Run `/bump patch` (or the appropriate level) so the push carries a unique version.
 - Commit the changes with a descriptive message referencing the issue number (e.g., "Fix X for issue #N").
 - Push to the remote.
 - Monitor CI with `gh run list --branch $(git branch --show-current) --limit 3` — if CI fails on your changes, fix and re-push. If CI fails on unrelated flaky tests, note it and move on.
@@ -104,4 +146,5 @@ When there is only **1 issue**, skip parallel dispatch and investigate directly.
 
 - Return to **Step 1** and pick the next issue.
 - If no open issues remain, report completion and stop.
-- If all remaining issues are large/blocked/need user decisions, summarise the state and ask the user how to proceed.
+- **Default mode:** if all remaining issues are large/blocked/need user decisions, summarise the state and ask the user how to proceed.
+- **Auto mode:** do **not** stop for a large backlog — continue the loop, escalating each remaining issue via its intervention tier (Step 3). Stop only when no open issues remain (excluding Tier-3 issues deliberately left open with a saved plan, and third-party issues) or the user halts the loop. When you do stop, report: issues shipped, issues left open with reasons, and any saved Tier-3 plans.
