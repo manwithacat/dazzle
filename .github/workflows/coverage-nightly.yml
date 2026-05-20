@@ -1,0 +1,125 @@
+name: Nightly Coverage
+
+# #1169: per-push CI uploads unit + integration + postgres coverage.
+# E2E coverage additionally needs the served-app *subprocess* traced —
+# coverage.py only sees a subprocess via COVERAGE_PROCESS_START + a .pth
+# hook + `coverage combine`. That machinery is fragile (silent miscount
+# if a server is hard-killed before flushing, path remapping), so it is
+# deliberately kept OFF the per-push critical path and runs here:
+# nightly, non-gating, uploaded under the `e2e` flag (carryforward in
+# codecov.yml keeps the last report on commits between nightly runs).
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 04:00 UTC daily
+  workflow_dispatch: {}    # manual trigger (verification / on demand)
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-coverage:
+    name: E2E Coverage (subprocess-traced)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dazzle
+          POSTGRES_PASSWORD: dazzle_test
+          POSTGRES_DB: dazzle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dazzle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+      DAZZLE_SKIP_INFRA_CHECK: "1"
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+    - uses: ./.github/actions/setup-dazzle
+      with:
+        optional-pip: ""
+
+    - name: Build asset bundles
+      run: python scripts/build_dist.py
+
+    - name: Install subprocess-coverage hook
+      # coverage.py traces a subprocess only when COVERAGE_PROCESS_START
+      # is set AND a .pth file runs coverage.process_startup() at
+      # interpreter start. Installed here, after setup — so only the
+      # E2E steps below are traced. parallel=true makes every process
+      # write its own .coverage.* file; the absolute data_file pins
+      # them all to one directory regardless of each process's CWD
+      # (the served app boots from examples/simple_task/).
+      run: |
+        cat > "$GITHUB_WORKSPACE/.coveragerc-e2e" <<EOF
+        [run]
+        parallel = true
+        data_file = $GITHUB_WORKSPACE/.coverage
+        source = $GITHUB_WORKSPACE/src/dazzle
+        omit =
+            */tests/*
+            */__pycache__/*
+        EOF
+        SITE=$(python -c "import sysconfig; print(sysconfig.get_path('purelib'))")
+        echo "import coverage; coverage.process_startup()" > "$SITE/dazzle-subcov.pth"
+        echo "COVERAGE_PROCESS_START=$GITHUB_WORKSPACE/.coveragerc-e2e" >> "$GITHUB_ENV"
+
+    - name: Run E2E runtime tests (traced)
+      # Non-gating: a test failure must not abort coverage collection.
+      # Pass/fail is ci.yml's job — this workflow only measures.
+      continue-on-error: true
+      run: |
+        pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=180
+      timeout-minutes: 12
+
+    - name: Run served-app DSL tests (traced subprocess)
+      continue-on-error: true
+      run: |
+        cd examples/simple_task
+        python -m dazzle serve --test-mode --local --port 3000 > /tmp/dazzle-server.log 2>&1 &
+        SERVER_PID=$!
+        for i in {1..45}; do
+          if curl -s http://localhost:3000/health > /dev/null 2>&1; then
+            echo "Server ready"
+            break
+          fi
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Server died. Logs:"; cat /tmp/dazzle-server.log; exit 1
+          fi
+          sleep 2
+        done
+        python -m dazzle test run --no-auto-server --verbose || true
+        # SIGTERM (not SIGKILL) so uvicorn shuts down gracefully and the
+        # subprocess's atexit coverage flush runs. Then wait for exit.
+        kill -TERM $SERVER_PID 2>/dev/null || true
+        for i in {1..15}; do
+          kill -0 $SERVER_PID 2>/dev/null || break
+          sleep 1
+        done
+      timeout-minutes: 8
+
+    - name: Combine + report coverage
+      # `combine` merges every .coverage.* parallel file. Tolerant: if a
+      # subprocess didn't flush its data the report is partial, not a
+      # hard failure — this job is informational.
+      continue-on-error: true
+      run: |
+        coverage combine --rcfile="$GITHUB_WORKSPACE/.coveragerc-e2e" || true
+        coverage xml --rcfile="$GITHUB_WORKSPACE/.coveragerc-e2e" || true
+        coverage report --rcfile="$GITHUB_WORKSPACE/.coveragerc-e2e" || true
+
+    - name: Upload E2E coverage to Codecov
+      uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6
+      with:
+        files: ./coverage.xml
+        flags: e2e
+        fail_ci_if_error: false

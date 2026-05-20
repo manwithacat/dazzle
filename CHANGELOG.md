@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.89] - 2026-05-20
+
+### Changed
+
+- **Codecov now reflects integration, postgres, and E2E coverage — not
+  just unit** (#1169). Previously only the unit-test job uploaded
+  coverage, so any path exercised solely by integration/E2E (serve-boot
+  orchestration, runtime route handlers, real-DB code) showed as
+  uncovered. The `integration` and `postgres-tests` CI jobs now run
+  under `--cov` and upload under their own Codecov flags. E2E/subprocess
+  coverage — which needs `COVERAGE_PROCESS_START` + `coverage combine`,
+  a fragile, silent-failing mechanism — runs in a new nightly
+  `coverage-nightly.yml` workflow (also `workflow_dispatch`-triggerable)
+  under the `e2e` flag, kept off the per-push critical path.
+  `codecov.yml` gains flag declarations with `carryforward` so a flag's
+  last report persists on commits where its job didn't run.
+
 ## [0.71.88] - 2026-05-20
 
 ### Added

@@ -21,3 +21,23 @@ coverage:
     patch:
       default:
         informational: true
+
+# Flags (#1169) — coverage is uploaded from several CI jobs so the
+# project number reflects unit + integration + postgres + e2e, not just
+# the unit job:
+#   unittests   — `python-tests` job, per push
+#   integration — `integration` job (in-process TestClient), per push
+#   postgres    — `postgres-tests` job (real DB), per push
+#   e2e         — `coverage-nightly.yml`, nightly only
+# carryforward keeps the last known report for a flag on commits where
+# its job didn't run — essential for `e2e` (nightly cadence), defensive
+# for the rest (a docs-only push skips CI entirely).
+flags:
+  unittests:
+    carryforward: true
+  integration:
+    carryforward: true
+  postgres:
+    carryforward: true
+  e2e:
+    carryforward: true

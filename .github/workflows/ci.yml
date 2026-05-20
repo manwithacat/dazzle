@@ -262,12 +262,23 @@ jobs:
 
     - name: Run integration tests
       run: |
-        pytest tests/integration/ -v --maxfail=1 -m "not e2e"
+        pytest tests/integration/ -v --maxfail=1 -m "not e2e" --cov=src/dazzle --cov-report=xml
 
     - name: Test CLI commands
       run: |
         python -m dazzle --help
         python -m dazzle --version
+
+    - name: Upload coverage to Codecov
+      # #1169: integration tests run in-process (TestClient) and exercise
+      # serve-boot orchestration + route handlers the unit job never
+      # reaches. Uploaded under its own `integration` flag — Codecov
+      # merges flagged reports into the project total.
+      uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6
+      with:
+        files: ./coverage.xml
+        flags: integration
+        fail_ci_if_error: false
 
   # Smoke tests: validate all examples parse + lint, run moved test_serve_validation.py
   e2e-smoke:
@@ -359,7 +370,17 @@ jobs:
         DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
         TEST_DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
       run: |
-        pytest -v -m "postgres" -x
+        pytest -v -m "postgres" -x --cov=src/dazzle --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      # #1169: the postgres-marked tests exercise real-DB code paths
+      # (migrations, scope SQL, repository internals) invisible to the
+      # SQLite-free unit job. Uploaded under the `postgres` flag.
+      uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6
+      with:
+        files: ./coverage.xml
+        flags: postgres
+        fail_ci_if_error: false
 
   # Runtime E2E: CRUD tests + Tier 1 DSL tests against PostgreSQL
   e2e-runtime:
