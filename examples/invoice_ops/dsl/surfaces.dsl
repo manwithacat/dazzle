@@ -108,3 +108,74 @@ surface line_item_list "Line Items":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount"
+
+# =============================================================================
+# INVOICE EDIT SURFACE — generates PUT /invoices/{id} + drives state machine
+# =============================================================================
+
+surface invoice_edit "Edit Invoice":
+  uses entity Invoice
+  mode: edit
+  section main:
+    field invoice_number "Number"
+    field supplier "Supplier"
+    field amount "Amount"
+    field currency "Currency"
+    field status "Status"
+    field rejection_reason "Rejection Reason"
+    field dispute_reason "Dispute Reason"
+
+# =============================================================================
+# SUPPLIER CREATE / EDIT SURFACES — tenant_admin & finance manage suppliers
+# =============================================================================
+
+surface supplier_create "New Supplier":
+  uses entity Supplier
+  mode: create
+  section main:
+    field name "Name"
+    field contact_email "Contact"
+    field bank_reference "Bank Reference"
+    field region "Region"
+
+surface supplier_edit "Edit Supplier":
+  uses entity Supplier
+  mode: edit
+  section main:
+    field name "Name"
+    field contact_email "Contact"
+    field bank_reference "Bank Reference"
+    field region "Region"
+
+# =============================================================================
+# USER CREATE / EDIT SURFACES — tenant_admin manages domain users
+# (user_edit deliberately omits tenant_id — users must not be moved between tenants)
+# =============================================================================
+
+surface user_create "New User":
+  uses entity User
+  mode: create
+  section main:
+    field email "Email"
+    field name "Name"
+    field tenant_id "Tenant"
+
+surface user_edit "Edit User":
+  uses entity User
+  mode: edit
+  section main:
+    field email "Email"
+    field name "Name"
+
+# =============================================================================
+# LINE ITEM CREATE SURFACE — requester adds line items to an invoice
+# =============================================================================
+
+surface lineitem_create "New Line Item":
+  uses entity LineItem
+  mode: create
+  section main:
+    field invoice "Invoice"
+    field description "Description"
+    field quantity "Qty"
+    field unit_amount "Unit Amount"
