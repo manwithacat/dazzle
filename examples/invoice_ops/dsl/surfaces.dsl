@@ -135,7 +135,7 @@ surface supplier_create "New Supplier":
   section main:
     field name "Name"
     field contact_email "Contact"
-    field bank_reference "Bank Reference"
+    field bank_account_ref "Bank Reference"
     field region "Region"
 
 surface supplier_edit "Edit Supplier":
@@ -144,7 +144,7 @@ surface supplier_edit "Edit Supplier":
   section main:
     field name "Name"
     field contact_email "Contact"
-    field bank_reference "Bank Reference"
+    field bank_account_ref "Bank Reference"
     field region "Region"
 
 # =============================================================================

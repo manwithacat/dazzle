@@ -71,7 +71,7 @@ entity User "User":
   audit: all
 
 # =============================================================================
-# SUPPLIER — a supplier billing a tenant. bank_reference is a sensitive field.
+# SUPPLIER — a supplier billing a tenant. bank_account_ref is a sensitive field.
 # =============================================================================
 
 entity Supplier "Supplier":
@@ -81,7 +81,7 @@ entity Supplier "Supplier":
   tenant_id: ref Tenant required
   name: str(160) required
   contact_email: email required
-  bank_reference: str(64) required
+  bank_account_ref: str(64) required
   region: enum[emea,amer,apac]=emea
   created_at: datetime auto_add
   updated_at: datetime auto_update
