@@ -1,0 +1,468 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "invoice_ops",
+    "domain_description": "Multi-tenant invoice approval & payment ops — two tenants exercising shared-schema isolation, maker-checker approval, and payment failure handling",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Northwind Trading",
+        "slug": "northwind",
+        "notes": "Demo tenant 1"
+      },
+      {
+        "name": "Contoso Supplies",
+        "slug": "contoso",
+        "notes": "Demo tenant 2 — cross-tenant boundary"
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "requester",
+        "description": "Maker",
+        "default_role": "role_requester",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "approver",
+        "description": "Checker",
+        "default_role": "role_approver",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "finance",
+        "description": "Finance operator",
+        "default_role": "role_finance",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "auditor",
+        "description": "Auditor",
+        "default_role": "role_auditor",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "tenant_admin",
+        "description": "Tenant admin",
+        "default_role": "role_tenant_admin",
+        "default_user_count": 1
+      }
+    ],
+    "entities": [
+      {
+        "name": "Tenant",
+        "row_count_default": 2,
+        "notes": "Two demo tenants",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Northwind Trading",
+                "Contoso Supplies"
+              ]
+            }
+          },
+          {
+            "field_name": "slug",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "northwind",
+                "contoso"
+              ]
+            }
+          },
+          {
+            "field_name": "region",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "emea",
+                "amer"
+              ]
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "active"
+              ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -730,
+              "max_offset_days": -180
+            }
+          }
+        ]
+      },
+      {
+        "name": "User",
+        "row_count_default": 10,
+        "notes": "5 users per tenant (one per persona). NOTE: the explicit User.jsonl seed file is the source of truth. The blueprint engine special-cases the User entity and derives the email domain from each tenant's slug.",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "name",
+              "domains": [
+                "northwind.example",
+                "contoso.example"
+              ]
+            }
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "tenant_id",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tenant"
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": -30
+            }
+          }
+        ]
+      },
+      {
+        "name": "Supplier",
+        "row_count_default": 6,
+        "notes": "3 suppliers per tenant",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "tenant_id",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tenant"
+            }
+          },
+          {
+            "field_name": "name",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Apex Office Solutions",
+                "BlueSky Logistics",
+                "Cedar IT Services",
+                "Delta Freight Co",
+                "Echo Print & Design",
+                "Falcon Cloud Systems"
+              ]
+            }
+          },
+          {
+            "field_name": "contact_email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "name",
+              "domains": [
+                "supplier.example"
+              ]
+            }
+          },
+          {
+            "field_name": "bank_reference",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "GB29NWBK60161331926819",
+                "GB82WEST12345698765432",
+                "GB33BUKB20201555555555",
+                "GB94BARC20714400048651",
+                "GB63CLYD82634110052715",
+                "GB91LOYD30968800135195"
+              ]
+            }
+          },
+          {
+            "field_name": "region",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "emea",
+                "amer",
+                "apac"
+              ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": -60
+            }
+          }
+        ]
+      },
+      {
+        "name": "Invoice",
+        "row_count_default": 12,
+        "notes": "6 invoices per tenant spanning every status. NOTE: an explicit Invoice.jsonl alongside this blueprint is recommended to guarantee all statuses are represented per tenant.",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "tenant_id",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tenant"
+            }
+          },
+          {
+            "field_name": "invoice_number",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "INV-2025-001",
+                "INV-2025-002",
+                "INV-2025-003",
+                "INV-2025-004",
+                "INV-2025-005",
+                "INV-2025-006",
+                "INV-2025-007",
+                "INV-2025-008",
+                "INV-2025-009",
+                "INV-2025-010",
+                "INV-2025-011",
+                "INV-2025-012"
+              ]
+            }
+          },
+          {
+            "field_name": "supplier",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Supplier"
+            }
+          },
+          {
+            "field_name": "amount",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 50000,
+              "max": 500000
+            }
+          },
+          {
+            "field_name": "currency",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "GBP",
+                "USD",
+                "EUR"
+              ]
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "draft",
+                "submitted",
+                "approved",
+                "rejected",
+                "disputed",
+                "paid"
+              ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -180,
+              "max_offset_days": -7
+            }
+          }
+        ]
+      },
+      {
+        "name": "LineItem",
+        "row_count_default": 24,
+        "notes": "~2 line items per invoice",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "tenant_id",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tenant"
+            }
+          },
+          {
+            "field_name": "invoice",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Invoice"
+            }
+          },
+          {
+            "field_name": "description",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Professional services — Q1",
+                "Software licences — annual",
+                "Hardware maintenance",
+                "Cloud hosting — monthly",
+                "Consultancy retainer",
+                "Freight & logistics",
+                "IT support contract",
+                "Print & marketing materials",
+                "Data migration services",
+                "Security audit"
+              ]
+            }
+          },
+          {
+            "field_name": "quantity",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 1,
+              "max": 10
+            }
+          },
+          {
+            "field_name": "unit_amount",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 5000,
+              "max": 100000
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -180,
+              "max_offset_days": -7
+            }
+          }
+        ]
+      },
+      {
+        "name": "PaymentAttempt",
+        "row_count_default": 6,
+        "notes": "Includes failed attempts to exercise the failure-handling flow",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "tenant_id",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Tenant"
+            }
+          },
+          {
+            "field_name": "invoice",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Invoice"
+            }
+          },
+          {
+            "field_name": "attempt_number",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 1,
+              "max": 3
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "pending",
+                "succeeded",
+                "failed"
+              ]
+            }
+          },
+          {
+            "field_name": "provider_reference",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "PAY-REF-00001",
+                "PAY-REF-00002",
+                "PAY-REF-00003",
+                "PAY-REF-00004",
+                "PAY-REF-00005",
+                "PAY-REF-00006"
+              ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -90,
+              "max_offset_days": -1
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
