@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/guides/observability.md`** — guide to Dazzle's runtime operational surface: health and readiness probes (`/_dazzle/health`, `/live`, `/ready`, `/stats`), the event subsystem operational API (`/_dazzle/events/*` — status, topics, consumers, outbox, DLQ, replay), job lifecycle and dead-letter handling, metrics via `MetricsEmitter` + Redis stream, and `dazzle perf` local tracing. Includes a worked `invoice_ops` production checklist. Four runtime gaps surfaced and filed as #1191 (retry backoff unenforced), #1192 (no Prometheus/OTel export), #1193 (no `/_dazzle/jobs` surface), #1194 (approval queues and integration retry not surfaced). Evaluator briefing #8.
+
 ## [0.71.105] - 2026-05-21
 
 ### Added

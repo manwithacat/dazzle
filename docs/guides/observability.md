@@ -399,7 +399,7 @@ The comment in `src/dazzle/back/runtime/job_worker.py` (line ~184):
 # wired; cycle 4 just re-enqueues immediately.
 ```
 
-This is a known gap (issue forthcoming). Until it is implemented, if
+This is a known gap (#1191). Until it is implemented, if
 exponential-backoff between job retries is required, implement the delay
 in the job handler itself.
 
@@ -415,7 +415,7 @@ backoff between process-step retries either.
 
 The event subsystem has a rich `/_dazzle/events/*` surface. Jobs do not
 have an equivalent — job state is inspectable only via the `JobRun` entity
-API (issue forthcoming).
+API (#1193).
 
 ---
 
@@ -513,8 +513,7 @@ your chosen backend:
 
 There is no built-in Prometheus `/metrics` endpoint and no OpenTelemetry
 runtime export in the current Dazzle release. The Redis stream is the
-only out-of-process metrics surface (issue forthcoming for a Prometheus
-exporter).
+only out-of-process metrics surface (#1192).
 
 ### Structured logs
 
@@ -549,8 +548,7 @@ awaiting approval?" queries the entity API directly:
 GET /api/invoices?status=submitted
 ```
 
-Operational endpoints for approval queues are not yet available (issue
-forthcoming).
+Operational endpoints for approval queues are not yet available (#1194).
 
 ### Integration retry status
 
@@ -559,7 +557,7 @@ forthcoming).
 (`retry: { max_attempts: 3, backoff: exponential }`). The retry state
 lives in process execution records, but there are no `/_dazzle/integrations/*`
 endpoints to inspect retry history or current backoff state. Integration
-retry status is not operationally surfaced (issue forthcoming).
+retry status is not operationally surfaced (#1194).
 
 ---
 

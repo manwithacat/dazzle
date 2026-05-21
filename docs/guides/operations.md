@@ -1,5 +1,7 @@
 # Operational Guide
 
+> **Runtime observability** (health endpoints, event subsystem, jobs, dead-letter handling, metrics) is covered in the [Observability Guide](observability.md) — this guide focuses on infrastructure operations (connection pools, migrations, backups).
+
 ## Environment Configuration
 
 | Setting | Development | Staging | Production |

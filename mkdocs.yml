@@ -82,6 +82,7 @@ nav:
   - Guides:
       - Agent Workflow: guides/agent-workflow.md
       - Heroku Deployment: guides/heroku.md
+      - Observability: guides/observability.md
       - Operations: guides/operations.md
       - Scaling: guides/scaling.md
   - Examples:

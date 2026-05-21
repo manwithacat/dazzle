@@ -112,7 +112,7 @@ Dazzle is built for the AI era:
 - **Semantic clarity** - DSL constructs map directly to implementation
 - **MCP server** - AI agents can introspect and modify Dazzle projects
 
-See [llms.txt](llms.txt) for an agent-oriented overview. For the end-to-end authoring loop (spec change → agent edit → validate → tests → human review → deploy), see the [Agent Workflow Guide](guides/agent-workflow.md).
+See [llms.txt](llms.txt) for an agent-oriented overview. For the end-to-end authoring loop (spec change → agent edit → validate → tests → human review → deploy), see the [Agent Workflow Guide](guides/agent-workflow.md). For watching a running application (health probes, event subsystem, jobs, metrics), see the [Observability Guide](guides/observability.md).
 
 ## Getting Help
 
