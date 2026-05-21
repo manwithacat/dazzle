@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`rbac/verifier.py` split into three modules** (#1177). The file had
+  grown to 1193 lines during the #1171 dynamic-verifier work, over the
+  project's size trigger. It is now: `verification_types.py` (the pure
+  result types — `CellResult`, `VerifiedCell`, `VerificationReport`,
+  `compare_cell` — no httpx/psycopg), `verification_harness.py` (the
+  in-process app-boot + probe infrastructure), and `verifier.py` (the public
+  `verify()` entrypoint plus a re-export block). `verifier.py` re-exports
+  every symbol the old module exposed, so all `from dazzle.rbac.verifier
+  import X` call sites — including those reaching into private helpers —
+  are unchanged. Pure refactor, zero behaviour change. `_VerifierContext`
+  also gains an explicit `transport` field so callers no longer reach into
+  the private `client._transport` attribute.
+
+### Agent Guidance
+
+- The RBAC verifier is now three modules under `src/dazzle/rbac/`:
+  `verification_types.py`, `verification_harness.py`, `verifier.py`. Import
+  from `dazzle.rbac.verifier` as before — it re-exports everything. When
+  *adding* code, put pure result types in `verification_types.py` and
+  app-boot/probe machinery in `verification_harness.py`; keep `verifier.py`
+  to the `verify()` entrypoint and the re-export surface.
+
 ### Removed
 
 - **Dead CI "Check DSL files (strict mode)" step** (#1183). The step ran

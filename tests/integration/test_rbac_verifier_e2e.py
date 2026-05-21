@@ -86,8 +86,8 @@ async def test_seed_role_users_creates_one_user_per_role() -> None:
 
             # The seeded users can actually authenticate — use the same in-process
             # transport as ctx.client so no network is required.
-            assert ctx.client._transport is not None  # type: ignore[attr-defined]
-            transport = ctx.client._transport  # type: ignore[attr-defined]
+            assert ctx.transport is not None
+            transport = ctx.transport
             async with httpx.AsyncClient(
                 transport=transport,
                 base_url="http://verifier.local",
@@ -133,8 +133,8 @@ async def test_seed_baseline_rows_returns_entity_ids() -> None:
             matrix = generate_access_matrix(ctx.appspec)
             creds = await _seed_role_users(ctx.auth_store, roles=list(matrix.roles))
 
-            assert ctx.client._transport is not None  # type: ignore[attr-defined]
-            transport = _probe_transport(ctx.client._transport)  # type: ignore[attr-defined]
+            assert ctx.transport is not None
+            transport = _probe_transport(ctx.transport)
             baseline = await _seed_baseline_rows(
                 transport=transport,
                 base_url="http://verifier.local",
