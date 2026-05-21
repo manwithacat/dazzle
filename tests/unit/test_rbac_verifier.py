@@ -315,6 +315,159 @@ class TestCreateCapableRole:
 
 
 # ---------------------------------------------------------------------------
+# _scope_create_overlay — scope: create: probe-body fidelity (#1174)
+# ---------------------------------------------------------------------------
+
+
+def _entity_with_create_scope(predicate, personas=("*",), entity_name="Widget"):
+    """Build a minimal AppSpec carrying one entity whose `scope: create:` rule
+    has the given compiled predicate. Used to exercise `_scope_create_overlay`
+    without booting the full linker."""
+    from dazzle.core.ir import (
+        AccessSpec,
+        AppSpec,
+        DomainSpec,
+        EntitySpec,
+        PermissionKind,
+        ScopeRule,
+    )
+
+    entity = EntitySpec(
+        name=entity_name,
+        title=entity_name,
+        fields=[],
+        access=AccessSpec(
+            permissions=[],
+            scopes=[
+                ScopeRule(
+                    operation=PermissionKind.CREATE,
+                    condition=None,
+                    personas=list(personas),
+                    predicate=predicate,
+                )
+            ],
+        ),
+    )
+    return AppSpec(name="test_app", domain=DomainSpec(entities=[entity]))
+
+
+class TestScopeCreateOverlay:
+    """`_scope_create_overlay` builds the create-body field values that satisfy
+    an entity's `scope: create:` predicate — the fix for #1174, where the
+    verifier's minimal probe body omitted optional scope-referenced fields
+    (FeedbackReport's `reported_by`) and 403'd a correct-by-design create.
+    """
+
+    def test_user_attr_email_resolves_to_role_email(self):
+        # The FeedbackReport regression shape: `reported_by = current_user.email`.
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        appspec = _entity_with_create_scope(
+            UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email")
+        )
+        overlay = _scope_create_overlay(
+            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+        )
+        assert overlay == {"reported_by": "m@x.test"}
+
+    def test_bare_current_user_resolves_to_auth_id(self):
+        from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        appspec = _entity_with_create_scope(
+            ColumnCheck(field="created_by", op=CompOp.EQ, value=ValueRef(current_user=True))
+        )
+        overlay = _scope_create_overlay(
+            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+        )
+        assert overlay == {"created_by": "u-1"}
+
+    def test_literal_constraint_is_overlaid(self):
+        from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        appspec = _entity_with_create_scope(
+            ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="draft"))
+        )
+        overlay = _scope_create_overlay(
+            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+        )
+        assert overlay == {"status": "draft"}
+
+    def test_unresolvable_user_attr_is_skipped(self):
+        # `current_user.org` needs a seeded domain User row the generic probe
+        # does not have — the field is left unset, the cell stays a WARNING.
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        appspec = _entity_with_create_scope(
+            UserAttrCheck(field="org", op=CompOp.EQ, user_attr="org")
+        )
+        overlay = _scope_create_overlay(
+            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+        )
+        assert overlay == {}
+
+    def test_and_composite_overlays_every_child(self):
+        from dazzle.core.ir.predicates import (
+            BoolComposite,
+            BoolOp,
+            ColumnCheck,
+            CompOp,
+            UserAttrCheck,
+            ValueRef,
+        )
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        predicate = BoolComposite(
+            op=BoolOp.AND,
+            children=[
+                UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email"),
+                ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="new")),
+            ],
+        )
+        appspec = _entity_with_create_scope(predicate)
+        overlay = _scope_create_overlay(
+            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+        )
+        assert overlay == {"reported_by": "m@x.test", "status": "new"}
+
+    def test_non_matching_role_yields_no_overlay(self):
+        # The create-scope rule binds only `admin`; a `member` probe matches no
+        # rule, so there is nothing to overlay (the create will default-deny).
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        appspec = _entity_with_create_scope(
+            UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email"),
+            personas=("admin",),
+        )
+        overlay = _scope_create_overlay(
+            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+        )
+        assert overlay == {}
+
+    def test_simple_task_feedbackreport_create_scope_is_satisfiable(self):
+        # End-to-end against the real regression app: the FeedbackReport
+        # `*`-persona create scope resolves to `reported_by = <role email>`.
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.rbac.verifier import _scope_create_overlay
+
+        appspec = load_project_appspec(Path("examples/simple_task"))
+        overlay = _scope_create_overlay(
+            "FeedbackReport",
+            appspec,
+            role="member",
+            user_email="verify-member@dazzle.test",
+            user_id="u-1",
+        )
+        assert overlay == {"reported_by": "verify-member@dazzle.test"}
+
+
+# ---------------------------------------------------------------------------
 # VerifiedCell
 # ---------------------------------------------------------------------------
 

@@ -51,6 +51,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `auditspec.json` roughly half the time. Replaced with an
   insertion-order-preserving `dict.fromkeys` dedup — evidence now
   follows taxonomy YAML declaration order on every run.
+- **RBAC verifier create probe satisfies `scope: create:` predicates**
+  (#1174). The Layer-2 verifier's `_minimal_body_for_entity` emits only an
+  entity's *required* fields, so a `PERMIT_SCOPED` create whose scope
+  predicate references an *optional* field (the framework `FeedbackReport`
+  entity's `reported_by = current_user.email` — `reported_by` is
+  `str(200)`, not `required`) got a probe body that omitted the field. The
+  now-functional `_enforce_create_scope` (fixed above) then saw
+  `reported_by = None`, the predicate rejected it, and the create 403'd —
+  scored as a false VIOLATION against the correct-by-design
+  `examples/simple_task` (2 phantom violations: `manager`/`member` ×
+  `FeedbackReport` create). Before the `_enforce_create_scope` fix the
+  broken resolver also returned `None` for `email`, so `None == None`
+  accidentally passed — the verifier blind spot was masked, not absent.
+  New `_scope_create_overlay` walks the entity's matched `scope: create:`
+  predicate and overlays the values it satisfies from the probing
+  role-user's identity (`current_user.email` → role email,
+  `current_user.id` → auth id, `= <literal>` → the literal) onto both the
+  baseline-seed and create-probe bodies — exactly what a real client
+  supplies. Constraints needing a domain attribute the verifier cannot
+  resolve (`current_user.org`) are skipped, so the cell stays WARNING
+  rather than being silently passed. No genuine check is weakened.
 
 ### Added
 

@@ -631,6 +631,127 @@ def _minimal_body_for_entity(
     return body
 
 
+def _scope_create_overlay(
+    entity_name: str,
+    appspec: Any,
+    *,
+    role: str,
+    user_email: str,
+    user_id: str | None,
+) -> dict[str, Any]:
+    """Return create-body field values that satisfy the entity's `scope: create:` rule.
+
+    A `scope: create:` predicate (#1124) is checked against the *inserted row*
+    AFTER framework defaulting — so for a `PERMIT_SCOPED` create the request
+    body must carry the values the predicate requires (e.g. FeedbackReport's
+    ``reported_by = current_user.email``).  A real client supplies them: the
+    feedback widget posts ``reported_by`` explicitly.  `_minimal_body_for_entity`
+    only emits *required* fields, so a scope-referenced field that is optional
+    (FeedbackReport's ``reported_by`` is ``str(200)`` with no ``required``
+    modifier) is omitted, the predicate sees ``None``, and the create 403s —
+    a false VIOLATION against a correct-by-design app.
+
+    This walks the create-scope rule matching ``role`` and resolves the
+    equality constraints it can satisfy from the probing role-user's identity:
+
+    * ``field = current_user.email``       → the role-user's email
+    * ``field = current_user.id`` (bare)   → the role-user's auth id
+    * ``field = <literal>``                → the literal
+
+    Constraints referencing a domain attribute the verifier cannot resolve
+    (e.g. ``current_user.org`` — needs a seeded domain ``User`` row) are
+    skipped; the cell then stays a WARNING rather than being silently passed.
+    Only equality (`EQ`) constraints are overlaid — an inequality cannot be
+    satisfied by a single deterministic value.
+    """
+    from dazzle.core.ir.predicates import (
+        BoolComposite,
+        BoolOp,
+        ColumnCheck,
+        CompOp,
+        PathCheck,
+        UserAttrCheck,
+    )
+
+    entity = next(
+        (e for e in (appspec.domain.entities or []) if e.name == entity_name),
+        None,
+    )
+    if entity is None:
+        return {}
+    access = getattr(entity, "access", None)
+    scopes = getattr(access, "scopes", None) or []
+
+    # Find the create-scope rule that matches this role (`*` or an explicit
+    # persona list). The runtime ORs all matched rules; the verifier only
+    # needs *one* satisfiable rule, so the first match is enough.
+    rule = None
+    for r in scopes:
+        op = r.operation.value if hasattr(r.operation, "value") else str(r.operation)
+        if op != "create":
+            continue
+        personas = list(getattr(r, "personas", []) or [])
+        if "*" in personas or role in personas:
+            rule = r
+            break
+    if rule is None:
+        return {}
+
+    predicate = getattr(rule, "predicate", None)
+    if predicate is None:
+        return {}
+
+    overlay: dict[str, Any] = {}
+
+    def _resolve_user_attr(attr: str) -> Any:
+        if attr in ("id", ""):
+            return user_id
+        if attr == "email":
+            return user_email
+        # Any other attribute (org, school, ...) needs a seeded domain row —
+        # not available for a generic probe. Leave the field unset.
+        return None
+
+    def _walk(p: Any) -> None:
+        if isinstance(p, UserAttrCheck) and p.op == CompOp.EQ:
+            value = _resolve_user_attr(p.user_attr)
+            if value is not None:
+                overlay[p.field] = value
+        elif isinstance(p, ColumnCheck) and p.op == CompOp.EQ:
+            value_ref = p.value
+            attr_name: str | None = getattr(value_ref, "user_attr", None)
+            if getattr(value_ref, "current_user", False):
+                if user_id is not None:
+                    overlay[p.field] = user_id
+            elif attr_name:
+                value = _resolve_user_attr(attr_name)
+                if value is not None:
+                    overlay[p.field] = value
+            elif getattr(value_ref, "literal", None) is not None:
+                overlay[p.field] = value_ref.literal
+        elif isinstance(p, PathCheck) and p.op == CompOp.EQ and len(p.path) == 1:
+            value_ref = p.value
+            attr_name = getattr(value_ref, "user_attr", None)
+            if attr_name:
+                value = _resolve_user_attr(attr_name)
+                if value is not None:
+                    overlay[p.path[0]] = value
+            elif getattr(value_ref, "current_user", False):
+                if user_id is not None:
+                    overlay[p.path[0]] = user_id
+            elif getattr(value_ref, "literal", None) is not None:
+                overlay[p.path[0]] = value_ref.literal
+        elif isinstance(p, BoolComposite) and p.op == BoolOp.AND:
+            # AND: every child must hold — overlay each one.
+            for child in p.children:
+                _walk(child)
+        # OR / NOT and unsupported shapes: skip — no single deterministic
+        # overlay satisfies them; the cell stays a WARNING.
+
+    _walk(predicate)
+    return overlay
+
+
 # CSRF cookie name set by the framework's double-submit middleware
 # (`dazzle.back.runtime.csrf.CSRFConfig`).  State-changing requests must
 # echo this cookie value back in the X-CSRF-Token header.
@@ -783,6 +904,21 @@ async def _seed_baseline_rows(
             if body is None:
                 # Required FK with no seeded target — skip this entity.
                 continue
+            # Satisfy any `scope: create:` predicate on the seeding role —
+            # `_create_capable_role` may pick a role whose create is
+            # `PERMIT_SCOPED` (e.g. FeedbackReport's `reported_by =
+            # current_user.email`), and a body that omits the scoped field
+            # would 403 and leave the entity un-seeded. Same overlay a real
+            # client supplies. See `_scope_create_overlay`.
+            body.update(
+                _scope_create_overlay(
+                    entity,
+                    appspec,
+                    role=role,
+                    user_email=creds[role][0],
+                    user_id=None,
+                )
+            )
 
             if role not in role_clients:
                 try:
@@ -842,6 +978,15 @@ async def _probe_all_cells(
 
     cells: list[VerifiedCell] = []
     base_url = "http://verifier.local"
+
+    # Map each role to its seeded auth-user id so `_scope_create_overlay` can
+    # satisfy a `scope: create:` predicate that references bare `current_user`
+    # / `current_user.id`. Resolved once up front from the auth store.
+    _role_auth_ids: dict[str, str | None] = {}
+    if ctx.auth_store is not None:
+        for _role, (_email, _) in creds.items():
+            _rec = ctx.auth_store.get_user_by_email(_email)
+            _role_auth_ids[_role] = str(_rec.id) if _rec is not None else None
 
     for role in matrix.roles:
         if role not in creds:
@@ -904,6 +1049,23 @@ async def _probe_all_cells(
                                 baseline=baseline,
                                 unique_suffix=suffix,
                             )
+                            # A `PERMIT_SCOPED` create checks the inserted row
+                            # against the entity's `scope: create:` predicate
+                            # (#1124). A scope-referenced field that is optional
+                            # is omitted by `_minimal_body_for_entity`, so the
+                            # predicate sees `None` and the create 403s — a
+                            # false VIOLATION. Overlay the values the predicate
+                            # requires (e.g. `reported_by = current_user.email`),
+                            # exactly as a real client would supply them.
+                            if operation == "create" and body is not None:
+                                overlay = _scope_create_overlay(
+                                    entity,
+                                    ctx.appspec,
+                                    role=role,
+                                    user_email=email,
+                                    user_id=_role_auth_ids.get(role),
+                                )
+                                body.update(overlay)
                         probe = await _probe_cell(
                             client,
                             entity=entity,
