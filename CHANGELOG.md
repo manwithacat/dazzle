@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.94] - 2026-05-21
+
+### Fixed
+
+- **Scope-denied UPDATE/DELETE now produce an audit deny record** (#1179).
+  When a `scope: <op>:` row-filter hides the target row, `_scoped_pre_read`
+  returns `None` and the Cedar handler 404s. The scope-denied READ path
+  records that as a `deny` in the audit trail (an access-control decision
+  `audit: all` entities must capture), but the UPDATE/DELETE path in
+  `_build_cedar_handler` raised the 404 without logging — so a thwarted
+  cross-tenant write left no trace. The UPDATE/DELETE pre-read miss now
+  emits the same `_SCOPE_DENY_EFFECT` deny record before raising,
+  mirroring the READ handler exactly.
+
 ## [0.71.93] - 2026-05-21
 
 ### Fixed

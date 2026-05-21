@@ -1553,6 +1553,24 @@ def _build_cedar_handler(
                 admin_personas=admin_personas,
             )
             if existing is None:
+                # Scope filter hid the row (or it does not exist). Record the
+                # deny in the audit trail — a scope-denied UPDATE/DELETE is an
+                # access-control decision and `audit: all` entities must
+                # capture it, same as the scope-denied READ path — then 404
+                # (row-existence opaque to the caller).
+                if audit_logger:
+                    _u, _ = _build_access_context(auth_context)
+                    await _log_audit_decision(
+                        audit_logger,
+                        request,
+                        operation=operation,
+                        entity_name=entity_name,
+                        entity_id=str(id),
+                        decision="deny",
+                        matched_policy=_SCOPE_DENY_EFFECT,
+                        policy_effect=_SCOPE_DENY_EFFECT,
+                        user=_u,
+                    )
                 raise HTTPException(status_code=404, detail="Not found")
 
         user, ctx = _build_access_context(auth_context)

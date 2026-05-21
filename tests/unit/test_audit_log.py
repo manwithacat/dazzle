@@ -598,6 +598,103 @@ class TestListAuditLogging:
         assert result is not None
 
 
+class TestScopeDenyAuditLogging:
+    """Tests for scope-denied UPDATE/DELETE audit logging (#1179).
+
+    A `scope: <op>:` row-filter that hides the target row makes
+    `_scoped_pre_read` return None. The handler then 404s. That 404 is an
+    access-control decision and `audit: all` entities must capture it as a
+    deny — same as the scope-denied READ path. Before #1179 the
+    UPDATE/DELETE path raised the 404 without logging.
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("operation", ["update", "delete"])
+    async def test_scope_denied_write_logs_deny(self, operation: str) -> None:
+        from types import SimpleNamespace
+        from uuid import uuid4
+
+        from fastapi import HTTPException
+
+        from dazzle.back.runtime import route_generator
+        from dazzle.back.runtime.route_generator import _build_cedar_handler
+
+        mock_logger = AsyncMock()
+        row_id = uuid4()
+
+        mock_request = MagicMock()
+        mock_request.client.host = "10.0.0.1"
+        mock_request.url.path = f"/_dazzle/invoices/{row_id}"
+        mock_request.method = "POST"
+
+        auth_context = SimpleNamespace(
+            is_authenticated=True,
+            user=SimpleNamespace(id=uuid4(), roles=["intern"], is_superuser=False),
+        )
+
+        handler = _build_cedar_handler(
+            AsyncMock(),
+            service=AsyncMock(),
+            cedar_access_spec=MagicMock(),
+            optional_auth_dep=lambda: None,
+            operation=operation,
+            entity_name="Invoice",
+            audit_logger=mock_logger,
+            include_field_changes=False,
+            needs_pre_read=True,
+            is_create=False,
+        )
+
+        # Scope filter hides the row: `_scoped_pre_read` returns None.
+        with patch.object(route_generator, "_scoped_pre_read", AsyncMock(return_value=None)):
+            with pytest.raises(HTTPException) as exc_info:
+                await handler(row_id, mock_request, auth_context)
+
+        assert exc_info.value.status_code == 404
+        mock_logger.log_decision.assert_called_once()
+        call_kwargs = mock_logger.log_decision.call_args.kwargs
+        assert call_kwargs["operation"] == operation
+        assert call_kwargs["entity_name"] == "Invoice"
+        assert call_kwargs["entity_id"] == str(row_id)
+        assert call_kwargs["decision"] == "deny"
+
+    @pytest.mark.asyncio
+    async def test_scope_denied_write_no_audit_when_logger_none(self) -> None:
+        """No audit_logger → scope-denied write still 404s without crashing."""
+        from types import SimpleNamespace
+        from uuid import uuid4
+
+        from fastapi import HTTPException
+
+        from dazzle.back.runtime import route_generator
+        from dazzle.back.runtime.route_generator import _build_cedar_handler
+
+        row_id = uuid4()
+        mock_request = MagicMock()
+        auth_context = SimpleNamespace(
+            is_authenticated=True,
+            user=SimpleNamespace(id=uuid4(), roles=["intern"], is_superuser=False),
+        )
+
+        handler = _build_cedar_handler(
+            AsyncMock(),
+            service=AsyncMock(),
+            cedar_access_spec=MagicMock(),
+            optional_auth_dep=lambda: None,
+            operation="delete",
+            entity_name="Invoice",
+            audit_logger=None,
+            include_field_changes=False,
+            needs_pre_read=True,
+            is_create=False,
+        )
+
+        with patch.object(route_generator, "_scoped_pre_read", AsyncMock(return_value=None)):
+            with pytest.raises(HTTPException) as exc_info:
+                await handler(row_id, mock_request, auth_context)
+        assert exc_info.value.status_code == 404
+
+
 class TestAuditTrailGlobalSwitch:
     """Tests for app-level audit_trail: true global switch (#354)."""
 
