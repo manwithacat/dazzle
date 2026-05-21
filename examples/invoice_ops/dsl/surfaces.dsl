@@ -135,7 +135,6 @@ surface supplier_create "New Supplier":
   section main:
     field name "Name"
     field contact_email "Contact"
-    field bank_account_ref "Bank Reference"
     field region "Region"
 
 surface supplier_edit "Edit Supplier":
@@ -144,8 +143,23 @@ surface supplier_edit "Edit Supplier":
   section main:
     field name "Name"
     field contact_email "Contact"
-    field bank_account_ref "Bank Reference"
     field region "Region"
+
+surface supplier_bank_account_list "Supplier Bank Accounts":
+  uses entity SupplierBankAccount
+  mode: list
+  section main:
+    field supplier "Supplier"
+    field bank_account_ref "Bank Ref"
+    field account_name "Account Name"
+
+surface supplier_bank_account_edit "Edit Supplier Bank Account":
+  uses entity SupplierBankAccount
+  mode: edit
+  section main:
+    field bank_account_ref "Bank Ref"
+    field account_name "Account Name"
+    field iban "IBAN"
 
 # =============================================================================
 # USER CREATE / EDIT SURFACES — tenant_admin manages domain users

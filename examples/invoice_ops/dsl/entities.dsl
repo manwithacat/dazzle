@@ -81,7 +81,6 @@ entity Supplier "Supplier":
   tenant_id: ref Tenant required
   name: str(160) required
   contact_email: email required
-  bank_account_ref: str(64) required
   region: enum[emea,amer,apac]=emea
   created_at: datetime auto_add
   updated_at: datetime auto_update
@@ -104,6 +103,43 @@ entity Supplier "Supplier":
       as: tenant_admin
     list: tenant_id = current_user.tenant_id
       as: requester, approver, finance, auditor, tenant_admin
+
+  audit: all
+
+# =============================================================================
+# SUPPLIER BANK ACCOUNT — bank details extracted from Supplier for stricter RBAC.
+# =============================================================================
+
+entity SupplierBankAccount "Supplier Bank Account":
+  intent: "Banking details for a supplier — isolated for stricter access control"
+
+  id: uuid pk
+  tenant_id: ref Tenant required
+  supplier: ref Supplier required
+  bank_account_ref: str(64) required
+  account_name: str(160) required
+  iban: str(34) optional
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+  permit:
+    create: role(finance) or role(tenant_admin)
+    read: role(finance) or role(tenant_admin)
+    update: role(finance) or role(tenant_admin)
+    delete: role(tenant_admin)
+    list: role(finance) or role(tenant_admin)
+
+  scope:
+    create: tenant_id = current_user.tenant_id
+      as: finance, tenant_admin
+    read: tenant_id = current_user.tenant_id
+      as: finance, tenant_admin
+    update: tenant_id = current_user.tenant_id
+      as: finance, tenant_admin
+    delete: tenant_id = current_user.tenant_id
+      as: tenant_admin
+    list: tenant_id = current_user.tenant_id
+      as: finance, tenant_admin
 
   audit: all
 
