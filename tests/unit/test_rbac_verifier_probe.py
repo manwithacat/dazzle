@@ -88,13 +88,28 @@ async def test_list_count_none_when_body_not_json() -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_probe_issues_patch_with_body() -> None:
+async def test_update_probe_issues_put_with_body() -> None:
+    """`update` probes the generated full-row update route — ``PUT
+    /<plural>/<id>`` — not PATCH. The only PATCH route is the inline
+    single-field edit (`/<id>/field/<name>`), so probing PATCH would 405
+    and mask every update verdict (#1171 Task 6)."""
     client = _FakeClient(_FakeResponse(200, {"id": "abc"}))
     result = await _probe_cell(
         client, entity="Task", operation="update", baseline_id="abc", body={"title": "x"}
     )
-    assert client.calls == [("PATCH", "/tasks/abc")]
+    assert client.calls == [("PUT", "/tasks/abc")]
     assert result.status == 200
+
+
+@pytest.mark.asyncio
+async def test_update_probe_attaches_csrf_header() -> None:
+    """PUT is a state-changing verb — the update probe must echo the
+    dazzle_csrf cookie, or the request 403s on CSRF before the RBAC gate."""
+    client = _FakeClient(_FakeResponse(200, {"id": "abc"}), cookies={"dazzle_csrf": "tok-put"})
+    await _probe_cell(
+        client, entity="Task", operation="update", baseline_id="abc", body={"title": "x"}
+    )
+    assert client.headers_seen == [{"X-CSRF-Token": "tok-put"}]
 
 
 @pytest.mark.asyncio

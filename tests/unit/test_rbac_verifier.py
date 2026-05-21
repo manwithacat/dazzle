@@ -160,6 +160,62 @@ class TestCompareCellPermitUnprotected:
         assert compare_cell(PolicyDecision.PERMIT_UNPROTECTED, 500, None) == CellResult.WARNING
 
 
+class TestCompareCellPermitScoped:
+    """`PERMIT_SCOPED` — access granted, rows filtered by a `scope:` rule.
+
+    The matrix generator emits PERMIT_SCOPED for every scope-block-governed
+    cell; before #1171 Task 6 `compare_cell` had no case for it, so all such
+    cells fell through to an inconclusive WARNING.
+    """
+
+    def test_scoped_200_is_pass(self):
+        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 200, None) == CellResult.PASS
+
+    def test_scoped_403_is_violation(self):
+        # A scoped grant that 403s contradicts the permit decision.
+        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 403, None) == CellResult.VIOLATION
+
+    @pytest.mark.parametrize("operation", ["read", "update", "delete"])
+    def test_scoped_404_on_single_id_op_is_pass(self, operation):
+        # 404 on a single-id op = the scope filter correctly hid a row the
+        # role does not own. Definitively correct RBAC, so PASS.
+        assert (
+            compare_cell(PolicyDecision.PERMIT_SCOPED, 404, None, operation=operation)
+            == CellResult.PASS
+        )
+
+    def test_scoped_404_on_list_is_warning(self):
+        # 404 on list is not the scoped-out signal — inconclusive.
+        assert (
+            compare_cell(PolicyDecision.PERMIT_SCOPED, 404, None, operation="list")
+            == CellResult.WARNING
+        )
+
+    def test_scoped_404_without_operation_is_warning(self):
+        # No operation hint — cannot claim a definitive scoped-out PASS.
+        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 404, None) == CellResult.WARNING
+
+    def test_scoped_500_is_warning(self):
+        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 500, None) == CellResult.WARNING
+
+
+class TestCompareCellPermitNoScope:
+    """`PERMIT_NO_SCOPE` — permitted but no matching `scope:` rule (config gap).
+
+    The only definitive verdict the verifier can add is that a 403 still
+    contradicts the permit grant; everything else stays WARNING.
+    """
+
+    def test_no_scope_403_is_violation(self):
+        assert compare_cell(PolicyDecision.PERMIT_NO_SCOPE, 403, None) == CellResult.VIOLATION
+
+    def test_no_scope_200_is_warning(self):
+        assert compare_cell(PolicyDecision.PERMIT_NO_SCOPE, 200, None) == CellResult.WARNING
+
+    def test_no_scope_404_is_warning(self):
+        assert compare_cell(PolicyDecision.PERMIT_NO_SCOPE, 404, None) == CellResult.WARNING
+
+
 # ---------------------------------------------------------------------------
 # VerifiedCell
 # ---------------------------------------------------------------------------

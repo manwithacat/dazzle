@@ -187,23 +187,35 @@ def compare_cell(
     observed_count: int | None,
     *,
     total: int | None = None,
+    operation: str | None = None,
 ) -> CellResult:
     """Compare an observed HTTP response against an expected policy decision.
 
     Comparison table
     ----------------
-    DENY            + 403                              → PASS
-    DENY            + 200                              → VIOLATION
-    PERMIT          + 200                              → PASS
-    PERMIT          + 403                              → VIOLATION
-    PERMIT_FILTERED + 200 + 0 < count < total          → PASS
-    PERMIT_FILTERED + 200 + count == total             → VIOLATION  (unfiltered)
-    PERMIT_FILTERED + 200 + count == 0                 → WARNING
-    PERMIT_UNPROTECTED + 200                           → PASS
-    PERMIT_UNPROTECTED + 403                           → VIOLATION
+    DENY               + 403                           → PASS
+    DENY               + 200                           → VIOLATION
+    PERMIT             + 200                            → PASS
+    PERMIT             + 403                            → VIOLATION
+    PERMIT_SCOPED      + 200                            → PASS
+    PERMIT_SCOPED      + 403                            → VIOLATION
+    PERMIT_SCOPED      + 404 on a single-id op          → PASS  (scoped out)
+    PERMIT_NO_SCOPE    + 403                            → VIOLATION
+    PERMIT_NO_SCOPE    + 200/404                        → WARNING (config gap)
+    PERMIT_FILTERED    + 200 + 0 < count < total        → PASS
+    PERMIT_FILTERED    + 200 + count == total           → VIOLATION  (unfiltered)
+    PERMIT_FILTERED    + 200 + count == 0               → WARNING
+    PERMIT_UNPROTECTED + 200                            → PASS
+    PERMIT_UNPROTECTED + 403                            → VIOLATION
 
     Any (expected, observed) combination not explicitly listed above
     is treated as WARNING.
+
+    ``operation`` is the matrix operation name (``read``/``update``/``delete``/
+    ``list``/``create``).  It only matters for ``PERMIT_SCOPED``: a 404 on a
+    single-id op means the scope filter legitimately hid the baseline row from
+    a role that does not own it — that is *correct* RBAC behaviour, so it
+    counts as PASS rather than an inconclusive WARNING.
     """
     if expected == PolicyDecision.DENY:
         if observed_status == 403:
@@ -215,6 +227,28 @@ def compare_cell(
     if expected == PolicyDecision.PERMIT:
         if observed_status == 200:
             return CellResult.PASS
+        if observed_status == 403:
+            return CellResult.VIOLATION
+        return CellResult.WARNING
+
+    if expected == PolicyDecision.PERMIT_SCOPED:
+        # Access is granted by `permit:` and rows are scoped by a `scope:`
+        # rule. A 403 contradicts the grant. A 200 confirms it. A 404 on a
+        # single-id op (read/update/delete) is the scope filter correctly
+        # hiding a row the role does not own — definitively correct, PASS.
+        if observed_status == 200:
+            return CellResult.PASS
+        if observed_status == 403:
+            return CellResult.VIOLATION
+        if observed_status == 404 and operation in ("read", "update", "delete"):
+            return CellResult.PASS
+        return CellResult.WARNING
+
+    if expected == PolicyDecision.PERMIT_NO_SCOPE:
+        # `permit:` grants access but no matching `scope:` rule exists — the
+        # role sees 0 rows. The matrix already flags this as a config gap; the
+        # only definitive verdict the verifier can add is that a 403 still
+        # contradicts the permit grant.
         if observed_status == 403:
             return CellResult.VIOLATION
         return CellResult.WARNING
@@ -250,11 +284,17 @@ class _ProbeResult:
 
 
 # operation -> (HTTP method, needs_id, has_body)
+#
+# `update` is PUT, not PATCH: the generated entity CRUD router
+# (`route_generator.py`) mounts the full-row update at ``PUT /<plural>/<id>``.
+# The only PATCH route is ``/<plural>/<id>/field/<name>`` (inline single-field
+# edit), so probing ``PATCH /<plural>/<id>`` would always 405 and reduce every
+# update cell to an inconclusive WARNING.
 _PROBE_VERBS: dict[str, tuple[str, bool, bool]] = {
     "list": ("GET", False, False),
     "read": ("GET", True, False),
     "create": ("POST", False, True),
-    "update": ("PATCH", True, True),
+    "update": ("PUT", True, True),
     "delete": ("DELETE", True, False),
 }
 
@@ -286,8 +326,11 @@ async def _probe_cell(
     kwargs: dict[str, Any] = {}
     if has_body:
         kwargs["json"] = body or {}
-    # POST/PATCH/DELETE are CSRF-protected; GET (list/read) is not.
-    if method in ("POST", "PATCH", "DELETE"):
+    # Every state-changing verb (POST/PUT/PATCH/DELETE) passes through the
+    # double-submit CSRF middleware; only GET/HEAD are exempt. `update` is
+    # PUT, so it MUST carry the token — omitting it 403s before the RBAC
+    # gate runs, masking the verdict as a false VIOLATION.
+    if method not in ("GET", "HEAD"):
         kwargs["headers"] = _csrf_headers(client)
 
     response = await client.request(method, url, **kwargs)
@@ -506,6 +549,7 @@ def _minimal_body_for_entity(
     appspec: Any,
     *,
     baseline: dict[str, str] | None = None,
+    unique_suffix: str = "",
 ) -> dict[str, Any] | None:
     """Build the smallest valid JSON body for creating an entity row.
 
@@ -514,6 +558,11 @@ def _minimal_body_for_entity(
     ``baseline`` (the already-seeded row id for the target entity).  If a
     required ref has no seeded target, the entity cannot be created — this
     function returns ``None`` and the caller omits the entity.
+
+    ``unique_suffix`` is appended to every ``unique`` string/email field so a
+    create *probe* does not collide with the baseline row's value (a unique
+    constraint hit returns 422, which would mask the real RBAC verdict).
+    Pass an empty suffix for the one-off baseline seed.
     """
     from dazzle.core.ir.fields import FieldTypeKind
 
@@ -549,7 +598,10 @@ def _minimal_body_for_entity(
                 return None
             body[field.name] = ref_id
         elif kind in (FieldTypeKind.STR, FieldTypeKind.TEXT, FieldTypeKind.EMAIL):
-            body[field.name] = f"seed-{field.name}"
+            # Unique fields get the suffix so a probe never collides with the
+            # baseline row on a unique constraint (a 422 that hides the verdict).
+            suffix = unique_suffix if field.is_unique else ""
+            body[field.name] = f"seed-{field.name}{suffix}"
         elif kind == FieldTypeKind.INT:
             body[field.name] = 1
         elif kind == FieldTypeKind.DECIMAL:
@@ -598,44 +650,125 @@ def _csrf_headers(client: Any) -> dict[str, str]:
     return {_CSRF_HEADER: token} if token else {}
 
 
+def _probe_transport(ctx_transport: Any) -> Any:
+    """Return an ``ASGITransport`` for the booted app that surfaces server
+    errors as HTTP responses instead of re-raising them.
+
+    `httpx.ASGITransport` defaults to ``raise_app_exceptions=True``, so an
+    unhandled 500 inside a route propagates as a Python exception and aborts
+    the whole probe.  A delete blocked by a foreign-key constraint, for
+    example, is a *data-integrity* outcome — not an RBAC verdict — and must
+    not crash verification.  This rebuilds the transport pointed at the same
+    in-process app with ``raise_app_exceptions=False`` so the probe observes a
+    500 status and records a WARNING for that one cell.
+    """
+    import httpx
+
+    return httpx.ASGITransport(app=ctx_transport.app, raise_app_exceptions=False)
+
+
+def _create_capable_role(matrix: AccessMatrix, entity: str) -> str | None:
+    """Return a role that holds a `create` PERMIT for *entity*, or None.
+
+    The bootstrap superuser is created with ``roles=[]`` so every project
+    whose entities carry a `permit: create:` role gate (or a `scope: create:`
+    rule) rejects it with 403.  Baseline rows are test scaffolding, not a
+    probe — they must be inserted by a client that genuinely satisfies the
+    create gate.  This picks the first role from the static matrix whose
+    decision for ``(role, entity, "create")`` is any PERMIT* variant, so the
+    baseline POST goes through the same gate a real authorised user would.
+
+    Returns None when no role can create the entity (e.g. framework/admin
+    entities exposed read-only) — such entities are legitimately un-seedable
+    and their read/update/delete cells stay WARNING.
+    """
+    for role in matrix.roles:
+        if matrix.get(role, entity, "create").value.startswith("PERMIT"):
+            return role
+    return None
+
+
 async def _seed_baseline_rows(
-    client: Any,
     *,
+    transport: Any,
+    base_url: str,
+    matrix: AccessMatrix,
+    creds: dict[str, tuple[str, str]],
     entities: list[str],
     appspec: Any,
 ) -> dict[str, str]:
-    """Create one baseline row per entity (client authenticated as superuser).
+    """Create one baseline row per entity via a create-capable role-user.
 
     Returns {entity: row_id}. The generated CRUD routes are mounted at
     ``/<plural>`` (no ``/api`` prefix) and POST is CSRF-protected, so this
-    echoes the client's `dazzle_csrf` cookie back as the X-CSRF-Token header.
+    echoes each role client's `dazzle_csrf` cookie back as the X-CSRF-Token
+    header.
+
+    Each entity is seeded by a role-user whose role holds a `create` PERMIT
+    in the static matrix — *not* the bootstrap superuser, which carries
+    ``roles=[]`` and is rejected by every `permit: create:` role gate and
+    every `scope: create:` rule (403).  Role clients are opened lazily and
+    cached for the duration of the call; all ride the same in-process
+    ``ASGITransport`` as the verifier context so the seeded rows land in the
+    booted scratch database.
 
     Entities are seeded in the given order; a required ``ref`` field is
     resolved against rows already seeded earlier in the list, so callers
     should pass referenced entities before their dependents.  Any entity
-    whose create fails (no POST route, missing FK, validation error) is
-    omitted so callers can continue with the entities that did seed.
+    whose create fails (no create-capable role, no POST route, missing FK,
+    validation error) is omitted so callers can continue with the entities
+    that did seed.
     """
+    import httpx
+
+    from dazzle.cli.rbac import _login
+
     baseline: dict[str, str] = {}
-    for entity in entities:
-        body = _minimal_body_for_entity(entity, appspec, baseline=baseline)
-        if body is None:
-            # Required FK with no seeded target — skip this entity.
-            continue
-        plural = to_api_plural(entity)
-        resp = await client.request(
-            "POST",
-            f"/{plural}",
-            json=body,
-            headers=_csrf_headers(client),
-        )
-        if resp.status_code in (200, 201):
-            try:
-                row_id = resp.json().get("id")
-            except Exception:
-                row_id = None
-            if row_id:
-                baseline[entity] = str(row_id)
+    role_clients: dict[str, httpx.AsyncClient] = {}
+    try:
+        for entity in entities:
+            role = _create_capable_role(matrix, entity)
+            if role is None or role not in creds:
+                # No role can create this entity — legitimately un-seedable.
+                continue
+            body = _minimal_body_for_entity(entity, appspec, baseline=baseline)
+            if body is None:
+                # Required FK with no seeded target — skip this entity.
+                continue
+
+            client = role_clients.get(role)
+            if client is None:
+                client = httpx.AsyncClient(
+                    transport=transport,
+                    base_url=base_url,
+                    follow_redirects=True,
+                )
+                try:
+                    await _login(client, base_url, *creds[role])
+                except Exception:
+                    # Role user cannot authenticate — skip; _probe_all_cells
+                    # records the per-cell WARNING for this role separately.
+                    await client.aclose()
+                    continue
+                role_clients[role] = client
+
+            plural = to_api_plural(entity)
+            resp = await client.request(
+                "POST",
+                f"/{plural}",
+                json=body,
+                headers=_csrf_headers(client),
+            )
+            if resp.status_code in (200, 201):
+                try:
+                    row_id = resp.json().get("id")
+                except Exception:
+                    row_id = None
+                if row_id:
+                    baseline[entity] = str(row_id)
+    finally:
+        for client in role_clients.values():
+            await client.aclose()
     return baseline
 
 
@@ -644,14 +777,18 @@ async def _probe_all_cells(
     matrix: AccessMatrix,
     creds: dict[str, tuple[str, str]],
     baseline: dict[str, str],
+    *,
+    transport: Any,
 ) -> list[VerifiedCell]:
     """Open one authenticated client per role; probe every matrix cell.
 
     Reuses the app already booted by `_verifier_app_context` — the seeded
     role users and baseline rows live in *that* boot's scratch database, so
-    every role client must ride the same in-process `httpx.ASGITransport`
-    (`ctx.client._transport`).  Re-booting the app would point at a fresh,
-    empty database and lose the fixtures.
+    every role client must ride a transport over the same in-process app.
+    Re-booting the app would point at a fresh, empty database and lose the
+    fixtures.  `transport` is the lenient (`raise_app_exceptions=False`)
+    transport built by `_probe_transport`, so a server-side 500 surfaces as a
+    status code rather than aborting the run.
 
     Per-cell probe failures are caught here and recorded as WARNING — only
     an app-boot failure (which happens before this is called) yields an
@@ -663,9 +800,6 @@ async def _probe_all_cells(
     from dazzle.rbac.audit import InMemoryAuditSink, NullAuditSink, set_audit_sink
 
     cells: list[VerifiedCell] = []
-    # `_transport` is httpx-private but the only handle on the in-process
-    # ASGITransport — reuse it so each role client rides the same booted app.
-    transport = ctx.client._transport
     base_url = "http://verifier.local"
 
     for role in matrix.roles:
@@ -709,13 +843,31 @@ async def _probe_all_cells(
                     sink = InMemoryAuditSink()
                     set_audit_sink(sink)
                     try:
+                        # create/update are body-bearing verbs — without a
+                        # valid body the request 422s on required-field
+                        # validation before the RBAC gate is even reached,
+                        # masking the verdict. create uses a per-cell unique
+                        # suffix so a `unique` field never collides with the
+                        # baseline row.
+                        body: dict[str, Any] | None = None
+                        if operation in ("create", "update"):
+                            suffix = f"-{role}-{operation}" if operation == "create" else ""
+                            body = _minimal_body_for_entity(
+                                entity,
+                                ctx.appspec,
+                                baseline=baseline,
+                                unique_suffix=suffix,
+                            )
                         probe = await _probe_cell(
                             client,
                             entity=entity,
                             operation=operation,
                             baseline_id=baseline.get(entity),
+                            body=body,
                         )
-                        result = compare_cell(expected, probe.status, probe.count)
+                        result = compare_cell(
+                            expected, probe.status, probe.count, operation=operation
+                        )
                         detail = ""
                     except Exception as exc:
                         probe = _ProbeResult(status=0, count=None)
@@ -779,10 +931,22 @@ async def verify(
         async with _DisposableDatabase(server_url) as db_url:
             async with _verifier_app_context(project_root, db_url) as ctx:
                 creds = await _seed_role_users(ctx.auth_store, roles=list(matrix.roles))
+                # All probe/seed clients ride a transport over the same booted
+                # app, but with raise_app_exceptions=False so a server-side 500
+                # surfaces as a status code instead of crashing the run.
+                transport = _probe_transport(ctx.client._transport)
+                # Baseline rows are seeded by a create-capable role-user, not
+                # the roles-less bootstrap superuser (which every create gate
+                # rejects with 403).
                 baseline = await _seed_baseline_rows(
-                    ctx.client, entities=list(matrix.entities), appspec=ctx.appspec
+                    transport=transport,
+                    base_url="http://verifier.local",
+                    matrix=matrix,
+                    creds=creds,
+                    entities=list(matrix.entities),
+                    appspec=ctx.appspec,
                 )
-                cells = await _probe_all_cells(ctx, matrix, creds, baseline)
+                cells = await _probe_all_cells(ctx, matrix, creds, baseline, transport=transport)
     except Exception as exc:
         # App-boot / database-provisioning failure — return an empty report
         # rather than raising, so callers can render a consistent result.

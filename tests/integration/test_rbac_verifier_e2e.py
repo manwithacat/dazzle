@@ -107,21 +107,21 @@ async def test_seed_role_users_creates_one_user_per_role() -> None:
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _PG_URL, reason="no TEST_DATABASE_URL / DATABASE_URL")
 async def test_seed_baseline_rows_returns_entity_ids() -> None:
-    """_seed_baseline_rows creates a baseline row and returns its id.
+    """_seed_baseline_rows creates a baseline row via a create-capable role.
 
     Uses `examples/simple_task` rather than `fixtures/rbac_validation`:
     entity REST CRUD routes are generated from `surface` declarations
     (mode: create -> POST), and rbac_validation has no surfaces. The seed
     POST goes through `permit:` AND `scope:` gates, so the request must
-    come from a role-user that satisfies both — the bootstrap superuser
-    (roles=[]) is rejected by `scope: create`. Task creation is permitted
-    for `role(admin)` with a matching `scope: create ... as: admin` rule.
+    come from a role-user that satisfies both — the roles-less bootstrap
+    superuser is rejected by every create gate (403). #1171 Task 6:
+    `_seed_baseline_rows` now derives a create-capable role from the static
+    matrix and seeds the row through that role's authenticated client.
     """
-    import httpx
-
-    from dazzle.cli.rbac import _login
+    from dazzle.rbac.matrix import generate_access_matrix
     from dazzle.rbac.verifier import (
         _DisposableDatabase,
+        _probe_transport,
         _seed_baseline_rows,
         _seed_role_users,
         _verifier_app_context,
@@ -130,25 +130,24 @@ async def test_seed_baseline_rows_returns_entity_ids() -> None:
     async with _DisposableDatabase(_PG_URL) as db_url:
         async with _verifier_app_context("examples/simple_task", db_url) as ctx:
             assert ctx.auth_store is not None
-            creds = await _seed_role_users(ctx.auth_store, roles=["admin"])
+            matrix = generate_access_matrix(ctx.appspec)
+            creds = await _seed_role_users(ctx.auth_store, roles=list(matrix.roles))
 
             assert ctx.client._transport is not None  # type: ignore[attr-defined]
-            transport = ctx.client._transport  # type: ignore[attr-defined]
-            async with httpx.AsyncClient(
+            transport = _probe_transport(ctx.client._transport)  # type: ignore[attr-defined]
+            baseline = await _seed_baseline_rows(
                 transport=transport,
                 base_url="http://verifier.local",
-                follow_redirects=True,
-            ) as admin_client:
-                await _login(admin_client, "http://verifier.local", *creds["admin"])
-                baseline = await _seed_baseline_rows(
-                    admin_client,
-                    entities=["Task"],
-                    appspec=ctx.appspec,
-                )
+                matrix=matrix,
+                creds=creds,
+                entities=["Task"],
+                appspec=ctx.appspec,
+            )
 
             assert "Task" in baseline, (
-                "Task is permitted for role(admin) and has only a required "
-                "str field — it should seed successfully"
+                "Task create is permitted for role(admin|manager|member) and "
+                "the entity has only a required str field — _seed_baseline_rows "
+                "should pick a create-capable role and seed it successfully"
             )
             assert baseline["Task"]  # non-empty id string
 
@@ -158,10 +157,30 @@ async def test_seed_baseline_rows_returns_entity_ids() -> None:
 async def test_verify_runs_end_to_end_and_produces_cells() -> None:
     """`verify()` runs the full orchestration against `examples/simple_task`.
 
-    Proves the end-to-end path — disposable DB, in-process boot, role-user
-    seeding, per-cell probing — produces a populated report. Does NOT assert
-    zero violations (that is a separate task against a clean-by-design app);
-    only that the orchestration runs and emits cells.
+    `examples/simple_task` is a correct-by-design app: every entity's
+    observed HTTP behaviour must match its static RBAC matrix, so a clean
+    run shows **zero violations**. This test pins both the orchestration
+    (disposable DB, in-process boot, role-user seeding, per-cell probing)
+    *and* the substance of the verdict — that a meaningful share of cells
+    reach a definitive PASS rather than an inconclusive WARNING.
+
+    Baseline-fix history (#1171 Task 6)
+    -----------------------------------
+    Before the baseline-seeding fix the report was 22 PASS / 0 VIOLATION /
+    113 WARNING: baseline rows were seeded by the roles-less bootstrap
+    superuser, which every `permit:`/`scope: create:` gate rejects with 403,
+    so no rows existed and every read/update/delete cell 404'd to a WARNING.
+    The fix seeds each entity via a create-capable role-user, probes
+    create/update with valid bodies, teaches `compare_cell` the modern
+    `PERMIT_SCOPED` decision, and sends the CSRF token on `PUT`. After the
+    fix the run is ~75 PASS / 0 VIOLATION / ~60 WARNING.
+
+    The residual WARNINGs are structurally legitimate: ~48 of them are
+    framework/admin entities (AIJob, SystemHealth, SystemMetric,
+    DeployHistory) that declare **no CRUD `surface`**, so they have no
+    POST/PUT/DELETE routes to probe (405) and no seedable rows (404). The
+    verifier correctly cannot turn "there is no route" into a definitive
+    verdict — that is a property of the app, not a verifier weakness.
     """
     from pathlib import Path
 
@@ -175,11 +194,47 @@ async def test_verify_runs_end_to_end_and_produces_cells() -> None:
     assert report.app_name == str(project_root)
     assert report.matrix is not None
 
+    # The orchestration ran cleanly — no boot/provisioning failure.
+    assert report.error is None, f"verify() boot failed: {report.error}"
+
     # The matrix has roles × entities × operations cells; verify() probes
-    # every one of them, so the report must be populated.
+    # every one of them, so the report must be populated and self-consistent.
     assert report.total > 0, "verify() should probe at least one matrix cell"
     assert report.total == len(report.cells)
     assert report.total == report.passed + report.violated + report.warnings
+
+    # A correct-by-design app must show no RBAC violations. A violation here
+    # is a genuine finding — either an enforcement bug in simple_task or a
+    # verifier bug — and must be investigated, never silenced.
+    violations = [
+        (c.role, c.entity, c.operation, c.observed_status)
+        for c in report.cells
+        if c.result == CellResult.VIOLATION
+    ]
+    assert report.violated == 0, (
+        "examples/simple_task is correct-by-design — a violation indicates a "
+        f"real RBAC enforcement bug or a verifier bug: {violations}"
+    )
+
+    # The baseline-seeding fix must produce *definitive* verdicts, not a wall
+    # of inconclusive WARNINGs. Two concrete, justified thresholds:
+    #
+    #  1. PASS is the majority outcome — more cells reach a definitive PASS
+    #     than land in WARNING. (Post-fix ~75 PASS vs ~60 WARNING; the 60 are
+    #     the no-CRUD-surface framework entities described above.)
+    #  2. WARNINGs dropped well below the pre-fix count of 113 — a hard
+    #     regression guard. We require < 90, leaving generous headroom for
+    #     framework-entity drift while still failing loudly if the baseline
+    #     fix ever regresses back toward the all-superuser-seeding behaviour.
+    assert report.passed > report.warnings, (
+        "expected PASS to be the majority verdict after the baseline fix, "
+        f"got {report.passed} PASS vs {report.warnings} WARNING"
+    )
+    assert report.warnings < 90, (
+        f"WARNINGs ({report.warnings}) regressed toward the pre-fix 113 — "
+        "baseline-row seeding may no longer be producing real rows to probe"
+    )
+    assert report.passed > 0
 
     # Every cell carries the expected structure.
     for cell in report.cells:
