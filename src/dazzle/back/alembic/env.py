@@ -41,48 +41,20 @@ if _src not in sys.path:
 def _load_target_metadata() -> sqlalchemy.MetaData:
     """Lazily load target metadata from the active Dazzle project.
 
-    Falls back to an empty MetaData if no project entities are available
-    (e.g. when running ``alembic current`` without a project context).
+    Delegates to the side-effect-free :func:`load_target_metadata` and falls
+    back to empty MetaData on failure (e.g. when running ``alembic current``
+    without a project context). The actual DSL→metadata logic lives in
+    ``dazzle.back.alembic.metadata_loader`` so callers outside an Alembic run
+    can reuse it without importing this module (which executes
+    ``config = context.config`` at import time).
     """
+    from dazzle.back.alembic.metadata_loader import load_target_metadata
+
     try:
-        # Try to load entities from the project in CWD
-        from dazzle.back.runtime.sa_schema import build_metadata
-        from dazzle.core.fileset import discover_dsl_files
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.manifest import load_manifest
-        from dazzle.core.parser import parse_modules
-
-        project_root = Path.cwd()
-        manifest_path = project_root / "dazzle.toml"
-        if manifest_path.exists():
-            manifest = load_manifest(manifest_path)
-            dsl_files = discover_dsl_files(project_root, manifest)
-            if dsl_files:
-                modules = parse_modules(dsl_files)
-                # ``build_appspec`` wants the module name (e.g.
-                # "aegismark.core" from `[project] root` in dazzle.toml),
-                # NOT the filesystem path. ProjectManifest.project_root
-                # is misleadingly named — it holds the module string,
-                # not a Path. Passing the cwd here raises LinkError on
-                # every db migrate / revision (#886).
-                from dazzle.core.renderer_registry import known_renderer_names
-
-                appspec = build_appspec(
-                    modules,
-                    manifest.project_root,
-                    known_renderers=known_renderer_names(manifest),
-                )
-                from dazzle.back.converters.entity_converter import convert_entities
-
-                entities = convert_entities(appspec.domain.entities)
-                return build_metadata(entities)
+        return load_target_metadata()
     except Exception:
         logger.warning("Failed to load target metadata from DSL", exc_info=True)
-
-    # Fallback: empty metadata
-    import sqlalchemy
-
-    return sqlalchemy.MetaData()
+        return sqlalchemy.MetaData()
 
 
 target_metadata = _load_target_metadata()

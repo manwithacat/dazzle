@@ -1,8 +1,9 @@
-"""Tests for dazzle db CLI commands (status, verify, reset, cleanup, stamp)."""
+"""Tests for dazzle db CLI commands (status, verify, reset, cleanup, stamp, baseline)."""
 
 from unittest.mock import MagicMock, patch
 
 import pytest
+import sqlalchemy
 from typer.testing import CliRunner
 
 from dazzle.cli.db import db_app
@@ -177,3 +178,67 @@ class TestDbStampCommand:
         result = runner.invoke(db_app, ["stamp", "head"])
         assert result.exit_code == 1
         assert "Stamp failed" in result.output
+
+
+class TestDbBaselineCommand:
+    @patch("alembic.command.revision")
+    @patch("dazzle.back.alembic.metadata_loader.load_target_metadata")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("dazzle.cli.db._resolve_url", return_value="")
+    def test_baseline_metadata_path_no_alembic_context_crash(
+        self,
+        mock_url: MagicMock,
+        mock_cfg: MagicMock,
+        mock_load_metadata: MagicMock,
+        mock_revision: MagicMock,
+    ) -> None:
+        """`dazzle db baseline` loads DSL metadata without an active Alembic context.
+
+        Regression for the AttributeError crash: importing
+        ``dazzle.back.alembic.env`` runs ``config = context.config`` at module
+        level, which fails outside an Alembic run. ``baseline_command`` must
+        instead call the side-effect-free ``metadata_loader``. This test fails
+        if anyone re-introduces the ``env`` import — the patch target
+        ``dazzle.back.alembic.metadata_loader.load_target_metadata`` would no
+        longer intercept the call.
+        """
+        # Fake metadata with one table — the non-empty path.
+        metadata = sqlalchemy.MetaData()
+        sqlalchemy.Table("Task", metadata, sqlalchemy.Column("id", sqlalchemy.Integer))
+        mock_load_metadata.return_value = metadata
+
+        rev = MagicMock()
+        rev.revision = "abc123"
+        mock_revision.return_value = rev
+
+        result = runner.invoke(db_app, ["baseline"])
+
+        assert result.exit_code == 0, result.output
+        assert "AttributeError" not in result.output
+        assert "DSL declares 1 tables" in result.output
+        mock_load_metadata.assert_called_once()
+
+    @patch("alembic.command.revision")
+    @patch("dazzle.back.alembic.metadata_loader.load_target_metadata")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("dazzle.cli.db._resolve_url", return_value="")
+    def test_baseline_real_dsl_error_stops_command(
+        self,
+        mock_url: MagicMock,
+        mock_cfg: MagicMock,
+        mock_load_metadata: MagicMock,
+        mock_revision: MagicMock,
+    ) -> None:
+        """A genuine DSL load error aborts baseline instead of being swallowed.
+
+        Proceeding against empty metadata would autogenerate a migration that
+        drops every table — so a ParseError/LinkError must exit non-zero.
+        """
+        mock_load_metadata.side_effect = ValueError("DSL parse failed")
+
+        result = runner.invoke(db_app, ["baseline"])
+
+        assert result.exit_code == 1
+        assert "DSL metadata load failed" in result.output
+        # The command must NOT have proceeded to autogenerate.
+        mock_revision.assert_not_called()

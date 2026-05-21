@@ -6,6 +6,13 @@ The old `dazzle.core.dsl_parser` module was split into `dazzle.core.parser`
 process worker — kept stale imports and only failed at runtime when a project
 actually ran `dazzle db migrate` etc. This pins the import path so a future
 rename surfaces in CI rather than in a downstream user's terminal.
+
+The Alembic DSL→metadata logic was later extracted out of ``env.py`` into the
+side-effect-free ``dazzle.back.alembic.metadata_loader`` module (so callers
+outside an Alembic run — e.g. ``dazzle db baseline`` — can reuse it without
+triggering ``env.py``'s module-level ``config = context.config``). The
+``parse_modules`` / ``build_appspec`` call site moved with it, so this test
+pins ``metadata_loader.py`` rather than ``env.py``.
 """
 
 import ast
@@ -18,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Files that import parse_modules at runtime to drive schema migrations,
 # DSL deployment, or background worker DSL loading.
 RUNTIME_PARSE_MODULES_CALLERS = [
-    "src/dazzle/back/alembic/env.py",
+    "src/dazzle/back/alembic/metadata_loader.py",
     "src/dazzle/cli/migrate.py",
     "src/dazzle/process/worker.py",
 ]

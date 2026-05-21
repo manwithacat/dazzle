@@ -74,12 +74,16 @@ pytest-of-*/
 
 # invoice_ops commits its migration history — a project's migrations
 # must be version-controlled (see docs/reference/migrations.md).
+# Only the versions/ revision files are tracked; other migrations/ runtime
+# files (alembic.ini, env.py copies, __pycache__) stay ignored.
 !examples/invoice_ops/.dazzle/
 examples/invoice_ops/.dazzle/*
 !examples/invoice_ops/.dazzle/migrations/
-!examples/invoice_ops/.dazzle/migrations/**
-examples/invoice_ops/.dazzle/migrations/**/__pycache__/
-examples/invoice_ops/.dazzle/migrations/**/*.pyc
+examples/invoice_ops/.dazzle/migrations/*
+!examples/invoice_ops/.dazzle/migrations/versions/
+!examples/invoice_ops/.dazzle/migrations/versions/**
+examples/invoice_ops/.dazzle/migrations/versions/**/__pycache__/
+examples/invoice_ops/.dazzle/migrations/versions/**/*.pyc
 
 # Development Docs (legacy)
 /devdocs
