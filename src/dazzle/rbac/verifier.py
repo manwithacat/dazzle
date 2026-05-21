@@ -17,12 +17,18 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
 from dazzle.core.strings import to_api_plural
 from dazzle.rbac.audit import AccessDecisionRecord
 from dazzle.rbac.matrix import AccessMatrix, PolicyDecision
+
+if TYPE_CHECKING:
+    import httpx
+
+    from dazzle.back.runtime.server import DazzleBackendApp
+    from dazzle.core.ir import AppSpec
 
 
 class CellResult(StrEnum):
@@ -332,16 +338,31 @@ _SUPERUSER_PASSWORD: str = "verifier-bootstrap-secret"  # nosec B105 — scratch
 class _VerifierContext:
     """Holds the booted AppSpec and an authenticated httpx client."""
 
-    appspec: Any
-    client: Any  # httpx.AsyncClient, authenticated as superuser
+    appspec: AppSpec
+    client: httpx.AsyncClient  # authenticated as superuser
 
 
-def _build_asgi_app(root: Path, database_url: str) -> Any:
+@dataclass
+class _BuiltApp:
+    """Everything `_verifier_app_context` needs from a single app build.
+
+    Carries the FastAPI app, the `DazzleBackendApp` builder (for the
+    wired `auth_store` and `db_manager`), and the parsed `AppSpec` — so
+    the caller never has to parse the project DSL a second time.
+    """
+
+    app: Any  # FastAPI
+    builder: DazzleBackendApp
+    appspec: AppSpec
+
+
+def _build_asgi_app(root: Path, database_url: str) -> _BuiltApp:
     """Build the Dazzle ASGI app for `root` against `database_url`.
 
     Thin adapter over `DazzleBackendApp.build()`.  Enables test-mode so
     entity tables are created on first boot (no prior Alembic migration
-    needed) and `enable_auth=True` so `/auth/login` is mounted.
+    needed) and `enable_auth` follows the project manifest so `/auth/login`
+    is mounted when the project uses auth.
 
     The caller is responsible for creating the bootstrap superuser in the
     auth store before the first authenticated request.
@@ -363,9 +384,7 @@ def _build_asgi_app(root: Path, database_url: str) -> Any:
     )
     builder = DazzleBackendApp(appspec, config=config)
     app = builder.build()
-    # Stash builder on app.state so _verifier_app_context can reach auth_store.
-    app.state.verifier_builder = builder
-    return app
+    return _BuiltApp(app=app, builder=builder, appspec=appspec)
 
 
 @asynccontextmanager
@@ -387,50 +406,50 @@ async def _verifier_app_context(
     import httpx
 
     from dazzle.cli.rbac import _login
-    from dazzle.core.appspec_loader import load_project_appspec
 
     root = Path(project_root)
-    appspec = load_project_appspec(root)
 
     # Build the ASGI app — entity + auth tables are created synchronously
     # during DazzleBackendApp.build() because enable_test_mode=True sets
-    # _should_create_schema_on_startup() → True.
-    app = _build_asgi_app(root, database_url)
+    # _should_create_schema_on_startup() → True.  `_BuiltApp` carries the
+    # builder + appspec so we don't re-parse the project DSL.
+    built = _build_asgi_app(root, database_url)
+    app = built.app
+    auth_store = built.builder.auth_store
 
-    # Retrieve the AuthStore wired during build() and seed the bootstrap
-    # superuser.  AuthStore._init_db() already ran inside build(); calling
-    # AuthStore(database_url) a second time is safe (IF NOT EXISTS DDL).
-    builder = app.state.verifier_builder
-    auth_store = builder.auth_store
-    if auth_store is None:
-        # Auth not enabled for this project — boot without login.
-        transport = httpx.ASGITransport(app=app)
+    # Seed the bootstrap superuser when auth is enabled.  AuthStore._init_db()
+    # already ran inside build(); the create call is idempotent (skip if the
+    # row already exists).
+    if auth_store is not None:
+        existing = auth_store.get_user_by_email(_SUPERUSER_EMAIL)
+        if existing is None:
+            auth_store.create_user(
+                email=_SUPERUSER_EMAIL,
+                password=_SUPERUSER_PASSWORD,
+                is_superuser=True,
+                roles=[],
+            )
+
+    # httpx.ASGITransport does NOT run FastAPI lifespan events, so the
+    # `_open_db_pool` startup handler never fires — repositories and the
+    # AuthStore fall back to per-call connections.  We still close the
+    # connection pool on exit (idempotent no-op when it was never opened)
+    # so a future change that opens it eagerly can't leak connections
+    # across the scratch-DB drop.
+    transport = httpx.ASGITransport(app=app)
+    try:
         async with httpx.AsyncClient(
             transport=transport,
             base_url="http://verifier.local",
             follow_redirects=True,
         ) as client:
-            yield _VerifierContext(appspec=appspec, client=client)
-        return
-
-    # Create the bootstrap superuser (idempotent — skip if already exists).
-    existing = auth_store.get_user_by_email(_SUPERUSER_EMAIL)
-    if existing is None:
-        auth_store.create_user(
-            email=_SUPERUSER_EMAIL,
-            password=_SUPERUSER_PASSWORD,
-            is_superuser=True,
-            roles=[],
-        )
-
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport,
-        base_url="http://verifier.local",
-        follow_redirects=True,
-    ) as client:
-        await _login(client, "http://verifier.local", _SUPERUSER_EMAIL, _SUPERUSER_PASSWORD)
-        yield _VerifierContext(appspec=appspec, client=client)
+            if auth_store is not None:
+                await _login(client, "http://verifier.local", _SUPERUSER_EMAIL, _SUPERUSER_PASSWORD)
+            yield _VerifierContext(appspec=built.appspec, client=client)
+    finally:
+        db_manager = getattr(built.builder, "_db_manager", None)
+        if db_manager is not None:
+            db_manager.close_pool()
 
 
 async def verify(

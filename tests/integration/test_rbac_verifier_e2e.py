@@ -36,7 +36,11 @@ async def test_disposable_database_creates_and_drops() -> None:
 async def test_verifier_app_context_boots_and_authenticates() -> None:
     """The verifier context boots the Dazzle app in-process, creates a
     bootstrap superuser, and returns an authenticated httpx client."""
-    from dazzle.rbac.verifier import _DisposableDatabase, _verifier_app_context
+    from dazzle.rbac.verifier import (
+        _SUPERUSER_EMAIL,
+        _DisposableDatabase,
+        _verifier_app_context,
+    )
 
     async with _DisposableDatabase(_PG_URL) as db_url:
         async with _verifier_app_context("fixtures/rbac_validation", db_url) as ctx:
@@ -44,5 +48,13 @@ async def test_verifier_app_context_boots_and_authenticates() -> None:
             # The app booted — /health is always registered by SystemRoutesSubsystem.
             resp = await ctx.client.get("/health")
             assert resp.status_code == 200
-            data = resp.json()
-            assert data["status"] == "healthy"
+            assert resp.json()["status"] == "healthy"
+
+            # The client genuinely carries an authenticated superuser session:
+            # /auth/me is auth-gated (401 without a session) and the verifier
+            # bootstrap user has is_superuser=True.
+            me = await ctx.client.get("/auth/me")
+            assert me.status_code == 200, me.text
+            me_data = me.json()
+            assert me_data["email"] == _SUPERUSER_EMAIL
+            assert me_data["is_superuser"] is True
