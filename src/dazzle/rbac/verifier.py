@@ -1,11 +1,10 @@
 """RBAC verifier — Layer 2 of the RBAC verification framework.
 
 Provides types for representing verification results, the core `compare_cell()`
-comparison function, and `VerificationReport` with JSON serialisation.
-
-The full `verify()` async function (which starts a live server and probes
-endpoints) is stubbed here. The types and comparison logic are the critical
-pieces for unit testing.
+comparison function, `VerificationReport` with JSON serialisation, and the
+`verify()` async function that boots the app in-process against a disposable
+PostgreSQL database, seeds role users and baseline rows, probes every
+(role, entity, operation) matrix cell, and reports PASS/VIOLATION/WARNING per cell.
 """
 
 from __future__ import annotations  # required: forward reference

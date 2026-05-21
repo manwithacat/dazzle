@@ -375,11 +375,39 @@ def matrix(
 def verify_cmd(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
 ) -> None:
-    """Run RBAC verification against a live server (Layer 2)."""
+    """Run dynamic RBAC verification against an in-process app (Layer 2)."""
+    from dazzle.rbac.verifier import verify
+
+    root = resolve_project(manifest)
+    try:
+        report = asyncio.run(verify(root))
+    except Exception as exc:
+        typer.echo(f"RBAC verification failed: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+    report_path = root / ".dazzle" / "rbac-verify-report.json"
+    report.save(report_path)
+
+    # Boot failure — verify() returns a zeroed report with `error` set.
+    if report.error is not None:
+        typer.echo(f"RBAC verification could not run: {report.error}", err=True)
+        typer.echo(f"Report: {report_path}")
+        raise typer.Exit(code=1)
+
     typer.echo(
-        "RBAC verification not yet implemented — use `dazzle rbac matrix` for static analysis"
+        f"RBAC verification: {report.total} cells | {report.passed} passed | "
+        f"{report.violated} violated | {report.warnings} warnings"
     )
-    raise typer.Exit(code=0)
+    typer.echo(f"Report: {report_path}")
+    for cell in report.cells:
+        if cell.result.value == "VIOLATION":
+            typer.echo(
+                f"  VIOLATION  {cell.role}/{cell.entity}/{cell.operation}: "
+                f"expected {cell.expected.value}, got HTTP {cell.observed_status}",
+                err=True,
+            )
+    if report.violated > 0:
+        raise typer.Exit(code=1)
 
 
 @rbac_app.command("report")

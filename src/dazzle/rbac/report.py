@@ -174,11 +174,22 @@ def generate_report(report: VerificationReport, format: str = "markdown") -> str
     Currently only ``"markdown"`` format is supported.  Passing any other
     value also produces Markdown (format is reserved for future JSON/HTML
     output).
+
+    When *report* has ``error`` set (boot/provisioning failure) the report
+    opens with a clear notice so the rendered output is never silently empty.
     """
     lines: list[str] = [
         "# RBAC Compliance Report",
         "",
     ]
+    if report.error is not None:
+        lines += [
+            "> **Verification did not run.**",
+            f"> Error: {report.error}",
+            ">",
+            "> Run `dazzle rbac verify` with a reachable PostgreSQL server to generate a full report.",
+            "",
+        ]
     lines.extend(_render_summary(report))
     lines.extend(_render_matrix_table(report))
     lines.extend(_render_violations(report))
