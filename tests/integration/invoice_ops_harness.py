@@ -141,6 +141,22 @@ async def _csrf_post(
     return await client.post(url, json=body, headers=headers)
 
 
+async def _csrf_put(
+    client: httpx.AsyncClient,
+    url: str,
+    body: dict[str, Any],
+) -> httpx.Response:
+    """PUT with the double-submit CSRF token echoed from the cookie jar.
+
+    PUT is a state-changing verb and passes through the double-submit
+    CSRF middleware exactly like POST. Omitting the token 403s with a
+    ``CSRF token missing or invalid`` body *before* the RBAC/scope gate
+    runs — which would mask the real transition-role verdict."""
+    token = client.cookies.get("dazzle_csrf")
+    headers = {"X-CSRF-Token": token} if token else {}
+    return await client.put(url, json=body, headers=headers)
+
+
 async def _csrf_delete(
     client: httpx.AsyncClient,
     url: str,
