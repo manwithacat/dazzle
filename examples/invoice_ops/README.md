@@ -110,29 +110,32 @@ DATABASE_URL=postgresql://localhost/postgres \
 
 ### Tenant isolation suite (`test_invoice_ops_tenant_isolation.py`)
 
-9 tests (2 skipped without a second seeded tenant):
+11 tests (9 run, 2 skipped):
 
-| Test | What it probes |
-|------|---------------|
-| `test_cross_tenant_invoice_list_isolation` | Tenant B user cannot list Tenant A invoices |
-| `test_cross_tenant_invoice_read_by_id` | IDOR: Tenant B user cannot read a Tenant A invoice by UUID |
-| `test_cross_tenant_invoice_update` | Tenant B user cannot update a Tenant A invoice |
-| `test_cross_tenant_invoice_delete` | Tenant B user cannot delete a Tenant A invoice |
-| `test_cross_tenant_supplier_list_isolation` | Supplier list is scoped per tenant |
-| `test_create_invoice_with_foreign_supplier_rejected` | Cross-tenant FK injection on create is rejected |
-| `test_cross_tenant_payment_attempt_isolation` | Payment attempt reads are scoped per tenant |
-| `test_tenant_admin_cannot_read_other_tenant` | `tenant_admin` is NOT a cross-tenant bypass (fixed) |
-| `test_tenant_admin_cannot_delete_other_tenant_invoice` | `tenant_admin` delete is scoped to own tenant |
+| Test | What it probes | Notes |
+|------|---------------|-------|
+| `test_list_excludes_other_tenant` | Northwind invoice list contains no contoso rows (checks both id and invoice_number) | Runs |
+| `test_read_other_tenant_invoice_is_404` | IDOR: northwind requester fetching a contoso invoice by UUID gets 404 | Runs |
+| `test_update_other_tenant_invoice_is_404` | Northwind approver cannot update a contoso invoice (404 or 405) | Runs |
+| `test_delete_other_tenant_supplier_is_404` | Northwind `tenant_admin` cannot delete a contoso supplier by UUID | Runs |
+| `test_create_invoice_with_foreign_supplier_rejected` | Invoice create referencing a contoso supplier is rejected (cross-tenant FK injection) | Runs |
+| `test_read_other_tenant_lineitem_is_404` | IDOR: northwind requester fetching a contoso line item by UUID gets 404 | Runs |
+| `test_admin_positive_control` | Sanity check: northwind requester CAN read a northwind invoice (guards against over-filtering false-greens) | Runs |
+| `test_search_excludes_other_tenant` | Northwind invoice list with search params (`q=`, `search=`) contains no contoso data | Runs |
+| `test_audit_export_excludes_other_tenant` | Northwind auditor's `/_dazzle/audit/logs` view contains no contoso entity ids | Runs |
+| `test_event_log_excludes_other_tenant` | `/_dazzle/events/topics/invoice_events` contains no contoso tenant_id | **Skipped** — events subsystem requires REDIS_URL + lifespan events; unavailable under in-process ASGITransport |
+| `test_other_tenant_config_denied` | Northwind `tenant_admin` cannot read or delete the contoso `Tenant` row (per-tenant config container) | **Skipped** — requires contoso `tenant_id` in seed data |
 
 ### RBAC / transition suite (`test_invoice_ops_rbac.py`)
 
-3 tests (1 skipped without full seed data):
+4 tests (3 run, 1 skipped):
 
-| Test | What it probes |
-|------|---------------|
-| `test_transition_role_guard_enforced` | Role-guarded transitions are enforced at runtime |
-| `test_finance_can_trigger_payment` | `finance` role can move approved → paid |
-| `test_requester_cannot_approve` | `requester` role is denied the approved transition |
+| Test | What it probes | Notes |
+|------|---------------|-------|
+| `test_requester_cannot_approve` | A requester attempting `submitted → approved` is denied (403/404/422) — approver-only transition | Runs |
+| `test_approver_cannot_pay` | An approver attempting `approved → paid` is denied (403/404/422) — finance-only transition | Runs |
+| `test_approver_can_approve` | Positive control: approver driving `submitted → approved` succeeds (200/204/302) | Runs |
+| `test_projection_agrees_with_status_column` | `InvoiceStatusView` projection status agrees with raw `Invoice.status` column | **Skipped** — no queryable projection route; events subsystem not functional under in-process ASGITransport |
 
 ---
 
@@ -179,6 +182,8 @@ The table below records framework friction encountered during the invoice_ops ke
 | 10 | E2E generator skips role-guarded transitions | `src/dazzle/testing/testspec_generator.py` line 587 skips all transitions with `role()` guards. Invoice_ops received zero auto-derived lifecycle E2E flows. | [#1186](https://github.com/manwithacat/dazzle/issues/1186) |
 | 11 | `dazzle e2e run-viewport` broken | Fails with `ModuleNotFoundError: No module named 'dazzle.core.loader'` — `viewport_testing.py` imports a renamed module. | [#1187](https://github.com/manwithacat/dazzle/issues/1187) |
 | 12 | Transition-guard denials return HTTP 422 | Denied role-guarded transitions return 422 Unprocessable Entity instead of 403 Forbidden. Denial is correct; status code is softer than expected. | Minor |
+| 13 | `Tenant.create` open to `tenant_admin` | The `Tenant` entity's `permit: create: role(tenant_admin)` with `scope: create: all` allows a `tenant_admin` to create new `Tenant` rows without restriction. In a production multi-tenant SaaS, tenant provisioning would be a platform-admin action outside any tenant's trust boundary. `invoice_ops` keeps this simple: tenants are demo seed data and there is no platform-admin persona in the DSL. This is a deliberate simplification, not a bug. | Known limitation |
+| 14 | Event model only partially wired to publishers | `events.dsl` declares 6 events (`InvoiceSubmitted`, `InvoiceApproved`, `InvoiceRejected`, `InvoiceDisputed`, `InvoicePaid`, `PaymentAttemptFailed`), but the `Invoice` entity only has `publish` directives for `InvoiceSubmitted` and `InvoicePaid`. The entity-level `publish … when status changed` trigger fires on coarse state changes and cannot emit a distinct event per target state; fine-grained per-transition events (`InvoiceApproved`, `InvoiceRejected`, `InvoiceDisputed`) are declared in the model but have no publisher wired to them. The events stack is preview-only regardless, so this is a known limitation rather than an actionable gap. | Known limitation — preview |
 
 ---
 
