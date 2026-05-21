@@ -217,6 +217,104 @@ class TestCompareCellPermitNoScope:
 
 
 # ---------------------------------------------------------------------------
+# _create_capable_role — baseline-seeding role selection (#1171 Task 6)
+# ---------------------------------------------------------------------------
+
+
+def _matrix(cells: dict[tuple[str, str, str], PolicyDecision]) -> AccessMatrix:
+    """Build an AccessMatrix from an explicit cell map for unit tests.
+
+    Roles/entities/operations are derived from the cell keys (sorted for a
+    stable order); no warnings are attached.
+    """
+    roles = sorted({k[0] for k in cells})
+    entities = sorted({k[1] for k in cells})
+    operations = sorted({k[2] for k in cells})
+    return AccessMatrix(
+        cells=cells,
+        warnings=[],
+        roles=roles,
+        entities=entities,
+        operations=operations,
+    )
+
+
+class TestCreateCapableRole:
+    """`_create_capable_role` picks a role that can seed an entity's baseline
+    row, or returns None when the entity is legitimately un-seedable.
+
+    The None path is a load-bearing degradation contract: an entity no role
+    can create stays un-seeded, so its read/update/delete cells have no
+    baseline row to target and correctly remain WARNING rather than producing
+    a false verdict.
+    """
+
+    def test_returns_role_with_create_permit(self):
+        from dazzle.rbac.verifier import _create_capable_role
+
+        m = _matrix(
+            {
+                ("admin", "Widget", "create"): PolicyDecision.PERMIT,
+                ("viewer", "Widget", "create"): PolicyDecision.DENY,
+            }
+        )
+        assert _create_capable_role(m, "Widget") == "admin"
+
+    def test_accepts_any_permit_family_decision(self):
+        # PERMIT_SCOPED / PERMIT_NO_SCOPE / PERMIT_UNPROTECTED all satisfy the
+        # create gate — the helper matches the whole PERMIT* family.
+        from dazzle.rbac.verifier import _create_capable_role
+
+        for decision in (
+            PolicyDecision.PERMIT_SCOPED,
+            PolicyDecision.PERMIT_NO_SCOPE,
+            PolicyDecision.PERMIT_UNPROTECTED,
+            PolicyDecision.PERMIT_FILTERED,
+        ):
+            m = _matrix({("editor", "Widget", "create"): decision})
+            assert _create_capable_role(m, "Widget") == "editor", decision
+
+    def test_returns_none_when_no_role_can_create(self):
+        # Every role is DENY on create — the entity is un-seedable. This is the
+        # framework/admin-entity case (no CRUD surface, read-only exposure).
+        from dazzle.rbac.verifier import _create_capable_role
+
+        m = _matrix(
+            {
+                ("admin", "SystemHealth", "create"): PolicyDecision.DENY,
+                ("viewer", "SystemHealth", "create"): PolicyDecision.DENY,
+            }
+        )
+        assert _create_capable_role(m, "SystemHealth") is None
+
+    def test_returns_none_for_unknown_entity(self):
+        # An entity absent from the matrix has no create cell — matrix.get()
+        # returns DENY, so the helper yields None (un-seedable).
+        from dazzle.rbac.verifier import _create_capable_role
+
+        m = _matrix({("admin", "Widget", "create"): PolicyDecision.PERMIT})
+        assert _create_capable_role(m, "Gadget") is None
+
+    def test_first_capable_role_follows_matrix_role_order(self):
+        # When multiple roles can create, the first in matrix.roles order wins
+        # — deterministic but declaration-order-dependent.
+        from dazzle.rbac.verifier import _create_capable_role
+
+        m = AccessMatrix(
+            cells={
+                ("manager", "Widget", "create"): PolicyDecision.PERMIT,
+                ("admin", "Widget", "create"): PolicyDecision.PERMIT,
+            },
+            warnings=[],
+            # Explicit role order: manager declared before admin.
+            roles=["manager", "admin"],
+            entities=["Widget"],
+            operations=["create"],
+        )
+        assert _create_capable_role(m, "Widget") == "manager"
+
+
+# ---------------------------------------------------------------------------
 # VerifiedCell
 # ---------------------------------------------------------------------------
 

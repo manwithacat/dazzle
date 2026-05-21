@@ -222,17 +222,24 @@ async def test_verify_runs_end_to_end_and_produces_cells() -> None:
     #  1. PASS is the majority outcome — more cells reach a definitive PASS
     #     than land in WARNING. (Post-fix ~75 PASS vs ~60 WARNING; the 60 are
     #     the no-CRUD-surface framework entities described above.)
-    #  2. WARNINGs dropped well below the pre-fix count of 113 — a hard
-    #     regression guard. We require < 90, leaving generous headroom for
-    #     framework-entity drift while still failing loudly if the baseline
-    #     fix ever regresses back toward the all-superuser-seeding behaviour.
+    #  2. WARNINGs sit in a justified band — a *two-sided* regression guard.
+    #     Upper bound (< 90): WARNINGs dropped well below the pre-fix count of
+    #     113, with headroom for framework-entity drift; fails loudly if the
+    #     baseline fix ever regresses toward all-superuser-seeding.
+    #     Lower bound (>= 40): ~48 residual WARNINGs are framework/admin
+    #     entities (AIJob, SystemHealth, SystemMetric, DeployHistory) that
+    #     declare no CRUD `surface` — they have no routes to probe and cannot
+    #     yield a definitive verdict. If WARNINGs ever fall below this floor,
+    #     a no-route probe (404/405) is silently being counted as a PASS,
+    #     inflating the PASS share — that must fail the test, not pass quietly.
     assert report.passed > report.warnings, (
         "expected PASS to be the majority verdict after the baseline fix, "
         f"got {report.passed} PASS vs {report.warnings} WARNING"
     )
-    assert report.warnings < 90, (
-        f"WARNINGs ({report.warnings}) regressed toward the pre-fix 113 — "
-        "baseline-row seeding may no longer be producing real rows to probe"
+    assert 40 <= report.warnings < 90, (
+        f"WARNINGs ({report.warnings}) left the expected band [40, 90): "
+        "above 90 means baseline seeding regressed; below 40 means a "
+        "no-route probe is being miscounted as a definitive PASS"
     )
     assert report.passed > 0
 

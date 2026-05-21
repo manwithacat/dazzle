@@ -662,9 +662,49 @@ def _probe_transport(ctx_transport: Any) -> Any:
     in-process app with ``raise_app_exceptions=False`` so the probe observes a
     500 status and records a WARNING for that one cell.
     """
+    # Lazy import is intentional: httpx is only ever needed at verify() time,
+    # and this module is imported on every `dazzle` CLI invocation (e.g. for
+    # the type/report classes). Keeping httpx off the module-load path mirrors
+    # the lazy-import pattern used throughout the rest of this module.
     import httpx
 
     return httpx.ASGITransport(app=ctx_transport.app, raise_app_exceptions=False)
+
+
+@asynccontextmanager
+async def _open_role_client(
+    transport: Any,
+    base_url: str,
+    email: str,
+    password: str,
+) -> AsyncIterator[Any]:
+    """Yield an authenticated `httpx.AsyncClient` for one role user.
+
+    Single source of truth for the verifier's per-role client setup —
+    `_seed_baseline_rows` and `_probe_all_cells` both use it, so the client
+    construction (transport, base_url, follow_redirects) and the `_login`
+    round-trip can never drift between the two call sites.  The client is
+    closed when the context exits; a failed `_login` propagates after the
+    client is closed so callers can record the role as unverifiable.
+    """
+    import httpx
+
+    from dazzle.cli.rbac import _login
+
+    client = httpx.AsyncClient(
+        transport=transport,
+        base_url=base_url,
+        follow_redirects=True,
+    )
+    try:
+        await _login(client, base_url, email, password)
+    except Exception:
+        await client.aclose()
+        raise
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 
 def _create_capable_role(matrix: AccessMatrix, entity: str) -> str | None:
@@ -677,6 +717,13 @@ def _create_capable_role(matrix: AccessMatrix, entity: str) -> str | None:
     create gate.  This picks the first role from the static matrix whose
     decision for ``(role, entity, "create")`` is any PERMIT* variant, so the
     baseline POST goes through the same gate a real authorised user would.
+
+    Roles are iterated in ``matrix.roles`` order, which preserves the
+    persona-declaration order from the DSL.  "First capable role" is therefore
+    deterministic, but declaration-order-dependent: reordering personas in the
+    DSL can change which role seeds a given entity (the seeded row is
+    equivalent either way, so this only matters for reproducing a specific
+    run).
 
     Returns None when no role can create the entity (e.g. framework/admin
     entities exposed read-only) — such entities are legitimately un-seedable
@@ -719,13 +766,15 @@ async def _seed_baseline_rows(
     validation error) is omitted so callers can continue with the entities
     that did seed.
     """
-    import httpx
-
-    from dazzle.cli.rbac import _login
+    from contextlib import AsyncExitStack
 
     baseline: dict[str, str] = {}
-    role_clients: dict[str, httpx.AsyncClient] = {}
-    try:
+    # Role clients are opened lazily and cached for the duration of the call;
+    # the AsyncExitStack closes every one when this function returns. A role
+    # whose `_login` fails is recorded as `None` so it is not retried per
+    # entity — _probe_all_cells records the per-cell WARNING for it separately.
+    role_clients: dict[str, Any] = {}
+    async with AsyncExitStack() as stack:
         for entity in entities:
             role = _create_capable_role(matrix, entity)
             if role is None or role not in creds:
@@ -736,21 +785,18 @@ async def _seed_baseline_rows(
                 # Required FK with no seeded target — skip this entity.
                 continue
 
-            client = role_clients.get(role)
-            if client is None:
-                client = httpx.AsyncClient(
-                    transport=transport,
-                    base_url=base_url,
-                    follow_redirects=True,
-                )
+            if role not in role_clients:
                 try:
-                    await _login(client, base_url, *creds[role])
+                    role_clients[role] = await stack.enter_async_context(
+                        _open_role_client(transport, base_url, *creds[role])
+                    )
                 except Exception:
-                    # Role user cannot authenticate — skip; _probe_all_cells
-                    # records the per-cell WARNING for this role separately.
-                    await client.aclose()
-                    continue
-                role_clients[role] = client
+                    # Role user cannot authenticate — mark unverifiable so it
+                    # is not retried for the next entity owned by this role.
+                    role_clients[role] = None
+            client = role_clients[role]
+            if client is None:
+                continue
 
             plural = to_api_plural(entity)
             resp = await client.request(
@@ -766,9 +812,6 @@ async def _seed_baseline_rows(
                     row_id = None
                 if row_id:
                     baseline[entity] = str(row_id)
-    finally:
-        for client in role_clients.values():
-            await client.aclose()
     return baseline
 
 
@@ -794,9 +837,8 @@ async def _probe_all_cells(
     an app-boot failure (which happens before this is called) yields an
     empty report.
     """
-    import httpx
+    from contextlib import AsyncExitStack
 
-    from dazzle.cli.rbac import _login
     from dazzle.rbac.audit import InMemoryAuditSink, NullAuditSink, set_audit_sink
 
     cells: list[VerifiedCell] = []
@@ -806,13 +848,14 @@ async def _probe_all_cells(
         if role not in creds:
             continue
         email, password = creds[role]
-        async with httpx.AsyncClient(
-            transport=transport,
-            base_url=base_url,
-            follow_redirects=True,
-        ) as client:
+        # `_open_role_client` raises if `_login` fails; an AsyncExitStack lets
+        # the failure be caught here (to emit per-cell WARNINGs) while still
+        # closing the client deterministically on the success path.
+        async with AsyncExitStack() as stack:
             try:
-                await _login(client, base_url, email, password)
+                client = await stack.enter_async_context(
+                    _open_role_client(transport, base_url, email, password)
+                )
             except Exception as exc:
                 # The role user cannot authenticate — every cell for this
                 # role is unverifiable. Record one WARNING per cell.
@@ -846,9 +889,13 @@ async def _probe_all_cells(
                         # create/update are body-bearing verbs — without a
                         # valid body the request 422s on required-field
                         # validation before the RBAC gate is even reached,
-                        # masking the verdict. create uses a per-cell unique
-                        # suffix so a `unique` field never collides with the
-                        # baseline row.
+                        # masking the verdict.
+                        #
+                        # Only `create` gets a unique suffix: it inserts a new
+                        # row, so a `unique` field must not collide with the
+                        # baseline row. `update` is a PUT against the baseline
+                        # row itself — the value replaces itself, so there is
+                        # no unique-constraint collision and no suffix needed.
                         body: dict[str, Any] | None = None
                         if operation in ("create", "update"):
                             suffix = f"-{role}-{operation}" if operation == "create" else ""
