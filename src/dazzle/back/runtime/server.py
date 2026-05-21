@@ -564,6 +564,9 @@ class DazzleBackendApp:
 
         metadata = build_metadata(self._entities)
         sa_url = self._database_url
+        # Normalise Heroku-style postgres:// alias before adding driver suffix
+        if sa_url.startswith("postgres://"):
+            sa_url = sa_url.replace("postgres://", "postgresql://", 1)
         if sa_url.startswith("postgresql://"):
             sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
@@ -659,6 +662,9 @@ class DazzleBackendApp:
 
                 metadata = build_metadata(self._entities)
                 sa_url = self._database_url
+                # Normalise Heroku-style postgres:// alias before adding driver suffix
+                if sa_url.startswith("postgres://"):
+                    sa_url = sa_url.replace("postgres://", "postgresql://", 1)
                 if sa_url.startswith("postgresql://"):
                     sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
                 engine = _sa_create_engine(sa_url)

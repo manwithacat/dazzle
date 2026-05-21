@@ -204,6 +204,9 @@ class PostgresBackend:
     def _sa_url(self) -> str:
         """Return a SQLAlchemy-compatible URL using psycopg (v3) driver."""
         url = self.database_url
+        # Normalise Heroku-style postgres:// alias before adding driver suffix
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+psycopg://", 1)
         return url
