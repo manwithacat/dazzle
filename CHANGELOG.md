@@ -138,6 +138,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now rewrite `postgres://` → `postgresql://` at startup; both sync and async
   URL construction paths are covered. Tested in `tests/unit/test_pg_pool.py`.
 
+- **Parser raises `ParseError`, not a raw `ValueError`, for an invalid
+  service `kind:`**. `service.py` converted the `kind:` token directly via
+  `ir.DomainServiceKind(token.value)`, so a malformed kind (e.g. a keyword)
+  escaped as an uncaught `ValueError` instead of a clean `ParseError`. The
+  conversion is now guarded and raises `ParseError` with the valid kinds
+  listed, matching the existing `auth_profile`-kind handling in the same
+  file. Surfaced by `tests/unit/test_parser_fuzz.py`.
+
 - **FK-constrained DELETE returns HTTP 409, not 500** (#1178). The Cedar
   delete handler (`create_delete_handler._core`) called
   `service.execute(operation="delete")` with no `except` guard. When the
