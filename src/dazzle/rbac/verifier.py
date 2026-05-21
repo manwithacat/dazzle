@@ -27,6 +27,7 @@ from dazzle.rbac.matrix import AccessMatrix, PolicyDecision
 if TYPE_CHECKING:
     import httpx
 
+    from dazzle.back.runtime.auth.store import AuthStore
     from dazzle.back.runtime.server import DazzleBackendApp
     from dazzle.core.ir import AppSpec
 
@@ -336,10 +337,11 @@ _SUPERUSER_PASSWORD: str = "verifier-bootstrap-secret"  # nosec B105 — scratch
 
 @dataclass
 class _VerifierContext:
-    """Holds the booted AppSpec and an authenticated httpx client."""
+    """Holds the booted AppSpec, an authenticated httpx client, and the auth store."""
 
     appspec: AppSpec
     client: httpx.AsyncClient  # authenticated as superuser
+    auth_store: AuthStore | None
 
 
 @dataclass
@@ -445,11 +447,113 @@ async def _verifier_app_context(
         ) as client:
             if auth_store is not None:
                 await _login(client, "http://verifier.local", _SUPERUSER_EMAIL, _SUPERUSER_PASSWORD)
-            yield _VerifierContext(appspec=built.appspec, client=client)
+            yield _VerifierContext(appspec=built.appspec, client=client, auth_store=auth_store)
     finally:
         db_manager = getattr(built.builder, "_db_manager", None)
         if db_manager is not None:
             db_manager.close_pool()
+
+
+_VERIFIER_PASSWORD = "verify-test-password"  # nosec B105 — scratch DB only
+
+
+async def _seed_role_users(
+    auth_store: Any,
+    *,
+    roles: list[str],
+) -> dict[str, tuple[str, str]]:
+    """Create one user per role via auth_store. Returns {role: (email, password)}.
+
+    `create_user` is synchronous; this wrapper is async for uniformity with
+    other async verifier helpers so call sites can `await` it.
+    """
+    creds: dict[str, tuple[str, str]] = {}
+    for role in roles:
+        email = f"verify-{role}@dazzle.test"
+        existing = auth_store.get_user_by_email(email)
+        if existing is None:
+            auth_store.create_user(
+                email,
+                _VERIFIER_PASSWORD,
+                roles=[role],
+            )
+        creds[role] = (email, _VERIFIER_PASSWORD)
+    return creds
+
+
+def _minimal_body_for_entity(entity_name: str, appspec: Any) -> dict[str, Any]:
+    """Build the smallest valid JSON body for creating an entity row.
+
+    Iterates the entity's required non-PK fields and emits a representative
+    value for each field type.  Ref fields are omitted (FK not seeded yet);
+    callers should handle the 422 by omitting that entity.
+    """
+    from dazzle.core.ir.fields import FieldTypeKind
+
+    entity = next(
+        (e for e in (appspec.entities or []) if e.name == entity_name),
+        None,
+    )
+    if entity is None:
+        return {}
+
+    body: dict[str, Any] = {}
+    for field in entity.fields:
+        if not field.is_required:
+            continue
+        if field.is_primary_key:
+            continue
+        kind = field.type.kind
+        if kind == FieldTypeKind.REF:
+            # FK — dependent entity not seeded; skip and let caller handle 422.
+            continue
+        if kind in (FieldTypeKind.STR, FieldTypeKind.TEXT, FieldTypeKind.EMAIL):
+            body[field.name] = f"seed-{field.name}"
+        elif kind == FieldTypeKind.INT:
+            body[field.name] = 1
+        elif kind == FieldTypeKind.DECIMAL:
+            body[field.name] = "1.00"
+        elif kind == FieldTypeKind.BOOL:
+            body[field.name] = False
+        elif kind == FieldTypeKind.DATE:
+            body[field.name] = "2000-01-01"
+        elif kind == FieldTypeKind.DATETIME:
+            body[field.name] = "2000-01-01T00:00:00Z"
+        elif kind == FieldTypeKind.UUID:
+            body[field.name] = "00000000-0000-0000-0000-000000000001"
+        elif kind == FieldTypeKind.ENUM:
+            values = field.type.enum_values
+            body[field.name] = values[0] if values else ""
+        else:
+            body[field.name] = ""
+    return body
+
+
+async def _seed_baseline_rows(
+    client: Any,
+    *,
+    entities: list[str],
+    appspec: Any,
+) -> dict[str, str]:
+    """Create one baseline row per entity (client authenticated as superuser).
+
+    Returns {entity: row_id}. Entities whose create fails (e.g. missing FK
+    dependency) are omitted so callers can continue with the entities that
+    did seed successfully.
+    """
+    baseline: dict[str, str] = {}
+    for entity in entities:
+        body = _minimal_body_for_entity(entity, appspec)
+        plural = to_api_plural(entity)
+        resp = await client.request("POST", f"/api/{plural}", json=body)
+        if resp.status_code in (200, 201):
+            try:
+                row_id = resp.json().get("id")
+            except Exception:
+                row_id = None
+            if row_id:
+                baseline[entity] = str(row_id)
+    return baseline
 
 
 async def verify(
