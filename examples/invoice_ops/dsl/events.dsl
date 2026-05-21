@@ -2,7 +2,7 @@ module invoice_ops.events
 
 event_model:
   topic invoice_events:
-    retention: 365
+    retention: 730
     partition_key: invoice_id
 
   event InvoiceSubmitted:
@@ -19,6 +19,7 @@ event_model:
       invoice_id: uuid required
       tenant_id: uuid required
       approved_at: datetime required
+      currency: str required
 
   event InvoiceRejected:
     topic: invoice_events
