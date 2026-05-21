@@ -58,7 +58,9 @@ def compile_auditspec(taxonomy: Taxonomy, evidence: EvidenceMap) -> AuditSpec:
     # Assess each control
     results: list[ControlResult] = []
     for control in taxonomy.all_controls():
-        expected = {e.construct for e in control.dsl_evidence}
+        # Insertion-order-preserving dedup — keeps evidence ordering deterministic
+        # (follows YAML declaration order, not non-deterministic set iteration).
+        expected = list(dict.fromkeys(e.construct for e in control.dsl_evidence))
         matched: list[EvidenceItem] = []
         for category in expected:
             matched.extend(evidence_by_category.get(category, []))

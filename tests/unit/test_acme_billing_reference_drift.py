@@ -12,14 +12,17 @@ Regeneration commands (run from examples/acme_billing/):
 import json; from pathlib import Path
 d = json.loads(Path('.dazzle/compliance/output/iso27001/auditspec.json').read_text())
 d.pop('generated_at', None)
+d.pop('dsl_source', None)
 Path('expected/compliance-auditspec.json').write_text(json.dumps(d, indent=2))
 "
 
 Volatile content normalisation
-  - compliance-auditspec.json: ``generated_at`` is stripped before comparison
-    (it embeds a UTC timestamp — the committed copy is stored without it).
-    The compile command writes to .dazzle/compliance/output/iso27001/auditspec.json;
-    the test reads from that path after running the command.
+  - compliance-auditspec.json: ``generated_at`` (a UTC timestamp) and
+    ``dsl_source`` (a machine-absolute project path — differs between dev
+    boxes and CI runners) are stripped before comparison. The committed copy
+    is stored without either field. The compile command writes to
+    .dazzle/compliance/output/iso27001/auditspec.json; the test reads from
+    that path after running the command.
   - rbac-matrix.json: fully deterministic, no normalisation required.
 """
 
@@ -28,14 +31,25 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
-_APP = Path("examples/acme_billing")
+# Anchor paths to the repo root, not pytest's launch directory (#1174).
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_APP = _REPO_ROOT / "examples" / "acme_billing"
 _AUDITSPEC_PATH = _APP / ".dazzle" / "compliance" / "output" / "iso27001" / "auditspec.json"
 
+# Fields stripped before comparison — volatile or machine-specific.
+_VOLATILE_AUDITSPEC_FIELDS = ("generated_at", "dsl_source")
 
-def _normalise_auditspec(d: dict) -> dict:
-    """Remove the volatile ``generated_at`` field from a parsed auditspec dict."""
-    d.pop("generated_at", None)
+
+def _normalise_auditspec(d: dict[str, Any]) -> dict[str, Any]:
+    """Drop volatile/machine-specific top-level fields from a parsed auditspec.
+
+    ``generated_at`` is a per-run UTC timestamp; ``dsl_source`` is the
+    machine-absolute project path. Both would cause spurious drift failures.
+    """
+    for field in _VOLATILE_AUDITSPEC_FIELDS:
+        d.pop(field, None)
     return d
 
 
@@ -64,8 +78,8 @@ def test_rbac_matrix_matches_committed_reference() -> None:
 def test_compliance_auditspec_matches_committed_reference() -> None:
     """Compliance auditspec must match committed expected/compliance-auditspec.json.
 
-    ``generated_at`` is stripped from both sides before comparison (it embeds a
-    UTC timestamp and would cause spurious failures on every run).
+    ``generated_at`` (timestamp) and ``dsl_source`` (machine-absolute path) are
+    stripped from both sides before comparison — see ``_normalise_auditspec``.
 
     The ``compile`` command writes to .dazzle/compliance/output/iso27001/auditspec.json;
     the test reads from that canonical output path rather than stdout (which mixes
@@ -90,7 +104,7 @@ def test_compliance_auditspec_matches_committed_reference() -> None:
         "  2. python -m dazzle compliance compile\n"
         '  3. python3 -c "import json; from pathlib import Path; '
         "d=json.loads(Path('.dazzle/compliance/output/iso27001/auditspec.json').read_text()); "
-        "d.pop('generated_at', None); "
+        "d.pop('generated_at', None); d.pop('dsl_source', None); "
         "Path('expected/compliance-auditspec.json').write_text(json.dumps(d, indent=2))\"\n"
         "  4. Review the diff\n"
         "  5. Add a CHANGELOG entry under Changed\n"

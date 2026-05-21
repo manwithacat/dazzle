@@ -28,8 +28,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   route was silently skipped ("no service for scope enforcement") whenever
   auth was enabled. The server now re-keys services by `CRUDService.
   entity_name` for the bulk-route call.
+- **Compliance auditspec evidence ordering is now deterministic** (#1174).
+  `assess_controls` built each control's expected-construct set with a
+  `set` comprehension; iterating it later ordered evidence items
+  non-deterministically (Python set iteration varies by process hash
+  seed), so `dazzle compliance compile` emitted a different
+  `auditspec.json` roughly half the time. Replaced with an
+  insertion-order-preserving `dict.fromkeys` dedup — evidence now
+  follows taxonomy YAML declaration order on every run.
 
 ### Added
+
+- **Drift-gated reference outputs for `examples/acme_billing`** (#1174).
+  `examples/acme_billing/expected/` commits `rbac-matrix.json` (from
+  `dazzle rbac matrix`) and `compliance-auditspec.json` (from
+  `dazzle compliance compile`). `tests/unit/test_acme_billing_reference_drift.py`
+  regenerates both and diffs against the committed copies, so a framework
+  change that alters either output fails fast. The volatile `generated_at`
+  timestamp and machine-absolute `dsl_source` path are stripped before
+  comparison. Same pattern as `docs/api-surface/` + `test_api_surface_drift.py`.
 
 - **`examples/acme_billing` adversarial RBAC suite** (#1174). A new
   multi-tenant billing example plus
