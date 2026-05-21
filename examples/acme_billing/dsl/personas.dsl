@@ -1,0 +1,26 @@
+module acme_billing.personas
+
+persona admin "Administrator":
+  description: "Platform administrator — full cross-org access (break-glass)"
+  goals: "Manage organizations", "Audit access"
+  proficiency: expert
+
+persona org_owner "Organization Owner":
+  description: "Owns one organization — full access within that org only"
+  goals: "Manage projects", "Review invoices"
+  proficiency: expert
+
+persona auditor "Auditor":
+  description: "Read-only reviewer scoped to one organization"
+  goals: "Review invoices and projects", "Verify compliance"
+  proficiency: intermediate
+
+persona project_member "Project Member":
+  description: "Works on assigned projects only"
+  goals: "View assigned projects", "View project invoices"
+  proficiency: intermediate
+
+persona external_contractor "External Contractor":
+  description: "Limited outside collaborator — non-sensitive data on assigned projects"
+  goals: "View assigned non-sensitive project data"
+  proficiency: novice
