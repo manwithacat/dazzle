@@ -738,6 +738,30 @@ class ServiceFactory:
         """Get a service by name."""
         return self._services.get(name)
 
+    def services_by_entity(self) -> dict[str, BaseService[Any]]:
+        """Map entity name -> a service wrapping that entity's repository.
+
+        `_services` is keyed by *service* name (`list_invoices`,
+        `read_invoices`, ...). Multiple `CRUDService`s can exist per entity
+        (one per surface mode) but all wrap the same repository, so
+        last-write-wins on a key collision is benign. `CustomService`
+        instances carry no `entity_name` and are skipped.
+        """
+        return {
+            entity_name: service
+            for service in self._services.values()
+            if (entity_name := getattr(service, "entity_name", None))
+        }
+
+    def service_for_entity(self, entity_name: str) -> BaseService[Any] | None:
+        """Return a service wrapping `entity_name`'s repository, or None.
+
+        Use this instead of `_services.get(entity_name)` — the latter keys by
+        service name and silently resolves to None for entity-name callers
+        (#1181).
+        """
+        return self.services_by_entity().get(entity_name)
+
     def create_all_services(
         self,
         specs: list[ServiceSpec],

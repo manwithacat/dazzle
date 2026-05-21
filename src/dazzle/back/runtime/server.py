@@ -292,6 +292,7 @@ class DazzleBackendApp:
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
+        self._service_factory: ServiceFactory | None = None
         self._repositories: dict[str, Any] = {}
         self._db_manager: PostgresBackend | None = None
         self._auth_store: AuthStore | None = None
@@ -747,6 +748,7 @@ class DazzleBackendApp:
         entity_specs = {entity.name: entity for entity in self._entities}
 
         factory = ServiceFactory(self._models, state_machines, entity_specs)
+        self._service_factory = factory
         self._services = factory.create_all_services(
             self._service_specs,
             self._schemas,
@@ -1290,6 +1292,10 @@ class DazzleBackendApp:
         # bypass permit/scope" gap surfaced by #1126.
         from dazzle.back.runtime.policy import EntityPolicyInfo, PolicyRegistry
 
+        # `_services` is keyed by service name; resolve an entity-keyed view
+        # once so both the `service=` lookup and the entity-set enumeration
+        # below see entity names, not service names (#1181).
+        _services_by_entity = self._services_by_entity()
         policy_registry = PolicyRegistry(
             entities={
                 entity_name: EntityPolicyInfo(
@@ -1297,11 +1303,11 @@ class DazzleBackendApp:
                     cedar_access_spec=cedar_access_specs.get(entity_name),
                     fk_graph=_fk_graph,
                     admin_personas=list(_admin_personas),
-                    service=self._services.get(entity_name),
+                    service=_services_by_entity.get(entity_name),
                 )
                 for entity_name in {
                     *cedar_access_specs.keys(),
-                    *self._services.keys(),
+                    *_services_by_entity.keys(),
                 }
             }
         )
@@ -1346,7 +1352,7 @@ class DazzleBackendApp:
             )
 
             audit_history_router = create_audit_history_routes(
-                audit_service=self._services.get("AuditEntry"),
+                audit_service=self.service_for_entity("AuditEntry"),
                 audits=list(self._appspec.audits),
                 auth_dep=auth_dep,
             )
@@ -1480,21 +1486,13 @@ class DazzleBackendApp:
             # `create_bulk_routes` expects `services` keyed by entity name
             # (it gates each bulk route on `entity_name in services` for the
             # scope-aware pre-read). `self._services` is keyed by *service*
-            # name (`list_invoices`, ...), so re-key by `CRUDService.
-            # entity_name` here — otherwise every bulk route is silently
-            # skipped under auth ("no service for scope enforcement").
-            # Multiple CRUDServices can exist per entity (one per surface
-            # mode); any one is interchangeable for the bulk route's
-            # scope-pre-read, so last-write-wins on the key collision is benign.
-            _bulk_services = {
-                getattr(svc, "entity_name", name): svc
-                for name, svc in self._services.items()
-                if getattr(svc, "entity_name", None)
-            }
+            # name (`list_invoices`, ...), so pass the entity-keyed view
+            # (#1181) — otherwise every bulk route is silently skipped under
+            # auth ("no service for scope enforcement").
             bulk_router = create_bulk_routes(
                 list(self._appspec.surfaces),
                 repositories=self._repositories,
-                services=_bulk_services,
+                services=self._services_by_entity(),
                 cedar_access_specs=cedar_access_specs,
                 fk_graph=_fk_graph,
                 optional_auth_dep=optional_auth_dep,
@@ -1599,6 +1597,28 @@ class DazzleBackendApp:
     def get_service(self, name: str) -> Any | None:
         """Get a service by name."""
         return self._services.get(name)
+
+    def _services_by_entity(self) -> dict[str, Any]:
+        """Entity-name-keyed view of the services (#1181).
+
+        `_services` is keyed by *service* name (`list_invoices`, ...), so an
+        entity-name lookup against it silently misses. Delegates to the
+        `ServiceFactory`, which owns the keying.
+        """
+        if self._service_factory is None:
+            return {}
+        return self._service_factory.services_by_entity()
+
+    def service_for_entity(self, entity_name: str) -> Any | None:
+        """Return a service wrapping `entity_name`'s repository, or None.
+
+        Use this instead of `_services.get(entity_name)` — the latter keys by
+        service name and silently resolves to None for entity-name callers
+        (#1181).
+        """
+        if self._service_factory is None:
+            return None
+        return self._service_factory.service_for_entity(entity_name)
 
     @property
     def auth_store(self) -> AuthStore | None:

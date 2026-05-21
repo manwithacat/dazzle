@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Entity-name service lookups no longer silently resolve to `None`**
+  (#1181). `ServiceFactory._services` (and `DazzleServer._services`) is keyed
+  by *service* name (`list_invoices`, `read_invoices`, ...), so
+  `_services.get(entity_name)` always missed. The `PolicyRegistry`
+  construction in `server.py` did exactly that — every `EntityPolicyInfo`
+  got `service=None` — and additionally enumerated *service* names into the
+  registry's entity set. `ServiceFactory` now exposes `services_by_entity()`
+  and `service_for_entity()`; `DazzleServer.service_for_entity()` delegates
+  to them. The `PolicyRegistry` build, the audit-history route wiring, and
+  the bulk-routes service map all route through the entity-keyed view (the
+  bulk-routes path had a local re-keying workaround from #1174, now removed
+  in favour of the shared accessor).
+
 - **`not (...)` composes as an operand of `and`/`or` in `scope:` rules**
   (#1180). The parenthesised-negation form only parsed as a standalone
   top-level scope condition: `_parse_primary_condition` in
