@@ -2906,6 +2906,8 @@ def create_read_handler(spec: RouteSpec) -> Callable[..., Any]:
     # double-fetch.  So for Cedar-READ we inline a lightweight wrapper that
     # fetches once, evaluates, then returns.
     _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+    fk_graph = spec.handler.fk_graph
+    admin_personas = spec.handler.admin_personas
     if _use_cedar:
 
         async def _read_cedar(
@@ -2915,9 +2917,52 @@ def create_read_handler(spec: RouteSpec) -> Callable[..., Any]:
             from dazzle.core.access import AccessDecision, AccessOperationKind
             from dazzle.render.access_evaluator import evaluate_permission
 
-            result = await service.execute(operation="read", id=id, include=auto_include)
+            # Apply `scope: read:` row-level enforcement (#1174). Before this,
+            # the single-id READ path fetched the row unscoped and only ran the
+            # Cedar permit/forbid evaluator — so a role holding `permit: read`
+            # plus a `scope: read:` row-filter (e.g. `project.org =
+            # current_user.org`) could IDOR-fetch *any* row by id, cross-tenant.
+            # `_scoped_pre_read` re-queries through the scope predicate (the
+            # same path UPDATE/DELETE use) and returns None — yielding a 404 —
+            # when the row is outside the caller's scope.
+            assert cedar_access_spec is not None
+            result = await _scoped_pre_read(
+                service=service,
+                operation="read",
+                id=id,
+                cedar_access_spec=cedar_access_spec,
+                auth_context=auth_context,
+                entity_name=entity_name,
+                fk_graph=fk_graph,
+                admin_personas=admin_personas,
+            )
             if result is None:
+                # Scope filter hid the row (or it does not exist). Record the
+                # deny in the audit trail — a scope-denied read is an
+                # access-control decision and `audit: all` entities must
+                # capture it — then 404 (row-existence opaque to the caller).
+                if audit_logger:
+                    _u, _ = _build_access_context(auth_context)
+                    await _log_audit_decision(
+                        audit_logger,
+                        request,
+                        operation="read",
+                        entity_name=entity_name,
+                        entity_id=str(id),
+                        decision="deny",
+                        matched_policy="scope",
+                        policy_effect="scope",
+                        user=_u,
+                    )
                 raise HTTPException(status_code=404, detail="Not found")
+            # `_scoped_pre_read` may return a row fetched via the list path,
+            # which does not carry `include=auto_include` relations. Re-fetch
+            # through the read path so the response shape is unchanged when a
+            # scope filter was applied.
+            if auto_include:
+                hydrated = await service.execute(operation="read", id=id, include=auto_include)
+                if hydrated is not None:
+                    result = hydrated
 
             user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None

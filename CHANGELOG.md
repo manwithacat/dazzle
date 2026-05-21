@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Single-id reads now enforce `scope:` row filters** (#1174). The
+  generated `GET /<entity>/<id>` handler fetched the row unscoped and
+  ran only the Cedar permit/forbid evaluator — so a role holding
+  `permit: read` plus a `scope: read:` row filter (e.g.
+  `project.org = current_user.org`, or a compound `... and sensitive
+  != true`) could fetch *any* row by id, cross-tenant. This is an IDOR
+  hole: `list` was scoped correctly but `read` was not. The READ
+  handler now routes through `_scoped_pre_read` — the same scope path
+  UPDATE/DELETE already use — and returns 404 when the row is outside
+  the caller's scope, leaving the row's existence opaque. A
+  scope-denied read also writes a `deny` record to `_dazzle_audit_log`.
+- **Bulk-action endpoints register under auth** (#1174). `create_bulk_routes`
+  gates each route on `entity_name in services`, but the server passed a
+  services dict keyed by *service* name (`list_invoices`), so every bulk
+  route was silently skipped ("no service for scope enforcement") whenever
+  auth was enabled. The server now re-keys services by `CRUDService.
+  entity_name` for the bulk-route call.
+
+### Added
+
+- **`examples/acme_billing` adversarial RBAC suite** (#1174). A new
+  multi-tenant billing example plus
+  `tests/integration/test_acme_billing_rbac.py` — 8 `e2e`+`postgres`
+  tests that boot the app in-process and adversarially probe RBAC:
+  cross-tenant IDOR, list isolation, compound (`!=`) sensitivity scope,
+  the bulk-action permit gate, read-only roles, EXISTS-via-junction
+  scope, the admin cross-org positive control, and the audit trail.
+  `acme_billing` gains `create`/`edit` surfaces and an Invoice
+  `bulk_actions:` block.
+
+### Agent Guidance
+
+- **`current_user.<attr>` resolves from the domain `User` entity row**,
+  matched by the auth user's email (`AuthStore._load_domain_user_attributes`).
+  A seeded test user that needs `current_user.org` to resolve must have
+  *both* an auth `users` row and a domain `User` entity row sharing one
+  email — see `tests/integration/test_acme_billing_rbac.py` for the
+  canonical fixture pattern.
+
 ## [0.71.91] - 2026-05-21
 
 ### Added

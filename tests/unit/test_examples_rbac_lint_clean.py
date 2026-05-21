@@ -40,6 +40,11 @@ _KNOWN_EXAMPLES = [
     # permit: rules at all, so no PERMIT_NO_SCOPE warnings can fire —
     # included to keep the discovery gate honest.
     "custom_renderer",
+    # #1174 — multi-tenant billing app. Canonical adversarial-RBAC
+    # teaching example: direct-equality, FK-path, EXISTS-via-junction
+    # and compound (`!=`) scope rules, exercised by the adversarial
+    # suite in tests/integration/test_acme_billing_rbac.py.
+    "acme_billing",
 ]
 
 # Examples that live under `examples/` but are NOT covered by the dogfood

@@ -24,6 +24,22 @@ surface organization_detail "Organization":
     field name "Name"
     field created_at "Created"
 
+surface organization_create "Create Organization":
+  uses entity Organization
+  mode: create
+  render: fragment
+
+  section main "New Organization":
+    field name "Name"
+
+surface organization_edit "Edit Organization":
+  uses entity Organization
+  mode: edit
+  render: fragment
+
+  section main "Organization":
+    field name "Name"
+
 # =============================================================================
 # USER SURFACES
 # =============================================================================
@@ -50,6 +66,26 @@ surface user_detail "User":
     field org "Organization"
     field created_at "Created"
 
+surface user_create "Create User":
+  uses entity User
+  mode: create
+  render: fragment
+
+  section main "New User":
+    field email "Email"
+    field name "Name"
+    field org "Organization"
+
+surface user_edit "Edit User":
+  uses entity User
+  mode: edit
+  render: fragment
+
+  section main "User":
+    field email "Email"
+    field name "Name"
+    field org "Organization"
+
 # =============================================================================
 # PROJECT SURFACES
 # =============================================================================
@@ -74,6 +110,24 @@ surface project_detail "Project":
     field org "Organization"
     field created_at "Created"
 
+surface project_create "Create Project":
+  uses entity Project
+  mode: create
+  render: fragment
+
+  section main "New Project":
+    field name "Name"
+    field org "Organization"
+
+surface project_edit "Edit Project":
+  uses entity Project
+  mode: edit
+  render: fragment
+
+  section main "Project":
+    field name "Name"
+    field org "Organization"
+
 # =============================================================================
 # INVOICE SURFACES
 # =============================================================================
@@ -90,6 +144,14 @@ surface invoice_list "Invoices":
     field sensitive "Sensitive"
     field created_at "Created"
 
+  # Bulk sensitivity transitions — the runtime mounts POST /api/invoices/bulk.
+  # The endpoint enforces the Invoice `update` permit gate (admin / org_owner
+  # only), so auditor / project_member / external_contractor are denied (#1170).
+  ux:
+    bulk_actions:
+      mark_sensitive: sensitive -> true
+      mark_public: sensitive -> false
+
 surface invoice_detail "Invoice":
   uses entity Invoice
   mode: view
@@ -101,6 +163,28 @@ surface invoice_detail "Invoice":
     field project "Project"
     field sensitive "Sensitive"
     field created_at "Created"
+
+surface invoice_create "Create Invoice":
+  uses entity Invoice
+  mode: create
+  render: fragment
+
+  section main "New Invoice":
+    field number "Number"
+    field amount "Amount"
+    field project "Project"
+    field sensitive "Sensitive"
+
+surface invoice_edit "Edit Invoice":
+  uses entity Invoice
+  mode: edit
+  render: fragment
+
+  section main "Invoice":
+    field number "Number"
+    field amount "Amount"
+    field project "Project"
+    field sensitive "Sensitive"
 
 # =============================================================================
 # MEMBERSHIP SURFACES
@@ -121,6 +205,24 @@ surface membership_detail "Membership":
   render: fragment
 
   section main "Membership Details":
+    field user "User"
+    field project "Project"
+
+surface membership_create "Create Membership":
+  uses entity Membership
+  mode: create
+  render: fragment
+
+  section main "New Membership":
+    field user "User"
+    field project "Project"
+
+surface membership_edit "Edit Membership":
+  uses entity Membership
+  mode: edit
+  render: fragment
+
+  section main "Membership":
     field user "User"
     field project "Project"
 

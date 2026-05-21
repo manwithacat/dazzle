@@ -1471,10 +1471,21 @@ class DazzleBackendApp:
         if self._repositories and self._appspec.surfaces:
             from dazzle.back.runtime.bulk_routes import create_bulk_routes
 
+            # `create_bulk_routes` expects `services` keyed by entity name
+            # (it gates each bulk route on `entity_name in services` for the
+            # scope-aware pre-read). `self._services` is keyed by *service*
+            # name (`list_invoices`, ...), so re-key by `CRUDService.
+            # entity_name` here — otherwise every bulk route is silently
+            # skipped under auth ("no service for scope enforcement").
+            _bulk_services = {
+                getattr(svc, "entity_name", name): svc
+                for name, svc in self._services.items()
+                if getattr(svc, "entity_name", None)
+            }
             bulk_router = create_bulk_routes(
                 list(self._appspec.surfaces),
                 repositories=self._repositories,
-                services=self._services,
+                services=_bulk_services,
                 cedar_access_specs=cedar_access_specs,
                 fk_graph=_fk_graph,
                 optional_auth_dep=optional_auth_dep,
