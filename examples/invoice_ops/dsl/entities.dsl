@@ -22,7 +22,7 @@ entity Tenant "Tenant":
     list: role(requester) or role(approver) or role(finance) or role(auditor) or role(tenant_admin)
 
   scope:
-    create: id = current_user.tenant_id
+    create: all
       as: tenant_admin
     read: id = current_user.tenant_id
       as: requester, approver, finance, auditor, tenant_admin
@@ -68,6 +68,8 @@ entity User "User":
     list: tenant_id = current_user.tenant_id
       as: auditor, tenant_admin
 
+  audit: all
+
 # =============================================================================
 # SUPPLIER — a supplier billing a tenant. bank_reference is a sensitive field.
 # =============================================================================
@@ -82,6 +84,7 @@ entity Supplier "Supplier":
   bank_reference: str(64) required
   region: enum[emea,amer,apac]=emea
   created_at: datetime auto_add
+  updated_at: datetime auto_update
 
   permit:
     create: role(finance) or role(tenant_admin)
@@ -102,6 +105,8 @@ entity Supplier "Supplier":
     list: tenant_id = current_user.tenant_id
       as: requester, approver, finance, auditor, tenant_admin
 
+  audit: all
+
 # =============================================================================
 # INVOICE — the lifecycle entity. State machine + event publishing live here.
 # =============================================================================
@@ -114,7 +119,7 @@ entity Invoice "Invoice":
   invoice_number: str(40) required
   supplier: ref Supplier required
   amount: decimal(15,2) required
-  currency: str(3)=GBP
+  currency: str(3)="GBP"
   status: enum[draft,submitted,approved,rejected,disputed,paid]=draft
   submitted_by: ref User optional
   rejection_reason: text optional
@@ -170,6 +175,7 @@ entity LineItem "Line Item":
   description: str(200) required
   quantity: int=1
   unit_amount: decimal(15,2) required
+  created_at: datetime auto_add
 
   permit:
     create: role(requester)
@@ -189,6 +195,8 @@ entity LineItem "Line Item":
       as: requester
     list: tenant_id = current_user.tenant_id
       as: requester, approver, finance, auditor, tenant_admin
+
+  audit: all
 
 # =============================================================================
 # PAYMENT ATTEMPT — one attempt to settle an approved invoice.
