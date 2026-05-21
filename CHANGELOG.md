@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **FK-constrained DELETE returns HTTP 409, not 500** (#1178). The Cedar
+  delete handler (`create_delete_handler._core`) called
+  `service.execute(operation="delete")` with no `except` guard. When the
+  row is referenced by child records, `Repository.delete()` re-raises the
+  psycopg `IntegrityError` as a `ValueError`, which propagated unhandled as
+  an HTTP 500. The handler now catches `ValueError` and raises
+  `HTTPException(409, detail=...)` — the same guard the legacy `delete_item`
+  route already had.
+
 ## [0.71.94] - 2026-05-21
 
 ### Fixed

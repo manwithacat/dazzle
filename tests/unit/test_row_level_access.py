@@ -477,6 +477,52 @@ class TestDeleteHandlerCedar:
             await handler(uuid4(), request, auth_ctx)
         assert exc_info.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_delete_fk_constraint_returns_409(self) -> None:
+        """An FK-constrained delete surfaces as 409, not an unhandled 500 (#1178).
+
+        `Repository.delete()` re-raises a psycopg IntegrityError as a
+        ValueError; the Cedar delete handler must translate that into a 409.
+        """
+        from fastapi import HTTPException
+
+        record_id = str(uuid4())
+        service = _make_service(
+            {record_id: {"id": record_id, "title": "Test", "owner_id": "user-1"}}
+        )
+
+        async def _execute_fk_block(operation: str = "read", **kwargs: object) -> object:
+            if operation == "delete":
+                raise ValueError("Cannot delete Task: referenced by 3 child records")
+            record = {record_id: {"id": record_id, "title": "Test", "owner_id": "user-1"}}
+            if operation == "read":
+                rid = str(kwargs.get("id", ""))
+                return TaskModel(**record[rid]) if rid in record else None
+            return None
+
+        service.execute = AsyncMock(side_effect=_execute_fk_block)
+        auth_ctx = _make_auth_context(roles=["admin"])
+        spec = EntityAccessSpec(
+            permissions=[_permit_rule(AccessOperationKind.DELETE, _role_check("admin"))]
+        )
+
+        handler = create_delete_handler(
+            RouteSpec(
+                handler=HandlerConfig(
+                    cedar_access_spec=spec,
+                    optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+                    entity_name="Task",
+                ),
+                service=service,
+            ),
+        )
+
+        request = _make_request(method="DELETE")
+        with pytest.raises(HTTPException) as exc_info:
+            await handler(UUID(record_id), request, auth_ctx)
+        assert exc_info.value.status_code == 409
+        assert "child records" in str(exc_info.value.detail)
+
 
 # =============================================================================
 # Forbid takes precedence in handlers

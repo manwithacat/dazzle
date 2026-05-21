@@ -3509,7 +3509,13 @@ def create_delete_handler(spec: RouteSpec) -> Callable[..., Any]:
         existing: Any = None,
         **_extra: Any,
     ) -> Any:
-        result = await service.execute(operation="delete", id=id)
+        try:
+            result = await service.execute(operation="delete", id=id)
+        except ValueError as exc:
+            # FK constraint violation — entity is referenced by child records.
+            # `Repository.delete()` re-raises the psycopg IntegrityError as a
+            # ValueError; without this guard it surfaces as an unhandled 500.
+            raise HTTPException(status_code=409, detail=str(exc))
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
         return _with_htmx_triggers(
