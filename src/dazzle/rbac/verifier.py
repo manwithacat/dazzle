@@ -261,14 +261,23 @@ async def _probe_cell(
     `client` is an authenticated httpx.AsyncClient (cookies already set).
     `baseline_id` is the seeded row for read/update/delete; ignored for
     list/create. `count` is the item count of a list response, else None.
+
+    The generated entity CRUD routes are mounted at ``/<plural>`` and
+    ``/<plural>/<id>`` (no ``/api`` prefix — see `RouteGenerator` /
+    `route_generator.py`). The mutating verbs (POST/PATCH/DELETE) pass
+    through the double-submit CSRF middleware, so this echoes the client's
+    `dazzle_csrf` cookie back as the X-CSRF-Token header for those verbs.
     """
     method, needs_id, has_body = _PROBE_VERBS[operation]
     plural = to_api_plural(entity)
-    url = f"/api/{plural}/{baseline_id}" if needs_id else f"/api/{plural}"
+    url = f"/{plural}/{baseline_id}" if needs_id else f"/{plural}"
 
     kwargs: dict[str, Any] = {}
     if has_body:
         kwargs["json"] = body or {}
+    # POST/PATCH/DELETE are CSRF-protected; GET (list/read) is not.
+    if method in ("POST", "PATCH", "PUT", "DELETE"):
+        kwargs["headers"] = _csrf_headers(client)
 
     response = await client.request(method, url, **kwargs)
 
