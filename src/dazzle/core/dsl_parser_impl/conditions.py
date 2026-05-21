@@ -82,6 +82,19 @@ class ConditionParserMixin:
             self.expect(TokenType.RPAREN)
             return expr
 
+        # Handle `not (condition)` as a primary — so a negated group can be an
+        # operand of `and`/`or` (#1180). The top-level scope dispatcher has its
+        # own `not via` / `not (...)` handling; the `via` form is unreachable
+        # here (no VIA token inside parse_condition_expr), so this only needs
+        # the parenthesised form. `ConditionExpr(operator=NOT, left=inner)`
+        # matches the shape `_parse_not_scope_condition` produces.
+        if self.match(TokenType.NOT) and self.peek_token().type == TokenType.LPAREN:
+            self.advance()  # consume 'not'
+            self.advance()  # consume '('
+            inner = self._parse_or_expr()
+            self.expect(TokenType.RPAREN)
+            return ir.ConditionExpr(operator=ir.LogicalOperator.NOT, left=inner)
+
         # Handle role(name) - standalone role check (v0.7.0)
         if self.match(TokenType.ROLE):
             self.advance()

@@ -631,3 +631,79 @@ entity Document "Document":
     inner = expr.left
     assert inner.comparison is not None
     assert inner.comparison.field == "status"
+
+
+def test_not_parenthesised_as_and_operand() -> None:
+    """`not (...)` is accepted as the right operand of `and` (#1180).
+
+    Before #1180 the `not (...)` form was only wired at the top-level scope
+    dispatcher; nested inside `and`/`or` it fell through to the comparison
+    parser and raised "Expected comparison operator, got (".
+    """
+    from dazzle.core.ir.conditions import LogicalOperator
+
+    dsl = """
+module test
+app test "Test"
+
+entity Document "Document":
+  status: enum[draft, active, archived] required
+  org: ref Org required
+  owner: ref User required
+
+  permit:
+    list: role(editor)
+
+  scope:
+    list: org = current_user.org and not (status = archived)
+      as: editor
+"""
+    fragment = _parse(dsl)
+    doc = [e for e in fragment.entities if e.name == "Document"][0]
+    assert doc.access is not None
+    scope_rule = doc.access.scopes[0]
+    expr = scope_rule.condition
+    assert expr is not None
+    # Top level is AND: left = org comparison, right = NOT(status = archived)
+    assert expr.operator == LogicalOperator.AND
+    assert expr.left is not None and expr.left.comparison is not None
+    assert expr.left.comparison.field == "org"
+    assert expr.right is not None
+    assert expr.right.operator == LogicalOperator.NOT
+    assert expr.right.left is not None
+    assert expr.right.left.comparison is not None
+    assert expr.right.left.comparison.field == "status"
+
+
+def test_not_parenthesised_as_or_operand() -> None:
+    """`not (...)` is accepted as an operand of `or` (#1180)."""
+    from dazzle.core.ir.conditions import LogicalOperator
+
+    dsl = """
+module test
+app test "Test"
+
+entity Document "Document":
+  status: enum[draft, active, archived] required
+  owner: ref User required
+
+  permit:
+    list: role(editor)
+
+  scope:
+    list: not (status = archived) or owner = current_user
+      as: editor
+"""
+    fragment = _parse(dsl)
+    doc = [e for e in fragment.entities if e.name == "Document"][0]
+    scope_rule = doc.access.scopes[0]
+    expr = scope_rule.condition
+    assert expr is not None
+    assert expr.operator == LogicalOperator.OR
+    assert expr.left is not None
+    assert expr.left.operator == LogicalOperator.NOT
+    assert expr.left.left is not None
+    assert expr.left.left.comparison is not None
+    assert expr.left.left.comparison.field == "status"
+    assert expr.right is not None and expr.right.comparison is not None
+    assert expr.right.comparison.field == "owner"

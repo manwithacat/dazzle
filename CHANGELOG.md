@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`not (...)` composes as an operand of `and`/`or` in `scope:` rules**
+  (#1180). The parenthesised-negation form only parsed as a standalone
+  top-level scope condition: `_parse_primary_condition` in
+  `dsl_parser_impl/conditions.py` had no `not (...)` branch, so
+  `org = current_user.org and not (sensitive = true)` failed with
+  `Expected comparison operator, got (`. `_parse_primary_condition` now
+  accepts `not (` as a primary, and the top-level scope dispatcher routes a
+  leading `not (...)` through the general expression parser (only `not via`
+  keeps its dedicated path) — so a negated group composes in either operand
+  position. `_parse_not_scope_condition` is renamed `_parse_not_via_condition`
+  and now handles only the `not via` form.
+
 - **FK-constrained DELETE returns HTTP 409, not 500** (#1178). The Cedar
   delete handler (`create_delete_handler._core`) called
   `service.execute(operation="delete")` with no `except` guard. When the
