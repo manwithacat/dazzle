@@ -15,6 +15,7 @@ class FieldStrategy(StrEnum):
     """Strategy for generating field values."""
 
     STATIC_LIST = "static_list"
+    SEQUENTIAL = "sequential"
     ENUM_WEIGHTED = "enum_weighted"
     PERSON_NAME = "person_name"
     COMPANY_NAME = "company_name"

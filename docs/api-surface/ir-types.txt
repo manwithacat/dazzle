@@ -3646,6 +3646,7 @@ enum: FieldStrategy
     - HASHED_PASSWORD_PLACEHOLDER = 'hashed_password_placeholder'
     - NUMERIC_RANGE = 'numeric_range'
     - PERSON_NAME = 'person_name'
+    - SEQUENTIAL = 'sequential'
     - STATIC_LIST = 'static_list'
     - USERNAME_FROM_NAME = 'username_from_name'
     - UUID_GENERATE = 'uuid_generate'

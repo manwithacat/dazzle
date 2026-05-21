@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Demo-data blueprint per-tenant FK balancing + `sequential` strategy**
+  (#1182). The blueprint generator's `foreign_key` strategy picked its
+  target via `random.choice` over *all* generated rows of the target
+  entity, so a multi-tenant blueprint could pile every child row under one
+  tenant (and even pair a child with a parent in a different tenant).
+  `foreign_key` now accepts an opt-in `within_tenant: true` param that
+  restricts the pick to target rows sharing the current row's `tenant_id`
+  (falling back to the full pool when the row has no `tenant_id` or none
+  matches — single-tenant blueprints are unaffected). A new
+  `FieldStrategy.SEQUENTIAL` (`sequential`) strategy cycles a `values` list
+  by row index, guaranteeing an even spread (e.g. ">=1 row per tenant")
+  where `static_list`'s random pick would cluster. The row index is now
+  threaded into the per-row generation context. Both additions are
+  opt-in — existing blueprints generate identically.
+
 ### Changed
 
 - **`rbac/verifier.py` split into three modules** (#1177). The file had

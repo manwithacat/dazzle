@@ -195,13 +195,13 @@ class BlueprintDataGenerator:
         """
         rows: list[dict[str, Any]] = []
 
-        for _ in range(entity.row_count_default):
-            row = self._generate_row(entity)
+        for row_index in range(entity.row_count_default):
+            row = self._generate_row(entity, row_index)
             rows.append(row)
 
         return rows
 
-    def _generate_row(self, entity: EntityBlueprint) -> dict[str, Any]:
+    def _generate_row(self, entity: EntityBlueprint, row_index: int = 0) -> dict[str, Any]:
         """Generate a single row for an entity.
 
         #821: when a field's strategy produces a value that clearly
@@ -213,7 +213,10 @@ class BlueprintDataGenerator:
         names weren't updated for the new field semantics.
         """
         row: dict[str, Any] = {}
-        context: dict[str, Any] = {}
+        # `__row_index__` lets the SEQUENTIAL strategy see the row's position
+        # within its entity. The dunder key cannot collide with a real field
+        # name (DSL field names are plain identifiers).
+        context: dict[str, Any] = {"__row_index__": row_index}
 
         for pattern in entity.field_patterns:
             value = self.generate_field_value(pattern, context)
@@ -247,6 +250,18 @@ class BlueprintDataGenerator:
             if params.get("random_pick", True):
                 return random.choice(values)
             return values[0] if values else "default"
+
+        elif strategy == FieldStrategy.SEQUENTIAL:
+            # Deterministic cycle through `values` by row index. Unlike
+            # STATIC_LIST's random pick (which clusters — `seed: 42` can put
+            # every row on one value), this guarantees an even spread: N rows
+            # over K values yield ceil(N/K) or floor(N/K) of each, so a
+            # blueprint can guarantee ">=1 row per tenant".
+            values = params.get("values", ["default"])
+            if not values:
+                return "default"
+            row_index = context.get("__row_index__", 0)
+            return values[row_index % len(values)]
 
         elif strategy == FieldStrategy.ENUM_WEIGHTED:
             enum_values = params.get("enum_values", [])
@@ -391,6 +406,20 @@ class BlueprintDataGenerator:
             # Look up from generated data
             if target_entity in self._generated_data:
                 target_rows = self._generated_data[target_entity]
+                # `within_tenant`: keep the FK reference tenant-consistent —
+                # restrict the pick to target rows in the same tenant as the
+                # row being generated. Without it, `random.choice` over the
+                # whole pool clusters children under one tenant (#1182) and
+                # can even pair a child with a parent in a *different* tenant.
+                # Falls back to the full pool when the current row has no
+                # tenant_id or no target row shares it, so single-tenant
+                # blueprints are unaffected.
+                if params.get("within_tenant") and target_rows:
+                    current_tenant = context.get("tenant_id")
+                    if current_tenant is not None:
+                        scoped = [r for r in target_rows if r.get("tenant_id") == current_tenant]
+                        if scoped:
+                            target_rows = scoped
                 if target_rows:
                     target_row = random.choice(target_rows)
                     return target_row.get(target_field)

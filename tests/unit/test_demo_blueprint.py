@@ -445,3 +445,91 @@ class TestBlueprintDataGenerator:
             assert "id" in row
             assert "value" in row
             assert 1 <= row["value"] <= 100
+
+    def test_sequential_strategy_cycles_evenly(self):
+        """SEQUENTIAL cycles `values` by row index — guarantees an even spread
+        where STATIC_LIST's random pick would cluster (#1182)."""
+        blueprint = DemoDataBlueprint(
+            project_id="test",
+            domain_description="Test",
+            seed=42,
+            entities=[
+                EntityBlueprint(
+                    name="Invoice",
+                    row_count_default=6,
+                    field_patterns=[
+                        FieldPattern(field_name="id", strategy=FieldStrategy.UUID_GENERATE),
+                        FieldPattern(
+                            field_name="bucket",
+                            strategy=FieldStrategy.SEQUENTIAL,
+                            params={"values": ["a", "b", "c"]},
+                        ),
+                    ],
+                ),
+            ],
+        )
+        generator = BlueprintDataGenerator(blueprint, seed=42)
+        rows = generator.generate_entity(blueprint.entities[0])
+        buckets = [r["bucket"] for r in rows]
+        # 6 rows over 3 values: deterministic round-robin, two of each.
+        assert buckets == ["a", "b", "c", "a", "b", "c"]
+
+    def test_sequential_strategy_empty_values_falls_back(self):
+        """SEQUENTIAL with no `values` returns the safe default, no crash."""
+        generator = BlueprintDataGenerator(
+            DemoDataBlueprint(project_id="t", domain_description="t", seed=1)
+        )
+        value = generator.generate_field_value(
+            FieldPattern(
+                field_name="bucket",
+                strategy=FieldStrategy.SEQUENTIAL,
+                params={"values": []},
+            ),
+            {"__row_index__": 3},
+        )
+        assert value == "default"
+
+    def test_foreign_key_within_tenant_keeps_reference_tenant_consistent(self):
+        """FOREIGN_KEY with `within_tenant` restricts the pick to target rows
+        sharing the current row's tenant_id — no cross-tenant FK (#1182)."""
+        generator = BlueprintDataGenerator(
+            DemoDataBlueprint(project_id="t", domain_description="t", seed=42)
+        )
+        # Two tenants, two projects each.
+        generator._generated_data["Project"] = [
+            {"id": "p-a1", "tenant_id": "tenant-A"},
+            {"id": "p-a2", "tenant_id": "tenant-A"},
+            {"id": "p-b1", "tenant_id": "tenant-B"},
+            {"id": "p-b2", "tenant_id": "tenant-B"},
+        ]
+        fk_pattern = FieldPattern(
+            field_name="project_id",
+            strategy=FieldStrategy.FOREIGN_KEY,
+            params={"target_entity": "Project", "within_tenant": True},
+        )
+        # Every pick for a tenant-A row must land on a tenant-A project.
+        for _ in range(40):
+            value = generator.generate_field_value(fk_pattern, {"tenant_id": "tenant-A"})
+            assert value in ("p-a1", "p-a2")
+        for _ in range(40):
+            value = generator.generate_field_value(fk_pattern, {"tenant_id": "tenant-B"})
+            assert value in ("p-b1", "p-b2")
+
+    def test_foreign_key_within_tenant_falls_back_when_no_tenant_match(self):
+        """`within_tenant` falls back to the full pool when the current row has
+        no tenant_id (or none matches) — single-tenant blueprints unaffected."""
+        generator = BlueprintDataGenerator(
+            DemoDataBlueprint(project_id="t", domain_description="t", seed=42)
+        )
+        generator._generated_data["Project"] = [
+            {"id": "p-a1", "tenant_id": "tenant-A"},
+            {"id": "p-b1", "tenant_id": "tenant-B"},
+        ]
+        fk_pattern = FieldPattern(
+            field_name="project_id",
+            strategy=FieldStrategy.FOREIGN_KEY,
+            params={"target_entity": "Project", "within_tenant": True},
+        )
+        # No tenant_id in context → full pool is eligible.
+        seen = {generator.generate_field_value(fk_pattern, {}) for _ in range(40)}
+        assert seen == {"p-a1", "p-b1"}
