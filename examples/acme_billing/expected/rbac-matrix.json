@@ -1,0 +1,1229 @@
+{
+  "roles": [
+    "admin",
+    "org_owner",
+    "auditor",
+    "project_member",
+    "external_contractor"
+  ],
+  "entities": [
+    "Organization",
+    "User",
+    "Project",
+    "Invoice",
+    "Membership",
+    "SystemHealth",
+    "SystemMetric",
+    "DeployHistory"
+  ],
+  "operations": [
+    "list",
+    "read",
+    "create",
+    "update",
+    "delete"
+  ],
+  "cells": [
+    {
+      "role": "admin",
+      "entity": "Organization",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Organization",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Organization",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Organization",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Organization",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Organization",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Organization",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Organization",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Organization",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Organization",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Organization",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Organization",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Organization",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Organization",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Organization",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Organization",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Organization",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Organization",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Organization",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Organization",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Organization",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Organization",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Organization",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Organization",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Organization",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "User",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "User",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "User",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "User",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "User",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "User",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "User",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "User",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "User",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "User",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "User",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "User",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "User",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "User",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "User",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "User",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "User",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "User",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "User",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "User",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "User",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "User",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "User",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "User",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "User",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "Project",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Project",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Project",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Project",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Project",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Project",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Project",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Project",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Project",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Project",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Project",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Project",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Project",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Project",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Project",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Project",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "Project",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "Project",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Project",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Project",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Project",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Project",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Project",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Project",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Project",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "Invoice",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Invoice",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Invoice",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Invoice",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Invoice",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Invoice",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Invoice",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Invoice",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Invoice",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Invoice",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Invoice",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Invoice",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Invoice",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Invoice",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Invoice",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Invoice",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "Invoice",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "Invoice",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Invoice",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Invoice",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Invoice",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Invoice",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Invoice",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Invoice",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Invoice",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "Membership",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Membership",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Membership",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Membership",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "Membership",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Membership",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Membership",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Membership",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Membership",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "Membership",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "Membership",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Membership",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Membership",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Membership",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "Membership",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Membership",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Membership",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Membership",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Membership",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "Membership",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Membership",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Membership",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Membership",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Membership",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "Membership",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemHealth",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemHealth",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemHealth",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemHealth",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemHealth",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemHealth",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemHealth",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemHealth",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemHealth",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemHealth",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemHealth",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemHealth",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemHealth",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemHealth",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemHealth",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemHealth",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemHealth",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemHealth",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemHealth",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemHealth",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemHealth",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemHealth",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemHealth",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemHealth",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemHealth",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemMetric",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemMetric",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemMetric",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemMetric",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "SystemMetric",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemMetric",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemMetric",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemMetric",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemMetric",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "SystemMetric",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemMetric",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemMetric",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemMetric",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemMetric",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "SystemMetric",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemMetric",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemMetric",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemMetric",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemMetric",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "SystemMetric",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemMetric",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemMetric",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemMetric",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemMetric",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "SystemMetric",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "DeployHistory",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "DeployHistory",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "DeployHistory",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "DeployHistory",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "DeployHistory",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "DeployHistory",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "DeployHistory",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "DeployHistory",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "DeployHistory",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "DeployHistory",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "DeployHistory",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "DeployHistory",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "DeployHistory",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "DeployHistory",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "DeployHistory",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "DeployHistory",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "DeployHistory",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "DeployHistory",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "DeployHistory",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "DeployHistory",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "DeployHistory",
+      "operation": "list",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "DeployHistory",
+      "operation": "read",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "DeployHistory",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "DeployHistory",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "DeployHistory",
+      "operation": "delete",
+      "decision": "DENY"
+    }
+  ],
+  "warnings": []
+}
