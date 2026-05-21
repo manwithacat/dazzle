@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Audit-trail tests no longer race the background flush timer** (#1174).
+  The runtime `AuditLogger` queues each access decision and only persists it
+  on a 1s background timer, so `tests/integration/test_acme_billing_rbac.py::`
+  `test_denied_access_emits_audit_record` polled-and-slept hoping the timer
+  fired before its budget expired — non-deterministic, and flaked in CI's
+  serial `postgres` job where event-loop scheduling under load + a blocking
+  `query_audit` starved the flush task. `AuditLogger` now exposes a
+  synchronous `drain()` that writes the current queue to PostgreSQL inline
+  (no `await`, its own short-lived connection) and returns the count;
+  `DazzleBackendApp.audit_logger` exposes the instance so the test drains
+  deterministically before asserting. No poll-budget bump, no weakened
+  assertion — the audit trail is made observable on demand.
+
+### Agent Guidance
+
+- When a test needs the runtime audit trail readable, call
+  `builder.audit_logger.drain()` (synchronous, returns entries written)
+  rather than sleeping for the 1s background flush. The timer remains the
+  production path; `drain()` is the deterministic test/shutdown seam.
+
 ## [0.71.92] - 2026-05-21
 
 ### Fixed

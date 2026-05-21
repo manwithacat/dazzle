@@ -63,6 +63,7 @@ else:
 
 if TYPE_CHECKING:
     from dazzle.back.events.framework import EventFramework
+    from dazzle.back.runtime.audit_log import AuditLogger
     from dazzle.back.runtime.auth_detection import AuthConfig
     from dazzle.back.runtime.pg_backend import PostgresBackend
     from dazzle.back.runtime.process_manager import ProcessManager
@@ -295,6 +296,7 @@ class DazzleBackendApp:
         self._db_manager: PostgresBackend | None = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
+        self._audit_logger: AuditLogger | None = None
         self._file_service: FileService | None = None
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
@@ -1087,6 +1089,10 @@ class DazzleBackendApp:
 
             audit_logger = AuditLogger(database_url=self._database_url)
             audit_logger.start()
+            # Keep a handle on the builder so callers (graceful shutdown,
+            # in-process tests) can deterministically `drain()` the audit
+            # queue instead of racing the 1s background flush timer.
+            self._audit_logger = audit_logger
 
         # Project route overrides — registered first for priority (v0.29.0)
         if self._project_root:
@@ -1598,6 +1604,16 @@ class DazzleBackendApp:
     def auth_store(self) -> AuthStore | None:
         """Get the auth store (None if auth not enabled)."""
         return self._auth_store
+
+    @property
+    def audit_logger(self) -> "AuditLogger | None":
+        """Get the runtime audit logger (None if no auditable entities).
+
+        Exposed so a graceful-shutdown path or an in-process test can call
+        ``audit_logger.drain()`` to synchronously persist the audit queue —
+        the deterministic alternative to waiting on the 1s background flush.
+        """
+        return self._audit_logger
 
     @property
     def auth_middleware(self) -> AuthMiddleware | None:

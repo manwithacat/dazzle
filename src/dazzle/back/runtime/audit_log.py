@@ -269,18 +269,20 @@ class AuditLogger:
             except Exception:
                 logger.warning("Audit flush error", exc_info=True)
 
-    async def _flush(self) -> None:
-        """Flush all queued entries to the database."""
+    def _drain_queue(self) -> list[dict[str, Any]]:
+        """Pop every currently-queued entry off the queue (non-blocking)."""
         entries: list[dict[str, Any]] = []
         while not self._queue.empty():
             try:
                 entries.append(self._queue.get_nowait())
             except asyncio.QueueEmpty:
                 break
+        return entries
 
+    def _write_entries(self, entries: list[dict[str, Any]]) -> None:
+        """Synchronously INSERT a batch of audit entries into PostgreSQL."""
         if not entries:
             return
-
         try:
             conn = self._get_connection()
             try:
@@ -303,6 +305,28 @@ class AuditLogger:
                 conn.close()
         except Exception:
             logger.warning("Failed to write %d audit entries", len(entries), exc_info=True)
+
+    async def _flush(self) -> None:
+        """Flush all queued entries to the database."""
+        self._write_entries(self._drain_queue())
+
+    def drain(self) -> int:
+        """Synchronously flush every queued entry to the database, now.
+
+        Unlike the background ``_flush_loop`` (which only runs on the timer
+        and depends on event-loop scheduling), this writes the current queue
+        contents inline and returns the number of entries persisted. It does
+        no ``await`` and acquires its own short-lived connection, so it is
+        safe to call from a synchronous context or from inside an async test
+        without racing the background flush task.
+
+        This is the deterministic observability seam: a test (or a graceful
+        shutdown path) that needs the audit trail to be readable *right now*
+        calls ``drain()`` instead of sleeping and hoping the 1s timer fired.
+        """
+        entries = self._drain_queue()
+        self._write_entries(entries)
+        return len(entries)
 
     def query_logs(
         self,

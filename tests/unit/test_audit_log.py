@@ -230,6 +230,32 @@ class TestAuditLogging:
         assert params[8] == "deny"
         assert params[10] == "forbid"
 
+    @pytest.mark.asyncio
+    async def test_drain_writes_queue_synchronously(self, audit_logger, mock_conn) -> None:
+        """`drain()` flushes queued entries to the DB inline, no timer wait.
+
+        This is the deterministic observability seam (#1174): callers that
+        need the audit trail readable *now* call `drain()` rather than racing
+        the 1s background flush loop.
+        """
+        conn, cursor = mock_conn
+        for i in range(3):
+            await audit_logger.log_decision(
+                operation="read",
+                entity_name="Invoice",
+                entity_id=f"inv-{i}",
+                decision="deny",
+                matched_policy="scope-deny",
+                policy_effect="scope-deny",
+            )
+        # drain() is synchronous — no await — and reports how many it wrote.
+        written = audit_logger.drain()
+        assert written == 3
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) == 3
+        # A second drain with an empty queue is a no-op writing nothing.
+        assert audit_logger.drain() == 0
+
 
 # =============================================================================
 # Query Methods

@@ -33,7 +33,6 @@ those tests are the deliberate sanity check against that failure mode.
 
 from __future__ import annotations
 
-import asyncio
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -64,6 +63,9 @@ class _RbacApp:
 
     _transport: Any
     _db_url: str
+    # The runtime AuditLogger for the booted app. Tests call `drain()` on it
+    # to synchronously flush the audit queue instead of racing the 1s timer.
+    _audit_logger: Any = None
     org_ids: dict[str, str] = field(default_factory=dict)
     # role -> org -> (email, password)
     _creds: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
@@ -99,6 +101,17 @@ class _RbacApp:
         )
         await _login(client, _BASE_URL, email, password)
         return client
+
+    def drain_audit(self) -> None:
+        """Synchronously flush the runtime audit queue to the DB.
+
+        The runtime `AuditLogger` queues decisions and only persists them on a
+        1s background timer — observing the trail by sleeping races that timer
+        and flakes under CI load. `drain()` writes the queue inline, making the
+        audit trail deterministically readable the instant this returns.
+        """
+        if self._audit_logger is not None:
+            self._audit_logger.drain()
 
     def query_audit(self, **where: str) -> list[dict[str, Any]]:
         """Query `_dazzle_audit_log` on the disposable DB. Keys are column names."""
@@ -281,7 +294,11 @@ async def rbac_app() -> Any:
         # transport). All clients ride this single in-process transport.
         transport = _probe_transport(httpx.ASGITransport(app=built.app))
 
-        rbac = _RbacApp(_transport=transport, _db_url=db_url)
+        rbac = _RbacApp(
+            _transport=transport,
+            _db_url=db_url,
+            _audit_logger=built.builder.audit_logger,
+        )
         await _seed(rbac, auth_store)
         try:
             yield rbac
@@ -391,20 +408,21 @@ async def test_denied_access_emits_audit_record(rbac_app: _RbacApp) -> None:
     """A denied cross-tenant access produces a row in `_dazzle_audit_log`.
 
     Every acme_billing entity declares `audit: all`; the runtime AuditLogger
-    persists each decision to `_dazzle_audit_log` via a 1s-interval background
-    flush. The denied IDOR read must leave a `deny` Invoice record."""
+    queues each decision and persists it to `_dazzle_audit_log`. The denied
+    IDOR read must leave a `deny` Invoice record.
+
+    The runtime persists on a 1s background timer; observing the trail by
+    sleeping races that timer and flaked under CI's serial postgres run. The
+    decision is queued synchronously *before* the 404 response returns, so by
+    the time `client.get` resolves the entry is on the queue — `drain_audit()`
+    then writes it inline, making this assertion deterministic."""
     client = await rbac_app.client_as("external_contractor", org="acme")
     resp = await client.get(f"/invoices/{rbac_app.globex_invoice_id}")
     assert resp.status_code == 404, resp.text
 
-    # The audit logger flushes on a 1s background loop; poll a few times so
-    # the test does not race the flush.
-    records: list[dict[str, Any]] = []
-    for _ in range(12):
-        records = rbac_app.query_audit(entity_name="Invoice")
-        if records:
-            break
-        await asyncio.sleep(0.5)
+    # Synchronously flush the audit queue — no timer race, no poll budget.
+    rbac_app.drain_audit()
+    records = rbac_app.query_audit(entity_name="Invoice")
 
     assert records, "no _dazzle_audit_log rows for Invoice — audit trail not wired"
     denies = [r for r in records if str(r.get("decision", "")).lower() == "deny"]
