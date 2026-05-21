@@ -106,23 +106,46 @@ async def test_seed_role_users_creates_one_user_per_role() -> None:
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _PG_URL, reason="no TEST_DATABASE_URL / DATABASE_URL")
 async def test_seed_baseline_rows_returns_entity_ids() -> None:
-    """_seed_baseline_rows creates at least one seedable entity and returns its id."""
+    """_seed_baseline_rows creates a baseline row and returns its id.
+
+    Uses `examples/simple_task` rather than `fixtures/rbac_validation`:
+    entity REST CRUD routes are generated from `surface` declarations
+    (mode: create -> POST), and rbac_validation has no surfaces. The seed
+    POST goes through `permit:` AND `scope:` gates, so the request must
+    come from a role-user that satisfies both — the bootstrap superuser
+    (roles=[]) is rejected by `scope: create`. Task creation is permitted
+    for `role(admin)` with a matching `scope: create ... as: admin` rule.
+    """
+    import httpx
+
+    from dazzle.cli.rbac import _login
     from dazzle.rbac.verifier import (
         _DisposableDatabase,
         _seed_baseline_rows,
+        _seed_role_users,
         _verifier_app_context,
     )
 
     async with _DisposableDatabase(_PG_URL) as db_url:
-        async with _verifier_app_context("fixtures/rbac_validation", db_url) as ctx:
-            # rbac_validation has Staff (no FK deps) — seed just that entity
-            # to keep the test focused and fast.
-            baseline = await _seed_baseline_rows(
-                ctx.client,
-                entities=["Staff"],
-                appspec=ctx.appspec,
+        async with _verifier_app_context("examples/simple_task", db_url) as ctx:
+            assert ctx.auth_store is not None
+            creds = await _seed_role_users(ctx.auth_store, roles=["admin"])
+
+            transport = ctx.client._transport  # type: ignore[attr-defined]
+            async with httpx.AsyncClient(
+                transport=transport,
+                base_url="http://verifier.local",
+                follow_redirects=True,
+            ) as admin_client:
+                await _login(admin_client, "http://verifier.local", *creds["admin"])
+                baseline = await _seed_baseline_rows(
+                    admin_client,
+                    entities=["Task"],
+                    appspec=ctx.appspec,
+                )
+
+            assert "Task" in baseline, (
+                "Task is permitted for role(admin) and has only a required "
+                "str field — it should seed successfully"
             )
-            assert "Staff" in baseline, (
-                "Staff has no FK dependencies and should always seed successfully"
-            )
-            assert baseline["Staff"]  # non-empty id string
+            assert baseline["Task"]  # non-empty id string

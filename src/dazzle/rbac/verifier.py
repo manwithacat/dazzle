@@ -481,21 +481,29 @@ async def _seed_role_users(
     return creds
 
 
-def _minimal_body_for_entity(entity_name: str, appspec: Any) -> dict[str, Any]:
+def _minimal_body_for_entity(
+    entity_name: str,
+    appspec: Any,
+    *,
+    baseline: dict[str, str] | None = None,
+) -> dict[str, Any] | None:
     """Build the smallest valid JSON body for creating an entity row.
 
     Iterates the entity's required non-PK fields and emits a representative
-    value for each field type.  Ref fields are omitted (FK not seeded yet);
-    callers should handle the 422 by omitting that entity.
+    value for each field type.  A required ``ref`` field is resolved against
+    ``baseline`` (the already-seeded row id for the target entity).  If a
+    required ref has no seeded target, the entity cannot be created — this
+    function returns ``None`` and the caller omits the entity.
     """
     from dazzle.core.ir.fields import FieldTypeKind
 
+    baseline = baseline or {}
     entity = next(
-        (e for e in (appspec.entities or []) if e.name == entity_name),
+        (e for e in (appspec.domain.entities or []) if e.name == entity_name),
         None,
     )
     if entity is None:
-        return {}
+        return None
 
     body: dict[str, Any] = {}
     for field in entity.fields:
@@ -505,9 +513,13 @@ def _minimal_body_for_entity(entity_name: str, appspec: Any) -> dict[str, Any]:
             continue
         kind = field.type.kind
         if kind == FieldTypeKind.REF:
-            # FK — dependent entity not seeded; skip and let caller handle 422.
-            continue
-        if kind in (FieldTypeKind.STR, FieldTypeKind.TEXT, FieldTypeKind.EMAIL):
+            ref_entity = field.type.ref_entity
+            ref_id = baseline.get(ref_entity) if ref_entity else None
+            if ref_id is None:
+                # Required FK with no seeded target — entity is unseedable.
+                return None
+            body[field.name] = ref_id
+        elif kind in (FieldTypeKind.STR, FieldTypeKind.TEXT, FieldTypeKind.EMAIL):
             body[field.name] = f"seed-{field.name}"
         elif kind == FieldTypeKind.INT:
             body[field.name] = 1
@@ -529,6 +541,24 @@ def _minimal_body_for_entity(entity_name: str, appspec: Any) -> dict[str, Any]:
     return body
 
 
+# CSRF cookie name set by the framework's double-submit middleware
+# (`dazzle.back.runtime.csrf.CSRFConfig`).  State-changing requests must
+# echo this cookie value back in the X-CSRF-Token header.
+_CSRF_COOKIE = "dazzle_csrf"
+_CSRF_HEADER = "X-CSRF-Token"
+
+
+def _csrf_headers(client: Any) -> dict[str, str]:
+    """Return the X-CSRF-Token header for `client` if it carries the cookie.
+
+    The framework's CSRF middleware issues the `dazzle_csrf` cookie on the
+    first non-Bearer response; once the verifier client has made any GET
+    (e.g. the bootstrap `/auth/login` round-trip) the cookie is in its jar.
+    """
+    token = client.cookies.get(_CSRF_COOKIE)
+    return {_CSRF_HEADER: token} if token else {}
+
+
 async def _seed_baseline_rows(
     client: Any,
     *,
@@ -537,15 +567,29 @@ async def _seed_baseline_rows(
 ) -> dict[str, str]:
     """Create one baseline row per entity (client authenticated as superuser).
 
-    Returns {entity: row_id}. Entities whose create fails (e.g. missing FK
-    dependency) are omitted so callers can continue with the entities that
-    did seed successfully.
+    Returns {entity: row_id}. The generated CRUD routes are mounted at
+    ``/<plural>`` (no ``/api`` prefix) and POST is CSRF-protected, so this
+    echoes the client's `dazzle_csrf` cookie back as the X-CSRF-Token header.
+
+    Entities are seeded in the given order; a required ``ref`` field is
+    resolved against rows already seeded earlier in the list, so callers
+    should pass referenced entities before their dependents.  Any entity
+    whose create fails (no POST route, missing FK, validation error) is
+    omitted so callers can continue with the entities that did seed.
     """
     baseline: dict[str, str] = {}
     for entity in entities:
-        body = _minimal_body_for_entity(entity, appspec)
+        body = _minimal_body_for_entity(entity, appspec, baseline=baseline)
+        if body is None:
+            # Required FK with no seeded target — skip this entity.
+            continue
         plural = to_api_plural(entity)
-        resp = await client.request("POST", f"/api/{plural}", json=body)
+        resp = await client.request(
+            "POST",
+            f"/{plural}",
+            json=body,
+            headers=_csrf_headers(client),
+        )
         if resp.status_code in (200, 201):
             try:
                 row_id = resp.json().get("id")
