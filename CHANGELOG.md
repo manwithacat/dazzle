@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.105] - 2026-05-21
+
 ### Added
 
 - **`docs/guides/agent-workflow.md`** — guide to the AI-agent spec-edit loop (spec change → agent DSL edit → `dazzle validate` → tests → human review → deploy) for building Dazzle apps, grounded in the `invoice_ops` commit history; evaluator briefing #6. Registered in `mkdocs.yml` nav and cross-referenced from `docs/index.md`, `README.md`, and `AGENTS.md`.
