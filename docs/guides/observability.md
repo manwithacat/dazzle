@@ -400,9 +400,16 @@ The comment in `src/dazzle/back/runtime/job_worker.py` (line ~184):
 ```
 
 This is a known gap (issue forthcoming). Until it is implemented, if
-exponential-backoff between job retries is required, implement it in
-the job handler itself or use a process block with `backoff:` on its
-retry step.
+exponential-backoff between job retries is required, implement the delay
+in the job handler itself.
+
+Note that process-step `retry:`/`backoff:` is *not* a workaround here.
+The process-step `RetryConfig` IR is consumed only by the optional
+Temporal and Celery adapters (`src/dazzle/core/process/temporal_adapter.py`,
+`celery_tasks.py`); the default Dazzle Native Runtime process executor
+(`EventBusProcessAdapter` + `step_executor.py`, whose `max_retries`
+parameter is documented "Not used directly here") does not apply
+backoff between process-step retries either.
 
 ### No `/_dazzle/jobs` operational endpoints
 
