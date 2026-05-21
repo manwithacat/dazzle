@@ -106,6 +106,10 @@ dazzle rbac verify                             # Verify runtime matches matrix
 
 ## Documentation Pages
 
+### Evaluating Dazzle
+- /EVALUATION.md — skeptical-evaluator walkthrough: claims demonstrated with copy-pasteable commands, per-subsystem maturity, framework comparison
+- /SECURITY_CLAIMS.md — claim-by-claim inventory: status, enforcement, tests, known gaps; maturity rubric
+
 ### Getting Started
 - /getting-started/installation/ — Install Dazzle
 - /getting-started/quickstart/ — 5-minute guide

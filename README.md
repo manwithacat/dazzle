@@ -298,6 +298,8 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 
 ## Documentation
 
+- **[Evaluating Dazzle](EVALUATION.md)** — skeptical-evaluator walkthrough: see the claims demonstrated in ~30 min
+- **[Security & Compliance Claims](SECURITY_CLAIMS.md)** — claim-by-claim inventory: status, enforcement, tests, known gaps
 - **[DSL Reference](docs/reference/index.md)** — complete guide to all DSL constructs
 - **[HLESS deep dive](docs/architecture/hless-deep-dive.md)** — event semantics and why they're named this way
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms

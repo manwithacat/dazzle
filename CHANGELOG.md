@@ -20,11 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now matches the (already-accurate) wording in `docs/reference/compliance.md`
   and the `dazzle compliance` CLI help. The RBAC "provably enforced" /
   "dynamic verification" language is unchanged — it became accurate when
-  #1171 shipped the real dynamic verifier. The remaining #1176 items
-  (`SECURITY_CLAIMS.md`, `EVALUATION.md`, a per-subsystem maturity table)
-  need maintainer judgment on maturity ratings and stay open.
+  #1171 shipped the real dynamic verifier.
 
 ### Added
+
+- **`SECURITY_CLAIMS.md` and `EVALUATION.md` — evaluator-facing docs**
+  (#1176). `SECURITY_CLAIMS.md` is a claim-by-claim inventory of every
+  security/RBAC/compliance/audit claim: implementation status, where it is
+  enforced, where it is tested, and known gaps — built on a maturity rubric
+  (Stable/Beta/Alpha) with evidence-based per-subsystem ratings.
+  `EVALUATION.md` is a ~30-minute skeptical-evaluator walkthrough with
+  copy-pasteable commands and expected output, a per-subsystem maturity
+  table, and an honest capability comparison against Django, Rails+Pundit,
+  Supabase/Postgres RLS, and Cedar/OpenFGA. Both are linked from `README.md`
+  and `docs/llms.txt`. Completes #1176 (the maturity ratings are
+  evidence-based assessments, explicitly flagged as open to maintainer
+  revision).
 
 - **Demo-data blueprint per-tenant FK balancing + `sequential` strategy**
   (#1182). The blueprint generator's `foreign_key` strategy picked its
