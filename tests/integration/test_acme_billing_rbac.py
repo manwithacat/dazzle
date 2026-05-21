@@ -412,3 +412,41 @@ async def test_denied_access_emits_audit_record(rbac_app: _RbacApp) -> None:
         "denied cross-tenant Invoice read produced no `deny` audit record: "
         f"{[(r['operation'], r['decision']) for r in records]}"
     )
+
+
+async def test_org_owner_create_is_scoped_to_own_org(rbac_app: _RbacApp) -> None:
+    """org_owner can create a Project in its OWN org but not in another org.
+
+    `Project` declares `scope: create: org = current_user.org as: org_owner`.
+    The create-scope walker must resolve `current_user.org` (a domain-User
+    attribute merged into `auth_context.preferences`) — before #1174 it built
+    its resolver from a hardcoded attribute allowlist that omitted `org`, so
+    the RHS resolved to None and org_owner was 403'd even within its own org.
+
+    Two assertions in one test so the negative case (foreign-org create
+    denied) and the positive case (own-org create allowed) are pinned
+    together — a regression in either direction fails loudly."""
+    client = await rbac_app.client_as("org_owner", org="acme")
+
+    # Negative: creating a Project in Globex's org must be denied (403). This
+    # is the cross-tenant write the create-scope predicate exists to block.
+    foreign = await _csrf_post(
+        client,
+        "/projects",
+        {"name": "Cross-Tenant Project", "org": rbac_app.globex_org_id},
+    )
+    assert foreign.status_code == 403, (
+        f"org_owner created a Project in another org — cross-tenant write hole: {foreign.text}"
+    )
+
+    # Positive: creating a Project in the org_owner's OWN org must succeed.
+    # This is the assertion the bug broke — `current_user.org` failed to
+    # resolve, so even a same-org create was 403'd.
+    own = await _csrf_post(
+        client,
+        "/projects",
+        {"name": "Acme Project Delta", "org": rbac_app.acme_org_id},
+    )
+    assert own.status_code in (200, 201), (
+        f"org_owner must be able to create a Project in its own org: {own.text}"
+    )

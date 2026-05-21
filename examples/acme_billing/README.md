@@ -97,7 +97,7 @@ Expected output (domain entities only — framework entities such as `SystemHeal
 | Membership   | delete    | PERMIT        | PERMIT_SCOPED  | DENY           | DENY           | DENY                |
 ```
 
-`PERMIT_SCOPED` means the role has access but with a row-filter predicate applied at query time. The exact predicate for each cell is documented in `dsl/entities.dsl`. The reference matrix is committed at `expected/rbac-matrix.json` and gated by `tests/unit/test_acme_billing_drift.py`.
+`PERMIT_SCOPED` means the role has access but with a row-filter predicate applied at query time. The exact predicate for each cell is documented in `dsl/entities.dsl`. The reference matrix is committed at `expected/rbac-matrix.json` and gated by `tests/unit/test_acme_billing_reference_drift.py`.
 
 ---
 

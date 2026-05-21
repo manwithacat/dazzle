@@ -1615,6 +1615,11 @@ def _build_cedar_handler(
             existing=existing,
             user_roles=raw_roles,
             is_superuser=_is_su,
+            # The CREATE core handler needs the full auth context to resolve
+            # `current_user.<attr>` in `scope: create:` predicates (#1174):
+            # the attributes (`org`, `school`, ...) live in
+            # `auth_context.preferences`, not on the bare `user` record.
+            auth_context=auth_context,
         )
 
         # Post-operation audit (create already logged above)
@@ -1698,6 +1703,10 @@ def _build_auth_handler(
             existing=existing,
             user_roles=raw_roles,
             is_superuser=_is_su,
+            # See the CREATE-scope note in the cedar-path call site above —
+            # `auth_context` carries the preferences `scope: create:`
+            # predicates resolve `current_user.<attr>` against (#1174).
+            auth_context=auth_context,
         )
 
         _fc = None
@@ -2151,6 +2160,52 @@ async def _scoped_pre_read(
     return items[0] if items else None
 
 
+class _LazyUserAttrs(dict):  # type: ignore[type-arg]
+    """`current_user.<attr>` resolver for `scope: create:` enforcement.
+
+    A `dict` subclass so it satisfies the `user_attrs: dict[str, Any]`
+    contract of `check_create_predicate`, but resolves any requested
+    attribute name on demand via `_resolve_user_attribute` (built-in
+    UserRecord fields + `auth_context.preferences`). This is what makes
+    `current_user.org` — and any other DSL-chosen attribute — resolvable
+    in create-scope predicates without a hardcoded allowlist (#1174).
+
+    `__missing__` caches each resolved value so a repeated lookup of the
+    same attribute (e.g. in an AND/OR predicate) hits the cache. An
+    unresolvable attribute resolves to `None` (the `__RBAC_DENY__`
+    sentinel is translated away) so the walker's `_compare` rejects it
+    — fail-closed, matching the previous "missing key → None" semantics.
+    """
+
+    def __init__(self, auth_context: "AuthContext | None") -> None:
+        super().__init__()
+        self._auth_context = auth_context
+
+    def __missing__(self, key: str) -> Any:
+        resolved = _resolve_user_attribute(key, self._auth_context)
+        value = None if resolved == "__RBAC_DENY__" else resolved
+        self[key] = value  # cache for repeated lookups within one predicate
+        return value
+
+    def get(self, key: str, default: Any = None) -> Any:
+        # `dict.get` does NOT trigger `__missing__` — only subscripting does.
+        # The create-scope walker (`scope_create_eval._walk`) resolves
+        # attributes via `user_attrs.get(...)`, so `get` must route through
+        # `__getitem__` for lazy resolution to fire. A resolved-but-None
+        # attribute is returned as-is (not replaced by `default`) so a
+        # genuinely-missing attr still fails the predicate closed.
+        return self[key]
+
+    def __bool__(self) -> bool:
+        # A lazy resolver is NEVER "empty" — it can resolve any attribute on
+        # demand. It must report truthy even before the first lookup caches
+        # an entry: `check_create_predicate` does `user_attrs = user_attrs
+        # or {}`, and a still-empty `_LazyUserAttrs` (the common case — the
+        # cache is only populated lazily) would be falsy and silently
+        # replaced by a plain empty dict, dropping the resolver entirely.
+        return True
+
+
 def _enforce_create_scope(
     *,
     cedar_access_spec: "EntityAccessSpec | None",
@@ -2158,7 +2213,7 @@ def _enforce_create_scope(
     user_id: str | None,
     user_roles: list[str],
     entity_name: str,
-    request: "Request",
+    auth_context: "AuthContext | None",
 ) -> None:
     """`scope: create:` enforcement (#1124, v0.71.22).
 
@@ -2231,22 +2286,23 @@ def _enforce_create_scope(
         if getattr(r, "predicate", None) is None and getattr(r, "condition", None) is None:
             return
 
-    # Build the user-attr resolver from the auth context. The auth
-    # context carries `current_user.school` / etc. on the User entity;
-    # we pull them off `request.state.auth_context.user` (set by the
-    # _build_cedar_handler upstream).
-    user_attrs: dict[str, Any] = {}
-    auth_ctx = getattr(request.state, "auth_context", None) if hasattr(request, "state") else None
-    auth_user = getattr(auth_ctx, "user", None) if auth_ctx is not None else None
-    if auth_user is not None:
-        # Common cross-tenant attribute names; the framework's auth
-        # user model doesn't expose a generic .attrs dict so we copy
-        # known shapes. Any missing key resolves to None and the
-        # predicate naturally rejects.
-        for attr_name in ("school", "school_id", "org_id", "tenant_id", "team_id"):
-            val = getattr(auth_user, attr_name, None)
-            if val is not None:
-                user_attrs[attr_name] = val
+    # Build the user-attr resolver from the auth context. A `scope: create:`
+    # predicate may reference `current_user.<attr>` for ANY attribute the DSL
+    # author chose (`org`, `school`, `team`, ...) — there is no fixed set. So
+    # rather than copy a hardcoded allowlist of attribute names (which silently
+    # over-denies for any attr not on the list — e.g. acme_billing's
+    # `current_user.org`, #1174), resolve every requested attribute lazily
+    # through `_resolve_user_attribute` — the same canonical resolver the
+    # read/list scope path uses. It reads built-in UserRecord fields *and*
+    # `auth_context.preferences` (where domain attributes like `org` are
+    # merged from the DSL User entity by `_load_domain_user_attributes`).
+    # `_resolve_user_attribute` returns the `__RBAC_DENY__` sentinel for an
+    # unresolvable attribute; we translate that to None so the create-scope
+    # walker's `_compare` rejects it (fail-closed), identical to the previous
+    # "missing key → None" behaviour. `auth_context` is threaded in from the
+    # CREATE handler — `request.state.auth_context` was never set, so the old
+    # code's resolver was always empty regardless of the attribute name.
+    user_attrs = _LazyUserAttrs(auth_context)
 
     # Run the v1-supported walker against the predicate. Any matched
     # rule passing the walker is enough to allow the insert (OR of
@@ -3284,13 +3340,19 @@ def create_create_handler(
         # rejected at link time by the linker. See
         # docs/reference/rbac-scope.md.
         _scope_user_roles = list(_extra.get("user_roles") or [])
+        # `mode="json"` so UUID / datetime payload fields are normalised to
+        # their string form. The create-scope walker compares them against
+        # `current_user.<attr>` values, which `_resolve_user_attribute`
+        # always returns as `str` — a bare `model_dump()` would leave a
+        # `ref` field as a `UUID` object, and `UUID(...) == "..."` is always
+        # False, so an own-org create would 403 on a pure type mismatch (#1174).
         _enforce_create_scope(
             cedar_access_spec=cedar_access_spec,
-            payload=data.model_dump(),
+            payload=data.model_dump(mode="json"),
             user_id=current_user,
             user_roles=_scope_user_roles,
             entity_name=entity_name,
-            request=request,
+            auth_context=_extra.get("auth_context"),
         )
 
         # Handle idempotent duplicate: unique constraint on idempotency_key

@@ -349,16 +349,17 @@ def _check_scope_create(
         if getattr(r, "predicate", None) is None and getattr(r, "condition", None) is None:
             return
 
-    # Build the user-attrs map (school / org_id / etc.) from the
-    # auth user, same as `_enforce_create_scope` in route_generator.
-    user_attrs: dict[str, Any] = {}
+    # Build the user-attr resolver from the auth context — same lazy
+    # resolver `route_generator._enforce_create_scope` uses (#1174). A
+    # `scope: create:` predicate may reference `current_user.<attr>` for
+    # ANY DSL-chosen attribute (`org`, `school`, ...); resolving lazily
+    # through `_resolve_user_attribute` (built-in UserRecord fields +
+    # `auth_context.preferences`) avoids the hardcoded-allowlist bug that
+    # silently over-denied any attribute not on a fixed list.
+    from dazzle.back.runtime.route_generator import _LazyUserAttrs
+
     auth_ctx = getattr(request.state, "auth_context", None) if hasattr(request, "state") else None
-    auth_user = getattr(auth_ctx, "user", None) if auth_ctx is not None else None
-    if auth_user is not None:
-        for attr_name in ("school", "school_id", "org_id", "tenant_id", "team_id"):
-            val = getattr(auth_user, attr_name, None)
-            if val is not None:
-                user_attrs[attr_name] = val
+    user_attrs = _LazyUserAttrs(auth_ctx)
 
     from dazzle.back.runtime.scope_create_eval import (
         ScopeCreateUnsupportedError,

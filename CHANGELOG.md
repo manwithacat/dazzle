@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`scope: create:` enforcement resolves any `current_user.<attr>`** (#1174).
+  `_enforce_create_scope` built its user-attribute resolver from a hardcoded
+  allowlist (`school`, `school_id`, `org_id`, `tenant_id`, `team_id`) and read
+  it off `request.state.auth_context` — which the generated CREATE route never
+  set. So a `scope: create:` predicate referencing any other attribute (e.g.
+  `current_user.org`) resolved to `None` and the rule was always False:
+  `org_owner` was 403'd creating a `User`/`Project` even within its own org
+  (fails closed — over-denies, not a leak). The CREATE handler now threads the
+  full `AuthContext` into `_enforce_create_scope`, which resolves every
+  attribute lazily through `_resolve_user_attribute` (built-in UserRecord
+  fields + `auth_context.preferences`) — the same canonical resolver the
+  read/list scope path uses. The create-scope payload is dumped with
+  `mode="json"` so a `ref` UUID field compares equal to the string-valued
+  `current_user.<attr>`. The route-override mirror (`policy._check_scope_create`)
+  gets the same lazy resolver.
 - **Single-id reads now enforce `scope:` row filters** (#1174). The
   generated `GET /<entity>/<id>` handler fetched the row unscoped and
   ran only the Cedar permit/forbid evaluator — so a role holding
