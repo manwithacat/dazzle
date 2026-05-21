@@ -80,6 +80,7 @@ nav:
       - CLI: reference/cli.md
       - Grammar: reference/grammar.md
   - Guides:
+      - Agent Workflow: guides/agent-workflow.md
       - Heroku Deployment: guides/heroku.md
       - Operations: guides/operations.md
       - Scaling: guides/scaling.md
