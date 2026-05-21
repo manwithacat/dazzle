@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/reference/migrations.md`** — canonical guide to Dazzle schema-evolution: baseline workflow, every migration operation (additive, rename, enum, entity-split, event-schema, DSL-only RBAC), and the round-trip test protocol. Surfaced by the SP2 migration exercise on `examples/invoice_ops`.
+- **ADR-0025 — authorization is entity-level** (`docs/adr/0025-authorization-is-entity-level.md`). When a field needs different access rules than its siblings, it becomes its own entity — not a field-level permit. The invoice_ops `SupplierBankAccount` entity split (Change 4) is the canonical example.
+- **`examples/invoice_ops` committed migration history** (`.dazzle/migrations/versions/`) — 8 migrations: framework baseline, project baseline, and 6 change migrations (additive field, field rename, enum evolution, entity split + backfill, event-schema change, DSL-only RBAC). Serves as a reference for every supported migration operation.
+
+### Changed
+
+- **`examples/invoice_ops` evolved through 6 requirement changes** — additive field (`po_number`), field rename (`bank_reference` → `bank_account_ref`), enum evolution (`partially_paid` status), entity split + backfill (`SupplierBankAccount` extracted from `Supplier`), event-schema change (retention + new `currency` field on `InvoiceApproved`), and DSL-only RBAC change (`finance_admin` persona). Each change has a committed migration, hand-edited where autogenerate produces unsafe output (rename, entity-split backfill).
+
+### Fixed
+
+- **`dazzle db baseline` crash on a fresh example app** — `env.py` accessed `context.config` at module level before Alembic bound the context, causing `AttributeError: 'NoneType' object has no attribute 'config'`. Fixed by extracting a `metadata_loader.py` helper and deferring all DSL loading into the migration functions (`src/dazzle/cli/db.py`, new `src/dazzle/cli/metadata_loader.py`).
+
+### Agent Guidance
+
+- **Authorization is entity-level (ADR-0025)**: when a field in an entity needs different access rules than its siblings (e.g. bank account details visible only to `finance` but not `requester`), the correct pattern is to extract that field into a new entity with its own `permit:` and `scope:` blocks — not to add field-level conditions to `permit:`. See `docs/adr/0025-authorization-is-entity-level.md` and the `SupplierBankAccount` entity in `examples/invoice_ops/dsl/entities.dsl`.
+
 ## [0.71.103] - 2026-05-21
 
 ### Changed

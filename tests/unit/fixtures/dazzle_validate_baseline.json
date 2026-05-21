@@ -13,6 +13,11 @@
       "expected_errors": 0,
       "expected_warnings_min": 2
     },
+    "examples/invoice_ops": {
+      "expected_errors": 0,
+      "expected_warnings_min": 11,
+      "rationale": "invoice_ops is the keystone migration-story example. The 11 warnings are: 1 decimal monetary field (LineItem.unit_amount), 2 approval-gate preview notices, 2 audit-enabled info notices (audit+field-changes), and 6 fitness.repr_fields advisory notices (1 per audited/scoped entity). These are known, expected, and tracking the DSL design state."
+    },
     "examples/fieldtest_hub": {
       "expected_errors": 0,
       "expected_warnings_min": 24
