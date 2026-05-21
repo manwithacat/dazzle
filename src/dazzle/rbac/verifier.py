@@ -11,6 +11,7 @@ pieces for unit testing.
 from __future__ import annotations  # required: forward reference
 
 import json
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -30,6 +31,8 @@ if TYPE_CHECKING:
     from dazzle.back.runtime.auth.store import AuthStore
     from dazzle.back.runtime.server import DazzleBackendApp
     from dazzle.core.ir import AppSpec
+
+_logger = logging.getLogger(__name__)
 
 
 class CellResult(StrEnum):
@@ -102,6 +105,12 @@ class VerificationReport:
     passed: int
     violated: int
     warnings: int
+    error: str | None = None
+    """Boot/provisioning failure message, or None on a successful run.
+
+    A zeroed report (total=0) with `error` set means verification could
+    not run — distinct from a clean run of an app with no cells.
+    """
 
     def to_json(self) -> dict[str, object]:
         """Return a JSON-serialisable representation of the report."""
@@ -116,6 +125,7 @@ class VerificationReport:
             "passed": self.passed,
             "violated": self.violated,
             "warnings": self.warnings,
+            "error": self.error,
         }
 
     def save(self, path: Path) -> None:
@@ -167,6 +177,7 @@ class VerificationReport:
             passed=raw["passed"],
             violated=raw["violated"],
             warnings=raw["warnings"],
+            error=raw.get("error"),
         )
 
 
@@ -276,7 +287,7 @@ async def _probe_cell(
     if has_body:
         kwargs["json"] = body or {}
     # POST/PATCH/DELETE are CSRF-protected; GET (list/read) is not.
-    if method in ("POST", "PATCH", "PUT", "DELETE"):
+    if method in ("POST", "PATCH", "DELETE"):
         kwargs["headers"] = _csrf_headers(client)
 
     response = await client.request(method, url, **kwargs)
@@ -649,9 +660,11 @@ async def _probe_all_cells(
     import httpx
 
     from dazzle.cli.rbac import _login
-    from dazzle.rbac.audit import InMemoryAuditSink, set_audit_sink
+    from dazzle.rbac.audit import InMemoryAuditSink, NullAuditSink, set_audit_sink
 
     cells: list[VerifiedCell] = []
+    # `_transport` is httpx-private but the only handle on the in-process
+    # ASGITransport — reuse it so each role client rides the same booted app.
     transport = ctx.client._transport
     base_url = "http://verifier.local"
 
@@ -690,6 +703,9 @@ async def _probe_all_cells(
             for entity in matrix.entities:
                 for operation in matrix.operations:
                     expected = matrix.get(role, entity, operation)
+                    # Each cell installs its own sink and resets it in the
+                    # finally so a probe failure can't leak the sink into the
+                    # next cell. verify()'s outer finally is the backstop.
                     sink = InMemoryAuditSink()
                     set_audit_sink(sink)
                     try:
@@ -705,6 +721,8 @@ async def _probe_all_cells(
                         probe = _ProbeResult(status=0, count=None)
                         result = CellResult.WARNING
                         detail = f"probe error: {exc}"
+                    finally:
+                        set_audit_sink(NullAuditSink())
                     cells.append(
                         VerifiedCell(
                             role=role,
@@ -765,9 +783,13 @@ async def verify(
                     ctx.client, entities=list(matrix.entities), appspec=ctx.appspec
                 )
                 cells = await _probe_all_cells(ctx, matrix, creds, baseline)
-    except Exception:
+    except Exception as exc:
         # App-boot / database-provisioning failure — return an empty report
         # rather than raising, so callers can render a consistent result.
+        # The `error` field disambiguates this from a clean run of an app
+        # with zero cells: a zeroed report with `error` set means the
+        # verifier could not run, not that everything passed.
+        _logger.error("verify() boot failed: %s", exc, exc_info=True)
         return VerificationReport(
             app_name=str(project_root),
             timestamp=now,
@@ -778,6 +800,7 @@ async def verify(
             passed=0,
             violated=0,
             warnings=0,
+            error=repr(exc),
         )
     finally:
         set_audit_sink(NullAuditSink())
