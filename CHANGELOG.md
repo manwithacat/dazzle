@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Dead CI "Check DSL files (strict mode)" step** (#1183). The step ran
+  `dazzle validate --strict` — a flag that has never existed — under a
+  `|| echo` that swallowed the resulting non-zero exit, so it validated
+  nothing while always reporting success. A real `--strict` (fail-on-warning)
+  mode is infeasible as a gate: every example carries warnings (`pra` alone
+  has 336). The step was also fully redundant — the `e2e-smoke` job's
+  "Validate all example and fixture projects" step already runs real
+  `dazzle validate` gating across the same `examples/*/ fixtures/*/` set
+  (and correctly skips the intentionally-broken `pra` conformance corpus,
+  which the dead step did not). The no-op step is removed.
+
 ### Fixed
 
 - **Entity-name service lookups no longer silently resolve to `None`**

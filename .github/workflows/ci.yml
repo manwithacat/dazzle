@@ -164,17 +164,12 @@ jobs:
         pip install bandit[toml]
         bandit -c pyproject.toml -r src/ --severity-level medium
 
-    - name: Check DSL files (strict mode)
-      run: |
-        for dir in examples/*/ fixtures/*/; do
-          if [ -f "${dir}dazzle.toml" ]; then
-            example=$(basename "$dir")
-            echo "Checking DSL for $example..."
-            cd "$dir"
-            python -m dazzle validate --strict || echo "Note: Some warnings in $example"
-            cd "$GITHUB_WORKSPACE"
-          fi
-        done
+    # NOTE: the former "Check DSL files (strict mode)" step was removed in
+    # v0.71.98 (#1183). It called `dazzle validate --strict` — a flag that
+    # never existed — under a `|| echo` that swallowed the error, so it was a
+    # permanent no-op. Real per-example/fixture `dazzle validate` gating
+    # already runs in the e2e-smoke job's "Validate all example and fixture
+    # projects" step (which also correctly skips the pra conformance corpus).
 
     - name: Fragment audit (per example, advisory)
       run: |
