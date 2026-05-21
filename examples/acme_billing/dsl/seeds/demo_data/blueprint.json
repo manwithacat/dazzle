@@ -84,7 +84,7 @@
       {
         "name": "User",
         "row_count_default": 8,
-        "notes": "4 users per org across the persona roles",
+        "notes": "4 users per org across the persona roles. NOTE: the explicit User.jsonl seed file is the source of truth. The blueprint engine special-cases the User entity (_generate_users_from_blueprint) and derives the email domain from each tenant's slug, so the email_from_name field_pattern below is only consulted on the `dazzle demo generate` fallback path.",
         "tenant_scoped": true,
         "field_patterns": [
           {
@@ -174,7 +174,7 @@
       {
         "name": "Invoice",
         "row_count_default": 10,
-        "notes": "~5 invoices per org; mix of regular and sensitive=true rows for visibility tests",
+        "notes": "~5 invoices per org. NOTE: the explicit Invoice.jsonl seed file alongside this blueprint is the source of truth (it takes loader precedence and guarantees 2 sensitive invoices per org with distinct numbers). This blueprint is a fallback for `dazzle demo generate` — the engine has no per-row sequential or per-org-balanced strategy, so true_weight is set to 0.6 to make a zero-sensitive org near-impossible (0.4^5 = ~1% per org).",
         "tenant_scoped": true,
         "field_patterns": [
           {
@@ -219,7 +219,7 @@
             "field_name": "sensitive",
             "strategy": "boolean_weighted",
             "params": {
-              "true_weight": 0.3
+              "true_weight": 0.6
             }
           },
           {
