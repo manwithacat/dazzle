@@ -6,7 +6,10 @@ Tests the parsing of domain service declarations in DSL files.
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
 from dazzle.core.ir import (
     DomainServiceKind,
     StubLanguage,
@@ -282,3 +285,29 @@ service calculate_vat "Calculate VAT":
         assert len(fragment.domain_services) == 1
         assert fragment.apis[0].name == "stripe_api"
         assert fragment.domain_services[0].name == "calculate_vat"
+
+
+class TestDomainServiceInvalidKind:
+    """Tests that invalid service kind values raise ParseError, not ValueError."""
+
+    def test_invalid_kind_raises_parse_error_not_value_error(self) -> None:
+        """Invalid kind value must produce ParseError, never a raw ValueError."""
+        dsl = """
+module m
+
+service bad "Bad":
+  kind: surface
+"""
+        with pytest.raises(ParseError, match="Invalid service kind 'surface'"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_invalid_kind_message_lists_valid_options(self) -> None:
+        """ParseError message must enumerate valid kind options."""
+        dsl = """
+module m
+
+service bad "Bad":
+  kind: surface
+"""
+        with pytest.raises(ParseError, match="domain_logic"):
+            parse_dsl(dsl, Path("test.dsl"))

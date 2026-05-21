@@ -172,7 +172,16 @@ class ServiceParserMixin:
                 self.expect(TokenType.COLON)
                 # Use expect_identifier_or_keyword since 'integration' is a keyword
                 kind_token = self.expect_identifier_or_keyword()
-                kind = ir.DomainServiceKind(kind_token.value)
+                try:
+                    kind = ir.DomainServiceKind(kind_token.value)
+                except ValueError as exc:
+                    valid = ", ".join(k.value for k in ir.DomainServiceKind)
+                    raise make_parse_error(
+                        f"Invalid service kind '{kind_token.value}'. Valid kinds: {valid}.",
+                        self.file,
+                        kind_token.line,
+                        kind_token.column,
+                    ) from exc
                 self.skip_newlines()
 
             # input:
