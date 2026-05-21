@@ -156,9 +156,8 @@ entity Invoice "Invoice":
     disputed -> approved: role(finance)
     disputed -> rejected: role(approver) requires rejection_reason
 
-  # publish lines re-enabled in the events task
-  # publish InvoiceSubmitted when status changed
-  # publish InvoicePaid when status changed
+  publish InvoiceSubmitted when status changed
+  publish InvoicePaid when status changed
 
   audit: all
 
