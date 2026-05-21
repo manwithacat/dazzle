@@ -1,6 +1,6 @@
 # Invoice Ops
 
-> **Complexity**: Advanced | **Entities**: 6 | **Personas**: 5 | **DSL Lines**: ~600
+> **Complexity**: Advanced | **Entities**: 6 | **Personas**: 6 | **DSL Lines**: ~600
 
 `invoice_ops` is the **keystone example app** in the Dazzle examples collection — built specifically to prove the framework under realistic multi-tenant, multi-role, workflow-driven pressure. It models a supplier-invoice approval and payment-operations platform for a SaaS product that serves multiple isolated customer tenants. The app exercises `shared_schema` tenancy with `partition_key: tenant_id`, a 6-state role-guarded Invoice state machine, maker-checker `approval` gates, HLESS event publishing with a `InvoiceStatusView` projection, and a `payment_provider` integration service. The build was conducted as an evaluator-briefing improvement round: every friction point encountered was logged, reproduced, and filed as a framework issue.
 
@@ -62,6 +62,7 @@ The threshold itself is a per-tenant configuration key (`per_tenant_config: appr
 | `requester` | Own tenant | Create invoices, submit for approval |
 | `approver` | Own tenant | Approve or reject submitted invoices |
 | `finance` | Own tenant | Pay, dispute, manage suppliers and payment attempts |
+| `finance_admin` | Own tenant | Finance Administrator — cross-cutting finance oversight, an override role above `finance`; same access `finance` has on Invoice and PaymentAttempt |
 | `auditor` | Own tenant, read-only | Read invoices, line items, payment attempts, users |
 | `tenant_admin` | Own tenant | Manage users, suppliers, tenant configuration |
 

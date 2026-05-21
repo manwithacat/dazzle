@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`dazzle db baseline` crash on a fresh example app** — `env.py` accessed `context.config` at module level before Alembic bound the context, causing `AttributeError: 'NoneType' object has no attribute 'config'`. Fixed by extracting a `metadata_loader.py` helper and deferring all DSL loading into the migration functions (`src/dazzle/cli/db.py`, new `src/dazzle/cli/metadata_loader.py`).
+- **`dazzle db baseline` crash on a fresh example app** — `env.py` accessed `context.config` at module level before Alembic bound the context, causing `AttributeError: 'NoneType' object has no attribute 'config'`. Fixed by extracting a `metadata_loader.py` helper and deferring all DSL loading into the migration functions (`src/dazzle/cli/db.py`, new `src/dazzle/back/alembic/metadata_loader.py`).
 
 ### Agent Guidance
 

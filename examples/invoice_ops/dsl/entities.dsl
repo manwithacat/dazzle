@@ -71,7 +71,7 @@ entity User "User":
   audit: all
 
 # =============================================================================
-# SUPPLIER — a supplier billing a tenant. bank_account_ref is a sensitive field.
+# SUPPLIER — a supplier billing a tenant. Sensitive bank details live in SupplierBankAccount.
 # =============================================================================
 
 entity Supplier "Supplier":
