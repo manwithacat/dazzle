@@ -3,6 +3,7 @@
 **Status**: Accepted
 **Date**: 2026-03-26
 **Relates to**: #712, #713, ADR-0008 (PostgreSQL only)
+**How-to companion**: [`docs/reference/migrations.md`](../reference/migrations.md) — practical workflow, migration patterns, and worked examples from `examples/invoice_ops`.
 
 ## Context
 

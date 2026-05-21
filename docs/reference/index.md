@@ -25,3 +25,4 @@
 | [Compliance](compliance.md) | Automated compliance evidence extraction from DSL constructs. Supports ISO 27001 and SOC 2 Trust Services Criteria. |
 | [Governance](governance.md) | Governance constructs enforce organisational policies, approval workflows, and service-level agreements. |
 | [Patterns](patterns.md) | Patterns are reusable DSL recipes that combine multiple constructs into proven solutions. |
+| [Schema Migrations](migrations.md) | How to generate, hand-edit, and apply Alembic migrations as DSL requirements evolve. Covers additive fields, renames, enum evolution, entity splits with data backfill, and changes that need no migration. |
