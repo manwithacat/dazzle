@@ -24,3 +24,8 @@ persona tenant_admin "Tenant Administrator":
   description: "Manages users, suppliers and per-tenant config within one tenant"
   goals: "Manage tenant users and suppliers", "Set approval thresholds"
   proficiency: expert
+
+persona finance_admin "Finance Administrator":
+  description: "Cross-cutting finance oversight — an override role above finance"
+  goals: "Override blocked payments", "Audit financial records"
+  proficiency: expert

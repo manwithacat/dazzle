@@ -166,22 +166,22 @@ entity Invoice "Invoice":
 
   permit:
     create: role(requester)
-    read: role(requester) or role(approver) or role(finance) or role(auditor) or role(tenant_admin)
-    update: role(requester) or role(approver) or role(finance)
+    read: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
+    update: role(requester) or role(approver) or role(finance) or role(finance_admin)
     delete: role(tenant_admin)
-    list: role(requester) or role(approver) or role(finance) or role(auditor) or role(tenant_admin)
+    list: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
 
   scope:
     create: tenant_id = current_user.tenant_id
       as: requester
     read: tenant_id = current_user.tenant_id
-      as: requester, approver, finance, auditor, tenant_admin
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
     update: tenant_id = current_user.tenant_id
-      as: requester, approver, finance
+      as: requester, approver, finance, finance_admin
     delete: tenant_id = current_user.tenant_id
       as: tenant_admin
     list: tenant_id = current_user.tenant_id
-      as: requester, approver, finance, auditor, tenant_admin
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
 
   transitions:
     draft -> submitted: role(requester)
@@ -253,22 +253,22 @@ entity PaymentAttempt "Payment Attempt":
   created_at: datetime auto_add
 
   permit:
-    create: role(finance)
-    read: role(approver) or role(finance) or role(auditor) or role(tenant_admin)
-    update: role(finance)
+    create: role(finance) or role(finance_admin)
+    read: role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
+    update: role(finance) or role(finance_admin)
     delete: role(tenant_admin)
-    list: role(approver) or role(finance) or role(auditor) or role(tenant_admin)
+    list: role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
 
   scope:
     create: tenant_id = current_user.tenant_id
-      as: finance
+      as: finance, finance_admin
     read: tenant_id = current_user.tenant_id
-      as: approver, finance, auditor, tenant_admin
+      as: approver, finance, finance_admin, auditor, tenant_admin
     update: tenant_id = current_user.tenant_id
-      as: finance
+      as: finance, finance_admin
     delete: tenant_id = current_user.tenant_id
       as: tenant_admin
     list: tenant_id = current_user.tenant_id
-      as: approver, finance, auditor, tenant_admin
+      as: approver, finance, finance_admin, auditor, tenant_admin
 
   audit: all
