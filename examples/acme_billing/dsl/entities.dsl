@@ -47,6 +47,7 @@ entity User "User":
   email: email required
   name: str(120) required
   org: ref Organization required
+  created_at: datetime auto_add
 
   permit:
     create: role(admin) or role(org_owner)
@@ -129,7 +130,7 @@ entity Project "Project":
 # =============================================================================
 
 entity Invoice "Invoice":
-  intent: "Billing record — FK-path scope (project.org) + negation (not (sensitive = true))"
+  intent: "Billing record — FK-path scope (project.org) + negation (not (sensitive = true)); amount is stored as integer cents (no separate money type)"
 
   id: uuid pk
   number: str(40) required
@@ -138,8 +139,12 @@ entity Invoice "Invoice":
   sensitive: bool=false
   created_at: datetime auto_add
 
+  # create is admin-only: scope: create: does not support FK-path predicates (#1124),
+  # so an org_owner-scoped create cannot be expressed — granting org_owner an
+  # unrestricted create would open a cross-org write hole. org_owner reviews and
+  # updates invoices within its own org via the FK-path scope rules below.
   permit:
-    create: role(admin) or role(org_owner)
+    create: role(admin)
     read: role(admin) or role(org_owner) or role(auditor) or role(project_member) or role(external_contractor)
     update: role(admin) or role(org_owner)
     delete: role(admin)
@@ -156,8 +161,6 @@ entity Invoice "Invoice":
       as: admin
     list: all
       as: admin
-    create: all
-      as: org_owner
     update: project.org = current_user.org
       as: org_owner
     list: project.org = current_user.org
@@ -182,8 +185,12 @@ entity Membership "Membership":
   user: ref User required
   project: ref Project required
 
+  # create is admin-only: scope: create: does not support FK-path predicates (#1124),
+  # so an org_owner-scoped create cannot be expressed — granting org_owner an
+  # unrestricted create would open a cross-org write hole. org_owner reviews and
+  # updates memberships within its own org via the FK-path scope rules below.
   permit:
-    create: role(admin) or role(org_owner)
+    create: role(admin)
     read: role(admin) or role(org_owner)
     update: role(admin) or role(org_owner)
     delete: role(admin) or role(org_owner)
@@ -200,8 +207,6 @@ entity Membership "Membership":
       as: admin
     list: all
       as: admin
-    create: all
-      as: org_owner
     update: project.org = current_user.org
       as: org_owner
     delete: project.org = current_user.org
