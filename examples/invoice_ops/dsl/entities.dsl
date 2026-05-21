@@ -121,7 +121,7 @@ entity Invoice "Invoice":
   amount: decimal(15,2) required
   currency: str(3)="GBP"
   po_number: str(40) optional
-  status: enum[draft,submitted,approved,rejected,disputed,paid]=draft
+  status: enum[draft,submitted,approved,partially_paid,rejected,disputed,paid]=draft
   submitted_by: ref User optional
   rejection_reason: text optional
   dispute_reason: text optional
@@ -152,6 +152,8 @@ entity Invoice "Invoice":
     submitted -> approved: role(approver)
     submitted -> rejected: role(approver) requires rejection_reason
     approved -> paid: role(finance)
+    approved -> partially_paid: role(finance)
+    partially_paid -> paid: role(finance)
     approved -> disputed: role(finance) requires dispute_reason
     paid -> disputed: role(finance) requires dispute_reason
     disputed -> approved: role(finance)
