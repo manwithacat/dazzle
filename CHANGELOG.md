@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.91] - 2026-05-21
+
+### Added
+
+- **Dynamic RBAC verifier — `dazzle rbac verify` is now real** (#1171).
+  Replaces the stub `verify()`. It provisions a disposable PostgreSQL
+  database, boots the app in-process (httpx `ASGITransport`), seeds one
+  user per role and one baseline row per entity, probes every
+  `(role, entity, operation)` cell of the static RBAC matrix as the
+  relevant role, and reports each cell as PASS / VIOLATION / WARNING — a
+  VIOLATION being a genuine divergence between runtime enforcement and
+  the static matrix. The report is saved to
+  `.dazzle/rbac-verify-report.json` (rendered by `dazzle rbac report`);
+  the command exits non-zero on any violation. Requires `DATABASE_URL`
+  — the verifier creates and drops its own scratch database and never
+  touches the app's real one.
+
+### Agent Guidance
+
+- **`dazzle rbac verify` needs a PostgreSQL server** (reads
+  `DATABASE_URL`, creates/drops a disposable scratch DB per run). Layer-2
+  dynamic verification is now implemented — the RBAC framework's three
+  layers (static matrix, dynamic verification, audit trail) are all
+  real. The verifier covers entity-level allow/deny/filter against
+  generated routes; per-row cross-tenant IDOR probing is a planned
+  future enhancement.
+
 ## [0.71.90] - 2026-05-20
 
 ### Changed
