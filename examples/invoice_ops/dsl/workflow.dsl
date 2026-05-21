@@ -1,7 +1,5 @@
 module invoice_ops.workflow
 
-use invoice_ops.entities
-
 # Standard maker-checker: one approver clears an invoice at or below the
 # tenant's configured threshold.
 approval StandardApproval "Standard Invoice Approval":
