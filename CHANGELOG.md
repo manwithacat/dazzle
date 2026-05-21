@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.104] - 2026-05-21
+
 ### Added
 
 - **`docs/reference/migrations.md`** — canonical guide to Dazzle schema-evolution: baseline workflow, every migration operation (additive, rename, enum, entity-split, event-schema, DSL-only RBAC), and the round-trip test protocol. Surfaced by the SP2 migration exercise on `examples/invoice_ops`.
