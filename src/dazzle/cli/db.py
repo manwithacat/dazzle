@@ -241,11 +241,43 @@ def baseline_command(
     if url:
         cfg.set_main_option("sqlalchemy.url", url)
 
-    # Validate that DSL metadata is loadable and non-empty
+    # Validate that DSL metadata is loadable and non-empty.
+    # NOTE: Do NOT import from dazzle.back.alembic.env here — that module
+    # executes ``config = context.config`` at import time, which raises
+    # AttributeError when alembic.context has no active config (i.e. any
+    # direct Python import outside an Alembic run).  The metadata loader
+    # is inlined below to avoid that module-level side effect.
     try:
-        from dazzle.back.alembic.env import _load_target_metadata
+        import sqlalchemy
 
-        metadata = _load_target_metadata()
+        from dazzle.back.runtime.sa_schema import build_metadata
+        from dazzle.core.fileset import discover_dsl_files
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.manifest import load_manifest
+        from dazzle.core.parser import parse_modules
+        from dazzle.core.renderer_registry import known_renderer_names
+
+        project_root = Path.cwd().resolve()
+        manifest_path = project_root / "dazzle.toml"
+        if manifest_path.exists():
+            manifest = load_manifest(manifest_path)
+            dsl_files = discover_dsl_files(project_root, manifest)
+            if dsl_files:
+                modules = parse_modules(dsl_files)
+                appspec = build_appspec(
+                    modules,
+                    manifest.project_root,
+                    known_renderers=known_renderer_names(manifest),
+                )
+                from dazzle.back.converters.entity_converter import convert_entities
+
+                entities = convert_entities(appspec.domain.entities)
+                metadata = build_metadata(entities)
+            else:
+                metadata = sqlalchemy.MetaData()
+        else:
+            metadata = sqlalchemy.MetaData()
+
         table_count = len(metadata.tables)
         if table_count == 0:
             console.print(
@@ -255,7 +287,9 @@ def baseline_command(
             )
             raise typer.Exit(1)
         console.print(f"[dim]DSL declares {table_count} tables[/dim]")
-    except ImportError:
+    except typer.Exit:
+        raise
+    except Exception:
         console.print("[yellow]Could not validate DSL metadata — proceeding anyway[/yellow]")
 
     project_versions = str(_get_project_versions_dir())

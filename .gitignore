@@ -72,6 +72,15 @@ pytest-of-*/
 **/.dazzle/
 *.db
 
+# invoice_ops commits its migration history — a project's migrations
+# must be version-controlled (see docs/reference/migrations.md).
+!examples/invoice_ops/.dazzle/
+examples/invoice_ops/.dazzle/*
+!examples/invoice_ops/.dazzle/migrations/
+!examples/invoice_ops/.dazzle/migrations/**
+examples/invoice_ops/.dazzle/migrations/**/__pycache__/
+examples/invoice_ops/.dazzle/migrations/**/*.pyc
+
 # Development Docs (legacy)
 /devdocs
 # Example build outputs
