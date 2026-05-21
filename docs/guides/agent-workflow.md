@@ -204,9 +204,10 @@ A reviewer inspects:
 
 - **RBAC matrix diff** — `dazzle rbac matrix` output between the old and new
   spec. New `ALLOW` entries on sensitive entities need explicit sign-off.
-- **Migration preview** — `dazzle db upgrade --sql` (dry-run) for any schema
-  change. Destructive migrations (column drops, renames, type changes) need
-  hand-editing before they run; see [migrations guide](../reference/migrations.md).
+- **Migration review** — the generated Alembic migration file under
+  `.dazzle/migrations/versions/` for any schema change. Destructive migrations
+  (column drops, renames, type changes) must be hand-edited in that file before
+  they are applied; see [migrations guide](../reference/migrations.md).
 - **Friction findings** — anything the agent logged as uncertain or the
   `dazzle lint` warnings flagged but didn't block on.
 - **Business-logic correctness** — the loop verifies structural consistency, not
@@ -407,11 +408,13 @@ Some schema changes cannot be expressed as auto-generated Alembic migrations:
 column renames, type changes, entity splits with backfill logic. When the agent
 encounters one of these:
 
-1. Generate the baseline migration with `dazzle db revision -m "description"`.
-2. Open the generated file in `migrations/versions/` and add the hand-written
-   SQL or SQLAlchemy operations.
-3. Preview with `dazzle db upgrade --sql` (dry-run) before applying.
-4. Apply with `dazzle db upgrade`.
+1. Generate the migration with `dazzle db revision -m "description"`.
+2. Open the generated file under `.dazzle/migrations/versions/` and add the
+   hand-written SQL or SQLAlchemy operations.
+3. Review the generated migration file and hand-edit it — rename, split, and
+   type-change migrations need hand-written SQL (see [migrations.md](../reference/migrations.md)) —
+   then apply with `dazzle db upgrade`.
+4. Run `dazzle db verify` afterwards to confirm FK integrity.
 
 See [migrations.md](../reference/migrations.md) for the full taxonomy of
 migration classes and the patterns the SP2 exercise produced.
@@ -432,7 +435,7 @@ section is honest about both.
 | Access matrix is correct by construction | `dazzle rbac matrix` | The static matrix matches the DSL's `permit:` / `scope:` / `as:` declarations |
 | Access matrix is enforced at runtime | `dazzle rbac verify` | HTTP responses match the matrix for every persona / surface pair tested |
 | Scope filters restrict data | `dazzle rbac verify-scope` | Row-level filters fire and are not bypassable via the tested routes |
-| Schema migrations are valid Alembic | `dazzle db upgrade --sql` | The migration SQL is syntactically correct and applies without error |
+| Schema migrations apply cleanly | `dazzle db upgrade` + `dazzle db verify` | Pending migrations apply without error; FK integrity holds afterwards |
 | Anti-Turing compliance | `dazzle lint --anti-turing` | No control-flow constructs in DSL files |
 
 ### What still needs human judgment
@@ -447,9 +450,10 @@ section is honest about both.
   in [SECURITY_CLAIMS.md](../../SECURITY_CLAIMS.md), not a sufficient one.
   Evaluating those claims requires the full exercise described in
   [EVALUATION.md](../../EVALUATION.md).
-- **Destructive migration review.** `dazzle db upgrade --sql` shows what will
-  run. Whether it is *correct* for the domain — whether a column rename is safe,
-  whether a backfill is complete — requires a reviewer who understands the data.
+- **Destructive migration review.** The generated migration file under
+  `.dazzle/migrations/versions/` shows what will run. Whether it is *correct*
+  for the domain — whether a column rename is safe, whether a backfill is
+  complete — requires a reviewer who understands the data.
 - **External integrations.** Service blocks declare contracts with external
   systems. The loop validates the DSL side of that contract; it cannot validate
   the external system.
