@@ -14,7 +14,7 @@ sensitive supplier bank details. Two mechanisms can express this requirement:
    columns from the API response and form for any other persona.
 
 2. **Entity split** — move the bank-detail fields into a dedicated entity
-   (e.g. `SupplierBankDetail`) with its own `permit:` / `scope:` rules.
+   (e.g. `SupplierBankAccount`) with its own `permit:` / `scope:` rules.
    The sensitive data carries its own entity-level authorization
    independent of the parent entity.
 
@@ -124,7 +124,7 @@ parallel `permit:` system, and is out of scope for this ADR.
 
 ### Negative
 
-- **Entity split has schema cost.** A `SupplierBankDetail` entity means a
+- **Entity split has schema cost.** A `SupplierBankAccount` entity means a
   second table, a second FK join, and a second `dazzle db revision`. For
   very small apps this is arguably over-engineering. The design choice is
   that correctness and analysability outweigh the join.
