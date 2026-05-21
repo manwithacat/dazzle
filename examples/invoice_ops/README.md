@@ -122,9 +122,9 @@ DATABASE_URL=postgresql://localhost/postgres \
 | `test_read_other_tenant_lineitem_is_404` | IDOR: northwind requester fetching a contoso line item by UUID gets 404 | Runs |
 | `test_admin_positive_control` | Sanity check: northwind requester CAN read a northwind invoice (guards against over-filtering false-greens) | Runs |
 | `test_search_excludes_other_tenant` | Northwind invoice list with search params (`q=`, `search=`) contains no contoso data | Runs |
-| `test_audit_export_excludes_other_tenant` | Northwind auditor's `/_dazzle/audit/logs` view contains no contoso entity ids | Runs |
-| `test_event_log_excludes_other_tenant` | `/_dazzle/events/topics/invoice_events` contains no contoso tenant_id | **Skipped** — events subsystem requires REDIS_URL + lifespan events; unavailable under in-process ASGITransport |
-| `test_other_tenant_config_denied` | Northwind `tenant_admin` cannot read or delete the contoso `Tenant` row (per-tenant config container) | **Skipped** — requires contoso `tenant_id` in seed data |
+| `test_audit_export_excludes_other_tenant` | Northwind auditor's `/_dazzle/audit/logs` view contains no contoso entity ids | **Skipped** — `/_dazzle/audit/logs` not accessible to auditor role; endpoint gated |
+| `test_event_log_excludes_other_tenant` | `/_dazzle/events/topics/invoice_events` contains no contoso tenant_id | **Skipped** — events subsystem not wired under in-process transport (no lifespan, no REDIS_URL); endpoint returns 500 |
+| `test_other_tenant_config_denied` | Northwind `tenant_admin` cannot read or delete the contoso `Tenant` row (per-tenant config container) | Runs |
 
 ### RBAC / transition suite (`test_invoice_ops_rbac.py`)
 
