@@ -19,10 +19,11 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Hand-edited: autogenerate emitted sa.Text() instead of sa.String(40),
-    # plus spurious _dazzle_params drop and unnamed unique-constraint ops.
-    # Only the intentional column addition is retained.
-    op.add_column("Invoice", sa.Column("po_number", sa.String(length=40), nullable=True))
+    # Hand-edited: stripped spurious _dazzle_params drop and unnamed
+    # unique-constraint ops emitted by autogenerate. Column type kept as
+    # sa.Text() — Dazzle maps str/str(N) to TEXT (back/runtime/sa_schema.py);
+    # the (40) length is an application-layer concern, not a DB column type.
+    op.add_column("Invoice", sa.Column("po_number", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
