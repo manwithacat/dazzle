@@ -56,22 +56,23 @@ story ST-003 "Project member sees only their assigned projects":
     - "Project Alpha is visible to the project member"
     - "Project Beta is not visible to the project member"
 
-story ST-004 "External contractor views non-sensitive invoices only":
+story ST-004 "External contractor views non-sensitive invoices within their organization":
   actor: external_contractor
   trigger: user_click
-  scope: [Invoice, Project]
+  scope: [Invoice]
 
   given:
-    - "External contractor is authenticated"
-    - "External contractor has a Membership to Project Alpha"
-    - "Project Alpha has two invoices: one with sensitive = false, one with sensitive = true"
+    - "External contractor is authenticated and belongs to the Acme organization"
+    - "Acme has two invoices: one with sensitive = false, one with sensitive = true"
+    - "Globex organization also has invoices (both sensitive and non-sensitive)"
 
   when:
     - "External contractor lists invoices"
 
   then:
-    - "Non-sensitive invoice is visible to the external contractor"
-    - "Sensitive invoice is hidden from the external contractor"
+    - "Non-sensitive Acme invoices are visible to the external contractor"
+    - "Sensitive Acme invoice is hidden from the external contractor"
+    - "All Globex invoices are hidden — scope predicate is project.org = current_user.org, so cross-org rows are excluded regardless of sensitivity"
 
   unless:
     - "Invoice has sensitive = true":

@@ -130,7 +130,7 @@ entity Project "Project":
 # =============================================================================
 
 entity Invoice "Invoice":
-  intent: "Billing record — FK-path scope (project.org) + negation (not (sensitive = true)); amount is stored as integer cents (no separate money type)"
+  intent: "Billing record — FK-path scope (project.org) + inequality (sensitive != true); boolean-AND compound predicate tenant-isolates project_member/external_contractor. Amount stored as integer cents (no separate money type)"
 
   id: uuid pk
   number: str(40) required
@@ -167,9 +167,9 @@ entity Invoice "Invoice":
       as: org_owner, auditor
     read: project.org = current_user.org
       as: org_owner, auditor
-    list: not (sensitive = true)
+    list: project.org = current_user.org and sensitive != true
       as: project_member, external_contractor
-    read: not (sensitive = true)
+    read: project.org = current_user.org and sensitive != true
       as: project_member, external_contractor
 
   audit: all
