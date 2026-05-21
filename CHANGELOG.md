@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Reframed compliance headline copy to accurate evidence-mapping
+  language** (#1176, partial). `README.md` and `docs/llms.txt` described the
+  compliance pipeline as "Compliance by construction" / "Audit-ready from
+  day one" / "built-in compliance" — language that overstates what the
+  pipeline does. It maps DSL constructs to ISO 27001 / SOC 2 controls and
+  flags coverage gaps; it does not make an app compliant. The headline copy
+  now matches the (already-accurate) wording in `docs/reference/compliance.md`
+  and the `dazzle compliance` CLI help. The RBAC "provably enforced" /
+  "dynamic verification" language is unchanged — it became accurate when
+  #1171 shipped the real dynamic verifier. The remaining #1176 items
+  (`SECURITY_CLAIMS.md`, `EVALUATION.md`, a per-subsystem maturity table)
+  need maintainer judgment on maturity ratings and stay open.
+
 ### Added
 
 - **Demo-data blueprint per-tenant FK balancing + `sequential` strategy**

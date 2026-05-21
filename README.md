@@ -70,7 +70,7 @@ Dazzle inverts this. You write what your business *is* — entities, roles, perm
 
 If you're building SaaS — especially in regulated industries — you will face auditors. They will ask: *who can access what? how are changes controlled? where is sensitive data classified?*
 
-Most teams answer these questions retroactively, combing through code to produce evidence. Dazzle answers them by construction:
+Most teams answer these questions retroactively, combing through code to produce evidence. Dazzle derives the answers from the DSL itself:
 
 - **Access control** is declared in the DSL and provably enforced. Every permission is statically verifiable.
 - **State machines** model approval workflows, transitions, and four-eyes authorization.
@@ -128,7 +128,7 @@ That's a todo app. The same language scales to 39-entity accountancy platforms w
 | **Fragments** | Constrained custom rendering inside generated surfaces | Differentiated UX without losing semantic integrity |
 | **Integrations** | Declarative API bindings with triggers and mappings | Connect to Stripe, HMRC, Xero, and more |
 | **LLM Jobs** | Classification, extraction, generation tasks | AI capabilities without prompt engineering sprawl |
-| **Compliance** | Automated evidence extraction for ISO 27001 and SOC 2 | Audit-ready from day one |
+| **Compliance** | Maps DSL constructs to ISO 27001 and SOC 2 controls | Control-coverage evidence, gaps flagged |
 
 For the full DSL reference, see [docs/reference/index.md](docs/reference/index.md).
 

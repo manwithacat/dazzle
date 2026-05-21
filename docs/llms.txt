@@ -1,6 +1,6 @@
 # Dazzle — LLM Agent Index
 
-> Declarative SaaS framework with built-in compliance, provable RBAC, and graph features.
+> Declarative SaaS framework with compliance-evidence mapping, provable RBAC, and graph features.
 > This file helps AI agents evaluate and navigate Dazzle before installing or connecting to the MCP server.
 
 ## What Dazzle Is
@@ -8,7 +8,7 @@
 Dazzle is a declarative framework for building SaaS applications. You describe your business — data models, users, permissions, workflows, state machines — in structured `.dsl` files. Dazzle gives you a running web app with database, API, UI, auth, RBAC, and compliance evidence. No code generation, no build step.
 
 **Key differentiators:**
-- **Compliance by construction** — automated evidence extraction for ISO 27001 and SOC 2 TSC
+- **Compliance evidence mapping** — maps DSL constructs to ISO 27001 and SOC 2 TSC controls and flags coverage gaps
 - **Provable RBAC** — access rules compile to a formal predicate algebra, statically verifiable
 - **Graph features** — entity relationships with CTE traversal, PageRank, community detection
 - **Double-entry ledgers** — TigerBeetle-backed financial transactions
