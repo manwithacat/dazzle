@@ -86,6 +86,7 @@ async def test_seed_role_users_creates_one_user_per_role() -> None:
 
             # The seeded users can actually authenticate — use the same in-process
             # transport as ctx.client so no network is required.
+            assert ctx.client._transport is not None  # type: ignore[attr-defined]
             transport = ctx.client._transport  # type: ignore[attr-defined]
             async with httpx.AsyncClient(
                 transport=transport,
@@ -131,6 +132,7 @@ async def test_seed_baseline_rows_returns_entity_ids() -> None:
             assert ctx.auth_store is not None
             creds = await _seed_role_users(ctx.auth_store, roles=["admin"])
 
+            assert ctx.client._transport is not None  # type: ignore[attr-defined]
             transport = ctx.client._transport  # type: ignore[attr-defined]
             async with httpx.AsyncClient(
                 transport=transport,
@@ -149,3 +151,40 @@ async def test_seed_baseline_rows_returns_entity_ids() -> None:
                 "str field — it should seed successfully"
             )
             assert baseline["Task"]  # non-empty id string
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _PG_URL, reason="no TEST_DATABASE_URL / DATABASE_URL")
+async def test_verify_runs_end_to_end_and_produces_cells() -> None:
+    """`verify()` runs the full orchestration against `examples/simple_task`.
+
+    Proves the end-to-end path — disposable DB, in-process boot, role-user
+    seeding, per-cell probing — produces a populated report. Does NOT assert
+    zero violations (that is a separate task against a clean-by-design app);
+    only that the orchestration runs and emits cells.
+    """
+    from pathlib import Path
+
+    from dazzle.rbac.verifier import CellResult, VerificationReport, verify
+
+    assert _PG_URL is not None
+    project_root = Path("examples/simple_task")
+    report = await verify(project_root, server_database_url=_PG_URL)
+
+    assert isinstance(report, VerificationReport)
+    assert report.app_name == str(project_root)
+    assert report.matrix is not None
+
+    # The matrix has roles × entities × operations cells; verify() probes
+    # every one of them, so the report must be populated.
+    assert report.total > 0, "verify() should probe at least one matrix cell"
+    assert report.total == len(report.cells)
+    assert report.total == report.passed + report.violated + report.warnings
+
+    # Every cell carries the expected structure.
+    for cell in report.cells:
+        assert cell.role
+        assert cell.entity
+        assert cell.operation
+        assert isinstance(cell.result, CellResult)
+        assert isinstance(cell.observed_status, int)

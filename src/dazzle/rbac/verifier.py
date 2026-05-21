@@ -521,6 +521,15 @@ def _minimal_body_for_entity(
         if field.is_primary_key:
             continue
         kind = field.type.kind
+        if kind in (
+            FieldTypeKind.HAS_MANY,
+            FieldTypeKind.HAS_ONE,
+            FieldTypeKind.EMBEDS,
+            FieldTypeKind.BELONGS_TO,
+        ):
+            # Relationship fields are not required in DSL practice — they
+            # are populated via FK columns, not the create body. Skip.
+            continue
         if kind == FieldTypeKind.REF:
             ref_entity = field.type.ref_entity
             ref_id = baseline.get(ref_entity) if ref_entity else None
@@ -534,6 +543,10 @@ def _minimal_body_for_entity(
             body[field.name] = 1
         elif kind == FieldTypeKind.DECIMAL:
             body[field.name] = "1.00"
+        elif kind == FieldTypeKind.FLOAT:
+            body[field.name] = 1.0
+        elif kind == FieldTypeKind.MONEY:
+            body[field.name] = "1.00"
         elif kind == FieldTypeKind.BOOL:
             body[field.name] = False
         elif kind == FieldTypeKind.DATE:
@@ -545,6 +558,12 @@ def _minimal_body_for_entity(
         elif kind == FieldTypeKind.ENUM:
             values = field.type.enum_values
             body[field.name] = values[0] if values else ""
+        elif kind in (FieldTypeKind.URL, FieldTypeKind.FILE):
+            body[field.name] = "https://example.com/seed"
+        elif kind == FieldTypeKind.TIMEZONE:
+            body[field.name] = "UTC"
+        elif kind == FieldTypeKind.JSON:
+            body[field.name] = {}
         else:
             body[field.name] = ""
     return body
@@ -609,34 +628,171 @@ async def _seed_baseline_rows(
     return baseline
 
 
+async def _probe_all_cells(
+    ctx: _VerifierContext,
+    matrix: AccessMatrix,
+    creds: dict[str, tuple[str, str]],
+    baseline: dict[str, str],
+) -> list[VerifiedCell]:
+    """Open one authenticated client per role; probe every matrix cell.
+
+    Reuses the app already booted by `_verifier_app_context` — the seeded
+    role users and baseline rows live in *that* boot's scratch database, so
+    every role client must ride the same in-process `httpx.ASGITransport`
+    (`ctx.client._transport`).  Re-booting the app would point at a fresh,
+    empty database and lose the fixtures.
+
+    Per-cell probe failures are caught here and recorded as WARNING — only
+    an app-boot failure (which happens before this is called) yields an
+    empty report.
+    """
+    import httpx
+
+    from dazzle.cli.rbac import _login
+    from dazzle.rbac.audit import InMemoryAuditSink, set_audit_sink
+
+    cells: list[VerifiedCell] = []
+    transport = ctx.client._transport
+    base_url = "http://verifier.local"
+
+    for role in matrix.roles:
+        if role not in creds:
+            continue
+        email, password = creds[role]
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url=base_url,
+            follow_redirects=True,
+        ) as client:
+            try:
+                await _login(client, base_url, email, password)
+            except Exception as exc:
+                # The role user cannot authenticate — every cell for this
+                # role is unverifiable. Record one WARNING per cell.
+                for entity in matrix.entities:
+                    for operation in matrix.operations:
+                        expected = matrix.get(role, entity, operation)
+                        cells.append(
+                            VerifiedCell(
+                                role=role,
+                                entity=entity,
+                                operation=operation,
+                                expected=expected,
+                                observed_status=0,
+                                observed_count=None,
+                                result=CellResult.WARNING,
+                                audit_records=[],
+                                detail=f"role login failed: {exc}",
+                            )
+                        )
+                continue
+
+            for entity in matrix.entities:
+                for operation in matrix.operations:
+                    expected = matrix.get(role, entity, operation)
+                    sink = InMemoryAuditSink()
+                    set_audit_sink(sink)
+                    try:
+                        probe = await _probe_cell(
+                            client,
+                            entity=entity,
+                            operation=operation,
+                            baseline_id=baseline.get(entity),
+                        )
+                        result = compare_cell(expected, probe.status, probe.count)
+                        detail = ""
+                    except Exception as exc:
+                        probe = _ProbeResult(status=0, count=None)
+                        result = CellResult.WARNING
+                        detail = f"probe error: {exc}"
+                    cells.append(
+                        VerifiedCell(
+                            role=role,
+                            entity=entity,
+                            operation=operation,
+                            expected=expected,
+                            observed_status=probe.status,
+                            observed_count=probe.count,
+                            result=result,
+                            audit_records=list(sink.records),
+                            detail=detail,
+                        )
+                    )
+    return cells
+
+
 async def verify(
     project_root: Path,
     *,
-    host: str = "localhost",
-    port: int = 8000,
+    server_database_url: str | None = None,
 ) -> VerificationReport:
-    """Run Layer 2 dynamic RBAC verification against a live server.
+    """Run Layer-2 dynamic RBAC verification.
 
-    This is a stub — the full server lifecycle + HTTP probing implementation
-    is deferred to a follow-up task.  Returns a placeholder report with zero
-    cells so that callers can handle the result type consistently.
+    Provisions a disposable database, boots the app in-process, probes
+    every (role, entity, operation) matrix cell as the relevant role, and
+    compares observed behaviour against the static matrix.
     """
     import importlib.metadata
+    import os
     from datetime import UTC, datetime
+
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.rbac.audit import NullAuditSink, set_audit_sink
+    from dazzle.rbac.matrix import generate_access_matrix
 
     try:
         version = importlib.metadata.version("dazzle-dsl")
     except importlib.metadata.PackageNotFoundError:
         version = "unknown"
+    now = datetime.now(UTC).isoformat()
 
+    server_url = server_database_url or os.environ.get("DATABASE_URL")
+    if not server_url:
+        raise RuntimeError(
+            "dynamic RBAC verification requires a PostgreSQL server — set "
+            "DATABASE_URL (the verifier creates and drops its own scratch DB)."
+        )
+
+    appspec = load_project_appspec(project_root)
+    matrix = generate_access_matrix(appspec)
+
+    cells: list[VerifiedCell] = []
+    try:
+        async with _DisposableDatabase(server_url) as db_url:
+            async with _verifier_app_context(project_root, db_url) as ctx:
+                creds = await _seed_role_users(ctx.auth_store, roles=list(matrix.roles))
+                baseline = await _seed_baseline_rows(
+                    ctx.client, entities=list(matrix.entities), appspec=ctx.appspec
+                )
+                cells = await _probe_all_cells(ctx, matrix, creds, baseline)
+    except Exception:
+        # App-boot / database-provisioning failure — return an empty report
+        # rather than raising, so callers can render a consistent result.
+        return VerificationReport(
+            app_name=str(project_root),
+            timestamp=now,
+            dazzle_version=version,
+            matrix=matrix,
+            cells=[],
+            total=0,
+            passed=0,
+            violated=0,
+            warnings=0,
+        )
+    finally:
+        set_audit_sink(NullAuditSink())
+
+    passed = sum(1 for c in cells if c.result == CellResult.PASS)
+    violated = sum(1 for c in cells if c.result == CellResult.VIOLATION)
+    warnings = sum(1 for c in cells if c.result == CellResult.WARNING)
     return VerificationReport(
         app_name=str(project_root),
-        timestamp=datetime.now(UTC).isoformat(),
+        timestamp=now,
         dazzle_version=version,
-        matrix=None,
-        cells=[],
-        total=0,
-        passed=0,
-        violated=0,
-        warnings=0,
+        matrix=matrix,
+        cells=cells,
+        total=len(cells),
+        passed=passed,
+        violated=violated,
+        warnings=warnings,
     )
