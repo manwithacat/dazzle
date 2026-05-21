@@ -1,0 +1,265 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "acme_billing",
+    "domain_description": "Multi-tenant billing app — two orgs (Acme Corp, Globex Inc) each with projects, invoices, and memberships; exercises FK-path scope, junction-scope, and sensitive-flag visibility",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Acme Corp",
+        "slug": "acme-corp",
+        "notes": "Demo tenant 1 — primary org for happy-path walkthroughs"
+      },
+      {
+        "name": "Globex Inc",
+        "slug": "globex-inc",
+        "notes": "Demo tenant 2 — cross-tenant boundary for adversarial tests"
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "admin",
+        "description": "Platform administrator — full cross-org access",
+        "default_role": "role_admin",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "org_owner",
+        "description": "Organization owner — full access within own org",
+        "default_role": "role_org_owner",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "auditor",
+        "description": "Read-only auditor scoped to one org",
+        "default_role": "role_auditor",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "project_member",
+        "description": "Works on assigned projects only",
+        "default_role": "role_project_member",
+        "default_user_count": 2
+      },
+      {
+        "persona_name": "external_contractor",
+        "description": "Outside collaborator — non-sensitive data on assigned projects",
+        "default_role": "role_external_contractor",
+        "default_user_count": 1
+      }
+    ],
+    "entities": [
+      {
+        "name": "Organization",
+        "row_count_default": 2,
+        "notes": "Two tenant orgs: Acme Corp and Globex Inc",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Acme Corp",
+                "Globex Inc"
+              ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -730,
+              "max_offset_days": -180
+            }
+          }
+        ]
+      },
+      {
+        "name": "User",
+        "row_count_default": 8,
+        "notes": "4 users per org across the persona roles",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "name",
+              "domains": [
+                "acme-corp.example",
+                "globex-inc.example"
+              ]
+            }
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "org",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Organization"
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": -30
+            }
+          }
+        ]
+      },
+      {
+        "name": "Project",
+        "row_count_default": 6,
+        "notes": "3 projects per org — platform, mobile, and data projects",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Platform Upgrade",
+                "Mobile App",
+                "Data Pipeline",
+                "Cloud Migration",
+                "Analytics Dashboard",
+                "API Redesign"
+              ]
+            }
+          },
+          {
+            "field_name": "org",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Organization"
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -300,
+              "max_offset_days": -30
+            }
+          }
+        ]
+      },
+      {
+        "name": "Invoice",
+        "row_count_default": 10,
+        "notes": "~5 invoices per org; mix of regular and sensitive=true rows for visibility tests",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "number",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "INV-2024-001",
+                "INV-2024-002",
+                "INV-2024-003",
+                "INV-2024-004",
+                "INV-2024-005",
+                "INV-2024-006",
+                "INV-2024-007",
+                "INV-2024-008",
+                "INV-2024-009",
+                "INV-2024-010"
+              ]
+            }
+          },
+          {
+            "field_name": "amount",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 50000,
+              "max": 500000
+            }
+          },
+          {
+            "field_name": "project",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Project"
+            }
+          },
+          {
+            "field_name": "sensitive",
+            "strategy": "boolean_weighted",
+            "params": {
+              "true_weight": 0.3
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -180,
+              "max_offset_days": -7
+            }
+          }
+        ]
+      },
+      {
+        "name": "Membership",
+        "row_count_default": 8,
+        "notes": "~4 memberships per org — assign project_members and external_contractors to a subset of projects",
+        "tenant_scoped": true,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "user",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "User"
+            }
+          },
+          {
+            "field_name": "project",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Project"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
