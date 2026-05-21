@@ -45,6 +45,12 @@ _KNOWN_EXAMPLES = [
     # and compound (`!=`) scope rules, exercised by the adversarial
     # suite in tests/integration/test_acme_billing_rbac.py.
     "acme_billing",
+    # #1184 — multi-tenant invoice-approval / payment-ops keystone
+    # example. Teaches admin_personas cross-tenant bypass, approval
+    # gates, and the postgres:// URL scheme alias. Exercised by the
+    # adversarial isolation suite in
+    # tests/integration/test_invoice_ops_tenant_isolation.py.
+    "invoice_ops",
 ]
 
 # Examples that live under `examples/` but are NOT covered by the dogfood

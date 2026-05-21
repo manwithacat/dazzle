@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`examples/invoice_ops` — multi-tenant invoice-approval / payment-ops
+  keystone example** (#1184). End-to-end teaching example covering
+  multi-tenant isolation, approval gates, HLESS event model, payment-provider
+  service, and audit export. Includes an adversarial cross-tenant isolation
+  test suite (`tests/integration/test_invoice_ops_tenant_isolation.py`) and a
+  transition-RBAC / projection-agreement suite
+  (`tests/integration/test_invoice_ops_rbac.py`). `admin_personas:` usage
+  demonstrates the cross-tenant bypass — tenant admins must NOT appear there
+  (see Agent Guidance below).
+
 - **`SECURITY_CLAIMS.md` and `EVALUATION.md` — evaluator-facing docs**
   (#1176). `SECURITY_CLAIMS.md` is a claim-by-claim inventory of every
   security/RBAC/compliance/audit claim: implementation status, where it is
@@ -68,6 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the private `client._transport` attribute.
 
 ### Agent Guidance
+
+- `tenancy: admin_personas:` grants a **cross-tenant** scope bypass; list only
+  platform-level superuser roles there (e.g. `platform_admin`). A
+  within-tenant admin role listed under `admin_personas:` becomes a
+  cross-tenant superuser and leaks every other tenant's data — use a
+  `scope: all as: tenant_admin` rule instead. See #1184.
 
 - The RBAC verifier is now three modules under `src/dazzle/rbac/`:
   `verification_types.py`, `verification_harness.py`, `verifier.py`. Import
@@ -115,6 +131,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keeps its dedicated path) — so a negated group composes in either operand
   position. `_parse_not_scope_condition` is renamed `_parse_not_via_condition`
   and now handles only the `not via` form.
+
+- **Runtime now normalises the `postgres://` DB-URL scheme alias** (#1184).
+  `DATABASE_URL=postgres://...` previously crashed schema creation because the
+  asyncpg driver only accepts `postgresql://`. `pg_backend.py` and `server.py`
+  now rewrite `postgres://` → `postgresql://` at startup; both sync and async
+  URL construction paths are covered. Tested in `tests/unit/test_pg_pool.py`.
 
 - **FK-constrained DELETE returns HTTP 409, not 500** (#1178). The Cedar
   delete handler (`create_delete_handler._core`) called
