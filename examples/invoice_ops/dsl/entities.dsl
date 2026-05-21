@@ -120,6 +120,7 @@ entity Invoice "Invoice":
   supplier: ref Supplier required
   amount: decimal(15,2) required
   currency: str(3)="GBP"
+  po_number: str(40) optional
   status: enum[draft,submitted,approved,rejected,disputed,paid]=draft
   submitted_by: ref User optional
   rejection_reason: text optional
