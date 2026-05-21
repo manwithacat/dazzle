@@ -1477,6 +1477,9 @@ class DazzleBackendApp:
             # name (`list_invoices`, ...), so re-key by `CRUDService.
             # entity_name` here — otherwise every bulk route is silently
             # skipped under auth ("no service for scope enforcement").
+            # Multiple CRUDServices can exist per entity (one per surface
+            # mode); any one is interchangeable for the bulk route's
+            # scope-pre-read, so last-write-wins on the key collision is benign.
             _bulk_services = {
                 getattr(svc, "entity_name", name): svc
                 for name, svc in self._services.items()

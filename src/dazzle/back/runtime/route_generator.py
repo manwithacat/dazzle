@@ -78,6 +78,12 @@ logger = logging.getLogger(__name__)
 APIRouter = _APIRouter
 
 
+# Audit `policy_effect` sentinel for a read denied by a `scope:` row filter
+# rather than a Cedar permit/forbid policy — distinct from the standard
+# `permit`/`forbid` effects so audit consumers can grep scope denials (#1174).
+_SCOPE_DENY_EFFECT = "scope"
+
+
 # ---------------------------------------------------------------------------
 # HandlerConfig — stable contract for CRUD factory authorization context (#1011)
 # ---------------------------------------------------------------------------
@@ -2950,15 +2956,17 @@ def create_read_handler(spec: RouteSpec) -> Callable[..., Any]:
                         entity_name=entity_name,
                         entity_id=str(id),
                         decision="deny",
-                        matched_policy="scope",
-                        policy_effect="scope",
+                        matched_policy=_SCOPE_DENY_EFFECT,
+                        policy_effect=_SCOPE_DENY_EFFECT,
                         user=_u,
                     )
                 raise HTTPException(status_code=404, detail="Not found")
             # `_scoped_pre_read` may return a row fetched via the list path,
             # which does not carry `include=auto_include` relations. Re-fetch
             # through the read path so the response shape is unchanged when a
-            # scope filter was applied.
+            # scope filter was applied. The re-fetch is intentionally unscoped:
+            # scope has already passed for this id above — this only restores
+            # the relation hydration the list-path row lacks.
             if auto_include:
                 hydrated = await service.execute(operation="read", id=id, include=auto_include)
                 if hydrated is not None:
