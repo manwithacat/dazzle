@@ -86,6 +86,9 @@ class _InvoiceOpsApp:
     # Invoices in specific states (for later tasks)
     northwind_submitted_invoice_id: str = ""
     northwind_approved_invoice_id: str = ""
+    # SupplierBankAccount ids (one per tenant) for isolation coverage.
+    northwind_bank_account_id: str = ""
+    contoso_bank_account_id: str = ""
 
     def credentials(self, role: str, tenant: str) -> tuple[str, str]:
         return self._creds[role][tenant]
@@ -264,6 +267,11 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
     app.northwind_lineitem_id = nw_lineitem_id
     app.contoso_lineitem_id = co_lineitem_id
 
+    nw_bank_account_id = _mk_id()
+    co_bank_account_id = _mk_id()
+    app.northwind_bank_account_id = nw_bank_account_id
+    app.contoso_bank_account_id = co_bank_account_id
+
     with psycopg.connect(db_url, autocommit=True) as conn:
         # --- Tenant rows ------------------------------------------------
         _sql_insert(
@@ -314,7 +322,6 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
                 "tenant_id": nw_tenant_id,
                 "name": "Northwind Supplier Alpha",
                 "contact_email": "alpha@northwind.test",
-                "bank_account_ref": "NW-BANK-001",
                 "region": "emea",
                 "created_at": now,
                 "updated_at": now,
@@ -324,7 +331,6 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
                 "tenant_id": nw_tenant_id,
                 "name": "Northwind Supplier Beta",
                 "contact_email": "beta@northwind.test",
-                "bank_account_ref": "NW-BANK-002",
                 "region": "emea",
                 "created_at": now,
                 "updated_at": now,
@@ -334,7 +340,6 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
                 "tenant_id": co_tenant_id,
                 "name": "Contoso Supplier Gamma",
                 "contact_email": "gamma@contoso.test",
-                "bank_account_ref": "CO-BANK-001",
                 "region": "amer",
                 "created_at": now,
                 "updated_at": now,
@@ -344,7 +349,6 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
                 "tenant_id": co_tenant_id,
                 "name": "Contoso Supplier Delta",
                 "contact_email": "delta@contoso.test",
-                "bank_account_ref": "CO-BANK-002",
                 "region": "amer",
                 "created_at": now,
                 "updated_at": now,
@@ -506,6 +510,29 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
             },
         ]:
             _sql_insert(conn, "PaymentAttempt", row)
+
+        # --- SupplierBankAccount rows (one per tenant) -------------------
+        for row in [
+            {
+                "id": nw_bank_account_id,
+                "tenant_id": nw_tenant_id,
+                "supplier": nw_supplier_id,
+                "bank_account_ref": "NW-BANK-001",
+                "account_name": "Northwind Supplier Alpha Account",
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "id": co_bank_account_id,
+                "tenant_id": co_tenant_id,
+                "supplier": co_supplier_id,
+                "bank_account_ref": "CO-BANK-001",
+                "account_name": "Contoso Supplier Gamma Account",
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]:
+            _sql_insert(conn, "SupplierBankAccount", row)
 
 
 async def booted_invoice_ops() -> AsyncIterator[_InvoiceOpsApp]:

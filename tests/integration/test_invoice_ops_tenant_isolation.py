@@ -235,6 +235,21 @@ async def test_event_log_excludes_other_tenant(app) -> None:
         )
 
 
+async def test_read_other_tenant_bank_account_is_404(app) -> None:
+    """A northwind user cannot read a contoso supplier's bank account.
+
+    SupplierBankAccount has a ``tenant_id = current_user.tenant_id`` scope on
+    ``read`` — a northwind finance user fetching a contoso bank account row by
+    id must receive 404 (the scope gate hides the row entirely, preventing IDOR
+    on sensitive bank account data)."""
+    client = await app.client_as("finance", "northwind")
+    resp = await client.get(f"/supplierbankaccounts/{app.contoso_bank_account_id}")
+    assert resp.status_code == 404, (
+        f"IDOR leak: expected 404, got {resp.status_code} — "
+        f"contoso SupplierBankAccount visible to northwind finance user"
+    )
+
+
 async def test_other_tenant_config_denied(app) -> None:
     """Northwind tenant_admin cannot read or write contoso's per-tenant config.
 
