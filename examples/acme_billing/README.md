@@ -23,7 +23,7 @@
 | Role | Trust boundary | Notes |
 |------|---------------|-------|
 | `admin` | Cross-org, unrestricted | Break-glass access. All scope rules are `all`. |
-| `org_owner` | Own org only | Full CRUD within the org boundary; cannot create across-org records via FK-path-limited operations (see #1124 comment in `entities.dsl`). |
+| `org_owner` | Own org only | Read/update within their own organization. Create/delete is restricted: Invoice and Membership create are admin-only (a `scope: create` FK-path limitation, #1124); Organization create/update/delete are admin-only by design; User delete and Invoice delete are also admin-only. org_owner can create/update/delete User and Project rows within their org. |
 | `auditor` | Own org, read-only | Can list/read Organizations, Users, Projects, Invoices. No write access. Cannot see Membership records. |
 | `project_member` | Assigned projects only | Accesses Projects and Invoices via junction `via Membership`; invoices additionally filtered to `sensitive != true`. |
 | `external_contractor` | Non-sensitive invoices on assigned org's projects only | Same invoice filter as `project_member` but no direct Project read access. |
