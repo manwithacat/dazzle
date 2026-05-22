@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.107] - 2026-05-22
+
 ### Added
 
 - **`docs/guides/security.md`** — threat model, framework-vs-app security responsibility matrix, and app-developer security checklist; evaluator briefing #7. Five honest gaps surfaced and filed as #1196 (rate limiting not auto-wired to generated entity routes), #1197 (audit log has no tamper-resistance affordance), #1198 (no session-fixation defence on login), #1199 (no framework-level log/error secret redaction), #1200 (`pip-audit` CI-informational-only).
