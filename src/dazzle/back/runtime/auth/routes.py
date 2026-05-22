@@ -112,13 +112,19 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
             status_code=200,
         )
 
-    # No 2FA — create full session
+    # No 2FA — create full session.
+    # Session-fixation defence (#1198): regenerate the session id on login
+    # success — invalidate any pre-auth session cookie the client presented
+    # so an attacker-planted id can't survive into the authenticated state.
+    pre_auth_sid = request.cookies.get(deps.cookie_name)
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
+    if pre_auth_sid and pre_auth_sid != session.id:
+        deps.auth_store.delete_session(pre_auth_sid)
 
     redirect_url = _resolve_redirect(deps.persona_routes, user.roles)
 
@@ -196,12 +202,19 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
         logger.error("User registration failed: %s", e)
         raise HTTPException(status_code=400, detail="Registration failed")
 
+    # Session-fixation defence (#1198): regenerate the session id on
+    # registration success — invalidate any pre-auth session cookie the
+    # client presented so an attacker-planted id can't survive into the
+    # newly-authenticated state.
+    pre_auth_sid = request.cookies.get(deps.cookie_name)
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
+    if pre_auth_sid and pre_auth_sid != session.id:
+        deps.auth_store.delete_session(pre_auth_sid)
 
     redirect_url = _resolve_redirect(deps.persona_routes, user.roles)
 

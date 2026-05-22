@@ -101,12 +101,20 @@ def create_two_factor_form_routes(
             return RedirectResponse(url=f"{challenge_back}&error=invalid_code", status_code=303)
 
         auth_store.delete_session(session_token)
+        # Session-fixation defence (#1198): regenerate the session id on
+        # 2FA verification success — invalidate any pre-auth session cookie
+        # the client presented (separate from the pending 2FA token deleted
+        # above) so an attacker-planted id can't survive into the
+        # authenticated state.
+        pre_auth_sid = request.cookies.get(cookie_name)
         session = auth_store.create_session(
             user,
             expires_in=timedelta(days=session_expires_days),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
         )
+        if pre_auth_sid and pre_auth_sid != session.id:
+            auth_store.delete_session(pre_auth_sid)
 
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)

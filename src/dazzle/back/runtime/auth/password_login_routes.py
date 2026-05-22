@@ -85,7 +85,14 @@ def create_password_login_routes() -> APIRouter:
                 challenge_url = f"{challenge_url}&next={next}"
             return RedirectResponse(url=challenge_url, status_code=303)
 
+        # Session-fixation defence (#1198): regenerate the session id on
+        # login success — invalidate any pre-auth session cookie the client
+        # presented so an attacker-planted id can't survive into the
+        # authenticated state.
+        pre_auth_sid = request.cookies.get("dazzle_session")
         session = auth_store.create_session(user)
+        if pre_auth_sid and pre_auth_sid != session.id:
+            auth_store.delete_session(pre_auth_sid)
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         _set_session_cookie(response, request, session.id)
@@ -140,7 +147,14 @@ def create_password_login_routes() -> APIRouter:
             )
             return RedirectResponse(url="/signup?error=create_failed", status_code=303)
 
+        # Session-fixation defence (#1198): regenerate the session id on
+        # signup success — invalidate any pre-auth session cookie the client
+        # presented so an attacker-planted id can't survive into the
+        # newly-authenticated state.
+        pre_auth_sid = request.cookies.get("dazzle_session")
         session = auth_store.create_session(user)
+        if pre_auth_sid and pre_auth_sid != session.id:
+            auth_store.delete_session(pre_auth_sid)
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         _set_session_cookie(response, request, session.id)

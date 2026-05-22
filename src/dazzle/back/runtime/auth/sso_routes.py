@@ -208,7 +208,14 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             )
             return RedirectResponse(url="/login?error=sso_failed", status_code=303)
 
+        # Session-fixation defence (#1198): regenerate the session id on
+        # SSO callback success — invalidate any pre-auth session cookie the
+        # client presented so an attacker-planted id can't survive into the
+        # authenticated state.
+        pre_auth_sid = request.cookies.get(cookie_name)
         session = auth_store.create_session(user)
+        if pre_auth_sid and pre_auth_sid != session.id:
+            auth_store.delete_session(pre_auth_sid)
 
         # Pull the next-URL the initiate route stashed in the session.
         next_url = request.session.pop("sso_next", "") if hasattr(request, "session") else ""

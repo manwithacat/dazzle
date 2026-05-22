@@ -113,7 +113,14 @@ def create_magic_link_routes() -> APIRouter:
             )
 
         # Create session (same code path as password login).
+        # Session-fixation defence (#1198): regenerate the session id on
+        # magic-link consumption — invalidate any pre-auth session cookie
+        # the client presented so an attacker-planted id can't survive into
+        # the authenticated state.
+        pre_auth_sid = request.cookies.get("dazzle_session")
         session = auth_store.create_session(user)
+        if pre_auth_sid and pre_auth_sid != session.id:
+            auth_store.delete_session(pre_auth_sid)
 
         # Honour ?next= only when it is a same-origin path.
         redirect_to = next if _is_safe_redirect_path(next) else "/"

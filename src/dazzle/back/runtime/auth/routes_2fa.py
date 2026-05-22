@@ -235,6 +235,11 @@ async def _verify_2fa(
     # Delete the pending session
     deps.auth_store.delete_session(data.session_token)
 
+    # Session-fixation defence (#1198): regenerate the session id on 2FA
+    # verification success — invalidate any pre-auth session cookie the
+    # client presented (separate from the pending 2FA token deleted above)
+    # so an attacker-planted id can't survive into the authenticated state.
+    pre_auth_sid = request.cookies.get(deps.cookie_name)
     # Create a full session
     session = deps.auth_store.create_session(
         user,
@@ -242,6 +247,8 @@ async def _verify_2fa(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
+    if pre_auth_sid and pre_auth_sid != session.id:
+        deps.auth_store.delete_session(pre_auth_sid)
 
     response = JSONResponse(
         content={

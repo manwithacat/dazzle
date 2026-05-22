@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.124] - 2026-05-23
+
+### Added
+
+- **Session-fixation defence on login (#1198).** Every login-success path now captures the incoming pre-auth session cookie and invalidates it (via `auth_store.delete_session`) after `create_session` mints the new authenticated session. OWASP-standard regenerate-on-auth; an attacker-planted pre-auth session id can no longer be carried forward. Crucially, the user's *other* active sessions are preserved (unlike a blanket `delete_user_sessions`), so multi-device sessions keep working. Applied across all seven login paths: JSON login, register, JSON 2FA verify, form login, form signup, magic-link consumption, SSO callback, and form 2FA verify. The 10-minute *pending* 2FA session deliberately does NOT trigger regenerate — only the final, authenticated `create_session` does.
+
 ## [0.71.123] - 2026-05-22
 
 ### Added
