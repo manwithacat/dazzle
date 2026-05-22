@@ -149,6 +149,13 @@ class ServerConfig:
     # routes when entities have `field foo: file storage=<name>` bindings.
     storage_defs: "dict[str, StorageConfig]" = field(default_factory=dict)
 
+    # Audit log tamper-resistance (#1197). Opt-in. Default "none" preserves
+    # today's behaviour exactly — no schema change, no extra SELECT-prev-hash.
+    # "hash_chain" enables a per-row sha256 chain (column `row_hash`) so a
+    # tampered row breaks the chain at the modified entry. See
+    # `AuditLogger.verify_chain()` for offline verification.
+    audit_integrity: str = "none"  # "none" | "hash_chain"
+
 
 def _maybe_configure_tracer() -> None:
     """Configure the OTel tracer when ``dazzle perf trace`` set the env.
@@ -1095,7 +1102,10 @@ class DazzleBackendApp:
                 )
             from dazzle.back.runtime.audit_log import AuditLogger
 
-            audit_logger = AuditLogger(database_url=self._database_url)
+            audit_logger = AuditLogger(
+                database_url=self._database_url,
+                audit_integrity=self._config.audit_integrity,
+            )
             audit_logger.start()
             # Keep a handle on the builder so callers (graceful shutdown,
             # in-process tests) can deterministically `drain()` the audit

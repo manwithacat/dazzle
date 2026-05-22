@@ -6,6 +6,8 @@ following the _dazzle_event_outbox pattern. PostgreSQL only.
 """
 
 import asyncio
+import hashlib
+import json
 import logging
 import time
 from dataclasses import dataclass
@@ -13,6 +15,78 @@ from typing import Any
 from uuid import uuid4
 
 logger = logging.getLogger("dazzle.audit")
+
+
+# Columns persisted as a row of `_dazzle_audit_log`. This is also the
+# canonical ordering used for the INSERT and — when `audit_integrity ==
+# "hash_chain"` — for building the canonical payload that feeds the
+# row-hash. `row_hash` is deliberately NOT part of this list: it depends
+# on the canonical payload, so it cannot be one of its inputs.
+_AUDIT_ROW_COLUMNS: tuple[str, ...] = (
+    "id",
+    "timestamp",
+    "user_id",
+    "user_email",
+    "user_roles",
+    "operation",
+    "entity_name",
+    "entity_id",
+    "decision",
+    "matched_policy",
+    "policy_effect",
+    "ip_address",
+    "request_path",
+    "request_method",
+    "tenant_id",
+    "evaluation_time_us",
+    "field_changes",
+)
+
+
+def _canonical_payload(row: dict[str, Any]) -> str:
+    """Render an audit row to its canonical hash-input string.
+
+    Deterministic and stable: `sort_keys=True`, no whitespace, `default=str`
+    for anything not natively JSON-serialisable (e.g. UUIDs). `row_hash`
+    itself is stripped because the hash is computed over the row *content*,
+    not over a value that depends on the hash.
+    """
+    payload = {k: row[k] for k in _AUDIT_ROW_COLUMNS if k in row}
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _compute_row_hash(prev_hash: str, row: dict[str, Any]) -> str:
+    """sha256(prev_hash || canonical_payload(row)).hexdigest().
+
+    Empty-prev sentinel is the empty string. Hex digest. No key, no salt —
+    this is chain integrity, not authenticity.
+    """
+    return hashlib.sha256((prev_hash + _canonical_payload(row)).encode("utf-8")).hexdigest()
+
+
+@dataclass
+class ChainVerifyResult:
+    """Result of :meth:`AuditLogger.verify_chain`.
+
+    Attributes:
+        ok: True iff every chained row's stored hash matches recomputation.
+        total_rows: All rows considered (including NULL-`row_hash` rows
+            from before integrity was enabled — those are skipped, not
+            counted as mismatches; see ``skipped_legacy_rows``).
+        first_mismatch_id: ID of the first row whose stored hash != the
+            recomputed hash, or None if the chain is intact.
+        mismatched_count: Number of rows whose stored hash != recomputed.
+        skipped_legacy_rows: Rows with ``row_hash IS NULL`` — these
+            pre-date integrity-mode being switched on. They are treated
+            as a valid seed boundary: verification of subsequent rows
+            uses the last NULL row's canonical payload as the seed.
+    """
+
+    ok: bool
+    total_rows: int
+    first_mismatch_id: str | None
+    mismatched_count: int
+    skipped_legacy_rows: int = 0
 
 
 @dataclass
@@ -78,15 +152,37 @@ class AuditLogger:
         database_url: str,
         max_queue_size: int = 10000,
         flush_interval: float = 1.0,
+        audit_integrity: str = "none",
     ):
+        if audit_integrity not in ("none", "hash_chain"):
+            raise ValueError(
+                f"audit_integrity must be 'none' or 'hash_chain', got {audit_integrity!r}"
+            )
         self._database_url = database_url
         self._max_queue_size = max_queue_size
         self._flush_interval = flush_interval
+        self._audit_integrity = audit_integrity
         self._queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=max_queue_size)
         self._dropped_count = 0
         self._task: asyncio.Task[None] | None = None
         self._stopped = False
         self._init_db()
+        # Startup verification — log a single WARNING (not raise) if the
+        # chain is broken. A bootstrap failure here would deny legitimate
+        # access for a non-malicious data event (e.g. partial restore);
+        # the goal is signal, not bootstrap denial. #1197.
+        if self._audit_integrity == "hash_chain":
+            try:
+                result = self.verify_chain()
+                if not result.ok:
+                    logger.warning(
+                        "Audit hash-chain verification found %d mismatched row(s); "
+                        "first mismatch at id=%s",
+                        result.mismatched_count,
+                        result.first_mismatch_id,
+                    )
+            except Exception:
+                logger.warning("Audit hash-chain startup verification failed", exc_info=True)
 
     def _get_connection(self) -> Any:
         """Get a PostgreSQL database connection.
@@ -147,6 +243,14 @@ class AuditLogger:
                 cursor.execute(
                     "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON _dazzle_audit_log(timestamp)"
                 )
+                # Opt-in tamper-evident hash chain (#1197). Only when
+                # `audit_integrity == "hash_chain"` do we touch the
+                # schema; the default ("none") path leaves the table
+                # byte-identical to today's behaviour.
+                if self._audit_integrity == "hash_chain":
+                    cursor.execute(
+                        "ALTER TABLE _dazzle_audit_log ADD COLUMN IF NOT EXISTS row_hash TEXT"
+                    )
                 conn.commit()
             finally:
                 conn.close()
@@ -280,31 +384,150 @@ class AuditLogger:
         return entries
 
     def _write_entries(self, entries: list[dict[str, Any]]) -> None:
-        """Synchronously INSERT a batch of audit entries into PostgreSQL."""
+        """Synchronously INSERT a batch of audit entries into PostgreSQL.
+
+        When ``audit_integrity == "hash_chain"`` each row's ``row_hash`` is
+        threaded forward in memory: row N's prev = row N-1's hash. The
+        previous-hash seed for the batch is fetched once with a single
+        SELECT; we never query inside the loop. The default path (no
+        integrity) is byte-identical to the pre-#1197 INSERT.
+        """
         if not entries:
             return
         try:
             conn = self._get_connection()
             try:
                 cursor = conn.cursor()
-                for entry in entries:
+                if self._audit_integrity == "hash_chain":
+                    # Seed the chain from the most-recent existing row.
+                    # `timestamp` is the only monotonically-increasing
+                    # column we have ('id' is a uuid). Empty table → "".
                     cursor.execute(
-                        """
-                        INSERT INTO _dazzle_audit_log
-                            (id, timestamp, user_id, user_email, user_roles,
-                             operation, entity_name, entity_id, decision,
-                             matched_policy, policy_effect, ip_address,
-                             request_path, request_method, tenant_id,
-                             evaluation_time_us, field_changes)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                        """,
-                        tuple(entry.values()),
+                        "SELECT row_hash FROM _dazzle_audit_log ORDER BY timestamp DESC LIMIT 1"
                     )
+                    seed_row = cursor.fetchone()
+                    prev_hash = ""
+                    if seed_row is not None:
+                        # dict_row factory → mapping; psycopg also returns
+                        # tuples in some configurations. Handle both.
+                        if isinstance(seed_row, dict):
+                            prev_hash = seed_row.get("row_hash") or ""
+                        else:
+                            prev_hash = seed_row[0] or ""
+                    for entry in entries:
+                        row_hash = _compute_row_hash(prev_hash, entry)
+                        entry["row_hash"] = row_hash
+                        prev_hash = row_hash
+                        cursor.execute(
+                            """
+                            INSERT INTO _dazzle_audit_log
+                                (id, timestamp, user_id, user_email, user_roles,
+                                 operation, entity_name, entity_id, decision,
+                                 matched_policy, policy_effect, ip_address,
+                                 request_path, request_method, tenant_id,
+                                 evaluation_time_us, field_changes, row_hash)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            tuple(entry[c] for c in _AUDIT_ROW_COLUMNS) + (row_hash,),
+                        )
+                else:
+                    for entry in entries:
+                        cursor.execute(
+                            """
+                            INSERT INTO _dazzle_audit_log
+                                (id, timestamp, user_id, user_email, user_roles,
+                                 operation, entity_name, entity_id, decision,
+                                 matched_policy, policy_effect, ip_address,
+                                 request_path, request_method, tenant_id,
+                                 evaluation_time_us, field_changes)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            tuple(entry.values()),
+                        )
                 conn.commit()
             finally:
                 conn.close()
         except Exception:
             logger.warning("Failed to write %d audit entries", len(entries), exc_info=True)
+
+    def verify_chain(self) -> ChainVerifyResult:
+        """Walk `_dazzle_audit_log` in chain order and verify every row_hash.
+
+        Rows with ``row_hash IS NULL`` are treated as a **valid seed
+        boundary**, not a mismatch: they pre-date integrity-mode being
+        switched on, and verifying them against the post-switch chain
+        would always fail. They are counted in ``skipped_legacy_rows``.
+        The verification "seed" for the first chained row after a run of
+        NULL rows is the empty string ``""`` — the same seed used for an
+        empty table. This means a clean ALTER (none → hash_chain) lets
+        the chain begin from the next inserted row, with the legacy rows
+        ignored.
+
+        Returns:
+            ChainVerifyResult with ok / first_mismatch_id / counts.
+        """
+        if self._audit_integrity != "hash_chain":
+            # Not enabled — nothing to verify. Report ok=True, zero rows.
+            return ChainVerifyResult(
+                ok=True,
+                total_rows=0,
+                first_mismatch_id=None,
+                mismatched_count=0,
+                skipped_legacy_rows=0,
+            )
+
+        first_mismatch_id: str | None = None
+        mismatched = 0
+        skipped = 0
+        total = 0
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM _dazzle_audit_log ORDER BY timestamp ASC, id ASC")
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+        except Exception:
+            logger.warning("verify_chain: failed to read audit log", exc_info=True)
+            return ChainVerifyResult(
+                ok=False,
+                total_rows=0,
+                first_mismatch_id=None,
+                mismatched_count=0,
+                skipped_legacy_rows=0,
+            )
+
+        prev_hash = ""
+        for raw in rows:
+            row = dict(raw) if not isinstance(raw, dict) else raw
+            total += 1
+            stored = row.get("row_hash")
+            if stored is None:
+                # Pre-integrity legacy row: treat as seed boundary.
+                # Reset prev_hash to "" so the first post-switch row
+                # verifies the same way it was written.
+                skipped += 1
+                prev_hash = ""
+                continue
+            expected = _compute_row_hash(prev_hash, row)
+            if expected != stored:
+                mismatched += 1
+                if first_mismatch_id is None:
+                    first_mismatch_id = str(row.get("id"))
+            # Even on mismatch, advance the chain using the STORED hash
+            # so downstream rows are evaluated against what's actually
+            # in the DB (otherwise one tampered row cascades into every
+            # subsequent row also being flagged).
+            prev_hash = stored
+
+        return ChainVerifyResult(
+            ok=mismatched == 0,
+            total_rows=total,
+            first_mismatch_id=first_mismatch_id,
+            mismatched_count=mismatched,
+            skipped_legacy_rows=skipped,
+        )
 
     async def _flush(self) -> None:
         """Flush all queued entries to the database."""

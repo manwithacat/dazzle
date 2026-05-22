@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.125] - 2026-05-23
+
+### Added
+
+- **Opt-in hash-chain tamper-evidence on the audit log (#1197).** New `ServerConfig.audit_integrity` setting (`"none"` (default) | `"hash_chain"`). When enabled, `AuditLogger` adds a `row_hash TEXT` column to `_dazzle_audit_log` via `ALTER TABLE ADD COLUMN IF NOT EXISTS`, computes `row_hash = sha256(prev_hash + canonical_json(row))` per insert (chain threaded in memory across a batch with one seed-fetch), runs a startup `verify_chain()` that logs a WARNING on the first mismatch, and exposes the verification as `AuditLogger.verify_chain() -> ChainVerifyResult` for future CLI use. The default `"none"` mode is byte-identical to today's behaviour (no schema change, no extra query, unchanged INSERT shape). Pre-existing rows with `row_hash IS NULL` (from before the switch) are treated as a valid seed boundary — they aren't tamper-evident but don't break verification of post-switch rows. External-shipper protocol deliberately not in scope.
+
 ## [0.71.124] - 2026-05-23
 
 ### Added
