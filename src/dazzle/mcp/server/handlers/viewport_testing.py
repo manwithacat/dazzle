@@ -4,9 +4,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.loader import load_and_link
-
-from .common import error_response, extract_progress, unknown_op_response, wrap_handler_errors
+from .common import (
+    error_response,
+    extract_progress,
+    load_project_appspec,
+    unknown_op_response,
+    wrap_handler_errors,
+)
 
 # ---------------------------------------------------------------------------
 # run_viewport
@@ -36,7 +40,7 @@ def run_viewport_tests_impl(
         merge_patterns,
     )
 
-    appspec = load_and_link(project_path)
+    appspec = load_project_appspec(project_path)
     patterns = derive_patterns_from_appspec(appspec)
 
     custom_specs = load_custom_viewport_specs(project_path)

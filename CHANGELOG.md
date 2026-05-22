@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.115] - 2026-05-22
+
+### Fixed
+
+- **`dazzle e2e run-viewport` crashed with `ModuleNotFoundError: dazzle.core.loader` (#1187).** The `viewport_testing` MCP handler imported `load_and_link` from a module that no longer exists; it now uses `load_project_appspec` from `handlers/common` — the loader every other handler uses. Added `tests/unit/test_mcp_handler_imports.py`, which imports every MCP handler module so a stale import fails fast (nothing covered the handler layer before).
+
 ## [0.71.114] - 2026-05-22
 
 ### Fixed
