@@ -1,6 +1,6 @@
 -- benchmarks/indexes.sql — scope-predicate and FK indexes for invoice_ops (SP6)
 --
--- WHY THESE ARE NEEDED
+-- WHAT THIS IS
 -- ---------------------
 -- The Dazzle schema builder (src/dazzle/back/runtime/sa_schema.py) emits only
 -- PK constraints and unique constraints (i.e. the "id" column index and any
@@ -8,14 +8,25 @@
 --   • tenant_id columns  — every list/read scope predicate filters on this
 --   • FK columns used in JOIN paths  — Invoice.supplier, LineItem.invoice, etc.
 --
--- At low row counts the sequential scan is cheaper; at benchmark scale
--- (tens of thousands to millions of rows) the planner switches to SeqScan and
--- latency degrades non-linearly.  These indexes let the benchmark isolate
--- *application-level* latency from missing-index overhead.
+-- This file adds single-column b-tree indexes on those columns so the
+-- benchmark's `indexed` config can quantify their impact against `default`.
+--
+-- MEASURED RESULT — these indexes do NOT help
+-- ---------------------
+-- The SP6 benchmark ran every probe against both configs at scales up to
+-- 1,000,000 invoices/tenant (3,000,000 Invoice rows).  The `indexed` config
+-- (these indexes) is within measurement noise of `default` at every scale:
+-- list/read/search/aggregate latency does NOT materially change.  EXPLAIN
+-- shows why — the list path is sort-bound (a single-column tenant_id index
+-- cannot satisfy ORDER BY created_at), search is heap-page-bound, and
+-- aggregate is a full scan.  The real lever is a COMPOSITE
+-- (tenant_id, created_at) index plus full-text (tsvector/GIN) for search.
+-- See docs/reference/performance-envelope.md and issue #1202.  These
+-- single-column indexes are kept only as the benchmark's negative-result
+-- comparison config — do not treat them as a production fix.
 --
 -- Apply with:
 --   psql $DB_URL -f benchmarks/indexes.sql
--- or inside a migration if you want them in production too.
 
 -- ---------------------------------------------------------------------------
 -- tenant_id indexes — one per entity that carries a tenant scope predicate

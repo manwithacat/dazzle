@@ -77,6 +77,7 @@ nav:
       - Deployment: reference/deployment.md
       - Islands: reference/islands.md
       - PII & Privacy: reference/pii-privacy.md
+      - Performance Envelope: reference/performance-envelope.md
       - CLI: reference/cli.md
       - Grammar: reference/grammar.md
   - Guides:

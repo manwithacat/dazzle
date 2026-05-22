@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`benchmarks/` reproducible benchmark harness** and **`docs/reference/performance-envelope.md`** — evaluator briefing #9. The harness (`seed.py`, `indexes.sql`, `measure.py`, `run.py`) seeds `examples/invoice_ops` at 1k–1M invoices per tenant and measures p50/p95/p99 for four probes (list, read, search, aggregate) across two schema configs. The committed full-scale run shows the runtime degrades roughly linearly with dataset size — scope-filtered list/search p95 climbs ~17 ms → ~85 ms across 1k → 1M invoice-rows-per-tenant (3M total), aggregate to ~143 ms, while primary-key `read` stays flat at ~18–21 ms. Single-column `tenant_id`/FK indexes (the harness's `indexed` config) are within measurement noise of the framework-default schema at every scale and do not help; the real lever is a composite `(tenant_id, created_at)` index plus full-text search indexing, which the schema builder does not generate. That gap is filed as #1202.
+
 ## [0.71.107] - 2026-05-22
 
 ### Added
