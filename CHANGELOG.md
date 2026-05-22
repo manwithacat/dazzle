@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.119] - 2026-05-22
+
+### Fixed
+
+- **`dazzle init` scaffold gitignored Alembic migration files (#1190).** The generated `.gitignore` blanket-ignored `.dazzle/`, silently excluding the migration files written to `.dazzle/migrations/versions/` — but under ADR-0017 those are schema history and must be version-controlled. The scaffold template now negates the migrations subtree back in (`!.dazzle/migrations/versions/*.py`, with the parent dirs negated first so git descends). The template was also extracted to a module-level `_GITIGNORE_TEMPLATE` constant so it is unit-testable.
+
 ## [0.71.118] - 2026-05-22
 
 ### Changed

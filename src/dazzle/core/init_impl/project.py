@@ -20,6 +20,59 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+_GITIGNORE_TEMPLATE = """# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# DAZZLE
+.dazzle/
+# ...but keep generated Alembic migrations under version control (ADR-0017).
+# Negate the parent dirs first so git descends into them.
+!.dazzle/migrations/
+!.dazzle/migrations/versions/
+!.dazzle/migrations/versions/*.py
+dev_docs/
+
+# Database
+*.sqlite3
+*.db
+"""
+
+
 def list_examples(examples_dir: Path | None = None) -> list[str]:
     """
     List available example projects.
@@ -223,53 +276,7 @@ def _init_git_repository(target_dir: Path, log: Callable[[str], None]) -> None:
         gitignore_path = target_dir / ".gitignore"
         if not gitignore_path.exists():
             log("  Creating .gitignore...")
-            gitignore_content = """# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
-venv/
-env/
-ENV/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# DAZZLE
-.dazzle/
-dev_docs/
-
-# Database
-*.sqlite3
-*.db
-"""
-            gitignore_path.write_text(gitignore_content)
+            gitignore_path.write_text(_GITIGNORE_TEMPLATE)
 
         # Make initial commit (optional - only if we have content)
         # Check if we have files to commit
