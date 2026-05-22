@@ -45,7 +45,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
   mkdocs build --strict
   ```
 
-  `--strict` turns broken internal links, missing nav entries, and unrecognised link targets into errors — the build must pass clean (exit 0, no warnings). Links to repo-root files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`) and to non-`docs/` paths (`benchmarks/`, `examples/`) must be GitHub blob/tree URLs, not `../../` relative paths — `mkdocs` only resolves links inside `docs/`. The docs toolchain is pinned in `requirements-docs.txt`; note `pygments` is held `<2.20` (#1203 — 2.20 crashes `pymdownx` highlight).
+  `--strict` turns broken internal links, missing nav entries, and unrecognised link targets into errors — the build must pass clean (exit 0, no warnings). Links to repo-root files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`) and to non-`docs/` paths (`benchmarks/`, `examples/`) must be GitHub blob/tree URLs, not `../../` relative paths — `mkdocs` only resolves links inside `docs/`. The docs toolchain is pinned in `requirements-docs.txt` — run `pip install -r requirements-docs.txt` so a local build matches CI (a stale `pymdown-extensions` is what made #1203 look like a repo bug).
 
 - If lint, type, drift, policy, spec-strict, or docs-build errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
 

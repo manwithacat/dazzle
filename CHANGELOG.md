@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.111] - 2026-05-22
+
+### Changed
+
+- **`requirements-docs.txt`: `pygments` pin loosened to `>=2.20`, dropping the brittle upper cap.** v0.71.110 pinned `pygments<2.20` to dodge an `mkdocs build` crash, but that diagnosis was wrong: the crash only reproduces with a stale `pymdown-extensions` (`<10.21.3`). `pymdown-extensions>=10.21.3` — already pinned — carries the upstream fix (a `filename=None` guard), so pygments 2.20+ builds cleanly. The docs CI was never failing. The `docs/adr/0020` fence fix from v0.71.110 stands — `pymdown-extensions` still mis-parses a blank-line-then-indent inside a code fence, so that fence renders wrong without it.
+
 ## [0.71.110] - 2026-05-22
 
 ### Fixed
