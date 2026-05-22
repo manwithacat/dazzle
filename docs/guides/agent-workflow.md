@@ -39,7 +39,7 @@ a field path that doesn't exist in the FK chain) gets a precise error before
 anything runs. This makes access-control errors a class of problem the loop
 catches early rather than discovering in production.
 
-The [ROADMAP](../../ROADMAP.md) describes the growth model that emerges from
+The [ROADMAP](https://github.com/manwithacat/dazzle/blob/main/ROADMAP.md) describes the growth model that emerges from
 this design: agents build applications within the existing DSL vocabulary,
 encounter friction at the grammar boundary when they need something the DSL
 cannot yet express, and produce structured friction reports. That feedback loop
@@ -139,7 +139,7 @@ dsl { "operation": "lint", "extended": true }
 
 Verified operations on the `dsl` MCP tool: `validate`, `list_modules`,
 `inspect_entity`, `inspect_surface`, `analyze`, `lint`, `get_spec`, `fidelity`,
-`list_fragments`, `export_frontend_spec`. See [section 3](#3-mcp--claude-code-setup)
+`list_fragments`, `export_frontend_spec`. See [section 3](#3-mcp-claude-code-setup)
 for how to point an MCP client at the server.
 
 For a more thorough pass — scope-warning completeness, anti-Turing compliance,
@@ -447,9 +447,9 @@ section is honest about both.
   It does not auto-generate adversarial cross-tenant, privilege-escalation, or
   state-machine abuse tests. Those must be hand-authored.
 - **Security claims.** The RBAC matrix is a necessary condition for the claims
-  in [SECURITY_CLAIMS.md](../../SECURITY_CLAIMS.md), not a sufficient one.
+  in [SECURITY_CLAIMS.md](https://github.com/manwithacat/dazzle/blob/main/SECURITY_CLAIMS.md), not a sufficient one.
   Evaluating those claims requires the full exercise described in
-  [EVALUATION.md](../../EVALUATION.md).
+  [EVALUATION.md](https://github.com/manwithacat/dazzle/blob/main/EVALUATION.md).
 - **Destructive migration review.** The generated migration file under
   `.dazzle/migrations/versions/` shows what will run. Whether it is *correct*
   for the domain — whether a column rename is safe, whether a backfill is
@@ -469,6 +469,6 @@ approves it is doing a different job — one the loop cannot do on their behalf.
 ---
 
 *Related: [deployment reference](../reference/deployment.md) · [Heroku guide](heroku.md)
-· [migrations guide](../reference/migrations.md) · [SECURITY_CLAIMS.md](../../SECURITY_CLAIMS.md)
-· [EVALUATION.md](../../EVALUATION.md) · [ADR-0004](../adr/0004-dsl-agent-first.md)
-· [ROADMAP](../../ROADMAP.md) · [AGENTS.md](../../AGENTS.md)*
+· [migrations guide](../reference/migrations.md) · [SECURITY_CLAIMS.md](https://github.com/manwithacat/dazzle/blob/main/SECURITY_CLAIMS.md)
+· [EVALUATION.md](https://github.com/manwithacat/dazzle/blob/main/EVALUATION.md) · [ADR-0004](../adr/0004-dsl-agent-first.md)
+· [ROADMAP](https://github.com/manwithacat/dazzle/blob/main/ROADMAP.md) · [AGENTS.md](https://github.com/manwithacat/dazzle/blob/main/AGENTS.md)*
