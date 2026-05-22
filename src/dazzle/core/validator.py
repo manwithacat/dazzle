@@ -3057,6 +3057,40 @@ def validate_tenancy_partition_key(
     return errors, warnings
 
 
+def validate_admin_personas_scope_conflict(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Reject a persona that is both a tenancy admin and bound to a scope rule.
+
+    A persona listed in `tenancy.admin_personas` bypasses the tenant filter at
+    runtime (#957). If the same persona is also named in a `scope: ... as:`
+    rule, that rule is dead for that persona — its grants ignore the row
+    filter — so the apparent partitioning is a silent cross-tenant leak (#1184).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    tenancy = appspec.tenancy
+    if tenancy is None or not tenancy.admin_personas:
+        return errors, warnings
+    admin = set(tenancy.admin_personas)
+
+    for entity in appspec.domain.entities:
+        if entity.access is None or not entity.access.scopes:
+            continue
+        conflicting: set[str] = set()
+        for rule in entity.access.scopes:
+            conflicting |= admin.intersection(rule.personas)
+        for persona in sorted(conflicting):
+            errors.append(
+                f"Entity '{entity.name}': persona '{persona}' is in "
+                f"`tenancy.admin_personas` (bypasses the tenant filter) and "
+                f"also bound to a `scope:` rule via `as:`. The scope rule is "
+                f"dead for that persona — remove '{persona}' from one side."
+            )
+    return errors, warnings
+
+
 def validate_process_step_service_refs(
     appspec: ir.AppSpec,
 ) -> tuple[list[str], list[str]]:

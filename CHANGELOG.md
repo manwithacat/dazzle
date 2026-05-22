@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.117] - 2026-05-22
+
+### Added
+
+- **Validation: reject a persona used in both `tenancy.admin_personas` and a tenant-scoped `scope: as:` rule (#1184).** A persona in `admin_personas` bypasses the tenant filter at runtime; if the same persona is also bound to a `scope:` rule, that rule is dead for it — the apparent row-filtering is a silent cross-tenant leak. `validate_admin_personas_scope_conflict` now emits an error for each such conflict (one per entity/persona), wired into the lint hardening block. This caught a real misconfiguration: `examples/support_tickets` listed `manager` (a within-tenant team-lead role) in `admin_personas` while also scoping it via `as:` — the `admin_personas: [manager]` line is removed.
+
 ## [0.71.116] - 2026-05-22
 
 ### Fixed

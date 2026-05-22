@@ -14,7 +14,6 @@ use support_tickets.core
 tenancy:
   mode: shared_schema
   partition_key: tenant_id
-  admin_personas: [manager]
   per_tenant_config:
     sla_response_minutes: int
     default_ticket_priority: str

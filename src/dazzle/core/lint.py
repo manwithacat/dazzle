@@ -2,6 +2,7 @@ from . import ir
 from .discovery import Relevance, suggest_capabilities
 from .validator import (
     extended_lint,
+    validate_admin_personas_scope_conflict,
     validate_approvals,
     validate_audit_config,
     validate_entities,
@@ -168,6 +169,7 @@ def lint_appspec(
     for check in (
         validate_role_references_against_enum,
         validate_tenancy_partition_key,
+        validate_admin_personas_scope_conflict,
         validate_process_step_service_refs,
         validate_rbac_matrix_diagnostics,
     ):
