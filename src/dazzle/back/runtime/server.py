@@ -589,7 +589,14 @@ class DazzleBackendApp:
                     dbapi_conn = conn.connection
                     cur = dbapi_conn.cursor()
                     try:
-                        cur.execute("SET search_path TO %s, public", (schema_name,))
+                        from psycopg import sql as pgsql
+
+                        # SET cannot take a bound parameter; compose the
+                        # already-validated identifier safely instead (#1201).
+                        stmt = pgsql.SQL("SET search_path TO {}, public").format(
+                            pgsql.Identifier(schema_name)
+                        )
+                        cur.execute(stmt)  # nosemgrep
                     finally:
                         cur.close()
                     metadata.create_all(conn)

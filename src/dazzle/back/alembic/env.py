@@ -184,7 +184,14 @@ def run_migrations_online() -> None:
                 dbapi_conn: Any = connection.connection
                 cur = dbapi_conn.cursor()
                 try:
-                    cur.execute("SET search_path TO %s, public", (tenant_schema,))
+                    from psycopg import sql as pgsql
+
+                    # SET cannot take a bound parameter; compose the
+                    # already-validated identifier safely instead (#1201).
+                    stmt = pgsql.SQL("SET search_path TO {}, public").format(
+                        pgsql.Identifier(tenant_schema)
+                    )
+                    cur.execute(stmt)  # nosemgrep
                 finally:
                     cur.close()
             context.run_migrations()

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.114] - 2026-05-22
+
+### Fixed
+
+- **Tenant schema migrations silently failed on every boot (#1201).** `server.py` and the Alembic `env.py` ran `SET search_path TO %s` — but PostgreSQL `SET` cannot take a bound parameter, so psycopg's `$1` was rejected with a syntax error that was swallowed, leaving every tenant schema unmigrated. The schema name (already regex-validated at both sites) is now composed safely via `psycopg.sql.Identifier`, matching the existing `pg_backend._set_search_path` pattern. Regression guard added in `tests/unit/test_no_parameterised_set_statement.py`.
+
 ## [0.71.113] - 2026-05-22
 
 ### Changed
