@@ -82,6 +82,19 @@ class SystemRoutesSubsystem:
             event_explorer_router = create_event_explorer_routes(ctx.event_framework)
             ctx.app.include_router(event_explorer_router)
 
+            # Prometheus scrape endpoint (#1192 slice 1) — pull-side
+            # observability over the SystemMetricsCollector snapshot.
+            # The collector lives on ``app.state.services.system_collector``
+            # and may be ``None`` when telemetry is off; the route serves
+            # an empty Prometheus document in that case (never 500s).
+            from dazzle.back.runtime.metrics_routes import create_metrics_routes
+
+            _system_collector = getattr(
+                getattr(ctx.app.state, "services", None), "system_collector", None
+            )
+            metrics_router = create_metrics_routes(_system_collector)
+            ctx.app.include_router(metrics_router)
+
             # Job explorer (#1193) — /_dazzle/jobs/* inspection endpoints,
             # the job-system analogue of the event explorer above. Only
             # registered when `job` blocks are declared (the JobRun system

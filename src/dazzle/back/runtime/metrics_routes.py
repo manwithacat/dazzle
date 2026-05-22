@@ -1,0 +1,99 @@
+"""
+Prometheus scrape endpoint — ``GET /_dazzle/metrics``.
+
+Exposes the runtime's :class:`SystemMetricsCollector` snapshot in the
+Prometheus text exposition format (content-type
+``text/plain; version=0.0.4; charset=utf-8``).
+
+This is the *pull* side of metrics observability (slice 1 of #1192).
+A future slice will add an OTLP push exporter alongside it; the two
+are independent and additive.
+
+Sibling of :mod:`dazzle.back.runtime.event_explorer` and
+:mod:`dazzle.back.runtime.job_explorer` — same factory shape, same
+``/_dazzle/*`` prefix, same auth/gating as the existing inspection
+endpoints.
+
+When the collector is not wired (``None``) — for instance, in test apps
+or when telemetry is disabled — the endpoint returns an empty but valid
+Prometheus document (a single comment line, status 200) rather than a
+500. Scrape tooling will read the empty document cleanly.
+"""
+
+from __future__ import annotations
+
+import logging
+from functools import partial
+from typing import Any
+
+from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, Response
+
+logger = logging.getLogger(__name__)
+
+
+# Standard Prometheus text exposition format content-type.
+# Pinned exactly as the Prometheus project documents it — both the
+# version and charset matter for some scrapers.
+PROMETHEUS_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
+
+# Empty-but-valid Prometheus document returned when the collector is
+# not wired. A single comment line is the canonical "no metrics"
+# response — scrapers accept it without warnings.
+_EMPTY_DOCUMENT = "# Dazzle metrics — collector not configured\n"
+
+
+def _render_metrics(collector: Any | None) -> Response:
+    """
+    Render the current metrics snapshot as a Prometheus text response.
+
+    When ``collector`` is ``None`` (telemetry off / not wired), returns
+    the empty document rather than 500ing the scrape.
+    """
+    if collector is None:
+        return Response(content=_EMPTY_DOCUMENT, media_type=PROMETHEUS_CONTENT_TYPE)
+
+    try:
+        snapshot = collector.snapshot()
+        body = snapshot.to_prometheus()
+    except Exception:
+        # Never 500 a scrape — log + return the empty document so
+        # Prometheus keeps polling and the operator notices via the
+        # missing series (not the failing target).
+        logger.warning("Failed to render Prometheus snapshot", exc_info=True)
+        return Response(content=_EMPTY_DOCUMENT, media_type=PROMETHEUS_CONTENT_TYPE)
+
+    # snapshot.to_prometheus() does not append a trailing newline.
+    # The Prometheus exposition format requires one — append it here.
+    if not body.endswith("\n"):
+        body += "\n"
+    return Response(content=body, media_type=PROMETHEUS_CONTENT_TYPE)
+
+
+def create_metrics_routes(collector: Any | None) -> APIRouter:
+    """
+    Create the ``/_dazzle/metrics`` Prometheus scrape endpoint.
+
+    Args:
+        collector: A :class:`SystemMetricsCollector` (or any object
+            exposing ``.snapshot().to_prometheus() -> str``). May be
+            ``None`` — in which case the endpoint serves the empty
+            document.
+
+    Returns:
+        APIRouter with the single ``GET /_dazzle/metrics`` route.
+
+    Raises:
+        RuntimeError: If FastAPI is not available.
+    """
+    if not FASTAPI_AVAILABLE:
+        raise RuntimeError(
+            "FastAPI is required for metrics routes. Install it with: pip install fastapi"
+        )
+
+    router = APIRouter(prefix="/_dazzle", tags=["Metrics"])
+    router.add_api_route(
+        "/metrics",
+        partial(_render_metrics, collector),
+        methods=["GET"],
+    )
+    return router

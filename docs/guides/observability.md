@@ -38,6 +38,7 @@ application — no sidecar or separate management port required.
 | `/_dazzle/events/outbox` | GET | Transactional outbox stats + recent entries | None (all environments) |
 | `/_dazzle/events/dlq` | GET | Dead-letter queue contents | None (all environments) |
 | `/_dazzle/events/dlq/{event_id}/replay` | POST | Re-queue one DLQ event | None (all environments) |
+| `/_dazzle/metrics` | GET | Prometheus scrape endpoint (text exposition) | None (all environments) |
 
 **Gating note:** The `/_dazzle/*` debug and event endpoints are
 registered unconditionally — there is no `DAZZLE_ENV`-based removal
@@ -505,15 +506,31 @@ The Redis stream is the integration point for external time-series systems.
 A lightweight bridge reads from `dazzle:metrics:stream` and forwards to
 your chosen backend:
 
-- **Prometheus:** Read the stream, convert to Prometheus text format,
-  expose on a scrape endpoint.
+- **Prometheus:** Scrape `GET /_dazzle/metrics` directly (see below) — no
+  bridge needed.
 - **Datadog / New Relic / Grafana Cloud:** Read the stream, forward via
   the provider's ingest API or statsd bridge.
 - **InfluxDB / TimescaleDB:** Read the stream, insert via line protocol.
 
-There is no built-in Prometheus `/metrics` endpoint and no OpenTelemetry
-runtime export in the current Dazzle release. The Redis stream is the
-only out-of-process metrics surface (#1192).
+### `GET /_dazzle/metrics` — Prometheus scrape endpoint
+
+Dazzle exposes the runtime's `SystemMetricsCollector` snapshot in the
+Prometheus text exposition format. Response content-type is
+`text/plain; version=0.0.4; charset=utf-8` — the standard pinned by the
+Prometheus project. Point any Prometheus-compatible scraper (Prometheus,
+VictoriaMetrics, Grafana Agent, OpenTelemetry Collector's `prometheus`
+receiver) at this endpoint on the application's HTTP port.
+
+The endpoint always responds with HTTP 200. When the collector is not
+wired (telemetry off, test boot, no broker), the body is an empty but
+valid Prometheus document — scrapes succeed cleanly with zero series
+rather than failing.
+
+Series surfaced today include `dazzle_uptime_seconds`,
+`dazzle_component_health{component="..."}`, per-component counters
+(suffixed `_total`), gauges, and histograms exported as summaries with
+0.5 / 0.95 / 0.99 quantile labels. See
+`src/dazzle/back/metrics/system_collector.py` for the full schema.
 
 ### Structured logs
 

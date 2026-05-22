@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.126] - 2026-05-23
+
+### Added
+
+- **`GET /_dazzle/metrics` — Prometheus scrape endpoint (#1192 slice 1 of 2).** Renders `SystemMetricsSnapshot.to_prometheus()` with `Content-Type: text/plain; version=0.0.4; charset=utf-8`. When the collector isn't wired, the endpoint returns 200 with a brief Prometheus-format comment (never 500s). Registered alongside the event/job explorers in `SystemRoutesSubsystem`; collector resolved from `app.state.services.system_collector`. No new dependencies. Slice 2 (OTLP push export via `DAZZLE_OTEL_ENDPOINT`) follows; #1192 remains open until then.
+
 ## [0.71.125] - 2026-05-23
 
 ### Added
