@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pygments-dazzle"
+version = "0.1.0"
+description = "Pygments lexer for the Dazzle DSL — syntax highlighting for ```dsl fences in the docs"
+requires-python = ">=3.12"
+dependencies = ["pygments>=2.17"]
+
+# Registers the lexer so `get_lexer_by_name("dsl")` resolves once this package
+# is installed (the docs build does so via requirements-docs.txt).
+[project.entry-points."pygments.lexers"]
+dazzle_dsl = "pygments_dazzle:DazzleDslLexer"
+
+[tool.setuptools]
+packages = ["pygments_dazzle"]

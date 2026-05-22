@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.112] - 2026-05-22
+
+### Added
+
+- **Pygments lexer for the Dazzle DSL — `dsl` code fences now syntax-highlight in the docs.** New standalone `tools/pygments-dazzle/` package registers a `dsl`/`dazzle` lexer via the `pygments.lexers` entry point; `requirements-docs.txt` installs it so `mkdocs`/`pymdownx` pick it up. Previously `dsl` fences fell back to the plain-text lexer (`language-text`); they now render as `language-dazzle dsl` with highlighted keywords, types, field modifiers, constants, comments, and strings. The package depends only on Pygments — the docs build does not need the full `dazzle` runtime.
+
+### Agent Guidance
+
+- A new top-level DSL construct that should highlight in the docs needs adding to `_KEYWORDS` in `tools/pygments-dazzle/pygments_dazzle/__init__.py`. The lexer is a static keyword snapshot — an unlisted construct still renders, just unhighlighted, so parity with the parser is best-effort, not enforced.
+
 ## [0.71.111] - 2026-05-22
 
 ### Changed
