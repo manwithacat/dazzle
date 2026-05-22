@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.113] - 2026-05-22
+
+### Changed
+
+- The docs quickstart now opens with a `What you'll write` section showing a `dsl` entity example, so the page leads with the DSL (and its new syntax highlighting) instead of burying it below the run steps.
+
 ## [0.71.112] - 2026-05-22
 
 ### Added

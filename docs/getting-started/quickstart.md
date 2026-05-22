@@ -2,6 +2,18 @@
 
 Get a working application from your Dazzle DSL in under 5 minutes.
 
+## What you'll write
+
+A Dazzle app is a DSL spec. The `entity` is the core building block — it becomes a database table, a typed REST API, and a UI surface:
+
+```dsl
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  status: enum[open, in_progress, done] = open
+  due: date
+```
+
 ## Prerequisites
 
 - Dazzle installed ([Installation Guide](installation.md))
