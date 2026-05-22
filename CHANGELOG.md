@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.109] - 2026-05-22
+
+### Changed
+
+- **Pre-ship checklist now builds the docs.** `.claude/commands/ship.md` runs `mkdocs build --strict` as a pre-flight gate — catching broken links and nav rot (the regression class behind SP3's `../../ROADMAP.md` link) before they ship. One pre-existing failure is carved out: `mkdocs` crashes rendering `docs/adr/0020` (a `pymdownx`/`pygments` bug, issue #1203); the carve-out is removed once that is fixed.
+
+### Agent Guidance
+
+- When adding or moving docs, run `mkdocs build --strict` before shipping. Links to repo-root files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`) and to non-`docs/` paths (`benchmarks/`, `examples/`) must be GitHub blob/tree URLs — `mkdocs` only resolves links inside `docs/`.
+
 ## [0.71.108] - 2026-05-22
 
 ### Added
