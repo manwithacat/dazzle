@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.71.109] - 2026-05-22
+## [0.71.110] - 2026-05-22
+
+### Fixed
+
+- **`mkdocs build` no longer crashes — the docs site builds cleanly again (#1203).** `requirements-docs.txt` pinned `pygments>=2.20.0,<2.21`, which forces the exact version whose `HtmlFormatter` adds `html.escape()` on the `filename` option — and crashes (`AttributeError`) on the `filename=None` that `pymdownx` passes for untitled/indented code blocks. The pin is corrected to `pygments>=2.19,<2.20`. Also removed the cosmetic blank lines inside the `dsl` code fence in `docs/adr/0020` that `pymdownx.superfences` mis-parsed (blank-line-then-indent leaks content into a separate code block). `mkdocs build --strict` now passes with zero warnings; the pre-ship docs gate's carve-out for this crash is removed.
 
 ### Changed
 

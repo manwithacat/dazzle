@@ -45,7 +45,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
   mkdocs build --strict
   ```
 
-  `--strict` turns broken internal links, missing nav entries, and unrecognised link targets into errors. **One pre-existing failure is tolerated:** the build currently crashes rendering `docs/adr/0020-lifecycle-evidence-predicates.md` (a `pymdownx`/`pygments` `filename=None` bug — issue #1203). That crash, and *only* that crash, is acceptable; any other error or warning must be fixed before shipping. Because `--strict` aborts at the crash, docs that sort after `adr/` in the `mkdocs.yml` nav are not reached — if you touched one, verify it by building with `adr/` temporarily added to `exclude_docs`. Links to repo-root files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`) and to non-`docs/` paths (`benchmarks/`, `examples/`) must be GitHub blob/tree URLs, not `../../` relative paths. Drop this carve-out once #1203 is fixed.
+  `--strict` turns broken internal links, missing nav entries, and unrecognised link targets into errors — the build must pass clean (exit 0, no warnings). Links to repo-root files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`) and to non-`docs/` paths (`benchmarks/`, `examples/`) must be GitHub blob/tree URLs, not `../../` relative paths — `mkdocs` only resolves links inside `docs/`. The docs toolchain is pinned in `requirements-docs.txt`; note `pygments` is held `<2.20` (#1203 — 2.20 crashes `pymdownx` highlight).
 
 - If lint, type, drift, policy, spec-strict, or docs-build errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
 

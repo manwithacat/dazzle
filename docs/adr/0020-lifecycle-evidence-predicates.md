@@ -39,30 +39,25 @@ entity Ticket "Support Ticket":
 process ticket_lifecycle:
   entity: Ticket
   status_field: status
-
   states:
     - new         (order: 0)
     - assigned    (order: 1)
     - in_progress (order: 2)
     - resolved    (order: 3)
     - closed      (order: 4)
-
   transitions:
     - from: new
       to: assigned
       evidence: assignee_id != null
       role: support_agent
-
     - from: assigned
       to: in_progress
       evidence: assignee_id != null
       role: support_agent
-
     - from: in_progress
       to: resolved
       evidence: resolution_notes != null AND resolution_notes != ""
       role: support_agent
-
     - from: resolved
       to: closed
       evidence: true   # any user can close a resolved ticket
