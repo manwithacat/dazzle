@@ -13,6 +13,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 
 class OTPRecord(BaseModel):
     """Record for a stored OTP code."""
@@ -63,9 +65,7 @@ class OTPStore:
         Args:
             database_url: PostgreSQL connection URL
         """
-        self._database_url = database_url
-        if self._database_url.startswith("postgres://"):
-            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
+        self._database_url = normalise_postgres_scheme(database_url)
 
     def _get_connection(self) -> Any:
         """Get a PostgreSQL connection."""

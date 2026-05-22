@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 _FRAGMENT_CHROME_WARNED = False
 
 
@@ -1000,7 +1002,7 @@ def resolve_database_url(
     """
     # 1. Explicit CLI flag
     if explicit_url:
-        return _normalise_postgres_scheme(explicit_url)
+        return normalise_postgres_scheme(explicit_url)
 
     # 2. Environment profile
     if env_name and manifest is not None:
@@ -1014,17 +1016,17 @@ def resolve_database_url(
         profile = manifest.environments[env_name]
         # database_url wins over database_url_env on the same profile
         if profile.database_url:
-            return _normalise_postgres_scheme(profile.database_url)
+            return normalise_postgres_scheme(profile.database_url)
         if profile.database_url_env:
             resolved = os.environ.get(profile.database_url_env, "")
             if resolved:
-                return _normalise_postgres_scheme(resolved)
+                return normalise_postgres_scheme(resolved)
         # Profile set but neither field resolved — fall through
 
     # 3. Environment variable
     env_url = os.environ.get("DATABASE_URL", "")
     if env_url:
-        return _normalise_postgres_scheme(env_url)
+        return normalise_postgres_scheme(env_url)
 
     # 4. Manifest [database].url
     if manifest is not None:
@@ -1033,20 +1035,13 @@ def resolve_database_url(
             var_name = manifest_url[4:]
             resolved = os.environ.get(var_name, "")
             if resolved:
-                return _normalise_postgres_scheme(resolved)
+                return normalise_postgres_scheme(resolved)
             # env var not set — fall through to default
         elif manifest_url and manifest_url != _DEFAULT_DATABASE_URL:
-            return _normalise_postgres_scheme(manifest_url)
+            return normalise_postgres_scheme(manifest_url)
 
     # 5. Default
     return _DEFAULT_DATABASE_URL
-
-
-def _normalise_postgres_scheme(url: str) -> str:
-    """Convert Heroku's ``postgres://`` to ``postgresql://``."""
-    if url.startswith("postgres://"):
-        return "postgresql://" + url[len("postgres://") :]
-    return url
 
 
 _DEFAULT_SITE_URL = "http://localhost:3000"

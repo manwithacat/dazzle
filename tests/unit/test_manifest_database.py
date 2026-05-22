@@ -10,7 +10,6 @@ from dazzle.core.manifest import (
     DatabaseConfig,
     EnvironmentProfile,
     ProjectManifest,
-    _normalise_postgres_scheme,
     load_manifest,
     resolve_database_url,
 )
@@ -176,22 +175,6 @@ class TestResolveDatabaseUrl:
             assert result == _DEFAULT_DATABASE_URL
         else:
             assert result == expected
-
-
-# ---------------------------------------------------------------------------
-# _normalise_postgres_scheme tests
-# ---------------------------------------------------------------------------
-
-
-class TestNormalisePostgresScheme:
-    def test_converts_postgres(self) -> None:
-        assert _normalise_postgres_scheme("postgres://u:p@h/d") == "postgresql://u:p@h/d"
-
-    def test_leaves_postgresql(self) -> None:
-        assert _normalise_postgres_scheme("postgresql://u:p@h/d") == "postgresql://u:p@h/d"
-
-    def test_leaves_other_schemes(self) -> None:
-        assert _normalise_postgres_scheme("sqlite:///foo.db") == "sqlite:///foo.db"
 
 
 # ---------------------------------------------------------------------------

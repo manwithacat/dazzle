@@ -54,6 +54,7 @@ from dazzle.back.runtime.workspace_handlers import (  # noqa: F401
 )
 from dazzle.back.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
+from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 from dazzle.core.ir import AppSpec
 
 if FASTAPI_AVAILABLE:
@@ -563,12 +564,8 @@ class DazzleBackendApp:
             return
 
         metadata = build_metadata(self._entities)
-        sa_url = self._database_url
         # Normalise Heroku-style postgres:// alias before adding driver suffix
-        if sa_url.startswith("postgres://"):
-            sa_url = sa_url.replace("postgres://", "postgresql://", 1)
-        if sa_url.startswith("postgresql://"):
-            sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
 
         for tenant in tenants:
             if tenant.status != "active":
@@ -668,12 +665,8 @@ class DazzleBackendApp:
                 from dazzle.back.runtime.sa_schema import build_metadata
 
                 metadata = build_metadata(self._entities)
-                sa_url = self._database_url
                 # Normalise Heroku-style postgres:// alias before adding driver suffix
-                if sa_url.startswith("postgres://"):
-                    sa_url = sa_url.replace("postgres://", "postgresql://", 1)
-                if sa_url.startswith("postgresql://"):
-                    sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
+                sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
                 engine = _sa_create_engine(sa_url)
                 try:
                     metadata.create_all(engine)

@@ -40,6 +40,7 @@ from dazzle.back.events.envelope import EventEnvelope
 from dazzle.back.events.inbox import EventInbox
 from dazzle.back.events.outbox import EventOutbox
 from dazzle.back.events.publisher import OutboxPublisher, PublisherConfig
+from dazzle.core.db_url import normalise_postgres_scheme
 
 # Connection factory type: async callable returning a connection
 ConnectFn = Callable[[], Awaitable[Any]]
@@ -145,9 +146,7 @@ class EventFramework:
         if database_url is None:
             raise ValueError("database_url is required for event system")
 
-        url = database_url
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql://", 1)
+        url = normalise_postgres_scheme(database_url)
 
         async def _pg_connect() -> psycopg.AsyncConnection[dict[str, Any]]:
             import psycopg

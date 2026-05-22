@@ -11,6 +11,8 @@ import os
 import sys
 from datetime import UTC, datetime
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 
 def validate_production_env() -> tuple[str, str | None]:
     """Validate required environment variables for production mode.
@@ -32,8 +34,9 @@ def validate_production_env() -> tuple[str, str | None]:
         sys.exit(1)
 
     # Normalize postgres:// → postgresql:// (Heroku convention)
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    normalised_url = normalise_postgres_scheme(database_url)
+    if normalised_url != database_url:
+        database_url = normalised_url
         os.environ["DATABASE_URL"] = database_url
 
     redis_url = os.environ.get("REDIS_URL") or None

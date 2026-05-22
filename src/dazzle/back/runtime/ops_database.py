@@ -27,6 +27,8 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 if TYPE_CHECKING:
     import psycopg
 
@@ -174,9 +176,7 @@ class OpsDatabase:
             retention: Data retention configuration
         """
         # Normalize Heroku's postgres:// to postgresql://
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
-        self._database_url = database_url
+        self._database_url = normalise_postgres_scheme(database_url)
         self.retention = retention or RetentionConfig()
         self._init_schema()
 

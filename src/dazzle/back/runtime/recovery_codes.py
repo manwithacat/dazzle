@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 
 def generate_recovery_codes(count: int = 8) -> list[str]:
     """Generate a set of recovery codes.
@@ -56,9 +58,7 @@ class RecoveryCodeStore:
         Args:
             database_url: PostgreSQL connection URL
         """
-        self._database_url = database_url
-        if self._database_url.startswith("postgres://"):
-            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
+        self._database_url = normalise_postgres_scheme(database_url)
 
     def _get_connection(self) -> Any:
         """Get a PostgreSQL connection."""

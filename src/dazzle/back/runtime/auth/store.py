@@ -16,6 +16,8 @@ except ImportError:
     dict_row = None  # type: ignore[assignment]
     PSYCOPG_AVAILABLE = False
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 from .crypto import hash_password, verify_password
 from .models import AuthContext, SessionRecord, UserRecord
 
@@ -616,11 +618,9 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                 into auth_context.preferences during session validation,
                 so scope rules like ``current_user.school`` resolve.
         """
-        self._database_url = database_url
-        self._user_entity_table = user_entity_table
         # Normalize Heroku's postgres:// to postgresql://
-        if self._database_url.startswith("postgres://"):
-            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
+        self._database_url = normalise_postgres_scheme(database_url)
+        self._user_entity_table = user_entity_table
 
         self._init_db()
 

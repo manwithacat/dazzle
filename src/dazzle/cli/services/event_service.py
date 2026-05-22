@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 
 class EventService:
     """Event service for CLI usage, using the tier system.
@@ -92,8 +94,7 @@ class EventService:
             import psycopg
             from psycopg.rows import dict_row
 
-            if db_url.startswith("postgres://"):
-                db_url = db_url.replace("postgres://", "postgresql://", 1)
+            db_url = normalise_postgres_scheme(db_url)
             return await psycopg.AsyncConnection.connect(db_url, row_factory=dict_row)
         raise RuntimeError("DATABASE_URL not set. Outbox operations require a database connection.")
 
@@ -133,8 +134,7 @@ class EventService:
             import psycopg
             from psycopg.rows import dict_row
 
-            if db_url.startswith("postgres://"):
-                db_url = db_url.replace("postgres://", "postgresql://", 1)
+            db_url = normalise_postgres_scheme(db_url)
 
             async def connect() -> psycopg.AsyncConnection[dict[str, Any]]:
                 return await psycopg.AsyncConnection.connect(db_url, row_factory=dict_row)

@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -200,9 +202,7 @@ def run_unified_server(
     print()
 
     # Check for PostgreSQL DATABASE_URL
-    database_url = os.environ.get("DATABASE_URL", "")
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    database_url = normalise_postgres_scheme(os.environ.get("DATABASE_URL", ""))
 
     # Set REDIS_URL in env for subcomponents that read it
     if redis_url:
@@ -440,9 +440,7 @@ def run_backend_only(
     if redis_url:
         os.environ.setdefault("REDIS_URL", redis_url)
 
-    database_url = os.environ.get("DATABASE_URL", "")
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    database_url = normalise_postgres_scheme(os.environ.get("DATABASE_URL", ""))
 
     config = build_server_config(
         appspec,

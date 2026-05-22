@@ -5,20 +5,19 @@ from unittest.mock import patch
 
 import pytest
 
+from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
+
 
 def _call_get_url(*, sqlalchemy_url: str = "", env_url: str = "") -> str:
     """Call _get_url() with mocked config and environment.
 
-    Inlines the logic from _get_url to test it without importing env.py
+    Mirrors the logic of env.py's ``_get_url`` (scheme normalisation +
+    psycopg driver) via the shared helpers, without importing env.py
     (which has heavy alembic dependencies).
     """
     with patch.dict("os.environ", {"DATABASE_URL": env_url} if env_url else {}, clear=False):
         url = sqlalchemy_url or os.environ.get("DATABASE_URL", "")
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql://", 1)
-        if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-        return url
+        return add_psycopg_driver(normalise_postgres_scheme(url))
 
 
 class TestGetUrl:

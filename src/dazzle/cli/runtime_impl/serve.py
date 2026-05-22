@@ -24,6 +24,7 @@ import typer
 
 from dazzle.cli.dotenv import load_project_dotenv as _load_dotenv
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.core.environment import (
     get_dazzle_env,
     should_enable_test_endpoints,
@@ -79,8 +80,7 @@ def _validate_infrastructure() -> tuple[str, str]:
         raise typer.Exit(code=1)
 
     # Normalize postgres:// → postgresql://
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    database_url = normalise_postgres_scheme(database_url)
 
     return database_url, redis_url
 

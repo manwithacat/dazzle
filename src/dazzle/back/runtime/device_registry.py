@@ -12,6 +12,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 if TYPE_CHECKING:
     import psycopg
     from fastapi import APIRouter
@@ -75,9 +77,7 @@ class DeviceRegistry:
             database_url: PostgreSQL connection URL
         """
         # Normalize Heroku's postgres:// to postgresql://
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
-        self._database_url = database_url
+        self._database_url = normalise_postgres_scheme(database_url)
         self._init_db()
 
     def _get_connection(self) -> "psycopg.Connection[dict[str, Any]]":

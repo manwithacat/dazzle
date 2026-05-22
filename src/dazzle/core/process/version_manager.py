@@ -35,6 +35,8 @@ from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 try:
     import aiosqlite  # type: ignore[import-untyped,unused-ignore]
 except ImportError:
@@ -124,8 +126,7 @@ class VersionManager:
 
             pg_url = self._database_url
             assert pg_url is not None
-            if pg_url.startswith("postgres://"):
-                pg_url = pg_url.replace("postgres://", "postgresql://", 1)
+            pg_url = normalise_postgres_scheme(pg_url)
             return await psycopg.AsyncConnection.connect(pg_url, row_factory=dict_row)
         else:
             return await aiosqlite.connect(self._db_path)

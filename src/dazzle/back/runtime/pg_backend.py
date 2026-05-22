@@ -15,6 +15,7 @@ from psycopg import sql as pgsql
 
 from dazzle.back.runtime.query_builder import quote_identifier
 from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 
 logger = logging.getLogger(__name__)
 
@@ -203,13 +204,8 @@ class PostgresBackend:
     @property
     def _sa_url(self) -> str:
         """Return a SQLAlchemy-compatible URL using psycopg (v3) driver."""
-        url = self.database_url
         # Normalise Heroku-style postgres:// alias before adding driver suffix
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql://", 1)
-        if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-        return url
+        return add_psycopg_driver(normalise_postgres_scheme(self.database_url))
 
     @contextmanager
     def connection(self) -> Iterator[Any]:

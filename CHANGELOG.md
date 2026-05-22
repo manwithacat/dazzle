@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.118] - 2026-05-22
+
+### Changed
+
+- **Consolidated DB-URL scheme normalization into `dazzle/core/db_url.py` (#1185).** The `postgres://` → `postgresql://` rewrite (Heroku hands out the deprecated alias) was copy-pasted inline across ~16 modules, four of which also rewrote `postgresql://` → `postgresql+psycopg://`. New `db_url.py` exposes two idempotent helpers — `normalise_postgres_scheme` and `add_psycopg_driver` — and every call site (plus the now-deleted private `manifest._normalise_postgres_scheme`) imports them. No behaviour change; `add_psycopg_driver` is driver-aware (won't double-add a `+driver` suffix).
+
 ## [0.71.117] - 2026-05-22
 
 ### Added

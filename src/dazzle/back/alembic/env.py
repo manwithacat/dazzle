@@ -17,6 +17,8 @@ import sqlalchemy
 from alembic import context
 from alembic.operations import ops as alembic_ops
 
+from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -72,13 +74,9 @@ def _get_url() -> str:
     ensures the psycopg v3 driver is used.
     """
     url = config.get_main_option("sqlalchemy.url", "") or os.environ.get("DATABASE_URL", "")
-    # Heroku uses the deprecated postgres:// scheme — normalise it
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-    # Ensure SQLAlchemy uses psycopg v3, not psycopg2
-    if url.startswith("postgresql://"):
-        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-    return url
+    # Heroku uses the deprecated postgres:// scheme — normalise it, then
+    # ensure SQLAlchemy uses psycopg v3, not psycopg2.
+    return add_psycopg_driver(normalise_postgres_scheme(url))
 
 
 # ---------------------------------------------------------------------------

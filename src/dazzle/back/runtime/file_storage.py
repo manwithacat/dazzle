@@ -18,6 +18,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 if TYPE_CHECKING:
     pass
 
@@ -456,10 +458,7 @@ class FileMetadataStore:
         if database_url is None:
             raise ValueError("database_url is required. SQLite is no longer supported.")
         # Normalize Heroku's postgres:// to postgresql://
-        pg_url = database_url
-        if pg_url.startswith("postgres://"):
-            pg_url = pg_url.replace("postgres://", "postgresql://", 1)
-        self._pg_url: str = pg_url
+        self._pg_url: str = normalise_postgres_scheme(database_url)
         self._init_db()
 
     def _get_connection(self) -> Any:

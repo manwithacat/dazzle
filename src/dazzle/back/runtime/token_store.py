@@ -15,6 +15,8 @@ import psycopg
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.db_url import normalise_postgres_scheme
+
 if TYPE_CHECKING:
     from dazzle.back.runtime.auth import UserRecord
 
@@ -80,10 +82,8 @@ class TokenStore:
             database_url: PostgreSQL connection URL
             token_lifetime_days: Refresh token lifetime in days
         """
-        self._database_url = database_url
         # Normalize Heroku's postgres:// to postgresql://
-        if self._database_url.startswith("postgres://"):
-            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
+        self._database_url = normalise_postgres_scheme(database_url)
 
         self.token_lifetime_days = token_lifetime_days
         self._init_db()
