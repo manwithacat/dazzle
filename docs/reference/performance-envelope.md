@@ -124,33 +124,42 @@ vs 84.9, `search` 83.9 vs 84.0, `aggregate` 143.2 vs 142.0. The small apparent
 gap at 100k (`list` 29.4 vs 26.2) is timing noise — it vanishes at 1M where the
 signal is 10× larger.
 
-The obvious fix does not work. `EXPLAIN (ANALYZE, BUFFERS)` against the
-3M-row bench database confirms why:
+Why the single-column indexes don't help is part structural certainty, part
+honest open question.
 
-- **`list`** — the runtime issues a `SELECT COUNT(*) ... WHERE tenant_id = $1`
-  (for the pagination total) followed by a `SELECT * ... LIMIT n`. A
-  single-column `tenant_id` index speeds the COUNT (a 62 ms parallel SeqScan
-  becomes a 20 ms Index-Only Scan) but the end-to-end probe does not move — the
-  COUNT is not the probe's dominant cost. When a list surface applies a default
-  sort (`ORDER BY created_at DESC`), the dominant plan node becomes a `Sort`
-  over the full ~1M-row tenant slice (~74 ms top-N heapsort), and a
-  single-column `tenant_id` index *cannot* satisfy an `ORDER BY created_at` —
-  there is no `created_at` index at all.
-- **`search`** — `... LIKE '%term%'` scans at ~33% tenant selectivity. With a
-  `tenant_id` index the planner runs a Bitmap Heap Scan that rechecks
-  essentially every tenant heap page; it is measured *slower* (117 ms) than the
-  index-free parallel SeqScan (91 ms). A plain b-tree cannot serve a
-  leading-wildcard `LIKE` regardless.
-- **`aggregate`** — a full-table `GROUP BY status`; no single-column index
-  applies.
-- **`read`** — a primary-key lookup, already optimal and flat at all scales.
+**Structurally certain:**
+
+- **`search`** matches with a leading-wildcard `LIKE '%term%'`. A plain b-tree
+  cannot serve a leading-wildcard pattern under any conditions, so the
+  `tenant_id` b-tree in the `indexed` config is simply irrelevant to it.
+- **`aggregate`** is a full-table `GROUP BY status` — it reads every row by
+  definition, so no single-column index changes its cost.
+- **`read`** is a primary-key lookup, already served optimally by the PK index
+  Dazzle emits — which is why it stays flat at every scale.
+- A `list` surface that applies a default sort (`ORDER BY created_at DESC LIMIT
+  n`) needs an index *ordered by* `created_at`; a single-column `tenant_id`
+  index cannot satisfy that ordering, and Dazzle emits no `created_at` index.
+
+**Honest open question:** for the scope-filtered `list` and `search` probes the
+benchmark establishes the *outcome* — a single-column `tenant_id` b-tree does
+not move end-to-end p95 at any scale — but not a complete per-component cost
+breakdown. Isolated `EXPLAIN` of individual sub-queries shows plan-level
+differences that do not translate into the measured request latency, and the
+single-threaded harness does not attribute the remaining wall-clock. The
+load-bearing claim here is the measured outcome, not a mechanism.
+
+One factor that *is* clear: the benchmark runs **3 tenants**, so `tenant_id`
+matches ~⅓ of the table — low selectivity, where an index earns little. An app
+with hundreds of tenants has a far more selective predicate and would benefit
+more from indexing it; the benchmark deliberately measures the low-tenant-count
+case.
 
 ### The real lever
 
-The fix for the `list` path is a **composite `(tenant_id, created_at)` index** —
-one index that covers both the scope predicate and the sort, so the planner can
-serve `WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT n` straight from the
-index with no sort node. For `search`, the lever is a PostgreSQL full-text
+The fix for a sorted `list` path is a **composite `(tenant_id, created_at)`
+index** — one index that covers both the scope predicate and the sort, so the
+planner can serve `WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT n`
+straight from the index with no sort node. For `search`, the lever is a PostgreSQL full-text
 (`tsvector` + GIN) index, not a plain b-tree. Neither is what
 `benchmarks/indexes.sql` contains, and — more importantly — neither is what the
 framework's schema builder generates today. This gap is tracked as

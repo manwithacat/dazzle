@@ -16,12 +16,14 @@
 -- The SP6 benchmark ran every probe against both configs at scales up to
 -- 1,000,000 invoices/tenant (3,000,000 Invoice rows).  The `indexed` config
 -- (these indexes) is within measurement noise of `default` at every scale:
--- list/read/search/aggregate latency does NOT materially change.  EXPLAIN
--- shows why — the list path is sort-bound (a single-column tenant_id index
--- cannot satisfy ORDER BY created_at), search is heap-page-bound, and
--- aggregate is a full scan.  The real lever is a COMPOSITE
+-- list/read/search/aggregate latency does NOT materially change.  In short:
+-- a sorted list path needs a composite index (a single-column tenant_id index
+-- cannot satisfy ORDER BY created_at), search's leading-wildcard LIKE cannot
+-- use a b-tree, aggregate is a full scan, and at 3 tenants the tenant_id
+-- predicate is only ~1/3 selective.  The real lever is a COMPOSITE
 -- (tenant_id, created_at) index plus full-text (tsvector/GIN) for search.
--- See docs/reference/performance-envelope.md and issue #1202.  These
+-- See docs/reference/performance-envelope.md ("Where it degrades") for the
+-- full mechanism + caveats, and issue #1202.  These
 -- single-column indexes are kept only as the benchmark's negative-result
 -- comparison config — do not treat them as a production fix.
 --
