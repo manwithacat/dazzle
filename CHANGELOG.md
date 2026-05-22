@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.121] - 2026-05-22
+
+### Added
+
+- **Framework-level log/error secret redaction (#1199).** Credentials that reach a log record — an API key in an exception message, a bearer token in a traceback, a DB-URL password — were emitted in plaintext (`log_setup.py` attached a handler with no filter). A new `SecretRedactionFilter` is now attached to the framework's log handlers (and any existing root/`dazzle` handlers) by `ensure_dazzle_logging_configured`; it masks URL credentials, `Bearer` tokens, and `key=value` secrets (`password`, `secret`, `token`, `api_key`, …) in both the message and the formatted traceback. The `redact_secrets()` helper is also exported for ad-hoc use.
+
 ## [0.71.120] - 2026-05-22
 
 ### Fixed
