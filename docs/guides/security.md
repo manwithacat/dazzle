@@ -240,7 +240,7 @@ verify) and file upload endpoints are rate-limited at the profile limits when
 **Mitigation while gap is open:** Apply rate limits at your load balancer or API
 gateway for generated API routes. For auth routes, ensure `slowapi` is installed.
 
-*(Issue forthcoming — see Task 2)*
+*(Tracked: #1196)*
 
 ### Gap 2: Audit log has no tamper-resistance affordance
 
@@ -252,7 +252,7 @@ or other integrity mechanism.
 sink as soon as they are written. PostgreSQL's logical replication or a
 background `pg_notify` listener are practical integration points.
 
-*(Issue forthcoming — see Task 2)*
+*(Tracked: #1197)*
 
 ### Gap 3: No session fixation defence on login
 
@@ -264,7 +264,7 @@ background `pg_notify` listener are practical integration points.
 block that calls `auth_store.delete_user_sessions(user.id)` before the new
 session is issued. Alternatively, avoid long-lived pre-auth sessions.
 
-*(Issue forthcoming — see Task 2)*
+*(Tracked: #1198)*
 
 ### Gap 4: No framework-level log redaction
 
@@ -277,7 +277,7 @@ known secret patterns. For Python's `logging`, a `logging.Filter` that replaces
 known-secret-shaped values (API keys, bearer tokens) before records are emitted
 is the standard approach.
 
-*(Issue forthcoming — see Task 2)*
+*(Tracked: #1199)*
 
 ### Gap 5: `pip-audit` is CI-informational-only
 
@@ -289,7 +289,7 @@ A known vulnerable dependency does not fail the build.
 output on every merge. Act on critical/high findings before merging to
 production.
 
-*(Issue forthcoming — see Task 2)*
+*(Tracked: #1200)*
 
 ### Gap 6: Field-level security is deliberately absent
 

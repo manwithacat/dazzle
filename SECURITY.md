@@ -1,5 +1,7 @@
 # Security Policy
 
+For the framework's threat model and the framework-vs-application security responsibility matrix, see `docs/guides/security.md`.
+
 ## Supported Versions
 
 | Version | Supported          |

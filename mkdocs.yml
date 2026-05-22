@@ -85,6 +85,7 @@ nav:
       - Observability: guides/observability.md
       - Operations: guides/operations.md
       - Scaling: guides/scaling.md
+      - Security: guides/security.md
   - Examples:
       - Overview: examples/index.md
       - Simple Task: examples/simple-task.md
