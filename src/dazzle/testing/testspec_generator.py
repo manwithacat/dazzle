@@ -8,6 +8,7 @@ Generates E2ETestSpec from AppSpec, automatically creating:
 - Test fixtures from entity schemas
 """
 
+import warnings
 from typing import Any
 
 from dazzle.core.ir import (
@@ -27,6 +28,7 @@ from dazzle.core.ir import (
     FlowStep,
     FlowStepKind,
     PermissionKind,
+    PersonaSpec,
     SurfaceAccessSpec,
     SurfaceMode,
     SurfaceSpec,
@@ -559,6 +561,16 @@ def generate_surface_flows(surface: SurfaceSpec, appspec: AppSpec) -> list[FlowS
 # =============================================================================
 
 
+def _resolve_personas_for_role(appspec: AppSpec, role: str) -> list[PersonaSpec]:
+    """Return every persona whose effective role matches ``role``.
+
+    Role-guarded state transitions are exercised by authenticating as a
+    persona that carries the required role (#1186). A role can map to
+    multiple personas (#1147), so this returns all matches.
+    """
+    return [p for p in appspec.personas if p.effective_role == role]
+
+
 def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowSpec]:
     """
     Generate state machine transition test flows for an entity.
@@ -584,9 +596,11 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
 
     # Generate tests for each explicit transition
     for transition in sm.transitions:
-        # Skip transitions with role guards — E2E tests have no auth context
-        if any(g.requires_role for g in transition.guards):
-            continue
+        # Role guards: resolve every persona carrying the required role so the
+        # transition can be exercised under an authenticated context (#1186).
+        # A transition may declare more than one role guard; collect them all.
+        required_roles = [g.requires_role for g in transition.guards if g.requires_role]
+
         if transition.is_wildcard:
             # For wildcard transitions, pick first non-target state as example
             example_states = [s for s in sm.states if s != transition.to_state]
@@ -594,58 +608,139 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
         else:
             from_states = [transition.from_state]
 
-        for from_state in from_states:
-            # Test valid transition
-            steps: list[FlowStep] = [
-                FlowStep(
-                    kind=FlowStepKind.NAVIGATE,
-                    target=f"view:{list_surface}",
-                    description=f"Navigate to {entity.name} list",
-                ),
-                FlowStep(
-                    kind=FlowStepKind.CLICK,
-                    target=f"row:{entity.name}",
-                    description=f"Select {entity.name} in state '{from_state}'",
-                ),
-                FlowStep(
-                    kind=FlowStepKind.CLICK,
-                    target=f"action:{entity.name}.transition.{transition.to_state}",
-                    description=f"Trigger transition to '{transition.to_state}'",
-                ),
-            ]
-
-            # Guard satisfaction: requires_field guards are satisfied by ensuring
-            # the fixture has the field populated (checked server-side).
-            # HTMX transition buttons send hx-put directly, so there's no form
-            # to fill guard fields in the UI.
-
-            steps.append(
-                FlowStep(
-                    kind=FlowStepKind.ASSERT,
-                    assertion=FlowAssertion(
-                        kind=FlowAssertionKind.STATE_TRANSITION_ALLOWED,
-                        target=f"{entity.name}.{sm.status_field}",
-                        expected=transition.to_state,
-                    ),
-                    description=f"Assert transition to '{transition.to_state}' succeeded",
+        if not required_roles:
+            # Unguarded (by role) path: emit a single anonymous flow per from-state.
+            # requires_field / expression guards are satisfied server-side via the
+            # state fixture, so they need no auth context.
+            persona_variants: list[PersonaSpec | None] = [None]
+        else:
+            # Match personas across every required role. Sorted + de-duplicated
+            # by id so the flow set is deterministic.
+            matched: dict[str, PersonaSpec] = {}
+            for role in required_roles:
+                for matched_persona in _resolve_personas_for_role(appspec, role):
+                    matched[matched_persona.id] = matched_persona
+            if matched:
+                persona_variants = [matched[pid] for pid in sorted(matched)]
+            else:
+                # No persona maps to the required role(s): do NOT silently drop
+                # the transition. Emit a single skip-marked stub and warn so the
+                # coverage gap is visible.
+                persona_variants = []
+                roles_label = ", ".join(sorted(set(required_roles)))
+                target_label = transition.to_state
+                for from_state in from_states:
+                    stub_id = (
+                        f"{entity.name}_transition_{from_state}_to_{target_label}"
+                        "_skipped_no_persona"
+                    )
+                    flows.append(
+                        FlowSpec(
+                            id=stub_id,
+                            description=(
+                                f"SKIPPED — role-guarded transition {entity.name} "
+                                f"'{from_state}' -> '{target_label}' requires role "
+                                f"'{roles_label}' but no persona carries it"
+                            ),
+                            priority=FlowPriority.HIGH,
+                            preconditions=FlowPrecondition(
+                                fixtures=[f"{entity.name}_state_{from_state}"],
+                            ),
+                            steps=[],
+                            tags=[
+                                "state_machine",
+                                "transition",
+                                entity.name.lower(),
+                                "skip:no-persona",
+                            ],
+                            entity=entity.name,
+                            auto_generated=True,
+                        )
+                    )
+                warnings.warn(
+                    f"{entity.name}: role-guarded transition to "
+                    f"'{transition.to_state}' requires role '{roles_label}' but no "
+                    f"persona carries it — emitted skip:no-persona stub instead of "
+                    f"an E2E flow.",
+                    stacklevel=2,
                 )
-            )
 
-            flow_id = f"{entity.name}_transition_{from_state}_to_{transition.to_state}"
-            flows.append(
-                FlowSpec(
-                    id=flow_id,
-                    description=f"Valid transition: {entity.name} from '{from_state}' to '{transition.to_state}'",
-                    priority=FlowPriority.HIGH,
-                    preconditions=FlowPrecondition(
+        persona: PersonaSpec | None
+        for persona in persona_variants:
+            for from_state in from_states:
+                # Test valid transition
+                steps: list[FlowStep] = [
+                    FlowStep(
+                        kind=FlowStepKind.NAVIGATE,
+                        target=f"view:{list_surface}",
+                        description=f"Navigate to {entity.name} list",
+                    ),
+                    FlowStep(
+                        kind=FlowStepKind.CLICK,
+                        target=f"row:{entity.name}",
+                        description=f"Select {entity.name} in state '{from_state}'",
+                    ),
+                    FlowStep(
+                        kind=FlowStepKind.CLICK,
+                        target=f"action:{entity.name}.transition.{transition.to_state}",
+                        description=f"Trigger transition to '{transition.to_state}'",
+                    ),
+                ]
+
+                # Guard satisfaction: requires_field guards are satisfied by ensuring
+                # the fixture has the field populated (checked server-side).
+                # HTMX transition buttons send hx-put directly, so there's no form
+                # to fill guard fields in the UI. Role guards are satisfied by the
+                # precondition's user_role (set below) authenticating as a persona.
+
+                steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.ASSERT,
+                        assertion=FlowAssertion(
+                            kind=FlowAssertionKind.STATE_TRANSITION_ALLOWED,
+                            target=f"{entity.name}.{sm.status_field}",
+                            expected=transition.to_state,
+                        ),
+                        description=f"Assert transition to '{transition.to_state}' succeeded",
+                    )
+                )
+
+                if persona is None:
+                    flow_id = f"{entity.name}_transition_{from_state}_to_{transition.to_state}"
+                    description = (
+                        f"Valid transition: {entity.name} from '{from_state}' "
+                        f"to '{transition.to_state}'"
+                    )
+                    preconditions = FlowPrecondition(
                         fixtures=[f"{entity.name}_state_{from_state}"],
-                    ),
-                    steps=steps,
-                    tags=["state_machine", "transition", entity.name.lower()],
-                    entity=entity.name,
-                    auto_generated=True,
+                    )
+                else:
+                    flow_id = (
+                        f"{entity.name}_transition_{from_state}_to_"
+                        f"{transition.to_state}_as_{persona.id}"
+                    )
+                    description = (
+                        f"Valid transition: {entity.name} from '{from_state}' "
+                        f"to '{transition.to_state}' as persona '{persona.id}'"
+                    )
+                    preconditions = FlowPrecondition(
+                        user_role=persona.id,
+                        authenticated=True,
+                        fixtures=[f"{entity.name}_state_{from_state}"],
+                    )
+
+                flows.append(
+                    FlowSpec(
+                        id=flow_id,
+                        description=description,
+                        priority=FlowPriority.HIGH,
+                        preconditions=preconditions,
+                        steps=steps,
+                        tags=["state_machine", "transition", entity.name.lower()],
+                        entity=entity.name,
+                        auto_generated=True,
+                    )
                 )
-            )
 
     # Generate tests for INVALID transitions (not in allowed list)
     for from_state in sm.states:

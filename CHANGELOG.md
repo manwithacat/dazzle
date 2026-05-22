@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.120] - 2026-05-22
+
+### Fixed
+
+- **testspec generator now produces E2E flows for role-guarded state transitions (#1186).** `generate_state_machine_flows` previously skipped *every* transition with a `requires_role` guard ("E2E tests have no auth context") — so apps with role-gated workflows (most of them) got zero auto-derived transition coverage. It now resolves each required role to the matching personas (via `PersonaSpec.effective_role`) and emits a flow per persona with `FlowPrecondition(user_role=…, authenticated=True)`. A required role with no matching persona is no longer dropped silently — it emits a `skip:no-persona`-tagged stub flow and a `warnings.warn`, so the coverage gap is visible.
+
 ## [0.71.119] - 2026-05-22
 
 ### Fixed

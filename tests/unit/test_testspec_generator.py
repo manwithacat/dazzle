@@ -27,7 +27,12 @@ from dazzle.core.ir.computed import (
     FieldReference,
 )
 from dazzle.core.ir.domain import AccessSpec, PermissionKind, PermissionRule
-from dazzle.core.ir.state_machine import StateMachineSpec, StateTransition
+from dazzle.core.ir.personas import PersonaSpec
+from dazzle.core.ir.state_machine import (
+    StateMachineSpec,
+    StateTransition,
+    TransitionGuard,
+)
 from dazzle.testing.testspec_generator import (
     generate_access_control_flows,
     generate_computed_field_flows,
@@ -588,6 +593,133 @@ class TestStateMachineFlowGeneration:
         """Test that no flows are generated for entity without state machine."""
         flows = generate_state_machine_flows(task_entity, simple_appspec)
         assert flows == []
+
+    def test_unguarded_transition_emits_anonymous_flow(
+        self, ticket_entity_with_state_machine: EntitySpec, ticket_appspec: AppSpec
+    ) -> None:
+        """Non-role-guarded transitions still emit a plain flow (no user_role)."""
+        flows = generate_state_machine_flows(ticket_entity_with_state_machine, ticket_appspec)
+
+        valid_flow = next(
+            (f for f in flows if f.id == "Ticket_transition_open_to_in_progress"),
+            None,
+        )
+        assert valid_flow is not None
+        # Unguarded path: precondition carries only the state fixture, no role.
+        assert valid_flow.preconditions is not None
+        assert valid_flow.preconditions.user_role is None
+        assert valid_flow.preconditions.fixtures == ["Ticket_state_open"]
+        # No skip marker on a real flow.
+        assert "skip:no-persona" not in valid_flow.tags
+        assert len(valid_flow.steps) > 0
+
+    @pytest.fixture
+    def role_guarded_ticket_entity(self) -> EntitySpec:
+        """Ticket entity whose transition is gated by role(agent)."""
+        return EntitySpec(
+            name="Ticket",
+            title="Support Ticket",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                FieldSpec(
+                    name="title",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
+                    modifiers=[FieldModifier.REQUIRED],
+                ),
+                FieldSpec(
+                    name="status",
+                    type=FieldType(
+                        kind=FieldTypeKind.ENUM,
+                        enum_values=["open", "in_progress"],
+                    ),
+                ),
+            ],
+            state_machine=StateMachineSpec(
+                status_field="status",
+                states=["open", "in_progress"],
+                transitions=[
+                    StateTransition(
+                        from_state="open",
+                        to_state="in_progress",
+                        guards=[TransitionGuard(requires_role="agent")],
+                    ),
+                ],
+            ),
+        )
+
+    def test_role_guarded_transition_with_matching_persona(
+        self, role_guarded_ticket_entity: EntitySpec
+    ) -> None:
+        """A role-guarded transition resolves to a persona-scoped flow."""
+        appspec = AppSpec(
+            name="support",
+            title="Support App",
+            domain=DomainSpec(entities=[role_guarded_ticket_entity]),
+            surfaces=[
+                SurfaceSpec(
+                    name="ticket_list",
+                    entity_ref="Ticket",
+                    mode=SurfaceMode.LIST,
+                ),
+            ],
+            personas=[
+                PersonaSpec(id="support_agent", label="Support Agent", role="agent"),
+            ],
+        )
+
+        flows = generate_state_machine_flows(role_guarded_ticket_entity, appspec)
+
+        # The role-guarded transition should produce a persona-scoped flow.
+        role_flow = next(
+            (f for f in flows if f.id == "Ticket_transition_open_to_in_progress_as_support_agent"),
+            None,
+        )
+        assert role_flow is not None
+        assert role_flow.preconditions is not None
+        assert role_flow.preconditions.user_role == "support_agent"
+        assert role_flow.preconditions.authenticated is True
+        assert role_flow.preconditions.fixtures == ["Ticket_state_open"]
+        assert "skip:no-persona" not in role_flow.tags
+        # The transition is not silently dropped — a real flow with steps exists.
+        assert len(role_flow.steps) > 0
+
+    def test_role_guarded_transition_without_persona_emits_stub_and_warns(
+        self, role_guarded_ticket_entity: EntitySpec
+    ) -> None:
+        """A role-guarded transition with no matching persona stubs + warns."""
+        appspec = AppSpec(
+            name="support",
+            title="Support App",
+            domain=DomainSpec(entities=[role_guarded_ticket_entity]),
+            surfaces=[
+                SurfaceSpec(
+                    name="ticket_list",
+                    entity_ref="Ticket",
+                    mode=SurfaceMode.LIST,
+                ),
+            ],
+            # No persona carries role "agent".
+            personas=[
+                PersonaSpec(id="customer", label="Customer", role="customer"),
+            ],
+        )
+
+        with pytest.warns(UserWarning, match="role-guarded transition"):
+            flows = generate_state_machine_flows(role_guarded_ticket_entity, appspec)
+
+        # The transition is NOT silently dropped — a skip-marked stub exists.
+        stub = next((f for f in flows if "skip:no-persona" in f.tags), None)
+        assert stub is not None
+        assert stub.id == "Ticket_transition_open_to_in_progress_skipped_no_persona"
+        assert stub.entity == "Ticket"
+        assert stub.steps == []  # Stub has no executable steps.
+        assert "state_machine" in stub.tags
+        # No persona-scoped flow was emitted for this transition.
+        assert not any(f.id.endswith("_as_customer") for f in flows)
 
 
 class TestComputedFieldFlowGeneration:
