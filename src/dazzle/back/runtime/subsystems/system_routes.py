@@ -82,6 +82,29 @@ class SystemRoutesSubsystem:
             event_explorer_router = create_event_explorer_routes(ctx.event_framework)
             ctx.app.include_router(event_explorer_router)
 
+            # Job explorer (#1193) — /_dazzle/jobs/* inspection endpoints,
+            # the job-system analogue of the event explorer above. Only
+            # registered when `job` blocks are declared (the JobRun system
+            # entity + its CRUD service exist only then). Resolves the
+            # JobRun service from `ctx.services` (keyed by service name)
+            # the same way `services_by_entity()` does.
+            if ctx.appspec.jobs:
+                from dazzle.back.runtime.job_explorer import create_job_explorer_routes
+
+                job_run_service = next(
+                    (
+                        svc
+                        for svc in ctx.services.values()
+                        if getattr(svc, "entity_name", None) == "JobRun"
+                    ),
+                    None,
+                )
+                job_explorer_router = create_job_explorer_routes(
+                    job_run_service,
+                    jobs_declared=len(ctx.appspec.jobs),
+                )
+                ctx.app.include_router(job_explorer_router)
+
         # Site API routes (v0.16.0). The page-router (`/`, `/site.js`,
         # `/styles/dazzle.css`) is registered by app_factory.py with the
         # full auth/persona/analytics wiring. Calling

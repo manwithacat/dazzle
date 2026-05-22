@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.122] - 2026-05-22
+
+### Added
+
+- **`/_dazzle/jobs` operational endpoints (#1193).** The job subsystem had no runtime-inspection surface — the `/_dazzle/events/*` explorer had no jobs counterpart. New `job_explorer.py` (modelled on `event_explorer.py`) registers three read-only routes when an app declares jobs: `GET /_dazzle/jobs` (status summary — jobs declared, run counts by status, dead-letter count), `GET /_dazzle/jobs/runs` (recent `JobRun` rows, `limit` query param), and `GET /_dazzle/jobs/dead-letter` (exhausted-retry / terminal-failure runs). Wired into `SystemRoutesSubsystem` alongside the event explorer, conditioned on `appspec.jobs` being non-empty.
+
 ## [0.71.121] - 2026-05-22
 
 ### Added
