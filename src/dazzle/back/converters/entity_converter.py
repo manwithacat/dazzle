@@ -218,7 +218,10 @@ def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
         default=default,
         validators=_extract_validators(dazzle_field),
         indexed=dazzle_field.is_primary_key or dazzle_field.is_indexed,
-        unique=dazzle_field.is_unique or dazzle_field.is_primary_key,
+        # PK uniqueness is enforced by the PRIMARY KEY; an extra unique=True
+        # emits a redundant *unnamed* UNIQUE constraint that Alembic autogenerate
+        # cannot reconcile and re-emits on every run (#1188).
+        unique=dazzle_field.is_unique,
         auto_add=ir.FieldModifier.AUTO_ADD in dazzle_field.modifiers,
         auto_update=ir.FieldModifier.AUTO_UPDATE in dazzle_field.modifiers,
         sensitive=dazzle_field.is_sensitive,

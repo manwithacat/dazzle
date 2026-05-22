@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.116] - 2026-05-22
+
+### Fixed
+
+- **`dazzle db revision` autogenerate emitted spurious ops on every run (#1188).** Two causes: (1) the framework table `_dazzle_params` is created at runtime and is absent from the DSL-derived metadata, so autogenerate proposed `drop_table('_dazzle_params')` every time; (2) `entity_converter` marked every primary-key field `unique=True`, producing a redundant *unnamed* `UNIQUE` constraint alongside the `PRIMARY KEY` that Alembic could not reconcile by name and re-emitted on every run. Fix: the Alembic `env.py` now passes an `include_object` filter that excludes framework-owned tables and unnamed unique constraints from autogenerate diffs; `entity_converter` no longer sets `unique=True` for PK fields (the `PRIMARY KEY` already enforces uniqueness). Generated schemas for new apps no longer carry the redundant constraint; existing databases are unaffected (the filter ignores the already-present unnamed constraint).
+
 ## [0.71.115] - 2026-05-22
 
 ### Fixed
