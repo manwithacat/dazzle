@@ -4042,6 +4042,7 @@ class RouteGenerator:
         db_manager: Any | None = None,
         entity_storage_bindings: dict[str, dict[str, tuple[str, ...]]] | None = None,
         admin_personas: list[str] | None = None,
+        security_profile: str = "basic",
     ):
         """
         Initialize the route generator.
@@ -4106,6 +4107,11 @@ class RouteGenerator:
         # so the predicate compiler can short-circuit the scope filter
         # when the active user matches one of them.
         self.admin_personas: list[str] = list(admin_personas or [])
+        # #1196: the active security profile drives the per-route rate-limit
+        # wrap in `_add_route`. On "basic" (or when slowapi is absent) the
+        # rate_limit module's _NoOpLimiter makes the decorator a no-op, so the
+        # wrap is safe to apply unconditionally.
+        self.security_profile: str = security_profile
         # Cycle 249 (EX-049): persona-backed entity map.
         # Maps entity_name → (persona_id, link_via) for each persona that
         # declares ``backed_by``. Built by the caller from appspec.personas.
@@ -4458,6 +4464,15 @@ class RouteGenerator:
 
         if dependencies:
             route_kwargs["dependencies"] = dependencies
+
+        # #1196: apply the active security profile's API rate limit to every
+        # generated entity route. `rate_limit.limits.api_limit` is set by
+        # `apply_rate_limiting(app, profile)` at server boot; on the "basic"
+        # profile (or when slowapi is absent) the limiter is a no-op stub, so
+        # the wrap is backward-safe — no behaviour change on `basic`.
+        from dazzle.back.runtime import rate_limit as _rl
+
+        handler = _rl.limits.limiter.limit(_rl.limits.api_limit)(handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
 
         # Add the route
         router_method(path, **route_kwargs)(handler)

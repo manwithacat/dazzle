@@ -1234,6 +1234,7 @@ class DazzleBackendApp:
             _admin_personas = list(self._appspec.tenancy.admin_personas)
 
         route_generator = RouteGenerator(
+            security_profile=self._security_profile,
             services=self._services,
             models=self._models,
             schemas=self._schemas,

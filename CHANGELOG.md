@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.123] - 2026-05-22
+
+### Added
+
+- **Auto-wire rate limiting to generated entity routes (#1196).** The active security profile's `api_limit` (`slowapi`-style spec, e.g. `60/minute`) is now applied to every route registered by `RouteGenerator` — `RouteGenerator.__init__` takes a `security_profile` parameter (default `"basic"`), and `_add_route` wraps each handler with `rate_limit.limits.limiter.limit(limits.api_limit)` before registration (matching the existing `auth/routes.py` pattern). On the `basic` profile, or when `slowapi` is absent, `rate_limit.limits.limiter` is a `_NoOpLimiter` stub, so the wrap is a no-op and the change is backward-safe.
+
 ## [0.71.122] - 2026-05-22
 
 ### Added
