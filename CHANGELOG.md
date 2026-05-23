@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.133] - 2026-05-23
+
+### Security
+
+- **CI `pip-audit` step now hard-fails on any finding (#1200).** The step in `.github/workflows/ci.yml` previously ran with `pip-audit --strict --desc 2>&1 || true` and `continue-on-error: true` (labelled "informational"), so a known-vulnerable transitive dep would not fail the build. The step now runs as a true gate — `|| true` and `continue-on-error: true` are both removed, and `--skip-editable` is passed to exclude the editable `dazzle-dsl` install itself (pip-audit cannot resolve editable distributions on PyPI). The resolved dependency tree was audited and found clean against the GHSA/OSV feeds: fastapi 0.136.1 + starlette 1.0.1 + every other resolved transitive shows no known vulnerabilities. The `setup-dazzle` composite action already upgrades pip to latest before install, so pip's own CVEs (CVE-2025-8869, CVE-2026-1703, CVE-2026-3219, CVE-2026-6357 — all in pip <26.1) don't surface in CI.
+
+### Agent Guidance
+
+- **`pip-audit` is now a hard CI gate (#1200).** When `pip-audit` reports a finding, the default fix is to bump the offending package's lower bound in `pyproject.toml` so the resolver picks a clean version (Dazzle uses open `>=` lower bounds — see [user_dsl_philosophy] for the no-backward-compat stance, clean breaks are fine). `--ignore-vuln <ID>` is allowed ONLY when (a) upstream disputes the CVE, (b) the fix version conflicts with another framework constraint we can't move (e.g. fastapi capping starlette), or (c) the CVE's vector requires a feature we don't use. Each ignore needs a YAML comment above the flag stating the rationale + the condition under which it should be removed. Re-audit reproducibly with a fresh venv (`python -m venv /tmp/x && /tmp/x/bin/pip install -e ".[dev,llm,mcp]" pip-audit && PIPAPI_PYTHON_LOCATION=/tmp/x/bin/python /tmp/x/bin/pip-audit --strict --desc --skip-editable`) — the local dazzle-dev env carries stale conflicts (mixed `0.63b0`/`0.63b1` opentelemetry pkgs) that prevent a direct audit.
+
 ## [0.71.132] - 2026-05-23
 
 ### Added
