@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.135] - 2026-05-23
+
+### Changed
+
+- **`dazzle qa trial --fresh-db` seed circuit-breaker now classifies the underlying failure before recommending recovery (#1207).** Previously, hitting the 10-consecutive-failure threshold always emitted "Blueprint drift is the most likely cause — run `dazzle demo verify`". When the real cause was schema/Alembic drift (`column "X" of relation "Y" does not exist` or `relation "Y" does not exist`), this sent the operator down the wrong recovery path — `demo verify` would report a clean blueprint and leave them stuck. The circuit-breaker emit point in `src/dazzle/cli/qa.py` now scans the collected `sample_errors` strings via a small classifier (`_diagnose_seed_failures`). On a column-missing match it names the specific column + table and recommends `dazzle db revision -m "add <table>.<column>" && dazzle db upgrade`; on a relation-missing match it names the table and recommends `dazzle db revision -m "create <table>" && dazzle db upgrade`. The original blueprint-drift message is the fallback for unmatched errors (e.g. FK violations, constraint failures). Closes #1207.
+
 ## [0.71.134] - 2026-05-23
 
 ### Fixed

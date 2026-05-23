@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,47 @@ qa_app = typer.Typer(
     help="QA toolkit — visual quality evaluation and screenshot capture.",
     no_args_is_help=True,
 )
+
+
+# Patterns for classifying seed circuit-breaker failures (#1207).
+# Schema-drift: DSL declares a field/entity that the live DB schema lacks —
+# the recovery path is Alembic, not blueprint regeneration.
+# Quotes may appear plain (`"X"`) or JSON-escaped (`\"X\"`) depending on whether
+# resp.text returned the raw HTTP body (escaped) or a decoded detail string.
+_COL_MISSING_RE = re.compile(
+    r'column \\?"([^"\\]+)\\?" of relation \\?"([^"\\]+)\\?" does not exist'
+)
+_TABLE_MISSING_RE = re.compile(r'relation \\?"([^"\\]+)\\?" does not exist')
+
+
+def _diagnose_seed_failures(sample_errors: list[str]) -> str | None:
+    """Return a recovery hint for the dominant failure mode, or None for generic blueprint-drift.
+
+    Inspects the collected sample_errors strings (each is "Entity/uuid: HTTP 400 {...}").
+    Schema-drift wins over table-missing if both appear, since column-add is the more
+    common DSL edit; table-missing indicates a never-migrated app and is less frequent.
+    """
+    for err in sample_errors:
+        m = _COL_MISSING_RE.search(err)
+        if m:
+            column, table = m.group(1), m.group(2)
+            return (
+                f'Detected schema drift: column "{column}" missing in relation "{table}". '
+                f"The DSL declares the field but the live schema doesn't have it. "
+                f'Recovery: run `dazzle db revision -m "add {table}.{column}"` '
+                f"then `dazzle db upgrade`."
+            )
+    for err in sample_errors:
+        m = _TABLE_MISSING_RE.search(err)
+        if m:
+            table = m.group(1)
+            return (
+                f'Detected schema drift: relation "{table}" does not exist. '
+                f"The DSL declares the entity but no migration has been applied. "
+                f'Recovery: run `dazzle db revision -m "create {table}"` '
+                f"then `dazzle db upgrade`."
+            )
+    return None  # fall back to blueprint-drift message
 
 
 def _resolve_project_dir(app: str | None) -> Path:
@@ -240,10 +282,15 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     for err in sample_errors:
         typer.echo(f"  seed error: {err}", err=True)
     if aborted_by_circuit:
+        hint = _diagnose_seed_failures(sample_errors)
+        if hint is None:
+            hint = (
+                "Blueprint drift is the most likely cause — run "
+                "`dazzle demo verify` to see full details."
+            )
         typer.echo(
             f"Seed aborted after {fail_streak} consecutive failures "
-            f"(total {fail_total} so far). Blueprint drift is the most "
-            f"likely cause — run `dazzle demo verify` to see full details.",
+            f"(total {fail_total} so far). {hint}",
             err=True,
         )
     return True
