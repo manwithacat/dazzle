@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.140] - 2026-05-23
+
+### Added
+
+- **`ProjectManifest.audit_integrity` + `DAZZLE_AUDIT_INTEGRITY` env var — config-loading paths for the #1197 opt-in tamper-evident hash chain (#1206).** #1197 shipped `ServerConfig.audit_integrity` and `AuditLogger(audit_integrity=...)` but the loader path was never built — `build_server_config()` had no kwarg, `create_app_factory()` never read an env var or manifest field, and `dazzle.toml` `[audit] integrity = "hash_chain"` was silently ignored. The opt-in advertised at `docs/guides/security.md:248` was therefore unreachable from any downstream app booting via the standard factory — `ServerConfig.audit_integrity` was permanently hardcoded to `"none"`. Three layers wired in this release: (1) `[audit] integrity = "<mode>"` parsed off `dazzle.toml` into `ProjectManifest.audit_integrity` with manifest-time validation against the `{"none", "hash_chain"}` set (a hyphen typo like `"hash-chain"` raises `ValueError` at load, not at silent default); (2) `build_server_config(audit_integrity=...)` parameter threaded into `ServerConfig(...)`, with matching validation at the build boundary so an invalid value fails loud before `AuditLogger` is constructed; (3) `create_app_factory()` resolves the value `DAZZLE_AUDIT_INTEGRITY` env var → `manifest.audit_integrity` → default `"none"` (env wins over manifest, matching the established precedence for `DAZZLE_ENABLE_PROCESSES`, `DAZZLE_PROCESS_ADAPTER`, etc.). `run_unified_server` and `run_backend_only` in `combined_server.py` also honour the env var. Closes #1206.
+
+### Documentation
+
+- **`docs/guides/security.md` T5 now documents how to enable `audit_integrity` from `dazzle.toml` or env (#1206).** The "Opt-in hash chain (#1197)" paragraph gains a `[audit] integrity = "hash_chain"` TOML snippet and a `DAZZLE_AUDIT_INTEGRITY=hash_chain` env-var example, plus a note that the value is validated at config-build time so a hyphen typo raises `ValueError` during boot rather than silently coercing to the default.
+
 ## [0.71.139] - 2026-05-23
 
 ### Added

@@ -599,7 +599,16 @@ class ProjectManifest:
     # v0.61.104 (#932): per-name `[storage.<name>]` blocks. Keyed by the
     # storage name. Empty when no storage blocks are declared.
     storage_defs: dict[str, StorageConfig] = field(default_factory=dict)
+    # v0.71.140 (#1206): audit-log tamper-evidence opt-in shipped in #1197.
+    # Read from `[audit] integrity = "<mode>"` in dazzle.toml. Threaded
+    # through `create_app_factory()` → `build_server_config()` →
+    # `ServerConfig.audit_integrity` → `AuditLogger(audit_integrity=...)`.
+    # "none" (default) leaves the schema and write path byte-identical to
+    # pre-#1197 behaviour; "hash_chain" enables the per-row sha256 chain.
+    audit_integrity: str = "none"  # "none" | "hash_chain"
 
+
+_AUDIT_INTEGRITY_VALID = {"none", "hash_chain"}
 
 _STORAGE_VALID_BACKENDS = {"s3"}
 
@@ -940,6 +949,15 @@ def load_manifest(path: Path) -> ProjectManifest:
     # Parse [storage.<name>] blocks (v0.61.104, #932)
     storage_defs = _parse_storage_configs(data)
 
+    # Parse [audit] block (#1206) — opt-in tamper-evidence shipped in #1197.
+    audit_data = data.get("audit", {}) if isinstance(data.get("audit"), dict) else {}
+    audit_integrity = str(audit_data.get("integrity", "none"))
+    if audit_integrity not in _AUDIT_INTEGRITY_VALID:
+        raise ValueError(
+            f"[audit] integrity must be one of {sorted(_AUDIT_INTEGRITY_VALID)!r}; "
+            f"got {audit_integrity!r}"
+        )
+
     # Parse [spec] block (#1106 Prop 3)
     spec_data = data.get("spec", {}) if isinstance(data.get("spec"), dict) else {}
     spec_config = SpecConfig(strict=bool(spec_data.get("strict", False)))
@@ -973,6 +991,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         extensions=extensions_config,
         renderers=renderers_config,
         storage_defs=storage_defs,
+        audit_integrity=audit_integrity,
     )
 
 

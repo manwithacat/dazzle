@@ -212,6 +212,12 @@ def run_unified_server(
         print("[Dazzle] Error: appspec is required")
         return
 
+    # Audit-log tamper-evidence (#1206): env var only on this path; the
+    # CLI `dazzle serve` boot doesn't currently load the manifest in
+    # this call site, so honour `DAZZLE_AUDIT_INTEGRITY` and leave the
+    # manifest path to the production `create_app_factory()` factory.
+    audit_integrity = os.environ.get("DAZZLE_AUDIT_INTEGRITY", "none")
+
     server_config = build_server_config(
         appspec,
         database_url=database_url or None,
@@ -225,6 +231,7 @@ def run_unified_server(
         sitespec_data=sitespec_data,
         project_root=project_root,
         storage_defs=storage_defs,
+        audit_integrity=audit_integrity,
     )
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
@@ -450,6 +457,7 @@ def run_backend_only(
         sitespec_data=sitespec_data,
         project_root=project_root,
         storage_defs=storage_defs,
+        audit_integrity=os.environ.get("DAZZLE_AUDIT_INTEGRITY", "none"),
     )
     app_builder = DazzleBackendApp(appspec, config=config)
     app = app_builder.build()

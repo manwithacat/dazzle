@@ -246,7 +246,18 @@ with audited entities when `DATABASE_URL` is absent (fail-closed).
 attacker with `DELETE` privilege on the table can erase records.
 
 **Opt-in hash chain (#1197):** Set `audit_integrity = "hash_chain"` in
-`ServerConfig` to enable a per-row sha256 chain (`row_hash` column). Each row's
+`ServerConfig` to enable a per-row sha256 chain (`row_hash` column). Downstream
+apps booting via `create_app_factory()` enable it either via `dazzle.toml`:
+
+```toml
+[audit]
+integrity = "hash_chain"
+```
+
+…or by setting `DAZZLE_AUDIT_INTEGRITY=hash_chain` in the environment (env var
+wins over the manifest). The value is validated at config-build time — an
+unknown mode (e.g. `"hash-chain"` with a hyphen typo) raises `ValueError`
+during boot rather than silently coercing to `"none"` (#1206). Each row's
 hash is `sha256(prev_row_hash || canonical_payload).hexdigest()`, so a tampered
 row breaks the chain at the modified entry. `AuditLogger.verify_chain()` walks
 the table and reports the first mismatch. The default (`"none"`) leaves the

@@ -348,6 +348,7 @@ def build_server_config(
     project_root: Path | None = None,
     fragment_sources: dict[str, dict[str, Any]] | None = None,
     storage_defs: Any = None,  # dict[str, StorageConfig] from manifest (#932)
+    audit_integrity: str = "none",  # "none" | "hash_chain" (#1197, #1206)
 ) -> "ServerConfig":
     """Build a fully-populated ``ServerConfig`` from an AppSpec.
 
@@ -359,6 +360,12 @@ def build_server_config(
     deployment-specific).
     """
     from dazzle.back.runtime.server import ServerConfig
+
+    # Validate audit_integrity at the build boundary so a misconfigured
+    # value (e.g. "hash-chain" hyphen typo) fails loud here rather than
+    # silently shipping the default, and before AuditLogger is constructed.
+    if audit_integrity not in ("none", "hash_chain"):
+        raise ValueError(f"audit_integrity must be 'none' or 'hash_chain', got {audit_integrity!r}")
 
     # Compute view-based list projections from DSL surfaces
     entity_list_projections = build_entity_list_projections(
@@ -458,6 +465,7 @@ def build_server_config(
         fragment_sources=fragment_sources,
         tenant_config=tenant_config,
         storage_defs=dict(storage_defs or {}),
+        audit_integrity=audit_integrity,
     )
 
 
@@ -765,6 +773,9 @@ def create_app_factory(
         DAZZLE_SECRET_KEY: Secret key for sessions/tokens
         DAZZLE_ENABLE_PROCESSES: Enable/disable process workflows (default: "true")
         DAZZLE_PROCESS_ADAPTER: Process adapter type ("eventbus", "celery", "temporal")
+        DAZZLE_AUDIT_INTEGRITY: Audit-log tamper-evidence mode (#1206).
+            "none" (default) | "hash_chain". Overrides `[audit] integrity`
+            in `dazzle.toml`. See `docs/guides/security.md` T5.
 
     Usage:
         uvicorn dazzle_back.runtime.app_factory:create_app_factory --factory --host 0.0.0.0 --port $PORT
@@ -834,6 +845,14 @@ def create_app_factory(
 
     # Process workflow support (can be disabled via env var)
     enable_processes = os.environ.get("DAZZLE_ENABLE_PROCESSES", "true").lower() == "true"
+
+    # Audit-log tamper-evidence (#1206): env var beats manifest beats default.
+    # `DAZZLE_AUDIT_INTEGRITY` overrides `[audit] integrity` in dazzle.toml.
+    # Both paths fall through `build_server_config` which validates the value.
+    audit_integrity = os.environ.get(
+        "DAZZLE_AUDIT_INTEGRITY",
+        getattr(manifest, "audit_integrity", "none"),
+    )
 
     # Parse DSL and build spec. Pass `known_renderers=` so the linker
     # rejects `render: <unknown>` clauses against the framework defaults
@@ -929,6 +948,7 @@ def create_app_factory(
         sitespec_data=sitespec_data,
         project_root=project_root,
         storage_defs=getattr(manifest, "storage_defs", None),
+        audit_integrity=audit_integrity,
     )
 
     # Build and return the FastAPI app
