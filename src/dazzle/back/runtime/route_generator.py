@@ -184,6 +184,12 @@ class RouteSpec:
     storage_bindings: dict[str, tuple[str, ...]] | None = None
     include_field_changes: bool = False
 
+    # #1218 Option A: when True, the DELETE handler stamps
+    # ``deleted_at = NOW()`` via an UPDATE instead of issuing a
+    # hard DELETE. Set by the route generator from
+    # ``entity.soft_delete``.
+    soft_delete: bool = False
+
 
 def _set_handler_annotations(fn: Any, *, with_id: bool = False, with_auth: bool = False) -> None:
     """Set FastAPI-compatible type annotations on a dynamic handler function."""
@@ -205,6 +211,8 @@ def _is_htmx_request(request: Any) -> bool:
 # _forbidden_detail moved to dazzle.render.access_messages in #1094 so that
 # ui/ page handlers can build the same payload without crossing back↔ui.
 # Re-exported here so the existing back-internal call sites keep working.
+from datetime import UTC, datetime  # noqa: E402
+
 from dazzle.render.access_messages import _forbidden_detail  # noqa: E402, F401
 
 
@@ -3500,6 +3508,7 @@ def create_delete_handler(spec: RouteSpec) -> Callable[..., Any]:
     entity_name = spec.handler.entity_name
     audit_logger = spec.handler.audit_logger
     cedar_access_spec = spec.handler.cedar_access_spec
+    soft_delete_enabled = spec.soft_delete
 
     async def _core(
         id: UUID,
@@ -3510,7 +3519,18 @@ def create_delete_handler(spec: RouteSpec) -> Callable[..., Any]:
         **_extra: Any,
     ) -> Any:
         try:
-            result = await service.execute(operation="delete", id=id)
+            if soft_delete_enabled:
+                # #1218 Option A: stamp deleted_at instead of hard DELETE.
+                # `existing` is populated by the `needs_pre_read` wrapper
+                # below; if missing (e.g. already tombstoned), the read
+                # path's tombstone filter has hidden the row → 404.
+                result = await service.execute(
+                    operation="update",
+                    id=id,
+                    data={"deleted_at": datetime.now(UTC)},
+                )
+            else:
+                result = await service.execute(operation="delete", id=id)
         except ValueError as exc:
             # FK constraint violation — entity is referenced by child records.
             # `Repository.delete()` re-raises the psycopg IntegrityError as a
@@ -4041,6 +4061,7 @@ class RouteGenerator:
         entity_display_fields: dict[str, str] | None = None,
         db_manager: Any | None = None,
         entity_storage_bindings: dict[str, dict[str, tuple[str, ...]]] | None = None,
+        entity_soft_delete: dict[str, bool] | None = None,
         admin_personas: list[str] | None = None,
         security_profile: str = "basic",
     ):
@@ -4102,6 +4123,11 @@ class RouteGenerator:
         # for entities without `field foo: file storage=<name>` bindings;
         # the create/update handlers no-op cheaply in that case.
         self.entity_storage_bindings = entity_storage_bindings or {}
+        # #1218 Option A: per-entity soft_delete flag. DELETE handlers
+        # for entities marked True stamp `deleted_at` instead of
+        # issuing a hard DELETE; the read-path tombstone filter on
+        # Repository.list/read/aggregate hides those rows.
+        self.entity_soft_delete = entity_soft_delete or {}
         # #957 cycle 6: tenant-admin personas drawn from
         # `appspec.tenancy.admin_personas`. Threaded into list handlers
         # so the predicate compiler can short-circuit the scope filter
@@ -4401,6 +4427,7 @@ class RouteGenerator:
                     handler=replace(_base_config, audit_logger=_audit_for("delete")),
                     service=service,
                     include_field_changes=_include_fc,
+                    soft_delete=self.entity_soft_delete.get(entity_name or "", False),
                 )
             )
             self._add_route(endpoint, handler, response_model=None)

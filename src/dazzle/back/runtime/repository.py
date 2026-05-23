@@ -325,7 +325,14 @@ class Repository(Generic[T]):
         """
         table = quote_identifier(self.table_name)
         ph = self.db.placeholder
-        sql = f'SELECT * FROM {table} WHERE "id" = {ph}'
+        # #1218 Option A: tombstone filter on the single-row read path.
+        # The list path threads through QueryBuilder; read() builds raw
+        # SQL, so the filter is appended here directly. Soft-deleted
+        # rows are returned as None — same shape as "id not found".
+        soft_delete_clause = (
+            ' AND "deleted_at" IS NULL' if getattr(self.entity_spec, "soft_delete", False) else ""
+        )
+        sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}'
 
         start = time.perf_counter()
         with self.db.connection() as conn:
@@ -508,8 +515,17 @@ class Repository(Generic[T]):
             builder.select_fields = list(select_fields)
         builder.set_pagination(page, page_size)
 
-        if filters:
-            builder.add_filters(filters)
+        # #1218 Option A: tombstone filter for soft-delete entities.
+        # Composes via QueryBuilder so the predicate AND-merges with
+        # any user/scope filters already in `filters`. Authors opt
+        # into the filter via `soft_delete: true` on the entity.
+        # `include_deleted` query-param + RBAC gate is a follow-up.
+        effective_filters: dict[str, Any] = dict(filters) if filters else {}
+        if getattr(self.entity_spec, "soft_delete", False):
+            effective_filters.setdefault("deleted_at__isnull", True)
+
+        if effective_filters:
+            builder.add_filters(effective_filters)
 
         if sort:
             builder.add_sorts(sort)
@@ -649,12 +665,20 @@ class Repository(Generic[T]):
             dimension_count=len(dimensions),
             measure_count=len(measures),
         ):
+            # #1218 Option A: tombstone filter on the aggregate path.
+            # Same composition contract as `list` — merges with the
+            # incoming `filters` dict so QueryBuilder ANDs the
+            # tombstone predicate with any scope/user filters.
+            effective_filters: dict[str, Any] = dict(filters) if filters else {}
+            if getattr(self.entity_spec, "soft_delete", False):
+                effective_filters.setdefault("deleted_at__isnull", True)
+
             sql, params = build_aggregate_sql(
                 table_name=self.table_name,
                 placeholder_style=self.db.placeholder,
                 dimensions=dimensions,
                 measures=measures,
-                filters=filters,
+                filters=effective_filters or None,
                 limit=limit,
                 measure_expressions=measure_expressions,
             )

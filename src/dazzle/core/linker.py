@@ -179,6 +179,14 @@ def build_appspec(
     entities = [*entities, *admin_entities]
     surfaces = [*surfaces, *admin_surfaces]
 
+    # 9d. Inject `deleted_at: datetime optional` for entities with
+    # `soft_delete: true` (#1218 Option A). The runtime filters
+    # read paths on `deleted_at IS NULL` and the DELETE handler
+    # stamps the column instead of issuing a hard DELETE — both
+    # require the column to exist. Authors who already declared
+    # `deleted_at` explicitly keep theirs.
+    entities = _inject_soft_delete_fields(entities)
+
     # 10. Build FK graph and compile scope predicates
     from .ir.fk_graph import FKGraph
     from .ir.predicate_builder import build_scope_predicate
@@ -285,6 +293,33 @@ def build_appspec(
             "link_warnings": unused_import_warnings,  # v0.14.1
         },
     )
+
+
+def _inject_soft_delete_fields(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
+    """Append a `deleted_at: datetime optional` field to every entity
+    with ``soft_delete=True`` that does not already declare one (#1218).
+
+    The runtime soft-delete plumbing (read-path tombstone filter +
+    DELETE-as-UPDATE) needs the column to exist. Authors who already
+    declared ``deleted_at`` explicitly keep their field unchanged —
+    we only fill the gap when ``soft_delete: true`` is set with no
+    accompanying field.
+    """
+    out: list[ir.EntitySpec] = []
+    for entity in entities:
+        if not getattr(entity, "soft_delete", False):
+            out.append(entity)
+            continue
+        if any(f.name == "deleted_at" for f in entity.fields):
+            out.append(entity)
+            continue
+        new_field = FieldSpec(
+            name="deleted_at",
+            type=FieldType(kind=FieldTypeKind.DATETIME),
+            modifiers=[FieldModifier.OPTIONAL],
+        )
+        out.append(entity.model_copy(update={"fields": [*entity.fields, new_field]}))
+    return out
 
 
 def _validate_render_references(

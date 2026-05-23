@@ -1332,6 +1332,9 @@ class DazzleBackendApp:
             entity_display_fields=entity_display_fields,
             db_manager=self._db_manager,
             entity_storage_bindings=entity_storage_bindings,
+            entity_soft_delete={
+                e.name: bool(getattr(e, "soft_delete", False)) for e in self._entities
+            },
             admin_personas=_admin_personas,
         )
 

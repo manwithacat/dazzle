@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.153] - 2026-05-23
+
+### Added (closes #1218)
+
+- **`soft_delete: true` is now first-class — Option A of #1218.** The keyword has been recognised in the parser since v0.34.0 but was a runtime no-op until now. v0.71.153 wires the full MVP:
+  - **Linker auto-adds `deleted_at: datetime optional`** when the entity sets `soft_delete: true` and hasn't already declared the field. Authors who *do* declare it explicitly (e.g. with a different default or modifier) keep their version untouched.
+  - **Read paths apply a `deleted_at IS NULL` tombstone filter** at the repository layer: `Repository.list` and `Repository.aggregate` merge the predicate into the `filters` dict so it ANDs cleanly with any user/scope predicate via the shared `QueryBuilder` path; `Repository.read` appends `AND "deleted_at" IS NULL` to the single-row WHERE clause. Soft-deleted rows surface as `None` from `read()` — same shape as a missing id, no special handling required at the route layer.
+  - **DELETE handler stamps `deleted_at = NOW()` via an UPDATE** instead of issuing a hard DELETE. `RouteSpec` gained a `soft_delete: bool = False` field, `RouteGenerator` accepts an `entity_soft_delete` map and populates it from `entity.soft_delete` in the boot path, and `create_delete_handler` branches on the flag.
+- **The v0.71.152 holding-warning is removed.** The validator no longer emits the "`soft_delete: true` is currently a no-op" warning since the keyword now does the implied work.
+
+### Deferred (follow-ups, not in this ship)
+
+- `?include_deleted=true` query param + RBAC gate for admin/audit personas. Currently no way to read tombstoned rows through the HTTP API — direct DB access only.
+- Cascade semantics. A parent with `soft_delete: true` does *not* propagate to children; each entity opts in independently. This is the explicit-over-implicit default; revisit if real use cases demand otherwise.
+- Undelete API. Stamp `deleted_at = null` via direct UPDATE works today but isn't surfaced as a first-class route.
+- Inference KB at `inference_kb.toml:1837` (`no_soft_delete`) still discourages the pattern — a future cycle should flip the guidance now that the keyword works.
+
+### Agent Guidance
+
+- `soft_delete: true` is the supported way to opt an entity into soft-delete semantics. Don't hand-roll `deleted_at` + `scope: deleted_at = null` on every surface unless you specifically need a column shape the framework hasn't auto-added (e.g. tombstone metadata beyond a timestamp). The framework wiring covers `list`, `read`, `aggregate`, and `DELETE` on the standard auto-generated routes; project route overrides remain responsible for honouring the filter themselves (the `Repository` layer applies it regardless of who calls it).
+- The tombstone filter composes with `scope:` predicates via `QueryBuilder`. You don't need to add `deleted_at = null` to your scope rules — the repo layer ANDs the tombstone predicate after the scope predicate. Doing both is redundant but harmless.
+
 ## [0.71.152] - 2026-05-23
 
 ### Added

@@ -413,14 +413,13 @@ class TestNavGroupIconConsistency:
         assert not any("mixes iconed" in w for w in warnings)
 
 
-class TestSoftDeleteKeywordWarning:
-    """#1218: `soft_delete: true` on an entity is currently a parse-
-    time stub (no backend wiring). Until first-class support lands,
-    the linter must call this out loudly so authors don't think the
-    keyword does anything.
+class TestSoftDeleteKeywordNoLongerWarns:
+    """#1218 Option A: the keyword is now fully wired (linker auto-adds
+    `deleted_at`, repo paths apply tombstone filter, DELETE stamps the
+    column). The v0.71.152 holding-warning has been removed.
     """
 
-    def test_warns_when_soft_delete_keyword_set(self) -> None:
+    def test_soft_delete_keyword_no_longer_warns(self) -> None:
         entity = ir.EntitySpec(
             name="Document",
             fields=[_id_field()],
@@ -429,11 +428,5 @@ class TestSoftDeleteKeywordWarning:
         from dazzle.core.validator import extended_lint
 
         warnings = extended_lint(_make_appspec([entity]))
-        assert any("`soft_delete: true`" in w and "no-op" in w and "#1218" in w for w in warnings)
-
-    def test_no_warning_when_soft_delete_keyword_absent(self) -> None:
-        entity = ir.EntitySpec(name="Document", fields=[_id_field()])
-        from dazzle.core.validator import extended_lint
-
-        warnings = extended_lint(_make_appspec([entity]))
         assert not any("`soft_delete: true`" in w for w in warnings)
+        assert not any("no-op" in w and "soft" in w.lower() for w in warnings)
