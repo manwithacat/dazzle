@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.154] - 2026-05-23
+
+### Changed (agent-cognition surfacing — #1217 Phase 2)
+
+- **Inference KB `junction_many_to_many` entry now recommends the `has_many … via JunctionEntity` shape** instead of the raw-FK shape. Pre-fix, the KB example showed `product_id: uuid required + tag_id: uuid required` on the junction with no mention of the `via:` keyword that gives both sides a typed collection accessor. Agents asking the KB about many-to-many got DSL guidance that predated the v0.34.0+ syntax. The refreshed entry: junction uses typed `ref` fields, each side declares `has_many … via JunctionEntity`, and there's a worked example of how the same `via:` grammar carries through to `primary_aggregate` cross-entity rollups.
+- **Inference KB `no_soft_delete` retired in favour of `prefer_soft_delete_keyword`.** With #1218 Option A shipped in v0.71.153, the framework now does the work the `soft_delete:` keyword implies. The KB entry has been flipped from "avoid this, use a state machine" to "prefer `soft_delete:` when retention or undelete is the goal; use a state machine when there are multiple lifecycle states." Triggers expanded to include `retention`, `undelete`, `restore deleted` so the entry surfaces under more realistic phrasing.
+- **`_GUIDANCE` constant updated** to point at the `soft_delete:` keyword instead of describing soft-delete columns as something to avoid. The pattern is no longer an anti-pattern.
+
+### Agent Guidance
+
+- When modelling many-to-many relationships, declare a junction entity with two `ref` fields AND add `has_many … via JunctionEntity` on each parent side. The junction-only shape (raw FKs, no `via:`) is valid but loses the collection accessor on each parent — and the inference KB previously recommended that older form. v0.71.154 fixes the recommendation.
+- When the business case is retention / undelete / tombstoning, use `soft_delete: true` on the entity (v0.71.153+). The inference KB previously advised against it; that guidance is now inverted. State machines remain the right answer for multi-state lifecycles.
+
 ## [0.71.153] - 2026-05-23
 
 ### Added (closes #1218)

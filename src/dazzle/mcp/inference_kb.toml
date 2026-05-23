@@ -1768,18 +1768,33 @@ parent_id: uuid  # Nullable FK to Category (self)
 id = "junction_many_to_many"
 name = "Many-to-Many Junction"
 triggers = ["many to many", "can have multiple", "multiple X can have multiple Y", "tags"]
-suggests = "Create junction entity with two required FKs"
-rationale = "Many-to-many relationships require a junction table"
+suggests = "Create a junction entity with two typed refs, then declare `has_many ... via JunctionEntity` on each side"
+rationale = "Dazzle's `via:` keyword on `has_many` is the canonical m:n shape — it gives both sides the convenience of `entity.related_collection` without the agent or the runtime needing to know the junction's internal structure"
 example = """
 # SPEC says: Products can have multiple Tags, Tags can be on multiple Products
-# Create junction entity:
+
+# 1. Junction entity uses TYPED refs (not raw uuid FKs):
 entity ProductTag "Product Tag":
   id: uuid pk
-  product_id: uuid required
-  tag_id: uuid required
+  product: ref Product required
+  tag: ref Tag required
 
-  index product_id
-  index tag_id
+# 2. Each side declares `has_many ... via` for the convenience accessor:
+entity Product "Product":
+  id: uuid pk
+  name: str(200) required
+  tags: has_many Tag via ProductTag
+
+entity Tag "Tag":
+  id: uuid pk
+  name: str(50) required
+  products: has_many Product via ProductTag
+
+# Cohort_strip / per-member aggregates over the m:n relationship also use
+# `via:` — same junction-binding grammar:
+#   primary_aggregate:
+#     aggregate: count(Tag)
+#     via: ProductTag(product = id)
 """
 
 # =============================================================================
@@ -1834,22 +1849,34 @@ entity OrderLine "Order Line":
 """
 
 [[modeling_guidance]]
-id = "no_soft_delete"
-name = "Use State Machines Instead of Soft-Delete Flags"
-triggers = ["soft delete", "is_deleted", "deleted_at", "archived_at", "tombstone", "logical delete"]
-anti_pattern = "is_deleted: bool or deleted_at: datetime as a field"
-prefer = "State machine transition to a terminal state, or simply delete the record"
-rationale = "Soft-delete flags create invisible data that scope rules must manually filter, break list counts, and bypass the transitions block which provides audit trails and role-gated deletion."
+id = "prefer_soft_delete_keyword"
+name = "Prefer the soft_delete: keyword over hand-rolled tombstone columns"
+triggers = ["soft delete", "is_deleted", "deleted_at", "archived_at", "tombstone", "logical delete", "retention", "undelete", "restore deleted"]
+anti_pattern = "Hand-rolling `deleted_at: datetime optional` + per-surface `scope: deleted_at = null` rules + custom DELETE handler"
+prefer = "Declare `soft_delete: true` on the entity — framework auto-adds the `deleted_at` field, applies the tombstone filter on list/read/aggregate, and rewrites DELETE to stamp the column"
+rationale = "Since v0.71.153 (#1218) the `soft_delete:` keyword is fully wired. It composes with `scope:` predicates via QueryBuilder, so authors don't double-filter. Use it when the business case calls for retention, undelete affordance, or regulatory recovery. Reach for a state machine instead when the lifecycle has *multiple* terminal/intermediate states (e.g. draft → published → archived) — soft-delete is a single tombstone flag, not a workflow."
 example = """
-# BAD
-is_deleted: bool=false
-deleted_at: datetime
+# GOOD — first-class soft-delete (since v0.71.153, #1218)
+entity Document "Document":
+  soft_delete
+  id: uuid pk
+  title: str(200) required
+  # `deleted_at: datetime optional` is auto-added by the linker.
 
-# GOOD — state machine
-status: enum[active,archived]=active
+# Read paths auto-filter `deleted_at IS NULL`:
+#   list, read, aggregate — no manual scope filter needed.
+# DELETE /api/document/<id> stamps deleted_at = NOW() instead of
+#   issuing a hard DELETE — soft-deleted rows become invisible
+#   without leaving the table.
+
+# When state isn't a tombstone — use a state machine instead:
+entity Order "Order":
+  id: uuid pk
+  status: enum[draft,placed,shipped,delivered]=draft
 
 transitions:
-  active -> archived: role(admin)
+  draft -> placed: role(customer)
+  placed -> shipped: role(warehouse)
 """
 
 [[modeling_guidance]]

@@ -145,8 +145,9 @@ _GUIDANCE = (
     "Use your judgment - override when context warrants. "
     "Adapt examples to the specific domain. "
     "Avoid: polymorphic keys (use typed refs), god entities (decompose), "
-    "soft-delete booleans (use state machines), stringly-typed refs (use ref), "
-    "and duplicated fields (let auto-include resolve)."
+    "hand-rolled soft-delete columns (use the `soft_delete:` keyword — "
+    "first-class since v0.71.153), stringly-typed refs (use ref), and "
+    "duplicated fields (let auto-include resolve)."
 )
 
 # ---------------------------------------------------------------------------
