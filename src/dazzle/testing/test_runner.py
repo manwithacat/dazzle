@@ -26,6 +26,7 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import httpx
 
@@ -435,7 +436,11 @@ class DazzleClient:
         try:
             # Use __test__/seed when available (bypasses auth)
             if self._test_routes_available is not False:
-                fixture_id = f"test-{entity_name.lower()}-{int(time.time())}"
+                # #1210: uuid4 hex (not int(time.time())) — two entities
+                # created in the same second previously collided on
+                # fixture_id, silently dropping one from
+                # ``_created_entities`` and leaking it past --cleanup.
+                fixture_id = f"test-{entity_name.lower()}-{uuid4().hex}"
                 fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
                 resp = self._request(
                     "POST", f"{self.api_url}/__test__/seed", json={"fixtures": fixtures}
@@ -1523,6 +1528,38 @@ class TestRunner:
             duration_ms=(time.time() - start_time) * 1000,
         )
 
+    def _track_post_cleanup(self, resp: Any, step: dict[str, Any] | None) -> None:
+        """#1210: explicit-opt-in cleanup tracking for ``post`` / ``post_json``.
+
+        If the step spec carries ``cleanup_entity: <EntityName>`` AND the
+        response is 2xx with a JSON body containing an ``id``, append
+        ``(EntityName, id)`` to the client's ``_created_entities`` list so
+        the end-of-run ``--cleanup`` phase deletes it.
+
+        Absent the hint, no tracking happens — this preserves existing
+        behaviour for transition / auth / form POSTs that don't create
+        entities (and would 404 on DELETE).
+        """
+        if step is None or self.client is None:
+            return
+        cleanup_entity = step.get("cleanup_entity")
+        if not cleanup_entity:
+            return
+        status_code = getattr(resp, "status_code", None)
+        if status_code is None or not (200 <= int(status_code) < 300):
+            return
+        try:
+            body = resp.json()
+        except Exception:
+            logger.debug("post cleanup_entity: response body not JSON", exc_info=True)
+            return
+        if not isinstance(body, dict):
+            return
+        entity_id = body.get("id")
+        if entity_id is None:
+            return
+        self.client._created_entities.append((str(cleanup_entity), str(entity_id)))
+
     def _execute_post_step(
         self,
         action: str,
@@ -1537,6 +1574,7 @@ class TestRunner:
         url = f"{self.client.ui_url}{target}"
         resp = self.client._request("POST", url, data=resolved_data, follow_redirects=False)
         context["last_response"] = resp
+        self._track_post_cleanup(resp, _kw.get("step"))
         return StepResult(
             action=action,
             target=target,
@@ -1559,6 +1597,7 @@ class TestRunner:
         url = f"{self.client.api_url}{target}"
         resp = self.client._request("POST", url, json=resolved_data, follow_redirects=False)
         context["last_response"] = resp
+        self._track_post_cleanup(resp, _kw.get("step"))
         return StepResult(
             action=action,
             target=target,
@@ -2173,6 +2212,10 @@ class TestRunner:
             "store_result": store_result,
             "start_time": start_time,
             "data": data,
+            # #1210: pass the raw step so handlers can read optional
+            # fields like ``cleanup_entity`` without widening the kwargs
+            # contract for every existing handler.
+            "step": step,
         }
 
         try:

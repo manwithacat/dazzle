@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.142] - 2026-05-23
+
+### Fixed
+
+- **`dazzle test dsl-run --cleanup` no longer leaks rows created via `post` / `post_json` test steps (#1210).** Pre-fix, `_execute_post_step` and `_execute_post_json_step` made POST requests to arbitrary endpoints but never registered the created entity in `DazzleClient._created_entities`, so the end-of-run cleanup phase couldn't see — let alone delete — them. Residue grew by ~50–100 rows per cycle on apps whose nightly tests exercised auth/transition/registration POSTs. The fix has two parts. (a) `post` / `post_json` steps now accept an optional `cleanup_entity:` field naming the entity created by the request. When set and the response is 2xx with a JSON body containing an `id`, the runner appends `(entity_name, id)` to `_created_entities` so `--cleanup` deletes it. When absent, no tracking happens — preserving existing behaviour for the many `post_json` steps that POST to `/auth/login` and friends (which would 404 on DELETE). The hint is explicit-opt-in by design: URL-path-segment inference was considered and rejected for being too brittle. (b) `DazzleClient.create_entity`'s `fixture_id` is now `uuid4().hex` instead of `int(time.time())`. Two entities created in the same wall-clock second previously collided on key, the second response's `created[fixture_id]` overwrote the first, and only one entity ended up in `_created_entities` — the second leaked. uuid4 makes the key collision-proof. Closes #1210.
+
+### Added
+
+- **`cleanup_entity:` optional field on `post` / `post_json` test steps** — names the entity (e.g. `ServicePackage`) the step creates so the runner can register it for end-of-run cleanup. If omitted, no tracking happens, preserving the existing behaviour for transition/auth/form POSTs that don't create entities.
+
+### Agent Guidance
+
+- When authoring a `post` or `post_json` test step that actually creates a row (and the response body contains `{"id": ...}`), add `cleanup_entity: "<EntityName>"` so `dazzle test dsl-run --cleanup` can delete it. Without the hint the row will leak past cleanup. Login/logout/transition POSTs don't need it.
+
 ## [0.71.141] - 2026-05-23
 
 ### Security
