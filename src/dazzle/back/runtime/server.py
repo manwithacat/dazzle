@@ -565,7 +565,15 @@ class DazzleBackendApp:
         register_exception_handlers(self._app)
 
     def _migrate_tenant_schemas(self) -> None:
-        """Create/update tables in each active tenant schema (#561)."""
+        """Create/update tables in each active tenant schema (#561).
+
+        Fail-closed under ``isolation = "schema"`` (#1209): per-tenant
+        failures are accumulated, logged at ERROR, and a ``RuntimeError``
+        is raised at the end of the loop naming every failed schema. This
+        halts boot rather than silently falling back to the ``public``
+        schema and violating the declared isolation posture. Mirrors the
+        audit-trail fail-closed invariant at #1172.
+        """
         import logging
 
         from sqlalchemy import create_engine
@@ -589,6 +597,8 @@ class DazzleBackendApp:
         # Normalise Heroku-style postgres:// alias before adding driver suffix
         sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
 
+        failed_tenants: list[tuple[str, str]] = []
+
         for tenant in tenants:
             if tenant.status != "active":
                 continue
@@ -599,7 +609,8 @@ class DazzleBackendApp:
                 import re
 
                 if not re.fullmatch(r"[a-zA-Z0-9_]+", schema_name):
-                    logger.warning("Invalid tenant schema name: %s", schema_name)
+                    logger.error("Invalid tenant schema name: %s", schema_name)
+                    failed_tenants.append((schema_name, "invalid schema name"))
                     continue
                 engine = create_engine(sa_url)
                 with engine.connect() as conn:
@@ -623,7 +634,28 @@ class DazzleBackendApp:
                 engine.dispose()
                 logger.info("Migrated tenant schema %s", schema_name)
             except Exception as exc:
-                logger.warning("Failed to migrate tenant schema %s: %s", schema_name, exc)
+                # Log at ERROR (operators must see this) and accumulate
+                # so every tenant is still attempted before we raise.
+                logger.error("Failed to migrate tenant schema %s: %s", schema_name, exc)
+                # One-line excerpt — keep the structured raise message
+                # below readable when many tenants fail.
+                excerpt = str(exc).splitlines()[0] if str(exc) else exc.__class__.__name__
+                failed_tenants.append((schema_name, excerpt))
+
+        if failed_tenants:
+            # Fail-closed invariant (#1209): under ``isolation = "schema"``
+            # a silently-skipped tenant means the app would serve that
+            # tenant's traffic from the ``public`` schema — a direct
+            # violation of the declared isolation posture. Halt boot.
+            # Callers must repair the listed schemas (manual SQL or
+            # schema rollback) before the app will serve. Do NOT
+            # downgrade this raise to a warning.
+            details = "; ".join(f"{schema} ({excerpt})" for schema, excerpt in failed_tenants)
+            raise RuntimeError(
+                "tenant schema migration failed for "
+                f"{len(failed_tenants)} schema(s): {details}. "
+                "Repair the listed tenants before booting (see #1209)."
+            )
 
     def _apply_search_indexes(self, engine: Any) -> None:
         """Apply #954 cycle 2 search indexes (tsvector + GIN) to *engine*.

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.141] - 2026-05-23
+
+### Security
+
+- **Tenant schema migration failures now fail boot under `isolation = "schema"` (#1209).** `_migrate_tenant_schemas` in `src/dazzle/back/runtime/server.py` previously caught every per-tenant migration exception in a bare `except Exception`, logged a single `WARNING`, and `continue`d — boot proceeded and the failed tenant was silently served from the `public` schema, a direct violation of the declared isolation posture. Three behaviour changes wired in this release: (1) per-tenant failures are accumulated into a local `failed_tenants: list[tuple[str, str]]` (schema name + one-line error excerpt) rather than dropped; (2) the log level for each per-tenant failure is raised from `WARNING` to `ERROR` so operators see it; (3) after the loop, if any failures accumulated, a `RuntimeError` is raised naming every failed schema and its error excerpt, halting boot. All tenants are still attempted before the raise, so operators see the full failure surface (not just the first one). Mirrors the audit-trail fail-closed invariant at #1172. **Backward-incompatible** for apps that were silently relying on the warning-only behaviour. Closes #1209.
+
+### Agent Guidance
+
+- Schema migration failures now halt boot under `isolation = "schema"`. If you see `RuntimeError: tenant schema migration failed for ...` on startup, the listed tenant(s) must be repaired (manual SQL or schema rollback) before the app will serve. Do NOT downgrade the raise back to a warning — that's exactly the silent-violation #1209 closed.
+
 ## [0.71.140] - 2026-05-23
 
 ### Added
