@@ -450,12 +450,12 @@ class LensAggregatePrimary(BaseModel):
     ``Repository.aggregate`` machinery, joined through an optional
     junction table, filtered by an optional predicate.
 
-    **Status:** IR + parser shipped this slice (#1144 part 3 phase 1).
-    Runtime execution (Repository.aggregate wiring + RBAC scope
-    composition) lands in subsequent slices. DSL authoring works
-    today; rendering raises ``NotImplementedError`` with a clear
-    "aggregate primary runtime not wired yet" message until the
-    next phase ships.
+    **Runtime status:** fully wired. ``compute_cohort_aggregate_primary``
+    in ``workspace_region_computes.py`` dispatches to one of three
+    batched helpers depending on the link strategy (direct FK, true
+    junction via :class:`ViaCondition`, or shared parent via ``share``).
+    All three execute a single ``GROUP BY`` query per region — no N+1,
+    no enumeration.
 
     Attributes:
         aggregate: Typed :class:`AggregateRef` driving the lens
@@ -467,7 +467,12 @@ class LensAggregatePrimary(BaseModel):
             :class:`ViaCondition` shape from #530 — same parser, same
             SQL compiler. ``None`` means no junction (aggregate
             operates against the source-entity directly, scoped by
-            the member's FK relationship).
+            the member's FK relationship). Mutually exclusive with
+            ``share`` (parse-time refusal).
+        share: Optional shared-parent join (#1216). Names a pivot
+            entity that both the cohort source row and the aggregated
+            row reference via a single ``ref`` field each. Mutually
+            exclusive with ``via``.
     """
 
     aggregate: AggregateRef
