@@ -131,6 +131,24 @@ class ProcessStateStore:
             "channel": getattr(step, "channel", None),
             "timeout_seconds": getattr(step, "timeout_seconds", None),
         }
+        # Retry configuration — runtime honours this in step_executor via
+        # an in-loop retry-with-backoff for transient failures (#1191).
+        retry_cfg = getattr(step, "retry", None)
+        if retry_cfg is not None:
+            backoff_attr = getattr(retry_cfg, "backoff", None)
+            if backoff_attr is None:
+                backoff_str = "exponential"
+            elif hasattr(backoff_attr, "value"):
+                backoff_str = backoff_attr.value
+            else:
+                backoff_str = str(backoff_attr)
+            data["retry"] = {
+                "max_attempts": getattr(retry_cfg, "max_attempts", 3),
+                "initial_interval_seconds": getattr(retry_cfg, "initial_interval_seconds", 1),
+                "backoff": backoff_str,
+                "backoff_coefficient": getattr(retry_cfg, "backoff_coefficient", 2.0),
+                "max_interval_seconds": getattr(retry_cfg, "max_interval_seconds", 60),
+            }
         # Query step fields
         if getattr(step, "query_entity", None):
             data["query_entity"] = step.query_entity

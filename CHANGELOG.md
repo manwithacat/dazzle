@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.128] - 2026-05-23
+
+### Fixed
+
+- **`retry_backoff` is now enforced in the default runtime — for both jobs and process steps (#1191).** Both IR fields were parsed but ignored. **Jobs:** `job_worker._handle_failure` now reads `spec.retry_backoff` (`JobBackoff.NONE | LINEAR | EXPONENTIAL`, base 1s, capped at 300s) and `await asyncio.sleep(delay)` before re-enqueueing. The sleep stalls the in-process worker for the delay — acceptable at current low-volume scale; a more scalable design (delayed-queue delivery) is a separate follow-up, noted in the source comment. **Process steps:** `step_executor.execute_step` now wraps the kind-dispatch in a retry loop reading `step["retry"]` (`max_attempts`, `initial_interval_seconds`, `backoff` ∈ `fixed/linear/exponential`, `backoff_coefficient`, `max_interval_seconds`). `celery_state._serialize_step` now emits the retry block so the config survives the Redis round-trip. Process-step `time.sleep` is fine — steps are inherently sequential per process run.
+
 ## [0.71.127] - 2026-05-23
 
 ### Removed

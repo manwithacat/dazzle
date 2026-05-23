@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib
 import logging
 import os
+import time
 import uuid as uuid_mod
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -29,6 +30,10 @@ if TYPE_CHECKING:
     from dazzle.core.process.celery_state import ProcessStateStore
 
 logger = logging.getLogger(__name__)
+
+# Upper bound on per-attempt step backoff so an exponential schedule on a
+# high max_attempts step can't park a worker thread for hours.
+MAX_STEP_BACKOFF_SECONDS: float = 300.0
 
 # Callback type for scheduling delayed work (timeout checks, process resumption).
 # Adapters provide their own implementation:
@@ -129,7 +134,95 @@ def execute_step(
     *,
     on_task_created: DelayedCallback | None = None,
 ) -> dict[str, Any]:
-    """Execute a single process step."""
+    """Execute a single process step, honouring the step's retry config.
+
+    If the step declares a ``retry`` block (``RetryConfig`` in IR,
+    serialised into the step dict by ``ProcessStateStore``), transient
+    failures are retried in-loop with backoff before propagating. The
+    sleep is synchronous ``time.sleep`` — process steps already block
+    while executing (sync psycopg, sync HTTP), so the sleep is
+    acceptable here; there's no worker-stall concern at the same scale
+    as background-job retries (#1191).
+    """
+    retry_cfg = step.get("retry") or {}
+    max_attempts = max(1, int(retry_cfg.get("max_attempts", 1)))
+    initial_interval = float(retry_cfg.get("initial_interval_seconds", 1))
+    coefficient = float(retry_cfg.get("backoff_coefficient", 2.0))
+    max_interval = float(retry_cfg.get("max_interval_seconds", 60))
+    backoff_strategy = str(retry_cfg.get("backoff", "exponential"))
+
+    attempt = 0
+    while True:
+        try:
+            return _dispatch_step(store, run, spec, step, on_task_created=on_task_created)
+        except Exception:
+            attempt += 1
+            if attempt >= max_attempts:
+                raise
+            delay = _compute_step_backoff(
+                strategy=backoff_strategy,
+                initial=initial_interval,
+                coefficient=coefficient,
+                attempt=attempt,
+                max_interval=max_interval,
+            )
+            logger.warning(
+                "Step %s attempt %d failed; retrying in %.2fs (max_attempts=%d)",
+                step.get("name", "unknown"),
+                attempt,
+                delay,
+                max_attempts,
+            )
+            if delay > 0:
+                time.sleep(min(delay, MAX_STEP_BACKOFF_SECONDS))
+
+
+def _compute_step_backoff(
+    *,
+    strategy: str,
+    initial: float,
+    coefficient: float,
+    attempt: int,
+    max_interval: float,
+) -> float:
+    """Compute the next retry delay for a process step.
+
+    Args:
+        strategy: One of "fixed", "linear", "exponential" (see
+            :class:`dazzle.core.ir.process.RetryBackoff`).
+        initial: ``RetryConfig.initial_interval_seconds``.
+        coefficient: ``RetryConfig.backoff_coefficient`` — only used
+            for ``exponential``.
+        attempt: Number of failed attempts so far (1-indexed).
+        max_interval: ``RetryConfig.max_interval_seconds`` — per-config
+            cap; the module-level :data:`MAX_STEP_BACKOFF_SECONDS` is
+            applied at the sleep site as a safety net.
+
+    Returns:
+        Delay in seconds, capped at ``max_interval``.
+    """
+    if attempt < 1:
+        return 0.0
+    if strategy == "fixed":
+        delay = initial
+    elif strategy == "linear":
+        delay = initial * attempt
+    else:
+        # Exponential is the IR default; fall through here for any
+        # unknown value so we never sleep zero on a misconfigured spec.
+        delay = initial * (coefficient ** (attempt - 1))
+    return min(delay, max_interval)
+
+
+def _dispatch_step(
+    store: ProcessStateStore,
+    run: ProcessRun,
+    spec: dict[str, Any],
+    step: dict[str, Any],
+    *,
+    on_task_created: DelayedCallback | None = None,
+) -> dict[str, Any]:
+    """Dispatch a single step to its kind-specific executor."""
     kind = step.get("kind", "")
 
     if kind == StepKind.SERVICE.value or kind == "service":

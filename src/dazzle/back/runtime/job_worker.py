@@ -32,8 +32,48 @@ from typing import Any
 
 from dazzle.back.runtime.job_handler import JobHandlerNotFound, resolve_handler
 from dazzle.back.runtime.job_queue import JobMessage, JobQueue
+from dazzle.core.ir.jobs import JobBackoff
 
 logger = logging.getLogger(__name__)
+
+# Upper bound on the per-attempt sleep so an exponential schedule on a
+# high-retry job can't park a worker iteration for hours. 300s = 5 min
+# is well above any sensible "transient blip" window for the workloads
+# this worker is intended for.
+MAX_BACKOFF_SECONDS: float = 300.0
+
+# Base delay (seconds) for LINEAR / EXPONENTIAL strategies. LINEAR
+# yields 1, 2, 3, ...; EXPONENTIAL yields 1, 2, 4, 8, ...
+_BASE_BACKOFF_SECONDS: float = 1.0
+
+
+def _compute_backoff_delay(backoff: JobBackoff, attempt: int) -> float:
+    """Compute the sleep delay before re-enqueueing after a failed attempt.
+
+    Args:
+        backoff: The job's declared retry-backoff strategy.
+        attempt: The attempt number that just failed (1-indexed).
+
+    Returns:
+        Delay in seconds (capped at :data:`MAX_BACKOFF_SECONDS`).
+
+    Strategies:
+        * ``NONE``       → ``0`` — immediate re-enqueue.
+        * ``LINEAR``     → ``base * attempt`` (1, 2, 3, ... seconds).
+        * ``EXPONENTIAL``→ ``base * 2 ** (attempt - 1)`` (1, 2, 4, ...).
+    """
+    if attempt < 1:
+        return 0.0
+    if backoff == JobBackoff.NONE:
+        return 0.0
+    if backoff == JobBackoff.LINEAR:
+        delay = _BASE_BACKOFF_SECONDS * attempt
+    elif backoff == JobBackoff.EXPONENTIAL:
+        delay = _BASE_BACKOFF_SECONDS * (2 ** (attempt - 1))
+    else:
+        # Defensive: unknown strategy → immediate.
+        return 0.0
+    return min(delay, MAX_BACKOFF_SECONDS)
 
 
 class WorkerOutcome:
@@ -181,9 +221,8 @@ async def _handle_failure(
     max_attempts = max(1, getattr(spec, "retry", 0) + 1)
     if message.attempt < max_attempts:
         # Mark the current run terminal (with retry context) and
-        # enqueue a fresh attempt. The cycle-7 retry-backoff sleep
-        # would go here when the timer is wired; cycle 4 just
-        # re-enqueues immediately.
+        # enqueue a fresh attempt — honouring the spec's declared
+        # ``retry_backoff`` strategy via an in-process sleep.
         await _safe_update(
             job_service,
             message.job_run_id,
@@ -194,6 +233,29 @@ async def _handle_failure(
                 "duration_ms": duration_ms,
             },
         )
+        backoff = getattr(spec, "retry_backoff", JobBackoff.EXPONENTIAL)
+        delay = _compute_backoff_delay(backoff, message.attempt)
+        if delay > 0:
+            # Trade-off: the in-process ``asyncio.sleep`` blocks this
+            # worker iteration for ``delay`` seconds — the single
+            # worker can't pick up other messages during that window.
+            # A more scalable design is delayed-queue delivery via
+            # ``queue.submit(..., available_at=...)`` so the broker
+            # holds the message until the wakeup time and any worker
+            # can claim it. That requires queue-backend changes
+            # (Redis Streams ``XADD`` with a delay token, SQS visibility
+            # delay, etc.) and is left for a follow-up. For current
+            # low-volume background work this is acceptable; for
+            # high-throughput workloads, throughput will be visibly
+            # affected during retry storms.
+            logger.info(
+                "Job %s backoff (%s, attempt %d): sleeping %.2fs before re-enqueue",
+                message.job_name,
+                backoff.value if hasattr(backoff, "value") else backoff,
+                message.attempt,
+                delay,
+            )
+            await asyncio.sleep(delay)
         await queue.submit(
             message.job_name,
             payload=message.payload,
