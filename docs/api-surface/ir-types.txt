@@ -1548,8 +1548,8 @@ ir_class: LensAggregatePrimary
   required:
     - aggregate: AggregateRef
   optional:
+    - share: str | None = None
     - via: ViaCondition | None = None
-    - via_pivot: str | None = None
 
 ir_class: LifecycleReport
   required:

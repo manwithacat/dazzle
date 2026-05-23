@@ -463,14 +463,14 @@ def test_missing_repo_returns_empty() -> None:
     assert result == {}
 
 
-# ─────────────── #1216: via_pivot diamond-JOIN tests ───────────────
+# ─────────────── #1216: share: shared-parent JOIN tests ───────────────
 
 
 def _make_repo_with_fks(entity_name: str, table_name: str, fks: dict[str, str]) -> MagicMock:
     """Build a mock repo whose entity_spec has named ref fields.
 
-    `fks` maps field name → target entity name. Used to fake the diamond
-    schema (junction.student_profile → StudentProfile,
+    `fks` maps field name → target entity name. Used to fake the
+    shared-parent schema (ClassEnrolment.student_profile → StudentProfile,
     MarkingResult.student_profile → StudentProfile) without needing both
     sides to FK to each other.
     """
@@ -511,12 +511,11 @@ def _make_repo_with_fks(entity_name: str, table_name: str, fks: dict[str, str]) 
     return repo
 
 
-def test_via_pivot_diamond_join_builds_two_hop_sql() -> None:
-    """#1216: junction (ClassEnrolment) and aggregated (MarkingResult)
-    both FK to a shared parent (StudentProfile). Neither FKs to the
-    other. via_pivot: StudentProfile bridges them in a single GROUP BY
-    query via direct equality JOIN on the pivot FK columns."""
-    junction = _make_repo_with_fks(
+def test_share_builds_shared_parent_join_sql() -> None:
+    """#1216: cohort source row (ClassEnrolment) and aggregated row
+    (MarkingResult) both reference StudentProfile. `share: StudentProfile`
+    bridges them with a single GROUP BY query keyed on source.id."""
+    source = _make_repo_with_fks(
         "ClassEnrolment",
         "class_enrolment",
         {"student_profile": "StudentProfile", "teaching_group": "TeachingGroup"},
@@ -531,19 +530,12 @@ def test_via_pivot_diamond_join_builds_two_hop_sql() -> None:
         ]
     )
 
-    via = ViaCondition(
-        junction_entity="ClassEnrolment",
-        bindings=[
-            ViaBinding(junction_field="id", target="id", operator="="),
-        ],
-    )
     lens = CohortStripLens(
         id="cohort",
         label="X",
         primary_aggregate=LensAggregatePrimary(
             aggregate=AggregateRef(func="avg", entity="MarkingResult", column="score"),
-            via=via,
-            via_pivot="StudentProfile",
+            share="StudentProfile",
         ),
     )
 
@@ -552,7 +544,7 @@ def test_via_pivot_diamond_join_builds_two_hop_sql() -> None:
             items=[{"id": "e1"}, {"id": "e2"}],
             lens=lens,
             source_entity="ClassEnrolment",
-            repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
+            repositories={"MarkingResult": aggregated, "ClassEnrolment": source},
             scope_only_filters=None,
         )
     )
@@ -560,34 +552,29 @@ def test_via_pivot_diamond_join_builds_two_hop_sql() -> None:
 
     assert aggregated._mock_cursor.execute.call_count == 1
     sql_text, params = aggregated._mock_cursor.execute.call_args.args
-    # Diamond JOIN: both sides reference the pivot FK column.
+    # Source table joined directly (no junction abstraction).
     assert 'FROM "marking_result" a' in sql_text
-    assert 'INNER JOIN "ClassEnrolment" j' in sql_text
-    assert 'a."student_profile" = j."student_profile"' in sql_text
-    assert 'GROUP BY j."id"' in sql_text
-    assert 'j."id" IN (%s, %s)' in sql_text
+    assert 'INNER JOIN "class_enrolment" s' in sql_text
+    assert 'a."student_profile" = s."student_profile"' in sql_text
+    assert 'GROUP BY s."id"' in sql_text
+    assert 's."id" IN (%s, %s)' in sql_text
     assert params[-2:] == ["e1", "e2"]
 
 
-def test_via_pivot_missing_pivot_fk_warns(caplog: pytest.LogCaptureFixture) -> None:
-    """When via_pivot is set but neither junction nor aggregated has a
-    FK to the named pivot, log a warning and return empty."""
-    junction = _make_repo_with_fks(
+def test_share_missing_pivot_fk_warns(caplog: pytest.LogCaptureFixture) -> None:
+    """When `share:` is set but either side lacks a FK to the named
+    pivot, log a warning naming the missing side and return empty."""
+    source = _make_repo_with_fks(
         "ClassEnrolment", "class_enrolment", {"teaching_group": "TeachingGroup"}
     )
     aggregated = _make_repo_with_fks("MarkingResult", "marking_result", {})
 
-    via = ViaCondition(
-        junction_entity="ClassEnrolment",
-        bindings=[ViaBinding(junction_field="id", target="id", operator="=")],
-    )
     lens = CohortStripLens(
         id="x",
         label="X",
         primary_aggregate=LensAggregatePrimary(
             aggregate=AggregateRef(func="count", entity="MarkingResult"),
-            via=via,
-            via_pivot="StudentProfile",
+            share="StudentProfile",
         ),
     )
     with caplog.at_level("WARNING"):
@@ -596,9 +583,51 @@ def test_via_pivot_missing_pivot_fk_warns(caplog: pytest.LogCaptureFixture) -> N
                 items=[{"id": "e1"}],
                 lens=lens,
                 source_entity="ClassEnrolment",
-                repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
+                repositories={"MarkingResult": aggregated, "ClassEnrolment": source},
                 scope_only_filters=None,
             )
         )
     assert result == {}
-    assert any("via_pivot" in r.message for r in caplog.records)
+    assert any("not reachable" in r.message for r in caplog.records)
+
+
+def test_share_ambiguous_fk_refuses(caplog: pytest.LogCaptureFixture) -> None:
+    """Hardening: when either side has *multiple* FKs to the named
+    pivot, refuse rather than silently guess which one to JOIN on.
+
+    Real-world trigger: a transfer-records table where the entity has
+    `student_profile` AND `original_student_profile`, both `ref
+    StudentProfile`. We don't try to pick.
+    """
+    source = _make_repo_with_fks(
+        "ClassEnrolment", "class_enrolment", {"student_profile": "StudentProfile"}
+    )
+    aggregated = _make_repo_with_fks(
+        "MarkingResult",
+        "marking_result",
+        {
+            "student_profile": "StudentProfile",
+            "original_student_profile": "StudentProfile",
+        },
+    )
+
+    lens = CohortStripLens(
+        id="x",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(func="count", entity="MarkingResult"),
+            share="StudentProfile",
+        ),
+    )
+    with caplog.at_level("WARNING"):
+        result = _run(
+            compute_cohort_aggregate_primary(
+                items=[{"id": "e1"}],
+                lens=lens,
+                source_entity="ClassEnrolment",
+                repositories={"MarkingResult": aggregated, "ClassEnrolment": source},
+                scope_only_filters=None,
+            )
+        )
+    assert result == {}
+    assert any("ambiguous" in r.message for r in caplog.records)

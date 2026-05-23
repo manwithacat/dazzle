@@ -472,15 +472,14 @@ class LensAggregatePrimary(BaseModel):
 
     aggregate: AggregateRef
     via: ViaCondition | None = None
-    # #1216: diamond-JOIN bridge. When the junction (named in `via`)
-    # and the aggregated entity (named in `aggregate.entity`) do not
-    # FK to each other directly but BOTH FK to a shared parent
-    # (StudentProfile is the canonical example), `via_pivot` names
-    # that parent. The compute path builds a two-hop JOIN:
-    # aggregate → pivot ← junction, grouped by the junction row.
-    # When None, the legacy `_resolve_via_link_direction` direct-FK
-    # path is used.
-    via_pivot: str | None = None
+    # #1216: shared-parent JOIN. When the cohort source row and the
+    # aggregated entity both reference the same parent entity (the
+    # "pivot") but don't FK to each other, `share` names that parent.
+    # Semantics: "for each cohort row, aggregate rows that reference
+    # the SAME pivot entity as the cohort row does." Mutually
+    # exclusive with `via:` (true-junction semantics) — set one or
+    # the other, never both.
+    share: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

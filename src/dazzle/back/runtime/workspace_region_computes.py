@@ -622,16 +622,17 @@ async def compute_cohort_aggregate_primary(
     the junction, not the aggregated entity.
 
     Three link strategies:
-      - Without ``via:`` — direct FK from aggregated entity → source
-        entity. Batched as ``GROUP BY aggregated.<fk_col>`` with
-        ``aggregated.<fk_col> IN (...member_ids)``.
-      - With ``via:`` and a direct FK between junction and aggregated
-        — junction-binding subquery. Batched as a JOIN through the
-        junction with ``GROUP BY junction.<member_binding_col>``.
-      - With ``via:`` and ``via_pivot:`` (#1216) — diamond JOIN through
-        a shared parent. Both junction and aggregated entity FK to
-        the named pivot; the JOIN composes
-        ``a.<agg_to_pivot_fk> = j.<junc_to_pivot_fk>``.
+      - Without ``via:`` or ``share:`` — direct FK from aggregated
+        entity → source entity. Batched as ``GROUP BY aggregated.<fk_col>``
+        with ``aggregated.<fk_col> IN (...member_ids)``.
+      - With ``via:`` — true-junction subquery (junction has a direct
+        FK to aggregated). Batched as a JOIN through the junction
+        with ``GROUP BY junction.<member_binding_col>``.
+      - With ``share:`` (#1216) — shared-parent JOIN. Cohort source row
+        and aggregated row both FK to the named pivot entity; the JOIN
+        composes ``a.<agg_to_pivot_fk> = s.<source_to_pivot_fk>``,
+        grouped by ``s.id``. Refuses at compute time when either side
+        has zero or multiple ``ref <pivot>`` fields (no silent guessing).
 
     Args:
         items: Cohort source rows (already RBAC-scoped upstream).
@@ -680,11 +681,62 @@ async def compute_cohort_aggregate_primary(
     #   - Without `via:` → direct FK from aggregated entity → source entity
     #     (phase 2). Per-member filter is `aggregated_entity.<fk> = member_id`.
     via = primary_aggregate.via
-    via_pivot = getattr(primary_aggregate, "via_pivot", None)
+    share_entity = getattr(primary_aggregate, "share", None)
     junction_repo = repositories.get(via.junction_entity) if (via and repositories) else None
     via_link: tuple[str, str, str] | None = None  # (subq_select_field, agg_filter_col, direction)
-    via_pivot_link: tuple[str, str] | None = None  # (agg_to_pivot_fk, junc_to_pivot_fk)
-    if via is not None:
+    share_link: tuple[str, str] | None = None  # (agg_to_pivot_fk, source_to_pivot_fk)
+    if share_entity is not None:
+        # #1216: shared-parent JOIN. Cohort source row and the
+        # aggregated row both reference the named pivot. We refuse to
+        # silently pick a FK when there's more than one candidate —
+        # better empty cells + a clear warning than silently-wrong
+        # SQL. (`share:` and `via:` are mutually exclusive at parse
+        # time, so we never hit both branches.)
+        source_repo = repositories.get(source_entity)
+        if source_repo is None:
+            logger.warning(
+                "cohort_strip lens %r: share=%r set but source entity %r not in repositories",
+                getattr(lens, "id", "<unknown>"),
+                share_entity,
+                source_entity,
+            )
+            return out
+        agg_pivot_fks = _all_fks_to(agg_repo, share_entity)
+        source_pivot_fks = _all_fks_to(source_repo, share_entity)
+        if not agg_pivot_fks or not source_pivot_fks:
+            logger.warning(
+                "cohort_strip lens %r: share=%r not reachable — "
+                "aggregated %r FKs→pivot=%r, source %r FKs→pivot=%r. "
+                "Both entities must declare a `ref %s` field.",
+                getattr(lens, "id", "<unknown>"),
+                share_entity,
+                aggregated_entity,
+                agg_pivot_fks or "none",
+                source_entity,
+                source_pivot_fks or "none",
+                share_entity,
+            )
+            return out
+        if len(agg_pivot_fks) > 1 or len(source_pivot_fks) > 1:
+            logger.warning(
+                "cohort_strip lens %r: share=%r is ambiguous — "
+                "aggregated %r has %d FKs to %r (%s); source %r has %d (%s). "
+                "Multiple candidate FKs to the pivot are not yet supported; "
+                "rename one or split the entity.",
+                getattr(lens, "id", "<unknown>"),
+                share_entity,
+                aggregated_entity,
+                len(agg_pivot_fks),
+                share_entity,
+                ",".join(agg_pivot_fks),
+                source_entity,
+                len(source_pivot_fks),
+                ",".join(source_pivot_fks),
+            )
+            return out
+        share_link = (agg_pivot_fks[0], source_pivot_fks[0])
+        fk_col = None
+    elif via is not None:
         if junction_repo is None:
             logger.warning(
                 "cohort_strip lens %r: junction entity %r not in repositories — "
@@ -693,40 +745,18 @@ async def compute_cohort_aggregate_primary(
                 via.junction_entity,
             )
             return out
-        if via_pivot is not None:
-            # #1216: diamond JOIN. Both junction and aggregated entity
-            # must FK to the named pivot — no direct junction↔agg FK
-            # is required (the legacy path's failure mode).
-            agg_to_pivot = _find_fk_to(agg_repo, via_pivot)
-            junc_to_pivot = _find_fk_to(junction_repo, via_pivot)
-            if agg_to_pivot is None or junc_to_pivot is None:
-                logger.warning(
-                    "cohort_strip lens %r: via_pivot %r not reachable — "
-                    "aggregated entity %r FK→pivot=%r, junction %r FK→pivot=%r. "
-                    "Both must declare a `ref %s` field. Cells render without value.",
-                    getattr(lens, "id", "<unknown>"),
-                    via_pivot,
-                    aggregated_entity,
-                    agg_to_pivot,
-                    via.junction_entity,
-                    junc_to_pivot,
-                    via_pivot,
-                )
-                return out
-            via_pivot_link = (agg_to_pivot, junc_to_pivot)
-        else:
-            via_link = _resolve_via_link_direction(agg_repo, junction_repo, via.junction_entity)
-            if via_link is None:
-                logger.warning(
-                    "cohort_strip lens %r: no FK between aggregated entity %r and "
-                    "junction %r — declare a direct reference, set `via_pivot:` "
-                    "(diamond JOIN through a shared parent), or use the no-via "
-                    "case. Cells will render without a value.",
-                    getattr(lens, "id", "<unknown>"),
-                    aggregated_entity,
-                    via.junction_entity,
-                )
-                return out
+        via_link = _resolve_via_link_direction(agg_repo, junction_repo, via.junction_entity)
+        if via_link is None:
+            logger.warning(
+                "cohort_strip lens %r: no FK between aggregated entity %r and "
+                "junction %r — declare a direct reference, set `share:` "
+                "(shared-parent JOIN), or use the no-via case. "
+                "Cells will render without a value.",
+                getattr(lens, "id", "<unknown>"),
+                aggregated_entity,
+                via.junction_entity,
+            )
+            return out
         fk_col = None
     else:
         fk_col = _find_fk_to(agg_repo, source_entity)
@@ -780,11 +810,12 @@ async def compute_cohort_aggregate_primary(
         return out
 
     try:
-        if via_pivot_link is not None and via is not None:
-            return await _batched_via_pivot_cohort_aggregate(
+        if share_link is not None:
+            assert repositories is not None  # narrowed by the share branch above
+            return await _batched_share_cohort_aggregate(
                 agg_repo=agg_repo,
-                via=via,
-                via_pivot_link=via_pivot_link,
+                source_repo=repositories[source_entity],
+                share_link=share_link,
                 aggregated_entity=aggregated_entity,
                 member_ids=member_ids,
                 measures=measures,
@@ -1028,11 +1059,11 @@ async def _batched_via_cohort_aggregate(
     return out
 
 
-async def _batched_via_pivot_cohort_aggregate(
+async def _batched_share_cohort_aggregate(
     *,
     agg_repo: Any,
-    via: Any,  # ViaCondition
-    via_pivot_link: tuple[str, str],  # (agg_to_pivot_fk, junc_to_pivot_fk)
+    source_repo: Any,
+    share_link: tuple[str, str],  # (agg_to_pivot_fk, source_to_pivot_fk)
     aggregated_entity: str,
     member_ids: list[str],
     measures: dict[str, str],
@@ -1040,52 +1071,39 @@ async def _batched_via_pivot_cohort_aggregate(
     where: Any,
     scope_filters: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Batched diamond-JOIN cohort aggregate (#1216).
+    """Batched shared-parent cohort aggregate (#1216).
 
-    Variant of :func:`_batched_via_cohort_aggregate` for the shared-
-    parent case. Neither the junction nor the aggregated entity FK
-    to each other; both FK to a shared parent (the ``via_pivot``).
-    The JOIN matches rows whose pivot FK values agree:
+    For each cohort source row, aggregate ``aggregated_entity`` rows
+    whose reference to the named pivot equals the source row's
+    reference to the same pivot. Single GROUP BY query keyed on the
+    source row's primary key — the pivot table itself never appears
+    in the FROM clause because both FKs hold the same id values, so
+    an equi-join on the FK columns suffices.
 
-        SELECT j.<member_binding_col> AS member_id,
+        SELECT s.id AS member_id,
                <agg>(<measure>) AS primary
         FROM   <aggregated_table> a
-        INNER JOIN <junction_table> j
-               ON a.<agg_to_pivot_fk> = j.<junc_to_pivot_fk>
-        WHERE  j.<member_binding_col> IN (...)
-          AND  <non-id bindings>
+        INNER JOIN <source_table> s
+               ON a.<agg_to_pivot_fk> = s.<source_to_pivot_fk>
+        WHERE  s.id IN (...member_ids)
           AND  <where + scope predicates against a>
-        GROUP BY j.<member_binding_col>
+        GROUP BY s.id
         LIMIT N+10
 
-    The pivot table itself never appears in the FROM clause — both
-    FKs reference the same id values, so a direct equality JOIN
-    suffices. This stays as one query (matching the framework's
-    one-aggregate-per-region contract; no N+1, no enumeration).
+    Mutually exclusive with the ``via:`` true-junction path — see
+    :class:`LensAggregatePrimary` and the parse-time guard.
     """
     from dazzle.back.runtime.aggregate import measure_to_sql
     from dazzle.back.runtime.query_builder import QueryBuilder, quote_identifier
     from dazzle.back.runtime.workspace_aggregation import _build_aggregate_filters
 
-    agg_to_pivot_fk, junc_to_pivot_fk = via_pivot_link
-
-    # Locate the member-id binding — same as the direct-FK via path.
-    member_binding_col: str | None = None
-    static_bindings: list[Any] = []
-    for binding in via.bindings:
-        if binding.target == "id" and member_binding_col is None:
-            member_binding_col = binding.junction_field
-        else:
-            static_bindings.append(binding)
-    if member_binding_col is None:
-        return {}
+    agg_to_pivot_fk, source_to_pivot_fk = share_link
 
     placeholder = agg_repo.db.placeholder
     agg_table = quote_identifier(agg_repo.table_name)
-    junction_table = quote_identifier(via.junction_entity)
-    member_col_q = quote_identifier(member_binding_col)
+    source_table = quote_identifier(source_repo.table_name)
     agg_pivot_q = quote_identifier(agg_to_pivot_fk)
-    junc_pivot_q = quote_identifier(junc_to_pivot_fk)
+    source_pivot_q = quote_identifier(source_to_pivot_fk)
 
     measure_sql: str
     measure_params: list[Any] = []
@@ -1101,14 +1119,8 @@ async def _batched_via_pivot_cohort_aggregate(
         measure_sql = compiled
 
     in_placeholders = ", ".join(placeholder for _ in member_ids)
-    where_clauses: list[str] = [f"j.{member_col_q} IN ({in_placeholders})"]
+    where_clauses: list[str] = [f's."id" IN ({in_placeholders})']
     where_params: list[Any] = list(member_ids)
-
-    for binding in static_bindings:
-        col = quote_identifier(binding.junction_field)
-        op = getattr(binding, "operator", "=") or "="
-        if binding.target == "null":
-            where_clauses.append(f"j.{col} IS NULL" if op == "=" else f"j.{col} IS NOT NULL")
 
     composed_filters = _build_aggregate_filters(where, scope_filters, agg_repo, aggregated_entity)
     if composed_filters:
@@ -1122,11 +1134,11 @@ async def _batched_via_pivot_cohort_aggregate(
                 where_params.extend(sub_params)
 
     sql_parts: list[str] = [
-        f"SELECT j.{member_col_q} AS member_id, {measure_sql} AS {quote_identifier('primary')}",
+        f'SELECT s."id" AS member_id, {measure_sql} AS {quote_identifier("primary")}',
         f"FROM {agg_table} a",
-        f"INNER JOIN {junction_table} j ON a.{agg_pivot_q} = j.{junc_pivot_q}",
+        f"INNER JOIN {source_table} s ON a.{agg_pivot_q} = s.{source_pivot_q}",
         "WHERE " + " AND ".join(where_clauses),
-        f"GROUP BY j.{member_col_q}",
+        'GROUP BY s."id"',
         f"LIMIT {len(member_ids) + 10}",
     ]
     sql = " ".join(sql_parts)
@@ -1151,6 +1163,29 @@ async def _batched_via_pivot_cohort_aggregate(
         value = row_dict.get("primary")
         if value is not None:
             out[str(member)] = value
+    return out
+
+
+def _all_fks_to(repo: Any, target_entity: str) -> list[str]:
+    """Return *all* ref-field names on ``repo``'s entity pointing at
+    ``target_entity``.
+
+    Used by the ``share:`` compute path (#1216) to detect ambiguous
+    pivot references — when the caller needs to refuse rather than
+    silently pick the first FK.
+    """
+    spec = getattr(repo, "entity_spec", None)
+    if spec is None:
+        return []
+    out: list[str] = []
+    for fld in getattr(spec, "fields", []):
+        ftype = getattr(fld, "type", None)
+        if ftype is None or getattr(ftype, "kind", None) != "ref":
+            continue
+        if getattr(ftype, "ref_entity", None) == target_entity:
+            name = fld.name
+            if name is not None:
+                out.append(str(name))
     return out
 
 

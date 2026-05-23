@@ -138,30 +138,42 @@ def test_parses_aggregate_with_via_clause() -> None:
     assert via.bindings[0].junction_field == "student_profile"
 
 
-def test_parses_aggregate_with_via_pivot() -> None:
-    """#1216: via_pivot names the shared parent for diamond JOINs."""
+def test_parses_aggregate_with_share() -> None:
+    """#1216: share: names the pivot entity that both the cohort source
+    row and the aggregated row reference. No `via:` required."""
     lens = _parse_lens(
         """          primary_aggregate:
             aggregate: avg(MarkingResult.score)
-            via: ClassEnrolment(student_profile = id)
-            via_pivot: StudentProfile
+            share: StudentProfile
 """
     )
     spec = lens.primary_aggregate
-    assert spec.via_pivot == "StudentProfile"
-    assert spec.via is not None
-    assert spec.via.junction_entity == "ClassEnrolment"
+    assert spec.share == "StudentProfile"
+    assert spec.via is None
 
 
-def test_via_pivot_optional_defaults_none() -> None:
-    """#1216: existing primary_aggregate blocks unchanged — via_pivot defaults None."""
+def test_share_optional_defaults_none() -> None:
+    """#1216: existing primary_aggregate blocks unchanged — share defaults None."""
     lens = _parse_lens(
         """          primary_aggregate:
             aggregate: avg(MarkingResult.score)
             via: ClassEnrolment(student_profile = id)
 """
     )
-    assert lens.primary_aggregate.via_pivot is None
+    assert lens.primary_aggregate.share is None
+
+
+def test_share_and_via_mutually_exclusive() -> None:
+    """#1216: `share:` and `via:` are different operations — refuse to
+    combine them rather than guess intent."""
+    with pytest.raises(ParseError, match="cannot combine"):
+        _parse_lens(
+            """          primary_aggregate:
+            aggregate: avg(MarkingResult.score)
+            via: ClassEnrolment(student_profile = id)
+            share: StudentProfile
+"""
+        )
 
 
 def test_parses_aggregate_with_inner_where_predicate() -> None:

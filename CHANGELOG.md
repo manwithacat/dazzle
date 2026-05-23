@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.151] - 2026-05-23
+
+### Changed (breaking — replaces v0.71.150 syntax)
+
+- **`primary_aggregate.via_pivot:` retired in favour of `primary_aggregate.share:` (#1216 redesign).** v0.71.150 (shipped <1h ago) introduced `via_pivot:` as a sub-key beneath `via:` for the "junction and aggregated entity both FK to a shared parent" case. Reviewing it with @manwithacat surfaced two issues: the old syntax extended `via:` (true-junction semantics) for a fundamentally different operation (shared-parent JOIN), and `_find_fk_to` silently picked the first matching FK when multiple candidates existed. The redesigned `share:` keyword fixes both:
+
+  ```dsl
+  primary_aggregate:
+    aggregate: avg(MarkingResult.score)
+    share: StudentProfile
+  ```
+
+  Semantics: "for each cohort row, aggregate rows of the named entity where the cohort row and the aggregated row *both* reference the same `share:` entity." Mutually exclusive with `via:` (parse-time refuses to combine them — different operations should not share syntax). The compute path walks `entity_spec.fields` on the **source** and **aggregated** repos collecting *all* `ref <pivot>` fields; if either side has zero, log "not reachable"; if either has ≥2, log "ambiguous" naming the candidates and return empty rather than silent SQL guessing. The SQL JOIN composes `a.<agg_to_pivot_fk> = s.<source_to_pivot_fk>` grouped by `s.id` — pivot table itself never appears in the FROM clause because both FKs hold the same id values.
+
+  **No deployed users of v0.71.150** — the feature shipped under an hour ago, AegisMark hadn't migrated yet. So this is a "still warm enough to iterate" clean break, not a breaking change in the deployment sense.
+
+  AegisMark migration:
+  ```dsl
+  # Before (v0.71.150)
+  primary_aggregate:
+    aggregate: avg(MarkingResult.score)
+    via: ClassEnrolment(id = id)        # redundant — source IS ClassEnrolment
+    via_pivot: StudentProfile
+
+  # After (v0.71.151)
+  primary_aggregate:
+    aggregate: avg(MarkingResult.score)
+    share: StudentProfile
+  ```
+
+  Two ambiguity-defence tests cover the new contract: missing FK → "not reachable" warning, multiple candidate FKs (e.g. `student_profile` AND `original_student_profile`) → "ambiguous" warning naming the candidates. Closes #1216.
+
+### Agent Guidance
+
+- When a `cohort_strip` lens aggregates rows from a different entity that's joined through a shared parent (the canonical "people-in-groups-have-attributes" 3NF pattern: cohort source row and the aggregated row both reference a `Person` / `Customer` / `Student`), reach for `share: <ParentEntity>`. Don't reach for `via:` — `via:` is reserved for *true* junction tables where the junction directly FKs to the aggregated entity (e.g., m:n tag/permission tables). Different operations, different keywords.
+- If you have multiple `ref <ParentEntity>` fields on either side (e.g., `student_profile` and `original_student_profile`), the framework refuses with an "ambiguous" warning. Don't try to disambiguate via `share:` — the framework hasn't agreed on a `share:` syntax for "use *this* FK on this side." For now, rename one of the refs or split the entity. If that pattern shows up repeatedly we'll add an explicit-FK form.
+
 ## [0.71.150] - 2026-05-23
 
 ### Added
