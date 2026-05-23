@@ -101,6 +101,44 @@ class TestCRUDAnalysis:
         assert len(crud.operations_mentioned) == 4
         assert "delete" in crud.missing_operations
 
+    def test_additional_operations_coerces_bare_strings(self):
+        """#1220 regression — the LLM sometimes returns
+        `additional_operations` as a list of bare strings. Coerce to
+        `[{"name": s}, ...]` rather than crash the parse."""
+        crud = CRUDAnalysis(
+            entity="Person",
+            additional_operations=["anonymise/redact", "bulk import"],  # type: ignore[arg-type]
+        )
+        assert crud.additional_operations == [
+            {"name": "anonymise/redact"},
+            {"name": "bulk import"},
+        ]
+
+    def test_additional_operations_preserves_dict_items(self):
+        """#1220 — already-dict items pass through unchanged."""
+        crud = CRUDAnalysis(
+            entity="Person",
+            additional_operations=[
+                {"name": "anonymise", "description": "GDPR redaction"},
+            ],
+        )
+        assert crud.additional_operations == [
+            {"name": "anonymise", "description": "GDPR redaction"},
+        ]
+
+    def test_additional_operations_mixed_string_and_dict(self):
+        """#1220 — a mix of bare strings and dicts (LLM half-followed the
+        new prompt) also normalises cleanly."""
+        crud = CRUDAnalysis(
+            entity="Person",
+            additional_operations=[
+                "bare string",
+                {"name": "structured", "description": "with shape"},
+            ],  # type: ignore[list-item]
+        )
+        assert crud.additional_operations[0] == {"name": "bare string"}
+        assert crud.additional_operations[1]["description"] == "with shape"
+
 
 class TestBusinessRule:
     """Tests for business rule models."""

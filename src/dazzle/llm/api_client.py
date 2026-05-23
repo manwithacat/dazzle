@@ -313,7 +313,7 @@ You must return ONLY valid JSON with this exact structure:
         "list": {"found": true, "filters_needed": ["filter1"]}
       },
       "missing_operations": ["update"],
-      "additional_operations": [],
+      "additional_operations": [{"name": "operation_name", "description": "what it does and when it applies"}],
       "questions": []
     }
   ],

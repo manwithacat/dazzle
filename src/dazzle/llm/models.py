@@ -7,7 +7,7 @@ These models represent the structured output from LLM analysis of natural langua
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class QuestionPriority(StrEnum):
@@ -85,6 +85,21 @@ class CRUDAnalysis(BaseModel):
     missing_operations: list[str] = Field(default_factory=list)
     additional_operations: list[dict[str, Any]] = Field(default_factory=list)
     questions: list[str] = Field(default_factory=list)
+
+    @field_validator("additional_operations", mode="before")
+    @classmethod
+    def _coerce_string_operations(cls, v: Any) -> Any:
+        """Tolerate LLM drift (#1220).
+
+        The prompt example asks for ``[{"name": ..., "description": ...}]``,
+        but the LLM sometimes responds with bare strings — semantically
+        meaningful ("anonymise/redact", "bulk import") but the wrong shape.
+        Coerce bare strings to ``{"name": <string>}`` rather than fail the
+        whole parse over a field that isn't load-bearing.
+        """
+        if not isinstance(v, list):
+            return v
+        return [{"name": item} if isinstance(item, str) else item for item in v]
 
 
 class BusinessRule(BaseModel):

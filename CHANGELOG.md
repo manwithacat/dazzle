@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.157] - 2026-05-24
+
+### Fixed
+
+- **`CRUDAnalysis.additional_operations` now tolerates bare-string LLM output (#1220).** Pre-fix, the model required `list[dict[str, Any]]` but the LLM prompt example showed only an empty list with no shape hint — so the LLM filled the field with bare strings ("anonymise/redact", "search by name/email") and Pydantic rejected the whole parse. Two-part fix: (a) the prompt example now shows `[{"name": ..., "description": ...}]` so the LLM has the shape, and (b) a `field_validator` on the model coerces any bare-string items into `{"name": s}` dicts as a belt-and-suspenders tolerance for LLM drift. Three regression tests pin: bare strings coerce, dict items pass through, mixed input normalises cleanly. Closes #1220.
+
+### Agent Guidance
+
+- When wiring a new Pydantic model that consumes LLM output, two practices keep `analyze-spec`-class workflows robust: (1) give the prompt example a *concrete* shape — empty containers without shape hints invite LLM drift; (2) add a `field_validator` that coerces the most likely incorrect-but-meaningful LLM output rather than rejecting it.
+
 ## [0.71.156] - 2026-05-23
 
 ### Fixed
