@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.134] - 2026-05-23
+
+### Fixed
+
+- **CI `pip-audit` step now actually runs the audit (follow-up to #1200).** v0.71.133 enabled `--skip-editable` to exclude the editable `dazzle-dsl` install, but pip-audit 2.10.0 still emitted `ERROR:pip_audit._cli:dazzle-dsl: distribution marked as editable` and exited 1 *before* checking any vulnerabilities — the flag only suppresses the audit step for editables that successfully enumerate, not the enumeration error itself. The step now snapshots the resolved tree via `pip freeze --exclude-editable` and audits that snapshot with `--no-deps --disable-pip`, sidestepping the editable-enumeration path entirely while still auditing every transitive dep. Caught by the first CI run after v0.71.133 shipped.
+
 ## [0.71.133] - 2026-05-23
 
 ### Security

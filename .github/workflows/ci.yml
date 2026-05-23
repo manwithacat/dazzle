@@ -135,15 +135,26 @@ jobs:
       # `continue-on-error: true`). The `setup-dazzle` composite upgrades
       # pip to latest before install, so pip's own CVEs (CVE-2025-8869,
       # CVE-2026-1703, CVE-2026-3219, CVE-2026-6357 — all in pip <26.1)
-      # don't surface here. `--skip-editable` excludes the editable
-      # `dazzle-dsl` install itself (pip-audit cannot resolve editable
-      # distributions on PyPI). If a future CVE genuinely cannot be
-      # bumped, add `--ignore-vuln <GHSA-or-CVE-id>` with a rationale
-      # comment + a CHANGELOG `### Agent Guidance` entry naming the
-      # condition to remove it.
+      # don't surface here.
+      #
+      # We audit a `pip freeze --exclude-editable` snapshot with
+      # `--no-deps --disable-pip` rather than the live env: pip-audit
+      # 2.10.0 errors out on the editable `dazzle-dsl` install itself
+      # (cannot resolve editable distributions on PyPI), and its
+      # `--skip-editable` flag does NOT suppress this error — it only
+      # suppresses the audit for editables that successfully enumerate.
+      # Freezing the resolved tree first, then telling pip-audit not to
+      # re-resolve, sidesteps that entirely while still auditing every
+      # transitive dep.
+      #
+      # If a future CVE genuinely cannot be bumped, add
+      # `--ignore-vuln <GHSA-or-CVE-id>` with a rationale comment + a
+      # CHANGELOG `### Agent Guidance` entry naming the condition to
+      # remove it.
       run: |
         pip install pip-audit
-        pip-audit --strict --desc --skip-editable
+        pip freeze --exclude-editable > /tmp/audit-reqs.txt
+        pip-audit --strict --desc --no-deps --disable-pip -r /tmp/audit-reqs.txt
 
   lint:
     runs-on: ubuntu-latest
