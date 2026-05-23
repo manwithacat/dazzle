@@ -76,9 +76,27 @@ class CSRFConfig:
     )
 
 
-def configure_csrf_for_profile(profile: str) -> CSRFConfig:
-    """Get CSRF configuration based on security profile."""
-    return CSRFConfig(enabled=True)
+def configure_csrf_for_profile(
+    profile: str, extra_exempt_paths: list[str] | None = None
+) -> CSRFConfig:
+    """Get CSRF configuration based on security profile.
+
+    Args:
+        profile: Security profile name (``basic``/``standard``/``strict``).
+        extra_exempt_paths: Optional list of additional exact paths to mark as
+            CSRF-exempt. Merged with the framework defaults; duplicates are
+            silently de-duplicated. Use this from a downstream app's
+            ``ServerConfig.csrf_exempt_paths`` to register internal POST
+            endpoints (e.g. a public-read GraphQL gateway authenticated by
+            Bearer) without mutating ``app.state.csrf_config`` after boot
+            (#1212).
+    """
+    config = CSRFConfig(enabled=True)
+    if extra_exempt_paths:
+        for path in extra_exempt_paths:
+            if path not in config.exempt_paths:
+                config.exempt_paths.append(path)
+    return config
 
 
 def _parse_cookies(headers: list[tuple[bytes, bytes]]) -> dict[str, str]:
@@ -214,9 +232,18 @@ class CSRFMiddleware:
         )
 
 
-def apply_csrf_protection(app: Any, profile: str) -> None:
-    """Apply CSRF protection middleware to a FastAPI application."""
-    config = configure_csrf_for_profile(profile)
+def apply_csrf_protection(
+    app: Any, profile: str, extra_exempt_paths: list[str] | None = None
+) -> None:
+    """Apply CSRF protection middleware to a FastAPI application.
+
+    Args:
+        app: The FastAPI application.
+        profile: Security profile name (``basic``/``standard``/``strict``).
+        extra_exempt_paths: Optional list of additional exact paths to mark as
+            CSRF-exempt. See :func:`configure_csrf_for_profile` (#1212).
+    """
+    config = configure_csrf_for_profile(profile, extra_exempt_paths=extra_exempt_paths)
     app.state.csrf_config = config
 
     if not config.enabled:

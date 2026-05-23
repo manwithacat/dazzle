@@ -66,7 +66,7 @@ gap.
 | Concern | Framework-handled | App-responsibility | Gap / note |
 |---|---|---|---|
 | **Authentication & sessions** | Session cookie `dazzle_session`: `HttpOnly=true`, `Secure=true` when HTTPS, `SameSite=Lax`. 7-day TTL. PBKDF2-SHA256 password hashing (100 000 iterations, `auth/crypto.py`). JWT minimum secret length enforced (32 bytes, `jwt_auth.py`). | Rotate `DAZZLE_SECRET_KEY` on compromise. Set `AUTH_DATABASE_URL` separate from app DB if required. Choose `session_expires_days` appropriate to your risk profile. | No session fixation defence: login creates a new session but does not invalidate any pre-existing session for the same user. No automatic session rotation on privilege change. |
-| **CSRF** | Double-submit cookie pattern: `dazzle_csrf` cookie (HttpOnly=false so JS can read it), `X-CSRF-Token` header required on POST/PUT/DELETE/PATCH. Bearer-authenticated requests are exempt. Enabled on all security profiles. Exempt paths include `/auth/*`, `/webhooks/*`, health + docs endpoints. Source: `src/dazzle/back/runtime/csrf.py`. | No app action required — enabled by default. | Not documented prior to this guide. |
+| **CSRF** | Double-submit cookie pattern: `dazzle_csrf` cookie (HttpOnly=false so JS can read it), `X-CSRF-Token` header required on POST/PUT/DELETE/PATCH. Bearer-authenticated requests are exempt. Enabled on all security profiles. Default exempt list is enumerated in section 3 T3 below — health/docs endpoints, the auth router, webhooks, the `__test__` and `dev` mounts, the QA magic-link route, and idempotent consent/i18n cookie-setters. Source: `src/dazzle/back/runtime/csrf.py`. | App-level state-changing endpoints (e.g. a mounted `POST /graphql`) **must** echo the `dazzle_csrf` cookie back as `X-CSRF-Token` — they are not exempt by default. Use the `csrfFetch` client snippet in section 3 T3. Extend the exempt list via `ServerConfig.csrf_exempt_paths` (#1212) when an endpoint is intentionally Bearer-only or genuinely public. | None — but the default behaviour was previously undocumented; this surfaced as `403 {"detail":"CSRF token missing or invalid"}` on every `POST /graphql` from JS clients that copied the standard GraphQL fetch snippet. |
 | **Secrets management** | `env:VAR` indirection in `dazzle.toml` (`src/dazzle/core/manifest.py`) — database URL and OAuth credentials are never committed. DB URL masked in `/_dazzle/db-info` response (`subsystems/system_routes.py`). JWT secret auto-generated if not provided; minimum length 32 bytes enforced at startup. | Provide `DAZZLE_SECRET_KEY` as a strong random string (≥ 32 bytes) in production. Keep all secrets in your deployment platform's secret store, not in committed config files. | No framework-level secret redaction in log lines or error responses beyond the DB URL mask. A secret that appears in structured logging (e.g. via a misconfigured integration) will not be scrubbed. |
 | **Audit trail** | `AuditLogger` (`src/dazzle/back/runtime/audit_log.py`) writes every access-control decision (allow and deny, with policy match, user, IP, path, latency) to `_dazzle_audit_log` in PostgreSQL. Bounded async queue (default max 10 000 entries). Fail-closed on startup: server refuses to boot with audited entities and no `DATABASE_URL`. Queryable via `/_dazzle/audit/logs` (admin auth required). | Declare `audit:` on every entity that requires a durable access trail. Set a retention policy and archive/purge on a schedule appropriate to your compliance requirements. | `_dazzle_audit_log` is a regular PostgreSQL table — no append-only constraint, no signing. Opt-in tamper-evident hash chain available via `audit_integrity = "hash_chain"` in `ServerConfig` (#1197): each row's `row_hash = sha256(prev_hash || canonical_payload)` so a tampered row breaks the chain at that entry, and `AuditLogger.verify_chain()` reports the first mismatch. Default (`"none"`) leaves schema and write path byte-identical to pre-#1197 behaviour. The chain provides tamper evidence, not prevention. |
 | **API auth & rate limiting** | Rate-limit config per security profile (`src/dazzle/back/runtime/rate_limit.py`): `standard` — auth 10/min, API 60/min; `strict` — auth 5/min, API 30/min; `basic` — none. Rate limits are applied to the auth routes (login, register, forgot/reset password, 2FA verify) and file upload endpoints. Uses slowapi; falls back to no-op if not installed. | Install `slowapi` in production (`pip install slowapi`). Implement platform-level rate limiting (load balancer / API gateway) for generated business API routes. | Rate limits are **not auto-applied to generated entity routes** — `route_generator.py` has zero calls to the rate-limit decorator. The `rate_limit:` DSL field exists in the IR but is not wired to route generation. Protection for generated routes is opt-in or platform-level. |
@@ -130,6 +130,89 @@ the cookie on top-level navigations (e.g., link clicks that trigger a GET
 followed by a redirect to a POST). If your app uses POST-redirect patterns
 triggered by external navigations, consider whether `SameSite=Strict` is
 appropriate.
+
+**Default exempt list.** The middleware skips its check on a small set of
+paths that either (a) cannot carry an authority-escalating side effect, or
+(b) are authenticated by a different non-forgeable credential. The current
+defaults (read directly from `src/dazzle/back/runtime/csrf.py`):
+
+*Exact paths (`exempt_paths`):*
+
+- `/health` — liveness probe.
+- `/docs`, `/openapi.json`, `/redoc` — OpenAPI / Swagger UI.
+- `/feedbackreports` — framework feedback ingest.
+- `/_dazzle/consent`, `/_dazzle/consent/banner`, `/_dazzle/consent/state` —
+  idempotent cookie-setters reachable from anonymous marketing pages that
+  do not carry a CSRF token (#868).
+
+*Prefix paths (`exempt_path_prefixes`):*
+
+- `/webhooks/`, `/api/v1/webhooks/` — webhook receivers, authenticated by
+  per-provider signature verification.
+- `/__test__/` — pytest harness routes (only mounted when test mode is on).
+- `/dazzle/dev/` — dev control plane (gated by `enable_dev_mode`).
+- `/auth/` — login/logout/register; CSRF is not the right primitive here
+  (sessions don't exist yet at login time).
+- `/feedbackreports/`.
+- `/qa/` — QA magic-link generator (#768), triple-gated by env flags +
+  mount-time + request-time checks.
+- `/_dazzle/i18n/` — locale-switcher cookie endpoint (#955); writes the
+  `dz_locale` cookie after validating against the project's
+  `supported_locales` allow-list.
+
+Bearer-authenticated requests (`Authorization: Bearer …`) are exempt
+regardless of path — the Bearer token is itself non-forgeable.
+
+**GraphQL endpoints are NOT exempt.** If your app mounts `POST /graphql`,
+`POST /graphql/v1`, or any equivalent (Strawberry, Ariadne, Graphene, etc.),
+the request must carry `X-CSRF-Token`. GraphQL POSTs include mutations and
+are state-changing by design; exempting them would defeat the protection on
+every framework using GraphQL as its primary write API. The symptom of
+missing the token is `403 {"detail":"CSRF token missing or invalid"}` on
+every mutation — which is exactly the failure mode that motivated this
+documentation (#1212).
+
+**Client pattern.** Your front-end must echo the `dazzle_csrf` cookie back
+as the `X-CSRF-Token` header on every state-changing request. The minimal
+wrapper:
+
+```js
+// csrf-fetch.js
+function getCsrfToken() {
+  const m = document.cookie.match(/(?:^|; )dazzle_csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+async function csrfFetch(url, init = {}) {
+  const headers = new Headers(init.headers || {});
+  const token = getCsrfToken();
+  if (token) headers.set('X-CSRF-Token', token);
+  return fetch(url, { ...init, headers, credentials: init.credentials || 'same-origin' });
+}
+```
+
+Replace every state-changing `fetch(...)` call in your app with
+`csrfFetch(...)`. The cookie is set on the first `GET` response, so the
+first `csrfFetch` from a fresh page load will already find it.
+
+**Extending the exempt list.** If you mount an internal POST endpoint that
+is genuinely public-read or authenticated by Bearer only, declare it via
+`ServerConfig.csrf_exempt_paths` (#1212):
+
+```python
+from dazzle.back.runtime.server import ServerConfig
+
+config = ServerConfig(
+    security_profile="standard",
+    csrf_exempt_paths=["/integrations/stripe-webhook-v2"],
+)
+```
+
+Entries are merged with the framework defaults (duplicates de-duped) before
+the `CSRFConfig` is built. This replaces the previous workaround of mutating
+`app.state.csrf_config.exempt_paths` after framework boot, which relied on
+the middleware closing over the same list — an implementation detail. There
+is no env-var path for this knob; downstream apps set it at the
+`create_app_factory()` call site.
 
 ### T4: Cross-tenant data access
 
@@ -356,6 +439,11 @@ Work through this list before deploying to production.
       a defined cadence.
 - [ ] Verify that bulk-export surfaces carry the narrowest `permit:`/`scope:`
       rule consistent with your use case.
+- [ ] Ensure custom POST endpoints carry the CSRF token (or are explicitly
+      added to `ServerConfig.csrf_exempt_paths` if intentionally
+      Bearer-authenticated or genuinely public). The default exempt list
+      does **not** include `/graphql` — wire `csrfFetch` (section 3 T3) into
+      every GraphQL client.
 
 **PII**
 - [ ] Annotate personal data fields with `pii(category=..., sensitivity=...)`.

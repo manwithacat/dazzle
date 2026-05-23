@@ -149,6 +149,15 @@ class ServerConfig:
     # routes when entities have `field foo: file storage=<name>` bindings.
     storage_defs: "dict[str, StorageConfig]" = field(default_factory=dict)
 
+    # CSRF exempt paths (#1212). Opt-in extension for downstream apps that need
+    # to mark internal POST endpoints (e.g. a public-read GraphQL gateway
+    # authenticated by Bearer) as exempt without mutating
+    # `app.state.csrf_config.exempt_paths` after boot. Merged with the
+    # framework defaults in `csrf.configure_csrf_for_profile`; duplicates are
+    # de-duped. The default exempt list is documented in
+    # `docs/guides/security.md` section 3 T3 — `POST /graphql` is NOT in it.
+    csrf_exempt_paths: list[str] = field(default_factory=list)
+
     # Audit log tamper-resistance (#1197). Opt-in. Default "none" preserves
     # today's behaviour exactly — no schema change, no extra SELECT-prev-hash.
     # "hash_chain" enables a per-row sha256 chain (column `row_hash`) so a
@@ -318,6 +327,8 @@ class DazzleBackendApp:
         # Security (v0.11.0)
         self._security_profile = config.security_profile
         self._cors_origins = config.cors_origins
+        # #1212 — opt-in extra CSRF-exempt paths from ServerConfig.
+        self._csrf_exempt_paths = list(config.csrf_exempt_paths)
         # Event system (v0.18.0)
         self._event_framework: EventFramework | None = None
         # NOTE: _sitespec_data and _project_root are already set above (lines 201-203)
@@ -492,7 +503,11 @@ class DazzleBackendApp:
         # CSRF protection (v1.0.0)
         from dazzle.back.runtime.csrf import apply_csrf_protection
 
-        apply_csrf_protection(self._app, self._security_profile)
+        apply_csrf_protection(
+            self._app,
+            self._security_profile,
+            extra_exempt_paths=self._csrf_exempt_paths or None,
+        )
 
         # GZip compression (v0.33.0) — must be added before other middleware
         from starlette.middleware.gzip import GZipMiddleware

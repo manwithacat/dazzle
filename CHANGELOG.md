@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.139] - 2026-05-23
+
+### Added
+
+- **`ServerConfig.csrf_exempt_paths` — opt-in CSRF exempt-list extension (#1212).** Downstream apps that mount internal POST endpoints which are intentionally Bearer-authenticated or genuinely public (e.g. a public-read GraphQL gateway) can now register them via `ServerConfig(csrf_exempt_paths=["/integrations/foo"])`. The list is merged with the framework defaults in `csrf.configure_csrf_for_profile` (duplicates de-duped) before the `CSRFConfig` is built. Replaces the previous workaround of mutating `app.state.csrf_config.exempt_paths` after framework boot, which relied on the middleware closing over the same list — an implementation detail. No env-var path; set it at the `create_app_factory()` call site.
+
+### Documentation
+
+- **CSRF section in `docs/guides/security.md` now documents the default exempt list, calls out that `POST /graphql` requires a token, and provides a `csrfFetch` client snippet (#1212).** Section 3 T3 (CSRF threat walkthrough) gains a "Default exempt list" enumeration (read directly from `csrf.py`), a "GraphQL endpoints are NOT exempt" note pinning the issue's root confusion, the verbatim `csrfFetch` JS wrapper for clients, and a "Extending the exempt list" subsection showing the new `ServerConfig.csrf_exempt_paths` knob. Section 2's matrix row is rewritten from "Not documented prior to this guide" to a real entry, and section 5 gains a checklist item ("Ensure custom POST endpoints carry the CSRF token or are explicitly added to `csrf_exempt_paths`"). Closes #1212.
+
 ## [0.71.138] - 2026-05-23
 
 ### Fixed
