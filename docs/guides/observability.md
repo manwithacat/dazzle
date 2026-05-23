@@ -532,6 +532,34 @@ Series surfaced today include `dazzle_uptime_seconds`,
 0.5 / 0.95 / 0.99 quantile labels. See
 `src/dazzle/back/metrics/system_collector.py` for the full schema.
 
+### OTLP push export
+
+When `DAZZLE_OTEL_ENDPOINT` is set, the framework tracer attaches an
+OTLP HTTP span exporter alongside the local SQLite span file —
+`dazzle perf` keeps writing to `.dazzle/perf/<run-id>.db`, and every
+span is also pushed to the configured collector. The endpoint is the
+full URL of an OTLP/HTTP traces ingest, e.g.
+`https://otel.example.com/v1/traces`. When the env var is unset the
+push path is dormant and behaviour is identical to a pre-#1192 build.
+
+Install the optional extra and point at your collector:
+
+```bash
+pip install 'dazzle-dsl[observability]'
+export DAZZLE_OTEL_ENDPOINT=https://otel.example.com/v1/traces
+```
+
+Typical destinations:
+
+- **Grafana Cloud (Tempo):** `https://otlp-gateway-<region>.grafana.net/otlp/v1/traces`
+- **Datadog (Agent OTLP receiver):** `http://<agent-host>:4318/v1/traces`
+- **Jaeger (built-in OTLP HTTP):** `http://<jaeger-host>:4318/v1/traces`
+
+If `DAZZLE_OTEL_ENDPOINT` is set but the `observability` extra is not
+installed, the tracer logs a single WARNING naming the missing extra
+and continues with the local SQLite exporter — boot never crashes on
+a missing exporter dependency.
+
 ### Structured logs
 
 Dazzle logs to stdout in structured form. Log lines are tagged with

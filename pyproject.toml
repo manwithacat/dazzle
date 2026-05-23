@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.71.128"
+version = "0.71.129"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -146,6 +146,15 @@ perf = [
     "opentelemetry-instrumentation-fastapi>=0.48b0,<1",
     "opentelemetry-instrumentation-psycopg>=0.48b0,<1",
     "opentelemetry-instrumentation-asyncio>=0.48b0,<1",
+]
+# OTLP HTTP push exporter for runtime tracing (#1192 slice 2).
+# When ``DAZZLE_OTEL_ENDPOINT`` is set in the environment, the framework
+# tracer attaches a ``BatchSpanProcessor(OTLPSpanExporter(...))`` alongside
+# the local SQLite span exporter — see ``src/dazzle/perf/tracer.py``. The
+# env var path is no-op without this extra installed (a single WARNING is
+# logged naming the extra; the local SQLite path is unaffected).
+observability = [
+    "opentelemetry-exporter-otlp-proto-http>=1.27,<2",
 ]
 # Runtime server dependencies for `dazzle serve --local` (v0.34.3 — Issue #388)
 serve = [

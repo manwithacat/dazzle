@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.129] - 2026-05-23
+
+### Added
+
+- **OTLP push export — `DAZZLE_OTEL_ENDPOINT` (#1192 slice 2 of 2; closes #1192).** Setting `DAZZLE_OTEL_ENDPOINT=https://…/v1/traces` attaches a `BatchSpanProcessor(OTLPSpanExporter)` to the tracer provider **in addition to** the existing local SQLite span exporter — additive, no replacement. Install via the new `dazzle-dsl[observability]` extra (`opentelemetry-exporter-otlp-proto-http>=1.27,<2`). When the env var is unset, behaviour is byte-identical to today (pinned by test). When the env var is set but the extra isn't installed, the framework logs a single WARNING naming the extra and continues with the local SQLite path — boot is never broken. Docs (`observability.md`) cover the env-var contract and the extra.
+
 ## [0.71.128] - 2026-05-23
 
 ### Fixed

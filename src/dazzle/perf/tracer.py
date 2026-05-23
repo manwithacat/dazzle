@@ -22,6 +22,8 @@ which is only reached when tracing is explicitly requested.
 from __future__ import annotations
 
 import contextlib
+import logging
+import os
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
@@ -39,6 +41,22 @@ _TRACER_NAME = "dazzle"
 _PERF_EXTRA_HINT = (
     "dazzle perf tracing requires the optional 'perf' extra. "
     "Install it with:  pip install 'dazzle-dsl[perf]'"
+)
+
+# Environment variable consumed by :func:`configure_tracer` to attach a
+# ``BatchSpanProcessor(OTLPSpanExporter(...))`` alongside the local SQLite
+# exporter (#1192 slice 2). Value is a full URL — e.g.
+# ``https://otel.example.com/v1/traces``. Never strip or transform it.
+_OTLP_ENDPOINT_ENV = "DAZZLE_OTEL_ENDPOINT"
+
+# Hint surfaced in the WARNING log when the OTLP endpoint env var is set
+# but the optional ``observability`` extra is not installed. The local
+# SQLite exporter remains wired — boot does not crash.
+_OBSERVABILITY_EXTRA_HINT = (
+    "DAZZLE_OTEL_ENDPOINT is set but the OTLP HTTP exporter is not "
+    "installed. Install the optional 'observability' extra with:  "
+    "pip install 'dazzle-dsl[observability]'  — continuing without "
+    "OTLP push; the local SQLite span exporter is unaffected."
 )
 
 # Module-level provider reference.  ``dazzle_span`` calls
@@ -97,6 +115,10 @@ def configure_tracer(
     )
     processor: Any = BatchSpanProcessor(exporter) if batch else SimpleSpanProcessor(exporter)
     provider.add_span_processor(processor)
+    # OTLP push branch (#1192 slice 2). Additive — does not touch the
+    # local SQLite processor above. The env-var check stays inside this
+    # function so the no-env-var path is byte-identical to pre-#1192.
+    _maybe_attach_otlp_processor(provider)
     _provider = provider
     # Best-effort set on the OTel global; ignored silently after the first
     # call in a process (OTel locks the global after initial assignment).
@@ -113,6 +135,41 @@ def configure_tracer(
             exc_info=True,
         )
     return provider
+
+
+def _maybe_attach_otlp_processor(provider: TracerProvider) -> None:
+    """Attach an OTLP HTTP span exporter when ``DAZZLE_OTEL_ENDPOINT`` is set.
+
+    Reads the env var at call time. When unset, returns immediately —
+    the existing local span processor is left untouched and no OTel-OTLP
+    code path runs. This guarantees byte-identical behaviour to before
+    #1192 slice 2 for the default install.
+
+    When set, imports ``OTLPSpanExporter`` from the optional
+    ``observability`` extra (``opentelemetry-exporter-otlp-proto-http``)
+    and attaches a ``BatchSpanProcessor`` wrapping it onto ``provider``,
+    in addition to the local SQLite processor. The endpoint string is
+    passed through verbatim — operators are expected to provide the full
+    URL (e.g. ``https://otel.example.com/v1/traces``).
+
+    If the extra is not installed, logs a single WARNING naming the
+    extra and returns without raising. The local exporter stays wired,
+    so the tracer keeps working.
+    """
+    endpoint = os.environ.get(_OTLP_ENDPOINT_ENV)
+    if not endpoint:
+        return
+    try:
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,
+        )
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    except ModuleNotFoundError:
+        logging.getLogger(__name__).warning(_OBSERVABILITY_EXTRA_HINT)
+        return
+
+    otlp_exporter = OTLPSpanExporter(endpoint=endpoint)
+    provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
 
 
 def reset_tracer() -> None:
