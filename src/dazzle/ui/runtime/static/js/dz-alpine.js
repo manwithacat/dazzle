@@ -1531,6 +1531,7 @@ document.addEventListener("alpine:init", () => {
     filename: "",
     hasFile: false,
     uploading: false,
+    progress: 0, // 0-100; bytes-uploaded percentage (#1213 Phase A)
     error: "",
     dragging: false,
 
@@ -1547,45 +1548,68 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    async upload(file) {
+    upload(file) {
+      // XMLHttpRequest over fetch() to expose upload-progress events
+      // (#1213 Phase A). The fetch() Streams body progress API is not
+      // yet a uniform browser baseline, and `xhr.upload.onprogress`
+      // is what the existing <progress> element needs to display real
+      // bytes-loaded percentage instead of binary on/off.
       this.error = "";
       this.uploading = true;
+      this.progress = 0;
 
       const formData = new FormData();
       formData.append("file", file);
 
-      // Add entity context from form
       const form = this.$el.closest("form");
       const entityName = form?.dataset.dazzleForm || "";
       const fieldName = this.$el.dataset.dzFile || "";
       if (entityName) formData.append("entity", entityName);
       if (fieldName) formData.append("field", fieldName);
 
-      try {
-        const resp = await fetch("/files/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (!resp.ok) {
-          const errBody = await resp.json().catch(() => ({}));
-          throw new Error(errBody.detail || "Upload failed");
-        }
-        const data = await resp.json();
-        this.filename = data.filename || file.name;
-        this.hasFile = true;
-        // Set hidden input value
-        const hidden = this.$el.querySelector("[data-dz-file-value]");
-        if (hidden) hidden.value = data.url || data.id;
-      } catch (err) {
-        this.error = err.message || "Upload failed";
-      } finally {
-        this.uploading = false;
-      }
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/files/upload");
+        xhr.responseType = "json";
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            this.progress = Math.round((event.loaded / event.total) * 100);
+          }
+        };
+
+        xhr.onload = () => {
+          this.uploading = false;
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const data = xhr.response || {};
+            this.filename = data.filename || file.name;
+            this.hasFile = true;
+            this.progress = 100;
+            const hidden = this.$el.querySelector("[data-dz-file-value]");
+            if (hidden) hidden.value = data.url || data.id;
+          } else {
+            const detail = (xhr.response && xhr.response.detail) || "";
+            this.error = detail || "Upload failed";
+            this.progress = 0;
+          }
+          resolve();
+        };
+
+        xhr.onerror = () => {
+          this.uploading = false;
+          this.progress = 0;
+          this.error = "Upload failed";
+          resolve();
+        };
+
+        xhr.send(formData);
+      });
     },
 
     clear() {
       this.filename = "";
       this.hasFile = false;
+      this.progress = 0;
       this.error = "";
       const hidden = this.$el.querySelector("[data-dz-file-value]");
       if (hidden) hidden.value = "";

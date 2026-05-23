@@ -658,7 +658,7 @@ def _render_file(field: Any, value: Any, error: str) -> str:
         "</label>"
         '<div x-show="uploading">'
         '<progress data-dz-file-progress class="dz-file-upload-progress" '
-        'max="100"></progress></div>'
+        ':value="progress" max="100"></progress></div>'
         '<p x-show="error" class="dz-form-error" x-text="error" role="alert"></p>'
         "</div>"
     )

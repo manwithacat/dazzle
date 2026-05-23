@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.146] - 2026-05-23
+
+### Fixed
+
+- **File-upload `<progress>` now shows real bytes-uploaded percentage instead of binary on/off (#1213 Phase A).** `dzFileUpload.upload()` previously used `fetch()`, which does not expose upload-body progress events — so the `<progress>` element rendered by `_render_file` was driven by a binary `uploading` flag (visible during the request, hidden after) and provided no useful information for large files. The fix swaps `fetch()` for `XMLHttpRequest`, listens on `xhr.upload.onprogress`, and exposes a `progress` (0–100) Alpine state that the `<progress>` element now binds via `:value="progress"`. The endpoint, FormData payload, and response handling are unchanged — pure JS-side upgrade, zero DSL or backend surface change. This is the first of three planned phases on #1213; B (`ui:` DSL modifier syntax) and C (managed-upload ticket→S3→finalize flow) remain open pending the framework's auto-finalize work — see the design comment on the issue.
+
+### Agent Guidance
+
+- For binary file uploads from Alpine components, prefer `XMLHttpRequest` with `xhr.upload.onprogress` over `fetch()` whenever a `<progress>` element is in the markup. The fetch Streams progress API is not yet a uniform browser baseline; XHR upload-progress events are. Bind `<progress :value="progress" max="100">` against an Alpine state variable updated from the progress event's `loaded / total` ratio.
+
 ## [0.71.145] - 2026-05-23
 
 ### Fixed
