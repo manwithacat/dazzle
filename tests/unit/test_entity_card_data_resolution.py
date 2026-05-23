@@ -794,3 +794,54 @@ def test_thread_summary_short_snippet_not_truncated() -> None:
     body = out[0]["body"]
     assert ">Short<" in body
     assert "…" not in body
+
+
+# ---------------------------------------------------------------------------
+# Regression for #1215: `_safe_fetch` must normalise Pydantic-model rows
+# to dicts before returning, otherwise downstream renderers that call
+# `row.get(field)` raise AttributeError on the model instance.
+# ---------------------------------------------------------------------------
+
+
+def test_safe_fetch_normalises_pydantic_rows_to_dicts() -> None:
+    """`_safe_fetch` must call .model_dump() on row objects.
+
+    The three cross-entity entity_card modes (mini_bars, stamps,
+    thread_summary) read each row via `row.get(field)` — a `dict`
+    method that does not exist on Pydantic v2 models. Pre-#1215,
+    `_safe_fetch` returned the items list as-is, propagating model
+    instances; the renderers crashed with HTTP 500.
+    """
+    import asyncio
+
+    from pydantic import BaseModel
+
+    from dazzle.back.runtime.workspace_card_fetchers import _safe_fetch
+
+    class FakeRow(BaseModel):
+        id: str
+        score: int
+
+    class FakeRepo:
+        async def list(self, **_kwargs):
+            return {"items": [FakeRow(id="r1", score=42), FakeRow(id="r2", score=99)]}
+
+    rows = asyncio.run(_safe_fetch(FakeRepo(), filters={}, page_size=10, label="MarkingResult"))
+    # Renderers depend on .get(field) — must be plain dicts now.
+    assert all(isinstance(r, dict) for r in rows)
+    assert rows[0].get("score") == 42
+    assert rows[1].get("id") == "r2"
+
+
+def test_safe_fetch_handles_plain_dict_rows() -> None:
+    """Repos that already return dicts must pass through unchanged."""
+    import asyncio
+
+    from dazzle.back.runtime.workspace_card_fetchers import _safe_fetch
+
+    class FakeRepo:
+        async def list(self, **_kwargs):
+            return {"items": [{"id": "r1", "score": 7}]}
+
+    rows = asyncio.run(_safe_fetch(FakeRepo(), filters={}, page_size=10, label="X"))
+    assert rows == [{"id": "r1", "score": 7}]

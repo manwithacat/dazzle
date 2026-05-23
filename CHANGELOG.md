@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.147] - 2026-05-23
+
+### Fixed
+
+- **`entity_card` cross-entity sections (`mini_bars` / `stamps` / `thread_summary`) no longer crash with `AttributeError` on Pydantic-model rows (#1215).** `_safe_fetch` in `src/dazzle/back/runtime/workspace_card_fetchers.py` previously returned the items list from `repo.list(...)` as-is. When `include=None` (the path the cross-entity section fetchers take), the repository serialised rows via the `_row_to_model` code path — handing back Pydantic v2 model instances. The three render helpers `_render_mini_bars_body`, `_render_stamps_body`, and `_render_thread_summary_body` then called `row.get(field)`, a `dict` method that does not exist on Pydantic models, returning HTTP 500 and blocking the entity_card "360-degree" use case (pupil profile, customer profile, asset record). The fix normalises every row through `r.model_dump() if hasattr(r, "model_dump") else dict(r)` before returning — mirroring the same normalisation in `workspace_region_fetch.py:185`. The primary modes (`halo`, `flags`, `quick_actions`) were unaffected because they read primary-record fields through a different path. Closes #1215.
+
 ## [0.71.146] - 2026-05-23
 
 ### Fixed

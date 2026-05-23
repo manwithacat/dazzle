@@ -270,11 +270,19 @@ async def _safe_fetch(
     except Exception as exc:  # noqa: BLE001 — surface to ops log
         logger.warning("task_inbox source %s fetch raised %s", label, exc)
         return []
+    # Normalise rows to plain dicts so downstream `row.get(field)` calls
+    # in `_render_mini_bars_body` / `_render_stamps_body` /
+    # `_render_thread_summary_body` work regardless of whether the
+    # repository returned Pydantic models (when `include=None` takes
+    # the `_row_to_model` path) or dict rows. Mirrors the same
+    # normalisation in `workspace_region_fetch.py` (#1215).
     if isinstance(result, dict):
-        return list(result.get("items", []) or [])
-    if isinstance(result, list):
-        return list(result)
-    return []
+        raw_items = result.get("items", []) or []
+    elif isinstance(result, list):
+        raw_items = result
+    else:
+        return []
+    return [r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in raw_items]
 
 
 def _build_entity_card_sections(
