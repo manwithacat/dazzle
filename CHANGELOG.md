@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.155] - 2026-05-23
+
+### Added (#1217 Phase 2 — `share:` worked example)
+
+- **`fixtures/shared_parent_aggregate/`** — new framework-validation fixture that exercises `primary_aggregate.share:` end-to-end. Abstract diamond domain: `Person` is the pivot; `ProjectMember` (cohort source row) and `Contribution` (aggregated entity) both `ref Person` and not each other. A `cohort_strip` workspace declares two lenses (`count(Contribution)` + `sum(Contribution.weight)`) using `share: Person` to bridge the diamond. Resolves the [Pattern 4 gap](https://github.com/manwithacat/dazzle/issues/1217#issuecomment-4526580676) from the #1217 Phase 1 audit — agents searching for "shared parent" / "diamond" / "cohort over junction" now have a discoverable working DSL example in the fixtures directory.
+- **`tests/unit/test_shared_parent_aggregate_fixture.py`** — three test classes pinning: (a) fixture parses + linker accepts the diamond, (b) the lens's `primary_aggregate.share` field reaches the IR as `"Person"`, (c) the compute path resolves the FKs without raising the "not reachable" or "ambiguous" warnings that guard against silent failures.
+
+### Agent Guidance
+
+- When demonstrating the `share:` keyword to an agent or human, point at `fixtures/shared_parent_aggregate/dsl/app.dsl`. The schema is deliberately abstract (Person / Project / ProjectMember / Contribution) so the diamond shape stands out without domain noise. The fixture README documents the diamond visually.
+
 ## [0.71.154] - 2026-05-23
 
 ### Changed (agent-cognition surfacing — #1217 Phase 2)

@@ -1,0 +1,16 @@
+[project]
+name = "shared_parent_aggregate"
+title = "Shared-Parent Aggregate (cohort_strip share: validation)"
+description = "Abstract diamond domain: cohort source row and aggregated row both reference a shared parent entity (#1216)."
+root = "shared_parent_aggregate"
+version = "0.1.0"
+type = "benchmark"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = false
