@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.138] - 2026-05-23
+
+### Fixed
+
+- **TD-* nightlies fail identically because `assert_visible` runs without a preceding `navigate_to` (#1211).** `_execute_assert_visible_step` in `src/dazzle/testing/test_runner.py` read `context["_current_ui_url"]` (stashed by `navigate_to`) and fell back to the bare base UI URL when unset — which 302s to `/login`, fails, and reports identical errors across 21 TD-* tests every nightly. Fix: when no `navigate_to` has stashed a URL, auto-synthesise `/app/workspaces/<surfaces[0]>` from the design's `surfaces` list (already part of every TD-* design dict) and use that. `run_single_test` now stashes `_design_surfaces` in the run context so the per-step handler can read it without changing the handler signature. The runtime hint from #1135/#1149 still fires when the synthesised URL doesn't resolve, so the diagnostic path for genuinely broken designs is unchanged. Closes #1211.
+
 ## [0.71.137] - 2026-05-23
 
 ### Fixed

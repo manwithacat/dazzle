@@ -1096,6 +1096,9 @@ class TestRunner:
         # Context for storing step results (e.g., created entity IDs)
         context: dict[str, Any] = {
             "_persona": design.get("persona", "admin"),
+            # #1211: stash design's surfaces so assert_visible can
+            # auto-synthesise a URL when no navigate_to has run.
+            "_design_surfaces": design.get("surfaces", []) or [],
         }
 
         try:
@@ -1292,6 +1295,22 @@ class TestRunner:
         # context; fall back to the client's base ui_url when no
         # navigate happened.
         check_url = context.get("_current_ui_url")
+        if not check_url:
+            # #1211 fallback: synthesise URL from the design's first
+            # surface when no navigate_to has stashed one. Auto-prepend
+            # lets TD-* designs that emit assert_visible without a
+            # preceding navigate_to (e.g. STATUS_CHANGED triggers) still
+            # resolve to a real workspace URL instead of hitting the
+            # bare base URL → 302 → identical failure on every nightly.
+            surfaces = context.get("_design_surfaces") or []
+            if surfaces:
+                from urllib.parse import urljoin
+
+                check_url = urljoin(
+                    self.client.ui_url + "/",
+                    f"app/workspaces/{surfaces[0]}",
+                )
+                context["_current_ui_url"] = check_url
         result = self.client.check_ui_loads(url=check_url)
         # #1149: synthesise a fix hint from the failure shape.
         hint = ""
