@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.136] - 2026-05-23
+
+### Removed
+
+- **Orphan `_dazzle_migrations` table dropped via Alembic migration `0002_drop_dazzle_migrations` (#1208).** The table was abandoned in place when `MigrationHistory` was retired (commit `adb3e0ca`, shipped via #1195) but pre-existing deployments still carried it — on one staging environment it had grown to ~52K rows of dead writes before manual cleanup. New deployments never got the table, so two divergent states (stale legacy rows vs no table) coexisted across the fleet. The new framework migration runs `DROP TABLE IF EXISTS _dazzle_migrations` exactly once per deployment, collapsing all variants to one truth. `downgrade()` is intentionally a no-op: the table has no writer in the current codebase, so re-creating it empty would mislead future investigators. Closes #1208.
+
 ## [0.71.135] - 2026-05-23
 
 ### Changed
