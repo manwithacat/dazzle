@@ -219,6 +219,60 @@ def test_list_search_and_filter_can_coexist() -> None:
     assert search_pos < filter_pos
 
 
+# ── Issue #1205 regression ──
+
+
+def test_dispatch_ctx_region_name_uses_surface_name_not_table_id() -> None:
+    """Issue #1205: `region_name` must match the workspace region
+    container id (`region-<surface.name>`), not the renderer's `table_id`
+    (which gets a `dt-` prefix). Pre-fix the FilterBar emitted
+    `hx-target="#region-dt-device_list"` while the container was
+    `#region-device_list` — one-prefix mismatch fired htmx:targetError
+    on every filter change."""
+    table = _table(table_id="dt-device_list")
+    ctx = _build_dispatch_ctx(_RC(table), _Surface())
+    # Must prefer the surface name (no `dt-` prefix), not table_id.
+    assert ctx["region_name"] == "contact_list"
+    assert ctx["region_name"] != "dt-device_list"
+
+
+def test_dispatch_ctx_region_name_falls_back_to_table_id_without_surface_name() -> None:
+    """Defensive: if surface has no name (shouldn't happen in practice),
+    we fall back to table_id to preserve pre-fix behaviour rather than
+    emitting `region-` with an empty suffix."""
+    table = _table(table_id="dt-device_list")
+    # object() has no `.name` attribute — fall back to table_id.
+    ctx = _build_dispatch_ctx(_RC(table), object())
+    assert ctx["region_name"] == "dt-device_list"
+
+
+def test_list_filter_bar_hx_target_uses_surface_region_id() -> None:
+    """End-to-end: rendered FilterBar `hx-target` points at the
+    workspace region container (`#region-<surface.name>`), not at the
+    renderer's table_id with `dt-` prefix. Closes #1205."""
+    table = _table(
+        table_id="dt-contact_list",
+        columns=[
+            ColumnContext(key="name", label="Name"),
+            ColumnContext(
+                key="status",
+                label="Status",
+                filterable=True,
+                filter_type="select",
+                filter_options=[
+                    {"value": "active", "label": "Active"},
+                    {"value": "archived", "label": "Archived"},
+                ],
+            ),
+        ],
+    )
+    ctx = _build_dispatch_ctx(_RC(table), _Surface())
+    html = _render_list(ctx)
+    # FilterBar hx-target must hit the workspace region container.
+    assert "#region-contact_list" in html
+    assert "#region-dt-contact_list" not in html
+
+
 def test_list_omits_filter_bar_when_endpoint_missing() -> None:
     """Without `endpoint` we can't build hx-get URLs for the filter
     selects — omit the FilterBar rather than emit broken bindings."""

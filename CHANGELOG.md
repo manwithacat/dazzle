@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.137] - 2026-05-23
+
+### Fixed
+
+- **`htmx:targetError` on every `filterable_table` filter change (#1205).** `_build_dispatch_ctx` in `src/dazzle/ui/runtime/page_routes.py` was threading `table.table_id` (e.g. `dt-device_list`) into `region_name`, so the FilterBar emitted `hx-target="#region-dt-device_list"` while the workspace region container actually had `id="region-device_list"` — one-prefix mismatch that fired `htmx:targetError` on every dropdown change and visibly broke the filter. Fix: prefer `surface.name`, fall back to `table_id` only if surface has no name (defensive). Closes #1205.
+
 ## [0.71.136] - 2026-05-23
 
 ### Removed

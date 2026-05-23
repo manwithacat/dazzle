@@ -1278,7 +1278,14 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
             "total": int(getattr(table, "total", 0) or 0),
             "page": int(getattr(table, "page", 1) or 1),
             "page_size": int(getattr(table, "page_size", 20) or 20),
-            "region_name": getattr(table, "table_id", "") or "",
+            # Issue #1205: region_name must match the workspace region
+            # container id (`region-<surface.name>`), not the table_id.
+            # Pre-fix the FilterBar emitted `hx-target="#region-dt-<id>"`
+            # while the actual container was `#region-<surface.name>` —
+            # one-prefix mismatch fired htmx:targetError on every filter
+            # change. Prefer surface.name; fall back to table_id only if
+            # surface has no name (defensive — shouldn't happen).
+            "region_name": getattr(surface, "name", "") or getattr(table, "table_id", "") or "",
             "empty_message": getattr(table, "empty_message", "") or "No items found.",
             # Issue #1029 phase 4: typed empty-state variants (#807).
             # Adapter picks the right one based on `empty_kind`.
