@@ -34,6 +34,11 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from dazzle.back.runtime.event_bus import EntityEvent, EntityEventType
+from dazzle.back.runtime.retry_accumulator import (
+    RetryAccumulator,
+    RetryEvent,
+    get_default_accumulator,
+)
 from dazzle.core.http_client import async_retrying_request
 from dazzle.core.ir.integrations import (
     AuthType,
@@ -117,6 +122,7 @@ class MappingExecutor:
         *,
         update_entity: Any | None = None,
         cache: ApiResponseCache | None = None,
+        retry_accumulator: RetryAccumulator | None = None,
     ) -> None:
         self._appspec = appspec
         self._event_bus = event_bus
@@ -126,6 +132,13 @@ class MappingExecutor:
         self._results: list[MappingResult] = []
         self._cache = cache
         self._pack_ttl_cache: dict[str, int | None] = {}  # integration:entity_ref → TTL
+        # #1194: in-process retry-event accumulator. Defaults to the
+        # process-wide singleton so the /_dazzle/integrations/{name}/retries
+        # surface (which also resolves the singleton) reads the same
+        # state this executor writes. Volatile; resets on restart.
+        self._retry_accumulator: RetryAccumulator = (
+            retry_accumulator if retry_accumulator is not None else get_default_accumulator()
+        )
 
     @property
     def results(self) -> list[MappingResult]:
@@ -334,6 +347,40 @@ class MappingExecutor:
                 if method in ("POST", "PUT", "PATCH"):
                     request_kwargs["json"] = body
 
+                # #1194: record each retry attempt's outcome into the
+                # in-process accumulator. Surfaced via
+                # /_dazzle/integrations/{name}/retries. Volatile; resets
+                # on restart.
+                payload_summary = self._summarize_payload(entity_data)
+                accumulator = self._retry_accumulator
+                integration_name = integration.name
+                mapping_name = mapping.name
+
+                async def _on_attempt(
+                    attempt: int,
+                    total_attempts: int,
+                    status_code: int | None,
+                    error: str | None,
+                    next_backoff: float | None,
+                ) -> None:
+                    succeeded = (
+                        status_code is not None and 200 <= status_code < 300 and error is None
+                    )
+                    accumulator.record(
+                        RetryEvent(
+                            integration=integration_name,
+                            mapping=mapping_name,
+                            attempt=attempt,
+                            max_attempts=total_attempts,
+                            status_code=status_code,
+                            error=error,
+                            payload_summary=payload_summary,
+                            next_retry_at=None,
+                            backoff_seconds=next_backoff,
+                            succeeded=succeeded,
+                        )
+                    )
+
                 async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  retry via async_retrying_request below
                     resp = await async_retrying_request(
                         client,
@@ -343,6 +390,7 @@ class MappingExecutor:
                         backoff=tuple(
                             _RETRY_BACKOFF_BASE * (2**i) for i in range(max_attempts - 1)
                         ),
+                        on_attempt=_on_attempt,
                         **request_kwargs,
                     )
 
@@ -394,6 +442,25 @@ class MappingExecutor:
             except Exception as e:
                 result.error = str(e)
                 logger.warning("Mapping '%s' failed: %s", mapping.name, e)
+                # #1194: record the terminal failure (after retries
+                # exhausted, or non-transient). async_retrying_request's
+                # on_attempt fires for transient exceptions; a final
+                # entry here captures the post-loop terminal outcome
+                # with no further backoff.
+                self._retry_accumulator.record(
+                    RetryEvent(
+                        integration=integration.name,
+                        mapping=mapping.name,
+                        attempt=max_attempts,
+                        max_attempts=max_attempts,
+                        status_code=None,
+                        error=str(e),
+                        payload_summary=self._summarize_payload(entity_data),
+                        next_retry_at=None,
+                        backoff_seconds=None,
+                        succeeded=False,
+                    )
+                )
         finally:
             # Always release dedup lock after the request completes
             if is_cacheable and cache is not None:
@@ -409,6 +476,20 @@ class MappingExecutor:
     # =========================================================================
     # URL and Mapping Helpers
     # =========================================================================
+
+    @staticmethod
+    def _summarize_payload(entity_data: dict[str, Any]) -> str | None:
+        """Short identifier for a payload used in #1194 retry events.
+
+        Returns the entity's id-shaped field if present, else None.
+        Deliberately tiny — the retry accumulator must not hold large
+        payload bodies in memory.
+        """
+        for key in ("id", "uuid", "pk"):
+            value = entity_data.get(key)
+            if value:
+                return f"{key}={value}"
+        return None
 
     def _resolve_base_url(self, integration: IntegrationSpec) -> str:
         """Resolve the integration base URL.

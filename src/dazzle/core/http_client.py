@@ -8,6 +8,7 @@ and HTTP 502/503/504 responses).
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
@@ -98,6 +99,17 @@ def retrying_request(
     raise RuntimeError("retrying_request exhausted attempts without returning")
 
 
+#: Signature of an optional per-attempt observability callback. Each invocation
+#: corresponds to one outcome of one attempt of an HTTP call inside
+#: :func:`async_retrying_request`. ``status_code`` is None when the attempt
+#: raised a transient exception; ``error`` is None when an HTTP response came
+#: back. ``next_backoff`` is the delay before the *next* attempt and is None
+#: when the current attempt is terminal (success or last failure).
+AsyncAttemptCallback = Callable[
+    [int, int, "int | None", "str | None", "float | None"], Awaitable[None]
+]
+
+
 async def async_retrying_request(
     client: httpx.AsyncClient,
     method: str,
@@ -105,56 +117,124 @@ async def async_retrying_request(
     *,
     max_retries: int = MAX_RETRIES,
     backoff: tuple[float, ...] = BACKOFF_SECONDS,
+    on_attempt: AsyncAttemptCallback | None = None,
     **kwargs: Any,
 ) -> httpx.Response:
     """Async HTTP request with retry on transient errors.
 
     Same semantics as ``retrying_request`` but for async clients.
+
+    When ``on_attempt`` is provided, it is invoked once per attempt with
+    ``(attempt_number, max_attempts, status_code, error, next_backoff)``
+    so callers can record observability state (e.g. retry events).
+    Errors raised inside ``on_attempt`` are logged and swallowed —
+    observability hooks must never break the retry loop.
     """
     last_exc: Exception | None = None
+    max_attempts = max_retries + 1
     for attempt in range(max_retries + 1):
         try:
             response = await client.request(method, url, **kwargs)
 
             if response.status_code not in _TRANSIENT_STATUS_CODES:
+                if on_attempt is not None:
+                    await _safe_attempt(
+                        on_attempt,
+                        attempt + 1,
+                        max_attempts,
+                        response.status_code,
+                        None,
+                        None,
+                    )
                 return response
 
             # Transient server error — log and maybe retry
             if attempt < max_retries:
                 delay = _backoff_delay(attempt, backoff)
+                if on_attempt is not None:
+                    await _safe_attempt(
+                        on_attempt,
+                        attempt + 1,
+                        max_attempts,
+                        response.status_code,
+                        None,
+                        delay,
+                    )
                 logger.warning(
                     "HTTP %s %s returned %d (attempt %d/%d), retrying in %.1fs",
                     method,
                     url,
                     response.status_code,
                     attempt + 1,
-                    max_retries + 1,
+                    max_attempts,
                     delay,
                 )
                 await asyncio.sleep(delay)
                 continue
 
+            if on_attempt is not None:
+                await _safe_attempt(
+                    on_attempt,
+                    attempt + 1,
+                    max_attempts,
+                    response.status_code,
+                    None,
+                    None,
+                )
             return response
 
         except _TRANSIENT_EXCEPTIONS as exc:
             last_exc = exc
             if attempt < max_retries:
                 delay = _backoff_delay(attempt, backoff)
+                if on_attempt is not None:
+                    await _safe_attempt(
+                        on_attempt,
+                        attempt + 1,
+                        max_attempts,
+                        None,
+                        str(exc),
+                        delay,
+                    )
                 logger.warning(
                     "HTTP %s %s failed with %s (attempt %d/%d), retrying in %.1fs",
                     method,
                     url,
                     exc,
                     attempt + 1,
-                    max_retries + 1,
+                    max_attempts,
                     delay,
                 )
                 await asyncio.sleep(delay)
                 continue
 
+            if on_attempt is not None:
+                await _safe_attempt(
+                    on_attempt,
+                    attempt + 1,
+                    max_attempts,
+                    None,
+                    str(exc),
+                    None,
+                )
             raise
 
     # Should not be reached, but satisfies type checkers
     if last_exc is not None:
         raise last_exc
     raise RuntimeError("async_retrying_request exhausted attempts without returning")
+
+
+async def _safe_attempt(
+    callback: AsyncAttemptCallback,
+    attempt: int,
+    max_attempts: int,
+    status_code: int | None,
+    error: str | None,
+    next_backoff: float | None,
+) -> None:
+    """Invoke an ``on_attempt`` callback, swallowing any exception it raises."""
+    try:
+        await callback(attempt, max_attempts, status_code, error, next_backoff)
+    except Exception as exc:  # pragma: no cover — observability must not break retries
+        logger.debug("on_attempt callback failed: %s", exc)

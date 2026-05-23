@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.132] - 2026-05-23
+
+### Added
+
+- **`GET /_dazzle/approvals/pending` and `GET /_dazzle/integrations/{name}/retries` — two new operational surfaces (#1194).** The approvals endpoint walks every declared `ApprovalSpec`, queries the driving entity's CRUD service for rows where `trigger_field = trigger_value`, and returns counts plus capped `sample_ids` per approval block. The integration-retries endpoint surfaces in-flight and recent retry attempts driven by `MappingExecutor.async_retrying_request`. Both are additive, internal `/_dazzle/*` routes registered only when the AppSpec actually declares the corresponding blocks (approvals / integrations); same auth gating as the sibling event-/job-explorer surfaces (none — production deployments protect at the ingress).
+- **`async_retrying_request` now accepts an optional `on_attempt` callback (#1194).** One invocation per attempt with `(attempt, max_attempts, status_code, error, next_backoff)`. Errors raised inside the callback are swallowed — observability hooks must never break the retry loop. `MappingExecutor` uses this hook to record each attempt into a new in-process retry accumulator.
+
+### Agent Guidance
+
+- **Retry-event accumulator is IN-PROCESS and VOLATILE (#1194).** The `/_dazzle/integrations/{name}/retries` surface reads from `dazzle.back.runtime.retry_accumulator.get_default_accumulator()` — a process-wide singleton capped at 100 entries per integration (FIFO). It is deliberately not persisted to `ops_db`. State resets on every restart. The response payload carries a load-bearing `volatile: true` flag; do not build operational alerting against this endpoint's contents. Alert on the DLQ, `JobRun` status distribution, or the integration provider's own logs instead. Durable retry history is an explicit non-goal of this surface.
+- **New ops surfaces register conditionally.** `SystemRoutesSubsystem._setup_optional_features` only includes the approvals router when `ctx.appspec.approvals` is non-empty and the integrations-retries router when `ctx.appspec.integrations` is non-empty. The factories themselves are tolerant of empty inputs, but the registration site is the gating check.
+
 ## [0.71.131] - 2026-05-23
 
 ### Changed

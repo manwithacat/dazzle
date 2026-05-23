@@ -39,6 +39,8 @@ application — no sidecar or separate management port required.
 | `/_dazzle/events/dlq` | GET | Dead-letter queue contents | None (all environments) |
 | `/_dazzle/events/dlq/{event_id}/replay` | POST | Re-queue one DLQ event | None (all environments) |
 | `/_dazzle/metrics` | GET | Prometheus scrape endpoint (text exposition) | None (all environments) |
+| `/_dazzle/approvals/pending` | GET | Pending approvals per `ApprovalSpec` block | None; only when `approval` blocks declared |
+| `/_dazzle/integrations/{name}/retries` | GET | Recent retry attempts (in-process, volatile) | None; only when `integration` blocks declared |
 
 **Gating note:** The `/_dazzle/*` debug and event endpoints are
 registered unconditionally — there is no `DAZZLE_ENV`-based removal
@@ -577,32 +579,98 @@ Dazzle logs to stdout in structured form. Log lines are tagged with
 
 ---
 
-## 6. Not Yet Operationally Surfaced
+## 6. Approval Queues and Integration Retries (#1194)
 
-### Approval queues
+### `GET /_dazzle/approvals/pending` — pending approvals per block
 
 `approval:` blocks in the DSL declare maker-checker approval gates (as in
-`invoice_ops`'s `StandardApproval` and `HighValueApproval`). The DSL
-declares the quorum, approver role, and threshold. There are no
-`/_dazzle/approvals/*` endpoints — approval state is inspectable only
-through the entity status field that the approval gate drives (e.g.,
-`Invoice.status`). An operator wanting to know "how many invoices are
-awaiting approval?" queries the entity API directly:
+`invoice_ops`'s `StandardApproval` and `HighValueApproval`). For each
+declared `ApprovalSpec`, this endpoint returns the count of rows whose
+driving entity has `trigger_field = trigger_value` — i.e. the rows
+currently awaiting that approval — plus a sample of their primary-key
+ids.
 
 ```bash
-GET /api/invoices?status=submitted
+GET /_dazzle/approvals/pending?limit=20
 ```
 
-Operational endpoints for approval queues are not yet available (#1194).
+```json
+{
+  "approvals": [
+    {
+      "name": "StandardApproval",
+      "entity": "Invoice",
+      "trigger_field": "status",
+      "trigger_value": "submitted",
+      "count": 4,
+      "sample_ids": ["inv-1", "inv-2", "inv-3", "inv-4"]
+    }
+  ],
+  "total_pending": 4,
+  "limit": 20
+}
+```
 
-### Integration retry status
+The `limit` query param caps `sample_ids` per approval block (default 20,
+max 100); the `count` is always the full pending total. The endpoint is
+registered only when the AppSpec actually declares `approval` blocks. If
+a declared block references an entity with no registered CRUD service,
+its summary includes a non-null `error` field rather than 500-ing the
+whole response.
 
-`integration:` service blocks (such as `payment_provider` in
-`invoice_ops`) support automatic retry via process step declarations
-(`retry: { max_attempts: 3, backoff: exponential }`). The retry state
-lives in process execution records, but there are no `/_dazzle/integrations/*`
-endpoints to inspect retry history or current backoff state. Integration
-retry status is not operationally surfaced (#1194).
+### `GET /_dazzle/integrations/{name}/retries` — recent retry attempts
+
+`integration:` blocks (such as `payment_provider` in `invoice_ops`)
+support automatic retry on transient errors via `async_retrying_request`
+in `MappingExecutor`. This endpoint surfaces each retry attempt's
+outcome — attempt number, status code or transient error, the next
+backoff delay, and whether the attempt succeeded.
+
+```bash
+GET /_dazzle/integrations/payment_provider/retries?limit=50
+```
+
+```json
+{
+  "integration": "payment_provider",
+  "events": [
+    {
+      "integration": "payment_provider",
+      "mapping": "charge_card",
+      "attempt": 3,
+      "max_attempts": 3,
+      "status_code": 200,
+      "error": null,
+      "backoff_seconds": null,
+      "succeeded": true,
+      "last_attempt_at": "2026-05-23T10:42:11.123456+00:00"
+    }
+  ],
+  "total": 3,
+  "limit": 50,
+  "volatile": true
+}
+```
+
+Events are returned newest-first up to `limit` (default 50, max 200). An
+unknown integration name returns 404; the endpoint is registered only
+when `integration` blocks are declared.
+
+#### Volatility — IN-PROCESS, RESETS ON RESTART
+
+The retry events backing this endpoint live in a process-local
+accumulator (the `volatile: true` flag in the response is a load-bearing
+signal of this). The accumulator caps each integration at 100 entries
+(FIFO, oldest drop first) and is **not** persisted to `ops_db`. Every
+restart of the app process drops the full retry history.
+
+That trade-off is deliberate: the surface exists for in-flight and
+recent-restart inspection only. For durable retry history use the
+integration provider's own logs, or wait for a future persistent-retry
+feature. Do not build operational alerting against this endpoint's
+contents — alert on the DLQ (`/_dazzle/events/dlq`), the JobRun status
+distribution (`/_dazzle/jobs`), or your integration provider's logs
+instead.
 
 ---
 

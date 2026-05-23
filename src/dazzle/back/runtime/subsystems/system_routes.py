@@ -118,6 +118,43 @@ class SystemRoutesSubsystem:
                 )
                 ctx.app.include_router(job_explorer_router)
 
+            # Approvals explorer (#1194) — /_dazzle/approvals/pending.
+            # Only registered when `approval` blocks are declared. Reads
+            # the per-entity CRUD services from `ctx.services`, keyed by
+            # ``service.entity_name`` (mirrors `services_by_entity()`).
+            if ctx.appspec.approvals:
+                from dazzle.back.runtime.approvals_explorer import create_approvals_routes
+
+                services_by_entity = {
+                    entity_name: svc
+                    for svc in ctx.services.values()
+                    if (entity_name := getattr(svc, "entity_name", None))
+                }
+                approvals_router = create_approvals_routes(
+                    services_by_entity,
+                    list(ctx.appspec.approvals),
+                )
+                ctx.app.include_router(approvals_router)
+
+            # Integration retries explorer (#1194) —
+            # /_dazzle/integrations/{name}/retries. Only registered when
+            # `integration` blocks are declared. Reads from the
+            # process-wide RetryAccumulator singleton that MappingExecutor
+            # also writes to. The accumulator is IN-PROCESS and resets
+            # on restart — see retry_accumulator.py module docstring +
+            # the CHANGELOG entry for #1194.
+            if ctx.appspec.integrations:
+                from dazzle.back.runtime.integrations_retries import (
+                    create_integrations_retries_routes,
+                )
+                from dazzle.back.runtime.retry_accumulator import get_default_accumulator
+
+                integrations_retries_router = create_integrations_retries_routes(
+                    get_default_accumulator(),
+                    list(ctx.appspec.integrations),
+                )
+                ctx.app.include_router(integrations_retries_router)
+
         # Site API routes (v0.16.0). The page-router (`/`, `/site.js`,
         # `/styles/dazzle.css`) is registered by app_factory.py with the
         # full auth/persona/analytics wiring. Calling

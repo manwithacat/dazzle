@@ -5,8 +5,6 @@
   "approvals.ApprovalOutcomeSpec.target_status",
   "approvals.ApprovalSpec.auto_approve",
   "approvals.ApprovalSpec.quorum",
-  "approvals.ApprovalSpec.trigger_field",
-  "approvals.ApprovalSpec.trigger_value",
   "appspec.AppSpec.hless_mode",
   "conditions.ConditionValue.date_expr",
   "domain.BulkConfig.export_enabled",
