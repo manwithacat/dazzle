@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.152] - 2026-05-23
+
+### Added
+
+- **Validator warning when `soft_delete: true` is set on an entity (#1218 Option C, holding fix).** The `soft_delete:` keyword has been recognised in the parser since v0.34.0 and stored on `EntitySpec.soft_delete`, but no backend layer consumes it — read paths get no automatic `deleted_at IS NULL` filter, and authors who set the keyword get a silent no-op. The validator now emits a warning naming the issue (#1218), explaining that the keyword is currently unwired, and pointing at the workaround (declare `deleted_at: datetime optional` + include `deleted_at = null` in each surface's `scope:` rule, or use `archetype SoftDeletable` for the field plumbing). First-class support (auto-filter injection on all read paths, opt-in `?include_deleted=true` for audit personas, cascade semantics) is tracked in #1218 Option A — this Option C ship buys an honest holding pattern that doesn't punish authors for trying the keyword.
+
+### Agent Guidance
+
+- Do not use `soft_delete: true` expecting framework auto-behaviour today. The keyword parses but is a no-op until #1218 Option A ships. Until then: hand-roll `deleted_at: datetime optional` + per-surface `scope: deleted_at = null` rules, or stamp the field through `archetype SoftDeletable`. The validator now warns on the bare keyword — if you hit the warning, you're not getting what you expected.
+
 ## [0.71.151] - 2026-05-23
 
 ### Changed (breaking — replaces v0.71.150 syntax)

@@ -1822,6 +1822,22 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
                         f"(e.g., 'archived')."
                     )
 
+        # 4. `soft_delete: true` keyword set but unwired at runtime (#1218).
+        # The keyword is recognised in the grammar and stored on EntitySpec
+        # but no backend consumer applies the implied `deleted_at IS NULL`
+        # filter on read paths. Warn loudly until first-class support
+        # lands (issue #1218 tracks the Option A implementation).
+        if getattr(entity, "soft_delete", False):
+            warnings.append(
+                f"Entity '{entity.name}': `soft_delete: true` is recognised by the "
+                f"parser but is currently a no-op — the framework does not yet auto-"
+                f"apply a `deleted_at IS NULL` filter on read paths (tracked by #1218). "
+                f"Until first-class support lands, hand-roll the pattern: declare a "
+                f"`deleted_at: datetime optional` field and include `deleted_at = null` "
+                f"in each surface's `scope:` rule, or use `archetype SoftDeletable` "
+                f"for the field plumbing."
+            )
+
         # 4. Stringly-typed refs: <entity>_name or <entity>_email
         for field in entity.fields:
             if field.type.kind not in (ir.FieldTypeKind.STR, ir.FieldTypeKind.EMAIL):

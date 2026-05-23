@@ -411,3 +411,29 @@ class TestNavGroupIconConsistency:
 
         warnings = extended_lint(self._make_appspec_with_group([]))
         assert not any("mixes iconed" in w for w in warnings)
+
+
+class TestSoftDeleteKeywordWarning:
+    """#1218: `soft_delete: true` on an entity is currently a parse-
+    time stub (no backend wiring). Until first-class support lands,
+    the linter must call this out loudly so authors don't think the
+    keyword does anything.
+    """
+
+    def test_warns_when_soft_delete_keyword_set(self) -> None:
+        entity = ir.EntitySpec(
+            name="Document",
+            fields=[_id_field()],
+            soft_delete=True,
+        )
+        from dazzle.core.validator import extended_lint
+
+        warnings = extended_lint(_make_appspec([entity]))
+        assert any("`soft_delete: true`" in w and "no-op" in w and "#1218" in w for w in warnings)
+
+    def test_no_warning_when_soft_delete_keyword_absent(self) -> None:
+        entity = ir.EntitySpec(name="Document", fields=[_id_field()])
+        from dazzle.core.validator import extended_lint
+
+        warnings = extended_lint(_make_appspec([entity]))
+        assert not any("`soft_delete: true`" in w for w in warnings)
