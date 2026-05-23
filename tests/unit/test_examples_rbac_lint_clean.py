@@ -75,6 +75,11 @@ _DOGFOOD_EXEMPT = {
     "design_studio",
     # LLM intent demo — focus is classification + extraction, not RBAC.
     "llm_ticket_classifier",
+    # #1217 Phase 2/3 design-pressure surface for temporal / SCD support.
+    # The example is deliberately incomplete in places (TODO blocks marking
+    # desired-syntax for unimplemented temporal features); RBAC is present
+    # but the example exists to surface Phase 3 gaps, not teach RBAC.
+    "hr_records",
 }
 
 

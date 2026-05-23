@@ -1,0 +1,19 @@
+[project]
+name = "hr_records"
+version = "0.1.0"
+root = "hr_records.core"
+title = "HR Records"
+description = "Personnel system of record — exercises the temporal / effective-dated patterns that #1217 Phase 3 needs."
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = true
+provider = "session"
+allow_registration = false
+
+[ui]

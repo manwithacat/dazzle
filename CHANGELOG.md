@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.160] - 2026-05-24
+
+### Added (#1217 Phase 2/3 — example-app design-pressure surface)
+
+- **`examples/hr_records/`** — new example app: 50-person UK consulting firm HR system. The 14th example. Deliberately authored as a *credible* HR system (Person + Department + Role + Employment + Salary + ManagerLink), heavy on the temporal / effective-dated patterns that Phase 3 of #1217 will need. The example exists to **surface DSL gaps as concrete TODO blocks** rather than to teach an idiom; each gap carries an inline comment showing the desired syntax adjacent to the hand-rolled workaround. Sections covered:
+  - **Six entities** — Department (with self-ref `parent_department`), Role (with career-framework `level` enum), Person (identity), Employment + Salary + ManagerLink (the three temporal cores)
+  - **Four personas** — `hr_admin`, `manager`, `finance`, `employee` — exercising RBAC scope variance from tenant-wide read to self-only
+  - **Fourteen surfaces** — minimal CRUD per entity, just enough to make the workspaces functional
+  - **Four workspaces** — `staff_directory`, `person_detail`, `org_chart`, `compensation_review` — each plants TODO blocks for the temporal/hierarchy gaps it can't express
+  - **Comprehensive SPEC.md** — vision, four personas, full domain model, eight user flows, RBAC matrix, explicit out-of-scope list, predicted Phase 3 gap list
+- The example validates clean (warnings only, no errors), is added to the `_DOGFOOD_EXEMPT` list in `test_examples_rbac_lint_clean.py` (it's a Phase 3 pressure surface, not a teaching example for canonical RBAC), and is recognised by `test_cli_sweep` (count bumped from 13 → 14).
+
+### Agent Guidance
+
+- The TODO blocks in `examples/hr_records/dsl/app.dsl` are the literal spec for the upcoming Phase 3 temporal/SCD feature work. Each block carries an `# IF DAZZLE SUPPORTED IT, WE'D WRITE:` snippet showing the desired syntax. When designing Phase 3 features, these blocks collapse one-for-one into the new syntax — that's the validation that the feature design matches the design-pressure that generated it.
+- The example deliberately does *not* implement the `time_machine` workspace from SPEC.md flow 7 — that's the largest single Phase 3 ask (`?as_of=YYYY-MM-DD` URL param + entity-wide re-projection) and would require route-override scaffolding inappropriate for an example app. It exists as a SPEC.md flow + a workspace-block-level TODO comment.
+
 ## [0.71.159] - 2026-05-24
 
 ### Removed (breaking — closes #1222)

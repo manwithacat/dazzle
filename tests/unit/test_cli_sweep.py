@@ -129,10 +129,12 @@ class TestSweepIntegration:
         payload = json.loads(result.stdout)
         assert "apps" in payload
         assert "coverage" in payload
-        # 13 examples: contact_manager, custom_renderer, fieldtest_hub,
+        # 14 examples: contact_manager, custom_renderer, fieldtest_hub,
         # ops_dashboard, simple_task, support_tickets, the 5 reclassified
         # from fixtures/ (component_showcase, design_studio,
         # llm_ticket_classifier, pra, project_tracker), plus acme_billing
         # (#1174 — the multi-tenant adversarial-RBAC teaching example),
-        # plus invoice_ops (#1184 — invoice-approval / payment-ops keystone).
-        assert len(payload["apps"]) == 13
+        # plus invoice_ops (#1184 — invoice-approval / payment-ops keystone),
+        # plus hr_records (#1217 Phase 2 / Phase 3 design-pressure surface
+        # for temporal / SCD support).
+        assert len(payload["apps"]) == 14
