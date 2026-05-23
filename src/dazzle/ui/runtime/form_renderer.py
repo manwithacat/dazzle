@@ -610,6 +610,11 @@ def _render_file(field: Any, value: Any, error: str) -> str:
     accept_attr = _esc(extra.get("accept", "*/*"), quote=True)
     capture_val = extra.get("capture")
     capture_attr = f' capture="{_esc(capture_val, quote=True)}"' if capture_val else ""
+    # #1213: file ui_mode threads through `extra["ui_mode"]`. Emit a
+    # data-dz-file-mode attr so dzFileUpload.upload() can branch on it
+    # at the JS layer (ticket flow vs simple /files/upload POST).
+    ui_mode = extra.get("ui_mode")
+    ui_mode_attr = f' data-dz-file-mode="{_esc(ui_mode, quote=True)}"' if ui_mode else ""
     init_filename = _basename_or_url(value) if value else ""
     x_init_attr = ""
     if value:
@@ -619,7 +624,7 @@ def _render_file(field: Any, value: Any, error: str) -> str:
         required_when_empty = ' required aria-required="true"'
 
     return (
-        f'<div x-data="dzFileUpload" data-dz-file="{name_attr}" '  # nosemgrep
+        f'<div x-data="dzFileUpload" data-dz-file="{name_attr}"{ui_mode_attr} '  # nosemgrep
         f'class="dz-file-upload"{x_init_attr}>'
         f'<input type="hidden" name="{name_attr}" id="{field_id_attr}" '
         f'data-dazzle-field="{name_attr}" data-dz-file-value '

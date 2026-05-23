@@ -269,11 +269,16 @@ class TypeParserMixin:
             ui_mode=ui_mode,
         )
 
-    _FILE_UI_MODES_ACCEPTED: tuple[str, ...] = ("drag_drop",)
-    _FILE_UI_MODES_RESERVED: tuple[str, ...] = ("managed_upload",)
+    # #1213 Phase C (v0.71.149): `managed_upload` joined the accepted
+    # set. The framework's existing `verify_storage_field_keys` hook on
+    # entity-create POSTs serves as the implicit finalize — no separate
+    # finalize URL is needed for DSL-driven forms because the entity
+    # create handler runs the prefix-sandbox + head_object verifier
+    # before persisting (`route_generator.py:3307,3441`).
+    _FILE_UI_MODES_ACCEPTED: tuple[str, ...] = ("drag_drop", "managed_upload")
 
     def _parse_file_ui_modifier(self) -> str:
-        """Parse ``ui: <mode>`` inside file(...) parens (#1213 Phase B)."""
+        """Parse ``ui: <mode>`` inside file(...) parens (#1213 Phase B, C)."""
         key_token = self.expect_identifier_or_keyword()
         if key_token.value != "ui":
             raise make_parse_error(
@@ -285,15 +290,6 @@ class TypeParserMixin:
         self.expect(TokenType.COLON)
         mode_token = self.expect_identifier_or_keyword()
         mode: str = str(mode_token.value)
-        if mode in self._FILE_UI_MODES_RESERVED:
-            raise make_parse_error(
-                f"file(ui: {mode}) is reserved for #1213 Phase C "
-                f"(framework auto-finalize must land first). "
-                f"Accepted ui modes today: {', '.join(self._FILE_UI_MODES_ACCEPTED)}.",
-                self.file,
-                mode_token.line,
-                mode_token.column,
-            )
         if mode not in self._FILE_UI_MODES_ACCEPTED:
             raise make_parse_error(
                 f"Unknown file ui mode: {mode!r}. "

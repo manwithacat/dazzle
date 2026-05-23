@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.149] - 2026-05-23
+
+### Added
+
+- **`file(ui: managed_upload)` DSL modifier — Phase C of #1213.** The managed-upload mode is now accepted at parse time and wired end-to-end. When set, `dzFileUpload.upload()` switches from the simple `/files/upload` POST to the ticket flow: (1) `POST /api/{entity}/upload-ticket` (auto-generated for every entity with a `storage:` binding via `register_upload_ticket_routes`) returns a presigned POST policy + canonical `s3_key`; (2) the file is uploaded directly to S3 via the presigned form; (3) the hidden form input receives the `s3_key` value. On form submit, the framework's existing `verify_storage_field_keys` hook on entity-create POSTs (`route_generator.py:3307`, `:3441`) runs the prefix-sandbox + `head_object` verification — serving as the implicit finalize. **No separate finalize URL or DSL knob required** for DSL-driven create forms. Renderer emits `data-dz-file-mode="managed_upload"` on the component div; JS branches on the attribute. `dz-file-upload-progress` is driven by `xhr.upload.onprogress` on the S3 PUT (same per-byte progress as the simple path).
+
+### Agent Guidance
+
+- Prefer `file(ui: managed_upload)` over a route override when a `file` field needs direct-to-S3 uploads with progress UI. Requirements: (a) the field carries a `storage=<name>` binding; (b) the entity-create route is a standard auto-generated one (the verifier hook only runs on auto-routes, not project route overrides); (c) the form has `data-dazzle-form` set to the entity name (the auto-rendered form already does this). The framework's `verify_storage_field_keys` is the implicit finalize — do not write a project-side `/upload-finalize` route unless you need finalize semantics beyond head_object + prefix sandbox.
+- **Closes #1213.** Phases A (XHR progress), B (`ui: drag_drop` syntax), and C (`ui: managed_upload`) all shipped across v0.71.146 → v0.71.149.
+
 ## [0.71.148] - 2026-05-23
 
 ### Added

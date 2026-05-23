@@ -3105,9 +3105,8 @@ entity Doc "Doc":
         field = fragment.entities[0].fields[1]
         assert field.type.ui_mode is None
 
-    def test_file_managed_upload_rejected_pending_phase_c(self):
-        import pytest
-
+    def test_file_ui_managed_upload(self):
+        """Phase C: managed_upload is now accepted."""
         dsl = """
 module test.core
 app MyApp "My App"
@@ -3116,8 +3115,9 @@ entity Doc "Doc":
   id: uuid pk
   attachment: file(ui: managed_upload)
 """
-        with pytest.raises(Exception, match="Phase C"):
-            parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.ui_mode == "managed_upload"
 
     def test_file_unknown_ui_mode_rejected(self):
         import pytest

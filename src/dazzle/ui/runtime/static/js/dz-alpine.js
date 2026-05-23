@@ -1554,10 +1554,25 @@ document.addEventListener("alpine:init", () => {
       // yet a uniform browser baseline, and `xhr.upload.onprogress`
       // is what the existing <progress> element needs to display real
       // bytes-loaded percentage instead of binary on/off.
+      //
+      // Phase C: when data-dz-file-mode="managed_upload" is present,
+      // route through the ticket flow (POST /api/{entity}/upload-ticket
+      // → presigned POST to S3 → set hidden input to s3_key). The
+      // framework's verify_storage_field_keys hook on entity-create
+      // POSTs runs the prefix-sandbox + head_object verification on
+      // form submit, so no separate finalize round-trip is needed.
       this.error = "";
       this.uploading = true;
       this.progress = 0;
 
+      const mode = this.$el.dataset.dzFileMode || "";
+      if (mode === "managed_upload") {
+        return this._uploadManaged(file);
+      }
+      return this._uploadSimple(file);
+    },
+
+    _uploadSimple(file) {
       const formData = new FormData();
       formData.append("file", file);
 
@@ -1603,6 +1618,99 @@ document.addEventListener("alpine:init", () => {
         };
 
         xhr.send(formData);
+      });
+    },
+
+    async _uploadManaged(file) {
+      // managed_upload (#1213 Phase C): three steps.
+      // 1) POST /api/{entity}/upload-ticket → ticket payload
+      // 2) Direct presigned POST to ticket.upload.url with the file
+      //    binary; xhr.upload.onprogress drives the <progress> bar
+      // 3) Set hidden input value to ticket.s3_key — the entity-create
+      //    route's verify_storage_field_keys hook validates it on
+      //    form submit (prefix sandbox + head_object).
+      const form = this.$el.closest("form");
+      const entityName = form?.dataset.dazzleForm || "";
+      const fieldName = this.$el.dataset.dzFile || "";
+      if (!entityName) {
+        this.uploading = false;
+        this.error = "managed_upload requires data-dazzle-form on the form";
+        return;
+      }
+
+      const ticketUrl = `/api/${entityName.toLowerCase()}/upload-ticket`;
+      let ticket;
+      try {
+        const ticketResp = await fetch(ticketUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type || "application/octet-stream",
+            field: fieldName,
+          }),
+        });
+        if (!ticketResp.ok) {
+          const errBody = await ticketResp.json().catch(() => ({}));
+          throw new Error(
+            errBody.error || `ticket request failed (${ticketResp.status})`,
+          );
+        }
+        ticket = await ticketResp.json();
+      } catch (err) {
+        this.uploading = false;
+        this.progress = 0;
+        this.error = err.message || "Upload ticket request failed";
+        return;
+      }
+
+      const presigned = (ticket && ticket.upload) || {};
+      const s3Url = presigned.url;
+      const s3Fields = presigned.fields || {};
+      const s3Key = ticket.s3_key;
+      if (!s3Url || !s3Key) {
+        this.uploading = false;
+        this.error = "Malformed upload ticket: missing url or s3_key";
+        return;
+      }
+
+      const s3Form = new FormData();
+      for (const [k, v] of Object.entries(s3Fields)) s3Form.append(k, v);
+      s3Form.append("file", file);
+
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", s3Url);
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            this.progress = Math.round((event.loaded / event.total) * 100);
+          }
+        };
+
+        xhr.onload = () => {
+          this.uploading = false;
+          if (xhr.status >= 200 && xhr.status < 300) {
+            this.filename = file.name;
+            this.hasFile = true;
+            this.progress = 100;
+            const hidden = this.$el.querySelector("[data-dz-file-value]");
+            if (hidden) hidden.value = s3Key;
+          } else {
+            this.error = `S3 upload failed (${xhr.status})`;
+            this.progress = 0;
+          }
+          resolve();
+        };
+
+        xhr.onerror = () => {
+          this.uploading = false;
+          this.progress = 0;
+          this.error = "S3 upload failed";
+          resolve();
+        };
+
+        xhr.send(s3Form);
       });
     },
 

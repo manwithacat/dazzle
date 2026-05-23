@@ -633,6 +633,10 @@ def _build_form_fields(
             capture = element_options.get("capture")
             if capture:
                 extra["capture"] = capture
+            # #1213: thread the file ui_mode modifier through so the
+            # form renderer can emit the right data-dz-file-mode attr.
+            if field_spec.type.ui_mode:
+                extra["ui_mode"] = field_spec.type.ui_mode
 
         # #977 cycle 5 — rich-text DSL knobs. Field-level overrides
         # propagate into the form_field.html data-dz-options JSON; the

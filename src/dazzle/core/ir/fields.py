@@ -99,13 +99,15 @@ class FieldType(BaseModel):
     via_entity: str | None = None  # for has_many with junction table (m:n relationship)
     # v0.39.0: Per-field upload size limit
     max_size: int | None = None  # for file (bytes, e.g., 200*1024*1024 for 200MB)
-    # #1213 Phase B: file UI-mode modifier. Currently only `drag_drop`
-    # is accepted (the default rendering already does drag-drop, so the
-    # keyword is a documented no-op that reserves the syntax surface).
-    # `managed_upload` is rejected at parse time pending Phase C (the
-    # ticket→S3→finalize flow needs the framework auto-finalize work
-    # to land first — see #1213).
-    ui_mode: str | None = None  # for file: None | "drag_drop"
+    # #1213: file UI-mode modifier.
+    # - "drag_drop" (Phase B) — documented no-op label; the default
+    #   rendering already emits a drag-drop zone.
+    # - "managed_upload" (Phase C) — JS switches to the
+    #   ticket→S3→implicit-finalize flow via the auto-generated
+    #   `/api/{entity}/upload-ticket` route. The framework's
+    #   `verify_storage_field_keys` hook on entity-create POSTs
+    #   provides the implicit finalize (prefix-sandbox + head_object).
+    ui_mode: str | None = None  # for file: None | "drag_drop" | "managed_upload"
 
     model_config = ConfigDict(frozen=True)
 
