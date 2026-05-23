@@ -93,7 +93,6 @@ def test_direct_fk_batched_dispatch() -> None:
             source_entity="StudentProfile",
             repositories={"MarkingResult": repo},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     assert result == {"m1": 6.5, "m2": 4.2}
@@ -125,7 +124,6 @@ def test_source_relative_aggregate_no_entity() -> None:
             source_entity="StudentProfile",
             repositories={"StudentProfile": repo},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     assert result == {"m1": 7.0}
@@ -150,7 +148,6 @@ def test_via_clause_missing_junction_repo_warns(caplog: pytest.LogCaptureFixture
                 source_entity="StudentProfile",
                 repositories={"MarkingResult": repo},
                 scope_only_filters=None,
-                member_via="id",
             )
         )
     assert result == {}
@@ -185,7 +182,6 @@ def test_missing_fk_returns_empty_with_warning(caplog: pytest.LogCaptureFixture)
                 source_entity="StudentProfile",
                 repositories={"MarkingResult": repo},
                 scope_only_filters=None,
-                member_via="id",
             )
         )
     assert result == {}
@@ -223,7 +219,6 @@ def test_where_clause_propagates_to_aggregate_filters() -> None:
             source_entity="StudentProfile",
             repositories={"MarkingResult": repo},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     call = repo.aggregate.await_args
@@ -251,7 +246,6 @@ def test_count_aggregate_uses_count_measure() -> None:
             source_entity="StudentProfile",
             repositories={"MarkingResult": repo},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     measures = repo.aggregate.await_args.kwargs["measures"]
@@ -356,7 +350,6 @@ def test_via_junction_to_aggregated_batched() -> None:
             source_entity="StudentProfile",
             repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     assert result == {"s1": 6.5, "s2": 8.0}
@@ -401,7 +394,6 @@ def test_via_null_binding_batched() -> None:
             source_entity="StudentProfile",
             repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     sql_text, _params = aggregated._mock_cursor.execute.call_args.args
@@ -443,7 +435,6 @@ def test_via_no_link_warns(caplog: pytest.LogCaptureFixture) -> None:
                 source_entity="StudentProfile",
                 repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
                 scope_only_filters=None,
-                member_via="id",
             )
         )
     assert result == {}
@@ -467,7 +458,147 @@ def test_missing_repo_returns_empty() -> None:
             source_entity="StudentProfile",
             repositories={"StudentProfile": MagicMock()},
             scope_only_filters=None,
-            member_via="id",
         )
     )
     assert result == {}
+
+
+# ─────────────── #1216: via_pivot diamond-JOIN tests ───────────────
+
+
+def _make_repo_with_fks(entity_name: str, table_name: str, fks: dict[str, str]) -> MagicMock:
+    """Build a mock repo whose entity_spec has named ref fields.
+
+    `fks` maps field name → target entity name. Used to fake the diamond
+    schema (junction.student_profile → StudentProfile,
+    MarkingResult.student_profile → StudentProfile) without needing both
+    sides to FK to each other.
+    """
+    spec = MagicMock()
+    spec.name = entity_name
+    fields = []
+    id_field = MagicMock()
+    id_field.name = "id"
+    id_field.type = MagicMock()
+    id_field.type.kind = "uuid"
+    fields.append(id_field)
+    for col, target in fks.items():
+        ref = MagicMock()
+        ref.name = col
+        ref.type = MagicMock()
+        ref.type.kind = "ref"
+        ref.type.ref_entity = target
+        fields.append(ref)
+    spec.fields = fields
+
+    repo = MagicMock()
+    repo.entity_spec = spec
+    repo.table_name = table_name
+
+    cursor = MagicMock()
+    cursor.execute = MagicMock()
+    cursor.fetchall = MagicMock(return_value=[])
+    conn = MagicMock()
+    conn.cursor = MagicMock(return_value=cursor)
+    ctx = MagicMock()
+    ctx.__enter__ = MagicMock(return_value=conn)
+    ctx.__exit__ = MagicMock(return_value=False)
+    repo.db = MagicMock()
+    repo.db.placeholder = "%s"
+    repo.db.connection = MagicMock(return_value=ctx)
+
+    repo._mock_cursor = cursor
+    return repo
+
+
+def test_via_pivot_diamond_join_builds_two_hop_sql() -> None:
+    """#1216: junction (ClassEnrolment) and aggregated (MarkingResult)
+    both FK to a shared parent (StudentProfile). Neither FKs to the
+    other. via_pivot: StudentProfile bridges them in a single GROUP BY
+    query via direct equality JOIN on the pivot FK columns."""
+    junction = _make_repo_with_fks(
+        "ClassEnrolment",
+        "class_enrolment",
+        {"student_profile": "StudentProfile", "teaching_group": "TeachingGroup"},
+    )
+    aggregated = _make_repo_with_fks(
+        "MarkingResult", "marking_result", {"student_profile": "StudentProfile"}
+    )
+    aggregated._mock_cursor.fetchall = MagicMock(
+        return_value=[
+            {"member_id": "e1", "primary": 7.4},
+            {"member_id": "e2", "primary": 9.0},
+        ]
+    )
+
+    via = ViaCondition(
+        junction_entity="ClassEnrolment",
+        bindings=[
+            ViaBinding(junction_field="id", target="id", operator="="),
+        ],
+    )
+    lens = CohortStripLens(
+        id="cohort",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(func="avg", entity="MarkingResult", column="score"),
+            via=via,
+            via_pivot="StudentProfile",
+        ),
+    )
+
+    result = _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "e1"}, {"id": "e2"}],
+            lens=lens,
+            source_entity="ClassEnrolment",
+            repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
+            scope_only_filters=None,
+        )
+    )
+    assert result == {"e1": 7.4, "e2": 9.0}
+
+    assert aggregated._mock_cursor.execute.call_count == 1
+    sql_text, params = aggregated._mock_cursor.execute.call_args.args
+    # Diamond JOIN: both sides reference the pivot FK column.
+    assert 'FROM "marking_result" a' in sql_text
+    assert 'INNER JOIN "ClassEnrolment" j' in sql_text
+    assert 'a."student_profile" = j."student_profile"' in sql_text
+    assert 'GROUP BY j."id"' in sql_text
+    assert 'j."id" IN (%s, %s)' in sql_text
+    assert params[-2:] == ["e1", "e2"]
+
+
+def test_via_pivot_missing_pivot_fk_warns(caplog: pytest.LogCaptureFixture) -> None:
+    """When via_pivot is set but neither junction nor aggregated has a
+    FK to the named pivot, log a warning and return empty."""
+    junction = _make_repo_with_fks(
+        "ClassEnrolment", "class_enrolment", {"teaching_group": "TeachingGroup"}
+    )
+    aggregated = _make_repo_with_fks("MarkingResult", "marking_result", {})
+
+    via = ViaCondition(
+        junction_entity="ClassEnrolment",
+        bindings=[ViaBinding(junction_field="id", target="id", operator="=")],
+    )
+    lens = CohortStripLens(
+        id="x",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(func="count", entity="MarkingResult"),
+            via=via,
+            via_pivot="StudentProfile",
+        ),
+    )
+    with caplog.at_level("WARNING"):
+        result = _run(
+            compute_cohort_aggregate_primary(
+                items=[{"id": "e1"}],
+                lens=lens,
+                source_entity="ClassEnrolment",
+                repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
+                scope_only_filters=None,
+            )
+        )
+    assert result == {}
+    assert any("via_pivot" in r.message for r in caplog.records)

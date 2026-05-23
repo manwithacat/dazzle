@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.150] - 2026-05-23
+
+### Added
+
+- **`primary_aggregate.via_pivot:` — diamond-JOIN bridge for cohort_strip lenses (#1216).** When the junction (e.g. `ClassEnrolment`) and the aggregated entity (e.g. `MarkingResult`) share a common parent (e.g. `StudentProfile`) but **neither FKs to the other directly**, the framework previously returned empty for every cell (no FK in either direction → `_resolve_via_link_direction` returns None → warning + skip). The new `via_pivot:` key on `primary_aggregate` names the shared parent. The compute path verifies both junction and aggregated entity declare a `ref <pivot>` field and builds a single GROUP BY query joining on the pivot FK columns directly (`a.<agg_to_pivot_fk> = j.<junc_to_pivot_fk>`) — the pivot table itself never appears in the FROM clause. Stays one query per region (no N+1). Syntax:
+
+  ```dsl
+  primary_aggregate:
+    aggregate: avg(MarkingResult.score)
+    via: ClassEnrolment(id = id)
+    via_pivot: StudentProfile
+  ```
+
+  Unblocks AegisMark's `class_view.py` route override → declarative `cohort_strip` migration where the canonical pattern is "class roster with per-pupil aggregates through a shared StudentProfile parent." Closes #1216.
+
+### Changed
+
+- **`compute_cohort_aggregate_primary` lost its dead `member_via` kwarg.** The parameter was declared in the signature and described in the docstring but never read in the function body (#1216 cleanup). Removed from the function signature, docstring, and the single call site in `workspace_region_orchestration.py`. Existing tests that passed `member_via="id"` had the kwarg stripped — no semantic change.
+
+### Agent Guidance
+
+- When authoring a `cohort_strip` lens with a cross-entity `primary_aggregate` and the junction-aggregated pair don't directly FK to each other, reach for `via_pivot:` rather than reshaping the schema. The runtime walks `entity_spec.fields` looking for a `ref <pivot>` field on each side — if either is missing you get a clear warning and an empty result rather than a SQL error. The fix is to declare the `ref` field, not to invent a synthetic FK.
+
 ## [0.71.149] - 2026-05-23
 
 ### Added

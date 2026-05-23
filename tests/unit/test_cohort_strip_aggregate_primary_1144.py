@@ -138,6 +138,32 @@ def test_parses_aggregate_with_via_clause() -> None:
     assert via.bindings[0].junction_field == "student_profile"
 
 
+def test_parses_aggregate_with_via_pivot() -> None:
+    """#1216: via_pivot names the shared parent for diamond JOINs."""
+    lens = _parse_lens(
+        """          primary_aggregate:
+            aggregate: avg(MarkingResult.score)
+            via: ClassEnrolment(student_profile = id)
+            via_pivot: StudentProfile
+"""
+    )
+    spec = lens.primary_aggregate
+    assert spec.via_pivot == "StudentProfile"
+    assert spec.via is not None
+    assert spec.via.junction_entity == "ClassEnrolment"
+
+
+def test_via_pivot_optional_defaults_none() -> None:
+    """#1216: existing primary_aggregate blocks unchanged — via_pivot defaults None."""
+    lens = _parse_lens(
+        """          primary_aggregate:
+            aggregate: avg(MarkingResult.score)
+            via: ClassEnrolment(student_profile = id)
+"""
+    )
+    assert lens.primary_aggregate.via_pivot is None
+
+
 def test_parses_aggregate_with_inner_where_predicate() -> None:
     """Row-level predicates ride inside the AggregateRef's own
     ``where:`` (ADR-0024) — no separate top-level ``where:`` key."""

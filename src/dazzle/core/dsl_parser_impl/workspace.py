@@ -910,9 +910,10 @@ class WorkspaceParserMixin:
         ``where:`` clause. ``via:`` is optional and reuses the
         junction-binding grammar from scope rules (#530).
         """
-        _VALID_KEYS = {"aggregate", "via"}
+        _VALID_KEYS = {"aggregate", "via", "via_pivot"}
         aggregate_ref: ir.AggregateRef | None = None
         via_cond: ir.ViaCondition | None = None
+        via_pivot: str | None = None
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
@@ -931,6 +932,13 @@ class WorkspaceParserMixin:
             self.expect(TokenType.COLON)
             if key == "aggregate":
                 aggregate_ref = self.parse_aggregate_ref()
+                self.skip_newlines()
+            elif key == "via_pivot":
+                # #1216: diamond-JOIN bridge. Names the shared parent
+                # entity that both the junction and the aggregated
+                # entity FK to, when neither FKs to the other directly.
+                pivot_tok = self.expect_identifier_or_keyword()
+                via_pivot = str(pivot_tok.value)
                 self.skip_newlines()
             else:  # via
                 # Reuse the scope-rule via-binding grammar shape:
@@ -958,7 +966,7 @@ class WorkspaceParserMixin:
                 tok.line,
                 tok.column,
             )
-        return ir.LensAggregatePrimary(aggregate=aggregate_ref, via=via_cond)
+        return ir.LensAggregatePrimary(aggregate=aggregate_ref, via=via_cond, via_pivot=via_pivot)
 
     def _parse_primary_composite_block(self) -> ir.CompositePrimarySpec:
         """#1144 part 2: parse the indented body of a

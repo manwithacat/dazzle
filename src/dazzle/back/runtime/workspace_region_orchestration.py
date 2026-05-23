@@ -357,7 +357,6 @@ async def compute_region_render_inputs(
                     source_entity=ctx.source,
                     repositories=ctx.repositories,
                     scope_only_filters=scope_only_filters,
-                    member_via=str(getattr(cohort_cfg, "member_via", "") or ""),
                 )
 
     return RegionRenderInputs(
