@@ -184,20 +184,36 @@ def _run_interactive_qa(analyzer: Any, results: dict[str, Any]) -> dict[str, Any
     return results
 
 
-def _generate_dsl(analyzer: Any, results: dict[str, Any], output_path: Path) -> None:
-    """Generate DSL from analysis results."""
+def _generate_dsl(
+    analysis: Any,  # SpecAnalysis — typed loosely to avoid LLM import at module top
+    answers: dict[str, str],
+    output_path: Path,
+    *,
+    module_name: str = "main",
+    app_name: str = "app",
+) -> None:
+    """Generate DSL from analysis results.
+
+    #1221: the CLI previously called ``analyzer.generate_dsl(results)``
+    on the ``SpecAnalyzer`` instance — a method that doesn't exist. The
+    actual DSL generator lives on a separate ``DSLGenerator`` class
+    (``src/dazzle/llm/dsl_generator.py``) that wasn't wired in. This
+    version uses the module-level ``generate_dsl_from_analysis`` helper
+    that already exists for exactly this purpose.
+    """
     typer.echo("\n🔧 Generating DSL...")
 
     try:
-        dsl_code = analyzer.generate_dsl(results)
-
-        # Determine module name from results
-        app_info = results.get("app", {})
-        module_name = app_info.get("module", "main")
-        app_name = app_info.get("name", "app")
+        from dazzle.llm.dsl_generator import generate_dsl_from_analysis
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(dsl_code)
+        generate_dsl_from_analysis(
+            analysis=analysis,
+            answers=answers,
+            output_path=output_path,
+            module_name=module_name,
+            app_name=app_name,
+        )
 
         typer.echo(f"✓ DSL generated: {output_path}")
         typer.echo(f"   Module: {module_name}")
@@ -713,16 +729,22 @@ def analyze_spec_command(
         typer.echo("\n🔍 Analyzing specification...")
         analysis = analyzer.analyze(spec_content)
 
-        # Convert to dict for helper functions
+        # Convert to dict for helper functions (#1221: only used for the
+        # summary print + interactive Q&A; DSL generation now uses the
+        # typed SpecAnalysis object directly via DSLGenerator).
         results = analysis.model_dump()
 
         _print_analysis_summary(results)
 
+        answers: dict[str, str] = {}
         if interactive:
             results = _run_interactive_qa(analyzer, results)
+            # Interactive Q&A may stash user answers under "answers" — pass
+            # whatever's there through; DSLGenerator tolerates an empty dict.
+            answers = dict(results.get("answers", {}))
 
         if output:
-            _generate_dsl(analyzer, results, Path(output))
+            _generate_dsl(analysis, answers, Path(output))
 
     except ImportError:
         typer.echo("LLM support not available. Install with: pip install dazzle[llm]", err=True)

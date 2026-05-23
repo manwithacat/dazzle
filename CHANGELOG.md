@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.158] - 2026-05-24
+
+### Fixed
+
+- **`dazzle analyze-spec` now wires the DSL generator end-to-end (#1221).** Pre-fix, the CLI called `analyzer.generate_dsl(results)` on the `SpecAnalyzer` instance — a method that doesn't exist. The actual `DSLGenerator` class (and the `generate_dsl_from_analysis` module-level helper) lived in `src/dazzle/llm/dsl_generator.py` but had never been wired to the CLI. With #1219 (fence stripping) and #1220 (schema tolerance) shipped, the workflow now reaches DSL generation and produces output instead of crashing. Closes #1221.
+
+### Known limitations (not fixed in this ship, surfaced by running it)
+
+- **The DSL the LLM generator produces from a credible spec is not usable as-is.** When run against the in-progress `examples/hr_records/SPEC.md` (a ~250-line HR domain spec heavy on temporal patterns), the generator: (a) mis-interprets "end_date NULL = currently active" prose as an enum on the `end_date` field; (b) fabricates fields like `start_date / end_date: str(200)`; (c) drops all `ref` types between entities. The end-to-end pipeline is now *callable*, but the LLM-generation prompt is a separate workstream from this fix. File-and-fix has reached the point of diminishing returns; the next step is to hand-write the DSL from SPEC.md and use the LLM-generated draft only as a comparison artefact.
+
 ## [0.71.157] - 2026-05-24
 
 ### Fixed
