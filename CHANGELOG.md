@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.156] - 2026-05-23
+
+### Fixed
+
+- **`dazzle analyze-spec` no longer crashes on LLM responses wrapped in markdown code fences (#1219).** Claude's instruction-following defaults to fenced output (```` ```json\n{...}\n``` ````) even when the prompt asks for raw JSON. Pre-fix, `LLMAPIClient.analyze_spec` called `json.loads(response_text)` directly and exploded on the leading backtick. v0.71.156 adds a `_strip_code_fence` helper that drops the optional opening fence (with or without a language tag) and the closing fence before parsing; unfenced responses pass through unchanged. Six regression tests cover fenced/unfenced/whitespace/no-trailing-newline/inner-backticks/bare-fence shapes. Closes #1219.
+
+### Agent Guidance
+
+- When parsing LLM JSON output anywhere in the framework, normalise via `_strip_code_fence` (or an equivalent) before `json.loads`. Don't bother instructing the LLM to omit fences — they often add them anyway, and fence-stripping is one line and safe.
+
 ## [0.71.155] - 2026-05-23
 
 ### Added (#1217 Phase 2 — `share:` worked example)

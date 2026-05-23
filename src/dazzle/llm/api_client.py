@@ -28,6 +28,26 @@ def _claude_cli_available() -> bool:
     return shutil.which("claude") is not None
 
 
+def _strip_code_fence(s: str) -> str:
+    """Strip an optional markdown code fence from an LLM response (#1219).
+
+    Claude's instruction-following routinely wraps JSON output in
+    triple-backtick fences even when the prompt explicitly asks for
+    raw JSON. Rather than fight the model, normalise on the consumer
+    side. Handles ``\\`\\`\\`json\\n…\\n\\`\\`\\``` and bare ``\\`\\`\\`…\\`\\`\\``` and
+    leaves unfenced responses unchanged.
+    """
+    s = s.strip()
+    if not s.startswith("```"):
+        return s
+    # Drop the opening fence (and optional language tag on the same line).
+    s = s.split("\n", 1)[1] if "\n" in s else s[3:]
+    # Drop the closing fence if present.
+    if s.rstrip().endswith("```"):
+        s = s.rstrip()[:-3]
+    return s.strip()
+
+
 def _call_claude_cli(prompt: str, system_prompt: str | None = None) -> str:
     """
     Call Claude via CLI (uses subscription, no API key needed).
@@ -231,7 +251,11 @@ class LLMAPIClient:
         else:
             response_text = self._call_openai(system_prompt, user_prompt)
 
-        # Parse JSON response
+        # Parse JSON response — strip optional markdown code fences first
+        # (#1219). Claude's instruction-following defaults to fenced output
+        # like ```json\n{...}\n``` even when the prompt asks for raw JSON;
+        # rather than fight the LLM, normalise on read.
+        response_text = _strip_code_fence(response_text)
         try:
             analysis = json.loads(response_text)
             logger.info("Successfully parsed LLM analysis")
