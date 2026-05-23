@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.130] - 2026-05-23
+
+### Added
+
+- **`event_model` events can now declare a `version:` (#1189).** `EventSpec.version` existed in the IR with default `"1.0"` but the parser ignored a `version:` line in the DSL — the field never wired up to authored DSL input. `_parse_event_definition` now accepts `version: "X.Y"` on every `event` block and threads it into `EventSpec(version=...)`. Default remains `"1.0"` when omitted. This provides the *mechanism* for event-schema versioning. Detecting a "silent breaking change" — adding a required `custom_field` without bumping `version:` — needs schema history / diffing and is left for a future iteration; the heuristic "required-field + version 1.0" the investigation proposed was too noisy to ship.
+
 ## [0.71.129] - 2026-05-23
 
 ### Added

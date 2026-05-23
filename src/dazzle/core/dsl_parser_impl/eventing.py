@@ -188,6 +188,7 @@ class EventingParserMixin:
         topic: str | None = None
         payload_entity: str | None = None
         custom_fields: list[ir.EventFieldSpec] = []
+        version: str = "1.0"
 
         self.expect(TokenType.COLON)
         self.skip_newlines()
@@ -208,6 +209,13 @@ class EventingParserMixin:
                     self.advance()
                     self.expect(TokenType.COLON)
                     payload_entity = self.expect(TokenType.IDENTIFIER).value
+                elif key == "version":
+                    # #1189: opt-in event-schema version. Bump when adding
+                    # a required `custom_field` so consumers can detect a
+                    # breaking change. DSL form: `version: "2.0"`.
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    version = self.expect(TokenType.STRING).value
                 elif key == "fields":
                     self.advance()
                     self.expect(TokenType.COLON)
@@ -236,6 +244,7 @@ class EventingParserMixin:
             topic=topic or "default",
             payload_entity=payload_entity,
             custom_fields=custom_fields,
+            version=version,
         )
 
     def _parse_event_fields(self) -> list[ir.EventFieldSpec]:
