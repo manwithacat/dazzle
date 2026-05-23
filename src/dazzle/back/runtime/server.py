@@ -570,7 +570,7 @@ class DazzleBackendApp:
             logger.warning("Could not list tenants for schema migration: %s", exc)
             return
 
-        metadata = build_metadata(self._entities)
+        metadata = build_metadata(self._entities, surfaces=list(self._appspec.surfaces))
         # Normalise Heroku-style postgres:// alias before adding driver suffix
         sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
 
@@ -671,7 +671,7 @@ class DazzleBackendApp:
 
                 from dazzle.back.runtime.sa_schema import build_metadata
 
-                metadata = build_metadata(self._entities)
+                metadata = build_metadata(self._entities, surfaces=list(self._appspec.surfaces))
                 # Normalise Heroku-style postgres:// alias before adding driver suffix
                 sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
                 engine = _sa_create_engine(sa_url)

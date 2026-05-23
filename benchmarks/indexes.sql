@@ -11,21 +11,22 @@
 -- This file adds single-column b-tree indexes on those columns so the
 -- benchmark's `indexed` config can quantify their impact against `default`.
 --
--- MEASURED RESULT — these indexes do NOT help
+-- MEASURED RESULT — these single-column indexes do NOT help
 -- ---------------------
 -- The SP6 benchmark ran every probe against both configs at scales up to
 -- 1,000,000 invoices/tenant (3,000,000 Invoice rows).  The `indexed` config
 -- (these indexes) is within measurement noise of `default` at every scale:
--- list/read/search/aggregate latency does NOT materially change.  In short:
--- a sorted list path needs a composite index (a single-column tenant_id index
--- cannot satisfy ORDER BY created_at), search's leading-wildcard LIKE cannot
--- use a b-tree, aggregate is a full scan, and at 3 tenants the tenant_id
--- predicate is only ~1/3 selective.  The real lever is a COMPOSITE
--- (tenant_id, created_at) index plus full-text (tsvector/GIN) for search.
--- See docs/reference/performance-envelope.md ("Where it degrades") for the
--- full mechanism + caveats, and issue #1202.  These
--- single-column indexes are kept only as the benchmark's negative-result
--- comparison config — do not treat them as a production fix.
+-- list/read/search/aggregate latency does NOT materially change.  The real
+-- lever is a COMPOSITE (scope, default-sort) index plus full-text
+-- (tsvector/GIN) for search.
+--
+-- Composite (scope, default-sort) indexes shipped via the schema builder
+-- (#1202): `build_metadata` now accepts the AppSpec's `surfaces` and emits
+-- one `sa.Index(ix_list_<entity>_<scope>_<sort>, scope, sort)` per
+-- `list`-mode surface that declares a `ux.sort`.  Alembic autogenerate
+-- picks them up automatically.  This file is kept ONLY as the benchmark's
+-- negative-result comparison config for the single-column case — do not
+-- treat its contents as a production fix.
 --
 -- Apply with:
 --   psql $DB_URL -f benchmarks/indexes.sql

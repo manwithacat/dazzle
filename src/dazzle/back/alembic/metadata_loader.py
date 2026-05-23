@@ -63,4 +63,4 @@ def load_target_metadata() -> sqlalchemy.MetaData:
         known_renderers=known_renderer_names(manifest),
     )
     entities = convert_entities(appspec.domain.entities)
-    return build_metadata(entities)
+    return build_metadata(entities, surfaces=list(appspec.surfaces))

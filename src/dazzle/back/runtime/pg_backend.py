@@ -356,18 +356,25 @@ class PostgresBackend:
 
         return " ".join(parts)
 
-    def create_all_tables(self, entities: list[EntitySpec]) -> None:
+    def create_all_tables(
+        self,
+        entities: list[EntitySpec],
+        surfaces: list[Any] | None = None,
+    ) -> None:
         """Create tables for all entities in topological (FK-dependency) order.
 
         Uses SQLAlchemy MetaData.create_all() which internally sorts tables
         by foreign key dependencies, preventing errors when a table references
         another that hasn't been created yet.
+
+        When ``surfaces`` is provided, composite list-path indexes are
+        emitted alongside the base schema (#1202).
         """
         from sqlalchemy import create_engine
 
         from dazzle.back.runtime.sa_schema import build_metadata
 
-        metadata = build_metadata(entities)
+        metadata = build_metadata(entities, surfaces=surfaces)
         engine = create_engine(self._sa_url)
         try:
             metadata.create_all(engine, checkfirst=True)

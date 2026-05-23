@@ -22,6 +22,8 @@ from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES as _VIRTUAL_ENTITY_NAMES
 if TYPE_CHECKING:
     import sqlalchemy
 
+    from dazzle.core.ir import SurfaceSpec
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -188,11 +190,128 @@ def _field_to_column(
 
 
 # ---------------------------------------------------------------------------
+# List-surface composite index emission (#1202)
+# ---------------------------------------------------------------------------
+
+
+def _extract_scope_column(predicate: Any) -> str | None:
+    """Return the first-level scope column from a compiled scope predicate.
+
+    Walks the predicate tree (top-level only — no recursion into nested
+    booleans beyond the immediate AND/OR children) and returns the first
+    field name encountered on a ``ColumnCheck`` or ``UserAttrCheck`` node.
+    Returns ``None`` when the predicate is a logical constant
+    (``Tautology`` / ``Contradiction``) or otherwise lacks a column anchor
+    we can attach a composite index to.
+
+    The check is structural rather than imported: predicates land here as
+    ``ScopePredicate`` instances from :mod:`dazzle.core.ir.predicates` and
+    each node type carries a discriminator ``kind`` literal we can pivot on
+    without forcing the import (the back runtime stays decoupled from IR).
+    """
+    if predicate is None:
+        return None
+    kind = getattr(predicate, "kind", None)
+    if kind in ("column_check", "user_attr_check"):
+        field = getattr(predicate, "field", None)
+        return field if isinstance(field, str) else None
+    if kind == "bool_composite":
+        # Walk immediate children — pick the first column anchor we find.
+        # AND/OR composites where one branch carries the scope column are
+        # the common shape (e.g. ``tenant_id = current_user.tenant and
+        # status != archived``); the column-anchored branch is the lever.
+        for child in getattr(predicate, "children", []) or []:
+            anchor = _extract_scope_column(child)
+            if anchor is not None:
+                return anchor
+    return None
+
+
+def _list_index_specs(
+    entities: list[EntitySpec],
+    surfaces: list[SurfaceSpec] | None,
+) -> dict[str, list[tuple[str, str, str]]]:
+    """Compute composite (scope, default-sort) indexes per entity.
+
+    Walks every ``list``-mode surface, pairs it with the entity referenced
+    by ``surface.entity_ref``, extracts (a) the first-level scope column
+    from the entity's compiled scope predicate, (b) the first ``SortSpec``
+    field from ``surface.ux.sort``, and (c) a deterministic index name
+    ``ix_list_<entity>_<scope>_<sort>``.
+
+    Returns a mapping from entity name to a list of
+    ``(index_name, scope_column, sort_column)`` tuples. De-duplicates by
+    index name within the same entity. Silently skips:
+
+    - Surfaces whose mode is not ``list``.
+    - Surfaces missing ``entity_ref`` or pointing at an unknown entity.
+    - Surfaces without a ``ux.sort`` declared.
+    - Entities with no compiled scope predicate (or only logical constants).
+    - Duplicate (scope, sort) pairs that would emit the same index name.
+    """
+    if not surfaces:
+        return {}
+
+    entity_by_name = {e.name: e for e in entities}
+    by_entity: dict[str, list[tuple[str, str, str]]] = {}
+    seen_names: dict[str, set[str]] = {}
+
+    for surface in surfaces:
+        # Mode check — SurfaceMode.LIST has value "list".
+        mode_value = getattr(surface.mode, "value", surface.mode)
+        if mode_value != "list":
+            continue
+
+        entity_name = surface.entity_ref
+        if not entity_name:
+            continue
+        entity = entity_by_name.get(entity_name)
+        if entity is None:
+            continue
+
+        ux = surface.ux
+        if ux is None or not ux.sort:
+            continue
+        sort_col = ux.sort[0].field
+        if not sort_col:
+            continue
+
+        access = entity.access
+        if access is None or not access.scopes:
+            continue
+
+        scope_col: str | None = None
+        for scope_rule in access.scopes:
+            scope_col = _extract_scope_column(scope_rule.predicate)
+            if scope_col is not None:
+                break
+        if scope_col is None:
+            continue
+        if scope_col == sort_col:
+            # A composite over (X, X) is degenerate — skip rather than
+            # emit a single-column index that the benchmark already
+            # demonstrated does not move the numbers.
+            continue
+
+        index_name = f"ix_list_{entity_name}_{scope_col}_{sort_col}"
+        names = seen_names.setdefault(entity_name, set())
+        if index_name in names:
+            continue
+        names.add(index_name)
+        by_entity.setdefault(entity_name, []).append((index_name, scope_col, sort_col))
+
+    return by_entity
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
 
-def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
+def build_metadata(
+    entities: list[EntitySpec],
+    surfaces: list[SurfaceSpec] | None = None,
+) -> sqlalchemy.MetaData:
     """Convert a list of EntitySpec into a SQLAlchemy ``MetaData``.
 
     Each entity becomes a ``Table`` with columns derived from its fields.
@@ -207,8 +326,18 @@ def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
     Virtual entities (backed by Redis/in-memory) are excluded — they have
     no PostgreSQL table.
 
+    When ``surfaces`` is provided, the schema builder also emits one
+    composite ``(scope-column, default-sort-column)`` b-tree index per
+    ``list``-mode surface that declares a ``ux.sort`` (#1202). The
+    indexes are attached to the ``sa.Table`` via ``sa.Index`` so Alembic
+    autogenerate picks them up. Passing ``surfaces=None`` (the default)
+    preserves the prior behaviour — no list indexes are emitted.
+
     Args:
         entities: DSL entity specifications.
+        surfaces: Optional list of surface specifications. When provided,
+            composite list-path indexes are attached to the relevant
+            tables. Pass ``appspec.surfaces`` from the calling site.
 
     Returns:
         A populated ``sqlalchemy.MetaData`` instance.
@@ -229,6 +358,8 @@ def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
             ", ".join(sorted(involved)),
         )
 
+    list_indexes = _list_index_specs(db_entities, surfaces)
+
     for entity in db_entities:
         columns = []
 
@@ -240,7 +371,23 @@ def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
         for field in entity.fields:
             columns.append(_field_to_column(field, entity.name, entity_names, circular_edges))
 
-        sa.Table(entity.name, metadata, *columns)
+        # Build composite list-path indexes that target this entity. Index
+        # objects bound to a Table flow into the table's `.indexes` set
+        # automatically so Alembic autogenerate emits them as `CREATE
+        # INDEX` statements (#1202).
+        index_args: list[Any] = []
+        column_names = {c.name for c in columns}
+        for index_name, scope_col, sort_col in list_indexes.get(entity.name, []):
+            if scope_col not in column_names or sort_col not in column_names:
+                # Skip silently when the columns referenced by the surface
+                # do not exist on the entity (e.g. computed fields, or a
+                # surface authored ahead of the schema). The validator
+                # already lints these — we don't want to crash schema
+                # build over a soft inconsistency.
+                continue
+            index_args.append(sa.Index(index_name, scope_col, sort_col))
+
+        sa.Table(entity.name, metadata, *columns, *index_args)
 
     return metadata
 

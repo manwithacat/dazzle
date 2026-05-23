@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.131] - 2026-05-23
+
+### Changed
+
+- **`build_metadata` now accepts `surfaces` and emits composite list-path indexes (#1202).** Signature widened to `build_metadata(entities, surfaces=None)` — when `surfaces` is provided, the schema builder attaches one `sa.Index(ix_list_<entity>_<scope>_<sort>, scope_col, sort_col)` per `list`-mode surface that declares a `ux.sort`. The index is attached to the `sa.Table`, so Alembic autogenerate picks it up automatically. The first-level scope column is extracted from the entity's compiled scope predicate (`ColumnCheck` / `UserAttrCheck`, or the first column-anchored branch of a `BoolComposite`); the sort column is the first `SortSpec.field` in `surface.ux.sort`. Silently skips entities with tautology scopes, surfaces without `ux.sort`, and de-duplicates identical `(scope, sort)` pairs. Behaviour preserved when `surfaces=None` (the default). All five framework callers — `back/runtime/server.py` (two sites), `back/runtime/pg_backend.py`, `back/alembic/metadata_loader.py`, `cli/runtime_impl/build.py` — now thread `appspec.surfaces`. The SP6 benchmark identified the composite `(scope, default-sort)` index as the real lever; single-column `tenant_id`/FK indexes (kept under `benchmarks/indexes.sql` as the negative-result baseline) did not move the numbers.
+
 ## [0.71.130] - 2026-05-23
 
 ### Added
