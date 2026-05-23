@@ -99,6 +99,13 @@ class FieldType(BaseModel):
     via_entity: str | None = None  # for has_many with junction table (m:n relationship)
     # v0.39.0: Per-field upload size limit
     max_size: int | None = None  # for file (bytes, e.g., 200*1024*1024 for 200MB)
+    # #1213 Phase B: file UI-mode modifier. Currently only `drag_drop`
+    # is accepted (the default rendering already does drag-drop, so the
+    # keyword is a documented no-op that reserves the syntax surface).
+    # `managed_upload` is rejected at parse time pending Phase C (the
+    # ticket→S3→finalize flow needs the framework auto-finalize work
+    # to land first — see #1213).
+    ui_mode: str | None = None  # for file: None | "drag_drop"
 
     model_config = ConfigDict(frozen=True)
 

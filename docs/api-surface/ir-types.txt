@@ -954,6 +954,7 @@ ir_class: FieldType
     - ref_entity: str | None = None
     - relationship_behavior: RelationshipBehavior | None = None
     - scale: int | None = None
+    - ui_mode: str | None = None
     - via_entity: str | None = None
 
 ir_class: FitnessSpec

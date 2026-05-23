@@ -3060,6 +3060,80 @@ entity Doc "Doc":
         assert field.type.max_size is None
 
 
+class TestFileUiMode:
+    """#1213 Phase B: `file(ui: drag_drop)` modifier parsing."""
+
+    def test_file_ui_drag_drop_only(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Doc "Doc":
+  id: uuid pk
+  attachment: file(ui: drag_drop)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.kind.value == "file"
+        assert field.type.ui_mode == "drag_drop"
+        assert field.type.max_size is None
+
+    def test_file_size_and_ui_drag_drop(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Doc "Doc":
+  id: uuid pk
+  attachment: file(200MB, ui: drag_drop)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.max_size == 200 * 1024 * 1024
+        assert field.type.ui_mode == "drag_drop"
+
+    def test_file_bare_has_no_ui_mode(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Doc "Doc":
+  id: uuid pk
+  attachment: file
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.ui_mode is None
+
+    def test_file_managed_upload_rejected_pending_phase_c(self):
+        import pytest
+
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Doc "Doc":
+  id: uuid pk
+  attachment: file(ui: managed_upload)
+"""
+        with pytest.raises(Exception, match="Phase C"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_file_unknown_ui_mode_rejected(self):
+        import pytest
+
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Doc "Doc":
+  id: uuid pk
+  attachment: file(ui: bogus_mode)
+"""
+        with pytest.raises(Exception, match="Unknown file ui mode"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+
 class TestExternalActionLinks:
     """Tests for external URL action links on surfaces (#542)."""
 

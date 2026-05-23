@@ -231,14 +231,78 @@ class TypeParserMixin:
         return ir.FieldType(kind=ir.FieldTypeKind.MONEY, currency_code=currency_code)
 
     def _parse_file_type(self) -> ir.FieldType:
-        """Parse file or file(200MB) type (v0.9.5, v0.39.0)."""
+        """Parse file, file(200MB), file(ui: drag_drop), or
+        file(200MB, ui: drag_drop) type.
+
+        - v0.9.5: bare ``file``
+        - v0.39.0: ``file(200MB)`` per-field size limit
+        - v0.71.148 (#1213 Phase B): ``ui:`` modifier accepting
+          ``drag_drop`` as a documented no-op (the default rendering
+          already does drag-drop). ``managed_upload`` is reserved
+          for Phase C and rejected at parse time pending the
+          framework auto-finalize work.
+        """
         self.advance()
         max_size = None
+        ui_mode = None
         if self.match(TokenType.LPAREN):
             self.advance()
-            max_size = self._parse_size_literal()
+            if self.match(TokenType.NUMBER):
+                max_size = self._parse_size_literal()
+                if self.match(TokenType.COMMA):
+                    self.advance()
+                    ui_mode = self._parse_file_ui_modifier()
+            elif self.match(TokenType.IDENTIFIER):
+                ui_mode = self._parse_file_ui_modifier()
+            else:
+                bad = self.current_token()
+                raise make_parse_error(
+                    f"Expected size literal (e.g. 200MB) or 'ui:' modifier inside file(...), got {bad.value!r}",
+                    self.file,
+                    bad.line,
+                    bad.column,
+                )
             self.expect(TokenType.RPAREN)
-        return ir.FieldType(kind=ir.FieldTypeKind.FILE, max_size=max_size)
+        return ir.FieldType(
+            kind=ir.FieldTypeKind.FILE,
+            max_size=max_size,
+            ui_mode=ui_mode,
+        )
+
+    _FILE_UI_MODES_ACCEPTED: tuple[str, ...] = ("drag_drop",)
+    _FILE_UI_MODES_RESERVED: tuple[str, ...] = ("managed_upload",)
+
+    def _parse_file_ui_modifier(self) -> str:
+        """Parse ``ui: <mode>`` inside file(...) parens (#1213 Phase B)."""
+        key_token = self.expect_identifier_or_keyword()
+        if key_token.value != "ui":
+            raise make_parse_error(
+                f"Expected 'ui:' modifier inside file(...), got {key_token.value!r}",
+                self.file,
+                key_token.line,
+                key_token.column,
+            )
+        self.expect(TokenType.COLON)
+        mode_token = self.expect_identifier_or_keyword()
+        mode: str = str(mode_token.value)
+        if mode in self._FILE_UI_MODES_RESERVED:
+            raise make_parse_error(
+                f"file(ui: {mode}) is reserved for #1213 Phase C "
+                f"(framework auto-finalize must land first). "
+                f"Accepted ui modes today: {', '.join(self._FILE_UI_MODES_ACCEPTED)}.",
+                self.file,
+                mode_token.line,
+                mode_token.column,
+            )
+        if mode not in self._FILE_UI_MODES_ACCEPTED:
+            raise make_parse_error(
+                f"Unknown file ui mode: {mode!r}. "
+                f"Accepted: {', '.join(self._FILE_UI_MODES_ACCEPTED)}.",
+                self.file,
+                mode_token.line,
+                mode_token.column,
+            )
+        return mode
 
     def _parse_url_type(self) -> ir.FieldType:
         """Parse url type (v0.9.5)."""

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.148] - 2026-05-23
+
+### Added
+
+- **`file(ui: drag_drop)` DSL modifier — Phase B of #1213.** The `file` field type now accepts an optional `ui:` modifier inside the type parens. Today only `drag_drop` is accepted, and it is a *documented no-op*: the default rendering already emits a drag-drop zone (`@dragover` / `@drop` handlers, click-to-pick fallback, the "Click to upload or drag and drop" prompt — see `form_renderer.py:_render_file`). The DSL keyword reserves the syntax surface so future visual variants land as an additive change. Syntax: `file(ui: drag_drop)`, `file(200MB, ui: drag_drop)`. `managed_upload` is reserved for Phase C and rejected at parse time with a message pointing back at #1213 — the framework's `/api/{entity}/upload-finalize` story (`storage/routes.py:18-22`) needs to land before C can ship cleanly. Unknown ui modes also raise at parse time with the accepted list.
+
+### Agent Guidance
+
+- When writing or migrating a Dazzle DSL `file` field, prefer the bare form (`file` / `file(200MB)`) unless you specifically want to *document* drag-drop intent — the default render already does drag-drop, so `ui: drag_drop` is a label, not a behaviour switch. Do not write `ui: managed_upload` yet; it's reserved pending Phase C of #1213. Per-byte upload progress is automatic since v0.71.146 (no `progress:` flag needed).
+
 ## [0.71.147] - 2026-05-23
 
 ### Fixed

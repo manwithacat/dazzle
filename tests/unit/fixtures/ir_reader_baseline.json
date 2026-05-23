@@ -50,6 +50,7 @@
   "fidelity.FidelityReport.integration_fidelity",
   "fidelity.SurfaceFidelityScore.interaction",
   "fields.FieldSpec.default_expr",
+  "fields.FieldType.ui_mode",
   "fields.FieldType.via_entity",
   "fk_graph.FKEdge.from_entity",
   "fk_graph.PathStep.from_entity",
