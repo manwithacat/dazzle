@@ -184,49 +184,6 @@ def _run_interactive_qa(analyzer: Any, results: dict[str, Any]) -> dict[str, Any
     return results
 
 
-def _generate_dsl(
-    analysis: Any,  # SpecAnalysis — typed loosely to avoid LLM import at module top
-    answers: dict[str, str],
-    output_path: Path,
-    *,
-    module_name: str = "main",
-    app_name: str = "app",
-) -> None:
-    """Generate DSL from analysis results.
-
-    #1221: the CLI previously called ``analyzer.generate_dsl(results)``
-    on the ``SpecAnalyzer`` instance — a method that doesn't exist. The
-    actual DSL generator lives on a separate ``DSLGenerator`` class
-    (``src/dazzle/llm/dsl_generator.py``) that wasn't wired in. This
-    version uses the module-level ``generate_dsl_from_analysis`` helper
-    that already exists for exactly this purpose.
-    """
-    typer.echo("\n🔧 Generating DSL...")
-
-    try:
-        from dazzle.llm.dsl_generator import generate_dsl_from_analysis
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        generate_dsl_from_analysis(
-            analysis=analysis,
-            answers=answers,
-            output_path=output_path,
-            module_name=module_name,
-            app_name=app_name,
-        )
-
-        typer.echo(f"✓ DSL generated: {output_path}")
-        typer.echo(f"   Module: {module_name}")
-        typer.echo(f"   App: {app_name}")
-        typer.echo("\nNext steps:")
-        typer.echo(f"   1. Review and customize {output_path}")
-        typer.echo("   2. Run: dazzle validate")
-        typer.echo("   3. Run: dazzle build")
-    except Exception as e:
-        typer.echo(f"Error generating DSL: {e}", err=True)
-        raise typer.Exit(code=1)
-
-
 # =============================================================================
 # Project Commands - These are registered directly on the main app
 # =============================================================================
@@ -662,12 +619,19 @@ def analyze_spec_command(
         None,
         help="Specification file or directory. If omitted, auto-detects spec/ directory or SPEC.md",
     ),
-    output: str | None = typer.Option(None, "--output", "-o", help="Output DSL file"),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive Q&A mode"),
     provider: str = typer.Option("anthropic", "--provider", "-p", help="LLM provider"),
 ) -> None:
     """
-    Analyze a specification file using LLM to generate DSL.
+    Analyze a specification file using LLM. Prints structured analysis
+    (entities, personas, business rules, state machines) for an agent
+    in-session to use as context when authoring DSL.
+
+    DSL synthesis is NOT performed here — Dazzle structural authoring
+    stays in the agent session (#1222). An in-session Claude Code agent
+    holds the framework-specific knowledge to write valid, idiomatic
+    DSL; an out-of-context API call cannot. Run this command to get the
+    analysis, then have the agent author the DSL with that context.
 
     Supports flexible spec organization:
     - spec/ directory with multiple markdown files
@@ -729,22 +693,16 @@ def analyze_spec_command(
         typer.echo("\n🔍 Analyzing specification...")
         analysis = analyzer.analyze(spec_content)
 
-        # Convert to dict for helper functions (#1221: only used for the
-        # summary print + interactive Q&A; DSL generation now uses the
-        # typed SpecAnalysis object directly via DSLGenerator).
         results = analysis.model_dump()
 
         _print_analysis_summary(results)
 
-        answers: dict[str, str] = {}
         if interactive:
             results = _run_interactive_qa(analyzer, results)
-            # Interactive Q&A may stash user answers under "answers" — pass
-            # whatever's there through; DSLGenerator tolerates an empty dict.
-            answers = dict(results.get("answers", {}))
 
-        if output:
-            _generate_dsl(analysis, answers, Path(output))
+        typer.echo("\nNext step: hand this analysis to a Dazzle agent in-session")
+        typer.echo("to author the DSL — structural authoring is not delegated to")
+        typer.echo("external API calls (see CLAUDE.md / #1222).")
 
     except ImportError:
         typer.echo("LLM support not available. Install with: pip install dazzle[llm]", err=True)

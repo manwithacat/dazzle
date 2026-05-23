@@ -1,12 +1,15 @@
 """
 LLM Integration for DAZZLE.
 
-This package provides LLM-assisted specification analysis and DSL generation.
-Supports both API mode (Anthropic, OpenAI) and CLI handoff mode.
+This package provides LLM-assisted specification *analysis* — extracting
+entities, personas, business rules and lifecycles from a SPEC.md and
+returning them as structured data. Dazzle DSL synthesis is deliberately
+**not** performed via external API call (#1222): the in-session agent
+holds the framework-specific knowledge required to author DSL, and is
+the right place to do that synthesis once analysis context is available.
 """
 
 from .api_client import LLMAPIClient, LLMProvider
-from .dsl_generator import DSLGenerator, generate_dsl_from_analysis
 from .models import (
     BusinessRule,
     CRUDAnalysis,
@@ -22,8 +25,6 @@ __all__ = [
     "LLMProvider",
     "SpecAnalyzer",
     "SpecAnalysis",
-    "DSLGenerator",
-    "generate_dsl_from_analysis",
     "StateMachine",
     "StateTransition",
     "CRUDAnalysis",

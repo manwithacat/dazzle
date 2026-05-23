@@ -46,6 +46,15 @@ When creating custom Python code in a Dazzle project (not the framework itself),
 - Data shapes in dedicated files (`models.py`)
 - Never edit auto-generated files (marked with `# AUTO-GENERATED`)
 
+## Authoring vs API Boundary (#1222)
+
+**Dazzle structural authoring stays in the Claude Code session.** The framework's MCP, knowledge graph, parser source, IR types, examples, and CLAUDE.md are scaffolding built around the assumption that an in-session agent does DSL synthesis with full Dazzle-specific context. An out-of-context API call lacks that context and cannot produce idiomatic DSL.
+
+- ✅ **OK to delegate to API:** domain-neutral structural extraction (parse a SPEC.md into entities/personas/business rules), language tasks (summarise, translate, classify) — anything where the output is *data*, not Dazzle code.
+- ❌ **Not OK to delegate to API:** authoring or modifying `.dsl` files, IR types, parser dispatchers, schema migrations, examples, fixtures. The in-session agent does this work directly.
+
+If you find yourself wiring up an LLM call that writes Dazzle DSL, that's the warning sign. The right shape is: LLM call returns structured analysis → agent reads analysis + writes DSL using current Dazzle expertise.
+
 ## Commands
 
 ### Dev Setup

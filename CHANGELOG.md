@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.159] - 2026-05-24
+
+### Removed (breaking — closes #1222)
+
+- **`dazzle analyze-spec --output FILE` flag retired.** External-API DSL synthesis was contrary to Dazzle's design — the framework's MCP, knowledge graph, parser source, IR types, examples, and CLAUDE.md are scaffolding built around an in-session agent doing DSL authoring with full Dazzle-specific context. An out-of-context API call cannot produce idiomatic DSL (demonstrated empirically: when run against a credible HR spec, the LLM encoded "NULL = currently active" prose as a literal enum value, fabricated fields with slashes in their names, and dropped all `ref` types between entities). The CLI now prints structured analysis (entities, personas, business rules, state machines) and stops — an in-session Claude Code agent uses that analysis as context for authoring DSL with current Dazzle expertise.
+- **`src/dazzle/llm/dsl_generator.py`** (`DSLGenerator` class + `generate_dsl_from_analysis` helper) deleted — ~480 lines of dead code with no remaining callers after the CLI flag retirement.
+- **`tests/llm/test_dsl_generator.py`** and **`tests/llm/test_integration.py`** deleted — both exclusively exercised the removed DSL-generation path. Net –800 lines removed.
+
+### Added
+
+- **CLAUDE.md `## Authoring vs API Boundary (#1222)`** section codifies the principle: domain-neutral structural extraction may be delegated to LLM API calls; Dazzle structural authoring (DSL, IR, parser, schema, examples, fixtures) stays in the agent session. The rule didn't previously exist in writing, which let `#1219` / `#1220` / `#1221` build up over time — three fixes deep into the wrong path before the architectural mismatch surfaced.
+
+### Agent Guidance
+
+- If you find yourself wiring up an LLM call that writes Dazzle DSL: stop. That's the warning sign the CLAUDE.md `## Authoring vs API Boundary` section was added to prevent. The right shape is *analysis → in-session synthesis*, not *analysis → API → DSL*.
+
 ## [0.71.158] - 2026-05-24
 
 ### Fixed
