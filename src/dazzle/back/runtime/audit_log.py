@@ -258,10 +258,18 @@ class AuditLogger:
             logger.warning("Failed to initialize audit log table", exc_info=True)
 
     def start(self) -> None:
-        """Start the background flush task."""
+        """Start the background flush task.
+
+        Must be called from within a running event loop — typically a
+        FastAPI ``@app.on_event("startup")`` handler. Calling from a
+        sync context with no running loop raises ``RuntimeError`` on
+        Py3.12+ (#1214); the previous ``asyncio.ensure_future`` path
+        silently relied on the deprecated implicit loop acquisition.
+        """
         if self._task is None or self._task.done():
             self._stopped = False
-            self._task = asyncio.ensure_future(self._flush_loop())
+            loop = asyncio.get_running_loop()
+            self._task = loop.create_task(self._flush_loop())
 
     async def stop(self) -> None:
         """Stop the background flush task and flush remaining entries."""

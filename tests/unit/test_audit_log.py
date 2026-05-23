@@ -320,6 +320,15 @@ class TestAuditQueries:
 
 
 class TestFlushLoop:
+    def test_start_outside_running_loop_raises(self, audit_logger, mock_conn) -> None:
+        """Regression for #1214: start() must fail loudly outside a running loop.
+
+        Previously used asyncio.ensure_future, which silently relied on
+        the deprecated implicit-loop acquisition removed in Py3.12.
+        """
+        with pytest.raises(RuntimeError):
+            audit_logger.start()
+
     @pytest.mark.asyncio
     async def test_start_stop(self, audit_logger, mock_conn) -> None:
         """Logger can be started and stopped without errors."""

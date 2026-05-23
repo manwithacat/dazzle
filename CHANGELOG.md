@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.145] - 2026-05-23
+
+### Fixed
+
+- **`AuditLogger.start()` no longer raises `RuntimeError` on Py3.12 when an app is constructed outside a running event loop (#1214).** The pre-fix code scheduled the background flush task via `asyncio.ensure_future(self._flush_loop())`, which implicitly calls `asyncio.get_event_loop()`. Py3.12 removed the silent fallback to creating a new loop, so any caller that built the FastAPI app from a sync context (a pytest harness after async fixtures had torn the loop down — Penny Dreadful's case — or any tool that constructed the app outside uvicorn) crashed during `_create_app()`. The fix has two parts. (a) `AuditLogger.start()` now uses `asyncio.get_running_loop().create_task(...)` instead of `ensure_future` — so calling it without a running loop fails *loudly and immediately*, rather than depending on the deprecated implicit-loop path. (b) The call site in `_setup_routes()` (`server.py`) no longer invokes `audit_logger.start()` synchronously; instead it registers a `@app.on_event("startup")` handler that starts the logger once uvicorn's loop is up, plus a matching `@app.on_event("shutdown")` handler that calls `await audit_logger.stop()` for a clean drain. This mirrors the existing `_open_db_pool` / `_close_db_pool` pattern next door in `_setup_database()`. Closes #1214.
+
+### Agent Guidance
+
+- Async-startup background tasks belong in a FastAPI `@app.on_event("startup")` handler, not in the sync `_create_app()` / `_setup_routes()` path. When a subsystem needs a background coroutine, follow the `_open_db_pool` template at `server.py:768` — register start/stop event handlers and keep a handle on the subsystem for graceful shutdown. Inside the subsystem itself, prefer `asyncio.get_running_loop().create_task(...)` over `asyncio.ensure_future(...)` — the former fails loudly outside a loop; the latter silently relied on a deprecated implicit fallback.
+
 ## [0.71.144] - 2026-05-23
 
 ### Fixed

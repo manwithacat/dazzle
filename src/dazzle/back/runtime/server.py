@@ -1153,7 +1153,24 @@ class DazzleBackendApp:
                 database_url=self._database_url,
                 audit_integrity=self._config.audit_integrity,
             )
-            audit_logger.start()
+            # Defer start() to the FastAPI startup event so a running
+            # loop is guaranteed (#1214). Py3.12 removed the implicit
+            # event-loop acquisition that ``asyncio.ensure_future``
+            # previously relied on, so starting from this sync
+            # construction path raises ``RuntimeError`` when no loop
+            # is current. Mirrors the ``_open_db_pool`` pattern above.
+            assert self._app is not None
+            _audit_app = self._app
+            _audit_logger_for_events = audit_logger
+
+            @_audit_app.on_event("startup")
+            async def _start_audit_logger() -> None:
+                _audit_logger_for_events.start()
+
+            @_audit_app.on_event("shutdown")
+            async def _stop_audit_logger() -> None:
+                await _audit_logger_for_events.stop()
+
             # Keep a handle on the builder so callers (graceful shutdown,
             # in-process tests) can deterministically `drain()` the audit
             # queue instead of racing the 1s background flush timer.
