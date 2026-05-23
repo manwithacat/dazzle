@@ -375,15 +375,26 @@ document.addEventListener("alpine:init", () => {
       titles.appendChild(titleH3);
       header.appendChild(titles);
 
-      const actions = document.createElement("div");
-      actions.className = "dz-card-actions";
-      const removeBtn = document.createElement("button");
-      removeBtn.setAttribute("data-test-id", "dz-card-remove");
-      removeBtn.setAttribute("aria-label", "Remove card");
-      removeBtn.className = "dz-card-action-button";
-      removeBtn.textContent = "×";
-      actions.appendChild(removeBtn);
-      header.appendChild(actions);
+      // #1204: edit-mode chrome is permission-gated. Mirror the server-
+      // side `_emit_dashboard_card` gate by reading `data-grid-editable`
+      // on the grid container — set by `_emit_dashboard_grid_impl` from
+      // `DashboardGrid.edit_enabled`. When the grid is not editable we
+      // omit the dz-card-actions div entirely (no hover-flash, no a11y
+      // tab target, no surprise screen-reader click).
+      const grid = document.querySelector("[data-grid-container]");
+      const gridEditable =
+        grid && grid.getAttribute("data-grid-editable") === "true";
+      if (gridEditable) {
+        const actions = document.createElement("div");
+        actions.className = "dz-card-actions";
+        const removeBtn = document.createElement("button");
+        removeBtn.setAttribute("data-test-id", "dz-card-remove");
+        removeBtn.setAttribute("aria-label", "Remove card");
+        removeBtn.className = "dz-card-action-button";
+        removeBtn.textContent = "×";
+        actions.appendChild(removeBtn);
+        header.appendChild(actions);
+      }
 
       article.appendChild(header);
 

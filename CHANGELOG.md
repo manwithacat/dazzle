@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.143] - 2026-05-23
+
+### Fixed
+
+- **Dashboard "Remove card" (×) button no longer renders on every persona's workspace view (#1204).** `_emit_dashboard_card()` in `src/dazzle/render/fragment/renderer/_render_dashboard.py` previously emitted the `dz-card-actions` div unconditionally — every dashboard card in every persona view carried the edit-mode chrome. Two qa-trial personas across two example apps independently flagged it as workspace noise that eroded trust (ops_dashboard / oncall_engineer cycle 120, contact_manager / small_firm_owner cycle 151 — the latter verdict was *"I cannot recommend this contact management software"*). The fix gates emission on a new `edit_enabled: bool = False` field on `DashboardCard` and `DashboardGrid`; the renderer omits the entire actions div when False, and emits a `data-grid-editable="true|false"` attribute on the grid container as the contract the JS `dashboard-builder.js` reads when it injects cards dynamically via the picker. `render_workspace_content_typed` gained a `can_edit_layout: bool = False` parameter that propagates to both grid and cards; the page-route call site in `page_routes.py` resolves it from the existing `is_superuser` check. CSS hover/opacity rules are unchanged — they handled hover state, not permission; this fix removes the div *itself* (no hover-flash, no a11y tab target, no surprise screen-reader click target). Default is False everywhere — opt-in, not opt-out. Closes #1204.
+
+### Changed
+
+- **`DashboardCard`, `DashboardGrid`, and `render_workspace_content_typed` gained a permission-gating field/parameter.** New `edit_enabled: bool = False` field on both `DashboardCard` and `DashboardGrid`; new `can_edit_layout: bool = False` keyword on `render_workspace_content_typed`. Existing call sites that don't pass the new value get the safe default (no Remove button rendered, `data-grid-editable="false"` on the grid).
+
+### Agent Guidance
+
+- Edit-mode chrome on dashboard cards (the X / drag handle) is now opt-in via `can_edit_layout`. When adding new dashboard surfaces or call sites, default to `False`; only flip `True` for explicit edit-mode views. The contract between Python and JS for dynamically-added cards is the grid container's `data-grid-editable` attribute — `dashboard-builder.js` reads it before constructing a Remove button. A future, larger design may surface this through a DSL `editable:` knob on `workspace` blocks; for now `is_superuser` is the v1 gate.
+
 ## [0.71.142] - 2026-05-23
 
 ### Fixed

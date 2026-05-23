@@ -862,6 +862,7 @@ def render_workspace_content_typed(
     catalog: list[dict[str, str]],
     fold_count: int,
     primary_actions: list[dict[str, str]],
+    can_edit_layout: bool = False,
 ) -> str:
     """Render the workspace content via the typed-Fragment substrate.
 
@@ -923,6 +924,7 @@ def render_workspace_content_typed(
                 eyebrow=r.eyebrow,
                 css_class=getattr(r, "css_class", "") or "",
                 notice=notice,
+                edit_enabled=can_edit_layout,
             )
         )
 
@@ -961,7 +963,13 @@ def render_workspace_content_typed(
         )
 
     inner_pieces.append(WorkspaceToolbar())
-    inner_pieces.append(DashboardGrid(cards=tuple(cards), sse_url=workspace.sse_url or ""))
+    inner_pieces.append(
+        DashboardGrid(
+            cards=tuple(cards),
+            sse_url=workspace.sse_url or "",
+            edit_enabled=can_edit_layout,
+        )
+    )
     inner_pieces.append(AddCardRow(picker=picker))
 
     shell = WorkspaceShell(

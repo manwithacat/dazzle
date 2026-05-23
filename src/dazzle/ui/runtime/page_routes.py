@@ -2046,11 +2046,17 @@ async def _workspace_handler(
         render_workspace_content_typed,
     )
 
+    # #1204: edit-mode chrome (Remove-card × button on every dashboard card,
+    # `data-grid-editable` on the grid container) is now opt-in. v1 gate is
+    # the existing `is_superuser` check resolved above; non-superusers see
+    # the dashboard without the leak that two qa-trial personas flagged as
+    # workspace noise (ops_dashboard cycle 120, contact_manager cycle 151).
     workspace_inner = render_workspace_content_typed(
         workspace=render_ws_ctx,
         catalog=catalog,
         fold_count=fold_count,
         primary_actions=primary_actions,
+        can_edit_layout=is_superuser,
     )
 
     # Fragment targeting: return only the workspace content.

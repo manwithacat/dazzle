@@ -61,12 +61,21 @@ class _RenderDashboardMixin:
         sse_attrs = ""
         if g.sse_url:
             sse_attrs = f' hx-ext="sse" sse-connect="{ctx.escape_attr(g.sse_url)}"'
+        # #1204: data-grid-editable is the contract between Python (server-
+        # rendered cards) and JS (dashboard-builder.js dynamic card injection)
+        # for whether the Remove-card chrome should appear at all. The JS
+        # reads this on the grid container to decide whether to add the X
+        # button when the user adds a new card via the picker.
+        editable_attr = (
+            ' data-grid-editable="true"' if g.edit_enabled else ' data-grid-editable="false"'
+        )
         cards_html = "".join(self._emit(c, ctx) for c in g.cards)
         return (
             f'<div class="dz-dashboard-grid" '
             f"data-grid-container "
             f'role="application" '
             f'aria-label="Dashboard card grid"'
+            f"{editable_attr}"
             f"{sse_attrs}>"
             f"{cards_html}"
             f"</div>"
@@ -100,6 +109,28 @@ class _RenderDashboardMixin:
         eyebrow_html = (
             f'<span class="dz-card-eyebrow">{ctx.escape(c.eyebrow)}</span>' if c.eyebrow else ""
         )
+        # #1204: actions block (Remove-card × button) is permission-gated.
+        # When `edit_enabled` is False (safe default), the entire
+        # `dz-card-actions` div is omitted — no hover-flash, no a11y tab
+        # target, no surprise screen-reader click target. Page-route call
+        # site flips this from the existing `is_superuser` check.
+        actions_html = (
+            (
+                '<div class="dz-card-actions">'
+                '<button data-test-id="dz-card-remove" '
+                'class="dz-card-action-button" aria-label="Remove card">'
+                '<svg width="14" height="14" fill="none" stroke="currentColor" '
+                'viewBox="0 0 24 24" aria-hidden="true">'
+                '<path stroke-linecap="round" stroke-linejoin="round" '
+                'stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
+                "</svg>"
+                '<span class="visually-hidden">Remove card</span>'
+                "</button>"
+                "</div>"
+            )
+            if c.edit_enabled
+            else ""
+        )
         header_html = (
             f'<div class="dz-card-header" data-test-id="dz-card-drag-handle">'
             f'<div class="dz-card-titles">'
@@ -107,17 +138,7 @@ class _RenderDashboardMixin:
             f'<h3 id="card-title-{ctx.escape_attr(c.card_id)}" '
             f'class="dz-card-title">{ctx.escape(c.title)}</h3>'
             f"</div>"
-            f'<div class="dz-card-actions">'
-            f'<button data-test-id="dz-card-remove" '
-            f'class="dz-card-action-button" aria-label="Remove card">'
-            f'<svg width="14" height="14" fill="none" stroke="currentColor" '
-            f'viewBox="0 0 24 24" aria-hidden="true">'
-            f'<path stroke-linecap="round" stroke-linejoin="round" '
-            f'stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
-            f"</svg>"
-            f'<span class="visually-hidden">Remove card</span>'
-            f"</button>"
-            f"</div>"
+            f"{actions_html}"
             f"</div>"
         )
 

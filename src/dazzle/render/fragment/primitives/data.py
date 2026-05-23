@@ -1469,6 +1469,12 @@ class DashboardCard:
     eyebrow: str = ""
     css_class: str = ""
     notice: DashboardNotice | None = None
+    # #1204: edit-mode chrome gating. When False (the safe default), the
+    # `dz-card-actions` div (Remove card × button) is omitted entirely
+    # from emitted HTML — no hover-flash, no a11y tab target, no surprise
+    # screen-reader click target. The page-route call site flips this to
+    # True only for permitted users (currently `is_superuser`).
+    edit_enabled: bool = False
 
     def __post_init__(self) -> None:
         if not self.card_id:
@@ -1488,10 +1494,17 @@ class DashboardGrid:
 
     Cards are pre-built by the adapter; per-card `card_id`,
     `eager` (loop.index0 < fold_count), `hx_endpoint`, and
-    `sse_enabled` are all computed there."""
+    `sse_enabled` are all computed there.
+
+    `edit_enabled` (#1204) gates edit-mode chrome — both the server-rendered
+    Remove-card buttons on cards AND the `data-grid-editable` attribute the
+    JS dashboard-builder reads when injecting dynamically-added cards.
+    Defaults to False (safe). The page-route call site flips it from the
+    existing `is_superuser` check."""
 
     cards: tuple[DashboardCard, ...] = ()
     sse_url: str = ""
+    edit_enabled: bool = False
 
 
 @dataclass(frozen=True, slots=True)
