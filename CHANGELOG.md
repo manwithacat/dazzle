@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.127] - 2026-05-23
+
+### Removed
+
+- **Dead `record_history` parameter on `BuildService.auto_migrate()` (#1195).** The unbounded-growth bug the issue reported was already resolved when `MigrationHistory` was retired (commit `adb3e0ca`); the `record_history` kwarg had no effect in the current Alembic-based implementation. The parameter is gone and the single call site in `cli/runtime_impl/build.py` no longer passes it. The orphan `_dazzle_migrations` table in pre-existing deployments is harmless (no writer) and left in place — a future iteration can ship a `DROP TABLE IF EXISTS` framework migration if cleanup is wanted.
+
 ## [0.71.126] - 2026-05-23
 
 ### Added

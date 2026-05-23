@@ -276,11 +276,7 @@ def migrate_command(
         typer.echo(f"Migrating database: {database_url}")
         typer.echo()
 
-        svc.auto_migrate(
-            database_url,
-            appspec.domain.entities,
-            record_history=True,
-        )
+        svc.auto_migrate(database_url, appspec.domain.entities)
 
         typer.echo("Alembic migrations applied successfully.")
 

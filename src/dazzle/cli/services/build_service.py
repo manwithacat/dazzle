@@ -40,8 +40,13 @@ class BuildService:
         except CommandError:
             return True  # Changes detected
 
-    def auto_migrate(self, database_url: str, entities: Any, *, record_history: bool = True) -> Any:
-        """Apply safe migrations automatically via Alembic."""
+    def auto_migrate(self, database_url: str, entities: Any) -> Any:
+        """Apply safe migrations automatically via Alembic.
+
+        The ``record_history`` keyword (removed in #1195) was dead — the old
+        ``MigrationHistory`` write path was retired in commit ``adb3e0ca``,
+        and the current implementation just calls ``alembic upgrade head``.
+        """
         from alembic import command
 
         cfg = self._alembic_cfg(database_url)
