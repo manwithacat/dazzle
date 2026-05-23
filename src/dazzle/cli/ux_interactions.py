@@ -63,8 +63,8 @@ def _default_workspace_path(page: Page) -> str:
     return "/app"
 
 
-def _layout_card_ids_and_catalog(page: Page) -> tuple[list[str], list[str]]:
-    """Extract the workspace's card ids + catalog region names.
+def _layout_card_ids_and_catalog(page: Page) -> tuple[list[str], list[str], bool]:
+    """Extract the workspace's card ids + catalog region names + edit flag.
 
     The dashboard refactor (#948) replaced the ``#dz-workspace-layout`` JSON
     data island with SSR ``data-card-*`` attributes on each card wrapper and
@@ -72,7 +72,13 @@ def _layout_card_ids_and_catalog(page: Page) -> tuple[list[str], list[str]]:
     helper tries the SSR attributes first and falls back to the legacy JSON
     island for any older template still emitting it.
 
-    Returns ``([], [])`` if the page isn't a workspace page.
+    Also reads ``data-grid-editable`` on the grid container (#1204). When
+    the grid is not editable (default for non-superuser personas), the
+    Remove-card button is intentionally absent from the DOM and the
+    ``card_remove_reachable`` walk is N/A — the caller skips it rather
+    than treating it as a regression.
+
+    Returns ``([], [], False)`` if the page isn't a workspace page.
     """
     layout = page.evaluate(
         """() => {
@@ -88,39 +94,61 @@ def _layout_card_ids_and_catalog(page: Page) -> tuple[list[str], list[str]]:
             try { catalog = JSON.parse(pickerEl.getAttribute('data-card-catalog') || '[]'); }
             catch { catalog = []; }
           }
-          if (cards.length || catalog.length) return {cards, catalog};
+          // #1204: grid-level editable flag — gates Remove-card chrome.
+          const gridEl = document.querySelector('[data-grid-container]');
+          const editable = !!(gridEl && gridEl.getAttribute('data-grid-editable') === 'true');
+          if (cards.length || catalog.length) return {cards, catalog, editable};
 
           // Legacy fallback — pre-#948 JSON data island.
           const el = document.getElementById('dz-workspace-layout');
           if (!el) return null;
-          try { return JSON.parse(el.textContent); } catch { return null; }
+          try {
+            const parsed = JSON.parse(el.textContent);
+            // Legacy data island didn't carry editable; preserve old
+            // behaviour (assume editable so existing walks keep running).
+            if (parsed && parsed.editable === undefined) parsed.editable = true;
+            return parsed;
+          } catch { return null; }
         }"""
     )
     if not isinstance(layout, dict):
-        return [], []
+        return [], [], False
     cards = layout.get("cards") or []
     catalog = layout.get("catalog") or []
+    editable = bool(layout.get("editable", False))
     card_ids = [str(c["id"]) for c in cards if isinstance(c, dict) and c.get("id")]
     region_names = [str(c["name"]) for c in catalog if isinstance(c, dict) and c.get("name")]
-    return card_ids, region_names
+    return card_ids, region_names, editable
 
 
-def _build_default_walk(card_ids: list[str], catalog_regions: list[str]) -> list[Interaction]:
+def _build_default_walk(
+    card_ids: list[str],
+    catalog_regions: list[str],
+    editable: bool = True,
+) -> list[Interaction]:
     """Build the v1 walk from the discovered card ids + catalog.
 
     Pure function — no Page reference — so it's unit-testable without
     a live browser. Invoked from :func:`run_interaction_walk` after
     layout extraction.
 
+    ``editable`` (#1204) gates the ``card_remove_reachable`` walk —
+    when the grid isn't editable the Remove-card chrome is
+    intentionally absent from the DOM, so the walk is N/A rather
+    than a regression. Defaults to ``True`` to preserve legacy
+    behaviour for callers that don't surface the flag.
+
     Returns ``[]`` if neither a card nor a catalog entry exists (the
     caller treats that as a setup failure, not a regression).
     """
     walk: list[Interaction] = []
     if card_ids:
-        # card_remove_reachable and card_drag both need a card to
-        # operate on. Prefer the first card — workspace layouts
-        # order them deterministically.
-        walk.append(CardRemoveReachableInteraction(card_id=card_ids[0]))
+        # card_remove_reachable needs the Remove-card button in the
+        # DOM — only present when the grid is editable (#1204).
+        # card_drag works regardless of edit mode (the drag handle
+        # is always present).
+        if editable:
+            walk.append(CardRemoveReachableInteraction(card_id=card_ids[0]))
         walk.append(CardDragInteraction(card_id=card_ids[0]))
     if catalog_regions:
         # card_add picks a region from the catalog. Pick the first
@@ -249,8 +277,8 @@ def run_interaction_walk(
                     for msg in page_console[:30]:
                         print(f"[console] {msg}", file=sys.stderr)
 
-                    card_ids, catalog = _layout_card_ids_and_catalog(page)
-                    walk = _build_default_walk(card_ids, catalog)
+                    card_ids, catalog, editable = _layout_card_ids_and_catalog(page)
+                    walk = _build_default_walk(card_ids, catalog, editable=editable)
                     if not walk:
                         # Diagnostic dump — walk builds against either the
                         # post-#948 SSR `data-card-*` attributes or the

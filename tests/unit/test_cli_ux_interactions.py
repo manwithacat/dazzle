@@ -70,6 +70,34 @@ class TestBuildDefaultWalk:
         # produce the empty list deterministically rather than crashing.
         assert _build_default_walk(card_ids=[], catalog_regions=[]) == []
 
+    def test_non_editable_grid_skips_card_remove_reachable(self) -> None:
+        # #1204: when the grid isn't editable, the Remove-card button is
+        # intentionally absent — the walk skips the reachability check
+        # rather than treating it as a regression. card_drag still runs
+        # (the drag handle is present regardless of edit mode).
+        walk = _build_default_walk(
+            card_ids=["card-0"],
+            catalog_regions=["ticket_board"],
+            editable=False,
+        )
+        names = [type(w).__name__ for w in walk]
+        assert "CardRemoveReachableInteraction" not in names
+        assert "CardDragInteraction" in names
+        assert "CardAddInteraction" in names
+
+    def test_editable_grid_includes_card_remove_reachable(self) -> None:
+        # The complementary positive case — editable=True keeps the
+        # full walk shape that existed before #1204.
+        walk = _build_default_walk(
+            card_ids=["card-0"],
+            catalog_regions=["ticket_board"],
+            editable=True,
+        )
+        names = [type(w).__name__ for w in walk]
+        assert "CardRemoveReachableInteraction" in names
+        assert "CardDragInteraction" in names
+        assert "CardAddInteraction" in names
+
 
 class TestHumanReport:
     def test_all_pass(self) -> None:

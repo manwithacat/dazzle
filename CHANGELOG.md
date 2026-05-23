@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.144] - 2026-05-23
+
+### Fixed
+
+- **INTERACTION_WALK harness skips `card_remove_reachable` when the grid isn't editable (#1204 follow-up).** v0.71.143 gated the Remove-card button on `data-grid-editable="true"`, which is False for non-superuser personas — including the `support_tickets` `agent` persona that CI runs the workspace-gestures walk against. The walk failed because the button is intentionally absent from the DOM. The harness now reads `data-grid-editable` on the grid container and, when False, skips the `CardRemoveReachableInteraction` step rather than treating its absence as a regression. `card_drag` still runs (the drag handle is present regardless of edit mode). `_layout_card_ids_and_catalog` returns the flag; `_build_default_walk` gates the step on it. Backward-compatible: callers that don't pass the flag get `editable=True` (the legacy walk shape).
+
 ## [0.71.143] - 2026-05-23
 
 ### Fixed
