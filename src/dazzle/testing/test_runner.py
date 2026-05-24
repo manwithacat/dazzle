@@ -823,6 +823,12 @@ class TestRunner:
         self._server_process: subprocess.Popen[str] | None = None
         self._persona = persona
         self._cleanup = cleanup
+        # #1224: map of surface/workspace name → relative URL path. Built
+        # lazily on first lookup so we don't pay parse cost when running
+        # API-only tests. Replaces the previous hardcoded
+        # `/app/workspaces/{name}` template that 17 nightly tests on
+        # v0.71.161 failed against.
+        self._surface_url_map: dict[str, str] | None = None
 
     def _inject_persona_session(self) -> None:
         """Inject stored persona session cookie into the client."""
@@ -1182,6 +1188,62 @@ class TestRunner:
             duration_ms=(time.time() - start_time) * 1000,
         )
 
+    def _resolve_surface_url(self, name: str) -> str | None:
+        """#1224: resolve a surface/workspace name to its URL path.
+
+        Returns ``None`` for unknown names or for kinds that need a
+        record id (view / edit) — callers should fall through to a
+        clear error rather than constructing a wrong URL.
+
+        Pre-#1224, the test runner hardcoded ``/app/workspaces/{name}``
+        for every surface kind, causing 17 TD-* tests to 404 on
+        v0.71.161 because list / create surfaces have different URL
+        templates that the route generator already knows but the
+        runner did not.
+        """
+        if self._surface_url_map is None:
+            self._surface_url_map = self._build_surface_url_map()
+        return self._surface_url_map.get(name)
+
+    def _build_surface_url_map(self) -> dict[str, str]:
+        """Parse the project's DSL and build a surface-name → URL map (#1224)."""
+        from dazzle.core.ir import SurfaceMode
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.parser import parse_modules
+        from dazzle.core.strings import to_api_plural
+
+        out: dict[str, str] = {}
+        dsl_dir = self.project_path / "dsl"
+        if not dsl_dir.is_dir():
+            return out
+        try:
+            modules = parse_modules(sorted(dsl_dir.glob("*.dsl")))
+            if not modules:
+                return out
+            # build_appspec needs the *module* name (e.g. 'tinyapp.core'),
+            # not the project directory name. Pick the first module —
+            # dazzle apps conventionally have one root module per project.
+            appspec = build_appspec(modules, modules[0].name)
+        except Exception:  # noqa: BLE001 — best-effort URL resolution
+            return out
+
+        for ws in getattr(appspec, "workspaces", None) or []:
+            out[ws.name] = f"/app/workspaces/{ws.name}"
+
+        for surface in getattr(appspec, "surfaces", None) or []:
+            entity = getattr(surface, "entity_ref", None)
+            if entity is None:
+                continue
+            plural = to_api_plural(entity)
+            mode = getattr(surface, "mode", None)
+            if mode == SurfaceMode.LIST:
+                out[surface.name] = f"/{plural}"
+            elif mode == SurfaceMode.CREATE:
+                out[surface.name] = f"/{plural}/create"
+            # view / edit need a record id — skip; callers see None and
+            # fall through to a clear error rather than a wrong URL.
+        return out
+
     def _execute_navigate_to_step(
         self,
         action: str,
@@ -1208,6 +1270,16 @@ class TestRunner:
 
         assert self.client is not None
         route = resolved_data.get("route") if resolved_data else None
+        if not route:
+            # #1224: when data.route is missing, resolve from the step's
+            # target (surface or workspace name) via the route generator
+            # templates. Previously the design's route was the only path
+            # into _current_ui_url; assert_visible then fell back to a
+            # hardcoded /app/workspaces/{surfaces[0]} template that 404'd
+            # for any list/create surface or wrong-position dashboard.
+            stripped_target = target.split(":", 1)[-1] if target else ""
+            if stripped_target:
+                route = self._resolve_surface_url(stripped_target)
         if route:
             # Resolve relative to the client's ui_url. urljoin handles
             # both absolute (``http://...``) and relative (``/app/x``)
@@ -1301,21 +1373,25 @@ class TestRunner:
         # navigate happened.
         check_url = context.get("_current_ui_url")
         if not check_url:
-            # #1211 fallback: synthesise URL from the design's first
-            # surface when no navigate_to has stashed one. Auto-prepend
-            # lets TD-* designs that emit assert_visible without a
-            # preceding navigate_to (e.g. STATUS_CHANGED triggers) still
-            # resolve to a real workspace URL instead of hitting the
-            # bare base URL → 302 → identical failure on every nightly.
+            # #1211 fallback (revised in #1224): synthesise URL from the
+            # design's first surface when no navigate_to has stashed
+            # one. #1224 fix: dispatch by SurfaceKind via the route
+            # generator's actual templates, not the hardcoded
+            # /app/workspaces/{name} template that 404'd for every
+            # list/create surface. surfaces[0] is still the source —
+            # tests that emit bare assert_visible against multi-surface
+            # designs are themselves ambiguous; the design author should
+            # add an explicit navigate_to.
             surfaces = context.get("_design_surfaces") or []
             if surfaces:
                 from urllib.parse import urljoin
 
-                check_url = urljoin(
-                    self.client.ui_url + "/",
-                    f"app/workspaces/{surfaces[0]}",
-                )
-                context["_current_ui_url"] = check_url
+                first = surfaces[0]
+                first_name = first if isinstance(first, str) else first.get("name", "")
+                resolved = self._resolve_surface_url(first_name) if first_name else None
+                if resolved:
+                    check_url = urljoin(self.client.ui_url + "/", resolved.lstrip("/"))
+                    context["_current_ui_url"] = check_url
         result = self.client.check_ui_loads(url=check_url)
         # #1149: synthesise a fix hint from the failure shape.
         hint = ""

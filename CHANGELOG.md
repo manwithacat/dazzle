@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.166] - 2026-05-24
+
+### Fixed
+
+- **test-runner URL resolver dispatches by SurfaceMode instead of hard-coding `/app/workspaces/{name}` (#1224).** Pre-fix, every `assert_visible` step with no preceding `navigate_to` (or with a `navigate_to` that lacked `data.route`) synthesised a URL as `/app/workspaces/<surfaces[0]>` regardless of what kind of surface that name pointed at. On v0.71.161, this produced 17 TD-* failures (TD-064, TD-068, TD-070, TD-072, TD-383, TD-387, TD-389, TD-390, TD-391, TD-392, TD-393, TD-394, TD-396, TD-398, TD-400, TD-402, TD-404 in CyFuture's nightly) — list surfaces 404'd on `/app/workspaces/contact_list` when they should have been `/contacts`, create surfaces 404'd on `/app/workspaces/contact_create` when they should have been `/contacts/create`, and dashboards 404'd when the first surface in the design wasn't a workspace at all. The fix introduces `_resolve_surface_url(name)` on `TestRunner`, lazily building a `surface_name → URL` map from the project's appspec — workspaces emit `/app/workspaces/{name}`, LIST surfaces emit `/{plural_entity}`, CREATE surfaces emit `/{plural_entity}/create`. View / edit kinds need a record id and remain unsupported in the fallback (callers see `None` and fall through rather than constructing a wrong URL). `_execute_navigate_to_step` also now falls back to the same resolver when `data.route` is missing, so `navigate_to: target=contact_create` correctly stashes `/contacts/create` for the next `assert_visible`. Closes #1224.
+
+### Changed
+
+- `tests/unit/test_runner_assert_visible_fallback_1211.py` updated to reflect the new contract — the previous hardcoded-template assertion was pinning the bug shape.
+- 6 new regression tests in `tests/unit/test_runner_url_resolver_1224.py` cover: workspace template, list-surface plural path, create-surface path, unknown name → None, no DSL dir → empty map (silent), map caching between calls.
+
+### Agent Guidance
+
+- When test designs need to navigate to a non-workspace surface, prefer `{action: navigate_to, target: <surface_name>}` over emitting `data.route` by hand — the runner now resolves the URL from the surface's mode automatically (LIST/CREATE/workspace covered; view/edit need an id and aren't auto-resolvable). For view/edit, still pass `data.route` explicitly with the id baked in.
+
 ## [0.71.165] - 2026-05-24
 
 ### Added (#1223 Phase 3a.v — `latest_one` derived current-row relationship — parser + IR + validator)

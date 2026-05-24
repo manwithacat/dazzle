@@ -38,24 +38,57 @@ def _runner_with_client(ok: bool = True, status: int = 200) -> TestRunner:
     return runner
 
 
-def test_fallback_fires_when_no_navigate_to_ran() -> None:
-    """When _current_ui_url is unset and the design has surfaces,
-    the fallback synthesises ``/app/workspaces/<surfaces[0]>`` and
-    stashes it in context."""
+def test_fallback_resolves_via_appspec_when_project_has_dsl(tmp_path: Path) -> None:
+    """#1224 update: when _current_ui_url is unset and the design has
+    surfaces, the fallback now resolves via the route generator's
+    actual URL templates (per SurfaceMode) — not the hardcoded
+    ``/app/workspaces/{name}`` that 404'd for list/create surfaces.
+    Requires a parseable project to find the surface kinds."""
+    (tmp_path / "dsl").mkdir()
+    (tmp_path / "dsl" / "app.dsl").write_text(
+        "module tinytest.core\n"
+        'app tinytest "Tiny"\n\n'
+        'persona admin "Admin":\n'
+        '  description: "test"\n\n'
+        'entity Task "Task":\n'
+        "  id: uuid pk\n"
+        "  title: str(100) required\n\n"
+        'surface task_list "Tasks":\n'
+        "  uses entity Task\n"
+        "  mode: list\n"
+        "  section main:\n"
+        '    field title "Title"\n'
+    )
     runner = _runner_with_client(ok=True)
+    runner.project_path = tmp_path  # rebind to the tmp project
+
     context: dict = {"_design_surfaces": ["task_list"]}
     result = runner.execute_step(
         {"action": "assert_visible", "target": "task"},
         design={"surfaces": ["task_list"]},
         context=context,
     )
-    assert context["_current_ui_url"] == "http://stg.example/app/workspaces/task_list"
-    # check_ui_loads was invoked with the synthesised URL.
+    # task_list is a LIST surface → /tasks, NOT /app/workspaces/task_list
+    assert context["_current_ui_url"] == "http://stg.example/tasks"
     assert runner.client is not None
     runner.client.check_ui_loads.assert_called_once_with(  # type: ignore[attr-defined]
-        url="http://stg.example/app/workspaces/task_list"
+        url="http://stg.example/tasks"
     )
     assert result.result is TestResult.PASSED
+
+
+def test_fallback_no_op_when_appspec_unavailable() -> None:
+    """#1224: when the project has no parseable DSL, the resolver
+    returns None — runner falls through to the bare ui_url rather
+    than constructing a wrong URL."""
+    runner = _runner_with_client(ok=True)
+    context: dict = {"_design_surfaces": ["task_list"]}
+    runner.execute_step(
+        {"action": "assert_visible", "target": "task"},
+        design={"surfaces": ["task_list"]},
+        context=context,
+    )
+    assert "_current_ui_url" not in context
 
 
 def test_fallback_does_not_override_existing_url() -> None:
