@@ -1154,8 +1154,17 @@ class Repository(Generic[T]):
 
         # Convert to models (or return dicts if relations/computed fields included)
         items: list[Any]
-        if include or self._computed_fields or _has_latest_one or _has_traversal:
-            # Return dicts with nested data and/or computed/derived fields
+        if (
+            include
+            or self._computed_fields
+            or _has_latest_one
+            or _has_traversal
+            or self._subtype_join_sql is not None
+        ):
+            # Return dicts with nested data and/or computed/derived fields.
+            # #1237: subtype JOINs append base columns that the child Pydantic
+            # model would silently drop via `extra='ignore'`, so route through
+            # the dict path (mirrors the read() fix shipped in v0.72.0).
             items = [self._convert_row_dict(row) for row in row_dicts]
         else:
             items = [self._row_to_model(row) for row in rows]

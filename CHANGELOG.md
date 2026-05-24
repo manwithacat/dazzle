@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1237 — Repository.list() subtype JOIN coercion)
+
+- **`Repository.list()` now routes through the dict-coercion path when a subtype JOIN is active** at `src/dazzle/back/runtime/repository.py:1157`. Mirrors the `Repository.read()` fix shipped in v0.72.0 (see commit `e23ef886`). Without this, `list()` on a polymorphic-child entity would JOIN to the base table at the SQL level (correct) but then map each row through `self._row_to_model(...)`, dropping `acquired_at` / `location` / `kind` and any other base column under Pydantic's default `extra='ignore'`. Not yet symptomatic in any shipping list surface — list-mode renderers were reaching for child-only columns — but it would have bitten the moment a list surface tried to surface a base column, and is structurally required for parity with `read()`.
+- **1 new test** at `tests/unit/test_subtype_of_query.py::test_list_on_child_returns_dicts_with_base_columns` pins: child `list()` returns items as dicts (not stripped models) carrying `kind`, `location`, and child columns.
+
 ### Fixed (#1234 — `day_timeline as_of: today` unparseable)
 
 - **`TokenType.TODAY` and `TokenType.NOW` promoted to `KEYWORD_AS_IDENTIFIER_TYPES`** at `src/dazzle/core/dsl_parser_impl/base.py:913`. The `day_timeline_config.as_of:` slot (and any other config key that reads its value via `expect_identifier_or_keyword()`) now accepts the literal date anchors `today` / `now` that the runtime (`_resolve_date_anchor`) already handles. Without this, `day_timeline as_of: today` raised `'today' is a reserved keyword` at parse time, making the primitive unusable for timetable-style surfaces that compose HH:MM time fields with today's date.

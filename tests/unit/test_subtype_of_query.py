@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 
@@ -187,6 +188,54 @@ class TestRepositoryListSubtypeJoin:
             and "COUNT(*)" not in c.args[0]
         )
         assert "JOIN " not in select_sql
+
+    @pytest.mark.asyncio
+    async def test_list_on_child_returns_dicts_with_base_columns(self) -> None:
+        """#1237 — list() must route through the dict-coercion path when a
+        subtype JOIN is active, so base columns (acquired_at, location, kind)
+        survive into the renderer instead of being dropped by Pydantic's
+        default `extra='ignore'` on the child model."""
+        from pydantic import BaseModel
+
+        from dazzle.back.runtime.repository import Repository
+
+        entities = _build_subtype_back_entities()
+        asset_spec = entities["Asset"]
+        vehicle_spec = entities["Vehicle"]
+
+        # Deliberately narrow model — exposes the bug if list() returns models.
+        class VehicleModel(BaseModel):
+            id: str | None = None
+            wheels: int | None = None
+            vin: str | None = None
+
+        row = {
+            "id": str(uuid4()),
+            "wheels": 4,
+            "vin": "1HGCM82633A123456",
+            "acquired_at": None,
+            "location": "Warehouse 7",
+            "kind": "Vehicle",
+        }
+        db = _mock_db_manager(fetched_rows=[row], count=1)
+        repo = Repository(
+            db_manager=db,
+            entity_spec=vehicle_spec,
+            model_class=VehicleModel,
+            base_entity_spec=asset_spec,
+        )
+
+        result = await repo.list(page=1, page_size=20)
+
+        assert result["total"] == 1
+        items = result["items"]
+        assert len(items) == 1
+        item = items[0]
+        # Must be a dict (not a stripped VehicleModel).
+        assert isinstance(item, dict), f"expected dict, got {type(item).__name__}"
+        assert item.get("kind") == "Vehicle"
+        assert item.get("location") == "Warehouse 7"
+        assert item.get("wheels") == 4
 
 
 class TestAggregateByKind:
