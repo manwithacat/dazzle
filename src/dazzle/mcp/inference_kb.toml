@@ -1827,6 +1827,64 @@ entity ProductTag "Product Tag":
 """
 
 [[modeling_guidance]]
+id = "subtype_of_only_for_true_isa"
+name = "subtype_of: is an escape hatch — model around it when you can"
+triggers = [
+  "subtype", "subclass", "is_a", "type hierarchy", "vehicle is an asset",
+  "table per type", "single table inheritance", "discriminator", "kind column",
+]
+anti_pattern = "Reaching for subtype_of: as a default whenever variants exist"
+prefer = """
+Most "variant" shapes don't need subtype polymorphism. Try these first:
+
+1. Separate entities with no shared base — if Vehicle and Building never need
+   to be queried together as a single list, model them as two independent
+   entities. The polymorphic-list use case is the only reason to reach for
+   subtype_of:.
+2. State machine + variant fields — if the variants represent behaviour over
+   time (Draft → Submitted → Approved → Archived), use enum states + lifecycle,
+   not subtypes.
+3. Nullable subtype fields on a single entity — if the variants share most
+   fields and the "subtype-specific" fields are 2–3 columns, a single entity
+   with nullable fields + an enum discriminator is simpler.
+4. has_many / via: — if the variant data is genuinely a separate concept
+   (Asset HAS a MaintenanceSchedule), use a ref, not a subtype.
+
+Only reach for subtype_of: when ALL of these apply:
+  - True IS-A (Vehicle IS an Asset, not Vehicle HAS an Asset)
+  - Subtype-specific fields need NOT NULL at the schema level
+  - You need polymorphic queries ("show me all assets, mixed kinds")
+"""
+rationale = """
+Polymorphism adds real complexity: cross-table joins for subtype queries,
+surface variance via subtype_panel:, RBAC composition across base + child,
+additional grants per subtype. When alternatives fit, prefer them — they're
+easier to evolve and easier for agents to reason about.
+Available when you need it; not the default.
+"""
+example = """
+# GOOD — when subtype_of: is the right tool (asset registry)
+entity Asset "Asset":
+  acquired_at: date required
+  acquired_value: decimal(12,2) required
+
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+  vin: str(17) required unique
+
+# Better than subtype_of: when the polymorphic-list case doesn't apply
+entity Vehicle "Vehicle":
+  acquired_at: date required
+  wheels: int required
+  vin: str(17) required unique
+
+entity Building "Building":
+  acquired_at: date required
+  floors: int required
+"""
+
+[[modeling_guidance]]
 id = "no_god_entities"
 name = "Decompose God Entities"
 triggers = ["too many fields", "large entity", "god entity", "monolith entity", "kitchen sink"]
