@@ -1413,6 +1413,20 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_router)
 
+        # #1228 Phase 3c.iii — atomic-flow routes (POST /api/atomic/<name>)
+        if self._appspec and self._appspec.atomic_flows and self._db_manager:
+            from dazzle.back.runtime.atomic_flow_routes import (
+                build_atomic_flow_router,
+            )
+
+            atomic_router = build_atomic_flow_router(
+                list(self._appspec.atomic_flows),
+                self._db_manager,
+                user_role_extractor=lambda user: list(getattr(user, "roles", []) or []),
+                auth_dep=auth_dep,
+            )
+            self._app.include_router(atomic_router)
+
         # Grant management routes (#629)
         if self._appspec and self._appspec.grant_schemas and self._db_manager:
             from dazzle.back.runtime.grant_routes import create_grant_routes

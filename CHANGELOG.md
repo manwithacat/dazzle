@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.179] - 2026-05-24
+
+### Added (#1228 Phase 3c.iii — atomic-flow route registration)
+
+- **`POST /api/atomic/<name>` endpoints** auto-registered for every parsed `AtomicFlowSpec` at server startup. The wiring is in `_setup_routes` next to the grant + audit-history routers.
+- **`build_input_model(flow)`** synthesises a Pydantic model class from the flow's `inputs:` block. IR field-type kinds (`STR`, `INT`, `DATE`, `DATETIME`, `UUID`, `REF`, `BOOL`, `EMAIL`, `URL`, etc.) map to the natural Python types; required vs optional honoured; model class named `<FlowName>Input`.
+- **`build_atomic_flow_router(atomic_flows, db_manager, *, user_role_extractor, auth_dep)`** is the standalone router builder. Each handler:
+  - Validates the request body against the synthesised input model (FastAPI returns 422 on shape errors).
+  - Checks the caller's roles against `flow.permit_execute` — 403 with a clear "requires one of {roles}" message if the caller lacks any.
+  - Calls `execute_atomic_flow` (slice 3c.ii).
+  - Returns `{"created": {EntityName: uuid-string, ...}}` on success.
+  - Translates `AtomicFlowError` to HTTP 400 with `{"error": "atomic_flow_failed", "failed_at": "<Entity>", "message": "..."}` so callers know which create broke.
+- 12 new tests in `tests/unit/test_atomic_flow_routes.py` covering input-model shape, router registration, end-to-end happy path, 422 on missing inputs, 400 on DB failure, 403 on missing role, 200 on permitted role.
+
+### Agent Guidance
+
+- `atomic` flows are now live: declare `atomic <name> "Label":` with `permit:`, `inputs:`, `creates:`, and a working app gets a `POST /api/atomic/<name>` endpoint at boot. No imports, no custom Python required.
+- The response shape is fixed: `{"created": {EntityName: uuid_string}}`. If you need richer payloads (eg. full row data), wrap the route or wait for a follow-up.
+- The default `user_role_extractor` looks at `user.roles`. If your auth dep yields users with role info elsewhere, pass a custom extractor when wiring via `build_atomic_flow_router` directly.
+
 ## [0.71.178] - 2026-05-24
 
 ### Added (#1228 Phase 3c.ii — atomic-flow runtime executor)
