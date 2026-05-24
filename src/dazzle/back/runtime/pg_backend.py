@@ -329,10 +329,7 @@ class PostgresBackend:
             # Enforces "at most one currently-active row per key_field" at
             # the DB layer. The IR validator already confirmed the named
             # fields exist; we just translate the spec into SQL here.
-            # Type annotation says back-side EntitySpec (no temporal attr);
-            # runtime receives the IR EntitySpec (does carry temporal).
-            # Defensive getattr mirrors the soft_delete access pattern.
-            _temporal = getattr(entity, "temporal", None)
+            _temporal = entity.temporal
             if _temporal is not None:
                 cursor.execute(
                     _create_temporal_unique_index_sql(
@@ -434,7 +431,7 @@ class PostgresBackend:
                 for fk_idx_sql in get_foreign_key_indexes(entity, registry):
                     cursor.execute(fk_idx_sql)
                 # #1223 Phase 3a.iii — partial unique index per temporal entity.
-                _temporal_bulk = getattr(entity, "temporal", None)
+                _temporal_bulk = entity.temporal
                 if _temporal_bulk is not None:
                     cursor.execute(
                         _create_temporal_unique_index_sql(

@@ -11,6 +11,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from dazzle.core.ir import domain as ir_domain
+
 from .auth import EntityAccessSpec
 
 # =============================================================================
@@ -630,6 +632,21 @@ class EntitySpec(BaseModel):
     is_tenant_root: bool = Field(
         default=False,
         description="Entity is the tenant root (defines multi-tenant boundary)",
+    )
+    # #1218: soft-delete keyword. When True the framework's read paths
+    # auto-filter `deleted_at IS NULL` and DELETE handlers swap to
+    # UPDATE-SET-deleted_at=now(). Threaded from IR by the converter.
+    soft_delete: bool = Field(
+        default=False,
+        description="Entity uses soft deletion (deleted_at tombstone)",
+    )
+    # #1223 / #1226: temporal entity spec. None for non-temporal entities;
+    # set to a TemporalSpec when the IR declares `temporal:` on the entity.
+    # Imported from IR rather than re-defined — there's no semantic
+    # divergence between the two layers for this shape.
+    temporal: ir_domain.TemporalSpec | None = Field(
+        default=None,
+        description="Temporal-entity declaration (start/end/key fields)",
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 

@@ -50,6 +50,11 @@ class BaseService(ABC, Generic[T]):
     specific domain operations.
     """
 
+    # #1226: every service exposes `.entity_spec` so route_generator can
+    # uniformly read temporal/soft_delete shape without defensive getattr.
+    # CRUDService sets it from the appspec; CustomService leaves it None.
+    entity_spec: EntitySpec | None = None
+
     @abstractmethod
     async def execute(self, **kwargs: Any) -> Any:
         """Execute the service operation."""

@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.176] - 2026-05-24
+
+### Changed (#1226 — back-side EntitySpec now carries `soft_delete` + `temporal`)
+
+- **Two new fields on `dazzle.back.specs.entity.EntitySpec`:** `soft_delete: bool = False` (was IR-only since #1218) and `temporal: ir_domain.TemporalSpec | None = None` (was IR-only since #1223). The TemporalSpec type is imported from IR rather than duplicated — same shape, no semantic divergence.
+- **`convert_entity` now threads both fields through** from IR to back-side. Previously the converter silently dropped them, forcing 11 runtime sites to use `getattr(entity, "...", default)` to handle the IR-vs-back-side type drift.
+- **11 defensive `getattr` sites collapsed** to direct attribute access:
+  - `repository.py` ×6 (read/list/aggregate tombstone + temporal filter paths)
+  - `pg_backend.py` ×2 (create_table + create_all_tables temporal index emission)
+  - `route_generator.py` ×2 (list + read handler as_of param extraction; reduced to one `getattr(service, ...)` outer check for non-CRUD services)
+  - `server.py` ×1 (entity_soft_delete dict comprehension)
+- **`BaseService.entity_spec: EntitySpec | None = None` declared on the base class** so route_generator's polymorphic access uniformly works; CRUDService overrides with the real spec, CustomService keeps `None`.
+- 7 new tests in `tests/unit/test_entity_converter_1226.py` pin both threading directions and the new direct-attribute-access contract.
+
+### Agent Guidance
+
+- Back-side EntitySpec is now field-aligned with IR for `soft_delete` and `temporal`. New entity-level fields (e.g. future "lifecycle" or "bulk" archetype flags) need converter wiring too — pattern is `convert_entity` `<field>=dazzle_entity.<field>` and the matching `Field(default=...)` declaration on `back.specs.entity.EntitySpec`. The defensive-getattr pattern this issue retired should not return.
+- Tests that mock services may still need to declare `entity_spec=None` if they want to exercise as_of / soft-delete handler paths. `BaseService.entity_spec` is now part of the contract.
+
 ## [0.71.175] - 2026-05-24
 
 ### Added (#1227 Phase 3b.ii — runtime recursive CTE for `descendants_of` / `ancestors_of`)

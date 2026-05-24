@@ -2610,7 +2610,8 @@ async def _list_handler_body(
     # dict key and replaces the default tombstone filter with the
     # open-interval predicate. The URL param name is configurable via
     # `entity.temporal.as_of_param` (default `as_of`).
-    _entity_temporal = getattr(getattr(service, "entity_spec", None), "temporal", None)
+    _entity_spec = getattr(service, "entity_spec", None)
+    _entity_temporal = _entity_spec.temporal if _entity_spec is not None else None
     if _entity_temporal is not None:
         _as_of_raw = request.query_params.get(_entity_temporal.as_of_param)
         if _as_of_raw:
@@ -3024,7 +3025,8 @@ def create_read_handler(spec: RouteSpec) -> Callable[..., Any]:
         # paths already handle this via the __as_of filter dict key (v0.71.164);
         # read() doesn't take a filters dict so as_of threads through as a
         # service-execute kwarg. Repository.read consumes it directly.
-        _entity_temporal = getattr(getattr(service, "entity_spec", None), "temporal", None)
+        _entity_spec = getattr(service, "entity_spec", None)
+        _entity_temporal = _entity_spec.temporal if _entity_spec is not None else None
         _read_kwargs: dict[str, Any] = {"include": auto_include}
         if _entity_temporal is not None:
             _as_of_raw = request.query_params.get(_entity_temporal.as_of_param)

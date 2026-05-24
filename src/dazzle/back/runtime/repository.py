@@ -705,14 +705,12 @@ class Repository(Generic[T]):
         # The list path threads through QueryBuilder; read() builds raw
         # SQL, so the filter is appended here directly. Soft-deleted
         # rows are returned as None — same shape as "id not found".
-        soft_delete_clause = (
-            ' AND "deleted_at" IS NULL' if getattr(self.entity_spec, "soft_delete", False) else ""
-        )
+        soft_delete_clause = ' AND "deleted_at" IS NULL' if self.entity_spec.soft_delete else ""
         # #1223 Phase 3a.ii / 3a.iv: tombstone or as-of predicate for
         # temporal entities. read() is unique in not having a `filters`
         # dict, so as_of for the read path is supplied via a separate
         # kwarg threaded from the route handler.
-        _temporal_read = getattr(self.entity_spec, "temporal", None)
+        _temporal_read = self.entity_spec.temporal
         temporal_clause = ""
         extra_params: list[Any] = []
         if _temporal_read is not None and _temporal_read.default_filter == "active":
@@ -947,7 +945,7 @@ class Repository(Generic[T]):
         # into the filter via `soft_delete: true` on the entity.
         # `include_deleted` query-param + RBAC gate is a follow-up.
         effective_filters: dict[str, Any] = dict(filters) if filters else {}
-        if getattr(self.entity_spec, "soft_delete", False):
+        if self.entity_spec.soft_delete:
             effective_filters.setdefault("deleted_at__isnull", True)
 
         # #1223 Phase 3a.ii / 3a.iv: tombstone filter + as_of reprojection.
@@ -958,7 +956,7 @@ class Repository(Generic[T]):
         # The as_of value is passed via the special `__as_of` filter dict key,
         # mirroring the `__scope_predicate` pattern. Route handlers inject it
         # from the workspace/surface `?as_of=YYYY-MM-DD` URL parameter.
-        _temporal = getattr(self.entity_spec, "temporal", None)
+        _temporal = self.entity_spec.temporal
         _as_of = effective_filters.pop("__as_of", None)
         if _temporal is not None and _temporal.default_filter == "active":
             if _as_of is not None:
@@ -1152,13 +1150,13 @@ class Repository(Generic[T]):
             # incoming `filters` dict so QueryBuilder ANDs the
             # tombstone predicate with any scope/user filters.
             effective_filters: dict[str, Any] = dict(filters) if filters else {}
-            if getattr(self.entity_spec, "soft_delete", False):
+            if self.entity_spec.soft_delete:
                 effective_filters.setdefault("deleted_at__isnull", True)
 
             # #1223 Phase 3a.ii / 3a.iv: tombstone or as-of for temporal.
             # Same shape as the list path. The __as_of key flows through
             # the same filters dict used by list/scope composition.
-            _temporal_agg = getattr(self.entity_spec, "temporal", None)
+            _temporal_agg = self.entity_spec.temporal
             _as_of_agg = effective_filters.pop("__as_of", None)
             if _temporal_agg is not None and _temporal_agg.default_filter == "active":
                 if _as_of_agg is not None:
