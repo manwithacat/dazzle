@@ -94,3 +94,14 @@ class TestSubtypeOfRejects:
 """)
         with pytest.raises(ParseError):
             _parse(dsl)
+
+
+class TestRuntimeStubsRaise:
+    """Slice 3e.i ships parser + IR only; runtime ops on subtypes must raise
+    a clear NotImplementedError until 3e.iii wires them up."""
+
+    def test_create_subtype_raises_until_3e_iii(self) -> None:
+        from dazzle.back.runtime.repository import create_subtype
+
+        with pytest.raises(NotImplementedError, match="subtype_of: not wired yet"):
+            create_subtype(child_entity="Vehicle", payload={"wheels": 4})

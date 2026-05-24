@@ -1514,3 +1514,19 @@ class RepositoryFactory:
     def get_repository(self, entity_name: str) -> Repository[Any] | None:
         """Get a repository by entity name."""
         return self._repositories.get(entity_name)
+
+
+# =============================================================================
+# Subtype Operations (Stubs)
+# =============================================================================
+
+
+def create_subtype(child_entity: str, payload: dict) -> None:
+    """Subtype-aware INSERT — wires base + child rows in one transaction.
+
+    Slice 3e.i stub: raises until 3e.iii lands the DB schema + atomic insert.
+    """
+    raise NotImplementedError(
+        f"subtype_of: not wired yet (Phase 3e.iii). "
+        f"create_subtype({child_entity!r}) requires DDL + transaction support."
+    )
