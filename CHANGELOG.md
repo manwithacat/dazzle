@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.185] - 2026-05-24
+
+### Added (#1217 Phase 3e.vi — KB + validator escape-hatch framing)
+
+- **Inference KB entry `subtype_of_only_for_true_isa`** at `src/dazzle/mcp/inference_kb.toml` (between `no_polymorphic_keys` and `no_god_entities`). Frames `subtype_of:` as the escape hatch — the `prefer` field enumerates four alternatives (separate entities, state machine + variant fields, nullable subtype fields with discriminator, has_many / via:) BEFORE the "only reach for subtype_of: when ALL of these apply" gate (true IS-A + NOT NULL fields + polymorphic queries needed). Triggers cover the obvious phrases ("subtype", "subclass", "table per type", "discriminator", "kind column", etc.) so KB retrieval surfaces this entry on relevant author intents.
+- **`_GUIDANCE` blurb updated** at `src/dazzle/mcp/inference.py:147` — the "Avoid:" list now includes "default-reaching for subtype_of: (model flat when alternatives fit)" right after polymorphic keys. Surfaces the framing inline when the inference module's guidance string is sampled directly.
+- **`SEED_SCHEMA_VERSION` bumped 8 → 9** at `src/dazzle/mcp/knowledge_graph/seed.py:24` so existing KGs re-seed and pick up the new modeling-guidance entry.
+- **`W_LOOKS_POLYMORPHIC` warning message updated** at `src/dazzle/core/validator.py` — now uses the code prefix (`W_LOOKS_POLYMORPHIC:`) AND leads with "Separate nullable refs" as the preferred alternative, with `subtype_of:` listed second. Closes the loop with the KB entry's "alternatives first" framing — the same priority order appears at lint time and at KB-retrieval time.
+- **`W_SUBTYPE_OF_OVERREACH` validator check** — fires when a subtype child entity adds ≤1 specific field (excluding id / PK). Message names the offending entity, the base, and suggests "modelling as a flat entity with a discriminator enum instead." The asset_registry fixture's three subtypes each add ≥2 fields so the fixture stays clean; this warning targets genuine overreach.
+- **Tests** — 4 KB drift tests at `tests/unit/test_subtype_kb_drift.py` (entry present, prior `no_polymorphic_keys` survives, `prefer` field leads with alternatives, `_GUIDANCE` mentions subtype_of) and 5 validator tests at `tests/unit/test_subtype_validator.py` (W_LOOKS_POLYMORPHIC code prefix, alternative ordering, overreach detection on 1 field, no overreach on 3 fields, no false positive on non-subtype entity).
+
+### Agent Guidance
+
+- **`subtype_of:` ships as an escape hatch.** The inference KB (`subtype_of_only_for_true_isa`) AND the validator (`W_LOOKS_POLYMORPHIC` updated, `W_SUBTYPE_OF_OVERREACH` new) both steer toward alternatives first. Reach for `subtype_of:` only when ALL of:
+  - True IS-A (Vehicle IS an Asset, not Vehicle HAS an Asset)
+  - Subtype-specific fields need NOT NULL at the schema level
+  - You need polymorphic queries ("show me all assets, mixed kinds")
+- `kind` is a reserved field name on any entity with subtypes — the linker rejects `kind:` declarations on polymorphic bases (`E_SUBTYPE_KIND_RESERVED`).
+- Subtype-specific `scope:` composes with base `scope:` as intersection — more restrictive at subtype layer is allowed; less restrictive is not.
+- No multi-level inheritance (linker `E_SUBTYPE_OF_MULTILEVEL`) and no subtype mutation post-create (`create_subtype`/`update_subtype` both reject `kind` in payload) in v1.
+- See [ADR-0026](docs/adr/0026-subtype-polymorphism-tpt.md) and `dev_docs/2026-05-24-1217-phase3e-subtype-polymorphism-design.md` for the full design + framing. The canonical worked example is `fixtures/asset_registry/`.
+
 ## [0.71.184] - 2026-05-24
 
 ### Added (#1217 Phase 3e.v — `subtype_panel:` block + MCP + fixture surfaces)
