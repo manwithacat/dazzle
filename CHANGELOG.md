@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.182] - 2026-05-24
+
+### Added (#1217 Phase 3e.iii — `subtype_of:` runtime — DDL + triggers + atomic CRUD)
+
+- **TPT (table-per-type) DDL emission** in `src/dazzle/back/runtime/sa_schema.py:363-394`. When `EntitySpec.subtype_of` is set, `build_metadata` emits a child table containing only subtype-specific fields; the `id` column is BOTH `primary_key=True` AND a `sa.ForeignKey("<base>.id", ondelete="CASCADE")`. Base-table emission is unchanged — the `kind` enum column rides through from the linker pass (slice 3e.ii). The TPT branch sits at the top of the per-entity loop with an early `continue`, so the normal-emission path is never re-entered for children.
+- **Back-layer EntitySpec threading**: `dazzle.back.specs.entity.EntitySpec` (separate from the IR-layer EntitySpec) gains `subtype_of: str | None` and `subtype_children: tuple[str, ...]` fields plus `is_polymorphic_base` / `is_polymorphic_child` helper properties. `convert_entities` at `src/dazzle/back/converters/entity_converter.py:792-793` passes the fields through alongside soft_delete and temporal.
+- **Cross-row consistency trigger emitters** in new module `src/dazzle/back/runtime/triggers.py`:
+  - `build_assert_subtype_kind_function()` — declares the shared plpgsql function called from per-child triggers. Uses `format('SELECT kind::text FROM %I WHERE id = $1', base_table)` for safe identifier interpolation.
+  - `build_child_kind_trigger(*, child_table, base_table, expected_kind)` — emits `BEFORE INSERT OR UPDATE` trigger DDL with PascalCase identifiers double-quoted for case preservation.
+- **Framework Alembic revision** `0003_subtype_kind_function.py` registers the `assert_subtype_kind` plpgsql function once at deploy time. Per-child triggers are NOT in this migration — they're applied per-project at runtime DB bootstrap because the trigger declarations depend on parsed AppSpec.
+- **Per-child trigger application** in `pg_backend.create_all_tables` at `src/dazzle/back/runtime/pg_backend.py:444+`. After `metadata.create_all`, the bootstrap installs `assert_subtype_kind()` via `CREATE OR REPLACE` (idempotent) and applies per-child `DROP TRIGGER IF EXISTS ... ; CREATE TRIGGER ...` for each entity with `subtype_of` set. Mirrors the existing FK-index installation pattern.
+- **`create_subtype` repository method** at `src/dazzle/back/runtime/repository.py:1575+` replaces the 3e.i stub. Atomic INSERT of base + child rows sharing one uuid PK in a single transaction. The `kind` discriminator is auto-populated from the snake_case child name; the caller MUST NOT supply `kind` (rejected with a clear ValueError citing ADR-0026). Integrity errors translate to `ConstraintViolationError` mirroring `Repository.create()`.
+- **`update_subtype` repository method** splits the payload by field-ownership into per-table UPDATEs in one transaction. `kind` in payload is rejected — to change a subtype, callers must DELETE + INSERT (the id will change). Partial payloads cleanly skip the side with no fields rather than emit malformed SQL.
+- **Cascade DELETE**: the existing `Repository.delete()` handles subtype deletion for free — the child's FK to base has `ON DELETE CASCADE` from Task 12, so `DELETE FROM "Asset" WHERE id = ?` removes the matching child row automatically. No `delete_subtype` wrapper added.
+- **Tests**: 17 new mock-based unit tests across `test_subtype_of_ddl.py` (3), `test_subtype_of_triggers.py` (3), `test_subtype_alembic_revision.py` (3), and `test_subtype_of_runtime.py` (11) — pin DDL shape, trigger SQL contracts, Alembic revision wiring, and `create_subtype` / `update_subtype` SQL emission + kind-immutability guards.
+
+### Agent Guidance
+
+- Authoring + linker validation (3e.ii) PLUS runtime (3e.iii) are now live. An app with `subtype_of:` declarations boots successfully against Postgres: tables created with shared-PK FKs, triggers installed, atomic CRUD works. Polymorphic-base SELECT queries return rows of mixed kinds; subtype-specific queries (3e.iv) are still pending.
+- **kind is immutable post-create** (ADR-0026). `create_subtype` and `update_subtype` both reject `"kind"` in the payload; the per-row Postgres trigger catches any out-of-band manipulation. To change a subtype, DELETE the row and INSERT a new one — the id will change.
+- **Cascade DELETE is base-driven**: `DELETE FROM "Asset" WHERE id = ?` removes both base and child rows. Direct deletion of a child row leaves an orphan base — don't do that. The existing `Repository.delete()` on the base entity is the right path.
+- Cleanup follow-ups deferred to next slice: (a) `_subtype_kind_value` is a single-use helper — inline at the one call site for symmetry with `pg_backend.py:461` which inlines `_to_snake_case`. (b) `_translate_integrity_error` extraction would dedupe four copies of the constraint-violation message tree across `Repository.create/update` + `create_subtype/update_subtype`.
+
 ## [0.71.181] - 2026-05-24
 
 ### Added (#1217 Phase 3e.ii — `subtype_of:` linker validation)
