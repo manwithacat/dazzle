@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.175] - 2026-05-24
+
+### Added (#1227 Phase 3b.ii — runtime recursive CTE for `descendants_of` / `ancestors_of`)
+
+- **`_resolve_recursive_traversal_fields`** module-level helper runs a recursive CTE per traversal field, then a batched fetch to resolve full rows. Each input row receives a list under the field name (empty list when no walk results). Wired into `Repository.read()` and `Repository.list()` alongside the latest_one resolver.
+- **Self-ref descendants:** anchor `SELECT id, <via> FROM <host> WHERE <via> IN (...source_ids)` UNION ALL `SELECT t.id, w.root FROM <host> t JOIN walk w ON t.<via> = w.id` — pure single-table walk.
+- **Self-ref ancestors:** mirror walks *up* via the parent FK from each source; the recursion stops when `<via>` IS NULL (the root).
+- **Junction-mediated descendants** (e.g. `via ManagerLink.manager`): CTE hits the junction table directly. The "child" FK column on the junction is discovered at runtime via an `information_schema.columns` probe (one query per traversal field per request — acceptable for now; structured plumbing of the junction's other-FK name through `EntitySpec` is a follow-up).
+- **Junction-mediated ancestors:** same junction, reversed CTE direction.
+- **`_discover_junction_child_fk`** logs at DEBUG level on probe failure and returns `None`, attaching empty traversal results. Validator has already enforced compile-time that the second `ref Host` field exists; runtime probe failure means catalog access issues, not a missing column.
+- 11 new runtime tests in `tests/unit/test_descendants_of_runtime.py` exercising both via shapes, both directions, empty/no-result paths, no-op skip when entity has no traversal fields, and the junction probe helper directly.
+- Frontend-spec map: `DESCENDANTS_OF` / `ANCESTORS_OF` map to `string[]` (same shape as `HAS_MANY`).
+
+### Agent Guidance
+
+- `descendants_of` / `ancestors_of` are now runtime-resolved on read and list paths. The field on the returned row is a Python list of dicts (full row payloads, not just ids — same convention as `latest_one`'s nested dict). Empty list when no matches.
+- Junction-mediated traversal runs an `information_schema` probe per field per request to discover the "other" FK on the junction. Acceptable for hr_records-class apps; if junction-heavy apps appear, the probe should move into a startup-time discovery (file as follow-up if you hit it).
+
 ## [0.71.174] - 2026-05-24
 
 ### Added (#1227 Phase 3b.i — `descendants_of` / `ancestors_of` parser + IR + validator)

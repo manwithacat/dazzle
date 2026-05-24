@@ -42,6 +42,10 @@ FIELD_TYPE_MAP: dict[str, str] = {
     # #1223 Phase 3a.v: latest_one resolves to a single row's primary key
     # at the frontend layer — same shape as HAS_ONE.
     FieldTypeKind.LATEST_ONE: "string",
+    # #1227 Phase 3b: descendants_of / ancestors_of resolve to arrays of
+    # row ids at the frontend layer — same shape as HAS_MANY.
+    FieldTypeKind.DESCENDANTS_OF: "string[]",
+    FieldTypeKind.ANCESTORS_OF: "string[]",
 }
 
 ALL_SECTIONS = [

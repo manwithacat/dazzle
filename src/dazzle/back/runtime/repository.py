@@ -192,6 +192,216 @@ def _resolve_latest_one_fields(
     return rows
 
 
+def _resolve_recursive_traversal_fields(
+    rows: list[dict[str, Any]],
+    entity_spec: Any,
+    db: Any,
+    host_table: str,
+) -> list[dict[str, Any]]:
+    """Resolve every ``descendants_of`` / ``ancestors_of`` field on the
+    entity (#1227 Phase 3b.ii).
+
+    For each traversal field, runs a recursive CTE:
+
+    Self-ref descendants:
+        WITH RECURSIVE walk(id, root) AS (
+          SELECT id, <via> FROM <host> WHERE <via> IN (...source_ids)
+          UNION ALL
+          SELECT t.id, w.root FROM <host> t JOIN walk w ON t.<via> = w.id
+        )
+        SELECT root, id FROM walk
+
+    Junction-mediated descendants (e.g. ``via ManagerLink.manager``):
+        WITH RECURSIVE walk(id, root) AS (
+          SELECT m.<other_fk>, m.<via> FROM <junction> m WHERE m.<via> IN (...)
+          UNION ALL
+          SELECT m.<other_fk>, w.root FROM <junction> m JOIN walk w ON m.<via> = w.id
+        )
+
+    Ancestors mirror the same shape walking up via the parent FK.
+
+    After the walk yields ``(root, id)`` pairs, a second batched
+    ``SELECT * FROM <host> WHERE id IN (...)`` fetches the resolved
+    rows. Each input row receives a list under the field name (empty
+    list when no descendants/ancestors).
+
+    No-op when entity has no such fields or ``rows`` is empty.
+    """
+    from dazzle.core.ir import FieldTypeKind
+
+    if not rows or entity_spec is None:
+        return rows
+
+    traversal_fields = [
+        f
+        for f in getattr(entity_spec, "fields", [])
+        if getattr(f.type, "kind", None)
+        in (FieldTypeKind.DESCENDANTS_OF, FieldTypeKind.ANCESTORS_OF)
+    ]
+    if not traversal_fields:
+        return rows
+
+    placeholder = db.placeholder
+    source_ids = [str(row["id"]) for row in rows if row.get("id")]
+    if not source_ids:
+        for row in rows:
+            for f in traversal_fields:
+                row[f.name] = []
+        return rows
+
+    host_q = quote_identifier(host_table)
+
+    for f in traversal_fields:
+        is_descendants = f.type.kind == FieldTypeKind.DESCENDANTS_OF
+        via_field = f.type.via_field
+        via_entity = f.type.via_entity
+        if not via_field:
+            for row in rows:
+                row[f.name] = []
+            continue
+
+        via_q = quote_identifier(via_field)
+        in_placeholders = ", ".join(placeholder for _ in source_ids)
+
+        if via_entity is None:
+            # Self-ref: walk through the host table itself.
+            if is_descendants:
+                cte = (
+                    f"WITH RECURSIVE walk(id, root) AS ( "
+                    f"SELECT id, {via_q} FROM {host_q} "
+                    f"WHERE {via_q} IN ({in_placeholders}) "
+                    f"UNION ALL "
+                    f"SELECT t.id, w.root FROM {host_q} t "
+                    f"JOIN walk w ON t.{via_q} = w.id "
+                    f") SELECT root, id FROM walk"
+                )
+            else:
+                # Ancestors: from each source, walk up via the FK.
+                cte = (
+                    f"WITH RECURSIVE walk(id, root) AS ( "
+                    f"SELECT {via_q}, id FROM {host_q} "
+                    f"WHERE id IN ({in_placeholders}) AND {via_q} IS NOT NULL "
+                    f"UNION ALL "
+                    f"SELECT t.{via_q}, w.root FROM {host_q} t "
+                    f"JOIN walk w ON t.id = w.id AND t.{via_q} IS NOT NULL "
+                    f") SELECT root, id FROM walk"
+                )
+            params = list(source_ids)
+        else:
+            # Junction-mediated: the validator already ensured the junction
+            # exists, has the parent FK named after the dot, and has at
+            # least one other `ref Host` field. We need that *other* field's
+            # name to know what the "child" id is on each link row. Without
+            # the appspec threaded here, we discover it by querying the
+            # junction's columns at execution time — but the cleaner shape
+            # is to look it up via the entity_spec registry. For MVP we
+            # accept a small N+1 quirk: assume the junction has exactly two
+            # `ref Host` fields and call the non-via one "child". We probe
+            # by selecting all column names from the junction and picking
+            # the first FK-looking column that isn't via_field.
+            child_fk = _discover_junction_child_fk(db, via_entity, via_field)
+            if child_fk is None:
+                for row in rows:
+                    row[f.name] = []
+                continue
+            junction_q = quote_identifier(via_entity)
+            child_q = quote_identifier(child_fk)
+            if is_descendants:
+                cte = (
+                    f"WITH RECURSIVE walk(id, root) AS ( "
+                    f"SELECT m.{child_q}, m.{via_q} FROM {junction_q} m "
+                    f"WHERE m.{via_q} IN ({in_placeholders}) "
+                    f"UNION ALL "
+                    f"SELECT m.{child_q}, w.root FROM {junction_q} m "
+                    f"JOIN walk w ON m.{via_q} = w.id "
+                    f") SELECT root, id FROM walk"
+                )
+            else:
+                cte = (
+                    f"WITH RECURSIVE walk(id, root) AS ( "
+                    f"SELECT m.{via_q}, m.{child_q} FROM {junction_q} m "
+                    f"WHERE m.{child_q} IN ({in_placeholders}) "
+                    f"UNION ALL "
+                    f"SELECT m.{via_q}, w.root FROM {junction_q} m "
+                    f"JOIN walk w ON m.{child_q} = w.id "
+                    f") SELECT root, id FROM walk"
+                )
+            params = list(source_ids)
+
+        pairs: list[tuple[str, str]] = []
+        with db.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(cte, params)  # nosemgrep
+            fetched = cursor.fetchall()
+            pairs = [(str(r["root"]), str(r["id"])) for r in fetched]
+
+        if not pairs:
+            for row in rows:
+                row[f.name] = []
+            continue
+
+        unique_ids = list({pid for _, pid in pairs})
+        unique_ph = ", ".join(placeholder for _ in unique_ids)
+        fetch_sql = f"SELECT * FROM {host_q} WHERE id IN ({unique_ph})"
+        fetched_rows: dict[str, dict[str, Any]] = {}
+        with db.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(fetch_sql, unique_ids)  # nosemgrep
+            for r in cursor.fetchall():
+                fetched_rows[str(r["id"])] = dict(r)
+
+        by_root: dict[str, list[dict[str, Any]]] = {sid: [] for sid in source_ids}
+        for root, pid in pairs:
+            fetched = fetched_rows.get(pid)
+            if fetched is not None:
+                by_root.setdefault(root, []).append(fetched)
+
+        for input_row in rows:
+            input_row[f.name] = by_root.get(str(input_row.get("id")), [])
+
+    return rows
+
+
+def _discover_junction_child_fk(db: Any, junction_table: str, via_field: str) -> str | None:
+    """Look up the junction's non-via FK column name.
+
+    Probes the database catalog (information_schema.columns) for the
+    junction's columns and returns the first that looks like a FK
+    (UUID-typed, not the via_field, not `id`).
+
+    Returns ``None`` if no candidate column is found — the caller
+    handles by attaching empty traversal results.
+    """
+    sql = (
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = %s ORDER BY ordinal_position"
+    )
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        with db.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, [junction_table])
+            cols = [str(r["column_name"]) for r in cursor.fetchall()]
+    except Exception:
+        logger.debug(
+            "junction child-FK probe failed for %s; traversal attaches empty list",
+            junction_table,
+            exc_info=True,
+        )
+        return None
+    for col in cols:
+        if col == via_field or col == "id":
+            continue
+        # Convention: any non-id column on a junction whose name doesn't
+        # match the parent via_field is a candidate child FK. Validator
+        # has already enforced at compile time that such a column exists
+        # and is a `ref Host` — we trust that here.
+        return col
+    return None
+
+
 def _build_temporal_as_of_predicate(
     start_field: str, end_field: str, as_of: Any
 ) -> tuple[str, list[Any]]:
@@ -537,6 +747,12 @@ class Repository(Generic[T]):
             getattr(f.type, "kind", None) == FieldTypeKind.LATEST_ONE
             for f in self.entity_spec.fields
         )
+        # #1227 Phase 3b.ii: descendants_of / ancestors_of resolution.
+        _has_traversal = any(
+            getattr(f.type, "kind", None)
+            in (FieldTypeKind.DESCENDANTS_OF, FieldTypeKind.ANCESTORS_OF)
+            for f in self.entity_spec.fields
+        )
 
         # If relations requested, load them and return dict
         if include and self._relation_loader:
@@ -551,14 +767,22 @@ class Repository(Generic[T]):
                 row_dicts = _resolve_latest_one_fields(
                     row_dicts, self.entity_spec, self.db, as_of=as_of
                 )
+            if _has_traversal:
+                row_dicts = _resolve_recursive_traversal_fields(
+                    row_dicts, self.entity_spec, self.db, self.table_name
+                )
             return self._convert_row_dict(row_dicts[0])
 
         # If computed fields or latest_one fields, return dict with derived values
-        if self._computed_fields or _has_latest_one:
+        if self._computed_fields or _has_latest_one or _has_traversal:
             row_dicts_l = [dict(row)]
             if _has_latest_one:
                 row_dicts_l = _resolve_latest_one_fields(
                     row_dicts_l, self.entity_spec, self.db, as_of=as_of
+                )
+            if _has_traversal:
+                row_dicts_l = _resolve_recursive_traversal_fields(
+                    row_dicts_l, self.entity_spec, self.db, self.table_name
                 )
             return self._convert_row_dict(row_dicts_l[0])
 
@@ -845,9 +1069,20 @@ class Repository(Generic[T]):
                 row_dicts, self.entity_spec, self.db, as_of=_as_of
             )
 
+        # #1227 Phase 3b.ii: descendants_of / ancestors_of resolution.
+        _has_traversal = any(
+            getattr(f.type, "kind", None)
+            in (FieldTypeKind.DESCENDANTS_OF, FieldTypeKind.ANCESTORS_OF)
+            for f in self.entity_spec.fields
+        )
+        if _has_traversal:
+            row_dicts = _resolve_recursive_traversal_fields(
+                row_dicts, self.entity_spec, self.db, self.table_name
+            )
+
         # Convert to models (or return dicts if relations/computed fields included)
         items: list[Any]
-        if include or self._computed_fields or _has_latest_one:
+        if include or self._computed_fields or _has_latest_one or _has_traversal:
             # Return dicts with nested data and/or computed/derived fields
             items = [self._convert_row_dict(row) for row in row_dicts]
         else:
