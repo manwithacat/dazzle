@@ -7,6 +7,27 @@ from __future__ import annotations  # required: forward reference
 from dataclasses import dataclass
 from pathlib import Path
 
+# =============================================================================
+# Diagnostic Codes for LinkError (Linker Pass)
+# =============================================================================
+# Error codes (E_*) for subtype_of validation in the linker pass.
+# Used to identify specific validation failures that require fixing.
+
+# Entity subtype validation errors
+E_SUBTYPE_OF_UNKNOWN_BASE = "E_SUBTYPE_OF_UNKNOWN_BASE"
+E_SUBTYPE_OF_CYCLE = "E_SUBTYPE_OF_CYCLE"
+E_SUBTYPE_OF_MULTILEVEL = "E_SUBTYPE_OF_MULTILEVEL"
+E_SUBTYPE_DUPLICATE_PK = "E_SUBTYPE_DUPLICATE_PK"
+E_SUBTYPE_KIND_RESERVED = "E_SUBTYPE_KIND_RESERVED"
+E_SUBTYPE_SOFT_DELETE_ON_CHILD = "E_SUBTYPE_SOFT_DELETE_ON_CHILD"
+E_SUBTYPE_GRANT_INCOMPLETE = "E_SUBTYPE_GRANT_INCOMPLETE"
+
+# UI subtype validation errors
+E_SUBTYPE_PANEL_UNKNOWN_KIND = "E_SUBTYPE_PANEL_UNKNOWN_KIND"
+
+# Warnings
+W_SUBTYPE_PANEL_INCOMPLETE = "W_SUBTYPE_PANEL_INCOMPLETE"
+
 
 class DazzleError(Exception):
     """Base exception for all DAZZLE errors."""
