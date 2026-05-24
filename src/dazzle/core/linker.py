@@ -1,6 +1,14 @@
 from . import ir
-from .archetype_expander import expand_archetypes, generate_archetype_surfaces
-from .errors import LinkError
+from .archetype_expander import _to_snake_case, expand_archetypes, generate_archetype_surfaces
+from .errors import (
+    E_SUBTYPE_DUPLICATE_PK,
+    E_SUBTYPE_KIND_RESERVED,
+    E_SUBTYPE_OF_CYCLE,
+    E_SUBTYPE_OF_MULTILEVEL,
+    E_SUBTYPE_OF_UNKNOWN_BASE,
+    E_SUBTYPE_SOFT_DELETE_ON_CHILD,
+    LinkError,
+)
 from .ir.audit import AUDIT_ENTRY_FIELDS
 from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
@@ -179,6 +187,11 @@ def build_appspec(
     entities = [*entities, *admin_entities]
     surfaces = [*surfaces, *admin_surfaces]
 
+    # 9c.1 Validate `subtype_of:` declarations and synthesise discriminator
+    # (#1217 Phase 3e.ii). Must precede _inject_soft_delete_fields so rule
+    # 10 (soft_delete on child) fires before auto-injection masks intent.
+    entities = _link_subtypes(entities)
+
     # 9d. Inject `deleted_at: datetime optional` for entities with
     # `soft_delete: true` (#1218 Option A). The runtime filters
     # read paths on `deleted_at IS NULL` and the DELETE handler
@@ -294,6 +307,94 @@ def build_appspec(
             "link_warnings": unused_import_warnings,  # v0.14.1
         },
     )
+
+
+def _link_subtypes(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
+    """Validate `subtype_of:` declarations and synthesise discriminators (#1217 Phase 3e.ii).
+
+    See ADR-0026. Enforces rules 1, 2, 3/5, 6, 7, 10 from spec §5. On success,
+    populates `subtype_children` on each base and appends a `kind` enum field
+    listing the snake_case child names. Rule 11 (grant_schema completeness) is
+    handled separately.
+    """
+    by_name = {e.name: e for e in entities}
+
+    children_by_base: dict[str, list[str]] = {}
+    for entity in entities:
+        if entity.subtype_of is None:
+            continue
+        base_name = entity.subtype_of
+
+        if base_name == entity.name:
+            raise LinkError(
+                f"{E_SUBTYPE_OF_CYCLE}: Entity '{entity.name}' declares "
+                f"subtype_of itself; cycles are not permitted."
+            )
+
+        if base_name not in by_name:
+            raise LinkError(
+                f"{E_SUBTYPE_OF_UNKNOWN_BASE}: Entity '{entity.name}' declares "
+                f"subtype_of '{base_name}', but no entity by that name exists."
+            )
+
+        parent = by_name[base_name]
+        if parent.subtype_of is not None:
+            raise LinkError(
+                f"{E_SUBTYPE_OF_MULTILEVEL}: Entity '{entity.name}' declares "
+                f"subtype_of '{base_name}', which itself declares "
+                f"subtype_of '{parent.subtype_of}'. Subtype hierarchies must be flat."
+            )
+
+        for f in entity.fields:
+            if ir.FieldModifier.PK in f.modifiers:
+                raise LinkError(
+                    f"{E_SUBTYPE_DUPLICATE_PK}: Entity '{entity.name}' is a "
+                    f"subtype of '{base_name}' and must not declare its own "
+                    f"primary key (field '{f.name}'). The PK is inherited from the base."
+                )
+
+        if getattr(entity, "soft_delete", False):
+            raise LinkError(
+                f"{E_SUBTYPE_SOFT_DELETE_ON_CHILD}: Entity '{entity.name}' is a "
+                f"subtype of '{base_name}' and must not declare `soft_delete:`. "
+                f"Declare soft_delete on the base entity instead."
+            )
+
+        children_by_base.setdefault(base_name, []).append(entity.name)
+
+    out: list[ir.EntitySpec] = []
+    for entity in entities:
+        children = children_by_base.get(entity.name)
+        if children is None:
+            out.append(entity)
+            continue
+
+        if any(f.name == "kind" for f in entity.fields):
+            raise LinkError(
+                f"{E_SUBTYPE_KIND_RESERVED}: Entity '{entity.name}' is a "
+                f"polymorphic base (children: {sorted(children)}) and already "
+                f"declares a `kind` field. `kind` is reserved as the subtype "
+                f"discriminator."
+            )
+
+        children_sorted = sorted(children)
+        kind_field = ir.FieldSpec(
+            name="kind",
+            type=ir.FieldType(
+                kind=ir.FieldTypeKind.ENUM,
+                enum_values=[_to_snake_case(c) for c in children_sorted],
+            ),
+            modifiers=[ir.FieldModifier.REQUIRED],
+        )
+        out.append(
+            entity.model_copy(
+                update={
+                    "subtype_children": tuple(children_sorted),
+                    "fields": [*entity.fields, kind_field],
+                }
+            )
+        )
+    return out
 
 
 def _inject_soft_delete_fields(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
