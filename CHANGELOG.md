@@ -9,21 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (#1217 Phase 3e.v — `subtype_panel:` block, parser + linker)
+## [0.71.184] - 2026-05-24
 
-- **`SUBTYPE_PANEL` lexer token** at `src/dazzle/core/lexer.py:188`. Enables the new `subtype_panel:` block keyword inside a surface section.
-- **`SubtypePanelSpec` + `SubtypePanelBranch` IR types** at `src/dazzle/core/ir/surfaces.py` (immediately before `SurfaceSection`). Each branch carries a `when_kind` discriminator value and an `include_surface` reference. `SurfaceSection` gains an optional `subtype_panel: SubtypePanelSpec | None = None` field.
-- **Surface section parser extension** at `src/dazzle/core/dsl_parser_impl/surface.py` — `parse_surface_section` now dispatches `subtype_panel` alongside `field`. The new `_parse_subtype_panel` helper reads `when kind = <value>: include surface <name>` branches between INDENT/DEDENT.
-- **Linker rule 9** at `src/dazzle/core/linker.py` — new `_validate_subtype_panels(entities, surfaces)` raises `LinkError(E_SUBTYPE_PANEL_UNKNOWN_KIND)` when (a) the host surface's entity is not a polymorphic base, or (b) a branch's `when_kind` does not match any known subtype. Missing subtypes emit `W_SUBTYPE_PANEL_INCOMPLETE` warnings joined into `AppSpec.metadata['link_warnings']`.
-- **Parser + linker test suite** at `tests/unit/test_subtype_panel_parser.py` (4 tests) pinning successful parse, unknown-kind rejection, non-base rejection, and the incomplete-coverage warning surface.
+### Added (#1217 Phase 3e.v — `subtype_panel:` block + MCP + fixture surfaces)
 
-### Changed
-
-- **`AppSpec.metadata['link_warnings']`** now also carries `W_SUBTYPE_PANEL_INCOMPLETE` strings alongside the existing unused-import warnings.
+- **`SUBTYPE_PANEL` lexer token + IR types** — `SubtypePanelSpec(branches: tuple[SubtypePanelBranch, ...])` and `SubtypePanelBranch(when_kind: str, include_surface: str)`, both frozen Pydantic models. `SurfaceSection` gains `subtype_panel: SubtypePanelSpec | None = None`.
+- **Surface section parser extension** — `parse_surface_section` dispatches `subtype_panel` alongside `field`. The new `_parse_subtype_panel` helper reads `when kind = <value>: include surface <name>` branches between INDENT/DEDENT. The parser uses the existing `TokenType.KIND` (already reserved framework-wide), a stronger guarantee than the design draft's identifier-with-value pattern.
+- **Linker rule 9** — `_validate_subtype_panels(entities, surfaces)` raises `LinkError(E_SUBTYPE_PANEL_UNKNOWN_KIND)` when (a) the host surface's entity is not a polymorphic base, or (b) a branch's `when_kind` does not match any known subtype. Missing subtypes emit `W_SUBTYPE_PANEL_INCOMPLETE` warnings joined into `AppSpec.metadata['link_warnings']` alongside the existing unused-import warnings.
+- **`resolve_subtype_panel_surface` helper** at `src/dazzle/render/subtype_panel.py` — pure lookup utility `(section, row_kind, appspec) -> SurfaceSpec | None` that future renderer code can call. Reuses `dazzle.core.ir.appspec_queries.get_surface`. Defence-in-depth: returns None for any of (no panel, no row_kind, no matching branch, unknown surface) so the renderer falls through to the section's normal content.
+- **`inspect_entity` MCP handler enriched** at `src/dazzle/mcp/server/handlers/dsl/inspect.py` — returns `subtype_of` (None or base name), `subtype_children` (sorted list), and synthesises an inherited-field view for polymorphic children by appending base fields with an `inherited_from: <base>` marker. Lets agents see the full effective field set without having to look up the base separately.
+- **`fixtures/asset_registry/` surfaces** — three per-subtype detail surfaces (`vehicle_detail`, `building_detail`, `equipment_detail`) plus an `asset_card` polymorphic surface whose `section main:` ends with a `subtype_panel:` block dispatching to each per-subtype surface. Canonical worked example for the construct.
+- **Tests** — 4 parser+linker tests (`test_subtype_panel_parser.py`), 5 resolver tests (`test_subtype_panel_resolver.py`), 3 MCP-inspect tests (`test_inspect_entity_subtypes.py`), 4 surface-shape tests added to `test_asset_registry_fixture.py` (now 9 total).
 
 ### Agent Guidance
 
-- `subtype_panel:` is the surface-side counterpart to `entity X: subtype_of: Base`. Only valid on surfaces whose entity is a polymorphic base; the renderer (Task 24, not yet wired) will dispatch on `row.kind`. Until renderer dispatch lands, the block is parsed and validated but the per-subtype include is not yet rendered.
+- **`subtype_panel:` is the surface-side counterpart to `entity X: subtype_of: Base`.** Use it on a polymorphic-base surface's section to dispatch rendering by `row.kind`. Each branch points at a per-subtype surface that holds the kind-specific fields:
+  ```
+  surface asset_card "Asset":
+    uses entity Asset
+    mode: view
+    section main:
+      field acquired_at "Acquired"
+      subtype_panel:
+        when kind = vehicle: include surface vehicle_detail
+        when kind = building: include surface building_detail
+  ```
+- **Renderer wiring is a deferred follow-up.** The IR + parser + linker + lookup helper are in place; the live section-rendering integration (substituting the resolved surface's content for the parent section's content) is NOT yet wired into the card-mode renderer. Until that lands, `subtype_panel:` parses, validates, and resolves but doesn't visibly affect runtime HTML.
+- **`inspect_entity` now surfaces subtype info** to agents — `subtype_of` and `subtype_children` are first-class, and `fields` includes inherited base fields with an `inherited_from: <base>` marker. Use this MCP handler to discover the full effective shape of a polymorphic-child entity without separately inspecting the base.
+- **KG indexing of `is_subtype_of`/`has_subtype` relations** as graph edges is a deferred follow-up — would need project-KG indexer work beyond this slice. The inference KB entry that frames the construct as an escape hatch (`subtype_of_only_for_true_isa`) lands in slice 3e.vi.
 
 ## [0.71.183] - 2026-05-24
 
