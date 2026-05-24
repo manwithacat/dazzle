@@ -3666,11 +3666,13 @@ enum: FieldStrategy
 
 enum: FieldTypeKind
   members:
+    - ANCESTORS_OF = 'ancestors_of'
     - BELONGS_TO = 'belongs_to'
     - BOOL = 'bool'
     - DATE = 'date'
     - DATETIME = 'datetime'
     - DECIMAL = 'decimal'
+    - DESCENDANTS_OF = 'descendants_of'
     - EMAIL = 'email'
     - EMBEDS = 'embeds'
     - ENUM = 'enum'

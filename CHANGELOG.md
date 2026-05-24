@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.174] - 2026-05-24
+
+### Added (#1227 Phase 3b.i — `descendants_of` / `ancestors_of` parser + IR + validator)
+
+- **Two new field kinds** for recursive traversal of self-referencing hierarchies:
+  - `all_descendants: descendants_of self via parent_department` — self-ref FK on the host entity. Walks rows where the FK chains back through itself.
+  - `all_descendants: descendants_of self via Junction.fk_field` — junction-qualified path. Composes naturally with the junction's `temporal:` so active-only walks are automatic on read paths.
+  - `ancestors_of` mirrors the same shapes, walking *up* the hierarchy.
+- IR: `FieldTypeKind.DESCENDANTS_OF`, `FieldTypeKind.ANCESTORS_OF` reuse existing `via_field` + `via_entity` slots. `ref_entity` is left `None` because the target is always the host entity (validator/runtime derive).
+- Parser: `_parse_descendants_of_type` / `_parse_ancestors_of_type` share `_parse_recursive_traversal_type` helper. Anchor must be `self` in this slice; non-self anchors are a reserved extension.
+- Validator catches: bare via field doesn't exist on host; bare via field isn't a self-ref FK; junction-qualified path names an unknown entity; junction missing the named parent FK; junction missing a second `ref Host` field (needed to name the child set).
+- 12 new parser/validator tests in `tests/unit/test_descendants_of_parser.py`.
+- Runtime resolution (recursive CTE) lands in slice 3b.ii — this slice raises `NotImplementedError` shape via the standard "feature not wired yet" path used by other staged IR-first features (`latest_one`, `share:`).
+
+### Agent Guidance
+
+- New IR field kinds `DESCENDANTS_OF` / `ANCESTORS_OF` are parser-only as of this slice; reading a row that references one yields the field unresolved. Runtime walkers come next slice (3b.ii). Don't generate IR with these field kinds in places that expect resolution today; the validator passes, but reads won't include the walk.
+- The anchor token must be `self`. The grammar rejects other anchors with a clear error pointing at "reserved for a future slice."
+- Two via shapes — bare (`via fk_field`) for self-ref, qualified (`via Junction.fk_field`) for junction-mediated. The validator enforces *which* shape matches *which* FK layout; don't mix them up.
+
 ## [0.71.173] - 2026-05-24
 
 ### Changed (#1217 / #1223 follow-up — Person-as-temporal in hr_records)

@@ -282,6 +282,9 @@ class TokenType(Enum):
     BELONGS_TO = "belongs_to"
     # #1223 Phase 3a.v: derived current-row relationship for temporal entities
     LATEST_ONE = "latest_one"
+    # #1227 Phase 3b: recursive descendant / ancestor traversal for self-refs
+    DESCENDANTS_OF = "descendants_of"
+    ANCESTORS_OF = "ancestors_of"
     CASCADE = "cascade"
     RESTRICT = "restrict"
     NULLIFY = "nullify"

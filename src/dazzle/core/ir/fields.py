@@ -52,6 +52,14 @@ class FieldTypeKind(StrEnum):
     # end_field to filter on. v0.71.165: IR + parser + validator only;
     # runtime resolution in a follow-up slice (3a.v.ii).
     LATEST_ONE = "latest_one"
+    # #1227 Phase 3b — derived recursive traversal of self-referencing
+    # hierarchies. `all_descendants: descendants_of self via parent_department`
+    # for self-ref FKs; `all_reports: descendants_of self via ManagerLink.manager`
+    # for via-junction traversal (composes with the junction's temporal:
+    # default_filter for active-only walks). v0.71.174: IR + parser + validator
+    # only; runtime resolution (recursive CTE) lands in 3b.ii.
+    DESCENDANTS_OF = "descendants_of"
+    ANCESTORS_OF = "ancestors_of"
 
 
 class RelationshipBehavior(StrEnum):

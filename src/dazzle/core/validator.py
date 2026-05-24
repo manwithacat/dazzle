@@ -339,6 +339,88 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     f"field — latest_one requires the via field to be a FK back to this entity."
                 )
 
+        # #1227 Phase 3b: validate descendants_of / ancestors_of declarations.
+        # The traversal walks rows of the host entity itself, so the via
+        # field must resolve to a FK whose REF target is the host entity.
+        # Two via shapes:
+        #   - bare `via fk_field` → fk_field is on the host entity, ref host
+        #   - `via Junction.fk_field` → junction entity exists, has BOTH a
+        #     FK to host (named after the dot) and a "child" FK to host
+        for field in entity.fields:
+            if field.type.kind not in (
+                ir.FieldTypeKind.DESCENDANTS_OF,
+                ir.FieldTypeKind.ANCESTORS_OF,
+            ):
+                continue
+            kw = field.type.kind.value
+            via_field = field.type.via_field
+            via_entity_name = field.type.via_entity
+            if via_field is None:
+                errors.append(
+                    f"Entity '{entity.name}': field '{field.name}' has "
+                    f"{kw} but is missing via_field."
+                )
+                continue
+            if via_entity_name is None:
+                # Self-ref FK on host: must be `ref <entity.name>`
+                host_field_map = {f.name: f for f in entity.fields}
+                fk = host_field_map.get(via_field)
+                if fk is None:
+                    errors.append(
+                        f"Entity '{entity.name}': {kw} '{field.name}' "
+                        f"via='{via_field}' is not a field on this entity."
+                    )
+                elif fk.type.kind != ir.FieldTypeKind.REF or fk.type.ref_entity != entity.name:
+                    errors.append(
+                        f"Entity '{entity.name}': {kw} '{field.name}' "
+                        f"via='{via_field}' is not a `ref {entity.name}` "
+                        f"field — recursive traversal needs a self-referencing FK."
+                    )
+            else:
+                # Junction-qualified path: the junction must exist and have
+                # at least two FKs back to the host entity (one acting as
+                # "parent", named after the dot, plus at least one other).
+                junction = entity_map.get(via_entity_name)
+                if junction is None:
+                    errors.append(
+                        f"Entity '{entity.name}': {kw} '{field.name}' "
+                        f"via='{via_entity_name}.{via_field}' references "
+                        f"unknown entity '{via_entity_name}'."
+                    )
+                    continue
+                jmap = {f.name: f for f in junction.fields}
+                parent_fk = jmap.get(via_field)
+                if parent_fk is None:
+                    errors.append(
+                        f"Entity '{entity.name}': {kw} '{field.name}' "
+                        f"via='{via_entity_name}.{via_field}' — junction "
+                        f"'{via_entity_name}' has no field '{via_field}'."
+                    )
+                    continue
+                if (
+                    parent_fk.type.kind != ir.FieldTypeKind.REF
+                    or parent_fk.type.ref_entity != entity.name
+                ):
+                    errors.append(
+                        f"Entity '{entity.name}': {kw} '{field.name}' "
+                        f"via='{via_entity_name}.{via_field}' is not a "
+                        f"`ref {entity.name}` field on '{via_entity_name}'."
+                    )
+                other_fks = [
+                    f
+                    for f in junction.fields
+                    if f.name != via_field
+                    and f.type.kind == ir.FieldTypeKind.REF
+                    and f.type.ref_entity == entity.name
+                ]
+                if not other_fks:
+                    errors.append(
+                        f"Entity '{entity.name}': {kw} '{field.name}' "
+                        f"via junction '{via_entity_name}' needs a second "
+                        f"`ref {entity.name}` field to name the child set "
+                        f"(only '{via_field}' was found)."
+                    )
+
         # #1223 Phase 3a.i: validate temporal: block field references.
         # The named start/end/key fields must exist on the entity, and
         # end_field must NOT be `required` (NULL = currently active).

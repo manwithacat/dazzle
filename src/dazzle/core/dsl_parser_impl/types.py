@@ -127,6 +127,8 @@ class TypeParserMixin:
             TokenType.EMBEDS: self._parse_embeds_type,
             TokenType.BELONGS_TO: self._parse_belongs_to_type,
             TokenType.LATEST_ONE: self._parse_latest_one_type,
+            TokenType.DESCENDANTS_OF: self._parse_descendants_of_type,
+            TokenType.ANCESTORS_OF: self._parse_ancestors_of_type,
         }
 
         token_type_parser = _token_type_dispatch.get(token.type)
@@ -405,6 +407,83 @@ class TypeParserMixin:
             kind=ir.FieldTypeKind.LATEST_ONE,
             ref_entity=entity_name,
             via_field=str(fk_field),
+        )
+
+    def _parse_descendants_of_type(self) -> ir.FieldType:
+        """Parse ``descendants_of self via <fk_path>`` (#1227 Phase 3b).
+
+        Two FK-path shapes:
+        - ``descendants_of self via parent_department`` — self-ref FK on
+          the host entity. Walk children where ``parent_department = self.id``.
+        - ``descendants_of self via ManagerLink.manager`` — FK lives on
+          a junction entity. The host entity's id matches the FK named after
+          the ``.``; the junction's *other* FK names the child set. Composes
+          with the junction's ``temporal:`` so historical links are skipped
+          automatically on active reads.
+
+        Anchor is always ``self`` in this slice; non-self anchors are a
+        deliberate later extension. ``ref_entity`` is left ``None`` because
+        the target is always the host entity itself (validator/runtime
+        derive it from context).
+        """
+        return self._parse_recursive_traversal_type(
+            keyword="descendants_of",
+            kind=ir.FieldTypeKind.DESCENDANTS_OF,
+        )
+
+    def _parse_ancestors_of_type(self) -> ir.FieldType:
+        """Parse ``ancestors_of self via <fk_path>`` (#1227 Phase 3b).
+
+        Mirrors ``descendants_of`` but walks *up* the hierarchy: start at
+        self.id, follow the FK to the parent row, recurse. Same FK-path
+        shapes (self-ref or ``Junction.field``) and same anchor rules.
+        """
+        return self._parse_recursive_traversal_type(
+            keyword="ancestors_of",
+            kind=ir.FieldTypeKind.ANCESTORS_OF,
+        )
+
+    def _parse_recursive_traversal_type(self, keyword: str, kind: ir.FieldTypeKind) -> ir.FieldType:
+        """Shared parser for descendants_of / ancestors_of (#1227)."""
+        self.advance()  # consume keyword token
+        anchor_tok = self.expect(TokenType.IDENTIFIER)
+        anchor = anchor_tok.value
+        if anchor != "self":
+            raise make_parse_error(
+                f"`{keyword}` requires `self` as the anchor in this release; "
+                f"got `{anchor}`. Non-self anchors are reserved for a future slice.",
+                self.file,
+                anchor_tok.line,
+                anchor_tok.column,
+            )
+        if not self.match(TokenType.VIA):
+            tok = self.current_token()
+            raise make_parse_error(
+                f"`{keyword} self` requires `via <fk_field>` or "
+                f"`via <Junction>.<fk_field>` — name the FK that links rows "
+                f"in the hierarchy.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume 'via'
+        first_tok = self.expect_identifier_or_keyword()
+        first = str(first_tok.value)
+        via_entity: str | None = None
+        via_field: str
+        # Junction-qualified path: Entity.field
+        if self.match(TokenType.DOT):
+            self.advance()  # consume '.'
+            second_tok = self.expect_identifier_or_keyword()
+            via_entity = first
+            via_field = str(second_tok.value)
+        else:
+            via_field = first
+        return ir.FieldType(
+            kind=kind,
+            ref_entity=None,
+            via_entity=via_entity,
+            via_field=via_field,
         )
 
     # ------------------------------------------------------------------
