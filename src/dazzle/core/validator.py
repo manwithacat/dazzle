@@ -1954,11 +1954,39 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
                 sibling_name = f"{prefix}_id"
                 sibling = field_map.get(sibling_name)
                 if sibling and sibling.type.kind == ir.FieldTypeKind.UUID:
+                    # Diagnostic code is the first token so downstream
+                    # tooling can grep by code. Alternatives ordered by
+                    # cost: separate refs first (cheap, common case),
+                    # subtype_of: second (heavier, only when truly IS-A).
                     warnings.append(
-                        f"Entity '{entity.name}': fields '{field.name}' + "
-                        f"'{sibling_name}' look like a polymorphic key. "
-                        f"Prefer separate ref fields for each target entity."
+                        f"W_LOOKS_POLYMORPHIC: Entity '{entity.name}': fields "
+                        f"'{field.name}' + '{sibling_name}' look like a "
+                        f"polymorphic key pair. Prefer (in order): "
+                        f"1. Separate nullable refs — `post: ref Post` + "
+                        f"`photo: ref Photo` — when the set is small + closed. "
+                        f"2. subtype_of: — declare a base entity + subtypes "
+                        f"if these really form an IS-A hierarchy. "
+                        f"Polymorphic key pairs break referential integrity "
+                        f"and linker validation."
                     )
+
+        # 1b. Subtype overreach (#1217 Phase 3e.vi): child entity declares
+        # subtype_of: but adds <=1 specific field. That shape is almost
+        # always cheaper as a flat entity with a discriminator enum.
+        # Polymorphism is the escape hatch, not the default — see ADR-0026.
+        if entity.subtype_of is not None:
+            specific_count = sum(
+                1
+                for f in entity.fields
+                if f.name != "id" and ir.FieldModifier.PK not in (f.modifiers or [])
+            )
+            if specific_count <= 1:
+                warnings.append(
+                    f"W_SUBTYPE_OF_OVERREACH: Entity '{entity.name}' subtypes "
+                    f"'{entity.subtype_of}' but only adds {specific_count} "
+                    f"field(s). Consider modelling as a flat entity with a "
+                    f"discriminator enum instead."
+                )
 
         # 2. God entities: too many fields
         meaningful_fields = [
