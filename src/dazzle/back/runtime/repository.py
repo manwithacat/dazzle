@@ -1517,16 +1517,204 @@ class RepositoryFactory:
 
 
 # =============================================================================
-# Subtype Operations (Stubs)
+# Subtype Operations (#1217 Phase 3e.iii)
 # =============================================================================
+#
+# Polymorphic subtype rows live across two TPT tables sharing the same uuid
+# PK: a base row (with discriminator `kind`) and a child row. Both writes
+# must succeed together; the `with db.connection() as conn:` context
+# commits on clean exit and rolls back on exception, so two `cursor.execute`
+# calls inside one block are a single transaction. The base table's
+# BEFORE INSERT/UPDATE trigger (build_child_kind_trigger) enforces
+# kind/child-table consistency at the DB layer — we still emit `kind`
+# explicitly so the trigger sees a non-null discriminator on the base row.
+#
+# `delete_subtype` is intentionally absent: the FK on the child table
+# carries ON DELETE CASCADE (sa_schema.py — Task 12), so the existing
+# Repository.delete() against the base table cascades automatically.
 
 
-def create_subtype(child_entity: str, payload: dict[str, object]) -> None:
-    """Subtype-aware INSERT — wires base + child rows in one transaction.
+def _subtype_kind_value(child_entity: str) -> str:
+    """Discriminator value for a subtype: snake_case(child_entity).
 
-    Slice 3e.i stub: raises until 3e.iii lands the DB schema + atomic insert.
+    `Vehicle` -> `vehicle`, `PoweredAsset` -> `powered_asset`. Mirrors the
+    convention used by the trigger emitter (Task 13).
     """
-    raise NotImplementedError(
-        f"subtype_of: not wired yet (Phase 3e.iii). "
-        f"create_subtype({child_entity!r}) requires DDL + transaction support."
-    )
+    from dazzle.core.archetype_expander import _to_snake_case
+
+    return _to_snake_case(child_entity)
+
+
+def _split_payload_by_owner(
+    payload: dict[str, Any],
+    base_spec: EntitySpec,
+    child_spec: EntitySpec,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Partition a flat payload into base-owned + child-owned column buckets.
+
+    Fields named on both sides (e.g. the shared `id`) are treated as
+    base-owned for input purposes; the caller is responsible for stamping
+    `id` on both buckets at INSERT time.
+    """
+    base_names = {f.name for f in base_spec.fields}
+    child_names = {f.name for f in child_spec.fields}
+    base_payload = {k: v for k, v in payload.items() if k in base_names}
+    # Child-only — don't double-route `id` if it's in both.
+    child_payload = {k: v for k, v in payload.items() if k in child_names and k not in base_names}
+    return base_payload, child_payload
+
+
+def _convert_payload_for_db(payload: dict[str, Any], spec: EntitySpec) -> dict[str, Any]:
+    """Run each value through _python_to_postgres for its declared type."""
+    from dazzle.back.runtime.pg_backend import _python_to_postgres
+
+    field_types = {f.name: f.type for f in spec.fields}
+    return {k: _python_to_postgres(v, field_types.get(k)) for k, v in payload.items()}
+
+
+def create_subtype(
+    *,
+    db_manager: Any,
+    base_spec: EntitySpec,
+    child_spec: EntitySpec,
+    payload: dict[str, Any],
+) -> UUID:
+    """Atomic INSERT of base + child rows sharing one uuid PK.
+
+    The discriminator (`kind`) is auto-populated from the child entity name
+    in snake_case; the caller MUST NOT supply it. The new uuid is generated
+    server-side and returned.
+
+    Raises:
+        ValueError: if child_spec is not a subtype, or if payload includes
+            the framework-owned `kind` key.
+    """
+    from uuid import uuid4
+
+    if not child_spec.is_polymorphic_child or child_spec.subtype_of != base_spec.name:
+        raise ValueError(f"{child_spec.name!r} is not a subtype of {base_spec.name!r}")
+    if "kind" in payload:
+        raise ValueError(
+            "`kind` is framework-owned and auto-populated from the child entity name; "
+            "do not pass it in the create payload."
+        )
+
+    base_payload, child_payload = _split_payload_by_owner(payload, base_spec, child_spec)
+
+    new_id = uuid4()
+    base_payload["id"] = new_id
+    base_payload["kind"] = _subtype_kind_value(child_spec.name)
+    child_payload["id"] = new_id
+
+    base_db = _convert_payload_for_db(base_payload, base_spec)
+    child_db = _convert_payload_for_db(child_payload, child_spec)
+
+    ph = db_manager.placeholder
+
+    def _insert_sql(table_name: str, row: dict[str, Any]) -> tuple[str, list[Any]]:
+        columns = ", ".join(quote_identifier(k) for k in row.keys())
+        placeholders = ", ".join(ph for _ in row)
+        sql = f"INSERT INTO {quote_identifier(table_name)} ({columns}) VALUES ({placeholders})"
+        return sql, list(row.values())
+
+    base_sql, base_values = _insert_sql(base_spec.name, base_db)
+    child_sql, child_values = _insert_sql(child_spec.name, child_db)
+
+    try:
+        with db_manager.connection() as conn:
+            cursor = conn.cursor()
+            # Order matters: base first so the FK on the child row resolves,
+            # and so the trigger on the child table sees a base row to read.
+            cursor.execute(base_sql, base_values)  # nosemgrep
+            cursor.execute(child_sql, child_values)  # nosemgrep
+    except _INTEGRITY_ERRORS as exc:
+        # Reuse the constraint-translation logic so callers see the same
+        # error shape as plain Repository.create().
+        ctype, field = _parse_constraint_error(exc, child_spec.name)
+        if ctype == "unique":
+            msg = (
+                f"A {child_spec.name} with this {field} already exists"
+                if field
+                else f"Duplicate value violates unique constraint on {child_spec.name}"
+            )
+        elif ctype == "foreign_key":
+            msg = (
+                f"Referenced record not found for field '{field}' on {child_spec.name}"
+                if field
+                else f"Referenced record does not exist for {child_spec.name}"
+            )
+        else:
+            msg = f"Integrity constraint violated on {child_spec.name}: {exc}"
+        raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+
+    return new_id
+
+
+def update_subtype(
+    *,
+    db_manager: Any,
+    base_spec: EntitySpec,
+    child_spec: EntitySpec,
+    row_id: UUID,
+    payload: dict[str, Any],
+) -> None:
+    """Per-table UPDATEs in one transaction. The `kind` discriminator is
+    immutable (ADR-0026) — to change subtype, delete + recreate.
+
+    Raises:
+        ValueError: if child_spec is not a subtype, or if the payload
+            attempts to mutate `kind`.
+    """
+    if not child_spec.is_polymorphic_child or child_spec.subtype_of != base_spec.name:
+        raise ValueError(f"{child_spec.name!r} is not a subtype of {base_spec.name!r}")
+    if "kind" in payload:
+        raise ValueError(
+            "subtype kind is immutable post-create (ADR-0026, #1217 Phase 3e). "
+            "To change a subtype, DELETE the row and INSERT a new one (the id will change)."
+        )
+
+    base_payload, child_payload = _split_payload_by_owner(payload, base_spec, child_spec)
+
+    # Drop None values to mirror Repository.update() semantics.
+    base_payload = {k: v for k, v in base_payload.items() if v is not None}
+    child_payload = {k: v for k, v in child_payload.items() if v is not None}
+
+    if not base_payload and not child_payload:
+        return
+
+    base_db = _convert_payload_for_db(base_payload, base_spec)
+    child_db = _convert_payload_for_db(child_payload, child_spec)
+
+    ph = db_manager.placeholder
+
+    def _update_sql(table_name: str, row: dict[str, Any]) -> tuple[str, list[Any]]:
+        set_clause = ", ".join(f"{quote_identifier(k)} = {ph}" for k in row.keys())
+        sql = f'UPDATE {quote_identifier(table_name)} SET {set_clause} WHERE "id" = {ph}'
+        return sql, [*row.values(), str(row_id)]
+
+    try:
+        with db_manager.connection() as conn:
+            cursor = conn.cursor()
+            if base_db:
+                sql, values = _update_sql(base_spec.name, base_db)
+                cursor.execute(sql, values)  # nosemgrep
+            if child_db:
+                sql, values = _update_sql(child_spec.name, child_db)
+                cursor.execute(sql, values)  # nosemgrep
+    except _INTEGRITY_ERRORS as exc:
+        ctype, field = _parse_constraint_error(exc, child_spec.name)
+        if ctype == "unique":
+            msg = (
+                f"A {child_spec.name} with this {field} already exists"
+                if field
+                else f"Duplicate value violates unique constraint on {child_spec.name}"
+            )
+        elif ctype == "foreign_key":
+            msg = (
+                f"Referenced record not found for field '{field}' on {child_spec.name}"
+                if field
+                else f"Referenced record does not exist for {child_spec.name}"
+            )
+        else:
+            msg = f"Integrity constraint violated on {child_spec.name}: {exc}"
+        raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc

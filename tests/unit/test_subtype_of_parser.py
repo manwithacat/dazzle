@@ -96,12 +96,16 @@ class TestSubtypeOfRejects:
             _parse(dsl)
 
 
-class TestRuntimeStubsRaise:
-    """Slice 3e.i ships parser + IR only; runtime ops on subtypes must raise
-    a clear NotImplementedError until 3e.iii wires them up."""
+class TestRuntimeStubsWiredIn3eIII:
+    """Slice 3e.i shipped the stub; 3e.iii (this slice) replaced it with a
+    real implementation. The function is now keyword-only with explicit
+    base/child specs — see test_subtype_of_runtime.py for the full test set.
+    """
 
-    def test_create_subtype_raises_until_3e_iii(self) -> None:
-        from dazzle.back.runtime.repository import create_subtype
+    def test_create_subtype_is_importable(self) -> None:
+        # Pin that the symbol survives the 3e.iii rewrite and is no longer
+        # a NotImplementedError stub.
+        from dazzle.back.runtime.repository import create_subtype, update_subtype
 
-        with pytest.raises(NotImplementedError, match="subtype_of: not wired yet"):
-            create_subtype(child_entity="Vehicle", payload={"wheels": 4})
+        assert callable(create_subtype)
+        assert callable(update_subtype)

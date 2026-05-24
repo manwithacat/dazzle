@@ -441,6 +441,36 @@ class PostgresBackend:
                         )
                     )
 
+        # #1217 Phase 3e.iii — install the shared assert_subtype_kind() plpgsql
+        # function and one BEFORE INSERT/UPDATE trigger per polymorphic child
+        # table. The function is idempotent (CREATE OR REPLACE) and the
+        # triggers are dropped + re-created so this path is safe to call
+        # multiple times.
+        children = [e for e in entities if e.subtype_of is not None]
+        if children:
+            from dazzle.back.runtime.triggers import (
+                build_assert_subtype_kind_function,
+                build_child_kind_trigger,
+            )
+            from dazzle.core.archetype_expander import _to_snake_case
+
+            with self.connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(build_assert_subtype_kind_function())
+                for entity in children:
+                    expected_kind = _to_snake_case(entity.name)
+                    cursor.execute(
+                        f'DROP TRIGGER IF EXISTS "{entity.name}_kind_consistency" '
+                        f'ON "{entity.name}"'
+                    )
+                    cursor.execute(
+                        build_child_kind_trigger(
+                            child_table=entity.name,
+                            base_table=entity.subtype_of or "",
+                            expected_kind=expected_kind,
+                        )
+                    )
+
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists."""
         with self.connection() as conn:
