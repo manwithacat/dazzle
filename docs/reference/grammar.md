@@ -1223,6 +1223,24 @@ pii_config    ::= ("scan" ":" BOOLEAN NEWLINE)?
 
 ```
 
+## Entity Constructs
+
+### `subtype_of:` (v0.71.180, #1217 Phase 3e)
+
+Declares an IS-A relationship to a base entity (table-per-type polymorphism).
+The child shares the base's primary key via a shared-PK FK; the framework
+auto-adds a `kind` enum on the base. **Escape hatch — see ADR-0026 and the
+inference KB for guidance on when NOT to reach for this.**
+
+```dsl
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+```
+
+Multiple inheritance is not supported (one identifier only). Multi-level
+hierarchies (A subtype_of B subtype_of C) are rejected at linker time.
+
 ## DSL Examples
 
 ### Core

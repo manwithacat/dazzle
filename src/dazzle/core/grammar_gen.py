@@ -441,6 +441,7 @@ entity_metadata ::= "intent" ":" STRING NEWLINE
                   | "domain" ":" IDENT NEWLINE
                   | "patterns" ":" IDENT ("," IDENT)* NEWLINE
                   | "extends" ":" IDENT ("," IDENT)* NEWLINE
+                  | "subtype_of" ":" IDENT NEWLINE
                   | "archetype" ":" IDENT NEWLINE ;
 
 field_line    ::= IDENT ":" field_def NEWLINE ;
