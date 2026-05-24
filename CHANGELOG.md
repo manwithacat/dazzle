@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1234 — `day_timeline as_of: today` unparseable)
+
+- **`TokenType.TODAY` and `TokenType.NOW` promoted to `KEYWORD_AS_IDENTIFIER_TYPES`** at `src/dazzle/core/dsl_parser_impl/base.py:913`. The `day_timeline_config.as_of:` slot (and any other config key that reads its value via `expect_identifier_or_keyword()`) now accepts the literal date anchors `today` / `now` that the runtime (`_resolve_date_anchor`) already handles. Without this, `day_timeline as_of: today` raised `'today' is a reserved keyword` at parse time, making the primitive unusable for timetable-style surfaces that compose HH:MM time fields with today's date.
+- **Reordered field-default branches** at `src/dazzle/core/dsl_parser_impl/types.py:830`. With TODAY/NOW now in the keyword-as-identifier set, `_is_expression_default()` matches `today + 7d` as a typed `FieldRef + duration` expression — so the explicit TODAY/NOW → `DateArithmeticExpr` branch must precede it. Caught by `tests/unit/test_date_arithmetic.py::test_today_plus_days_default`.
+- **2 new tests** in `tests/unit/test_day_timeline_config_parser.py` pin `as_of: today` and `as_of: now` parsing to `DayTimelineConfig.as_of`.
+
 ## [0.72.0] - 2026-05-24
 
 ### Added (#1217 Phase 3(e) feature-complete — `Repository.read()` JOIN parity)

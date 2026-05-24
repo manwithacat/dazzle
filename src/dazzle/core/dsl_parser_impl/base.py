@@ -910,4 +910,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.COMPANION,
     TokenType.POSITION,
     TokenType.BELOW_SECTION,
+    # #1234 — `today` and `now` are date anchors used as identifier-shaped
+    # values in `day_timeline as_of:` and similar config slots.
+    TokenType.TODAY,
+    TokenType.NOW,
 )

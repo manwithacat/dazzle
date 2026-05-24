@@ -84,6 +84,30 @@ def test_rejects_unknown_key() -> None:
         )
 
 
+def test_parses_as_of_today() -> None:
+    """#1234 — `today` is a lexer-reserved keyword but must be usable as
+    the `as_of:` value (date anchor for HH:MM time-field composition)."""
+    cfg = _parse(
+        """      starts_at: period_start
+      ends_at: period_end
+      as_of: today
+"""
+    )
+    assert cfg.as_of == "today"
+
+
+def test_parses_as_of_now() -> None:
+    """#1234 — `now` is the sibling of `today` for instant-anchored
+    timelines; must also pass through `expect_identifier_or_keyword()`."""
+    cfg = _parse(
+        """      starts_at: period_start
+      ends_at: period_end
+      as_of: now
+"""
+    )
+    assert cfg.as_of == "now"
+
+
 def test_runtime_default_card_is_empty_string() -> None:
     """When `card:` is omitted the runtime falls through to a minimal
     default body (start/end label only) — IR carries empty string."""

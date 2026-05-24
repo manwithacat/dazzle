@@ -827,13 +827,16 @@ class TypeParserMixin:
         Returns a (default, default_expr) pair exactly as ``parse_field_modifiers``
         expects; exactly one of the two will be non-None.
         """
+        # v0.10.2: date expression (today, now, today + 7d, …)
+        # Must precede the typed-expression check: after #1234, TODAY/NOW pass
+        # _is_keyword_as_identifier(), so `today + 7d` would otherwise be
+        # mis-classified as a FieldRef arithmetic expression.
+        if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+            return self._parse_date_expr(), None
+
         # v0.29.0: typed expression default (e.g., = box1 + box2, = if ...)
         if self._is_expression_default():
             return None, self.collect_line_as_expr()
-
-        # v0.10.2: date expression (today, now, today + 7d, …)
-        if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
-            return self._parse_date_expr(), None
 
         if self.match(TokenType.STRING):
             return self.advance().value, None
