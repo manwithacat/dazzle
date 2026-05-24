@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-05-24
+
+### Added (#1217 Phase 3(e) feature-complete — `Repository.read()` JOIN parity)
+
+- **`Repository.read()` JOIN parity for polymorphic-child entities** at `src/dazzle/back/runtime/repository.py:752`. When `self._subtype_join_sql` is set, read() now emits `SELECT {table}.*, <base cols> FROM {table} JOIN "Base" ON {table}."id" = "Base"."id" WHERE {table}."id" = ?` and returns a dict (extending the existing dict-return gate that already handles `include` / `latest_one` / traversal cases). Without this, the renderer wiring shipped in v0.71.186 would silently return empty for polymorphic detail views — a single-row fetch returns only the child's columns under Pydantic's default `extra='ignore'`. Defensive assert ensures soft_delete + temporal clauses remain unreachable on subtype children (linker rules `E_SUBTYPE_SOFT_DELETE_ON_CHILD` + temporal-on-base convention). Non-subtype `else` branch byte-for-byte unchanged.
+- **3 new tests** at `tests/unit/test_subtype_read_join.py` pin: (a) child read emits JOIN + extra base cols + source-qualified id predicate + `{table}.*` (not bare `*`); (b) base read uses unchanged plain `SELECT *` shape; (c) child read returns a dict carrying `kind` / `location` so the renderer can dispatch.
+- **Phase 3(e) bumped to MINOR** (0.71.x → 0.72.0) to mark feature completion. `subtype_of:` now flows end-to-end: DSL author → parser → linker (11 rules) → DDL with FK + cascade + trigger → atomic CRUD → subtype-aware list AND read JOIN → subtype_panel section dispatch in the dispatch ctx builder → renderer (unchanged). KB + validator + inline guidance steer toward alternatives. The asset_registry fixture is the canonical worked example.
+
+### Agent Guidance
+
+- **Phase 3(e) feature-complete summary**. `subtype_of:` is shipped: author-time (parser+linker), runtime (DDL+triggers+CRUD+queries), view layer (resolver + dispatch ctx augmentation), MCP (inspect_entity), KB (escape-hatch entry), validator (W_LOOKS_POLYMORPHIC + W_SUBTYPE_OF_OVERREACH). Open follow-ups (none load-bearing):
+  - Linker `E_SUBTYPE_FIELD_NAME_OVERLAP` defensive rule (parallel to existing E_SUBTYPE_KIND_RESERVED but for arbitrary names).
+  - Project-KG `is_subtype_of` / `has_subtype` relation indexing for graph queries.
+  - Repository.list() model-shape coercion when base columns flow in via JOIN (mirrors the read() fix; not yet symptomatic since list surfaces typically don't surface base columns).
+  - Slice 3e.iii code-quality tidy-ups: drop `_subtype_kind_value` single-use wrapper; extract `_translate_integrity_error` to dedupe 4 copies of the constraint-violation message tree.
+- See ADR-0026, `fixtures/asset_registry/`, and the inference KB entry `subtype_of_only_for_true_isa` for the full author-facing surface.
+
 ## [0.71.186] - 2026-05-24
 
 ### Added (#1217 follow-up — `subtype_panel:` renderer wiring)
