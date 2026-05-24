@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.167] - 2026-05-24
+
+### Added (#1223 Phase 3a.iv read-path follow-up)
+
+- **Single-row read endpoint now honours `?as_of=YYYY-MM-DD`** for temporal entities. `Repository.read` accepted the kwarg since v0.71.164; this ship threads it through the auto-generated `GET /api/{entity}/{id}` handler. `GET /api/employment/<id>?as_of=2025-06-01` now returns the row as it was on 2025-06-01 (or 404 if the row wasn't active then). Same `entity.temporal.as_of_param` configurable name, same HTTP 400 on bad date format. With this, all four CRUD-shaped read endpoints (list / detail / aggregate / single read) honour the as-of contract uniformly.
+
+### Slice status (#1223)
+
+| Slice | Status |
+|---|---|
+| 3a.i — IR + parser + validator | ✅ v0.71.161 |
+| 3a.ii — Repository tombstone filter | ✅ v0.71.162 |
+| 3a.iii — DB partial unique index | ✅ v0.71.163 |
+| 3a.iv — `?as_of=` URL param threading | ✅ v0.71.164 + .167 (read-path) |
+| 3a.v — `latest_one` parser + IR + validator | ✅ v0.71.165 |
+| 3a.v.ii — `latest_one` runtime resolution | 🔲 follow-up |
+
 ## [0.71.166] - 2026-05-24
 
 ### Fixed

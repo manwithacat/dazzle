@@ -211,7 +211,7 @@ def _is_htmx_request(request: Any) -> bool:
 # _forbidden_detail moved to dazzle.render.access_messages in #1094 so that
 # ui/ page handlers can build the same payload without crossing back↔ui.
 # Re-exported here so the existing back-internal call sites keep working.
-from datetime import UTC, datetime  # noqa: E402
+from datetime import UTC, date, datetime  # noqa: E402
 
 from dazzle.render.access_messages import _forbidden_detail  # noqa: E402, F401
 
@@ -3008,7 +3008,27 @@ def create_read_handler(spec: RouteSpec) -> Callable[..., Any]:
         existing: Any = None,
         **_extra: Any,
     ) -> Any:
-        result = await service.execute(operation="read", id=id, include=auto_include)
+        # #1223 Phase 3a.iv (read-path follow-up): honour `?as_of=YYYY-MM-DD`
+        # on the single-row read endpoint for temporal entities. List + aggregate
+        # paths already handle this via the __as_of filter dict key (v0.71.164);
+        # read() doesn't take a filters dict so as_of threads through as a
+        # service-execute kwarg. Repository.read consumes it directly.
+        _entity_temporal = getattr(getattr(service, "entity_spec", None), "temporal", None)
+        _read_kwargs: dict[str, Any] = {"include": auto_include}
+        if _entity_temporal is not None:
+            _as_of_raw = request.query_params.get(_entity_temporal.as_of_param)
+            if _as_of_raw:
+                try:
+                    _read_kwargs["as_of"] = date.fromisoformat(_as_of_raw)
+                except ValueError:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"Invalid {_entity_temporal.as_of_param}={_as_of_raw!r}: "
+                            f"expected YYYY-MM-DD"
+                        ),
+                    )
+        result = await service.execute(operation="read", id=id, **_read_kwargs)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
         html = _render_detail_html(request, result, entity_name)
