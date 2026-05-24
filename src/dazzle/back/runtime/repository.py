@@ -1521,7 +1521,7 @@ class RepositoryFactory:
 # =============================================================================
 
 
-def create_subtype(child_entity: str, payload: dict) -> None:
+def create_subtype(child_entity: str, payload: dict[str, object]) -> None:
     """Subtype-aware INSERT — wires base + child rows in one transaction.
 
     Slice 3e.i stub: raises until 3e.iii lands the DB schema + atomic insert.

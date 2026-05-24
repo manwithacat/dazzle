@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1217 Phase 3e.i — `subtype_of:` IR + parser)
+
+- **`SUBTYPE_OF` lexer token** (`src/dazzle/core/lexer.py`) — the `subtype_of` keyword is now tokenised; the `KEYWORDS` frozenset picks it up automatically via the enum-derived construction.
+- **`EntitySpec.subtype_of: str | None`** and **`EntitySpec.subtype_children: tuple[str, ...]`** fields in `src/dazzle/core/ir/domain.py`, plus helper properties `is_polymorphic_base` and `is_polymorphic_child`. `subtype_of` is parser-time; `subtype_children` is a linker-time back-pointer (empty in raw parser output — populated in slice 3e.ii).
+- **Entity parser dispatch** for `subtype_of: <Identifier>` in `src/dazzle/core/dsl_parser_impl/entity.py`. Single identifier only — comma-separated lists are rejected at parse time with a clear `ParseError` ("Multiple inheritance is not supported in v1"). New helper `_parse_entity_subtype_of()` mirrors the structure of `_parse_entity_extends`.
+- **Grammar reference** updated (`src/dazzle/core/grammar_gen.py` + `docs/reference/grammar.md`) with the new rule + a sub-section under "Entity Constructs" describing the escape-hatch framing.
+- **`create_subtype(child_entity, payload)` runtime stub** in `src/dazzle/back/runtime/repository.py` — raises `NotImplementedError("subtype_of: not wired yet (Phase 3e.iii). …")` until DB schema + atomic insert lands. Acts as a fence against silent no-ops or surprise failures if a downstream caller tries to use the construct before slice 3e.iii.
+- **ADR-0026** (`docs/adr/0026-subtype-polymorphism-tpt.md`) pins the design: table-per-type storage, flat hierarchy (no multi-level), immutable discriminator (no Vehicle → Building mutation). Records STI / TPC / multi-level as rejected alternatives.
+- **5 parser tests** in `tests/unit/test_subtype_of_parser.py` (parse path, co-existence with `extends:`, multi-identifier rejection, missing-identifier rejection, runtime stub raises).
+
+### Agent Guidance
+
+- **`subtype_of:` is the escape hatch — not the recommended modelling default.** Subtype polymorphism is a complex, potentially brittle data structure: cross-table joins, surface variance, RBAC composition across base + child, immutable discriminator, cascade-DELETE semantics. Dazzle supports and tests it rigorously, but agent guidance must require a *clear business requirement* before reaching for it. It is **not the first tool in the toolbox**.
+- Justified only when ALL three hold: true IS-A (Vehicle IS an Asset, not Vehicle HAS an Asset), subtype-specific NOT NULL fields needed at the schema level, polymorphic queries genuinely needed ("show me all assets, mixed kinds").
+- When those don't all hold, prefer: separate entities with no shared base; state machine + variant fields; nullable subtype fields on a single entity; `has_many` / `via:` if the variant is a separate concept.
+- See ADR-0026 and `dev_docs/2026-05-24-1217-phase3e-subtype-polymorphism-design.md` for the full design + framing. The inference KB and validator (slice 3e.vi) will surface this guidance to agents at modelling time.
+- Authoring works in this slice; linker validation lands in 3e.ii, DDL + runtime in 3e.iii.
+
 ## [0.71.179] - 2026-05-24
 
 ### Added (#1228 Phase 3c.iii — atomic-flow route registration)
