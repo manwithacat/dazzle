@@ -755,6 +755,8 @@ ir_class: EntitySpec
     - soft_delete: bool = False
     - source: SourceLocation | None = None
     - state_machine: StateMachineSpec | None = None
+    - subtype_children: tuple[str, Ellipsis] = ()
+    - subtype_of: str | None = None
     - temporal: TemporalSpec | None = None
     - title: str | None = None
 

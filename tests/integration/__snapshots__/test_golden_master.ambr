@@ -194,6 +194,9 @@
             'line': 5,
           }),
           'state_machine': None,
+          'subtype_children': tuple(
+          ),
+          'subtype_of': None,
           'temporal': None,
           'title': 'Task',
         }),
@@ -418,6 +421,9 @@
           'soft_delete': False,
           'source': None,
           'state_machine': None,
+          'subtype_children': tuple(
+          ),
+          'subtype_of': None,
           'temporal': None,
           'title': 'System Health',
         }),
@@ -663,6 +669,9 @@
           'soft_delete': False,
           'source': None,
           'state_machine': None,
+          'subtype_children': tuple(
+          ),
+          'subtype_of': None,
           'temporal': None,
           'title': 'System Metric',
         }),
@@ -913,6 +922,9 @@
           'soft_delete': False,
           'source': None,
           'state_machine': None,
+          'subtype_children': tuple(
+          ),
+          'subtype_of': None,
           'temporal': None,
           'title': 'Deploy History',
         }),

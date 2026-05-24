@@ -30,6 +30,8 @@ class _EntityParseContext:
     archetype_kind: ir.ArchetypeKind | None = None
     # Soft delete and bulk config (v0.34.0)
     soft_delete: bool = False
+    # Subtype-of polymorphism (v0.71.180, #1217 Phase 3e.i)
+    subtype_of: str | None = None
     # Temporal / effective-dated spec (v0.71.161 / #1223 Phase 3a.i)
     temporal: ir.TemporalSpec | None = None
     bulk_config: ir.BulkConfig | None = None
@@ -143,6 +145,8 @@ class EntityParserMixin:
                 ctx.soft_delete = True
             elif self.match(TokenType.TEMPORAL):
                 ctx.temporal = self._parse_entity_temporal()
+            elif self.match(TokenType.SUBTYPE_OF):
+                ctx.subtype_of = self._parse_entity_subtype_of()
             elif self.match(TokenType.BULK):
                 ctx.bulk_config = self._parse_entity_bulk()
             elif self.match(TokenType.GRAPH_EDGE):
@@ -210,6 +214,26 @@ class EntityParserMixin:
             self.advance()
             extends.append(self.expect(TokenType.IDENTIFIER).value)
         return extends
+
+    def _parse_entity_subtype_of(self) -> str:
+        """Parse ``subtype_of: <Identifier>`` declaration (#1217 Phase 3e.i).
+
+        Exactly one identifier — no multiple inheritance in v1.
+        """
+        self.advance()
+        self.expect(TokenType.COLON)
+        base_tok = self.expect(TokenType.IDENTIFIER)
+        base: str = base_tok.value
+        # Reject comma-separated lists: multiple inheritance is out of scope.
+        if self.match(TokenType.COMMA):
+            raise make_parse_error(
+                f"subtype_of: expects exactly one identifier (got list starting with {base!r}). "
+                "Multiple inheritance is not supported in v1.",
+                self.file,
+                base_tok.line,
+                base_tok.column,
+            )
+        return base
 
     def _parse_entity_archetype(self) -> ir.ArchetypeKind:
         """Parse ``archetype: kind`` declaration."""
@@ -898,6 +922,7 @@ class EntityParserMixin:
             access=access,
             audit=ctx.audit_config,
             soft_delete=ctx.soft_delete,
+            subtype_of=ctx.subtype_of,
             temporal=ctx.temporal,
             bulk=ctx.bulk_config,
             state_machine=state_machine,
