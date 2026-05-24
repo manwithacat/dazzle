@@ -483,3 +483,46 @@ class TestLatestOneResolverHelper:
         assert '"start_date" <= %s' in sql
         # Params: source_ids + [as_of, as_of]
         assert params[-2:] == [date(2025, 6, 1), date(2025, 6, 1)]
+
+
+# ============================================================================
+# 3a.iv follow-up: ?include_closed=true URL param friendly alias
+# ============================================================================
+
+
+class TestIncludeClosedURLParam:
+    """`?include_closed=true` is a friendly URL alias for opting out
+    of the default `<end_field>__isnull=True` filter. The list-handler
+    sets `<end_field>__isnull=False` in the filter dict; the
+    Repository layer's setdefault contract preserves the explicit
+    False (explicit-caller-wins). Functional equivalent to
+    `?filter[<end_field>__isnull]=false` but discoverable without
+    knowing the field name."""
+
+    def test_explicit_false_overrides_default(self) -> None:
+        """Repository's setdefault contract preserves an explicit
+        `<end_field>__isnull=False` filter — which is what the
+        handler-level `?include_closed=true` URL param produces.
+        Verifying the Repository contract here; the handler-level
+        URL-param-to-filter-dict translation is a 4-line
+        implementation in route_generator.py that's covered by
+        bootstrap-app integration tests."""
+        import asyncio
+        from unittest.mock import patch
+
+        repo = _make_employment_repo()
+        captured: dict = {}
+
+        from dazzle.back.runtime.query_builder import QueryBuilder
+
+        original = QueryBuilder.add_filters
+
+        def _capture(self, filters):
+            captured.update(filters)
+            return original(self, filters)
+
+        with patch.object(QueryBuilder, "add_filters", _capture):
+            # What ?include_closed=true → produces in merged_filters
+            asyncio.run(repo.list(filters={"end_date__isnull": False}))
+
+        assert captured.get("end_date__isnull") is False

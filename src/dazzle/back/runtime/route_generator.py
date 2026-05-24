@@ -2630,6 +2630,17 @@ async def _list_handler_body(
                 merged_filters = {}
             merged_filters["__as_of"] = _as_of_value
 
+        # `?include_closed=true` — friendly alias for opting out of the
+        # default "active rows only" filter on a temporal entity. Sets
+        # `<end_field>__isnull=False` which the Repository layer honours
+        # via its setdefault contract: an explicit caller-provided value
+        # for the tombstone key wins over the default.
+        _include_closed_raw = request.query_params.get("include_closed", "").lower()
+        if _include_closed_raw in ("true", "1", "yes"):
+            if merged_filters is None:
+                merged_filters = {}
+            merged_filters[f"{_entity_temporal.end_field}__isnull"] = False
+
     # Build sort list for repository
     sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
 

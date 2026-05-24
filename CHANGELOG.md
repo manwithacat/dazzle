@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.172] - 2026-05-24
+
+### Added (#1223 follow-up — `?include_closed=true` friendly URL param)
+
+- **List endpoints for temporal entities now accept `?include_closed=true`** as a friendly alias for opting out of the default "currently active only" filter. Functionally equivalent to `?filter[<end_field>__isnull]=false` but discoverable without knowing the field name. Accepts `true`, `1`, or `yes` (case-insensitive). Sets `<end_field>__isnull=False` in the merged filter dict; Repository's `setdefault` contract (the explicit-caller-wins shape used by #1218 and #1223) preserves the explicit `False` over the active-only default.
+
+  Example: `GET /api/employment?include_closed=true` returns currently-active **and** closed Employment rows. Useful for history views without bespoke route overrides.
+
+  Composes with `?as_of=YYYY-MM-DD` — though when both are set, `?as_of=` wins (the open-interval predicate explicitly tests both ends, so `include_closed` is irrelevant in the as-of branch).
+
+### Agent Guidance
+
+- When designing a history-timeline UI for a temporal entity, the URL contract is now:
+  - `GET /api/<entity>` — currently-active only
+  - `GET /api/<entity>?include_closed=true` — all rows (active + closed)
+  - `GET /api/<entity>?as_of=YYYY-MM-DD` — rows active on a historical date
+  Document this in the workspace's `purpose:` so authors discover the param.
+
 ## [0.71.171] - 2026-05-24
 
 ### Added (#1217 Phase 2 — inference KB surfacing for `temporal:` keyword)
