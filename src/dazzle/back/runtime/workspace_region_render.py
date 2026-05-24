@@ -408,6 +408,9 @@ async def _build_card_adapter_ctx(
                 request=env.request,
                 auth_context=env.user_ctx.auth_ctx_for_filters,
                 user_id=env.user_ctx.user_id,
+                # #1225: thread context_id so per-section
+                # `filter: X = current_context` predicates resolve.
+                context_id=env.user_ctx.filter_context.get("current_context"),
             )
             adapter_ctx["entity_card_sections"] = _build_entity_card_sections(
                 items=inputs.items,

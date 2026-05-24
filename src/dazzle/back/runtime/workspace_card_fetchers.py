@@ -36,6 +36,7 @@ async def _fetch_entity_card_section_rows(
     request: Any,
     auth_context: Any,
     user_id: str | None,
+    context_id: str | None = None,
 ) -> dict[int, list[dict[str, Any]]]:
     """Fan out per-section queries for an entity_card region (#1017).
 
@@ -102,6 +103,13 @@ async def _fetch_entity_card_section_rows(
             from dazzle.back.runtime.route_generator import _extract_condition_filters
 
             with suppress(Exception):
+                # #1225: thread `context_id` through so per-section
+                # `filter: X = current_context` predicates resolve to
+                # the scoped record id. Pre-fix this argument was None
+                # → filter silently dropped → sections rendered the
+                # first-scope row regardless of which entity the
+                # entity_card was scoped to. AegisMark's pupil_dashboard
+                # made the data-attribution-wrongness visible.
                 _extract_condition_filters(
                     section_filter,
                     user_id or "",
@@ -109,7 +117,7 @@ async def _fetch_entity_card_section_rows(
                     logger,
                     auth_context,
                     None,
-                    None,
+                    context_id,
                 )
 
         section_limit = getattr(section, "limit", None)

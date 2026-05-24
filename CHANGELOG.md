@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.168] - 2026-05-24
+
+### Fixed
+
+- **`entity_card` cross-entity sections now honour `filter: X = current_context` predicates (#1225).** `_fetch_entity_card_section_rows` called `_extract_condition_filters(..., None, None)` — the last positional arg (`context_id`) was hardcoded `None`, so per-section filter predicates referencing `current_context` were silently dropped. Sections fan-fetched the first-scope row regardless of which entity the `entity_card` was scoped to (AegisMark's pupil dashboard showed e.g. another pupil's parent under the wrong pupil — same school, intra-tenant, but still data-attribution-wrong). The fix adds `context_id` as a keyword argument to `_fetch_entity_card_section_rows` and threads it from `env.user_ctx.filter_context["current_context"]` through to the `_extract_condition_filters` call. Bug introduced silently in #1057 when section fan-out was extracted but the `context_id` parameter on `_extract_condition_filters` (added in #857) wasn't wired into the new call site. RBAC scope was always correct (only intra-tenant attribution was wrong); cross-tenant data didn't leak. Closes #1225.
+- **2 regression tests** in `tests/unit/test_entity_card_section_context_id_1225.py` pin the `context_id` threading via a stubbed `_extract_condition_filters` — covers both the new-positional and the backward-compat default-None paths.
+
+### Agent Guidance
+
+- When extracting a fan-out helper from a parent call site, audit every parameter the parent passes — silent omissions of optional parameters with `None` defaults are the most common shape of post-extraction bug (this is the second time this exact mistake has bitten the entity_card section path — #1215 was the same shape on a different parameter, `model_dump` for Pydantic rows). A grep for `_extract_condition_filters(` across the codebase to confirm every caller passes `context_id` would have caught both.
+
 ## [0.71.167] - 2026-05-24
 
 ### Added (#1223 Phase 3a.iv read-path follow-up)
