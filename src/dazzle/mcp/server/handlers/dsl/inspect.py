@@ -22,19 +22,46 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     if not entity:
         return error_response(f"Entity '{entity_name}' not found")
 
+    # Child entities' own IR fields don't include base fields — synthesise the
+    # inherited view here so agents see the full field set when inspecting a
+    # subtype child.
+    base_entity = None
+    if entity.subtype_of is not None:
+        base_entity = next(
+            (e for e in app_spec.domain.entities if e.name == entity.subtype_of),
+            None,
+        )
+
+    def _field_dict(f: Any, inherited_from: str | None = None) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "name": f.name,
+            "type": str(f.type.kind),
+            "required": f.is_required,
+            "modifiers": [str(m) for m in f.modifiers],
+        }
+        if inherited_from is not None:
+            d["inherited_from"] = inherited_from
+        return d
+
+    fields: list[dict[str, Any]] = [_field_dict(f) for f in entity.fields]
+    if base_entity is not None:
+        # Append base fields after the child's own — preserves child's
+        # primary ordering while making inheritance explicit to agents.
+        own_names = {f.name for f in entity.fields}
+        for f in base_entity.fields:
+            if f.name in own_names:
+                # Defensive: linker should reject overlap but if a future
+                # rule allows override, prefer the child's declaration.
+                continue
+            fields.append(_field_dict(f, inherited_from=base_entity.name))
+
     return json.dumps(
         {
             "name": entity.name,
             "description": entity.title,
-            "fields": [
-                {
-                    "name": f.name,
-                    "type": str(f.type.kind),
-                    "required": f.is_required,
-                    "modifiers": [str(m) for m in f.modifiers],
-                }
-                for f in entity.fields
-            ],
+            "subtype_of": entity.subtype_of,
+            "subtype_children": sorted(entity.subtype_children),
+            "fields": fields,
             "constraints": [str(c) for c in entity.constraints] if entity.constraints else [],
         },
         indent=2,
