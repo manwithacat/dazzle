@@ -2,6 +2,7 @@ from . import ir
 from .archetype_expander import _to_snake_case, expand_archetypes, generate_archetype_surfaces
 from .errors import (
     E_SUBTYPE_DUPLICATE_PK,
+    E_SUBTYPE_GRANT_INCOMPLETE,
     E_SUBTYPE_KIND_RESERVED,
     E_SUBTYPE_OF_CYCLE,
     E_SUBTYPE_OF_MULTILEVEL,
@@ -190,7 +191,7 @@ def build_appspec(
     # 9c.1 Validate `subtype_of:` declarations and synthesise discriminator
     # (#1217 Phase 3e.ii). Must precede _inject_soft_delete_fields so rule
     # 10 (soft_delete on child) fires before auto-injection masks intent.
-    entities = _link_subtypes(entities)
+    entities = _link_subtypes(entities, merged_fragment.grant_schemas)
 
     # 9d. Inject `deleted_at: datetime optional` for entities with
     # `soft_delete: true` (#1218 Option A). The runtime filters
@@ -309,15 +310,21 @@ def build_appspec(
     )
 
 
-def _link_subtypes(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
+def _link_subtypes(
+    entities: list[ir.EntitySpec],
+    grant_schemas: list[ir.GrantSchemaSpec],
+) -> list[ir.EntitySpec]:
     """Validate `subtype_of:` declarations and synthesise discriminators (#1217 Phase 3e.ii).
 
-    See ADR-0026. Enforces rules 1, 2, 3/5, 6, 7, 10 from spec §5. On success,
-    populates `subtype_children` on each base and appends a `kind` enum field
-    listing the snake_case child names. Rule 11 (grant_schema completeness) is
-    handled separately.
+    See ADR-0026. Enforces rules 1, 2, 3/5, 6, 7, 10, and 11 from spec §5. On
+    success, populates `subtype_children` on each base and appends a `kind`
+    enum field listing the snake_case child names.
     """
     by_name = {e.name: e for e in entities}
+    # Rule 11: a grant on a child subtype would silently broaden delegated
+    # access to rows the base's RBAC posture intends to govern. Require the
+    # author to declare the base grant explicitly so the policy is visible.
+    scoped_entities = {gs.scope for gs in grant_schemas}
 
     children_by_base: dict[str, list[str]] = {}
     for entity in entities:
@@ -358,6 +365,14 @@ def _link_subtypes(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
                 f"{E_SUBTYPE_SOFT_DELETE_ON_CHILD}: Entity '{entity.name}' is a "
                 f"subtype of '{base_name}' and must not declare `soft_delete:`. "
                 f"Declare soft_delete on the base entity instead."
+            )
+
+        if entity.name in scoped_entities and base_name not in scoped_entities:
+            raise LinkError(
+                f"{E_SUBTYPE_GRANT_INCOMPLETE}: Entity '{entity.name}' has a "
+                f"grant_schema but its base '{base_name}' does not. "
+                f"Declare a grant_schema with `scope: {base_name}` "
+                f"alongside the one on '{entity.name}', or remove the child grant."
             )
 
         children_by_base.setdefault(base_name, []).append(entity.name)

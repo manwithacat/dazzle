@@ -209,3 +209,51 @@ entity Building "Building":
         assert kind_field is not None
         assert kind_field.type.kind == ir.FieldTypeKind.ENUM
         assert sorted(kind_field.type.enum_values or []) == ["building", "vehicle"]
+
+
+class TestSubtypeLinkerRule11_GrantIncomplete:
+    def test_grant_on_child_without_grant_on_base_rejected(self) -> None:
+        dsl = """\
+module test
+app a "A"
+
+entity Asset "Asset":
+  id: uuid pk
+
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+
+grant_schema fleet_admin "Fleet Admin":
+  scope: Vehicle
+  relation assign "Assign Vehicle":
+    granted_by: role(admin)
+"""
+        with pytest.raises(LinkError, match="E_SUBTYPE_GRANT_INCOMPLETE"):
+            _link(dsl)
+
+    def test_grant_on_both_child_and_base_accepted(self) -> None:
+        dsl = """\
+module test
+app a "A"
+
+entity Asset "Asset":
+  id: uuid pk
+
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+
+grant_schema asset_admin "Asset Admin":
+  scope: Asset
+  relation hand_off "Hand off Asset":
+    granted_by: role(admin)
+
+grant_schema fleet_admin "Fleet Admin":
+  scope: Vehicle
+  relation assign "Assign Vehicle":
+    granted_by: role(admin)
+"""
+        appspec = _link(dsl)
+        names = {gs.name for gs in appspec.grant_schemas}
+        assert names == {"asset_admin", "fleet_admin"}
