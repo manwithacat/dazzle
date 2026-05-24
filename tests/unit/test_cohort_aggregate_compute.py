@@ -561,6 +561,106 @@ def test_share_builds_shared_parent_join_sql() -> None:
     assert params[-2:] == ["e1", "e2"]
 
 
+def test_share_with_where_clause_uses_alias_not_table_name() -> None:
+    """#1229 — when share: + aggregate where: compose, the sub-WHERE must
+    reference the FROM alias ``a`` (not the raw ``"marking_result"`` table
+    name). Pre-fix the bare table name leaked through and Postgres rejected
+    the statement with UndefinedTable."""
+    source = _make_repo_with_fks(
+        "ClassEnrolment",
+        "class_enrolment",
+        {"student_profile": "StudentProfile"},
+    )
+    aggregated = _make_repo_with_fks(
+        "MarkingResult", "marking_result", {"student_profile": "StudentProfile"}
+    )
+    aggregated._mock_cursor.fetchall = MagicMock(return_value=[{"member_id": "e1", "primary": 7.4}])
+
+    where_expr = ConditionExpr(
+        comparison=Comparison(
+            field="latest_for_event",
+            operator=ComparisonOperator.EQUALS,
+            value=ConditionValue(literal=True),
+        )
+    )
+
+    lens = CohortStripLens(
+        id="cohort",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(
+                func="avg", entity="MarkingResult", column="score", where=where_expr
+            ),
+            share="StudentProfile",
+        ),
+    )
+
+    _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "e1"}],
+            lens=lens,
+            source_entity="ClassEnrolment",
+            repositories={"MarkingResult": aggregated, "ClassEnrolment": source},
+            scope_only_filters=None,
+        )
+    )
+
+    sql_text, _params = aggregated._mock_cursor.execute.call_args.args
+    # The sub-WHERE composed from the where_expr must reference the alias
+    # ``a`` (Postgres treats ``"a"`` and ``a`` as the same identifier when
+    # the alias was introduced unquoted in the FROM clause).
+    assert '"a"."latest_for_event"' in sql_text, sql_text
+    # And must NOT reference the unaliased entity name (would 500 with
+    # UndefinedTable on Postgres).
+    assert '"MarkingResult"."latest_for_event"' not in sql_text, sql_text
+
+
+def test_via_with_where_clause_uses_alias_not_table_name() -> None:
+    """#1229 — mirrors test_share_with_where_clause_uses_alias_not_table_name
+    for the via: junction path. Same root cause: predicate compiler emits
+    entity-name qualifiers but FROM clause aliases the table to ``a``."""
+    junction = _make_junction_repo("ClassEnrolment", fk_to="MarkingResult", fk_col="marking_result")
+    aggregated = _make_aggregated_with_db_mock("MarkingResult", "marking_result")
+    aggregated._mock_cursor.fetchall = MagicMock(return_value=[{"member_id": "s1", "primary": 6.5}])
+
+    where_expr = ConditionExpr(
+        comparison=Comparison(
+            field="latest_for_event",
+            operator=ComparisonOperator.EQUALS,
+            value=ConditionValue(literal=True),
+        )
+    )
+
+    via = ViaCondition(
+        junction_entity="ClassEnrolment",
+        bindings=[ViaBinding(junction_field="student_profile", target="id", operator="=")],
+    )
+    lens = CohortStripLens(
+        id="cohort",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(
+                func="avg", entity="MarkingResult", column="score", where=where_expr
+            ),
+            via=via,
+        ),
+    )
+
+    _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "s1"}],
+            lens=lens,
+            source_entity="StudentProfile",
+            repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
+            scope_only_filters=None,
+        )
+    )
+
+    sql_text, _params = aggregated._mock_cursor.execute.call_args.args
+    assert '"a"."latest_for_event"' in sql_text, sql_text
+    assert '"MarkingResult"."latest_for_event"' not in sql_text, sql_text
+
+
 def test_share_missing_pivot_fk_warns(caplog: pytest.LogCaptureFixture) -> None:
     """When `share:` is set but either side lacks a FK to the named
     pivot, log a warning naming the missing side and return empty."""

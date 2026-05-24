@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1229 — cohort_strip `share:`/`via:` + aggregate `where:` retargets predicate to FROM alias)
+
+- **`_retarget_scope_predicate_to_alias` helper** at `src/dazzle/back/runtime/workspace_region_computes.py` rewrites entity-name-qualified column refs in a composed `__scope_predicate` SQL fragment to the FROM-clause alias. The `share:` / `via:` cohort aggregate paths alias the aggregated table to `a` in their bespoke FROM clauses, but `_build_aggregate_filters` compiles the typed `where:` predicate against the aggregated *entity name* — emitting `"MarkingResult"."col"` qualifiers that Postgres rejects (UndefinedTable) in the aliased scope.
+- **Wired into `_batched_share_cohort_aggregate` and `_batched_via_cohort_aggregate`** so any consumer of `share:` or `via:` with an aggregate `where:` clause now produces executable SQL. Without the fix, the exception was swallowed downstream and the cells silently rendered empty.
+- **2 new tests** in `tests/unit/test_cohort_aggregate_compute.py` (`test_share_with_where_clause_uses_alias_not_table_name`, `test_via_with_where_clause_uses_alias_not_table_name`) pin: composed `where:` SQL must reference `"a"."col"`, never `"<EntityName>"."col"`.
+
 ### Fixed (#1230 — Test-runner URL resolver picked wrong template)
 
 - **`_build_surface_url_map()` now uses `/app/{entity_slug}` / `/app/{entity_slug}/create`** at `src/dazzle/testing/test_runner.py:1208`, mirroring `template_compiler.py`'s authoritative `route_map`. The previous templates (`/{plural}`, `/{plural}/create`) hit the JSON API (`/contacts` → 200 with JSON, breaks the "is this HTML?" check) or 404'd outright (`/contacts/create` is not a mounted route — UI surfaces live at `/app/contact/create`). Closes the CyFuture TD-* cluster filed against v0.71.179 (TD-390/391/392/393/394/396/400/402 wrong-template 404s + TD-389 API-vs-UI mismatch).

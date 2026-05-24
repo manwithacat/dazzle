@@ -1012,6 +1012,15 @@ async def _batched_via_cohort_aggregate(
     # so the typed ConditionExpr → SQL path stays single-sourced.
     composed_filters = _build_aggregate_filters(where, scope_filters, agg_repo, aggregated_entity)
     if composed_filters:
+        # #1229: the aggregated table is aliased ``a`` in the FROM clause
+        # below, but ``_build_aggregate_filters`` compiles the typed
+        # ``where`` predicate against ``aggregated_entity``, so the
+        # ``__scope_predicate`` SQL is already qualified with the entity
+        # name (e.g. ``"MarkingResult"."col"``). Rewrite that qualifier
+        # to the alias ``a`` so Postgres can resolve the column.
+        composed_filters = _retarget_scope_predicate_to_alias(
+            composed_filters, aggregated_entity, "a"
+        )
         sub_builder = QueryBuilder(table_name=agg_repo.table_name, placeholder_style=placeholder)
         sub_builder.add_filters(composed_filters)
         sub_sql, sub_params = sub_builder.build_where_clause()
@@ -1124,6 +1133,12 @@ async def _batched_share_cohort_aggregate(
 
     composed_filters = _build_aggregate_filters(where, scope_filters, agg_repo, aggregated_entity)
     if composed_filters:
+        # #1229: see _batched_via_cohort_aggregate above — the FROM clause
+        # aliases the aggregated table to ``a``, so the predicate SQL
+        # (qualified with the entity name) must be retargeted to the alias.
+        composed_filters = _retarget_scope_predicate_to_alias(
+            composed_filters, aggregated_entity, "a"
+        )
         sub_builder = QueryBuilder(table_name=agg_repo.table_name, placeholder_style=placeholder)
         sub_builder.add_filters(composed_filters)
         sub_sql, sub_params = sub_builder.build_where_clause()
@@ -1163,6 +1178,29 @@ async def _batched_share_cohort_aggregate(
         value = row_dict.get("primary")
         if value is not None:
             out[str(member)] = value
+    return out
+
+
+def _retarget_scope_predicate_to_alias(
+    filters: dict[str, Any], entity_name: str, alias: str
+) -> dict[str, Any]:
+    """Rewrite ``__scope_predicate`` SQL so ``"<entity_name>".`` qualifiers
+    become ``"<alias>".`` — used by the ``share:`` / ``via:`` cohort paths
+    where the aggregated table is aliased in the FROM clause but the
+    predicate compiler emits entity-name-qualified column refs.
+
+    Returns a shallow copy so the caller's dict isn't mutated.
+    """
+    pred = filters.get("__scope_predicate")
+    if pred is None:
+        return filters
+    pred_sql, pred_params = pred
+    needle = f'"{entity_name}".'
+    if needle not in pred_sql:
+        return filters
+    new_sql = pred_sql.replace(needle, f'"{alias}".')
+    out = dict(filters)
+    out["__scope_predicate"] = (new_sql, pred_params)
     return out
 
 
