@@ -147,3 +147,43 @@ workspace fleet "Fleet":
     sort: vin asc
     display: list
     empty: "No vehicles registered"
+
+# ── Surfaces ────────────────────────────────────────────────────────
+# Per-subtype detail surfaces hold the subtype-specific fields.
+# asset_card is the polymorphic VIEW that dispatches by `kind` via
+# subtype_panel: — slice 3e.v adds this construct.
+
+surface vehicle_detail "Vehicle Detail":
+  uses entity Vehicle
+  mode: view
+  section main:
+    field wheels "Wheels"
+    field vin "VIN"
+    field fuel_type "Fuel"
+
+surface building_detail "Building Detail":
+  uses entity Building
+  mode: view
+  section main:
+    field floors "Floors"
+    field square_metres "Square Metres"
+    field occupancy_type "Occupancy"
+
+surface equipment_detail "Equipment Detail":
+  uses entity Equipment
+  mode: view
+  section main:
+    field serial_number "Serial Number"
+    field manufacturer "Manufacturer"
+
+surface asset_card "Asset":
+  uses entity Asset
+  mode: view
+  section main:
+    field acquired_at "Acquired"
+    field acquired_value "Value"
+    field location "Location"
+    subtype_panel:
+      when kind = vehicle: include surface vehicle_detail
+      when kind = building: include surface building_detail
+      when kind = equipment: include surface equipment_detail

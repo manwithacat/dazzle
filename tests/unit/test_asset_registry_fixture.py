@@ -77,3 +77,40 @@ class TestAssetRegistryFixture:
         assert len(fks) == 1
         assert fks[0].column.table.name == "Asset"
         assert fks[0].ondelete == "CASCADE"
+
+
+class TestAssetRegistrySurfaces:
+    def test_asset_card_has_subtype_panel_with_three_branches(self) -> None:
+        appspec = _load_fixture()
+        card = next(s for s in appspec.surfaces if s.name == "asset_card")
+        section = card.sections[0]
+        assert section.subtype_panel is not None
+        kinds = {b.when_kind for b in section.subtype_panel.branches}
+        assert kinds == {"vehicle", "building", "equipment"}
+
+    def test_subtype_panel_branches_map_to_per_subtype_surfaces(self) -> None:
+        appspec = _load_fixture()
+        card = next(s for s in appspec.surfaces if s.name == "asset_card")
+        by_kind = {b.when_kind: b.include_surface for b in card.sections[0].subtype_panel.branches}
+        assert by_kind == {
+            "vehicle": "vehicle_detail",
+            "building": "building_detail",
+            "equipment": "equipment_detail",
+        }
+
+    def test_subtype_panel_resolver_returns_correct_surface(self) -> None:
+        """Sanity-check the resolver helper against the canonical fixture."""
+        from dazzle.render.subtype_panel import resolve_subtype_panel_surface
+
+        appspec = _load_fixture()
+        card = next(s for s in appspec.surfaces if s.name == "asset_card")
+        section = card.sections[0]
+        result = resolve_subtype_panel_surface(section, "vehicle", appspec)
+        assert result is not None
+        assert result.name == "vehicle_detail"
+
+    def test_per_subtype_surfaces_have_subtype_specific_fields(self) -> None:
+        appspec = _load_fixture()
+        vd = next(s for s in appspec.surfaces if s.name == "vehicle_detail")
+        field_names = {e.field_name for e in vd.sections[0].elements}
+        assert field_names == {"wheels", "vin", "fuel_type"}
