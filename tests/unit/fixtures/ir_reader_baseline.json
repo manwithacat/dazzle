@@ -10,7 +10,6 @@
   "domain.BulkConfig.export_enabled",
   "domain.BulkConfig.formats",
   "domain.BulkConfig.import_enabled",
-  "domain.EntitySpec.subtype_children",
   "email.BusinessReference.ref_type",
   "email.BusinessReference.ref_value",
   "email.EmailAttachmentRef.mime_type",

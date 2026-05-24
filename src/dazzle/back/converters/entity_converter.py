@@ -789,6 +789,8 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         is_tenant_root=dazzle_entity.is_tenant_root,  # v0.10.3
         soft_delete=dazzle_entity.soft_delete,  # #1218
         temporal=dazzle_entity.temporal,  # #1223
+        subtype_of=dazzle_entity.subtype_of,  # #1217 3(e)
+        subtype_children=dazzle_entity.subtype_children,  # #1217 3(e)
         metadata=metadata,
     )
 

@@ -361,6 +361,38 @@ def build_metadata(
     list_indexes = _list_index_specs(db_entities, surfaces)
 
     for entity in db_entities:
+        # #1217 Phase 3(e): table-per-type child. Only emit subtype-specific
+        # columns; the shared identifier comes from the base's id via a FK,
+        # so the child's `id` is BOTH primary key AND foreign key with
+        # ON DELETE CASCADE. Base-owned fields (including the synthesised
+        # `kind`) stay on the base table.
+        if entity.subtype_of is not None:
+            base_name = entity.subtype_of
+            base_entity = next((e for e in db_entities if e.name == base_name), None)
+            if base_entity is None:
+                # Defensive — linker should have rejected this, but skip
+                # rather than crash if it slips through (e.g. virtual base).
+                continue
+            base_id_field = next(f for f in base_entity.fields if f.name == "id")
+            base_id_type = _field_type_to_sa(base_id_field.type)
+            tpt_columns: list[Any] = [
+                sa.Column(
+                    "id",
+                    base_id_type,
+                    sa.ForeignKey(f"{base_name}.id", ondelete="CASCADE"),
+                    primary_key=True,
+                ),
+            ]
+            base_field_names = {f.name for f in base_entity.fields}
+            for field in entity.fields:
+                if field.name == "id" or field.name in base_field_names:
+                    continue
+                tpt_columns.append(
+                    _field_to_column(field, entity.name, entity_names, circular_edges)
+                )
+            sa.Table(entity.name, metadata, *tpt_columns)
+            continue
+
         columns = []
 
         # Ensure an 'id' column exists

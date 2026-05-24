@@ -648,6 +648,18 @@ class EntitySpec(BaseModel):
         default=None,
         description="Temporal-entity declaration (start/end/key fields)",
     )
+    # #1217 Phase 3(e): subtype polymorphism. `subtype_of` names the base
+    # entity on a child; `subtype_children` is the linker-populated
+    # back-pointer on the base. Threaded from IR by the converter; the
+    # runtime DDL emitter consumes these to emit TPT child tables.
+    subtype_of: str | None = Field(
+        default=None,
+        description="Name of base entity this is a subtype of",
+    )
+    subtype_children: tuple[str, ...] = Field(
+        default=(),
+        description="Names of child subtypes (linker-populated back-pointer on base)",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     model_config = ConfigDict(frozen=True)
@@ -673,3 +685,13 @@ class EntitySpec(BaseModel):
             if relation.name == name:
                 return relation
         return None
+
+    @property
+    def is_polymorphic_base(self) -> bool:
+        """True when one or more entities declare `subtype_of: <this>`."""
+        return len(self.subtype_children) > 0
+
+    @property
+    def is_polymorphic_child(self) -> bool:
+        """True when this entity declares `subtype_of: <some base>`."""
+        return self.subtype_of is not None
