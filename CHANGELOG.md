@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.186] - 2026-05-24
+
+### Added (#1217 follow-up — `subtype_panel:` renderer wiring)
+
+- **Subtype-panel dispatch in `_build_dispatch_ctx`** at `src/dazzle/ui/runtime/page_routes.py:1245`. The detail-branch field builder now walks `surface.sections` for any with `subtype_panel:`, resolves the per-subtype surface via `resolve_subtype_panel_surface(section, row_kind, appspec)` when `item["kind"]` matches a branch, and appends the resolved surface's section elements as additional ctx fields. The fragment renderer stays section-ignorant — augmentation lives one layer up where the appspec is reachable, the row is in hand, and the field list is being built anyway.
+- **`RuntimeServices.app_spec: Any = None`** field added so the parsed AppSpec is reachable from anywhere services flows. Set at server boot (`src/dazzle/back/runtime/server.py:468` neighbourhood) immediately before `app.state.services = services`. Documented in the RuntimeServices "Optional services" docstring section as the polymorphic-surface lookup point.
+- **`_build_dispatch_ctx(render_ctx, surface, *, services=None)`** — new optional `services` kwarg threads through from the single dispatch call site at `page_routes.py:1581`. Defaults to None so existing positional callers (and the implicit-None test stubs) keep working unchanged; the augmentation gates on `app_spec is not None` so the behaviour is opt-in and graceful when wiring is incomplete.
+- **6-test dispatch suite** at `tests/unit/test_subtype_panel_dispatch_ctx.py` pins every path: vehicle/building branch resolution, value pulled from item dict, unknown-kind no-op, missing-kind no-op, no-services graceful fallback, surface-without-panel unaffected.
+
+### Agent Guidance
+
+- **`subtype_panel:` is now live end-to-end on VIEW surfaces.** Author the base surface with `subtype_panel:` branches, define per-subtype surfaces with their kind-specific fields, and the dispatch ctx builder augments the field list at request time based on `row.kind`. The renderer doesn't need to know about sections — the augmentation hands it a single flat list to render. The asset_registry fixture demonstrates the full shape: `surface asset_card` (base) + `surface vehicle_detail` / `building_detail` / `equipment_detail` (per-subtype).
+- This closes the deferred follow-up from slice 3e.v. Renderer wiring is now: parser → linker → resolver helper → dispatch ctx augmentation → renderer (unchanged).
+
 ## [0.71.185] - 2026-05-24
 
 ### Added (#1217 Phase 3e.vi — KB + validator escape-hatch framing)
