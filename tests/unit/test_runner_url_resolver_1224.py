@@ -100,13 +100,17 @@ class TestSurfaceURLMap:
         runner = TestRunner(project_path=tiny_project)
         assert runner._resolve_surface_url("home_dashboard") == "/app/workspaces/home_dashboard"
 
-    def test_list_surface_resolves_to_plural_entity_path(self, tiny_project: Path) -> None:
+    def test_list_surface_resolves_to_app_entity_slug_path(self, tiny_project: Path) -> None:
+        # #1230: must mirror template_compiler.py's `/app/{entity_slug}` —
+        # the JSON API mounts `/contacts` but the UI surface (which the
+        # test-runner navigates) is at `/app/contact`.
         runner = TestRunner(project_path=tiny_project)
-        assert runner._resolve_surface_url("contact_list") == "/contacts"
+        assert runner._resolve_surface_url("contact_list") == "/app/contact"
 
     def test_create_surface_resolves_to_create_path(self, tiny_project: Path) -> None:
+        # #1230: matches `/app/{entity_slug}/create` from template_compiler.py.
         runner = TestRunner(project_path=tiny_project)
-        assert runner._resolve_surface_url("contact_create") == "/contacts/create"
+        assert runner._resolve_surface_url("contact_create") == "/app/contact/create"
 
     def test_unknown_name_returns_none(self, tiny_project: Path) -> None:
         runner = TestRunner(project_path=tiny_project)

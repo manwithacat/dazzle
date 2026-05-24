@@ -1206,11 +1206,18 @@ class TestRunner:
         return self._surface_url_map.get(name)
 
     def _build_surface_url_map(self) -> dict[str, str]:
-        """Parse the project's DSL and build a surface-name → URL map (#1224)."""
+        """Parse the project's DSL and build a surface-name → URL map (#1224).
+
+        Templates mirror ``template_compiler.py``'s authoritative ``route_map``
+        (``/app/{entity_slug}`` for LIST, ``/app/{entity_slug}/create`` for
+        CREATE) — #1230 fixed a v0.71.x divergence where the resolver picked
+        ``/{plural}`` (which Dazzle does not mount for UI surfaces, only the
+        JSON API), producing 404s on CREATE walks and wrong-content checks on
+        LIST walks.
+        """
         from dazzle.core.ir import SurfaceMode
         from dazzle.core.linker import build_appspec
         from dazzle.core.parser import parse_modules
-        from dazzle.core.strings import to_api_plural
 
         out: dict[str, str] = {}
         dsl_dir = self.project_path / "dsl"
@@ -1234,12 +1241,12 @@ class TestRunner:
             entity = getattr(surface, "entity_ref", None)
             if entity is None:
                 continue
-            plural = to_api_plural(entity)
+            entity_slug = entity.lower().replace("_", "-")
             mode = getattr(surface, "mode", None)
             if mode == SurfaceMode.LIST:
-                out[surface.name] = f"/{plural}"
+                out[surface.name] = f"/app/{entity_slug}"
             elif mode == SurfaceMode.CREATE:
-                out[surface.name] = f"/{plural}/create"
+                out[surface.name] = f"/app/{entity_slug}/create"
             # view / edit need a record id — skip; callers see None and
             # fall through to a clear error rather than a wrong URL.
         return out

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1230 — Test-runner URL resolver picked wrong template)
+
+- **`_build_surface_url_map()` now uses `/app/{entity_slug}` / `/app/{entity_slug}/create`** at `src/dazzle/testing/test_runner.py:1208`, mirroring `template_compiler.py`'s authoritative `route_map`. The previous templates (`/{plural}`, `/{plural}/create`) hit the JSON API (`/contacts` → 200 with JSON, breaks the "is this HTML?" check) or 404'd outright (`/contacts/create` is not a mounted route — UI surfaces live at `/app/contact/create`). Closes the CyFuture TD-* cluster filed against v0.71.179 (TD-390/391/392/393/394/396/400/402 wrong-template 404s + TD-389 API-vs-UI mismatch).
+- Tests updated: `test_runner_url_resolver_1224.py` now pins the corrected templates; `test_runner_assert_visible_fallback_1211.py` likewise updated. The `to_api_plural` import in `test_runner.py` is no longer needed and was removed.
+
 ### Fixed (#1237 — Repository.list() subtype JOIN coercion)
 
 - **`Repository.list()` now routes through the dict-coercion path when a subtype JOIN is active** at `src/dazzle/back/runtime/repository.py:1157`. Mirrors the `Repository.read()` fix shipped in v0.72.0 (see commit `e23ef886`). Without this, `list()` on a polymorphic-child entity would JOIN to the base table at the SQL level (correct) but then map each row through `self._row_to_model(...)`, dropping `acquired_at` / `location` / `kind` and any other base column under Pydantic's default `extra='ignore'`. Not yet symptomatic in any shipping list surface — list-mode renderers were reaching for child-only columns — but it would have bitten the moment a list surface tried to surface a base column, and is structurally required for parity with `read()`.

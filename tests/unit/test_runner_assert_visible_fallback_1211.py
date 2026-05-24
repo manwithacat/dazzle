@@ -68,11 +68,12 @@ def test_fallback_resolves_via_appspec_when_project_has_dsl(tmp_path: Path) -> N
         design={"surfaces": ["task_list"]},
         context=context,
     )
-    # task_list is a LIST surface → /tasks, NOT /app/workspaces/task_list
-    assert context["_current_ui_url"] == "http://stg.example/tasks"
+    # #1230: task_list is a LIST surface → /app/task, NOT
+    # /app/workspaces/task_list (and not the JSON-API plural /tasks).
+    assert context["_current_ui_url"] == "http://stg.example/app/task"
     assert runner.client is not None
     runner.client.check_ui_loads.assert_called_once_with(  # type: ignore[attr-defined]
-        url="http://stg.example/tasks"
+        url="http://stg.example/app/task"
     )
     assert result.result is TestResult.PASSED
 
