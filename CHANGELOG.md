@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.178] - 2026-05-24
+
+### Added (#1228 Phase 3c.ii — atomic-flow runtime executor)
+
+- **`execute_atomic_flow(flow, inputs, db_manager)`** in new `src/dazzle/back/runtime/atomic_flow_executor.py`. Executes a parsed `AtomicFlowSpec`'s creates inside a single transaction on a shared connection. Returns `{EntityName: generated UUID}` for each create.
+- **`AtomicFlowError`** wraps any create failure with `failed_at` (the entity that errored) and the original DB exception as `__cause__`. The pool's connection-context exit handler rolls back the transaction automatically when an exception bubbles out of the `with`-block.
+- **Reference resolution** at runtime:
+  - `input.<name>` → looks up `inputs[name]`
+  - `above.<Entity>.id` → uses the UUID generated for the earlier create
+  - LITERAL → passes through to the INSERT params
+  - Framework auto-generates `id` (UUID4) for every create — flow author doesn't need to declare it.
+- 11 new runtime tests pin: shared-connection invariant, ref resolution, auto-id generation, rollback semantics on failure, missing-input error path, return-value shape.
+
+**Not in scope for this slice (deferred to 3c.ii.b / 3c.iii):**
+- Pydantic input schema generation from `flow.inputs`
+- Route registration (`POST /api/atomic/<name>`)
+- Server-startup discovery of atomic flows
+- `permit:` enforcement at the route layer
+- Per-create `state_machine:` initial-state transitions
+- Per-create `temporal:` integration (atomic-flow over Employment + Salary already mostly works because temporal's tombstone filter is a read-path concern; the active-row partial unique index is enforced by the DB regardless)
+
+### Agent Guidance
+
+- `execute_atomic_flow` is callable today from custom Python in an app's `app/` directory — wrap it in your own route if you need atomic flows before slice 3c.iii lands. The function takes the parsed `AtomicFlowSpec` (look it up from `appspec.atomic_flows`), an inputs dict, and the runtime `db_manager`.
+- `AtomicFlowError.failed_at` names the entity that broke. The DB error is preserved as `__cause__` — wrap it for user-facing messages.
+- The framework generates `id`; don't declare it in the flow's `create` assignments. (If you do, the validator currently accepts it but the executor's auto-generated `id` will win.)
+
 ## [0.71.177] - 2026-05-24
 
 ### Added (#1228 Phase 3c.i — `atomic` block parser + IR + validator)

@@ -20,7 +20,6 @@
   "email.EmailBouncedEvent.bounced_recipient",
   "email.EmailBouncedEvent.diagnostic_code",
   "email.EmailFailedEvent.attempt_number",
-  "email.EmailFailedEvent.failed_at",
   "email.EmailSendRequestedEvent.bcc_addresses",
   "email.EmailSendRequestedEvent.body_pointer",
   "email.EmailSendRequestedEvent.requested_at",

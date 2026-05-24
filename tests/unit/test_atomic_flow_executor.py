@@ -1,0 +1,196 @@
+"""#1228 Phase 3c slice 3c.ii — atomic-flow runtime executor.
+
+These tests pin the in-process semantics of ``execute_atomic_flow``:
+
+1. Each create runs against a SHARED connection (single transaction).
+2. ``input.X`` resolves to ``inputs[X]``; ``above.E.id`` resolves to
+   the UUID generated for the earlier create of E.
+3. The framework auto-generates ``id`` for every create.
+4. On any create failure, the executor raises AtomicFlowError with
+   ``failed_at`` set to the offending entity name, and the connection
+   context's exception handler rolls back the transaction.
+5. Successful execution returns ``{EntityName: uuid}`` for each create.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+
+from dazzle.back.runtime.atomic_flow_executor import (
+    AtomicFlowError,
+    execute_atomic_flow,
+)
+from dazzle.core import ir
+
+
+def _make_db(*, raise_on_execute: bool = False) -> MagicMock:
+    """Mock DB with a context-managed connection + cursor."""
+    cursor = MagicMock()
+    if raise_on_execute:
+        cursor.execute = MagicMock(side_effect=RuntimeError("INSERT failed"))
+    else:
+        cursor.execute = MagicMock()
+    conn = MagicMock()
+    conn.cursor = MagicMock(return_value=cursor)
+    ctx = MagicMock()
+    ctx.__enter__ = MagicMock(return_value=conn)
+    ctx.__exit__ = MagicMock(return_value=False)
+    db = MagicMock()
+    db.placeholder = "%s"
+    db.connection = MagicMock(return_value=ctx)
+    db._mock_cursor = cursor
+    db._mock_conn = conn
+    db._mock_ctx = ctx
+    return db
+
+
+def _input(name: str, kind: ir.FieldTypeKind) -> ir.FlowInput:
+    return ir.FlowInput(name=name, type=ir.FieldType(kind=kind), required=True)
+
+
+def _flow_two_creates() -> ir.AtomicFlowSpec:
+    """Person → Employment(person=above.Person.id)."""
+    return ir.AtomicFlowSpec(
+        name="onboard",
+        label="Onboard",
+        permit_execute=["admin"],
+        inputs=[_input("legal_name", ir.FieldTypeKind.STR)],
+        creates=[
+            ir.FlowCreate(
+                entity="Person",
+                assignments={
+                    "legal_name": ir.FlowFieldValue(
+                        kind=ir.FlowFieldValueKind.INPUT_REF,
+                        input_name="legal_name",
+                    ),
+                },
+            ),
+            ir.FlowCreate(
+                entity="Employment",
+                assignments={
+                    "person": ir.FlowFieldValue(
+                        kind=ir.FlowFieldValueKind.ABOVE_REF,
+                        above_entity="Person",
+                        above_field="id",
+                    ),
+                },
+            ),
+        ],
+    )
+
+
+class TestSingleTransaction:
+    def test_all_creates_share_one_connection(self) -> None:
+        db = _make_db()
+        execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        # One connection lease for the whole flow.
+        assert db.connection.call_count == 1
+
+    def test_one_cursor_used_for_both_creates(self) -> None:
+        db = _make_db()
+        execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        # Cursor.execute called once per create.
+        assert db._mock_cursor.execute.call_count == 2
+
+
+class TestReferenceResolution:
+    def test_input_ref_resolves_to_inputs_dict(self) -> None:
+        db = _make_db()
+        execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        first_sql, first_params = db._mock_cursor.execute.call_args_list[0].args
+        assert "Person" in first_sql
+        assert "Alice" in first_params
+
+    def test_above_ref_resolves_to_prior_uuid(self) -> None:
+        db = _make_db()
+        result = execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        # Second create (Employment) should have used Person's id as a
+        # parameter — find it in the second call's params.
+        second_sql, second_params = db._mock_cursor.execute.call_args_list[1].args
+        assert "Employment" in second_sql
+        assert result["Person"] in second_params
+
+    def test_auto_generates_id_per_create(self) -> None:
+        db = _make_db()
+        result = execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        assert set(result.keys()) == {"Person", "Employment"}
+        # Both ids are UUIDs and distinct.
+        from uuid import UUID
+
+        assert isinstance(result["Person"], UUID)
+        assert isinstance(result["Employment"], UUID)
+        assert result["Person"] != result["Employment"]
+
+    def test_literal_value_passes_through(self) -> None:
+        flow = ir.AtomicFlowSpec(
+            name="x",
+            label="X",
+            permit_execute=["admin"],
+            inputs=[],
+            creates=[
+                ir.FlowCreate(
+                    entity="Person",
+                    assignments={
+                        "legal_name": ir.FlowFieldValue(
+                            kind=ir.FlowFieldValueKind.LITERAL,
+                            literal="hardcoded",
+                        )
+                    },
+                )
+            ],
+        )
+        db = _make_db()
+        execute_atomic_flow(flow, {}, db)
+        _, params = db._mock_cursor.execute.call_args.args
+        assert "hardcoded" in params
+
+
+class TestFailureSemantics:
+    def test_raises_atomic_flow_error_on_db_failure(self) -> None:
+        db = _make_db(raise_on_execute=True)
+        with pytest.raises(AtomicFlowError) as exc_info:
+            execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        # First create fails, so failed_at = "Person"
+        assert exc_info.value.failed_at == "Person"
+
+    def test_failure_propagates_through_connection_exit(self) -> None:
+        """Connection.__exit__ sees the exception so the pool can rollback."""
+        db = _make_db(raise_on_execute=True)
+        with pytest.raises(AtomicFlowError):
+            execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        # __exit__ was called with non-None exc_type (the pool sees the error
+        # and rolls back the transaction).
+        exit_call = db._mock_ctx.__exit__.call_args
+        # exit_call.args = (exc_type, exc_value, traceback) — first non-None
+        # means an exception bubbled up.
+        assert exit_call.args[0] is not None
+
+    def test_missing_input_raises_atomic_flow_error(self) -> None:
+        db = _make_db()
+        with pytest.raises(AtomicFlowError) as exc_info:
+            execute_atomic_flow(_flow_two_creates(), {}, db)  # no legal_name
+        assert exc_info.value.failed_at == "Person"
+        assert "unresolved reference" in str(exc_info.value)
+
+
+class TestReturnValue:
+    def test_returns_entity_name_to_uuid_map(self) -> None:
+        db = _make_db()
+        result = execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        assert "Person" in result and "Employment" in result
+
+    def test_empty_creates_returns_empty_map(self) -> None:
+        flow = ir.AtomicFlowSpec(
+            name="noop",
+            label="Noop",
+            permit_execute=["admin"],
+            inputs=[],
+            creates=[],
+        )
+        db = _make_db()
+        result = execute_atomic_flow(flow, {}, db)
+        assert result == {}
+        # No cursor.execute calls.
+        assert db._mock_cursor.execute.call_count == 0
