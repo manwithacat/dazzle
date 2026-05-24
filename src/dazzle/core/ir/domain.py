@@ -331,6 +331,9 @@ class EntitySpec(BaseModel):
         constraints: Entity-level constraints (unique, index)
         access: Access control specification (visibility + permissions)
         state_machine: State machine specification for status transitions (v0.7.0)
+        temporal: Effective-dated / temporal entity specification (v0.71.161, #1223 Phase 3a.i)
+        subtype_of: Name of base entity this is a subtype of (v0.71.180, #1217 Phase 3e.i)
+        subtype_children: Back-pointer to subtypes (linker-populated; empty in raw parser output)
         examples: Example data records for LLM cognition (v0.7.1)
         publishes: Event publishing declarations (v0.18.0)
     """
@@ -358,6 +361,12 @@ class EntitySpec(BaseModel):
     # auto-filter read paths to currently-active rows and thread
     # `?as_of=` URL params through workspace renders.
     temporal: TemporalSpec | None = None
+    # v0.71.180 (#1217 Phase 3e.i): subtype polymorphism (table-per-type).
+    # When set on a child entity, declares an IS-A relationship to the named
+    # base. Linker populates `subtype_children` on the base (back-pointer)
+    # and synthesises a `kind` enum field. See ADR-0026.
+    subtype_of: str | None = None
+    subtype_children: tuple[str, ...] = ()
     # v0.34.0: Bulk import/export
     bulk: BulkConfig | None = None
     state_machine: StateMachineSpec | None = None
@@ -387,6 +396,16 @@ class EntitySpec(BaseModel):
             if field.is_primary_key:
                 return field
         return None
+
+    @property
+    def is_polymorphic_base(self) -> bool:
+        """True when one or more entities declare `subtype_of: <this>`."""
+        return len(self.subtype_children) > 0
+
+    @property
+    def is_polymorphic_child(self) -> bool:
+        """True when this entity declares `subtype_of: <some base>`."""
+        return self.subtype_of is not None
 
     def get_field(self, name: str) -> FieldSpec | None:
         """Get field by name."""
