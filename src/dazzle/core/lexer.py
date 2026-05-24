@@ -280,6 +280,8 @@ class TokenType(Enum):
     HAS_ONE = "has_one"
     EMBEDS = "embeds"
     BELONGS_TO = "belongs_to"
+    # #1223 Phase 3a.v: derived current-row relationship for temporal entities
+    LATEST_ONE = "latest_one"
     CASCADE = "cascade"
     RESTRICT = "restrict"
     NULLIFY = "nullify"

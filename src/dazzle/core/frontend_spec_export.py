@@ -39,6 +39,9 @@ FIELD_TYPE_MAP: dict[str, str] = {
     FieldTypeKind.HAS_ONE: "string",
     FieldTypeKind.BELONGS_TO: "string",
     FieldTypeKind.EMBEDS: "Record<string, unknown>",
+    # #1223 Phase 3a.v: latest_one resolves to a single row's primary key
+    # at the frontend layer — same shape as HAS_ONE.
+    FieldTypeKind.LATEST_ONE: "string",
 }
 
 ALL_SECTIONS = [

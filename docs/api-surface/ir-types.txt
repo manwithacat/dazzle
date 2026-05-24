@@ -957,6 +957,7 @@ ir_class: FieldType
     - scale: int | None = None
     - ui_mode: str | None = None
     - via_entity: str | None = None
+    - via_field: str | None = None
 
 ir_class: FitnessSpec
   required: (none)
@@ -3679,6 +3680,7 @@ enum: FieldTypeKind
     - HAS_ONE = 'has_one'
     - INT = 'int'
     - JSON = 'json'
+    - LATEST_ONE = 'latest_one'
     - MONEY = 'money'
     - REF = 'ref'
     - STR = 'str'

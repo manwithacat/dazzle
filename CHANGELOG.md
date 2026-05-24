@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.165] - 2026-05-24
+
+### Added (#1223 Phase 3a.v — `latest_one` derived current-row relationship — parser + IR + validator)
+
+- **New `LATEST_ONE` field type kind** + DSL syntax `latest_one EntityName via fk_field`. Declares a derived current-row relationship that (once runtime resolution lands in 3a.v.ii) resolves at read time to "the row of `EntityName` where `fk_field = self.id` AND the target's temporal `end_field` is NULL." Example:
+
+  ```dsl
+  entity Person "Person":
+    id: uuid pk
+    current_employment: latest_one Employment via person
+    current_salary: latest_one Salary via person
+  ```
+
+  The `via` keyword is **required** — there's no FK-inference fallback. Explicit names like `ManagerLink.report` vs `ManagerLink.manager` would otherwise need ambiguity resolution; one consistent rule (always-explicit) is simpler than two-shapes-with-different-magic.
+
+- **Semantic validation** in `validate_entities` catches: unknown target entity, target without `temporal:` block, named via field doesn't exist on the target, via field isn't a `ref` back to this entity. All produce clear error messages.
+
+- **`FIELD_TYPE_MAP`** updated to map `LATEST_ONE` to TypeScript `string` (same shape as `HAS_ONE` — frontend sees the resolved row's primary key once the runtime layer materialises it).
+
+- **7 regression tests** in `tests/unit/test_latest_one_parser.py` covering parse path (with/without via), all four validator failure modes, and the happy-path passes-without-errors case.
+
+### Slice status (#1223)
+
+| Slice | Status |
+|---|---|
+| 3a.i — IR + parser + validator | ✅ v0.71.161 |
+| 3a.ii — Repository tombstone filter | ✅ v0.71.162 |
+| 3a.iii — DB partial unique index | ✅ v0.71.163 |
+| 3a.iv — `?as_of=` URL param threading | ✅ v0.71.164 |
+| 3a.v — `latest_one` parser + IR + validator | ✅ v0.71.165 (this) |
+| 3a.v.ii — `latest_one` runtime resolution | 🔲 follow-up |
+
+#1223's main thrust is shipped. The remaining 3a.v.ii (resolution at read time via the relation_loader / repository serialisation path) is a substantial separate workstream that touches the request/response shape — better as its own focused cycle.
+
+### Agent Guidance
+
+- The `latest_one EntityName via fk_field` syntax is forward-compatible — author it today, resolution lights up when 3a.v.ii ships. The validator already catches mistakes at parse time, so getting the schema right now is verifiable; only the runtime returns nothing yet.
+
 ## [0.71.164] - 2026-05-24
 
 ### Added (#1223 Phase 3a.iv — `?as_of=YYYY-MM-DD` URL param for temporal entities)

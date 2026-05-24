@@ -294,6 +294,51 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         _validate_field_modifiers(entity, errors, warnings)
         _validate_constraints(entity, errors)
 
+        # #1223 Phase 3a.v: validate latest_one field declarations.
+        # Target entity must exist, declare `temporal:`, and have the
+        # named FK column pointing back at this entity.
+        entity_map = {e.name: e for e in appspec.domain.entities}
+        for field in entity.fields:
+            if field.type.kind != ir.FieldTypeKind.LATEST_ONE:
+                continue
+            target_name = field.type.ref_entity
+            via_field = field.type.via_field
+            if target_name is None or via_field is None:
+                errors.append(
+                    f"Entity '{entity.name}': field '{field.name}' has "
+                    f"latest_one but is missing ref_entity or via_field."
+                )
+                continue
+            target = entity_map.get(target_name)
+            if target is None:
+                errors.append(
+                    f"Entity '{entity.name}': latest_one '{field.name}' "
+                    f"references unknown entity '{target_name}'."
+                )
+                continue
+            if target.temporal is None:
+                errors.append(
+                    f"Entity '{entity.name}': latest_one '{field.name}' "
+                    f"targets entity '{target_name}' but '{target_name}' has no "
+                    f"`temporal:` block. latest_one only works against temporal entities."
+                )
+            target_field_map = {f.name: f for f in target.fields}
+            target_fk = target_field_map.get(via_field)
+            if target_fk is None:
+                errors.append(
+                    f"Entity '{entity.name}': latest_one '{field.name}' "
+                    f"via='{via_field}' references unknown field on '{target_name}'."
+                )
+            elif (
+                target_fk.type.kind != ir.FieldTypeKind.REF
+                or target_fk.type.ref_entity != entity.name
+            ):
+                errors.append(
+                    f"Entity '{entity.name}': latest_one '{field.name}' "
+                    f"via='{via_field}' on '{target_name}' is not a `ref {entity.name}` "
+                    f"field — latest_one requires the via field to be a FK back to this entity."
+                )
+
         # #1223 Phase 3a.i: validate temporal: block field references.
         # The named start/end/key fields must exist on the entity, and
         # end_field must NOT be `required` (NULL = currently active).

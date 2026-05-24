@@ -126,6 +126,7 @@ class TypeParserMixin:
             TokenType.HAS_ONE: self._parse_has_one_type,
             TokenType.EMBEDS: self._parse_embeds_type,
             TokenType.BELONGS_TO: self._parse_belongs_to_type,
+            TokenType.LATEST_ONE: self._parse_latest_one_type,
         }
 
         token_type_parser = _token_type_dispatch.get(token.type)
@@ -370,6 +371,41 @@ class TypeParserMixin:
         self.advance()
         entity_name = self.expect(TokenType.IDENTIFIER).value
         return ir.FieldType(kind=ir.FieldTypeKind.BELONGS_TO, ref_entity=entity_name)
+
+    def _parse_latest_one_type(self) -> ir.FieldType:
+        """Parse ``latest_one EntityName via fk_field`` (#1223 Phase 3a.v).
+
+        Declares a derived current-row relationship: resolves at read
+        time to the row of EntityName where ``fk_field = self.id`` AND
+        the target's temporal ``end_field`` is NULL. Validation (target
+        must declare ``temporal:``) runs in ``validate_entities``.
+
+        ``via fk_field`` is *required* — there's no inference fallback.
+        If the target entity has multiple FKs back to self (e.g.
+        ``ManagerLink.report`` vs ``ManagerLink.manager``), the
+        explicit ``via`` is the only way to disambiguate, and we don't
+        want one shape that's explicit and another that magic-guesses.
+        """
+        self.advance()  # consume 'latest_one'
+        entity_name = self.expect(TokenType.IDENTIFIER).value
+        # The `via` keyword is the same token used by has_many ... via.
+        if not self.match(TokenType.VIA):
+            tok = self.current_token()
+            raise make_parse_error(
+                f"`latest_one {entity_name}` requires `via <fk_field>` — "
+                f"name the FK column on {entity_name} that points back to "
+                f"this entity.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()  # consume 'via'
+        fk_field = self.expect_identifier_or_keyword().value
+        return ir.FieldType(
+            kind=ir.FieldTypeKind.LATEST_ONE,
+            ref_entity=entity_name,
+            via_field=str(fk_field),
+        )
 
     # ------------------------------------------------------------------
     # Relationship and duration helpers
