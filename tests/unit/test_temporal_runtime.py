@@ -84,6 +84,8 @@ def _make_employment_repo(*, default_filter: str = "active") -> MagicMock:
     repo._field_types = {f.name: f.type for f in entity_spec.fields}
     repo._computed_fields = []
     repo._relation_loader = None
+    repo._subtype_join_sql = None
+    repo._subtype_extra_cols = []
     repo._record_query = lambda *_a, **_kw: None  # type: ignore[method-assign]
     repo._mock_cursor = cursor
     return repo
@@ -226,6 +228,8 @@ class TestSoftDeleteAndTemporalCompose:
         repo._field_types = {f.name: f.type for f in entity_spec.fields}
         repo._computed_fields = []
         repo._relation_loader = None
+        repo._subtype_join_sql = None
+        repo._subtype_extra_cols = []
         repo._record_query = lambda *_a, **_kw: None  # type: ignore[method-assign]
 
         asyncio.run(repo.read(uuid4()))

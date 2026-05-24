@@ -610,10 +610,7 @@ class Repository(Generic[T]):
         # `_field_types` so `_row_to_model` can coerce them on the way out.
         self._subtype_join_sql: str | None = None
         self._subtype_extra_cols: list[str] = []
-        # getattr guard: legacy unit tests stub `entity_spec` as a bare
-        # SimpleNamespace lacking the polymorphism fields. Real EntitySpec
-        # always has `subtype_of` defaulted to None.
-        if getattr(entity_spec, "subtype_of", None) is not None and base_entity_spec is not None:
+        if entity_spec.subtype_of is not None and base_entity_spec is not None:
             base_table = quote_identifier(base_entity_spec.name)
             child_table = quote_identifier(self.table_name)
             self._subtype_join_sql = f'JOIN {base_table} ON {child_table}."id" = {base_table}."id"'
@@ -1020,12 +1017,10 @@ class Repository(Generic[T]):
         # shared columns (e.g. acquired_at, location, kind) live on the
         # base table. Inject the JOIN + extra SELECT cols cached at
         # __init__ time so every list query against a child surface
-        # returns the merged row shape. The getattr fallback covers
-        # legacy tests that bypass __init__ via Repository.__new__.
-        _subtype_join_sql = getattr(self, "_subtype_join_sql", None)
-        if _subtype_join_sql is not None:
-            builder.joins.append(_subtype_join_sql)
-            builder.extra_select_cols.extend(getattr(self, "_subtype_extra_cols", []))
+        # returns the merged row shape.
+        if self._subtype_join_sql is not None:
+            builder.joins.append(self._subtype_join_sql)
+            builder.extra_select_cols.extend(self._subtype_extra_cols)
 
         # v0.61.9 (#865): FK-display fast path — LEFT JOIN the display field
         # instead of issuing one SELECT per FK relation. Only to-one relations

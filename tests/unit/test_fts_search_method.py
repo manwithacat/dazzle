@@ -72,7 +72,7 @@ def _build_repo(
     for these tests — fts_search doesn't go through model_class."""
     if rows is None:
         rows = [{"id": "uid-1", "rank": 0.9, "title": "Hello world"}]
-    entity = SimpleNamespace(name=table_name, fields=[], computed_fields=[])
+    entity = SimpleNamespace(name=table_name, fields=[], computed_fields=[], subtype_of=None)
 
     class _M:
         pass
