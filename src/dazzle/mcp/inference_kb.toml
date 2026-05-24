@@ -1897,6 +1897,43 @@ assigned_to: ref User
 """
 
 [[modeling_guidance]]
+id = "prefer_temporal_keyword"
+name = "Effective-dated history — use the temporal: keyword"
+triggers = ["effective date", "history of", "as of", "as-of date", "snapshot at date", "time machine", "audit trail", "career history", "salary history", "price history", "lease term", "employment history", "manager change", "slowly changing", "scd", "interval table", "current row", "currently active"]
+anti_pattern = "Hand-rolling `start_date` + nullable `end_date` + per-surface `scope: end_date = null` rules + a custom route handler for as-of queries"
+prefer = "Declare `temporal: { start_field, end_field, key_field }` on the entity — framework auto-filters read paths to currently-active rows, enforces 'at most one active per key' via a partial unique index, threads `?as_of=YYYY-MM-DD` URL param for historical snapshots, and resolves `current_X: latest_one X via fk` traversals at read time"
+rationale = "Since v0.71.161 (#1223) the `temporal:` keyword is fully wired across the IR + parser + Repository + DB + URL param + latest_one resolver. Use it for any entity whose rows represent open or closed time intervals — Employment / Salary / ManagerLink in HR, lease terms in real estate, price-list rows in retail, GDPR consent records, exchange-rate snapshots. Pair with `latest_one EntityName via fk_field` on a parent entity to get a typed 'current row' relationship that resolves automatically."
+example = """
+# GOOD — first-class temporal entity (since v0.71.161, #1223)
+entity Employment "Employment":
+  id: uuid pk
+  person: ref Person required
+  role: ref Role required
+  start_date: date required
+  end_date: date    # NULL = currently active
+
+  temporal:
+    start_field: start_date
+    end_field: end_date
+    key_field: person
+
+# Read paths auto-filter `end_date IS NULL` by default.
+# GET /api/employment → currently-active rows only.
+# GET /api/employment?as_of=2025-06-01 → re-projects to that date.
+# DB enforces "at most one active row per person" via partial unique index.
+
+# Pair with latest_one on a parent for typed current-row traversal:
+entity Person "Person":
+  id: uuid pk
+  legal_name: str(200) required
+  current_employment: latest_one Employment via person
+  # GET /api/person/<id> includes the resolved current Employment row.
+
+# When the lifecycle is a workflow (multi-state), use a state machine
+# instead — temporal: is for interval data, not stage transitions.
+"""
+
+[[modeling_guidance]]
 id = "no_duplicated_fields"
 name = "Don't Copy Parent Fields — Use Refs"
 triggers = ["duplicated field", "copy parent field", "denormalized name", "school_name on student"]

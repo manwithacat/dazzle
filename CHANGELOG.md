@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.171] - 2026-05-24
+
+### Added (#1217 Phase 2 — inference KB surfacing for `temporal:` keyword)
+
+- **New inference KB entry `prefer_temporal_keyword`** in `src/dazzle/mcp/inference_kb.toml`. Triggers under 18 query phrases ("effective date", "history of", "as of", "snapshot at date", "time machine", "audit trail", "career history", "salary history", "price history", "lease term", "employment history", "slowly changing", "SCD", "current row", "currently active", etc.) and directs agents at the `temporal:` keyword with a worked example showing the IR + URL param + latest_one composition. Mirrors the `prefer_soft_delete_keyword` entry that landed in v0.71.154 — both convert "things experts know about temporal modelling" into "things agents discover via retrieval."
+- **Companion guidance:** the entry explicitly contrasts `temporal:` (interval data) with state machines (multi-state workflows) so agents pick the right shape for the use case.
+
+### Filed (housekeeping, not blocking)
+
+- **#1226 — back-side EntitySpec lags IR EntitySpec.** Defensive `getattr(entity, "soft_delete", False)` / `getattr(entity, "temporal", None)` pattern across 8 runtime sites. Filed with three options (unify / augment / document the duality) for a focused future cleanup session. The defensive pattern works; this is readability + IDE-ergonomics work.
+
 ## [0.71.170] - 2026-05-24
 
 ### Added (#1223 Phase 3a.v.ii — `latest_one` runtime resolution)
