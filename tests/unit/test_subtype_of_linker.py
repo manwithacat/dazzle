@@ -160,6 +160,50 @@ entity Vehicle "Vehicle":
             build_appspec([module], root_module_name=module.name)
 
 
+class TestSubtypeLinkerRule12_FieldNameOverlap:
+    """#1236 — a child field that shadows a base field name would produce
+    an ambiguous SELECT under the auto-JOIN (the column appears in both
+    ``"{Child}".*`` and the aliased base column)."""
+
+    def test_child_shadows_base_field_rejected(self) -> None:
+        dsl = """\
+module test
+app a "A"
+
+entity Asset "Asset":
+  id: uuid pk
+  location: str(120)
+
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+  location: int
+"""
+        with pytest.raises(LinkError, match="E_SUBTYPE_FIELD_NAME_OVERLAP"):
+            _link(dsl)
+
+    def test_disjoint_child_fields_accepted(self) -> None:
+        dsl = """\
+module test
+app a "A"
+
+entity Asset "Asset":
+  id: uuid pk
+  location: str(120)
+
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+  vin: str(17) required
+"""
+        # Must not raise.
+        appspec = _link(dsl)
+        vehicle = next(e for e in appspec.domain.entities if e.name == "Vehicle")
+        names = {f.name for f in vehicle.fields}
+        assert "wheels" in names
+        assert "vin" in names
+
+
 class TestSubtypeLinkerRule10_SoftDeleteOnChild:
     def test_child_soft_delete_rejected(self) -> None:
         dsl = """\

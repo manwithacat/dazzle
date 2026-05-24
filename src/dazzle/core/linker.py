@@ -2,6 +2,7 @@ from . import ir
 from .archetype_expander import _to_snake_case, expand_archetypes, generate_archetype_surfaces
 from .errors import (
     E_SUBTYPE_DUPLICATE_PK,
+    E_SUBTYPE_FIELD_NAME_OVERLAP,
     E_SUBTYPE_GRANT_INCOMPLETE,
     E_SUBTYPE_KIND_RESERVED,
     E_SUBTYPE_OF_CYCLE,
@@ -360,12 +361,24 @@ def _link_subtypes(
                 f"subtype_of '{parent.subtype_of}'. Subtype hierarchies must be flat."
             )
 
+        base_field_names = {f.name for f in parent.fields}
         for f in entity.fields:
             if ir.FieldModifier.PK in f.modifiers:
                 raise LinkError(
                     f"{E_SUBTYPE_DUPLICATE_PK}: Entity '{entity.name}' is a "
                     f"subtype of '{base_name}' and must not declare its own "
                     f"primary key (field '{f.name}'). The PK is inherited from the base."
+                )
+            # #1236: a child field that shadows a base field name would
+            # produce an ambiguous SELECT under the auto-JOIN (the column
+            # appears in both ``"{Child}".*`` and the aliased base column).
+            if f.name in base_field_names:
+                raise LinkError(
+                    f"{E_SUBTYPE_FIELD_NAME_OVERLAP}: Entity '{entity.name}' is a "
+                    f"subtype of '{base_name}' and declares a field '{f.name}' "
+                    f"that shadows a base field. Subtype children must declare "
+                    f"disjoint field names from the base; rename the child field "
+                    f"or move it onto the base."
                 )
 
         if getattr(entity, "soft_delete", False):

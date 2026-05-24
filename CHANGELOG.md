@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1236 — `E_SUBTYPE_FIELD_NAME_OVERLAP` linker rule)
+
+- **New linker rule** in `src/dazzle/core/linker.py`'s `_link_subtypes()`: a polymorphic-child entity that redeclares a field name already on the base raises `LinkError(E_SUBTYPE_FIELD_NAME_OVERLAP)`. Mirrors the existing `E_SUBTYPE_KIND_RESERVED` and `E_SUBTYPE_DUPLICATE_PK` rules. Without this, the auto-JOIN shipped in #1217 Phase 3(e) would produce an ambiguous SELECT (the column appears in both `"{Child}".*` and the aliased base column).
+- **2 new tests** in `tests/unit/test_subtype_of_linker.py::TestSubtypeLinkerRule12_FieldNameOverlap` pin: shadowing fields rejected, disjoint fields accepted.
+
 ### Fixed (#1229 — cohort_strip `share:`/`via:` + aggregate `where:` retargets predicate to FROM alias)
 
 - **`_retarget_scope_predicate_to_alias` helper** at `src/dazzle/back/runtime/workspace_region_computes.py` rewrites entity-name-qualified column refs in a composed `__scope_predicate` SQL fragment to the FROM-clause alias. The `share:` / `via:` cohort aggregate paths alias the aggregated table to `a` in their bespoke FROM clauses, but `_build_aggregate_filters` compiles the typed `where:` predicate against the aggregated *entity name* — emitting `"MarkingResult"."col"` qualifiers that Postgres rejects (UndefinedTable) in the aliased scope.
