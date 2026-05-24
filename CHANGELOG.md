@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.164] - 2026-05-24
+
+### Added (#1223 Phase 3a.iv — `?as_of=YYYY-MM-DD` URL param for temporal entities)
+
+- **List + aggregate API endpoints** for entities carrying `temporal:` now honour `?as_of=YYYY-MM-DD` URL parameter (configurable via `temporal.as_of_param`, default `as_of`). When set, the read paths re-project the default "currently active" filter to the historical-snapshot test `<start_field> <= as_of AND (<end_field> IS NULL OR <end_field> > as_of)` — returning the rows that were active *as of* that date. Composes with scope predicates via AND (existing scope rule + temporal snapshot). Bad date format → HTTP 400 with a clear message.
+- **`Repository.read` gains an `as_of` kwarg** for the same re-projection on single-row reads (the read path doesn't have a `filters` dict, so as_of threads through as a separate kwarg). Route-handler-level threading for the read path is a small follow-up.
+- **5 regression tests** in `tests/unit/test_temporal_runtime.py` covering: helper SQL/params shape, read-with-as_of replaces tombstone with open-interval predicate, read-without-as_of keeps tombstone, list as_of routes through `__scope_predicate` slot, `__as_of` key consumed by Repository (doesn't leak to QueryBuilder).
+
+### Behavioural effect
+
+For `examples/hr_records/`:
+- `GET /api/employment?as_of=2025-06-01` returns employment rows that were active on 2025-06-01 (including those since closed)
+- `GET /api/salary?as_of=2025-06-01` returns salary rows effective on 2025-06-01
+- `GET /api/managerlink?as_of=2025-06-01` returns the reporting structure as of 2025-06-01
+
+The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored using standard surfaces + a date-picker UI — the underlying API supports the re-projection.
+
+### Slice status (#1223)
+
+| Slice | Status |
+|---|---|
+| 3a.i — IR + parser + validator | ✅ v0.71.161 |
+| 3a.ii — Repository tombstone filter | ✅ v0.71.162 |
+| 3a.iii — DB partial unique index | ✅ v0.71.163 |
+| 3a.iv — `?as_of=` URL param threading | ✅ v0.71.164 (this) |
+| 3a.v — `latest_one` typed relationship (`Person.current_employment`) | 🔲 next |
+
+### Agent Guidance
+
+- The `?as_of=` URL parameter works on `list` and aggregate endpoints today. The read path (`GET /api/<entity>/<id>?as_of=…`) has the Repository support but isn't yet wired through the route handler — that's a small follow-up. For the headline "time machine" workspace pattern, list endpoints are the primary need.
+- When designing UI that needs as-of-date semantics, render the date picker as a workspace-level control that adds `?as_of=…` to every region's source URL — the framework's API surface handles the rest.
+
 ## [0.71.163] - 2026-05-24
 
 ### Added (#1223 Phase 3a.iii — DB partial unique index for temporal entities)

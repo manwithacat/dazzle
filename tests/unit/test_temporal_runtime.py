@@ -279,3 +279,86 @@ class TestPartialUniqueIndexSQL:
             end_field="end_date",
         )
         assert "Identifier('uniq_active_ManagerLink_report')" in str(composed)
+
+
+# ============================================================================
+# 3a.iv: ?as_of= URL param threading + Repository as_of kwarg
+# ============================================================================
+
+
+class TestAsOfHelper:
+    def test_predicate_shape(self) -> None:
+        from datetime import date
+
+        from dazzle.back.runtime.repository import _build_temporal_as_of_predicate
+
+        sql, params = _build_temporal_as_of_predicate("start_date", "end_date", date(2026, 5, 24))
+        # Open-interval test: must have started by as_of AND not yet ended.
+        assert '"start_date" <= %s' in sql
+        assert '"end_date" IS NULL OR "end_date" > %s' in sql
+        assert params == [date(2026, 5, 24), date(2026, 5, 24)]
+
+
+class TestReadAsOf:
+    def test_read_with_as_of_uses_open_interval_predicate(self) -> None:
+        import asyncio
+        from datetime import date
+        from uuid import uuid4
+
+        repo = _make_employment_repo()
+        repo._mock_cursor.fetchone = MagicMock(return_value=None)
+        asyncio.run(repo.read(uuid4(), as_of=date(2025, 6, 1)))
+        sql, params = repo._mock_cursor.execute.call_args.args
+        # The tombstone-only clause is REPLACED with the open-interval test.
+        assert 'AND ("start_date" <= %s' in sql
+        assert '"end_date" IS NULL OR "end_date" > %s)' in sql
+        # The original `AND "end_date" IS NULL` shouldn't appear standalone.
+        # Two as_of params appended after the id.
+        assert len(params) == 3  # id + as_of x2
+        assert params[1] == date(2025, 6, 1)
+        assert params[2] == date(2025, 6, 1)
+
+    def test_read_without_as_of_keeps_tombstone(self) -> None:
+        import asyncio
+        from uuid import uuid4
+
+        repo = _make_employment_repo()
+        repo._mock_cursor.fetchone = MagicMock(return_value=None)
+        asyncio.run(repo.read(uuid4()))
+        sql = repo._mock_cursor.execute.call_args.args[0]
+        # Tombstone path — no open-interval predicate.
+        assert 'AND "end_date" IS NULL' in sql
+        assert "start_date" not in sql
+
+
+class TestListAsOf:
+    def test_list_with_as_of_routes_through_scope_predicate(self) -> None:
+        """List path: __as_of in filters dict → scope_predicate slot
+        (the QueryBuilder special key, intercepted in add_filters)."""
+        import asyncio
+        from datetime import date
+        from unittest.mock import patch
+
+        repo = _make_employment_repo()
+        captured_filters: dict = {}
+
+        from dazzle.back.runtime.query_builder import QueryBuilder
+
+        original = QueryBuilder.add_filters
+
+        def _capture(self, filters):
+            captured_filters.update(filters)
+            return original(self, filters)
+
+        with patch.object(QueryBuilder, "add_filters", _capture):
+            asyncio.run(repo.list(filters={"__as_of": date(2025, 6, 1)}))
+
+        # __as_of consumed by Repository, replaced with __scope_predicate
+        # before reaching QueryBuilder.
+        assert "__as_of" not in captured_filters
+        scope = captured_filters.get("__scope_predicate")
+        assert scope is not None
+        sql, params = scope
+        assert '"start_date" <= %s' in sql
+        assert '"end_date" IS NULL OR "end_date" > %s' in sql
+        assert params == [date(2025, 6, 1), date(2025, 6, 1)]

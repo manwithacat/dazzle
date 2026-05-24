@@ -2605,6 +2605,31 @@ async def _list_handler_body(
     if sql_filters or filters:
         merged_filters = {**(sql_filters or {}), **filters}
 
+    # #1223 Phase 3a.iv — `?as_of=YYYY-MM-DD` URL parameter for temporal
+    # entities. The Repository layer reads the special `__as_of` filter
+    # dict key and replaces the default tombstone filter with the
+    # open-interval predicate. The URL param name is configurable via
+    # `entity.temporal.as_of_param` (default `as_of`).
+    _entity_temporal = getattr(getattr(service, "entity_spec", None), "temporal", None)
+    if _entity_temporal is not None:
+        _as_of_raw = request.query_params.get(_entity_temporal.as_of_param)
+        if _as_of_raw:
+            from datetime import date as _date
+
+            try:
+                _as_of_value = _date.fromisoformat(_as_of_raw)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Invalid {_entity_temporal.as_of_param}={_as_of_raw!r}: "
+                        f"expected YYYY-MM-DD"
+                    ),
+                )
+            if merged_filters is None:
+                merged_filters = {}
+            merged_filters["__as_of"] = _as_of_value
+
     # Build sort list for repository
     sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
 

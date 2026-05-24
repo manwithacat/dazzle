@@ -54,6 +54,28 @@ class ConstraintViolationError(Exception):
         super().__init__(message)
 
 
+def _build_temporal_as_of_predicate(
+    start_field: str, end_field: str, as_of: Any
+) -> tuple[str, list[Any]]:
+    """Build the as-of-date temporal predicate for #1223 Phase 3a.iv.
+
+    Re-projects a temporal entity's read paths to "what was true as of
+    `as_of`" by replacing the default `end_field IS NULL` active-only
+    filter with the open-interval test:
+
+        start_field <= as_of AND (end_field IS NULL OR end_field > as_of)
+
+    Returns ``(sql, params)`` ready to plug into QueryBuilder's
+    ``__scope_predicate`` slot (or AND-compose with an existing one).
+    """
+    from dazzle.back.runtime.query_builder import quote_identifier
+
+    s = quote_identifier(start_field)
+    e = quote_identifier(end_field)
+    sql = f"{s} <= %s AND ({e} IS NULL OR {e} > %s)"
+    return sql, [as_of, as_of]
+
+
 def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str, str | None]:
     """Parse a constraint error message to extract type and field.
 
@@ -312,6 +334,8 @@ class Repository(Generic[T]):
         self,
         id: UUID,
         include: list[str] | None = None,
+        *,
+        as_of: Any = None,
     ) -> T | dict[str, Any] | None:
         """
         Read an entity by ID.
@@ -319,6 +343,10 @@ class Repository(Generic[T]):
         Args:
             id: Entity ID
             include: List of relation names to include (nested loading)
+            as_of: Optional date for temporal entity time-travel (#1223 Phase 3a.iv).
+                When set on an entity with `temporal:` declared, the row must have
+                been *active* on this date (start_field <= as_of AND (end_field IS
+                NULL OR end_field > as_of)). NULL on non-temporal entities is a no-op.
 
         Returns:
             Entity (or dict with nested data if include specified), or None if not found
@@ -332,21 +360,29 @@ class Repository(Generic[T]):
         soft_delete_clause = (
             ' AND "deleted_at" IS NULL' if getattr(self.entity_spec, "soft_delete", False) else ""
         )
-        # #1223 Phase 3a.ii: same shape for temporal entities. Rows
-        # whose `end_field` is non-NULL (closed intervals) are hidden
-        # from single-row reads when default_filter == "active".
+        # #1223 Phase 3a.ii / 3a.iv: tombstone or as-of predicate for
+        # temporal entities. read() is unique in not having a `filters`
+        # dict, so as_of for the read path is supplied via a separate
+        # kwarg threaded from the route handler.
         _temporal_read = getattr(self.entity_spec, "temporal", None)
-        temporal_clause = (
-            f' AND "{_temporal_read.end_field}" IS NULL'
-            if _temporal_read is not None and _temporal_read.default_filter == "active"
-            else ""
-        )
+        temporal_clause = ""
+        extra_params: list[Any] = []
+        if _temporal_read is not None and _temporal_read.default_filter == "active":
+            if as_of is not None:
+                t_sql, t_params = _build_temporal_as_of_predicate(
+                    _temporal_read.start_field, _temporal_read.end_field, as_of
+                )
+                temporal_clause = f" AND ({t_sql})"
+                extra_params = list(t_params)
+            else:
+                temporal_clause = f' AND "{_temporal_read.end_field}" IS NULL'
         sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}{temporal_clause}'
+        params: tuple[Any, ...] = (str(id), *extra_params)
 
         start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql, (str(id),))  # nosemgrep
+            cursor.execute(sql, params)  # nosemgrep
             row = cursor.fetchone()
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("select", latency_ms, rows=1 if row else 0)
@@ -533,16 +569,33 @@ class Repository(Generic[T]):
         if getattr(self.entity_spec, "soft_delete", False):
             effective_filters.setdefault("deleted_at__isnull", True)
 
-        # #1223 Phase 3a.ii: tombstone filter for temporal entities.
-        # When `temporal:` is declared with default_filter == "active"
-        # (the default), inject `<end_field> IS NULL` so list paths
-        # return only currently-active rows. Composes with soft_delete
-        # and scope predicates via the same setdefault contract —
-        # explicit callers passing `<end_field>__isnull=False` win.
-        # ?as_of= URL param threading lands in 3a.iv.
+        # #1223 Phase 3a.ii / 3a.iv: tombstone filter + as_of reprojection.
+        # Default behaviour (no as_of): inject `<end_field> IS NULL` so list
+        # paths return only currently-active rows. With as_of (3a.iv): replace
+        # the active-only filter with the historical-snapshot predicate
+        # `start_field <= as_of AND (end_field IS NULL OR end_field > as_of)`.
+        # The as_of value is passed via the special `__as_of` filter dict key,
+        # mirroring the `__scope_predicate` pattern. Route handlers inject it
+        # from the workspace/surface `?as_of=YYYY-MM-DD` URL parameter.
         _temporal = getattr(self.entity_spec, "temporal", None)
+        _as_of = effective_filters.pop("__as_of", None)
         if _temporal is not None and _temporal.default_filter == "active":
-            effective_filters.setdefault(f"{_temporal.end_field}__isnull", True)
+            if _as_of is not None:
+                _temporal_predicate = _build_temporal_as_of_predicate(
+                    _temporal.start_field, _temporal.end_field, _as_of
+                )
+                # AND-compose with any existing scope predicate.
+                existing = effective_filters.get("__scope_predicate")
+                if existing is not None:
+                    s_sql, s_params = existing
+                    effective_filters["__scope_predicate"] = (
+                        f"({s_sql}) AND ({_temporal_predicate[0]})",
+                        list(s_params) + list(_temporal_predicate[1]),
+                    )
+                else:
+                    effective_filters["__scope_predicate"] = _temporal_predicate
+            else:
+                effective_filters.setdefault(f"{_temporal.end_field}__isnull", True)
 
         if effective_filters:
             builder.add_filters(effective_filters)
@@ -693,10 +746,27 @@ class Repository(Generic[T]):
             if getattr(self.entity_spec, "soft_delete", False):
                 effective_filters.setdefault("deleted_at__isnull", True)
 
-            # #1223 Phase 3a.ii: same shape for temporal entities.
+            # #1223 Phase 3a.ii / 3a.iv: tombstone or as-of for temporal.
+            # Same shape as the list path. The __as_of key flows through
+            # the same filters dict used by list/scope composition.
             _temporal_agg = getattr(self.entity_spec, "temporal", None)
+            _as_of_agg = effective_filters.pop("__as_of", None)
             if _temporal_agg is not None and _temporal_agg.default_filter == "active":
-                effective_filters.setdefault(f"{_temporal_agg.end_field}__isnull", True)
+                if _as_of_agg is not None:
+                    _t_pred = _build_temporal_as_of_predicate(
+                        _temporal_agg.start_field, _temporal_agg.end_field, _as_of_agg
+                    )
+                    existing_agg = effective_filters.get("__scope_predicate")
+                    if existing_agg is not None:
+                        s_sql, s_params = existing_agg
+                        effective_filters["__scope_predicate"] = (
+                            f"({s_sql}) AND ({_t_pred[0]})",
+                            list(s_params) + list(_t_pred[1]),
+                        )
+                    else:
+                        effective_filters["__scope_predicate"] = _t_pred
+                else:
+                    effective_filters.setdefault(f"{_temporal_agg.end_field}__isnull", True)
 
             sql, params = build_aggregate_sql(
                 table_name=self.table_name,
