@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.180] - 2026-05-24
+
 ### Added (#1217 Phase 3e.i — `subtype_of:` IR + parser)
 
 - **`SUBTYPE_OF` lexer token** (`src/dazzle/core/lexer.py`) — the `subtype_of` keyword is now tokenised; the `KEYWORDS` frozenset picks it up automatically via the enum-derived construction.
