@@ -332,7 +332,16 @@ class Repository(Generic[T]):
         soft_delete_clause = (
             ' AND "deleted_at" IS NULL' if getattr(self.entity_spec, "soft_delete", False) else ""
         )
-        sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}'
+        # #1223 Phase 3a.ii: same shape for temporal entities. Rows
+        # whose `end_field` is non-NULL (closed intervals) are hidden
+        # from single-row reads when default_filter == "active".
+        _temporal_read = getattr(self.entity_spec, "temporal", None)
+        temporal_clause = (
+            f' AND "{_temporal_read.end_field}" IS NULL'
+            if _temporal_read is not None and _temporal_read.default_filter == "active"
+            else ""
+        )
+        sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}{temporal_clause}'
 
         start = time.perf_counter()
         with self.db.connection() as conn:
@@ -524,6 +533,17 @@ class Repository(Generic[T]):
         if getattr(self.entity_spec, "soft_delete", False):
             effective_filters.setdefault("deleted_at__isnull", True)
 
+        # #1223 Phase 3a.ii: tombstone filter for temporal entities.
+        # When `temporal:` is declared with default_filter == "active"
+        # (the default), inject `<end_field> IS NULL` so list paths
+        # return only currently-active rows. Composes with soft_delete
+        # and scope predicates via the same setdefault contract —
+        # explicit callers passing `<end_field>__isnull=False` win.
+        # ?as_of= URL param threading lands in 3a.iv.
+        _temporal = getattr(self.entity_spec, "temporal", None)
+        if _temporal is not None and _temporal.default_filter == "active":
+            effective_filters.setdefault(f"{_temporal.end_field}__isnull", True)
+
         if effective_filters:
             builder.add_filters(effective_filters)
 
@@ -672,6 +692,11 @@ class Repository(Generic[T]):
             effective_filters: dict[str, Any] = dict(filters) if filters else {}
             if getattr(self.entity_spec, "soft_delete", False):
                 effective_filters.setdefault("deleted_at__isnull", True)
+
+            # #1223 Phase 3a.ii: same shape for temporal entities.
+            _temporal_agg = getattr(self.entity_spec, "temporal", None)
+            if _temporal_agg is not None and _temporal_agg.default_filter == "active":
+                effective_filters.setdefault(f"{_temporal_agg.end_field}__isnull", True)
 
             sql, params = build_aggregate_sql(
                 table_name=self.table_name,

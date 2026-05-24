@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.162] - 2026-05-24
+
+### Added (#1223 Phase 3a.ii — Repository tombstone filter for temporal entities)
+
+- **`Repository.list` / `.read` / `.aggregate` now auto-inject `<end_field> IS NULL`** when the entity carries `temporal:` with `default_filter == "active"` (the default). Closed-interval rows are hidden from every standard read path. Composes via the same `setdefault` contract as #1218's `soft_delete:` filter — explicit callers passing `<end_field>__isnull=False` override the default (the future hook for `?include_closed=true`). For entities that carry both `soft_delete:` and `temporal:`, both predicates apply (`deleted_at IS NULL AND end_date IS NULL`).
+- **Behavioural effect today:** declaring `temporal:` on `Employment` / `Salary` / `ManagerLink` in `examples/hr_records/` now makes their list / read / aggregate paths filter to currently-active rows by default — without changing the DSL further. Workspace authors get the right shape "for free."
+- **5 regression tests** in `tests/unit/test_temporal_runtime.py` covering: read-path SQL has the temporal AND clause, read-path skips the clause when `default_filter: none`, list-path injects `end_date__isnull=True` via QueryBuilder, explicit caller override wins, soft_delete + temporal compose together.
+
+### Slice status (#1223)
+
+| Slice | Status |
+|---|---|
+| 3a.i — IR + parser + validator | ✅ shipped v0.71.161 |
+| 3a.ii — Repository tombstone filter | ✅ shipped v0.71.162 (this) |
+| 3a.iii — DB partial unique index | 🔲 next |
+| 3a.iv — `?as_of=` URL param threading | 🔲 |
+| 3a.v — `latest_one` typed relationship | 🔲 |
+
+### Agent Guidance
+
+- An entity with `temporal: { default_filter: active }` (the default when declaring `temporal:`) auto-filters to currently-active rows on every standard read path. If you want to *see* historical rows (admin/audit views, history timelines), pass `<end_field>__isnull=False` in the filter dict to opt out — same pattern as `?include_deleted=true` will use for soft-delete once that lands.
+
 ## [0.71.161] - 2026-05-24
 
 ### Added (#1223 Phase 3a.i — IR + parser for `temporal:` block)
