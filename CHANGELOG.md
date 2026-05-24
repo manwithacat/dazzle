@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.183] - 2026-05-24
+
+### Added (#1217 Phase 3e.iv — subtype query JOIN + `asset_registry` fixture)
+
+- **Subtype auto-JOIN in `Repository.list`** at `src/dazzle/back/runtime/repository.py:614-628`. Polymorphic-child entities now query the JOIN of their child table + base table on the shared `id`: `SELECT "Vehicle".*, "Asset"."acquired_at" AS "acquired_at", "Asset"."kind" AS "kind", … FROM "Vehicle" JOIN "Asset" ON "Vehicle"."id" = "Asset"."id" WHERE …`. The JOIN spec is cached at Repository `__init__` time (not rebuilt per call) and threaded through `RepositoryFactory` via a new optional `base_entity_spec: EntitySpec | None` kwarg.
+- **`_field_types` merge** so `_row_to_model` correctly coerces the base columns pulled in by the JOIN (e.g., `date` → `datetime.date` for `acquired_at`). Child fields shadow base fields via `setdefault` — matches OO subtype-override semantics.
+- **`group_by: kind` aggregate** works against polymorphic bases via the existing `aggregate.py` path — the synthesised `kind` field is just a regular column on the base. Pinned by a regression test that drives the real `build_aggregate_sql`.
+- **`fixtures/asset_registry/`** — framework-validation fixture exercising the escape hatch end-to-end. Asset is the polymorphic base; Vehicle / Building / Equipment are subtypes. The README explicitly frames this as the escape hatch (NOT a recommended modelling pattern) and points at ADR-0026 + the inference KB. Workspaces cover both polymorphic (`asset_registry` workspace lists all assets with a `kind` badge column) and subtype-specific (`fleet` workspace lists only Vehicles, auto-JOINing to pull base columns). Scope rules on Vehicle (`scope: fuel_type = electric as fleet_admin`) exercise per-table RBAC composition.
+- **5-test fixture regression suite** at `tests/unit/test_asset_registry_fixture.py` — pins the fixture parses + links, the polymorphic-base / -child flags are populated correctly, the `kind` enum is synthesised with the three expected values, and the DDL emits TPT tables with FK + ON DELETE CASCADE wiring.
+- **4-test QueryBuilder/JOIN shape suite** at `tests/unit/test_subtype_of_query.py` — pins QueryBuilder JOIN emission, the Repository JOIN injection on real parse → link → convert path, the no-JOIN regression guard for non-subtype entities, and the `group_by: kind` aggregate.
+
+### Fixed
+
+- **`_validate_entity_pk` subtype-awareness** at `src/dazzle/core/validator.py:147-156`. The validator's PK check was firing on subtype children, which by design must not declare their own `pk` modifier (the linker enforces this, and the DDL builder derives child pk from a FK to base id with ON DELETE CASCADE). Added a 4-line early-return when `entity.subtype_of is not None`. Without this fix, the asset_registry fixture cannot validate.
+
+### Refactored
+
+- **Dropped two ADR-0003 `getattr` shims** in `Repository.list` (`_subtype_join_sql` defaulting) and `Repository.__init__` (`subtype_of` defaulting). The shims were added to keep two existing tests passing — both used non-standard Repository construction patterns. Fix-forward: `tests/unit/test_fts_search_method.py` now passes `subtype_of=None` on its `SimpleNamespace` entity stub; `tests/unit/test_temporal_runtime.py` sets the new `_subtype_join_sql=None` / `_subtype_extra_cols=[]` attributes on its `Repository.__new__` test instances. Clean break per ADR-0003.
+
+### Agent Guidance
+
+- **Querying a child entity now pulls base columns automatically.** `Repository.list` on `Vehicle` returns rows with `wheels`, `vin`, `fuel_type` (child columns) AND `acquired_at`, `location`, `kind` (base columns) — no need for the caller to JOIN manually. This works in `list` only — `Repository.read` (single-row fetch) does NOT yet have the JOIN; that's a known gap that lands in a follow-up.
+- **Scope composition is per-table** for polymorphic queries. A `scope: ... as <persona>` on the base filters the base side of the JOIN; a `scope: ...` on the child filters the child side. The effective scope is the intersection (AND-composition) — a fleet_admin querying Vehicle sees rows that satisfy BOTH `Asset` scopes AND `Vehicle` scopes.
+- **Subtype child entities MUST NOT declare `pk`** — the linker rejects it (`E_SUBTYPE_DUPLICATE_PK`), the validator now correctly skips its own PK check on children, and the DDL builder derives the child's id column from a FK to the base.
+
 ## [0.71.182] - 2026-05-24
 
 ### Added (#1217 Phase 3e.iii — `subtype_of:` runtime — DDL + triggers + atomic CRUD)
