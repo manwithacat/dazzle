@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.173] - 2026-05-24
+
+### Changed (#1217 / #1223 follow-up — Person-as-temporal in hr_records)
+
+- **`examples/hr_records/` Person entity now uses `temporal:`** with `key_field: id`. Identity-style entities (Person, Account, Subscription, etc.) where each entity has at most one lifecycle — started + optionally ended — fit the temporal shape cleanly even though they're not interval-relationship entities. The `key_field: id` constraint becomes degenerate (id is already unique by being PK), but the auto-filter behaviour is what we want: list/read paths hide ex-employees by default; append `?include_closed=true` to see them. Two more TODO blocks on Person collapse:
+  - `active_until: date soft_active` predicted syntax → not needed; `temporal:` is the right shape for "current vs ended lifecycle" without inventing a separate keyword.
+  - `current_employment / current_salary / current_manager` predicted syntax → use the now-shipped `latest_one Employment via person` etc. (the `via ManagerLink` traversal pattern remains future-Phase-3 work).
+- **Person now declares two `latest_one` fields** — `current_employment` and `current_salary` — exercising the 3a.v.ii runtime resolver. `GET /api/person/<id>` now nests both as resolved objects (or null when the person is between employments / had no salary set). Documents the typed-relationship shape end-to-end.
+
+### hr_records TODO progress
+
+| Status | Count |
+|---|---|
+| Originally planted | 19 |
+| Collapsed by shipped runtime | 8 |
+| Remaining (Phase 3b/c + adjacent design) | 11 |
+
+Remaining clusters: recursive descendants (Department tree + ManagerLink chain — Phase 3b), atomic multi-entity onboarding (Phase 3c), date arithmetic in filters, history-timeline display mode, RBAC scope rules traversing temporal links via ManagerLink (compound 3b + 3a).
+
 ## [0.71.172] - 2026-05-24
 
 ### Added (#1223 follow-up — `?include_closed=true` friendly URL param)

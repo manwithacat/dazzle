@@ -128,31 +128,30 @@ entity Role "Role":
 # =============================================================================
 
 entity Person "Person":
-  intent: "Staff member, past or present. Identity only — temporal facts are in Employment/Salary/ManagerLink."
+  intent: "Staff member, past or present. Identity record with temporal lifecycle (started_at → ended_at). Per-period facts (role, salary, manager) are in Employment/Salary/ManagerLink."
 
   id: uuid pk
   legal_name: str(200) required
   preferred_name: str(100)
   email: email required unique
   started_at: date required
+  ended_at: date    # NULL = currently employed
 
-  # TODO(#hr-temporal): no first-class concept of 'currently active employee'.
-  # `ended_at IS NULL` is the convention; every query that wants 'active staff
-  # only' has to add it manually to scope or where clauses.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # active_until: date soft_active   # framework treats null as 'currently active'
-  # # ...so that `scope: list: active` resolves to `ended_at IS NULL OR ended_at > today`
-  # ------------------------------------------------
-  ended_at: date
+  # #1223: Person uses `temporal:` even though it's an identity record
+  # (not an interval relationship). key_field: id makes the "at most
+  # one active per key" constraint degenerate (id is already unique),
+  # but the auto-filter behaviour is what we want: list/read paths hide
+  # ex-employees by default. Append `?include_closed=true` to see them.
+  temporal:
+    start_field: started_at
+    end_field: ended_at
+    key_field: id
 
-  # TODO(#hr-temporal): no first-class 'current row' relationship.
-  # We'd like `current_employment` and `current_salary` as typed traversals
-  # that resolve to the row where end_date / effective_to IS NULL.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # current_employment: latest_one Employment of self where end_date = null
-  # current_salary: latest_one Salary of self where effective_to = null
-  # current_manager: latest_one Person via ManagerLink where end_date = null and report = self
-  # ------------------------------------------------
+  # #1223 Phase 3a.v + .v.ii — current_employment / current_salary
+  # resolve at read time. GET /api/person/<id> includes both as
+  # nested objects (or null if the person isn't currently employed).
+  current_employment: latest_one Employment via person
+  current_salary: latest_one Salary via person
 
   permit:
     create: role(hr_admin)
