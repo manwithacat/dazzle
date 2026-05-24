@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 352 BaseModels, 143 Enums, 22 other (functions / typealiases / constants)
+# Counts: 353 BaseModels, 143 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -742,6 +742,7 @@ ir_class: EntitySpec
     - soft_delete: bool = False
     - source: SourceLocation | None = None
     - state_machine: StateMachineSpec | None = None
+    - temporal: TemporalSpec | None = None
     - title: str | None = None
 
 ir_class: EnumSpec
@@ -2786,6 +2787,15 @@ ir_class: TemplateSpec
     - body: str = ''
     - html_body: str | None = None
     - subject: str = ''
+
+ir_class: TemporalSpec
+  required:
+    - end_field: str
+    - key_field: str
+    - start_field: str
+  optional:
+    - as_of_param: str = 'as_of'
+    - default_filter: str = 'active'
 
 ir_class: TenancySpec
   required: (none)

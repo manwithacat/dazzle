@@ -187,6 +187,7 @@
             'line': 5,
           }),
           'state_machine': None,
+          'temporal': None,
           'title': 'Task',
         }),
         dict({
@@ -404,6 +405,7 @@
           'soft_delete': False,
           'source': None,
           'state_machine': None,
+          'temporal': None,
           'title': 'System Health',
         }),
         dict({
@@ -641,6 +643,7 @@
           'soft_delete': False,
           'source': None,
           'state_machine': None,
+          'temporal': None,
           'title': 'System Metric',
         }),
         dict({
@@ -883,6 +886,7 @@
           'soft_delete': False,
           'source': None,
           'state_machine': None,
+          'temporal': None,
           'title': 'Deploy History',
         }),
       ]),

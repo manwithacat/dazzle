@@ -850,6 +850,7 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.TRIGGER,
     # v0.34.0 Platform Capability Keywords
     TokenType.SOFT_DELETE,
+    TokenType.TEMPORAL,
     TokenType.DISPLAY_FIELD,
     TokenType.SEARCHABLE,
     TokenType.BULK,

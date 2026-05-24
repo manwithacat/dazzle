@@ -108,6 +108,7 @@ from .domain import (
     PermissionRule,
     PolicyEffect,
     ScopeRule,
+    TemporalSpec,
     VisibilityRule,
 )
 
@@ -894,6 +895,7 @@ __all__ = [
     "AuditConfig",
     "AccessSpec",
     "ScopeRule",
+    "TemporalSpec",
     "ExampleRecord",
     "GraphEdgeSpec",
     "GraphNodeSpec",

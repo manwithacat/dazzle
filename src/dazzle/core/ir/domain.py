@@ -268,6 +268,47 @@ class GraphNodeSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class TemporalSpec(BaseModel):
+    """Effective-dated entity declaration (#1223 / #1217 Pattern 7).
+
+    Marks an entity as carrying open / closed temporal intervals — each
+    row spans ``start_field`` to ``end_field``. NULL ``end_field`` is
+    the convention for "currently active." The framework uses this spec
+    to compose tombstone filters on read paths, enforce "at most one
+    active row per ``key_field``" at the DB layer, and re-project
+    queries via ``?as_of=YYYY-MM-DD`` URL params.
+
+    **Status at v0.71.161 (Phase 3a.i):** parsed into IR; runtime
+    consumers land in subsequent slices (3a.ii through 3a.v). DSL
+    authoring works today — declaring ``temporal:`` on an entity has
+    no runtime effect until the next ship cycles wire the consumers.
+
+    Attributes:
+        start_field: Name of the field carrying the interval start. Must
+            be a ``date`` or ``datetime`` field declared on the entity.
+        end_field: Name of the field carrying the interval end. Must be
+            an *optional* ``date`` or ``datetime`` field declared on the
+            entity (NULL = currently active).
+        key_field: Name of the field that identifies the *thing* being
+            tracked over time (e.g. ``person`` on an Employment entity).
+            The "at most one active row per key" constraint groups by
+            this field.
+        default_filter: Either ``active`` (auto-filter list/read paths
+            to rows where end_field IS NULL) or ``none`` (no
+            auto-filter). Default ``active``.
+        as_of_param: URL query-string parameter name that re-projects
+            the temporal filter to an arbitrary date. Default ``as_of``.
+    """
+
+    start_field: str
+    end_field: str
+    key_field: str
+    default_filter: str = "active"
+    as_of_param: str = "as_of"
+
+    model_config = ConfigDict(frozen=True)
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -312,6 +353,11 @@ class EntitySpec(BaseModel):
     audit: AuditConfig | None = None
     # v0.34.0: Soft delete — archive instead of hard delete
     soft_delete: bool = False
+    # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity
+    # declaration. When set, the framework will (in subsequent slices)
+    # auto-filter read paths to currently-active rows and thread
+    # `?as_of=` URL params through workspace renders.
+    temporal: TemporalSpec | None = None
     # v0.34.0: Bulk import/export
     bulk: BulkConfig | None = None
     state_machine: StateMachineSpec | None = None

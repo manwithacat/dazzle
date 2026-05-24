@@ -217,32 +217,19 @@ entity Employment "Employment":
   role: ref Role required
   department: ref Department required    # denormalised — role may move dept later
   start_date: date required
-
-  # TODO(#hr-temporal): no first-class 'effective_to' / 'open interval' shape.
-  # The whole temporal row pattern is hand-rolled — start_date + nullable
-  # end_date with NULL meaning "currently active". We'd like the framework
-  # to recognise this shape and:
-  #   - auto-add an `active` boolean computed field (end_date IS NULL)
-  #   - enforce "at most one row per person where end_date IS NULL"
-  #   - auto-filter list/read paths to active rows unless explicitly asked
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # temporal:
-  #   start_field: start_date
-  #   end_field: end_date
-  #   key_field: person                # one active row per person
-  #   default_filter: active           # list/read default to end_date IS NULL
-  #   as_of_param: as_of               # ?as_of=YYYY-MM-DD reprojects to that date
-  # ------------------------------------------------
   end_date: date    # NULL = currently active
 
   notes: text
 
-  # TODO(#hr-temporal): no entity-level default scope. Every list/read
-  # surface that wants "active only" has to repeat `scope: end_date = null`.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # default_scope: where end_date = null
-  # # ...and `?include_closed=true` on the URL opts out for history views.
-  # ------------------------------------------------
+  # #1223 Phase 3a.i (v0.71.161) — IR + parser shipped. Runtime
+  # consumers (tombstone filter on read paths, ?as_of= URL param,
+  # "at most one active per key" constraint, current-row resolution)
+  # land in subsequent slices (3a.ii–3a.v). DSL authoring works today;
+  # this block has no runtime effect yet.
+  temporal:
+    start_field: start_date
+    end_field: end_date
+    key_field: person
 
   permit:
     create: role(hr_admin)
@@ -291,22 +278,16 @@ entity Salary "Salary":
   amount_minor: int required
   currency: enum[gbp, eur, usd]=gbp
   effective_from: date required
-
-  # TODO(#hr-temporal): same `temporal:` block as Employment would apply here.
-  # Two entities with identical temporal shape — current DSL has no way to
-  # factor that shape out. An archetype could provide the fields, but not
-  # the constraint or the default-scope behaviour.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # temporal:
-  #   start_field: effective_from
-  #   end_field: effective_to
-  #   key_field: person
-  #   default_filter: active
-  #   as_of_param: as_of
-  # ------------------------------------------------
   effective_to: date    # NULL = currently active
 
   reason: enum[new_hire, promotion, market_adjustment, annual_review, correction] required
+
+  # #1223 Phase 3a.i (v0.71.161) — IR + parser shipped. Same shape as
+  # Employment.temporal, different field names.
+  temporal:
+    start_field: effective_from
+    end_field: effective_to
+    key_field: person
 
   permit:
     create: role(hr_admin)
@@ -352,17 +333,16 @@ entity ManagerLink "Manager Link":
   report: ref Person required
   manager: ref Person required
   start_date: date required
-
-  # TODO(#hr-temporal): same shape pressure as Employment / Salary.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # temporal:
-  #   start_field: start_date
-  #   end_field: end_date
-  #   key_field: report
-  #   default_filter: active
-  #   as_of_param: as_of
-  # ------------------------------------------------
   end_date: date    # NULL = currently active
+
+  # #1223 Phase 3a.i (v0.71.161) — IR + parser shipped. The key_field
+  # is `report` here: a person can be reported-by at most one manager
+  # at a time, but `manager` is unconstrained (one person can have
+  # many direct reports active simultaneously).
+  temporal:
+    start_field: start_date
+    end_field: end_date
+    key_field: report
 
   # TODO(#hr-hierarchy): no recursive 'manager chain' / 'all reports under'
   # traversal in DSL. Use cases: "show me every IC under VP of Engineering",

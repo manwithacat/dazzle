@@ -180,6 +180,8 @@ class TokenType(Enum):
 
     # v0.34.0 Platform Capability Keywords
     SOFT_DELETE = "soft_delete"
+    # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity declaration
+    TEMPORAL = "temporal"
     DISPLAY_FIELD = "display_field"
     SEARCHABLE = "searchable"
     BULK = "bulk"

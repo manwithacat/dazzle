@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.161] - 2026-05-24
+
+### Added (#1223 Phase 3a.i — IR + parser for `temporal:` block)
+
+- **Entity-level `temporal:` block** declares an effective-dated entity. New `TemporalSpec` IR class carries `start_field`, `end_field`, `key_field` (required) plus `default_filter` (`active` | `none`, defaults to `active`) and `as_of_param` (defaults to `as_of`). Authoring works today; runtime consumers (tombstone filter on read paths, `?as_of=YYYY-MM-DD` URL param, "at most one active row per key" constraint, current-row resolution) land in subsequent slices 3a.ii–3a.v.
+
+  Syntax:
+
+  ```dsl
+  entity Employment "Employment":
+    id: uuid pk
+    person: ref Person required
+    start_date: date required
+    end_date: date    # NULL = currently active
+
+    temporal:
+      start_field: start_date
+      end_field: end_date
+      key_field: person
+  ```
+
+- **Parser validation** at parse time: missing required keys raise with the full required list; unknown keys raise with the accepted list; `default_filter` value enforced to be one of `active` | `none`.
+- **Semantic validation** in `validate_entities`: temporal field references must resolve to fields on the entity, and `end_field` must NOT carry `required` modifier (the NULL sentinel is what the framework reads for "currently active").
+- **`examples/hr_records/`** entities updated: 3 of the 19 TODO blocks (one each on `Employment`, `Salary`, `ManagerLink`) collapse to real `temporal:` blocks. The hr_records example now demonstrates the new syntax end-to-end.
+
+### Agent Guidance
+
+- When modelling an effective-dated entity (employment history, price lists, lease terms, salary, role assignments — anything where each row is an open / closed interval), declare a `temporal:` block on the entity. The block is shape-only at v0.71.161 — runtime tombstone filtering and as-of-date re-projection follow in 3a.ii–3a.v. Authors writing temporal entities today can plant the block and reap the runtime benefits when those slices land, without needing to re-author the DSL.
+- `end_field` must be *optional* (no `required` modifier) — the framework reads NULL as "currently active." The validator enforces this; if you see the "must NOT be `required`" error, drop `required` from the end field's modifiers.
+
 ## [0.71.160] - 2026-05-24
 
 ### Added (#1217 Phase 2/3 — example-app design-pressure surface)

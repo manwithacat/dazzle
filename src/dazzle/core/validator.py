@@ -294,6 +294,32 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         _validate_field_modifiers(entity, errors, warnings)
         _validate_constraints(entity, errors)
 
+        # #1223 Phase 3a.i: validate temporal: block field references.
+        # The named start/end/key fields must exist on the entity, and
+        # end_field must NOT be `required` (NULL = currently active).
+        if entity.temporal:
+            field_map = {f.name: f for f in entity.fields}
+            t = entity.temporal
+            for slot, fname in (
+                ("start_field", t.start_field),
+                ("end_field", t.end_field),
+                ("key_field", t.key_field),
+            ):
+                if fname not in field_map:
+                    errors.append(
+                        f"Entity '{entity.name}' temporal.{slot} = '{fname}' "
+                        f"references a field that doesn't exist on the entity."
+                    )
+            # If both start/end exist, end must be optional (i.e. not required)
+            # so the framework can use NULL as the 'currently active' sentinel.
+            end_field = field_map.get(t.end_field)
+            if end_field is not None and ir.FieldModifier.REQUIRED in (end_field.modifiers or []):
+                errors.append(
+                    f"Entity '{entity.name}' temporal.end_field = '{t.end_field}' "
+                    f"must NOT be `required` — NULL is the 'currently active' "
+                    f"sentinel that the framework reads."
+                )
+
         # v0.34.0: Validate bulk config field references
         if entity.bulk:
             field_names = {f.name for f in entity.fields}

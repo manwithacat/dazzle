@@ -30,6 +30,8 @@ class _EntityParseContext:
     archetype_kind: ir.ArchetypeKind | None = None
     # Soft delete and bulk config (v0.34.0)
     soft_delete: bool = False
+    # Temporal / effective-dated spec (v0.71.161 / #1223 Phase 3a.i)
+    temporal: ir.TemporalSpec | None = None
     bulk_config: ir.BulkConfig | None = None
     # Seed template (v0.38.0)
     seed_template: ir.SeedTemplateSpec | None = None
@@ -139,6 +141,8 @@ class EntityParserMixin:
             elif self.match(TokenType.SOFT_DELETE):
                 self.advance()
                 ctx.soft_delete = True
+            elif self.match(TokenType.TEMPORAL):
+                ctx.temporal = self._parse_entity_temporal()
             elif self.match(TokenType.BULK):
                 ctx.bulk_config = self._parse_entity_bulk()
             elif self.match(TokenType.GRAPH_EDGE):
@@ -464,6 +468,106 @@ class EntityParserMixin:
         self.advance()
         self.expect(TokenType.COLON)
         return self._parse_bulk_config()
+
+    _TEMPORAL_VALID_KEYS: tuple[str, ...] = (
+        "start_field",
+        "end_field",
+        "key_field",
+        "default_filter",
+        "as_of_param",
+    )
+    _TEMPORAL_DEFAULT_FILTER_VALUES: tuple[str, ...] = ("active", "none")
+
+    def _parse_entity_temporal(self) -> ir.TemporalSpec:
+        """Parse the entity-level ``temporal:`` block (#1223 Phase 3a.i).
+
+        Syntax::
+
+            temporal:
+              start_field: start_date
+              end_field: end_date
+              key_field: person
+              default_filter: active     # optional, default 'active'
+              as_of_param: as_of         # optional, default 'as_of'
+        """
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        start_field: str | None = None
+        end_field: str | None = None
+        key_field: str | None = None
+        default_filter: str = "active"
+        as_of_param: str = "as_of"
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_tok = self.current_token()
+            key = key_tok.value
+            if key not in self._TEMPORAL_VALID_KEYS:
+                raise make_parse_error(
+                    f"Unknown temporal: key {key!r}. "
+                    f"Expected one of: {', '.join(self._TEMPORAL_VALID_KEYS)}.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            self.advance()
+            self.expect(TokenType.COLON)
+            value_tok = self.expect_identifier_or_keyword()
+            value = str(value_tok.value)
+
+            if key == "start_field":
+                start_field = value
+            elif key == "end_field":
+                end_field = value
+            elif key == "key_field":
+                key_field = value
+            elif key == "default_filter":
+                if value not in self._TEMPORAL_DEFAULT_FILTER_VALUES:
+                    raise make_parse_error(
+                        f"Unknown temporal default_filter: {value!r}. "
+                        f"Expected one of: {', '.join(self._TEMPORAL_DEFAULT_FILTER_VALUES)}.",
+                        self.file,
+                        value_tok.line,
+                        value_tok.column,
+                    )
+                default_filter = value
+            elif key == "as_of_param":
+                as_of_param = value
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        if start_field is None or end_field is None or key_field is None:
+            tok = self.current_token()
+            missing = [
+                name
+                for name, val in (
+                    ("start_field", start_field),
+                    ("end_field", end_field),
+                    ("key_field", key_field),
+                )
+                if val is None
+            ]
+            raise make_parse_error(
+                f"temporal: block missing required key(s): {', '.join(missing)}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+
+        return ir.TemporalSpec(
+            start_field=start_field,
+            end_field=end_field,
+            key_field=key_field,
+            default_filter=default_filter,
+            as_of_param=as_of_param,
+        )
 
     def _parse_entity_graph_edge(self) -> ir.GraphEdgeSpec:
         """Parse ``graph_edge:`` indented block (v0.46.0, #619)."""
@@ -794,6 +898,7 @@ class EntityParserMixin:
             access=access,
             audit=ctx.audit_config,
             soft_delete=ctx.soft_delete,
+            temporal=ctx.temporal,
             bulk=ctx.bulk_config,
             state_machine=state_machine,
             lifecycle=ctx.lifecycle,
