@@ -232,3 +232,50 @@ class TestSoftDeleteAndTemporalCompose:
         sql = cursor.execute.call_args.args[0]
         assert 'AND "deleted_at" IS NULL' in sql
         assert 'AND "end_date" IS NULL' in sql
+
+
+# ============================================================================
+# 3a.iii: DB partial unique index
+# ============================================================================
+
+
+class TestPartialUniqueIndexSQL:
+    """Phase 3a.iii: pg_backend emits a partial unique index per temporal
+    entity. The index covers only currently-active rows (end_field IS
+    NULL), so closing a row + opening a new one is allowed."""
+
+    def test_temporal_unique_index_sql_shape(self) -> None:
+        """Builder emits the expected partial unique index SQL.
+
+        `Composed.as_string()` needs a connection or a context; we
+        instead inspect the structural pieces (identifiers + SQL
+        fragments) which is what matters for safety + correctness.
+        """
+        from dazzle.back.runtime.pg_backend import _create_temporal_unique_index_sql
+
+        composed = _create_temporal_unique_index_sql(
+            entity_name="Employment",
+            key_field="person",
+            end_field="end_date",
+        )
+        rendered = str(composed)  # repr-style; contains literal identifiers
+        # SQL skeleton
+        assert "CREATE UNIQUE INDEX IF NOT EXISTS" in rendered
+        assert "WHERE" in rendered
+        assert "IS NULL" in rendered
+        # Identifiers correctly composed (psycopg Identifier wraps them)
+        assert "Identifier('uniq_active_Employment_person')" in rendered
+        assert "Identifier('Employment')" in rendered
+        assert "Identifier('person')" in rendered
+        assert "Identifier('end_date')" in rendered
+
+    def test_index_name_uses_key_field(self) -> None:
+        """The index name carries the key_field for grep-ability."""
+        from dazzle.back.runtime.pg_backend import _create_temporal_unique_index_sql
+
+        composed = _create_temporal_unique_index_sql(
+            entity_name="ManagerLink",
+            key_field="report",
+            end_field="end_date",
+        )
+        assert "Identifier('uniq_active_ManagerLink_report')" in str(composed)

@@ -48,6 +48,26 @@ def _create_index_sql(entity_name: str, field_name: str) -> pgsql.Composed:
     )
 
 
+def _create_temporal_unique_index_sql(
+    entity_name: str, key_field: str, end_field: str
+) -> pgsql.Composed:
+    """Build a PostgreSQL partial unique index for a temporal entity (#1223 3a.iii).
+
+    Enforces the "at most one currently-active row per key_field"
+    invariant declared by ``temporal: { key_field: X, end_field: Y }``.
+    The index covers only rows where ``end_field IS NULL`` so closed
+    intervals don't participate in uniqueness — opening a new active
+    row after closing the previous one is allowed.
+    """
+    idx_name = f"uniq_active_{entity_name}_{key_field}"
+    return pgsql.SQL("CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ({}) WHERE {} IS NULL").format(
+        pgsql.Identifier(idx_name),
+        pgsql.Identifier(entity_name),
+        pgsql.Identifier(key_field),
+        pgsql.Identifier(end_field),
+    )
+
+
 # =============================================================================
 # Connection Wrapper
 # =============================================================================
@@ -305,6 +325,23 @@ class PostgresBackend:
                 for fk_idx_sql in get_foreign_key_indexes(entity, registry):
                     cursor.execute(fk_idx_sql)
 
+            # #1223 Phase 3a.iii — partial unique index for temporal entities.
+            # Enforces "at most one currently-active row per key_field" at
+            # the DB layer. The IR validator already confirmed the named
+            # fields exist; we just translate the spec into SQL here.
+            # Type annotation says back-side EntitySpec (no temporal attr);
+            # runtime receives the IR EntitySpec (does carry temporal).
+            # Defensive getattr mirrors the soft_delete access pattern.
+            _temporal = getattr(entity, "temporal", None)
+            if _temporal is not None:
+                cursor.execute(
+                    _create_temporal_unique_index_sql(
+                        entity.name,
+                        _temporal.key_field,
+                        _temporal.end_field,
+                    )
+                )
+
     def _build_columns(self, entity: EntitySpec, *, registry: Any = None) -> str:
         """Build column definitions for CREATE TABLE."""
         columns = []
@@ -396,6 +433,16 @@ class PostgresBackend:
                         cursor.execute(_create_index_sql(entity.name, field.name))
                 for fk_idx_sql in get_foreign_key_indexes(entity, registry):
                     cursor.execute(fk_idx_sql)
+                # #1223 Phase 3a.iii — partial unique index per temporal entity.
+                _temporal_bulk = getattr(entity, "temporal", None)
+                if _temporal_bulk is not None:
+                    cursor.execute(
+                        _create_temporal_unique_index_sql(
+                            entity.name,
+                            _temporal_bulk.key_field,
+                            _temporal_bulk.end_field,
+                        )
+                    )
 
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists."""

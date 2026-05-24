@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.163] - 2026-05-24
+
+### Added (#1223 Phase 3a.iii — DB partial unique index for temporal entities)
+
+- **`pg_backend` now emits a PostgreSQL partial unique index** for every entity carrying a `temporal:` block. Shape: `CREATE UNIQUE INDEX IF NOT EXISTS uniq_active_<entity>_<key_field> ON <entity> (<key_field>) WHERE <end_field> IS NULL`. Enforces the "at most one currently-active row per key_field" invariant at the database layer — opening a new active row while another is open for the same key raises a uniqueness violation. Closed rows (where `end_field IS NOT NULL`) don't participate in the index, so the usual close-then-open pattern (promotions, manager changes, salary revisions) continues to work.
+- **Index emission wired into both schema paths** — single-entity `create_table` and bulk `create_all_tables`. Defensive `getattr(entity, "temporal", None)` access pattern mirrors the existing `soft_delete` lookup (the back-side `EntitySpec` annotation doesn't declare these IR-only fields).
+- **2 regression tests** in `tests/unit/test_temporal_runtime.py::TestPartialUniqueIndexSQL` pinning the SQL shape and the index-naming convention.
+
+### Slice status (#1223)
+
+| Slice | Status |
+|---|---|
+| 3a.i — IR + parser + validator | ✅ v0.71.161 |
+| 3a.ii — Repository tombstone filter | ✅ v0.71.162 |
+| 3a.iii — DB partial unique index | ✅ v0.71.163 (this) |
+| 3a.iv — `?as_of=YYYY-MM-DD` URL param threading | 🔲 next |
+| 3a.v — `latest_one` typed relationship | 🔲 |
+
+### Agent Guidance
+
+- A temporal entity's runtime now enforces "at most one currently-active row per key" at three layers: (1) reads only see active rows by default (3a.ii), (2) the DB rejects a second insert/update that would create a duplicate-active row (this slice), (3) the validator catches authoring mistakes at parse time (3a.i). Promotions / manager changes / salary revisions still work because the partial index doesn't cover closed rows — close the old row first, then open the new one in the same transaction.
+
 ## [0.71.162] - 2026-05-24
 
 ### Added (#1223 Phase 3a.ii — Repository tombstone filter for temporal entities)
