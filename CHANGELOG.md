@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.169] - 2026-05-24
+
+### Changed (#1217 / #1223 — hr_records example sync pass)
+
+- **`examples/hr_records/dsl/app.dsl` updated to reflect the shipped Phase 3a runtime.** Three TODO blocks collapsed (their predicted behaviour is now live), one workspace newly implementable:
+  - Workspace-section TODO predicting `?as_of=` URL param — **collapsed**, the section now documents the live behaviour (`?as_of=YYYY-MM-DD` on any temporal entity's URL re-projects).
+  - `compensation_review.salary_list` TODO predicting auto-current-row filtering on aggregates — **collapsed**, the region documents that `Salary`'s `temporal: default_filter: active` makes the filter automatic.
+  - `time_machine` workspace TODO labelled "unimplementable in DSL" — **replaced with the actual workspace**: three regions (Employment, Salary, ManagerLink) all temporal entities, so `/app/workspaces/time_machine?as_of=2025-06-01` re-projects every region to that historical date. Date-picker UI chrome remains a follow-up; the URL contract itself works.
+- Workspace count in the example: 4 → 5 (added `time_machine`).
+- 8 TODO blocks remain — covering Phase 3b (recursive descendants for departments + manager chain), Phase 3c (multi-entity atomic onboarding), date arithmetic in filters, history-timeline display mode, and Person-as-temporal modelling (separate from per-row temporal).
+
+### Agent Guidance
+
+- When adding a new workspace whose regions all source from temporal entities, the `?as_of=YYYY-MM-DD` parameter works "for free" — no per-workspace declaration needed. Document the URL pattern in the workspace's `purpose:` string so authors discover it.
+
 ## [0.71.168] - 2026-05-24
 
 ### Fixed

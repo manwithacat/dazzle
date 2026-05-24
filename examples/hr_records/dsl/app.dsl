@@ -521,15 +521,14 @@ surface managerlink_edit "End Reporting Line":
 # =============================================================================
 # WORKSPACES
 # =============================================================================
-
-# TODO(#hr-temporal): no `?as_of=YYYY-MM-DD` URL parameter for any workspace.
-# The `time_machine` workspace below would need this as a first-class concept
-# that re-projects every region's source query through a date filter.
-# ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-# workspace time_machine "Time Machine":
-#   as_of_param: as_of    # query string ?as_of=YYYY-MM-DD
-#   # ...every region with a temporal entity source auto-filters by as_of
-# ------------------------------------------------
+#
+# #1223 Phase 3a.iv shipped `?as_of=YYYY-MM-DD` as a per-temporal-entity
+# URL parameter. Any list/aggregate/read endpoint backed by a temporal
+# entity automatically re-projects when the URL carries the param. The
+# `time_machine` workspace below exercises this by stacking regions
+# whose sources are all temporal entities — appending `?as_of=2025-06-01`
+# to its URL re-projects every region to that historical snapshot.
+# =============================================================================
 
 
 workspace staff_directory "Staff Directory":
@@ -613,38 +612,44 @@ workspace compensation_review "Compensation Review":
   access: persona(hr_admin, finance)
   purpose: "Salary band analysis — by department, by role level"
 
-  # TODO(#hr-temporal): aggregates over current-only rows.
-  # cohort_strip lenses with primary_aggregate would benefit from
-  # automatic "current only" filtering when the aggregated entity is
-  # temporal. Today every lens needs `where effective_to = null` inside
-  # the aggregate expression, repeated per lens.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # by_department:
-  #   source: Department
-  #   display: cohort_strip
-  #   cohort_strip_config:
-  #     member_via: id
-  #     lenses:
-  #       - id: avg_salary
-  #         primary_aggregate:
-  #           aggregate: avg(Salary.amount_minor where effective_to = null)
-  #           via: Employment(department = id, end_date = null)
-  #           share: Person
-  #     # ...framework auto-applies "active only" since Salary + Employment
-  #     # are both `temporal:` entities. Today each `where` must be hand-rolled.
-  # ------------------------------------------------
+  # #1223 Phase 3a.ii — Salary is a temporal entity (declared above) with
+  # default_filter: active, so every list / aggregate / read path against
+  # it automatically filters to currently-active rows. Authors no longer
+  # need `where effective_to = null` per lens — the framework injects it
+  # via Repository's tombstone filter. This list region renders only
+  # active salary rows by default; appending `?effective_to__isnull=false`
+  # to the URL opts out for history views (the future `?include_closed`
+  # hook from #1218 will surface this as a friendlier param).
   salary_list:
     source: Salary
     display: list
 
 
-# TODO(#hr-temporal-time-machine): the time_machine workspace is the
-# headline as-of demo and is the largest single Phase 3 ask. Currently
-# unimplementable in DSL; would require:
-#  - `as_of:` workspace-level query param declaration
-#  - Every region with a temporal source re-projects via:
-#      WHERE start_field <= as_of AND (end_field IS NULL OR end_field > as_of)
-#  - The same predicate composes with scope: rules
-#  - UI: date-picker chrome in the workspace shell, syncs ?as_of= URL param
-# Until then, the workspace exists in spec only (see SPEC.md flow 7);
-# implementing it would require a full route override + bespoke Jinja.
+workspace time_machine "Time Machine":
+  access: persona(hr_admin)
+  purpose: "Historical snapshot — append ?as_of=YYYY-MM-DD to re-project every region"
+
+  # #1223 Phase 3a.iv shipped the as_of URL parameter as a per-temporal-
+  # entity contract. Every region below has a temporal entity source
+  # (Employment, Salary, ManagerLink), so URLs like
+  #   /app/workspaces/time_machine?as_of=2025-06-01
+  # automatically filter each region's source query to rows that were
+  # active on 2025-06-01. Without the param, all three regions render
+  # currently-active rows (same as default behaviour everywhere else).
+  #
+  # The workspace shell doesn't yet ship date-picker chrome — that's a
+  # UI follow-up. For now the URL is editable by hand or via project-
+  # side route override (e.g. a custom landing page that POSTs a date
+  # form and redirects to the time_machine URL with ?as_of= appended).
+
+  employment_snapshot:
+    source: Employment
+    display: list
+
+  salary_snapshot:
+    source: Salary
+    display: list
+
+  reporting_lines_snapshot:
+    source: ManagerLink
+    display: list
