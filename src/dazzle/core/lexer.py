@@ -521,6 +521,9 @@ class TokenType(Enum):
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
     # because they're commonly used as enum values or field names.
     FLOW = "flow"
+    # #1228 Phase 3c: atomic multi-entity creation block. Distinct keyword
+    # from FLOW (E2E test construct) to avoid ambiguity.
+    ATOMIC = "atomic"
     STEPS = "steps"
     NAVIGATE = "navigate"
     CLICK = "click"

@@ -2352,6 +2352,92 @@ def validate_webhooks(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate atomic-flow declarations (#1228 Phase 3c).
+
+    Checks that each flow:
+      - has at least one create
+      - has unique input names
+      - has unique entity targets across creates (one create per entity in MVP)
+      - every create targets a known entity
+      - every assignment field exists on the target entity
+      - every ``input.X`` reference names a declared input
+      - every ``above.E.F`` reference points at an entity created earlier
+        in this flow (no forward refs) and the field is ``id`` (the only
+        always-derivable field at this slice)
+      - permit_execute is non-empty
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not appspec.atomic_flows:
+        return errors, warnings
+
+    warnings.append(
+        f"[Preview] {len(appspec.atomic_flows)} atomic flow(s) defined. "
+        "Runtime execution (single transaction, route generation) lands in slice 3c.ii."
+    )
+
+    entity_map = {e.name: e for e in appspec.domain.entities}
+
+    for flow in appspec.atomic_flows:
+        prefix = f"atomic flow '{flow.name}'"
+
+        if not flow.creates:
+            errors.append(f"{prefix}: must declare at least one `create` block.")
+        if not flow.permit_execute:
+            errors.append(f"{prefix}: must declare `permit: execute: role(...)`.")
+
+        # Input uniqueness
+        input_names: set[str] = set()
+        for inp in flow.inputs:
+            if inp.name in input_names:
+                errors.append(f"{prefix}: duplicate input '{inp.name}'.")
+            input_names.add(inp.name)
+
+        # Track entities created so far (left-to-right) for above-ref validation
+        seen_entities: set[str] = set()
+        for create in flow.creates:
+            if create.entity in seen_entities:
+                errors.append(
+                    f"{prefix}: create target '{create.entity}' appears more than once "
+                    f"(one create per entity per flow in this release)."
+                )
+            target = entity_map.get(create.entity)
+            if target is None:
+                errors.append(f"{prefix}: create targets unknown entity '{create.entity}'.")
+                seen_entities.add(create.entity)
+                continue
+            target_fields = {f.name for f in target.fields}
+            for field_name, value in create.assignments.items():
+                if field_name not in target_fields:
+                    errors.append(
+                        f"{prefix}: create {create.entity} assigns to unknown field '{field_name}'."
+                    )
+                if value.kind == ir.FlowFieldValueKind.INPUT_REF:
+                    if value.input_name not in input_names:
+                        errors.append(
+                            f"{prefix}: create {create.entity}.{field_name} references "
+                            f"undeclared input '{value.input_name}'."
+                        )
+                elif value.kind == ir.FlowFieldValueKind.ABOVE_REF:
+                    if value.above_entity not in seen_entities:
+                        errors.append(
+                            f"{prefix}: create {create.entity}.{field_name} references "
+                            f"above.{value.above_entity}.{value.above_field} but "
+                            f"'{value.above_entity}' is not created earlier in this flow."
+                        )
+                    if value.above_field != "id":
+                        errors.append(
+                            f"{prefix}: create {create.entity}.{field_name} uses "
+                            f"above.{value.above_entity}.{value.above_field}; only "
+                            f"'.id' is supported in this release."
+                        )
+            seen_entities.add(create.entity)
+
+    return errors, warnings
+
+
 def validate_approvals(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate approval definitions and warn about runtime status."""
     errors: list[str] = []

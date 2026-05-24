@@ -4,6 +4,7 @@ from .validator import (
     extended_lint,
     validate_admin_personas_scope_conflict,
     validate_approvals,
+    validate_atomic_flows,
     validate_audit_config,
     validate_entities,
     validate_event_payload_secrets,
@@ -136,6 +137,11 @@ def lint_appspec(
     all_warnings.extend(warnings)
 
     errors, warnings = validate_approvals(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1228 Phase 3c — atomic multi-entity flows
+    errors, warnings = validate_atomic_flows(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

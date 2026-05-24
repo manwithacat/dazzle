@@ -37,6 +37,16 @@ from .archetype import (
     ArchetypeSpec,
 )
 
+# E2E Flows
+from .atomic_flows import (
+    AtomicFlowSpec,
+    FlowCreate,
+    FlowFailureMode,
+    FlowFieldValue,
+    FlowFieldValueKind,
+    FlowInput,
+)
+
 # Audit trail (#956)
 from .audit import (
     AuditShowTo,
@@ -111,8 +121,6 @@ from .domain import (
     TemporalSpec,
     VisibilityRule,
 )
-
-# E2E Flows
 from .e2e import (
     A11yRule,
     E2ETestSpec,
@@ -1032,6 +1040,13 @@ __all__ = [
     "UsabilityRule",
     "A11yRule",
     "E2ETestSpec",
+    # #1228 — atomic multi-entity flows
+    "AtomicFlowSpec",
+    "FlowFieldValue",
+    "FlowFieldValueKind",
+    "FlowInput",
+    "FlowCreate",
+    "FlowFailureMode",
     # Layout
     "AttentionSignalKind",
     "LayoutSignal",

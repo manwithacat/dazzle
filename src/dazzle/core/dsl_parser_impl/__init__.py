@@ -22,6 +22,7 @@ from ..lexer import tokenize
 from .aggregate import AggregateParserMixin
 from .analytics import AnalyticsParserMixin
 from .approval import ApprovalParserMixin
+from .atomic_flow import AtomicFlowParserMixin
 from .audit import AuditParserMixin
 from .base import BaseParser
 from .conditions import ConditionParserMixin
@@ -73,6 +74,7 @@ class Parser(
     IntegrationParserMixin,
     TestParserMixin,
     FlowParserMixin,
+    AtomicFlowParserMixin,
     UXParserMixin,
     WorkspaceParserMixin,
     ScenarioParserMixin,
@@ -220,6 +222,15 @@ class Parser(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
                 "e2e_flows": [*fragment.e2e_flows, flow],
+            }
+        )
+
+    def _dispatch_atomic(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        atomic = self.parse_atomic_flow()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "atomic_flows": [*fragment.atomic_flows, atomic],
             }
         )
 
@@ -681,6 +692,7 @@ class Parser(
             TokenType.TEST: self._dispatch_test,
             TokenType.WORKSPACE: self._dispatch_workspace,
             TokenType.FLOW: self._dispatch_flow,
+            TokenType.ATOMIC: self._dispatch_atomic,
             TokenType.PERSONA: self._dispatch_persona,
             TokenType.SCENARIO: self._dispatch_scenario,
             TokenType.STORY: self._dispatch_story,

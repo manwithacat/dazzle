@@ -1,0 +1,110 @@
+"""
+Atomic-flow specification types for DAZZLE IR (#1228 Phase 3c).
+
+An ``atomic`` block declares a multi-entity creation operation that
+executes in a single DB transaction. All creates succeed or all roll
+back — there is no partial state.
+
+DSL keyword note: the issue proposal called this construct ``flow``,
+but ``flow`` is already the E2E test construct (``flow.py`` in this
+package). The user-facing alternative ``atomic`` was suggested in the
+Q1 design question on #1228 — it's short, signals atomicity, and
+doesn't collide.
+
+IR class is ``AtomicFlowSpec`` rather than ``FlowSpec`` (also taken
+by E2E flow tests).
+
+Status at v0.71.177 (slice 3c.i): parsed into IR + validated; runtime
+service + route generation lands in slices 3c.ii / 3c.iii.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict
+
+from .fields import FieldType
+from .location import SourceLocation
+
+
+class FlowFieldValueKind(StrEnum):
+    """Kinds of right-hand-side value an atomic-flow create can assign."""
+
+    LITERAL = "literal"
+    INPUT_REF = "input_ref"  # input.<name>
+    ABOVE_REF = "above_ref"  # above.<EntityName>.<field>
+
+
+class FlowFieldValue(BaseModel):
+    """Right-hand-side value of a flow create's field assignment.
+
+    Exactly one of the three slots is populated, keyed by ``kind``.
+
+    - LITERAL: ``literal`` carries the value (string, int, float, bool).
+    - INPUT_REF: ``input_name`` names a declared input.
+    - ABOVE_REF: ``above_entity`` + ``above_field`` refer to a value
+      produced by an earlier create in the same flow.
+    """
+
+    kind: FlowFieldValueKind
+    literal: str | int | float | bool | None = None
+    input_name: str | None = None
+    above_entity: str | None = None
+    above_field: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class FlowInput(BaseModel):
+    """A typed input parameter for an atomic flow.
+
+    Reuses the same ``FieldType`` shape as entity field declarations,
+    so authoring is consistent (``str(200)``, ``ref Role``, ``date``,
+    etc. all work).
+    """
+
+    name: str
+    type: FieldType
+    required: bool = False
+
+    model_config = ConfigDict(frozen=True)
+
+
+class FlowCreate(BaseModel):
+    """A single create step within an atomic flow.
+
+    Maps a target entity to a dict of field assignments. The order of
+    creates within the flow is the order they execute in.
+    """
+
+    entity: str
+    assignments: dict[str, FlowFieldValue]
+
+    model_config = ConfigDict(frozen=True)
+
+
+class FlowFailureMode(StrEnum):
+    """How the framework handles a create failure mid-flow."""
+
+    ROLLBACK_ALL = "rollback_all"  # default + only option in 3c.i
+
+
+class AtomicFlowSpec(BaseModel):
+    """An atomic multi-entity creation operation.
+
+    All creates execute in a single DB transaction. ``above.<Entity>``
+    references resolve to values produced by earlier creates in the
+    flow; the framework executes them in declaration order.
+    """
+
+    name: str
+    label: str
+    intent: str | None = None
+    permit_execute: list[str]  # role names allowed to execute the flow
+    on_failure: FlowFailureMode = FlowFailureMode.ROLLBACK_ALL
+    inputs: list[FlowInput]
+    creates: list[FlowCreate]
+    location: SourceLocation | None = None
+
+    model_config = ConfigDict(frozen=True)

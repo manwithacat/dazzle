@@ -11,6 +11,8 @@
     ]),
     'assets': list([
     ]),
+    'atomic_flows': list([
+    ]),
     'audit_trail': False,
     'audits': list([
     ]),

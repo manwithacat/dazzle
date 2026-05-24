@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 353 BaseModels, 143 Enums, 22 other (functions / typealiases / constants)
+# Counts: 357 BaseModels, 145 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -128,6 +128,7 @@ ir_class: AppSpec
     - approvals: list[ApprovalSpec] = []
     - archetypes: list[ArchetypeSpec] = []
     - assets: list[AssetSpec] = []
+    - atomic_flows: list[AtomicFlowSpec] = []
     - audit_trail: bool = False
     - audits: list[AuditSpec] = []
     - channels: list[ChannelSpec] = []
@@ -246,6 +247,18 @@ ir_class: AssetSpec
     - description: str | None = None
     - kind: AssetKind = <AssetKind.FILE: 'file'>
     - path: str = ''
+
+ir_class: AtomicFlowSpec
+  required:
+    - creates: list[FlowCreate]
+    - inputs: list[FlowInput]
+    - label: str
+    - name: str
+    - permit_execute: list[str]
+  optional:
+    - intent: str | None = None
+    - location: SourceLocation | None = None
+    - on_failure: FlowFailureMode = <FlowFailureMode.ROLLBACK_ALL: 'rollback_all'>
 
 ir_class: AttentionMapSpec
   required: (none)
@@ -987,6 +1000,28 @@ ir_class: FlowContextVar
     - name: str
   optional: (none)
 
+ir_class: FlowCreate
+  required:
+    - assignments: dict[str, FlowFieldValue]
+    - entity: str
+  optional: (none)
+
+ir_class: FlowFieldValue
+  required:
+    - kind: FlowFieldValueKind
+  optional:
+    - above_entity: str | None = None
+    - above_field: str | None = None
+    - input_name: str | None = None
+    - literal: str | int | float | bool | None = None
+
+ir_class: FlowInput
+  required:
+    - name: str
+    - type: FieldType
+  optional:
+    - required: bool = False
+
 ir_class: FlowPrecondition
   required: (none)
   optional:
@@ -1691,6 +1726,7 @@ ir_class: ModuleFragment
     - approvals: list[ApprovalSpec] = []
     - archetypes: list[ArchetypeSpec] = []
     - assets: list[AssetSpec] = []
+    - atomic_flows: list[AtomicFlowSpec] = []
     - audits: list[AuditSpec] = []
     - channels: list[ChannelSpec] = []
     - data_products: DataProductsSpec | None = None
@@ -3715,6 +3751,16 @@ enum: FlowAssertionKind
     - TEXT_CONTAINS = 'text_contains'
     - VALIDATION_ERROR = 'validation_error'
     - VISIBLE = 'visible'
+
+enum: FlowFailureMode
+  members:
+    - ROLLBACK_ALL = 'rollback_all'
+
+enum: FlowFieldValueKind
+  members:
+    - ABOVE_REF = 'above_ref'
+    - INPUT_REF = 'input_ref'
+    - LITERAL = 'literal'
 
 enum: FlowPriority
   members:

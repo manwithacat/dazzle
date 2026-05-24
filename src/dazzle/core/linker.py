@@ -242,6 +242,7 @@ def build_appspec(
         data_products=merged_fragment.data_products,
         documents=merged_fragment.documents,
         e2e_flows=merged_fragment.e2e_flows,
+        atomic_flows=merged_fragment.atomic_flows,
         event_model=merged_fragment.event_model,
         fixtures=merged_fragment.fixtures,
         hless_pragma=merged_fragment.hless_pragma,

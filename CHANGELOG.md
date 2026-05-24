@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.177] - 2026-05-24
+
+### Added (#1228 Phase 3c.i — `atomic` block parser + IR + validator)
+
+- **New top-level DSL construct `atomic <name> "Label":`** declaring a multi-entity creation operation. All declared `create <Entity>:` blocks will execute in a single DB transaction at runtime; this slice ships IR + parser + validator only, runtime + route generation land in 3c.ii.
+- **DSL keyword call:** went with `atomic` rather than the proposed `flow` because `flow` already names the E2E test construct in this parser. Acknowledged as Q1 alternative in the original design proposal.
+- **IR:** `AtomicFlowSpec`, `FlowInput`, `FlowCreate`, `FlowFieldValue`, `FlowFieldValueKind`, `FlowFailureMode` in new `core/ir/atomic_flows.py`. Threaded through `ModuleFragment` and `AppSpec`; linker merges across modules.
+- **Field-value RHS forms:** `input.<name>` → INPUT_REF, `above.<Entity>.id` → ABOVE_REF, plus string/numeric/bare-identifier literals (the bare identifier covers enum values like `currency: gbp`).
+- **Validator** (`validate_atomic_flows`) catches: unknown create-target entity, unknown assignment field, undeclared input refs, forward `above.X` refs to an entity not created earlier in the same flow, `above.X.<non-id-field>` (only `.id` supported this slice), duplicate input names, duplicate create targets (one create per entity per flow in MVP), missing `permit: execute:` clause, no `create` blocks.
+- **`on_failure: rollback_all` only** in this release; future `continue_on_failure` / `partial_rollback` modes deferred per Q3 of the design proposal.
+- 15 new parser/validator tests in `tests/unit/test_atomic_flow_parser.py`.
+- `CLAUDE.md` constructs list updated; api-surface baselines regenerated.
+
+### Agent Guidance
+
+- The `atomic` keyword (NOT `flow`) introduces atomic multi-entity creation. `flow` remains the E2E test construct — don't confuse them. When generating DSL for "onboard a new X" / "checkout an order" / "tenant signup" patterns, reach for `atomic`.
+- `above.<Entity>.id` refs only point at entities created *earlier* in the same flow (left-to-right). The validator rejects forward refs explicitly. `.id` is the only field supported this slice — other fields land in a later iteration.
+- Runtime is not yet wired: declaring an `atomic` block parses + validates but doesn't yet expose a route. Slice 3c.ii adds the `POST /api/atomic/<name>` endpoint + single-transaction execution.
+
 ## [0.71.176] - 2026-05-24
 
 ### Changed (#1226 — back-side EntitySpec now carries `soft_delete` + `temporal`)

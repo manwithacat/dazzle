@@ -29,6 +29,10 @@ construct: asset
   fragment_fields: assets
   ir_classes: AssetSpec
 
+construct: atomic
+  fragment_fields: atomic_flows
+  ir_classes: AtomicFlowSpec
+
 construct: audit
   fragment_fields: audits
   ir_classes: AuditSpec

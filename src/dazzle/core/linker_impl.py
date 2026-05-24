@@ -1503,6 +1503,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         channels=_flatten_list("channels"),
         documents=_flatten_list("documents"),
         e2e_flows=_flatten_list("e2e_flows"),
+        atomic_flows=_flatten_list("atomic_flows"),
         fixtures=_flatten_list("fixtures"),
         interfaces=_first_scalar("interfaces"),
         messages=_flatten_list("messages"),

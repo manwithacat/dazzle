@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .analytics import AnalyticsSpec
 from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
+from .atomic_flows import AtomicFlowSpec
 from .audit import AuditSpec
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
@@ -146,6 +147,9 @@ class ModuleFragment(BaseModel):
     integrations: list[IntegrationSpec] = Field(default_factory=list)
     tests: list[TestSpec] = Field(default_factory=list)
     e2e_flows: list[FlowSpec] = Field(default_factory=list)  # Semantic E2E flows (v0.3.2)
+    atomic_flows: list[AtomicFlowSpec] = Field(
+        default_factory=list
+    )  # #1228 — atomic multi-entity creates
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
