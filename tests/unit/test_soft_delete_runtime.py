@@ -131,6 +131,10 @@ class TestRepositoryTombstoneFilter:
         repo._computed_fields = []
         repo._relation_loader = None
         repo._record_query = lambda *_a, **_kw: None  # type: ignore[method-assign]
+        # #1217 Phase 3e follow-up: read() now inspects these subtype attrs
+        # to choose between plain SELECT and the JOIN-to-base shape.
+        repo._subtype_join_sql = None
+        repo._subtype_extra_cols = []
         repo._mock_cursor = cursor
         return repo
 

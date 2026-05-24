@@ -749,7 +749,34 @@ class Repository(Generic[T]):
                 extra_params = list(t_params)
             else:
                 temporal_clause = f' AND "{_temporal_read.end_field}" IS NULL'
-        sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}{temporal_clause}'
+        # #1217 Phase 3e follow-up: parity with list() — polymorphic-child
+        # entities must JOIN to the base table on the shared id so that the
+        # detail-row dict carries every base column (most importantly `kind`,
+        # which the subtype_panel renderer reads to dispatch). The list path
+        # injects the same JOIN+extra cols via QueryBuilder at line ~1015;
+        # read() builds raw SQL so we splice them in directly here.
+        #
+        # WHY the soft_delete/temporal clauses can't conflict with the JOIN:
+        # the linker rejects soft_delete on polymorphic children (rule
+        # E_SUBTYPE_SOFT_DELETE_ON_CHILD) and temporal on children, so when
+        # _subtype_join_sql is set both clauses are guaranteed empty by
+        # construction. The assert below makes that contract explicit.
+        if self._subtype_join_sql is not None:
+            assert not soft_delete_clause and not temporal_clause, (
+                "polymorphic-child entity unexpectedly carries "
+                "soft_delete/temporal clauses; linker rules E_SUBTYPE_* "
+                "should have rejected this upstream"
+            )
+            extra_cols_sql = (
+                ", " + ", ".join(self._subtype_extra_cols) if self._subtype_extra_cols else ""
+            )
+            sql = (
+                f"SELECT {table}.*{extra_cols_sql} "
+                f"FROM {table} {self._subtype_join_sql} "
+                f'WHERE {table}."id" = {ph}'
+            )
+        else:
+            sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}{temporal_clause}'
         params: tuple[Any, ...] = (str(id), *extra_params)
 
         start = time.perf_counter()
@@ -798,8 +825,18 @@ class Repository(Generic[T]):
                 )
             return self._convert_row_dict(row_dicts[0])
 
-        # If computed fields or latest_one fields, return dict with derived values
-        if self._computed_fields or _has_latest_one or _has_traversal:
+        # If computed fields, latest_one, traversal, OR subtype JOIN, return
+        # a dict so the merged shape (base + child columns) survives. The
+        # generated child model only declares child-specific fields, so a
+        # plain `_row_to_model` call would silently drop base columns (Pydantic
+        # default ignores extras) — losing `kind` and breaking the
+        # subtype_panel renderer at v0.71.186.
+        if (
+            self._computed_fields
+            or _has_latest_one
+            or _has_traversal
+            or self._subtype_join_sql is not None
+        ):
             row_dicts_l = [dict(row)]
             if _has_latest_one:
                 row_dicts_l = _resolve_latest_one_fields(
