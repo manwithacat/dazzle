@@ -184,6 +184,8 @@ class TokenType(Enum):
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities
     SUBTYPE_OF = "subtype_of"
+    # v0.71.184 (#1217 Phase 3e.v): per-subtype dispatch panel inside a section
+    SUBTYPE_PANEL = "subtype_panel"
     DISPLAY_FIELD = "display_field"
     SEARCHABLE = "searchable"
     BULK = "bulk"

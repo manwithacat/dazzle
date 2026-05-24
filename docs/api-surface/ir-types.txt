@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 357 BaseModels, 145 Enums, 22 other (functions / typealiases / constants)
+# Counts: 359 BaseModels, 145 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -2690,6 +2690,17 @@ ir_class: SubscribeSpec
     - description: str | None = None
     - handlers: list[EventHandlerSpec] = []
 
+ir_class: SubtypePanelBranch
+  required:
+    - include_surface: str
+    - when_kind: str
+  optional: (none)
+
+ir_class: SubtypePanelSpec
+  required:
+    - branches: tuple[SubtypePanelBranch, Ellipsis]
+  optional: (none)
+
 ir_class: SurfaceAccessSpec
   required: (none)
   optional:
@@ -2756,6 +2767,7 @@ ir_class: SurfaceSection
   optional:
     - elements: list[SurfaceElement] = []
     - note: str | None = None
+    - subtype_panel: SubtypePanelSpec | None = None
     - title: str | None = None
     - visible: ConditionExpr | None = None
 

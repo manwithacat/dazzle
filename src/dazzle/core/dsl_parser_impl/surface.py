@@ -371,6 +371,7 @@ class SurfaceParserMixin:
             self.skip_newlines()
 
         elements: list[ir.SurfaceElement] = []
+        subtype_panel: ir.SubtypePanelSpec | None = None
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
@@ -378,11 +379,15 @@ class SurfaceParserMixin:
             if self.match(TokenType.FIELD):
                 elements.append(self._parse_surface_field_element())
                 self.skip_newlines()
+            elif self.match(TokenType.SUBTYPE_PANEL):
+                # v0.71.184 (#1217 Phase 3e.v): polymorphic per-subtype dispatch.
+                subtype_panel = self._parse_subtype_panel()
+                self.skip_newlines()
             else:
                 token = self.current_token()
                 self.error(
                     f"Unexpected '{token.value}' in surface section — "
-                    f"only 'field' declarations are supported here"
+                    f"only 'field' and 'subtype_panel' declarations are supported here"
                 )
 
         self.expect(TokenType.DEDENT)
@@ -392,7 +397,53 @@ class SurfaceParserMixin:
             elements=elements,
             visible=visible_condition,
             note=note,
+            subtype_panel=subtype_panel,
         )
+
+    def _parse_subtype_panel(self) -> ir.SubtypePanelSpec:
+        """Parse a ``subtype_panel:`` block inside a section (#1217 Phase 3e.v).
+
+        Syntax::
+
+            subtype_panel:
+              when kind = vehicle: include surface vehicle_detail
+              when kind = building: include surface building_detail
+
+        Each branch reads `when` + the literal identifier ``kind`` + ``=`` +
+        a snake_case discriminator + ``:`` + the literal identifier
+        ``include`` + ``surface`` + a surface name.
+        """
+        self.advance()  # consume `subtype_panel`
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        branches: list[ir.SubtypePanelBranch] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            self.expect(TokenType.WHEN)
+            # `kind` is a reserved keyword (TokenType.KIND); match the literal token.
+            self.expect(TokenType.KIND)
+            self.expect(TokenType.EQUALS)
+            kind_value = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+            include_ident = self.expect_identifier_or_keyword()
+            if include_ident.value != "include":
+                self.error(
+                    f"expected 'include' in subtype_panel branch, got {include_ident.value!r}"
+                )
+            self.expect(TokenType.SURFACE)
+            surface_name = self.expect_identifier_or_keyword().value
+            branches.append(
+                ir.SubtypePanelBranch(
+                    when_kind=kind_value,
+                    include_surface=surface_name,
+                )
+            )
+            self.skip_newlines()
+        self.expect(TokenType.DEDENT)
+        return ir.SubtypePanelSpec(branches=tuple(branches))
 
     def _parse_surface_field_element(self) -> ir.SurfaceElement:
         """Parse one ``field <name> ["label"] [k=v ...] [visible:/when:/help:]`` row.

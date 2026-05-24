@@ -127,6 +127,31 @@ class SurfaceElement(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SubtypePanelBranch(BaseModel):
+    """One branch of a `subtype_panel:` dispatch (#1217 Phase 3e.v).
+
+    when_kind: snake_case discriminator value selecting this branch.
+    include_surface: name of the per-subtype surface to render inline.
+    """
+
+    when_kind: str
+    include_surface: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class SubtypePanelSpec(BaseModel):
+    """A `subtype_panel:` block inside a surface section (#1217 Phase 3e.v).
+
+    Valid only on surfaces whose entity is a polymorphic base.
+    Linker rule 9 validates `when_kind` ⊆ base.subtype_children.
+    """
+
+    branches: tuple[SubtypePanelBranch, ...]
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SurfaceSection(BaseModel):
     """
     Section within a surface containing related elements.
@@ -147,6 +172,11 @@ class SurfaceSection(BaseModel):
     # v0.61.88 (#918): section-level explanatory copy. Renders as a muted
     # paragraph below the section heading. None = no note.
     note: str | None = None
+    # v0.71.184 (#1217 Phase 3e.v): polymorphic per-subtype dispatch panel.
+    # When set, the renderer inspects `row.kind` and includes the matching
+    # subtype surface inline. Valid only on surfaces whose entity is a
+    # polymorphic base (linker rule 9).
+    subtype_panel: SubtypePanelSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

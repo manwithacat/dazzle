@@ -1241,6 +1241,28 @@ entity Vehicle "Vehicle":
 Multiple inheritance is not supported (one identifier only). Multi-level
 hierarchies (A subtype_of B subtype_of C) are rejected at linker time.
 
+### `subtype_panel:` (v0.71.184, #1217 Phase 3e.v)
+
+Inside a surface section, dispatches inline rendering by `row.kind`. Each
+branch names a snake_case discriminator value and the per-subtype surface
+to include. Valid only on surfaces whose entity is a polymorphic base
+(linker rule 9).
+
+```dsl
+surface asset_card "Asset Card":
+  uses entity Asset
+  mode: view
+  section main:
+    field acquired_at "Acquired"
+    subtype_panel:
+      when kind = vehicle: include surface vehicle_detail
+      when kind = building: include surface building_detail
+```
+
+Unknown discriminator values raise `E_SUBTYPE_PANEL_UNKNOWN_KIND`. Omitting
+a known subtype emits `W_SUBTYPE_PANEL_INCOMPLETE` in
+`AppSpec.metadata['link_warnings']`.
+
 ## DSL Examples
 
 ### Core

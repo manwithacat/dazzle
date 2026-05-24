@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1217 Phase 3e.v — `subtype_panel:` block, parser + linker)
+
+- **`SUBTYPE_PANEL` lexer token** at `src/dazzle/core/lexer.py:188`. Enables the new `subtype_panel:` block keyword inside a surface section.
+- **`SubtypePanelSpec` + `SubtypePanelBranch` IR types** at `src/dazzle/core/ir/surfaces.py` (immediately before `SurfaceSection`). Each branch carries a `when_kind` discriminator value and an `include_surface` reference. `SurfaceSection` gains an optional `subtype_panel: SubtypePanelSpec | None = None` field.
+- **Surface section parser extension** at `src/dazzle/core/dsl_parser_impl/surface.py` — `parse_surface_section` now dispatches `subtype_panel` alongside `field`. The new `_parse_subtype_panel` helper reads `when kind = <value>: include surface <name>` branches between INDENT/DEDENT.
+- **Linker rule 9** at `src/dazzle/core/linker.py` — new `_validate_subtype_panels(entities, surfaces)` raises `LinkError(E_SUBTYPE_PANEL_UNKNOWN_KIND)` when (a) the host surface's entity is not a polymorphic base, or (b) a branch's `when_kind` does not match any known subtype. Missing subtypes emit `W_SUBTYPE_PANEL_INCOMPLETE` warnings joined into `AppSpec.metadata['link_warnings']`.
+- **Parser + linker test suite** at `tests/unit/test_subtype_panel_parser.py` (4 tests) pinning successful parse, unknown-kind rejection, non-base rejection, and the incomplete-coverage warning surface.
+
+### Changed
+
+- **`AppSpec.metadata['link_warnings']`** now also carries `W_SUBTYPE_PANEL_INCOMPLETE` strings alongside the existing unused-import warnings.
+
+### Agent Guidance
+
+- `subtype_panel:` is the surface-side counterpart to `entity X: subtype_of: Base`. Only valid on surfaces whose entity is a polymorphic base; the renderer (Task 24, not yet wired) will dispatch on `row.kind`. Until renderer dispatch lands, the block is parsed and validated but the per-subtype include is not yet rendered.
+
 ## [0.71.183] - 2026-05-24
 
 ### Added (#1217 Phase 3e.iv — subtype query JOIN + `asset_registry` fixture)

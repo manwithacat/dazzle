@@ -139,6 +139,7 @@
   "sitespec.MediaSpec.alt",
   "sitespec.TestimonialItem.author",
   "sitespec.TestimonialItem.avatar",
+  "surfaces.SubtypePanelBranch.include_surface",
   "test_design.TestGap.related_entities",
   "test_design.TestGapAnalysis.suggested_designs",
   "tests.TestSetupStep.variable_name",

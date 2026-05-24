@@ -219,6 +219,11 @@ def build_appspec(
     if known_renderers is not None:
         _validate_render_references(surfaces, workspaces, known_renderers)
 
+    # 10c.1 Linker rule 9 — validate subtype_panel: blocks (#1217 Phase 3e.v).
+    # Raises on unknown discriminator / non-base host; returns warnings joined
+    # into link_warnings below.
+    subtype_panel_warnings = _validate_subtype_panels(entities, surfaces)
+
     # 10d. Guide concordance — every guide step's target / completion /
     # cta must resolve against the actual DSL state (#1106 follow-up,
     # v0.71.0). Drift becomes a compile error, not a runtime surprise.
@@ -305,7 +310,10 @@ def build_appspec(
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,
-            "link_warnings": unused_import_warnings,  # v0.14.1
+            "link_warnings": [
+                *unused_import_warnings,  # v0.14.1
+                *subtype_panel_warnings,  # v0.71.184 (#1217 Phase 3e.v)
+            ],
         },
     )
 
@@ -410,6 +418,59 @@ def _link_subtypes(
             )
         )
     return out
+
+
+def _validate_subtype_panels(
+    entities: list[ir.EntitySpec],
+    surfaces: list[ir.SurfaceSpec],
+) -> list[str]:
+    """Linker rule 9 — `subtype_panel:` branches must reference real subtypes.
+
+    Walks every surface's sections for a populated `subtype_panel`, and:
+    - Raises ``LinkError(E_SUBTYPE_PANEL_UNKNOWN_KIND)`` when the surface's
+      entity is not a polymorphic base, or a branch's ``when_kind`` does
+      not match any child of the base.
+    - Returns ``W_SUBTYPE_PANEL_INCOMPLETE`` warning strings for panels that
+      omit one or more known subtypes — caller joins these into
+      ``metadata['link_warnings']``.
+    """
+    from .archetype_expander import _to_snake_case
+    from .errors import E_SUBTYPE_PANEL_UNKNOWN_KIND, W_SUBTYPE_PANEL_INCOMPLETE
+
+    by_name = {e.name: e for e in entities}
+    warnings: list[str] = []
+    for surface in surfaces:
+        # SurfaceSpec.entity_ref is the canonical attribute (surfaces.py:303).
+        base = by_name.get(surface.entity_ref) if surface.entity_ref else None
+        for section in surface.sections:
+            if section.subtype_panel is None:
+                continue
+            if base is None or not base.is_polymorphic_base:
+                raise LinkError(
+                    f"{E_SUBTYPE_PANEL_UNKNOWN_KIND}: subtype_panel: on surface "
+                    f"'{surface.name}' but its entity "
+                    f"{'(none)' if base is None else f'{base.name!r}'} is not a "
+                    f"polymorphic base. Add `subtype_of:` declarations to make "
+                    f"it a base, or remove the subtype_panel block."
+                )
+            valid_kinds = {_to_snake_case(c) for c in base.subtype_children}
+            seen: set[str] = set()
+            for branch in section.subtype_panel.branches:
+                if branch.when_kind not in valid_kinds:
+                    raise LinkError(
+                        f"{E_SUBTYPE_PANEL_UNKNOWN_KIND}: subtype_panel branch "
+                        f"`when kind = {branch.when_kind}` in surface "
+                        f"'{surface.name}' does not match any subtype of "
+                        f"'{base.name}' (known: {sorted(valid_kinds)})."
+                    )
+                seen.add(branch.when_kind)
+            missing = valid_kinds - seen
+            if missing:
+                warnings.append(
+                    f"{W_SUBTYPE_PANEL_INCOMPLETE}: surface '{surface.name}' "
+                    f"subtype_panel missing branches for: {sorted(missing)}."
+                )
+    return warnings
 
 
 def _inject_soft_delete_fields(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
