@@ -365,6 +365,25 @@ class PopulationHandlers:
                         },
                     )
 
+            # #1238: subtype polymorphism edges (#1217 Phase 3(e)).
+            # Mirror IR fields (subtype_of, subtype_children) into traversable
+            # graph relations so MCP `graph` queries can answer "what are the
+            # subtypes of X?" without re-walking the IR.
+            if getattr(entity, "subtype_of", None):
+                self._create_relation_counted(
+                    stats,
+                    source_id=entity_id,
+                    target_id=f"entity:{entity.subtype_of}",
+                    relation_type="is_subtype_of",
+                )
+            for child_name in getattr(entity, "subtype_children", None) or []:
+                self._create_relation_counted(
+                    stats,
+                    source_id=entity_id,
+                    target_id=f"entity:{child_name}",
+                    relation_type="has_subtype",
+                )
+
     def _populate_surfaces(self, appspec: Any, stats: dict[str, Any]) -> None:
         """Index surfaces and their relationships to entities and personas."""
         for surface in appspec.surfaces:

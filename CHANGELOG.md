@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1238 — project-KG indexes subtype polymorphism relations)
+
+- **`is_subtype_of` and `has_subtype` relation types** registered in `KnowledgeGraph.RELATION_TYPES` (`src/dazzle/mcp/knowledge_graph/store.py:73`).
+- **`_populate_entities()` emits subtype edges** at `src/dazzle/mcp/knowledge_graph/handlers/population_handlers.py:367`: child→base (`is_subtype_of`) when `entity.subtype_of` is set, plus base→child (`has_subtype`) for each entry in `entity.subtype_children`. Mirrors IR fields into graph relations so MCP `graph` queries can answer "what are the subtypes of X?" without re-walking the IR.
+- **1 new test** at `tests/unit/test_knowledge_graph.py::test_handler_populate_from_appspec_indexes_subtype_relations` pins both directions land in the graph for the `asset_registry` fixture.
+
 ### Added (#1236 — `E_SUBTYPE_FIELD_NAME_OVERLAP` linker rule)
 
 - **New linker rule** in `src/dazzle/core/linker.py`'s `_link_subtypes()`: a polymorphic-child entity that redeclares a field name already on the base raises `LinkError(E_SUBTYPE_FIELD_NAME_OVERLAP)`. Mirrors the existing `E_SUBTYPE_KIND_RESERVED` and `E_SUBTYPE_DUPLICATE_PK` rules. Without this, the auto-JOIN shipped in #1217 Phase 3(e) would produce an ambiguous SELECT (the column appears in both `"{Child}".*` and the aliased base column).

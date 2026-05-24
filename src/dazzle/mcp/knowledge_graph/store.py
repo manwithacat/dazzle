@@ -69,6 +69,9 @@ class KnowledgeGraph(
         "has_subprocess": "Process step starts a subprocess",
         "human_task_on": "Process step presents a surface",
         "navigates_to": "Experience step navigates to a surface",
+        # Subtype polymorphism (#1217 Phase 3(e); #1238 indexes into KG)
+        "is_subtype_of": "Polymorphic-child entity points at its base",
+        "has_subtype": "Polymorphic-base entity points at each child",
         "allows_persona": "Workspace/surface allows a persona",
         "denies_persona": "Workspace/surface denies a persona",
         "default_workspace": "Persona's default workspace",

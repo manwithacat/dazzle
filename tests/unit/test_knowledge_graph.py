@@ -411,6 +411,37 @@ class TestKnowledgeGraphHandlers:
             entities = graph.query("Task", entity_types=["dsl_entity"])
             assert len(entities) > 0
 
+    def test_handler_populate_from_appspec_indexes_subtype_relations(self) -> None:
+        """#1238 — `is_subtype_of` (child→base) and `has_subtype` (base→child)
+        edges land in the graph for the asset_registry fixture."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        fixture_path = Path(__file__).parent.parent.parent / "fixtures" / "asset_registry"
+        if not (fixture_path / "dazzle.toml").exists():
+            return  # fixture not available — skip
+
+        result = handlers.handle_populate_from_appspec(str(fixture_path))
+        assert "error" not in result or result.get("entities_created", 0) > 0
+
+        # Vehicle is a subtype of Asset → outgoing is_subtype_of.
+        outgoing = graph.get_relations(entity_id="entity:Vehicle", direction="outgoing")
+        subtype_edges = [
+            r
+            for r in outgoing
+            if r.relation_type == "is_subtype_of" and r.target_id == "entity:Asset"
+        ]
+        assert subtype_edges, (
+            f"expected entity:Vehicle -is_subtype_of-> entity:Asset; got {outgoing}"
+        )
+
+        # Asset is the base → outgoing has_subtype edges to each child.
+        base_out = graph.get_relations(entity_id="entity:Asset", direction="outgoing")
+        child_targets = {r.target_id for r in base_out if r.relation_type == "has_subtype"}
+        assert "entity:Vehicle" in child_targets, (
+            f"expected has_subtype→Vehicle; got {child_targets}"
+        )
+
     def test_handler_populate_from_appspec_invalid_path(self) -> None:
         """Test populate from appspec with invalid path."""
         graph = KnowledgeGraph(":memory:")
