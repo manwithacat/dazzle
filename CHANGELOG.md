@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.181] - 2026-05-24
+
+### Added (#1217 Phase 3e.ii — `subtype_of:` linker validation)
+
+- **`_link_subtypes()` linker pass** (`src/dazzle/core/linker.py`) — runs immediately before `_inject_soft_delete_fields` so child-declared `soft_delete:` is caught on author intent, not on auto-injected fields. Enforces 7 of the 11 spec rules:
+  - **`E_SUBTYPE_OF_UNKNOWN_BASE`** — base named in `subtype_of:` must resolve to a known entity.
+  - **`E_SUBTYPE_OF_CYCLE`** — self-cycle (`entity X: subtype_of: X`) rejected.
+  - **`E_SUBTYPE_OF_MULTILEVEL`** — multi-level hierarchies (`A subtype_of B subtype_of C`) rejected; v1 is flat-only.
+  - **`E_SUBTYPE_DUPLICATE_PK`** — child entities inherit PK via shared-PK FK, so they must not declare their own `pk` modifier.
+  - **`E_SUBTYPE_KIND_RESERVED`** — bases (entities with subtypes) cannot pre-declare a `kind` field; the linker synthesises it. Defence-in-depth against archetype-expansion / fixture / tooling paths that bypass the parser's reserved-keyword check.
+  - **`E_SUBTYPE_SOFT_DELETE_ON_CHILD`** — `soft_delete:` must live on the base (or be absent); a child-only tombstone would be invisible to polymorphic-base queries.
+  - **`E_SUBTYPE_GRANT_INCOMPLETE`** — a `grant_schema` on a child entity requires a `grant_schema` on its base, otherwise the delegation would silently broaden access beyond what the base's RBAC posture allows.
+- **Enrichment on success**: each base gets `subtype_children: tuple[str, ...]` (alphabetically sorted) populated and a synthesised `kind: enum[<snake_case child names>] required` field appended to its fields list — using `model_copy(update=…)` per the existing frozen-Pydantic convention.
+- Diagnostic codes are module-level string constants in `src/dazzle/core/errors.py` (Task 8); messages begin with the code as the first token so callers can `pytest.raises(LinkError, match="E_…")` reliably.
+- **9 linker tests** in `tests/unit/test_subtype_of_linker.py` — one per diagnostic plus a happy-path verifying `subtype_children` population and `kind` synthesis on a base with two children.
+
+### Agent Guidance
+
+- The 7 validation rules above all surface as `LinkError` at `dazzle validate` time with the diagnostic code as the message prefix — agents can grep error output for `E_SUBTYPE_…` to disambiguate. Each message names the offending entity, the base, and the concrete fix.
+- **DDL + runtime still pending** (slice 3e.iii). Authoring + linker validation work; `create_subtype` still raises `NotImplementedError`. Agents may safely author with `subtype_of:` for design exploration, but apps with subtype declarations will not boot until 3e.iii lands.
+
 ## [0.71.180] - 2026-05-24
 
 ### Added (#1217 Phase 3e.i — `subtype_of:` IR + parser)
