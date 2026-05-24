@@ -54,6 +54,144 @@ class ConstraintViolationError(Exception):
         super().__init__(message)
 
 
+def _resolve_latest_one_fields(
+    rows: list[dict[str, Any]],
+    entity_spec: Any,
+    db: Any,
+    *,
+    as_of: Any = None,
+) -> list[dict[str, Any]]:
+    """Resolve every ``latest_one`` field on the entity (#1223 Phase 3a.v.ii).
+
+    For each LATEST_ONE field on ``entity_spec``:
+      1. Look up the target entity's table + temporal.end_field
+      2. Batch-query the target where ``via_field IN (...source_ids)``
+         AND ``end_field IS NULL`` (or the open-interval as_of predicate)
+      3. Attach the resolved row (or None) under the field name on each
+         input row
+
+    Returns the input rows (mutated in place, also returned for chaining).
+    No-op when ``entity_spec`` has no LATEST_ONE fields or rows is empty.
+
+    Performance: one batched query per latest_one field. For a list page of
+    N rows with K latest_one fields, K extra queries. Acceptable since
+    cohort_strip-class workloads already do per-region fan-out at similar
+    granularity.
+    """
+    from dazzle.back.runtime.query_builder import quote_identifier
+    from dazzle.core.ir import FieldTypeKind
+
+    if not rows or entity_spec is None:
+        return rows
+
+    latest_one_fields = [
+        f
+        for f in getattr(entity_spec, "fields", [])
+        if getattr(f.type, "kind", None) == FieldTypeKind.LATEST_ONE
+    ]
+    if not latest_one_fields:
+        return rows
+
+    placeholder = db.placeholder
+
+    for f in latest_one_fields:
+        target_entity = f.type.ref_entity
+        via_field = f.type.via_field
+        if not target_entity or not via_field:
+            continue
+
+        # The target entity needs `temporal:` (validator enforces this);
+        # at runtime we still defensively look it up via the field's
+        # ref_entity. The target's own EntitySpec carries the temporal.
+        # We don't have access to the full registry here, so we rely on
+        # convention: end_field is named conventionally (end_date /
+        # effective_to). For MVP, look up via_field's target_entity
+        # spec from the global appspec is overkill — instead we hard-
+        # code knowledge: the latest_one validator already ensured the
+        # target has `temporal:`, so we encode the end_field discovery
+        # by querying the row where via_field matches AND ORDER BY
+        # start_date DESC LIMIT 1 in absence of richer context. Simpler:
+        # rely on the target entity exposing temporal.end_field via the
+        # registry once we plumb it through. For 3a.v.ii MVP we use
+        # ORDER BY id DESC fallback if we can't access temporal.end_field.
+        #
+        # TODO: thread the appspec through Repository so we can look up
+        # the target's temporal.end_field exactly. For now, prefer the
+        # conventional `end_date` / `effective_to` field-name fallback.
+        end_field_candidates = ("end_date", "effective_to")
+        end_field = end_field_candidates[0]
+
+        source_ids = [str(row["id"]) for row in rows if row.get("id")]
+        if not source_ids:
+            for row in rows:
+                row[f.name] = None
+            continue
+
+        in_placeholders = ", ".join(placeholder for _ in source_ids)
+        target_table = quote_identifier(target_entity)
+        via_q = quote_identifier(via_field)
+
+        # Build the active-row predicate. If as_of is set, the row must
+        # have been active on as_of; otherwise NULL end_field.
+        if as_of is not None:
+            # Try both candidate end-fields with COALESCE-style fallback —
+            # simplest: query with WHERE via IN AND (end_date IS NULL OR
+            # end_date > as_of) AND start_date <= as_of. If the target
+            # uses effective_to/effective_from instead, the first attempt
+            # raises (column not found) and we'll fall back.
+            sql = (
+                f"SELECT * FROM {target_table} "
+                f"WHERE {via_q} IN ({in_placeholders}) "
+                f'AND ("{end_field}" IS NULL OR "{end_field}" > {placeholder}) '
+                f'AND "start_date" <= {placeholder}'
+            )
+            params: list[Any] = list(source_ids) + [as_of, as_of]
+        else:
+            sql = (
+                f"SELECT * FROM {target_table} "
+                f"WHERE {via_q} IN ({in_placeholders}) "
+                f'AND "{end_field}" IS NULL'
+            )
+            params = list(source_ids)
+
+        target_rows: list[dict[str, Any]] = []
+        with db.connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(sql, params)  # nosemgrep
+                fetched = cursor.fetchall()
+                target_rows = [dict(r) if hasattr(r, "keys") else dict(r) for r in fetched]
+            except Exception:
+                # Likely a column-name mismatch (target uses effective_to,
+                # not end_date). Try the alternate. Belt-and-suspenders
+                # until the appspec-plumbing TODO above lands.
+                end_field = end_field_candidates[1]
+                if as_of is not None:
+                    sql = (
+                        f"SELECT * FROM {target_table} "
+                        f"WHERE {via_q} IN ({in_placeholders}) "
+                        f'AND ("{end_field}" IS NULL OR "{end_field}" > {placeholder}) '
+                        f'AND "effective_from" <= {placeholder}'
+                    )
+                    params = list(source_ids) + [as_of, as_of]
+                else:
+                    sql = (
+                        f"SELECT * FROM {target_table} "
+                        f"WHERE {via_q} IN ({in_placeholders}) "
+                        f'AND "{end_field}" IS NULL'
+                    )
+                    params = list(source_ids)
+                cursor.execute(sql, params)  # nosemgrep
+                fetched = cursor.fetchall()
+                target_rows = [dict(r) if hasattr(r, "keys") else dict(r) for r in fetched]
+
+        by_source = {str(r.get(via_field)): r for r in target_rows}
+        for row in rows:
+            row[f.name] = by_source.get(str(row.get("id")))
+
+    return rows
+
+
 def _build_temporal_as_of_predicate(
     start_field: str, end_field: str, as_of: Any
 ) -> tuple[str, list[Any]]:
@@ -390,6 +528,16 @@ class Repository(Generic[T]):
         if not row:
             return None
 
+        # #1223 Phase 3a.v.ii: resolve latest_one fields if any exist on
+        # the entity. Forces dict-return (same coercion as `include`).
+        # No-op when entity has no latest_one fields.
+        from dazzle.core.ir import FieldTypeKind
+
+        _has_latest_one = any(
+            getattr(f.type, "kind", None) == FieldTypeKind.LATEST_ONE
+            for f in self.entity_spec.fields
+        )
+
         # If relations requested, load them and return dict
         if include and self._relation_loader:
             row_dict = dict(row)
@@ -399,11 +547,20 @@ class Repository(Generic[T]):
                 include,
                 conn=self.db.get_persistent_connection(),
             )
+            if _has_latest_one:
+                row_dicts = _resolve_latest_one_fields(
+                    row_dicts, self.entity_spec, self.db, as_of=as_of
+                )
             return self._convert_row_dict(row_dicts[0])
 
-        # If computed fields, return dict with computed values
-        if self._computed_fields:
-            return self._convert_row_dict(dict(row))
+        # If computed fields or latest_one fields, return dict with derived values
+        if self._computed_fields or _has_latest_one:
+            row_dicts_l = [dict(row)]
+            if _has_latest_one:
+                row_dicts_l = _resolve_latest_one_fields(
+                    row_dicts_l, self.entity_spec, self.db, as_of=as_of
+                )
+            return self._convert_row_dict(row_dicts_l[0])
 
         return self._row_to_model(row)
 
@@ -671,10 +828,27 @@ class Repository(Generic[T]):
                     conn=self.db.get_persistent_connection(),
                 )
 
+        # #1223 Phase 3a.v.ii: resolve latest_one fields if any exist.
+        # Forces dict-return (same coercion as `include` / computed).
+        from dazzle.core.ir import FieldTypeKind
+
+        _has_latest_one = any(
+            getattr(f.type, "kind", None) == FieldTypeKind.LATEST_ONE
+            for f in self.entity_spec.fields
+        )
+        if _has_latest_one:
+            # `_as_of` was popped from effective_filters in the temporal
+            # block above (line ~738) before being passed to QueryBuilder.
+            # Reuse the same value here so latest_one resolution honours
+            # the as-of date for consistent time-travel.
+            row_dicts = _resolve_latest_one_fields(
+                row_dicts, self.entity_spec, self.db, as_of=_as_of
+            )
+
         # Convert to models (or return dicts if relations/computed fields included)
         items: list[Any]
-        if include or self._computed_fields:
-            # Return dicts with nested data and/or computed fields
+        if include or self._computed_fields or _has_latest_one:
+            # Return dicts with nested data and/or computed/derived fields
             items = [self._convert_row_dict(row) for row in row_dicts]
         else:
             items = [self._row_to_model(row) for row in rows]

@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.170] - 2026-05-24
+
+### Added (#1223 Phase 3a.v.ii — `latest_one` runtime resolution)
+
+- **`latest_one EntityName via fk_field` fields now resolve at read time** on both `Repository.read` and `Repository.list`. The framework batch-queries the target entity where `via_field IN (...source_ids) AND <end_field> IS NULL` and attaches the resolved row (or `None` if no active match) under the field's name. As-of composition: when the parent request carries `?as_of=YYYY-MM-DD`, the latest_one query uses the open-interval predicate `(end_field IS NULL OR end_field > as_of) AND start_field <= as_of` — historical snapshots stay consistent end-to-end.
+
+  Concretely for hr_records:
+
+  ```dsl
+  entity Person "Person":
+    id: uuid pk
+    current_employment: latest_one Employment via person
+  ```
+
+  `GET /api/person/<id>` now returns `{..., "current_employment": {<the active Employment row>}}`. `GET /api/person/<id>?as_of=2025-06-01` returns the Employment row that was active on that date. List endpoints batch the resolution: one extra query per latest_one field per page, regardless of page size.
+
+- **5 regression tests** in `tests/unit/test_temporal_runtime.py::TestLatestOneResolverHelper` covering: happy-path resolution attaches the row, missing target row → None, SQL shape uses via_field IN + end_field IS NULL, no-op when entity has no latest_one fields (zero DB hits), as_of composes to the open-interval predicate.
+
+### Known limitation
+
+The end-field lookup uses a name-based convention fallback (`end_date` first, `effective_to` second) rather than reading `target.temporal.end_field` from the appspec — Repository doesn't have direct access to the appspec to resolve this exactly. The fallback covers hr_records (Employment/end_date, Salary/effective_to, ManagerLink/end_date) but is brittle for projects using non-conventional names. **Follow-up:** plumb the appspec or a small target-registry through `RepositoryFactory` so latest_one can resolve `temporal.end_field` exactly. Tracked informally in the helper's docstring TODO; can be filed as a sub-issue if real schemas trip it.
+
+### Slice status (#1223) — main thrust COMPLETE
+
+| Slice | Status |
+|---|---|
+| 3a.i — IR + parser + validator | ✅ v0.71.161 |
+| 3a.ii — Repository tombstone filter | ✅ v0.71.162 |
+| 3a.iii — DB partial unique index | ✅ v0.71.163 |
+| 3a.iv — `?as_of=` URL param threading | ✅ v0.71.164 + .167 |
+| 3a.v — `latest_one` parser + IR + validator | ✅ v0.71.165 |
+| **3a.v.ii — `latest_one` runtime resolution** | ✅ v0.71.170 (this) |
+| Example sync | ✅ v0.71.169 |
+| Convention-fallback hardening | 🔲 small follow-up |
+
+With this ship, every slice of #1223 has runtime behaviour. The umbrella issue can close.
+
+### Agent Guidance
+
+- When designing a Person-style identity entity that has child temporal records, declare `current_X: latest_one X via fk_field` for the common "show me the current row" needs. The framework resolves at read time without per-handler glue. For computing aggregates over current-only rows (e.g. "total cost of currently-active salaries"), use a `temporal:` entity directly with `default_filter: active` (already auto-filters via 3a.ii) — `latest_one` is for single-row joins, aggregates are for cohort-style rollups.
+
 ## [0.71.169] - 2026-05-24
 
 ### Changed (#1217 / #1223 — hr_records example sync pass)

@@ -362,3 +362,124 @@ class TestListAsOf:
         assert '"start_date" <= %s' in sql
         assert '"end_date" IS NULL OR "end_date" > %s' in sql
         assert params == [date(2025, 6, 1), date(2025, 6, 1)]
+
+
+# ============================================================================
+# 3a.v.ii: latest_one runtime resolution
+# ============================================================================
+
+
+class TestLatestOneResolverHelper:
+    """The module-level helper that fetches current rows per latest_one
+    field and attaches them under the field name on each input row."""
+
+    def _person_entity_with_current_employment(self) -> ir.EntitySpec:
+        return ir.EntitySpec(
+            name="Person",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(
+                    name="legal_name",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
+                ),
+                ir.FieldSpec(
+                    name="current_employment",
+                    type=ir.FieldType(
+                        kind=ir.FieldTypeKind.LATEST_ONE,
+                        ref_entity="Employment",
+                        via_field="person",
+                    ),
+                ),
+            ],
+        )
+
+    def _mock_db(self, fetched_rows: list[dict]) -> MagicMock:
+        cursor = MagicMock()
+        cursor.execute = MagicMock()
+        cursor.fetchall = MagicMock(return_value=fetched_rows)
+        conn = MagicMock()
+        conn.cursor = MagicMock(return_value=cursor)
+        ctx = MagicMock()
+        ctx.__enter__ = MagicMock(return_value=conn)
+        ctx.__exit__ = MagicMock(return_value=False)
+        db = MagicMock()
+        db.placeholder = "%s"
+        db.connection = MagicMock(return_value=ctx)
+        db._mock_cursor = cursor
+        return db
+
+    def test_attaches_resolved_row_when_match(self) -> None:
+        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+
+        person = self._person_entity_with_current_employment()
+        rows = [{"id": "p1", "legal_name": "Alice"}]
+        # Mock: one active employment for p1
+        db = self._mock_db([{"id": "e1", "person": "p1", "role": "r1", "end_date": None}])
+
+        result = _resolve_latest_one_fields(rows, person, db)
+        assert result[0]["current_employment"] == {
+            "id": "e1",
+            "person": "p1",
+            "role": "r1",
+            "end_date": None,
+        }
+
+    def test_attaches_none_when_no_active_row(self) -> None:
+        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+
+        person = self._person_entity_with_current_employment()
+        rows = [{"id": "p1", "legal_name": "Alice"}]
+        db = self._mock_db([])  # nothing returned — no active employment
+
+        result = _resolve_latest_one_fields(rows, person, db)
+        assert result[0]["current_employment"] is None
+
+    def test_query_shape_uses_via_field_and_end_field_tombstone(self) -> None:
+        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+
+        person = self._person_entity_with_current_employment()
+        rows = [{"id": "p1"}, {"id": "p2"}]
+        db = self._mock_db([])
+
+        _resolve_latest_one_fields(rows, person, db)
+        sql, params = db._mock_cursor.execute.call_args.args
+        assert '"person" IN (%s, %s)' in sql
+        assert '"end_date" IS NULL' in sql
+        assert params == ["p1", "p2"]
+
+    def test_no_op_when_entity_has_no_latest_one_fields(self) -> None:
+        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+
+        plain_person = ir.EntitySpec(
+            name="Person",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(
+                    name="legal_name",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
+                ),
+            ],
+        )
+        rows = [{"id": "p1", "legal_name": "Alice"}]
+        db = self._mock_db([])
+
+        result = _resolve_latest_one_fields(rows, plain_person, db)
+        assert result == rows  # unchanged
+        # The DB shouldn't have been touched.
+        assert not db._mock_cursor.execute.called
+
+    def test_as_of_composes_with_open_interval_predicate(self) -> None:
+        from datetime import date
+
+        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+
+        person = self._person_entity_with_current_employment()
+        rows = [{"id": "p1"}]
+        db = self._mock_db([])
+
+        _resolve_latest_one_fields(rows, person, db, as_of=date(2025, 6, 1))
+        sql, params = db._mock_cursor.execute.call_args.args
+        assert '"end_date" IS NULL OR "end_date" > %s' in sql
+        assert '"start_date" <= %s' in sql
+        # Params: source_ids + [as_of, as_of]
+        assert params[-2:] == [date(2025, 6, 1), date(2025, 6, 1)]
