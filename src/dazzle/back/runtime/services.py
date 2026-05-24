@@ -74,6 +74,9 @@ class RuntimeServices:
     - ``process_manager`` — the active process / schedule runtime
       (Celery / Temporal / event-bus adapter). Extension code that
       starts domain processes reaches for this.
+    - ``app_spec`` — the parsed Dazzle ``AppSpec`` for this app instance.
+      Populated at boot. Used by the renderer dispatch ctx builder to do
+      polymorphic-surface lookups for ``subtype_panel:`` blocks (#1217 Phase 3e).
 
     Anything not listed here is framework-internal and may change
     between minor versions. If you need to reach for it, file an
@@ -100,6 +103,9 @@ class RuntimeServices:
     system_collector: Any = None  # SystemCollector | None
     metrics_emitter: Any = None  # MetricsEmitter | None
     process_manager: Any = None  # ProcessManager | None
+    app_spec: Any = (
+        None  # ir.AppSpec | None — populated at boot, used by renderer dispatch ctx builder
+    )
 
 
 def get_services(request: Request) -> RuntimeServices:

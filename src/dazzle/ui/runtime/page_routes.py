@@ -1242,7 +1242,12 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     prc.ctx_overrides["table"] = req_table
 
 
-def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
+def _build_dispatch_ctx(
+    render_ctx: Any,
+    surface: Any = None,
+    *,
+    services: Any = None,
+) -> dict[str, Any]:
     """Translate the per-request PageContext into the flat ctx dict shape
     that the renderer registry adapters consume.
 
@@ -1425,6 +1430,46 @@ def _build_dispatch_ctx(render_ctx: Any, surface: Any = None) -> dict[str, Any]:
                     "kind": getattr(f, "type", "text") or "text",
                 }
             )
+        # #1217 Phase 3e: when a section has subtype_panel and the row's
+        # kind matches a branch, append the per-subtype surface's section
+        # elements as additional fields. The renderer stays section-ignorant
+        # — it iterates ctx["fields"] and renders each.
+        app_spec = getattr(services, "app_spec", None) if services is not None else None
+        if (
+            app_spec is not None
+            and surface is not None
+            and getattr(surface, "sections", None)
+            and isinstance(item, dict)
+        ):
+            from dazzle.render.subtype_panel import resolve_subtype_panel_surface
+
+            row_kind = item.get("kind")
+            seen_keys = {f["key"] for f in detail_fields_out}
+            for section in surface.sections:
+                if getattr(section, "subtype_panel", None) is None:
+                    continue
+                resolved = resolve_subtype_panel_surface(section, row_kind, app_spec)
+                if resolved is None:
+                    continue
+                # Append each element of the resolved surface's sections
+                # as a field entry. The per-subtype surface's section
+                # convention is one or more sections each carrying its
+                # own elements list.
+                for resolved_section in getattr(resolved, "sections", []) or []:
+                    for element in getattr(resolved_section, "elements", []) or []:
+                        field_name = getattr(element, "field_name", "") or ""
+                        if not field_name or field_name in seen_keys:
+                            continue
+                        value = item.get(field_name, "")
+                        detail_fields_out.append(
+                            {
+                                "key": field_name,
+                                "label": getattr(element, "label", "") or field_name,
+                                "value": "" if value is None else value,
+                                "kind": "text",
+                            }
+                        )
+                        seen_keys.add(field_name)
         fields_out = detail_fields_out
         # Plan 10: thread surface.related_groups (IR-level) into the ctx
         related_groups_out: list[dict[str, Any]] = []
@@ -1578,7 +1623,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     if not (has_table or has_detail or has_form):
         return None
 
-    ctx_dict = _build_dispatch_ctx(render_ctx, surface)
+    ctx_dict = _build_dispatch_ctx(render_ctx, surface, services=services)
     try:
         return _compose(dispatch_render(surface, ctx=ctx_dict, services=services))
     except FragmentError as e:

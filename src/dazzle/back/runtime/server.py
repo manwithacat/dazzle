@@ -465,6 +465,7 @@ class DazzleBackendApp:
 
         services = RuntimeServices()
         register_default_renderers(services)
+        services.app_spec = self._appspec
         self._app.state.services = services
 
         # Phase 4 app-shell migration (v0.67.45): the `fragment_chrome`
