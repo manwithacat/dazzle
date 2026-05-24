@@ -574,6 +574,7 @@ class Repository(Generic[T]):
         model_class: type[T],
         relation_loader: RelationLoader | None = None,
         metrics_collector: SystemMetricsCollector | None = None,
+        base_entity_spec: EntitySpec | None = None,
     ):
         """
         Initialize the repository.
@@ -584,6 +585,10 @@ class Repository(Generic[T]):
             model_class: Pydantic model class for the entity
             relation_loader: Optional relation loader for nested data fetching
             metrics_collector: Optional system metrics collector for query timing
+            base_entity_spec: For polymorphic-child entities (``subtype_of: <base>``),
+                the back-layer EntitySpec for the base entity. Repository.list
+                uses this to inject a JOIN that pulls shared base columns into
+                child queries (#1217 slice 3e.iv).
         """
         self.db = db_manager
         self.entity_spec = entity_spec
@@ -597,6 +602,31 @@ class Repository(Generic[T]):
 
         # Store computed field specs for evaluation
         self._computed_fields: list[ComputedFieldSpec] = entity_spec.computed_fields or []
+
+        # #1217 Phase 3e.iv: cache the subtype JOIN+columns at construction
+        # time. Child entities have ONLY their subtype-specific fields in
+        # `entity_spec.fields`; shared base fields live in `base_entity_spec`.
+        # Field types for the base columns also need to land in
+        # `_field_types` so `_row_to_model` can coerce them on the way out.
+        self._subtype_join_sql: str | None = None
+        self._subtype_extra_cols: list[str] = []
+        # getattr guard: legacy unit tests stub `entity_spec` as a bare
+        # SimpleNamespace lacking the polymorphism fields. Real EntitySpec
+        # always has `subtype_of` defaulted to None.
+        if getattr(entity_spec, "subtype_of", None) is not None and base_entity_spec is not None:
+            base_table = quote_identifier(base_entity_spec.name)
+            child_table = quote_identifier(self.table_name)
+            self._subtype_join_sql = f'JOIN {base_table} ON {child_table}."id" = {base_table}."id"'
+            # Pull every base column EXCEPT id (already in the child table).
+            for f in base_entity_spec.fields:
+                if f.name == "id":
+                    continue
+                col_q = quote_identifier(f.name)
+                self._subtype_extra_cols.append(f"{base_table}.{col_q} AS {col_q}")
+                # Make base field types visible to _row_to_model — without
+                # this the JOINed columns are returned as raw DB values
+                # rather than coerced Python types.
+                self._field_types.setdefault(f.name, f.type)
 
     def _record_query(self, query_type: str, latency_ms: float, rows: int = 0) -> None:
         """Record a database query metric."""
@@ -984,6 +1014,18 @@ class Repository(Generic[T]):
 
         if search:
             builder.set_search(search, fields=search_fields)
+
+        # #1217 Phase 3e.iv: subtype auto-JOIN. Child entities only carry
+        # their own subtype-specific fields in `entity_spec.fields`; the
+        # shared columns (e.g. acquired_at, location, kind) live on the
+        # base table. Inject the JOIN + extra SELECT cols cached at
+        # __init__ time so every list query against a child surface
+        # returns the merged row shape. The getattr fallback covers
+        # legacy tests that bypass __init__ via Repository.__new__.
+        _subtype_join_sql = getattr(self, "_subtype_join_sql", None)
+        if _subtype_join_sql is not None:
+            builder.joins.append(_subtype_join_sql)
+            builder.extra_select_cols.extend(getattr(self, "_subtype_extra_cols", []))
 
         # v0.61.9 (#865): FK-display fast path — LEFT JOIN the display field
         # instead of issuing one SELECT per FK relation. Only to-one relations
@@ -1473,12 +1515,18 @@ class RepositoryFactory:
         self._metrics = metrics_collector
         self._repositories: dict[str, Repository[Any]] = {}
 
-    def create_repository(self, entity: EntitySpec) -> Repository[Any]:
+    def create_repository(
+        self,
+        entity: EntitySpec,
+        base_entity_spec: EntitySpec | None = None,
+    ) -> Repository[Any]:
         """
         Create a repository for an entity.
 
         Args:
             entity: Entity specification
+            base_entity_spec: For polymorphic-child entities, the base
+                entity spec used for subtype JOIN injection (#1217 3e.iv).
 
         Returns:
             Repository instance
@@ -1493,6 +1541,7 @@ class RepositoryFactory:
             model_class=model,
             relation_loader=self._relation_loader,
             metrics_collector=self._metrics,
+            base_entity_spec=base_entity_spec,
         )
         self._repositories[entity.name] = repo
         return repo
@@ -1507,8 +1556,12 @@ class RepositoryFactory:
         Returns:
             Dictionary mapping entity names to repositories
         """
+        # Build name → EntitySpec lookup so polymorphic children can be
+        # constructed with their base spec for subtype JOIN injection.
+        by_name = {e.name: e for e in entities}
         for entity in entities:
-            self.create_repository(entity)
+            base = by_name.get(entity.subtype_of) if entity.subtype_of else None
+            self.create_repository(entity, base_entity_spec=base)
         return self._repositories
 
     def get_repository(self, entity_name: str) -> Repository[Any] | None:
