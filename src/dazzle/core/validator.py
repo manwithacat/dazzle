@@ -145,7 +145,15 @@ def is_secret_field_name(name: str) -> bool:
 
 
 def _validate_entity_pk(entity: ir.EntitySpec, errors: list[str]) -> None:
-    """Check that the entity has a primary key field."""
+    """Check that the entity has a primary key field.
+
+    Subtype children (#1217 Phase 3e) MUST NOT declare their own primary key —
+    the linker enforces this (E_SUBTYPE_CHILD_HAS_PK) and the DDL builder
+    derives the child's id as a FK to the base's id with ON DELETE CASCADE.
+    Skip the pk check for them.
+    """
+    if entity.subtype_of is not None:
+        return
     if not entity.primary_key:
         errors.append(
             f"Entity '{entity.name}' has no primary key field. Add a field with 'pk' modifier."

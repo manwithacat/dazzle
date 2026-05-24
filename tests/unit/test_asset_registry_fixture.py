@@ -1,0 +1,79 @@
+"""#1217 Phase 3e.iv — regression tests for the asset_registry fixture.
+
+Pin that the fixture parses, links, and emits subtype-aware DDL without
+errors. These tests block accidental fixture rot when future slices touch
+parser / linker / DDL.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from dazzle.core import ir
+from dazzle.core.linker import build_appspec
+from dazzle.core.parser import parse_modules
+
+_FIXTURE_ROOT = Path(__file__).parents[2] / "fixtures" / "asset_registry"
+
+
+def _load_fixture() -> ir.AppSpec:
+    dsl_files = sorted((_FIXTURE_ROOT / "dsl").glob("*.dsl"))
+    return build_appspec(parse_modules(dsl_files), "asset_registry")
+
+
+class TestAssetRegistryFixture:
+    def test_fixture_parses_and_links(self) -> None:
+        appspec = _load_fixture()
+        entity_names = {e.name for e in appspec.domain.entities}
+        # Base + 3 subtypes.
+        for expected in ("Asset", "Vehicle", "Building", "Equipment"):
+            assert expected in entity_names
+
+    def test_asset_is_polymorphic_base_with_three_children(self) -> None:
+        appspec = _load_fixture()
+        asset = next(e for e in appspec.domain.entities if e.name == "Asset")
+        assert asset.is_polymorphic_base is True
+        # Linker populates subtype_children alphabetically.
+        assert set(asset.subtype_children) == {"Vehicle", "Building", "Equipment"}
+
+    def test_vehicle_is_polymorphic_child_of_asset(self) -> None:
+        appspec = _load_fixture()
+        vehicle = next(e for e in appspec.domain.entities if e.name == "Vehicle")
+        assert vehicle.is_polymorphic_child is True
+        assert vehicle.subtype_of == "Asset"
+
+    def test_kind_field_synthesised_with_three_enum_values(self) -> None:
+        appspec = _load_fixture()
+        asset = next(e for e in appspec.domain.entities if e.name == "Asset")
+        kind_field = next((f for f in asset.fields if f.name == "kind"), None)
+        assert kind_field is not None
+        assert kind_field.type.kind == ir.FieldTypeKind.ENUM
+        assert sorted(kind_field.type.enum_values or []) == [
+            "building",
+            "equipment",
+            "vehicle",
+        ]
+
+    def test_ddl_emits_tpt_tables_with_cascade_fk(self) -> None:
+        """Subtype DDL (slice 3e.iii): each child gets its own table whose
+        `id` is BOTH primary key AND a FK to the base's id with ON DELETE
+        CASCADE.
+        """
+        from dazzle.back.converters.entity_converter import convert_entities
+        from dazzle.back.runtime.sa_schema import build_metadata
+
+        appspec = _load_fixture()
+        entities = convert_entities(appspec.domain.entities)
+        md = build_metadata(entities)
+
+        # Base + each subtype emits its own table.
+        for table_name in ("Asset", "Vehicle", "Building", "Equipment"):
+            assert table_name in md.tables, f"missing table {table_name}"
+
+        # Child id is FK-with-cascade to base id.
+        vehicle_id = md.tables["Vehicle"].c.id
+        assert vehicle_id.primary_key is True
+        fks = list(vehicle_id.foreign_keys)
+        assert len(fks) == 1
+        assert fks[0].column.table.name == "Asset"
+        assert fks[0].ondelete == "CASCADE"

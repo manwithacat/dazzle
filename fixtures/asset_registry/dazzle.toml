@@ -1,0 +1,16 @@
+[project]
+name = "asset_registry"
+title = "Asset Registry (subtype_of: validation)"
+description = "Abstract domain exercising the subtype_of: escape hatch (#1217 Phase 3e). NOT a recommended modelling pattern — see README."
+root = "asset_registry"
+version = "0.1.0"
+type = "benchmark"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = false
