@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.77.0] - 2026-05-26
+
+### Added — agent code quality substrate round 3 (Layer 2: dazzle.result + PA-LLM-09)
+
+- **`dazzle.result`** — new convention library shipping `Ok[T]`, `Err[E]`, `type Result[T, E] = Ok[T] | Err[E]`, and `UnwrapError`. Frozen dataclasses with slots, PEP 695 method-local generics. Four methods per type (`unwrap`, `unwrap_or`, `is_ok`, `is_err`); match is the canonical composition idiom. Importable from `dazzle` top-level.
+- **`docs/counter-priors/optional-instead-of-result.md`** — new counter-prior documenting the antipattern of collapsing multiple distinct failure modes into a single `None` sentinel. Frontmatter declares PA-LLM-09. The "right shape" section shows the canonical pattern: `Result[T, ParseError]` with a tagged union of frozen-dataclass error variants.
+- **Sentinel heuristic `PA-LLM-09`** (`optional_instead_of_result`) fires on `def f(...) -> T | None` (or `Optional[T]`) with ≥2 distinct `return None` statements OR a `try/except (X, Y, ...)` block returning None. Severity MEDIUM, confidence LIKELY. Suppress via `# noqa: PA-LLM-09 — <reason>` on the `def` line for legitimate single-failure-mode Optionals (find-or-None patterns).
+
+### Agent Guidance
+
+- When a function might fail in **two or more distinguishable ways**, return `Result[T, ErrorUnion]` from `dazzle.result`. Use `@dataclass(frozen=True, slots=True)` for error variants and `type ErrorUnion = X | Y | Z` (PEP 695) for the tagged union. The caller's `match` becomes exhaustive — type checker enforces every variant is handled.
+- `T | None` remains correct for **single-failure-mode** Optionals (a cache lookup whose only outcome is "miss"; a `dict.get(k)` clone whose only outcome is "key absent"). The antipattern is collapsing distinct failure modes into the same `None`.
+- `.unwrap()` belongs at boundaries (CLI entry points, top-level request handlers, test code). Inside business logic, `match` is the idiom. Calling `.unwrap()` on an `Err` re-raises as `UnwrapError` carrying the wrapped error.
+- Layer 2 of the substrate now exists. Future rounds may add `dazzle.types` (branded NewType helpers countering the `magic-string-typing` gap) — `dazzle.result` is the first Layer-2 primitive.
+
 ## [0.76.1] - 2026-05-25
 
 ### Added — PA-LLM-08 covers comprehension N+1 (#1267)

@@ -10,6 +10,7 @@ from ._version import get_version as _get_version
 # Re-export commonly used types for convenience
 from .core import ir
 from .core.errors import BackendError, DazzleError, LinkError, ParseError, ValidationError
+from .result import Err, Ok, Result, UnwrapError
 
 __version__ = _get_version()
 
@@ -21,4 +22,8 @@ __all__ = [
     "LinkError",
     "ValidationError",
     "BackendError",
+    "Ok",
+    "Err",
+    "Result",
+    "UnwrapError",
 ]

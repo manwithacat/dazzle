@@ -15,12 +15,16 @@
 
 package: dazzle
   source: __all__
-  count: 7
+  count: 11
   exports:
   - BackendError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
   - DazzleError: class (bases=[Exception]) (message: 'str', context: 'ErrorContext | None' = None)
+  - Err: class (bases=[Generic]) (error: 'E') -> None
   - LinkError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
+  - Ok: class (bases=[Generic]) (value: 'T') -> None
   - ParseError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
+  - Result: TypeAliasType = Result
+  - UnwrapError: class (bases=[Exception]) (error: 'object') -> 'None'
   - ValidationError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
   - __version__: str (version-like)
   - ir: module (dazzle.core.ir)

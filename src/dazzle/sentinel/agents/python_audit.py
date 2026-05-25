@@ -451,6 +451,113 @@ def _detect_n_plus_one(tree: ast.AST, path: Path) -> list[_ShapeHit]:
 
 
 # ---------------------------------------------------------------------------
+# PA-LLM-09 helpers — optional-instead-of-result
+# ---------------------------------------------------------------------------
+
+
+def _is_none_constant(node: ast.AST) -> bool:
+    """True if node is the literal `None`."""
+    return isinstance(node, ast.Constant) and node.value is None
+
+
+def _returns_optional_t(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if the function's return annotation is `T | None` or `Optional[T]`.
+
+    Recognises both PEP 604 (`X | None`) and `typing.Optional[X]` (legacy).
+    """
+    rt = fn.returns
+    if rt is None:
+        return False
+    # X | None or None | X (BinOp with BitOr operator)
+    if isinstance(rt, ast.BinOp) and isinstance(rt.op, ast.BitOr):
+        return _is_none_constant(rt.left) or _is_none_constant(rt.right)
+    # Optional[X]
+    if isinstance(rt, ast.Subscript) and isinstance(rt.value, ast.Name):
+        return rt.value.id == "Optional"
+    return False
+
+
+def _count_return_none(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    """Count `return None` (or bare `return`) statements in fn body.
+
+    Skips nested function definitions (those have their own scope).
+    Uses a manual stack-based walk instead of ast.walk so we can truly
+    stop descending into nested function bodies.
+    """
+    count = 0
+    stack: list[ast.AST] = list(ast.iter_child_nodes(fn))
+    while stack:
+        node = stack.pop()
+        # Don't descend into nested function definitions.
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if isinstance(node, ast.Return):
+            if node.value is None:  # bare `return`
+                count += 1
+            elif _is_none_constant(node.value):  # `return None`
+                count += 1
+        stack.extend(ast.iter_child_nodes(node))
+    return count
+
+
+def _has_multi_exception_catch_returning_none(
+    fn: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> bool:
+    """True if fn body contains `try/except (X, Y, ...) ...: return None`.
+
+    The except clause must catch >=2 exception types AND its body must
+    contain a `return None` (or bare return) statement.
+    """
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.ExceptHandler):
+            continue
+        # The except type must be a Tuple (e.g. `except (X, Y):`).
+        if not isinstance(node.type, ast.Tuple):
+            continue
+        if len(node.type.elts) < 2:
+            continue
+        for inner in ast.walk(node):
+            if isinstance(inner, ast.Return) and (
+                inner.value is None or _is_none_constant(inner.value)
+            ):
+                return True
+    return False
+
+
+def _detect_optional_instead_of_result(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Return _ShapeHit records for functions that should use Result.
+
+    Fires when both conditions hold:
+    1. Function signature returns `T | None` (or `Optional[T]`).
+    2. Function body has >=2 distinct `return None` statements OR a
+       `try/except (X, Y, ...)` block returning None.
+    """
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not _returns_optional_t(node):
+            continue
+
+        return_none_count = _count_return_none(node)
+        multi_catch = _has_multi_exception_catch_returning_none(node)
+
+        if return_none_count < 2 and not multi_catch:
+            continue
+
+        shape = "multi_return_none" if return_none_count >= 2 else "multi_exception_catch"
+        hits.append(
+            _ShapeHit(
+                line=node.lineno,
+                snippet=f"def {node.name}(...) -> ... | None",
+                shape=shape,
+                try_line=node.lineno,  # outer fn def line, for noqa scope
+            )
+        )
+    return hits
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -1215,6 +1322,92 @@ class PythonAuditAgent(DetectionAgent):
                             references=[catalogue_url],
                         ),
                         catalogue_entry="n-plus-one-in-user-code",
+                    )
+                )
+        return findings
+
+    @heuristic(
+        heuristic_id="PA-LLM-09",
+        category="python_audit",
+        subcategory="llm_bias",
+        title="Optional[T] where Result[T, E] would distinguish failure modes",
+    )
+    def check_optional_instead_of_result(self, appspec: AppSpec) -> list[Finding]:
+        """Flag functions that should use Result instead of T | None.
+
+        See docs/counter-priors/optional-instead-of-result.md for the
+        full taxonomy and the right shape (dazzle.result + tagged
+        ParseError union).
+        """
+        from dazzle.sentinel.models import (
+            Confidence,
+            Evidence,
+            Finding,
+            Remediation,
+            RemediationEffort,
+            Severity,
+        )
+
+        app_dir = self._project_path / "app"
+        if not app_dir.exists():
+            return []
+
+        catalogue_url = (
+            "https://github.com/cyfutureuk/dazzle/blob/main/"
+            "docs/counter-priors/optional-instead-of-result.md"
+        )
+
+        findings: list[Finding] = []
+        for py_file in sorted(app_dir.rglob("*.py")):
+            try:
+                source_text = py_file.read_text(encoding="utf-8")
+                tree = ast.parse(source_text, filename=str(py_file))
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+            source_lines = source_text.splitlines()
+
+            for hit in _detect_optional_instead_of_result(tree, py_file):
+                def_line_text = (
+                    source_lines[hit.line - 1] if 0 < hit.line <= len(source_lines) else ""
+                )
+                if "noqa: PA-LLM-09" in def_line_text:
+                    continue
+
+                findings.append(
+                    Finding(
+                        agent=AgentId.PA,
+                        heuristic_id="PA-LLM-09",
+                        category="python_audit",
+                        subcategory="llm_bias",
+                        severity=Severity.MEDIUM,
+                        confidence=Confidence.LIKELY,
+                        title=f"Optional-instead-of-Result ({hit.shape})",
+                        description=(
+                            f"Function `{hit.snippet}` collapses multiple distinct failure "
+                            "modes into None. Use Result[T, E] with a tagged error union "
+                            "so the caller can distinguish failure modes."
+                        ),
+                        evidence=[
+                            Evidence(
+                                evidence_type="source_pattern",
+                                location=f"{py_file}:{hit.line}",
+                                snippet=hit.snippet,
+                            )
+                        ],
+                        remediation=Remediation(
+                            summary=(
+                                "Return `Result[T, ErrorUnion]` from dazzle.result with "
+                                "a tagged union of error variants."
+                            ),
+                            effort=RemediationEffort.MEDIUM,
+                            guidance=(
+                                "See docs/counter-priors/optional-instead-of-result.md for "
+                                "the canonical right-shape pattern using dazzle.result + "
+                                "frozen-dataclass error variants."
+                            ),
+                            references=[catalogue_url],
+                        ),
+                        catalogue_entry="optional-instead-of-result",
                     )
                 )
         return findings
