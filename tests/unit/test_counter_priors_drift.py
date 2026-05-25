@@ -216,3 +216,42 @@ def test_kb_to_counter_prior_map_is_total() -> None:
         f"modeling_guidance ids missing from _KB_TO_COUNTER_PRIOR: {unmapped}. "
         "Add the mapping when introducing a new modeling_guidance anti_pattern."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Counter-prior ↔ Sentinel heuristic drift (PA-LLM-07 onwards)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def _python_audit_heuristic_ids() -> set[str]:
+    """Return every heuristic_id declared on PythonAuditAgent.
+
+    Reflection is sufficient: heuristics are discovered the same way at runtime.
+    """
+    from dazzle.sentinel.agents.python_audit import PythonAuditAgent
+
+    agent = PythonAuditAgent()
+    return {meta.heuristic_id for meta, _ in agent.get_heuristics()}
+
+
+def test_every_declared_detector_resolves() -> None:
+    """Every detector id declared in a counter-prior frontmatter must exist."""
+    heuristic_ids = _python_audit_heuristic_ids()
+    missing: list[str] = []
+    for entry in load_all_counter_priors():
+        for detector in entry.detectors:
+            if detector.agent == "PA" and detector.id not in heuristic_ids:
+                missing.append(
+                    f"{entry.id}: declared detector {detector.id!r} not found on PythonAuditAgent"
+                )
+    assert not missing, "Detector ids declared in catalogue but not implemented:\n" + "\n".join(
+        missing
+    )
+
+
+def test_exceptions_entry_declares_pa_llm_07() -> None:
+    """Sanity pin: the pilot entry must wire to PA-LLM-07."""
+    entries = {e.id: e for e in load_all_counter_priors()}
+    entry = entries["exceptions_as_control_flow"]
+    detector_ids = {d.id for d in entry.detectors}
+    assert "PA-LLM-07" in detector_ids
