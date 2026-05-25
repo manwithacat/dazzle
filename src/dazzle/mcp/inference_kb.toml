@@ -1885,6 +1885,155 @@ entity Building "Building":
 """
 
 [[modeling_guidance]]
+id = "polymorphic_association_antipattern"
+name = "Polymorphic association is a code smell — refuse the shape by default"
+triggers = [
+  "polymorphic association", "polymorphic_ref", "polymorphic foreign key",
+  "polymorphic belongs_to", "comments on any entity",
+  "attachments on multiple entities", "tags across entities",
+  "subject_type and subject_id", "commentable_type", "taggable_type",
+  "owner_type", "attachable_type", "notification target",
+  "single audit log across types", "morphic", "reference any entity",
+]
+anti_pattern = "Modelling a single entity that points at rows in N different tables via a (type, id) discriminator pair — Rails-style `belongs_to :subject, polymorphic: true`"
+prefer = """
+Every "I need polymorphic association" use case, when interrogated, turns
+out to be one of four shapes that the framework already supports. Ask in
+this order:
+
+1. **Is this UI-driven?** If the only reason "Comment" / "Attachment" /
+   "Like" is one entity is that the UI renders them similarly — refactor
+   per-target. ArticleComment and InvoiceComment have different retention,
+   audit, visibility, and notification rules. The "shared Comment entity"
+   was the bug. Use one entity per business-distinct use of the verb.
+
+2. **Is this an event, not a reference?** Audit logs, notifications, and
+   activity feeds usually want an append-only event-stream entity with a
+   typed aggregate_type + JSON payload, not a polymorphic FK. You're
+   recording an event ABOUT the entity, not REFERENCING it — different
+   semantics, different lifecycle, different scope rules.
+
+3. **Is this a junction table in disguise?** Tags-across-entities is the
+   classic example: `entity_tags(tag_id, entity_type, entity_id)` is a
+   bad junction. Use per-pair junctions (ArticleTag, ProductTag) — the
+   cost is trivial and you get per-target indexing, scope rules,
+   audit trails.
+
+4. **Is this actually TPT (table-per-type)?** If the N target entities
+   share substantial fields and "the union" is a meaningful concept (you
+   query across all of them), use `subtype_of:` with a real base entity.
+
+5. **Genuinely small-N (≤3) with mutually-exclusive targets?** Per-target
+   nullable refs + a CHECK constraint "exactly one is non-null" is the
+   legitimate small-N expression — Option C. Works today with vanilla
+   refs; no DSL changes needed.
+
+Prior on "this is a legitimate polymorphic association use case": ~5%.
+The default outcome of the interrogation is: not-polymorphic, refactor.
+"""
+rationale = """
+Polymorphic association as a first-class modelling primitive is a
+Rails-era artefact, not a relational-modelling result. ORM textbooks
+document it because ActiveRecord made it trivial to write, not because
+schema design ever argued for it.
+
+Two framing principles explain why:
+
+  1. Runtime-dispatched polymorphism creates more problems than it
+     solves in the vast majority of cases. Compile-time parametric and
+     bounded polymorphism do not. `subtype_of:` is bounded — the
+     framework knows the full child set at link time and can validate,
+     plan queries, and compose scope rules. A `(type, id)` pair is
+     runtime-dispatched — every read branches on the row value, every
+     cross-target query is composed in application code, no static
+     analyser can reason about reachable targets. The first earns its
+     complexity. The second defers it onto every consumer.
+
+  2. Defer decisions to runtime only when the dynamism is essential to
+     the domain, not merely convenient for the author. "I want one
+     Comment entity attached to anything" is author convenience; the
+     domain knows whether it's an article comment or an invoice comment
+     at the moment of creation. Polymorphic FKs preserve an authoring
+     shape the domain never actually has, and charge for that
+     preservation at every read.
+
+The pattern then breaks three contracts the rest of Dazzle relies on:
+referential integrity (no FK can target multiple tables), scope
+composition (RBAC rules can't traverse a (type, id) pair), and
+JOIN-based queries (the planner can't see through the discriminator).
+
+Dazzle deliberately does NOT ship a `polymorphic_ref:` keyword. Phase
+3(d) of #1217's 3NF audit closed wontfix-by-design (see ADR-0027).
+If a future use case genuinely requires it AFTER surviving the
+four-question interrogation in `prefer`, the implementation shape is
+pre-committed to an explicit-discriminator `polymorphic_ref:` block —
+never the `ref X | Y | Z` union-type sugar, which hides the
+discriminator and adds parser cost for no semantic gain.
+
+Available as a deliberate convention, not as a feature gap.
+"""
+example = """
+# BAD — polymorphic association, code smell
+entity Comment "Comment":
+  id: uuid pk
+  body: text required
+  subject_type: enum[article, issue, manuscript] required   # the smell
+  subject_id: uuid required                                 # the smell
+# Problem: subject_id has no FK constraint. Can point at a deleted row,
+# wrong table, or no table. Scope rules can't traverse Comment.subject_id
+# because the target depends on subject_type. JOINs need per-type
+# branches in application code.
+
+# GOOD — Option 1: per-target entities (the usual answer)
+entity ArticleComment "Article Comment":
+  id: uuid pk
+  article: ref Article required
+  body: text required
+  # Retention, audit, visibility scoped to articles.
+
+entity IssueComment "Issue Comment":
+  id: uuid pk
+  issue: ref Issue required
+  body: text required
+  # Different lifecycle from ArticleComment — that's the point.
+
+# GOOD — Option 2: event stream (when "comment" was actually "audit event")
+entity ActivityEvent "Activity Event":
+  id: uuid pk
+  occurred_at: datetime auto_add required
+  actor: ref User required
+  aggregate_type: enum[article, issue, manuscript] required
+  aggregate_id: uuid required          # acceptable here — it's an event
+  event_kind: enum[created, commented, archived] required
+  payload: json
+  # The (aggregate_type, aggregate_id) pair is fine for events: events
+  # don't need referential integrity into mutable tables; they're an
+  # append-only log of "what happened".
+
+# GOOD — Option 3: per-pair junctions (the "tags" case)
+entity ArticleTag "Article Tag":
+  article: ref Article required
+  tag: ref Tag required
+
+entity ProductTag "Product Tag":
+  product: ref Product required
+  tag: ref Tag required
+# Same Tag entity; per-target junctions. Per-target indexing for free.
+
+# GOOD — Option 5: small-N mutex (legitimate exception)
+entity Attachment "Attachment":
+  id: uuid pk
+  filename: str(200) required
+  storage_key: str(500) required
+  # Exactly one of these is non-null. Add a CHECK at the DB layer; the
+  # framework will gain a `mutex_refs:` modifier to express this directly
+  # if the pattern becomes common.
+  article: ref Article optional
+  issue: ref Issue optional
+  manuscript: ref Manuscript optional
+"""
+
+[[modeling_guidance]]
 id = "no_god_entities"
 name = "Decompose God Entities"
 triggers = ["too many fields", "large entity", "god entity", "monolith entity", "kitchen sink"]

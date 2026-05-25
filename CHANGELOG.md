@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Decision (#1240 wontfix-by-design — no `polymorphic_ref:` keyword, now or planned)
+
+- **ADR-0027** `docs/adr/0027-no-polymorphic-ref.md` codifies the architectural refusal: Dazzle will not ship a `polymorphic_ref:` keyword, nor `ref X | Y | Z` union sugar. Polymorphic association is a Rails-era ORM artefact that breaks referential integrity, scope composition, and JOIN-based queries; every classic use case (comments, attachments, tags, audit log, notifications, likes) fails a four-question interrogation that routes to per-target refs, event-stream entities, per-pair junctions, or TPT (ADR-0026). The decision turns the ❌ "polymorphic association" row in #1217's Phase 1 audit into ⚠️ intentionally unsupported.
+- **Framing principles** captured in ADR + KB: (1) runtime-dispatched polymorphism creates more problems than it solves; compile-time parametric and bounded polymorphism (i.e. `subtype_of:`) do not; (2) defer decisions to runtime only when the dynamism is essential to the domain, not merely convenient for the author.
+- **`polymorphic_association_antipattern` `[[modeling_guidance]]` entry** in `src/dazzle/mcp/inference_kb.toml` so the MCP `knowledge` tool serves the refusal to agents automatically. Trigger list catches Rails terminology, the `(type, id)` shape, and the colloquial English forms ("comments on any entity", "tags across entities").
+- **Validator coverage**: existing `W_LOOKS_POLYMORPHIC` warning now load-bearing — fires on any `*_type` enum + `*_id` uuid pair and steers toward per-target refs first, `subtype_of:` second.
+- **`SEED_SCHEMA_VERSION` bumped 11 → 13** to trigger re-seed in deployed KGs.
+- **4 new tests** at `tests/unit/test_polymorphic_association_guidance_1240.py` pin the KB entry, the trigger coverage, the anti-pattern framing, and the ADR's existence.
+- **Closes** #1240.
+
+### Agent Guidance
+
+- When an author describes a domain that sounds like polymorphic association ("comments on multiple entities", "attachments to any record", "tags across types", "audit log referencing entities"), refuse the shape by default and route to one of: per-target entities (Option 1), an event-stream entity (Option 2), per-pair junctions (Option 3), `subtype_of:` (Option 4), or small-N nullable refs + a mutex CHECK (Option 5). Prior on "this is a legitimate polymorphic association use case" is ~5%. See ADR-0027 and `inference_kb.toml: polymorphic_association_antipattern`.
+
 ### Added (#1241-#1247 / #1217 Phase 2 — 7 pattern entries in semantics KB)
 
 - **7 new `[patterns.X]` entries** in `src/dazzle/mcp/semantics_kb/patterns.toml`, one per supported 3NF pattern:
