@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1248 / #1217 Phase 2 — `subtype_of:` discoverability)
+
+- **`[patterns.subtype_of]` entry in `semantics_kb/patterns.toml`** with the full pattern profile: name, description carrying the escape-hatch framing, when-to-use / when-NOT-to-use lists, a copy-paste DSL example from the `asset_registry` fixture, anti-pattern callout linking the W_LOOKS_POLYMORPHIC + W_SUBTYPE_OF_OVERREACH validator warnings, and cross-links to the `subtype_of_only_for_true_isa` modeling-guidance entry in the inference KB.
+- **`SEED_SCHEMA_VERSION` bumped 9 → 10** at `src/dazzle/mcp/knowledge_graph/seed.py:24` to trigger a KG re-seed on next boot so the new pattern entry lands in already-deployed graphs.
+- **README cross-link** added under `## Docs` pointing at `fixtures/` (canonical worked example for both `shapes_validation` RBAC and `asset_registry` `subtype_of:` TPT).
+- **3 new tests** at `tests/unit/test_patterns_subtype_of_kb_1248.py` pin: the TOML entry exists with the escape-hatch framing, `get_dsl_patterns()` exposes it, and the `pattern_count` meta tracks actuals (regression guard for the next pattern addition).
+- **Out of scope** (deferred): MCP `bootstrap` spec-analyse pattern recognition is currently shape-driven via the LLM cognition pass and doesn't have per-pattern recognisers for any of the 3NF patterns — that's a separate cross-pattern infrastructure piece, not specific to `subtype_of:`.
+
 ### Fixed (#1233 — `row_action:` buttons fire POSTs)
 
 - **Server emits the resolved POST URL on each row_action button** as `data-dz-row-action-url="<url>"` alongside the existing `data-dz-row-action` + `data-dz-row-args` attributes. The renderer (`_render_row_action_button` in `workspace_card_bodies.py`) takes a new `action_url=` kwarg; the route-builder builds an `action_id → POST URL` map once per app boot from `appspec.surfaces` (each CREATE surface mounts at `POST /{plural(entity)}`) and threads it through `WorkspaceRegionContext.row_action_routes` to all three call sites (cohort_strip cells, day_timeline slots, list rows).

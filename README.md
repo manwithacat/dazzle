@@ -311,6 +311,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
 - **[Examples](examples/)** — runnable example applications
+- **[Fixtures](fixtures/)** — framework-validation probes (`shapes_validation` for RBAC, `asset_registry` for `subtype_of:` TPT inheritance)
 
 ---
 

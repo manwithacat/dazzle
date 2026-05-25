@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 9  # v9: subtype_of escape-hatch modeling guidance entry
+SEED_SCHEMA_VERSION = 10  # v10: patterns.subtype_of full pattern entry (#1248 Phase 2)
 
 
 def compute_seed_version() -> str:
