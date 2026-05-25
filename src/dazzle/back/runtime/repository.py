@@ -462,6 +462,33 @@ def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str,
     return "integrity", None
 
 
+def _translate_integrity_error(exc: Exception, table_name: str) -> ConstraintViolationError:
+    """Translate a backend integrity error into the framework-canonical
+    :class:`ConstraintViolationError` shape.
+
+    Used by ``Repository.create`` / ``Repository.update`` and the bespoke
+    ``create_subtype`` / ``update_subtype`` paths so all four sites raise
+    identical-shape errors. #1239 extracted this to dedupe four ~19-line
+    copies that had drifted out of slice 3e.iii.
+    """
+    ctype, field = _parse_constraint_error(exc, table_name)
+    if ctype == "unique":
+        msg = (
+            f"A {table_name} with this {field} already exists"
+            if field
+            else f"Duplicate value violates unique constraint on {table_name}"
+        )
+    elif ctype == "foreign_key":
+        msg = (
+            f"Referenced record not found for field '{field}' on {table_name}"
+            if field
+            else f"Referenced record does not exist for {table_name}"
+        )
+    else:
+        msg = f"Integrity constraint violated on {table_name}: {exc}"
+    return ConstraintViolationError(msg, field=field, constraint_type=ctype)
+
+
 # Alias to prevent mypy resolving `list` as Repository.list inside the class
 _list = list
 
@@ -679,22 +706,7 @@ class Repository(Generic[T]):
                 cursor = conn.cursor()
                 cursor.execute(sql, values)  # nosemgrep
         except _INTEGRITY_ERRORS as exc:
-            ctype, field = _parse_constraint_error(exc, self.table_name)
-            if ctype == "unique":
-                msg = (
-                    f"A {self.table_name} with this {field} already exists"
-                    if field
-                    else f"Duplicate value violates unique constraint on {self.table_name}"
-                )
-            elif ctype == "foreign_key":
-                msg = (
-                    f"Referenced record not found for field '{field}' on {self.table_name}"
-                    if field
-                    else f"Referenced record does not exist for {self.table_name}"
-                )
-            else:
-                msg = f"Integrity constraint violated on {self.table_name}: {exc}"
-            raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+            raise _translate_integrity_error(exc, self.table_name) from exc
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("insert", latency_ms, rows=1)
 
@@ -887,22 +899,7 @@ class Repository(Generic[T]):
                 cursor.execute(sql, values)  # nosemgrep
                 rowcount = cursor.rowcount
         except _INTEGRITY_ERRORS as exc:
-            ctype, field = _parse_constraint_error(exc, self.table_name)
-            if ctype == "unique":
-                msg = (
-                    f"A {self.table_name} with this {field} already exists"
-                    if field
-                    else f"Duplicate value violates unique constraint on {self.table_name}"
-                )
-            elif ctype == "foreign_key":
-                msg = (
-                    f"Referenced record not found for field '{field}' on {self.table_name}"
-                    if field
-                    else f"Referenced record does not exist for {self.table_name}"
-                )
-            else:
-                msg = f"Integrity constraint violated on {self.table_name}: {exc}"
-            raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+            raise _translate_integrity_error(exc, self.table_name) from exc
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("update", latency_ms, rows=rowcount)
 
@@ -1628,17 +1625,6 @@ class RepositoryFactory:
 # Repository.delete() against the base table cascades automatically.
 
 
-def _subtype_kind_value(child_entity: str) -> str:
-    """Discriminator value for a subtype: snake_case(child_entity).
-
-    `Vehicle` -> `vehicle`, `PoweredAsset` -> `powered_asset`. Mirrors the
-    convention used by the trigger emitter (Task 13).
-    """
-    from dazzle.core.archetype_expander import _to_snake_case
-
-    return _to_snake_case(child_entity)
-
-
 def _split_payload_by_owner(
     payload: dict[str, Any],
     base_spec: EntitySpec,
@@ -1695,9 +1681,14 @@ def create_subtype(
 
     base_payload, child_payload = _split_payload_by_owner(payload, base_spec, child_spec)
 
+    # #1239: snake_case the child entity name to derive the discriminator
+    # value. Mirrors the convention used by the trigger emitter (Task 13)
+    # and pg_backend.py's child-table mapping (~line 461).
+    from dazzle.core.archetype_expander import _to_snake_case
+
     new_id = uuid4()
     base_payload["id"] = new_id
-    base_payload["kind"] = _subtype_kind_value(child_spec.name)
+    base_payload["kind"] = _to_snake_case(child_spec.name)
     child_payload["id"] = new_id
 
     base_db = _convert_payload_for_db(base_payload, base_spec)
@@ -1722,24 +1713,8 @@ def create_subtype(
             cursor.execute(base_sql, base_values)  # nosemgrep
             cursor.execute(child_sql, child_values)  # nosemgrep
     except _INTEGRITY_ERRORS as exc:
-        # Reuse the constraint-translation logic so callers see the same
-        # error shape as plain Repository.create().
-        ctype, field = _parse_constraint_error(exc, child_spec.name)
-        if ctype == "unique":
-            msg = (
-                f"A {child_spec.name} with this {field} already exists"
-                if field
-                else f"Duplicate value violates unique constraint on {child_spec.name}"
-            )
-        elif ctype == "foreign_key":
-            msg = (
-                f"Referenced record not found for field '{field}' on {child_spec.name}"
-                if field
-                else f"Referenced record does not exist for {child_spec.name}"
-            )
-        else:
-            msg = f"Integrity constraint violated on {child_spec.name}: {exc}"
-        raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+        # Same error shape as plain Repository.create().
+        raise _translate_integrity_error(exc, child_spec.name) from exc
 
     return new_id
 
@@ -1796,19 +1771,4 @@ def update_subtype(
                 sql, values = _update_sql(child_spec.name, child_db)
                 cursor.execute(sql, values)  # nosemgrep
     except _INTEGRITY_ERRORS as exc:
-        ctype, field = _parse_constraint_error(exc, child_spec.name)
-        if ctype == "unique":
-            msg = (
-                f"A {child_spec.name} with this {field} already exists"
-                if field
-                else f"Duplicate value violates unique constraint on {child_spec.name}"
-            )
-        elif ctype == "foreign_key":
-            msg = (
-                f"Referenced record not found for field '{field}' on {child_spec.name}"
-                if field
-                else f"Referenced record does not exist for {child_spec.name}"
-            )
-        else:
-            msg = f"Integrity constraint violated on {child_spec.name}: {exc}"
-        raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+        raise _translate_integrity_error(exc, child_spec.name) from exc

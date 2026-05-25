@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored (#1239 — Repository.py subtype-path tidy-ups)
+
+- **`_translate_integrity_error(exc, table_name)` helper** extracted at `src/dazzle/back/runtime/repository.py:465`. Collapses four ~19-line copies of the integrity-error → `ConstraintViolationError` translation block (in `Repository.create`, `Repository.update`, `create_subtype`, `update_subtype`) into one shared helper. No behaviour change — all four sites raise the same `ConstraintViolationError` shape, only now from one source of truth.
+- **Removed `_subtype_kind_value` single-use wrapper**. The one call site (`create_subtype`) now inlines `_to_snake_case(child_spec.name)` directly, matching the existing `pg_backend.py` convention.
+
 ### Added (#1238 — project-KG indexes subtype polymorphism relations)
 
 - **`is_subtype_of` and `has_subtype` relation types** registered in `KnowledgeGraph.RELATION_TYPES` (`src/dazzle/mcp/knowledge_graph/store.py:73`).
