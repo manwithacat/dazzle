@@ -94,5 +94,5 @@ The substrate's value emerges when it covers the whole codebase. The first raw-S
 ## Cross-references
 
 - ADR-0009 (predicate algebra) — the substrate-side closure that user-code raw SQL bypasses.
-- `src/dazzle_back/repository/` — Repository helpers that should cover ~all real read patterns.
+- `src/dazzle/back/runtime/repository.py` — Repository helpers that should cover ~all real read patterns.
 - The `awesome-secure-defaults` list (Helmet, secure-by-construction libraries) recommends the same approach industry-wide; raw SQL string-building is the canonical example.

@@ -9,7 +9,7 @@ concept_count = 7
 category = "Testing"
 doc_page = "testing"
 doc_order = 1
-definition = "End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running DNR app."
+definition = "End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running Dazzle app."
 related = ["flowspec", "semantic_dom", "authentication"]
 
 [concepts.flowspec]
@@ -39,7 +39,7 @@ related = ["e2e_testing", "semantic_dom"]
 category = "Testing"
 doc_page = "testing"
 doc_order = 3
-definition = "Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements."
+definition = "Convention for data attributes in the Dazzle UI runtime that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements."
 related = ["e2e_testing", "flowspec"]
 
 [concepts.capability_discovery]

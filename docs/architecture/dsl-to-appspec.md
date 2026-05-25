@@ -11,10 +11,10 @@ graph TD
     IR --> Linker
     Linker --> Validator
     Validator --> Runtime{Runtime}
-    Runtime --> Back[DNR Backend]
-    Runtime --> UI[Dazzle UI]
+    Runtime --> Back[FastAPI Runtime<br/>dazzle/back]
+    Runtime --> UI[Server-rendered UI<br/>dazzle/ui · typed Fragments + HTMX]
     Back --> API[FastAPI App]
-    UI --> JS[HTMX Templates]
+    UI --> HTML[HTML + hx-* attributes]
 ```
 
 ## Stage 1: Parsing
@@ -95,10 +95,10 @@ Validation checks:
 
 The validated AppSpec feeds into runtime generators:
 
-### Backend (DNR-Back)
+### Backend (`dazzle/back`)
 
 ```python
-from dazzle_back.converters import convert_appspec_to_backend
+from dazzle.back.converters import convert_appspec_to_backend
 
 backend_spec = convert_appspec_to_backend(appspec)
 ```
@@ -109,10 +109,10 @@ Produces:
 - Services from ServiceSpec
 - FastAPI routes from EndpointSpec
 
-### Frontend (DNR-UI)
+### Frontend (`dazzle/ui`)
 
 ```python
-from dazzle_ui.converters import convert_appspec_to_ui
+from dazzle.ui.converters import convert_appspec_to_ui
 
 ui_spec = convert_appspec_to_ui(appspec)
 ```
@@ -120,8 +120,8 @@ ui_spec = convert_appspec_to_ui(appspec)
 Produces:
 
 - Workspaces with layouts
-- Components from surfaces
-- Reactive state bindings
+- Surfaces rendered as typed Fragment primitive trees (`render: fragment`)
+- HTML emission with `hx-*` HTMX attributes for declarative interactions
 
 ## Data Flow
 

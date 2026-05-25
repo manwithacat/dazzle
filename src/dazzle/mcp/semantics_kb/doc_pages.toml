@@ -146,6 +146,21 @@ discovery, CRUD completeness analysis, workflow coherence checks, and \
 RBAC validation.
 """
 
+[pages.mcp-tools]
+title = "MCP Tool Inventory"
+slug = "mcp-tools"
+order = 13.5
+auto_source = "mcp_tools"
+intro = """
+Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from \
+the tool registry — every operation, parameter, and description below comes \
+straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` \
+at build time. Run `dazzle docs generate` to refresh after adding, renaming, \
+or removing tools or operations. The drift gate at \
+`tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface \
+changes that didn't update the docs.
+"""
+
 [pages.frontend]
 title = "Frontend & Templates"
 slug = "frontend"

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — live MCP tool inventory + docs staleness sweep (DNR retirement, package-path refresh)
+
+- **`docs/reference/mcp-tools.md`** — auto-generated live inventory of the MCP tool registry. Lists every tool, its operations, parameters, and description, sourced from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Current count: **34 tools, 156 operations** (will drift; the page is regenerated every `dazzle docs generate`).
+- **`docs_gen.py` gains a third page shape: `auto_source`.** Pages declaring `auto_source = "<key>"` in `doc_pages.toml` dispatch to a generator function that introspects live code. First registered generator: `mcp_tools`. Adding new live inventories is a two-step change (TOML page declaration + generator function in `_generate_auto_source`).
+- **README MCP section** swapped the stale "26 tools with 170+ operations" claim for a link to the live inventory page plus a build-time count.
+- **DNR / "Dazzle Native Runtime" retired across user-facing docs.** Renamed in `docs/architecture/overview.md` (status banner explaining the rename), `docs/architecture/dsl-to-appspec.md`, `docs/architecture/mcp-server.md`, `docs/contributing/testing.md`, `docs/contributing/dev-setup.md`, `docs/guides/observability.md`, `docs/examples/support-tickets.md`, `docs/examples/fieldtest-hub.md`, plus the KB source `src/dazzle/mcp/semantics_kb/testing.toml` so regenerated reference pages stay clean. The only remaining DNR mentions in user-facing docs are in the architecture/overview.md status banner that *documents* the rename.
+- **Package-path refresh: `src/dazzle_back/` → `src/dazzle/back/`, `src/dazzle_ui/` → `src/dazzle/ui/`.** The package was moved inside the main `dazzle` namespace; docs hadn't caught up. Swept across `docs/llms.txt`, `docs/CSS_MIGRATION_GUIDE.md`, `docs/typed-fragment-pilot-guide.md`, every ADR that mentioned the old paths (0005, 0008, 0011, 0012, 0014, 0017, 0021, 0022), `docs/contributing/*.md`, `docs/guides/marketing-conformance.md`, `docs/reference/card-safety-invariants.md`, the recent counter-priors, and the doc-infra plan.
+- **Tests**: `test_docs_gen.py` updated for 21 pages (added `mcp-tools`); two new tests pin the `auto_source` shape (`test_mcp_tools_page_is_auto_source`) and the registry-derived count (`test_inventory_counts_match_registry`).
+
 ### Added — README substrate framing + docs Jinja2 → typed Fragments cleanup + prose-page TOML migration
 
 - **README.md** — new section "The substrate: three layers of prior correction" between *The thesis* and *Design principles*. Explains grammar-restriction / inference-bias / post-hoc-filter and points readers at `docs/counter-priors/INDEX.md`.

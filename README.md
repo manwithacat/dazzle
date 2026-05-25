@@ -257,7 +257,7 @@ For the full architecture, see [docs/architecture/overview.md](docs/architecture
 
 ## AI-assisted development
 
-Dazzle ships as both a runtime and an AI development environment. When used with Claude Code (via MCP), you get access to **26 tools with 170+ operations** that span the full lifecycle:
+Dazzle ships as both a runtime and an AI development environment. When used with Claude Code (via MCP), you get access to a growing set of tools that span the full lifecycle. The exact tool count, operations, and parameters drift with development — see the [MCP Tool Inventory](docs/reference/mcp-tools.md) for the live list, regenerated from the registry every build. As of the latest doc regen: **34 tools, 156 operations**. Broad lifecycle coverage:
 
 | Stage | What the tools do |
 |-------|------------------|
@@ -269,7 +269,7 @@ Dazzle ships as both a runtime and an AI development environment. When used with
 
 The agent framework uses an **observe-decide-act-record** loop to autonomously explore running applications, discover gaps, and propose DSL fixes. Discovery modes include persona-based exploration, CRUD completeness analysis, workflow coherence checks, and headless DSL/KG analysis.
 
-For the full MCP tool reference, see [Architecture: MCP Server](docs/architecture/mcp-server.md). For how the autonomous slash-command harness drives day-to-day development on the framework itself, see [Autonomous Harness](docs/autonomous-harness.md).
+For the live tool-by-tool inventory (operations, parameters, descriptions), see the [MCP Tool Inventory](docs/reference/mcp-tools.md) — generated from the registry every doc build. For the architectural model, see [Architecture: MCP Server](docs/architecture/mcp-server.md). For how the autonomous slash-command harness drives day-to-day development on the framework itself, see [Autonomous Harness](docs/autonomous-harness.md).
 
 ### Claude Code integration
 

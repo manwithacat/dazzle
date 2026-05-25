@@ -106,6 +106,6 @@ A useful heuristic for review: if you see `for x in xs:` followed by `something.
 ## Cross-references
 
 - `docs/reference/reports.md` — the canonical aggregate doctrine for chart/report regions.
-- `src/dazzle_back/repository/` — `Repository.aggregate` and `latest_per_group`.
+- `src/dazzle/back/runtime/repository.py` — `Repository.aggregate` and `latest_per_group`.
 - `docs/reference/project-layout.md` — the `app/<category>/` layout convention that scopes where this counter-prior applies.
 - pr-review-toolkit — a review-time net for catching N+1 patterns.

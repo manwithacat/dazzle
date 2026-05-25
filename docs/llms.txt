@@ -27,12 +27,12 @@ cd examples/simple_task && dazzle serve
 | Path | Contents |
 |------|----------|
 | `src/dazzle/core/` | Parser, IR types, linker, validation |
-| `src/dazzle/mcp/` | MCP server — 26 tools, knowledge graph |
+| `src/dazzle/mcp/` | MCP server — see `docs/reference/mcp-tools.md` for the live tool inventory + knowledge graph |
 | `src/dazzle/agent/` | Mission-driven agent framework |
 | `src/dazzle/compliance/` | ISO 27001 + SOC 2 compliance pipeline |
 | `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail |
-| `src/dazzle_back/` | FastAPI runtime (CRUD, auth, events, grants) |
-| `src/dazzle_ui/` | HTMX + DaisyUI frontend runtime |
+| `src/dazzle/back/` | FastAPI runtime (CRUD, auth, events, grants) |
+| `src/dazzle/ui/` | Server-rendered UI runtime — typed Fragment substrate + HTMX |
 | `docs/reference/` | DSL reference documentation |
 | `examples/` | Runnable example applications |
 

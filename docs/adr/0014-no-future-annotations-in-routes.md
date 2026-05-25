@@ -57,4 +57,4 @@ Simply don't use the import in files that FastAPI inspects.
 
 ## Implementation
 
-Removed `from __future__ import annotations` from 23 files in `src/dazzle_back/` that define route handlers, middleware, or dependencies. CI badge went green after being red for 24 hours.
+Removed `from __future__ import annotations` from 23 files in `src/dazzle/back/` that define route handlers, middleware, or dependencies. CI badge went green after being red for 24 hours.

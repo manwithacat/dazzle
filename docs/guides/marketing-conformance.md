@@ -8,7 +8,7 @@ This guide walks a Dazzle project through bringing its public-facing surface (ma
 
 ## What's at stake
 
-The framework's site_routes (`src/dazzle_back/runtime/site_routes.py`) carefully maintain three invariants on marketing GETs:
+The framework's site_routes (`src/dazzle/back/runtime/site_routes.py`) carefully maintain three invariants on marketing GETs:
 
 1. **Cookie discipline** — never call `set_cookie` / `delete_cookie` on `dazzle_session` or `dazzle_csrf`
 2. **CSRF middleware compatibility** — preserve framework-injected Set-Cookie headers
@@ -228,6 +228,6 @@ Then redeploy and run your site-fuzz / persona harness — the 403-on-marketing-
 
 - ADR-0021 — Marketing pages via sitespec (the policy this guide implements)
 - ADR-0011 — SSR + HTMX architecture
-- `src/dazzle_back/runtime/site_routes.py` — framework site router (the code path your sitespec entries flow through)
-- `src/dazzle_back/runtime/shell.py` — `render_in_app_shell` for auth-required non-app pages
+- `src/dazzle/back/runtime/site_routes.py` — framework site router (the code path your sitespec entries flow through)
+- `src/dazzle/back/runtime/shell.py` — `render_in_app_shell` for auth-required non-app pages
 - [#969](https://github.com/manwithacat/dazzle/issues/969) — the regression that surfaced this guide

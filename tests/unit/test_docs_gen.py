@@ -26,10 +26,11 @@ class TestLoadConcepts:
 
 
 class TestLoadPageMetadata:
-    def test_loads_20_pages(self) -> None:
+    def test_loads_21_pages(self) -> None:
         # 17 concept-assembled + 3 prose pages (rhythms, graphs, compliance)
+        # + 1 auto-source page (mcp-tools)
         pages = load_page_metadata()
-        assert len(pages) == 20
+        assert len(pages) == 21
 
     def test_pages_have_required_fields(self) -> None:
         pages = load_page_metadata()
@@ -46,6 +47,39 @@ class TestLoadPageMetadata:
             assert (pages[slug].get("body") or "").strip(), (
                 f"prose page {slug!r} must declare a non-empty `body` field"
             )
+
+    def test_mcp_tools_page_is_auto_source(self) -> None:
+        """The MCP tool inventory must be auto-generated from the live registry."""
+        pages = load_page_metadata()
+        assert "mcp-tools" in pages, "mcp-tools page missing from doc_pages.toml"
+        assert pages["mcp-tools"].get("auto_source") == "mcp_tools", (
+            "mcp-tools page must declare `auto_source = 'mcp_tools'`"
+        )
+
+
+class TestMcpToolsInventory:
+    """Tests for the live MCP tool inventory page."""
+
+    def test_inventory_renders_at_least_one_tool(self) -> None:
+        from dazzle.core.docs_gen import _generate_mcp_tools_inventory
+
+        out = _generate_mcp_tools_inventory()
+        assert "## Tool index" in out
+        assert "## Per-tool detail" in out
+        # Spot-check a known stable tool.
+        assert "### `dsl`" in out, "dsl tool must appear in the inventory"
+        assert "### `knowledge`" in out
+        assert "### `bootstrap`" in out
+
+    def test_inventory_counts_match_registry(self) -> None:
+        """The header tally must match what the registry actually exposes."""
+        from dazzle.core.docs_gen import _extract_operations, _generate_mcp_tools_inventory
+        from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
+
+        out = _generate_mcp_tools_inventory()
+        tools = get_all_consolidated_tools()
+        total_ops = sum(len(_extract_operations(t.inputSchema)) for t in tools)
+        assert f"**Live count:** {len(tools)} tools, {total_ops} operations." in out
 
 
 class TestGenerateReferenceDocs:

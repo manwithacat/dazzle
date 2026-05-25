@@ -191,7 +191,7 @@ attention notice:
 
 ## API Endpoints
 
-With 6 entities, DNR generates 24 CRUD endpoints:
+With 6 entities, the runtime generates 24 CRUD endpoints:
 
 | Entity | Count |
 |--------|-------|

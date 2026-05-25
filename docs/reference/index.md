@@ -18,6 +18,7 @@
 | [Ledgers & Transactions](ledgers.md) | Ledgers and transactions provide TigerBeetle-backed double-entry accounting. |
 | [LLM Models & Intents](llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
 | [Testing](testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
+| [MCP Tool Inventory](mcp-tools.md) | Live inventory of the MCP tools exposed by `dazzle mcp run`. |
 | [Frontend & Templates](frontend.md) | The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass HTML primitives) with HTMX for declarative server interactions. |
 | [Messaging & Events](messaging.md) | Messaging and events enable asynchronous communication between components and users. |
 | [Graph Features](graphs.md) | Dazzle has first-class support for property graphs — data models where entities form nodes and their relationships form edges. |

@@ -140,9 +140,9 @@ Tests `dazzle validate` and AppSpec-to-BackendSpec conversion (no server needed)
 pytest tests/integration/test_serve_validation.py -v
 ```
 
-### 4. DNR Runtime Tests
+### 4. Runtime Tests
 
-#### Backend Tests (`src/dazzle_back/tests/`)
+#### Backend Tests (`src/dazzle/back/tests/`)
 
 | File | Description |
 |------|-------------|
@@ -157,7 +157,7 @@ pytest tests/integration/test_serve_validation.py -v
 | `test_file_storage.py` | File uploads |
 | `test_fts.py` | Full-text search |
 
-#### UI Tests (`src/dazzle_ui/tests/`)
+#### UI Tests (`src/dazzle/ui/tests/`)
 
 | File | Description |
 |------|-------------|
@@ -168,7 +168,7 @@ pytest tests/integration/test_serve_validation.py -v
 
 ### 5. JavaScript Tests
 
-**Location:** `src/dazzle_ui/runtime/static/js/*.test.js`
+**Location:** `src/dazzle/ui/runtime/static/js/*.test.js`
 **Framework:** Vitest (jsdom environment)
 **Execution:** Pre-commit, CI (js-test job)
 
@@ -500,8 +500,8 @@ class TestMyExample:
 | Integration | `tests/integration/` | ✅ | ❌ | ✅ |
 | E2E (Playwright) | `tests/e2e/` | ✅ | ❌ | ❌ (local only) |
 | E2E (Semantic) | `tests/e2e/test_semantic_dom_contract.py` | ✅ | ❌ | ✅ |
-| DNR Backend | `src/dazzle_back/tests/` | ✅ | ❌ | ✅ |
-| Dazzle UI | `src/dazzle_ui/tests/` | ✅ | ❌ | ✅ |
+| Backend runtime | `src/dazzle/back/tests/` | ✅ | ❌ | ✅ |
+| UI runtime | `src/dazzle/ui/tests/` | ✅ | ❌ | ✅ |
 | JavaScript | `*.test.js` | ✅ | ✅ | ✅ |
 | Example E2E (P0) | `examples/*/tests/e2e/` | ✅ | ❌ | ✅ |
 | Example E2E (P1/P2) | `examples/*/tests/e2e/` | ✅ | ❌ | ⚠️ (main only) |

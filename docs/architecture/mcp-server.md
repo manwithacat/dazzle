@@ -399,7 +399,7 @@ src/dazzle/mcp/server/
 │   ├── pulse.py                 # Project health reports
 │   ├── composition.py           # Visual composition analysis
 │   ├── policy.py                # RBAC access control analysis
-│   ├── status.py                # MCP/DNR status and activity
+│   ├── status.py                # MCP + runtime status and activity
 │   └── ...
 ├── state.py                     # Project state management
 ├── progress.py                  # Progress reporting

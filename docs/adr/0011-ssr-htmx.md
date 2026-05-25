@@ -95,4 +95,4 @@ Independent deployment of UI and API with a CDN in front.
 
 ## Implementation
 
-Templates live in `src/dazzle_ui/templates/`. HTMX is loaded from CDN or vendored into `src/dazzle_ui/static/`. FastAPI route handlers in `src/dazzle_back/` return `TemplateResponse` objects backed by Jinja2.
+Templates live in `src/dazzle/ui/templates/`. HTMX is loaded from CDN or vendored into `src/dazzle/ui/static/`. FastAPI route handlers in `src/dazzle/back/` return `TemplateResponse` objects backed by Jinja2.

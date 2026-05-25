@@ -130,7 +130,7 @@ entity Comment "Comment":
 
 ## API Endpoints
 
-With 3 entities, DNR generates 12 CRUD endpoints:
+With 3 entities, the runtime generates 12 CRUD endpoints:
 
 | Entity | Endpoints |
 |--------|-----------|

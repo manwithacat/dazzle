@@ -9,7 +9,7 @@ DAZZLE provides a comprehensive testing toolkit including E2E testing with Playw
 
 ## E2E Testing
 
-End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running DNR app.
+End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running Dazzle app.
 
 **Related:** [Flowspec](testing.md#flowspec), [Semantic Dom](testing.md#semantic-dom), [Authentication](access-control.md#authentication)
 
@@ -44,7 +44,7 @@ JSON/YAML specification defining E2E test flows. Auto-generated from DSL but can
 
 ## Semantic Dom
 
-Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements.
+Convention for data attributes in the Dazzle UI runtime that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements.
 
 **Related:** [E2E Testing](testing.md#e2e-testing), [Flowspec](testing.md#flowspec)
 

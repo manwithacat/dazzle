@@ -43,7 +43,7 @@ npm test
 
 # Type check
 mypy src/dazzle
-npx tsc --noEmit -p src/dazzle_ui/runtime/static/js/
+npx tsc --noEmit -p src/dazzle/ui/runtime/static/js/
 ```
 
 ## Project Structure
@@ -63,19 +63,19 @@ dazzle/
 │   │   │           ├── project.py   # Project management
 │   │   │           ├── dsl.py       # DSL validation/inspection
 │   │   │           ├── knowledge.py # Concept lookup
-│   │   │           ├── status.py    # MCP/DNR status
+│   │   │           ├── status.py    # MCP + runtime status
 │   │   │           ├── api_packs.py # External API packs
 │   │   │           └── stories.py   # Story generation
+│   │   ├── back/                  # FastAPI backend runtime
+│   │   │   ├── runtime/           # Server and API generation
+│   │   │   └── converters/        # AppSpec → BackendSpec
+│   │   ├── ui/                    # Server-rendered UI runtime
+│   │   │   ├── runtime/
+│   │   │   │   ├── combined_server.py  # HTTP server
+│   │   │   │   ├── site_renderer.py    # Site/auth page HTML
+│   │   │   │   └── static/             # JS/CSS assets
+│   │   │   └── converters/        # AppSpec → typed Fragment trees
 │   │   └── eject/                 # Code generation adapters
-│   ├── dazzle_back/           # FastAPI backend runtime
-│   │   ├── runtime/               # Server and API generation
-│   │   └── converters/            # AppSpec → BackendSpec
-│   └── dazzle_ui/             # JavaScript UI runtime
-│       ├── runtime/
-│       │   ├── combined_server.py # HTTP server
-│       │   ├── site_renderer.py   # Site/auth page HTML generation
-│       │   └── static/            # JS/CSS assets
-│       └── converters/            # AppSpec → UISpec
 ├── tests/
 │   ├── unit/                      # Unit tests
 │   ├── integration/               # Integration tests
@@ -193,7 +193,7 @@ pre-commit run --all-files -v
 ### JavaScript type errors
 
 ```bash
-npx tsc --noEmit -p src/dazzle_ui/runtime/static/js/
+npx tsc --noEmit -p src/dazzle/ui/runtime/static/js/
 ```
 
 ## See Also

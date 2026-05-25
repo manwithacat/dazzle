@@ -195,7 +195,7 @@ Scanner._is_card`.
 ### INV-6: Region templates emit zero chrome
 
 **Rule**: Every template under
-`src/dazzle_ui/templates/workspace/regions/*.html`, and the shared
+`src/dazzle/ui/templates/workspace/regions/*.html`, and the shared
 `macros/region_wrapper.html::region_card`, must emit **no** card
 chrome (no rounded + full border + bg on any block container).
 Items inside a region (rows, tiles, events) must also be bare —
@@ -209,7 +209,7 @@ pre-v0.57.37 follow-ups to #794.
 
 **Enforcement**:
 - Single render site verification: regions are rendered ONLY via
-  `_fetch_region_html()` in `src/dazzle_back/runtime/
+  `_fetch_region_html()` in `src/dazzle/back/runtime/
   workspace_rendering.py:879`. If a new render site is added,
   re-validate the invariant there.
 - Jinja test: `test_template_html.py::TestWorkspaceRegionRendering::
@@ -236,7 +236,7 @@ renders the title produces the three-copies-in-DOM symptom.
 **Enforcement**:
 - Composite test: `TestDashboardRegionCompositeShapes::
   test_composite_has_no_duplicate_titles`.
-- Manual grep: `grep "{{ title }}" src/dazzle_ui/templates/workspace/
+- Manual grep: `grep "{{ title }}" src/dazzle/ui/templates/workspace/
   regions/*.html` should return empty.
 
 ---
