@@ -238,6 +238,156 @@ def _detect_try_as_conditional(tree: ast.AST, path: Path) -> list[_ShapeHit]:
 
 
 # ---------------------------------------------------------------------------
+# PA-LLM-08 helpers — N+1 queries in user app code
+# ---------------------------------------------------------------------------
+
+_QUERYSET_METHODS = frozenset(
+    {
+        "all",
+        "list",
+        "first",
+        "last",
+        "filter",
+        "order_by",
+        "count",
+        "exists",
+    }
+)
+# `get` is deliberately excluded — it collides with dict.get(). The
+# unambiguous `<x>_repo.get(...)` shape is covered by _REPO_METHODS below.
+
+_REPO_METHODS = frozenset(
+    {
+        "list",
+        "fetch",
+        "fetch_by_id",
+        "get",
+        "find",
+    }
+)
+
+_LEN_LIKE_BUILTINS = frozenset({"len"})
+# Conservative start. Backfill audit (#1256) may expand to sum, sorted, etc.
+
+
+def _names_in_expr(node: ast.AST) -> set[str]:
+    """Return every Name id referenced anywhere inside the given expression."""
+    return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+
+
+def _loop_targets(node: ast.For) -> set[str]:
+    """Return the set of names bound by a for-loop target.
+
+    Handles `for x in xs:` and `for x, y in items:` (tuple unpacking).
+    """
+    target = node.target
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, ast.Tuple):
+        return {elt.id for elt in target.elts if isinstance(elt, ast.Name)}
+    return set()
+
+
+def _root_of_attribute_chain(node: ast.AST) -> ast.Name | None:
+    """Walk an Attribute chain to its root Name. Returns None if not a Name."""
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return node if isinstance(node, ast.Name) else None
+
+
+def _matches_queryset_shape(call: ast.Call, loop_targets: set[str]) -> bool:
+    """Shape 1: <loopvar>.<attr>...<attr>.<queryset_method>(...)."""
+    if not isinstance(call.func, ast.Attribute):
+        return False
+    if call.func.attr not in _QUERYSET_METHODS:
+        return False
+    root = _root_of_attribute_chain(call.func.value)
+    return root is not None and root.id in loop_targets
+
+
+def _matches_repo_shape(call: ast.Call, loop_targets: set[str]) -> bool:
+    """Shape 2: <x>_repo.<repo_method>(...) where any arg references a loop var."""
+    if not isinstance(call.func, ast.Attribute):
+        return False
+    if call.func.attr not in _REPO_METHODS:
+        return False
+    if not isinstance(call.func.value, ast.Name):
+        return False
+    if not call.func.value.id.endswith("_repo"):
+        return False
+    referenced: set[str] = set()
+    for arg in call.args:
+        referenced |= _names_in_expr(arg)
+    for kw in call.keywords:
+        if kw.value is not None:
+            referenced |= _names_in_expr(kw.value)
+    return bool(referenced & loop_targets)
+
+
+def _matches_len_wrap_shape(call: ast.Call, loop_targets: set[str]) -> bool:
+    """Shape 3: len(<loopvar>.attr.all()) (or another _LEN_LIKE_BUILTINS wrapper)."""
+    if not (isinstance(call.func, ast.Name) and call.func.id in _LEN_LIKE_BUILTINS):
+        return False
+    if not call.args:
+        return False
+    inner = call.args[0]
+    return isinstance(inner, ast.Call) and _matches_queryset_shape(inner, loop_targets)
+
+
+def _detect_n_plus_one(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Return _ShapeHit records for every N+1-shaped call inside a for-loop body.
+
+    Uses the existing _ShapeHit dataclass from round 1 (PA-LLM-07). The
+    `try_line` field carries the outer `for` statement's line number so the
+    suppression check can match a `# noqa: PA-LLM-08` comment on the for-line.
+    The field name is historical — round 1 originally used it for the `try:`
+    line. A future rename to `outer_line` is fine but out of scope for this slice.
+
+    When a len-wrap shape is detected, the inner queryset call is *not* reported
+    separately — the outer len() node is the canonical hit.
+    """
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.For):
+            continue
+        targets = _loop_targets(node)
+        if not targets:
+            continue
+        for body_node in node.body:
+            all_calls = [c for c in ast.walk(body_node) if isinstance(c, ast.Call)]
+
+            # Pre-pass: collect inner queryset calls that are wrapped by len().
+            # These will be reported only via their outer len() hit, not standalone.
+            len_wrap_inner: set[int] = set()
+            for call in all_calls:
+                if _matches_len_wrap_shape(call, targets) and call.args:
+                    len_wrap_inner.add(id(call.args[0]))
+
+            for call in all_calls:
+                if _matches_len_wrap_shape(call, targets):
+                    shape = "len_wrap"
+                elif id(call) in len_wrap_inner:
+                    # Skip — already captured as the inner arg of a len_wrap hit.
+                    continue
+                elif _matches_queryset_shape(call, targets):
+                    shape = "queryset"
+                elif _matches_repo_shape(call, targets):
+                    shape = "repo"
+                else:
+                    continue
+                snippet = ast.unparse(call) if hasattr(ast, "unparse") else "<call>"
+                hits.append(
+                    _ShapeHit(
+                        line=call.lineno,
+                        snippet=snippet,
+                        shape=shape,
+                        try_line=node.lineno,  # outer for-line, see docstring
+                    )
+                )
+    return hits
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -913,6 +1063,97 @@ class PythonAuditAgent(DetectionAgent):
                             catalogue_entry="exceptions-as-control-flow",
                         )
                     )
+        return findings
+
+    @heuristic(
+        heuristic_id="PA-LLM-08",
+        category="python_audit",
+        subcategory="llm_bias",
+        title="N+1 queries in user app code",
+    )
+    def check_n_plus_one_in_user_code(self, appspec: AppSpec) -> list[Finding]:
+        """Flag the three canonical shapes of N+1 in user app/ Python.
+
+        See docs/counter-priors/n-plus-one-in-user-code.md for the
+        full taxonomy and the right shapes (Repository.aggregate, batched
+        fetch, latest_per_group).
+        """
+        from dazzle.sentinel.models import (
+            Confidence,
+            Evidence,
+            Finding,
+            Remediation,
+            RemediationEffort,
+            Severity,
+        )
+
+        app_dir = self._project_path / "app"
+        if not app_dir.exists():
+            return []
+
+        catalogue_url = (
+            "https://github.com/cyfutureuk/dazzle/blob/main/"
+            "docs/counter-priors/n-plus-one-in-user-code.md"
+        )
+
+        findings: list[Finding] = []
+        for py_file in sorted(app_dir.rglob("*.py")):
+            try:
+                source_text = py_file.read_text(encoding="utf-8")
+                tree = ast.parse(source_text, filename=str(py_file))
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+            source_lines = source_text.splitlines()
+
+            for hit in _detect_n_plus_one(tree, py_file):
+                call_line_text = (
+                    source_lines[hit.line - 1] if 0 < hit.line <= len(source_lines) else ""
+                )
+                for_line_text = (
+                    source_lines[hit.try_line - 1]
+                    if hit.try_line and 0 < hit.try_line <= len(source_lines)
+                    else ""
+                )
+                if "noqa: PA-LLM-08" in call_line_text:
+                    continue
+                if "noqa: PA-LLM-08" in for_line_text:
+                    continue
+
+                findings.append(
+                    Finding(
+                        agent=AgentId.PA,
+                        heuristic_id="PA-LLM-08",
+                        category="python_audit",
+                        subcategory="llm_bias",
+                        severity=Severity.MEDIUM,
+                        confidence=Confidence.LIKELY,
+                        title=f"N+1 query in loop ({hit.shape})",
+                        description=(
+                            f"This for-loop body matches the {hit.shape!r} N+1 shape. "
+                            "Pull the inner call up to a batched aggregate / fetch "
+                            "before the loop. See linked catalogue entry."
+                        ),
+                        evidence=[
+                            Evidence(
+                                evidence_type="source_pattern",
+                                location=f"{py_file}:{hit.line}",
+                                snippet=hit.snippet,
+                            )
+                        ],
+                        remediation=Remediation(
+                            summary=(
+                                "Replace with Repository.aggregate or batched fetch outside the loop."
+                            ),
+                            effort=RemediationEffort.SMALL,
+                            guidance=(
+                                "See docs/counter-priors/n-plus-one-in-user-code.md "
+                                "for the right shapes (aggregate / latest_per_group / prefetch)."
+                            ),
+                            references=[catalogue_url],
+                        ),
+                        catalogue_entry="n-plus-one-in-user-code",
+                    )
+                )
         return findings
 
     # ------------------------------------------------------------------
