@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - When writing user code in `app/`, prefer explicit conditionals (`d.get(k)`, `getattr(obj, "attr", None)`) and structured errors over `try`/`except`. The four canonical wrong shapes are catalogued at `docs/counter-priors/exceptions-as-control-flow.md`; PA-LLM-07 flags them at sentinel-scan time.
 - When introducing a new counter-prior that has a Sentinel detector, declare the link in the catalogue entry's frontmatter `detectors:` array. The drift test (`tests/unit/test_counter_priors_drift.py`) will fail if the declaration goes missing.
-- For per-line suppression of PA-LLM-07, add `# noqa: PA-LLM-07 — <reason>` on the `try:` line or the handler line. Suppression without a reason is invalid (the human reader needs to know why).
+- For per-line suppression of PA-LLM-07, add `# noqa: PA-LLM-07 — <reason>` on the `try:` line or the handler line. The detector matches on the substring `noqa: PA-LLM-07`; the trailing reason isn't enforced today but is strongly expected — future-you reading the diff needs to know why the antipattern was kept.
 - New project scaffolding ships strict Ruff (TRY/BLE/S/B006/etc.) + Pyright strict + pre-commit defaults. Existing projects can opt in with `dazzle quality bootstrap`.
 
 
