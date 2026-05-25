@@ -175,3 +175,86 @@ def test_heuristic_skips_tests_and_scripts(tmp_path: Path) -> None:
 
     agent = PythonAuditAgent(project_path=tmp_path)
     assert agent.check_n_plus_one_in_user_code(appspec=None) == []  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Comprehension N+1 (#1267) — same shapes, different AST node types.
+# ---------------------------------------------------------------------------
+
+
+def test_listcomp_queryset_chain() -> None:
+    """`[order.lines.all() for order in orders]` fires."""
+    src = "x = [order.lines.all() for order in orders]\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+    assert hits[0].shape == "queryset"
+
+
+def test_listcomp_repo_call() -> None:
+    """`[order_repo.fetch(oid) for oid in ids]` fires."""
+    src = "x = [order_repo.fetch(oid) for oid in ids]\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+    assert hits[0].shape == "repo"
+
+
+def test_listcomp_len_wrap() -> None:
+    """`[len(order.lines.all()) for order in orders]` fires once on the len-wrap."""
+    src = "x = [len(order.lines.all()) for order in orders]\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+    assert hits[0].shape == "len_wrap"
+
+
+def test_genexp_queryset_chain() -> None:
+    """`(order.lines.all() for order in orders)` (generator expression) fires."""
+    src = "x = (order.lines.all() for order in orders)\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+
+
+def test_dictcomp_value_side() -> None:
+    """`{order.id: order.lines.all() for order in orders}` fires on the value expr."""
+    src = "x = {order.id: order.lines.all() for order in orders}\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+    assert hits[0].shape == "queryset"
+
+
+def test_setcomp_queryset_chain() -> None:
+    """`{order.lines.first() for order in orders}` (set comprehension) fires."""
+    src = "x = {order.lines.first() for order in orders}\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+
+
+def test_nested_comprehension_accumulates_targets() -> None:
+    """`[x.lines.all() for o in orders for x in o.items]` — both o and x are loop vars."""
+    src = "y = [x.lines.all() for o in orders for x in o.items]\n"
+    hits = _detect_n_plus_one(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+    assert hits[0].shape == "queryset"
+
+
+def test_negative_listcomp_attribute_access_only() -> None:
+    """`[order.id for order in orders]` is just attribute access — no fire."""
+    src = "x = [order.id for order in orders]\n"
+    assert _detect_n_plus_one(_parse(src), Path("app/x.py")) == []
+
+
+def test_negative_listcomp_method_outside_set() -> None:
+    """`[s.upper() for s in strings]` — `.upper()` is not a queryset terminator."""
+    src = "x = [s.upper() for s in strings]\n"
+    assert _detect_n_plus_one(_parse(src), Path("app/x.py")) == []
+
+
+def test_listcomp_noqa_suppression(tmp_path: Path) -> None:
+    """`# noqa: PA-LLM-08` on the comprehension's line suppresses the finding."""
+    app_dir = tmp_path / "app"
+    app_dir.mkdir()
+    (app_dir / "x.py").write_text(
+        "def f(orders):\n"
+        "    return [order.lines.all() for order in orders]  # noqa: PA-LLM-08 - prefetched\n"
+    )
+    agent = PythonAuditAgent(project_path=tmp_path)
+    assert agent.check_n_plus_one_in_user_code(appspec=None) == []  # type: ignore[arg-type]

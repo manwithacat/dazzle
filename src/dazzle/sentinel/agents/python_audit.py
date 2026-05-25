@@ -275,17 +275,58 @@ def _names_in_expr(node: ast.AST) -> set[str]:
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
 
 
-def _loop_targets(node: ast.For) -> set[str]:
-    """Return the set of names bound by a for-loop target.
+def _target_names(target: ast.AST) -> set[str]:
+    """Return the names bound by an iteration target.
 
-    Handles `for x in xs:` and `for x, y in items:` (tuple unpacking).
+    Shared between `ast.For.target` and `ast.comprehension.target` — both
+    have the same shape (a Name or a Tuple of Names).
     """
-    target = node.target
     if isinstance(target, ast.Name):
         return {target.id}
     if isinstance(target, ast.Tuple):
         return {elt.id for elt in target.elts if isinstance(elt, ast.Name)}
     return set()
+
+
+def _loop_targets(node: ast.For) -> set[str]:
+    """Return the set of names bound by a for-loop target.
+
+    Handles `for x in xs:` and `for x, y in items:` (tuple unpacking).
+    """
+    return _target_names(node.target)
+
+
+def _comprehension_targets(generators: list[ast.comprehension]) -> set[str]:
+    """Accumulate every loop-target name across a comprehension's generators.
+
+    For nested comprehensions like `[expr for a in xs for b in a.items]`,
+    later generators can reference earlier targets, so we union all of them.
+    """
+    accumulated: set[str] = set()
+    for gen in generators:
+        accumulated |= _target_names(gen.target)
+    return accumulated
+
+
+def _comprehension_body_exprs(node: ast.AST) -> list[ast.expr]:
+    """Return the per-iteration expressions of a comprehension node.
+
+    Each value here is evaluated once per iteration — so any N+1-shaped call
+    inside is an N+1 finding. The `.ifs` predicates inside each generator
+    are also per-iteration; included so a queryset terminator in an `if`
+    filter doesn't get a free pass.
+    """
+    bodies: list[ast.expr] = []
+    if isinstance(node, (ast.ListComp, ast.SetComp, ast.GeneratorExp)):
+        bodies.append(node.elt)
+    elif isinstance(node, ast.DictComp):
+        bodies.append(node.key)
+        bodies.append(node.value)
+    else:
+        return []
+    for gen in node.generators:
+        bodies.extend(gen.ifs)
+    return bodies
 
 
 def _root_of_attribute_chain(node: ast.AST) -> ast.Name | None:
@@ -334,56 +375,78 @@ def _matches_len_wrap_shape(call: ast.Call, loop_targets: set[str]) -> bool:
     return isinstance(inner, ast.Call) and _matches_queryset_shape(inner, loop_targets)
 
 
-def _detect_n_plus_one(tree: ast.AST, path: Path) -> list[_ShapeHit]:
-    """Return _ShapeHit records for every N+1-shaped call inside a for-loop body.
-
-    Uses the existing _ShapeHit dataclass from round 1 (PA-LLM-07). The
-    `try_line` field carries the outer `for` statement's line number so the
-    suppression check can match a `# noqa: PA-LLM-08` comment on the for-line.
-    The field name is historical — round 1 originally used it for the `try:`
-    line. A future rename to `outer_line` is fine but out of scope for this slice.
+def _shape_hits_in_body(
+    body_nodes: list[ast.AST] | list[ast.stmt] | list[ast.expr],
+    targets: set[str],
+    outer_lineno: int,
+) -> list[_ShapeHit]:
+    """Find every N+1-shaped call inside the given body nodes, attributed to outer_lineno.
 
     When a len-wrap shape is detected, the inner queryset call is *not* reported
-    separately — the outer len() node is the canonical hit.
+    separately — the outer len() node is the canonical hit (identity-tracked
+    via id()).
+    """
+    hits: list[_ShapeHit] = []
+    all_calls: list[ast.Call] = []
+    for body_node in body_nodes:
+        all_calls.extend(c for c in ast.walk(body_node) if isinstance(c, ast.Call))
+
+    len_wrap_inner: set[int] = set()
+    for call in all_calls:
+        if _matches_len_wrap_shape(call, targets) and call.args:
+            len_wrap_inner.add(id(call.args[0]))
+
+    for call in all_calls:
+        if _matches_len_wrap_shape(call, targets):
+            shape = "len_wrap"
+        elif id(call) in len_wrap_inner:
+            continue
+        elif _matches_queryset_shape(call, targets):
+            shape = "queryset"
+        elif _matches_repo_shape(call, targets):
+            shape = "repo"
+        else:
+            continue
+        snippet = ast.unparse(call) if hasattr(ast, "unparse") else "<call>"
+        hits.append(
+            _ShapeHit(
+                line=call.lineno,
+                snippet=snippet,
+                shape=shape,
+                try_line=outer_lineno,
+            )
+        )
+    return hits
+
+
+def _detect_n_plus_one(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Return _ShapeHit records for every N+1-shaped call inside a for-loop OR comprehension body.
+
+    Walks both `ast.For` statements and the four comprehension types
+    (`ast.ListComp`, `ast.SetComp`, `ast.GeneratorExp`, `ast.DictComp`).
+    Nested comprehensions accumulate loop targets across their generators —
+    `[expr for a in xs for b in a.items]` has both `a` and `b` in scope for
+    `expr`, so a wrong-shape call against either fires.
+
+    Uses the existing _ShapeHit dataclass from round 1 (PA-LLM-07). The
+    `try_line` field carries the outer statement's line number so the
+    suppression check can match a `# noqa: PA-LLM-08` comment on the for-line
+    or the comprehension's opening bracket line. The field name is historical;
+    semantically it's now "outer-statement line".
     """
     hits: list[_ShapeHit] = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.For):
-            continue
-        targets = _loop_targets(node)
-        if not targets:
-            continue
-        for body_node in node.body:
-            all_calls = [c for c in ast.walk(body_node) if isinstance(c, ast.Call)]
-
-            # Pre-pass: collect inner queryset calls that are wrapped by len().
-            # These will be reported only via their outer len() hit, not standalone.
-            len_wrap_inner: set[int] = set()
-            for call in all_calls:
-                if _matches_len_wrap_shape(call, targets) and call.args:
-                    len_wrap_inner.add(id(call.args[0]))
-
-            for call in all_calls:
-                if _matches_len_wrap_shape(call, targets):
-                    shape = "len_wrap"
-                elif id(call) in len_wrap_inner:
-                    # Skip — already captured as the inner arg of a len_wrap hit.
-                    continue
-                elif _matches_queryset_shape(call, targets):
-                    shape = "queryset"
-                elif _matches_repo_shape(call, targets):
-                    shape = "repo"
-                else:
-                    continue
-                snippet = ast.unparse(call) if hasattr(ast, "unparse") else "<call>"
-                hits.append(
-                    _ShapeHit(
-                        line=call.lineno,
-                        snippet=snippet,
-                        shape=shape,
-                        try_line=node.lineno,  # outer for-line, see docstring
-                    )
-                )
+        if isinstance(node, ast.For):
+            targets = _loop_targets(node)
+            if not targets:
+                continue
+            hits.extend(_shape_hits_in_body(list(node.body), targets, node.lineno))
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
+            targets = _comprehension_targets(node.generators)
+            if not targets:
+                continue
+            body_exprs = _comprehension_body_exprs(node)
+            hits.extend(_shape_hits_in_body(list(body_exprs), targets, node.lineno))
     return hits
 
 
