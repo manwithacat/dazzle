@@ -836,6 +836,18 @@ async def compute_cohort_aggregate_primary(
                 scope_filters=scope_only_filters,
             )
         assert fk_col is not None  # narrowed by the else branch above
+        # #1250: for cross-entity aggregates the source-entity
+        # __scope_predicate references a table not in the aggregate's
+        # FROM clause — strip it before passing through. Same root cause
+        # as #1231 for the share/via paths; the FK path's IN clause
+        # (`{fk_col}__in = member_ids`) already enforces source-row
+        # scoping because member_ids only contains scope-passing ids.
+        # When aggregated_entity == source_entity (same-entity aggregate,
+        # e.g. self-referencing FK), keep the predicate — it qualifies a
+        # column on the table that IS in the FROM.
+        fk_scope_filters = scope_only_filters
+        if aggregated_entity != source_entity:
+            fk_scope_filters = _strip_scope_predicate(scope_only_filters)
         return await _batched_fk_cohort_aggregate(
             agg_repo=agg_repo,
             fk_col=fk_col,
@@ -844,7 +856,7 @@ async def compute_cohort_aggregate_primary(
             measures=measures,
             measure_expressions=measure_expressions,
             where=ref.where,
-            scope_filters=scope_only_filters,
+            scope_filters=fk_scope_filters,
         )
     except Exception:
         logger.warning(

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1250 — cohort_strip direct-FK path also leaked the source-entity scope predicate)
+
+- **Strip the source-entity `__scope_predicate` at the FK-path call site** when `aggregated_entity != source_entity`. The #1231 fix only patched the `share:` / `via:` paths; the direct-FK path (`_batched_fk_cohort_aggregate`) had the same shape and the same silent failure mode. The IN-clause filter (`{fk_col}__in = member_ids`) already enforces source-row scoping because `member_ids` only contains ids that passed the upstream scope check; threading the source-entity qualifier through to `Repository.aggregate` referenced a table not in the aggregate's FROM and the silent-catch at line 849 swallowed the resulting UndefinedTable.
+- **Same-entity aggregates preserved**: when `ref.entity == source_entity` (self-referencing FK case) the predicate qualifies a column on the table that IS in the aggregate's FROM, so it's kept. Conditional strip rather than unconditional — this is the load-bearing difference vs. share/via, where the cross-entity nature is structural.
+- **2 new tests** in `tests/unit/test_cohort_aggregate_compute.py`: cross-entity FK aggregate strips the predicate; same-entity FK aggregate keeps it.
+
 ### Fixed (#1251 — auth_routes startup failed under non-basic security profiles)
 
 - **`safe_limit(limit_str)` helper** at `src/dazzle/back/runtime/rate_limit.py:56` wraps `Limiter.limit(...)` in a way that's robust to `functools.partial` handlers. slowapi's real `Limiter.limit()` introspects `handler.__name__` to register the limit; partials don't have `__name__`, so the direct decorator chain (which the auth + 2FA routers used) raised `AttributeError` at module-import time as soon as the real Limiter was wired. Latent on `basic` profile (where `_NoOpLimiter` ignored the partial entirely) and surfaced by #1235 in v0.72.8 when DSL-declared profiles started reaching the runtime.

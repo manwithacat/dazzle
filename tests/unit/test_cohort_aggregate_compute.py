@@ -106,6 +106,83 @@ def test_direct_fk_batched_dispatch() -> None:
     assert call.kwargs["filters"]["student__in"] == ["m1", "m2"]
 
 
+def test_fk_path_strips_source_scope_predicate_for_cross_entity() -> None:
+    """#1250 — the direct-FK aggregate path is cross-entity when
+    `ref.entity != source_entity`. The source-entity __scope_predicate
+    qualifies a column on a table that's not in the aggregate's FROM
+    clause; merging it produces UndefinedTable and the silent-catch
+    swallows the failure. Strip it before invoking
+    Repository.aggregate."""
+    repo = _make_aggregated_repo({"m1": 6.5})
+    lens = CohortStripLens(
+        id="avg_score",
+        label="Avg Score",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(func="avg", entity="MarkingResult", column="score"),
+        ),
+    )
+
+    # Scoped persona — source-entity (StudentProfile) RBAC predicate.
+    scope_filters = {
+        "__scope_predicate": ('"StudentProfile"."school" = %s', ["school-uuid"]),
+    }
+
+    _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "m1"}],
+            lens=lens,
+            source_entity="StudentProfile",
+            repositories={"MarkingResult": repo},
+            scope_only_filters=scope_filters,
+        )
+    )
+
+    call = repo.aggregate.await_args
+    # Post-fix the source-entity __scope_predicate is stripped before
+    # passing through; the IN clause alone enforces source-row scoping.
+    filters_arg = call.kwargs["filters"]
+    assert "__scope_predicate" not in filters_arg, (
+        f"FK path must strip the source-entity scope predicate when "
+        f"aggregated_entity != source_entity; got {filters_arg}"
+    )
+    # The IN clause still restricts to scoped members.
+    assert filters_arg["student__in"] == ["m1"]
+
+
+def test_fk_path_keeps_scope_predicate_for_same_entity_aggregate() -> None:
+    """#1250 sibling: when ref.entity == source_entity (same-entity
+    aggregate, e.g. self-referencing FK), the source-entity scope
+    predicate qualifies a column on the table that IS in the FROM —
+    keep it. Otherwise we'd lose legitimate RBAC."""
+    repo = _make_aggregated_repo({"m1": 3})
+    lens = CohortStripLens(
+        id="dependents",
+        label="Dependents",
+        # Self-aggregate: ref.entity is None → aggregated_entity == source_entity.
+        primary_aggregate=LensAggregatePrimary(aggregate=AggregateRef(func="count")),
+    )
+
+    scope_filters = {
+        "__scope_predicate": ('"StudentProfile"."school" = %s', ["school-uuid"]),
+    }
+
+    _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "m1"}],
+            lens=lens,
+            source_entity="StudentProfile",
+            repositories={"StudentProfile": repo},
+            scope_only_filters=scope_filters,
+        )
+    )
+
+    call = repo.aggregate.await_args
+    # Same-entity aggregate: scope predicate must reach Repository.aggregate.
+    filters_arg = call.kwargs["filters"]
+    assert "__scope_predicate" in filters_arg, filters_arg
+    assert filters_arg["__scope_predicate"][1] == ["school-uuid"]
+
+
 def test_source_relative_aggregate_no_entity() -> None:
     """When AggregateRef has no entity, the source entity supplies the
     repo (self-reference)."""
