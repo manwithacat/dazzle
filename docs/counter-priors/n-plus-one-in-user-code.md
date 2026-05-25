@@ -25,6 +25,10 @@ triggers_code:
 refs:
   adrs: []
   tests: []
+detectors:
+  - id: PA-LLM-08
+    agent: PA
+    note: "covers queryset chains on loop-variable attribute access, *_repo calls with loop-variable args, and len() wrapping. Does not detect prefetched-relation suppression at AST level — author adds '# noqa: PA-LLM-08 — prefetched' when the relation is materialised upstream."
 ---
 
 # N+1 queries in user app code
