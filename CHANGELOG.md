@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1241-#1247 / #1217 Phase 2 — 7 pattern entries in semantics KB)
+
+- **7 new `[patterns.X]` entries** in `src/dazzle/mcp/semantics_kb/patterns.toml`, one per supported 3NF pattern:
+  - `direct_one_to_many` (#1241) — foundational `ref Parent` shape
+  - `primary_aggregate_n_to_one` (#1242) — per-parent aggregates via `primary_aggregate:`
+  - `junction_many_to_many` (#1243) — true m:n via an explicit junction entity + `via:`
+  - `shared_parent_join` (#1244) — diamond aggregates via `share:` (AegisMark's #1216 trigger)
+  - `self_referencing_hierarchy` (#1245) — tree walks via `descendants_of` / `ancestors_of`
+  - `temporal` (#1246) — effective-dated intervals via the `temporal:` block
+  - `soft_delete` (#1247) — tombstone via the `soft_delete:` flag
+- **Each entry carries the same schema as `#1248 subtype_of`:** name, when-to-use / when-NOT-to-use lists, copy-paste DSL example, anti-pattern callout, related cross-links. The `when_NOT_to_use` lists steer authors back to a different pattern when the shape they're describing fits one of the others — this is the steering work Phase 2 closes.
+- **`SEED_SCHEMA_VERSION` bumped 10 → 11** at `src/dazzle/mcp/knowledge_graph/seed.py:24` so already-deployed KGs re-seed and pick up all 7 entries.
+- **`[meta].pattern_count` bumped 26 → 33** to track actuals.
+- **9 new tests** at `tests/unit/test_patterns_phase2_kb_1217.py`: each entry pinned by canonical-idiom needle (description + example), plus a `pattern_count`-vs-actuals crosscheck and a `get_dsl_patterns()` exposure assertion.
+- **Closes** #1241, #1242, #1243, #1244, #1245, #1246, #1247 — the surface coverage / discoverability slice of each ticket. Bootstrap-pattern-recognition remains a cross-pattern infrastructure piece deferred to a separate ticket; lint coverage was already complete for each pattern in earlier shipping cycles.
+
 ### Added (#1248 / #1217 Phase 2 — `subtype_of:` discoverability)
 
 - **`[patterns.subtype_of]` entry in `semantics_kb/patterns.toml`** with the full pattern profile: name, description carrying the escape-hatch framing, when-to-use / when-NOT-to-use lists, a copy-paste DSL example from the `asset_registry` fixture, anti-pattern callout linking the W_LOOKS_POLYMORPHIC + W_SUBTYPE_OF_OVERREACH validator warnings, and cross-links to the `subtype_of_only_for_true_isa` modeling-guidance entry in the inference KB.

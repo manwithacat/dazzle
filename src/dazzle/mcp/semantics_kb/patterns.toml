@@ -2,7 +2,7 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 26
+pattern_count = 33
 
 
 [patterns.adapter_result]
@@ -1185,6 +1185,459 @@ related = [
     "audit_trail",
 ]
 v_0_72 = "Phase 3(e) feature-complete in v0.72.0; see ADR-0026 and fixtures/asset_registry/"
+
+[patterns.direct_one_to_many]
+category = "Modelling"
+doc_page = "patterns"
+name = "Direct 1:N parent → children (`ref` on the child) (#1241 / #1217 Phase 2)"
+description = """
+The foundational relational shape. A parent entity has many children; each
+child carries a `ref Parent` field. Reach for this *first* — it's the default
+relational expression in Dazzle and underpins almost every other pattern.
+
+Authors sometimes flatten into a `json[]` list on the parent or embed
+entity-shaped data inline. Resist that: the relational shape composes with
+scope rules, surfaces, aggregates, FK validation, and lifecycle in ways
+JSON arrays can't.
+"""
+when_to_use = [
+    "An `Order` has many `LineItem` rows",
+    "A `Project` has many `Task` rows",
+    "An `Article` has many `Comment` rows",
+    "Any parent → children fan-out where the children carry their own fields, lifecycle, or RBAC scope",
+]
+when_NOT_to_use = [
+    "Children are value objects that never need their own RBAC / surface / scope (use a json field on the parent)",
+    "The relationship is m:n (use a junction entity + `via:`)",
+    "Children carry a `kind` discriminator and have substantial per-subtype fields (use `subtype_of:`)",
+]
+example = '''
+entity Order "Order":
+  id: uuid pk
+  customer: ref Customer required
+  placed_at: datetime auto_add
+
+entity LineItem "Line Item":
+  id: uuid pk
+  order: ref Order required        # 1:N parent FK — the canonical shape
+  product_name: str(200) required
+  quantity: int required
+  unit_price: decimal(10,2) required
+
+# Surfaces compose naturally — list LineItem rows for one Order via filter,
+# aggregate via primary_aggregate: (see #1242), or scope via the FK chain.
+surface order_lines "Order Lines":
+  uses entity LineItem
+  mode: list
+  section main:
+    field order.placed_at "Order Date"
+    field product_name "Product"
+    field quantity "Qty"
+'''
+anti_pattern = """
+Embedding child data as `line_items: json` on the parent. Loses FK
+integrity, breaks scope composition, can't be aggregated, makes surfaces
+brittle. Almost always the wrong call.
+"""
+related = [
+    "primary_aggregate_n_to_one",
+    "junction_many_to_many",
+    "subtype_of",
+]
+
+
+[patterns.primary_aggregate_n_to_one]
+category = "Modelling"
+doc_page = "patterns"
+name = "Direct N:1 aggregates via `primary_aggregate:` (#1242 / #1217 Phase 2)"
+description = """
+Show a per-parent summary statistic computed over the parent's child rows —
+e.g. "total revenue per Customer", "open Issue count per Repository",
+"average response time per Ticket". Use `primary_aggregate:` on a
+cohort_strip / bar_chart / metrics region: one scope-aware GROUP BY query
+replaces N+1 enumeration.
+
+Pairs with the direct 1:N shape (#1241). The aggregated entity carries a
+`ref Parent` field; the region declares the aggregate against that FK.
+"""
+when_to_use = [
+    "Per-parent totals / counts / averages over direct child rows",
+    "Cohort dashboards where each member row needs a single derived value",
+    "Metrics tiles showing 'total X across all rows of entity Y'",
+]
+when_NOT_to_use = [
+    "Aggregating across a junction (m:n) → use `via:` (see #1243)",
+    "Aggregating across a shared-parent diamond → use `share:` (see #1244)",
+    "You need per-row computeds, not aggregates (use a computed field on the entity)",
+]
+example = '''
+entity Customer "Customer":
+  id: uuid pk
+  name: str(200) required
+
+entity Order "Order":
+  id: uuid pk
+  customer: ref Customer required
+  total: decimal(12,2) required
+  placed_at: datetime auto_add
+
+workspace customer_overview "Customer Overview":
+  customer_revenue:
+    source: Customer
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      lenses:
+        - id: total_revenue
+          label: "Total Revenue"
+          primary_aggregate:
+            aggregate:
+              entity: Order
+              func: sum
+              column: total
+'''
+anti_pattern = """
+N+1 enumeration: building one `Repository.list(Order, filters={customer:
+each_customer_id})` call per cohort member, then summing in Python. The
+bug class #847-#851 was the same shape; `primary_aggregate:` produces
+one SQL query that computes everything via GROUP BY.
+"""
+related = [
+    "direct_one_to_many",
+    "junction_many_to_many",
+    "shared_parent_join",
+]
+
+
+[patterns.junction_many_to_many]
+category = "Modelling"
+doc_page = "patterns"
+name = "True m:n via a junction entity (`via:`) (#1243 / #1217 Phase 2)"
+description = """
+Many-to-many relationships are modelled with an explicit junction entity
+that carries the FKs to both sides plus any relationship-specific data
+(timestamps, role flags, revocation). The `via:` keyword expresses
+aggregates / scope rules that walk through the junction without manual
+JOIN composition.
+
+The junction is a first-class entity — it can have its own surfaces,
+scope rules, RBAC, and audit trail. That matters because the relationship
+itself is often the thing the user cares about (e.g. "when was Alice
+assigned to Project X?").
+"""
+when_to_use = [
+    "Users ↔ Roles (UserRole junction)",
+    "Students ↔ Courses (Enrolment junction)",
+    "Articles ↔ Tags (ArticleTag junction)",
+    "Any relationship where both sides can have many of the other AND the relationship itself carries data or lifecycle",
+]
+when_NOT_to_use = [
+    "The 'junction' is just a value with no other fields (in some cases a json[] on one side is acceptable, though usually the explicit junction wins for scope composition)",
+    "The relationship is actually 1:N (use a direct ref instead, see #1241)",
+    "You want to aggregate through a shared parent, not a junction (use `share:`, see #1244)",
+]
+example = '''
+entity User "User":
+  id: uuid pk
+  email: email required unique
+
+entity Role "Role":
+  id: uuid pk
+  name: str(80) required unique
+
+entity UserRole "User Role":
+  id: uuid pk
+  user: ref User required
+  role: ref Role required
+  granted_at: datetime auto_add
+  revoked_at: datetime optional   # revocation = tombstone, not deletion
+
+# `via:` aggregate — count active roles per user
+workspace admin_dash "Admin Dashboard":
+  user_role_counts:
+    source: User
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      lenses:
+        - id: active_roles
+          label: "Active Roles"
+          primary_aggregate:
+            aggregate:
+              entity: Role
+              func: count
+              via: UserRole
+            where: revoked_at = null
+
+# `via:` scope rule — only Users you've co-rated can see your details
+scope:
+  read: via UserRole(user = current_user, role.code = co_rater)
+    as: rater
+'''
+anti_pattern = """
+Hand-rolling JSON arrays of FK ids (`role_ids: json[]` on User). Loses
+referential integrity, breaks scope composition, can't be aggregated
+properly, makes "when was this granted?" impossible to express.
+"""
+related = [
+    "direct_one_to_many",
+    "primary_aggregate_n_to_one",
+    "shared_parent_join",
+    "soft_delete",
+]
+
+
+[patterns.shared_parent_join]
+category = "Modelling"
+doc_page = "patterns"
+name = "Shared-parent JOIN via `share:` (diamond aggregates) (#1244 / #1217 Phase 2)"
+description = """
+The cohort source rows and the aggregated rows both reference a common
+pivot entity, but there is no direct FK between them. `share:` bridges
+the diamond with a single GROUP BY query keyed on the source row's
+primary key — the pivot itself doesn't appear in the FROM clause.
+
+Surfaced concretely by AegisMark in #1213-#1216. Before `share:` shipped,
+the only expression was a Python override route — agents went through
+2-3 design rounds before landing on the canonical shape, which is why
+discoverability (Phase 2) matters as much as the feature itself.
+"""
+when_to_use = [
+    "Cohort member rows (e.g. ClassEnrolment) and aggregated rows (e.g. MarkingResult) both FK→pivot (e.g. StudentProfile), with no direct FK between source and aggregated",
+    "You want a per-cohort-member statistic derived from rows that aren't direct children",
+    "The diamond shape is the natural relational expression of the question (don't denormalise to avoid it)",
+]
+when_NOT_to_use = [
+    "Source and aggregated entities have a direct FK (use `primary_aggregate:` with no share/via — see #1242)",
+    "The relationship goes through an explicit junction with its own lifecycle (use `via:` — see #1243)",
+    "The diamond doesn't actually share a parent (use a regular JOIN via a computed view)",
+]
+example = '''
+# AegisMark's canonical surface: per-enrolment average marking score,
+# where MarkingResult is keyed on StudentProfile, not ClassEnrolment.
+entity StudentProfile "Student":
+  id: uuid pk
+  display_name: str(120) required
+
+entity ClassEnrolment "Class Enrolment":
+  id: uuid pk
+  student_profile: ref StudentProfile required
+  teaching_group: ref TeachingGroup required
+
+entity MarkingResult "Marking Result":
+  id: uuid pk
+  student_profile: ref StudentProfile required   # shares the pivot
+  score: decimal(4,2) required
+
+workspace class_view "Class View":
+  cohort_attainment:
+    source: ClassEnrolment
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      lenses:
+        - id: attainment
+          label: "Avg Score"
+          primary_aggregate:
+            aggregate:
+              entity: MarkingResult
+              func: avg
+              column: score
+              share: StudentProfile     # the diamond pivot
+'''
+anti_pattern = """
+Writing a custom Python route to fetch the cohort, then per-member
+running `Repository.aggregate(MarkingResult, filter=student_profile=X)`.
+That's N+1 over the cohort and skips the scope-aware single-query path.
+"""
+related = [
+    "primary_aggregate_n_to_one",
+    "junction_many_to_many",
+    "subtype_of",
+]
+
+
+[patterns.self_referencing_hierarchy]
+category = "Modelling"
+doc_page = "patterns"
+name = "Self-referencing hierarchy (`descendants_of` / `ancestors_of`) (#1245 / #1217 Phase 2)"
+description = """
+Tree-shaped data where each row points at a parent of the same entity:
+Category → parent Category, Department → parent Department, manager →
+report chains. The `descendants_of` / `ancestors_of` field types resolve
+the recursive walk in one CTE rather than per-level Python loops.
+
+Two flavours: direct self-FK (`parent: ref self`) and chains-through-
+junction (`descendants_of self via ManagerLink.manager`). The
+declaration form `field all_reports: descendants_of self via
+ManagerLink.manager` exposes the resolved descendant set as a virtual
+field usable in surfaces, scope rules, and aggregates.
+"""
+when_to_use = [
+    "Department / category / org-chart trees",
+    "Manager → report chains (via a junction or direct FK)",
+    "Comment threads (Comment.parent → Comment)",
+    "Any 'all descendants' or 'all ancestors' query that would otherwise need iterative SQL or Python loops",
+]
+when_NOT_to_use = [
+    "The relationship is flat 1:N to a different entity (use `ref` — see #1241)",
+    "You only need direct parent / direct children (a regular `ref` field is enough; the traversal helper is for recursive walks)",
+    "The tree depth is bounded and small — direct includes can be cheaper than a CTE",
+]
+example = '''
+entity Department "Department":
+  id: uuid pk
+  name: str(120) required
+  parent: ref self optional    # nullable root → forest of trees
+
+  # #1227 Phase 3(b): resolved virtual field via recursive CTE.
+  all_descendants: descendants_of self via parent
+  all_ancestors: ancestors_of self via parent
+
+# Scope rule using the resolved set: a manager sees themselves + descendants.
+surface visible_departments "My Departments":
+  uses entity Department
+  mode: list
+  section main:
+    field name "Department"
+
+scope:
+  read: id in current_user.department.all_descendants
+    as: department_head
+'''
+anti_pattern = """
+Iterative SELECTs ("walk children one level at a time, recurse in
+Python"). Each level is a round-trip; the typed `descendants_of` field
+produces one SQL CTE per query.
+"""
+related = [
+    "direct_one_to_many",
+    "temporal",
+    "subtype_of",
+]
+
+
+[patterns.temporal]
+category = "Modelling"
+doc_page = "patterns"
+name = "Temporal / effective-dated entity (`temporal:`) (#1246 / #1217 Phase 2)"
+description = """
+Each row is an open or closed interval (`start_date`, `end_date`) and most
+queries want the row that is *currently active*. The `temporal:` block
+auto-injects the tombstone-style filter on read paths, threads an
+`?as_of=YYYY-MM-DD` URL parameter for historical lookups, enforces "at
+most one active row per key" via a partial unique index, and exposes a
+synthesised `active` computed field for use in scope predicates.
+
+Real surfaces: Employment, Salary, ManagerLink (all in `examples/hr_records/`),
+lease terms, price lists, GDPR consent records, feature flags with
+effective dates, exchange-rate snapshots.
+"""
+when_to_use = [
+    "Each row is a contract / assignment / period with start + end dates",
+    "Queries default to 'the current row' but historical lookups (`as_of:`) are also needed",
+    "The system needs to enforce 'at most one active X per Y'",
+    "RBAC scopes need to traverse 'the currently active assignment' (e.g. a manager sees reports of their current employees)",
+]
+when_NOT_to_use = [
+    "The row is immutable once created (timestamps are enough; no temporal semantics needed)",
+    "You want soft-delete behaviour (rows become invisible after a point in time) → use `soft_delete:` instead (see #1247)",
+    "The data is point-in-time event log without 'active' semantics (use a plain timestamp field)",
+]
+example = '''
+# From examples/hr_records — the canonical surface for `temporal:`.
+entity Person "Person":
+  id: uuid pk
+  display_name: str(120) required
+
+entity Employment "Employment":
+  id: uuid pk
+  person: ref Person required
+  role: ref Role required
+  start_date: date required
+  end_date: date              # implicit when temporal: is set
+
+  temporal:
+    start_field: start_date
+    end_field: end_date
+    key_field: person          # constrains 'at most one active row per person'
+    default_filter: active     # list/read/aggregate auto-filter end IS NULL
+    as_of_param: as_of         # workspaces accept ?as_of=YYYY-MM-DD
+
+# Workspaces composed against the temporal entity automatically get the
+# 'currently active' filter and the ?as_of= URL parameter. Manager scope
+# rules can traverse Person → current Employment without hand-rolling
+# `end_date = null` filters.
+'''
+anti_pattern = """
+Hand-rolling `start_date / end_date` fields per entity + manually
+applying `where end_date = null` on every list / read surface. That
+pattern repeats across each temporal entity AND silently leaks
+historical rows in scope rules that don't reapply the filter — the kind
+of subtle wrongness `temporal:` makes visible by centralising the
+contract.
+"""
+related = [
+    "soft_delete",
+    "self_referencing_hierarchy",
+    "junction_many_to_many",
+]
+
+
+[patterns.soft_delete]
+category = "Modelling"
+doc_page = "patterns"
+name = "Soft-delete + tombstone (`soft_delete:`) (#1247 / #1217 Phase 2)"
+description = """
+Mark rows as deleted without physically removing them (tombstone pattern).
+Set `soft_delete: true` on the entity; the framework auto-injects a
+nullable `deleted_at: datetime` tombstone field, auto-filters
+`deleted_at IS NULL` on list / read / aggregate, and converts DELETE
+requests into an UPDATE that stamps `deleted_at = NOW()`.
+
+Composes with scope rules and aggregates through the same `QueryBuilder`
+chain. `include_deleted=true` opt-out is available for admin / audit
+views.
+"""
+when_to_use = [
+    "Users can be deactivated but you keep their history (User.deleted_at)",
+    "Orders can be cancelled but stay in the ledger / audit trail",
+    "Any 'remove from default view but keep the row' requirement",
+    "Schema-level deletion is risky (FK fanout) and audit / undo is valuable",
+]
+when_NOT_to_use = [
+    "Rows are genuinely transient and deletion is permanent (use plain DELETE)",
+    "You need effective-dated intervals (start_date / end_date) — use `temporal:` (see #1246) instead",
+    "The 'soft-deletion' is actually a state in a finite-state machine (use a state machine + enum)",
+]
+example = '''
+entity User "User":
+  id: uuid pk
+  email: email required unique
+  display_name: str(120) required
+  soft_delete: true
+  # Framework auto-injects: `deleted_at: datetime optional` if missing.
+
+# List / read / aggregate paths auto-filter deleted_at IS NULL — authors
+# don't write the predicate. DELETE handler stamps deleted_at = NOW()
+# instead of physically removing.
+
+# Opt-out is per-call (e.g. admin audit view):
+#   repo.list(include_deleted=True)  # returns ALL rows including tombstoned
+'''
+anti_pattern = """
+Hand-rolling `deleted_at: datetime optional` + per-surface
+`where deleted_at = null` filters. Every read surface has to remember
+to apply it; one omission silently leaks tombstoned rows. `soft_delete:`
+centralises the contract so the filter applies uniformly across read
+paths.
+"""
+related = [
+    "temporal",
+    "direct_one_to_many",
+    "subtype_of",
+]
+
 
 [concepts.quality_ux_rubric]
 category = "Quality"
