@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — re-cut v0.74.2 as v0.74.3
+
+The v0.74.2 git tag was created before the commit landed, so it pointed at the v0.74.1 SHA. The PyPI publish workflow failed (correctly — it rejected the duplicate version). The v0.74.2 git tag is left in place pointing at the v0.74.1 commit for historical visibility; the live-MCP-inventory + docs-staleness-sweep work below is published as v0.74.3 instead. No content was published with the wrong shape; this is purely a tag/version recovery.
+
 ### Added — live MCP tool inventory + docs staleness sweep (DNR retirement, package-path refresh)
 
 - **`docs/reference/mcp-tools.md`** — auto-generated live inventory of the MCP tool registry. Lists every tool, its operations, parameters, and description, sourced from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Current count: **34 tools, 156 operations** (will drift; the page is regenerated every `dazzle docs generate`).
