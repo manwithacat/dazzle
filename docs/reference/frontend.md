@@ -3,7 +3,7 @@
 > **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
 > Do not edit manually; run `dazzle docs generate` to regenerate.
 
-The Dazzle frontend uses server-rendered Jinja2 templates with HTMX for declarative HTTP interactions. This page covers the three-layer template architecture, fragment contracts, out-of-band swaps, sitespec configuration, copy management, section types, and static asset serving.
+The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass HTML primitives) with HTMX for declarative server interactions. Surfaces declare `render: fragment` in DSL; the runtime emits HTML from a primitive tree, escaped at the boundary by default. No Jinja2 since #1042 / v0.67.92 ([ADR-0023](../adr/0023-template-emission-patterns.md)). This page covers the rendering architecture, fragment contracts, out-of-band swaps, sitespec configuration, copy management, section types, and static asset serving.
 
 ---
 
@@ -50,24 +50,22 @@ Declarative HTTP interaction layer for Dazzle-generated frontends. All interacti
 
 ## Templates
 
-Three-layer Jinja2 template architecture: Components (full page content), Fragments (HTMX-swappable partials), Macros (pure rendering helpers). Each layer has distinct responsibilities.
+Typed Fragment substrate (frozen-dataclass HTML primitive tree → emitted HTML via dazzle.render.html.esc). Surfaces declare `render: fragment` in DSL; the runtime emits HTML from a primitive tree, escaped at the boundary by default. The few remaining template paths use either f-strings + dazzle.render.html.esc (Pattern A: framework writes HTML) or string.Template (Pattern B: framework executes user-authored templates). See ADR-0023. Post-#1042 (v0.67.92) Jinja2 is no longer a dependency.
 
 ### Syntax
 
 ```dsl
-templates/
-├── base.html                 # Document shell
-├── components/               # Full page content (one per surface mode)
-│   ├── list_view.html
-│   ├── detail_view.html
-│   └── form_edit.html
-├── fragments/                # HTMX-swappable partials
-│   ├── table_rows.html
-│   ├── search_select.html
-│   └── form_errors.html
-└── macros/                   # Pure rendering helpers
-    ├── form_field.html
-    └── table_cell.html
+# DSL opt-in:
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  render: fragment        # <-- typed Fragment substrate
+
+# Runtime emission path:
+AppSpec (IR)
+  → converters (surface_converter, workspace_converter)
+  → typed Fragment tree (frozen dataclasses, HTML5 element/attribute allowlist)
+  → HTML + hx-* attributes (escaped by default)
 ```
 
 **Related:** [Htmx](frontend.md#htmx), [Fragment Contract](frontend.md#fragment-contract), [Surface](surfaces.md#surface)
@@ -139,7 +137,7 @@ Out-of-band swap pattern (hx-swap-oob) for updating multiple DOM elements from a
 
 ```dsl
 # Python endpoint returning OOB response
-from dazzle_back.runtime.htmx import render_oob_fields
+from dazzle.back.runtime.htmx import render_oob_fields
 
 @router.get("/select/{id}")
 async def select_company(id: str):

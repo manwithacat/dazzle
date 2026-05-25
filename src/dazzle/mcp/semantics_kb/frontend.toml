@@ -50,21 +50,19 @@ mcp_resource = "dazzle://docs/htmx-templates"
 category = "Frontend"
 doc_page = "frontend"
 doc_order = 2
-definition = "Three-layer Jinja2 template architecture: Components (full page content), Fragments (HTMX-swappable partials), Macros (pure rendering helpers). Each layer has distinct responsibilities."
+definition = "Typed Fragment substrate (frozen-dataclass HTML primitive tree → emitted HTML via dazzle.render.html.esc). Surfaces declare `render: fragment` in DSL; the runtime emits HTML from a primitive tree, escaped at the boundary by default. The few remaining template paths use either f-strings + dazzle.render.html.esc (Pattern A: framework writes HTML) or string.Template (Pattern B: framework executes user-authored templates). See ADR-0023. Post-#1042 (v0.67.92) Jinja2 is no longer a dependency."
 syntax = '''
-templates/
-├── base.html                 # Document shell
-├── components/               # Full page content (one per surface mode)
-│   ├── list_view.html
-│   ├── detail_view.html
-│   └── form_edit.html
-├── fragments/                # HTMX-swappable partials
-│   ├── table_rows.html
-│   ├── search_select.html
-│   └── form_errors.html
-└── macros/                   # Pure rendering helpers
-    ├── form_field.html
-    └── table_cell.html
+# DSL opt-in:
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  render: fragment        # <-- typed Fragment substrate
+
+# Runtime emission path:
+AppSpec (IR)
+  → converters (surface_converter, workspace_converter)
+  → typed Fragment tree (frozen dataclasses, HTML5 element/attribute allowlist)
+  → HTML + hx-* attributes (escaped by default)
 '''
 related = ["htmx", "fragment_contract", "surface"]
 cognition_tips = [

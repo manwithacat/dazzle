@@ -6,7 +6,7 @@ Dazzle apps are DSL-first and server-rendered. There is no separate frontend bui
 
 | Aspect | Traditional Stack | Dazzle |
 |--------|-------------------|--------|
-| Frontend | React/Vue SPA, CDN, API gateway | Server-rendered Jinja2 + HTMX |
+| Frontend | React/Vue SPA, CDN, API gateway | Server-rendered typed Fragments + HTMX |
 | API layer | REST/GraphQL microservices | Single FastAPI monolith |
 | State | Client-side stores + server | Server-only (PostgreSQL) |
 | Deployment units | 3-5 services | 1 process |

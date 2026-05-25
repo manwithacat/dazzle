@@ -1,5 +1,8 @@
 # Compliance Framework
 
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
+
 Dazzle can automatically assess how well your DSL specification maps to recognised compliance frameworks. Because the DSL is a complete, machine-readable description of your application — its entities, access rules, personas, processes, stories, and data classifications — Dazzle can walk that specification and produce a per-control audit assessment without requiring you to write any additional documentation.
 
 The result is an **AuditSpec**: a typed, JSON-serialisable document that lists every control in the target framework, the DSL evidence found (or not found) for it, and a tier rating indicating how complete that evidence is. You can query the AuditSpec through the CLI or via MCP.

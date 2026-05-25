@@ -8,7 +8,6 @@
 | [Access Control](access-control.md) | DAZZLE uses Cedar-style access rules with three layers: entity-level permit/forbid blocks, surface-level access restrictions, and workspace-level persona allow/deny lists. |
 | [Surfaces](surfaces.md) | Surfaces define the UI and API interfaces for interacting with entities. |
 | [Workspaces](workspaces.md) | Workspaces compose multiple data views into cohesive dashboards or information hubs. |
-| [Reports & Charts](reports.md) | Aggregate data for charts and reports via the scope-aware `Repository.aggregate` primitive. **Start here when writing any chart region.** |
 | [UX Semantic Layer](ux.md) | The UX semantic layer expresses WHY interfaces exist and WHAT matters to users, without prescribing HOW to implement it. |
 | [Experiences](experiences.md) | Experiences define multi-step user flows such as onboarding wizards, checkout processes, and approval workflows. |
 | [Services](services.md) | Services declare custom business logic in DSL with implementation in Python or TypeScript stubs. |
@@ -19,10 +18,9 @@
 | [Ledgers & Transactions](ledgers.md) | Ledgers and transactions provide TigerBeetle-backed double-entry accounting. |
 | [LLM Models & Intents](llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
 | [Testing](testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
-| [Frontend & Templates](frontend.md) | The Dazzle frontend uses server-rendered Jinja2 templates with HTMX for declarative HTTP interactions. |
+| [Frontend & Templates](frontend.md) | The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass HTML primitives) with HTMX for declarative server interactions. |
 | [Messaging & Events](messaging.md) | Messaging and events enable asynchronous communication between components and users. |
-| [Graphs](graphs.md) | Define entity relationships as graph edges, query neighborhoods via CTE, and run graph algorithms (PageRank, community detection, shortest paths). |
-| [Compliance](compliance.md) | Automated compliance evidence extraction from DSL constructs. Supports ISO 27001 and SOC 2 Trust Services Criteria. |
+| [Graph Features](graphs.md) | Dazzle has first-class support for property graphs — data models where entities form nodes and their relationships form edges. |
+| [Compliance Framework](compliance.md) | Dazzle can automatically assess how well your DSL specification maps to recognised compliance frameworks. |
 | [Governance](governance.md) | Governance constructs enforce organisational policies, approval workflows, and service-level agreements. |
 | [Patterns](patterns.md) | Patterns are reusable DSL recipes that combine multiple constructs into proven solutions. |
-| [Schema Migrations](migrations.md) | How to generate, hand-edit, and apply Alembic migrations as DSL requirements evolve. Covers additive fields, renames, enum evolution, entity splits with data backfill, and changes that need no migration. |

@@ -1,7 +1,9 @@
 # ADR-0011: Server-Side Rendering with HTMX
 
-**Status:** Accepted
+**Status:** Accepted (decision); **partially superseded by [ADR-0023](0023-template-emission-patterns.md) on the template-engine choice**
 **Date:** 2026-01-01
+
+> **Status note (2026-05-25):** The core decision (server-side rendering + HTMX, no SPA framework) is unchanged and load-bearing. The specific *template engine* — Jinja2 in the original ADR — was retired in #1042 (v0.67.92) and replaced by the **typed Fragment substrate** documented in [ADR-0023](0023-template-emission-patterns.md). Surfaces declare `render: fragment` in DSL; the runtime emits HTML from a frozen-dataclass primitive tree. Read the rest of this ADR as the rationale for *SSR + HTMX*; read ADR-0023 for the rationale on *how* SSR is implemented today.
 
 ## Context
 

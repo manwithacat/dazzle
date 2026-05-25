@@ -9,49 +9,92 @@ DAZZLE uses Cedar-style access rules with three layers: entity-level permit/forb
 
 ## Access Rules
 
-Inline access control rules on entities. Legacy syntax uses access: blocks with read/write permissions. Cedar-style syntax (v0.21+) uses permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment. Evaluation order: FORBID > PERMIT > default-deny.
+Inline access control rules on entities. Cedar-style syntax uses two separate blocks: permit: (WHO may access — role checks only) and scope: (WHAT they can see — row-level field conditions with for: clauses). Scope rules compile to a formal predicate algebra with static FK graph validation. Legacy access: blocks are still supported. Evaluation order: FORBID > PERMIT > default-deny. Field conditions in permit: are a parser error — they must live in scope: blocks.
 
 ### Syntax
 
 ```dsl
-# Legacy access: block (read/write permissions)
+# Two-block pattern (recommended): separate WHO from WHAT
+permit:
+  <action>: role(<name>)        # WHO — pure role checks only
+
+scope:
+  <action>: <field-condition>   # WHAT — row-level filter
+    for: <role>, <role>         # which roles this filter applies to
+  <action>: all                 # 'all' means no filter (full table access)
+    for: <role>
+
+# forbid: and audit: blocks
+forbid:
+  <action>: role(<name>)        # separation-of-duty constraints
+
+audit:
+  <action>: role(<name>)        # compliance logging
+
+# permit: expressions — role checks only (field conditions are a parser error here):
+# role(<name>) - User has the specified role
+# role(a) or role(b) - Either role
+
+# scope: expressions — field conditions only (compile to predicate algebra):
+# field = current_user - Field matches logged-in user
+# field = current_user.field - Field matches a property of the logged-in user
+# field = value - Field equals literal value
+# parent.field = current_user - FK path traversal (depth-N, nested subquery)
+# via Entity(field = current_user, field = id) - EXISTS subquery (junction table)
+# not via Entity(field = current_user, field = id) - NOT EXISTS (exclusion)
+# not (condition) - Parenthesised negation
+# Combine with: and, or — all boolean logic compiles to SQL
+
+# Cedar-style actions: list, read, create, update, delete, approve, prescribe, etc.
+# Cedar evaluation: FORBID rules override PERMIT; default is deny
+
+# Legacy access: block (read/write permissions — still supported)
 access:
   read: <condition>
   write: <condition>
-
-# Cedar-style blocks (v0.21+)
-permit:
-  <action>: <condition>
-
-forbid:
-  <action>: <condition>
-
-audit:
-  <action>: <condition>
-
-# Expressions:
-# field = current_user - Field matches logged-in user
-# role(<name>) - User has the specified role
-# field = value - Field equals literal value
-# Combine with: and, or
-
-# Cedar-style actions: read, write, create, update, delete, approve, prescribe, etc.
-# Cedar evaluation: FORBID rules override PERMIT; default is deny
 ```
 
 ### Example
 
 ```dsl
-# Legacy style
-entity Document "Document":
-  owner: ref User required
-  is_public: bool = false
+# Two-block pattern: permit: gates WHO, scope: gates WHAT
+entity Shape "Shape":
+  realm: ref Realm required
+  creator: ref User required
+  colour: enum[red,blue,green] required
 
-  access:
-    read: owner = current_user or is_public = true or role(admin)
-    write: owner = current_user or role(admin)
+  # WHO may access — role checks only
+  permit:
+    list: role(oracle)
+    read: role(oracle)
+    create: role(oracle) or role(forgemaster)
+    update: role(oracle)
+    delete: role(oracle)
 
-# Cedar-style (v0.21+) - fine-grained RBAC
+  # Separation of duty
+  forbid:
+    delete: role(forgemaster)
+
+  # WHAT they can see — row-level filters with for: clauses
+  scope:
+    list: all                              # oracle sees everything
+      for: oracle
+    read: all
+      for: oracle
+    create: all
+      for: oracle
+    create: realm = current_user.realm     # forgemaster scoped to their realm
+      for: forgemaster
+    update: all
+      for: oracle
+    delete: all
+      for: oracle
+    list: realm = current_user.realm or creator = current_user
+      for: forgemaster
+    read: realm = current_user.realm or creator = current_user
+      for: forgemaster
+
+# Cedar-style fine-grained RBAC with forbid: and audit:
 entity Prescription "Prescription":
   patient: ref Patient required
   prescriber: ref Doctor required
@@ -70,14 +113,25 @@ entity Prescription "Prescription":
     read: role(admin)
     prescribe: role(compliance_officer)
     dispense: role(compliance_officer)
+
+# Legacy style (still supported)
+entity Document "Document":
+  owner: ref User required
+  is_public: bool = false
+
+  access:
+    read: owner = current_user or is_public = true or role(admin)
+    write: owner = current_user or role(admin)
 ```
 
 ### Best Practices
 
 - Use = for equality (not ==)
 - Start with restrictive rules, expand as needed
-- Use role() for administrative access
-- Combine with persona scopes for UI filtering
+- permit: contains role checks only — field conditions belong in scope:
+- scope: rules use for: clauses to bind row-level filters to specific roles
+- Use 'all' in scope: for roles that should see the full table (e.g., admins)
+- Use for: * in scope: to apply a filter to all permitted roles
 - Cedar evaluation order: FORBID > PERMIT > default-deny
 - Use audit: blocks for compliance logging of sensitive actions
 - Use forbid: for separation-of-duty constraints (e.g., prescriber cannot dispense)
@@ -86,93 +140,43 @@ entity Prescription "Prescription":
 
 ---
 
-## Scope Rules
+## Ownership Pattern
 
-Row-level filtering rules on entities. `scope:` blocks control **what rows** a permitted role sees — they are separate from `permit:` blocks, which control **whether** a role may access an endpoint at all.
-
-The two-block pattern is mandatory:
-
-- `permit:` — authorization gate. Contains **only** `role()` checks. Field conditions inside `permit:` are a parser error.
-- `scope:` — row filter. Contains field conditions bound to one or more personas via an `as:` clause (renamed from `for:` in #998). Evaluated at query time, not at the gate.
-
-Every role that passes a `permit:` gate must have a matching `scope:` rule, or `scope: all` for unrestricted row access.
+Row-level ownership filtering for personal data. Uses scope: blocks (not permit:) because ownership is a row-level concern. The permit: block controls WHO (role checks), the scope: block controls WHICH ROWS (field conditions). There is no 'owner' keyword — use the actual field name with '= current_user'.
 
 ### Syntax
 
 ```dsl
-scope:
-  <field_condition>  as: <persona>[, <persona>...]
-  all                as: <persona>[, <persona>...]
-  *
-
-# <condition>  as: <persona>   — rows matching condition are visible to persona(s)
-# all          as: <persona>   — all rows are visible to persona(s) (unrestricted)
-# *                            — all rows visible to every permitted persona (wildcard)
-
-# Field conditions use standard ConditionExpr:
-#   field = current_user
-#   field = value
-#   field != value
-#   Combine with: and, or
-```
-
-### Example
-
-```dsl
-entity Task "Task":
+entity ReadingProgress "Reading Progress":
   id: uuid pk
-  title: str(200) required
-  owner: ref User required
-  team: ref Team required
-  status: enum[open,closed]=open
+  user_id: ref User required
+  work: ref Work required
+  chapter: int = 1
+  progress_pct: float = 0.0
 
-  # Authorization: who may access this entity
   permit:
-    list: role(admin) or role(manager) or role(member)
-    read: role(admin) or role(manager) or role(member)
-    create: role(admin) or role(manager)
-    update: role(admin) or role(manager) or role(member)
+    create: role(reader) or role(author) or role(admin)
+    read: role(reader) or role(author) or role(admin)
+    update: role(reader) or role(author) or role(admin)
     delete: role(admin)
 
-  # Row filtering: what each permitted persona sees
   scope:
-    all                            as: admin
-    team = current_user.team       as: manager
-    owner = current_user           as: member
-
-entity Shape "Shape":
-  id: uuid pk
-  colour: enum[red,blue,green]
-  realm: ref Realm required
-
-  permit:
-    list: role(oracle) or role(sovereign)
-    read: role(oracle) or role(sovereign)
-
-  # Wildcard: all permitted personas see all rows
-  scope:
-    *
+    read: user_id = current_user
+      for: reader, author
+    update: user_id = current_user
+      for: reader, author
+    read: all
+      for: admin
 ```
-
-### The `all` keyword and `*` wildcard
-
-- `all as: admin` — the named persona sees every row, no filter applied.
-- `*` on its own line — every permitted persona sees every row. Use when no per-persona scoping is needed. Equivalent to writing `all` for each permitted persona individually.
-
-### Default-deny at both layers
-
-- If a role has no matching `permit:` rule, the endpoint gate rejects it with HTTP 403.
-- If a persona passes the gate but has no `scope:` rule (and no `*`), it sees zero rows. This is intentional default-deny at the row level.
 
 ### Best Practices
 
-- Never put field conditions inside `permit:` — they are a parser error.
-- Every permitted persona needs an explicit `scope:` entry or a `*` wildcard.
-- Use `all as: admin` to grant unrestricted access to administrative personas.
-- Prefer named `as:` clauses over `*` when different personas need different row visibility.
-- `as:` is the canonical persona-binding keyword (renamed from `for:` in #998 to remove the overloaded `for` keyword from the grammar).
+- Always pair ownership permit: rules with a scope: block that filters by the owner field
+- Use 'all for: admin' in scope: to give admins visibility to all rows
+- Name the ownership field explicitly (user_id, not just 'user') for clarity
+- Add a ref constraint on the ownership field to link to the User entity
 
-**Related:** [Access Rules](access-control.md#access-rules), [Entity](entities.md#entity), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model)
+**Related:** [Access Rules](access-control.md#access-rules), Scope Runtime, [Cedar Rbac](patterns.md#cedar-rbac)
 
 ---
 
@@ -341,174 +345,6 @@ workspace team_board "Team Board":
 - Default is authenticated - omit access: if that is sufficient
 
 **Related:** [Access Rules](access-control.md#access-rules), [Workspace](workspaces.md#workspace), [Persona](ux.md#persona), [Surface Access](access-control.md#surface-access)
-
----
-
-## Runtime Evaluation Model
-
-Access rules evaluate in two tiers at runtime. The `permit:` and `scope:` blocks map directly onto these two tiers.
-
-### Tier 1: Entity-Level Gate (permit: blocks)
-
-Before any database query runs, the route handler performs a **gate check**: "Does this user have permission to access this endpoint at all?" This check calls `evaluate_permission(operation, record=None, context)` — note `record=None`, meaning no row data is available.
-
-**`permit:` blocks are evaluated here.** They contain only `role()` checks, which can be resolved with just the user's roles. Field conditions cannot appear in `permit:` (they are a parser error), so the gate is always unambiguous.
-
-If a role has no matching `permit:` rule, the gate returns HTTP 403 immediately.
-
-### Tier 2: Row-Level Filters (scope: blocks)
-
-After the gate, the handler builds SQL filters from two sources:
-
-1. **Visibility rules** (`visible:` blocks) — converted to SQL WHERE clauses based on auth state
-2. **Scope rules** (`scope:` blocks) — the `for role(<name>): <condition>` clause matching the authenticated user's role is extracted and merged into the query
-
-These filters ensure only authorized rows are returned. They run at query time, when record data is available. A role with no matching `scope:` entry (and no `*` wildcard) sees zero rows by default.
-
-### Evaluation Flow
-
-```
-Request arrives
-  │
-  ├─ Tier 1: Gate check (permit: blocks only — no record available)
-  │   ├─ Does any permit: rule match the user's roles?
-  │   │   ├─ FORBID match → 403
-  │   │   ├─ PERMIT match → continue to Tier 2
-  │   │   └─ No match → 403 (default-deny)
-  │   └─ Note: field conditions inside permit: are a parser error, never reached here
-  │
-  ├─ Build SQL filters
-  │   ├─ Visibility filters (visible: blocks)
-  │   └─ Scope filters (scope: blocks — <condition> as: <persona>)
-  │       ├─ Matching as: clause found → apply field condition as WHERE clause
-  │       ├─ all as: <persona> → no WHERE clause added (all rows)
-  │       └─ * wildcard → no WHERE clause for any persona (all rows)
-  │
-  ├─ Execute query with merged filters
-  │
-  └─ Tier 2: Post-fetch check (per record, for detail/update/delete)
-      └─ evaluate_permission(op, record, ctx) — full condition evaluation
-```
-
-### Why Two Separate Blocks?
-
-The gate (Tier 1) runs before any database query, so it cannot evaluate field conditions — there is no record yet. Putting field conditions inside `permit:` would force the gate to fail them (field lookup returns `None`), causing legitimate users to receive HTTP 403 even when they should see a filtered result set.
-
-`scope:` blocks exist precisely to express "this role may access the endpoint, but only sees rows matching this condition." They are evaluated at query time (Tier 2), where record data is available.
-
-This was the lesson of PR #503: a LIST gate that evaluated all `permit:` rules against `record=None` broke field-condition rules. The fix separated the concern — `permit:` for who, `scope:` for what.
-
-### Rule Type Summary
-
-| Block | Pattern | Enforcement Point | Notes |
-|-------|---------|-------------------|-------|
-| `permit:` | `list: role(admin)` | Tier 1 gate | Fast — no DB touch |
-| `permit:` | `list: role(teacher) or role(admin)` | Tier 1 gate | Multiple roles in one rule |
-| `scope:` | `for role(teacher): school = current_user.school` | Tier 2 row filter | Applied as SQL WHERE |
-| `scope:` | `for role(admin): all` | Tier 2 (no-op) | No filter added |
-| `scope:` | `*` | Tier 2 (no-op) | All permitted roles see all rows |
-| `visible:` | `when authenticated: owner = current_user` | Tier 2 row filter | Auth-state filter |
-
-### Best Practices
-
-- **`permit:` is for who, `scope:` is for what.** Never mix them. Field conditions in `permit:` are a parser error.
-- **Every permitted role needs a scope entry.** Either a named `for role(X):` clause or a `*` wildcard. A role with no scope entry sees zero rows.
-- **Use `for role(admin): all`** to grant unrestricted row access to administrative roles.
-- **Pure role gates are fast** — the gate rejects unauthorized users before touching the DB.
-- **`*` wildcard** simplifies entities where all permitted roles see all rows with no per-role distinction.
-
-**Related:** [Access Rules](access-control.md#access-rules), [Scope Rules](access-control.md#scope-rules), [Cedar Rbac](patterns.md#cedar-rbac), [Visibility Rules](access-control.md#visibility-rules)
-
----
-
-## Grant-Based RBAC
-
-Runtime-configurable delegation permissions that layer over Cedar-style static access rules (v0.42.0). Static `permit:` rules define the ceiling of what is possible; grant schemas define which of those permissions can be delegated at runtime, by whom, and under what constraints.
-
-### `grant_schema` — declaring a delegation domain
-
-```dsl
-grant_schema department_delegation "Department Delegation":
-  description: "Delegation of department-level responsibilities"
-  scope: Department
-
-  relation acting_hod "Assign covering HoD":
-    granted_by: role(senior_leadership)
-    approval: required
-    expiry: required
-    max_duration: 90d
-```
-
-A `grant_schema` ties a set of delegation rules to a **scope entity** — the object instance the grant is attached to (here, a `Department` row). Every relation within the schema becomes a named grant type that can be created, approved, and revoked at runtime.
-
-### `grant_relation` fields
-
-| Field | Values | Description |
-|-------|--------|-------------|
-| `granted_by` | `role(name)` or condition | Who may create a grant of this type |
-| `approved_by` | `role(name)` or condition | Who must approve (if `approval: required`) |
-| `approval` | `required` \| `immediate` \| `none` | Approval workflow for new grants |
-| `expiry` | `required` \| `optional` \| `none` | Whether an expiry date must be set |
-| `max_duration` | e.g. `90d`, or `param("key")` | Upper bound on expiry duration |
-| `principal_label` | string | UI label for the grantee field |
-| `confirmation` | string | Confirmation prompt shown before granting |
-| `revoke_verb` | string | Label for the revoke action |
-
-`granted_by` is mandatory. All other fields are optional.
-
-### `has_grant()` in state machine guards
-
-Grant status is available inside state machine transition guards via `has_grant()`:
-
-```dsl
-transition approve:
-  from: pending
-  to: approved
-  guard: has_grant("acting_hod", department_id)
-```
-
-The function signature is `has_grant(relation_name, scope_id)`. The runtime checks whether the current user holds an active (non-expired, approved) grant of that relation type for the given scope instance. `has_grant()` is evaluated at transition time; if the grant has expired or was revoked, the guard fails and the transition is blocked.
-
-### Four-eyes approval workflows
-
-Set `approval: required` and `approved_by` to a different role than `granted_by` to enforce separation of duties:
-
-```dsl
-relation payment_approver "Payment Approver":
-  granted_by: role(finance_manager)
-  approved_by: role(cfo)
-  approval: required
-  expiry: required
-  max_duration: 30d
-```
-
-The grant is created by a `finance_manager` but only becomes active once a `cfo` approves it. This prevents unilateral escalation of privileges and satisfies four-eyes controls for regulated workflows.
-
-### DSL example
-
-```dsl
-grant_schema school_cover "School Cover Arrangements":
-  description: "Temporary cover assignments within a school"
-  scope: School
-
-  relation acting_head "Acting Headteacher":
-    principal_label: "Cover headteacher"
-    granted_by: role(trust_admin)
-    approved_by: role(ceo)
-    approval: required
-    expiry: required
-    max_duration: param("max_acting_head_days")
-    confirmation: "This grants full headteacher access. Confirm?"
-    revoke_verb: "End cover arrangement"
-
-  relation cover_senco "Cover SENCO":
-    granted_by: role(headteacher) or role(acting_head)
-    approval: immediate
-    expiry: optional
-    max_duration: 14d
-```
-
-**Related:** [Access Rules](access-control.md#access-rules), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model), [Cedar Rbac](patterns.md#cedar-rbac)
 
 ---
 

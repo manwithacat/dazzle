@@ -1,5 +1,8 @@
 # Graph Features
 
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
+
 Dazzle has first-class support for property graphs — data models where entities form nodes and their relationships form edges. Graph semantics are declared directly in the DSL, and the runtime exposes traversal, algorithm, and visualization endpoints automatically.
 
 There are two distinct graph systems in Dazzle:

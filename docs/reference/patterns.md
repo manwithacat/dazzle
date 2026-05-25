@@ -182,66 +182,6 @@ entity Prescription "Prescription":
 
 ---
 
-## Multi-Tenant Rbac
-
-Field-condition RBAC for multi-tenant or ownership-scoped access. Combines role gates with row-level filters. See [Runtime Evaluation Model](access-control.md#runtime-evaluation-model) for how these rules are enforced at each tier.
-
-### Example
-
-```dsl
-# Multi-tenant school management — teachers see only their school's data
-entity Student "Student":
-  id: uuid pk
-  name: str(200) required
-  school: ref School required
-  grade: int required
-
-  # Pure role gate: admins see everything (Tier 1 — fast rejection)
-  permit:
-    list: role(admin)
-    read: role(admin)
-
-  # Field-condition filter: teachers see only their school (Tier 2 — row filter)
-  permit:
-    list: school = current_user.school
-    read: school = current_user.school
-
-  # Write access: teachers can update their school's students
-  permit:
-    update: school = current_user.school
-    create: role(teacher) or role(admin)
-
-  # Nobody outside admin can delete
-  forbid:
-    delete: role(teacher)
-
-# Ownership-scoped: users see only their own records
-entity Timesheet "Timesheet":
-  id: uuid pk
-  employee: ref User required
-  hours: decimal required
-  submitted: bool = false
-
-  # Owner sees their own timesheets
-  permit:
-    list: employee = current_user
-    read: employee = current_user
-    update: employee = current_user
-
-  # Managers see all (pure role gate)
-  permit:
-    list: role(manager)
-    read: role(manager)
-
-  # Only managers can delete
-  permit:
-    delete: role(manager)
-```
-
-**Related:** [Cedar Rbac](patterns.md#cedar-rbac), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model), [Access Rules](access-control.md#access-rules)
-
----
-
 ## Crud
 
 Complete create-read-update-delete interface for an entity
@@ -331,6 +271,47 @@ workspace team_dashboard "Team Dashboard":
       in_progress: count(Task where status = in_progress)
       completion_rate: round(count(Task where status = done) * 100 / count(Task), 1)
 ```
+
+---
+
+## Direct One To Many
+
+The foundational relational shape. A parent entity has many children; each
+child carries a `ref Parent` field. Reach for this *first* — it's the default
+relational expression in Dazzle and underpins almost every other pattern.
+
+Authors sometimes flatten into a `json[]` list on the parent or embed
+entity-shaped data inline. Resist that: the relational shape composes with
+scope rules, surfaces, aggregates, FK validation, and lifecycle in ways
+JSON arrays can't.
+
+### Example
+
+```dsl
+entity Order "Order":
+  id: uuid pk
+  customer: ref Customer required
+  placed_at: datetime auto_add
+
+entity LineItem "Line Item":
+  id: uuid pk
+  order: ref Order required        # 1:N parent FK — the canonical shape
+  product_name: str(200) required
+  quantity: int required
+  unit_price: decimal(10,2) required
+
+# Surfaces compose naturally — list LineItem rows for one Order via filter,
+# aggregate via primary_aggregate: (see #1242), or scope via the FK chain.
+surface order_lines "Order Lines":
+  uses entity LineItem
+  mode: list
+  section main:
+    field order.placed_at "Order Date"
+    field product_name "Product"
+    field quantity "Qty"
+```
+
+**Related:** [Primary Aggregate N To One](patterns.md#primary-aggregate-n-to-one), [Junction Many To Many](patterns.md#junction-many-to-many), [Subtype Of](patterns.md#subtype-of)
 
 ---
 
@@ -731,6 +712,64 @@ input TaskInput {
 
 ---
 
+## Junction Many To Many
+
+Many-to-many relationships are modelled with an explicit junction entity
+that carries the FKs to both sides plus any relationship-specific data
+(timestamps, role flags, revocation). The `via:` keyword expresses
+aggregates / scope rules that walk through the junction without manual
+JOIN composition.
+
+The junction is a first-class entity — it can have its own surfaces,
+scope rules, RBAC, and audit trail. That matters because the relationship
+itself is often the thing the user cares about (e.g. "when was Alice
+assigned to Project X?").
+
+### Example
+
+```dsl
+entity User "User":
+  id: uuid pk
+  email: email required unique
+
+entity Role "Role":
+  id: uuid pk
+  name: str(80) required unique
+
+entity UserRole "User Role":
+  id: uuid pk
+  user: ref User required
+  role: ref Role required
+  granted_at: datetime auto_add
+  revoked_at: datetime optional   # revocation = tombstone, not deletion
+
+# `via:` aggregate — count active roles per user
+workspace admin_dash "Admin Dashboard":
+  user_role_counts:
+    source: User
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      lenses:
+        - id: active_roles
+          label: "Active Roles"
+          primary_aggregate:
+            aggregate:
+              entity: Role
+              func: count
+              via: UserRole
+            where: revoked_at = null
+
+# `via:` scope rule — only Users you've co-rated can see your details
+scope:
+  read: via UserRole(user = current_user, role.code = co_rater)
+    as: rater
+```
+
+**Related:** [Direct One To Many](patterns.md#direct-one-to-many), [Primary Aggregate N To One](patterns.md#primary-aggregate-n-to-one), [Shared Parent Join](patterns.md#shared-parent-join), [Soft Delete](patterns.md#soft-delete)
+
+---
+
 ## Kanban Board
 
 Status-based workflow visualization
@@ -954,6 +993,50 @@ surface order_list "Orders":
 
 ---
 
+## Primary Aggregate N To One
+
+Show a per-parent summary statistic computed over the parent's child rows —
+e.g. "total revenue per Customer", "open Issue count per Repository",
+"average response time per Ticket". Use `primary_aggregate:` on a
+cohort_strip / bar_chart / metrics region: one scope-aware GROUP BY query
+replaces N+1 enumeration.
+
+Pairs with the direct 1:N shape (#1241). The aggregated entity carries a
+`ref Parent` field; the region declares the aggregate against that FK.
+
+### Example
+
+```dsl
+entity Customer "Customer":
+  id: uuid pk
+  name: str(200) required
+
+entity Order "Order":
+  id: uuid pk
+  customer: ref Customer required
+  total: decimal(12,2) required
+  placed_at: datetime auto_add
+
+workspace customer_overview "Customer Overview":
+  customer_revenue:
+    source: Customer
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      lenses:
+        - id: total_revenue
+          label: "Total Revenue"
+          primary_aggregate:
+            aggregate:
+              entity: Order
+              func: sum
+              column: total
+```
+
+**Related:** [Direct One To Many](patterns.md#direct-one-to-many), [Junction Many To Many](patterns.md#junction-many-to-many), [Shared Parent Join](patterns.md#shared-parent-join)
+
+---
+
 ## Role Based Access
 
 Persona variants controlling scope and capabilities
@@ -1030,6 +1113,47 @@ surface product_catalog "Products":
 
 ---
 
+## Self Referencing Hierarchy
+
+Tree-shaped data where each row points at a parent of the same entity:
+Category → parent Category, Department → parent Department, manager →
+report chains. The `descendants_of` / `ancestors_of` field types resolve
+the recursive walk in one CTE rather than per-level Python loops.
+
+Two flavours: direct self-FK (`parent: ref self`) and chains-through-
+junction (`descendants_of self via ManagerLink.manager`). The
+declaration form `field all_reports: descendants_of self via
+ManagerLink.manager` exposes the resolved descendant set as a virtual
+field usable in surfaces, scope rules, and aggregates.
+
+### Example
+
+```dsl
+entity Department "Department":
+  id: uuid pk
+  name: str(120) required
+  parent: ref self optional    # nullable root → forest of trees
+
+  # #1227 Phase 3(b): resolved virtual field via recursive CTE.
+  all_descendants: descendants_of self via parent
+  all_ancestors: ancestors_of self via parent
+
+# Scope rule using the resolved set: a manager sees themselves + descendants.
+surface visible_departments "My Departments":
+  uses entity Department
+  mode: list
+  section main:
+    field name "Department"
+
+scope:
+  read: id in current_user.department.all_descendants
+    as: department_head
+```
+
+**Related:** [Direct One To Many](patterns.md#direct-one-to-many), [Temporal](patterns.md#temporal), [Subtype Of](patterns.md#subtype-of)
+
+---
+
 ## Settings Archetype
 
 System-wide configuration using the settings semantic archetype for admin-only singleton entities
@@ -1061,6 +1185,204 @@ entity AppSettings "Application Settings":
 ```
 
 **Related:** [Tenant Archetype](patterns.md#tenant-archetype), [Tenant Settings Archetype](patterns.md#tenant-settings-archetype), Timezone Field
+
+---
+
+## Shared Parent Join
+
+The cohort source rows and the aggregated rows both reference a common
+pivot entity, but there is no direct FK between them. `share:` bridges
+the diamond with a single GROUP BY query keyed on the source row's
+primary key — the pivot itself doesn't appear in the FROM clause.
+
+Surfaced concretely by AegisMark in #1213-#1216. Before `share:` shipped,
+the only expression was a Python override route — agents went through
+2-3 design rounds before landing on the canonical shape, which is why
+discoverability (Phase 2) matters as much as the feature itself.
+
+### Example
+
+```dsl
+# AegisMark's canonical surface: per-enrolment average marking score,
+# where MarkingResult is keyed on StudentProfile, not ClassEnrolment.
+entity StudentProfile "Student":
+  id: uuid pk
+  display_name: str(120) required
+
+entity ClassEnrolment "Class Enrolment":
+  id: uuid pk
+  student_profile: ref StudentProfile required
+  teaching_group: ref TeachingGroup required
+
+entity MarkingResult "Marking Result":
+  id: uuid pk
+  student_profile: ref StudentProfile required   # shares the pivot
+  score: decimal(4,2) required
+
+workspace class_view "Class View":
+  cohort_attainment:
+    source: ClassEnrolment
+    display: cohort_strip
+    cohort_strip_config:
+      member_via: id
+      lenses:
+        - id: attainment
+          label: "Avg Score"
+          primary_aggregate:
+            aggregate:
+              entity: MarkingResult
+              func: avg
+              column: score
+              share: StudentProfile     # the diamond pivot
+```
+
+**Related:** [Primary Aggregate N To One](patterns.md#primary-aggregate-n-to-one), [Junction Many To Many](patterns.md#junction-many-to-many), [Subtype Of](patterns.md#subtype-of)
+
+---
+
+## Soft Delete
+
+Mark rows as deleted without physically removing them (tombstone pattern).
+Set `soft_delete: true` on the entity; the framework auto-injects a
+nullable `deleted_at: datetime` tombstone field, auto-filters
+`deleted_at IS NULL` on list / read / aggregate, and converts DELETE
+requests into an UPDATE that stamps `deleted_at = NOW()`.
+
+Composes with scope rules and aggregates through the same `QueryBuilder`
+chain. `include_deleted=true` opt-out is available for admin / audit
+views.
+
+### Example
+
+```dsl
+entity User "User":
+  id: uuid pk
+  email: email required unique
+  display_name: str(120) required
+  soft_delete: true
+  # Framework auto-injects: `deleted_at: datetime optional` if missing.
+
+# List / read / aggregate paths auto-filter deleted_at IS NULL — authors
+# don't write the predicate. DELETE handler stamps deleted_at = NOW()
+# instead of physically removing.
+
+# Opt-out is per-call (e.g. admin audit view):
+#   repo.list(include_deleted=True)  # returns ALL rows including tombstoned
+```
+
+**Related:** [Temporal](patterns.md#temporal), [Direct One To Many](patterns.md#direct-one-to-many), [Subtype Of](patterns.md#subtype-of)
+
+---
+
+## Subtype Of
+
+Declare an IS-A relationship to a base entity. The child shares the base's
+primary key via a shared-PK FK; the framework auto-adds a `kind` enum on the
+base table as the discriminator and writes rows atomically across both tables
+on create / update. Polymorphic detail surfaces dispatch via `subtype_panel:`.
+
+**Escape hatch, not the default.** See `inference_kb: subtype_of_only_for_true_isa`
+for the four cheaper alternatives to try first (separate entities, state machine,
+nullable fields on one entity, has_many / via:). Reach for `subtype_of:` only
+when all of: true IS-A relationship, subtype-specific fields need NOT NULL at
+the schema level, and you need polymorphic queries ("show me all assets, mixed
+kinds").
+
+### Example
+
+```dsl
+module assets
+app asset_registry "Asset Registry"
+
+# Base — shared fields + the synthesised `kind` discriminator enum.
+entity Asset "Asset":
+  id: uuid pk
+  acquired_at: date required
+  acquired_value: decimal(12,2) required
+  location: str(120)
+
+# Each subtype: declare subtype_of: <Base>. Do NOT redeclare `id` (linker rule
+# E_SUBTYPE_DUPLICATE_PK). Do NOT shadow base field names (#1236
+# E_SUBTYPE_FIELD_NAME_OVERLAP). Multi-level (A subtype_of B subtype_of C) is
+# rejected at linker time.
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+  vin: str(17) required unique
+
+entity Building "Building":
+  subtype_of: Asset
+  floors: int required
+  postcode: str(10) required
+
+# Polymorphic detail view dispatches inline by row.kind. The `when` branches
+# name snake_case discriminator values (lowercased child entity names).
+surface asset_card "Asset Card":
+  uses entity Asset
+  mode: view
+  section main:
+    field acquired_at "Acquired"
+    field location "Location"
+    subtype_panel:
+      when kind = vehicle: include surface vehicle_detail
+      when kind = building: include surface building_detail
+
+# A subtype detail surface receives the JOIN'd base columns automatically
+# (Repository.read injects them when subtype_join_sql is active).
+surface vehicle_detail "Vehicle":
+  uses entity Vehicle
+  mode: view
+  section main:
+    field wheels "Wheels"
+    field vin "VIN"
+```
+
+**Related:** Subtype Of Only For True Isa, State Machine Pattern, [Audit Trail](patterns.md#audit-trail)
+
+---
+
+## Temporal
+
+Each row is an open or closed interval (`start_date`, `end_date`) and most
+queries want the row that is *currently active*. The `temporal:` block
+auto-injects the tombstone-style filter on read paths, threads an
+`?as_of=YYYY-MM-DD` URL parameter for historical lookups, enforces "at
+most one active row per key" via a partial unique index, and exposes a
+synthesised `active` computed field for use in scope predicates.
+
+Real surfaces: Employment, Salary, ManagerLink (all in `examples/hr_records/`),
+lease terms, price lists, GDPR consent records, feature flags with
+effective dates, exchange-rate snapshots.
+
+### Example
+
+```dsl
+# From examples/hr_records — the canonical surface for `temporal:`.
+entity Person "Person":
+  id: uuid pk
+  display_name: str(120) required
+
+entity Employment "Employment":
+  id: uuid pk
+  person: ref Person required
+  role: ref Role required
+  start_date: date required
+  end_date: date              # implicit when temporal: is set
+
+  temporal:
+    start_field: start_date
+    end_field: end_date
+    key_field: person          # constrains 'at most one active row per person'
+    default_filter: active     # list/read/aggregate auto-filter end IS NULL
+    as_of_param: as_of         # workspaces accept ?as_of=YYYY-MM-DD
+
+# Workspaces composed against the temporal entity automatically get the
+# 'currently active' filter and the ?as_of= URL parameter. Manager scope
+# rules can traverse Person → current Employment without hand-rolling
+# `end_date = null` filters.
+```
+
+**Related:** [Soft Delete](patterns.md#soft-delete), [Self Referencing Hierarchy](patterns.md#self-referencing-hierarchy), [Junction Many To Many](patterns.md#junction-many-to-many)
 
 ---
 
@@ -1183,7 +1505,7 @@ entity User "User":
 
 # Auto-generated surfaces (admin-only):
 # - user_list: List all users
-# - user_view: View user details
+# - user_detail: View user details
 # - user_create: Create new user
 # - user_edit: Edit user
 

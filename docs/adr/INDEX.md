@@ -12,7 +12,7 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0008](0008-postgresql-only.md) — PostgreSQL is the sole database. No SQLite code paths.
 - [0009](0009-predicate-algebra.md) — Scope rules compile to 6-type predicate algebra. Validated against FK graph at link time.
 - [0010](0010-permit-scope-separation.md) — permit = role gate (RBAC). scope = row filter (ABAC). Never mix.
-- [0011](0011-ssr-htmx.md) — Server-side Jinja2 + HTMX. No SPA frameworks (React, Vue, etc.).
+- [0011](0011-ssr-htmx.md) — Server-side HTML rendering + HTMX. No SPA frameworks. Originally Jinja2; rendering pipeline is now typed Fragments — see ADR-0023, post-#1042.
 - [0012](0012-alembic-migrations.md) — Alembic for schema migrations. No hand-rolled migration planners.
 - [0013](0013-unified-knowledge-graph.md) — One per-project KG with TOML seed. No separate knowledge systems.
 - [0014](0014-no-future-annotations-in-routes.md) — No `from __future__ import annotations` in FastAPI route files. Breaks OpenAPI.

@@ -151,10 +151,13 @@ title = "Frontend & Templates"
 slug = "frontend"
 order = 14
 intro = """
-The Dazzle frontend uses server-rendered Jinja2 templates with HTMX for \
-declarative HTTP interactions. This page covers the three-layer template \
-architecture, fragment contracts, out-of-band swaps, sitespec configuration, \
-copy management, section types, and static asset serving.
+The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass \
+HTML primitives) with HTMX for declarative server interactions. Surfaces \
+declare `render: fragment` in DSL; the runtime emits HTML from a primitive \
+tree, escaped at the boundary by default. No Jinja2 since #1042 / v0.67.92 \
+([ADR-0023](../adr/0023-template-emission-patterns.md)). This page covers \
+the rendering architecture, fragment contracts, out-of-band swaps, sitespec \
+configuration, copy management, section types, and static asset serving.
 """
 
 [pages.messaging]
@@ -189,3 +192,1185 @@ proven solutions. Each pattern includes a complete, copy-paste-ready example \
 demonstrating how entities, surfaces, workspaces, and services work together \
 for common use cases.
 """
+
+
+# ──────────────────────────────────────────────────────────
+# Prose pages — body lives in TOML, not assembled from concepts.
+# Added 2026-05-25 to migrate rhythms / graphs / compliance off
+# the hand-maintained docs/reference/*.md fallback path.
+# ──────────────────────────────────────────────────────────
+
+[pages.rhythms]
+title = "Rhythms"
+slug = "rhythms"
+order = 10.5
+intro = """
+Rhythms capture longitudinal persona journeys through the app, organized into temporal phases containing scenes — evaluable actions on specific surfaces. They answer "can this persona complete their journey over time?" rather than testing atomic interactions (stories) or multi-actor state machines (processes).
+"""
+body = '''
+For a full introduction to the rhythm paradigm, see the [Rhythm Guide](../guides/rhythms.md).
+
+---
+
+## Rhythm
+
+A longitudinal journey map for a single persona through the app. Organized into temporal phases, each containing scenes. Every rhythm is bound to exactly one persona.
+
+Workflow: propose → evaluate → coverage → get → list
+
+### Syntax
+
+```dsl
+rhythm <name> "<Title>":
+  persona: <persona_id>
+  [cadence: "<temporal_hint>"]
+
+  phase <phase_name>:
+    [kind: <phase_kind>]
+    scene <scene_name> "<Scene Title>":
+      on: <surface_name>
+      [action: <verb1>[, <verb2>, ...]]
+      [entity: <EntityName>]
+      [expects: "<expected_outcome>"]
+      [story: <story_id>]
+
+    [scene ...]
+
+  [phase ...]
+```
+
+### Properties
+
+| Property | Level | Type | Validated? | Purpose |
+|----------|-------|------|-----------|---------|
+| `persona:` | rhythm | identifier | Yes — must reference existing persona | Who takes this journey |
+| `cadence:` | rhythm | quoted string | No — agent-interpreted | Temporal frequency hint |
+| `kind:` | phase | keyword | Yes if present — must be a valid phase kind | Phase lifecycle classification |
+| `on:` | scene | identifier | Yes — must reference existing surface | Which surface this scene exercises |
+| `action:` | scene | identifier(s) | No — agent-interpreted | What the persona does |
+| `entity:` | scene | identifier | Yes if present — must reference existing entity | What data is involved |
+| `expects:` | scene | quoted string | No — agent-interpreted | Expected outcome assertion |
+| `story:` | scene | identifier | Yes if present — must reference existing story | Link to atomic story |
+
+### Validation Rules
+
+The linker validates structural references at compile time:
+
+1. `rhythm.persona` must match a defined persona
+2. `scene.on` must match a defined surface
+3. `scene.entity` (if present) must match a defined entity
+4. `scene.story` (if present) must match a defined story
+5. Phase names must be unique within the rhythm
+6. Scene names must be unique within the rhythm (globally, not per-phase)
+
+### Examples
+
+**Minimal rhythm:**
+
+```dsl
+rhythm first_use "First Use":
+  persona: new_user
+
+  phase start:
+    scene view_dashboard "View Dashboard":
+      on: main_dashboard
+      action: browse
+      expects: "dashboard_loads"
+```
+
+**Multi-phase with entity and story references:**
+
+```dsl
+rhythm onboarding "New User Onboarding":
+  persona: new_user
+  cadence: "first 30 days"
+
+  phase discovery:
+    kind: onboarding
+    scene browse_catalog "Browse Available Courses":
+      on: course_list
+      action: filter, browse
+      expects: "visible_results"
+
+    scene enroll "Enroll in First Course":
+      on: course_detail
+      action: submit
+      entity: Enrollment
+      expects: "enrollment_confirmed"
+      story: ST-005
+
+  phase engagement:
+    kind: active
+    scene complete_module "Complete First Module":
+      on: module_view
+      action: submit
+      entity: ModuleCompletion
+      expects: "progress_recorded"
+
+  phase mastery:
+    kind: periodic
+    scene view_progress "Check Progress":
+      on: progress_dashboard
+      action: browse
+      expects: "credential_visible"
+```
+
+### Best Practices
+
+- One persona per rhythm — use processes for multi-actor handoffs
+- Keep phases abstract (discovery, engagement, mastery) — agents specialize to domain calendars
+- Use `story:` to bridge rhythms and stories where they overlap
+- Use `rhythm coverage` to find personas without rhythms and surfaces without scenes
+- Let the MCP `propose` operation generate rhythms — it analyzes your app's surfaces and entities
+
+**Related:** [Stories](stories.md#story), [Processes](processes.md#process), [Personas](ux.md#persona), [Surfaces](surfaces.md)
+
+---
+
+## Phase Kinds
+
+The optional `kind:` field on a phase classifies its role in the persona's lifecycle. This classification drives gap analysis, ambient detection, and evaluation strategy.
+
+| Kind | Description |
+|------|-------------|
+| `onboarding` | First-time setup and orientation. Scenes in this phase cover initial account creation, configuration wizards, and first meaningful interactions. |
+| `active` | Event-driven work. The persona reacts to triggers — incoming requests, notifications, or state changes — and takes action on them. |
+| `periodic` | Recurring scheduled tasks. Activities the persona performs on a regular cadence — daily reviews, weekly reports, monthly reconciliations. |
+| `ambient` | No explicit trigger; proactive system value. The system surfaces insights, recommendations, or background maintenance without the persona asking. |
+| `offboarding` | Wind-down, handoff, and archival. Covers account deactivation, data export, responsibility transfer, and cleanup. |
+
+When `kind:` is omitted, the IR stores `None` (unspecified). Unspecified phases are still valid but will not participate in kind-aware gap analysis.
+
+### Example
+
+```dsl
+rhythm quarterly_review "Quarterly Review Cycle":
+  persona: finance_manager
+  cadence: "quarterly"
+
+  phase preparation:
+    kind: periodic
+    scene pull_reports "Pull Financial Reports":
+      on: report_builder
+      action: generate
+      entity: FinancialReport
+      expects: "reports_generated"
+
+  phase review:
+    kind: active
+    scene review_anomalies "Review Flagged Anomalies":
+      on: anomaly_dashboard
+      action: browse, resolve
+      expects: "anomalies_addressed"
+
+  phase insights:
+    kind: ambient
+    scene system_trends "View System-Generated Trends":
+      on: trend_dashboard
+      action: browse
+      expects: "trends_visible"
+```
+
+---
+
+## Gaps Analysis
+
+The `rhythm gaps` MCP operation identifies missing or weak coverage in the persona journey. It combines static analysis of the AppSpec with evaluated scores from scene evaluation.
+
+### Static Gaps
+
+Static gaps are derived from the AppSpec without requiring any evaluation data:
+
+| Gap Type | Description |
+|----------|-------------|
+| `capability` | A surface exists that no scene exercises. The persona has no defined path to reach it. |
+| `unmapped` | A scene references an entity but has no `story:` link, so its behavioral contract is undefined. |
+| `orphan` | A scene references a story that does not exist in the AppSpec. |
+| `ambient` | A phase is marked `kind: ambient` but has no scenes. Ambient value was declared but not designed. |
+| `unscored` | Scenes exist but have never been evaluated. No quality signal is available. |
+
+### Evaluated Gaps
+
+When scene evaluations have been submitted (see [Scene Evaluation](#scene-evaluation)), additional gaps are derived from scoring patterns:
+
+- Low `arrival` scores suggest navigation or discovery problems.
+- Low `orientation` scores suggest the surface does not communicate its purpose.
+- Low `action` scores suggest the interaction is blocked or unclear.
+- Low `completion` scores suggest the persona cannot finish the task.
+- Low `confidence` scores suggest the persona is uncertain about the outcome.
+
+### Severity Levels
+
+Each gap is assigned a severity that determines its priority in the roadmap:
+
+| Severity | Meaning |
+|----------|---------|
+| `blocking` | The persona journey is broken. A required surface is unreachable or a scene consistently fails. |
+| `degraded` | The journey works but the experience is poor. Scores are below threshold in one or more dimensions. |
+| `advisory` | An opportunity for improvement. Missing coverage that does not block the journey. |
+
+### Roadmap Ordering
+
+Gaps are returned in priority order: `blocking` first, then `degraded`, then `advisory`. Within each severity level, gaps are ordered by the number of affected scenes (descending).
+
+---
+
+## Lifecycle Operation
+
+The `rhythm lifecycle` MCP operation reports where a project stands in the rhythm development workflow. It reads the current state of the AppSpec and stored evaluations, then returns a structured assessment. It is purely advisory — it never blocks or modifies anything.
+
+### Steps
+
+The lifecycle tracks 8 steps in order:
+
+| Step | Description | Maturity Level |
+|------|-------------|---------------|
+| `model_domain` | Define entities, surfaces, and personas | `new_domain` |
+| `write_stories` | Write stories for key interactions | `new_domain` |
+| `write_rhythms` | Define rhythms with phases and scenes | `building` |
+| `map_scenes_to_stories` | Link scenes to stories via `story:` | `building` |
+| `build_from_stories` | Build surfaces and logic from story contracts | `building` |
+| `evaluate_from_scenes` | Run scene evaluations and submit scores | `evaluating` |
+| `find_gaps` | Analyze gaps from evaluation results | `evaluating` |
+| `iterate` | Address gaps, re-evaluate, converge on quality | `mature` |
+
+### Maturity Levels
+
+The lifecycle assigns one of four maturity levels based on which steps are complete:
+
+- **new_domain** — Domain modeling and story writing are in progress. No rhythms exist yet.
+- **building** — Rhythms and scenes are defined. The app is being built from story contracts.
+- **evaluating** — Scenes are being evaluated. Gaps are being identified and prioritized.
+- **mature** — Evaluation cycles are producing consistently high scores. Gaps are advisory only.
+
+### Usage
+
+Call `rhythm lifecycle` to get the current step, maturity level, and a list of completed/pending steps. Use this to guide what to work on next.
+
+---
+
+## Scene Evaluation
+
+The `rhythm evaluate` MCP operation with `action: submit_scores` records quality scores for individual scenes. Scores are produced by agents (automated or human) who exercise the scene and rate their experience across five dimensions.
+
+### Dimensions
+
+Each scene is scored on 5 dimensions, each rated 0.0 to 1.0:
+
+| Dimension | Question |
+|-----------|----------|
+| `arrival` | Can the persona reach this surface? Is the navigation path clear? |
+| `orientation` | Does the surface communicate what it is and what the persona can do? |
+| `action` | Can the persona perform the intended action? Are controls discoverable and functional? |
+| `completion` | Does the action produce the expected outcome? Is success communicated? |
+| `confidence` | Does the persona trust the result? Is the system state clear after the action? |
+
+### Scoring Workflow
+
+1. An agent navigates to the surface referenced by `scene.on`.
+2. The agent attempts the actions listed in `scene.action`.
+3. The agent checks the outcome against `scene.expects`.
+4. The agent produces scores for each dimension.
+5. Scores are submitted via `rhythm evaluate` with `action: submit_scores`.
+
+### Gap Classification from Scores
+
+Scoring patterns map to gap types for the gaps analysis:
+
+- `arrival < 0.5` and `orientation < 0.5` together suggest the surface is unreachable or confusing — classified as `blocking`.
+- `action < 0.5` suggests the interaction is broken — classified as `blocking`.
+- `completion < 0.7` suggests the task cannot be reliably finished — classified as `degraded`.
+- `confidence < 0.7` with other scores high suggests UX polish issues — classified as `advisory`.
+- All dimensions above 0.8 means the scene is healthy and produces no gaps.
+
+### Example
+
+```dsl
+# Scene definition in the rhythm
+phase onboard:
+  kind: onboarding
+  scene create_account "Create Account":
+    on: registration_form
+    action: submit
+    entity: User
+    expects: "account_created"
+    story: ST-001
+```
+
+After evaluation, scores might look like:
+
+```
+arrival: 0.9, orientation: 0.85, action: 0.7, completion: 0.6, confidence: 0.5
+```
+
+This pattern (low completion + low confidence) would produce a `degraded` gap indicating the registration flow works but does not clearly confirm success.
+
+---
+'''
+
+[pages.graphs]
+title = "Graph Features"
+slug = "graphs"
+order = 15.5
+intro = """
+Dazzle has first-class support for property graphs — data models where entities form nodes and their relationships form edges. Graph semantics are declared directly in the DSL, and the runtime exposes traversal, algorithm, and visualization endpoints automatically.
+"""
+body = '''
+There are two distinct graph systems in Dazzle:
+
+- **DSL property graphs** — your application data as a graph (e.g. social networks, knowledge graphs, org charts). Declared with `graph_edge:` and `graph_node:` on entities. The runtime generates REST endpoints for traversal and algorithms.
+- **Knowledge Graph (MCP)** — a framework-level graph that indexes your DSL artefacts (entities, surfaces, stories, personas, workspaces) and framework concepts. Queried via the `graph` MCP tool by agents working on your project.
+
+## DSL Property Graphs
+
+### Declaring an edge entity
+
+Any entity can become a graph edge by adding a `graph_edge:` block. The entity must have two `ref` fields — one pointing to the source node and one to the target node.
+
+```dsl
+entity Friendship "Friendship":
+  id: uuid pk
+  from_person: ref Person required
+  to_person: ref Person required
+  since: date optional
+  strength: int optional
+
+  graph_edge:
+    source: from_person
+    target: to_person
+    weight: strength
+    directed: false
+```
+
+The `graph_edge:` block tells the runtime that rows in this table are edges in a graph. The runtime then generates graph-aware API endpoints for any node entity that references this edge entity.
+
+#### `graph_edge:` properties
+
+| Property | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `source` | yes | — | ref field on this entity pointing to the source node |
+| `target` | yes | — | ref field on this entity pointing to the target node |
+| `type` | no | — | enum or str field used as an edge type discriminator |
+| `weight` | no | — | numeric field (int, decimal, or float) used as edge weight in algorithm endpoints |
+| `directed` | no | `true` | whether edges have direction; `false` creates an undirected graph |
+| `acyclic` | no | `false` | advisory — documented intent; not enforced at the database level |
+
+### Annotating a node entity
+
+Add `graph_node:` to an entity to declare it as a node in a graph. This is optional but recommended — it tells the runtime which edge entity connects nodes of this type, and unlocks the `/graph` neighborhood endpoint.
+
+```dsl
+entity Person "Person":
+  id: uuid pk
+  name: str(100) required
+  bio: text optional
+
+  graph_node:
+    edges: Friendship
+    display: name
+```
+
+#### `graph_node:` properties
+
+| Property | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `edges` | yes | — | the edge entity (must declare `graph_edge:`) |
+| `display` | no | — | field used as the node label in visualization formats |
+
+### Heterogeneous graphs
+
+An edge entity can connect nodes of different types. The validator will emit a warning so you know the graph is heterogeneous, but this is fully supported.
+
+```dsl
+entity ContentLink "Content Link":
+  id: uuid pk
+  source_article: ref Article required
+  target_topic: ref Topic required
+  relevance: decimal(3,2) optional
+
+  graph_edge:
+    source: source_article
+    target: target_topic
+    weight: relevance
+    directed: true
+```
+
+### Edge type discrimination
+
+Use an enum field as the `type` discriminator when your graph has multiple kinds of edges:
+
+```dsl
+entity DocumentEdge "Document Edge":
+  id: uuid pk
+  from_doc: ref Document required
+  to_doc: ref Document required
+  kind: enum[references,extends,supersedes,related] required
+  created_at: datetime
+
+  graph_edge:
+    source: from_doc
+    target: to_doc
+    type: kind
+    directed: true
+```
+
+The serializer includes a `type` field on each edge in the API response, which Cytoscape.js and D3 consumers can use for edge styling.
+
+### Validation
+
+Run `dazzle validate` after adding graph declarations. Errors that will be reported:
+
+- `source` or `target` field does not exist on the entity
+- `source` or `target` field is not a `ref` type
+- `type` field does not exist on the entity
+- `weight` field does not exist or is not numeric (int, decimal, or float)
+- `graph_node: edges` references an entity that does not declare `graph_edge:`
+- `graph_node: display` references a field that does not exist
+
+Warnings (non-fatal):
+
+- Heterogeneous graph: source and target ref different entity types
+- Edge entity has no access control
+- `acyclic: true` — cycles are only detectable in seed data, not enforced at the DB level
+
+The linter (`dazzle lint`) will also suggest adding `graph_edge:` to entities with two or more ref fields pointing to the same entity, and suggest `graph_node:` on entities targeted by edge declarations.
+
+---
+
+## Runtime API Endpoints
+
+When a node entity has `graph_node:`, the runtime registers additional HTTP endpoints alongside the standard CRUD routes. Paths follow the same pattern as the entity's list route (e.g. if your `Person` entity is served at `/persons`, the graph endpoint is at `/persons/{id}/graph`).
+
+### Neighborhood traversal
+
+```
+GET /{entity-path}/{id}/graph?depth=1&format=cytoscape
+```
+
+Returns all nodes and edges reachable from the given node within `depth` hops. The seed node is always included even if it has no connections.
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `depth` | `1` | Hops to traverse (1–3) |
+| `format` | `cytoscape` | Response format: `cytoscape`, `d3`, or `raw` |
+
+The neighborhood query uses a PostgreSQL `WITH RECURSIVE` CTE. For directed graphs, traversal follows edge direction (source → target). For undirected graphs, traversal follows either direction.
+
+**Cytoscape.js format** (`format=cytoscape`):
+
+```json
+{
+  "elements": [
+    {"group": "nodes", "data": {"id": "abc", "label": "Alice", "name": "Alice"}},
+    {"group": "nodes", "data": {"id": "def", "label": "Bob", "name": "Bob"}},
+    {"group": "edges", "data": {"source": "abc", "target": "def", "strength": 5}}
+  ],
+  "stats": {"nodes": 2, "edges": 1}
+}
+```
+
+**D3 force-graph format** (`format=d3`):
+
+```json
+{
+  "nodes": [{"id": "abc", "label": "Alice"}, {"id": "def", "label": "Bob"}],
+  "links": [{"source": "abc", "target": "def", "strength": 5}]
+}
+```
+
+**Raw format** (`format=raw`): returns `{"nodes": [...], "edges": [...]}` with unmodified DB row dicts.
+
+### Shortest path
+
+Requires the `networkx` optional dependency (`pip install dazzle-dsl[graph]`).
+
+```
+GET /{entity-path}/{id}/graph/shortest-path?to={target_id}&weighted=false&format=cytoscape
+```
+
+Finds the shortest path between two nodes. Returns the nodes and edges that form the path, plus a `shortest_path` summary object.
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `to` | required | Target node UUID |
+| `weighted` | `false` | If `true`, uses the `weight` field on edges (requires `weight` in `graph_edge:`) |
+| `format` | `cytoscape` | Response format: `cytoscape`, `d3`, or `raw` |
+
+**Example response** (`format=raw`):
+
+```json
+{
+  "path": ["abc", "xyz", "def"],
+  "length": 2,
+  "weight": 12.5
+}
+```
+
+When no path exists, `path` is `[]` and `length` is `null`.
+
+### Connected components
+
+```
+GET /{entity-path}/graph/components?format=raw
+```
+
+Partitions all nodes into connected groups. Useful for detecting isolated subgraphs — users, documents, or topics with no links to the rest of the graph.
+
+For directed graphs, uses weak connectivity (ignores edge direction when determining components).
+
+**Example response:**
+
+```json
+{
+  "count": 3,
+  "components": [
+    ["abc", "def", "xyz"],
+    ["ghi"],
+    ["jkl", "mno"]
+  ]
+}
+```
+
+Components are returned sorted by size, largest first.
+
+### List with graph format
+
+The standard list endpoint also accepts a `format` parameter on edge entities:
+
+```
+GET /{edge-entity-path}?format=cytoscape
+GET /{edge-entity-path}?format=d3
+```
+
+This returns all edges as a graph payload, useful for rendering the full graph without starting from a specific seed node.
+
+---
+
+## Domain-Scoped Graphs
+
+Graph endpoints respect the entity's `filter_fields` configuration. You can scope a graph query to a specific domain partition by passing filter parameters:
+
+```
+GET /persons/{id}/graph?school_id=abc123&depth=2&format=cytoscape
+```
+
+The filter is applied to the edge table's WHERE clause before traversal begins. Only edges matching the filter are included, and only reachable nodes through those edges appear in the result.
+
+This means each tenant or domain context gets an isolated view of the graph — a school sees only connections within its own data, even on a shared edge table.
+
+---
+
+## Graph MCP Tool
+
+The `graph` MCP tool operates on the **Knowledge Graph** — the framework-level graph that indexes your project's DSL artefacts. It is separate from the runtime property graph API described above.
+
+The knowledge graph is populated automatically when the MCP server starts. It contains nodes for every entity, surface, story, process, persona, workspace, and service in your DSL, plus framework concepts seeded from the Dazzle knowledge base.
+
+### Operations
+
+#### `query` — search for nodes
+
+Search the graph by text. Matches against node names and metadata.
+
+```json
+{"operation": "query", "text": "invoice", "entity_types": ["dsl_entity"], "limit": 10}
+```
+
+`entity_types` filter accepts: `dsl_entity`, `dsl_surface`, `dsl_story`, `dsl_process`, `dsl_persona`, `dsl_workspace`, `concept`, `inference`.
+
+#### `neighbourhood` — explore around a node
+
+Get all nodes within N hops of a starting node.
+
+```json
+{"operation": "neighbourhood", "entity_id": "entity:Invoice", "depth": 2}
+```
+
+Entity IDs use prefixed notation: `entity:Name`, `surface:name`, `persona:name`, `workspace:name`, `story:name`.
+
+`depth` defaults to 1. Relation types can be filtered with `relation_types` (e.g. `["uses", "acts_as"]`).
+
+#### `dependencies` — what does X depend on?
+
+```json
+{"operation": "dependencies", "entity_id": "surface:invoice_list", "transitive": false}
+```
+
+Returns nodes that `entity_id` has outgoing relations to. Set `transitive: true` for full transitive closure (up to 5 hops by default).
+
+#### `dependents` — what depends on X?
+
+```json
+{"operation": "dependents", "entity_id": "entity:Invoice", "transitive": true}
+```
+
+Returns nodes with incoming relations pointing to `entity_id`.
+
+#### `paths` — find a route between two nodes
+
+```json
+{"operation": "paths", "source_id": "persona:accountant", "target_id": "entity:Payment"}
+```
+
+Returns up to 10 shortest paths. Each path includes the node ID sequence and the relation type sequence. Uses a recursive CTE — paths are capped at 5 hops by default.
+
+#### `concept` — look up a framework concept
+
+```json
+{"operation": "concept", "name": "state_machine"}
+```
+
+Looks up a seeded framework concept by name or alias. Returns the concept's type, metadata, and canonical ID.
+
+#### `inference` — find patterns matching a description
+
+```json
+{"operation": "inference", "text": "user uploads a file", "limit": 5}
+```
+
+Finds inference pattern entries whose trigger phrases match the query text. Used by agents to discover what DSL constructs are applicable in a given situation.
+
+#### `topology` — derive project structure
+
+```json
+{"operation": "topology"}
+```
+
+Returns the project topology derived from the current DSL: entity reference graph, surface-to-entity mapping, workspace composition, and dead construct detection (entities with no surfaces, entities with surfaces but no workspace).
+
+To focus on a single entity:
+
+```json
+{"operation": "topology", "entity": "Invoice"}
+```
+
+Returns what surfaces show it, which workspaces include it, and which other entities reference it.
+
+#### `triggers` — show what fires on an entity event
+
+```json
+{"operation": "triggers", "entity": "Order", "event": "created"}
+```
+
+Returns all LLM intents and processes that are triggered when the named entity event fires. Useful for understanding the automation chain attached to an event. `event` accepts `created`, `updated`, or `deleted`.
+
+#### `export` / `import` — snapshot and restore
+
+```json
+{"operation": "export"}
+```
+
+Returns the full project-specific KG data (not the seeded framework knowledge) as a JSON object. Use this to snapshot and restore KG state across environments.
+
+```json
+{"operation": "import", "data": {...}, "mode": "merge"}
+```
+
+Loads KG data from a JSON object. `mode` is `merge` (additive upsert, the default) or `replace` (wipe project data and load fresh).
+
+You can also pass `file_path` instead of `data` to import from a file.
+
+#### `stats` — graph summary
+
+```json
+{"operation": "stats"}
+```
+
+Returns total entity count, relation count, and breakdowns by entity type and relation type. Useful for understanding what the KG contains.
+
+#### `populate` — refresh from source
+
+```json
+{"operation": "populate", "root_path": "/path/to/project"}
+```
+
+Re-indexes the project from the DSL files on disk. Normally called automatically on MCP startup and project selection. Call manually if you have made changes that have not been picked up.
+
+### Entity ID format
+
+KG entity IDs use a prefix convention:
+
+| Prefix | Example |
+|--------|---------|
+| `entity:` | `entity:Invoice` |
+| `surface:` | `surface:invoice_list` |
+| `persona:` | `persona:accountant` |
+| `workspace:` | `workspace:finance` |
+| `story:` | `story:record_payment` |
+| `process:` | `process:payment_approval` |
+| `concept:` | `concept:state_machine` |
+| `inference:` | `inference:file_upload` |
+
+### Relation types
+
+The built-in DSL relation types:
+
+| Type | Meaning |
+|------|---------|
+| `uses` | Surface or workspace uses an entity |
+| `acts_as` | Story actor is a persona |
+| `scopes` | Story scopes to an entity |
+| `process_implements` | Process implements a story |
+| `invokes` | Process step invokes a service |
+| `has_subprocess` | Process step starts a subprocess |
+| `human_task_on` | Process step presents a surface |
+| `navigates_to` | Experience step navigates to a surface |
+| `allows_persona` | Workspace or surface allows a persona |
+| `denies_persona` | Workspace or surface denies a persona |
+| `default_workspace` | A persona's default workspace |
+| `region_source` | Workspace region is sourced from an entity |
+| `related_concept` | Framework concept relates to another concept |
+| `suggests_for` | Inference entry suggests for a concept |
+
+---
+
+## Installation
+
+NetworkX is an optional dependency required for the shortest-path and connected-components endpoints:
+
+```bash
+pip install dazzle-dsl[graph]
+```
+
+Without it, the neighborhood endpoint and list-with-format still work. The algorithm endpoints (`/graph/shortest-path`, `/graph/components`) return 501 if NetworkX is not installed.
+
+---
+
+## Complete example
+
+A social graph where people follow each other, with mutual-follow edges weighted by interaction count:
+
+```dsl
+entity Follow "Follow":
+  id: uuid pk
+  follower: ref Person required
+  followed: ref Person required
+  interaction_count: int optional
+
+  graph_edge:
+    source: follower
+    target: followed
+    weight: interaction_count
+    directed: true
+
+entity Person "Person":
+  id: uuid pk
+  username: str(50) required
+  display_name: str(100) optional
+
+  graph_node:
+    edges: Follow
+    display: display_name
+```
+
+This generates (assuming `Person` is served at `/persons` and `Follow` at `/follows`):
+
+- `GET /persons/{id}/graph?depth=2&format=cytoscape` — who does this person follow, and who do those people follow?
+- `GET /persons/{id}/graph/shortest-path?to={other_id}&weighted=true` — weighted shortest social path between two people
+- `GET /persons/graph/components` — isolated clusters in the social graph
+- `GET /follows?format=d3` — the full follow graph for force-directed rendering
+'''
+
+[pages.compliance]
+title = "Compliance Framework"
+slug = "compliance"
+order = 15.6
+intro = """
+Dazzle can automatically assess how well your DSL specification maps to recognised compliance frameworks. Because the DSL is a complete, machine-readable description of your application — its entities, access rules, personas, processes, stories, and data classifications — Dazzle can walk that specification and produce a per-control audit assessment without requiring you to write any additional documentation.
+"""
+body = '''
+The result is an **AuditSpec**: a typed, JSON-serialisable document that lists every control in the target framework, the DSL evidence found (or not found) for it, and a tier rating indicating how complete that evidence is. You can query the AuditSpec through the CLI or via MCP.
+
+---
+
+## Supported Frameworks
+
+| Framework | ID | Controls | Source |
+|-----------|----|----------|--------|
+| ISO/IEC 27001:2022 | `iso27001` | 93 (across 4 themes) | ISO/IEC JTC 1/SC 27 |
+| SOC 2 Type II — Trust Services Criteria | `soc2` | 64 (across 5 criteria) | AICPA (2017, revised 2022) |
+
+**ISO/IEC 27001:2022** organises its Annex A controls into four themes:
+- **Organisational Controls** (A.5.x) — policies, roles, information handling, supplier relations
+- **People Controls** (A.6.x) — screening, employment conditions, awareness, remote working
+- **Physical Controls** (A.7.x) — physical security, equipment maintenance, clear-desk policy
+- **Technological Controls** (A.8.x) — endpoint security, identity management, monitoring, cryptography
+
+**SOC 2 TSC** maps to five Trust Services Criteria:
+- **Security** — Common Criteria (CC1–CC9), the mandatory baseline
+- **Availability** — system uptime and capacity
+- **Confidentiality** — protection of confidential information
+- **Processing Integrity** — complete, valid, accurate, timely processing
+- **Privacy** — personal information lifecycle
+
+Not every control is mappable to DSL constructs. Controls that have no `dsl_evidence` mapping in the framework YAML are marked `excluded` (tier 0). This is expected — organisational governance, physical security, and HR controls cannot be evidenced by a DSL specification.
+
+---
+
+## How It Works
+
+The pipeline runs in three stages:
+
+```
+Framework YAML  ──┐
+                  ├─→  compile_auditspec()  ──→  AuditSpec
+DSL files  ──────┘
+```
+
+**Stage 1 — Taxonomy loading.** Dazzle reads the framework YAML from `src/dazzle/compliance/frameworks/<id>.yaml`. The YAML describes every control and lists which DSL constructs count as evidence for that control (the `dsl_evidence` list). The loader validates the structure and returns a `Taxonomy`.
+
+**Stage 2 — Evidence extraction.** Dazzle parses your DSL files into an `AppSpec` IR (the same IR used by the runtime). The evidence extractor walks the IR and collects items for ten construct categories:
+
+| Category | What is extracted |
+|----------|--------------------|
+| `classify` | Data classification directives on entities |
+| `permit` | Access control rules (permit blocks) |
+| `scope` | Row-filter scope rules |
+| `visible` | Field visibility rules |
+| `transitions` | State machine transition definitions |
+| `process` | Named process definitions |
+| `persona` | Persona/archetype definitions |
+| `story` | User story definitions |
+| `grant_schema` | Delegation rules (also satisfies `permit` evidence) |
+| `llm_intent` | AI intent declarations (also satisfies `classify` evidence) |
+
+Some categories are aliases. `grant_schema` satisfies `permit` evidence because delegation rules document access control policy. `llm_intent` satisfies `classify` evidence because AI intent configuration documents data handling governance. `workspace` satisfies `personas` evidence in the taxonomy lookup. The full mapping is in `src/dazzle/compliance/compiler.py` (`CONSTRUCT_TO_KEY`).
+
+**Stage 3 — Compilation.** For each control, Dazzle checks whether the extracted evidence contains items matching any of that control's expected construct categories. A control with at least one match is `evidenced` (tier 1). A control with no match and at least one expected category is a `gap` (tier 3). A control with no expected categories at all is `excluded` (tier 0).
+
+The output is written to `.dazzle/compliance/output/<framework>/auditspec.json`.
+
+---
+
+## CLI Commands
+
+### `dazzle compliance compile`
+
+Run the full pipeline and write the AuditSpec.
+
+```bash
+dazzle compliance compile
+dazzle compliance compile --framework soc2
+dazzle compliance compile --framework iso27001 --output /tmp/audit.json
+```
+
+Sample output:
+
+```
+Compliance: ISO/IEC 27001:2022
+  Controls: 93
+  Evidenced: 41
+  Partial: 0
+  Gaps: 21
+  Excluded: 31
+  Coverage: 44.1%
+
+  Output: .dazzle/compliance/output/iso27001/auditspec.json
+```
+
+The `--output` flag writes an additional copy to the given path. The canonical output is always written to `.dazzle/compliance/output/<framework>/auditspec.json` regardless.
+
+Options:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--framework`, `-f` | `iso27001` | Framework ID: `iso27001` or `soc2` |
+| `--output`, `-o` | *(none)* | Additional output path for auditspec JSON |
+
+---
+
+### `dazzle compliance evidence`
+
+Show which DSL constructs were found in the current project, without running the full compile.
+
+```bash
+dazzle compliance evidence
+```
+
+Sample output:
+
+```
+DSL Evidence
+  classify: 4 items
+  permit: 12 items
+  scope: 9 items
+  visible: 3 items
+  transitions: 7 items
+  process: 5 items
+  persona: 6 items
+  story: 14 items
+  grant_schema: 2 items
+  llm_intent: 0 items
+```
+
+Zero-item categories are shown dimmed. Use this command before compiling to understand whether your DSL has the constructs needed for coverage — if `persona` is 0 items, any control that requires `persona` evidence will be a gap.
+
+---
+
+### `dazzle compliance gaps`
+
+Compile and print only the controls with gaps or partial evidence.
+
+```bash
+dazzle compliance gaps
+dazzle compliance gaps --framework soc2
+dazzle compliance gaps --tier 3          # gaps only (no partials)
+dazzle compliance gaps --tier 2,3        # gaps and partials (default)
+```
+
+Sample output:
+
+```
+Compliance Gaps (14 controls)
+  A.5.7  Threat intelligence (tier 3)
+  A.5.9  Inventory of information and other associated assets (tier 3)
+  A.6.3  Information security awareness, education and training (tier 3)
+  A.8.16 Monitoring activities (tier 3)
+  ...
+```
+
+Gap lines are printed in red; partial lines in yellow. The `--tier` flag accepts a comma-separated list of tier numbers.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--framework`, `-f` | `iso27001` | Framework ID |
+| `--tier` | `2,3` | Tiers to display (2 = partial, 3 = gap) |
+
+---
+
+## MCP Operations
+
+The `compliance` MCP tool provides the same pipeline operations for use inside Claude. All operations accept a `framework` argument defaulting to `iso27001`.
+
+### `compile`
+
+Returns the full AuditSpec JSON. Use this when you need control-level detail for a specific theme or set of controls.
+
+```
+compliance compile framework=soc2
+```
+
+### `evidence`
+
+Returns the EvidenceMap JSON — the raw evidence extracted from the DSL before it is mapped to controls. Useful for understanding what Dazzle found before the compile step.
+
+```
+compliance evidence
+```
+
+### `gaps`
+
+Returns only the `gap` and `partial` ControlResults. Faster than `compile` when you only need to know what is missing.
+
+```
+compliance gaps framework=iso27001
+```
+
+Returns:
+```json
+{
+  "gaps": [
+    {
+      "control_id": "A.5.7",
+      "control_name": "Threat intelligence",
+      "theme_id": "organisational",
+      "status": "gap",
+      "tier": 3,
+      "evidence": [],
+      "gap_description": "",
+      "action": ""
+    }
+  ],
+  "count": 14
+}
+```
+
+### `summary`
+
+Returns only the `AuditSummary` counts. Useful for a quick health check.
+
+```
+compliance summary
+```
+
+Returns:
+```json
+{
+  "total_controls": 93,
+  "evidenced": 41,
+  "partial": 0,
+  "gaps": 21,
+  "excluded": 31
+}
+```
+
+### `review`
+
+Returns a review-tracking structure for all tier 2 and tier 3 controls. Each entry has a `status` of `"draft"` (tier 2) or `"stub"` (tier 3) and a `resolved` flag. Intended for human-in-the-loop review workflows.
+
+```
+compliance review framework=iso27001
+```
+
+---
+
+## Evidence Mapping Reference
+
+The table below shows which DSL constructs satisfy which compliance control categories. A control lists one or more expected constructs in its `dsl_evidence` list; any matching evidence item marks the control as `evidenced`.
+
+| DSL Construct | Taxonomy Category | What it evidences |
+|---------------|-------------------|-------------------|
+| `classify` on an entity field | `classify` | Data classification policy, information handling, GDPR-style data governance |
+| `permit` block on an entity | `permit` | Access control policies, least-privilege, role-based access |
+| `scope:` block on an entity | `scope` | Row-level data isolation, multi-tenancy, data minimisation |
+| `visible:` on an entity | `visible` | Field-level visibility controls, need-to-know enforcement |
+| `transitions:` / state machine | `transitions` | Lifecycle management, change management, audit trail |
+| `process` definition | `process` | Documented operational procedures, workflow governance |
+| `persona` / `archetype` | `persona` | Security roles, responsibilities, organisational structure |
+| `story` definition | `story` | Control validation, acceptance criteria, test evidence |
+| `grant_schema` | `permit` (alias) | Delegation policies, administrative access governance |
+| `llm_intent` | `classify` (alias) | AI data handling governance, automated processing disclosure |
+| `workspace` | `personas` (alias) | Role-specific interface boundaries, responsibility segregation |
+| `scenarios` in stories | `stories` (alias) | Scenario-based control validation |
+
+### Which frameworks use which constructs
+
+**ISO 27001** makes heavy use of `classify`, `permit`, `scope`, `transitions`, `process`, `persona`, and `story`. The Technological Controls theme (A.8.x) also uses `visible` for field-level access controls.
+
+**SOC 2** places significant weight on `permit`, `scope`, `persona`, and `story` for the Common Criteria (CC). The Availability and Processing Integrity criteria additionally use `process` and `transitions`. The Privacy criteria uses `classify` for personal data handling evidence.
+
+---
+
+## Understanding Results
+
+### Status values
+
+| Status | Tier | Meaning |
+|--------|------|---------|
+| `evidenced` | 1 | At least one DSL construct matching the control's expected evidence was found |
+| `partial` | 2 | Reserved for future use — controls that are partially evidenced but incomplete |
+| `gap` | 3 | The control has expected DSL evidence categories, but none were found in the project |
+| `excluded` | 0 | The control has no DSL evidence mapping — it cannot be assessed from the specification alone |
+
+### What "evidenced" means in practice
+
+An `evidenced` status means the DSL specification contains constructs that *correspond to* the control objective. It does not mean the control is operationally satisfied. For example:
+
+- ISO 27001 A.5.1 (Policies for information security) is evidenced by `classify` and `permit` blocks. This means your specification declares classification and access policies — but whether those policies are appropriate for your risk profile is a human judgment.
+- ISO 27001 A.5.2 (Information security roles and responsibilities) is evidenced by `persona` definitions — but whether the personas map to the right organisational structure requires review.
+
+The AuditSpec is evidence that your design intent is documented in machine-readable form. It is a starting point for an auditor conversation, not a substitute for one.
+
+### What "excluded" means
+
+Many framework controls are organisational, physical, or HR-level requirements that cannot be satisfied by an application specification. Examples:
+
+- ISO 27001 A.5.5 (Contact with authorities) — no DSL construct can evidence this
+- SOC 2 CC1.2 (Board independence and oversight) — this is a governance-level control
+
+Excluded controls are expected. A well-specified application will typically show 25–40% excluded on ISO 27001 and a similar proportion on SOC 2.
+
+### Coverage calculation
+
+The CLI reports `Coverage` as `(evidenced + partial) / total_controls`. Excluded controls are counted in the denominator. Realistic coverage for a medium-complexity Dazzle application against ISO 27001 is 40–55%. Higher coverage requires more DSL constructs: richer classification directives, more detailed process definitions, and story-level test coverage.
+
+---
+
+## Adding Custom Frameworks
+
+To assess against a framework not bundled with Dazzle, create a YAML file following the schema below and pass it directly to the CLI.
+
+### Framework YAML schema
+
+```yaml
+framework:
+  id: my_framework          # unique identifier, no spaces
+  name: "My Framework v1"
+  version: "1.0"
+  jurisdiction: "internal"
+  body: "My Org"
+
+  themes:
+    - id: security
+      name: "Security Controls"
+      controls:
+        - id: "SEC-1"
+          name: "Access Control Policy"
+          objective: "Ensure all access is governed by a defined policy."
+          attributes:
+            control_type: [preventive]
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks encode access control policy"
+            - construct: scope
+              description: "scope blocks enforce row-level isolation"
+
+        - id: "SEC-2"
+          name: "Role Definition"
+          objective: "All users must be assigned to a defined role."
+          dsl_evidence:
+            - construct: persona
+              description: "Persona definitions encode system roles"
+
+        - id: "SEC-3"
+          name: "Physical Security"
+          objective: "Physical access to systems must be controlled."
+          # No dsl_evidence → will be marked excluded
+          dsl_evidence: []
+```
+
+### Valid construct values for `dsl_evidence`
+
+The `construct` field must match one of the taxonomy categories the evidence extractor produces. Use one of:
+
+```
+classify   permit    scope       visible    transitions
+process    persona   story       personas   stories
+```
+
+Note that `personas` and `stories` are the plural aliases used in some taxonomy files; both map to the `persona` and `story` evidence buckets respectively.
+
+### Running with a custom taxonomy
+
+```bash
+dazzle compliance compile --framework my_framework \
+  --taxonomy-path /path/to/my_framework.yaml
+```
+
+The `--taxonomy-path` flag overrides the bundled framework lookup. The `--framework` flag is still used as the identifier in the output path and AuditSpec `framework_id` field.
+
+> The `--taxonomy-path` option is available on the `compile` command. The `gaps` command uses the same flag. The `evidence` command does not require a taxonomy — it only reads your DSL.
+
+---
+
+## Workflow
+
+A typical compliance assessment workflow:
+
+```bash
+# 1. Check what evidence exists in your project
+dazzle compliance evidence
+
+# 2. Run the full compile against ISO 27001
+dazzle compliance compile --framework iso27001
+
+# 3. Review gaps — what DSL constructs are missing?
+dazzle compliance gaps
+
+# 4. Add missing constructs to your DSL (e.g. missing persona definitions,
+#    unclassified entities, missing process documentation)
+
+# 5. Recompile — coverage should improve
+dazzle compliance compile
+
+# 6. Run against SOC 2 as well
+dazzle compliance compile --framework soc2
+dazzle compliance gaps --framework soc2
+```
+
+The AuditSpec at `.dazzle/compliance/output/iso27001/auditspec.json` is a stable, reproducible artifact — given the same DSL files, the same AuditSpec is produced. Commit the AuditSpec alongside your DSL to provide a dated record of your compliance posture at each release.
+'''

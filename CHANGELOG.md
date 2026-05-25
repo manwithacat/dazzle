@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — README substrate framing + docs Jinja2 → typed Fragments cleanup + prose-page TOML migration
+
+- **README.md** — new section "The substrate: three layers of prior correction" between *The thesis* and *Design principles*. Explains grammar-restriction / inference-bias / post-hoc-filter and points readers at `docs/counter-priors/INDEX.md`.
+- **docs/index.md** — replaced the stale "DNR Backend" / "Dazzle UI" Mermaid pipeline diagram. The new diagram shows the runtime path (FastAPI + typed Fragments + HTMX), the derived-artefact path (specs / tests / compliance), and the MCP + KG + counter-prior surface.
+- **Jinja2 → typed Fragments docs sweep** — `docs/philosophy.md`, `docs/adr/INDEX.md`, `docs/adr/0011-ssr-htmx.md` (status-banner pointing at ADR-0023), `docs/guides/scaling.md`, `docs/guides/security.md`, `docs/guides/agent-upgrade-guide-v0.51.md`, `docs/architecture/overview.md`, `docs/reference/htmx-templates.md` (status-banner), `docs/reference/index.md`, `docs/reference/frontend.md`, `docs/plans/2026-03-09-documentation-infrastructure-plan.md`, `.claude/CLAUDE.md` (path table + UI runtime description). Source-of-truth edits in `src/dazzle/mcp/semantics_kb/doc_pages.toml` (frontend intro) and `src/dazzle/mcp/semantics_kb/frontend.toml` (`templates` concept definition + syntax). Post-#1042 Jinja2 is no longer a dependency; SSR is now the typed Fragment substrate.
+- **`docs_gen.py` extended with prose pages** — `[pages.X]` entries in `doc_pages.toml` now support an optional `body = '''...'''` field. When set, the page body is the TOML literal; concept assembly is skipped. The three previously-hand-maintained reference pages (`rhythms`, `graphs`, `compliance`) — 1100+ lines of prose, tables, and worked examples — migrated into `doc_pages.toml` as prose pages so that **every** reference doc is now derivable from TOML. `check_docs_coverage` skips the "no concepts" error for prose pages.
+- **Tests**: `tests/unit/test_docs_gen.py` updated to expect 20 pages (was 17) and to assert that the three prose pages declare non-empty `body` fields.
+
 ### Added — counter-prior catalogue (`docs/counter-priors/`)
 
 - **Markdown-first catalogue at `docs/counter-priors/*.md`** of 10 corpus pathologies Dazzle inoculates against, with YAML frontmatter (id, layer, triggers_text, triggers_code, refs, summary) and a mandatory four-section body (corpus prior / wrong shape / right shape / why this matters here). Visible on GitHub, in mkdocs nav, and queryable via MCP. Source of truth for both human readers and the KG.

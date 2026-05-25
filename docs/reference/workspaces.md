@@ -213,6 +213,24 @@ workspace dashboard "Dashboard":
 
 Computed metrics and aggregate functions for workspace regions.
 
+**Entry point for chart authoring:** read ``docs/reference/reports.md``
+before writing any chart region. It explains the single/multi-dim
+decision, the fast/slow-path distinction, FK auto-join behaviour,
+scope-safety contract, and the ``dazzle db explain-aggregate``
+debugger.
+
+Fast path (recommended — one SQL query, scope evaluated once):
+- ``count(<source_entity>)`` with ``group_by: <field>`` — bar_chart
+- ``count(<source_entity>)`` with ``group_by: [<a>, <b>]`` — pivot_table
+- ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart, sparkline) — v0.60.0
+- ``count(<source_entity>)`` with ``group_by: [bucket(<ts>, week), severity]`` — stacked area_chart — v0.60.0
+- ``sum:<col>``, ``avg:<col>``, ``min:<col>``, ``max:<col>`` — numeric measures
+
+Slow path (N+1 — avoid when the fast path applies):
+- ``count(<other_entity> where field = current_bucket)`` — cross-entity,
+  per-bucket queries. Used only when the bucketing dimension lives on
+  a different entity than what you're counting.
+
 ### Syntax
 
 ```dsl
@@ -220,24 +238,42 @@ aggregate:
   total: count(Task)
   completed: count(Task where status = done)
   completion_rate: count(Task where status = done) * 100 / count(Task)
-  avg_duration: avg(Task.duration_days)
+  avg_duration: avg:duration_days
 ```
 
-**Related:** [Regions](workspaces.md#regions), [Workspace](workspaces.md#workspace)
+**Related:** [Regions](workspaces.md#regions), [Workspace](workspaces.md#workspace), [Display Modes](workspaces.md#display-modes)
 
 ---
 
 ## Display Modes
 
-Visualization modes for workspace regions.
+Visualization modes for workspace regions. Each display consumes a
+specific IR shape:
+
+- ``list`` / ``grid`` / ``timeline`` / ``map`` — row-per-item views
+- ``metrics`` / ``summary`` — KPI tiles from an aggregate: block
+- ``bar_chart`` / ``funnel_chart`` — single-dim count/measure distribution
+  (uses ``group_by: <field>``)
+- ``kanban`` — single-dim grouping with column-per-value layout
+- ``heatmap`` — 2-dim matrix (``heatmap_rows:`` + ``heatmap_columns:``)
+- ``pivot_table`` — N-dim cross-tab (``group_by: [field, field]``) — v0.59.3
+- ``line_chart`` — single-dim time series (``group_by: bucket(ts, day)``) — v0.60.0
+- ``area_chart`` — stacked time series (``group_by: [bucket(ts, week), series]``) — v0.60.0
+- ``sparkline`` — compact time-series tile — v0.60.0
+- ``tree`` / ``activity_feed`` / ``queue`` / ``progress`` — specialised
+
+**New in v0.59: Strategy C aggregate primitive.** Chart regions now run
+one scope-aware GROUP BY SQL query via Repository.aggregate — no more
+N+1 enumeration. See the ``reports`` doc for the canonical entry
+point when writing any chart region.
 
 ### Syntax
 
 ```dsl
-display: <list|grid|timeline|map>
+display: <list|grid|timeline|map|metrics|bar_chart|funnel_chart|pivot_table|heatmap|kanban|tree|queue|tabbed_list|activity_feed|progress>
 ```
 
-**Related:** [Regions](workspaces.md#regions), [Workspace](workspaces.md#workspace)
+**Related:** [Regions](workspaces.md#regions), [Workspace](workspaces.md#workspace), [Aggregates](workspaces.md#aggregates)
 
 ---
 

@@ -40,7 +40,7 @@ AppSpec (frozen Pydantic IR — src/dazzle/core/ir/)
    ▼
 validated AppSpec
    │
-   ├─→ Runtime (src/dazzle_back/, src/dazzle_ui/) — FastAPI + Jinja2/HTMX
+   ├─→ Runtime (src/dazzle/back/, src/dazzle/ui/)  — FastAPI + typed Fragments + HTMX
    ├─→ Specs   (src/dazzle/specs/)                — OpenAPI, AsyncAPI
    ├─→ MCP     (src/dazzle/mcp/)                  — knowledge, validation, queries
    ├─→ LSP     (src/dazzle/lsp/)                  — editor diagnostics
@@ -96,7 +96,7 @@ Django, Rails, Prisma, SQLAlchemy, TypeORM all give you a row-as-object layer wi
 The reason: an ORM conflates schema declaration, query construction, row-to-object mapping, migration management, and boundary validation into one package. Dazzle does most of those jobs — schema via DSL, migrations via Alembic, queries via `aggregate` and scope-compiled SQL, boundary validation via Pydantic DTOs — but deliberately omits row-to-object mapping. The omitted piece is the part that creates a parallel object graph, which is also the part that hides data access behind attribute reads (N+1 surprises, lazy-load lifecycle bugs, the `n+1.attribute_error_in_template` debugging session). The DSL is the model; the runtime executes it; there is no second source of truth to drift from. An ORM is a Python-language ergonomics tool, not a relational requirement — Codd's relational model has no notion of one.
 
 ### No SPA
-React, Vue, Svelte, Next.js, Remix all assume a JS application that fetches JSON from your backend. Dazzle uses server-rendered Jinja2 templates and HTMX for interactivity ([ADR-0011](adr/0011-ssr-htmx.md)).
+React, Vue, Svelte, Next.js, Remix all assume a JS application that fetches JSON from your backend. Dazzle uses **server-rendered typed Fragments + HTMX** for interactivity ([ADR-0011](adr/0011-ssr-htmx.md), [ADR-0023](adr/0023-template-emission-patterns.md)). Surfaces declare `render: fragment` in DSL; the runtime emits HTML from a frozen-dataclass primitive tree, no Jinja2 dependency (retired #1042 / v0.67.92).
 
 The reason: Dazzle generates UI from the model. SPAs are a poor fit because they want a rich client-side state machine that diverges from the server's. With server-side rendering, every UI surface is just a function of the (Entity, Surface, Persona) triple plus current row state, which is exactly what the model already describes. Interactivity that *does* need client state uses Alpine.js with carefully scoped patterns ([ADR-0022](adr/0022-alpine-bindings-vs-idiomorph.md)).
 

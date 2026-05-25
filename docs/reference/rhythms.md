@@ -1,5 +1,8 @@
 # Rhythms
 
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
+
 Rhythms capture longitudinal persona journeys through the app, organized into temporal phases containing scenes — evaluable actions on specific surfaces. They answer "can this persona complete their journey over time?" rather than testing atomic interactions (stories) or multi-actor state machines (processes).
 
 For a full introduction to the rhythm paradigm, see the [Rhythm Guide](../guides/rhythms.md).

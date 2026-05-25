@@ -159,9 +159,10 @@ title = "Frontend & Templates"
 slug = "frontend"
 order = 14
 intro = """
-The frontend runtime uses HTMX for interactivity and Jinja2 for server-rendered
-templates. Features include fragment contracts, OOB swaps, site specs for public
-pages, and island architecture for client-side components.
+The frontend runtime uses HTMX for interactivity and the typed Fragment
+substrate (frozen-dataclass primitive tree → HTML) for server-rendered
+templates. Features include fragment contracts, OOB swaps, site specs for
+public pages, and island architecture for client-side components.
 """
 
 [pages.messaging]

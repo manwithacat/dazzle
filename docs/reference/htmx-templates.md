@@ -1,6 +1,8 @@
 # HTMX Template Specification
 
-**Version:** 1.0.0 | **Status:** Active | **MCP Resource:** `dazzle://docs/htmx-templates`
+**Version:** 1.0.0 | **Status:** Active for HTMX patterns; **template-engine references stale** — see banner below | **MCP Resource:** `dazzle://docs/htmx-templates`
+
+> **Status note (2026-05-25):** This document captures the HTMX interaction patterns Dazzle's UI runtime emits (server-rendered HTML, `hx-*` attributes, composable fragments). Those patterns are unchanged. The *template engine* mentioned below (Jinja2 `ChoiceLoader`, `TemplateResponse` etc.) was retired in #1042 (v0.67.92). Rendering now goes through the **typed Fragment substrate** — see [ADR-0023](../adr/0023-template-emission-patterns.md) and [`typed-fragment-pilot-guide.md`](../typed-fragment-pilot-guide.md). The conceptual HTMX-patterns content below still applies; the Jinja2-specific override mechanism does not.
 
 ## Purpose
 

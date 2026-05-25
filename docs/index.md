@@ -62,11 +62,17 @@ Dazzle transforms domain specifications written in a human-readable DSL into wor
 graph LR
     DSL[DSL Files] --> Parser
     Parser --> IR[AppSpec IR]
-    IR --> Back[DNR Backend]
-    IR --> UI[Dazzle UI]
-    Back --> API[FastAPI App]
-    UI --> JS[HTMX Templates]
+    IR --> Back[FastAPI Runtime<br/>dazzle/back]
+    IR --> UI[Server-rendered UI<br/>dazzle/ui · typed Fragments + HTMX]
+    IR --> Derived[Derived artefacts]
+    Derived --> OAS[OpenAPI / AsyncAPI specs]
+    Derived --> Tests[Generated tests]
+    Derived --> Audit[Compliance evidence]
+    IR --> MCP[MCP server<br/>dazzle/mcp]
+    MCP --> KG[(Knowledge graph<br/>+ counter-prior catalogue)]
 ```
+
+The runtime executes the IR directly — no code generation step. Every artefact on the right is computed from the same IR. The MCP path is how agents introspect, query, and propose changes; the counter-prior catalogue at `docs/counter-priors/` is the substrate's antipattern-flagging surface, queryable via `knowledge counter_prior`.
 
 ### Key Constructs
 

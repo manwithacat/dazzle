@@ -76,7 +76,7 @@ Discovery mode that statically analyzes process and story integrity. Checks that
 
 ## Rbac Validation
 
-NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: examples/rbac_validation/ and tests/unit/test_rbac_validation.py.
+NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: fixtures/rbac_validation/ and tests/unit/test_rbac_validation.py.
 
 **Related:** [Capability Discovery](testing.md#capability-discovery), [E2E Testing](testing.md#e2e-testing), [Access Rules](access-control.md#access-rules)
 
@@ -92,7 +92,7 @@ Named demo state that sets up context for testing or demonstration. Scenarios de
 scenario <name> "<Title>":
   description: "<what this scenario tests>"
 
-  as persona <persona_name>:
+  for persona <persona_name>:
     start_route: "<url>"
 
   [demo:]

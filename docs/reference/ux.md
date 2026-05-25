@@ -160,7 +160,7 @@ for agent:
   scope: status = open and assigned_to = current_user
 ```
 
-**Related:** [Persona](ux.md#persona), [Conditions](entities.md#conditions)
+**Related:** [Persona](ux.md#persona), [Conditions](entities.md#conditions), Scope Runtime
 
 ---
 

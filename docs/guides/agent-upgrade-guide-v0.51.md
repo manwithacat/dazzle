@@ -8,7 +8,9 @@ This guide covers the UX component expansion (v0.51.1–v0.51.8) and how to appl
 
 ## What Changed
 
-Dazzle v0.51.x added 35 UX components across 5 tiers, 4 vendored JavaScript libraries, and a `widget=` DSL annotation. The goal: match standard frontend framework coverage without breaking the server-rendered Jinja2 + HTMX + Alpine architecture.
+Dazzle v0.51.x added 35 UX components across 5 tiers, 4 vendored JavaScript libraries, and a `widget=` DSL annotation. The goal: match standard frontend framework coverage without breaking the server-rendered HTML + HTMX + Alpine architecture.
+
+> **Historical note (v0.51 era):** At the time this guide was written, Dazzle rendered HTML via Jinja2 templates. Post-#1042 (v0.67.92, ADR-0023) the template engine is the typed Fragment substrate. The component patterns described here remain conceptually accurate; the on-disk implementation has moved from `.html` templates to typed fragment primitives.
 
 ### New Widget Types
 

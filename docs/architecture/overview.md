@@ -93,46 +93,38 @@ The runtime generates:
 - Zero build toolchain — two CDN script tags, no node_modules
 - LLM-friendly — templates are plain HTML with predictable attributes
 
-### Template Pipeline
+### Rendering Pipeline
 
 ```
 AppSpec (Dazzle IR)
-    ↓ template_compiler
-PageContext (Pydantic model)
-    ↓ Jinja2
+    ↓ converters (surface_converter, workspace_converter)
+typed Fragment tree (frozen dataclasses)
+    ↓ HTML emission (dazzle.render.html.esc by default, ADR-0023 Pattern A)
 HTML + hx-* attributes
     ↓ browser
 HTMX swaps partial HTML from server
 ```
+
+Post-#1042 (v0.67.92) the framework no longer ships Jinja2. Surfaces declare `render: fragment` in DSL; rendering goes through the typed Fragment substrate (frozen-dataclass primitive tree, validated against an HTML5 element/attribute allowlist, escaped at the emission boundary by default). The few remaining template paths use either f-strings + `dazzle.render.html.esc` (Pattern A — framework writes HTML) or `string.Template` (Pattern B — framework executes user-authored templates). See [ADR-0023](../adr/0023-template-emission-patterns.md) for the full rationale.
 
 ### Technology Stack
 
 | Technology | Role |
 |-----------|------|
 | **HTMX** | Declarative server interactions (`hx-get`, `hx-post`, `hx-swap`) |
+| **Typed Fragments** | Frozen-dataclass primitive tree for server-rendered HTML — `dazzle/ui/runtime/` |
 | **Dazzle CSS** | Bundled native stylesheet (`/styles/dazzle.css`) — tokens + components in @layer order, no third-party CSS framework |
 | **dz.js** | Lightweight client-side state (modals, toggles, transitions) |
-| **Jinja2** | Server-side template rendering |
+| **Alpine.js** | Local component state (filter bars, popovers, modals) — narrowly scoped per ADR-0022 |
 
 > The workspace runtime no longer loads Tailwind or DaisyUI. Site/marketing
 > pages still consume the legacy CDN tags via `site_renderer.get_shared_head_html`
 > for back-compat with `stat-value` / `bg-base-*` class names — see
 > `docs/CSS_MIGRATION_GUIDE.md` for the rename map.
 
-### Template Structure
+### Rendering Structure
 
-```
-templates/
-├── layouts/             # Page shells (app_shell, single_column)
-├── components/          # Full-page components (filterable_table, form, detail_view)
-├── fragments/           # Partial HTML for HTMX swaps (table_rows, inline_edit, bulk_actions)
-└── macros/              # Reusable Jinja2 macros
-```
-
-- **Layouts** wrap pages with nav, head, and CDN script tags
-- **Components** render full content areas from a `PageContext`
-- **Fragments** return partial HTML — the unit of HTMX interaction
-- **Macros** are Jinja2 helpers for repeated markup patterns
+The UI runtime emits HTML through the typed Fragment primitive tree. The DSL layer is unchanged — surfaces, sections, regions still declare layout; the `render: fragment` annotation tells the renderer to produce HTML from the typed tree rather than (the now-retired) Jinja2 templates. See [`docs/typed-fragment-pilot-guide.md`](../typed-fragment-pilot-guide.md) for the migration notes.
 
 ### Fragment Rendering
 

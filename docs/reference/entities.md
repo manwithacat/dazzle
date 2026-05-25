@@ -357,7 +357,7 @@ entity Contact "Contact":
   updated_by: ref User optional
 ```
 
-**Related:** [Field Types](entities.md#field-types), [Relationships](entities.md#relationships), [Entity](entities.md#entity)
+**Related:** [Field Types](entities.md#field-types), [Relationships](entities.md#relationships), [Entity](entities.md#entity), Display Field
 
 ---
 

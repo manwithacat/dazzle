@@ -26,9 +26,10 @@ class TestLoadConcepts:
 
 
 class TestLoadPageMetadata:
-    def test_loads_17_pages(self) -> None:
+    def test_loads_20_pages(self) -> None:
+        # 17 concept-assembled + 3 prose pages (rhythms, graphs, compliance)
         pages = load_page_metadata()
-        assert len(pages) == 17
+        assert len(pages) == 20
 
     def test_pages_have_required_fields(self) -> None:
         pages = load_page_metadata()
@@ -36,6 +37,15 @@ class TestLoadPageMetadata:
             assert "title" in page
             assert "order" in page
             assert "intro" in page
+
+    def test_prose_pages_carry_body(self) -> None:
+        """Prose pages (no concept entries) must declare their content via `body`."""
+        pages = load_page_metadata()
+        for slug in ("rhythms", "graphs", "compliance"):
+            assert slug in pages, f"prose page {slug!r} missing from doc_pages.toml"
+            assert (pages[slug].get("body") or "").strip(), (
+                f"prose page {slug!r} must declare a non-empty `body` field"
+            )
 
 
 class TestGenerateReferenceDocs:

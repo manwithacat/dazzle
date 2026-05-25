@@ -29,8 +29,8 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/compliance/` | Compliance pipeline — ISO 27001 + SOC 2 evidence extraction, taxonomy, compiler |
 | `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail, compliance report |
 | `src/dazzle/testing/` | Test infrastructure (agent E2E wrapper, browser gate) |
-| `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events, grants) |
-| `src/dazzle_ui/` | UI runtime — Python/Jinja2 templates rendered server-side, static JS/CSS assets |
+| `src/dazzle/back/` | FastAPI runtime (API, auth, channels, events, grants) |
+| `src/dazzle/ui/` | UI runtime — typed Fragment substrate (frozen-dataclass primitive tree → HTML via `dazzle.render.html.esc`) + static JS/CSS assets. No Jinja2 since #1042 (v0.67.92, ADR-0023). |
 
 ## Project Layout Convention
 
@@ -331,4 +331,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.74.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.74.1 | **Python**: 3.12+ | **Status**: Production Ready

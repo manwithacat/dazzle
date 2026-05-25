@@ -157,9 +157,14 @@ def check_docs_coverage(kb_dir: Path | None = None) -> list[str]:
         if not defn and not desc:
             issues.append(f"WARNING: Concept '{name}' has empty definition")
 
-    for slug in pages:
-        if slug not in pages_with_concepts:
-            issues.append(f"ERROR: Page '{slug}' in doc_pages.toml has no concepts")
+    for slug, page_meta in pages.items():
+        if slug in pages_with_concepts:
+            continue
+        # Prose pages (those with a non-empty `body`) are exempt — their content
+        # lives in doc_pages.toml directly, not in per-concept TOML entries.
+        if (page_meta.get("body") or "").strip():
+            continue
+        issues.append(f"ERROR: Page '{slug}' in doc_pages.toml has no concepts")
 
     return issues
 
@@ -300,10 +305,25 @@ def _render_page(
     concepts: list[tuple[str, dict[str, Any]]],
     all_concepts: dict[str, dict[str, Any]],
 ) -> str:
-    """Render a single reference doc page."""
+    """Render a single reference doc page.
+
+    Two page shapes are supported:
+
+      1. Concept-assembled (default) — concepts in semantics_kb/*.toml carrying a
+         matching ``doc_page`` field are rendered in ``doc_order`` then alphabetical.
+         The intro from doc_pages.toml goes above the assembled concepts.
+
+      2. Prose page — if doc_pages.toml carries a non-empty ``body`` field for the
+         page, the body is rendered verbatim after the intro. Concept rendering is
+         skipped. Prose pages still live in TOML (single source of truth) but their
+         content isn't decomposable into per-concept blocks. Use when the page is
+         largely flowing explanation, tables, and worked examples rather than a
+         catalogue of constructs.
+    """
     lines: list[str] = []
     title = page_meta.get("title", _concept_title(slug))
     intro = page_meta.get("intro", "").strip()
+    body = page_meta.get("body", "").strip()
 
     lines.append(f"# {title}")
     lines.append("")
@@ -312,6 +332,11 @@ def _render_page(
     if intro:
         lines.append(intro)
         lines.append("")
+
+    if body:
+        lines.append(body)
+        lines.append("")
+        return "\n".join(lines)
 
     lines.append("---")
     lines.append("")

@@ -38,6 +38,24 @@ Dazzle is a bet that **semantic compression** — putting your application's mea
 
 ---
 
+## The substrate: three layers of prior correction
+
+The reason the DSL is the codebase, not a generator for it, is downstream of a sharper claim: **Dazzle is a prior-correction substrate for LLM-driven software development.** Training corpora are dominated by popular-but-aging idioms (Rails ActiveRecord, React class components, jQuery-shaped vanilla JS, exception-as-control-flow, polymorphic associations, manual SQL string-building, untyped denormalisation). An LLM trained on that corpus has those shapes as its prior; running it as an agent at scale propagates the corpus mean into the codebase unless something else pulls against it.
+
+The framework's job in the agent-driven era is to be that something. Dazzle implements three stacked layers that each catch what the others miss:
+
+1. **Grammar restriction.** The DSL closes off bad idioms by construction. There is no `polymorphic_ref:` keyword (ADR-0027). Field-level authorization isn't expressible (ADR-0025). Scope rules compile to a formal predicate algebra validated against the FK graph (ADR-0009). Regex in the parser is a smell (ADR-0024) and the allowlist sits at zero. Each closed-off shape is one degree of freedom the corpus prior can no longer exercise.
+
+2. **Inference-time bias correction.** Agent instruction files (`.claude/CLAUDE.md`), the ADR index (each line a "decision that prevents a wrong proposal"), and the **counter-prior catalogue** at [`docs/counter-priors/`](docs/counter-priors/INDEX.md) are versioned engineering artefacts that name specific corpus pathologies and route the agent toward the right shape. The catalogue is queryable via the MCP server (`knowledge counter_prior query=...`) and is auto-surfaced at the bootstrap step when an agent's spec text contains matching triggers.
+
+3. **Post-hoc filtering.** Drift gates, the conformance engine, the fitness investigator, RBAC matrix verification, and the broader test sweep catch whatever slips past the first two layers. Each gate pins a specific corpus pattern: `test_no_bare_except_pass.py`, `test_no_regex_in_parser.py`, `test_shell_strict_mode.py`, the API surface drift baselines.
+
+The catalogue is itself a deliverable. Each entry — *exceptions-as-control-flow*, *polymorphic associations*, *hand-rolled soft-delete*, *raw SQL string-building*, *shell without strict mode*, and the rest — is a small permanent inoculation against a recurring drift. As LLM-emitted code re-enters training corpora at scale, this counter-biasing grows in value over time: a framework that does this work today is investing in an asset that compounds across model generations.
+
+The broader framing (corpus pathologies, compounding problem, generalised principle) is captured in the catalogue itself. The shortest version: **defer decisions to runtime only when the dynamism is essential to the domain, not merely convenient for the author. Make every other decision as statically as possible, and encode the static decision in the substrate so the LLM cannot accidentally undo it.**
+
+---
+
 ## Design principles
 
 Eleven stated positions, defended in the [ADRs](docs/adr/INDEX.md):
