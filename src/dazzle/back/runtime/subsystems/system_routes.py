@@ -62,6 +62,10 @@ class SystemRoutesSubsystem:
             enable_test_mode=ctx.enable_test_mode,
             entity_auto_includes=ctx.config.entity_auto_includes,
             user_entity_name=_user_entity_name,
+            # #1232 — thread the entity → {fk_field: target_entity} map so
+            # task_inbox sources can resolve dotted-path filters via
+            # subquery JOINs (mirrors the entity_card #1225 fix shape).
+            entity_ref_targets=ctx.config.entity_ref_targets,
         )
 
         # Debug routes

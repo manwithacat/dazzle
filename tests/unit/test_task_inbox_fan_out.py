@@ -71,6 +71,7 @@ class _StubCtx:
     surface_empty_message: str = ""
     param_resolver: Any = None
     tenant_id: str | None = None
+    entity_ref_targets: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 def _config(*, sources: list[TaskSource]) -> TaskInboxConfig:
@@ -208,6 +209,102 @@ async def test_source_filter_lands_in_repo_filters() -> None:
         config=cfg, ctx=ctx, request=None, auth_context=None, user_id="u1"
     )
     assert repo_a.last_filters == {"status": "active"}
+
+
+@pytest.mark.asyncio
+async def test_source_filter_dotted_path_uses_ref_targets() -> None:
+    """#1232 Gap 1 — a left-side dotted FK path (e.g. `teacher.user = X`)
+    must be resolved via the source entity's FK→target map (ref_targets)
+    by `_build_fk_path_subquery`. Without threading ``entity_ref_targets``
+    from ctx, the dotted path falls through as a literal filter key
+    `teacher.user` that the repository layer cannot recognise."""
+    from dazzle.core.ir.conditions import (
+        Comparison,
+        ComparisonOperator,
+        ConditionExpr,
+        ConditionValue,
+    )
+
+    repo_a = _StubRepo([])
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="TimetableSlot",
+                # `teacher.user` is a dotted left-side path:
+                #   TimetableSlot.teacher → StaffMember.user
+                filter=ConditionExpr(
+                    comparison=Comparison(
+                        field="teacher.user",
+                        operator=ComparisonOperator.EQUALS,
+                        value=ConditionValue(literal="user-uuid"),
+                    )
+                ),
+                as_task=TaskSourceTemplate(icon="x", title="t"),
+            ),
+        ]
+    )
+    ctx = _StubCtx(
+        repositories={"TimetableSlot": repo_a},
+        entity_access_specs={"TimetableSlot": None},
+        entity_ref_targets={"TimetableSlot": {"teacher": "StaffMember"}},
+    )
+    await _fetch_task_inbox_items_per_source(
+        config=cfg, ctx=ctx, request=None, auth_context=None, user_id="user-uuid"
+    )
+
+    # Post-fix: `_build_fk_path_subquery` produces a `teacher__in_subquery`
+    # filter ("SELECT id FROM StaffMember WHERE user = %s", ["user-uuid"]).
+    assert repo_a.last_filters is not None, "fetch path didn't fire"
+    assert "teacher__in_subquery" in repo_a.last_filters, (
+        f"expected teacher__in_subquery from FK-path resolution; got {repo_a.last_filters}"
+    )
+    sql, params = repo_a.last_filters["teacher__in_subquery"]
+    assert '"StaffMember"' in sql, sql
+    assert '"user"' in sql, sql
+    assert params == ["user-uuid"], params
+
+
+@pytest.mark.asyncio
+async def test_source_filter_dotted_path_without_ref_targets_falls_through() -> None:
+    """#1232 — pre-fix behaviour confirmation: when entity_ref_targets is
+    not threaded (empty dict), the dotted-path filter falls through as a
+    literal `teacher.user` key — the repo never sees the JOIN it needs."""
+    from dazzle.core.ir.conditions import (
+        Comparison,
+        ComparisonOperator,
+        ConditionExpr,
+        ConditionValue,
+    )
+
+    repo_a = _StubRepo([])
+    cfg = _config(
+        sources=[
+            TaskSource(
+                source="TimetableSlot",
+                filter=ConditionExpr(
+                    comparison=Comparison(
+                        field="teacher.user",
+                        operator=ComparisonOperator.EQUALS,
+                        value=ConditionValue(literal="user-uuid"),
+                    )
+                ),
+                as_task=TaskSourceTemplate(icon="x", title="t"),
+            ),
+        ]
+    )
+    ctx = _StubCtx(
+        repositories={"TimetableSlot": repo_a},
+        entity_access_specs={"TimetableSlot": None},
+        entity_ref_targets={},  # empty — simulates the pre-fix shape
+    )
+    await _fetch_task_inbox_items_per_source(
+        config=cfg, ctx=ctx, request=None, auth_context=None, user_id="user-uuid"
+    )
+    # Without ref_targets the dotted path stays a literal key. The repo
+    # has no JOIN; this confirms the bug — and is the regression boundary.
+    assert repo_a.last_filters is not None
+    assert "teacher__in_subquery" not in repo_a.last_filters
+    assert "teacher.user" in repo_a.last_filters
 
 
 @pytest.mark.asyncio

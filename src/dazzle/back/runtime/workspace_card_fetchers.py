@@ -221,6 +221,12 @@ async def _fetch_task_inbox_items_per_source(
         if source_filter is not None:
             from dazzle.back.runtime.route_generator import _extract_condition_filters
 
+            # #1232 — thread the source entity's FK→target map so dotted
+            # left-side paths (`teacher.user = current_user`) resolve via
+            # subquery JOINs in `_extract_condition_filters` instead of
+            # falling through as an unrecognised `teacher.user` filter key.
+            entity_ref_targets = getattr(ctx, "entity_ref_targets", None) or {}
+            _ref_targets = entity_ref_targets.get(source_entity)
             with suppress(Exception):
                 _extract_condition_filters(
                     source_filter,
@@ -228,7 +234,7 @@ async def _fetch_task_inbox_items_per_source(
                     merged_filters,
                     logger,
                     auth_context,
-                    None,
+                    _ref_targets,
                     None,
                 )
 

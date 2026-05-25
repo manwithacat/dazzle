@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1232 — task_inbox source filter resolves dotted FK paths)
+
+- **`entity_ref_targets` threaded into `WorkspaceRegionContext`** at `src/dazzle/back/runtime/workspace_context.py:50`. The map (`entity_name → {fk_field: target_entity}`) is built once at app boot (already lived in `ServerConfig.entity_ref_targets`) and is now flowed through `subsystems/system_routes.py` → `WorkspaceRouteBuilder.__init__` → both `WorkspaceRegionContext` construction sites in `workspace_route_builder.py`.
+- **`_fetch_task_inbox_items_per_source` consumes the source entity's FK map** at `workspace_card_fetchers.py:226` and passes it to `_extract_condition_filters`. Without this, any dotted left-side path (`teacher.user = current_user`) fell through as a literal `teacher.user` filter key the repository layer couldn't recognise — so per-source filters were silently inert for any source that needed a one-hop FK JOIN.
+- **2 new tests** in `tests/unit/test_task_inbox_fan_out.py` pin: with ref_targets, the dotted path resolves to a `*__in_subquery` filter carrying the right target table; without ref_targets (the pre-fix shape), the path falls through as a literal key — regression boundary.
+- Gap 2 from the issue (two-hop FK chains like `teacher.user.id`) is out of scope here — `_build_fk_path_subquery` itself only handles one-hop paths and is tracked separately.
+
 ### Fixed (#1231 — cohort_strip aggregate cells render for scoped personas)
 
 - **`_strip_scope_predicate` helper** at `src/dazzle/back/runtime/workspace_region_computes.py` removes the `__scope_predicate` slot from `scope_filters` before the `share:` / `via:` paths compose the aggregate query. The raw scope predicate is qualified by source-entity name (e.g. `"ClassEnrolment"."school" = $N`), but the source table isn't in either bespoke FROM clause — for `via:` only `a JOIN j` appears; for `share:` the source is aliased `s`. The IN clause (`s."id" IN (...)` or `j.{member_col} IN (...)`) already enforces source-row scoping (only members whose source row passed RBAC are in `member_ids`), so the predicate is redundant and was the source of the `UndefinedTable` failure that boot-time silently caught.

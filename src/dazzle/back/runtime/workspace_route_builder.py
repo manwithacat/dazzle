@@ -46,6 +46,7 @@ class WorkspaceRouteBuilder:
         enable_test_mode: bool,
         entity_auto_includes: dict[str, list[str]] | None = None,
         user_entity_name: str = "User",
+        entity_ref_targets: dict[str, dict[str, str]] | None = None,
     ) -> None:
         self._app = app
         self._appspec = appspec
@@ -57,6 +58,9 @@ class WorkspaceRouteBuilder:
         self._entity_auto_includes = entity_auto_includes or {}
         self._fk_graph = getattr(appspec, "fk_graph", None)
         self._user_entity_name = user_entity_name
+        # #1232 — entity → {fk_field: target_entity} for dotted-path
+        # filter resolution in task_inbox sources.
+        self._entity_ref_targets = entity_ref_targets or {}
 
     def init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (v0.20.0)."""
@@ -160,6 +164,7 @@ class WorkspaceRouteBuilder:
                                 fk_graph=self._fk_graph,
                                 user_entity_name=self._user_entity_name,
                                 entity_access_specs=entity_access_specs,
+                                entity_ref_targets=self._entity_ref_targets,
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -264,6 +269,7 @@ class WorkspaceRouteBuilder:
                         fk_graph=self._fk_graph,
                         user_entity_name=self._user_entity_name,
                         entity_access_specs=entity_access_specs,
+                        entity_ref_targets=self._entity_ref_targets,
                     )
                     _ws_region_ctxs.append(_region_ctx)
 
