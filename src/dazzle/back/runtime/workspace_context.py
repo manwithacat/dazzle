@@ -55,3 +55,10 @@ class WorkspaceRegionContext:
     # Default empty dict keeps callers that don't need it cost-free;
     # the workspace builder threads ServerConfig.entity_ref_targets.
     entity_ref_targets: dict[str, dict[str, str]] = field(default_factory=dict)
+    # #1233 — row_action action_id → POST URL map. The renderer emits
+    # this URL on the [data-dz-row-action] button as
+    # ``data-dz-row-action-url`` so the client-side JS can POST without
+    # re-deriving the route. Built once at WorkspaceRouteBuilder init
+    # from appspec.surfaces; empty dict means no row_action surfaces
+    # in this app (cost-free).
+    row_action_routes: dict[str, str] = field(default_factory=dict)

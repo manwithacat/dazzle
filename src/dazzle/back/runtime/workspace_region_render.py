@@ -324,6 +324,8 @@ def _build_list_adapter_ctx(
         adapter_ctx["sort_field"] = env.sort or ""
         adapter_ctx["sort_dir"] = env.sort_dir
         adapter_ctx["empty_message"] = ctx.surface_empty_message or ctx_region.empty_message
+        # #1233 — action_id → POST URL map for row_action buttons.
+        adapter_ctx["row_action_routes"] = getattr(ctx, "row_action_routes", None) or {}
     elif display_upper == "KANBAN":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns
@@ -466,6 +468,9 @@ async def _build_dashboard_adapter_ctx(
                 # #1144 Gap 1 phase 2: per-member aggregate values
                 # resolved upstream in orchestration phase 4.
                 cohort_aggregate_values=inputs.cohort_aggregate_values,
+                # #1233 — action_id → POST URL map for emitting
+                # ``data-dz-row-action-url`` on each row_action button.
+                row_action_routes=getattr(env.ctx, "row_action_routes", None),
             )
     elif display_upper == "DAY_TIMELINE":
         day_cfg = getattr(ir_region, "day_timeline_config", None)
@@ -477,6 +482,8 @@ async def _build_dashboard_adapter_ctx(
                 # #1148: thread the IR-declared row_action through so
                 # each slot can carry a per-row click-to-POST button.
                 row_action=getattr(ir_region, "row_action", None),
+                # #1233 — action_id → POST URL map.
+                row_action_routes=getattr(env.ctx, "row_action_routes", None),
             )
     elif display_upper == "TASK_INBOX":
         inbox_cfg = getattr(ir_region, "task_inbox_config", None)

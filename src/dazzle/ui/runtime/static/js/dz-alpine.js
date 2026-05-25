@@ -2404,3 +2404,91 @@ window.dz.filterRefSelect = function (selectEl) {
 };
 // Alpine x-init reads the function from the global scope by bare name.
 window.dzFilterRefSelect = window.dz.filterRefSelect;
+
+/* ------------------------------------------------------------------ */
+/* #1233 — row_action client handler                                  */
+/* ------------------------------------------------------------------ */
+/**
+ * Delegated click handler for [data-dz-row-action] buttons emitted by
+ * `_render_row_action_button` (workspace_card_bodies.py). The button
+ * carries:
+ *   data-dz-row-action       — the action_id (declared surface action)
+ *   data-dz-row-args         — JSON payload of bound row values
+ *   data-dz-row-action-url   — POST endpoint resolved server-side from
+ *                              the appspec's CREATE surfaces (#1233)
+ *
+ * When data-dz-row-action-url is present, POST the JSON payload via
+ * htmx.ajax so CSRF + redirect/swap behaviour matches the rest of the
+ * HTMX-driven runtime. When missing (no matching CREATE surface in the
+ * AppSpec), emit a console.warn and no-op — preserves the pre-#1233
+ * shape rather than 404ing.
+ */
+document.addEventListener("click", function (evt) {
+  const btn = evt.target.closest("[data-dz-row-action]");
+  if (!btn) return;
+  // Don't double-fire if a parent already handled this (e.g. surface
+  // action machinery hijacks the same data attribute).
+  if (evt.defaultPrevented) return;
+
+  const url = btn.getAttribute("data-dz-row-action-url") || "";
+  const actionId = btn.getAttribute("data-dz-row-action") || "";
+  if (!url) {
+    console.warn(
+      "[dz] row_action '" + actionId + "' has no resolved URL " +
+      "(data-dz-row-action-url missing) — declare a matching CREATE " +
+      "surface in the DSL or check the surface name.",
+    );
+    return;
+  }
+
+  let args = {};
+  const argsRaw = btn.getAttribute("data-dz-row-args");
+  if (argsRaw) {
+    try {
+      args = JSON.parse(argsRaw);
+    } catch (parseErr) {
+      console.warn(
+        "[dz] row_action '" + actionId + "': data-dz-row-args is not " +
+        "valid JSON; sending empty body. (" + parseErr.message + ")",
+      );
+    }
+  }
+
+  evt.preventDefault();
+  btn.classList.add("dz-loading");
+  btn.disabled = true;
+
+  // htmx.ajax composes CSRF + drives swap. Settle handler restores the
+  // button so subsequent clicks fire (no-op rather than disabled forever).
+  const htmx = window.htmx;
+  if (!htmx || typeof htmx.ajax !== "function") {
+    console.warn(
+      "[dz] row_action '" + actionId + "': htmx is not loaded; " +
+      "cannot POST. Ensure the runtime bundle is loaded.",
+    );
+    btn.classList.remove("dz-loading");
+    btn.disabled = false;
+    return;
+  }
+
+  htmx
+    .ajax("POST", url, {
+      values: args,
+      // No target/swap — server typically responds 303 → GET, which
+      // htmx follows. If the response is HTML, default swap into body.
+      target: "body",
+      swap: "none",
+    })
+    .then(function () {
+      btn.classList.remove("dz-loading");
+      btn.disabled = false;
+    })
+    .catch(function (ajaxErr) {
+      console.warn(
+        "[dz] row_action '" + actionId + "' POST to " + url + " failed: ",
+        ajaxErr,
+      );
+      btn.classList.remove("dz-loading");
+      btn.disabled = false;
+    });
+});

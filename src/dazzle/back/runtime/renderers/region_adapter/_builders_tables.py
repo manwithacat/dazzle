@@ -212,12 +212,14 @@ class _BuildersTablesMixin:
                     else _eval_row_condition(row_action_spec.visible_when, item)
                 )
                 if visible:
+                    _row_action_routes = ctx.get("row_action_routes") or {}
                     row_actions_list.append(
                         _render_row_action_button(
                             action_id=row_action_spec.action_id,
                             label=row_action_spec.label,
                             item=item,
                             bind=row_action_spec.bind,
+                            action_url=_row_action_routes.get(row_action_spec.action_id, ""),
                         )
                     )
                 else:

@@ -66,6 +66,44 @@ def test_row_action_emits_button_per_cell() -> None:
     assert "m2" in cells[1]["action_html"]
 
 
+def test_row_action_emits_url_data_attr_when_route_known() -> None:
+    """#1233 — when the action_id resolves in row_action_routes, the
+    button carries data-dz-row-action-url so the client handler can POST."""
+    row_action = RowActionSpec(
+        label="Commend",
+        action_id="issue_commendation",
+        bind={"pupil_id": "id"},
+    )
+    cells = _build_cohort_cells(
+        items=[_row("m1", score=80)],
+        config=_config(),
+        active_lens_id="score",
+        row_action=row_action,
+        row_action_routes={"issue_commendation": "/commendations"},
+    )
+    assert 'data-dz-row-action-url="/commendations"' in cells[0]["action_html"]
+
+
+def test_row_action_omits_url_data_attr_when_route_unknown() -> None:
+    """#1233 — no matching CREATE surface in the AppSpec → no URL attr.
+    Pre-existing button shape preserved; JS handler emits console.warn."""
+    row_action = RowActionSpec(
+        label="Commend",
+        action_id="issue_commendation",
+        bind={"pupil_id": "id"},
+    )
+    cells = _build_cohort_cells(
+        items=[_row("m1", score=80)],
+        config=_config(),
+        active_lens_id="score",
+        row_action=row_action,
+        # No matching entry — simulates a custom action_id not declared
+        # as a CREATE surface (the gap the JS handler warns about).
+        row_action_routes={},
+    )
+    assert "data-dz-row-action-url" not in cells[0]["action_html"]
+
+
 def test_visible_when_false_suppresses_button_for_that_cell() -> None:
     row_action = RowActionSpec(
         label="Commend",

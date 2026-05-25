@@ -220,6 +220,7 @@ def _build_cohort_cells(
     active_lens_id: str,
     row_action: Any = None,
     cohort_aggregate_values: dict[str, Any] | None = None,
+    row_action_routes: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Build cohort_strip cell dicts from already-scoped source rows (#1018).
 
@@ -356,12 +357,14 @@ def _build_cohort_cells(
             vw = getattr(row_action, "visible_when", None)
             visible = True if vw is None else _eval_row_condition(vw, item)
             if visible:
+                _aid = str(getattr(row_action, "action_id", ""))
                 action_html = _render_row_action_button(
-                    action_id=str(getattr(row_action, "action_id", "")),
+                    action_id=_aid,
                     label=str(getattr(row_action, "label", "")),
                     item=item,
                     bind=dict(getattr(row_action, "bind", {}) or {}),
                     extra_class="dz-cohort-strip-cell-action-btn",
+                    action_url=(row_action_routes or {}).get(_aid, ""),
                 )
         cells.append(
             {
@@ -384,6 +387,7 @@ def _build_day_timeline_slots(
     config: Any,
     now: _dt.datetime,
     row_action: Any = None,
+    row_action_routes: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Build day_timeline slot dicts from already-scoped source rows (#1016).
 
@@ -532,12 +536,14 @@ def _build_day_timeline_slots(
             vw = getattr(row_action, "visible_when", None)
             visible = True if vw is None else _eval_row_condition(vw, item)
             if visible:
+                _aid = str(getattr(row_action, "action_id", ""))
                 action_html = _render_row_action_button(
-                    action_id=str(getattr(row_action, "action_id", "")),
+                    action_id=_aid,
                     label=str(getattr(row_action, "label", "")),
                     item=item,
                     bind=dict(getattr(row_action, "bind", {}) or {}),
                     extra_class="dz-day-timeline-slot-action-btn",
+                    action_url=(row_action_routes or {}).get(_aid, ""),
                 )
         slots.append(
             {

@@ -93,6 +93,19 @@ class WorkspaceRouteBuilder:
             }
             entity_access_specs.pop("", None)  # drop missing-name fallback
 
+            # #1233 — build action_id → POST URL map once per boot. For
+            # each CREATE surface, the framework's auto-CRUD mounts
+            # `POST /{plural(entity)}`. Renderers consume this to emit
+            # ``data-dz-row-action-url`` on row_action buttons so the
+            # client-side handler can POST without re-deriving the route.
+            from dazzle.core.ir import SurfaceMode
+            from dazzle.core.strings import to_api_plural
+
+            row_action_routes: dict[str, str] = {}
+            for _surf in appspec.surfaces:
+                if _surf.mode == SurfaceMode.CREATE and _surf.entity_ref:
+                    row_action_routes[_surf.name] = f"/{to_api_plural(_surf.entity_ref)}"
+
             require_auth = self._enable_auth and not self._enable_test_mode
 
             # Build entity → list surface lookup for column projection (#357, #359)
@@ -165,6 +178,7 @@ class WorkspaceRouteBuilder:
                                 user_entity_name=self._user_entity_name,
                                 entity_access_specs=entity_access_specs,
                                 entity_ref_targets=self._entity_ref_targets,
+                                row_action_routes=row_action_routes,
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -270,6 +284,7 @@ class WorkspaceRouteBuilder:
                         user_entity_name=self._user_entity_name,
                         entity_access_specs=entity_access_specs,
                         entity_ref_targets=self._entity_ref_targets,
+                        row_action_routes=row_action_routes,
                     )
                     _ws_region_ctxs.append(_region_ctx)
 

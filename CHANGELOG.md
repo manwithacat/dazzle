@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1233 — `row_action:` buttons fire POSTs)
+
+- **Server emits the resolved POST URL on each row_action button** as `data-dz-row-action-url="<url>"` alongside the existing `data-dz-row-action` + `data-dz-row-args` attributes. The renderer (`_render_row_action_button` in `workspace_card_bodies.py`) takes a new `action_url=` kwarg; the route-builder builds an `action_id → POST URL` map once per app boot from `appspec.surfaces` (each CREATE surface mounts at `POST /{plural(entity)}`) and threads it through `WorkspaceRegionContext.row_action_routes` to all three call sites (cohort_strip cells, day_timeline slots, list rows).
+- **Client-side delegated click handler appended to `dz-alpine.js`** listens on `[data-dz-row-action]`, reads `data-dz-row-action-url` + `data-dz-row-args`, and `htmx.ajax`s a POST so CSRF + redirect/swap behaviour matches the rest of the HTMX runtime. Loading state via `.dz-loading` class. When the URL attr is missing (custom action_id with no matching CREATE surface), the handler emits a console warning and no-ops — preserves the pre-#1233 shape rather than 404ing.
+- **Bundle rebuilt** so `dist/dazzle.min.js` carries the handler.
+- **2 new tests** in `tests/unit/test_cohort_strip_row_action_1148.py` pin both the URL-emitted and URL-omitted paths.
+
 ### Fixed (#1232 — task_inbox source filter resolves dotted FK paths)
 
 - **`entity_ref_targets` threaded into `WorkspaceRegionContext`** at `src/dazzle/back/runtime/workspace_context.py:50`. The map (`entity_name → {fk_field: target_entity}`) is built once at app boot (already lived in `ServerConfig.entity_ref_targets`) and is now flowed through `subsystems/system_routes.py` → `WorkspaceRouteBuilder.__init__` → both `WorkspaceRegionContext` construction sites in `workspace_route_builder.py`.

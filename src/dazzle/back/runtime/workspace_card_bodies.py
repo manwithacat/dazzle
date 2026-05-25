@@ -95,18 +95,26 @@ def _render_row_action_button(
     bind: dict[str, str],
     *,
     extra_class: str = "dz-list-row-action-btn",
+    action_url: str = "",
 ) -> str:
     """#1148: build the per-row action button HTML.
 
-    Emits a ``<button data-dz-row-action="<id>" data-dz-row-args="...">``
-    carrying the bound row values as JSON. Client-side surface-action
-    machinery hooks ``[data-dz-row-action]`` to compose the POST,
-    inheriting CSRF + route binding the same way ``data-dz-action``
-    does for ``entity_card.quick_actions``.
+    Emits a ``<button data-dz-row-action="<id>" data-dz-row-args="..."
+    data-dz-row-action-url="<url>">`` carrying the bound row values as
+    JSON. The client-side handler in ``dz-alpine.js`` (#1233) listens
+    on ``[data-dz-row-action]``, reads the JSON payload and the resolved
+    URL, and POSTs via ``htmx.ajax`` — inheriting CSRF + redirect/swap
+    behaviour from the runtime's HTMX core.
 
     ``bind`` maps action-arg-name → row-field-name. The button's
     ``data-dz-row-args`` JSON encodes ``{arg: row[field]}`` per entry.
     Missing row fields become ``null`` — the action handler validates.
+
+    ``action_url`` is the resolved POST endpoint for the named surface
+    action (set by callers via the workspace ctx's ``row_action_routes``
+    map; empty when no matching CREATE surface was found in the AppSpec).
+    When empty, the client handler emits a console warning and no POST
+    fires — preserves the pre-#1233 no-op shape rather than 404ing.
 
     ``extra_class`` lets each display family tone its button (list
     uses the table-cell class; day_timeline gets a slot-action class
@@ -116,10 +124,16 @@ def _render_row_action_button(
     for arg_name, field_name in bind.items():
         bound[arg_name] = item.get(field_name)
     args_json = _json_module.dumps(bound, default=str, sort_keys=True)
+    url_attr = (
+        f' data-dz-row-action-url="{_html_module.escape(action_url, quote=True)}"'
+        if action_url
+        else ""
+    )
     return (
         f'<button type="button" class="{_html_module.escape(extra_class, quote=True)}" '
         f'data-dz-row-action="{_html_module.escape(action_id, quote=True)}" '
-        f'data-dz-row-args="{_html_module.escape(args_json, quote=True)}">'
+        f'data-dz-row-args="{_html_module.escape(args_json, quote=True)}"'
+        f"{url_attr}>"
         f"{_html_module.escape(label)}"
         f"</button>"
     )
