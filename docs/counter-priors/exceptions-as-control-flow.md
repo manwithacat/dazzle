@@ -32,6 +32,10 @@ refs:
     - silent-failure-hunter
   tests:
     - tests/unit/test_no_bare_except_pass.py
+detectors:
+  - id: PA-LLM-07
+    agent: PA
+    note: covers all four canonical wrong shapes (silent_swallow, fallback, validation, conditional) in app/ Python.
 ---
 
 # Exceptions as control flow

@@ -71,3 +71,21 @@ def init_command() -> None:
     for name in sorted(written):
         console.print(f"  [dim]\u2022[/dim] {name}")
     console.print("\n[dim]Run /nightly, /actions, /ux-actions, or /quality in Claude Code.[/dim]")
+
+
+@quality_app.command("bootstrap")
+def bootstrap_command() -> None:
+    """Write strict tooling defaults (pyproject.toml / pyrightconfig.json / .pre-commit-config.yaml) into the current project."""
+    from dazzle.quality.bootstrap import quality_bootstrap
+
+    project_root = Path.cwd().resolve()
+    written = quality_bootstrap(project_root)
+    console.print(
+        f"\n[green]Quality tooling bootstrapped[/green] ({len(written)} file{'s' if len(written) != 1 else ''})"
+    )
+    for path in written:
+        console.print(f"  [dim]\u2022[/dim] {path.relative_to(project_root)}")
+    console.print(
+        "\n[dim]Next: run `pre-commit install` to wire the hooks. "
+        "Existing pyproject.toml tables outside [tool.ruff*] were preserved.[/dim]"
+    )

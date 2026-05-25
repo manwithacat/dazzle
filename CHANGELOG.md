@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-05-25
+
+### Added — agent code quality substrate (PA-LLM-07 pilot)
+
+- **Sentinel heuristic `PA-LLM-07`** (`exceptions_as_control_flow`) detects the four canonical wrong shapes of `try`/`except` misuse in user `app/` Python — silent swallow, fallback control flow, validation via exception, and try-as-conditional. Scans `app/` only; suppression via `# noqa: PA-LLM-07` on the `try:` line or the handler line.
+- **`Finding.catalogue_entry`** field on Sentinel findings — links a finding back to its counter-prior catalogue entry for agent feedback.
+- **Counter-prior `detectors:` frontmatter field** with bidirectional drift test. Every declared detector id must resolve to a `@heuristic` decorator on `PythonAuditAgent`; every quality heuristic that enforces a catalogued pattern declares its catalogue entry.
+- **New CLI command `dazzle quality bootstrap`** writes strict Ruff + Pyright + pre-commit defaults (`pyproject.toml`, `pyrightconfig.json`, `.pre-commit-config.yaml`) into an existing project. Preserves all non-Dazzle-managed `[tool.*]` tables. Newly-scaffolded projects via `dazzle init` ship these files automatically through the blank template.
+- **CI gate**: `python-tests` job now runs `dazzle sentinel scan --agent PA --severity high` for each example after pytest (looping per-project directory, since the command reads from `dazzle.toml` in the current directory). Informational only until PA-LLM-07's backfill audit completes; promotes to commit-blocker in a future release.
+
+### Agent Guidance
+
+- When writing user code in `app/`, prefer explicit conditionals (`d.get(k)`, `getattr(obj, "attr", None)`) and structured errors over `try`/`except`. The four canonical wrong shapes are catalogued at `docs/counter-priors/exceptions-as-control-flow.md`; PA-LLM-07 flags them at sentinel-scan time.
+- When introducing a new counter-prior that has a Sentinel detector, declare the link in the catalogue entry's frontmatter `detectors:` array. The drift test (`tests/unit/test_counter_priors_drift.py`) will fail if the declaration goes missing.
+- For per-line suppression of PA-LLM-07, add `# noqa: PA-LLM-07 — <reason>` on the `try:` line or the handler line. The detector matches on the substring `noqa: PA-LLM-07`; the trailing reason isn't enforced today but is strongly expected — future-you reading the diff needs to know why the antipattern was kept.
+- New project scaffolding ships strict Ruff (TRY/BLE/S/B006/etc.) + Pyright strict + pre-commit defaults. Existing projects can opt in with `dazzle quality bootstrap`.
+
+---
+
+## [Pre-0.75 unreleased drift — needs version attribution]
+
+The entries below accumulated under Unreleased through the v0.72-v0.74 cycle without being promoted to dated headings. Left in place as a known CHANGELOG-hygiene issue for a separate cleanup pass.
+
 ### Changed — DNR docstring sweep across source files + api-reference regeneration
 
 - **Source-file DNR docstring leakage cleaned across ~60 files** in `src/dazzle/back/`, `src/dazzle/ui/`, `src/dazzle/mcp/`, `src/dazzle/core/`, and `src/dazzle_e2e/`. Docstrings, comments, log strings, and user-visible banner text (`combined_server.py` startup banners) now refer to "the Dazzle runtime", "Dazzle backend runtime", "Dazzle UI runtime" instead of "DNR" / "Dazzle Native Runtime". The auto-generated `docs/api-reference/files/` pages were down to 137 DNR-bearing files; after the source sweep + regen, only one remains — and that one is intentional (see preservation note below).

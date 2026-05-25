@@ -47,6 +47,14 @@ class CounterPriorRefs(BaseModel):
     tests: list[str] = Field(default_factory=list)
 
 
+class DetectorRef(BaseModel):
+    """Pointer to a Sentinel heuristic that enforces this counter-prior."""
+
+    id: str  # heuristic_id, e.g. "PA-LLM-07"
+    agent: str  # AgentId code, e.g. "PA"
+    note: str = ""  # optional clarification when coverage is partial
+
+
 class CounterPrior(BaseModel):
     """One entry in the counter-prior catalogue."""
 
@@ -58,6 +66,7 @@ class CounterPrior(BaseModel):
     triggers_text: list[str] = Field(default_factory=list)
     triggers_code: list[str] = Field(default_factory=list)
     refs: CounterPriorRefs = Field(default_factory=CounterPriorRefs)
+    detectors: list[DetectorRef] = Field(default_factory=list)
 
     file_path: str
     body: str
