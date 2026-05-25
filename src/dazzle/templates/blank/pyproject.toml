@@ -1,0 +1,35 @@
+# managed-by: dazzle quality bootstrap
+# Strict defaults from the agent code quality substrate.
+# Ignores require documented rationale in this file under
+# [tool.ruff.lint.per-file-ignores] or as inline # noqa: <code> - <reason> comments.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "W",     # pycodestyle warnings
+    "B",     # bugbear (likely bugs, includes B006 mutable-default-argument)
+    "BLE",   # blind-except
+    "FBT",   # boolean-trap
+    "C4",    # comprehensions
+    "DTZ",   # datetime gotchas
+    "PTH",   # pathlib over os.path
+    "PL",    # pylint subset
+    "TRY",   # tryceratops (exception-handling discipline)
+    "S",     # security (bandit)
+    "PERF",  # performance
+    "UP",    # modernise (pyupgrade)
+    "SIM",   # simplify
+    "I",     # import sorting
+    "TCH",   # type-checking imports
+    "RUF",   # ruff-specific
+]
+ignore = []  # add entries only with a rationale comment
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]   # assert is fine in tests
+"scripts/**" = ["T201"] # print is fine in scripts

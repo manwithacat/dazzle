@@ -1,0 +1,16 @@
+# managed-by: dazzle quality bootstrap
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: dazzle-sentinel-pa
+        name: dazzle sentinel scan (Python audit)
+        entry: dazzle sentinel scan --agent PA --severity-threshold medium
+        language: system
+        pass_filenames: false
+        types: [python]

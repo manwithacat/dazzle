@@ -87,6 +87,11 @@ dependencies = [
     # the CLI. Pre-existing breakage caught by `gh run list` showing
     # red PyPI publish on every release back to at least v0.67.70.
     "fastapi>=0.100.0",
+    # tomli_w serialises TOML back to text for dazzle quality bootstrap,
+    # which must read + merge-write pyproject.toml without losing unmanaged
+    # tables. tomllib (stdlib, read-only) handles the read side; tomli_w
+    # handles the write side. Pure-Python, zero transitive deps.
+    "tomli_w>=1.0",
 ]
 
 [project.optional-dependencies]
