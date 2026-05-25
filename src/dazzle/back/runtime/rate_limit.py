@@ -12,7 +12,9 @@ Usage in route modules::
     async def login(request: Request, ...): ...
 """
 
+import functools
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -49,6 +51,43 @@ class _Limits:
 
 
 limits = _Limits()
+
+
+def safe_limit(limit_str: str) -> Callable[[Any], Any]:
+    """Apply rate limiting to a handler, robust to ``functools.partial``.
+
+    slowapi's ``Limiter.limit()`` introspects ``handler.__name__`` to
+    register the limit; ``functools.partial`` objects don't have
+    ``__name__``, so a direct ``limits.limiter.limit(...)(partial_handler)``
+    raises ``AttributeError`` at module-import time (#1251). The fix:
+    copy ``__name__`` from the underlying callable onto the partial
+    before applying the decorator. The no-partial path is a no-op.
+
+    Deliberately NOT using ``functools.update_wrapper`` here:
+    ``update_wrapper`` *also* sets ``__wrapped__`` on the partial, which
+    causes FastAPI's ``add_api_route`` introspection to traverse past
+    the partial to the underlying function — and then try to wire the
+    pre-bound ``deps`` argument as a request parameter, breaking every
+    partial-bound handler in the auth router. Just ``__name__`` is the
+    surgical fix.
+
+    Route auth-flow + 2FA handlers wrapped with ``partial(deps_fn, deps)``
+    through this helper instead of calling ``_rl.limits.limiter.limit()``
+    directly.
+
+    Reproduced at #1251: this only bites when the real ``Limiter`` is
+    active (security_profile ∈ {standard, strict}); ``_NoOpLimiter``
+    ignores the partial entirely. The bug was latent on basic profile —
+    #1235 surfaced it by propagating the DSL-declared profile.
+    """
+    decorator = limits.limiter.limit(limit_str)
+
+    def wrap(handler: Any) -> Any:
+        if isinstance(handler, functools.partial):
+            handler.__name__ = handler.func.__name__  # type: ignore[attr-defined]
+        return decorator(handler)
+
+    return wrap
 
 
 @dataclass

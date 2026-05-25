@@ -392,9 +392,10 @@ def create_2fa_routes(
     # 2FA Challenge
     router.post("/challenge")(partial(_challenge_2fa, deps))
 
-    # 2FA Verify
+    # 2FA Verify — #1251: safe_limit handles the partial-vs-slowapi
+    # __name__ introspection incompatibility (see rate_limit.py).
     verify_handler = partial(_verify_2fa, deps)
-    verify_handler = _rl.limits.limiter.limit(_rl.limits.twofa_limit)(verify_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    verify_handler = _rl.safe_limit(_rl.limits.twofa_limit)(verify_handler)
     router.post("/verify", include_in_schema=False)(verify_handler)
 
     # Recovery codes

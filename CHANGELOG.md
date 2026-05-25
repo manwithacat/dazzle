@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1251 — auth_routes startup failed under non-basic security profiles)
+
+- **`safe_limit(limit_str)` helper** at `src/dazzle/back/runtime/rate_limit.py:56` wraps `Limiter.limit(...)` in a way that's robust to `functools.partial` handlers. slowapi's real `Limiter.limit()` introspects `handler.__name__` to register the limit; partials don't have `__name__`, so the direct decorator chain (which the auth + 2FA routers used) raised `AttributeError` at module-import time as soon as the real Limiter was wired. Latent on `basic` profile (where `_NoOpLimiter` ignored the partial entirely) and surfaced by #1235 in v0.72.8 when DSL-declared profiles started reaching the runtime.
+- **5 call sites converted** to `safe_limit`: login / register / forgot-password / reset-password (`src/dazzle/back/runtime/auth/routes.py`) and 2FA verify (`src/dazzle/back/runtime/auth/routes_2fa.py`). Other partial-bound handlers in the same files are not rate-limited and were unaffected.
+- **Deliberately uses bare `handler.__name__ = handler.func.__name__`**, not `functools.update_wrapper`. `update_wrapper` also sets `__wrapped__` on the partial, which makes FastAPI's `add_api_route` traverse past the partial to the underlying function and try to wire the pre-bound `deps` argument as a request parameter — breaking every partial-bound auth handler. (Caught by the user-preferences tests on first attempt; documented inline in `safe_limit`'s docstring.)
+- **5 new tests** at `tests/unit/test_rate_limit_safe_partial_1251.py` pin: safe_limit unblocks the partial, the plain-function path is unchanged, a synthetic strict limiter survives introspection, the raw partial without the helper still raises (negative regression confirming the test infrastructure), and `__wrapped__` is NOT set on the partial.
+
 ### Decision (#1240 wontfix-by-design — no `polymorphic_ref:` keyword, now or planned)
 
 - **ADR-0027** `docs/adr/0027-no-polymorphic-ref.md` codifies the architectural refusal: Dazzle will not ship a `polymorphic_ref:` keyword, nor `ref X | Y | Z` union sugar. Polymorphic association is a Rails-era ORM artefact that breaks referential integrity, scope composition, and JOIN-based queries; every classic use case (comments, attachments, tags, audit log, notifications, likes) fails a four-question interrogation that routes to per-target refs, event-stream entities, per-pair junctions, or TPT (ADR-0026). The decision turns the ❌ "polymorphic association" row in #1217's Phase 1 audit into ⚠️ intentionally unsupported.

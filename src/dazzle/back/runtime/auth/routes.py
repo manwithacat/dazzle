@@ -476,9 +476,11 @@ def create_auth_routes(
         default_signup_roles=default_signup_roles,
     )
 
-    # Login
+    # Login — #1251: safe_limit handles the partial → __name__ introspection
+    # incompatibility with slowapi's real Limiter (only bites when
+    # security_profile != basic, i.e. when _NoOpLimiter isn't in play).
     login_handler = partial(_login, deps)
-    login_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(login_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    login_handler = _rl.safe_limit(_rl.limits.auth_limit)(login_handler)
     router.post("/login", include_in_schema=False)(login_handler)
 
     # Logout
@@ -486,7 +488,7 @@ def create_auth_routes(
 
     # Register
     register_handler = partial(_register, deps)
-    register_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(register_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    register_handler = _rl.safe_limit(_rl.limits.auth_limit)(register_handler)
     router.post("/register", status_code=201, include_in_schema=False)(register_handler)
 
     # Get Current User
@@ -497,12 +499,12 @@ def create_auth_routes(
 
     # Forgot Password
     forgot_handler = partial(_forgot_password, deps)
-    forgot_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(forgot_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    forgot_handler = _rl.safe_limit(_rl.limits.auth_limit)(forgot_handler)
     router.post("/forgot-password", include_in_schema=False)(forgot_handler)
 
     # Reset Password
     reset_handler = partial(_reset_password, deps)
-    reset_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(reset_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    reset_handler = _rl.safe_limit(_rl.limits.auth_limit)(reset_handler)
     router.post("/reset-password", include_in_schema=False)(reset_handler)
 
     # Preferences
