@@ -79,6 +79,13 @@ def test_validation_via_exception_int_cast() -> None:
     assert len(hits) == 1
 
 
+def test_validation_via_exception_assigned_call() -> None:
+    """The assigned-call variant `n = int(s)` is also validation-via-exception."""
+    src = "try:\n    n = int(s)\n    valid = True\nexcept ValueError:\n    valid = False\n"
+    hits = _detect_validation_via_exception(_parse(src), Path("app/x.py"))
+    assert len(hits) == 1
+
+
 def test_validation_via_exception_negative_real_parse() -> None:
     """A try/except around a parse that uses the result downstream isn't validation."""
     src = (

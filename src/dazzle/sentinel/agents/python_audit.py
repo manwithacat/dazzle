@@ -73,7 +73,10 @@ def _body_assigns_literal_to(body: list[ast.stmt], target_name: str) -> bool:
 
 
 def _try_body_assigns_name(try_body: list[ast.stmt]) -> str | None:
-    """If the try body's last statement is ``name = <call>``, return name."""
+    """If the try body's last statement is ``name = <expr>``, return name.
+
+    Callers refine on the RHS shape they need.
+    """
     if not try_body:
         return None
     stmt = try_body[-1]
@@ -145,10 +148,19 @@ def _detect_validation_via_exception(tree: ast.AST, path: Path) -> list[_ShapeHi
         validation_call = False
         flag_assign: str | None = None
         for stmt in node.body:
+            # Discarded validation call: `int(s)` as a bare expression
             if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
                 fn = stmt.value.func
                 if isinstance(fn, ast.Name) and fn.id in _VALIDATION_CALLS:
                     validation_call = True
+            # Assigned validation call: `n = int(s)`
+            if (
+                isinstance(stmt, ast.Assign)
+                and isinstance(stmt.value, ast.Call)
+                and isinstance(stmt.value.func, ast.Name)
+                and stmt.value.func.id in _VALIDATION_CALLS
+            ):
+                validation_call = True
             if (
                 isinstance(stmt, ast.Assign)
                 and len(stmt.targets) == 1
@@ -809,8 +821,6 @@ class PythonAuditAgent(DetectionAgent):
         See docs/counter-priors/exceptions-as-control-flow.md for the
         full taxonomy and why these patterns are corrosive.
         """
-        import ast
-
         from dazzle.sentinel.models import (
             Confidence,
             Evidence,
