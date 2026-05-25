@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-05-25
+
 ### Added — agent code quality substrate (PA-LLM-07 pilot)
 
 - **Sentinel heuristic `PA-LLM-07`** (`exceptions_as_control_flow`) detects the four canonical wrong shapes of `try`/`except` misuse in user `app/` Python — silent swallow, fallback control flow, validation via exception, and try-as-conditional. Scans `app/` only; suppression via `# noqa: PA-LLM-07` on the `try:` line or the handler line.
@@ -24,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - For per-line suppression of PA-LLM-07, add `# noqa: PA-LLM-07 — <reason>` on the `try:` line or the handler line. The detector matches on the substring `noqa: PA-LLM-07`; the trailing reason isn't enforced today but is strongly expected — future-you reading the diff needs to know why the antipattern was kept.
 - New project scaffolding ships strict Ruff (TRY/BLE/S/B006/etc.) + Pyright strict + pre-commit defaults. Existing projects can opt in with `dazzle quality bootstrap`.
 
+---
+
+## [Pre-0.75 unreleased drift — needs version attribution]
+
+The entries below accumulated under Unreleased through the v0.72-v0.74 cycle without being promoted to dated headings. Left in place as a known CHANGELOG-hygiene issue for a separate cleanup pass.
 
 ### Changed — DNR docstring sweep across source files + api-reference regeneration
 
