@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.76.1] - 2026-05-25
+
+### Added — PA-LLM-08 covers comprehension N+1 (#1267)
+
+- **`PA-LLM-08`** now detects N+1 shapes inside the four comprehension node types (`ast.ListComp`, `ast.SetComp`, `ast.GeneratorExp`, `ast.DictComp`) in addition to `ast.For` loops. `[order.lines.all() for order in orders]` now fires the same way `for order in orders: order.lines.all()` did in v0.76.0. Nested comprehensions accumulate loop targets across their generators — `[x.lines.all() for o in orders for x in o.items]` fires on the inner-scope `x`. Suppression via `# noqa: PA-LLM-08` on the comprehension's line works the same as on a `for:` line.
+- The round-2 CHANGELOG caveat ("PA-LLM-08 doesn't detect comprehension N+1 yet") is now obsolete.
+
+### Agent Guidance
+
+- Comprehensions are no longer a blind spot for PA-LLM-08. Use them freely when the body is a pure transformation (`[render(x) for x in xs]`), but reach for `Repository.aggregate` or batched fetch when the body touches related rows — same discipline as for-loops.
+
 ## [0.76.0] - 2026-05-25
 
 ### Added — agent code quality substrate round 2 (PA-LLM-08 pilot)
