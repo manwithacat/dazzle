@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-05-25
+
+### Added — agent code quality substrate round 2 (PA-LLM-08 pilot)
+
+- **Sentinel heuristic `PA-LLM-08`** (`n_plus_one_in_user_code`) detects three canonical shapes of N+1 query patterns in user `app/` Python: queryset chains on loop-variable attribute access (`order.lines.all()` inside a for-loop), `*_repo.<method>(...)` calls with loop-variable args, and `len()` wrapping a queryset chain. Severity MEDIUM, confidence LIKELY (false-positive risk from prefetched relations and identically-named non-DB methods). Suppress via `# noqa: PA-LLM-08 — <reason>` on the `for` or call line.
+- **Counter-prior `n-plus-one-in-user-code.md` frontmatter** declares `PA-LLM-08`. Round-1 bidirectional drift test (#1255) automatically enforces the contract — no new test infrastructure needed.
+
+### Agent Guidance
+
+- When writing loops in `app/` that touch related rows, reach for `Repository.aggregate(group_by=..., count="...")` or batched fetch helpers. Don't enumerate. See `docs/counter-priors/n-plus-one-in-user-code.md` for the right shapes.
+- Prefetched relations are legitimate: when the relation is materialised upstream of the loop, document the suppression with `# noqa: PA-LLM-08 — prefetched via <upstream-call>`.
+- PA-LLM-08 doesn't detect comprehension N+1 yet (`[x.lines.all() for x in xs]`). Treat that shape with the same discipline manually until a follow-up extends the detector.
+- Round 2 was ~half the size of round 1 (~250 LOC vs ~500). The substrate is paying its rent — closing each subsequent counter-prior gap costs only the per-gap detection logic plus the catalogue frontmatter declaration. Round 3 candidates: `optional-instead-of-result` (requires `dazzle.result` convention library), comprehension-N+1 extension (round 2.5).
+
 ## [0.75.0] - 2026-05-25
 
 ### Added — agent code quality substrate (PA-LLM-07 pilot)
