@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 14  # v14: triggers arrays on all 8 Phase 2 pattern entries (#1249)
+SEED_SCHEMA_VERSION = 15  # v15: counter-prior catalogue ingested from docs/counter-priors/
 
 
 def compute_seed_version() -> str:
@@ -74,6 +74,7 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
         "patterns": 0,
         "inference_entries": 0,
         "changelog_entries": 0,
+        "counter_priors": 0,
         "aliases": 0,
         "relations": 0,
     }
@@ -101,16 +102,21 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
         # Load and seed changelog guidance
         _seed_changelog(graph, stats)
 
+        # Load and seed counter-prior catalogue (docs/counter-priors/*.md)
+        _seed_counter_priors(graph, stats)
+
         # Write seed version
         graph.set_seed_meta("seed_version", compute_seed_version())
 
         logger.info(
             "Seeded framework knowledge: %d concepts, %d patterns, "
-            "%d inference entries, %d changelog entries, %d aliases, %d relations",
+            "%d inference entries, %d changelog entries, %d counter-priors, "
+            "%d aliases, %d relations",
             stats["concepts"],
             stats["patterns"],
             stats["inference_entries"],
             stats["changelog_entries"],
+            stats["counter_priors"],
             stats["aliases"],
             stats["relations"],
         )
@@ -341,3 +347,49 @@ def _seed_changelog(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
             },
         )
         stats["changelog_entries"] += 1
+
+
+def _seed_counter_priors(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
+    """Seed the counter-prior catalogue from docs/counter-priors/*.md.
+
+    Each markdown file becomes one KG entity with entity_type='counter_prior'.
+    The frontmatter fields land in metadata (including the trigger arrays);
+    the markdown body is included so MCP queries can return it without a
+    second filesystem read.
+
+    Non-critical: a malformed entry logs a warning and is skipped, like the
+    rest of the seed pipeline.
+    """
+    from dazzle.mcp.semantics_kb.counter_priors import (
+        CounterPriorParseError,
+        load_all_counter_priors,
+    )
+
+    try:
+        entries = load_all_counter_priors()
+    except Exception:
+        logger.warning("counter-prior catalogue load failed — skipping", exc_info=True)
+        return
+
+    for entry in entries:
+        entity_id = f"counter_prior:{entry.id}"
+        try:
+            graph.create_entity(
+                entity_id=entity_id,
+                name=entry.name,
+                entity_type="counter_prior",
+                metadata={
+                    "source": "framework",
+                    "layer": entry.layer,
+                    "status": entry.status,
+                    "summary": entry.summary,
+                    "triggers_text": entry.triggers_text,
+                    "triggers_code": entry.triggers_code,
+                    "refs": entry.refs.model_dump(),
+                    "file_path": entry.file_path,
+                    "body": entry.body,
+                },
+            )
+            stats["counter_priors"] += 1
+        except CounterPriorParseError:
+            logger.warning("counter-prior %s: parse failed", entry.id, exc_info=True)

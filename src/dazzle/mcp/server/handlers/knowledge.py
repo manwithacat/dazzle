@@ -13,6 +13,11 @@ from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.semantics_kb import MCP_SEMANTICS_VERSION, lookup_concept
+from dazzle.mcp.semantics_kb.counter_priors import (
+    load_all_counter_priors,
+    match_code_triggers,
+    match_text_triggers,
+)
 
 from .common import error_response, extract_progress, wrap_handler_errors
 
@@ -145,3 +150,95 @@ def get_changelog_handler(args: dict[str, Any]) -> str:
         },
         indent=2,
     )
+
+
+def _summarise_entry(entry: Any, *, include_body: bool) -> dict[str, Any]:
+    """Render a CounterPrior for MCP output.
+
+    Default shape keeps the response small (id + name + layer + summary +
+    triggers + file_path); the agent can `Read` the file for the full body
+    when needed. include_body=True returns the markdown body inline.
+    """
+    out = {
+        "id": entry.id,
+        "name": entry.name,
+        "layer": entry.layer,
+        "status": entry.status,
+        "summary": entry.summary,
+        "triggers_text": entry.triggers_text,
+        "triggers_code": entry.triggers_code,
+        "refs": entry.refs.model_dump(),
+        "file_path": entry.file_path,
+    }
+    if include_body:
+        out["body"] = entry.body
+    return out
+
+
+@wrap_handler_errors
+def counter_prior_handler(args: dict[str, Any]) -> str:
+    """Query the counter-prior catalogue.
+
+    Modes:
+      - id="<id>"            — fetch one entry (returns full body)
+      - query="<sentence>"   — match against triggers_text (returns summaries)
+      - code_shape="<text>"  — match against triggers_code regexes
+      - list_all=true        — return the full index (summaries only)
+      - layer="<layer>"      — narrow list_all to one layer
+
+    Agents reading a result use the returned `file_path` with the Read tool
+    to get the full markdown body when query/code_shape didn't already
+    include it.
+    """
+    progress = extract_progress(args)
+    progress.log_sync("Querying counter-prior catalogue...")
+
+    entries = load_all_counter_priors()  # wrap_handler_errors formats CounterPriorParseError
+
+    entry_id = args.get("id")
+    if entry_id:
+        for e in entries:
+            if e.id == entry_id:
+                return json.dumps(_summarise_entry(e, include_body=True), indent=2)
+        return error_response(f"no counter-prior with id={entry_id!r}")
+
+    query = args.get("query")
+    code_shape = args.get("code_shape")
+    layer = args.get("layer")
+    list_all = args.get("list_all", False)
+
+    if query:
+        hits = match_text_triggers(entries, query)
+        return json.dumps(
+            {
+                "query": query,
+                "match_count": len(hits),
+                "matches": [_summarise_entry(e, include_body=False) for e in hits],
+            },
+            indent=2,
+        )
+
+    if code_shape:
+        hits = match_code_triggers(entries, code_shape)
+        return json.dumps(
+            {
+                "code_shape": code_shape,
+                "match_count": len(hits),
+                "matches": [_summarise_entry(e, include_body=False) for e in hits],
+            },
+            indent=2,
+        )
+
+    if list_all:
+        if layer:
+            entries = [e for e in entries if e.layer == layer]
+        return json.dumps(
+            {
+                "count": len(entries),
+                "layer_filter": layer,
+                "entries": [_summarise_entry(e, include_body=False) for e in entries],
+            },
+            indent=2,
+        )
+
+    return error_response("counter_prior requires one of: id, query, code_shape, list_all")

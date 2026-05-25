@@ -928,35 +928,32 @@ def _refine_spec(arguments: dict[str, Any]) -> str:
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def _load_modeling_guidance() -> list[dict[str, Any]]:
-    """Load `[[modeling_guidance]]` entries from ``inference_kb.toml``.
+def _load_counter_priors_for_flagging() -> list[Any]:
+    """Load counter-prior catalogue entries for anti-pattern flagging.
 
-    Used by ``_propose_patterns`` to flag anti-patterns in spec text.
-    The inference KB is the source of truth (`src/dazzle/mcp/inference_kb.toml`).
-    Returns an empty list on any I/O / parse failure — anti-pattern
-    flagging is best-effort and must not break the cognition pass.
+    Source of truth is `docs/counter-priors/*.md`. Returns an empty list on
+    any I/O / parse failure — anti-pattern flagging is best-effort and must
+    not break the cognition pass.
+
+    Migrated 2026-05-25: previously sourced anti_pattern fields from
+    `inference_kb.toml [[modeling_guidance]]`; the catalogue is now the
+    unified source for this consumer.
     """
-    import tomllib
-    from pathlib import Path
-
     try:
-        kb_path = Path(__file__).parent.parent.parent / "inference_kb.toml"
-        data = tomllib.loads(kb_path.read_text())
-    except Exception:  # noqa: BLE001 — inference_kb is best-effort
-        logger.debug("inference_kb load failed in _load_modeling_guidance", exc_info=True)
+        from dazzle.mcp.semantics_kb.counter_priors import load_all_counter_priors
+
+        return load_all_counter_priors()
+    except Exception:  # noqa: BLE001 — best-effort, must not break cognition
+        logger.debug("counter-prior catalogue load failed in flagging path", exc_info=True)
         return []
-    entries = data.get("modeling_guidance", [])
-    if not isinstance(entries, list):
-        return []
-    return entries
 
 
 #
 # Walks the spec text against two trigger sources:
 #  - patterns.toml  [patterns.X].triggers — POSITIVE proposals (the canonical
 #    idiom to reach for when the spec describes pattern X)
-#  - inference_kb.toml  [[modeling_guidance]].triggers — ANTI-PATTERN flags
-#    (the shape to refuse + the alternatives to route to)
+#  - docs/counter-priors/*.md  triggers_text — ANTI-PATTERN flags (the shape
+#    to refuse + the alternatives to route to)
 #
 # Each match emits a `pattern_proposal` with name, doc-pointer hint, and the
 # triggers that fired. Used by bootstrap to surface "your spec describes X;
@@ -1008,30 +1005,24 @@ def _propose_patterns(arguments: dict[str, Any]) -> str:
             }
         )
 
-    # --- Negative flags (inference_kb.toml modeling_guidance) ---
+    # --- Negative flags (docs/counter-priors/*.md) ---
     antipattern_flags: list[dict[str, Any]] = []
-    guidance_entries = _load_modeling_guidance()
-    for entry in guidance_entries:
-        if not isinstance(entry, dict):
-            continue
-        if not entry.get("anti_pattern"):
-            # Only flag entries that name an anti_pattern explicitly.
-            # The schema includes lots of style guidance (timestamp_auto,
-            # money_price etc.) that aren't anti-patterns to surface here.
-            continue
-        triggers = entry.get("triggers") or []
-        matched = [t for t in triggers if isinstance(t, str) and t.lower() in haystack]
+    counter_priors = _load_counter_priors_for_flagging()
+    for entry in counter_priors:
+        matched = [t for t in entry.triggers_text if isinstance(t, str) and t.lower() in haystack]
         if not matched:
             continue
         antipattern_flags.append(
             {
-                "guidance_id": entry.get("id"),
-                "name": entry.get("name", entry.get("id")),
-                "anti_pattern": entry.get("anti_pattern"),
+                # `guidance_id` kept for back-compat with #1249 test consumers;
+                # carries the counter-prior id.
+                "guidance_id": entry.id,
+                "name": entry.name,
+                "anti_pattern": entry.summary,
                 "matched_triggers": matched,
                 "hint": (
-                    f"knowledge(operation='inference', term='{entry.get('id')}') for the "
-                    "interrogation + alternatives the framework routes to instead."
+                    f"knowledge(operation='counter_prior', id='{entry.id}') for the "
+                    "wrong/right shape and the routing the framework prefers instead."
                 ),
             }
         )

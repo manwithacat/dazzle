@@ -676,10 +676,14 @@ tool: guide
   }
 
 tool: knowledge
-  description_hash: 349331c68e93
-  description_len: 160
+  description_hash: 68914e1bfcf5
+  description_len: 357
   {
     "properties": {
+      "code_shape": {
+        "description": "Description of code about to be written, matched against triggers_code regexes (for counter_prior)",
+        "type": "string"
+      },
       "command": {
         "description": "CLI command (for cli_help)",
         "type": "string"
@@ -708,8 +712,21 @@ tool: knowledge
         },
         "type": "array"
       },
+      "id": {
+        "description": "Counter-prior id (for counter_prior direct fetch \u2014 returns full body)",
+        "type": "string"
+      },
+      "layer": {
+        "description": "Substrate layer filter for list_all (for counter_prior)",
+        "enum": [
+          "grammar",
+          "inference",
+          "filter"
+        ],
+        "type": "string"
+      },
       "list_all": {
-        "description": "List all triggers (for inference)",
+        "description": "List all triggers (for inference / counter_prior)",
         "type": "boolean"
       },
       "operation": {
@@ -721,13 +738,14 @@ tool: knowledge
           "workflow",
           "inference",
           "changelog",
+          "counter_prior",
           "get_spec",
           "search_commands"
         ],
         "type": "string"
       },
       "query": {
-        "description": "Search query (for inference)",
+        "description": "Search query (for inference or counter_prior text-trigger match)",
         "type": "string"
       },
       "since": {

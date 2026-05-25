@@ -636,7 +636,14 @@ def _tool_knowledge() -> Tool:
     """Knowledge (replaces 5 tools, now primarily via Resources)."""
     return Tool(
         name="knowledge",
-        description="Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, get_spec, search_commands. Note: Static content also available via MCP Resources.",
+        description=(
+            "Knowledge lookup: concept, examples, cli_help, workflow, inference, "
+            "changelog, counter_prior, get_spec, search_commands. "
+            "counter_prior surfaces entries from docs/counter-priors/ — corpus "
+            "pathologies Dazzle inoculates against. Call before emitting "
+            "non-trivial user-app Python, raw SQL, or shell scripts. "
+            "Note: Static content also available via MCP Resources."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -649,6 +656,7 @@ def _tool_knowledge() -> Tool:
                         "workflow",
                         "inference",
                         "changelog",
+                        "counter_prior",
                         "get_spec",
                         "search_commands",
                     ],
@@ -678,7 +686,7 @@ def _tool_knowledge() -> Tool:
                 },
                 "query": {
                     "type": "string",
-                    "description": "Search query (for inference)",
+                    "description": "Search query (for inference or counter_prior text-trigger match)",
                 },
                 "detail": {
                     "type": "string",
@@ -687,11 +695,24 @@ def _tool_knowledge() -> Tool:
                 },
                 "list_all": {
                     "type": "boolean",
-                    "description": "List all triggers (for inference)",
+                    "description": "List all triggers (for inference / counter_prior)",
                 },
                 "since": {
                     "type": "string",
                     "description": "Version filter (for changelog, e.g. '0.48.0')",
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Counter-prior id (for counter_prior direct fetch — returns full body)",
+                },
+                "code_shape": {
+                    "type": "string",
+                    "description": "Description of code about to be written, matched against triggers_code regexes (for counter_prior)",
+                },
+                "layer": {
+                    "type": "string",
+                    "enum": ["grammar", "inference", "filter"],
+                    "description": "Substrate layer filter for list_all (for counter_prior)",
                 },
             },
             "required": ["operation"],

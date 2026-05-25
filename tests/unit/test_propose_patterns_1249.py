@@ -117,7 +117,7 @@ def test_no_proposal_when_spec_does_not_match_any_pattern() -> None:
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def test_flags_polymorphic_association_antipattern() -> None:
+def test_flags_polymorphic_associations() -> None:
     """When the spec describes Rails-style polymorphic association (e.g.
     a Comment that points at any of N target tables via subject_type +
     subject_id), the recogniser MUST flag it — that's the #1240
@@ -128,9 +128,8 @@ def test_flags_polymorphic_association_antipattern() -> None:
         "Manuscripts."
     )
     flags = _antipattern_ids(result)
-    assert "polymorphic_association_antipattern" in flags, (
-        f"polymorphic_association_antipattern must fire on Rails-style "
-        f"discriminator FKs; got {flags}"
+    assert "polymorphic_associations" in flags, (
+        f"polymorphic_associations must fire on Rails-style discriminator FKs; got {flags}"
     )
 
 
@@ -140,11 +139,7 @@ def test_antipattern_flag_carries_interrogation_hint() -> None:
     interrogation."""
     result = _propose("polymorphic association across multiple entity types")
     flag = next(
-        (
-            f
-            for f in result["antipattern_flags"]
-            if f["guidance_id"] == "polymorphic_association_antipattern"
-        ),
+        (f for f in result["antipattern_flags"] if f["guidance_id"] == "polymorphic_associations"),
         None,
     )
     assert flag is not None, result
@@ -154,7 +149,7 @@ def test_antipattern_flag_carries_interrogation_hint() -> None:
 
 
 def test_no_antipattern_flag_when_spec_uses_canonical_idiom() -> None:
-    """The polymorphic_association_antipattern triggers must NOT fire
+    """The polymorphic_associations triggers must NOT fire
     when the spec uses the canonical alternatives (per-target refs,
     event-stream entity, per-pair junctions, subtype_of:)."""
     result = _propose(
@@ -162,7 +157,7 @@ def test_no_antipattern_flag_when_spec_uses_canonical_idiom() -> None:
         "Each comment type has its own retention rules and audit trail."
     )
     flags = _antipattern_ids(result)
-    assert "polymorphic_association_antipattern" not in flags, (
+    assert "polymorphic_associations" not in flags, (
         f"Per-target entities is the canonical Option 1 — must not be flagged. {result}"
     )
 

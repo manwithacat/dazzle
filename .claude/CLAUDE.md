@@ -55,6 +55,10 @@ When creating custom Python code in a Dazzle project (not the framework itself),
 
 If you find yourself wiring up an LLM call that writes Dazzle DSL, that's the warning sign. The right shape is: LLM call returns structured analysis → agent reads analysis + writes DSL using current Dazzle expertise.
 
+## Counter-Prior Catalogue
+
+Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell scripts), call `knowledge counter_prior code_shape="<one-sentence description>"` to check the catalogue at `docs/counter-priors/` for matching pathologies (exceptions-as-control-flow, n+1, raw-sql, shell-strict, polymorphic associations, etc.). Same path for spec-driven structural choices via `query="<excerpt>"`. The bootstrap MCP entry point already surfaces antipattern flags from this catalogue; the explicit call is for everything outside the bootstrap moment. See `docs/counter-priors/INDEX.md` for the full list.
+
 ## Commands
 
 ### Dev Setup
@@ -327,4 +331,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.73.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.74.0 | **Python**: 3.12+ | **Status**: Production Ready

@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — counter-prior catalogue (`docs/counter-priors/`)
+
+- **Markdown-first catalogue at `docs/counter-priors/*.md`** of 10 corpus pathologies Dazzle inoculates against, with YAML frontmatter (id, layer, triggers_text, triggers_code, refs, summary) and a mandatory four-section body (corpus prior / wrong shape / right shape / why this matters here). Visible on GitHub, in mkdocs nav, and queryable via MCP. Source of truth for both human readers and the KG.
+- **`knowledge counter_prior` MCP operation** (modes: `id`, `query`, `code_shape`, `list_all` with optional `layer` filter). Default response shape is summary + triggers + `file_path` (~200 tokens per hit); the agent uses `Read` on the file path when it needs the full body. `id=` returns the body inline.
+- **KG ingestion** at `_seed_counter_priors` walks `docs/counter-priors/`, parses frontmatter, and writes one `counter_prior:<id>` entity per file. `SEED_SCHEMA_VERSION` bumped 14 → 15 so deployed KGs re-seed.
+- **`spec_analyze.propose_patterns` rewired** to source antipattern flags from the counter-prior catalogue instead of `inference_kb.toml [[modeling_guidance]]`. Bootstrap's #1249 surfacing now reads from the unified catalogue; the TOML rows remain for the `lookup_inference` MCP path and a parity drift test ensures the two catalogues don't drift apart.
+- **10 seed entries**: polymorphic-associations, exceptions-as-control-flow, subtype-polymorphism-default, regex-in-dsl-parser, domain-coupled-keywords, god-entities, hand-rolled-soft-delete, stringly-typed-refs, hand-rolled-temporal, duplicated-parent-fields, n-plus-one-in-user-code, raw-sql-string-building, shell-without-strict-mode.
+- **Drift gates**: `tests/unit/test_counter_priors_drift.py` (28 tests — schema, body sections, INDEX coverage, KB↔counter-prior parity); `tests/unit/test_shell_strict_mode.py` (8 tests — every script under `scripts/` and `app/` must declare `set -euo pipefail`).
+- **Optional PreToolUse hook** at `scripts/hooks/counter-prior-pretooluse.py` that surfaces catalogue matches before `Edit`/`Write` to `app/**/*.py` and `scripts/**/*.sh`. Opt-in via Claude Code settings.json; advisory, never gating.
+- **4 antipattern memories retired** (`feedback_polymorphic_association_antipattern`, `feedback_subtype_polymorphism_escape_hatch`, `feedback_regex_grammar_smell`, `feedback_dsl_keyword_domain_neutrality`) — bodies replaced with redirect pointers to the markdown catalogue. MEMORY.md index collapsed accordingly.
+
+### Agent Guidance
+
+- Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell), call `knowledge counter_prior code_shape="<one-sentence description>"` and check matches before writing. The bootstrap path already surfaces antipattern flags from the catalogue; the explicit call is for everything outside the bootstrap moment.
+- Adding a new counter-prior: write `docs/counter-priors/<kebab-id>.md` with frontmatter (id matching the filename in snake_case), the four mandatory sections, and at least one trigger. Bump `SEED_SCHEMA_VERSION`. Add a one-line entry to INDEX.md. The drift test enforces all four conditions.
+- The `feedback_*_antipattern*.md` memory files are now redirect stubs — don't write antipattern content there; write it in the markdown catalogue. The memory pointers exist for back-references from older memories.
+
 ### Added — single-instance guard for `dazzle mcp run`
 
 - **`ProcessLock`** at `src/dazzle/mcp/server/process_lock.py` — non-blocking `fcntl.flock` on `<project_root>/.dazzle/mcp.lock`. A second `dazzle mcp run` for the same project now fails immediately with a message naming the holder PID, start time, and the `kill` command to release it, instead of racing the first server on the SQLite WAL of `knowledge_graph.db` (which on a cold KG re-seed can take longer than Claude Code's 30s MCP handshake timeout).
