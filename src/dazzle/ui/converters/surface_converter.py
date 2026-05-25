@@ -1,7 +1,7 @@
 """
-Surface converter - converts Dazzle IR SurfaceSpec to DNR UISpec ComponentSpec.
+Surface converter - converts Dazzle IR SurfaceSpec to the Dazzle runtime UISpec ComponentSpec.
 
-This module transforms Dazzle's surface definitions into DNR UI components,
+This module transforms Dazzle's surface definitions into Dazzle UI runtime components,
 mapping surface modes to appropriate UI patterns.
 """
 
@@ -36,7 +36,7 @@ from dazzle.ui.specs import (
 
 
 def _surface_mode_to_component(mode: ir.SurfaceMode) -> str:
-    """Map surface mode to appropriate DNR pattern component."""
+    """Map surface mode to appropriate the Dazzle runtime pattern component."""
     mode_map = {
         ir.SurfaceMode.LIST: "FilterableTable",
         ir.SurfaceMode.VIEW: "Card",
@@ -604,14 +604,14 @@ def convert_surface_to_component(
     entity: ir.EntitySpec | None = None,
 ) -> ComponentSpec:
     """
-    Convert a Dazzle IR SurfaceSpec to DNR UISpec ComponentSpec.
+    Convert a Dazzle IR SurfaceSpec to the Dazzle runtime UISpec ComponentSpec.
 
     Args:
         surface: Dazzle IR surface specification
         entity: Optional entity specification for type inference
 
     Returns:
-        DNR UISpec component specification
+        the Dazzle runtime UISpec component specification
     """
     dazzle_attrs = _generate_dazzle_attrs(surface, entity)
 
@@ -634,14 +634,14 @@ def convert_surfaces_to_components(
     domain: ir.DomainSpec | None = None,
 ) -> list[ComponentSpec]:
     """
-    Convert a list of Dazzle IR surfaces to DNR UISpec components.
+    Convert a list of Dazzle IR surfaces to the Dazzle runtime UISpec components.
 
     Args:
         surfaces: List of Dazzle IR surface specifications
         domain: Optional domain spec for entity lookup
 
     Returns:
-        List of DNR UISpec component specifications
+        List of the Dazzle runtime UISpec component specifications
     """
     components: list[ComponentSpec] = []
 

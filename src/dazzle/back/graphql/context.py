@@ -119,7 +119,7 @@ def create_context_from_request(request: Request) -> GraphQLContext:
     session: dict[str, Any] = {}
 
     if auth_context:
-        # AuthContext from DNR auth middleware
+        # AuthContext from the Dazzle runtime auth middleware
         tenant_id = getattr(auth_context, "tenant_id", None)
         user_id = getattr(auth_context, "user_id", None)
         roles_list = getattr(auth_context, "roles", [])

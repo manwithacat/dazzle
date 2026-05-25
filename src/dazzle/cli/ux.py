@@ -28,7 +28,7 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
         3. Manifest [urls] section
         4. Defaults (localhost:3000 / localhost:8000)
 
-    In DNR mode the UI and API share a single port, so api_url falls back
+    In the Dazzle runtime mode the UI and API share a single port, so api_url falls back
     to site_url when runtime.json is present but api_url is unreachable.
     """
     import os
@@ -47,7 +47,7 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
             data = _json.loads(runtime_json.read_text())
             site = data.get("ui_url", "")
             if site:
-                # DNR serves UI + API on the same port; api_url in
+                # the Dazzle runtime serves UI + API on the same port; api_url in
                 # runtime.json points at a separate port that only exists
                 # in Docker/split mode.  Use site_url for both.
                 return site.rstrip("/"), site.rstrip("/")

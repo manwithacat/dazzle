@@ -1,5 +1,5 @@
 """
-WebSocket routes for DNR real-time features.
+WebSocket routes for the Dazzle runtime real-time features.
 
 Provides the WebSocket endpoint and message handlers.
 """
@@ -237,7 +237,7 @@ def setup_realtime(
     ws_path: str = "/ws",
 ) -> RealtimeContext:
     """
-    Set up real-time features for a DNR backend app.
+    Set up real-time features for a the Dazzle runtime backend app.
 
     This is the main entry point for adding real-time to an existing app.
 

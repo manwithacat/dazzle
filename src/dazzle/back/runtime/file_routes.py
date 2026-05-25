@@ -1,5 +1,5 @@
 """
-File upload routes for DNR Backend.
+File upload routes for Dazzle backend runtime.
 
 Provides REST endpoints for file upload, download, and management.
 """

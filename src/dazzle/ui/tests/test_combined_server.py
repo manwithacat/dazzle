@@ -1,5 +1,5 @@
 """
-Tests for unified DNR server.
+Tests for unified the Dazzle runtime server.
 
 Tests the unified development server that runs a single FastAPI app
 with both backend API and server-rendered UI on one port.

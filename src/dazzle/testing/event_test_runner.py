@@ -135,7 +135,7 @@ class EventTestRunResult:
 
 
 class EventTestClient:
-    """Client for event testing against a DNR server."""
+    """Client for event testing against a the Dazzle runtime server."""
 
     MAX_RETRIES = 3
     BACKOFF_SECONDS = (1.0, 2.0, 4.0)
@@ -405,7 +405,7 @@ class EventTestClient:
 
 
 class EventTestRunner:
-    """Run event flow tests against a DNR server."""
+    """Run event flow tests against a the Dazzle runtime server."""
 
     def __init__(self, api_url: str):
         self.api_url = api_url

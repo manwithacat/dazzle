@@ -1,5 +1,5 @@
 """
-DNR Logging Infrastructure.
+the Dazzle runtime Logging Infrastructure.
 
 Provides unified logging for both backend and frontend, with:
 - LLM-friendly log format (structured, contextual, easily parseable)
@@ -63,7 +63,7 @@ class JSONLFormatter(logging.Formatter):
     Each log entry is a single JSON object on one line containing:
     - timestamp: ISO 8601 format
     - level: DEBUG, INFO, WARNING, ERROR, CRITICAL
-    - component: API, UI, Bar, DNR
+    - component: API, UI, Bar, the Dazzle runtime
     - message: The log message
     - context: Additional structured data (optional)
     - source: Source file/location info (if available)
@@ -198,7 +198,7 @@ def setup_logging(
     _file_handler.setFormatter(JSONLFormatter())
     _file_handler.setLevel(level)
 
-    # Configure root DNR logger
+    # Configure root the Dazzle runtime logger
     root_logger = logging.getLogger("dazzle")
     root_logger.setLevel(level)
 
@@ -277,7 +277,7 @@ def log_with_context(
     """
     Log a message with structured context data.
 
-    This is the preferred method for logging in DNR as it produces
+    This is the preferred method for logging in the Dazzle runtime as it produces
     LLM-friendly output with rich context.
 
     Args:

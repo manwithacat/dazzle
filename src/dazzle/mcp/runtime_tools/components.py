@@ -1,11 +1,11 @@
 """
-Built-in component registry for DNR UI.
+Built-in component registry for Dazzle UI runtime.
 
 Contains primitive components, pattern components, and layout types
-as defined in DNR-Components-v1.md specification.
+as defined in the Dazzle runtime-Components-v1.md specification.
 """
 
-# Built-in component registry (from DNR-Components-v1.md)
+# Built-in component registry (from the Dazzle runtime-Components-v1.md)
 PRIMITIVE_COMPONENTS = [
     {"name": "Page", "category": "primitive", "description": "Top-level container for a screen"},
     {

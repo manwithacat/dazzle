@@ -1,5 +1,5 @@
 """
-Invariant evaluator for DNR runtime.
+Invariant evaluator for Dazzle runtime.
 
 This module evaluates entity invariants at runtime during create/update operations.
 Invariants are cross-field constraints that must always hold true.

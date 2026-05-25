@@ -440,7 +440,7 @@ Turing-complete implementation of a domain service. Auto-generated from DSL with
 ### Three-Layer Architecture (NEW in v0.5)
 DAZZLE's separation of concerns:
 1. **DSL Layer** - Declarative definitions (Anti-Turing: no arbitrary computation)
-2. **Kernel Layer** - DNR runtime (CRUD, auth, routing)
+2. **Kernel Layer** - Dazzle runtime (CRUD, auth, routing)
 3. **Stub Layer** - Custom business logic (Turing-complete)
 
 ### Access Rules (NEW in v0.5)

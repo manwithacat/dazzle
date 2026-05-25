@@ -1,5 +1,5 @@
 """
-File storage backend for DNR.
+File storage backend for the Dazzle runtime.
 
 Provides local and S3-compatible storage for file uploads.
 Metadata is stored in PostgreSQL via psycopg.
@@ -867,7 +867,7 @@ def secure_filename(filename: str) -> str:
 
 class FileService:
     """
-    High-level file service for DNR.
+    High-level file service for the Dazzle runtime.
 
     Combines storage backend, metadata store, and validation.
     """

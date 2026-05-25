@@ -1,5 +1,5 @@
 """
-DNR MCP tool handlers.
+the Dazzle runtime MCP tool handlers.
 
 Implementations for backend, UI, and GraphQL BFF tool calls.
 """
@@ -33,10 +33,10 @@ def _get_dispatch() -> dict[str, Callable[[dict[str, Any]], str]]:
 
 
 def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
-    """Handle DNR tool calls."""
+    """Handle the Dazzle runtime tool calls."""
     handler = _get_dispatch().get(name)
     if handler is None:
-        return json.dumps({"error": f"Unknown DNR tool: {name}"})
+        return json.dumps({"error": f"Unknown the Dazzle runtime tool: {name}"})
     try:
         return handler(arguments)
     except Exception as e:
@@ -178,7 +178,7 @@ def _get_backend_service_spec(args: dict[str, Any]) -> str:
 
 
 def _list_dnr_components(args: dict[str, Any]) -> str:
-    """List DNR UI components."""
+    """List Dazzle UI runtime components."""
     kind = args.get("kind", "all")
 
     if kind == "primitives":
@@ -703,13 +703,13 @@ def _get_channel_status(args: dict[str, Any]) -> str:
 
         # Check if dazzle_back.channels is available
         if importlib.util.find_spec("dazzle.back.channels"):
-            # Note: In real usage, this would connect to the running DNR server
+            # Note: In real usage, this would connect to the running the Dazzle runtime server
             # For now, return the DSL spec with a note about runtime status
-            runtime_status = {"note": "Start DNR server for live status"}
+            runtime_status = {"note": "Start the Dazzle runtime server for live status"}
         else:
             runtime_status = {"note": "Dazzle backend not installed"}
     except Exception:
-        runtime_status = {"note": "Could not check DNR backend availability"}
+        runtime_status = {"note": "Could not check the Dazzle runtime backend availability"}
 
     return json.dumps(
         {
@@ -804,12 +804,12 @@ def _get_outbox_status(_args: dict[str, Any] | None = None) -> str:
             }
         )
 
-    # Note: Real implementation would connect to running DNR server
+    # Note: Real implementation would connect to running the Dazzle runtime server
     # For now, return a helpful message about how to get live stats
     return json.dumps(
         {
             "status": "info",
-            "message": "Outbox statistics require a running DNR server.",
+            "message": "Outbox statistics require a running the Dazzle runtime server.",
             "hint": "Start the server with 'dazzle serve' then query the /_dazzle/channels endpoint.",
             "channels_defined": len(channels),
             "channel_names": [c.get("name") for c in channels],

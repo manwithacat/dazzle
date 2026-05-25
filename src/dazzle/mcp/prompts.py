@@ -33,7 +33,7 @@ def create_prompts() -> list[dict[str, Any]]:
         },
         {
             "name": "code_review",
-            "description": "Review generated code artifacts for quality and best practices. NOTE: DNR is the primary runtime - use code generation only for custom deployments.",
+            "description": "Review generated code artifacts for quality and best practices. NOTE: the Dazzle runtime is the primary runtime - use code generation only for custom deployments.",
             "arguments": [
                 {
                     "name": "stack",

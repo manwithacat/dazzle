@@ -61,7 +61,7 @@ class ServiceLoader:
     Load and invoke domain service stubs at runtime.
 
     The ServiceLoader discovers Python stub files in a services directory,
-    imports them, and makes them available for invocation by the DNR runtime.
+    imports them, and makes them available for invocation by the Dazzle runtime.
 
     Example:
         >>> loader = ServiceLoader(Path("examples/simple_task/services"))

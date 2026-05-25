@@ -1,5 +1,5 @@
 """
-Real-time client JavaScript generator for DNR-UI.
+Real-time client JavaScript generator for the Dazzle browser runtime (the `DNR` global namespace, defined in `dnr-ui/`).
 
 Generates JavaScript code for WebSocket communication, presence, and optimistic updates.
 
@@ -31,7 +31,7 @@ def _wrap_in_iife(source: str) -> str:
     lines = source.split("\n")
     result = [
         "/**",
-        " * DNR-UI Realtime Client",
+        " * Dazzle browser runtime Realtime Client",
         " * Provides WebSocket communication, presence, and optimistic updates.",
         " * Version: 0.4.0 (Week 13-14)",
         " */",
@@ -88,7 +88,7 @@ def _wrap_in_iife(source: str) -> str:
 # file is not available. The canonical source is now in static/js/realtime.js
 _REALTIME_CLIENT_JS_INLINE = """
 /**
- * DNR-UI Realtime Client
+ * Dazzle browser runtime Realtime Client
  * Provides WebSocket communication, presence, and optimistic updates.
  * Version: 0.4.0 (Week 13-14)
  */
@@ -944,7 +944,7 @@ def generate_realtime_init_js(
     options_js = ", ".join(f"{k}: {repr(v)}" for k, v in options.items())
 
     return f"""
-// Initialize DNR Realtime Client
+// Initialize Dazzle realtime client (binds onto the DNR global)
 (function() {{
   'use strict';
 

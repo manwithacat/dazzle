@@ -1,5 +1,5 @@
 """
-DNR MCP tool definitions.
+the Dazzle runtime MCP tool definitions.
 
 Contains Tool objects for backend, UI, and GraphQL BFF tools.
 """
@@ -11,7 +11,7 @@ except ImportError:
 
 
 def get_runtime_tools() -> list[Tool]:
-    """Get DNR-specific MCP tools."""
+    """Get the Dazzle runtime-specific MCP tools."""
     if Tool is None:
         return []
 
@@ -71,7 +71,7 @@ def get_runtime_tools() -> list[Tool]:
         # UI Tools
         Tool(
             name="list_dnr_components",
-            description="List known DNR UI components (primitives and patterns)",
+            description="List known Dazzle UI runtime components (primitives and patterns)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -301,7 +301,7 @@ def get_runtime_tools() -> list[Tool]:
     ]
 
 
-# List of DNR tool names for validation
+# List of the Dazzle runtime tool names for validation
 RUNTIME_TOOL_NAMES = [
     "list_dnr_entities",
     "get_dnr_entity",

@@ -1,5 +1,5 @@
 """
-Presence tracking for DNR real-time features.
+Presence tracking for the Dazzle runtime real-time features.
 
 Tracks which users are viewing which resources for collaboration awareness.
 """

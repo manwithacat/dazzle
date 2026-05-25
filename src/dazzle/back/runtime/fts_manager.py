@@ -1,5 +1,5 @@
 """
-Full-text search manager for DNR.
+Full-text search manager for the Dazzle runtime.
 
 Uses PostgreSQL tsvector/GIN backend exclusively.
 """

@@ -1,5 +1,5 @@
 """
-DNR-Back Runtime
+Dazzle Backend Runtime
 
 Native backend runtime implementation (FastAPI + Pydantic).
 

@@ -1,5 +1,5 @@
 """
-ProcessManager - Integrates process execution with DNR runtime.
+ProcessManager - Integrates process execution with Dazzle runtime.
 
 This module connects ProcessSpec definitions from the AppSpec to the
 process adapter (EventBusProcessAdapter, CeleryProcessAdapter, or TemporalAdapter) and handles
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class ProcessManager:
     """
-    Manages process lifecycle in the DNR runtime.
+    Manages process lifecycle in the Dazzle runtime.
 
     Responsibilities:
     - Register all processes and schedules from AppSpec

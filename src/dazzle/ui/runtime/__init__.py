@@ -1,5 +1,5 @@
 """
-DNR-UI Runtime
+Dazzle UI Runtime
 
 Server-rendered UI runtime using Jinja2 templates, HTMX, and Alpine.js.
 

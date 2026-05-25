@@ -135,7 +135,7 @@
 /* =============================================================================
    Semantic Data Attributes
 
-   These are used by the DNR system for semantic DOM identification.
+   These are used by the Dazzle runtime for semantic DOM identification.
    They don't provide styling but enable LLM/automation to understand the UI.
 
    [data-dazzle-entity]    - Entity name (e.g., "Task")

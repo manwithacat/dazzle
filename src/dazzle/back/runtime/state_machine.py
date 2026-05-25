@@ -1,5 +1,5 @@
 """
-State machine validation and transition handling for DNR Backend.
+State machine validation and transition handling for Dazzle backend runtime.
 
 This module provides runtime validation for state machine transitions,
 including guard evaluation and error handling.

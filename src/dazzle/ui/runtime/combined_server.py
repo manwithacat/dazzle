@@ -197,7 +197,7 @@ def run_unified_server(
         pass
 
     print("\n" + "=" * 60)
-    print("  DAZZLE NATIVE RUNTIME (DNR)")
+    print("  DAZZLE Runtime")
     print("=" * 60)
     print()
 
@@ -442,7 +442,7 @@ def run_backend_only(
         return
 
     print("\n" + "=" * 60)
-    print("  DAZZLE NATIVE RUNTIME (DNR) - Backend Only")
+    print("  DAZZLE Runtime (Backend Only)")
     print("=" * 60)
     print()
 

@@ -1,5 +1,5 @@
 """
-Image processing utilities for DNR.
+Image processing utilities for the Dazzle runtime.
 
 Provides thumbnail generation and image optimization.
 """

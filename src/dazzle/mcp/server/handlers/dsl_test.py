@@ -824,7 +824,7 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 @wrap_handler_errors
 def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Run DSL-driven tests against a running DNR server."""
+    """Run DSL-driven tests against a running the Dazzle runtime server."""
     try:
         progress = extract_progress(args)
         regenerate = args.get("regenerate", False)

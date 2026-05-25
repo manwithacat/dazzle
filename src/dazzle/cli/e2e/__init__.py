@@ -52,7 +52,7 @@ def e2e_run(
     Run E2E tests for an example project using Docker.
 
     This command handles the full Docker lifecycle:
-    1. Builds the DNR container with the specified example
+    1. Builds the the Dazzle runtime container with the specified example
     2. Starts containers with health checks
     3. Runs Playwright tests
     4. Captures screenshots and UX coverage

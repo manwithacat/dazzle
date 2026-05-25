@@ -1,7 +1,7 @@
 """
 Status and logging tool handlers.
 
-Handles MCP server status and DNR log retrieval.
+Handles MCP server status and the Dazzle runtime log retrieval.
 """
 
 import json
@@ -284,9 +284,9 @@ def get_activity_handler(args: dict[str, Any]) -> str:
 
 @wrap_handler_errors
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
-    """Get DNR runtime logs for debugging."""
+    """Get Dazzle runtime logs for debugging."""
     progress = extract_progress(args)
-    progress.log_sync("Reading DNR logs...")
+    progress.log_sync("Reading the Dazzle runtime logs...")
     from pathlib import Path
 
     count = args.get("count", 50)
@@ -310,7 +310,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     if not log_file.exists():
         result["status"] = "no_logs"
         result["message"] = (
-            "No log file found. Start the DNR server with `dazzle serve` to generate logs."
+            "No log file found. Start the the Dazzle runtime server with `dazzle serve` to generate logs."
         )
         result["hint"] = f"Log file will be created at: {log_file}"
         return json.dumps(result, indent=2)

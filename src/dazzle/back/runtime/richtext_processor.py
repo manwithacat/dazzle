@@ -1,5 +1,5 @@
 """
-Rich text processing for DNR.
+Rich text processing for the Dazzle runtime.
 
 Provides markdown processing, HTML sanitization, and inline image handling.
 """

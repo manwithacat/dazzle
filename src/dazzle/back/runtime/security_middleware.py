@@ -1,5 +1,5 @@
 """
-Security middleware for DNR-Back applications.
+Security middleware for Dazzle backend runtime applications.
 
 Provides configurable security based on security profile:
 - Security headers (X-Frame-Options, X-Content-Type-Options, HSTS, CSP)

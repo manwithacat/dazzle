@@ -1,5 +1,5 @@
 """
-WebSocket manager for DNR real-time features.
+WebSocket manager for the Dazzle runtime real-time features.
 
 Provides connection management, channel subscriptions, and message routing.
 """

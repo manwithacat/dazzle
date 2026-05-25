@@ -1,5 +1,5 @@
 """
-Exception handlers for DNR-Back applications.
+Exception handlers for Dazzle backend runtime applications.
 
 Provides centralized exception handling for:
 - State machine transition errors

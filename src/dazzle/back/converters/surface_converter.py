@@ -1,5 +1,5 @@
 """
-Surface converter - converts Dazzle IR SurfaceSpec to DNR BackendSpec services.
+Surface converter - converts Dazzle IR SurfaceSpec to the Dazzle runtime BackendSpec services.
 
 This module infers backend services from surface definitions, creating
 CRUD operations based on surface modes.
@@ -189,14 +189,14 @@ def convert_surface_to_service(
     entity: ir.EntitySpec | None = None,
 ) -> ServiceSpec:
     """
-    Convert a Dazzle IR SurfaceSpec to DNR BackendSpec ServiceSpec.
+    Convert a Dazzle IR SurfaceSpec to the Dazzle runtime BackendSpec ServiceSpec.
 
     Args:
         surface: Dazzle IR surface specification
         entity: Optional entity specification for field type inference
 
     Returns:
-        DNR BackendSpec service specification
+        the Dazzle runtime BackendSpec service specification
     """
     return ServiceSpec(
         name=_generate_service_name(surface),
@@ -215,14 +215,14 @@ def convert_surface_to_endpoint(
     service_name: str,
 ) -> EndpointSpec:
     """
-    Convert a Dazzle IR SurfaceSpec to DNR BackendSpec EndpointSpec.
+    Convert a Dazzle IR SurfaceSpec to the Dazzle runtime BackendSpec EndpointSpec.
 
     Args:
         surface: Dazzle IR surface specification
         service_name: Name of the corresponding service
 
     Returns:
-        DNR BackendSpec endpoint specification
+        the Dazzle runtime BackendSpec endpoint specification
     """
     entity = surface.entity_ref or "items"
     plural = to_api_plural(entity)
@@ -262,7 +262,7 @@ def convert_surfaces_to_services(
     domain: ir.DomainSpec | None = None,
 ) -> tuple[list[ServiceSpec], list[EndpointSpec]]:
     """
-    Convert a list of Dazzle IR surfaces to DNR services and endpoints.
+    Convert a list of Dazzle IR surfaces to the Dazzle runtime services and endpoints.
 
     Args:
         surfaces: List of Dazzle IR surface specifications

@@ -1,7 +1,7 @@
 """
 Resolver Generator - Generate GraphQL resolvers from BackendSpec.
 
-Creates resolvers that delegate to the DNR service layer while
+Creates resolvers that delegate to the the Dazzle runtime service layer while
 enforcing multi-tenant isolation through context.
 """
 

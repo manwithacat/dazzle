@@ -36,7 +36,7 @@ class DazzleLocators:
     Semantic locators for Dazzle applications.
 
     Provides methods to locate elements using data-dazzle-* attributes,
-    which are emitted by DNR UI components.
+    which are emitted by Dazzle UI runtime components.
     """
 
     def __init__(self, page: "Page") -> None:

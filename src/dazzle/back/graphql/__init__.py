@@ -1,5 +1,5 @@
 """
-GraphQL BFF Layer for DNR Backend.
+GraphQL BFF Layer for Dazzle backend runtime.
 
 This module provides GraphQL schema generation and resolver scaffolding
 from BackendSpec, implementing the BFF/Facade pattern.

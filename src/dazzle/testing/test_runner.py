@@ -1,9 +1,9 @@
 """
-DAZZLE Test Runner - Execute test designs against a running DNR app.
+DAZZLE Test Runner - Execute test designs against a running the Dazzle runtime app.
 
 This module provides a test harness that:
 1. Loads test designs from dsl/tests/designs.json
-2. Starts the DNR server (if needed)
+2. Starts the the Dazzle runtime server (if needed)
 3. Executes test steps via API calls
 4. Reports pass/fail results
 
@@ -138,7 +138,7 @@ class TestRunResult:
 
 
 class DazzleClient:
-    """HTTP client for interacting with a DNR server."""
+    """HTTP client for interacting with a the Dazzle runtime server."""
 
     MAX_RETRIES = 3
     BACKOFF_SECONDS = (1.0, 2.0, 4.0)
@@ -801,7 +801,7 @@ class DazzleClient:
 
 
 class TestRunner:
-    """Execute test designs against a DNR app."""
+    """Execute test designs against a the Dazzle runtime app."""
 
     def __init__(
         self,
@@ -864,7 +864,7 @@ class TestRunner:
             return list(data.get("designs", []))
 
     def start_server(self) -> bool:
-        """Start the DNR server."""
+        """Start the the Dazzle runtime server."""
         # Kill any existing server
         subprocess.run(["pkill", "-f", "dazzle serve"], capture_output=True)
         time.sleep(1)
@@ -909,7 +909,7 @@ class TestRunner:
         return True
 
     def stop_server(self) -> None:
-        """Stop the DNR server."""
+        """Stop the the Dazzle runtime server."""
         if self._server_process:
             self._server_process.terminate()
             try:

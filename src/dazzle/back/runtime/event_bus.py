@@ -1,5 +1,5 @@
 """
-Event bus for DNR entity change events.
+Event bus for the Dazzle runtime entity change events.
 
 Provides decoupled event publishing from repositories to WebSocket broadcasts.
 """

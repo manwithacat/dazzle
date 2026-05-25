@@ -42,7 +42,7 @@ def _target_to_selector(target: str) -> str:
     """
     Convert a semantic target to a Playwright selector.
 
-    DNR uses data-dazzle-* attributes for semantic DOM elements.
+    the Dazzle runtime uses data-dazzle-* attributes for semantic DOM elements.
     """
     target_type, target_name = _parse_target(target)
 

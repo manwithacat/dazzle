@@ -1,8 +1,8 @@
 """
-Entity converter - converts Dazzle IR EntitySpec to DNR BackendSpec EntitySpec.
+Entity converter - converts Dazzle IR EntitySpec to the Dazzle runtime BackendSpec EntitySpec.
 
 This module handles the transformation of Dazzle's domain entities into
-DNR's framework-agnostic BackendSpec format.
+the runtime's framework-agnostic BackendSpec format.
 """
 
 from typing import Any
@@ -50,7 +50,7 @@ from dazzle.core import ir
 
 def _map_field_type(dazzle_type: ir.FieldType) -> FieldType:
     """
-    Map Dazzle IR FieldType to DNR BackendSpec FieldType.
+    Map Dazzle IR FieldType to the Dazzle runtime BackendSpec FieldType.
 
     Handles scalar types, enums, and references.
     """
@@ -199,13 +199,13 @@ def _expand_money_field(dazzle_field: ir.FieldSpec) -> list[FieldSpec]:
 
 def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
     """
-    Convert a Dazzle IR FieldSpec to DNR BackendSpec FieldSpec.
+    Convert a Dazzle IR FieldSpec to the Dazzle runtime BackendSpec FieldSpec.
 
     Args:
         dazzle_field: Dazzle IR field specification
 
     Returns:
-        DNR BackendSpec field specification
+        the Dazzle runtime BackendSpec field specification
     """
     # Serialize default value, handling date expressions
     default = _serialize_date_expr(dazzle_field.default)
@@ -728,13 +728,13 @@ def _convert_access_spec(access: ir.AccessSpec) -> EntityAccessSpec:
 
 def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
     """
-    Convert a Dazzle IR EntitySpec to DNR BackendSpec EntitySpec.
+    Convert a Dazzle IR EntitySpec to the Dazzle runtime BackendSpec EntitySpec.
 
     Args:
         dazzle_entity: Dazzle IR entity specification
 
     Returns:
-        DNR BackendSpec entity specification
+        the Dazzle runtime BackendSpec entity specification
     """
     # Convert fields, expanding money fields into _minor/_currency pairs
     fields: list[FieldSpec] = []
@@ -799,12 +799,12 @@ def convert_entities(
     dazzle_entities: list[ir.EntitySpec],
 ) -> list[EntitySpec]:
     """
-    Convert a list of Dazzle IR entities to DNR BackendSpec entities.
+    Convert a list of Dazzle IR entities to the Dazzle runtime BackendSpec entities.
 
     Args:
         dazzle_entities: List of Dazzle IR entity specifications
 
     Returns:
-        List of DNR BackendSpec entity specifications
+        List of the Dazzle runtime BackendSpec entity specifications
     """
     return [convert_entity(e) for e in dazzle_entities]

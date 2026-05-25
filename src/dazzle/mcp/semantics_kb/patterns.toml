@@ -382,7 +382,7 @@ generated/
         ├── contract.yml
         └── deploy.yml
 '''
-use_cases = ["Deploy to platforms not supporting DNR runtime", "Need code review and audit for compliance", "Performance optimization with precompiled code", "Custom infrastructure requirements", "Migration away from DAZZLE runtime"]
+use_cases = ["Deploy to platforms not supporting Dazzle runtime", "Need code review and audit for compliance", "Performance optimization with precompiled code", "Custom infrastructure requirements", "Migration away from Dazzle runtime"]
 related = ["ejection", "ejection_config", "ejection_adapter", "openapi_generation"]
 
 [patterns.error_category]

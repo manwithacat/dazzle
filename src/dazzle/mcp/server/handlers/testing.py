@@ -258,7 +258,7 @@ def run_e2e_tests_handler(
     """
     Run E2E tests for the project.
 
-    This handler starts the DNR server, runs Playwright-based E2E tests,
+    This handler starts the the Dazzle runtime server, runs Playwright-based E2E tests,
     and returns the results.
 
     Args:

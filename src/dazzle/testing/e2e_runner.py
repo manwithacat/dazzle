@@ -3,7 +3,7 @@ E2E Test Runner with Server Lifecycle Management.
 
 Provides unified E2E test execution that:
 1. Ensures Playwright is installed
-2. Starts the DNR server automatically
+2. Starts the the Dazzle runtime server automatically
 3. Runs Playwright-based E2E tests
 4. Cleans up server after tests complete
 """
@@ -103,7 +103,7 @@ class E2ERunner:
     This class provides a complete E2E testing solution that:
     1. Checks for Playwright installation
     2. Generates E2ETestSpec from DSL
-    3. Starts the DNR server automatically
+    3. Starts the the Dazzle runtime server automatically
     4. Runs Playwright-based E2E tests
     5. Stops the server after tests complete
 
@@ -171,7 +171,7 @@ class E2ERunner:
 
     def start_server(self, timeout: int = 30) -> bool:
         """
-        Start the DNR server.
+        Start the the Dazzle runtime server.
 
         Args:
             timeout: Maximum seconds to wait for server to start
@@ -256,7 +256,7 @@ class E2ERunner:
         return True
 
     def stop_server(self) -> None:
-        """Stop the DNR server gracefully."""
+        """Stop the the Dazzle runtime server gracefully."""
         if self._server_process:
             self._server_process.terminate()
             try:
@@ -545,7 +545,7 @@ class E2ERunner:
         This method:
         1. Checks Playwright installation
         2. Generates E2ETestSpec from DSL
-        3. Starts the DNR server
+        3. Starts the the Dazzle runtime server
         4. Runs all E2E tests
         5. Stops the server
 
@@ -581,7 +581,7 @@ class E2ERunner:
         # Start server
         try:
             if not self.start_server():
-                result.error = "Failed to start DNR server"
+                result.error = "Failed to start the Dazzle runtime server"
                 result.completed_at = datetime.now()
                 return result
 

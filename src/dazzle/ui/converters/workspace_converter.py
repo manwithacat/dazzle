@@ -1,7 +1,7 @@
 """
-Workspace converter - converts Dazzle IR WorkspaceSpec to DNR UISpec WorkspaceSpec.
+Workspace converter - converts Dazzle IR WorkspaceSpec to the Dazzle runtime UISpec WorkspaceSpec.
 
-This module transforms Dazzle's workspace definitions into DNR's UI specification format,
+This module transforms Dazzle's workspace definitions into the runtime's UI specification format,
 leveraging the existing layout engine where possible.
 """
 
@@ -377,7 +377,7 @@ def convert_workspace(
     entities: list[ir.EntitySpec] | None = None,
 ) -> WorkspaceSpec:
     """
-    Convert a Dazzle IR WorkspaceSpec to DNR UISpec WorkspaceSpec.
+    Convert a Dazzle IR WorkspaceSpec to the Dazzle runtime UISpec WorkspaceSpec.
 
     Args:
         workspace: Dazzle IR workspace specification
@@ -387,7 +387,7 @@ def convert_workspace(
         entities: List of all entities in the app (for kanban route generation)
 
     Returns:
-        DNR UISpec workspace specification
+        the Dazzle runtime UISpec workspace specification
     """
     # Infer layout using surfaces
     layout = _infer_layout_from_workspace(workspace, surfaces, surface_component_map)
@@ -435,7 +435,7 @@ def convert_workspaces(
     entities: list[ir.EntitySpec] | None = None,
 ) -> list[WorkspaceSpec]:
     """
-    Convert a list of Dazzle IR workspaces to DNR UISpec workspaces.
+    Convert a list of Dazzle IR workspaces to the Dazzle runtime UISpec workspaces.
 
     Args:
         workspaces: List of Dazzle IR workspace specifications
@@ -444,7 +444,7 @@ def convert_workspaces(
         entities: List of all entities in the app (for kanban route generation)
 
     Returns:
-        List of DNR UISpec workspace specifications
+        List of the Dazzle runtime UISpec workspace specifications
     """
     # First workspace is primary (gets "/" route), others get workspace-prefixed routes
     return [

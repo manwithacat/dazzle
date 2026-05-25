@@ -143,7 +143,7 @@ def convert_appspec_to_ui(
     shell_config: ShellConfig | None = None,
 ) -> UISpec:
     """
-    Convert a complete Dazzle AppSpec to DNR UISpec.
+    Convert a complete Dazzle AppSpec to the Dazzle runtime UISpec.
 
     This is the main entry point for converting Dazzle's internal representation
     to the native UI specification.
@@ -153,7 +153,7 @@ def convert_appspec_to_ui(
         shell_config: Optional shell config from dazzle.toml manifest
 
     Returns:
-        DNR UISpec with shell, workspaces, components, and themes
+        the Dazzle runtime UISpec with shell, workspaces, components, and themes
 
     Example:
         >>> from dazzle.core.linker import build_appspec

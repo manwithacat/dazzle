@@ -418,7 +418,7 @@ def mount_ops_platform(
     """
     Mount the Operations Platform on a FastAPI app.
 
-    This is the main entry point for integrating ops into a DNR app.
+    This is the main entry point for integrating ops into a the Dazzle runtime app.
 
     Args:
         app: FastAPI application

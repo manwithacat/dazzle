@@ -78,7 +78,7 @@ def list_projects() -> str:
 
 def load_appspec_for_project(project_path: Path) -> bool:
     """
-    Load AppSpec for a project to enable DNR tools.
+    Load AppSpec for a project to enable the Dazzle runtime tools.
 
     Args:
         project_path: Path to the project directory
@@ -113,7 +113,7 @@ def load_appspec_for_project(project_path: Path) -> bool:
             logger.warning("No entities found in %s", project_path)
             return False
 
-        # Store AppSpec data for DNR tools
+        # Store AppSpec data for the Dazzle runtime tools
         get_state().appspec_data = appspec.model_dump()
 
         logger.info(
@@ -187,7 +187,7 @@ def select_project(args: dict[str, Any]) -> str:
     except Exception as e:
         result["warning"] = f"Could not load manifest: {e}"
 
-    # Auto-load AppSpec for DNR tools
+    # Auto-load AppSpec for the Dazzle runtime tools
     appspec_loaded = load_appspec_for_project(project_path)
     if appspec_loaded:
         result["appspec"] = "loaded"
@@ -233,7 +233,7 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
                 "version": manifest.version,
             }
 
-            # Auto-load AppSpec for DNR tools
+            # Auto-load AppSpec for the Dazzle runtime tools
             appspec_loaded = load_appspec_for_project(project_root)
             result["appspec"] = "loaded" if appspec_loaded else "not loaded"
 

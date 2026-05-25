@@ -27,7 +27,7 @@ def _build_page_url(
 ) -> str:
     """Build the URL for an interaction target.
 
-    URL conventions (DNR):
+    URL conventions (the Dazzle runtime):
         Entity list/detail: ``/app/{entity_lowercase}``
         Workspace:          ``/app/workspaces/{workspace_name}``
     """

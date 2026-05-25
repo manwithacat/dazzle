@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — DNR docstring sweep across source files + api-reference regeneration
+
+- **Source-file DNR docstring leakage cleaned across ~60 files** in `src/dazzle/back/`, `src/dazzle/ui/`, `src/dazzle/mcp/`, `src/dazzle/core/`, and `src/dazzle_e2e/`. Docstrings, comments, log strings, and user-visible banner text (`combined_server.py` startup banners) now refer to "the Dazzle runtime", "Dazzle backend runtime", "Dazzle UI runtime" instead of "DNR" / "Dazzle Native Runtime". The auto-generated `docs/api-reference/files/` pages were down to 137 DNR-bearing files; after the source sweep + regen, only one remains — and that one is intentional (see preservation note below).
+- **JS API surface PRESERVED.** `src/dazzle/ui/runtime/realtime_client.py` emits browser JavaScript that uses `global.DNR` / `window.DNR` / `DNRRealtime` / `DNR.createRealtimeClient` as load-bearing identifiers — the `dnr-ui/` browser-side runtime module defines `const DNR = {...}` and assigns it to `window.DNR`. Renaming those JS identifiers would break consumers, so they're left in place. Only the Python module docstring + the JS-emission section labels are rewritten; everything that crosses into the generated JS keeps the `DNR` namespace name.
+- **`scripts/reference_docs.config.json` cleaned of dead include paths.** The config still listed `src/dazzle_back/**/*.py` and `src/dazzle_ui/**/*.py` (paths that haven't existed since the package moved inside `src/dazzle/`). Pruned to the live paths.
+- **Orphan api-reference pages pruned.** 293 `*.py.md` entries pointed at source files that have been moved or deleted; deleted. Two orphan module summaries (`modules/dazzle_back.md`, `modules/dazzle_ui.md`) linking to non-existent `src/dazzle_back/**` paths also removed — they were the source of 171 mkdocs strict-mode broken-link warnings. `mkdocs build --strict` is clean again.
+
 ### Fixed — re-cut v0.74.2 as v0.74.3
 
 The v0.74.2 git tag was created before the commit landed, so it pointed at the v0.74.1 SHA. The PyPI publish workflow failed (correctly — it rejected the duplicate version). The v0.74.2 git tag is left in place pointing at the v0.74.1 commit for historical visibility; the live-MCP-inventory + docs-staleness-sweep work below is published as v0.74.3 instead. No content was published with the wrong shape; this is purely a tag/version recovery.

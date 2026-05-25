@@ -1,5 +1,5 @@
 """
-Computed field evaluator for DNR runtime.
+Computed field evaluator for Dazzle runtime.
 
 This module evaluates computed expressions at runtime.
 Computed fields are derived values calculated from other fields

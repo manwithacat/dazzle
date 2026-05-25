@@ -1,5 +1,5 @@
 """
-PostgreSQL database backend for DNR Backend.
+PostgreSQL database backend for Dazzle backend runtime.
 
 Provides the PostgreSQL database backend — the sole runtime backend.
 

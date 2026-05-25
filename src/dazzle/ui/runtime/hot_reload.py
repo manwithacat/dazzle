@@ -1,5 +1,5 @@
 """
-Hot reload support for DNR development server.
+Hot reload support for Dazzle development server.
 
 Watches DSL files and source files for changes and triggers browser refresh via SSE.
 
@@ -133,7 +133,7 @@ class FileWatcher:
 
 class HotReloadManager:
     """
-    Manages hot reload for DNR development server.
+    Manages hot reload for Dazzle development server.
 
     Coordinates file watching, spec regeneration, and browser notification.
     Supports two watch modes:

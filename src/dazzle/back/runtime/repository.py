@@ -1,5 +1,5 @@
 """
-Repository — provides persistence layer for DNR Backend.
+Repository — provides persistence layer for Dazzle backend runtime.
 
 This module implements the repository pattern for PostgreSQL database access.
 Provides CRUD operations with advanced filtering, sorting, pagination,

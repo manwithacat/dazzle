@@ -200,13 +200,13 @@ def test_run(
     auto_server: bool = typer.Option(
         True,
         "--auto-server/--no-auto-server",
-        help="Automatically start and stop DNR server (default: True)",
+        help="Automatically start and stop the Dazzle runtime server (default: True)",
     ),
 ) -> None:
     """
     Run E2E tests using Playwright.
 
-    By default, automatically starts the DNR server, runs tests, and stops the server.
+    By default, automatically starts the the Dazzle runtime server, runs tests, and stops the server.
     Use --no-auto-server to require a manually started server.
 
     Examples:
@@ -1567,7 +1567,7 @@ def dsl_run(
     ),
 ) -> None:
     """
-    [Tier 1] Run API-based tests against a DNR server.
+    [Tier 1] Run API-based tests against a the Dazzle runtime server.
 
     Fast, deterministic tests generated from your DSL. Use this for:
     - CRUD operations (create, read, update, delete)

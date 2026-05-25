@@ -1,5 +1,5 @@
 """
-User entity auto-detection for DNR Backend.
+User entity auto-detection for Dazzle backend runtime.
 
 Automatically detects User entities and configures authentication.
 """

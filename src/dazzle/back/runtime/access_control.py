@@ -1,5 +1,5 @@
 """
-Access control and row-level security for DNR Backend.
+Access control and row-level security for Dazzle backend runtime.
 
 Provides owner-based and tenant-based access control for entities.
 """

@@ -286,7 +286,7 @@ class UnifiedTestRunner:
             )
 
     def start_server(self, timeout: int | None = None) -> bool:
-        """Start the DNR server.
+        """Start the the Dazzle runtime server.
 
         Args:
             timeout: Seconds to wait for server startup. Defaults to self.server_timeout.
@@ -353,7 +353,7 @@ class UnifiedTestRunner:
         return True
 
     def stop_server(self) -> None:
-        """Stop the DNR server."""
+        """Stop the the Dazzle runtime server."""
         if self._server_process:
             self._server_process.terminate()
             try:

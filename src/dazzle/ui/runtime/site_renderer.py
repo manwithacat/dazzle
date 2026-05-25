@@ -1,5 +1,5 @@
 """
-Site page renderer for DNR runtime.
+Site page renderer for Dazzle runtime.
 
 Primary rendering is now handled by Jinja2 templates in ``templates/site/``.
 This module retains:

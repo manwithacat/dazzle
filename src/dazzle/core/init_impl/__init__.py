@@ -5,7 +5,7 @@ This package contains modular implementations for project initialization:
 - validation.py - Name validation and sanitization
 - templates.py - Template copying and variable substitution
 - spec.py - SPEC.md template generation
-- dnr_ui.py - DNR UI generation from DSL
+- dnr_ui.py - Dazzle UI runtime generation from DSL
 - project.py - Main init_project logic
 - reset.py - Project reset and verification
 """
