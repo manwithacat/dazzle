@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 16  # v16: counter-prior DetectorRef field added to schema
+SEED_SCHEMA_VERSION = 17  # v17: PA-LLM-08 n-plus-one detector declared
 
 
 def compute_seed_version() -> str:
