@@ -67,6 +67,20 @@ jobs:
       run: |
         pytest -v --cov=src/dazzle --cov-report=xml --cov-report=term-missing -m "not e2e"
 
+    - name: Sentinel Python audit on examples (PA-LLM-07)
+      # Informational only at HIGH+ until the backfill audit promotes PA-LLM-07
+      # findings to commit-blocker. See docs/counter-priors/exceptions-as-control-flow.md.
+      # Note: dazzle sentinel scan runs from the project directory (no path arg).
+      run: |
+        for dir in examples/*/; do
+          if [ -f "${dir}dazzle.toml" ] && [ "$(basename $dir)" != "pra" ]; then
+            echo "=== sentinel: $(basename $dir) ==="
+            cd "$dir"
+            python -m dazzle sentinel scan --agent PA --severity high || echo "Note: PA findings in $(basename $dir) (advisory until backfill complete)"
+            cd "$GITHUB_WORKSPACE"
+          fi
+        done
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6
       with:
