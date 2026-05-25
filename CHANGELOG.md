@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (#1249 — bootstrap MCP surfaces pattern proposals + anti-pattern flags)
+
+- **`triggers = [...]` arrays on all 8 Phase 2 `[patterns.X]` entries** in `src/dazzle/mcp/semantics_kb/patterns.toml`. 105 triggers total: natural-language fragments (`"has many"`, `"currently active"`, `"manager chain"`, `"deleted_at"`, etc.) and shape signatures (`"start_date and end_date"`, `"table per type"`) that an author would write when describing a domain that fits one of the patterns.
+- **`spec_analyze(operation='propose_patterns')`** at `src/dazzle/mcp/server/handlers/spec_analyze.py:925` walks spec_text against two trigger sources: `patterns.toml` (positive proposals) and `inference_kb.toml` `[[modeling_guidance]]` entries with an `anti_pattern` field (negative flags). Case-insensitive substring match; each match emits the pattern id, the matched triggers, and a hint pointing at the `knowledge` MCP tool for the full canonical entry.
+- **Bootstrap's `_run_cognition_pass` calls it** alongside entity / persona / lifecycle / rule analysis and exposes the result as `analysis.pattern_proposals` + `analysis.antipattern_flags` in the briefing. An agent bootstrapping an app from a spec that mentions "employment history with start_date and end_date" now sees `temporal:` proposed up front rather than discovering it through compile errors.
+- **Anti-pattern flagging works end-to-end too** — a spec describing Rails-style polymorphic association (`subject_type + subject_id` discriminator FKs) triggers `polymorphic_association_antipattern` (ADR-0027 wontfix-by-design surface) in the briefing, with the four-question interrogation accessible via the hint. The same path covers all 88 `[[modeling_guidance]]` entries that carry an `anti_pattern` field.
+- **`SEED_SCHEMA_VERSION` bumped 13 → 14** so deployed KGs re-seed and pick up the trigger arrays.
+- **15 new tests** at `tests/unit/test_propose_patterns_1249.py`: one parametrised case per Phase 2 pattern confirming the proposal fires on a representative spec, plus a no-spurious-match guard, plus 3 anti-pattern flag tests pinning the polymorphic-association inoculation, plus an end-to-end test asserting the briefing's `analysis` slot carries both fields.
+- **Closes** #1249. The last #1217 child issue — umbrella is now fully drained.
+
 ### Fixed (#1250 — cohort_strip direct-FK path also leaked the source-entity scope predicate)
 
 - **Strip the source-entity `__scope_predicate` at the FK-path call site** when `aggregated_entity != source_entity`. The #1231 fix only patched the `share:` / `via:` paths; the direct-FK path (`_batched_fk_cohort_aggregate`) had the same shape and the same silent failure mode. The IN-clause filter (`{fk_col}__in = member_ids`) already enforces source-row scoping because `member_ids` only contains ids that passed the upstream scope check; threading the source-entity qualifier through to `Repository.aggregate` referenced a table not in the aggregate's FROM and the silent-catch at line 849 swallowed the resulting UndefinedTable.

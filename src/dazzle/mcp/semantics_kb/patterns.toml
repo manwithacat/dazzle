@@ -1101,6 +1101,23 @@ related = ["user_archetype", "tenant_archetype"]
 category = "Modelling"
 doc_page = "patterns"
 name = "subtype_of: — table-per-type polymorphic inheritance (#1217 Phase 3e, v0.72.0)"
+triggers = [
+    "subtype",
+    "subclass",
+    "is_a",
+    "vehicle is an asset",
+    "is a kind of",
+    "type hierarchy",
+    "table per type",
+    "table-per-type",
+    "tpt",
+    "single table inheritance",
+    "discriminator",
+    "kind column",
+    "polymorphic queries",
+    "mixed kinds",
+    "show me all assets",
+]
 description = """
 Declare an IS-A relationship to a base entity. The child shares the base's
 primary key via a shared-PK FK; the framework auto-adds a `kind` enum on the
@@ -1190,6 +1207,18 @@ v_0_72 = "Phase 3(e) feature-complete in v0.72.0; see ADR-0026 and fixtures/asse
 category = "Modelling"
 doc_page = "patterns"
 name = "Direct 1:N parent → children (`ref` on the child) (#1241 / #1217 Phase 2)"
+triggers = [
+    "has many",
+    "1:n",
+    "one to many",
+    "one-to-many",
+    "parent and children",
+    "fan out",
+    "list of items belonging to",
+    "each order has several",
+    "child rows",
+    "owns a list of",
+]
 description = """
 The foundational relational shape. A parent entity has many children; each
 child carries a `ref Parent` field. Reach for this *first* — it's the default
@@ -1250,6 +1279,20 @@ related = [
 category = "Modelling"
 doc_page = "patterns"
 name = "Direct N:1 aggregates via `primary_aggregate:` (#1242 / #1217 Phase 2)"
+triggers = [
+    "total per",
+    "count per",
+    "sum per",
+    "average per",
+    "per-parent total",
+    "per-customer total",
+    "rollup",
+    "total revenue per",
+    "open count per",
+    "show the number of",
+    "show the total of",
+    "per-row summary",
+]
 description = """
 Show a per-parent summary statistic computed over the parent's child rows —
 e.g. "total revenue per Customer", "open Issue count per Repository",
@@ -1313,6 +1356,20 @@ related = [
 category = "Modelling"
 doc_page = "patterns"
 name = "True m:n via a junction entity (`via:`) (#1243 / #1217 Phase 2)"
+triggers = [
+    "many to many",
+    "many-to-many",
+    "m:n",
+    "junction",
+    "join table",
+    "users can have many roles",
+    "users have multiple roles",
+    "students enrolled in many courses",
+    "tags across",
+    "tag the same",
+    "user role",
+    "user-role",
+]
 description = """
 Many-to-many relationships are modelled with an explicit junction entity
 that carries the FKs to both sides plus any relationship-specific data
@@ -1391,6 +1448,17 @@ related = [
 category = "Modelling"
 doc_page = "patterns"
 name = "Shared-parent JOIN via `share:` (diamond aggregates) (#1244 / #1217 Phase 2)"
+triggers = [
+    "shared parent",
+    "diamond join",
+    "diamond aggregate",
+    "both reference the same",
+    "common pivot",
+    "per-member statistic through",
+    "share a parent",
+    "score per enrolment but stored on student",
+    "no direct fk between source and aggregated",
+]
 description = """
 The cohort source rows and the aggregated rows both reference a common
 pivot entity, but there is no direct FK between them. `share:` bridges
@@ -1461,6 +1529,24 @@ related = [
 category = "Modelling"
 doc_page = "patterns"
 name = "Self-referencing hierarchy (`descendants_of` / `ancestors_of`) (#1245 / #1217 Phase 2)"
+triggers = [
+    "hierarchy",
+    "tree",
+    "sub-department",
+    "subdepartment",
+    "subcategory",
+    "category tree",
+    "parent of the same type",
+    "self-referencing",
+    "self referencing",
+    "manager chain",
+    "manager and reports",
+    "org chart",
+    "comment thread",
+    "all descendants",
+    "all ancestors",
+    "recursive parent",
+]
 description = """
 Tree-shaped data where each row points at a parent of the same entity:
 Category → parent Category, Department → parent Department, manager →
@@ -1521,6 +1607,27 @@ related = [
 category = "Modelling"
 doc_page = "patterns"
 name = "Temporal / effective-dated entity (`temporal:`) (#1246 / #1217 Phase 2)"
+triggers = [
+    "effective date",
+    "effective-dated",
+    "start_date and end_date",
+    "start date and end date",
+    "currently active",
+    "current row",
+    "as of",
+    "as-of",
+    "as_of",
+    "employment history",
+    "salary history",
+    "lease term",
+    "price list",
+    "consent record",
+    "expiry date",
+    "valid from",
+    "valid until",
+    "point in time",
+    "historical lookup",
+]
 description = """
 Each row is an open or closed interval (`start_date`, `end_date`) and most
 queries want the row that is *currently active*. The `temporal:` block
@@ -1588,6 +1695,20 @@ related = [
 category = "Modelling"
 doc_page = "patterns"
 name = "Soft-delete + tombstone (`soft_delete:`) (#1247 / #1217 Phase 2)"
+triggers = [
+    "soft delete",
+    "soft-delete",
+    "tombstone",
+    "deactivate",
+    "archived but kept",
+    "keep history",
+    "deleted_at",
+    "marked as removed",
+    "cancelled but stay",
+    "logical delete",
+    "undelete",
+    "restore deleted",
+]
 description = """
 Mark rows as deleted without physically removing them (tombstone pattern).
 Set `soft_delete: true` on the entity; the framework auto-injects a

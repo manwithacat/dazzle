@@ -141,6 +141,15 @@ def _run_cognition_pass(spec_text: str, spec_source: str) -> str:
     )
     questions_result = json.loads(questions_raw)
 
+    # #1249 — pattern recogniser pass. Walks spec_text against
+    # patterns.toml trigger lists (positive proposals) and inference_kb
+    # modeling-guidance triggers (anti-pattern flags). Surfaces "your
+    # spec mentions X; consider declaring `temporal:` on Employment" so
+    # the agent picks the canonical idiom on the first try instead of
+    # discovering it via compile errors.
+    patterns_raw = handle_spec_analyze({"operation": "propose_patterns", "spec_text": spec_text})
+    patterns_result = json.loads(patterns_raw)
+
     # Build mission briefing
     questions = questions_result.get("questions", [])
     has_questions = len(questions) > 0
@@ -163,6 +172,12 @@ def _run_cognition_pass(spec_text: str, spec_source: str) -> str:
             "lifecycles": lifecycles_result.get("lifecycles", []),
             "business_rules": rules_result.get("business_rules", []),
             "detected_actions": entities_result.get("actions", []),
+            # #1249 — surface pattern proposals + anti-pattern flags so
+            # the agent's DSL generation reaches for the canonical idiom
+            # on the first try (and refuses the Rails-style polymorphic
+            # shapes the framework deliberately doesn't support).
+            "pattern_proposals": patterns_result.get("pattern_proposals", []),
+            "antipattern_flags": patterns_result.get("antipattern_flags", []),
         },
         "clarification_needed": has_questions,
         "questions": questions,
