@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1231 — cohort_strip aggregate cells render for scoped personas)
+
+- **`_strip_scope_predicate` helper** at `src/dazzle/back/runtime/workspace_region_computes.py` removes the `__scope_predicate` slot from `scope_filters` before the `share:` / `via:` paths compose the aggregate query. The raw scope predicate is qualified by source-entity name (e.g. `"ClassEnrolment"."school" = $N`), but the source table isn't in either bespoke FROM clause — for `via:` only `a JOIN j` appears; for `share:` the source is aliased `s`. The IN clause (`s."id" IN (...)` or `j.{member_col} IN (...)`) already enforces source-row scoping (only members whose source row passed RBAC are in `member_ids`), so the predicate is redundant and was the source of the `UndefinedTable` failure that boot-time silently caught.
+- Pre-fix symptom: cohort_strip cells silently rendered empty for any non-admin persona with a scope rule on the source entity (only the WARNING in the server log hinted at the failure). The `where:` predicate on the aggregated entity still flows through normally and is retargeted to the FROM alias (#1229).
+- **2 new tests** in `tests/unit/test_cohort_aggregate_compute.py` pin both `share:` and `via:` paths strip the source-entity scope predicate.
+
 ### Fixed (#1235 — DSL-declared `security_profile:` now reaches the runtime)
 
 - **`build_server_config()` now threads `appspec.security.profile.value` into `ServerConfig.security_profile`** at `src/dazzle/back/runtime/app_factory.py:331`. The DSL field parsed correctly into `SecurityConfig` since #1196, but the build_server_config seam never read it back — so the rate-limit decorator (#1196) and CSRF policy stayed at `"basic"` (no-op) on every DSL-only consumer regardless of what the DSL declared.

@@ -661,6 +661,93 @@ def test_via_with_where_clause_uses_alias_not_table_name() -> None:
     assert '"MarkingResult"."latest_for_event"' not in sql_text, sql_text
 
 
+def test_share_with_scope_predicate_strips_source_qualifier() -> None:
+    """#1231 — when scope_only_filters carries a __scope_predicate (RBAC
+    scope on the source entity), the share path must strip it before
+    composition. Without the strip, the predicate is qualified by source
+    entity name (e.g. ``"ClassEnrolment"."school" = $N``) and Postgres
+    rejects the statement because the source table is aliased ``s`` in
+    the FROM clause. The IN clause already enforces source-row scoping."""
+    source = _make_repo_with_fks(
+        "ClassEnrolment", "class_enrolment", {"student_profile": "StudentProfile"}
+    )
+    aggregated = _make_repo_with_fks(
+        "MarkingResult", "marking_result", {"student_profile": "StudentProfile"}
+    )
+    aggregated._mock_cursor.fetchall = MagicMock(return_value=[{"member_id": "e1", "primary": 7.4}])
+
+    lens = CohortStripLens(
+        id="cohort",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(func="avg", entity="MarkingResult", column="score"),
+            share="StudentProfile",
+        ),
+    )
+
+    # Simulate the scoped-persona path: scope_only_filters carries a
+    # __scope_predicate against the source entity (ClassEnrolment).
+    scope_filters = {
+        "__scope_predicate": ('"ClassEnrolment"."school" = %s', ["school-uuid"]),
+    }
+
+    _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "e1"}],
+            lens=lens,
+            source_entity="ClassEnrolment",
+            repositories={"MarkingResult": aggregated, "ClassEnrolment": source},
+            scope_only_filters=scope_filters,
+        )
+    )
+
+    sql_text, params = aggregated._mock_cursor.execute.call_args.args
+    # The unaliased source-entity qualifier must not appear in the SQL.
+    assert '"ClassEnrolment"."school"' not in sql_text, sql_text
+    # And the scope predicate's bound param ("school-uuid") must be absent
+    # — confirming the strip removed both the SQL and the params slot.
+    assert "school-uuid" not in params, params
+
+
+def test_via_with_scope_predicate_strips_source_qualifier() -> None:
+    """#1231 — mirror of the share test for the via: path. Same root cause:
+    source-entity __scope_predicate references a table not in the FROM."""
+    junction = _make_junction_repo("ClassEnrolment", fk_to="MarkingResult", fk_col="marking_result")
+    aggregated = _make_aggregated_with_db_mock("MarkingResult", "marking_result")
+    aggregated._mock_cursor.fetchall = MagicMock(return_value=[{"member_id": "s1", "primary": 6.5}])
+
+    via = ViaCondition(
+        junction_entity="ClassEnrolment",
+        bindings=[ViaBinding(junction_field="student_profile", target="id", operator="=")],
+    )
+    lens = CohortStripLens(
+        id="cohort",
+        label="X",
+        primary_aggregate=LensAggregatePrimary(
+            aggregate=AggregateRef(func="avg", entity="MarkingResult", column="score"),
+            via=via,
+        ),
+    )
+
+    scope_filters = {
+        "__scope_predicate": ('"StudentProfile"."school" = %s', ["school-uuid"]),
+    }
+
+    _run(
+        compute_cohort_aggregate_primary(
+            items=[{"id": "s1"}],
+            lens=lens,
+            source_entity="StudentProfile",
+            repositories={"MarkingResult": aggregated, "ClassEnrolment": junction},
+            scope_only_filters=scope_filters,
+        )
+    )
+
+    sql_text, params = aggregated._mock_cursor.execute.call_args.args
+    assert '"StudentProfile"."school"' not in sql_text, sql_text
+    assert "school-uuid" not in params, params
+
+
 def test_share_missing_pivot_fk_warns(caplog: pytest.LogCaptureFixture) -> None:
     """When `share:` is set but either side lacks a FK to the named
     pivot, log a warning naming the missing side and return empty."""

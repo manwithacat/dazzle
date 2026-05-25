@@ -1008,6 +1008,15 @@ async def _batched_via_cohort_aggregate(
         # Other targets (current_user.*, literals) are out of scope —
         # mirrors the N+1 helper's reach.
 
+    # #1231: drop any source-entity scope predicate from scope_filters
+    # before composition. The IN clause above (`j.{member_col_q} IN (...)`)
+    # already enforces source-row scoping — only members whose source row
+    # passed RBAC are in member_ids. Threading the source-entity
+    # `__scope_predicate` through here would emit a qualifier like
+    # `"ClassEnrolment"."school" = $N` which Postgres rejects because
+    # the source table isn't in this FROM clause (only `a JOIN j`).
+    scope_filters = _strip_scope_predicate(scope_filters)
+
     # AggregateRef.where + scope_filters → reuse the existing builder
     # so the typed ConditionExpr → SQL path stays single-sourced.
     composed_filters = _build_aggregate_filters(where, scope_filters, agg_repo, aggregated_entity)
@@ -1131,6 +1140,14 @@ async def _batched_share_cohort_aggregate(
     where_clauses: list[str] = [f's."id" IN ({in_placeholders})']
     where_params: list[Any] = list(member_ids)
 
+    # #1231: drop the source-entity __scope_predicate before composition —
+    # the `s."id" IN (...)` clause above already enforces source-row
+    # scoping (only members whose source row passed RBAC are in member_ids).
+    # The raw predicate is qualified by source-entity name (e.g.
+    # `"ClassEnrolment"."school" = $N`) and would need retargeting to
+    # the alias `s`; cheaper and clearer to strip it.
+    scope_filters = _strip_scope_predicate(scope_filters)
+
     composed_filters = _build_aggregate_filters(where, scope_filters, agg_repo, aggregated_entity)
     if composed_filters:
         # #1229: see _batched_via_cohort_aggregate above — the FROM clause
@@ -1178,6 +1195,22 @@ async def _batched_share_cohort_aggregate(
         value = row_dict.get("primary")
         if value is not None:
             out[str(member)] = value
+    return out
+
+
+def _strip_scope_predicate(
+    filters: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Return a copy of ``filters`` with the ``__scope_predicate`` key
+    removed. Used by ``share:`` / ``via:`` cohort paths where the
+    member-id IN clause already enforces source-row scoping and the
+    raw scope predicate (qualified with the source-entity name) would
+    reference a table not in the bespoke FROM clause (#1231).
+    """
+    if not filters or "__scope_predicate" not in filters:
+        return filters
+    out = dict(filters)
+    out.pop("__scope_predicate", None)
     return out
 
 
