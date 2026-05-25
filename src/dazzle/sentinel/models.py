@@ -111,6 +111,7 @@ class Finding(BaseModel):
     entity_name: str | None = None
     surface_name: str | None = None
     construct_type: str | None = None
+    catalogue_entry: str | None = None  # counter-prior catalogue entry id, kebab-case
 
     model_config = ConfigDict(frozen=True)
 
