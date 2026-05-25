@@ -8,6 +8,7 @@ Three detection layers:
 
 from __future__ import annotations
 
+import ast
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -18,6 +19,210 @@ from dazzle.sentinel.models import AgentId, Severity
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
     from dazzle.sentinel.models import AgentResult, Finding
+
+
+# ---------------------------------------------------------------------------
+# PA-LLM-07 helpers — exceptions as control flow
+# ---------------------------------------------------------------------------
+
+from dataclasses import dataclass as _dc
+
+_PRECHECK_EXCEPTIONS = {"KeyError", "ValueError", "AttributeError", "IndexError"}
+_VALIDATION_CALLS = {"int", "float", "Decimal", "bool"}
+
+
+@_dc(frozen=True)
+class _ShapeHit:
+    line: int
+    snippet: str
+    shape: str  # silent_swallow | fallback | validation | conditional
+    try_line: int = 0  # lineno of the enclosing try: statement (for noqa lookup)
+
+
+def _exception_names(handler: ast.ExceptHandler) -> set[str]:
+    """Return the set of exception names a handler catches.
+
+    Bare ``except:`` returns the empty set. ``except Exception:`` returns
+    {"Exception"}. ``except (KeyError, ValueError):`` returns both.
+    """
+    if handler.type is None:
+        return set()
+    if isinstance(handler.type, ast.Name):
+        return {handler.type.id}
+    if isinstance(handler.type, ast.Tuple):
+        return {n.id for n in handler.type.elts if isinstance(n, ast.Name)}
+    return set()
+
+
+def _body_is_pass(body: list[ast.stmt]) -> bool:
+    return len(body) == 1 and isinstance(body[0], ast.Pass)
+
+
+def _body_assigns_literal_to(body: list[ast.stmt], target_name: str) -> bool:
+    """True if the body's only statement is ``target_name = <Constant>``."""
+    if len(body) != 1:
+        return False
+    stmt = body[0]
+    if not isinstance(stmt, ast.Assign):
+        return False
+    if len(stmt.targets) != 1 or not isinstance(stmt.targets[0], ast.Name):
+        return False
+    if stmt.targets[0].id != target_name:
+        return False
+    return isinstance(stmt.value, ast.Constant)
+
+
+def _try_body_assigns_name(try_body: list[ast.stmt]) -> str | None:
+    """If the try body's last statement is ``name = <call>``, return name."""
+    if not try_body:
+        return None
+    stmt = try_body[-1]
+    if not isinstance(stmt, ast.Assign):
+        return None
+    if len(stmt.targets) != 1 or not isinstance(stmt.targets[0], ast.Name):
+        return None
+    return stmt.targets[0].id
+
+
+def _detect_silent_swallow(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Shape 1: ``except [Exception]: pass``."""
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        for handler in node.handlers:
+            names = _exception_names(handler)
+            if names and names != {"Exception"}:
+                continue  # specific recovery
+            if _body_is_pass(handler.body):
+                hits.append(
+                    _ShapeHit(
+                        line=handler.lineno,
+                        snippet="except: pass",
+                        shape="silent_swallow",
+                        try_line=node.lineno,
+                    )
+                )
+    return hits
+
+
+def _detect_fallback_control_flow(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Shape 2: try body assigns name=<call>; except body assigns name=<literal>.
+
+    Requires the try body's last stmt RHS to be a ``Call`` node — subscript
+    and attribute access are handled by _detect_try_as_conditional instead.
+    """
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        target_name = _try_body_assigns_name(node.body)
+        if target_name is None:
+            continue
+        # Only match when the try-body RHS is a function/method call
+        last_stmt = node.body[-1]
+        if not (isinstance(last_stmt, ast.Assign) and isinstance(last_stmt.value, ast.Call)):
+            continue
+        for handler in node.handlers:
+            if _body_assigns_literal_to(handler.body, target_name):
+                hits.append(
+                    _ShapeHit(
+                        line=handler.lineno,
+                        snippet=f"{target_name} = <literal>",
+                        shape="fallback",
+                        try_line=node.lineno,
+                    )
+                )
+    return hits
+
+
+def _detect_validation_via_exception(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Shape 3: try body calls int()/float()/Decimal(); except sets a flag."""
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        validation_call = False
+        flag_assign: str | None = None
+        for stmt in node.body:
+            if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+                fn = stmt.value.func
+                if isinstance(fn, ast.Name) and fn.id in _VALIDATION_CALLS:
+                    validation_call = True
+            if (
+                isinstance(stmt, ast.Assign)
+                and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name)
+                and isinstance(stmt.value, ast.Constant)
+                and stmt.value.value is True
+            ):
+                flag_assign = stmt.targets[0].id
+        if not (validation_call and flag_assign):
+            continue
+        for handler in node.handlers:
+            if "ValueError" not in _exception_names(handler):
+                continue
+            if _body_assigns_literal_to(handler.body, flag_assign):
+                hits.append(
+                    _ShapeHit(
+                        line=handler.lineno,
+                        snippet=f"{flag_assign} = False",
+                        shape="validation",
+                        try_line=node.lineno,
+                    )
+                )
+    return hits
+
+
+def _try_body_does_precheck_op(
+    body: list[ast.stmt],
+    exception_names: set[str],
+) -> str | None:
+    """Return a short description if the try body's single statement is a
+    subscript / attr access corresponding to one of the trivial-precheck
+    exceptions. Otherwise None.
+    """
+    if len(body) != 1:
+        return None
+    stmt = body[0]
+    if not (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1):
+        return None
+    value = stmt.value
+    if isinstance(value, ast.Subscript):
+        if exception_names & {"KeyError", "IndexError"}:
+            return "subscript"
+    if isinstance(value, ast.Attribute):
+        if "AttributeError" in exception_names:
+            return "attribute"
+    return None
+
+
+def _detect_try_as_conditional(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Shape 4: try body is a single subscript/attr access; except assigns literal."""
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        target_name = _try_body_assigns_name(node.body)
+        if target_name is None:
+            continue
+        for handler in node.handlers:
+            names = _exception_names(handler)
+            if not (names & _PRECHECK_EXCEPTIONS):
+                continue
+            op = _try_body_does_precheck_op(node.body, names)
+            if op is None:
+                continue
+            if _body_assigns_literal_to(handler.body, target_name):
+                hits.append(
+                    _ShapeHit(
+                        line=handler.lineno,
+                        snippet=f"{target_name} = <{op}>",
+                        shape="conditional",
+                        try_line=node.lineno,
+                    )
+                )
+    return hits
 
 
 # ---------------------------------------------------------------------------
@@ -590,6 +795,114 @@ class PythonAuditAgent(DetectionAgent):
                         )
                     )
                     break  # One finding per file is enough
+        return findings
+
+    @heuristic(
+        heuristic_id="PA-LLM-07",
+        category="python_audit",
+        subcategory="llm_bias",
+        title="exceptions used as control flow",
+    )
+    def check_exceptions_as_control_flow(self, appspec: AppSpec) -> list[Finding]:
+        """Flag the four canonical wrong shapes of try/except misuse.
+
+        See docs/counter-priors/exceptions-as-control-flow.md for the
+        full taxonomy and why these patterns are corrosive.
+        """
+        import ast
+
+        from dazzle.sentinel.models import (
+            Confidence,
+            Evidence,
+            Finding,
+            Remediation,
+            RemediationEffort,
+            Severity,
+        )
+
+        app_dir = self._project_path / "app"
+        if not app_dir.exists():
+            return []
+
+        detectors = (
+            ("silent_swallow", _detect_silent_swallow, Confidence.CONFIRMED),
+            ("fallback", _detect_fallback_control_flow, Confidence.LIKELY),
+            ("validation", _detect_validation_via_exception, Confidence.LIKELY),
+            ("conditional", _detect_try_as_conditional, Confidence.CONFIRMED),
+        )
+
+        catalogue_url = (
+            "https://github.com/cyfutureuk/dazzle/blob/main/"
+            "docs/counter-priors/exceptions-as-control-flow.md"
+        )
+
+        findings: list[Finding] = []
+        for py_file in sorted(app_dir.rglob("*.py")):
+            try:
+                source_text = py_file.read_text(encoding="utf-8")
+                tree = ast.parse(source_text, filename=str(py_file))
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+            source_lines = source_text.splitlines()
+
+            for shape_name, detector, confidence in detectors:
+                for hit in detector(tree, py_file):
+                    # Check for noqa suppression on: handler line, line above handler,
+                    # or the try: line itself (hit.try_line).
+                    handler_text = (
+                        source_lines[hit.line - 1] if 0 < hit.line <= len(source_lines) else ""
+                    )
+                    if "noqa: PA-LLM-07" in handler_text:
+                        continue
+                    above_handler = (
+                        source_lines[hit.line - 2]
+                        if hit.line >= 2 and hit.line - 2 < len(source_lines)
+                        else ""
+                    )
+                    if "noqa: PA-LLM-07" in above_handler:
+                        continue
+                    try_line_text = (
+                        source_lines[hit.try_line - 1]
+                        if hit.try_line and 0 < hit.try_line <= len(source_lines)
+                        else ""
+                    )
+                    if "noqa: PA-LLM-07" in try_line_text:
+                        continue
+                    findings.append(
+                        Finding(
+                            agent=AgentId.PA,
+                            heuristic_id="PA-LLM-07",
+                            category="python_audit",
+                            subcategory="llm_bias",
+                            severity=Severity.MEDIUM,
+                            confidence=confidence,
+                            title=f"Exceptions as control flow ({shape_name})",
+                            description=(
+                                f"This try/except matches the {shape_name!r} antipattern from "
+                                "the counter-prior catalogue. See linked entry for the right shape."
+                            ),
+                            evidence=[
+                                Evidence(
+                                    evidence_type="source_pattern",
+                                    location=f"{py_file}:{hit.line}",
+                                    snippet=hit.snippet,
+                                )
+                            ],
+                            remediation=Remediation(
+                                summary=(
+                                    "Replace with explicit conditional / structured error / "
+                                    "specific exception + recovery."
+                                ),
+                                effort=RemediationEffort.SMALL,
+                                guidance=(
+                                    "See docs/counter-priors/exceptions-as-control-flow.md "
+                                    "for the four canonical wrong shapes and the right shapes."
+                                ),
+                                references=[catalogue_url],
+                            ),
+                            catalogue_entry="exceptions-as-control-flow",
+                        )
+                    )
         return findings
 
     # ------------------------------------------------------------------
