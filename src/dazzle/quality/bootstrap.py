@@ -44,6 +44,15 @@ def quality_bootstrap(project_dir: Path) -> list[Path]:
 
 
 def _bootstrap_pyproject(project_dir: Path) -> list[Path]:
+    """Replace [tool.ruff*] tables in pyproject.toml; preserve other tables.
+
+    Note: tomli_w cannot re-emit TOML comments, so the
+    `# managed-by: dazzle quality bootstrap` header from the blank template
+    appears in fresh `dazzle init` output (verbatim file copy) but not in
+    `dazzle quality bootstrap` output against an existing project (re-parsed
+    and re-serialised). The CLI hint text after bootstrap is the ownership
+    signal in that case.
+    """
     target = project_dir / "pyproject.toml"
     template_tables = _load_template_ruff_tables()
 
