@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (#1235 — DSL-declared `security_profile:` now reaches the runtime)
+
+- **`build_server_config()` now threads `appspec.security.profile.value` into `ServerConfig.security_profile`** at `src/dazzle/back/runtime/app_factory.py:331`. The DSL field parsed correctly into `SecurityConfig` since #1196, but the build_server_config seam never read it back — so the rate-limit decorator (#1196) and CSRF policy stayed at `"basic"` (no-op) on every DSL-only consumer regardless of what the DSL declared.
+- **`DAZZLE_SECURITY_PROFILE` env-var override** wired into both `create_app_factory()` (`app_factory.py:855`) and the two `combined_server.py` call sites. Mirrors the `DAZZLE_AUDIT_INTEGRITY` pattern from #1206.
+- **Fail-loud at the build boundary**: an unknown profile value (e.g. typo `"stric"`) now raises `ValueError` instead of silently shipping the default.
+- **3 new tests** in `tests/unit/test_security.py` pin: DSL value flows through, explicit kwarg overrides, invalid profiles rejected.
+
 ### Refactored (#1239 — Repository.py subtype-path tidy-ups)
 
 - **`_translate_integrity_error(exc, table_name)` helper** extracted at `src/dazzle/back/runtime/repository.py:465`. Collapses four ~19-line copies of the integrity-error → `ConstraintViolationError` translation block (in `Repository.create`, `Repository.update`, `create_subtype`, `update_subtype`) into one shared helper. No behaviour change — all four sites raise the same `ConstraintViolationError` shape, only now from one source of truth.

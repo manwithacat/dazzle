@@ -396,6 +396,120 @@ entity Task "Task":
     assert cfg_c.security_profile == "basic"
 
 
+def test_build_server_config_threads_security_profile_from_appspec() -> None:
+    """#1235 — `appspec.security.profile` must reach `ServerConfig.security_profile`
+    so the rate-limit decorator and CSRF policy actually fire on DSL-only consumers.
+    Pre-fix the field stayed at the default "basic" regardless of the DSL value."""
+    from pathlib import Path
+
+    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.core.dsl_parser_impl import parse_dsl
+    from dazzle.core.ir.module import ModuleIR
+    from dazzle.core.linker import build_appspec
+
+    dsl = """
+module sp_test
+app SPTest "SP Test":
+  security_profile: standard
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+"""
+    module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
+        dsl, Path("sp_test.dsl")
+    )
+    module = ModuleIR(
+        name=module_name or "sp_test",
+        file=Path("sp_test.dsl"),
+        app_name=app_name,
+        app_title=app_title,
+        app_config=app_config,
+        uses=uses,
+        fragment=fragment,
+    )
+    appspec = build_appspec([module], root_module_name=module.name)
+    assert appspec.security is not None
+    assert appspec.security.profile.value == "standard"
+
+    cfg = build_server_config(appspec)
+    assert cfg.security_profile == "standard"
+
+
+def test_build_server_config_explicit_security_profile_wins() -> None:
+    """#1235 — env-var path: explicit `security_profile=` overrides the DSL value."""
+    from pathlib import Path
+
+    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.core.dsl_parser_impl import parse_dsl
+    from dazzle.core.ir.module import ModuleIR
+    from dazzle.core.linker import build_appspec
+
+    dsl = """
+module sp_test
+app SPTest "SP Test":
+  security_profile: standard
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+"""
+    module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
+        dsl, Path("sp_test.dsl")
+    )
+    module = ModuleIR(
+        name=module_name or "sp_test",
+        file=Path("sp_test.dsl"),
+        app_name=app_name,
+        app_title=app_title,
+        app_config=app_config,
+        uses=uses,
+        fragment=fragment,
+    )
+    appspec = build_appspec([module], root_module_name=module.name)
+
+    cfg = build_server_config(appspec, security_profile="strict")
+    assert cfg.security_profile == "strict"
+
+
+def test_build_server_config_rejects_invalid_security_profile() -> None:
+    """#1235 — fail-loud at the build boundary if the env var carries a typo
+    (e.g. "stric") rather than silently shipping the default."""
+    from pathlib import Path
+
+    import pytest
+
+    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.core.dsl_parser_impl import parse_dsl
+    from dazzle.core.ir.module import ModuleIR
+    from dazzle.core.linker import build_appspec
+
+    dsl = """
+module sp_test
+app SPTest "SP Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+"""
+    module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
+        dsl, Path("sp_test.dsl")
+    )
+    module = ModuleIR(
+        name=module_name or "sp_test",
+        file=Path("sp_test.dsl"),
+        app_name=app_name,
+        app_title=app_title,
+        app_config=app_config,
+        uses=uses,
+        fragment=fragment,
+    )
+    appspec = build_appspec([module], root_module_name=module.name)
+
+    with pytest.raises(ValueError, match="security_profile must be"):
+        build_server_config(appspec, security_profile="stric")
+
+
 # =============================================================================
 # CSP Default Directives + Report-Only Mode (#833)
 # =============================================================================

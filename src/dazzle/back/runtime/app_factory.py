@@ -349,6 +349,7 @@ def build_server_config(
     fragment_sources: dict[str, dict[str, Any]] | None = None,
     storage_defs: Any = None,  # dict[str, StorageConfig] from manifest (#932)
     audit_integrity: str = "none",  # "none" | "hash_chain" (#1197, #1206)
+    security_profile: str | None = None,  # "basic" | "standard" | "strict" (#1235)
 ) -> "ServerConfig":
     """Build a fully-populated ``ServerConfig`` from an AppSpec.
 
@@ -366,6 +367,19 @@ def build_server_config(
     # silently shipping the default, and before AuditLogger is constructed.
     if audit_integrity not in ("none", "hash_chain"):
         raise ValueError(f"audit_integrity must be 'none' or 'hash_chain', got {audit_integrity!r}")
+
+    # #1235: thread the DSL-declared `security_profile:` value through to
+    # ServerConfig so the rate-limit decorator and CSRF policy actually
+    # take effect. Caller may override (env var path in create_app_factory);
+    # otherwise fall back to appspec.security.profile, then "basic".
+    if security_profile is None:
+        security_cfg = getattr(appspec, "security", None)
+        profile_val = getattr(getattr(security_cfg, "profile", None), "value", None)
+        security_profile = profile_val or "basic"
+    if security_profile not in ("basic", "standard", "strict"):
+        raise ValueError(
+            f"security_profile must be 'basic', 'standard', or 'strict', got {security_profile!r}"
+        )
 
     # Compute view-based list projections from DSL surfaces
     entity_list_projections = build_entity_list_projections(
@@ -466,6 +480,7 @@ def build_server_config(
         tenant_config=tenant_config,
         storage_defs=dict(storage_defs or {}),
         audit_integrity=audit_integrity,
+        security_profile=security_profile,
     )
 
 
@@ -776,6 +791,10 @@ def create_app_factory(
         DAZZLE_AUDIT_INTEGRITY: Audit-log tamper-evidence mode (#1206).
             "none" (default) | "hash_chain". Overrides `[audit] integrity`
             in `dazzle.toml`. See `docs/guides/security.md` T5.
+        DAZZLE_SECURITY_PROFILE: Security profile override (#1235).
+            "basic" | "standard" | "strict". Overrides the DSL-declared
+            `app { security_profile: ... }`. Drives rate limiting, CSRF,
+            and upload-size policy.
 
     Usage:
         uvicorn dazzle_back.runtime.app_factory:create_app_factory --factory --host 0.0.0.0 --port $PORT
@@ -853,6 +872,11 @@ def create_app_factory(
         "DAZZLE_AUDIT_INTEGRITY",
         getattr(manifest, "audit_integrity", "none"),
     )
+
+    # Security profile (#1235): env var beats DSL-declared profile beats default.
+    # `DAZZLE_SECURITY_PROFILE` overrides `app { security_profile: ... }` in the
+    # DSL. If both are unset, build_server_config falls through to "basic".
+    security_profile_override = os.environ.get("DAZZLE_SECURITY_PROFILE") or None
 
     # Parse DSL and build spec. Pass `known_renderers=` so the linker
     # rejects `render: <unknown>` clauses against the framework defaults
@@ -949,6 +973,7 @@ def create_app_factory(
         project_root=project_root,
         storage_defs=getattr(manifest, "storage_defs", None),
         audit_integrity=audit_integrity,
+        security_profile=security_profile_override,
     )
 
     # Build and return the FastAPI app

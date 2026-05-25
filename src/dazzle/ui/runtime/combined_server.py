@@ -217,6 +217,8 @@ def run_unified_server(
     # this call site, so honour `DAZZLE_AUDIT_INTEGRITY` and leave the
     # manifest path to the production `create_app_factory()` factory.
     audit_integrity = os.environ.get("DAZZLE_AUDIT_INTEGRITY", "none")
+    # #1235: env-var override; falls through to appspec.security.profile.
+    security_profile_override = os.environ.get("DAZZLE_SECURITY_PROFILE") or None
 
     server_config = build_server_config(
         appspec,
@@ -232,6 +234,7 @@ def run_unified_server(
         project_root=project_root,
         storage_defs=storage_defs,
         audit_integrity=audit_integrity,
+        security_profile=security_profile_override,
     )
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
@@ -458,6 +461,7 @@ def run_backend_only(
         project_root=project_root,
         storage_defs=storage_defs,
         audit_integrity=os.environ.get("DAZZLE_AUDIT_INTEGRITY", "none"),
+        security_profile=os.environ.get("DAZZLE_SECURITY_PROFILE") or None,
     )
     app_builder = DazzleBackendApp(appspec, config=config)
     app = app_builder.build()
