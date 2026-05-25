@@ -530,6 +530,20 @@ async def run_server(project_root: Path | None = None) -> None:
     else:
         logger.info("Using default project root: %s", get_project_root())
 
+    # Single-instance guard: prevent two MCP servers from racing on the
+    # SQLite WAL of .dazzle/knowledge_graph.db. A stale holder (PID dead)
+    # is taken over silently; a live conflict fails fast so the client
+    # sees an error instead of a 30s handshake timeout.
+    from .process_lock import ProcessLock, format_conflict_message
+
+    lock = ProcessLock(get_project_root())
+    conflict = lock.acquire()
+    if conflict is not None:
+        message = format_conflict_message(conflict, get_project_root())
+        logger.error("MCP server already running:\n%s", message)
+        print(message, file=sys.stderr)
+        sys.exit(1)
+
     # Initialize dev mode detection
     init_dev_mode(get_project_root())
 
@@ -562,6 +576,8 @@ async def run_server(project_root: Path | None = None) -> None:
     except Exception as e:
         logger.exception("Server error: %s", e)
         raise
+    finally:
+        lock.release()
 
 
 # For backwards compatibility

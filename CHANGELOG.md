@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — single-instance guard for `dazzle mcp run`
+
+- **`ProcessLock`** at `src/dazzle/mcp/server/process_lock.py` — non-blocking `fcntl.flock` on `<project_root>/.dazzle/mcp.lock`. A second `dazzle mcp run` for the same project now fails immediately with a message naming the holder PID, start time, and the `kill` command to release it, instead of racing the first server on the SQLite WAL of `knowledge_graph.db` (which on a cold KG re-seed can take longer than Claude Code's 30s MCP handshake timeout).
+- **Stale-lock recovery**: if the recorded PID is dead (e.g. crash, OOM), the new server takes over silently.
+- **Test escape hatch**: `DAZZLE_MCP_SKIP_LOCK=1` bypasses the guard; the integration tests at `tests/test_mcp_integration.py` set it so the multi-subprocess fixtures don't collide on the lock.
+- **14 new tests** at `tests/unit/test_mcp_process_lock.py` cover happy-path acquire/release, live-conflict rejection, stale-PID takeover, corrupt-lock-file recovery, idempotent release, missing-metadata formatting, and the env-var bypass.
+
+### Agent Guidance
+
+- If `dazzle mcp run` exits 1 with "Another DAZZLE MCP server is already running" — that's the new guard. The message includes the holder PID; `kill <pid>` releases it. Don't paper over by deleting `.dazzle/mcp.lock` — a live holder will re-acquire and the lock file is recreated anyway.
+
 ### Added (#1249 — bootstrap MCP surfaces pattern proposals + anti-pattern flags)
 
 - **`triggers = [...]` arrays on all 8 Phase 2 `[patterns.X]` entries** in `src/dazzle/mcp/semantics_kb/patterns.toml`. 105 triggers total: natural-language fragments (`"has many"`, `"currently active"`, `"manager chain"`, `"deleted_at"`, etc.) and shape signatures (`"start_date and end_date"`, `"table per type"`) that an author would write when describing a domain that fits one of the patterns.

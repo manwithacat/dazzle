@@ -6,6 +6,7 @@ communicating via JSON-RPC over stdio.
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -56,6 +57,10 @@ def send_jsonrpc(proc: subprocess.Popen, method: str, params: dict = None, id: i
 
 def _start_mcp_server() -> subprocess.Popen:
     """Start the MCP server as a subprocess."""
+    # Several tests spawn extra servers alongside the class-scoped fixture in
+    # the same PROJECT_ROOT; opt out of the single-instance guard so they
+    # don't collide on the .dazzle/mcp.lock file.
+    env = {**os.environ, "DAZZLE_MCP_SKIP_LOCK": "1"}
     proc = subprocess.Popen(
         [PYTHON_PATH, "-m", "dazzle.mcp", "--working-dir", str(PROJECT_ROOT)],
         stdin=subprocess.PIPE,
@@ -63,6 +68,7 @@ def _start_mcp_server() -> subprocess.Popen:
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,  # Line buffered
+        env=env,
     )
     return proc
 

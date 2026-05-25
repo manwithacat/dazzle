@@ -2,7 +2,7 @@
 
 **Status:** Accepted (v0.72.14)
 **Issue:** #1240 (closed wontfix-by-design); part of the #1217 3NF coverage audit
-**Pair:** [inference KB `polymorphic_association_antipattern`](../../src/dazzle/mcp/inference_kb.toml)
+**Pair:** [inference KB `polymorphic_association_antipattern`](https://github.com/manwithacat/dazzle/blob/main/src/dazzle/mcp/inference_kb.toml)
 
 ## Decision
 
