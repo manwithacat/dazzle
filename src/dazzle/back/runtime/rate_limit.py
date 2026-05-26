@@ -14,6 +14,7 @@ Usage in route modules::
 
 import functools
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -161,6 +162,21 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
 
     # No rate limiting on basic profile
     if profile == "basic":
+        limits.limiter = _NoOpLimiter()
+        return
+
+    # #1252: `dazzle test dsl-run` issues many AUTH requests per persona
+    # (LOGIN_VALID/LOGIN_INVALID/REDIRECT × N personas), enough to exhaust
+    # standard/strict's 10-per-minute auth bucket mid-suite and produce
+    # spurious HTTP 429s. The same trust boundary that already gates the
+    # /__test__/* schema-wipe endpoints (DAZZLE_TEST_SECRET) bypasses the
+    # rate limiter here — strictly smaller blast radius than the schema
+    # endpoints the secret already unlocks.
+    if os.environ.get("DAZZLE_TEST_SECRET"):
+        logger.warning(
+            "Test-harness bypass active — rate limiting disabled (profile=%s)",
+            profile,
+        )
         limits.limiter = _NoOpLimiter()
         return
 

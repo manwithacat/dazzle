@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.2] - 2026-05-26
+
+### Fixed
+
+- **#1252** — `dazzle test dsl-run` no longer trips slowapi's `10/minute` auth bucket mid-suite on `security_profile = standard|strict`. `apply_rate_limiting` now installs `_NoOpLimiter` when `DAZZLE_TEST_SECRET` is set, reusing the trust boundary that already gates the `/__test__/*` schema-wipe endpoints. Projects with 6+ personas (3 AUTH tests apiece) were seeing 17/54 tests fail with HTTP 429 before this fix.
+
+### Agent Guidance
+
+- Production deployments never set `DAZZLE_TEST_SECRET`, so the rate-limit bypass is dev-environment-only. If you're seeing rate-limit failures in real traffic, this fix is not relevant — investigate `security_profile`, the underlying limit strings in `RateLimitConfig`, or the slowapi key function instead.
+
 ## [0.78.1] - 2026-05-26
 
 ### Fixed

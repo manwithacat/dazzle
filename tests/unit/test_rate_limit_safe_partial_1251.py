@@ -136,3 +136,69 @@ def test_safe_limit_raw_partial_without_helper_still_breaks() -> None:
             _rl.limits.limiter.limit("10/minute")(handler)
     finally:
         _rl.limits.limiter = saved
+
+
+def test_test_harness_secret_bypasses_real_limiter_1252(monkeypatch: Any) -> None:
+    """#1252: when DAZZLE_TEST_SECRET is set, apply_rate_limiting must
+    install a NoOp limiter even on standard/strict profile, so that
+    `dazzle test dsl-run` can issue many AUTH requests per persona
+    without tripping the 10/minute auth bucket mid-suite.
+
+    Reuses the existing trust boundary that already gates the
+    `/__test__/*` schema-wipe endpoints — strictly smaller blast
+    radius than the schema endpoints the secret already unlocks.
+    """
+    from dazzle.back.runtime import rate_limit as _rl
+
+    class _StubApp:
+        class _State:
+            pass
+
+        state = _State()
+
+        def add_exception_handler(self, *_a: Any, **_kw: Any) -> None:
+            pass
+
+    monkeypatch.setenv("DAZZLE_TEST_SECRET", "test-bypass-token")
+    saved = _rl.limits.limiter
+    try:
+        _rl.apply_rate_limiting(_StubApp(), "standard")
+        assert isinstance(_rl.limits.limiter, _rl._NoOpLimiter), (
+            "DAZZLE_TEST_SECRET must force NoOp limiter on standard profile (#1252)"
+        )
+
+        _rl.apply_rate_limiting(_StubApp(), "strict")
+        assert isinstance(_rl.limits.limiter, _rl._NoOpLimiter), (
+            "DAZZLE_TEST_SECRET must force NoOp limiter on strict profile (#1252)"
+        )
+    finally:
+        _rl.limits.limiter = saved
+
+
+def test_real_limiter_active_without_test_secret_1252(monkeypatch: Any) -> None:
+    """Negative regression: without DAZZLE_TEST_SECRET, standard profile
+    must still install the real slowapi Limiter (not the NoOp). Confirms
+    the bypass is gated on the env var, not unconditionally on profile.
+    """
+    pytest.importorskip("slowapi")
+    from dazzle.back.runtime import rate_limit as _rl
+
+    class _StubApp:
+        class _State:
+            pass
+
+        state = _State()
+
+        def add_exception_handler(self, *_a: Any, **_kw: Any) -> None:
+            pass
+
+    monkeypatch.delenv("DAZZLE_TEST_SECRET", raising=False)
+    saved = _rl.limits.limiter
+    try:
+        _rl.apply_rate_limiting(_StubApp(), "standard")
+        assert not isinstance(_rl.limits.limiter, _rl._NoOpLimiter), (
+            "Without DAZZLE_TEST_SECRET, standard profile must install the "
+            "real slowapi Limiter (#1252 negative regression)."
+        )
+    finally:
+        _rl.limits.limiter = saved
