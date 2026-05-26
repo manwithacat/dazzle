@@ -204,8 +204,29 @@ Yes, we offer a 14-day free trial with full access.
         faq = result.sections[0]
         assert faq.section_type == "faq"
         assert len(faq.subsections) == 3
-        assert faq.subsections[0]["question"] == "What is this product"
+        # #1264: trailing `?` is preserved verbatim, not stripped. The old
+        # behaviour stripped the question mark on the (false) theory that
+        # the renderer would re-add it; no renderer ever did, so rendered
+        # FAQs lost their question marks.
+        assert faq.subsections[0]["question"] == "What is this product?"
         assert "build apps faster" in faq.subsections[0]["answer"]
+        # All three Q&A pairs in this fixture end with `?` — pin the rule.
+        for sub in faq.subsections:
+            assert sub["question"].endswith("?"), (
+                f"FAQ question must preserve trailing `?` (#1264): {sub['question']!r}"
+            )
+
+    def test_faq_appends_question_mark_if_missing_1264(self) -> None:
+        """#1264: a heading without `?` (e.g. an imperative or a typo)
+        gets a `?` appended so the rendered FAQ always shows a question."""
+        content = """# FAQ
+
+## Tell me about pricing
+We have three tiers.
+"""
+        result = parse_copy_file(content)
+        faq = result.sections[0]
+        assert faq.subsections[0]["question"] == "Tell me about pricing?"
 
     def test_cta_parsing(self) -> None:
         """CTA section parses headline and buttons."""

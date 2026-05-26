@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.3] - 2026-05-26
+
+### Fixed
+
+- **#1264** — `_parse_faq_section` in `copy_parser.py` no longer strips trailing `?` from FAQ question headings. The previous behaviour stripped on the (false) theory that the renderer would re-add the `?` at display time; no renderer ever did, so rendered FAQs lost their question marks. The fix appends-if-missing instead — matches the sitespec typed path which preserves `?` verbatim, and handles imperative-phrased headings (`## Tell me about pricing`) by appending `?` so the rendered `<summary>` always shows a question.
+
 ## [0.78.2] - 2026-05-26
 
 ### Fixed

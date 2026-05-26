@@ -420,8 +420,13 @@ def _parse_faq_section(title: str, content: str) -> ContentBlock:
         lines = part.split("\n")
         question = lines[0][3:].strip()
 
-        # Remove trailing ? if present (we'll add it back in display)
-        question = question.rstrip("?")
+        # #1264: ensure the question ends with `?`. The previous shape
+        # stripped trailing `?` on the theory that the renderer would
+        # re-add it, but no renderer ever did — questions rendered without
+        # punctuation. Append-if-missing matches the sitespec typed path's
+        # behaviour (which preserves `?` verbatim).
+        if question and not question.endswith("?"):
+            question += "?"
 
         answer = "\n".join(lines[1:]).strip()
 
