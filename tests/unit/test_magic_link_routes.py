@@ -245,3 +245,52 @@ class TestMagicLinkBackslashBypass:
 
         assert resp.status_code == 303
         assert resp.headers["location"] == "/"
+
+
+class TestNextParamQueryInjection132:
+    """CodeQL alert #132 / py/url-redirection: `_is_safe_redirect_path`
+    accepts paths whose value contains `&` (e.g. `/foo&inject=1`),
+    because urlparse treats them as path-with-query. When such a value
+    was f-string-interpolated into another URL via `&next={next}`, the
+    `&` was treated as a top-level query separator at the receiving
+    endpoint, injecting an unrelated query parameter.
+
+    The fix uses `urllib.parse.quote(value, safe="/")` so the `&` is
+    percent-encoded as `%26` and remains part of the `next` value.
+    """
+
+    @pytest.mark.parametrize(
+        "raw_next, expected_encoded",
+        [
+            ("/foo&inject=1", "/foo%26inject%3D1"),
+            ("/path?bar=baz", "/path%3Fbar%3Dbaz"),
+            ("/with spaces", "/with%20spaces"),
+            ("/safe/path", "/safe/path"),  # No special chars — passes through.
+        ],
+    )
+    def test_login_sent_redirect_encodes_next_param_132(
+        self, client, mock_auth_store, raw_next: str, expected_encoded: str
+    ) -> None:
+        """`/login/sent?next=<encoded>` — the `next` value must be
+        percent-encoded so any `&` / `?` in it cannot inject extra
+        query params at the receiving endpoint."""
+        mock_auth_store.get_user_by_email = MagicMock(return_value=None)
+        resp = client.post(
+            "/auth/login/magic-link",
+            data={"email": "noone@example.com"},
+            params={"next": raw_next},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        location = resp.headers["location"]
+        # Either: (a) /login/sent with no next (guard rejected it), or
+        # (b) /login/sent?next=<expected_encoded>. Both are safe — the
+        # invariant is that the raw `&inject=1` substring NEVER appears
+        # as a top-level separator in the location header.
+        if "next=" in location:
+            assert f"next={expected_encoded}" in location, (
+                f"Location {location!r} did not contain properly encoded next; "
+                f"expected `next={expected_encoded}`. CodeQL #132 regression."
+            )
+        # Confirm the dangerous unencoded shape is absent.
+        assert "&inject=" not in location, f"Query injection via &: location={location!r} (#132)"

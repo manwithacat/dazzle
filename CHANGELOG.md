@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.13] - 2026-05-26
+
+### Security
+
+- **CodeQL alert #132 (py/url-redirection):** in `auth/password_login_routes.py` and `auth/magic_link_routes.py`, the `next` query parameter was f-string-interpolated raw into other URLs (`/login?error=...&next={next}`, `/2fa/challenge?session=...&next={next}`, `/login/sent?next={next}`, magic-link consumer URLs). `_is_safe_redirect_path` correctly rejects scheme/netloc/backslash, but it accepts paths like `/foo&inject=1` whose `&` then acted as a top-level query separator at the receiving endpoint — small but real query-parameter injection. Fix: `next` values are now percent-encoded via `urllib.parse.quote(value, safe="/")` before interpolation. Direct-redirect sites (where `next` is the URL itself, not embedded in one) keep their `_is_safe_redirect_path` guard and don't need encoding. New `TestNextParamQueryInjection132` test class pins the invariant.
+
+### Other
+
+- Merged dependabot PR #1254 — bumped `anthropics/claude-code-action` 1.0.124 → 1.0.133 in `.github/workflows/claude-code-review.yml` and `claude.yml`. CI-only change.
+
 ## [0.78.12] - 2026-05-26
 
 ### Fixed

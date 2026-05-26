@@ -12,7 +12,7 @@ This endpoint is mounted unconditionally and is suitable for:
 
 import logging
 from typing import Annotated
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -33,7 +33,12 @@ def _build_magic_link_url(*, request: Request, token: str, next_path: str) -> st
     Used by both the login + signup issuance paths so the URL
     shape stays consistent."""
     base = str(request.base_url).rstrip("/")
-    next_param = f"?next={next_path}" if next_path and next_path != "/" else ""
+    # CodeQL alert #132 / py/url-redirection: encode `next_path` so a value
+    # like `/foo&inject=1` doesn't introduce an extra query parameter at
+    # the consumer-side URL. The guard `_is_safe_redirect_path` ensures
+    # the path itself is same-origin, but `&` in the path passes the
+    # guard and would otherwise be interpolated raw.
+    next_param = f"?next={quote(next_path, safe='/')}" if next_path and next_path != "/" else ""
     return f"{base}/auth/magic/{token}{next_param}"
 
 
@@ -191,7 +196,8 @@ def create_magic_link_routes() -> APIRouter:
         # — defensive against account enumeration.
         sent_url = "/login/sent"
         if next and _is_safe_redirect_path(next) and next != "/":
-            sent_url = f"/login/sent?next={next}"
+            # CodeQL alert #132: encode `next` so `&` in the value cannot inject extra params.
+            sent_url = f"/login/sent?next={quote(next, safe='/')}"
         return RedirectResponse(url=sent_url, status_code=303)
 
     @router.post("/auth/signup/magic-link")
@@ -269,7 +275,8 @@ def create_magic_link_routes() -> APIRouter:
 
         sent_url = "/login/sent"
         if next and _is_safe_redirect_path(next) and next != "/":
-            sent_url = f"/login/sent?next={next}"
+            # CodeQL alert #132: encode `next` so `&` in the value cannot inject extra params.
+            sent_url = f"/login/sent?next={quote(next, safe='/')}"
         return RedirectResponse(url=sent_url, status_code=303)
 
     return router

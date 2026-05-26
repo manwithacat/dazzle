@@ -14,7 +14,7 @@ ADR-N from the Jinja2 retirement plan)."""
 
 import logging
 from typing import Annotated
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -35,6 +35,19 @@ def _is_safe_redirect_path(value: str) -> bool:
     if parsed.scheme or parsed.netloc:
         return False
     return parsed.path.startswith("/")
+
+
+def _encode_next(value: str) -> str:
+    """URL-encode a `next` parameter value for safe interpolation into
+    a query string (CodeQL alert #132 / py/url-redirection).
+
+    `_is_safe_redirect_path` rejects scheme/netloc/backslash but accepts
+    paths like `/foo&inject=1` whose `&` would inject extra query params
+    when interpolated raw into another URL. `quote(safe="/")` percent-
+    encodes everything except `/`, so the interpolated value is treated
+    as a single query-string value rather than a separator-bearing tail.
+    """
+    return quote(value, safe="/")
 
 
 def _set_session_cookie(response: RedirectResponse, request: Request, session_id: str) -> None:
@@ -75,14 +88,14 @@ def create_password_login_routes() -> APIRouter:
         if user is None:
             target = "/login?error=invalid_credentials"
             if next and _is_safe_redirect_path(next) and next != "/":
-                target = f"/login?error=invalid_credentials&next={next}"
+                target = f"/login?error=invalid_credentials&next={_encode_next(next)}"
             return RedirectResponse(url=target, status_code=303)
 
         if getattr(user, "two_factor_enabled", False):
             pending = auth_store.create_session(user)
             challenge_url = f"/2fa/challenge?session={pending.id}"
             if next and _is_safe_redirect_path(next) and next != "/":
-                challenge_url = f"{challenge_url}&next={next}"
+                challenge_url = f"{challenge_url}&next={_encode_next(next)}"
             return RedirectResponse(url=challenge_url, status_code=303)
 
         # Session-fixation defence (#1198): regenerate the session id on
