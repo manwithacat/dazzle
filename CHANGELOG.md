@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.6] - 2026-05-26
+
+### Changed
+
+- Regenerated `docs/api-surface/ir-types.txt` baseline for the `CTASpec.variant` field added in #1263 (v0.78.4). The drift gate (`tests/unit/test_api_surface_drift.py`) caught this on the next CI run; the field's intent was already captured in the v0.78.4 Added section.
+
 ## [0.78.5] - 2026-05-26
 
 ### Fixed

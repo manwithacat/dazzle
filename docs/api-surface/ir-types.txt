@@ -393,7 +393,8 @@ ir_class: CTASpec
   required:
     - href: str
     - label: str
-  optional: (none)
+  optional:
+    - variant: Literal[primary, outline, ghost] | None = None
 
 ir_class: ChannelConfigSpec
   required: (none)
