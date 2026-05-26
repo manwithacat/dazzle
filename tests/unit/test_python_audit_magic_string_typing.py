@@ -159,6 +159,24 @@ def test_noqa_suppression_on_def(tmp_path: Path) -> None:
     assert agent.check_magic_string_typing(appspec=None) == []  # type: ignore[arg-type]
 
 
+def test_noqa_suppression_on_param_line(tmp_path: Path) -> None:
+    """`# noqa: PA-LLM-10` on the parameter line (multi-line signature) suppresses."""
+    app_dir = tmp_path / "app"
+    app_dir.mkdir()
+    (app_dir / "x.py").write_text(
+        "def f(\n"
+        "    user_id: str,  # noqa: PA-LLM-10 - opaque\n"
+        "    tenant_id: str,\n"
+        ") -> None:\n"
+        "    pass\n"
+    )
+    agent = PythonAuditAgent(project_path=tmp_path)
+    findings = agent.check_magic_string_typing(appspec=None)  # type: ignore[arg-type]
+    # user_id is suppressed by the param-line noqa; tenant_id still fires.
+    assert len(findings) == 1
+    assert "tenant_id" in findings[0].title
+
+
 # ---------------------------------------------------------------------------
 # Integration
 # ---------------------------------------------------------------------------
