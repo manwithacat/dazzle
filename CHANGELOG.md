@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.5] - 2026-05-26
+
+### Fixed
+
+- Follow-up to **#1264** — `tests/unit/test_directive_parser.py::test_faq_directive` still encoded the pre-fix `"What is this"` shape (without `?`) and went red in CI. Updated to assert `"What is this?"` plus the second item, matching the new copy_parser behaviour.
+
 ## [0.78.4] - 2026-05-26
 
 ### Changed

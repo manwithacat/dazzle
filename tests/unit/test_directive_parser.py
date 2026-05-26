@@ -70,7 +70,9 @@ It is free.
         assert sections[0]["type"] == "faq"
         items = sections[0].get("items", [])
         assert len(items) == 2
-        assert items[0]["question"] == "What is this"
+        # #1264: trailing `?` preserved verbatim, not stripped.
+        assert items[0]["question"] == "What is this?"
+        assert items[1]["question"] == "How much does it cost?"
 
 
 class TestProseAndDirectives:
