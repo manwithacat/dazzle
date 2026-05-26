@@ -89,9 +89,16 @@ def sentinel_scan(
 
         typer.echo()
 
-    # Exit code 1 if any critical findings
+    # #1256: exit 1 on ANY returned finding. The `--severity` flag already
+    # filters the response down to the threshold the caller requested, so
+    # "any finding at or above the threshold" is the right gate. Pre-#1256
+    # the gate was specifically `critical`, which meant `--severity high`
+    # never failed CI even when the caller intended HIGH as the threshold.
+    # Callers that want informational-only output should pass `--severity
+    # informational` AND ignore the exit code (`|| true`); CI usages should
+    # pick the threshold they want to gate on.
     findings = data.get("findings", [])
-    if any(f.get("severity") == "critical" for f in findings):
+    if findings:
         raise typer.Exit(code=1)
 
 

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.17] - 2026-05-27
+
+### Changed
+
+- **#1256** — PA-LLM-07 (exceptions-as-control-flow) promoted from informational to commit-blocker. CI step now runs `--severity medium` (was `--severity high`) and no longer swallows non-zero exit with `|| echo`. Backfill audit confirmed zero PA-LLM-07/08/09/10 findings across all example apps (simple_task, contact_manager, support_tickets, ops_dashboard, etc.) at MEDIUM severity, so the promotion is a no-op for current code and a gate for future code.
+- **`dazzle sentinel scan` exit-code contract**: now exits 1 on any returned finding rather than specifically on `critical`. Since `--severity` already filters the response down to the requested threshold, "any finding at or above the threshold" is the right gate. Pre-#1256, `--severity high` would print findings but never fail CI — defeating the threshold's purpose. Callers that want informational-only output should pass `--severity informational` AND ignore the exit code (`|| true`); CI callers should pick the threshold they want to gate on.
+
+### Agent Guidance
+
+- `dazzle sentinel scan --severity <threshold>` is now a gate, not a report. Pick the threshold deliberately: `medium` blocks PA-LLM-07/08/09/10 (currently informational+); `high` blocks only HIGH+; `critical` blocks only CRITICAL.
+- The pre-existing `noqa: PA-LLM-XX — <reason>` suppression on the relevant `try:` / `def` / function line still escapes individual flagged sites; the suppression hasn't changed in shape, only the consequence of an unsuppressed finding has changed (no-op → CI red).
+- Future PA-LLM heuristics ship at `Severity.MEDIUM` and are immediately on the gate (no more "informational period" needed) — backfill audits should happen pre-merge of the heuristic itself, not as a separate promotion ticket later.
+
 ## [0.78.16] - 2026-05-27
 
 ### Changed
