@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.9] - 2026-05-26
+
+### Notes
+
+- **Correction on v0.78.8 fastapi pin (MAL-2026-4750):** further investigation showed the Amazon Inspector advisory is wrong on substance. The `fastar` dep is **legitimate** — `fastapi-cloud-cli/commands/deploy.py:127` uses it as `with fastar.open(tar_path, "w:zst", sparse=False) as tar:` to write a zstd-compressed tar of the user's app for upload to FastAPI Cloud. Python's stdlib `tarfile` doesn't speak zstd; `fastar` (Rust `tar` crate binding) does. The name is `fast`+`tar`, not a typosquat. fastapi 0.136.3 also ships a parallel `standard-no-fastapi-cloud-cli` extras group that explicitly opts out of both `fastapi-cli[standard]` and `fastar`, which is hard to reconcile with the advisory's "undocumented namespace abuse" framing. We're keeping the `!=0.136.3` pin because pip-audit's `--strict` mode still red-blocks on the version regardless of substance, but the *reason* is now "tool false-positive" rather than "tampered release." Issue #1278 tracks lifting the pin; the legitimate ergonomic concern that remains (`[standard]` silently bundles commercial deploy tooling) is upstream's call to address.
+
 ## [0.78.8] - 2026-05-26
 
 ### Security
