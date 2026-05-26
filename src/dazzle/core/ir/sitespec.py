@@ -14,6 +14,7 @@ Design Document: dev_docs/content_management.md
 from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -187,10 +188,15 @@ class CTASpec(BaseModel):
     Attributes:
         label: Button text
         href: Target URL or route
+        variant: Optional button style. When None, the renderer picks a
+            default appropriate for the section (e.g. pricing-tier CTAs
+            default to primary on the highlighted tier and outline on
+            non-highlighted tiers). Set explicitly to override (#1263).
     """
 
     label: str
     href: str
+    variant: Literal["primary", "outline", "ghost"] | None = None
 
     model_config = ConfigDict(frozen=True)
 

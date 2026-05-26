@@ -772,11 +772,17 @@ def _build_pricing_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: pricing` — tier cards with optional
     `highlighted: true` modifier on one tier (the recommended one).
 
-    Highlighted tier: gets `dz-pricing-highlighted` modifier class
-    AND its CTA renders as `dz-button-outline` instead of
-    `dz-button-primary` (deliberate inverse — the highlighted tier's
-    overall card is already visually emphasised, so the CTA inverts
-    to maintain visual balance). Matches the Jinja partial."""
+    CTA button class resolution (#1263):
+    - `cta.variant` explicit override wins: `primary` / `outline` / `ghost`.
+    - Otherwise the default flips on `highlighted`: highlighted tier gets
+      `dz-button-primary` (matches Stripe/Linear convention — the
+      recommended action should look like the recommended action),
+      non-highlighted tiers get `dz-button-outline` to recede.
+    - The previous default (highlighted → outline) was a deliberate
+      inverse intended to balance the card emphasis, but downstream
+      authors had no way to opt out; #1263 flipped the default and
+      added the per-tier variant override.
+    """
     parts: list[str] = []
     parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-pricing">')
     inner: list[str] = [_section_header(section)]
@@ -809,7 +815,14 @@ def _build_pricing_section(section: dict[str, Any]) -> str:
         if cta:
             href = str(cta.get("href", "#") or "#")
             label = str(cta.get("label", "Choose Plan") or "Choose Plan")
-            button_cls = "dz-button-outline" if is_highlighted else "dz-button-primary"
+            variant = cta.get("variant")
+            if variant in ("primary", "outline", "ghost"):
+                button_cls = f"dz-button-{variant}"
+            else:
+                # #1263: highlighted tier → primary by default (the
+                # recommended action looks recommended); non-highlighted
+                # tiers → outline to recede.
+                button_cls = "dz-button-primary" if is_highlighted else "dz-button-outline"
             tier_inner.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
                 f'class="dz-button {button_cls}">'

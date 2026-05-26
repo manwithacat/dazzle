@@ -166,10 +166,11 @@ def test_pricing_highlighted_tier_gets_modifier_class() -> None:
     assert "dz-pricing-highlighted" in out
 
 
-def test_pricing_highlighted_tier_inverts_cta_button_class() -> None:
-    """Deliberate inverse: highlighted tier's CTA uses `dz-button-
-    outline` (not -primary) because the card itself is already
-    visually emphasised."""
+def test_pricing_highlighted_tier_defaults_cta_to_primary() -> None:
+    """#1263: the default flipped. Highlighted tier's CTA now defaults to
+    `dz-button-primary` (matches Stripe/Linear convention — the
+    recommended action looks like the recommended action);
+    non-highlighted tiers default to `dz-button-outline` to recede."""
     out = _build_pricing_section(
         {
             "type": "pricing",
@@ -188,14 +189,51 @@ def test_pricing_highlighted_tier_inverts_cta_button_class() -> None:
             ],
         }
     )
-    # Free tier (non-highlighted) → primary button.
     free_pos = out.index(">Pick<")
     free_section = out[max(0, free_pos - 200) : free_pos]
-    assert "dz-button-primary" in free_section
-    # Pro tier (highlighted) → outline button.
+    assert "dz-button-outline" in free_section
     pro_pos = out.index(">Pick Pro<")
     pro_section = out[max(0, pro_pos - 200) : pro_pos]
-    assert "dz-button-outline" in pro_section
+    assert "dz-button-primary" in pro_section
+
+
+def test_pricing_cta_variant_override_wins_over_default_1263() -> None:
+    """#1263: explicit `cta.variant` overrides the highlighted-based
+    default in both directions — a non-highlighted tier can opt into
+    primary, and a highlighted tier can opt back to outline."""
+    out = _build_pricing_section(
+        {
+            "type": "pricing",
+            "tiers": [
+                {
+                    "name": "Free",
+                    "price": "$0",
+                    "cta": {"label": "FreeCTA", "href": "/f", "variant": "primary"},
+                },
+                {
+                    "name": "Pro",
+                    "price": "$9",
+                    "highlighted": True,
+                    "cta": {"label": "ProCTA", "href": "/p", "variant": "outline"},
+                },
+                {
+                    "name": "Ent",
+                    "price": "Custom",
+                    "cta": {"label": "EntCTA", "href": "/e", "variant": "ghost"},
+                },
+            ],
+        }
+    )
+    free_section = out[max(0, out.index(">FreeCTA<") - 200) : out.index(">FreeCTA<")]
+    assert "dz-button-primary" in free_section, (
+        "non-highlighted tier with variant=primary must use dz-button-primary"
+    )
+    pro_section = out[max(0, out.index(">ProCTA<") - 200) : out.index(">ProCTA<")]
+    assert "dz-button-outline" in pro_section, (
+        "highlighted tier with variant=outline must use dz-button-outline (the old default, opted into explicitly)"
+    )
+    ent_section = out[max(0, out.index(">EntCTA<") - 200) : out.index(">EntCTA<")]
+    assert "dz-button-ghost" in ent_section, "variant=ghost must use dz-button-ghost"
 
 
 def test_pricing_features_list_renders_each_as_li() -> None:

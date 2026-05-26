@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.4] - 2026-05-26
+
+### Changed
+
+- **#1263** — `_build_pricing_section` flipped its CTA default: the highlighted pricing tier's CTA now renders as `dz-button-primary` (was `dz-button-outline`), matching Stripe/Linear convention where the recommended action looks like the recommended action. Non-highlighted tiers continue to default to `dz-button-outline`. Downstream sites that relied on the old inverse can opt back in per-tier with the new `cta.variant` field (see Added).
+
+### Added
+
+- **#1263** — `CTASpec` gained an optional `variant: "primary" | "outline" | "ghost" | None` field. Explicit `variant` overrides the section's default in both directions: a non-highlighted tier can request `primary`, a highlighted tier can request `outline` to restore the pre-v0.78.4 behaviour, and any tier can request `ghost`.
+
+### Agent Guidance
+
+- When authoring `tier.cta`, leave `variant` unset to inherit the section default (highlighted → primary, otherwise → outline). Only set `variant` when the design system explicitly requires a non-default button style on that specific tier — e.g. all tiers share the same primary CTA, or the highlighted tier is already visually loud and wants a quieter outline button.
+- Sites that displayed the old highlighted-→-outline inverse on purpose need to add `cta: { variant: outline }` on the highlighted tier when upgrading to v0.78.4+.
+
 ## [0.78.3] - 2026-05-26
 
 ### Fixed
