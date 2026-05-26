@@ -11,6 +11,7 @@ from ._version import get_version as _get_version
 from .core import ir
 from .core.errors import BackendError, DazzleError, LinkError, ParseError, ValidationError
 from .result import Err, Ok, Result, UnwrapError
+from .types import NewType
 
 __version__ = _get_version()
 
@@ -26,4 +27,5 @@ __all__ = [
     "Err",
     "Result",
     "UnwrapError",
+    "NewType",
 ]

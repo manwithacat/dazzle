@@ -9,6 +9,7 @@ Three detection layers:
 from __future__ import annotations
 
 import ast
+import re
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -554,6 +555,124 @@ def _detect_optional_instead_of_result(tree: ast.AST, path: Path) -> list[_Shape
                 try_line=node.lineno,  # outer fn def line, for noqa scope
             )
         )
+    return hits
+
+
+# ---------------------------------------------------------------------------
+# PA-LLM-10 helpers — magic-string-typing (ID-shaped parameters)
+# ---------------------------------------------------------------------------
+
+# Matches: bare `id`, or any name ending in `_id`, `_uuid`, `_key`, `_token`.
+_ID_NAME_RE = re.compile(r"(^id$)|(_(id|uuid|key|token)$)")
+
+
+def _is_id_shaped_name(name: str) -> bool:
+    """True if the parameter name suggests an identifier class."""
+    return bool(_ID_NAME_RE.search(name))
+
+
+def _is_bare_str_annotation(node: ast.AST | None) -> bool:
+    """True if the annotation is bare `str`, `str | None`, `None | str`, or `Optional[str]`.
+
+    Does NOT fire on NewType-branded annotations (those are ast.Name with a
+    non-str id) or on str subclasses.
+    """
+    if node is None:
+        return False
+    # Bare `str`
+    if isinstance(node, ast.Name):
+        return node.id == "str"
+    # `str | None` / `None | str`
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        left = node.left
+        right = node.right
+        left_is_str = isinstance(left, ast.Name) and left.id == "str"
+        right_is_str = isinstance(right, ast.Name) and right.id == "str"
+        left_is_none = isinstance(left, ast.Constant) and left.value is None
+        right_is_none = isinstance(right, ast.Constant) and right.value is None
+        if (left_is_str and right_is_none) or (right_is_str and left_is_none):
+            return True
+        return False
+    # `Optional[str]`
+    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        if node.value.id == "Optional":
+            inner = node.slice
+            return isinstance(inner, ast.Name) and inner.id == "str"
+    return False
+
+
+def _has_dataclass_decorator(cls: ast.ClassDef) -> bool:
+    """True if any decorator references `dataclass` by name or attribute."""
+    for dec in cls.decorator_list:
+        # @dataclass
+        if isinstance(dec, ast.Name) and dec.id == "dataclass":
+            return True
+        # @dataclass(frozen=True, slots=True)
+        if (
+            isinstance(dec, ast.Call)
+            and isinstance(dec.func, ast.Name)
+            and dec.func.id == "dataclass"
+        ):
+            return True
+        # @dataclasses.dataclass / @dc.dataclass
+        if isinstance(dec, ast.Attribute) and dec.attr == "dataclass":
+            return True
+        if (
+            isinstance(dec, ast.Call)
+            and isinstance(dec.func, ast.Attribute)
+            and dec.func.attr == "dataclass"
+        ):
+            return True
+    return False
+
+
+def _detect_magic_string_id(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """Return _ShapeHit records for ID-shaped parameters typed as bare `str`.
+
+    Walks FunctionDef and AsyncFunctionDef nodes anywhere in the tree
+    (including methods on classes), skipping:
+    - `self` and `cls` parameters (never str-typed in practice)
+    - dataclass-decorated classes entirely (their synthesized __init__ would
+      fire spuriously; the field annotations are the source of truth and
+      a separate detector could handle them later)
+    """
+    # First pass: collect line ranges of dataclass-decorated classes to skip.
+    dataclass_ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and _has_dataclass_decorator(node):
+            end = getattr(node, "end_lineno", None) or node.lineno
+            dataclass_ranges.append((node.lineno, end))
+
+    def _in_dataclass(fn_lineno: int) -> bool:
+        return any(start <= fn_lineno <= end for start, end in dataclass_ranges)
+
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if _in_dataclass(node.lineno):
+            continue
+
+        all_args: list[ast.arg] = []
+        all_args.extend(node.args.posonlyargs)
+        all_args.extend(node.args.args)
+        all_args.extend(node.args.kwonlyargs)
+
+        for arg in all_args:
+            if arg.arg in ("self", "cls"):
+                continue
+            if not _is_id_shaped_name(arg.arg):
+                continue
+            if not _is_bare_str_annotation(arg.annotation):
+                continue
+            hits.append(
+                _ShapeHit(
+                    line=arg.lineno if hasattr(arg, "lineno") else node.lineno,
+                    snippet=f"{arg.arg}: str",
+                    shape="magic_string_id",
+                    try_line=node.lineno,  # def line for noqa scoping
+                )
+            )
     return hits
 
 
@@ -1408,6 +1527,99 @@ class PythonAuditAgent(DetectionAgent):
                             references=[catalogue_url],
                         ),
                         catalogue_entry="optional-instead-of-result",
+                    )
+                )
+        return findings
+
+    @heuristic(
+        heuristic_id="PA-LLM-10",
+        category="python_audit",
+        subcategory="llm_bias",
+        title="Magic-string typing — bare str where a brand would catch errors",
+    )
+    def check_magic_string_typing(self, appspec: AppSpec) -> list[Finding]:
+        """Flag ID-shaped function parameters typed as bare str.
+
+        See docs/counter-priors/magic-string-typing.md for the full
+        taxonomy and right-shape patterns (dazzle.types.NewType for IDs,
+        enum.StrEnum for closed sets).
+        """
+        from dazzle.sentinel.models import (
+            Confidence,
+            Evidence,
+            Finding,
+            Remediation,
+            RemediationEffort,
+            Severity,
+        )
+
+        app_dir = self._project_path / "app"
+        if not app_dir.exists():
+            return []
+
+        catalogue_url = (
+            "https://github.com/cyfutureuk/dazzle/blob/main/"
+            "docs/counter-priors/magic-string-typing.md"
+        )
+
+        findings: list[Finding] = []
+        for py_file in sorted(app_dir.rglob("*.py")):
+            try:
+                source_text = py_file.read_text(encoding="utf-8")
+                tree = ast.parse(source_text, filename=str(py_file))
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+            source_lines = source_text.splitlines()
+
+            for hit in _detect_magic_string_id(tree, py_file):
+                def_line_text = (
+                    source_lines[hit.try_line - 1]
+                    if hit.try_line and 0 < hit.try_line <= len(source_lines)
+                    else ""
+                )
+                param_line_text = (
+                    source_lines[hit.line - 1] if 0 < hit.line <= len(source_lines) else ""
+                )
+                if "noqa: PA-LLM-10" in def_line_text:
+                    continue
+                if "noqa: PA-LLM-10" in param_line_text:
+                    continue
+
+                findings.append(
+                    Finding(
+                        agent=AgentId.PA,
+                        heuristic_id="PA-LLM-10",
+                        category="python_audit",
+                        subcategory="llm_bias",
+                        severity=Severity.MEDIUM,
+                        confidence=Confidence.LIKELY,
+                        title=f"Magic-string ID parameter: {hit.snippet}",
+                        description=(
+                            f"Parameter `{hit.snippet}` is typed as bare `str`. "
+                            "Use a NewType-branded alias so the type checker "
+                            "distinguishes this identifier class from other str values."
+                        ),
+                        evidence=[
+                            Evidence(
+                                evidence_type="source_pattern",
+                                location=f"{py_file}:{hit.line}",
+                                snippet=hit.snippet,
+                            )
+                        ],
+                        remediation=Remediation(
+                            summary=(
+                                "Declare a brand: `from dazzle.types import NewType; "
+                                "MyId = NewType('MyId', str)`. Use `MyId` in the signature."
+                            ),
+                            effort=RemediationEffort.SMALL,
+                            guidance=(
+                                "See docs/counter-priors/magic-string-typing.md for the "
+                                "canonical right-shape pattern (branded IDs in app/ids.py + "
+                                "StrEnum for closed value sets)."
+                            ),
+                            references=[catalogue_url],
+                        ),
+                        catalogue_entry="magic-string-typing",
                     )
                 )
         return findings

@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.0] - 2026-05-26
+
+### Added — agent code quality substrate round 4 (Layer 2: dazzle.types + PA-LLM-10)
+
+- **`dazzle.types`** — second Layer-2 substrate piece. Thin module re-exporting `typing.NewType` for one-stop discovery: `from dazzle.types import NewType`. Zero runtime cost — NewType is the identity function at runtime. Importable from `dazzle` top-level as well (`from dazzle import NewType`).
+- **`docs/counter-priors/magic-string-typing.md`** — new counter-prior. Covers all three sub-shapes of the antipattern (magic-string IDs, enum-dispatch chains, typed lookup keys) with right-shape patterns using `dazzle.types.NewType`, `enum.StrEnum`, and `typing.TypedDict`. Only sub-shape (a) is detected by PA-LLM-10 today; (b) and (c) are documented for inference-time guidance.
+- **Sentinel heuristic `PA-LLM-10`** (`magic_string_typing`) fires on function/method parameters whose name matches `id`, `*_id`, `*_uuid`, `*_key`, or `*_token` AND whose annotation is bare `str` (or `str | None` / `Optional[str]`). Severity MEDIUM, confidence LIKELY. Suppress via `# noqa: PA-LLM-10 — <reason>` on the `def` line OR the parameter line (multi-line signatures).
+
+### Agent Guidance
+
+- When writing functions that take identifier parameters, declare branded types in `app/ids.py` (or similar) and use them in signatures: `def transfer(src: PaymentId, dst: PaymentId, amount: int) -> ...`. The brand catches cross-class mix-ups (`UserId` passed where `TenantId` was expected) that bare `str` parameters allow.
+- For closed value sets (status fields, discriminators), use `enum.StrEnum` (stdlib, Python 3.11+). The `match` statement with exhaustive cases gives type-checker exhaustiveness and catches typos in the enum-value strings.
+- `_key` and `_token` suffixes are noisier than `_id`/`_uuid` — cache keys and opaque auth tokens may legitimately be `str`. Document the case with `# noqa: PA-LLM-10 — opaque cache key` when intentional.
+- Layer 2 of the substrate now has two primitives: `dazzle.result` (round 3) and `dazzle.types` (round 4). The pattern is established — future rounds either extend Layer 2 with more primitives or fill Layer-3 catalogue-gap detectors.
+- **Enum-dispatch detection** (sub-shape b) and **typed-lookup-key detection** (sub-shape c) remain future work — PA-LLM-10's AST signal covers only sub-shape (a) ID-shaped params today.
+
 ## [0.77.0] - 2026-05-26
 
 ### Added — agent code quality substrate round 3 (Layer 2: dazzle.result + PA-LLM-09)
