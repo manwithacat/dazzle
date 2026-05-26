@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.12] - 2026-05-26
+
+### Fixed
+
+- Follow-up to **#1277** — `scripts/vendor_hashes.json` entry for `htmx-ext-preload.js` drifted by one byte because the pre-commit `trailing-whitespace` hook stripped a trailing space *after* `scripts/update_vendors.py` had already hashed the file. Recomputed the hash to match the on-disk artifact; `test_vendor_hash_drift.py` now passes.
+
+### Agent Guidance
+
+- When `update_vendors.py` downloads files that may contain trailing whitespace (htmx-extensions sources are unminified and sometimes ship one), the pre-commit hook will strip it on the next `git commit` and invalidate the hash that was just written. Run `pre-commit run --files <downloaded paths>` after `update_vendors.py` and *before* committing, or commit and immediately recompute hashes for any file that was modified by the hook.
+
 ## [0.78.11] - 2026-05-26
 
 ### Fixed
