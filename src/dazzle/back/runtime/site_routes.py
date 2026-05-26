@@ -509,9 +509,19 @@ def create_site_page_routes(
         # all other section types use _section_header() which emits <h2>.
         # Auto-inject one from page.title when no hero is present so every
         # page satisfies the single-<h1> WCAG rule.
-        has_hero = any(
-            isinstance(s, dict) and str(s.get("type", "") or "") == "hero" for s in sections
-        )
+        # #1261: when `_render_site_page_chromed` has already transformed
+        # typed sections into `{"type": "_typed", ...}` markers, the raw
+        # `"hero"` type is gone. The marker dict preserves the pre-transform
+        # type as `_original_type` so we can still detect a hero here.
+        def _is_hero(s: Any) -> bool:
+            if not isinstance(s, dict):
+                return False
+            stype = str(s.get("type", "") or "")
+            if stype == "hero":
+                return True
+            return stype == "_typed" and str(s.get("_original_type", "") or "") == "hero"
+
+        has_hero = any(_is_hero(s) for s in sections)
         page_h1_html = ""
         if not has_hero:
             page_title_text = _html_mod.escape(
@@ -618,6 +628,7 @@ def create_site_page_routes(
                     replaced.append(
                         {
                             "type": "_typed",
+                            "_original_type": section_type,
                             "_typed_html": render_typed_section(
                                 section, overrides=_section_overrides
                             ),

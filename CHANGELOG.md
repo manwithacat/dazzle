@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.1] - 2026-05-26
+
+### Fixed
+
+- **#1261** — `site_routes._render_site_inner_html` injected a duplicate `<h1 class="dz-page-title">` on every sitespec page with a `type: hero` section. Root cause: `_render_site_page_chromed` substituted typed sections with `{"type": "_typed", ...}` markers *before* the inner builder ran, so the `has_hero` predicate (introduced in #1108) always saw `False`. The marker dict now carries `_original_type` and the predicate recognises pre-transformed heroes. Hero pages once again emit a single h1 (the hero's own), satisfying the WCAG single-h1 rule that #1108 was meant to preserve.
+
 ## [0.78.0] - 2026-05-26
 
 ### Added — agent code quality substrate round 4 (Layer 2: dazzle.types + PA-LLM-10)

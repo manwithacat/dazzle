@@ -69,3 +69,24 @@ def test_h1_threaded_into_main_html_before_sections() -> None:
         "main_html must render the auto-injected h1 BEFORE sections so it "
         "stays the first heading on the page."
     )
+
+
+def test_has_hero_detects_pretransformed_typed_marker() -> None:
+    """#1261: `has_hero` must also accept the `_typed` marker that
+    `_render_site_page_chromed` substitutes in for typed hero sections
+    before `_render_site_inner_html` runs. Without this, every page
+    with a typed hero gets a duplicate `dz-page-title` h1 injected
+    on top of the hero's own h1 — the #1108 regression.
+    """
+    text = SITE_ROUTES.read_text()
+    # The marker dict must carry `_original_type` so the inner builder
+    # can still classify the section as a hero post-transform.
+    assert '"_original_type": section_type' in text, (
+        "_render_site_page_chromed must include `_original_type` on the "
+        "`_typed` marker dict so the downstream has_hero check survives "
+        "the section transform (#1261)."
+    )
+    # The has_hero predicate must check the transformed marker form too.
+    assert '"_original_type"' in text and "_typed" in text
+    # The #1261 anchor comment must be present so the gate is greppable.
+    assert "#1261" in text
