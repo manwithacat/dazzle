@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import Iterator
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -508,8 +509,27 @@ def _has_multi_exception_catch_returning_none(
 
     The except clause must catch >=2 exception types AND its body must
     contain a `return None` (or bare return) statement.
+
+    #1273: both the outer (find ExceptHandlers) and the inner (find
+    Return inside an ExceptHandler) walks skip nested function defs.
+    Without this, a helper defined inside the except body whose own
+    body contains `return None` was being counted against the outer
+    function — a false positive that fires PA-LLM-09 against well-
+    formed code (`_count_return_none` was already fixed this way).
+    Manual-stack traversal mirrors that sibling exactly.
     """
-    for node in ast.walk(fn):
+
+    def _iter_skipping_nested_fns(root: ast.AST) -> Iterator[ast.AST]:
+        """Yield every descendant of root except nodes inside nested fns."""
+        stack: list[ast.AST] = list(ast.iter_child_nodes(root))
+        while stack:
+            node = stack.pop()
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            yield node
+            stack.extend(ast.iter_child_nodes(node))
+
+    for node in _iter_skipping_nested_fns(fn):
         if not isinstance(node, ast.ExceptHandler):
             continue
         # The except type must be a Tuple (e.g. `except (X, Y):`).
@@ -517,7 +537,7 @@ def _has_multi_exception_catch_returning_none(
             continue
         if len(node.type.elts) < 2:
             continue
-        for inner in ast.walk(node):
+        for inner in _iter_skipping_nested_fns(node):
             if isinstance(inner, ast.Return) and (
                 inner.value is None or _is_none_constant(inner.value)
             ):
@@ -626,31 +646,70 @@ def _has_dataclass_decorator(cls: ast.ClassDef) -> bool:
     return False
 
 
+def _has_pydantic_basemodel_base(cls: ast.ClassDef) -> bool:
+    """True if the class inherits from Pydantic's `BaseModel`.
+
+    Pydantic synthesises `__init__` through its metaclass rather than via
+    a decorator, so `_has_dataclass_decorator` doesn't catch it. PA-LLM-10
+    needs to skip these for the same reason it skips dataclasses: the
+    field annotations are the source of truth, and the synthesized
+    constructor parameters fire ID-shaped false-positives (#1275).
+
+    Matches three common import shapes:
+        from pydantic import BaseModel        # class Foo(BaseModel): ...
+        import pydantic                        # class Foo(pydantic.BaseModel): ...
+        from pydantic import BaseModel as Pdt  # class Foo(Pdt.BaseModel): ...
+    """
+    for base in cls.bases:
+        # `class Foo(BaseModel):`
+        if isinstance(base, ast.Name) and base.id == "BaseModel":
+            return True
+        # `class Foo(pydantic.BaseModel):` or any `*.BaseModel`
+        if isinstance(base, ast.Attribute) and base.attr == "BaseModel":
+            return True
+    return False
+
+
+def _is_synthesized_constructor_class(cls: ast.ClassDef) -> bool:
+    """True if the class has a constructor synthesised by metaclass or
+    decorator — and therefore should be skipped by PA-LLM-10 (#1275).
+
+    Covers `@dataclass` (and dotted variants), plus Pydantic
+    `BaseModel`. Extending this to cover `attrs.define` / `msgspec.Struct`
+    is a future incremental win; the issue scoped the fix to Pydantic.
+    """
+    return _has_dataclass_decorator(cls) or _has_pydantic_basemodel_base(cls)
+
+
 def _detect_magic_string_id(tree: ast.AST, path: Path) -> list[_ShapeHit]:
     """Return _ShapeHit records for ID-shaped parameters typed as bare `str`.
 
     Walks FunctionDef and AsyncFunctionDef nodes anywhere in the tree
     (including methods on classes), skipping:
     - `self` and `cls` parameters (never str-typed in practice)
-    - dataclass-decorated classes entirely (their synthesized __init__ would
-      fire spuriously; the field annotations are the source of truth and
-      a separate detector could handle them later)
+    - classes with synthesised constructors — `@dataclass` (and dotted
+      variants) and Pydantic `BaseModel` subclasses (#1275). The
+      field annotations on these are the source of truth, and the
+      synthesized `__init__` parameter list fires ID-shape positives
+      spuriously. A separate detector for the field annotations
+      themselves could handle them later.
     """
-    # First pass: collect line ranges of dataclass-decorated classes to skip.
-    dataclass_ranges: list[tuple[int, int]] = []
+    # First pass: collect line ranges of synthesized-constructor classes
+    # (dataclass-decorated or Pydantic BaseModel subclass) to skip.
+    model_class_ranges: list[tuple[int, int]] = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and _has_dataclass_decorator(node):
+        if isinstance(node, ast.ClassDef) and _is_synthesized_constructor_class(node):
             end = getattr(node, "end_lineno", None) or node.lineno
-            dataclass_ranges.append((node.lineno, end))
+            model_class_ranges.append((node.lineno, end))
 
-    def _in_dataclass(fn_lineno: int) -> bool:
-        return any(start <= fn_lineno <= end for start, end in dataclass_ranges)
+    def _in_model_class(fn_lineno: int) -> bool:
+        return any(start <= fn_lineno <= end for start, end in model_class_ranges)
 
     hits: list[_ShapeHit] = []
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if _in_dataclass(node.lineno):
+        if _in_model_class(node.lineno):
             continue
 
         all_args: list[ast.arg] = []

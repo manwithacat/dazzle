@@ -207,3 +207,63 @@ def test_heuristic_skips_tests_and_scripts(tmp_path: Path) -> None:
         (d / "f.py").write_text("def f(user_id: str) -> None: ...\n")
     agent = PythonAuditAgent(project_path=tmp_path)
     assert agent.check_magic_string_typing(appspec=None) == []  # type: ignore[arg-type]
+
+
+def test_skips_pydantic_basemodel_subclass_1275(tmp_path: Path) -> None:
+    """#1275: Pydantic `BaseModel` synthesises `__init__` via its
+    metaclass, so `_has_dataclass_decorator` doesn't catch it. ID-shaped
+    field annotations on the model would otherwise fire PA-LLM-10
+    spuriously (the model's own validation is the canonical guard;
+    the agent should treat these the same as @dataclass).
+
+    Covers three import shapes the helper recognises:
+      - `from pydantic import BaseModel` → `class Foo(BaseModel):`
+      - `import pydantic` → `class Foo(pydantic.BaseModel):`
+      - aliased import → `class Foo(Pdt.BaseModel):`
+    """
+    app_dir = tmp_path / "app"
+    app_dir.mkdir()
+    (app_dir / "models.py").write_text(
+        "from pydantic import BaseModel\n"
+        "import pydantic\n"
+        "import pydantic as pdt\n"
+        "\n"
+        "class User(BaseModel):\n"
+        "    user_id: str\n"
+        "    tenant_id: str\n"
+        "\n"
+        "class Tenant(pydantic.BaseModel):\n"
+        "    tenant_id: str\n"
+        "    parent_id: str\n"
+        "\n"
+        "class Aliased(pdt.BaseModel):\n"
+        "    record_id: str\n"
+    )
+    agent = PythonAuditAgent(project_path=tmp_path)
+    findings = agent.check_magic_string_typing(appspec=None)  # type: ignore[arg-type]
+    assert findings == [], (
+        f"PA-LLM-10 must skip Pydantic BaseModel subclasses (#1275); got {findings}"
+    )
+
+
+def test_basemodel_subclass_still_audits_module_level_fns_1275(tmp_path: Path) -> None:
+    """The skip is scoped to the class body — module-level functions in
+    the same file still get audited normally. This pins that the
+    line-range gate doesn't accidentally swallow the whole file."""
+    app_dir = tmp_path / "app"
+    app_dir.mkdir()
+    (app_dir / "models.py").write_text(
+        "from pydantic import BaseModel\n"
+        "\n"
+        "class User(BaseModel):\n"
+        "    user_id: str\n"
+        "\n"
+        "def get_user(user_id: str) -> None:\n"  # NOT inside the model — should fire
+        "    pass\n"
+    )
+    agent = PythonAuditAgent(project_path=tmp_path)
+    findings = agent.check_magic_string_typing(appspec=None)  # type: ignore[arg-type]
+    assert len(findings) == 1, (
+        f"Module-level `get_user(user_id: str)` should still fire PA-LLM-10; "
+        f"the BaseModel skip only covers the class body. Got: {findings}"
+    )

@@ -220,3 +220,50 @@ def test_heuristic_skips_tests_and_scripts(tmp_path: Path) -> None:
         )
     agent = PythonAuditAgent(project_path=tmp_path)
     assert agent.check_optional_instead_of_result(appspec=None) == []  # type: ignore[arg-type]
+
+
+def test_nested_helper_inside_except_does_not_trip_outer_1273(tmp_path: Path) -> None:
+    """#1273: `_has_multi_exception_catch_returning_none` previously used a
+    naive `ast.walk` for its inner search, which descended into nested
+    function bodies inside an except clause. A helper whose own body
+    contained `return None` would then count as the outer function's
+    failure-merging behaviour, fully fabricating PA-LLM-09 against
+    well-formed code.
+
+    This fixture: outer `fetch_user` returns `User | None` with a single
+    `return None` in the main body (so the `>=2 return None` arm doesn't
+    fire). Inside the except block it defines a helper that itself
+    contains a `return None`. Pre-fix: the nested helper's return is
+    discovered by `ast.walk`, the except is a 2-type tuple catch, so
+    the `try/except (X, Y, ...): return None` arm fires. Post-fix: the
+    walk skips nested FunctionDef so only the outer's body counts.
+    """
+    app_dir = tmp_path / "app"
+    app_dir.mkdir()
+    (app_dir / "fetcher.py").write_text(
+        "from typing import Optional\n"
+        "\n"
+        "class User: pass\n"
+        "\n"
+        "def fetch_user(uid: str) -> Optional[User]:\n"
+        "    try:\n"
+        "        return load(uid)\n"
+        "    except (ValueError, KeyError):\n"
+        "        def _format_log(err: object) -> object | None:\n"
+        "            if not err:\n"
+        "                return None\n"
+        "            return repr(err)\n"
+        "        _format_log(None)\n"
+        "        return load_fallback(uid)\n"
+        "\n"
+        "def load(uid): return User()\n"
+        "def load_fallback(uid): return User()\n"
+    )
+    agent = PythonAuditAgent(project_path=tmp_path)
+    findings = agent.check_optional_instead_of_result(appspec=None)  # type: ignore[arg-type]
+    fetcher_findings = [f for f in findings if "fetcher.py" in str(f.location.file_path)]
+    assert fetcher_findings == [], (
+        f"PA-LLM-09 false-positive on fetcher.fetch_user: nested helper's "
+        f"`return None` was incorrectly attributed to the outer function. "
+        f"Got: {fetcher_findings} (#1273)"
+    )

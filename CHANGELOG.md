@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.15] - 2026-05-27
+
+### Fixed
+
+- **#1273** — `PythonAuditAgent._has_multi_exception_catch_returning_none` (PA-LLM-09) previously used a naive `ast.walk` for its inner search inside `ExceptHandler` nodes, descending into nested function bodies. A helper defined inside an `except` block whose own body contained `return None` was attributed to the outer function — fabricating a false positive against well-formed code. Both the outer ExceptHandler search and the inner Return search now use a manual-stack traversal that skips `FunctionDef`/`AsyncFunctionDef` nodes (mirroring the existing `_count_return_none` sibling).
+- **#1275** — `PythonAuditAgent._detect_magic_string_id` (PA-LLM-10) only skipped `@dataclass`-decorated classes, missing Pydantic `BaseModel` subclasses whose `__init__` is synthesized by a metaclass rather than a decorator. ID-shaped field annotations on Pydantic models now skip in the same way dataclass fields do. New `_has_pydantic_basemodel_base` recognises three import shapes (`BaseModel`, `pydantic.BaseModel`, aliased `Pdt.BaseModel`); `_is_synthesized_constructor_class` is the unified gate. Module-level functions in the same file as a `BaseModel` subclass still audit normally — the skip is scoped to the class body's line range.
+
+### Agent Guidance
+
+- When writing AST detectors that look for patterns scoped to a function body, prefer the manual-stack-with-skip-FunctionDef pattern over `ast.walk`. Nested function definitions have their own scope; their `return`s, `raise`s, and assignment targets belong to the inner scope, not the outer one. The two PA-LLM detectors that ship in v0.78.15 are reference implementations.
+- When a heuristic skips synthesized-constructor classes (`@dataclass`, Pydantic `BaseModel`, future `attrs.define`/`msgspec.Struct`), use the unified `_is_synthesized_constructor_class` helper rather than open-coding each test. Extending the skip set to a new model framework is one new `_has_X_base/decorator` helper plus an `or` clause in the gate.
+
 ## [0.78.14] - 2026-05-26
 
 ### Notes
