@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.10] - 2026-05-26
+
+### Fixed
+
+- **#1276** — Marketing/site pages rendered all `data-lucide` icons as invisible. The typed-substrate migration (#1042 era) replaced the Jinja-rendered head — which loaded the lucide UMD bundle via `<script>` — with the typed `AppChrome` dataclass, whose `js_scripts` default only included the framework bundle. `dazzle.min.js` calls `lucide.createIcons()` expecting `window.lucide` to be defined, but with no prior script there was nothing to define it. The default now prepends `/static/dist/dazzle-icons.min.js` (already shipped in the wheel) so lucide loads before the framework bundle.
+
+### Agent Guidance
+
+- When migrating from Jinja-rendered chrome to a typed substrate, audit every `<script>` and `<link>` the old templates emitted and confirm the typed dataclass defaults cover the same set. Silent omissions cause bugs that don't manifest until something on the page actually uses the dropped asset.
+- The order of `js_scripts` is load-bearing: UMD libraries that the framework bundle calls (lucide, htmx, alpine) must precede the bundle. The new `test_lucide_umd_precedes_framework_bundle_1276` pins this invariant.
+
 ## [0.78.9] - 2026-05-26
 
 ### Notes

@@ -55,7 +55,15 @@ class AppChrome:
     """
 
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",)
-    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",)
+    # #1276: lucide UMD must precede the framework bundle so `window.lucide`
+    # exists when dazzle.min.js calls `lucide.createIcons()`. Pre-#1042 the
+    # Jinja head included this script via a CDN link; the typed substrate
+    # had silently dropped it, leaving every data-lucide icon invisible on
+    # marketing/site pages.
+    js_scripts: tuple[str, ...] = (
+        "/static/dist/dazzle-icons.min.js",
+        "/static/dist/dazzle.min.js",
+    )
     theme: str | None = None
     theme_map: dict[str, list[str]] = field(default_factory=dict)
     font_preconnect: tuple[str, ...] = ()
@@ -66,6 +74,10 @@ class AppChrome:
 
 _FRAMEWORK_BUNDLE_CSS = "/static/dist/dazzle.min.css"
 _FRAMEWORK_BUNDLE_JS = "/static/dist/dazzle.min.js"
+# #1276: lucide UMD bundle ships in the wheel at the same dist path.
+# Must load before the framework bundle so `window.lucide.createIcons()`
+# resolves on first page render.
+_LUCIDE_UMD_JS = "/static/dist/dazzle-icons.min.js"
 _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 
 
@@ -142,8 +154,10 @@ def resolve_app_chrome(
     leaf_theme = env_theme or dsl_theme or manifest_theme
 
     # Default CSS / JS chain — framework bundle always first.
+    # #1276: lucide UMD precedes the framework bundle so window.lucide is
+    # defined before dazzle.min.js calls lucide.createIcons().
     css_links: list[str] = [_FRAMEWORK_BUNDLE_CSS]
-    js_scripts: list[str] = [_FRAMEWORK_BUNDLE_JS]
+    js_scripts: list[str] = [_LUCIDE_UMD_JS, _FRAMEWORK_BUNDLE_JS]
     font_preconnect: list[str] = []
     theme_map: dict[str, list[str]] = {}
 

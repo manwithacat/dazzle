@@ -18,7 +18,12 @@ class TestResolveAppChrome:
         chrome = resolve_app_chrome(None, project_root=None, manifest=None)
         assert isinstance(chrome, AppChrome)
         assert chrome.css_links == ("/static/dist/dazzle.min.css",)
-        assert chrome.js_scripts == ("/static/dist/dazzle.min.js",)
+        # #1276: lucide UMD precedes the framework bundle so window.lucide
+        # exists when dazzle.min.js calls lucide.createIcons().
+        assert chrome.js_scripts == (
+            "/static/dist/dazzle-icons.min.js",
+            "/static/dist/dazzle.min.js",
+        )
         assert chrome.theme is None
         assert chrome.theme_map == {}
         assert chrome.font_preconnect == ()
@@ -74,6 +79,26 @@ class TestResolveAppChrome:
         # theme=None (graceful degradation).
         chrome = resolve_app_chrome(appspec, project_root=None, manifest=manifest)
         assert chrome.theme is None  # failed resolution → None
+
+    def test_lucide_umd_precedes_framework_bundle_1276(self) -> None:
+        """#1276: data-lucide icons render invisible if dazzle.min.js
+        calls `lucide.createIcons()` before the lucide UMD bundle has
+        defined window.lucide. The script order must put lucide first."""
+        chrome = resolve_app_chrome(None, project_root=None, manifest=None)
+        lucide_idx = next(
+            (i for i, s in enumerate(chrome.js_scripts) if s.endswith("dazzle-icons.min.js")),
+            -1,
+        )
+        bundle_idx = next(
+            (i for i, s in enumerate(chrome.js_scripts) if s.endswith("/dazzle.min.js")),
+            -1,
+        )
+        assert lucide_idx >= 0, f"lucide UMD missing from js_scripts: {chrome.js_scripts}"
+        assert bundle_idx >= 0, f"framework bundle missing: {chrome.js_scripts}"
+        assert lucide_idx < bundle_idx, (
+            "lucide UMD must precede the framework bundle so window.lucide "
+            f"is defined before dazzle.min.js runs: {chrome.js_scripts}"
+        )
 
     def test_use_cdn_does_not_affect_default_urls(self) -> None:
         """v0.67.93: the use_cdn field is informational only — the
