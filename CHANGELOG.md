@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.14] - 2026-05-26
+
+### Notes
+
+- Re-trigger push only. GitHub Actions experienced a major outage between roughly 09:46–12:25 UTC on 2026-05-26 during which two of our pushes (the #1254 dependabot merge and the v0.78.13 ship) reached origin but did not fire any `push`-triggered workflows. Once Actions returned to operational status, the missed webhooks were not retroactively delivered, so this bump exists solely to force a fresh push event that exercises CI on the v0.78.13 fix (CodeQL #132).
+
 ## [0.78.13] - 2026-05-26
 
 ### Security
