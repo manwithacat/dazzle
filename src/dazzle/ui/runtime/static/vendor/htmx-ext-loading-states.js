@@ -1,189 +1,184 @@
-;(function () {
+(function() {
+  const loadingStatesUndoQueue = []
 
-	if (htmx.version && !htmx.version.startsWith("1.")) {
-		console.warn("WARNING: You are using an htmx 1 extension with htmx " + htmx.version +
-			".  It is recommended that you move to the version of this extension found on https://htmx.org/extensions")
-	}
+  function loadingStateContainer(target) {
+    return htmx.closest(target, '[data-loading-states]') || document.body
+  }
 
-	let loadingStatesUndoQueue = []
+  function mayProcessUndoCallback(target, callback) {
+    if (document.body.contains(target)) {
+      callback()
+    }
+  }
 
-	function loadingStateContainer(target) {
-		return htmx.closest(target, '[data-loading-states]') || document.body
-	}
+  function mayProcessLoadingStateByPath(elt, requestPath) {
+    const pathElt = htmx.closest(elt, '[data-loading-path]')
+    if (!pathElt) {
+      return true
+    }
 
-	function mayProcessUndoCallback(target, callback) {
-		if (document.body.contains(target)) {
-			callback()
-		}
-	}
+    return pathElt.getAttribute('data-loading-path') === requestPath
+  }
 
-	function mayProcessLoadingStateByPath(elt, requestPath) {
-		const pathElt = htmx.closest(elt, '[data-loading-path]')
-		if (!pathElt) {
-			return true
-		}
+  function queueLoadingState(sourceElt, targetElt, doCallback, undoCallback) {
+    const delayElt = htmx.closest(sourceElt, '[data-loading-delay]')
+    if (delayElt) {
+      const delayInMilliseconds =
+        delayElt.getAttribute('data-loading-delay') || 200
+      const timeout = setTimeout(function() {
+        doCallback()
 
-		return pathElt.getAttribute('data-loading-path') === requestPath
-	}
+        loadingStatesUndoQueue.push(function() {
+          mayProcessUndoCallback(targetElt, undoCallback)
+        })
+      }, delayInMilliseconds)
 
-	function queueLoadingState(sourceElt, targetElt, doCallback, undoCallback) {
-		const delayElt = htmx.closest(sourceElt, '[data-loading-delay]')
-		if (delayElt) {
-			const delayInMilliseconds =
-				delayElt.getAttribute('data-loading-delay') || 200
-			const timeout = setTimeout(function () {
-				doCallback()
+      loadingStatesUndoQueue.push(function() {
+        mayProcessUndoCallback(targetElt, function() { clearTimeout(timeout) })
+      })
+    } else {
+      doCallback()
+      loadingStatesUndoQueue.push(function() {
+        mayProcessUndoCallback(targetElt, undoCallback)
+      })
+    }
+  }
 
-				loadingStatesUndoQueue.push(function () {
-					mayProcessUndoCallback(targetElt, undoCallback)
-				})
-			}, delayInMilliseconds)
+  function getLoadingStateElts(loadingScope, type, path) {
+    return Array.from(htmx.findAll(loadingScope, '[' + type + ']')).filter(
+      function(elt) { return mayProcessLoadingStateByPath(elt, path) }
+    )
+  }
 
-			loadingStatesUndoQueue.push(function () {
-				mayProcessUndoCallback(targetElt, function () { clearTimeout(timeout) })
-			})
-		} else {
-			doCallback()
-			loadingStatesUndoQueue.push(function () {
-				mayProcessUndoCallback(targetElt, undoCallback)
-			})
-		}
-	}
+  function getLoadingTarget(elt) {
+    if (elt.getAttribute('data-loading-target')) {
+      return Array.from(
+        htmx.findAll(elt.getAttribute('data-loading-target'))
+      )
+    }
+    return [elt]
+  }
 
-	function getLoadingStateElts(loadingScope, type, path) {
-		return Array.from(htmx.findAll(loadingScope, "[" + type + "]")).filter(
-			function (elt) { return mayProcessLoadingStateByPath(elt, path) }
-		)
-	}
+  htmx.defineExtension('loading-states', {
+    onEvent: function(name, evt) {
+      if (name === 'htmx:beforeRequest') {
+        const container = loadingStateContainer(evt.target)
 
-	function getLoadingTarget(elt) {
-		if (elt.getAttribute('data-loading-target')) {
-			return Array.from(
-				htmx.findAll(elt.getAttribute('data-loading-target'))
-			)
-		}
-		return [elt]
-	}
+        const loadingStateTypes = [
+          'data-loading',
+          'data-loading-class',
+          'data-loading-class-remove',
+          'data-loading-disable',
+          'data-loading-aria-busy'
+        ]
 
-	htmx.defineExtension('loading-states', {
-		onEvent: function (name, evt) {
-			if (name === 'htmx:beforeRequest') {
-				const container = loadingStateContainer(evt.target)
+        const loadingStateEltsByType = {}
 
-				const loadingStateTypes = [
-					'data-loading',
-					'data-loading-class',
-					'data-loading-class-remove',
-					'data-loading-disable',
-					'data-loading-aria-busy',
-				]
+        loadingStateTypes.forEach(function(type) {
+          loadingStateEltsByType[type] = getLoadingStateElts(
+            container,
+            type,
+            evt.detail.pathInfo.requestPath
+          )
+        })
 
-				let loadingStateEltsByType = {}
+        loadingStateEltsByType['data-loading'].forEach(function(sourceElt) {
+          getLoadingTarget(sourceElt).forEach(function(targetElt) {
+            queueLoadingState(
+              sourceElt,
+              targetElt,
+              function() {
+                targetElt.style.display =
+                  sourceElt.getAttribute('data-loading') ||
+                  'inline-block'
+              },
+              function() { targetElt.style.display = 'none' }
+            )
+          })
+        })
 
-				loadingStateTypes.forEach(function (type) {
-					loadingStateEltsByType[type] = getLoadingStateElts(
-						container,
-						type,
-						evt.detail.pathInfo.requestPath
-					)
-				})
+        loadingStateEltsByType['data-loading-class'].forEach(
+          function(sourceElt) {
+            const classNames = sourceElt
+              .getAttribute('data-loading-class')
+              .split(' ')
 
-				loadingStateEltsByType['data-loading'].forEach(function (sourceElt) {
-					getLoadingTarget(sourceElt).forEach(function (targetElt) {
-						queueLoadingState(
-							sourceElt,
-							targetElt,
-							function () {
-								targetElt.style.display =
-									sourceElt.getAttribute('data-loading') ||
-									'inline-block' },
-							function () { targetElt.style.display = 'none' }
-						)
-					})
-				})
+            getLoadingTarget(sourceElt).forEach(function(targetElt) {
+              queueLoadingState(
+                sourceElt,
+                targetElt,
+                function() {
+                  classNames.forEach(function(className) {
+                    targetElt.classList.add(className)
+                  })
+                },
+                function() {
+                  classNames.forEach(function(className) {
+                    targetElt.classList.remove(className)
+                  })
+                }
+              )
+            })
+          }
+        )
 
-				loadingStateEltsByType['data-loading-class'].forEach(
-					function (sourceElt) {
-						const classNames = sourceElt
-							.getAttribute('data-loading-class')
-							.split(' ')
+        loadingStateEltsByType['data-loading-class-remove'].forEach(
+          function(sourceElt) {
+            const classNames = sourceElt
+              .getAttribute('data-loading-class-remove')
+              .split(' ')
 
-						getLoadingTarget(sourceElt).forEach(function (targetElt) {
-							queueLoadingState(
-								sourceElt,
-								targetElt,
-								function () {
-									classNames.forEach(function (className) {
-                                        targetElt.classList.add(className)
-                                    })
-                                },
-								function() {
-									classNames.forEach(function (className) {
-                                        targetElt.classList.remove(className)
-                                    })
-                                }
-							)
-						})
-					}
-				)
+            getLoadingTarget(sourceElt).forEach(function(targetElt) {
+              queueLoadingState(
+                sourceElt,
+                targetElt,
+                function() {
+                  classNames.forEach(function(className) {
+                    targetElt.classList.remove(className)
+                  })
+                },
+                function() {
+                  classNames.forEach(function(className) {
+                    targetElt.classList.add(className)
+                  })
+                }
+              )
+            })
+          }
+        )
 
-				loadingStateEltsByType['data-loading-class-remove'].forEach(
-					function (sourceElt) {
-						const classNames = sourceElt
-							.getAttribute('data-loading-class-remove')
-							.split(' ')
+        loadingStateEltsByType['data-loading-disable'].forEach(
+          function(sourceElt) {
+            getLoadingTarget(sourceElt).forEach(function(targetElt) {
+              queueLoadingState(
+                sourceElt,
+                targetElt,
+                function() { targetElt.disabled = true },
+                function() { targetElt.disabled = false }
+              )
+            })
+          }
+        )
 
-						getLoadingTarget(sourceElt).forEach(function (targetElt) {
-							queueLoadingState(
-								sourceElt,
-								targetElt,
-								function () {
-									classNames.forEach(function (className) {
-                                        targetElt.classList.remove(className)
-                                    })
-                                },
-								function() {
-									classNames.forEach(function (className) {
-                                        targetElt.classList.add(className)
-                                    })
-                                }
-							)
-						})
-					}
-				)
+        loadingStateEltsByType['data-loading-aria-busy'].forEach(
+          function(sourceElt) {
+            getLoadingTarget(sourceElt).forEach(function(targetElt) {
+              queueLoadingState(
+                sourceElt,
+                targetElt,
+                function() { targetElt.setAttribute('aria-busy', 'true') },
+                function() { targetElt.removeAttribute('aria-busy') }
+              )
+            })
+          }
+        )
+      }
 
-				loadingStateEltsByType['data-loading-disable'].forEach(
-					function (sourceElt) {
-						getLoadingTarget(sourceElt).forEach(function (targetElt) {
-							queueLoadingState(
-								sourceElt,
-								targetElt,
-								function() { targetElt.disabled = true },
-                                function() { targetElt.disabled = false }
-							)
-						})
-					}
-				)
-
-				loadingStateEltsByType['data-loading-aria-busy'].forEach(
-					function (sourceElt) {
-						getLoadingTarget(sourceElt).forEach(function (targetElt) {
-							queueLoadingState(
-								sourceElt,
-								targetElt,
-								function () { targetElt.setAttribute("aria-busy", "true") },
-								function () { targetElt.removeAttribute("aria-busy") }
-							)
-						})
-					}
-				)
-			}
-
-			if (name === 'htmx:beforeOnLoad') {
-				while (loadingStatesUndoQueue.length > 0) {
-					loadingStatesUndoQueue.shift()()
-				}
-			}
-		},
-	})
+      if (name === 'htmx:beforeOnLoad') {
+        while (loadingStatesUndoQueue.length > 0) {
+          loadingStatesUndoQueue.shift()()
+        }
+      }
+    }
+  })
 })()

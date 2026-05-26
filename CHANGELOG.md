@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.11] - 2026-05-26
+
+### Fixed
+
+- **#1277** — Every htmx-driven page logged `WARNING: You are using an htmx 1 extension with htmx 2.0.9` for `json-enc`, `preload`, `response-targets`, `loading-states`, and `sse`. `scripts/update_vendors.py` was fetching from `bigskysoftware/htmx` at `dist/ext/<name>.js` — the deprecated v1 extension directory that htmx 2.x preserves only for unversioned unpkg URLs. Re-pointed at `bigskysoftware/htmx-extensions` at `src/<name>/<name>.js` (the canonical v2 source repo), re-downloaded all five extensions, refreshed `scripts/vendor_hashes.json`, and rebuilt `dist/dazzle.min.js`. Consumer-facing `hx-ext="json-enc"` / `hx-ext="loading-states"` attributes are unchanged — the v2 packages register under the same extension names.
+
+### Agent Guidance
+
+- When `bigskysoftware/htmx` ships a v3+ in the future, the same pattern applies: extensions are versioned independently of htmx core and live in the separate `bigskysoftware/htmx-extensions` repo. Don't fetch from `htmx`'s `dist/ext/` — that path exists for legacy unpkg compatibility, not as a current source.
+- New `tests/unit/test_htmx_extensions_v2_clean.py` pins the invariant: no vendored extension file or built bundle may carry the `htmx 1 extension with htmx` warning fragment. If a future update_vendors.py change re-introduces the v1 path, this gate fires.
+
 ## [0.78.10] - 2026-05-26
 
 ### Fixed

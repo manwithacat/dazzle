@@ -228,21 +228,31 @@ def update_htmx(*, check_only: bool) -> None:
         data = _download(url)
         _save_vendor("htmx.min.js", data)
 
-    # Extensions from dist/ext/ on the release tag
+    # #1277: htmx 2.x extensions live in a separate canonical source repo
+    # (`bigskysoftware/htmx-extensions`), at `src/<name>/<name>.js`. The old
+    # path `bigskysoftware/htmx` at `dist/ext/<name>.js` is the deprecated
+    # v1 set (preserved only for unversioned unpkg URLs) and embeds a v1-
+    # version-check guard that fires the console warning "You are using an
+    # htmx 1 extension with htmx <version>" against htmx 2.x core. The new
+    # path tracks main (the htmx-extensions repo doesn't tag releases for
+    # individual extensions; per-extension versioning happens on npm).
     extensions = {
-        "json-enc.js": "htmx-ext-json-enc.js",
-        "preload.js": "htmx-ext-preload.js",
-        "response-targets.js": "htmx-ext-response-targets.js",
-        "loading-states.js": "htmx-ext-loading-states.js",
-        "sse.js": "htmx-ext-sse.js",
+        "json-enc": "htmx-ext-json-enc.js",
+        "preload": "htmx-ext-preload.js",
+        "response-targets": "htmx-ext-response-targets.js",
+        "loading-states": "htmx-ext-loading-states.js",
+        "sse": "htmx-ext-sse.js",
     }
-    for src_name, dest_name in extensions.items():
+    for ext_name, dest_name in extensions.items():
         url = GITHUB_RAW.format(
-            owner="bigskysoftware", repo="htmx", tag=tag, path=f"dist/ext/{src_name}"
+            owner="bigskysoftware",
+            repo="htmx-extensions",
+            tag="main",
+            path=f"src/{ext_name}/{ext_name}.js",
         )
         data = _download(url)
         _save_vendor(dest_name, data)
-        print(f"  downloaded {dest_name}")
+        print(f"  downloaded {dest_name} (v2 source from htmx-extensions)")
 
 
 def update_idiomorph(*, check_only: bool) -> None:
