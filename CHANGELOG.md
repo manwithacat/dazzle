@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.8] - 2026-05-26
+
+### Security
+
+- Pinned `fastapi != 0.136.3` in the three dependency sites (core, `[dev]`, `[serve]`). The 0.136.3 release (published 2026-05-23) modifies `pyproject.toml` to add an undocumented `fastar>=0.9.0` dep to the `[standard]` extras group — Amazon Inspector advisory `MAL-2026-4750`. We never take `fastapi[standard]` (only `uvicorn[standard]`), so a transitive-install dry-run confirms `fastar` is NOT in our actual resolved set; the practical code-execution risk for us today is zero. But `pip-audit --strict` red-blocks CI on the version itself, regardless of whether the malicious code path is reachable. The exclusion will be removed once upstream yanks 0.136.3 or ships a clean release.
+
+### Agent Guidance
+
+- When a new pip-audit / vulnerability finding lands, do the transitive-install check before deciding whether to pin: a flagged release that we don't actually transitively install via the exposed extras group is a CI-block, not a runtime risk. Pin defensively anyway (CI's the only gate that matters for ship discipline) — but the rationale is different, and the urgency is different.
+- For non-yanked malicious-grade upstream releases, prefer `!=X.Y.Z` over `<X.Y.Z`. The exclusion targets the specific bad artifact and leaves forward compatibility intact; a stronger pin would block a future legitimate 0.136.4. Re-evaluate when upstream yanks or fixes.
+
 ## [0.78.7] - 2026-05-26
 
 ### Fixed
