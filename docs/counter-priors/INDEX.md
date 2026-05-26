@@ -20,6 +20,7 @@ Entries are agent-scannable: each row is a counter-prior that prevents a wrong e
 - [god-entities](god-entities.md) — Single-entity-spans-everything modelling. Decompose through refs so RBAC, scope, and lifecycle match conceptual boundaries.
 - [hand-rolled-soft-delete](hand-rolled-soft-delete.md) — Manual `deleted_at` column + per-surface `scope: deleted_at = null`. Use the `soft_delete:` keyword (#1218); the substrate filters tombstones centrally.
 - [hand-rolled-temporal](hand-rolled-temporal.md) — Manual `start_date`/`end_date` + per-surface current-row scopes + custom as-of handlers. Use `temporal:` (#1223); keyword wires auto-filtering, uniqueness, URL param, and `latest_one` traversal.
+- [magic-string-typing](magic-string-typing.md) — bare `str` for identifier classes (`user_id: str`), status discriminators, or lookup keys. Pairs with `dazzle.types.NewType`, `enum.StrEnum`, and `PA-LLM-10`.
 - [n-plus-one-in-user-code](n-plus-one-in-user-code.md) — Naive ORM-shaped loops over related rows in `app/` code. Framework paths aggregate centrally; user code re-introduces N+1 unless explicitly batched.
 - [optional-instead-of-result](optional-instead-of-result.md) — `def f(...) -> T | None` collapsing multiple distinct failure modes into a single None sentinel. Pairs with `dazzle.result` and `PA-LLM-09`.
 - [polymorphic-associations](polymorphic-associations.md) — Rails-style `belongs_to :commentable, polymorphic: true` and `(subject_type, subject_id)` discriminator pairs. Closed by ADR-0027; pairs with the four-question interrogation.
