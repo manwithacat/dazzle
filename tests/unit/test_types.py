@@ -20,7 +20,7 @@ def test_newtype_type_name() -> None:
 def test_newtype_supertype() -> None:
     """The brand records its supertype for type-checker use."""
     UserId = NewType("UserId", str)
-    assert UserId.__supertype__ is str
+    assert UserId.__supertype__ is str  # type: ignore[attr-defined]
 
 
 def test_public_import_from_dazzle_types() -> None:
