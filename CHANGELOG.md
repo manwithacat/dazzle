@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.7] - 2026-05-26
+
+### Fixed
+
+- **#1265** — `test_propose_patterns_1249.py` no longer flakes under the full pytest suite. Root cause: `seed_framework_knowledge` stored only `description` and `example` in KG pattern metadata, dropping `triggers` and `category`. `_propose_patterns` reads `entry.get("triggers")` from the KG-derived patterns dict, so once any earlier test initialised the global KG, the proposer matched against an empty trigger list and returned zero proposals. In isolation, the KG was uninitialised and the TOML fallback ran with the full trigger arrays, masking the bug. Two-layer fix: (1) seed `triggers` and `category` into KG metadata; (2) `get_dsl_patterns()` falls back to TOML when the KG-derived patterns dict is empty (defense in depth).
+- Bumped `SEED_SCHEMA_VERSION` 19 → 20 so existing project KG databases re-seed with the new metadata on next `ensure_seeded()` call.
+
+### Agent Guidance
+
+- When seeding entities into the KG from a TOML source-of-truth, mirror every field the runtime reads — not just human-readable fields like `description`. The KG-vs-TOML round-trip should be transparent; missing fields manifest as "works in isolation, breaks in full suite" flakes.
+- Bump `SEED_SCHEMA_VERSION` (in `src/dazzle/mcp/knowledge_graph/seed.py`) whenever the seed mapping changes shape, so existing project KGs re-seed automatically. The new value is shown in the CHANGELOG entry that introduced the change.
+
 ## [0.78.6] - 2026-05-26
 
 ### Changed

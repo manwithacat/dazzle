@@ -470,10 +470,18 @@ def get_dsl_patterns() -> dict[str, Any]:
 
     Returns:
         Dictionary of pattern names to their definitions and examples
+
+    #1265: falls back to the TOML loader if the KG-derived patterns dict
+    is empty (e.g. a partially-initialised KG from a polluting test).
+    The TOML loader is the canonical source — `patterns.toml` lives on
+    disk and never changes between test runs — so the fallback is safe.
     """
     index = get_semantic_index()
+    patterns = index["patterns"]
+    if not patterns:
+        patterns = _load_semantic_data()["patterns"]
     return {
-        "patterns": index["patterns"],
+        "patterns": patterns,
         "hint": "Each pattern includes a complete, copy-paste ready example",
     }
 
