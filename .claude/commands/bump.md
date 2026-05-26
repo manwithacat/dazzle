@@ -52,6 +52,7 @@ Bump the project's semantic version. The user may specify a bump level as an arg
 
 4. **Update CHANGELOG.md** following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventions. This is the only step that needs structured logic, so use the Edit tool here:
    - Read `CHANGELOG.md` and find the `## [Unreleased]` section.
+   - **Drift guard (#1259):** if the Unreleased section already carries content from a previous commit that *didn't* run `/bump` (i.e. it's not just the work you're about to bundle into this release), **stop and warn** rather than swallowing it into this version. The v0.72–v0.74 cycle accumulated ~200 lines of orphaned entries under Unreleased because multiple commits shipped without bumps; backfilling them later required a separate hygiene pass. A rough heuristic: if Unreleased has entries that span multiple unrelated themes / multiple `### ` subsections referencing distinct issue numbers, ask the user whether to (a) bundle them all into this version, (b) backfill them to past versions first, or (c) split this bump into multiple targeted versions.
    - If the Unreleased section has content (entries under Added/Changed/Deprecated/Fixed/Removed/Security):
      1. Insert a new heading `## [X.Y.Z] - YYYY-MM-DD` (today's date) immediately after the Unreleased section heading's blank line.
      2. Move **all** subsection headings and entries from Unreleased under the new version heading.

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.16] - 2026-05-27
+
+### Changed
+
+- **#1259** — Backfilled the `[Pre-0.75 unreleased drift — needs version attribution]` quarantine section in CHANGELOG.md into proper dated headings. The block contained ~200 lines of entries that accumulated under `[Unreleased]` during the v0.72-v0.74 cycle without being promoted on each bump; each entry was cross-referenced against `git log` between the surrounding tags and re-homed to the version it actually shipped in. Mapping: DNR docstring sweep → v0.74.4; live MCP tool inventory + v0.74.2 recovery note → v0.74.3; README substrate framing + Jinja2 cleanup → v0.74.1; counter-prior catalogue → v0.74.0; single-instance MCP guard + all the #1229-#1251 cluster → v0.73.0. v0.74.2 has no dedicated heading by design (the tag was miscut against the v0.74.1 SHA; the actual content shipped as v0.74.3).
+- **`.claude/commands/bump.md`** gained a drift guard in step 4: if `[Unreleased]` already carries content from previous unbumped commits that's unrelated to the current bundle, the bump stops and prompts the user instead of silently merging multi-theme drift into a single version. Closes the failure mode that produced the v0.72-v0.74 quarantine in the first place.
+
 ## [0.78.15] - 2026-05-27
 
 ### Fixed
@@ -222,9 +229,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Pre-0.75 unreleased drift — needs version attribution]
-
-The entries below accumulated under Unreleased through the v0.72-v0.74 cycle without being promoted to dated headings. Left in place as a known CHANGELOG-hygiene issue for a separate cleanup pass.
+## [0.74.4] - 2026-05-25
 
 ### Changed — DNR docstring sweep across source files + api-reference regeneration
 
@@ -232,6 +237,8 @@ The entries below accumulated under Unreleased through the v0.72-v0.74 cycle wit
 - **JS API surface PRESERVED.** `src/dazzle/ui/runtime/realtime_client.py` emits browser JavaScript that uses `global.DNR` / `window.DNR` / `DNRRealtime` / `DNR.createRealtimeClient` as load-bearing identifiers — the `dnr-ui/` browser-side runtime module defines `const DNR = {...}` and assigns it to `window.DNR`. Renaming those JS identifiers would break consumers, so they're left in place. Only the Python module docstring + the JS-emission section labels are rewritten; everything that crosses into the generated JS keeps the `DNR` namespace name.
 - **`scripts/reference_docs.config.json` cleaned of dead include paths.** The config still listed `src/dazzle_back/**/*.py` and `src/dazzle_ui/**/*.py` (paths that haven't existed since the package moved inside `src/dazzle/`). Pruned to the live paths.
 - **Orphan api-reference pages pruned.** 293 `*.py.md` entries pointed at source files that have been moved or deleted; deleted. Two orphan module summaries (`modules/dazzle_back.md`, `modules/dazzle_ui.md`) linking to non-existent `src/dazzle_back/**` paths also removed — they were the source of 171 mkdocs strict-mode broken-link warnings. `mkdocs build --strict` is clean again.
+
+## [0.74.3] - 2026-05-25
 
 ### Fixed — re-cut v0.74.2 as v0.74.3
 
@@ -246,6 +253,8 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 - **Package-path refresh: `src/dazzle_back/` → `src/dazzle/back/`, `src/dazzle_ui/` → `src/dazzle/ui/`.** The package was moved inside the main `dazzle` namespace; docs hadn't caught up. Swept across `docs/llms.txt`, `docs/CSS_MIGRATION_GUIDE.md`, `docs/typed-fragment-pilot-guide.md`, every ADR that mentioned the old paths (0005, 0008, 0011, 0012, 0014, 0017, 0021, 0022), `docs/contributing/*.md`, `docs/guides/marketing-conformance.md`, `docs/reference/card-safety-invariants.md`, the recent counter-priors, and the doc-infra plan.
 - **Tests**: `test_docs_gen.py` updated for 21 pages (added `mcp-tools`); two new tests pin the `auto_source` shape (`test_mcp_tools_page_is_auto_source`) and the registry-derived count (`test_inventory_counts_match_registry`).
 
+## [0.74.1] - 2026-05-25
+
 ### Added — README substrate framing + docs Jinja2 → typed Fragments cleanup + prose-page TOML migration
 
 - **README.md** — new section "The substrate: three layers of prior correction" between *The thesis* and *Design principles*. Explains grammar-restriction / inference-bias / post-hoc-filter and points readers at `docs/counter-priors/INDEX.md`.
@@ -253,6 +262,8 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 - **Jinja2 → typed Fragments docs sweep** — `docs/philosophy.md`, `docs/adr/INDEX.md`, `docs/adr/0011-ssr-htmx.md` (status-banner pointing at ADR-0023), `docs/guides/scaling.md`, `docs/guides/security.md`, `docs/guides/agent-upgrade-guide-v0.51.md`, `docs/architecture/overview.md`, `docs/reference/htmx-templates.md` (status-banner), `docs/reference/index.md`, `docs/reference/frontend.md`, `docs/plans/2026-03-09-documentation-infrastructure-plan.md`, `.claude/CLAUDE.md` (path table + UI runtime description). Source-of-truth edits in `src/dazzle/mcp/semantics_kb/doc_pages.toml` (frontend intro) and `src/dazzle/mcp/semantics_kb/frontend.toml` (`templates` concept definition + syntax). Post-#1042 Jinja2 is no longer a dependency; SSR is now the typed Fragment substrate.
 - **`docs_gen.py` extended with prose pages** — `[pages.X]` entries in `doc_pages.toml` now support an optional `body = '''...'''` field. When set, the page body is the TOML literal; concept assembly is skipped. The three previously-hand-maintained reference pages (`rhythms`, `graphs`, `compliance`) — 1100+ lines of prose, tables, and worked examples — migrated into `doc_pages.toml` as prose pages so that **every** reference doc is now derivable from TOML. `check_docs_coverage` skips the "no concepts" error for prose pages.
 - **Tests**: `tests/unit/test_docs_gen.py` updated to expect 20 pages (was 17) and to assert that the three prose pages declare non-empty `body` fields.
+
+## [0.74.0] - 2026-05-25
 
 ### Added — counter-prior catalogue (`docs/counter-priors/`)
 
@@ -270,6 +281,8 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 - Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell), call `knowledge counter_prior code_shape="<one-sentence description>"` and check matches before writing. The bootstrap path already surfaces antipattern flags from the catalogue; the explicit call is for everything outside the bootstrap moment.
 - Adding a new counter-prior: write `docs/counter-priors/<kebab-id>.md` with frontmatter (id matching the filename in snake_case), the four mandatory sections, and at least one trigger. Bump `SEED_SCHEMA_VERSION`. Add a one-line entry to INDEX.md. The drift test enforces all four conditions.
 - The `feedback_*_antipattern*.md` memory files are now redirect stubs — don't write antipattern content there; write it in the markdown catalogue. The memory pointers exist for back-references from older memories.
+
+## [0.73.0] - 2026-05-25
 
 ### Added — single-instance guard for `dazzle mcp run`
 
