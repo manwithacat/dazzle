@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
+import shutil
+import tempfile
+from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 import typer
+
+from dazzle.qa.signing_seed import (
+    SeededDoc,
+    SigningSeedContext,
+    mint_ephemeral_cert_env,
+    write_mock_inbox,
+)
+from dazzle.qa.signing_tools import build_signing_tools
+from dazzle.qa.signing_verifier import SigningOutcome, verify_signing_outcome
+from dazzle.signing.tokens import mint_token
 
 qa_app = typer.Typer(
     help="QA toolkit — visual quality evaluation and screenshot capture.",
@@ -296,6 +310,149 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     return True
 
 
+def _provision_signing_env(
+    app_spec: Any,
+    tmp_root: Path,
+    *,
+    project_name: str,
+) -> SigningSeedContext | None:
+    """Mint ephemeral cert + token secret if the app has any signable entity.
+
+    Returns a :class:`~dazzle.qa.signing_seed.SigningSeedContext` with the
+    generated env vars and an empty inbox stub, or ``None`` when no signable
+    entity exists.  The caller is responsible for merging ``ctx.env`` into
+    ``os.environ`` before booting the server subprocess.
+    """
+    if not app_spec.has_signable_entity():
+        return None
+    env = mint_ephemeral_cert_env(tmp_root, project_name=project_name)
+    inbox_path = tmp_root / "mock_inbox.json"
+    inbox_path.write_text("[]")
+    return SigningSeedContext(env=env, inbox_path=inbox_path, seeded_docs=[])
+
+
+def _insert_seed_row(*, entity_name: str, base_url: str, signatory_email: str) -> str:
+    """Insert one seed row for *entity_name* via the runtime API.
+
+    Posts only the fields that are common to all signable entities defined
+    by the trial harness (``signatory_email`` + ``status``), plus a set of
+    generic string fields that cover both ``EngagementLetter`` and
+    ``SlaWaiver``.  Fields unknown to a given entity are silently ignored
+    by the API.
+
+    Returns the new row's ``id`` (UUID string).
+    Raises ``httpx.HTTPStatusError`` on non-2xx responses — the caller
+    will surface the failure in the trial run.
+    """
+    import httpx
+
+    # Payload covers fields used by EngagementLetter + SlaWaiver +
+    # the minimal fixture TestDoc.  Entity-specific required fields not
+    # present here will cause a 422; that's an acceptable loud failure
+    # (Task 11 integration tests cover these flows end-to-end).
+    payload: dict[str, Any] = {
+        "signatory_email": signatory_email,
+        "signatory_name": "Trial Signatory",
+        "status": "sent",
+        # EngagementLetter fields
+        "party": "Trial Counterparty Ltd",
+        "scope_summary": "Trial-harness seed row.",
+        "effective_date": "2026-05-28",
+        # SlaWaiver fields
+        "breach_summary": "Trial-harness seed row.",
+        "waiver_terms": "Accepted for trial purposes.",
+        "signatory_role": "Authorised Signatory",
+        # TestDoc fields
+        "body": "Trial-harness seed body.",
+    }
+    resp = httpx.post(f"{base_url}/api/{entity_name}", json=payload, timeout=10.0)
+    resp.raise_for_status()
+    return str(resp.json()["id"])
+
+
+def _seed_signable_rows(*, app_spec: Any, base_url: str, signatory_email: str) -> list[SeededDoc]:
+    """For each signable entity in *app_spec*, insert one row + mint a token.
+
+    Returns a list of :class:`~dazzle.qa.signing_seed.SeededDoc` objects
+    (one per signable entity) ready to write into the mock inbox.
+    """
+    docs: list[SeededDoc] = []
+    for entity in app_spec.domain.entities:
+        if not getattr(entity, "signable", False):
+            continue
+        row_id = _insert_seed_row(
+            entity_name=entity.name,
+            base_url=base_url,
+            signatory_email=signatory_email,
+        )
+        token = mint_token(record_id=row_id, email=signatory_email)
+        docs.append(
+            SeededDoc(
+                entity=entity.name,
+                id=row_id,
+                token=token,
+                signing_url=f"{base_url}/sign/{entity.name}/{row_id}?token={token}",
+                signatory_email=signatory_email,
+            )
+        )
+    return docs
+
+
+def _build_db_reader(project_dir: Path) -> Callable[[str, str], dict[str, Any] | None]:
+    """Return a callable that reads (entity, id) from the runtime Postgres DB.
+
+    Reads the ``DATABASE_URL`` env var (set by the trial server subprocess
+    environment) to obtain the DSN.  Passes silently when the env var is
+    absent — ``None`` rows are treated as harness errors by the verifier.
+    """
+    import psycopg
+    import psycopg.rows
+
+    dsn = os.environ.get("DATABASE_URL", "")
+
+    def _read(entity: str, row_id: str) -> dict[str, Any] | None:
+        if not dsn:
+            return None
+        # Use psycopg.sql.Identifier to safely quote the table name —
+        # parameterised queries cannot bind table names directly, but
+        # psycopg's Identifier class escapes the identifier correctly and
+        # prevents SQL injection (the entity name comes from the AppSpec IR,
+        # but we still want the scan to be clean).
+        from psycopg import sql
+
+        query = sql.SQL("SELECT * FROM {} WHERE id = %s").format(sql.Identifier(entity))
+        with psycopg.connect(dsn) as conn:
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                cur.execute(query, (row_id,))  # nosemgrep
+                return cur.fetchone()
+
+    return _read
+
+
+def _pyhanko_validator(pdf_path: str) -> dict[str, Any]:
+    """Validate a PAdES PDF signature via pyhanko.
+
+    Thin wrapper — raises ``ImportError`` if pyhanko is absent (callers
+    treat that as a ``{"valid": False, "error": ...}`` result via the
+    verifier's try/except guard).
+    """
+    from pyhanko.pdf_utils.reader import PdfFileReader
+    from pyhanko.sign.validation import validate_pdf_signature
+    from pyhanko_certvalidator.context import ValidationContext
+
+    with open(pdf_path, "rb") as fh:
+        reader = PdfFileReader(fh)
+        sig = reader.embedded_signatures[0]
+        status = validate_pdf_signature(sig, ValidationContext())
+    return {
+        "valid": bool(status.intact and status.valid),
+        "embedded_timestamp": (
+            str(status.timestamp_validity) if status.timestamp_validity else None
+        ),
+        "summary": status.pretty_print_details(),  # type: ignore[no-untyped-call]
+    }
+
+
 def _reset_db_for_trial(project_dir: Path) -> None:
     """Truncate entity tables before a trial run (#810).
 
@@ -483,6 +640,7 @@ def qa_trial(
     from dazzle.agent.missions.trial import build_trial_mission
     from dazzle.agent.observer import PlaywrightObserver
     from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+    from dazzle.cli.utils import load_project_appspec
     from dazzle.qa.trial_report import build_trial_report, render_trial_report
     from dazzle.testing.ux.interactions.server_fixture import launch_interaction_server
 
@@ -535,12 +693,43 @@ def qa_trial(
     if fresh_db:
         _reset_db_for_trial(project_dir)
 
+    # Load appspec to check for signable entities.  A load failure is
+    # non-fatal for the trial itself — signing features are disabled when
+    # appspec cannot be read.
+    try:
+        _trial_appspec = load_project_appspec(project_dir)
+    except Exception as _appspec_exc:
+        typer.echo(
+            f"Note: could not load appspec for signing check ({_appspec_exc}); "
+            "signing trial harness disabled for this run.",
+            err=True,
+        )
+        _trial_appspec = None
+
+    # Provision ephemeral cert + token secret when the app has signable entities.
+    # The tmp_root scratch dir is always created so the finally block is
+    # unconditional (avoids a NameError if the Playwright import fails).
+    tmp_root = Path(tempfile.mkdtemp(prefix="dazzle-trial-signing-"))
+    seed_ctx: SigningSeedContext | None = None
+    if _trial_appspec is not None:
+        seed_ctx = _provision_signing_env(
+            _trial_appspec,
+            tmp_root,
+            project_name=getattr(_trial_appspec, "name", None) or project_dir.name,
+        )
+    if seed_ctx is not None:
+        # Inject signing env into this process so the server subprocess
+        # (launched by launch_interaction_server) inherits them.
+        os.environ.update(seed_ctx.env)
+        typer.echo("Signing trial harness: ephemeral cert provisioned.")
+
     transcript_sink: dict[str, list[dict[str, Any]]] = {"friction": [], "verdict": []}
     started_at = time.monotonic()
 
     try:
         from playwright.async_api import async_playwright
     except ImportError as exc:
+        shutil.rmtree(tmp_root, ignore_errors=True)
         typer.echo(
             "Playwright is not installed. Install with: pip install 'dazzle-dsl[e2e]' "
             "or pip install 'playwright>=1.40'",
@@ -548,92 +737,133 @@ def qa_trial(
         )
         raise typer.Exit(code=2) from exc
 
-    with launch_interaction_server(project_dir) as conn:
-        site_url = conn.site_url
-        try:
-            test_secret_val = read_runtime_test_secret(project_dir) or ""
-        except Exception:
-            test_secret_val = ""
+    try:
+        with launch_interaction_server(project_dir) as conn:
+            site_url = conn.site_url
+            try:
+                test_secret_val = read_runtime_test_secret(project_dir) or ""
+            except Exception:
+                test_secret_val = ""
 
-        if fresh_db:
-            seed_ok = _seed_demo_data_for_trial(project_dir, site_url, test_secret_val)
-            if not seed_ok:
-                # #1077: seed helper hard-aborted on blueprint drift.
-                # Without this guard the outer flow would continue and
-                # run the LLM agent against an empty DB, producing a
-                # misleading "I cannot recommend this app" verdict that
-                # is actually about data emptiness, not framework UX.
-                typer.echo(
-                    "Trial aborted: blueprint drift detected. "
-                    "Fix the blueprint and re-run (no LLM agent dispatched).",
-                    err=True,
-                )
-                raise typer.Exit(code=3)
-
-        async def _run_trial() -> tuple[Any, Any]:
-            """Full async path: start browser, authenticate via POST +
-            add_cookies, run the agent, tear down. PlaywrightObserver
-            expects an async page, so this all has to live under the
-            same event loop."""
-            import httpx
-
-            async with async_playwright() as pw:
-                browser = await pw.chromium.launch(headless=headless)
-                context = await browser.new_context()
-
-                # Authenticate via the /__test__/ endpoint (same
-                # protocol _authenticate_persona_on_context uses,
-                # but awaitable).
-                headers = {"X-Test-Secret": test_secret_val} if test_secret_val else {}
-                async with httpx.AsyncClient() as http:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
-                    resp = await http.post(
-                        f"{site_url}/__test__/authenticate",
-                        json={"role": login_persona, "username": login_persona},
-                        headers=headers,
-                        timeout=10,
-                    )
-                if resp.status_code != 200:
+            if fresh_db:
+                seed_ok = _seed_demo_data_for_trial(project_dir, site_url, test_secret_val)
+                if not seed_ok:
+                    # #1077: seed helper hard-aborted on blueprint drift.
+                    # Without this guard the outer flow would continue and
+                    # run the LLM agent against an empty DB, producing a
+                    # misleading "I cannot recommend this app" verdict that
+                    # is actually about data emptiness, not framework UX.
                     typer.echo(
-                        f"[auth] /__test__/authenticate returned {resp.status_code} "
-                        f"(body: {resp.text[:200]!r}). Persona {login_persona!r} may "
-                        f"not be a valid role, or test-mode may be disabled.",
+                        "Trial aborted: blueprint drift detected. "
+                        "Fix the blueprint and re-run (no LLM agent dispatched).",
                         err=True,
                     )
-                    await browser.close()
-                    raise typer.Exit(code=2)
-                token = resp.json().get("session_token") or resp.json().get("token") or ""
-                if token:
-                    await context.add_cookies(
-                        [{"name": "dazzle_session", "value": token, "url": site_url}]
+                    raise typer.Exit(code=3)
+
+            # Seed one signing row per signable entity, then build the
+            # persona-facing signing tools.  This happens after the demo-data
+            # seed so the runtime API is fully responsive.
+            signing_action_sink: dict[str, Any] = {}
+            signing_tools_list: list[Any] = []
+            if seed_ctx is not None and _trial_appspec is not None:
+                try:
+                    seeded = _seed_signable_rows(
+                        app_spec=_trial_appspec,
+                        base_url=site_url,
+                        signatory_email="trial-signatory@example.com",
                     )
+                    seed_ctx = SigningSeedContext(
+                        env=seed_ctx.env,
+                        inbox_path=seed_ctx.inbox_path,
+                        seeded_docs=seeded,
+                    )
+                    write_mock_inbox(tmp_root, seeded)
+                    signing_tools_list = build_signing_tools(
+                        base_url=site_url,
+                        inbox_path=seed_ctx.inbox_path,
+                        seeded_docs=seeded,
+                        action_sink=signing_action_sink,
+                    )
+                    typer.echo(
+                        f"Signing trial harness: {len(seeded)} doc(s) seeded, "
+                        f"{len(signing_tools_list)} signing tool(s) registered."
+                    )
+                except Exception as _seed_exc:
+                    typer.echo(
+                        f"Signing row seed failed ({_seed_exc}); "
+                        "signing tools disabled for this run.",
+                        err=True,
+                    )
+                    signing_tools_list = []
 
-                page = await context.new_page()
-                observer_inner = PlaywrightObserver(
-                    page,
-                    include_screenshots=False,
-                    capture_console=True,
-                )
-                executor_inner = PlaywrightExecutor(page)
-                agent_inner = DazzleAgent(
-                    observer=observer_inner,
-                    executor=executor_inner,
-                    model=model,
-                    use_tool_calls=True,
-                )
-                mission_inner = build_trial_mission(
-                    chosen,
-                    base_url=site_url,
-                    transcript_sink=transcript_sink,
-                )
-                typer.echo(
-                    f"Starting trial — up to {mission_inner.max_steps} steps, "
-                    f"budget {mission_inner.token_budget:,} tokens"
-                )
-                t = await agent_inner.run(mission_inner)
-                await browser.close()
-                return t, mission_inner
+            async def _run_trial() -> tuple[Any, Any]:
+                """Full async path: start browser, authenticate via POST +
+                add_cookies, run the agent, tear down. PlaywrightObserver
+                expects an async page, so this all has to live under the
+                same event loop."""
+                import httpx
 
-        transcript, _mission = asyncio.run(_run_trial())
+                async with async_playwright() as pw:
+                    browser = await pw.chromium.launch(headless=headless)
+                    context = await browser.new_context()
+
+                    # Authenticate via the /__test__/ endpoint (same
+                    # protocol _authenticate_persona_on_context uses,
+                    # but awaitable).
+                    headers = {"X-Test-Secret": test_secret_val} if test_secret_val else {}
+                    async with httpx.AsyncClient() as http:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+                        resp = await http.post(
+                            f"{site_url}/__test__/authenticate",
+                            json={"role": login_persona, "username": login_persona},
+                            headers=headers,
+                            timeout=10,
+                        )
+                    if resp.status_code != 200:
+                        typer.echo(
+                            f"[auth] /__test__/authenticate returned {resp.status_code} "
+                            f"(body: {resp.text[:200]!r}). Persona {login_persona!r} may "
+                            f"not be a valid role, or test-mode may be disabled.",
+                            err=True,
+                        )
+                        await browser.close()
+                        raise typer.Exit(code=2)
+                    token = resp.json().get("session_token") or resp.json().get("token") or ""
+                    if token:
+                        await context.add_cookies(
+                            [{"name": "dazzle_session", "value": token, "url": site_url}]
+                        )
+
+                    page = await context.new_page()
+                    observer_inner = PlaywrightObserver(
+                        page,
+                        include_screenshots=False,
+                        capture_console=True,
+                    )
+                    executor_inner = PlaywrightExecutor(page)
+                    agent_inner = DazzleAgent(
+                        observer=observer_inner,
+                        executor=executor_inner,
+                        model=model,
+                        use_tool_calls=True,
+                    )
+                    mission_inner = build_trial_mission(
+                        chosen,
+                        base_url=site_url,
+                        transcript_sink=transcript_sink,
+                        signing_tools=signing_tools_list or None,
+                    )
+                    typer.echo(
+                        f"Starting trial — up to {mission_inner.max_steps} steps, "
+                        f"budget {mission_inner.token_budget:,} tokens"
+                    )
+                    t = await agent_inner.run(mission_inner)
+                    await browser.close()
+                    return t, mission_inner
+
+            transcript, _mission = asyncio.run(_run_trial())
+
+    finally:
+        shutil.rmtree(tmp_root, ignore_errors=True)
 
     duration_s = time.monotonic() - started_at
 
@@ -659,6 +889,25 @@ def qa_trial(
         if verdict:
             verdict = f"(synthesized from recorded friction — agent ran out of steps)\n\n{verdict}"
 
+    # Post-run signing verification — only when the persona actually
+    # interacted with a signing link (detected via action_sink).
+    signing_outcome: SigningOutcome | None = None
+    if seed_ctx is not None and signing_action_sink.get("invoked"):
+        try:
+            db_reader = _build_db_reader(project_dir)
+            signing_outcome = verify_signing_outcome(
+                action_sink=signing_action_sink,
+                seeded_docs=seed_ctx.seeded_docs,
+                db_reader=db_reader,
+                pdf_validator=_pyhanko_validator,
+            )
+        except Exception as _verify_exc:
+            typer.echo(
+                f"Signing outcome verification failed ({_verify_exc}); "
+                "signing_outcomes block omitted from report.",
+                err=True,
+            )
+
     report = build_trial_report(
         scenario_name=scenario_name,
         user_identity=chosen.get("user_identity", ""),
@@ -668,6 +917,7 @@ def qa_trial(
         duration_seconds=duration_s,
         tokens_used=transcript.tokens_used,
         outcome=transcript.outcome,
+        signing_outcome=signing_outcome,
     )
     rendered = render_trial_report(report)
 
