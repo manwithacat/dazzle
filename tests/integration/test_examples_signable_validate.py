@@ -49,3 +49,22 @@ def test_contact_manager_engagement_letter_entity_inspectable():
     assert "EngagementLetter" in result.stdout, (
         f"EngagementLetter not found in inspect output:\n{result.stdout}"
     )
+
+
+def test_support_tickets_validates_with_sla_waiver():
+    project_dir = EXAMPLES / "support_tickets"
+    result = _run_validate(project_dir)
+    assert result.returncode == 0, (
+        f"dazzle validate failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
+    assert "SlaWaiver" in result.stdout + result.stderr
+
+
+def test_support_tickets_sla_waiver_entity_inspectable():
+    project_dir = EXAMPLES / "support_tickets"
+    result = _run_inspect_entity(project_dir, "SlaWaiver")
+    assert result.returncode == 0, (
+        f"dazzle inspect project --entity SlaWaiver failed:\n"
+        f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
+    assert "SlaWaiver" in result.stdout, f"SlaWaiver not found in inspect output:\n{result.stdout}"
