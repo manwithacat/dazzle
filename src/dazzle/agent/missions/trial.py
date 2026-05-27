@@ -330,6 +330,7 @@ def build_trial_mission(
     transcript_sink: dict[str, list[dict[str, Any]]],
     max_steps: int | None = None,
     token_budget: int = 200_000,
+    signing_tools: list[AgentTool] | None = None,
 ) -> Mission:
     """Build a :class:`Mission` for a qualitative trial.
 
@@ -345,6 +346,9 @@ def build_trial_mission(
             ``transcript_sink["verdict"]`` after the run.
         max_steps: Override the scenario's ``max_steps`` budget.
         token_budget: LLM token budget for the run.
+        signing_tools: When provided, the trial driver registers these
+            alongside the baseline tools (used by the signing trial
+            harness when the app has any ``signable: true`` entity).
     """
     user_identity = scenario.get("user_identity", "").strip()
     business_context = scenario.get("business_context", "").strip()
@@ -384,13 +388,17 @@ def build_trial_mission(
         wrap_up_at=wrap_up_at,
     )
 
+    base_tools = [
+        _make_record_friction_tool(transcript_sink),
+        _make_submit_verdict_tool(transcript_sink),
+    ]
+    if signing_tools:
+        base_tools.extend(signing_tools)
+
     return Mission(
         name=f"trial:{scenario.get('name', 'unnamed')}",
         system_prompt=system_prompt,
-        tools=[
-            _make_record_friction_tool(transcript_sink),
-            _make_submit_verdict_tool(transcript_sink),
-        ],
+        tools=base_tools,
         completion_criteria=_trial_completion,
         max_steps=effective_max_steps,
         token_budget=token_budget,
