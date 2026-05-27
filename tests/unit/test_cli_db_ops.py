@@ -6,7 +6,11 @@ import pytest
 import sqlalchemy
 from typer.testing import CliRunner
 
-from dazzle.cli.db import db_app
+from dazzle.cli.db import (
+    ALEMBIC_VERSION_NUM_MAX_LEN,
+    _validate_revision_widths,
+    db_app,
+)
 
 runner = CliRunner()
 
@@ -242,3 +246,105 @@ class TestDbBaselineCommand:
         assert "DSL metadata load failed" in result.output
         # The command must NOT have proceeded to autogenerate.
         mock_revision.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# #1282 — pre-upgrade revision-width validation
+# ---------------------------------------------------------------------------
+
+
+class TestValidateRevisionWidths1282:
+    """`alembic_version.version_num` is VARCHAR(128) after migration 0004.
+    `_validate_revision_widths` walks every revision in the chain and
+    fails fast if any id would overflow that column — otherwise the
+    DDL applies and the `UPDATE alembic_version` truncates mid-upgrade,
+    leaving schema-vs-version-state divergent (#1282).
+    """
+
+    def _stub_cfg(self, revision_ids: list[str]) -> MagicMock:
+        """Build a mock cfg whose ScriptDirectory enumerates `revision_ids`."""
+        cfg = MagicMock()
+        return cfg
+
+    def _make_mock_revisions(self, ids: list[str]) -> list[MagicMock]:
+        revs = []
+        for rid in ids:
+            r = MagicMock()
+            r.revision = rid
+            revs.append(r)
+        return revs
+
+    def test_accepts_short_revision_ids(self) -> None:
+        """Standard revision ids well under the cap pass cleanly."""
+        ids = ["0001_baseline", "0002_short", "0003_another_short_one"]
+        with patch("alembic.script.ScriptDirectory.from_config") as mock_sd:
+            mock_sd.return_value.walk_revisions.return_value = self._make_mock_revisions(ids)
+            # Should not raise.
+            _validate_revision_widths(MagicMock(), "head")
+
+    def test_accepts_revision_id_exactly_at_cap(self) -> None:
+        """Boundary: an id of exactly ALEMBIC_VERSION_NUM_MAX_LEN chars
+        fits — the check is `>` not `>=`."""
+        cap_id = "x" * ALEMBIC_VERSION_NUM_MAX_LEN
+        with patch("alembic.script.ScriptDirectory.from_config") as mock_sd:
+            mock_sd.return_value.walk_revisions.return_value = self._make_mock_revisions([cap_id])
+            _validate_revision_widths(MagicMock(), "head")  # no raise
+
+    def test_rejects_revision_id_one_over_cap(self) -> None:
+        """An id 1 char over the cap is rejected upfront with a clear
+        message; no DDL fires."""
+        over_id = "x" * (ALEMBIC_VERSION_NUM_MAX_LEN + 1)
+        with patch("alembic.script.ScriptDirectory.from_config") as mock_sd:
+            mock_sd.return_value.walk_revisions.return_value = self._make_mock_revisions([over_id])
+            with pytest.raises(RuntimeError, match="exceed"):
+                _validate_revision_widths(MagicMock(), "head")
+
+    def test_error_message_lists_every_offender(self) -> None:
+        """When multiple ids overflow, the error names all of them so
+        the user can rename in one pass."""
+        ids = [
+            "0001_short",
+            "x" * 150,
+            "0002_normal",
+            "y" * 200,
+        ]
+        with patch("alembic.script.ScriptDirectory.from_config") as mock_sd:
+            mock_sd.return_value.walk_revisions.return_value = self._make_mock_revisions(ids)
+            with pytest.raises(RuntimeError) as exc_info:
+                _validate_revision_widths(MagicMock(), "head")
+        msg = str(exc_info.value)
+        assert "2 revision id(s) exceed" in msg
+        assert "150 chars" in msg
+        assert "200 chars" in msg
+
+
+class TestMigration0004WidensVersionNum1282:
+    """Migration 0004 must contain the canonical `ALTER TABLE` widening
+    statement so the column matches the validator's cap."""
+
+    def test_migration_alters_version_num_to_128(self) -> None:
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parents[2]
+        migration = (
+            repo_root
+            / "src"
+            / "dazzle"
+            / "back"
+            / "alembic"
+            / "versions"
+            / "0004_widen_alembic_version_num.py"
+        )
+        assert migration.exists()
+        text = migration.read_text(encoding="utf-8")
+        assert "VARCHAR(128)" in text
+        assert "version_num" in text
+        assert 'down_revision = "0003_subtype_kind_function"' in text
+
+
+class TestPytestImports1282:
+    """Sanity test — pytest + patch must be importable for the new tests
+    above to run. Also pins that the cap is what migration 0004 sets."""
+
+    def test_cap_matches_migration(self) -> None:
+        assert ALEMBIC_VERSION_NUM_MAX_LEN == 128

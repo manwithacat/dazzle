@@ -261,7 +261,10 @@ class Page:
             charset and viewport are always emitted; this tuple is
             additional/custom metadata.
         cascade_layer_order — CSS `@layer` declaration. Drives the
-            cascade priority (e.g. "base, framework, app, overrides").
+            cascade priority (e.g. "reset, vendor, tokens, base,
+            utilities, components, framework, app, overrides"). Must
+            be a superset of every layer name the bundled
+            `dazzle.min.css` declares — see the default below.
 
     Body-level slots (rendered after the main body):
         toast_container — emit the `dz-toast-stack` markup if True.
@@ -298,7 +301,21 @@ class Page:
     # font CDN host here so the browser opens the TCP+TLS handshake
     # before the stylesheet itself loads.
     font_preconnect: tuple[str, ...] = ()
-    cascade_layer_order: str = "base, framework, app, overrides"
+    # #1279: must include every layer the bundled `dazzle.min.css` declares,
+    # in the canonical order. The cascade rule for `@layer` locks a name's
+    # position the first time it's seen — so this inline `<style>@layer ...>`
+    # tag (emitted before any `<link>`) determines the global order. Missing
+    # names ship as appended layers AFTER the last name here, which inverts
+    # the intended priority: a 4-name list like `base, framework, app, overrides`
+    # would cause `dazzle.min.css`'s own `components` and `utilities` layers
+    # to land *after* `overrides` and win the cascade. The list below mirrors
+    # `src/dazzle/ui/runtime/static/css/dazzle.css:22` plus the project-level
+    # `framework` and `app` slots, placed between `components` and `overrides`
+    # so project component CSS can target framework primitives without losing
+    # to the framework bundle's own component rules.
+    cascade_layer_order: str = (
+        "reset, vendor, tokens, base, utilities, components, framework, app, overrides"
+    )
     toast_container: bool = True
     modal_slot: bool = True
     page_announcer: bool = True

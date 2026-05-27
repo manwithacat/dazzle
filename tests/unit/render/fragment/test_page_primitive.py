@@ -84,8 +84,36 @@ def test_page_title_is_escaped() -> None:
 
 
 def test_page_includes_cascade_layer_declaration() -> None:
+    """#1279: the default `cascade_layer_order` must include every layer
+    the bundled `dazzle.min.css` declares, in canonical order. The 4-name
+    list `base, framework, app, overrides` was wrong — it left `components`,
+    `utilities`, `reset`, `vendor`, `tokens` to land AFTER `overrides`,
+    inverting the cascade and letting framework component rules win over
+    project overrides."""
     html = _render(Page(title="X", body=Text("x")))
-    assert "<style>@layer base, framework, app, overrides;</style>" in html
+    assert (
+        "<style>@layer reset, vendor, tokens, base, utilities, components, "
+        "framework, app, overrides;</style>" in html
+    )
+
+
+def test_default_layer_order_starts_with_framework_layers_1279() -> None:
+    """#1279: `reset`, `vendor`, `tokens` MUST come first so they have
+    the lowest priority; `overrides` MUST come last so project authors
+    can over-ride anything by writing `@layer overrides { ... }`. The
+    `framework` and `app` project slots sit between `components` and
+    `overrides`."""
+    from dazzle.render.fragment.primitives.containers import Page
+
+    order = Page(title="X", body=Text("x")).cascade_layer_order.split(", ")
+    assert order[0] == "reset"
+    assert order[-1] == "overrides"
+    assert "framework" in order
+    assert "app" in order
+    # framework + app project slots come AFTER components (so project
+    # component CSS can target framework component primitives without
+    # losing to the framework's own rules).
+    assert order.index("components") < order.index("framework") < order.index("overrides")
 
 
 def test_page_emits_css_links_in_order() -> None:

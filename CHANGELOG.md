@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.1] - 2026-05-27
+
+### Fixed
+
+- **#1279** — `Page.cascade_layer_order` default now includes every layer the bundled `dazzle.min.css` declares (`reset, vendor, tokens, base, utilities, components, framework, app, overrides`). Pre-fix the default was `base, framework, app, overrides`, so the inline `<style>@layer ...>` tag in `<head>` locked only those four positions; `dazzle.min.css`'s own `reset`/`vendor`/`tokens`/`utilities`/`components` layers landed AFTER `overrides` and won the cascade. Result: every `@layer overrides { ... }` rule in shipped themes (including `themes/stripe.css`) silently lost to the framework `components` layer. The new default places project `framework`/`app` slots between `components` and `overrides` so project component CSS can target framework primitives without losing to the framework's own component rules.
+- **#1282** — Alembic's default `alembic_version.version_num` column is `VARCHAR(32)`. Revision ids ≥33 chars previously applied their DDL and then failed mid-upgrade on the trailing `UPDATE alembic_version`, leaving schema-vs-version-state divergent. Migration `0004_widen_alembic_version_num` widens the column to `VARCHAR(128)` (no-rewrite metadata-only ALTER in Postgres). `dazzle db upgrade` also runs a pre-flight `_validate_revision_widths` check that walks the chain via `ScriptDirectory.walk_revisions()` and fails fast with a clear "rename these revisions" message if any id would overflow the new cap.
+
+### Agent Guidance
+
+- When authoring a Dazzle revision id (`dazzle db revision -m "..."`), keep the auto-generated file name + the `revision = "..."` variable inside it ≤128 chars. The CLI now blocks oversized ids upfront, but the pre-flight only catches them *before* the upgrade runs — name short to begin with.
+- Whenever you add a new CSS `@layer` to bundled framework CSS, update `Page.cascade_layer_order` AND `dazzle.min.css`'s top-level `@layer ...;` declaration in the same commit. The `test_default_layer_order_starts_with_framework_layers_1279` test pins the framework layers come first / `overrides` comes last; add a new pinned position if your layer needs one.
+
 ## [0.79.0] - 2026-05-27
 
 ### Added — agent code quality substrate round 5 (PA-LLM-11: raw-SQL string-building)

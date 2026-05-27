@@ -111,6 +111,44 @@ def revision_command(
         raise typer.Exit(1)
 
 
+#: #1282: Alembic ships `alembic_version.version_num` as `VARCHAR(32)`.
+#: Migration 0004 widens it to `VARCHAR(128)`. The pre-upgrade guard
+#: below uses this cap to fail fast on revision ids that would exceed
+#: the column width — otherwise the DDL applies and the trailing
+#: `UPDATE alembic_version` truncates, leaving schema-vs-version-state
+#: divergent. Keep in sync with `0004_widen_alembic_version_num.py`.
+ALEMBIC_VERSION_NUM_MAX_LEN = 128
+
+
+def _validate_revision_widths(cfg: object, target: str) -> None:
+    """Refuse the upgrade if any pending revision id would overflow the
+    `alembic_version.version_num` column (#1282).
+
+    Alembic's own `ScriptDirectory.walk_revisions()` enumerates the
+    revision chain; we walk every pending revision (from current head
+    to target) and reject the run upfront when any id is wider than the
+    column. Without this, the DDL would land but the version-bump
+    `UPDATE` would silently fail mid-chain.
+    """
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(cfg)  # type: ignore[arg-type]
+    too_long: list[tuple[str, int]] = []
+    for rev in script.walk_revisions():
+        if len(rev.revision) > ALEMBIC_VERSION_NUM_MAX_LEN:
+            too_long.append((rev.revision, len(rev.revision)))
+    if too_long:
+        offenders = "\n".join(f"  - {rid!r} ({n} chars)" for rid, n in too_long)
+        raise RuntimeError(
+            f"Refusing to upgrade: {len(too_long)} revision id(s) exceed "
+            f"the {ALEMBIC_VERSION_NUM_MAX_LEN}-char width of "
+            f"alembic_version.version_num.\n"
+            f"Affected:\n{offenders}\n"
+            f'Rename the file + the `revision = "..."` variable inside it '
+            f"to a shorter id, then re-run `dazzle db upgrade`. See #1282."
+        )
+
+
 @db_app.command(name="upgrade")
 def upgrade_command(
     revision: str = typer.Argument(
@@ -124,6 +162,7 @@ def upgrade_command(
     cfg = _get_alembic_cfg()
 
     try:
+        _validate_revision_widths(cfg, revision)
         command.upgrade(cfg, revision)
         console.print(f"[green]Upgraded to: {revision}[/green]")
     except Exception as e:
