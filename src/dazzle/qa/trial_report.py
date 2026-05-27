@@ -28,10 +28,13 @@ items become issues and which are "correct by design."
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from difflib import SequenceMatcher
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dazzle.qa.signing_verifier import SigningOutcome
 
 _CATEGORY_ORDER = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
@@ -56,6 +59,7 @@ class TrialReport:
     duration_seconds: float = 0.0
     tokens_used: int = 0
     outcome: str = ""
+    signing_outcomes: dict[str, Any] | None = None
 
 
 def _first_line(text: str) -> str:
@@ -225,43 +229,57 @@ def render_trial_report(report: TrialReport) -> str:
             "before anything was flagged)*"
         )
         lines.append("")
-        return "\n".join(lines)
+    else:
+        last_category: str | None = None
+        for entry in friction:
+            category = entry.get("category", "other")
+            severity = entry.get("severity", "medium")
+            description = entry.get("description", "").strip()
+            url = entry.get("url", "").strip()
+            evidence = entry.get("evidence", "").strip()
 
-    last_category: str | None = None
-    for entry in friction:
-        category = entry.get("category", "other")
-        severity = entry.get("severity", "medium")
-        description = entry.get("description", "").strip()
-        url = entry.get("url", "").strip()
-        evidence = entry.get("evidence", "").strip()
+            if category != last_category:
+                lines.append(f"### {category}")
+                lines.append("")
+                last_category = category
 
-        if category != last_category:
-            lines.append(f"### {category}")
+            title = _title_from_description(description)
+            lines.append(f"**{title}**")
             lines.append("")
-            last_category = category
+            if description and description != title:
+                lines.append(f"> {description}")
+                lines.append("")
+            meta: list[str] = [f"*severity:* {severity}"]
+            if url:
+                meta.append(f"*where:* `{url}`")
+            similar = entry.get("similar_count", 1)
+            if similar > 1:
+                meta.append(f"*reported:* ×{similar}")
+            lines.append(" · ".join(meta))
+            lines.append("")
+            if evidence:
+                lines.append("```")
+                # Trim evidence to keep the report readable; full evidence is
+                # still in the JSON transcript for deep dives.
+                snippet = evidence if len(evidence) < 600 else evidence[:597] + "..."
+                lines.append(snippet)
+                lines.append("```")
+                lines.append("")
 
-        title = _title_from_description(description)
-        lines.append(f"**{title}**")
+    # Signing outcomes — opt-in block; only rendered when present.
+    if report.signing_outcomes:
+        so = report.signing_outcomes
+        lines.append("## Signing Outcomes")
         lines.append("")
-        if description and description != title:
-            lines.append(f"> {description}")
-            lines.append("")
-        meta: list[str] = [f"*severity:* {severity}"]
-        if url:
-            meta.append(f"*where:* `{url}`")
-        similar = entry.get("similar_count", 1)
-        if similar > 1:
-            meta.append(f"*reported:* ×{similar}")
-        lines.append(" · ".join(meta))
+        lines.append(f"- **detected:** {so.get('detected')}")
+        lines.append(f"- **expected outcome (inferred):** {so.get('expected_outcome_inferred')}")
+        functional = so.get("functional") or {}
+        lines.append(f"- **functional:** {functional}")
+        sig_integrity = so.get("signature_integrity") or {}
+        lines.append(f"- **signature integrity:** {sig_integrity}")
+        latency = so.get("latency_ms") or {}
+        lines.append(f"- **latency (ms):** {latency}")
         lines.append("")
-        if evidence:
-            lines.append("```")
-            # Trim evidence to keep the report readable; full evidence is
-            # still in the JSON transcript for deep dives.
-            snippet = evidence if len(evidence) < 600 else evidence[:597] + "..."
-            lines.append(snippet)
-            lines.append("```")
-            lines.append("")
 
     return "\n".join(lines)
 
@@ -276,9 +294,13 @@ def build_trial_report(
     duration_seconds: float = 0.0,
     tokens_used: int = 0,
     outcome: str = "",
+    signing_outcome: SigningOutcome | None = None,
 ) -> TrialReport:
     """Convenience builder — pulls the one-line identity headline
     from the multi-line user_identity block."""
+    signing_outcomes: dict[str, Any] | None = None
+    if signing_outcome is not None:
+        signing_outcomes = asdict(signing_outcome)
     return TrialReport(
         scenario_name=scenario_name,
         user_identity_headline=_first_line(user_identity),
@@ -288,4 +310,5 @@ def build_trial_report(
         duration_seconds=duration_seconds,
         tokens_used=tokens_used,
         outcome=outcome,
+        signing_outcomes=signing_outcomes,
     )
