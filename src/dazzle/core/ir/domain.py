@@ -387,6 +387,13 @@ class EntitySpec(BaseModel):
     # hold approve_letter grant") or domain logic that can't be expressed
     # in DSL scope rules.
     signing_validator: str | None = None
+    # v0.79.12 (#1283 phase 6a): optional dotted-path callable that
+    # produces the document body HTML. Signature: ``(entity, row) ->
+    # str``. The framework imports + invokes it before generating the
+    # PDF. When unset, a stub "entity name + id" placeholder is used.
+    # Resolution is constrained to the same regex as signing_validator
+    # so a build-time DSL declaration is the only way in.
+    signing_template: str | None = None
     # v0.34.0: Bulk import/export
     bulk: BulkConfig | None = None
     state_machine: StateMachineSpec | None = None

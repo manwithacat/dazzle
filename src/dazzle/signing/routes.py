@@ -267,7 +267,13 @@ async def _handle_post(
 
         signature_png = base64.b64decode(body.signature_png_b64)
 
-    document_body = _stub_document_body(entity_name=entity.name, record_id=record_id)
+    if entity.signing_template:
+        try:
+            document_body = _invoke_template(entity.signing_template, entity=entity, row=row)
+        except SigningError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+    else:
+        document_body = _stub_document_body(entity_name=entity.name, record_id=record_id)
     pdf = generate_pdf(
         document_body,
         signer_name=signatory_name,
@@ -378,34 +384,61 @@ _ValidatorFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
 _VALIDATOR_PATH_RE = re.compile(r"^[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)+$")
 
 
-def _invoke_validator(dotted_path: str, *, entity: EntitySpec, row: Any) -> None:
-    """Resolve and invoke a project-supplied ``signing_validator``.
+def _resolve_dotted_callable(dotted_path: str, *, kind: str) -> Any:
+    """Resolve a project-supplied dotted-path callable.
 
-    The hook can raise ``SigningError(...)`` to block the signature.
+    Used by both ``signing_validator`` and ``signing_template``. The
+    regex guard rejects anything outside the ``module.submodule.fn``
+    shape so an attacker who somehow tampered with the spec still
+    cannot reach arbitrary modules.
 
     Security: ``dotted_path`` is project-author DSL set at compile time
     (parsed via the lexer's identifier rule, not from request input).
-    The regex guard rejects anything outside the
-    ``module.submodule.fn`` shape so an attacker who somehow tampered
-    with the spec still cannot reach arbitrary modules.
+    The regex guard is defence-in-depth and a documented trust
+    boundary so static scanners can see the constraint explicitly.
     """
     if not _VALIDATOR_PATH_RE.match(dotted_path):
-        raise SigningError(f"signing_validator {dotted_path!r} is not a valid dotted path")
+        raise SigningError(f"{kind} {dotted_path!r} is not a valid dotted path")
     module_path, _, fn_name = dotted_path.rpartition(".")
     try:
         # dotted_path is constrained by _VALIDATOR_PATH_RE above and
         # originates from project DSL, never from request input.
         module = importlib.import_module(module_path)  # nosemgrep
-        fn: _ValidatorFn = getattr(module, fn_name)
+        return getattr(module, fn_name)
     except (ImportError, AttributeError) as exc:
-        raise SigningError(
-            f"signing_validator {dotted_path!r} could not be resolved: {exc}"
-        ) from exc
+        raise SigningError(f"{kind} {dotted_path!r} could not be resolved: {exc}") from exc
+
+
+def _invoke_validator(dotted_path: str, *, entity: EntitySpec, row: Any) -> None:
+    """Resolve and invoke a project-supplied ``signing_validator``.
+
+    The hook can raise ``SigningError(...)`` to block the signature.
+    """
+    fn: _ValidatorFn = _resolve_dotted_callable(dotted_path, kind="signing_validator")
     result = fn(entity=entity, row=row)
     if hasattr(result, "__await__"):
         import asyncio
 
         asyncio.get_event_loop().run_until_complete(result)
+
+
+def _invoke_template(dotted_path: str, *, entity: EntitySpec, row: Any) -> str:
+    """Resolve and invoke a project-supplied ``signing_template``.
+
+    Function must return the document body HTML as a ``str``. The
+    framework feeds the result into ``generate_pdf`` for fpdf2 to
+    render. Async templates are not supported in phase 6a — the
+    rendering happens inside a request handler that's already awaiting
+    other work, and adding asyncio.run-from-inside-async ergonomics
+    here is bigger than the use case warrants. Sync return only.
+    """
+    fn = _resolve_dotted_callable(dotted_path, kind="signing_template")
+    result = fn(entity=entity, row=row)
+    if not isinstance(result, str):
+        raise SigningError(
+            f"signing_template {dotted_path!r} must return str, got {type(result).__name__}"
+        )
+    return result
 
 
 def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:

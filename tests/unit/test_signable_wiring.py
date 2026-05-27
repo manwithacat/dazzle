@@ -92,6 +92,31 @@ entity Contract "Contract":
         )
         assert e.signing_validator is None
 
+    def test_signing_template_dotted_path(self):
+        e = _parse_entity(
+            """\
+module test
+entity Contract "Contract":
+  id: uuid pk
+  party: str(200) required
+  signable: true
+  signing_template: app.signing.templates.standard
+"""
+        )
+        assert e.signing_template == "app.signing.templates.standard"
+
+    def test_signing_template_default_none(self):
+        e = _parse_entity(
+            """\
+module test
+entity Contract "Contract":
+  id: uuid pk
+  party: str(200) required
+  signable: true
+"""
+        )
+        assert e.signing_template is None
+
     def test_signable_requires_true_or_false(self):
         with pytest.raises(Exception, match="signable"):
             _parse_fragment(

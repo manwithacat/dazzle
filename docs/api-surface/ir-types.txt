@@ -754,6 +754,7 @@ ir_class: EntitySpec
     - publishes: list[PublishSpec] = []
     - seed_template: SeedTemplateSpec | None = None
     - signable: bool = False
+    - signing_template: str | None = None
     - signing_validator: str | None = None
     - soft_delete: bool = False
     - source: SourceLocation | None = None

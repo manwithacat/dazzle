@@ -33,6 +33,8 @@ class _EntityParseContext:
     # Native document signing primitive (v0.79.7, #1283 phase 3)
     signable: bool = False
     signing_validator: str | None = None
+    # v0.79.12 (#1283 phase 6a)
+    signing_template: str | None = None
     # Subtype-of polymorphism (v0.71.180, #1217 Phase 3e.i)
     subtype_of: str | None = None
     # Temporal / effective-dated spec (v0.71.161 / #1223 Phase 3a.i)
@@ -150,6 +152,8 @@ class EntityParserMixin:
                 ctx.signable = self._parse_entity_signable()
             elif self.match(TokenType.SIGNING_VALIDATOR):
                 ctx.signing_validator = self._parse_entity_signing_validator()
+            elif self.match(TokenType.SIGNING_TEMPLATE):
+                ctx.signing_template = self._parse_entity_signing_template()
             elif self.match(TokenType.TEMPORAL):
                 ctx.temporal = self._parse_entity_temporal()
             elif self.match(TokenType.SUBTYPE_OF):
@@ -278,6 +282,21 @@ class EntityParserMixin:
         ``SigningError(...)`` to block the signature. Resolved lazily at
         request time so the framework does not import project code at
         parse time.
+        """
+        self.advance()
+        self.expect(TokenType.COLON)
+        parts: list[str] = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.DOT):
+            self.advance()
+            parts.append(self.expect_identifier_or_keyword().value)
+        return ".".join(parts)
+
+    def _parse_entity_signing_template(self) -> str:
+        """Parse ``signing_template: dotted.path.to.callable`` (#1283 phase 6a).
+
+        Dotted-path identifying a project-supplied callable that returns
+        the document body HTML. Signature: ``(entity, row) -> str``.
+        Resolved lazily at request time alongside ``signing_validator``.
         """
         self.advance()
         self.expect(TokenType.COLON)
@@ -969,6 +988,7 @@ class EntityParserMixin:
             soft_delete=ctx.soft_delete,
             signable=ctx.signable,
             signing_validator=ctx.signing_validator,
+            signing_template=ctx.signing_template,
             subtype_of=ctx.subtype_of,
             temporal=ctx.temporal,
             bulk=ctx.bulk_config,

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.12] - 2026-05-27
+
+### Added
+
+- **#1283 phase 6a** — Project-supplied document template hook for `signable: true`. New entity directive `signing_template: dotted.path.to.callable` (parallel to `signing_validator:`). The framework imports + invokes the callable as `fn(entity, row) -> str` to produce the document body HTML; the result is fed into the PDF pipeline. When unset, the existing `_stub_document_body` placeholder is used so behaviour stays backward-compatible.
+  - **Lexer** — new `SIGNING_TEMPLATE` token.
+  - **IR** — `EntitySpec.signing_template: str | None = None`.
+  - **Parser** — entity-level directive shape mirrors `signing_validator:` (dotted-path identifier walk).
+  - **Routes** — `_handle_post` resolves the template callable when set; `SigningError` on invalid path or non-str return surfaces as HTTP 500.
+  - **Resolver refactor** — extracted `_resolve_dotted_callable(path, kind=...)` shared by `signing_validator` and `signing_template`. Same regex constraint (`^[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)+$`) + nosemgrep boundary + lazy import.
+  - **Tests** — 4 new parser/wiring tests + 2 route tests (template-injects-document-body, must-return-str rejection). Drift baselines (`ir-types`) + 1 golden-master IR snapshot regenerated.
+
+### Agent Guidance
+
+- **The framework deliberately does not ship a templating substrate for signing.** Per the phase-6 design decision, projects supply a `signing_template:` callable and choose their own rendering: Jinja2, typed-Fragment, Markdown, plain f-strings — anything that returns `str`. ADR-0023 retired Jinja2 from the framework; the callable hook keeps that boundary clean while letting downstream projects make their own call.
+- **Async templates are not supported in phase 6a.** Template invocation happens inside an already-async route handler; nested-event-loop ergonomics aren't worth solving until a real use case appears. The framework asserts the return is a sync `str`.
+- The `_resolve_dotted_callable(path, kind="...")` helper is now the canonical way to resolve a project-author dotted path inside `dazzle.signing.routes`. Future hooks should reuse it rather than re-implementing the regex guard + import dance.
+
 ## [0.79.11] - 2026-05-27
 
 ### Added

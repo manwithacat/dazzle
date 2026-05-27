@@ -73,11 +73,17 @@ def _app_with_routes(
     *,
     entity_name: str = "Contract",
     signing_validator: str | None = None,
+    signing_template: str | None = None,
     file_service: Any | None = None,
 ) -> tuple[FastAPI, _MockRepo]:
     entity = _signable_entity(entity_name)
+    updates: dict[str, Any] = {}
     if signing_validator is not None:
-        entity = entity.model_copy(update={"signing_validator": signing_validator})
+        updates["signing_validator"] = signing_validator
+    if signing_template is not None:
+        updates["signing_template"] = signing_template
+    if updates:
+        entity = entity.model_copy(update=updates)
     repo = _MockRepo(rows)
     router = create_signing_routes(
         [entity],
@@ -432,3 +438,66 @@ class TestFullSignFlow:
         # The entity row's signed_document field carries the URL.
         _, patch = repo.update_calls[0]
         assert patch["signed_document"] == f"/files/Contract-{record_id}.pdf"
+
+    def test_signing_template_provides_document_body(self) -> None:
+        """When signing_template is set, the framework calls the project
+        callable instead of using the stub placeholder body."""
+        pytest.importorskip("fpdf")
+        pytest.importorskip("pyhanko")
+
+        import dazzle.signing.tokens as host
+
+        marker = "<h1>CUSTOM TEMPLATE BODY MARKER</h1>"
+
+        def render(*, entity: Any, row: Any) -> str:
+            return marker
+
+        host._test_template_render = render  # type: ignore[attr-defined]
+        try:
+            record_id = str(uuid4())
+            app, _ = _app_with_routes(
+                {record_id: {"status": "viewed"}},
+                signing_template="dazzle.signing.tokens._test_template_render",
+            )
+            client = TestClient(app)
+            token = mint_token(record_id, "alice@example.com")
+
+            resp = client.post(
+                f"/api/sign/Contract/{record_id}",
+                json={"token": token, "signatory_name": "Alice"},
+            )
+            assert resp.status_code == 200
+            assert resp.content.startswith(b"%PDF-")
+            # The marker text appears in the PDF stream (fpdf2 may
+            # compress, but Helvetica text strings stay readable for
+            # ASCII inputs in the small-document case).
+            assert b"CUSTOM TEMPLATE BODY MARKER" in resp.content
+        finally:
+            del host._test_template_render  # type: ignore[attr-defined]
+
+    def test_signing_template_must_return_str(self) -> None:
+        pytest.importorskip("fpdf")
+        pytest.importorskip("pyhanko")
+        import dazzle.signing.tokens as host
+
+        def bad_render(*, entity: Any, row: Any) -> None:
+            return None  # noqa: RET501 — intentional bad return
+
+        host._test_template_bad = bad_render  # type: ignore[attr-defined]
+        try:
+            record_id = str(uuid4())
+            app, _ = _app_with_routes(
+                {record_id: {"status": "viewed"}},
+                signing_template="dazzle.signing.tokens._test_template_bad",
+            )
+            client = TestClient(app)
+            token = mint_token(record_id, "alice@example.com")
+
+            resp = client.post(
+                f"/api/sign/Contract/{record_id}",
+                json={"token": token, "signatory_name": "Alice"},
+            )
+            assert resp.status_code == 500
+            assert "must return str" in resp.text
+        finally:
+            del host._test_template_bad  # type: ignore[attr-defined]
