@@ -85,6 +85,9 @@ def _make_read_inbox(*, inbox_path: Path, action_sink: dict[str, Any]) -> AgentT
         except (FileNotFoundError, json.JSONDecodeError):
             entries = []
 
+        if not isinstance(entries, list):
+            return "Inbox is empty."
+
         if not entries:
             return "Inbox is empty."
 

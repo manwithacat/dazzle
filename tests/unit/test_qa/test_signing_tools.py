@@ -92,6 +92,23 @@ def test_read_inbox_empty_list(tmp_path: Path) -> None:
     assert "empty" in result.lower()
 
 
+def test_read_inbox_handles_non_list_json(tmp_path: Path) -> None:
+    """read_inbox should return 'empty' when JSON is valid but not a list."""
+    inbox = tmp_path / "inbox.json"
+    inbox.write_text("{}")  # valid JSON, but not a list
+    sink: dict = {}
+    tools = build_signing_tools(
+        base_url="http://localhost:3000",
+        inbox_path=inbox,
+        seeded_docs=[],
+        action_sink=sink,
+    )
+    read_inbox = next(t for t in tools if t.name == "read_inbox")
+    # Should not raise TypeError
+    result = _invoke(read_inbox, {})
+    assert "empty" in result.lower()
+
+
 def test_sign_document_no_active_doc(tmp_path: Path) -> None:
     inbox = tmp_path / "inbox.json"
     inbox.write_text("[]")
