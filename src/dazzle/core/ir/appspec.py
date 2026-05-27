@@ -609,3 +609,7 @@ class AppSpec(BaseModel):
         from .appspec_queries import get_field_type_conflicts as _q
 
         return _q(self)
+
+    def has_signable_entity(self) -> bool:
+        """True iff any entity in the app's domain has signable=True."""
+        return any(e.signable for e in self.domain.entities)
