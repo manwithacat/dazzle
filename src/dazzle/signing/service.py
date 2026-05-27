@@ -214,20 +214,16 @@ def reset_signer_cache() -> None:
     _signer_cache = None
 
 
-def sign_pdf(
+def _build_signing_inputs(
+    *,
     pdf_bytes: bytes,
     signer_name: str,
     signer_email: str,
     branding: PdfBranding,
-    use_tsa: bool = True,
-    tsa_url: str = DEFAULT_TSA_URL,
-) -> bytes:
-    """Apply a PKCS#7 digital signature + optional RFC 3161 timestamp.
-
-    Achieves PAdES B-T conformance when ``use_tsa=True`` and the TSA is
-    reachable. Falls back to PAdES B-B (no timestamp) if the TSA is
-    unreachable, logging a warning.
-    """
+    use_tsa: bool,
+    tsa_url: str,
+) -> tuple[Any, Any, Any, Any]:
+    """Lift the shared pyhanko object graph used by both sign paths."""
     try:
         from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
         from pyhanko.sign import fields as sig_fields
@@ -248,9 +244,9 @@ def sign_pdf(
         except Exception:
             log.warning("TSA unavailable, signing without timestamp")
 
-    w = IncrementalPdfFileWriter(io.BytesIO(pdf_bytes))
+    writer = IncrementalPdfFileWriter(io.BytesIO(pdf_bytes))
     sig_fields.append_signature_field(
-        w, sig_fields.SigFieldSpec("Signature", box=(30, 50, 250, 120))
+        writer, sig_fields.SigFieldSpec("Signature", box=(30, 50, 250, 120))
     )
 
     meta = signers.PdfSignatureMetadata(
@@ -260,5 +256,66 @@ def sign_pdf(
         location=branding.location,
     )
 
-    result = signers.sign_pdf(w, meta, signer=signer, timestamper=timestamper)
+    return writer, meta, signer, timestamper
+
+
+def sign_pdf(
+    pdf_bytes: bytes,
+    signer_name: str,
+    signer_email: str,
+    branding: PdfBranding,
+    use_tsa: bool = True,
+    tsa_url: str = DEFAULT_TSA_URL,
+) -> bytes:
+    """Apply a PKCS#7 digital signature + optional RFC 3161 timestamp.
+
+    Achieves PAdES B-T conformance when ``use_tsa=True`` and the TSA is
+    reachable. Falls back to PAdES B-B (no timestamp) if the TSA is
+    unreachable, logging a warning.
+
+    Synchronous entry point — uses pyhanko's blocking
+    ``signers.sign_pdf`` under the hood (which calls ``asyncio.run``
+    internally). For use from async code (e.g. FastAPI route handlers),
+    prefer :func:`async_sign_pdf` to avoid the nested-event-loop error.
+    """
+    writer, meta, signer, timestamper = _build_signing_inputs(
+        pdf_bytes=pdf_bytes,
+        signer_name=signer_name,
+        signer_email=signer_email,
+        branding=branding,
+        use_tsa=use_tsa,
+        tsa_url=tsa_url,
+    )
+    from pyhanko.sign import signers
+
+    result = signers.sign_pdf(writer, meta, signer=signer, timestamper=timestamper)
+    return bytes(result.read())
+
+
+async def async_sign_pdf(
+    pdf_bytes: bytes,
+    signer_name: str,
+    signer_email: str,
+    branding: PdfBranding,
+    use_tsa: bool = True,
+    tsa_url: str = DEFAULT_TSA_URL,
+) -> bytes:
+    """Async variant of :func:`sign_pdf` — safe to call from async code.
+
+    pyhanko's modern API is async-first; the sync ``sign_pdf`` wraps
+    ``async_sign_pdf`` with ``asyncio.run``, which fails when called
+    from inside a running event loop. Route handlers and other
+    in-loop callers must use this variant.
+    """
+    writer, meta, signer, timestamper = _build_signing_inputs(
+        pdf_bytes=pdf_bytes,
+        signer_name=signer_name,
+        signer_email=signer_email,
+        branding=branding,
+        use_tsa=use_tsa,
+        tsa_url=tsa_url,
+    )
+    from pyhanko.sign import signers
+
+    result = await signers.async_sign_pdf(writer, meta, signer=signer, timestamper=timestamper)
     return bytes(result.read())

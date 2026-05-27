@@ -1,6 +1,6 @@
 # DAZZLE Runtime URLs — API Surface (cycle 5 of #961)
 #
-# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py
+# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py (+ EXTRA_ROUTE_FILES)
 # Regenerate: dazzle inspect api runtime-urls --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 52 routes across 14 modules
+# Counts: 54 routes across 15 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
@@ -95,6 +95,12 @@ module: qa_routes
 module: search_routes
   GET | (root)
     handler: cross_entity_search(q: str = Query(..., description='Search query string', min_length=1), entity: str | None = Query(None, description='Restrict search to a single entity name'), limit: int = Query(per_entity_limit, ge=1, le=100, description='Max results returned per entity')) -> JSONResponse
+
+module: signing_routes
+  POST | /api/sign/{entity_name}/{record_id}
+    handler: submit_signature(entity_name: str, record_id: UUID, body: SignSubmission, request: Request) -> Response
+  GET | /sign/{entity_name}/{record_id}
+    handler: render_signing_page(entity_name: str, record_id: UUID, request: Request) -> HTMLResponse
 
 module: site_routes
   GET | /

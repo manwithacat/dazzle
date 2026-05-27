@@ -24,6 +24,13 @@ BASELINE_PATH = REPO_ROOT / "docs" / "api-surface" / "runtime-urls.txt"
 
 ROUTES_DIR = REPO_ROOT / "src" / "dazzle" / "back" / "runtime"
 
+# Additional route modules outside `back/runtime/`. Anything added here
+# is AST-walked alongside the canonical `*_routes.py` files so the API
+# surface gate covers it. Used when a feature ships routes that
+# logically live in their own package (e.g. `dazzle/signing/routes.py`
+# for the #1283 signing primitive).
+EXTRA_ROUTE_FILES: tuple[Path, ...] = (REPO_ROOT / "src" / "dazzle" / "signing" / "routes.py",)
+
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "websocket"}
 
 
@@ -71,10 +78,25 @@ def _signature_summary(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     return f"({', '.join(args)}){returns}"
 
 
+def _module_label(path: Path) -> str:
+    """Stable, baseline-friendly module label.
+
+    Files in the canonical `back/runtime/` directory use their stem
+    directly (e.g. `bulk_routes`). Files registered via
+    ``EXTRA_ROUTE_FILES`` outside that directory get a
+    ``<parent>_<stem>`` form so the label still sorts deterministically
+    and stays unique even if two extra files share a stem.
+    """
+    if path.parent == ROUTES_DIR:
+        return path.stem
+    return f"{path.parent.name}_{path.stem}"
+
+
 def _walk_module(path: Path) -> list[dict[str, str]]:
     """Extract every decorated route from a module file."""
     tree = ast.parse(path.read_text(), filename=str(path))
     routes: list[dict[str, str]] = []
+    label = _module_label(path)
     for node in ast.walk(tree):
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             continue
@@ -93,7 +115,7 @@ def _walk_module(path: Path) -> list[dict[str, str]]:
                     "path": url,
                     "handler": node.name,
                     "signature": _signature_summary(node),
-                    "module": path.stem,
+                    "module": label,
                 }
             )
     return routes
@@ -103,6 +125,9 @@ def _collect_routes() -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
     for path in sorted(ROUTES_DIR.glob("*_routes.py")):
         out.extend(_walk_module(path))
+    for extra in EXTRA_ROUTE_FILES:
+        if extra.exists():
+            out.extend(_walk_module(extra))
     out.sort(key=lambda r: (r["module"], r["path"], r["method"], r["handler"]))
     return out
 
@@ -117,7 +142,9 @@ def snapshot_runtime_urls() -> str:
     lines: list[str] = []
     lines.append("# DAZZLE Runtime URLs — API Surface (cycle 5 of #961)")
     lines.append("#")
-    lines.append("# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py")
+    lines.append(
+        "# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py (+ EXTRA_ROUTE_FILES)"
+    )
     lines.append("# Regenerate: dazzle inspect api runtime-urls --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
     lines.append("#")

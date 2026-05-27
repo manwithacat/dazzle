@@ -1575,6 +1575,28 @@ class DazzleBackendApp:
             except Exception:
                 logger.warning("FTS routes mount failed", exc_info=True)
 
+        # Native document signing endpoints (#1283 phase 3d) — mounted
+        # when any entity has `signable: true`. The factory short-
+        # circuits to None when no signable entity exists, so apps that
+        # never use the primitive get a clean OpenAPI surface and never
+        # import the fpdf2/pyhanko crypto chain.
+        if self._repositories and self._appspec.domain:
+            try:
+                from dazzle.signing.routes import create_signing_routes
+
+                signing_router = create_signing_routes(
+                    list(self._appspec.domain.entities),
+                    repositories=self._repositories,
+                )
+                if signing_router is not None:
+                    self._app.include_router(signing_router)
+                    logger.info("  Signing: /sign/{entity}/{id} + /api/sign/{entity}/{id}")
+            except ImportError:
+                # dazzle.signing imports `cryptography` lazily but the
+                # routes module itself is stdlib-only; an ImportError
+                # here means the package is broken, not opted out.
+                logger.exception("Failed to import dazzle.signing.routes")
+
         # Bulk-action endpoints (#785) — registered when any list-mode
         # surface declares `ux: bulk_actions:`.
         if self._repositories and self._appspec.surfaces:
