@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.6] - 2026-05-27
+
+### Fixed
+
+- Follow-up to #1281 — three drift gates fired in CI for v0.79.4's `PermissionRule.deny_all` addition: (a) `test_api_surface_drift[ir_types]` — regenerated `docs/api-surface/ir-types.txt` to include the new optional field; (b) `test_simple_dsl_to_ir_snapshot` — refreshed the golden-master snapshot to include `'deny_all': False` in the IR dict; (c) `test_no_new_ir_field_orphans` — wired `deny_all` into a real consumer (`_rule_matches_role` in `src/dazzle/rbac/matrix.py` now short-circuits to `return False` when `rule.deny_all` is True, so the explicit-denial intent flows through to the RBAC matrix and audit reports).
+
+### Agent Guidance
+
+- Adding a new IR field on a Pydantic model under `src/dazzle/core/ir/` requires three follow-up housekeeping steps that the drift gates enforce: regenerate the api-surface baseline (`dazzle inspect api ir-types --write`), refresh any golden-master snapshot that captures the model's serialized form, and add at least one consumer outside `src/dazzle/core/ir/` that reads the field (validator, runtime evaluator, audit matrix, etc.). The `test_ir_field_reader_parity` gate names these as "orphan fields" if a consumer is missing.
+
 ## [0.79.5] - 2026-05-27
 
 ### Security

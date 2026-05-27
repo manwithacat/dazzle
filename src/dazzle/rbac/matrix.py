@@ -165,13 +165,18 @@ def _rule_matches_role(rule: PermissionRule, role: str) -> bool:
     """Return True if *rule* applies to *role*.
 
     A rule applies when:
-      1. rule.personas is empty AND the condition is not a pure role gate
+      1. rule.deny_all is True — the rule explicitly forbids the
+         operation for everyone, no role matches (#1281).
+      2. rule.personas is empty AND the condition is not a pure role gate
          (applies to any authenticated user), OR
-      2. rule.personas is empty AND the condition is a pure role gate AND
+      3. rule.personas is empty AND the condition is a pure role gate AND
          the condition's role checks match *role*, OR
-      3. role is explicitly listed in rule.personas, OR
-      4. the rule's condition contains a role_check for *role*.
+      4. role is explicitly listed in rule.personas, OR
+      5. the rule's condition contains a role_check for *role*.
     """
+    if rule.deny_all:
+        # `permit: <op>: false` — denial is universal; no role matches.
+        return False
     if not rule.personas:
         # If the condition is exclusively role_checks, treat it as a role gate.
         if _condition_is_pure_role_only(rule.condition):

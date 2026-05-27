@@ -1967,6 +1967,7 @@ ir_class: PermissionRule
     - operation: PermissionKind
   optional:
     - condition: ConditionExpr | None = None
+    - deny_all: bool = False
     - effect: PolicyEffect = <PolicyEffect.PERMIT: 'permit'>
     - personas: list[str] = []
     - require_auth: bool = True

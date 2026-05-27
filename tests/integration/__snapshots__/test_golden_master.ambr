@@ -205,6 +205,7 @@
             'permissions': list([
               dict({
                 'condition': None,
+                'deny_all': False,
                 'effect': <PolicyEffect.PERMIT: 'permit'>,
                 'operation': <PermissionKind.READ: 'read'>,
                 'personas': list([
@@ -215,6 +216,7 @@
               }),
               dict({
                 'condition': None,
+                'deny_all': False,
                 'effect': <PolicyEffect.PERMIT: 'permit'>,
                 'operation': <PermissionKind.LIST: 'list'>,
                 'personas': list([
@@ -432,6 +434,7 @@
             'permissions': list([
               dict({
                 'condition': None,
+                'deny_all': False,
                 'effect': <PolicyEffect.PERMIT: 'permit'>,
                 'operation': <PermissionKind.READ: 'read'>,
                 'personas': list([
@@ -442,6 +445,7 @@
               }),
               dict({
                 'condition': None,
+                'deny_all': False,
                 'effect': <PolicyEffect.PERMIT: 'permit'>,
                 'operation': <PermissionKind.LIST: 'list'>,
                 'personas': list([
@@ -680,6 +684,7 @@
             'permissions': list([
               dict({
                 'condition': None,
+                'deny_all': False,
                 'effect': <PolicyEffect.PERMIT: 'permit'>,
                 'operation': <PermissionKind.READ: 'read'>,
                 'personas': list([
@@ -690,6 +695,7 @@
               }),
               dict({
                 'condition': None,
+                'deny_all': False,
                 'effect': <PolicyEffect.PERMIT: 'permit'>,
                 'operation': <PermissionKind.LIST: 'list'>,
                 'personas': list([
