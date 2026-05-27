@@ -62,14 +62,15 @@ The old `--primary`, `--success`, `--destructive` etc. (US English) are renamed:
 **Migration step for a project theme override:**
 
 ```css
-/* Before */
+/* Before (pre-#1280 — data-theme overloaded) */
 [data-theme="aegismark"] {
   --primary: 220 90% 56%;
   --success: 142 76% 36%;
 }
 
-/* After */
-[data-theme="aegismark"] {
+/* After (#1280+ — project theme identity on data-theme-name;
+   data-theme is now the colour-scheme carrier owned by runtime JS) */
+[data-theme-name="aegismark"] {
   --colour-brand: oklch(55% 0.18 260);
   --colour-success: oklch(65% 0.15 142);
 }

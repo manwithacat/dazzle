@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.2] - 2026-05-27
+
+### Changed (BREAKING — CSS selectors for theme identity)
+
+- **#1280** — Project theme identity moved from `<html data-theme="...">` to `<html data-theme-name="...">`. Runtime `static/js/site.js` writes `data-theme` to `"light"`/`"dark"` on first paint as the colour-scheme carrier; pre-#1280 the SSR-emitted project theme name (`stripe`, `linear-dark`, etc.) was overwritten by that JS, so `[data-theme="stripe"]` selectors never matched in the live DOM. The two attributes are now independent: SSR owns `data-theme-name` (never JS-rewritten); JS owns `data-theme` (colour scheme).
+- **`_variant_selector` in `css_generator.py`** updated accordingly: `"light"` / `"dark"` continue to emit `[data-theme="..."]` (colour-scheme selectors); any other variant name (project theme identity) now emits `[data-theme-name="..."]`.
+- **Theme CSS files must update their identity selectors.** Anything that read `[data-theme="<project-name>"]` (e.g. `[data-theme="aegismark"]`) must become `[data-theme-name="<project-name>"]`. `[data-theme="dark"]` / `[data-theme="light"]` colour-scheme selectors are unchanged. Migration guide in `docs/CSS_MIGRATION_GUIDE.md` updated.
+
+### Agent Guidance
+
+- When writing CSS theme selectors, use the matrix: **colour scheme** (`light`/`dark`) → `[data-theme="dark"]`; **project theme identity** → `[data-theme-name="stripe"]`. The two are orthogonal — `[data-theme-name="stripe"][data-theme="dark"]` scopes to the Stripe theme in dark mode.
+- The `dz-alpine.js` theme switcher already reads `data-theme-name` (was inert before #1280 because SSR never emitted it). The live theme-switch UI now wires up correctly.
+- SSR never writes `data-theme` directly — it's runtime-JS-owned to avoid hydration mismatches.
+
 ## [0.79.1] - 2026-05-27
 
 ### Fixed

@@ -143,9 +143,19 @@ class _RenderShellMixin:
         belong in the PageBuilder (Phase 2), not in the renderer.
         """
         parts: list[str] = ["<!DOCTYPE html>"]
-        theme_attr = f' data-theme="{ctx.escape_attr(p.theme)}"' if p.theme else ""
+        # #1280: `data-theme` carries the user's colour-scheme preference
+        # (`light` / `dark`) and is rewritten by `static/js/site.js` on
+        # first paint; `data-theme-name` carries the project theme
+        # identity (e.g. `stripe`) and is never rewritten. CSS theme
+        # selectors that scope by identity must use
+        # `[data-theme-name="<name>"]`; selectors that scope by colour
+        # scheme continue to use `[data-theme="dark"]`. The two
+        # attributes are emitted independently — `data-theme` defaults
+        # to absent (JS resolves at paint time), `data-theme-name` is
+        # only emitted when a project theme is configured.
+        theme_name_attr = f' data-theme-name="{ctx.escape_attr(p.theme)}"' if p.theme else ""
         lang_attr = f' lang="{ctx.escape_attr(p.lang)}"'
-        parts.append(f"<html{lang_attr}{theme_attr}>")
+        parts.append(f"<html{lang_attr}{theme_name_attr}>")
 
         # ── <head> ──
         parts.append("<head>")

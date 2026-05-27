@@ -102,14 +102,21 @@ def _variant_selector(variant_name: str) -> str:
     Get CSS selector for a variant.
 
     Args:
-        variant_name: Variant name (e.g., "dark")
+        variant_name: Variant name. `"light"` / `"dark"` are colour-scheme
+            variants that map to `[data-theme="..."]` — the runtime JS
+            rewrites `data-theme` on first paint to match the user's
+            colour-scheme preference. Any other name is treated as a
+            project theme identity and maps to `[data-theme-name="..."]`
+            — the SSR-set `data-theme-name` attribute that the runtime
+            JS never rewrites (#1280).
 
     Returns:
         CSS selector string
     """
     if variant_name == "dark":
         return '[data-theme="dark"]'
-    elif variant_name == "light":
+    if variant_name == "light":
         return '[data-theme="light"]'
-    else:
-        return f'[data-theme="{variant_name}"]'
+    # Project theme identity — match the SSR-set `data-theme-name`
+    # attribute, not the JS-rewritten `data-theme` colour scheme.
+    return f'[data-theme-name="{variant_name}"]'

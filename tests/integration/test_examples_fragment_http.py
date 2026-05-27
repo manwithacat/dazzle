@@ -421,12 +421,14 @@ def test_fragment_chrome_custom_js_scripts_override() -> None:
         assert f'<script defer src="{url}"></script>' in body
 
 
-def test_fragment_chrome_theme_override_emits_data_theme_attr() -> None:
-    """`fragment_chrome_theme` propagates to `<html data-theme="...">`,
-    matching the legacy template's theme attribute."""
+def test_fragment_chrome_theme_override_emits_data_theme_name_attr() -> None:
+    """#1280: `fragment_chrome_theme` propagates to
+    `<html data-theme-name="...">` (project theme identity, SSR-set,
+    never JS-rewritten). The separate `data-theme` attribute carries
+    the colour scheme (`light`/`dark`) and is owned by runtime JS."""
     client = _client_with_chrome_assets("simple_task", theme="linear-dark")
     body = client.get("/task").text
-    assert '<html lang="en" data-theme="linear-dark">' in body
+    assert '<html lang="en" data-theme-name="linear-dark">' in body
 
 
 def test_fragment_chrome_now_emits_full_app_shell_chrome() -> None:

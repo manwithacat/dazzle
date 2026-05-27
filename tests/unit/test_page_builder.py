@@ -86,7 +86,10 @@ def test_dispatch_render_page_returns_full_html_document() -> None:
         theme="linear-dark",
     )
     assert html.startswith("<!DOCTYPE html>")
-    assert '<html lang="en" data-theme="linear-dark">' in html
+    # #1280: project theme identity carried by data-theme-name (SSR-set,
+    # never JS-rewritten); data-theme carries the colour scheme and is
+    # written by runtime JS on first paint.
+    assert '<html lang="en" data-theme-name="linear-dark">' in html
     assert "<title>Tasks — Demo</title>" in html
     assert '<link rel="stylesheet" href="/static/dazzle.min.css">' in html
     assert '<script defer src="/static/dazzle.min.js"></script>' in html

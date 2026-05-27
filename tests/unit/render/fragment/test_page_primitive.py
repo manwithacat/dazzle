@@ -59,13 +59,33 @@ def test_page_emits_doctype() -> None:
 
 def test_page_emits_html_with_lang_and_optional_theme() -> None:
     html = _render(Page(title="X", body=Text("x"), lang="en", theme="dark"))
-    assert '<html lang="en" data-theme="dark">' in html
+    # #1280: project theme identity moved from `data-theme` to
+    # `data-theme-name`. `data-theme` is now JS-owned for colour scheme.
+    assert '<html lang="en" data-theme-name="dark">' in html
 
 
 def test_page_omits_theme_attr_when_none() -> None:
     html = _render(Page(title="X", body=Text("x")))
     assert "<html" in html
-    assert "data-theme" not in html
+
+
+def test_page_emits_data_theme_name_not_data_theme_1280() -> None:
+    """#1280: SSR sets ONLY `data-theme-name` for project theme identity.
+    `data-theme` is left absent so the runtime `static/js/site.js`
+    `applyTheme()` call on first paint can write it to `light` or `dark`
+    without overwriting the project identity. Pre-fix the renderer
+    emitted `data-theme="stripe"` and the JS clobbered it on first
+    paint — `[data-theme="stripe"]` CSS selectors never matched in the
+    live DOM."""
+    html = _render(Page(title="X", body=Text("x"), theme="stripe"))
+    assert 'data-theme-name="stripe"' in html, (
+        "Project theme identity must be on data-theme-name (#1280)"
+    )
+    # The bare `data-theme="stripe"` attribute MUST NOT be emitted —
+    # it's reserved for the JS-written colour scheme.
+    assert 'data-theme="stripe"' not in html, (
+        "data-theme is JS-owned for colour scheme; SSR must not write the project name there (#1280)"
+    )
 
 
 def test_page_emits_head_with_charset_viewport_title_favicon() -> None:
@@ -197,7 +217,9 @@ def test_page_with_surface_body_composes_correctly() -> None:
     html = _render(page)
     # Outer chrome
     assert "<!DOCTYPE html>" in html
-    assert '<html lang="en" data-theme="dark">' in html
+    # #1280: project theme identity moved from `data-theme` to
+    # `data-theme-name`. `data-theme` is now JS-owned for colour scheme.
+    assert '<html lang="en" data-theme-name="dark">' in html
     # Surface inside body
     assert '<section class="dz-surface">' in html
     assert "Tasks" in html
