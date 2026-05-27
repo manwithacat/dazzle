@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.7] - 2026-05-27
+
+### Added
+
+- **#1283 phase 2** — New `dazzle.signing` package: framework-agnostic backend for the upcoming `signable: true` DSL primitive. Lifts cyfuture's production signing stack (~1,033 LOC) into reusable, generalised modules:
+  - `dazzle.signing.tokens` — HMAC-SHA256 mint/verify + `token_hash` for audit storage. Stdlib-only. Reads `SIGNING_TOKEN_SECRET`. Exposes `SigningError`, `InvalidTokenError`.
+  - `dazzle.signing.cert` — ECDSA P-256 CA (10y) + signing cert (1y) chain generator, project-name parameterised. Returns PKCS#12 bytes or base64 string for env-var capture. Needs `cryptography`.
+  - `dazzle.signing.service` — PDF generation (`fpdf2`) + PKCS#7 signing with optional RFC 3161 timestamp (`pyhanko`) → PAdES B-T. Caller supplies `PdfBranding` (organisation, tagline, footer, jurisdiction); reads `SIGNING_CERT_PFX_B64` + `SIGNING_CERT_PASSWORD`.
+- **New optional extra `[signing]`** in `pyproject.toml`: `fpdf2>=2.8.0`, `pyhanko>=0.25.0`, `Pillow>=10.0`, `cryptography>=41.0.0`. Heavy deps imported lazily — consumers that never touch a signable entity stay free of the chain. Each entry point raises `SigningError` with an explicit `pip install dazzle-dsl[signing]` hint when its deps are missing.
+- **33 unit tests** at `tests/unit/test_signing/`: token round-trip, tamper rejection, expiry, missing-secret guard, cert subject/validity/chain assertions, PDF generation, PKCS#7 sign round-trip, deps-missing guard paths.
+
+### Agent Guidance
+
+- Phase 2 of #1283 is **standalone backend only** — the `signable: true` DSL keyword does not parse yet (phase 3 wires parser + IR + linker). Callers can use the public API directly from app code today; the framework integration arrives in a follow-up.
+- The two locked design decisions that shape this code: (a) one CA per Dazzle project — cert subject reflects project identity, tenant identity lives in the document body; (b) env-var shape is forward-compatible — a future HSM-backed CSP source can replace the PKCS#12 path without changing the `signable: true` entity contract.
+- pyhanko's `SimpleSigner` API changed since cyfuture's original lift: use `from pyhanko.sign.signers import SimpleSigner` (not `.pdf_signer`) and `load_pkcs12_data(pkcs12_bytes=…)` (not `load_pkcs12(pfx_file=BytesIO(…))`). Existing cyfuture code will need this path update when it migrates to the framework primitive.
+
 ## [0.79.6] - 2026-05-27
 
 ### Fixed

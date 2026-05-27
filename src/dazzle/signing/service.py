@@ -1,0 +1,264 @@
+"""PDF generation + PKCS#7 signing for native document signing (#1283).
+
+Two-stage pipeline:
+
+1. ``generate_pdf`` renders an HTML letter body to a PDF using ``fpdf2``
+   (pure-Python, no system deps). The caller supplies organisation
+   branding (header, country, footer) so the framework stays
+   project-agnostic.
+
+2. ``sign_pdf`` applies a PKCS#7 digital signature with an optional
+   RFC 3161 timestamp, producing a PAdES B-T (Basic + Timestamp)
+   document. The signing identity is loaded from the
+   ``SIGNING_CERT_PFX_B64`` + ``SIGNING_CERT_PASSWORD`` env vars (a
+   project-level CA + signing cert chain, minted by
+   ``dazzle.signing.cert.generate_cert_chain``).
+
+Both ``fpdf2`` and ``pyhanko`` live behind the ``[signing]`` extra and
+are imported lazily so consumers that never touch a signable entity
+stay free of the dep chain.
+
+Lifted from cyfuture's working stack (``services/signing_service.py``).
+Project-specific branding strings were inlined there; here they are
+explicit parameters on the ``PdfBranding`` dataclass so any Dazzle
+downstream can supply its own header/footer.
+"""
+
+from __future__ import annotations
+
+import base64
+import io
+import logging
+import os
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
+
+from dazzle.signing.tokens import SigningError
+
+if TYPE_CHECKING:
+    from pyhanko.sign.signers import SimpleSigner
+
+log = logging.getLogger(__name__)
+
+DEFAULT_TSA_URL = "http://timestamp.digicert.com"
+
+_signer_cache: SimpleSigner | None = None
+
+
+@dataclass(frozen=True)
+class PdfBranding:
+    """Project-level branding for the generated PDF.
+
+    All fields are required so the rendered PDF carries a clear
+    organisation identity. Use ``location`` to set the legal
+    jurisdiction recorded on the PKCS#7 signature.
+    """
+
+    organisation: str
+    organisation_tagline: str = ""
+    footer_text: str = ""
+    location: str = "United Kingdom"
+
+
+def _sanitize_html_for_pdf(html: str) -> str:
+    """Map HTML entities + Unicode chars to Helvetica-safe ASCII.
+
+    fpdf2's built-in Helvetica is Latin-1 only. Em dashes, smart
+    quotes, etc. must be down-converted or the PDF renders garbage.
+    """
+    html_entity_replacements = {
+        "&mdash;": " - ",
+        "&ndash;": "-",
+        "&lsquo;": "'",
+        "&rsquo;": "'",
+        "&ldquo;": '"',
+        "&rdquo;": '"',
+        "&hellip;": "...",
+        "&bull;": "*",
+    }
+    for entity, replacement in html_entity_replacements.items():
+        html = html.replace(entity, replacement)
+
+    unicode_replacements = {
+        "—": " - ",
+        "–": "-",
+        "‘": "'",
+        "’": "'",
+        "“": '"',
+        "”": '"',
+        "…": "...",
+        "•": "*",
+        " ": " ",
+    }
+    for char, replacement in unicode_replacements.items():
+        html = html.replace(char, replacement)
+
+    return html
+
+
+def generate_pdf(
+    letter_html: str,
+    signer_name: str,
+    branding: PdfBranding,
+    signature_png_bytes: bytes | None = None,
+) -> bytes:
+    """Render an HTML letter to a signed-ready PDF.
+
+    The output is an unsigned PDF; pass it to ``sign_pdf`` to apply the
+    PKCS#7 digital signature.
+    """
+    try:
+        from fpdf import FPDF
+    except ImportError as exc:
+        raise SigningError(
+            "fpdf2 is not installed. Install with `pip install dazzle-dsl[signing]`."
+        ) from exc
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=25)
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, branding.organisation, new_x="LMARGIN", new_y="NEXT")
+    if branding.organisation_tagline:
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(
+            0,
+            5,
+            branding.organisation_tagline,
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+    pdf.ln(5)
+
+    pdf.set_font("Helvetica", "", 10)
+    today = datetime.now(UTC).strftime("%d %B %Y")
+    pdf.cell(0, 6, f"Date: {today}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+
+    pdf.set_font("Helvetica", "", 10)
+    pdf.write_html(_sanitize_html_for_pdf(letter_html))
+
+    pdf.ln(15)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(0, 6, "Signed:", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+
+    if signature_png_bytes:
+        sig_stream = io.BytesIO(signature_png_bytes)
+        pdf.image(sig_stream, x=pdf.get_x(), y=pdf.get_y(), w=60)
+        pdf.ln(25)
+
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Name: {signer_name}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(
+        0,
+        6,
+        f"Date: {datetime.now(UTC).strftime('%d %B %Y at %H:%M UTC')}",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    if branding.footer_text:
+        pdf.ln(20)
+        pdf.set_font("Helvetica", "", 7)
+        pdf.cell(
+            0,
+            4,
+            branding.footer_text,
+            new_x="LMARGIN",
+            new_y="NEXT",
+            align="C",
+        )
+
+    return bytes(pdf.output())
+
+
+def _get_signer() -> SimpleSigner:
+    """Load and cache the PKCS#12 signer from env."""
+    global _signer_cache
+    if _signer_cache is not None:
+        return _signer_cache
+
+    pfx_b64 = os.environ.get("SIGNING_CERT_PFX_B64", "")
+    password = os.environ.get("SIGNING_CERT_PASSWORD", "")
+
+    if not pfx_b64:
+        raise SigningError("SIGNING_CERT_PFX_B64 not configured")
+
+    try:
+        from pyhanko.sign.signers import SimpleSigner
+    except ImportError as exc:
+        raise SigningError(
+            "pyhanko is not installed. Install with `pip install dazzle-dsl[signing]`."
+        ) from exc
+
+    try:
+        pfx_bytes = base64.b64decode(pfx_b64)
+        signer: SimpleSigner = SimpleSigner.load_pkcs12_data(
+            pkcs12_bytes=pfx_bytes,
+            other_certs=(),
+            passphrase=password.encode() if password else None,
+        )
+    except Exception as exc:
+        raise SigningError(f"Failed to load signing certificate: {exc}") from exc
+
+    _signer_cache = signer
+    return signer
+
+
+def reset_signer_cache() -> None:
+    """Clear the cached PKCS#12 signer. Test-only entry point."""
+    global _signer_cache
+    _signer_cache = None
+
+
+def sign_pdf(
+    pdf_bytes: bytes,
+    signer_name: str,
+    signer_email: str,
+    branding: PdfBranding,
+    use_tsa: bool = True,
+    tsa_url: str = DEFAULT_TSA_URL,
+) -> bytes:
+    """Apply a PKCS#7 digital signature + optional RFC 3161 timestamp.
+
+    Achieves PAdES B-T conformance when ``use_tsa=True`` and the TSA is
+    reachable. Falls back to PAdES B-B (no timestamp) if the TSA is
+    unreachable, logging a warning.
+    """
+    try:
+        from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+        from pyhanko.sign import fields as sig_fields
+        from pyhanko.sign import signers
+    except ImportError as exc:
+        raise SigningError(
+            "pyhanko is not installed. Install with `pip install dazzle-dsl[signing]`."
+        ) from exc
+
+    signer = _get_signer()
+
+    timestamper: Any = None
+    if use_tsa:
+        try:
+            from pyhanko.sign import timestamps
+
+            timestamper = timestamps.HTTPTimeStamper(tsa_url)  # type: ignore[no-untyped-call]
+        except Exception:
+            log.warning("TSA unavailable, signing without timestamp")
+
+    w = IncrementalPdfFileWriter(io.BytesIO(pdf_bytes))
+    sig_fields.append_signature_field(
+        w, sig_fields.SigFieldSpec("Signature", box=(30, 50, 250, 120))
+    )
+
+    meta = signers.PdfSignatureMetadata(
+        field_name="Signature",
+        md_algorithm="sha256",
+        reason=f"Signed by {signer_name} ({signer_email})",
+        location=branding.location,
+    )
+
+    result = signers.sign_pdf(w, meta, signer=signer, timestamper=timestamper)
+    return bytes(result.read())

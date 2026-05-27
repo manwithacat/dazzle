@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.79.6"
+version = "0.79.7"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -131,6 +131,18 @@ sso = [
     # itsdangerous moved to core deps in v0.67.96 (#1054) — required
     # by Starlette's SessionMiddleware whether or not authlib is
     # installed. Kept here for documentation; pip dedupes.
+]
+signing = [
+    # #1283 phase 2: native document signing primitive.
+    # fpdf2 = pure-Python PDF generation (no system deps).
+    # pyhanko = pure-Python PKCS#7 + PAdES B-T + RFC 3161 timestamps.
+    # Pillow = signature PNG handling (pyhanko + fpdf2 both depend on it).
+    # cryptography drives the ECDSA P-256 CA + signing cert chain in
+    # dazzle.signing.cert (not in core deps — pulled in here).
+    "fpdf2>=2.8.0",
+    "pyhanko>=0.25.0",
+    "Pillow>=10.0",
+    "cryptography>=41.0.0",
 ]
 dev = [
     "pytest>=7.4",
