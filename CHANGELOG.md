@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.10] - 2026-05-27
+
+### Added
+
+- **#1283 phase 4** — Three deliverables wire the `signable: true` primitive into a usable end-to-end experience:
+  - **`dazzle signing init` CLI** — new subcommand at `src/dazzle/cli/signing.py`. Mints a project-level CA + signing cert chain (ECDSA P-256, 10y / 1y validity per phase 1 decisions), emits PKCS#12 base64 + password + a fresh `SIGNING_TOKEN_SECRET` to stdout. Flags: `--project-name` (defaults to `name` in `dazzle.toml`, then CWD basename), `--country` (default `GB`), `--heroku-app NAME` (adds `heroku config:set` invocation hints), `--force` (override the `SIGNING_CERT_PFX_B64`-already-set refusal during cert rotation).
+  - **Signing-pad Island JS** — new ES module at `src/dazzle/ui/runtime/static/js/islands/signing-pad.js`, served via the framework's `/static` mount. Mounts via the existing `data-island="signing_pad"` + `data-island-src="/static/js/islands/signing-pad.js"` convention from `dz-islands.js`. Builds a `signature_pad` canvas + authority-declaration checkbox + sign/decline action buttons via `createElement`/`textContent` (no `innerHTML` with dynamic data). POSTs JSON `{token, signatory_name, signature_png_b64}` to `/api/sign/{entity}/{record}` and triggers a download of the returned signed PDF. The host page (`_signing_page`) now includes the `signature_pad@5` UMD script + `dz-islands.js` so the Island bootstraps without project-side wiring.
+  - **File persistence to `signed_document` column** — `create_signing_routes` accepts an optional `file_service` parameter. When supplied, the signed PDF is persisted via `FileService.upload(...)` and the entity row's `signed_document` field is patched with the returned URL. `ServerState` threads `self._file_service` through automatically. When the project has file uploads disabled, the PDF is still returned inline and `signed_document` stays null — graceful degradation.
+
+### Agent Guidance
+
+- **Cert rotation by design destroys signature verifiability.** Re-running `dazzle signing init --force` mints a NEW CA; every previously signed document becomes unverifiable against the new chain. Phase 1 ships one CA per project on purpose. Document rotation explicitly in any runbook before adopting in production.
+- **Signing-pad Island assumes `signature_pad@5` is on `window`.** The host page (`_signing_page` helper) loads the UMD build from jsDelivr before mounting. Downstream apps that re-host the signing page should keep the script tag or vendor the library — the Island surfaces a clear fatal-error message rather than silently failing when `window.SignaturePad` is missing.
+- **`file_service` is optional, not required.** Routes work fine without it (PDF returned inline, `signed_document` stays null). Wiring it on adds persistent storage + a fetchable URL but isn't a hard dependency — useful for projects that haven't enabled file uploads.
+
 ## [0.79.9] - 2026-05-27
 
 ### Added

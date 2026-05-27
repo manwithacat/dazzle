@@ -62,6 +62,7 @@ def create_signing_routes(
     *,
     repositories: dict[str, Any],
     branding: PdfBranding | None = None,
+    file_service: Any | None = None,
 ) -> APIRouter | None:
     """Build the auto-mounted signing router.
 
@@ -75,6 +76,14 @@ def create_signing_routes(
             jurisdiction). Defaults to a minimal ``PdfBranding`` whose
             ``organisation`` is "Dazzle App" — projects will normally
             supply their own via the runtime configuration.
+        file_service: Optional :class:`FileService` (or anything with
+            an ``upload(file, filename, content_type, entity_name,
+            entity_id, field_name)`` async method). When supplied, the
+            signed PDF is persisted via this service and the entity
+            row's ``signed_document`` field is patched with the
+            resulting URL. When ``None`` (file uploads disabled), the
+            PDF is still returned inline and the row's
+            ``signed_document`` stays null.
 
     Returns:
         ``None`` if no entity has ``signable: true``. Otherwise an
@@ -115,6 +124,7 @@ def create_signing_routes(
             signable=signable,
             repositories=repositories,
             branding=resolved_branding,
+            file_service=file_service,
         )
 
     return router
@@ -208,6 +218,7 @@ async def _handle_post(
     signable: dict[str, EntitySpec],
     repositories: dict[str, Any],
     branding: PdfBranding,
+    file_service: Any | None = None,
 ) -> Response:
     entity = _lookup_signable(entity_name, signable)
     repo = _lookup_repo(entity_name, repositories)
@@ -270,16 +281,43 @@ async def _handle_post(
         branding=branding,
     )
 
-    await repo.update(
-        record_id,
-        {
-            "status": "signed",
-            "signed_at": _utcnow(),
-            "signing_token_hash": token_hash(body.token),
-            "signer_ip": _client_ip(request),
-            "signer_user_agent": request.headers.get("user-agent", "")[:500],
-        },
-    )
+    patch: dict[str, Any] = {
+        "status": "signed",
+        "signed_at": _utcnow(),
+        "signing_token_hash": token_hash(body.token),
+        "signer_ip": _client_ip(request),
+        "signer_user_agent": request.headers.get("user-agent", "")[:500],
+    }
+
+    if file_service is not None:
+        import io as _io
+
+        filename = f"{entity.name}-{record_id}.pdf"
+        try:
+            metadata = await file_service.upload(
+                _io.BytesIO(signed_pdf),
+                filename=filename,
+                content_type="application/pdf",
+                entity_name=entity.name,
+                entity_id=str(record_id),
+                field_name="signed_document",
+                path_prefix=f"signing/{entity.name}",
+            )
+            # `signed_document` is a `file` field; the framework stores
+            # path/URL strings. Use the storage backend's public URL so
+            # the document is fetchable through the file-routes
+            # download path.
+            patch["signed_document"] = metadata.url
+        except Exception:
+            log.warning(
+                "Failed to persist signed PDF for %s/%s — PDF still "
+                "returned inline; signed_document field left null",
+                entity.name,
+                record_id,
+                exc_info=True,
+            )
+
+    await repo.update(record_id, patch)
 
     return Response(
         content=signed_pdf,
@@ -390,26 +428,42 @@ def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:
 
 
 def _signing_page(*, entity_name: str, record_id: str, token: str) -> str:
+    import json
+
     safe_entity = html.escape(entity_name)
     safe_id = html.escape(record_id)
-    # Tokens are HMAC-signed base64-url payloads (alnum + `-_=`). The
-    # ``quote=True`` flag also escapes the ASCII quote characters so the
-    # value is safe in an HTML attribute.
-    safe_token = html.escape(token, quote=True)
+    # The Island reads props from data-island-props; encode as JSON and
+    # then HTML-escape so the JSON itself can't break out of the
+    # attribute quotes. Tokens are HMAC-signed base64-url payloads
+    # (alnum + ``-_=``) so by character class they're attribute-safe,
+    # but escaping defends against future token-shape changes.
+    props = json.dumps(
+        {
+            "entity": entity_name,
+            "record": record_id,
+            "token": token,
+            "signatoryName": "Signer",
+            "entityName": entity_name,
+            "apiBase": "/api/sign",
+        }
+    )
+    safe_props = html.escape(props, quote=True)
     return (
         "<!DOCTYPE html>"
         '<html lang="en"><head><meta charset="utf-8">'
-        f"<title>Sign {safe_entity}</title></head>"
+        f"<title>Sign {safe_entity}</title>"
+        '<link rel="stylesheet" href="/static/dist/dazzle.min.css">'
+        "</head>"
         '<body style="font-family: system-ui; max-width: 720px; margin: 2rem auto;">'
         f"<h1>Sign {safe_entity}</h1>"
         f"<p>Document identifier: <code>{safe_id}</code></p>"
-        '<div id="signing-island" data-island="signing_pad" '
-        f'data-entity="{safe_entity}" data-record="{safe_id}" '
-        f'data-token="{safe_token}">'
-        "<p>The signing pad will load here when the phase-4 Island JS "
-        "is wired in. This page proves the route is mounted and the "
-        "token + status transition are working.</p>"
+        '<div data-island="signing_pad" '
+        'data-island-src="/static/js/islands/signing-pad.js" '
+        f'data-island-props="{safe_props}">'
+        "<p>Loading signing pad…</p>"
         "</div>"
+        '<script src="https://cdn.jsdelivr.net/npm/signature_pad@5/dist/signature_pad.umd.min.js"></script>'
+        '<script src="/static/js/dz-islands.js"></script>'
         "</body></html>"
     )
 

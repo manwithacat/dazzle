@@ -1587,6 +1587,7 @@ class DazzleBackendApp:
                 signing_router = create_signing_routes(
                     list(self._appspec.domain.entities),
                     repositories=self._repositories,
+                    file_service=self._file_service,
                 )
                 if signing_router is not None:
                     self._app.include_router(signing_router)

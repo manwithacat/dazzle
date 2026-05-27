@@ -73,16 +73,54 @@ def _app_with_routes(
     *,
     entity_name: str = "Contract",
     signing_validator: str | None = None,
+    file_service: Any | None = None,
 ) -> tuple[FastAPI, _MockRepo]:
     entity = _signable_entity(entity_name)
     if signing_validator is not None:
         entity = entity.model_copy(update={"signing_validator": signing_validator})
     repo = _MockRepo(rows)
-    router = create_signing_routes([entity], repositories={entity_name: repo})
+    router = create_signing_routes(
+        [entity],
+        repositories={entity_name: repo},
+        file_service=file_service,
+    )
     assert router is not None
     app = FastAPI()
     app.include_router(router)
     return app, repo
+
+
+class _MockFileService:
+    """Minimal async file service. Records uploads + returns a fake URL."""
+
+    def __init__(self) -> None:
+        self.uploads: list[dict[str, Any]] = []
+
+    async def upload(
+        self,
+        file: Any,
+        filename: str,
+        content_type: str | None = None,
+        entity_name: str | None = None,
+        entity_id: str | None = None,
+        field_name: str | None = None,
+        path_prefix: str = "",
+    ) -> Any:
+        from types import SimpleNamespace
+
+        data = file.read()
+        self.uploads.append(
+            {
+                "filename": filename,
+                "content_type": content_type,
+                "entity_name": entity_name,
+                "entity_id": entity_id,
+                "field_name": field_name,
+                "path_prefix": path_prefix,
+                "size": len(data),
+            }
+        )
+        return SimpleNamespace(url=f"/files/{filename}")
 
 
 @pytest.fixture(autouse=True)
@@ -184,7 +222,8 @@ class TestRenderSigningPage:
         token = mint_token(record_id, "a@example.com")
         resp = client.get(f"/sign/Contract/{record_id}?token={token}")
         assert resp.status_code == 200
-        assert "signing-island" in resp.text  # placeholder Island marker
+        assert 'data-island="signing_pad"' in resp.text  # Island mount marker
+        assert "/static/js/islands/signing-pad.js" in resp.text
         assert len(repo.update_calls) == 1
         _, patch = repo.update_calls[0]
         assert patch["status"] == "viewed"
@@ -357,3 +396,39 @@ class TestFullSignFlow:
         assert patch["status"] == "signed"
         assert patch["signed_at"] is not None
         assert patch["signing_token_hash"]
+        # No file_service was wired, so signed_document stays null.
+        assert "signed_document" not in patch
+
+    def test_sign_persists_pdf_when_file_service_set(self) -> None:
+        pytest.importorskip("fpdf")
+        pytest.importorskip("pyhanko")
+
+        record_id = str(uuid4())
+        file_service = _MockFileService()
+        app, repo = _app_with_routes(
+            {record_id: {"status": "viewed"}},
+            file_service=file_service,
+        )
+        client = TestClient(app)
+        token = mint_token(record_id, "alice@example.com")
+
+        resp = client.post(
+            f"/api/sign/Contract/{record_id}",
+            json={"token": token, "signatory_name": "Alice"},
+        )
+        assert resp.status_code == 200
+
+        # File service got the signed PDF.
+        assert len(file_service.uploads) == 1
+        upload = file_service.uploads[0]
+        assert upload["filename"] == f"Contract-{record_id}.pdf"
+        assert upload["content_type"] == "application/pdf"
+        assert upload["entity_name"] == "Contract"
+        assert upload["entity_id"] == record_id
+        assert upload["field_name"] == "signed_document"
+        assert upload["path_prefix"] == "signing/Contract"
+        assert upload["size"] > 100  # signed PDF, not empty
+
+        # The entity row's signed_document field carries the URL.
+        _, patch = repo.update_calls[0]
+        assert patch["signed_document"] == f"/files/Contract-{record_id}.pdf"
