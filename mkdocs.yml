@@ -76,6 +76,7 @@ nav:
       - Databases: reference/databases.md
       - Deployment: reference/deployment.md
       - Islands: reference/islands.md
+      - Document Signing: reference/document-signing.md
       - PII & Privacy: reference/pii-privacy.md
       - Performance Envelope: reference/performance-envelope.md
       - CLI: reference/cli.md

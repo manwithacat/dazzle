@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.11] - 2026-05-27
+
+### Added
+
+- **#1283 phase 5** — Integration test pass + user-facing reference docs:
+  - **9 new integration tests** at `tests/unit/test_signing/test_integration.py` close the gap between unit-level hand-built `EntitySpec` and a real boot path. They parse DSL through `parse_modules` + `build_appspec`, then exercise `create_signing_routes` against the linked AppSpec. Covers: linker injects the 11 canonical fields end-to-end, `signable: true` survives linker, `audit: AuditConfig(enabled=True)` defaults on a real parser-produced entity, non-signable entities stay untouched, router mounts the expected 2 routes when a signable entity is present, returns `None` otherwise, explicit `signable: false` is treated like the absent directive, and project-declared `status`/`signing_url` fields beat the auto-inject (widening test).
+  - **`docs/reference/document-signing.md`** — canonical reference for downstream consumers. Quick-start (mint cert → declare entity → mint token → signer flow), auto-injected field table, validator hook contract, route status-code matrix (200/400/403/404/409), token contract + expiry, env-var inventory, architecture diagram, limitations (template lookup, per-tenant CAs, AES escalation, `PdfBranding` wire-up). Added to the mkdocs nav under Reference.
+
+### Agent Guidance
+
+- **The signing primitive's runtime is feature-complete.** Phase 5 closed the test + docs gaps. The remaining open items are the project-side template-lookup design (Jinja2 vs typed-Fragment vs callable hook), surfacing `PdfBranding` from `dazzle.toml`, and the downstream consumer migrations (cyfuture phase 6, aegismark phase 7). None are blockers — projects can use the primitive today with the default placeholder template.
+- **`docs/reference/document-signing.md` is the canonical user-facing entry point.** When a downstream consumer asks about the primitive, point them there first; the issue thread (#1283) is the design history rather than the usage doc.
+
 ## [0.79.10] - 2026-05-27
 
 ### Added
