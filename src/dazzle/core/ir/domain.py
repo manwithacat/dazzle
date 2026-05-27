@@ -110,6 +110,14 @@ class PermissionRule(BaseModel):
     condition: ConditionExpr | None = None  # Additional row-level check
     effect: PolicyEffect = PolicyEffect.PERMIT  # Cedar-style effect
     personas: list[str] = Field(default_factory=list)  # Persona scope (empty = any)
+    # #1281: when set, this rule explicitly denies the operation for all
+    # callers. Lets append-only entities express `permit: update: false`
+    # / `permit: delete: false` as a first-class declaration rather than
+    # relying on the soft-deny `role(nobody)` workaround. The runtime
+    # already default-denies any operation with no PERMIT rule, but the
+    # explicit flag distinguishes "intentionally forbidden" from
+    # "accidentally omitted" for the validator + audit matrix.
+    deny_all: bool = False
 
     model_config = ConfigDict(frozen=True)
 

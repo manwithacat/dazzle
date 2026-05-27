@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.3] - 2026-05-27
+
+### Added
+
+- **#1281** — `permit: <op>: false` short-form for explicitly forbidding an operation on append-only entities. Replaces the soft-deny workaround `permit: update: role(nobody)` that relied on `nobody` being an undeclared role (and tripped the validator's `validate_role_references_against_enum` warning). The new shape lowers to `PermissionRule(deny_all=True, condition=None, effect=PERMIT)` — the runtime's existing default-deny path handles the actual denial; the explicit IR flag lets the validator + RBAC matrix distinguish "intentionally forbidden" from "accidentally omitted."
+- **`PermissionRule.deny_all: bool = False`** — new IR field. Defaults to False so legacy consumers that don't know about it aren't surprised.
+- **5 new tests** at `tests/unit/test_permit_false_short_form_1281.py`: positive parse (multiple `false` siblings, mixed with normal rules), legacy rules keep `deny_all=False`, `forbid: <op>: false` rejected (ambiguous semantics), IR default-value sanity.
+
+### Agent Guidance
+
+- For append-only entities (audit logs, event streams, journal entries, materialised projections), write `permit: update: false` and `permit: delete: false` rather than the `role(nobody)` workaround. The validator no longer tripping on undeclared roles is the immediate win; the audit matrix carrying explicit intent is the structural win.
+- `forbid: <op>: false` is rejected at parse time — the negation in a `forbid:` block has ambiguous semantics (does it mean "permit everyone"?). Use a concrete role/condition expression there.
+- `false` is only the short-form for "deny all"; there's no `permit: <op>: true` form (use `permit: <op>: authenticated` instead).
+
 ## [0.79.2] - 2026-05-27
 
 ### Changed (BREAKING — CSS selectors for theme identity)

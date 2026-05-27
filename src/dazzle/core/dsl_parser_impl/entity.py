@@ -1085,6 +1085,34 @@ class EntityParserMixin:
 
         self.expect(TokenType.COLON)
 
+        # #1281: `false` short-form. `permit: update: false` explicitly
+        # forbids the operation for all callers (append-only entities)
+        # rather than relying on the soft-deny `role(nobody)` workaround.
+        # Only valid in `permit:` blocks — `forbid: <op>: false` would
+        # be ambiguous (does it mean "permit everyone"?). The IR carries
+        # `deny_all=True`; the runtime's existing default-deny then
+        # excludes the op, and the validator/audit matrix can
+        # distinguish intentional prohibition from accidental omission.
+        if self.match(TokenType.FALSE):
+            bool_token = self.current_token()
+            self.advance()
+            if effect != ir.PolicyEffect.PERMIT:
+                raise make_parse_error(
+                    f"`false` short-form is only valid in `permit:` blocks, "
+                    f"not `{effect.value}:`. Use a role/condition expression "
+                    f"instead.",
+                    self.file,
+                    bool_token.line,
+                    bool_token.column,
+                )
+            return ir.PermissionRule(
+                operation=operation,
+                require_auth=True,
+                condition=None,
+                effect=effect,
+                deny_all=True,
+            )
+
         # Check for simple "authenticated" (no condition)
         if self.match(TokenType.AUTHENTICATED):
             self.advance()
