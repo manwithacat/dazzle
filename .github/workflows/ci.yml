@@ -167,10 +167,25 @@ jobs:
       # `--ignore-vuln <GHSA-or-CVE-id>` with a rationale comment + a
       # CHANGELOG `### Agent Guidance` entry naming the condition to
       # remove it.
+      #
+      # MAL-2026-4750 is suppressed (#1278): Amazon Inspector flagged
+      # fastapi 0.136.3 for declaring `fastar>=0.9.0` in its [standard]
+      # extra. Investigation confirmed `fastar` is a legitimate Rust-
+      # tar binding used by fastapi-cloud-cli to write zstd-compressed
+      # upload bundles (`with fastar.open(tar_path, "w:zst", ...)`).
+      # The name is `fast`+`tar`, not a typosquat. fastapi 0.136.3
+      # also ships a parallel `standard-no-fastapi-cloud-cli` extras
+      # group that opts out of cloud-cli + fastar — clear evidence of
+      # deliberate design, not malicious insertion. We don't take
+      # fastapi[standard] anywhere in our deps, so we never install
+      # fastar. Remove this suppression if/when Inspector retracts
+      # the advisory.
       run: |
         pip install pip-audit
         pip freeze --exclude-editable > /tmp/audit-reqs.txt
-        pip-audit --strict --desc --no-deps --disable-pip -r /tmp/audit-reqs.txt
+        pip-audit --strict --desc --no-deps --disable-pip \
+          --ignore-vuln MAL-2026-4750 \
+          -r /tmp/audit-reqs.txt
 
   lint:
     runs-on: ubuntu-latest

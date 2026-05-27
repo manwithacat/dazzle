@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.5] - 2026-05-27
+
+### Security
+
+- **#1278** — Lifted the `fastapi != 0.136.3` pin from all three sites in `pyproject.toml` (core, `[dev]`, `[serve]`). The MAL-2026-4750 advisory was thoroughly investigated and confirmed a false positive: `fastar` is a legitimate Rust-tar binding consumed by `fastapi-cloud-cli/commands/deploy.py:127` (`with fastar.open(tar_path, "w:zst", ...)`) for zstd-compressed upload bundling. Name is `fast`+`tar`, not a typosquat. fastapi 0.136.3 also ships a parallel `standard-no-fastapi-cloud-cli` extras group as the deliberate opt-out — clear evidence of intentional design.
+- **CI pip-audit** now passes `--ignore-vuln MAL-2026-4750` with an inline rationale comment. We don't take `fastapi[standard]` anywhere in our deps, so we never install `fastar` regardless of the advisory. Suppression will be removed if Amazon Inspector retracts the advisory.
+
+### Agent Guidance
+
+- For downstream users who need fastapi's `[standard]` features (uvicorn, httpx, jinja2, python-multipart, etc.) without bundled cloud-deploy tooling: install `fastapi[standard-no-fastapi-cloud-cli]>=0.136.3` rather than `fastapi[standard]`. This is upstream's documented opt-out variant.
+- When a `pip-audit` advisory turns out to be a false positive after structural investigation (legitimate dep with non-malicious purpose, no untrusted-input code path), suppress by advisory ID with `--ignore-vuln <ID>` in CI. Document the rationale inline; do NOT add a version exclusion to `pyproject.toml` as the suppression — that creates pin churn for downstream consumers without addressing the underlying false-positive signal.
+
 ## [0.79.4] - 2026-05-27
 
 ### Added
