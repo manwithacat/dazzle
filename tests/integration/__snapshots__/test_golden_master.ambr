@@ -187,6 +187,8 @@
           'publishes': list([
           ]),
           'seed_template': None,
+          'signable': False,
+          'signing_validator': None,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -420,6 +422,8 @@
           'publishes': list([
           ]),
           'seed_template': None,
+          'signable': False,
+          'signing_validator': None,
           'soft_delete': False,
           'source': None,
           'state_machine': None,
@@ -670,6 +674,8 @@
           'publishes': list([
           ]),
           'seed_template': None,
+          'signable': False,
+          'signing_validator': None,
           'soft_delete': False,
           'source': None,
           'state_machine': None,
@@ -925,6 +931,8 @@
           'publishes': list([
           ]),
           'seed_template': None,
+          'signable': False,
+          'signing_validator': None,
           'soft_delete': False,
           'source': None,
           'state_machine': None,

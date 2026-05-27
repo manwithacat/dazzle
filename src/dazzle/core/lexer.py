@@ -180,6 +180,9 @@ class TokenType(Enum):
 
     # v0.34.0 Platform Capability Keywords
     SOFT_DELETE = "soft_delete"
+    # v0.79.7 (#1283 phase 3): native document signing primitive
+    SIGNABLE = "signable"
+    SIGNING_VALIDATOR = "signing_validator"
     # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity declaration
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities

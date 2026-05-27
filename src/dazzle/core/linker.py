@@ -202,6 +202,13 @@ def build_appspec(
     # `deleted_at` explicitly keep theirs.
     entities = _inject_soft_delete_fields(entities)
 
+    # 9e. Inject the 11 native-signing fields + default audit on
+    # entities with `signable: true` (#1283 phase 3). The runtime
+    # signing routes + `dazzle.signing` backend (shipped phase 2)
+    # read these columns. Project-declared fields with the same name
+    # take precedence — explicit always wins.
+    entities = _inject_signable_fields(entities)
+
     # 10. Build FK graph and compile scope predicates
     from .ir.fk_graph import FKGraph
     from .ir.predicate_builder import build_scope_predicate
@@ -510,6 +517,104 @@ def _inject_soft_delete_fields(entities: list[ir.EntitySpec]) -> list[ir.EntityS
             modifiers=[FieldModifier.OPTIONAL],
         )
         out.append(entity.model_copy(update={"fields": [*entity.fields, new_field]}))
+    return out
+
+
+# Field set auto-injected on entities with `signable: true` (#1283 phase 3).
+# Project-declared fields with the same name win — explicit always beats
+# auto-inject. The 7-value status enum mirrors cyfuture's working state
+# machine; the URL/IP/UA/timestamp columns are the audit + crypto footprint
+# the signing runtime relies on.
+_SIGNABLE_AUTO_FIELDS: tuple[tuple[str, FieldType, tuple[FieldModifier, ...]], ...] = (
+    (
+        "status",
+        FieldType(
+            kind=FieldTypeKind.ENUM,
+            enum_values=[
+                "draft",
+                "sent",
+                "viewed",
+                "signed",
+                "declined",
+                "expired",
+                "superseded",
+            ],
+        ),
+        (FieldModifier.REQUIRED,),
+    ),
+    (
+        "signing_service",
+        FieldType(kind=FieldTypeKind.ENUM, enum_values=["native", "manual"]),
+        (FieldModifier.REQUIRED,),
+    ),
+    (
+        "signing_url",
+        FieldType(kind=FieldTypeKind.STR, max_length=500),
+        (FieldModifier.OPTIONAL,),
+    ),
+    ("signed_document", FieldType(kind=FieldTypeKind.FILE), (FieldModifier.OPTIONAL,)),
+    (
+        "signing_token_hash",
+        FieldType(kind=FieldTypeKind.STR, max_length=64),
+        (FieldModifier.OPTIONAL,),
+    ),
+    (
+        "signer_ip",
+        FieldType(kind=FieldTypeKind.STR, max_length=45),
+        (FieldModifier.OPTIONAL,),
+    ),
+    (
+        "signer_user_agent",
+        FieldType(kind=FieldTypeKind.STR, max_length=500),
+        (FieldModifier.OPTIONAL,),
+    ),
+    ("sent_at", FieldType(kind=FieldTypeKind.DATETIME), (FieldModifier.OPTIONAL,)),
+    ("viewed_at", FieldType(kind=FieldTypeKind.DATETIME), (FieldModifier.OPTIONAL,)),
+    ("signed_at", FieldType(kind=FieldTypeKind.DATETIME), (FieldModifier.OPTIONAL,)),
+    ("expires_at", FieldType(kind=FieldTypeKind.DATETIME), (FieldModifier.OPTIONAL,)),
+)
+
+
+def _inject_signable_fields(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
+    """Inject the 11 signing fields + default audit on `signable: true`
+    entities (#1283 phase 3).
+
+    For each entity with ``signable=True``:
+
+    * Append every field in ``_SIGNABLE_AUTO_FIELDS`` whose name is not
+      already declared. Project-declared fields with the same name keep
+      their existing type/modifiers — explicit always wins (allows
+      e.g. a wider ``status`` enum or a longer ``signing_url``).
+    * If ``audit`` is unset, default to
+      ``AuditConfig(enabled=True, operations=[])`` — signing is
+      legally meaningful, so the audit trail is on by default.
+
+    The state machine merge (auto-emit the 7-state transitions block
+    when no project-declared transitions exist) is intentionally
+    deferred to a later slice; phase 3 covers fields + audit defaults
+    only. The runtime read path needs the columns regardless of whether
+    the project supplied its own transitions block.
+    """
+    from .ir.domain import AuditConfig
+
+    out: list[ir.EntitySpec] = []
+    for entity in entities:
+        if not getattr(entity, "signable", False):
+            out.append(entity)
+            continue
+
+        existing = {f.name for f in entity.fields}
+        new_fields = list(entity.fields)
+        for name, ftype, mods in _SIGNABLE_AUTO_FIELDS:
+            if name in existing:
+                continue
+            new_fields.append(FieldSpec(name=name, type=ftype, modifiers=list(mods)))
+
+        updates: dict[str, object] = {"fields": new_fields}
+        if entity.audit is None:
+            updates["audit"] = AuditConfig(enabled=True, operations=[])
+
+        out.append(entity.model_copy(update=updates))
     return out
 
 

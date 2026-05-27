@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.8] - 2026-05-27
+
+### Added
+
+- **#1283 phase 3** — DSL keyword wiring for the `signable: true` primitive lands. `dazzle validate` now accepts a signable entity end-to-end:
+  - **IR** — `EntitySpec` carries two new fields: `signable: bool = False` and `signing_validator: str | None = None`.
+  - **Lexer** — new token types `SIGNABLE` and `SIGNING_VALIDATOR`.
+  - **Parser** — entity-level directives: `signable: true|false` and `signing_validator: dotted.path.to.callable`. The dotted-path parser walks `IDENT (DOT IDENT)*` so multi-segment validator paths (`app.signing.validators.verify_party_grant`) work without quoting.
+  - **Linker** — new `_inject_signable_fields` pass auto-injects the 11 framework-canonical fields (`status` 7-state enum, `signing_service` native|manual, `signing_url`, `signed_document`, `signing_token_hash`, `signer_ip`/`signer_user_agent`, `sent_at`/`viewed_at`/`signed_at`/`expires_at`) when `signable=True`. Project-declared fields with the same name win — explicit always beats auto-inject (use this to widen `signing_url` past 500 chars or add custom enum values to `status`).
+  - **Audit default** — signable entities default to `audit: AuditConfig(enabled=True)` when no `audit:` block is declared; signing is legally meaningful, so the trail is on by default.
+  - **17 unit tests** at `tests/unit/test_signable_wiring.py`: parser true/false/default/dotted-path, validation of bad values, all 11 auto-fields injected, project-declared field wins, audit-default behaviour, idempotency, field ordering.
+- **api-surface baseline** `docs/api-surface/ir-types.txt` updated with the two new `EntitySpec` fields.
+
+### Agent Guidance
+
+- The phase-3 ship covers **parser + IR + linker only**. Phase 3d (auto-emitted signing routes wired to the `dazzle.signing` backend shipped v0.79.7) and phase 4 (`dazzle signing init` CLI + signing-pad Island) land in follow-up cycles. `dazzle validate` accepts a signable entity today, but the runtime routes are not yet mounted — calling code can still use the `dazzle.signing` API directly from app code.
+- State-machine merge (auto-emit the 7-state transitions block when no project-declared transitions exist) is **deliberately deferred** to a later slice. The columns are injected, the audit default fires; transitions stay manual until the runtime needs them.
+- **Override the auto-inject by declaring the field explicitly.** A project with `status: enum[draft, sent, signed_remote, signed_in_person, archived] required` keeps its 5-value enum unchanged — the linker only fills the gap when the project did not declare the column. This is the canonical way to widen any of the 11 auto-fields.
+
 ## [0.79.7] - 2026-05-27
 
 ### Added

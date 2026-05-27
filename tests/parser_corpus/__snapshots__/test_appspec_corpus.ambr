@@ -183,6 +183,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Task',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -238,6 +239,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Report',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -493,6 +495,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Task',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -621,6 +624,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Item',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -787,6 +791,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Item',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -835,6 +840,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Task',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -958,6 +964,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Ticket',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -1078,6 +1085,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Order',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -1287,6 +1295,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Contact',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -1520,6 +1529,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Company',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -1600,6 +1610,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Person',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
@@ -1693,6 +1704,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Project',
+          'signable': False,
           'soft_delete': False,
           'source': dict({
             'column': 1,
