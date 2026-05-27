@@ -42,6 +42,7 @@ def test_seed_creates_one_doc_per_signable_entity():
             app_spec=app_spec,
             base_url="http://localhost:3000",
             signatory_email="a@b.com",
+            test_secret="dummy",
         )
     assert len(docs) == 1
     assert docs[0].entity == "EngagementLetter"

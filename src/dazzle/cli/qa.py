@@ -331,7 +331,9 @@ def _provision_signing_env(
     return SigningSeedContext(env=env, inbox_path=inbox_path, seeded_docs=[])
 
 
-def _insert_seed_row(*, entity_name: str, base_url: str, signatory_email: str) -> str:
+def _insert_seed_row(
+    *, entity_name: str, base_url: str, signatory_email: str, test_secret: str = ""
+) -> str:
     """Insert one seed row for *entity_name* via the runtime API.
 
     Posts only the fields that are common to all signable entities defined
@@ -339,6 +341,9 @@ def _insert_seed_row(*, entity_name: str, base_url: str, signatory_email: str) -
     generic string fields that cover both ``EngagementLetter`` and
     ``SlaWaiver``.  Fields unknown to a given entity are silently ignored
     by the API.
+
+    ``test_secret`` is forwarded as ``X-Test-Secret`` so the runtime auth
+    gate accepts the write (same pattern as ``_seed_demo_data_for_trial``).
 
     Returns the new row's ``id`` (UUID string).
     Raises ``httpx.HTTPStatusError`` on non-2xx responses — the caller
@@ -365,13 +370,21 @@ def _insert_seed_row(*, entity_name: str, base_url: str, signatory_email: str) -
         # TestDoc fields
         "body": "Trial-harness seed body.",
     }
-    resp = httpx.post(f"{base_url}/api/{entity_name}", json=payload, timeout=10.0)
+    headers: dict[str, str] = {}
+    if test_secret:
+        headers["X-Test-Secret"] = test_secret
+    resp = httpx.post(f"{base_url}/api/{entity_name}", json=payload, headers=headers, timeout=10.0)
     resp.raise_for_status()
     return str(resp.json()["id"])
 
 
-def _seed_signable_rows(*, app_spec: Any, base_url: str, signatory_email: str) -> list[SeededDoc]:
+def _seed_signable_rows(
+    *, app_spec: Any, base_url: str, signatory_email: str, test_secret: str = ""
+) -> list[SeededDoc]:
     """For each signable entity in *app_spec*, insert one row + mint a token.
+
+    ``test_secret`` is forwarded to ``_insert_seed_row`` so the runtime auth
+    gate accepts the write.
 
     Returns a list of :class:`~dazzle.qa.signing_seed.SeededDoc` objects
     (one per signable entity) ready to write into the mock inbox.
@@ -384,6 +397,7 @@ def _seed_signable_rows(*, app_spec: Any, base_url: str, signatory_email: str) -
             entity_name=entity.name,
             base_url=base_url,
             signatory_email=signatory_email,
+            test_secret=test_secret,
         )
         token = mint_token(record_id=row_id, email=signatory_email)
         docs.append(
@@ -401,16 +415,16 @@ def _seed_signable_rows(*, app_spec: Any, base_url: str, signatory_email: str) -
 def _build_db_reader(project_dir: Path) -> Callable[[str, str], dict[str, Any] | None]:
     """Return a callable that reads (entity, id) from the runtime Postgres DB.
 
-    Reads the ``DATABASE_URL`` env var (set by the trial server subprocess
-    environment) to obtain the DSN.  Passes silently when the env var is
-    absent — ``None`` rows are treated as harness errors by the verifier.
+    Reads the ``DATABASE_URL`` env var at *call* time (not at factory-call
+    time) so that env vars set by the server subprocess after factory
+    construction are visible.  Passes silently when the env var is absent —
+    ``None`` rows are treated as harness errors by the verifier.
     """
     import psycopg
     import psycopg.rows
 
-    dsn = os.environ.get("DATABASE_URL", "")
-
     def _read(entity: str, row_id: str) -> dict[str, Any] | None:
+        dsn = os.environ.get("DATABASE_URL", "")
         if not dsn:
             return None
         # Use psycopg.sql.Identifier to safely quote the table name —
@@ -725,6 +739,8 @@ def qa_trial(
 
     transcript_sink: dict[str, list[dict[str, Any]]] = {"friction": [], "verdict": []}
     started_at = time.monotonic()
+    signing_action_sink: dict[str, Any] = {}
+    signing_tools_list: list[Any] = []
 
     try:
         from playwright.async_api import async_playwright
@@ -763,14 +779,13 @@ def qa_trial(
             # Seed one signing row per signable entity, then build the
             # persona-facing signing tools.  This happens after the demo-data
             # seed so the runtime API is fully responsive.
-            signing_action_sink: dict[str, Any] = {}
-            signing_tools_list: list[Any] = []
             if seed_ctx is not None and _trial_appspec is not None:
                 try:
                     seeded = _seed_signable_rows(
                         app_spec=_trial_appspec,
                         base_url=site_url,
                         signatory_email="trial-signatory@example.com",
+                        test_secret=test_secret_val,
                     )
                     seed_ctx = SigningSeedContext(
                         env=seed_ctx.env,
