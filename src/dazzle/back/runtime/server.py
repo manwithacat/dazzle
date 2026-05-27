@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
     from dazzle.core.manifest import StorageConfig, TenantConfig
     from dazzle.core.process.adapter import ProcessAdapter
+    from dazzle.signing.service import PdfBranding
 
 logger = logging.getLogger(__name__)
 
@@ -848,6 +849,59 @@ class DazzleBackendApp:
         except Exception:
             logger.warning("i18n translation load failed", exc_info=True)
 
+    def _resolve_pdf_branding(self) -> "PdfBranding | None":
+        """Build a ``PdfBranding`` for the signing routes from the
+        project manifest's ``[signing]`` block.
+
+        Resolution order:
+
+        1. ``[signing]`` block in ``dazzle.toml``, when ``organisation``
+           is set — surfaces the full ``organisation`` / ``tagline`` /
+           ``footer_text`` / ``location`` quartet.
+        2. ``[project] name`` from the manifest — minimal fallback so
+           projects that don't bother with a ``[signing]`` block still
+           get their own name on every signed PDF.
+        3. ``None`` — let the signing router default to its built-in
+           ``PdfBranding(organisation="Dazzle App")``.
+        """
+        try:
+            from dazzle.core.manifest import load_manifest
+            from dazzle.signing.service import PdfBranding
+        except ImportError:
+            return None
+
+        if not self._project_root:
+            return None
+        manifest_path = self._project_root / "dazzle.toml"
+        if not manifest_path.is_file():
+            return None
+
+        try:
+            manifest = load_manifest(manifest_path)
+        except Exception:
+            logger.warning(
+                "Failed to load dazzle.toml for PdfBranding — falling back to defaults",
+                exc_info=True,
+            )
+            return None
+
+        signing_cfg = manifest.signing
+        if signing_cfg.organisation:
+            return PdfBranding(
+                organisation=signing_cfg.organisation,
+                organisation_tagline=signing_cfg.tagline,
+                footer_text=signing_cfg.footer_text,
+                location=signing_cfg.location,
+            )
+
+        # Fall back to the manifest's project name so something
+        # project-specific lands on the PDF even without a [signing]
+        # block.
+        if manifest.name and manifest.name != "unnamed":
+            return PdfBranding(organisation=manifest.name)
+
+        return None
+
     def _wire_service_hooks(self) -> None:
         """Discover and register project-level service hooks."""
         if not self._project_root:
@@ -1588,6 +1642,7 @@ class DazzleBackendApp:
                     list(self._appspec.domain.entities),
                     repositories=self._repositories,
                     file_service=self._file_service,
+                    branding=self._resolve_pdf_branding(),
                 )
                 if signing_router is not None:
                     self._app.include_router(signing_router)

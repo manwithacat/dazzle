@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.13] - 2026-05-27
+
+### Added
+
+- **#1283 phase 8** — `[signing]` manifest block surfaces project branding onto every signed PDF. Closes the wire-up that phase 4 left as a follow-on slice. `dazzle.toml`:
+
+  ```toml
+  [signing]
+  organisation = "Acme Ltd"
+  tagline      = "Chartered Accountants"
+  footer_text  = "Acme Ltd | Registered in England & Wales"
+  location     = "England and Wales"
+  ```
+
+  - **Manifest** — new `SigningConfig` dataclass (`src/dazzle/core/manifest.py`), wired through `ProjectManifest.signing`. Parsed from the `[signing]` table with sensible defaults (`location` defaults to `"United Kingdom"`; everything else empty).
+  - **ServerState** — new `_resolve_pdf_branding()` helper threads the manifest into a `PdfBranding` for the signing router. Three-tier fallback: full `[signing]` block → minimal `PdfBranding(organisation=manifest.name)` → `None` (router default kicks in).
+  - **15 new tests** at `tests/unit/test_signing/test_branding_manifest.py` (manifest parsing — absent / full / partial / unknown-keys-ignored; resolver — no-project-root / no-manifest / full-block / project-name-fallback / unnamed-project-returns-none) and `test_routes.py::test_custom_branding_flows_into_pdf_pipeline` (intercepts `generate_pdf` + `async_sign_pdf` to verify `PdfBranding` reaches both stages).
+
+### Agent Guidance
+
+- **The `[signing]` block is opt-in.** Projects that never add one still get sensible behaviour: their `[project] name` becomes the PDF organisation. The signing primitive doesn't break or warn when the block is missing.
+- **`location` flows into the PKCS#7 signature metadata** (`PdfSignatureMetadata.location`). Set it to the legal jurisdiction of the signer — "England and Wales", "Scotland", "Northern Ireland", or whatever fits. Default `"United Kingdom"` covers the common case but isn't always the right legal scope.
+- **PdfBranding is constructed at router-mount time, not per-request.** Changing `dazzle.toml` requires an app restart to take effect. (If projects need per-request branding — multi-tenant Dazzle apps with one CA but different per-tenant document headers — that's a separate feature; the current contract gives one branding per Dazzle app.)
+
 ## [0.79.12] - 2026-05-27
 
 ### Added

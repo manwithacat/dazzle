@@ -436,6 +436,34 @@ class SpecConfig:
 
 
 @dataclass
+class SigningConfig:
+    """Native document signing branding configuration (#1283 phase 8).
+
+    Reads ``[signing]`` from ``dazzle.toml``:
+
+        [signing]
+        organisation = "Acme Ltd"
+        tagline = "Chartered Accountants"
+        footer_text = "Acme Ltd | Registered in England & Wales"
+        location = "United Kingdom"
+
+    Wired into ``PdfBranding`` at runtime by ``ServerState`` when
+    mounting the signing routes. When unset, the framework falls back
+    to ``PdfBranding(organisation=manifest.name)`` so projects that
+    declare ``signable: true`` get sensible defaults out of the box.
+
+    The ``location`` field flows into the PKCS#7 signature metadata
+    (PdfSignatureMetadata.location), recording the legal jurisdiction
+    on every signed PDF.
+    """
+
+    organisation: str = ""
+    tagline: str = ""
+    footer_text: str = ""
+    location: str = "United Kingdom"
+
+
+@dataclass
 class ExtensionsConfig:
     """Registration of project-supplied extensions (closes #786).
 
@@ -560,6 +588,7 @@ class ProjectManifest:
     i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)  # #952
     spec: SpecConfig = field(default_factory=SpecConfig)  # #1106 Prop 3
+    signing: SigningConfig = field(default_factory=SigningConfig)  # #1283 phase 8
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     # Asset bundling mode. Resolved at request time by `should_bundle_assets()`:
@@ -962,6 +991,15 @@ def load_manifest(path: Path) -> ProjectManifest:
     spec_data = data.get("spec", {}) if isinstance(data.get("spec"), dict) else {}
     spec_config = SpecConfig(strict=bool(spec_data.get("strict", False)))
 
+    # Parse [signing] block (#1283 phase 8 — PdfBranding wire-up)
+    signing_data = data.get("signing", {}) if isinstance(data.get("signing"), dict) else {}
+    signing_config = SigningConfig(
+        organisation=str(signing_data.get("organisation", "")),
+        tagline=str(signing_data.get("tagline", "")),
+        footer_text=str(signing_data.get("footer_text", "")),
+        location=str(signing_data.get("location", "United Kingdom")),
+    )
+
     return ProjectManifest(
         name=project.get("name", "unnamed"),
         version=project.get("version", "0.0.0"),
@@ -980,6 +1018,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         i18n=i18n_config,
         notifications=notifications_config,
         spec=spec_config,
+        signing=signing_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
         assets=assets_mode,

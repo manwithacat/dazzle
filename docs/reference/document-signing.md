@@ -220,6 +220,31 @@ Default expiry is 72 hours. The verify routine raises
 The CLI minted all three on first setup. Capture them into your
 production environment (Heroku config vars, AWS Parameter Store, etc.).
 
+## PDF branding
+
+The signed PDF carries an organisation header, optional tagline, and
+an optional footer line. Configure them in `dazzle.toml`:
+
+```toml
+[signing]
+organisation = "Acme Ltd"
+tagline = "Chartered Accountants"
+footer_text = "Acme Ltd | Registered in England & Wales"
+location = "England and Wales"
+```
+
+`location` is recorded on every PKCS#7 signature (the
+`PdfSignatureMetadata.location` field) — it should reflect the legal
+jurisdiction of the signer.
+
+Resolution order at runtime:
+
+1. **`[signing]`** block with `organisation` set → full quartet wired
+   onto the PDF.
+2. **`[project] name`** → minimal fallback. Project name appears as
+   the organisation; tagline + footer stay empty.
+3. **Nothing useful** → framework default `PdfBranding(organisation="Dazzle App")`.
+
 ## Architecture
 
 ```
@@ -265,10 +290,6 @@ The phase-4 surface covers the canonical happy path. Known gaps:
   shape is forward-compatible: a future `SIGNING_CERT_SOURCE`
   selector can swap the PKCS#12 source without breaking the entity
   contract.
-- **PdfBranding wire-up.** `create_signing_routes(branding=...)`
-  accepts a `PdfBranding` object, but `ServerState` currently passes
-  `None` (defaults to a minimal `"Dazzle App"` branding). Surfacing
-  project branding from `dazzle.toml` is a follow-on slice.
 
 ## See also
 

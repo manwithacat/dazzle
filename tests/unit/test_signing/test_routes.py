@@ -75,6 +75,7 @@ def _app_with_routes(
     signing_validator: str | None = None,
     signing_template: str | None = None,
     file_service: Any | None = None,
+    branding: Any | None = None,
 ) -> tuple[FastAPI, _MockRepo]:
     entity = _signable_entity(entity_name)
     updates: dict[str, Any] = {}
@@ -89,6 +90,7 @@ def _app_with_routes(
         [entity],
         repositories={entity_name: repo},
         file_service=file_service,
+        branding=branding,
     )
     assert router is not None
     app = FastAPI()
@@ -501,3 +503,55 @@ class TestFullSignFlow:
             assert "must return str" in resp.text
         finally:
             del host._test_template_bad  # type: ignore[attr-defined]
+
+    def test_custom_branding_flows_into_pdf_pipeline(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A custom ``PdfBranding`` passed to ``create_signing_routes``
+        reaches ``generate_pdf`` + ``async_sign_pdf`` unchanged. The
+        PDF content stream is compressed so we can't grep it, but we
+        can prove the branding is what the pipeline sees."""
+        pytest.importorskip("fpdf")
+        pytest.importorskip("pyhanko")
+        from dazzle.signing import service as signing_service
+        from dazzle.signing.service import PdfBranding
+
+        record_id = str(uuid4())
+        branding = PdfBranding(
+            organisation="ACME LIMITED",
+            organisation_tagline="Chartered Accountants",
+            footer_text="ACME LIMITED | Registered in England & Wales",
+            location="England and Wales",
+        )
+
+        captured: dict[str, Any] = {}
+        real_generate_pdf = signing_service.generate_pdf
+        real_async_sign_pdf = signing_service.async_sign_pdf
+
+        def spy_generate_pdf(*args: Any, **kwargs: Any) -> bytes:
+            captured["generate_branding"] = kwargs.get("branding")
+            return real_generate_pdf(*args, **kwargs)
+
+        async def spy_async_sign_pdf(*args: Any, **kwargs: Any) -> bytes:
+            captured["sign_branding"] = kwargs.get("branding")
+            return await real_async_sign_pdf(*args, **kwargs)
+
+        # Patch the symbols the route handler imported at module load
+        # time — those are the names create_signing_routes calls into.
+        monkeypatch.setattr("dazzle.signing.routes.generate_pdf", spy_generate_pdf)
+        monkeypatch.setattr("dazzle.signing.routes.async_sign_pdf", spy_async_sign_pdf)
+
+        app, _ = _app_with_routes(
+            {record_id: {"status": "viewed"}},
+            branding=branding,
+        )
+        client = TestClient(app)
+        token = mint_token(record_id, "alice@example.com")
+        resp = client.post(
+            f"/api/sign/Contract/{record_id}",
+            json={"token": token, "signatory_name": "Alice"},
+        )
+        assert resp.status_code == 200
+        assert resp.content.startswith(b"%PDF-")
+        # Both pipeline stages saw the project-supplied branding,
+        # not the framework default.
+        assert captured["generate_branding"] is branding
+        assert captured["sign_branding"] is branding
