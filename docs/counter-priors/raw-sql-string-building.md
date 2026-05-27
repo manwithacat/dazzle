@@ -26,7 +26,20 @@ triggers_code:
 refs:
   adrs:
     - ADR-0009
-  tests: []
+  tests:
+    - tests/unit/test_python_audit_raw_sql_string_building.py
+detectors:
+  - id: PA-LLM-11
+    agent: PA
+    note: >-
+      Fires on `.execute(...)` calls whose first positional arg is built
+      via f-string, string-concat (`+`), `%`-format on a SQL literal, or
+      `"...{}".format()` on a SQL literal. Bare string literals
+      (`cur.execute("SELECT 1")`) are parameter-free and safe.
+      Identifier arguments (`cur.execute(query)`) and parameterised calls
+      (`cur.execute("... %s ...", (val,))`) are NOT flagged — data-flow
+      tracking on identifiers is out of scope, and parameterisation is
+      the canonical right shape.
 ---
 
 # Raw SQL string-building in user code

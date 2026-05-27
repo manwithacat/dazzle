@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.0] - 2026-05-27
+
+### Added — agent code quality substrate round 5 (PA-LLM-11: raw-SQL string-building)
+
+- **PA-LLM-11** (`raw_sql_string_building`) — new sentinel heuristic flagging `.execute(...)` call sites whose first positional argument is built via f-string, string concatenation (`+`), `%`-format on a SQL literal, or `"…{}".format()` on a SQL literal. Severity MEDIUM, confidence LIKELY. Closes the only security-critical pattern in `docs/counter-priors/` that had no paired detector.
+- **Detection logic** in `src/dazzle/sentinel/agents/python_audit.py`: four shape helpers (`_is_string_literal`, `_binop_uses_string_concat`, `_binop_uses_pct_format`, `_call_is_string_dot_format`), one entrypoint `_detect_raw_sql_string_building`, plus a `check_raw_sql_string_building` heuristic method that scans `app/` and `scripts/` directories. Bare string literals (`cur.execute("SELECT 1")`) and identifier arguments (`cur.execute(query)`) are explicitly NOT flagged — bare literals are parameter-free, identifiers would require data-flow analysis to classify.
+- **Counter-prior `docs/counter-priors/raw-sql-string-building.md`** updated to declare PA-LLM-11 in the `detectors:` frontmatter slot (was empty since v0.74.0 when the catalogue shipped). `SEED_SCHEMA_VERSION` bumped 20 → 21 so deployed KGs re-seed.
+- **13 new tests** at `tests/unit/test_python_audit_raw_sql_string_building.py` — six positive (f-string, concat, %-format, .format(), scripts/ scope, session.execute receiver), six negative (bare literal, parameterised, identifier, non-execute call, noqa suppression, no scan dirs), plus a catalogue-frontmatter linkage gate.
+
+### Agent Guidance
+
+- When user code in `app/` or `scripts/` needs SQL, prefer `Repository.list(scope={...})` / `.aggregate()` / `.get()`. These compile through the scope-validated predicate algebra (ADR-0009). When raw SQL is genuinely required, **always use the driver's parameter substitution** (`cur.execute("... %s ...", (val,))`) — values pass as a separate argument, not interpolated into the SQL string. f-string / concat / format-method all bypass the substrate's RBAC scope guarantees and are flagged at MEDIUM by PA-LLM-11.
+- Suppress with `# noqa: PA-LLM-11 — <reason>` on the call line when the interpolated value is known-safe (e.g. a hardcoded table-name allowlist). The reason isn't enforced by the detector but is strongly expected — future-you needs to know why the unsafe shape was kept.
+- If you find yourself reaching for raw SQL frequently, that's a signal the Repository helpers are missing a shape — file an issue instead of papering with `# noqa`.
+- Substrate round-5 closure: PA-LLM-07/08/09/10/11 all ship at MEDIUM severity; CI now gates at `--severity medium` (#1256). The catalogue↔detector round-trip is now complete for the five flagship pathologies: `exceptions-as-control-flow`, `n-plus-one-in-user-code`, `optional-instead-of-result`, `magic-string-typing`, `raw-sql-string-building`. Remaining gaps (PA-LLM-10 sub-shape b enum-dispatch, `shell-without-strict-mode` detector, Layer-2 `dazzle.validators` primitive) are filed for a future round.
+
 ## [0.78.17] - 2026-05-27
 
 ### Changed

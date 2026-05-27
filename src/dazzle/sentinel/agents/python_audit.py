@@ -735,6 +735,120 @@ def _detect_magic_string_id(tree: ast.AST, path: Path) -> list[_ShapeHit]:
     return hits
 
 
+def _is_string_literal(node: ast.AST) -> bool:
+    """True if `node` is a `Constant` whose value is a str."""
+    return isinstance(node, ast.Constant) and isinstance(node.value, str)
+
+
+def _binop_uses_string_concat(node: ast.AST) -> bool:
+    """True if `node` is a string-concat `BinOp` chain (`"a" + x` or `x + "a"`)
+    where at least one operand is a string literal. Walks `Add` chains
+    recursively so `"a" + x + "b"` also matches.
+    """
+    if not isinstance(node, ast.BinOp) or not isinstance(node.op, ast.Add):
+        return False
+
+    def _has_string_anywhere(n: ast.AST) -> bool:
+        if _is_string_literal(n):
+            return True
+        if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Add):
+            return _has_string_anywhere(n.left) or _has_string_anywhere(n.right)
+        return False
+
+    return _has_string_anywhere(node.left) or _has_string_anywhere(node.right)
+
+
+def _binop_uses_pct_format(node: ast.AST) -> bool:
+    """True if `node` is `"... %s ..." % (...)` — old-style string formatting
+    against a SQL-shaped literal on the left.
+    """
+    return (
+        isinstance(node, ast.BinOp)
+        and isinstance(node.op, ast.Mod)
+        and _is_string_literal(node.left)
+    )
+
+
+def _call_is_string_dot_format(node: ast.AST) -> bool:
+    """True if `node` is `"... {} ...".format(...)` — string-literal `.format()`."""
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "format"
+        and _is_string_literal(node.func.value)
+    )
+
+
+def _is_unsafe_sql_arg(node: ast.AST) -> bool:
+    """True if the first positional argument to `.execute(...)` is an
+    unsafe-SQL shape: f-string, string-concat, %-format, or
+    str-literal.format(). A bare string literal is safe (driver sees
+    parameterless SQL); a `Name` / call result is also not flagged
+    here (out of scope — would need data-flow analysis).
+    """
+    if isinstance(node, ast.JoinedStr):
+        return True
+    if _binop_uses_string_concat(node):
+        return True
+    if _binop_uses_pct_format(node):
+        return True
+    if _call_is_string_dot_format(node):
+        return True
+    return False
+
+
+def _detect_raw_sql_string_building(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """PA-LLM-11: flag `.execute(<unsafe SQL>)` call sites.
+
+    Matches `cursor.execute(...)`, `conn.execute(...)`, `session.execute(...)`,
+    and any other `.execute(...)` whose first positional arg is built via
+    f-string / string-concat / %-format / str.format().
+
+    Bare string literals (`cur.execute("SELECT 1")`) and identifiers
+    (`cur.execute(query)`) are NOT flagged — the former is parameter-
+    free, the latter would need data-flow tracking which is out of
+    scope for this heuristic. The corpus pathology is the LLM's
+    default of interpolating user-derived values directly into SQL.
+
+    See docs/counter-priors/raw-sql-string-building.md for the full
+    spec and right-shape patterns.
+    """
+    hits: list[_ShapeHit] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "execute":
+            continue
+        if not node.args:
+            continue
+        first_arg = node.args[0]
+        if not _is_unsafe_sql_arg(first_arg):
+            continue
+        # Build a short snippet — the receiver attribute chain (cursor.execute)
+        # is more informative than the full call source. Walk back from the
+        # Attribute to find a Name root.
+        receiver = node.func.value
+        receiver_repr = ""
+        if isinstance(receiver, ast.Name):
+            receiver_repr = receiver.id
+        elif isinstance(receiver, ast.Attribute):
+            receiver_repr = f"{getattr(receiver.value, 'id', '<expr>')}.{receiver.attr}"
+        else:
+            receiver_repr = "<expr>"
+        snippet = f"{receiver_repr}.execute(...)"
+        hits.append(
+            _ShapeHit(
+                line=node.lineno,
+                snippet=snippet,
+                shape="raw_sql_string_building",
+                try_line=node.lineno,  # .execute line for noqa scoping
+            )
+        )
+    return hits
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -1681,6 +1795,115 @@ class PythonAuditAgent(DetectionAgent):
                         catalogue_entry="magic-string-typing",
                     )
                 )
+        return findings
+
+    @heuristic(
+        heuristic_id="PA-LLM-11",
+        category="python_audit",
+        subcategory="llm_bias",
+        title="Raw-SQL string-building — f-string / concat / %-format / .format() in execute()",
+    )
+    def check_raw_sql_string_building(self, appspec: AppSpec) -> list[Finding]:
+        """Flag `.execute(...)` calls whose first argument is built via
+        f-string, string concat, %-format, or `str.format()`.
+
+        SQL injection is a 25+ year old known-bad class; the corpus
+        still teaches the unsafe shape because the safe shape is one
+        syntactic step longer. PA-LLM-11 catches user-app code that
+        bypasses Dazzle's substrate (Repository / predicate algebra)
+        and reaches for raw SQL with interpolation.
+
+        See docs/counter-priors/raw-sql-string-building.md for the
+        right-shape patterns: prefer `Repository.list(scope={...})`;
+        when raw SQL is genuinely required, use the driver's
+        parameter substitution (`cursor.execute("... %s ...", (val,))`).
+        """
+        from dazzle.sentinel.models import (
+            Confidence,
+            Evidence,
+            Finding,
+            Remediation,
+            RemediationEffort,
+            Severity,
+        )
+
+        app_dir = self._project_path / "app"
+        scripts_dir = self._project_path / "scripts"
+        scan_dirs = [d for d in (app_dir, scripts_dir) if d.exists()]
+        if not scan_dirs:
+            return []
+
+        catalogue_url = (
+            "https://github.com/cyfutureuk/dazzle/blob/main/"
+            "docs/counter-priors/raw-sql-string-building.md"
+        )
+
+        findings: list[Finding] = []
+        for scan_dir in scan_dirs:
+            for py_file in sorted(scan_dir.rglob("*.py")):
+                try:
+                    source_text = py_file.read_text(encoding="utf-8")
+                    tree = ast.parse(source_text, filename=str(py_file))
+                except (SyntaxError, UnicodeDecodeError):
+                    continue
+                source_lines = source_text.splitlines()
+
+                for hit in _detect_raw_sql_string_building(tree, py_file):
+                    call_line_text = (
+                        source_lines[hit.line - 1] if 0 < hit.line <= len(source_lines) else ""
+                    )
+                    if "noqa: PA-LLM-11" in call_line_text:
+                        continue
+
+                    findings.append(
+                        Finding(
+                            agent=AgentId.PA,
+                            heuristic_id="PA-LLM-11",
+                            category="python_audit",
+                            subcategory="llm_bias",
+                            severity=Severity.MEDIUM,
+                            confidence=Confidence.LIKELY,
+                            title=f"Raw-SQL string-building: {hit.snippet}",
+                            description=(
+                                f"`{hit.snippet}` is called with a SQL string built via "
+                                "f-string / string-concat / %-format / `.format()`. If any "
+                                "interpolated value originates from a request, header, "
+                                "cookie, or other untrusted source, this is a SQL "
+                                "injection vulnerability. Even when the inputs are "
+                                "trusted today, the raw-SQL shape bypasses Dazzle's "
+                                "predicate algebra (ADR-0009) — the substrate's RBAC "
+                                "scope guarantees stop applying at this call site."
+                            ),
+                            evidence=[
+                                Evidence(
+                                    evidence_type="source_pattern",
+                                    location=f"{py_file}:{hit.line}",
+                                    snippet=hit.snippet,
+                                )
+                            ],
+                            remediation=Remediation(
+                                summary=(
+                                    "Prefer `Repository.list(scope={...})` / .aggregate() / "
+                                    ".get() which compile through the scope-validated "
+                                    "predicate algebra. When raw SQL is genuinely required, "
+                                    "use the driver's parameter substitution: "
+                                    '`cur.execute("... %s ...", (val,))` — values are passed '
+                                    "as a separate argument, not interpolated into the SQL "
+                                    "string."
+                                ),
+                                effort=RemediationEffort.SMALL,
+                                guidance=(
+                                    "See docs/counter-priors/raw-sql-string-building.md "
+                                    "for the wrong/right shape pairing and the substrate "
+                                    "rationale (ADR-0009). If you're reaching for raw SQL "
+                                    "frequently, the Repository helpers are likely missing "
+                                    "a shape — file an issue."
+                                ),
+                                references=[catalogue_url],
+                            ),
+                            catalogue_entry="raw-sql-string-building",
+                        )
+                    )
         return findings
 
     # ------------------------------------------------------------------
