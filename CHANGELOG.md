@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.4] - 2026-05-27
+
+### Added
+
+- **#1274** — PA-LLM-10 now also detects **sub-shape (b) enum-dispatch chains**: function-body `if x == "a": ... elif x == "b": ... elif x == "c": ...` over the same `Name` with all string-literal RHS, ≥3 branches. A StrEnum + `match` would let the type checker prove exhaustiveness and catch typos; bare-string dispatch silently accepts them. Same heuristic_id (`PA-LLM-10`), same counter-prior (`magic-string-typing`), same MEDIUM severity / LIKELY confidence — sub-shapes (a) and (b) coexist in one detector pass.
+- **Detection algorithm** in `_detect_enum_dispatch_chain`: walks every `FunctionDef`/`AsyncFunctionDef` body, finds chain-root `If` nodes (via `_is_chain_root` — skips elif nodes so each chain fires exactly once), follows the `orelse`→`If` chain depth-first, fires when every branch is `<Name> == "<literal>"` (or the swapped `"<literal>" == <Name>`) over the same Name id. Strict mixed-comparator: any non-string-eq branch aborts the chain (so `elif x is None:` guards don't false-fire).
+- **noqa anchor**: `# noqa: PA-LLM-10 — <reason>` on the opening `if` line silences the chain (parallels sub-shape (a)'s `def`-line anchor).
+- **Counter-prior `docs/counter-priors/magic-string-typing.md`** detector `note` rewritten to describe both sub-shapes; `tests/unit/test_python_audit_enum_dispatch_1274.py` added to the `tests:` list.
+- **11 new tests** at `tests/unit/test_python_audit_enum_dispatch_1274.py` covering: 3-branch and 4-branch positive cases, literal-on-left RHS, the 2-branch threshold cutoff, strict mixed-comparator abort, int-literal chain (non-string), multi-discriminator non-chain, module-level scope, fire-once-per-chain (not per-elif), noqa suppression, and coexistence with sub-shape (a) findings.
+- **`SEED_SCHEMA_VERSION` bumped 21 → 22** so deployed KGs re-seed and pick up the updated counter-prior detector note.
+
+### Agent Guidance
+
+- When writing dispatch logic over a closed set of string values (status, kind, route action, etc.), define a `StrEnum` and `match` on it. The type checker enforces exhaustiveness and catches typos in the literal values. PA-LLM-10 now flags the bare-string-chain shape at MEDIUM (commit-blocker after #1256).
+- The two PA-LLM-10 sub-shapes share suppressions but anchor on different lines — sub-shape (a) on the `def` line (parameter signature), sub-shape (b) on the opening `if` line. Add `noqa` at the right anchor or it won't take effect.
+- Sub-shape (c) — typed-lookup keys (`HANDLERS["foo"]()`) — remains documented but undetected. Filing a separate ticket if/when a corpus example requires the detection.
+
 ## [0.79.3] - 2026-05-27
 
 ### Added

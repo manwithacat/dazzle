@@ -27,10 +27,27 @@ refs:
   memories: []
   tests:
     - tests/unit/test_python_audit_magic_string_typing.py
+    - tests/unit/test_python_audit_enum_dispatch_1274.py
 detectors:
   - id: PA-LLM-10
     agent: PA
-    note: fires on function/method parameters whose name matches `id`, `*_id`, `*_uuid`, `*_key`, or `*_token` AND whose annotation is bare `str` (or `str | None` / `Optional[str]`). Covers sub-shape (a) magic-string IDs only; sub-shapes (b) enum-dispatch chains and (c) typed-lookup keys are documented in the body but not detected today.
+    note: |
+      Covers two AST sub-shapes (#1274):
+
+      Sub-shape (a) — magic-string ID parameter: fires on function/method
+      parameters whose name matches `id`, `*_id`, `*_uuid`, `*_key`, or
+      `*_token` AND whose annotation is bare `str` (or `str | None` /
+      `Optional[str]`).
+
+      Sub-shape (b) — enum-dispatch chain: fires on function-body
+      `if x == "a": ... elif x == "b": ... elif x == "c": ...` chains
+      with ≥3 branches over the same `Name` and all string-literal RHS.
+      Strict mixed-comparator: any non-string-eq branch aborts the
+      chain (so `elif x is None: ...` guards don't false-fire).
+      Module-level / class-level chains are out of scope.
+
+      Sub-shape (c) — typed-lookup-key — documented in the body but
+      not detected today.
 ---
 
 # Magic-string typing — bare `str` where a brand or enum would catch errors

@@ -735,6 +735,142 @@ def _detect_magic_string_id(tree: ast.AST, path: Path) -> list[_ShapeHit]:
     return hits
 
 
+def _eq_string_branch(test: ast.AST) -> tuple[str, str] | None:
+    """If `test` is the shape `<Name> == "<literal>"`, return
+    `(name_id, literal_value)`. Otherwise return None.
+
+    Mixed-comparator chains (e.g. one branch comparing to an int, or
+    using `>=` / `in` / `is`) are caught by `None` returns here —
+    the caller treats any non-string-eq branch as a chain-terminator
+    (strict mode per #1274 design lock-in).
+    """
+    if not isinstance(test, ast.Compare):
+        return None
+    if len(test.ops) != 1 or not isinstance(test.ops[0], ast.Eq):
+        return None
+    if len(test.comparators) != 1:
+        return None
+    left, right = test.left, test.comparators[0]
+    # `x == "foo"` (canonical) or `"foo" == x` (swapped)
+    if isinstance(left, ast.Name) and _is_string_literal(right):
+        return (left.id, right.value)  # type: ignore[attr-defined]
+    if isinstance(right, ast.Name) and _is_string_literal(left):
+        return (right.id, left.value)  # type: ignore[attr-defined]
+    return None
+
+
+def _detect_enum_dispatch_chain(tree: ast.AST, path: Path) -> list[_ShapeHit]:
+    """PA-LLM-10 sub-shape (b): if/elif chain over a string discriminator.
+
+    Walks every `ast.FunctionDef` / `ast.AsyncFunctionDef` body and
+    scans for `if x == "lit": ...; elif x == "lit2": ...; elif x == "lit3": ...`
+    chains where:
+    - the same `Name.id` appears on the left of every branch's
+      `Compare` (or the right, if the literal is on the left),
+    - every branch's comparator is `==`,
+    - every right-hand side is a `Constant` str,
+    - ≥3 branches participate.
+
+    Strict mixed-comparator: if any branch in the chain fails any of
+    the above, the chain is aborted and not flagged (#1274 design
+    choice). This avoids false positives on `if x == "a": ... elif
+    x is None: ...` guards.
+
+    Module-level / class-level if-chains are out of scope (config
+    dispatch tables at those scopes are a different shape).
+    """
+    hits: list[_ShapeHit] = []
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for stmt in ast.walk(fn):
+            # Don't double-count nested fn bodies — _is_top_for_chain
+            # below skips chains whose root If is inside a nested fn
+            # other than `fn`. Simpler: only count chains where the
+            # outermost If is a *direct child* of fn's body (or of an
+            # inner block like for/while/try). We use `ast.walk(fn)`
+            # but filter to root-If nodes via the `_chain_root_in_fn`
+            # check below.
+            if not isinstance(stmt, ast.If):
+                continue
+            # Only consider chain roots (don't restart the chain at
+            # every elif-as-If node).
+            if not _is_chain_root(stmt, fn):
+                continue
+
+            branches: list[tuple[str, str]] = []
+            chain_node: ast.If | None = stmt
+            chain_consistent = True
+            while chain_node is not None:
+                branch = _eq_string_branch(chain_node.test)
+                if branch is None:
+                    # Mixed comparator → strict abort (per design lock).
+                    chain_consistent = False
+                    break
+                branches.append(branch)
+                # Look for `else:` containing exactly one further `If`
+                # (the orelse chain form for `elif`).
+                if len(chain_node.orelse) == 1 and isinstance(chain_node.orelse[0], ast.If):
+                    chain_node = chain_node.orelse[0]
+                else:
+                    chain_node = None  # chain terminated
+
+            if not chain_consistent:
+                continue
+            if len(branches) < 3:
+                continue
+            # Every branch must share the same Name on the LHS.
+            name_ids = {n for n, _ in branches}
+            if len(name_ids) != 1:
+                continue
+
+            discriminator = next(iter(name_ids))
+            literals_preview = ", ".join(repr(v) for _, v in branches[:3])
+            if len(branches) > 3:
+                literals_preview += ", ..."
+            hits.append(
+                _ShapeHit(
+                    line=stmt.lineno,
+                    snippet=f"if {discriminator} == ... ({literals_preview})",
+                    shape="enum_dispatch_chain",
+                    try_line=stmt.lineno,  # opening `if` for noqa scoping
+                )
+            )
+    return hits
+
+
+def _is_chain_root(node: ast.If, fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if `node` is the OUTERMOST If of its chain inside `fn`'s
+    own body (not inside a nested function).
+
+    Without this we'd re-fire on every elif: an `if a: ... elif b: ...
+    elif c: ...` would also count from `b`'s If and `c`'s If because
+    `ast.walk` visits every node.
+    """
+    # Walk the body manually so we know the parent of each If.
+    stack: list[tuple[ast.AST, ast.AST | None]] = [(fn, None)]
+    while stack:
+        parent, _ = stack.pop()
+        for child in ast.iter_child_nodes(parent):
+            if child is node:
+                # If the parent is itself an `If` and `node` is its
+                # only orelse element, then `node` is an `elif` —
+                # not a chain root.
+                if (
+                    isinstance(parent, ast.If)
+                    and len(parent.orelse) == 1
+                    and parent.orelse[0] is node
+                ):
+                    return False
+                return True
+            # Don't descend into nested functions — their If chains
+            # are their own scope.
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and child is not fn:
+                continue
+            stack.append((child, parent))
+    return False
+
+
 def _is_string_literal(node: ast.AST) -> bool:
     """True if `node` is a `Constant` whose value is a str."""
     return isinstance(node, ast.Constant) and isinstance(node.value, str)
@@ -1789,6 +1925,63 @@ class PythonAuditAgent(DetectionAgent):
                                 "See docs/counter-priors/magic-string-typing.md for the "
                                 "canonical right-shape pattern (branded IDs in app/ids.py + "
                                 "StrEnum for closed value sets)."
+                            ),
+                            references=[catalogue_url],
+                        ),
+                        catalogue_entry="magic-string-typing",
+                    )
+                )
+
+            # #1274 sub-shape (b): enum-dispatch chains.
+            for hit in _detect_enum_dispatch_chain(tree, py_file):
+                # `try_line` points at the opening `if` of the chain.
+                if_line_text = (
+                    source_lines[hit.try_line - 1]
+                    if hit.try_line and 0 < hit.try_line <= len(source_lines)
+                    else ""
+                )
+                if "noqa: PA-LLM-10" in if_line_text:
+                    continue
+
+                findings.append(
+                    Finding(
+                        agent=AgentId.PA,
+                        heuristic_id="PA-LLM-10",
+                        category="python_audit",
+                        subcategory="llm_bias",
+                        severity=Severity.MEDIUM,
+                        confidence=Confidence.LIKELY,
+                        title=f"Enum-dispatch chain on string literals: {hit.snippet}",
+                        description=(
+                            f"`{hit.snippet}` — an if/elif chain of ≥3 branches "
+                            "comparing the same variable against string literals. "
+                            "A StrEnum + `match` would let the type checker prove "
+                            "exhaustiveness and catch typos in the literal values; "
+                            "the corpus default of bare-string dispatch silently "
+                            "accepts typos and forgets cases."
+                        ),
+                        evidence=[
+                            Evidence(
+                                evidence_type="source_pattern",
+                                location=f"{py_file}:{hit.line}",
+                                snippet=hit.snippet,
+                            )
+                        ],
+                        remediation=Remediation(
+                            summary=(
+                                "Define a `StrEnum` for the discriminator values, "
+                                "type the variable as that enum, and `match` on it: "
+                                "`match status: case Status.PENDING: ... case "
+                                "Status.ACTIVE: ...`. The type checker will then "
+                                "warn on missing cases."
+                            ),
+                            effort=RemediationEffort.MEDIUM,
+                            guidance=(
+                                "See docs/counter-priors/magic-string-typing.md for "
+                                "the StrEnum + match right-shape pattern. Suppress "
+                                "with `# noqa: PA-LLM-10 — <reason>` on the opening "
+                                "`if` line when the chain is legitimately string-"
+                                "valued (e.g. user-input dispatch with no closed set)."
                             ),
                             references=[catalogue_url],
                         ),
