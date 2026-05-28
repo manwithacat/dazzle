@@ -114,6 +114,7 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
 - `enum`
 - `ref`
 - `email`
+- `slug`
 - `json`
 - `money`
 - `file`
@@ -235,6 +236,7 @@ scalar_type   ::= "str" "(" NUMBER ")"
                 | "datetime"
                 | "uuid"
                 | "email"
+                | "slug"
                 | "json"
                 | "money" ( "(" CURRENCY_CODE ")" )?
                 | "file"

@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.11] - 2026-05-28
+
+### Added
+
+- `slug:` field primitive (#1288 Phase 1 + validator). Bare `slug` is now a recognized DSL field type that maps to `TEXT` in PostgreSQL/SQLAlchemy and produces Pydantic models with an `AfterValidator` enforcing the slug rules at the request boundary. Rules: length 3-40 inclusive; lowercase letters, digits, ASCII hyphens only; must start and end with `[a-z0-9]`; no double-hyphens. Wired end-to-end through `FieldTypeKind.SLUG` → `ScalarType.SLUG` → `ValidatorKind.SLUG` → `sa_schema`/`pg_backend`/`model_generator`/`surface_converter`/`atomic_flow_routes`/`frontend_spec_export`/`service_generator`. Per-field overrides (`min_length:` / `max_length:` / `reserved_from:` / `history:` / `redirect_days:`) remain Phase 2/3 — projects that need a reserved-word check can register a custom validator via the post-build hook from #1290.
+
+### Changed
+
+- `docs/api-surface/ir-types.txt` baseline regenerated to include `FieldTypeKind.SLUG`.
+
+### Agent Guidance
+
+- Use `slug` (not `str(40)`) for any URL-safe identifier field. The bare type carries length and format validation automatically. Don't reimplement the regex in project code — the canonical helper is `dazzle.back.runtime.slug_validator.validate_slug`. Reserved-word lists stay project-side (per the issue's "Out of scope") and are layered via #1290's `pipeline/serve/app_init.py` if needed.
+
 ## [0.80.10] - 2026-05-28
 
 ### Added

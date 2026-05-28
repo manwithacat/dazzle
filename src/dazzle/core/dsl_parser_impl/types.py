@@ -107,6 +107,7 @@ class TypeParserMixin:
             "datetime": self._parse_datetime_type,
             "uuid": self._parse_uuid_type,
             "email": self._parse_email_type,
+            "slug": self._parse_slug_type,
             "json": self._parse_json_type,
             "money": self._parse_money_type,
             "file": self._parse_file_type,
@@ -217,6 +218,17 @@ class TypeParserMixin:
         """Parse email type."""
         self.advance()
         return ir.FieldType(kind=ir.FieldTypeKind.EMAIL)
+
+    def _parse_slug_type(self) -> ir.FieldType:
+        """Parse slug type (#1288 Phase 1+validator).
+
+        Bare ``slug`` only — per-field configuration sub-fields
+        (``min_length:``, ``max_length:``, ``reserved_from:``) land in
+        Phase 2. The generated Pydantic model carries the regex + length
+        validator (see ``dazzle.back.runtime.slug_validator``).
+        """
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.SLUG)
 
     def _parse_json_type(self) -> ir.FieldType:
         """Parse json type (v0.9.4)."""

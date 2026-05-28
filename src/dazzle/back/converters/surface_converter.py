@@ -172,6 +172,7 @@ def _map_field_type_name(field_type: ir.FieldType) -> str:
         ir.FieldTypeKind.DATETIME: "datetime",
         ir.FieldTypeKind.UUID: "uuid",
         ir.FieldTypeKind.EMAIL: "email",
+        ir.FieldTypeKind.SLUG: "str",
         ir.FieldTypeKind.ENUM: "str",  # Enums as strings
         ir.FieldTypeKind.REF: "uuid",  # References as UUIDs
         ir.FieldTypeKind.MONEY: "int",  # Money stored as minor units (pence/cents)

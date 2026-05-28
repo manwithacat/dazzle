@@ -24,6 +24,7 @@ FIELD_TYPE_MAP: dict[str, str] = {
     FieldTypeKind.TEXT: "string",
     FieldTypeKind.EMAIL: "string",
     FieldTypeKind.URL: "string",
+    FieldTypeKind.SLUG: "string",
     FieldTypeKind.TIMEZONE: "string",
     FieldTypeKind.INT: "number",
     FieldTypeKind.FLOAT: "number",

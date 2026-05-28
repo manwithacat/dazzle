@@ -567,6 +567,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 ScalarType.STR,
                 ScalarType.EMAIL,
                 ScalarType.URL,
+                ScalarType.SLUG,
             ):
                 # Plain string fields: strip all HTML tags
                 sanitized = strip_html_tags(value)

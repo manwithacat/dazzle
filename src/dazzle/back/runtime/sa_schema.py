@@ -71,6 +71,7 @@ def _scalar_type_to_sa(scalar_type: ScalarType) -> Any:
         ScalarType.UUID: sa.Uuid(),
         ScalarType.EMAIL: sa.Text(),
         ScalarType.URL: sa.Text(),
+        ScalarType.SLUG: sa.Text(),
         ScalarType.JSON: sa.JSON(),
     }
     return mapping.get(scalar_type, sa.Text())

@@ -33,6 +33,11 @@ class FieldTypeKind(StrEnum):
     ENUM = "enum"
     REF = "ref"
     EMAIL = "email"
+    # #1288 Phase 1+validator: URL-safe identifier with built-in regex + length
+    # enforcement. Bare `slug` enforces lowercase letters, digits, and single
+    # internal hyphens, length 3-40 inclusive. Per-field min/max/reserved-list
+    # configuration is Phase 2 (out of scope here).
+    SLUG = "slug"
     JSON = "json"  # v0.9.4: Flexible JSON data (maps to JSONB/JSON in databases)
     # v0.9.5: Additional semantic types
     MONEY = "money"  # Currency amount with optional currency code (maps to decimal + metadata)

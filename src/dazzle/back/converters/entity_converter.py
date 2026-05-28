@@ -68,6 +68,7 @@ def _map_field_type(dazzle_type: ir.FieldType) -> FieldType:
         ir.FieldTypeKind.DATETIME: ScalarType.DATETIME,
         ir.FieldTypeKind.UUID: ScalarType.UUID,
         ir.FieldTypeKind.EMAIL: ScalarType.EMAIL,
+        ir.FieldTypeKind.SLUG: ScalarType.SLUG,  # #1288
         ir.FieldTypeKind.JSON: ScalarType.JSON,  # v0.9.4
         ir.FieldTypeKind.TIMEZONE: ScalarType.TIMEZONE,  # v0.10.3
     }
@@ -107,6 +108,8 @@ def _extract_validators(field: ir.FieldSpec) -> list[ValidatorSpec]:
     # Add validators based on field type
     if field.type.kind == ir.FieldTypeKind.EMAIL:
         validators.append(ValidatorSpec(kind=ValidatorKind.EMAIL))
+    if field.type.kind == ir.FieldTypeKind.SLUG:
+        validators.append(ValidatorSpec(kind=ValidatorKind.SLUG))
 
     # Add max_length validator for string types
     if field.type.max_length:

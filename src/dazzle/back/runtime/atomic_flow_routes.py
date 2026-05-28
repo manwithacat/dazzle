@@ -40,6 +40,7 @@ _TYPE_MAP: dict[ir.FieldTypeKind, type] = {
     ir.FieldTypeKind.TEXT: str,
     ir.FieldTypeKind.EMAIL: str,
     ir.FieldTypeKind.URL: str,
+    ir.FieldTypeKind.SLUG: str,
     ir.FieldTypeKind.TIMEZONE: str,
     ir.FieldTypeKind.INT: int,
     ir.FieldTypeKind.FLOAT: float,

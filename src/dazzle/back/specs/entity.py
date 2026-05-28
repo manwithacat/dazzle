@@ -34,6 +34,7 @@ class ScalarType(StrEnum):
     UUID = "uuid"
     EMAIL = "email"
     URL = "url"
+    SLUG = "slug"
     JSON = "json"
     # File types (Week 9-10)
     FILE = "file"
@@ -165,6 +166,7 @@ class ValidatorKind(StrEnum):
     PATTERN = "pattern"
     EMAIL = "email"
     URL = "url"
+    SLUG = "slug"
     CUSTOM = "custom"
 
 

@@ -3740,6 +3740,7 @@ enum: FieldTypeKind
     - LATEST_ONE = 'latest_one'
     - MONEY = 'money'
     - REF = 'ref'
+    - SLUG = 'slug'
     - STR = 'str'
     - TEXT = 'text'
     - TIMEZONE = 'timezone'

@@ -112,6 +112,7 @@ def _scalar_type_to_postgres(scalar_type: ScalarType) -> str:
         ScalarType.UUID: "UUID",
         ScalarType.EMAIL: "TEXT",
         ScalarType.URL: "TEXT",
+        ScalarType.SLUG: "TEXT",
         ScalarType.JSON: "JSONB",
     }
     return mapping.get(scalar_type, "TEXT")

@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, Field, create_model
 
+from dazzle.back.runtime.slug_validator import validate_slug
 from dazzle.back.specs.entity import (
     EntitySpec,
     FieldSpec,
@@ -43,6 +44,12 @@ def _scalar_type_to_python(scalar_type: ScalarType) -> type:
     converter into ``_minor`` (INT) + ``_currency`` (STR), so they
     never reach this mapping directly.
     """
+    # SLUG returns Annotated[str, AfterValidator(validate_slug)] so the
+    # generated request models enforce the slug rules at the FastAPI
+    # boundary — see dazzle.back.runtime.slug_validator (#1288).
+    if scalar_type == ScalarType.SLUG:
+        return Annotated[str, AfterValidator(validate_slug)]  # type: ignore[return-value]
+
     mapping: dict[ScalarType, type] = {
         ScalarType.STR: str,
         ScalarType.TEXT: str,
