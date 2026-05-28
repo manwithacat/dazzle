@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.8] - 2026-05-28
+
+### Fixed
+
+- `dazzle --help` works again on a base wheel install (no `[signing]` extra). The `#1283` signing trial harness landed eager module-load imports of `cryptography` (via `dazzle.qa.signing_seed` → `dazzle.signing.cert`) and `httpx` (via `dazzle.qa.signing_tools`), both of which only ship under `[signing]`. Result: PyPI's smoke-test step has been failing since v0.80.0 with `ModuleNotFoundError: No module named 'cryptography'`, blocking every release for the past day. Defer both imports — `generate_cert_chain_b64` now loads lazily inside `mint_ephemeral_cert_env`, and `cli/qa.py` now imports `build_signing_tools` inside the function that registers them. Signing trials still work; the rest of the CLI no longer requires the extra.
+
 ## [0.80.7] - 2026-05-28
 
 ### Fixed

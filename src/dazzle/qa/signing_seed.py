@@ -15,8 +15,6 @@ import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from dazzle.signing.cert import generate_cert_chain_b64
-
 
 @dataclass
 class SeededDoc:
@@ -59,6 +57,8 @@ def mint_ephemeral_cert_env(tmpdir: Path, *, project_name: str) -> dict[str, str
         Dict with keys ``SIGNING_CERT_PFX_B64``, ``SIGNING_CERT_PASSWORD``,
         and ``SIGNING_TOKEN_SECRET``, ready to merge into a subprocess env.
     """
+    from dazzle.signing.cert import generate_cert_chain_b64
+
     pfx_b64, password_str = generate_cert_chain_b64(project_name)
     return {
         "SIGNING_CERT_PFX_B64": pfx_b64,

@@ -20,7 +20,6 @@ from dazzle.qa.signing_seed import (
     mint_ephemeral_cert_env,
     write_mock_inbox,
 )
-from dazzle.qa.signing_tools import build_signing_tools
 from dazzle.qa.signing_verifier import SigningOutcome, verify_signing_outcome
 from dazzle.signing.tokens import mint_token
 
@@ -1066,6 +1065,8 @@ def qa_trial(
                         seeded_docs=seeded,
                     )
                     write_mock_inbox(tmp_root, seeded)
+                    from dazzle.qa.signing_tools import build_signing_tools
+
                     signing_tools_list = build_signing_tools(
                         base_url=site_url,
                         inbox_path=seed_ctx.inbox_path,
