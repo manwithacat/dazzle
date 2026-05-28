@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.agent.core import AgentTool
 from dazzle.qa.signing_seed import SeededDoc
 from dazzle.qa.signing_tools import build_signing_tools
@@ -300,3 +302,49 @@ def test_open_signing_link_does_not_make_http_call_on_no_match(tmp_path: Path) -
 
     # requests list must be empty — no HTTP call was attempted
     assert sink.get("requests", []) == []
+
+
+def test_open_signing_link_success_response_contains_document_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """open_signing_link success path includes HTTP status, page text snippet, and next-step directive."""
+    import httpx
+
+    inbox = tmp_path / "inbox.json"
+    inbox.write_text("[]")
+    doc = SeededDoc(
+        entity="EngagementLetter",
+        id="doc-uuid",
+        token="tok123",
+        signing_url="http://localhost:3000/sign/EngagementLetter/doc-uuid?token=tok123",
+        signatory_email="signer@example.com",
+    )
+    sink: dict = {}
+    tools = build_signing_tools(
+        base_url="http://localhost:3000",
+        inbox_path=inbox,
+        seeded_docs=[doc],
+        action_sink=sink,
+    )
+    open_link = next(t for t in tools if t.name == "open_signing_link")
+
+    # Monkeypatch httpx.get to return a fake 200 response with HTML body
+    class _FakeResponse:
+        status_code = 200
+        text = "<html><body>Test document body here</body></html>"
+        content = text.encode()
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **kw: _FakeResponse())
+
+    result = _invoke(open_link, {"entity": "EngagementLetter", "id": "doc-uuid", "token": "tok123"})
+
+    # HTTP status line
+    assert "200" in result
+    # Stripped page text — tags removed, body text visible
+    assert "Test document body" in result
+    # Explicit navigate-suppression directive
+    assert "Do NOT call the navigate tool" in result
+    # All three next-step tool names
+    assert "sign_document" in result
+    assert "decline_signing" in result
+    assert "tamper_token" in result

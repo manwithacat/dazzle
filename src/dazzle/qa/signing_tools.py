@@ -11,6 +11,7 @@ Each tool:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -149,9 +150,20 @@ def _make_open_signing_link(
         try:
             resp = httpx.get(url, timeout=10.0)
             _record_request(action_sink, method="GET", url=url, status=resp.status_code)
+            # Strip HTML tags and collapse whitespace to give the LLM readable text.
+            page_text = re.sub(r"<[^>]+>", " ", resp.text)
+            page_text = re.sub(r"\s+", " ", page_text).strip()[:800]
             return (
                 f"Opened signing page for {entity}/{id}: "
-                f"HTTP {resp.status_code} ({len(resp.content)} bytes)."
+                f"HTTP {resp.status_code} ({len(resp.content)} bytes).\n\n"
+                f"Document content:\n{page_text}\n\n"
+                "The signing page is now loaded. The document content above is what\n"
+                "you would see in a browser. Do NOT call the navigate tool — the page\n"
+                "is already open from your perspective.\n\n"
+                "Your next step is one of:\n"
+                "- sign_document(authority_confirmed=true) to accept and sign\n"
+                '- decline_signing(reason="...") to refuse\n'
+                "- tamper_token() (only if explicitly testing tamper-detection)\n"
             )
         except httpx.HTTPError as exc:
             _record_request(action_sink, method="GET", url=url, status="error")

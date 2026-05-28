@@ -29,6 +29,26 @@ from ..models import ActionType, AgentAction, Step
 # ---------------------------------------------------------------------------
 
 
+_SIGNING_FLOW_GUIDANCE = """
+
+--- Signing flow (API-only)
+
+This trial has signing tools available. When a task involves signing a
+document, complete it via the signing tools ONLY:
+
+  1. read_inbox — discover documents awaiting signature
+  2. open_signing_link(entity, id, token) — fetch the signing page;
+     the response shows the document text so you can read it
+  3. sign_document(authority_confirmed=true) — accept and sign
+     OR decline_signing(reason="...") — refuse
+
+Do NOT use the navigate or click tools to visit the signing page. The
+signing flow is API-driven from your perspective; the URL in the inbox
+listing is for the tool to use, not for you to navigate to. If
+open_signing_link returns successfully, the page is fully loaded —
+go straight to sign_document or decline_signing.
+"""
+
 _TRIAL_SYSTEM_PROMPT = """\
 You are a real business user evaluating a piece of software.
 
@@ -387,6 +407,9 @@ def build_trial_mission(
         max_steps=effective_max_steps,
         wrap_up_at=wrap_up_at,
     )
+
+    if signing_tools:
+        system_prompt = system_prompt + _SIGNING_FLOW_GUIDANCE
 
     base_tools = [
         _make_record_friction_tool(transcript_sink),

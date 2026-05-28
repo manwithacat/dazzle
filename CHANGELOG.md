@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.3] - 2026-05-28
+
+### Fixed
+
+- `dazzle qa trial` signing harness: `open_signing_link` now returns the document text in its response, and the trial system prompt includes signing-flow guidance directing the persona to use signing tools sequentially rather than navigating the browser. (#1286)
+
 ## [0.80.2] - 2026-05-28
 
 ### Fixed

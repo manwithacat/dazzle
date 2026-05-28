@@ -49,6 +49,30 @@ def test_multiple_signing_tools():
     assert "submit_verdict" in names
 
 
+def test_signing_flow_guidance_in_system_prompt_when_tools_present():
+    """System prompt must contain signing-flow guidance when signing tools are provided."""
+    fake = _make_fake_tool("open_signing_link")
+    mission = build_trial_mission(
+        scenario={"name": "t", "tasks": []},
+        base_url="http://localhost:3000",
+        transcript_sink={},
+        signing_tools=[fake],
+    )
+    assert "Signing flow" in mission.system_prompt
+    assert "Do NOT use the navigate or click tools" in mission.system_prompt
+
+
+def test_no_signing_guidance_when_tools_absent():
+    """System prompt must NOT contain signing-flow guidance when signing_tools is None."""
+    mission = build_trial_mission(
+        scenario={"name": "t", "tasks": []},
+        base_url="http://localhost:3000",
+        transcript_sink={},
+        signing_tools=None,
+    )
+    assert "Signing flow" not in mission.system_prompt
+
+
 def _make_fake_tool(name: str) -> AgentTool:
     """Construct an AgentTool for testing."""
     return AgentTool(
