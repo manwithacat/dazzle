@@ -8,7 +8,7 @@ and the domain specification.
 from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -317,6 +317,26 @@ class TemporalSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class TenantHostSpec(BaseModel):
+    """Host-header tenant routing configuration for an entity (#1289).
+
+    Auto-mounts the framework's TenantResolutionMiddleware when any entity
+    declares this block. See docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    domain: str
+    slug_field: str
+    canonical_hosts: list[str] = Field(default_factory=list)
+    cookie_scope: Literal["host", "apex"] = "host"
+    super_admin_role: str = "super_admin"
+    history_entity: str | None = None
+    not_found_template: str | None = None
+    expired_template: str | None = None
+    order: int | None = None
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -413,6 +433,8 @@ class EntitySpec(BaseModel):
     graph_node: GraphNodeSpec | None = None
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
+    # v0.80.7 (#1289): host-header tenant routing configuration
+    tenant_host: TenantHostSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

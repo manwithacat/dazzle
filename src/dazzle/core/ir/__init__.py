@@ -119,6 +119,7 @@ from .domain import (
     PolicyEffect,
     ScopeRule,
     TemporalSpec,
+    TenantHostSpec,
     VisibilityRule,
 )
 from .e2e import (
