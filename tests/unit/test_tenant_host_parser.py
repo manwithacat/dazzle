@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from dazzle.core import ir
+from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.lexer import Lexer, TokenType
 
 
@@ -35,3 +36,59 @@ def test_lexer_emits_tenant_host_token():
     tokens = list(Lexer("tenant_host", Path("<test>")).tokenize())
     assert tokens[0].type == TokenType.TENANT_HOST
     assert tokens[0].value == "tenant_host"
+
+
+TENANT_HOST_DSL = """
+module test_tenant
+app test_tenant "Test"
+
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+    canonical_hosts: [www.example.com, example.com]
+    cookie_scope: host
+    super_admin_role: admin
+    history_entity: TrustSlugHistory
+    not_found_template: pkg.tpl:render_404
+    expired_template: pkg.tpl:render_410
+    order: 1
+""".lstrip()
+
+
+def test_parser_extracts_full_tenant_host_block():
+    _module, _app, _title, _config, _uses, fragment = parse_dsl(TENANT_HOST_DSL, Path("<test>"))
+    trust = next(e for e in fragment.entities if e.name == "Trust")
+    th = trust.tenant_host
+    assert th is not None
+    assert th.domain == "example.com"
+    assert th.slug_field == "slug"
+    assert th.canonical_hosts == ["www.example.com", "example.com"]
+    assert th.cookie_scope == "host"
+    assert th.super_admin_role == "admin"
+    assert th.history_entity == "TrustSlugHistory"
+    assert th.not_found_template == "pkg.tpl:render_404"
+    assert th.expired_template == "pkg.tpl:render_410"
+    assert th.order == 1
+
+
+def test_parser_defaults_when_block_minimal():
+    src = """
+module test_tenant
+app test_tenant "Test"
+
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+""".lstrip()
+    _m, _a, _t, _c, _u, fragment = parse_dsl(src, Path("<test>"))
+    trust = next(e for e in fragment.entities if e.name == "Trust")
+    assert trust.tenant_host is not None
+    assert trust.tenant_host.canonical_hosts == []
+    assert trust.tenant_host.cookie_scope == "host"
+    assert trust.tenant_host.order is None

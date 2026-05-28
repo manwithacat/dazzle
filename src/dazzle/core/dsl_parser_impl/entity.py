@@ -39,6 +39,8 @@ class _EntityParseContext:
     subtype_of: str | None = None
     # Temporal / effective-dated spec (v0.71.161 / #1223 Phase 3a.i)
     temporal: ir.TemporalSpec | None = None
+    # Tenant host routing spec (v0.80.7, #1289 slice 1)
+    tenant_host: ir.TenantHostSpec | None = None
     bulk_config: ir.BulkConfig | None = None
     # Seed template (v0.38.0)
     seed_template: ir.SeedTemplateSpec | None = None
@@ -178,6 +180,9 @@ class EntityParserMixin:
                 ctx.fitness_spec = self._parse_entity_fitness(ctx.fields)
             elif self.match(TokenType.DISPLAY_FIELD):
                 ctx.display_field = self._parse_entity_display_field()
+            elif self.match(TokenType.TENANT_HOST):
+                self._parse_tenant_host_block(ctx)
+                continue
             else:
                 self._parse_entity_field_declaration(ctx)
                 continue  # field parsing handles its own skip_newlines
@@ -877,6 +882,88 @@ class EntityParserMixin:
         result: str = self.expect_identifier_or_keyword().value
         return result
 
+    _TENANT_HOST_ALLOWED_KEYS: frozenset[str] = frozenset(
+        {
+            "domain",
+            "slug_field",
+            "canonical_hosts",
+            "cookie_scope",
+            "super_admin_role",
+            "history_entity",
+            "not_found_template",
+            "expired_template",
+            "order",
+        }
+    )
+
+    def _parse_tenant_host_block(self, ctx: _EntityParseContext) -> None:
+        """Parse the ``tenant_host:`` indented sub-field block (#1289 slice 1)."""
+        self.advance()  # consume TENANT_HOST
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        fields: dict[str, object] = {}
+        last_key_tok = None
+        while not self.match(TokenType.DEDENT) and not self.match(TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT) or self.match(TokenType.EOF):
+                break
+            last_key_tok = self.expect_identifier_or_keyword()
+            key = last_key_tok.value
+            self.expect(TokenType.COLON)
+            if key == "canonical_hosts":
+                # Parse bracketed comma-separated list of domain-like values: [a.b.c, d.e]
+                # Each item may be a dotted sequence (www.example.com) so we join
+                # consecutive IDENTIFIER/DOT tokens until we hit COMMA or RBRACKET.
+                self.expect(TokenType.LBRACKET)
+                items: list[str] = []
+                while not self.match(TokenType.RBRACKET):
+                    parts: list[str] = [self.expect_identifier_or_keyword().value]
+                    while self.match(TokenType.DOT):
+                        self.advance()
+                        parts.append(self.expect_identifier_or_keyword().value)
+                    items.append(".".join(parts))
+                    if self.match(TokenType.COMMA):
+                        self.advance()
+                self.expect(TokenType.RBRACKET)
+                fields[key] = items
+            elif key == "order":
+                fields[key] = int(self.expect(TokenType.NUMBER).value)
+            else:
+                # Scalar: collect remaining tokens on line as a compact string.
+                # Handles simple identifiers (e.g. "host", "admin"), dotted paths
+                # (e.g. "example.com"), and module:callable paths (e.g. "pkg.tpl:render_404").
+                # We join without spaces so colons and dots stay glued.
+                scalar_parts: list[str] = []
+                while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+                    scalar_parts.append(str(self.advance().value))
+                fields[key] = "".join(scalar_parts)
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        extra = set(fields) - self._TENANT_HOST_ALLOWED_KEYS
+        if extra:
+            tok_line = last_key_tok.line if last_key_tok else 0
+            tok_col = last_key_tok.column if last_key_tok else 0
+            raise make_parse_error(
+                f"Unknown sub-field(s) in tenant_host: block: {sorted(extra)}",
+                self.file,
+                tok_line,
+                tok_col,
+            )
+        if "domain" not in fields or "slug_field" not in fields:
+            tok_line = last_key_tok.line if last_key_tok else 0
+            tok_col = last_key_tok.column if last_key_tok else 0
+            raise make_parse_error(
+                "tenant_host: requires `domain:` and `slug_field:` sub-fields",
+                self.file,
+                tok_line,
+                tok_col,
+            )
+        ctx.tenant_host = ir.TenantHostSpec(**fields)  # type: ignore[arg-type]
+
     def _parse_entity_field_declaration(self, ctx: _EntityParseContext) -> None:
         """Parse a regular or computed field declaration (the default branch)."""
         field_name = self.expect_identifier_or_keyword().value
@@ -1001,6 +1088,7 @@ class EntityParserMixin:
             display_field=ctx.display_field,
             graph_edge=ctx.graph_edge,
             graph_node=ctx.graph_node,
+            tenant_host=ctx.tenant_host,
             source=loc,
         )
 

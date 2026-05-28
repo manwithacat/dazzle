@@ -762,6 +762,7 @@ ir_class: EntitySpec
     - subtype_children: tuple[str, Ellipsis] = ()
     - subtype_of: str | None = None
     - temporal: TemporalSpec | None = None
+    - tenant_host: TenantHostSpec | None = None
     - title: str | None = None
 
 ir_class: EnumSpec

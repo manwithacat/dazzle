@@ -201,6 +201,7 @@
           ),
           'subtype_of': None,
           'temporal': None,
+          'tenant_host': None,
           'title': 'Task',
         }),
         dict({
@@ -433,6 +434,7 @@
           ),
           'subtype_of': None,
           'temporal': None,
+          'tenant_host': None,
           'title': 'System Health',
         }),
         dict({
@@ -686,6 +688,7 @@
           ),
           'subtype_of': None,
           'temporal': None,
+          'tenant_host': None,
           'title': 'System Metric',
         }),
         dict({
@@ -944,6 +947,7 @@
           ),
           'subtype_of': None,
           'temporal': None,
+          'tenant_host': None,
           'title': 'Deploy History',
         }),
       ]),
