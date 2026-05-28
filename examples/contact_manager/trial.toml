@@ -35,3 +35,120 @@ Stop when you've formed an honest opinion on whether you'd consolidate
 your Outlook+spreadsheet setup into this. Call `submit_verdict` with a
 one-paragraph verdict from Tom's perspective.
 """
+
+
+[[scenario]]
+name = "engagement_letter_happy_path"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Priya, COO of a 40-person agency. The firm has sent you an
+engagement letter you're expected to sign before work begins.
+"""
+business_context = """
+Your firm is engaging Consulting Co for a Q4 brand refresh. You've
+verbally agreed the scope. The letter should match what you discussed.
+"""
+tasks = [
+    "Read your inbox to find the engagement letter awaiting signature.",
+    "Open the signing link.",
+    "Read the document. If it matches what you expected, sign it.",
+]
+stop_when = """
+Stop after signing or declining. Call submit_verdict with your verdict.
+"""
+
+
+[[scenario]]
+name = "engagement_letter_declined"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Priya, COO of a 40-person agency. You've received an engagement
+letter you weren't expecting and the scope reads broader than agreed.
+"""
+business_context = """
+Your finance lead has flagged scope items that were explicitly out of
+phase 1. You're going to read the document and decline.
+"""
+tasks = [
+    "Read your inbox to find the engagement letter awaiting signature.",
+    "Open the signing link.",
+    "Read the document. If the scope looks off, decline with a clear reason.",
+]
+stop_when = """
+Stop after declining. Call submit_verdict with your verdict.
+"""
+
+
+[[scenario]]
+name = "engagement_letter_token_expired"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Priya, COO. You meant to sign the engagement letter yesterday
+but got pulled into a board prep. You're opening the link now.
+"""
+business_context = """
+The link was sent yesterday. You're aware these links sometimes expire.
+"""
+tasks = [
+    "Read your inbox to find the engagement letter.",
+    "Open the signing link.",
+    "If the link is expired, note what the page tells you and call submit_verdict.",
+]
+stop_when = """
+Call submit_verdict describing the expired-link experience.
+"""
+
+
+[[scenario]]
+name = "engagement_letter_validator_rejected"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Devon, Office Manager. The Engagement Letter was sent to you
+by mistake — the firm should have sent it to your COO. You're going to
+try to sign it anyway because you'd rather not delay the project.
+"""
+business_context = """
+You don't have authority to bind your firm to engagement letters.
+"""
+tasks = [
+    "Read your inbox to find the engagement letter awaiting signature.",
+    "Open the signing link.",
+    "Sign it.",
+]
+stop_when = """
+Call submit_verdict describing whether the system caught the
+authority gap.
+"""
+
+
+[[scenario]]
+name = "engagement_letter_already_signed"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Priya, COO. You signed the engagement letter five minutes ago
+and now you're worried the click didn't go through — your network was
+flaky. You're opening the link again to double-check.
+"""
+business_context = """
+You're not trying to sign twice; you're trying to confirm the first
+signature actually worked.
+"""
+tasks = [
+    "Read your inbox to find the engagement letter.",
+    "Open the signing link.",
+    "Try to sign it if the first signature didn't go through.",
+]
+stop_when = """
+Call submit_verdict describing whether the system made it clear the
+document had already been signed.
+"""
