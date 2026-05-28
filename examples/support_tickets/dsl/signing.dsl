@@ -16,4 +16,4 @@ entity SlaWaiver "SLA Waiver":
   signatory_email: email required
 
   signable: true
-  signing_validator: support_tickets.app.signing.validator.validate_sla_waiver
+  signing_validator: app.signing.validator.validate_sla_waiver

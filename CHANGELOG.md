@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.6] - 2026-05-28
+
+### Fixed
+
+- Signing trial harness happy path now completes end-to-end with a successful sign. Example apps' `signing_validator:` dotted paths corrected from `<projectname>.app.X` to `app.X` — Dazzle runs `dazzle serve` with the project root on `sys.path` (no project-name prefix needed; matches the existing fixture pattern). Live trials of both `contact_manager/engagement_letter_happy_path` and `support_tickets/sla_waiver_happy_path` now produce `expected_outcome_inferred: signed`, `functional.status: pass`, `final_row_status: signed`, `audit_row_present: True`.
+
 ## [0.80.5] - 2026-05-28
 
 ### Changed

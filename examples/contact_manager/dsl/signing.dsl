@@ -16,4 +16,4 @@ entity EngagementLetter "Engagement Letter":
   signatory_email: email required
 
   signable: true
-  signing_validator: contact_manager.app.signing.validator.validate_engagement_letter
+  signing_validator: app.signing.validator.validate_engagement_letter
