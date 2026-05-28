@@ -7,13 +7,8 @@ Mounted at /_dazzle/audit/*.
 
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from dazzle.back.runtime.audit_log import AuditLogger
 from dazzle.back.runtime.auth import AuthContext
 
@@ -31,9 +26,6 @@ def create_audit_routes(
     Returns:
         FastAPI router with audit endpoints.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for audit routes")
-
     router = APIRouter(prefix="/_dazzle/audit", tags=["Audit"])
 
     def _require_admin(auth_context: AuthContext) -> None:

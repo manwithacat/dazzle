@@ -10,11 +10,8 @@ All endpoints require super_admin authentication.
 import logging
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE
-
-if FASTAPI_AVAILABLE:
-    from fastapi import APIRouter, HTTPException, Request
-    from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +30,6 @@ def create_admin_api_routes(
     Returns:
         A FastAPI APIRouter with the admin action endpoints.
     """
-    if not FASTAPI_AVAILABLE:
-        return None
-
     router = APIRouter(prefix="/_admin/api", tags=["admin"])
 
     @router.post("/deploys/trigger")

@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any
 
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter
 from dazzle.back.runtime.repository import DatabaseManager, Repository
 from dazzle.back.specs.entity import EntitySpec
 
@@ -185,15 +185,7 @@ def create_control_plane_routes(
 
     Returns:
         APIRouter with control plane endpoints
-
-    Raises:
-        RuntimeError: If FastAPI is not available
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for control plane routes. Install it with: pip install fastapi"
-        )
-
     router = APIRouter(prefix="/dazzle/dev", tags=["Dazzle Control Plane"])
 
     deps = _ControlPlaneDeps(

@@ -15,9 +15,9 @@ from datetime import datetime
 from functools import partial
 from typing import Any
 
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter
 from dazzle.back.runtime.query_builder import quote_identifier, validate_sql_identifier
 from dazzle.back.runtime.repository import DatabaseManager
 from dazzle.back.specs.entity import EntitySpec
@@ -327,15 +327,7 @@ def create_debug_routes(
 
     Returns:
         APIRouter with debug endpoints
-
-    Raises:
-        RuntimeError: If FastAPI is not available
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for debug routes. Install it with: pip install fastapi"
-        )
-
     router = APIRouter(prefix="/_dazzle", tags=["Debug"])
 
     deps = _DebugDeps(

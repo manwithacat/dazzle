@@ -11,13 +11,8 @@ field may create or manage grants.
 from typing import Any
 from uuid import UUID
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from dazzle.back.runtime.auth import AuthContext
 
 
@@ -37,9 +32,6 @@ def create_grant_routes(
     Returns:
         FastAPI router with grant endpoints.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for grant routes")
-
     router = APIRouter(prefix="/_dazzle/grants", tags=["Grants"])
 
     def _get_store() -> Any:

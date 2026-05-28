@@ -26,7 +26,7 @@ import logging
 from functools import partial
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, Response
+from fastapi import APIRouter, Response
 
 logger = logging.getLogger(__name__)
 
@@ -81,15 +81,7 @@ def create_metrics_routes(collector: Any | None) -> APIRouter:
 
     Returns:
         APIRouter with the single ``GET /_dazzle/metrics`` route.
-
-    Raises:
-        RuntimeError: If FastAPI is not available.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for metrics routes. Install it with: pip install fastapi"
-        )
-
     router = APIRouter(prefix="/_dazzle", tags=["Metrics"])
     router.add_api_route(
         "/metrics",
