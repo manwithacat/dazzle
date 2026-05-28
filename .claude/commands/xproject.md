@@ -18,7 +18,7 @@ If `$ARGUMENTS` is provided, filter to only that project name. If the project do
 
 ## 2. Dispatch parallel scans
 
-**Dispatch one background subagent per project** in a single message. Use `model: "sonnet"` — these need judgment to interpret results.
+**Dispatch one background subagent per project** in a single message. Omit the `model` override so each inherits the session model — these need judgment to interpret results (see the Subagent Model Policy in CLAUDE.md).
 
 Each subagent prompt:
 

@@ -5,7 +5,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Run `git status` (never use `-uall`) and `git diff --stat` to understand what changed.
 - If the worktree is already clean and there is nothing to commit, say so and stop.
 - Run `ruff check src/ tests/ --fix && ruff format src/ tests/` to auto-fix lint issues.
-- Run `mypy src/dazzle --ignore-missing-imports --exclude 'eject'` to catch type errors (matches CI).
+- Run `mypy src/dazzle --ignore-missing-imports --exclude 'eject'` to catch type errors. **This lint + type pair must stay identical across `/ship`, `/check`, and CI** — change one, change all three. (`/ship` deliberately runs the fast drift/policy gates below instead of `/check`'s full unit-test pass; that difference is by design, not drift.)
 - **Run drift + policy gates** — fast (~10s, no DB), catches the recurring Python ↔ htmx/Alpine boundary regressions (#949 / #963 / #966 / #968 class) plus CI-class violations that ruff/mypy don't see (bare excepts, abandoned shims, parser-regex sneaks, etc.):
 
   ```bash
@@ -54,7 +54,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Stage only the relevant changed files by name (never `git add -A` or `git add .`).
 - Do NOT stage files that look like secrets (.env, credentials, tokens).
 - Write a concise commit message that explains *why* the change was made, following the conventional commit style used in recent history (`git log --oneline -10`).
-- End the commit message with: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` (matches the signature on recent commits — bump this when the upstream model changes).
+- End the commit message with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` (matches the signature on recent commits — bump this when the upstream model changes).
 - Use a HEREDOC to pass the message to `git commit -m`.
 
 ## 3. Tag (if version was bumped)

@@ -52,10 +52,10 @@ Skip if contract is already `DONE`.
 ### 3. REFACTOR (only if impl is PENDING or PARTIAL)
 
 Apply contract to Dazzle code. Typical files:
-- `src/dazzle_ui/templates/...` — restyle to pure Tailwind with design-system.css HSL variables
-- `src/dazzle_ui/runtime/static/js/dz-alpine.js` — Alpine controllers aligning with contract's state grammar
+- `src/dazzle/render/fragment/...` + `src/dazzle/ui/runtime/static/css/design-system.css` — Fragment renderers + design-system HSL variables (no Jinja2 templates since #1042)
+- `src/dazzle/ui/runtime/static/js/dz-alpine.js` — Alpine controllers aligning with contract's state grammar
 - Backend endpoints for new server APIs
-- `src/dazzle_ui/converters/template_compiler.py` — new context fields
+- `src/dazzle/ui/converters/template_compiler.py` — new context fields
 
 Follow rules from `~/.claude/skills/ux-architect/stack-adapters/htmx-alpine-tailwind.md`.
 
@@ -167,7 +167,7 @@ Counts against shared explore budget.
 
 Counts against shared explore budget.
 
-**HEURISTIC 1 (mandatory): Try the real thing first.** Before writing fix code OR committing to a gap doc's framework infrastructure, reproduce the defect end-to-end at the lowest layer that can exhibit it. Track record: 4 of last 6 investigations had the hypothesised framework fix turn out to be unnecessary or wrong. See `improve/references/heuristics.md` for the full rule and `improve/references/substrate-failure-modes.md` for the catalog of observer-artifact failure modes.
+**HEURISTIC 1 (mandatory): Try the real thing first.** Before writing fix code OR committing to a gap doc's framework infrastructure, reproduce the defect end-to-end at the lowest layer that can exhibit it. Track record: 4 of last 6 investigations had the hypothesised framework fix turn out to be unnecessary or wrong.
 
 **HEURISTIC 2: Helper-audit propagation.** When fixing a single-source-of-truth helper miss, grep for other call sites before writing the fix.
 

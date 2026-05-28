@@ -12,13 +12,13 @@ Run a two-phase code smells analysis: regression checks against established rule
 
 ## Scope
 
-Focus on `src/dazzle/`, `src/dazzle_back/`, and `src/dazzle_ui/`. Ignore `tests/`, `examples/`, and auto-generated files.
+Focus on `src/dazzle/` — the merged tree (`back/`, `ui/`, `render/` all live under it since #1056). Ignore `tests/`, `examples/`, and auto-generated files.
 
 ---
 
 ## Dispatch parallel analysis
 
-**Dispatch ALL of these subagents in a single message** using `run_in_background: true`. Use `model: "sonnet"` — these need judgment for pattern recognition.
+**Dispatch ALL of these subagents in a single message** using `run_in_background: true`. Omit the `model` override so each inherits the session model — these need judgment for pattern recognition (see the Subagent Model Policy in CLAUDE.md).
 
 ### Subagent 1: Regression checks (Phase 1)
 
@@ -48,7 +48,7 @@ Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle. Report PASS
   Spot-check patterns from 1.1 and 1.2.
 
 1.5a No silent handlers in event delivery path:
-  grep -rn "except" src/dazzle_back/events/ src/dazzle_back/channels/ --include="*.py" -A2 | grep -E "pass$|return$"
+  grep -rn "except" src/dazzle/back/events/ src/dazzle/back/channels/ --include="*.py" -A2 | grep -E "pass$|return$"
   PASS = 0 silent handlers.
 
 1.5b getattr() with string literals:
@@ -63,7 +63,7 @@ Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle. Report PASS
 
 1.8 Declarative Alpine @<event>.window bindings leak across HTMX morph nav
   (issue #795 — fixed component must own listener lifecycle):
-  grep -rnE '@(pointer|mouse|key|resize|scroll|click|touch)[a-z]*\.window' src/dazzle_ui/templates/ --include="*.html"
+  grep -rnE '@(pointer|mouse|key|resize|scroll|click|touch)[a-z]*\.window' src/dazzle/ui/ --include="*.html"
   PASS = 0 results. Each hit is a latent lifecycle bug: move the listener
   to the component's init()/destroy() via addEventListener/removeEventListener.
 
@@ -76,7 +76,7 @@ REGRESSION_RESULTS:
 ### Subagent 2: Error handling & coupling patterns
 
 ```
-Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/, src/dazzle_back/, src/dazzle_ui/. Ignore tests/, examples/, auto-generated files.
+Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it). Ignore tests/, examples/, auto-generated files.
 
 Categories:
 1. Error handling — silent failures, inconsistent exception strategy, missing retries on I/O
@@ -95,7 +95,7 @@ ENFORCEMENT: <how to prevent recurrence>
 ### Subagent 3: Duplication & type safety patterns
 
 ```
-Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/, src/dazzle_back/, src/dazzle_ui/. Ignore tests/, examples/, auto-generated files.
+Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it). Ignore tests/, examples/, auto-generated files.
 
 Categories:
 1. Duplication — near-duplicate blocks >10 lines, copy-paste across handlers
@@ -119,7 +119,7 @@ ENFORCEMENT: <prevention>
 ### Subagent 4: Complexity & mutable globals
 
 ```
-Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/, src/dazzle_back/, src/dazzle_ui/. Ignore tests/, examples/, auto-generated files.
+Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it). Ignore tests/, examples/, auto-generated files.
 
 Categories:
 1. Complexity — functions >80 lines, deeply nested conditionals (3+ levels), god classes

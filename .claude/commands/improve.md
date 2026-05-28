@@ -177,8 +177,8 @@ Read-only — does not modify state, log, or lock.
 /loop 30m /improve                      # recurring; lane-pickup auto each fire
 ```
 
-## Migration note
+## Consolidation status
 
-This driver is currently shipping **alongside** the old /improve, /ux-cycle, /trial-cycle, /ux-converge skills. The old skills still work; this driver is opt-in via `/improve` (the old `/improve` skill has been moved to `improve/lanes/example-apps.md` body). When operator confirms the new driver is solid, the old commands will be removed.
+Consolidation is **complete**: the old /ux-cycle, /trial-cycle, /ux-converge, and standalone /improve skills have been removed; their playbook bodies now live in `improve/lanes/*.md`. `/improve` is the single entrypoint for all four lanes.
 
-See `dev_docs/2026-04-25-improve-consolidation-design.md` for the consolidation rationale.
+See `dev_docs/2026-04-25-improve-consolidation-design.md` for the rationale.

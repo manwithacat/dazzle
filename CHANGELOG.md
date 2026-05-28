@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.22] - 2026-05-28
+
+### Changed
+
+- Refreshed the `.claude/commands/` playbooks after the #1056 `dazzle_back`/`dazzle_ui` → `dazzle/` merge and the #1042 Jinja2 removal. Fixed dead `src/dazzle_back/` and `src/dazzle_ui/templates/` path references in `smells.md` (4 greps that silently passed by scanning deleted dirs), `check.md`, `cimonitor.md`, `framework-ux.md`, and `ux-converge.md`. Converged the mypy gate to the CI-matching `mypy src/dazzle` across `/check`, `/ship`, and `/cimonitor` (was a narrow `src/dazzle/core …` scope in `/check` that missed `render/ ui/ back/runtime/`). Corrected `/ship`'s commit attribution to Opus 4.8 and removed dead `improve/references/*.md` pointers from `framework-ux.md`. Updated `improve.md`'s migration note to reflect completed consolidation.
+
+### Agent Guidance
+
+- New **Subagent Model Policy** in CLAUDE.md: command playbooks pin `claude-haiku-4-5` only for mechanical subagent work (lint/type/test/scrape); judgment work (investigation, pattern recognition, interpretation) omits the `model` override and inherits the session model. Removed hardcoded `model: "sonnet"` pins from `/issues`, `/smells`, `/xproject`, and `/fuzz` accordingly. The `/check`, `/ship`, and `/cimonitor` lint+type commands must now stay byte-identical to CI — change one, change all three.
+
 ## [0.80.21] - 2026-05-28
 
 ### Changed

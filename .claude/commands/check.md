@@ -29,10 +29,9 @@ Return: LINT: pass|fail (N issues)
 
 **Type check agent:**
 ```
-Run mypy type checks on the Dazzle project (matching CI):
-1. Run: mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-2. Run: mypy src/dazzle_back/ --ignore-missing-imports
-3. Report any errors with file paths and line numbers from BOTH runs
+Run mypy type checks on the Dazzle project (must match /ship and CI — keep all three in sync):
+1. Run: mypy src/dazzle --ignore-missing-imports --exclude 'eject'
+2. Report any errors with file paths and line numbers
 Return: MYPY: pass|fail (N errors)
 ```
 

@@ -298,6 +298,10 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
 - **All schema changes via Alembic** — including framework entities (FeedbackReport, AIJob, admin entities). No raw ALTER TABLE. Use `dazzle db revision -m "description"` then `dazzle db upgrade` (ADR-0017)
 
+## Subagent Model Policy
+
+Command playbooks that fan out subagents: pin `model: "claude-haiku-4-5-20251001"` only for **mechanical** work (lint, type, test, fixed-signature scrapes). For **judgment** work (root-cause investigation, code-smell/pattern recognition, cross-project interpretation), omit the `model` override so the subagent inherits the session model. Never hardcode `sonnet` — it freezes judgment work below the session tier as models advance.
+
 ## Ship Discipline
 
 - **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
@@ -331,4 +335,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.80.21 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.80.22 | **Python**: 3.12+ | **Status**: Production Ready

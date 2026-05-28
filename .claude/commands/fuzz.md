@@ -26,7 +26,7 @@ Skip `examples/README.md` (not an app). Note: each app has `dsl/app.dsl` (or sim
 
 ### Step 2: Dispatch parallel fuzz agents
 
-For every discovered app, dispatch one `Explore` subagent with `run_in_background: true` and `model: "sonnet"`. **All in a single message.**
+For every discovered app, dispatch one `Explore` subagent with `run_in_background: true`, omitting the `model` override so it inherits the session model — signature-scraping plus false-positive judgment (see the Subagent Model Policy in CLAUDE.md). **All in a single message.**
 
 Each subagent prompt (substitute `<APP_PATH>` and `<APP_NAME>`):
 

@@ -61,7 +61,7 @@ Issues are handled differently based on who filed them:
 
 ### Step 2: Parallel investigation (when 2+ issues open)
 
-When there are **2 or more open `manwithacat` issues**, dispatch investigation subagents **in parallel** (one per issue, all in a single message). Use `run_in_background: true` and `model: "sonnet"` for each.
+When there are **2 or more open `manwithacat` issues**, dispatch investigation subagents **in parallel** (one per issue, all in a single message). Use `run_in_background: true` for each; omit the `model` override so each inherits the session model — root-cause investigation is judgment work (see the Subagent Model Policy in CLAUDE.md).
 
 Each investigation subagent prompt:
 
