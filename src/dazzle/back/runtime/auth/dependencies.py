@@ -2,7 +2,8 @@
 
 from collections.abc import Awaitable, Callable
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, FastAPIRequest
+from fastapi import HTTPException
+from fastapi import Request as FastAPIRequest
 
 from .models import AuthContext
 from .store import AuthStore
@@ -35,10 +36,6 @@ def create_auth_dependency(
             return {"user": user.user.email}
         ```
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for auth dependencies")
-
-    from fastapi import HTTPException
 
     async def get_current_user(request: FastAPIRequest) -> AuthContext:
         """Get current authenticated user."""
@@ -95,10 +92,6 @@ def create_deny_dependency(
     Returns:
         Dependency function
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for auth dependencies")
-
-    from fastapi import HTTPException
 
     async def check_deny_roles(request: FastAPIRequest) -> AuthContext:
         """Reject users with denied roles."""
@@ -145,8 +138,6 @@ def create_optional_auth_dependency(
     Returns:
         Dependency function
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for auth dependencies")
 
     async def get_optional_user(request: FastAPIRequest) -> AuthContext:
         """Get current user if authenticated, or empty context."""

@@ -9,6 +9,8 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from fastapi import Depends, HTTPException, Request
+
 from dazzle.back.runtime.subsystems import SubsystemContext
 
 if TYPE_CHECKING:
@@ -317,7 +319,6 @@ class SystemRoutesSubsystem:
 
     def _register_manual_trigger_routes(self, ctx: SubsystemContext, executor: Any) -> None:
         """Register POST endpoints for manual integration triggers."""
-        from dazzle.back.runtime._fastapi_compat import HTTPException, Request
         from dazzle.core.ir.integrations import MappingTriggerType
         from dazzle.core.strings import to_api_plural
 
@@ -450,7 +451,6 @@ class SystemRoutesSubsystem:
 
     def _setup_system_routes(self, ctx: SubsystemContext) -> None:
         """Register domain service stubs, health check, spec, and db-info routes."""
-        from dazzle.back.runtime._fastapi_compat import HTTPException
         from dazzle.back.runtime.service_loader import ServiceLoader
 
         # Load domain service stubs
@@ -563,7 +563,6 @@ class SystemRoutesSubsystem:
 
         # Authenticated diagnostics endpoint
         if ctx.auth_dep:
-            from dazzle.back.runtime._fastapi_compat import Depends
 
             @ctx.app.get("/_diagnostics", tags=["System"])
             async def diagnostics(

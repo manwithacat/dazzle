@@ -9,12 +9,8 @@ that proxies to the entity's CRUD service.
 import logging
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from dazzle.core.ir.islands import IslandSpec
 
 logger = logging.getLogger("dazzle.islands")

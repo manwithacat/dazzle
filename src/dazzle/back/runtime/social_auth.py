@@ -10,14 +10,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    HTTPException,
-    Request,
-)
 from dazzle.back.runtime.auth import AuthStore, UserRecord
 from dazzle.back.runtime.jwt_auth import JWTService
 from dazzle.back.runtime.token_store import TokenStore
@@ -633,9 +628,6 @@ def create_social_auth_routes(
     Returns:
         FastAPI router with social auth endpoints
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for social auth routes")
-
     router = APIRouter(prefix="/auth/social", tags=["Social Authentication"])
 
     @router.post("/{provider}")

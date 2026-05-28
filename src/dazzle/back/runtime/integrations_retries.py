@@ -27,14 +27,9 @@ import logging
 from functools import partial
 from typing import TYPE_CHECKING
 
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    HTTPException,
-    Query,
-)
 from dazzle.back.runtime.retry_accumulator import RetryAccumulator
 
 logger = logging.getLogger(__name__)
@@ -142,16 +137,7 @@ def create_integrations_retries_routes(
     Returns:
         APIRouter with the ``/_dazzle/integrations/{name}/retries``
         endpoint.
-
-    Raises:
-        RuntimeError: If FastAPI is not available.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for integration retries routes. "
-            "Install it with: pip install fastapi"
-        )
-
     router = APIRouter(prefix="/_dazzle/integrations", tags=["Integrations Retries"])
     declared_names = frozenset(getattr(i, "name", "") for i in integrations)
 

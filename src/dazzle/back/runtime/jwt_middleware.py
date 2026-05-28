@@ -5,16 +5,13 @@ Provides authentication middleware that validates JWT tokens from mobile clients
 """
 
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from fastapi import HTTPException
+from fastapi import Request as FastAPIRequest
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, FastAPIRequest
 from dazzle.back.runtime.jwt_auth import JWTClaims, JWTError, JWTService
-
-if TYPE_CHECKING:
-    pass
-
 
 # =============================================================================
 # Auth Context
@@ -190,10 +187,6 @@ def create_jwt_dependency(
     Returns:
         FastAPI dependency function
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for JWT dependencies")
-
-    from fastapi import HTTPException
 
     async def get_jwt_auth(request: FastAPIRequest) -> JWTAuthContext:
         """Validate JWT and return auth context."""
@@ -341,10 +334,6 @@ def create_dual_auth_dependency(
     Returns:
         FastAPI dependency function
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for auth dependencies")
-
-    from fastapi import HTTPException
 
     async def get_dual_auth(request: FastAPIRequest) -> dict[str, Any]:
         """Validate auth and return context."""

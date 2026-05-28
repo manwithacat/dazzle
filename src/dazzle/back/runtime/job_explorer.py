@@ -17,9 +17,8 @@ from datetime import datetime
 from functools import partial
 from typing import Any, Protocol, runtime_checkable
 
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
-
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, Query
 
 logger = logging.getLogger(__name__)
 
@@ -256,15 +255,7 @@ def create_job_explorer_routes(
 
     Returns:
         APIRouter with job explorer endpoints.
-
-    Raises:
-        RuntimeError: If FastAPI is not available.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for job explorer routes. Install it with: pip install fastapi"
-        )
-
     router = APIRouter(prefix="/_dazzle/jobs", tags=["Job Explorer"])
 
     router.add_api_route(

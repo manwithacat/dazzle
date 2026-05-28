@@ -19,9 +19,9 @@ import logging
 from functools import partial
 from typing import Any, Protocol, runtime_checkable
 
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, Query
 from dazzle.core.ir.approvals import ApprovalSpec
 
 logger = logging.getLogger(__name__)
@@ -249,16 +249,7 @@ def create_approvals_routes(
 
     Returns:
         APIRouter with the ``/_dazzle/approvals/*`` endpoints.
-
-    Raises:
-        RuntimeError: If FastAPI is not available.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for approvals explorer routes. "
-            "Install it with: pip install fastapi"
-        )
-
     router = APIRouter(prefix="/_dazzle/approvals", tags=["Approvals Explorer"])
 
     router.add_api_route(

@@ -17,15 +17,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    Depends,
-    HTTPException,
-    Request,
-)
 from dazzle.back.runtime.repository import DatabaseManager, Repository
 from dazzle.back.specs.entity import EntitySpec
 
@@ -533,15 +527,7 @@ def create_test_routes(
 
     Returns:
         APIRouter with test endpoints
-
-    Raises:
-        RuntimeError: If FastAPI is not available
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is required for test routes. Install it with: pip install fastapi"
-        )
-
     # Pre-compute SQL statements from validated entity names (startup-time only)
     entity_sql: dict[str, _EntitySQL] = {e.name: _EntitySQL(e.name) for e in entities}
 
