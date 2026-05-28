@@ -730,13 +730,13 @@ def _pyhanko_validator(pdf_path: str) -> dict[str, Any]:
     with open(pdf_path, "rb") as fh:
         reader = PdfFileReader(fh)
         sig = reader.embedded_signatures[0]
-        status = validate_pdf_signature(sig, ValidationContext())
+        status: Any = validate_pdf_signature(sig, ValidationContext())
     return {
         "valid": bool(status.intact and status.valid),
         "embedded_timestamp": (
             str(status.timestamp_validity) if status.timestamp_validity else None
         ),
-        "summary": status.pretty_print_details(),  # type: ignore[no-untyped-call]
+        "summary": status.pretty_print_details(),
     }
 
 

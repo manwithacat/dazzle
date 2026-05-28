@@ -240,7 +240,8 @@ def _build_signing_inputs(
         try:
             from pyhanko.sign import timestamps
 
-            timestamper = timestamps.HTTPTimeStamper(tsa_url)  # type: ignore[no-untyped-call]
+            HTTPTimeStamper: Any = timestamps.HTTPTimeStamper
+            timestamper = HTTPTimeStamper(tsa_url)
         except Exception:
             log.warning("TSA unavailable, signing without timestamp")
 

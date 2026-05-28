@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.7] - 2026-05-28
+
+### Fixed
+
+- CI `type-check` job green again. Removed two unused `# type: ignore[no-untyped-call]` comments at `src/dazzle/signing/service.py:243` (pyhanko `HTTPTimeStamper`) and `src/dazzle/cli/qa.py:739` (pyhanko `pretty_print_details`). CI runs mypy 2.1.0 which now resolves these pyhanko call sites as typed, making the suppressions redundant; local mypy 1.18.x still flags them as untyped but CI is authoritative.
+
 ## [0.80.6] - 2026-05-28
 
 ### Fixed
