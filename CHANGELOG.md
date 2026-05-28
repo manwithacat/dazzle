@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.10] - 2026-05-28
+
+### Added
+
+- Project post-build hook for injecting ASGI middleware (#1290). Place a module at `pipeline/serve/app_init.py` exposing `register_middleware(app) -> None`; the framework imports and invokes it after `builder.build()` and `assemble_post_build_routes` in both deployment paths (`create_app_factory()` for `--factory` deployments and `run_unified_server()` for the combined dev/local server). A missing module is a silent no-op; any exception raised by the hook is logged and re-raised so a broken hook can't ship a half-configured app. Unblocks AegisMark phase 1's `TenantResolutionMiddleware` + `ActivationGateMiddleware` from project-side mount.
+
+### Agent Guidance
+
+- When project code needs to attach ASGI middleware, lifespan callbacks, or any other post-build setup to the FastAPI app, the canonical extension point is now `pipeline/serve/app_init.py:register_middleware(app)`. Don't reach into `_setup_middleware()` or monkey-patch the builder — the hook fires after both production deploy paths and is the only sanctioned way for project code to extend the running app.
+
 ## [0.80.9] - 2026-05-28
 
 ### Security

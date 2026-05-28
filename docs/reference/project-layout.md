@@ -113,6 +113,28 @@ Generate the `app/` structure for an existing project:
 dazzle init --with-app    # Add app/ structure to existing project
 ```
 
+## Project Post-Build Hook (#1290)
+
+To inject ASGI middleware or run other setup against the fully-built
+FastAPI app, place a module at `pipeline/serve/app_init.py` that exposes
+a `register_middleware(app)` callable:
+
+```python
+# pipeline/serve/app_init.py
+from pipeline.tenant.middleware import TenantResolutionMiddleware
+
+def register_middleware(app) -> None:
+    app.add_middleware(TenantResolutionMiddleware, ...)
+```
+
+The framework imports and invokes this module after `builder.build()`
+and `assemble_post_build_routes` in both deployment paths
+(`create_app_factory()` for `--factory` deployments and
+`run_unified_server()` for the combined dev/local server). A missing
+module is a silent no-op (most projects don't need this); any exception
+raised by the hook itself is logged and re-raised so a broken hook
+can't ship a half-configured app.
+
 ## See Also
 
 - [Template Overrides](htmx-templates.md#template-overrides) — `dz://` prefix for template customization

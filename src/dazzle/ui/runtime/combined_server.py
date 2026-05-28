@@ -315,6 +315,10 @@ def run_unified_server(
         bundled_css=bundled_css,
     )
 
+    from dazzle.back.runtime.app_factory import _invoke_project_post_build_hook
+
+    _invoke_project_post_build_hook(app)
+
     # Post-#1044 (v0.67.92): the --local-assets toggle previously
     # flipped _use_cdn on the Jinja env so base.html could emit local
     # vs. CDN asset URLs. Jinja is gone; CDN-vs-local routing returns

@@ -20,6 +20,38 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# #1290: convention-based project hook for injecting ASGI middleware (and any
+# other post-build setup) into the FastAPI app. Projects place a module at
+# ``pipeline/serve/app_init.py`` exposing ``register_middleware(app)`` — the
+# framework imports and invokes it after ``builder.build()`` and after
+# ``assemble_post_build_routes``. A missing module is a no-op (most projects
+# don't need this); any other error from the hook is logged and re-raised so
+# silent failures can't ship a half-configured app.
+_PROJECT_INIT_MODULE = "pipeline.serve.app_init"
+_PROJECT_INIT_HOOK = "register_middleware"
+
+
+def _invoke_project_post_build_hook(app: "FastAPI") -> None:
+    import importlib
+
+    try:
+        module = importlib.import_module(_PROJECT_INIT_MODULE)
+    except ModuleNotFoundError:
+        logger.debug("No project post-build hook (%s missing)", _PROJECT_INIT_MODULE)
+        return
+
+    hook = getattr(module, _PROJECT_INIT_HOOK, None)
+    if hook is None:
+        logger.debug(
+            "Project module %s has no %s callable",
+            _PROJECT_INIT_MODULE,
+            _PROJECT_INIT_HOOK,
+        )
+        return
+
+    logger.info("Invoking project post-build hook %s:%s", _PROJECT_INIT_MODULE, _PROJECT_INIT_HOOK)
+    hook(app)
+
 
 def create_app(
     appspec: AppSpec,
@@ -998,6 +1030,8 @@ def create_app_factory(
         theme_css=theme_css,
         backend_url=os.environ.get("BACKEND_URL") or None,
     )
+
+    _invoke_project_post_build_hook(app)
 
     # Log startup info
     logger.info("Dazzle app '%s' ready", appspec.name)
