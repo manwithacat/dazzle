@@ -879,6 +879,23 @@ class Repository(Generic[T]):
         if not update_data:
             return await self.read(id)
 
+        # #1289 follow-up: if this entity has `tenant_host:` and its slug
+        # column is in the update payload, capture the pre-update value so
+        # we can bust the tenant cache for both old + new slugs after the
+        # UPDATE commits. Skipped entirely on non-tenant-host entities so
+        # the hot path stays a single SQL round-trip.
+        from dazzle.tenant.cache_registry import slug_field_for
+
+        slug_field = slug_field_for(self.table_name)
+        old_slug: str | None = None
+        if slug_field is not None and slug_field in update_data:
+            pre = await self.read(id)
+            if pre is not None:
+                raw = (
+                    pre.get(slug_field) if isinstance(pre, dict) else getattr(pre, slug_field, None)
+                )
+                old_slug = str(raw) if raw is not None else None
+
         # Convert values for database backend
         db_data = {
             k: self._python_to_db(v, self._field_types.get(k)) for k, v in update_data.items()
@@ -906,7 +923,19 @@ class Repository(Generic[T]):
         if rowcount == 0:
             return None
 
-        return await self.read(id)
+        result = await self.read(id)
+
+        if slug_field is not None and slug_field in update_data:
+            new_slug = str(update_data[slug_field])
+            if old_slug != new_slug:
+                from dazzle.tenant.cache_registry import bust
+
+                if old_slug:
+                    bust(old_slug)
+                if new_slug:
+                    bust(new_slug)
+
+        return result
 
     async def delete(self, id: UUID) -> bool:
         """

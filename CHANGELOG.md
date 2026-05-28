@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.20] - 2026-05-28
+
+### Added
+
+- Auto-bust hook on `Repository.update` for `tenant_host:` slug renames (#1289 final follow-up). When a slug field on a `tenant_host:` entity is updated, the framework now reads the pre-update slug value, runs the UPDATE, then auto-busts both the old and new slug entries in every registered tenant cache. Eliminates the "moved tenant still resolves to the old row until TTL" stale-cache window without any project-side wiring. Slug-field-to-table mapping lives in `dazzle.tenant.cache_registry._TENANT_HOST_SLUG_FIELDS`, registered from `app_factory` at middleware mount time alongside the existing cache registration. `Repository.update` consults `slug_field_for(table_name)` and short-circuits for non-tenant entities so the hot path stays a single SQL round-trip. 6 new tests in `test_tenant_bust.py` (3 registry, 4 hook behaviours), bringing the file to 13 tests total.
+
+### Agent Guidance
+
+- All `#1289` `tenant_host:` follow-ups are now shipped. Slug renames via `Repository.update` (the canonical path) auto-bust the cache; the public `dazzle.tenant.bust(slug)` API remains for raw-SQL renames, Alembic migrations, or admin tooling that bypasses Repository. Issue can be closed on next ship cycle.
+
 ## [0.80.19] - 2026-05-28
 
 ### Added

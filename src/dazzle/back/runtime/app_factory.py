@@ -192,9 +192,13 @@ def _mount_tenant_resolution_middleware(
 
         # #1289 slice 6: register the cache so dazzle.tenant.bust(slug) can
         # invalidate it from project code on raw-SQL renames or admin tooling.
-        from dazzle.tenant.cache_registry import _register_cache
+        # Also register each entity's slug field so Repository.update can
+        # auto-bust on slug renames without any project-side wiring.
+        from dazzle.tenant.cache_registry import _register_cache, _register_slug_field
 
         _register_cache(binding.cache)
+        for table_name, slug_col in slug_field_by_entity.items():
+            _register_slug_field(table_name, slug_col)
 
         logger.info(
             "Mounted TenantResolutionMiddleware for domain=%s (%d entit%s)",
