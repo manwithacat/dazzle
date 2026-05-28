@@ -21,9 +21,8 @@ def info_command() -> None:
         from dazzle import back as dazzle_back  # noqa: F401
 
         dnr_back_available = True
-        from dazzle.back.runtime import FASTAPI_AVAILABLE
-
-        fastapi_available = FASTAPI_AVAILABLE
+        # FastAPI is a required core dependency, so if the runtime imports it is present.
+        fastapi_available = True
     except ImportError:
         pass
 

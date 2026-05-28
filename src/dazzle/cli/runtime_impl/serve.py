@@ -438,15 +438,10 @@ def _validate_and_finalize_infra(ctx: _ServeContext) -> None:
 def _load_appspec_and_subsystems(ctx: _ServeContext) -> None:
     """Import runtime, load AppSpec, start vendor mocks, load SiteSpec."""
     try:
-        from dazzle.back.runtime import FASTAPI_AVAILABLE
+        import dazzle.back.runtime  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle runtime not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
-        raise typer.Exit(code=1)
-
-    if not FASTAPI_AVAILABLE and not ctx.ui_only:
-        typer.echo("FastAPI not installed. Use --ui-only or install:", err=True)
-        typer.echo("  pip install fastapi uvicorn", err=True)
         raise typer.Exit(code=1)
 
     try:

@@ -11,6 +11,8 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from fastapi import FastAPI
+
 from dazzle.back.graphql.context import GraphQLContext
 from dazzle.back.graphql.resolver_generator import ResolverGenerator
 from dazzle.back.graphql.schema_generator import SchemaGenerator
@@ -26,14 +28,6 @@ except ImportError:
     STRAWBERRY_AVAILABLE = False
     strawberry = None  # type: ignore[assignment, misc, unused-ignore]
     GraphQLRouter = None  # type: ignore[assignment, misc, unused-ignore]
-
-try:
-    from fastapi import FastAPI
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    FastAPI = None  # type: ignore[assignment, misc]
 
 if TYPE_CHECKING:
     from dazzle.back.specs import BackendSpec
@@ -70,9 +64,6 @@ def create_graphql_app(
         app = create_graphql_app(spec)
         # Run with: uvicorn mymodule:app
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
-
     if not STRAWBERRY_AVAILABLE:
         raise RuntimeError(
             "Strawberry is not installed. Install with: pip install strawberry-graphql"

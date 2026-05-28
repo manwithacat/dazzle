@@ -11,14 +11,6 @@ from uuid import UUID
 
 import pytest
 
-# Check FastAPI availability
-try:
-    import fastapi  # noqa: F401
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
 from dazzle.back.runtime.auth import (
     AuthContext,
     AuthMiddleware,
@@ -715,7 +707,6 @@ class TestAuthRoutes:
 # =============================================================================
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestServerAuthIntegration:
     """Tests for auth integration with DazzleBackendApp."""

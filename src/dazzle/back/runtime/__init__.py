@@ -23,7 +23,6 @@ Example usage:
     >>> run_app(spec, port=8000)
 """
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE
 from dazzle.back.runtime.app_factory import create_app, run_app
 from dazzle.back.runtime.migrations import (
     MigrationAction,
@@ -96,7 +95,6 @@ __all__ = [
     # Routes
     "RouteGenerator",
     "generate_crud_routes",
-    "FASTAPI_AVAILABLE",
     # Server
     "DazzleBackendApp",
     "ServerConfig",

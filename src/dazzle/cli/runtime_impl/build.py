@@ -158,9 +158,7 @@ Or run directly:
 from pathlib import Path
 
 try:
-    from dazzle.back.runtime import create_app_from_json, FASTAPI_AVAILABLE
-    if not FASTAPI_AVAILABLE:
-        raise ImportError("FastAPI not installed")
+    from dazzle.back.runtime import create_app_from_json
 
     spec_path = Path(__file__).parent / "appspec.json"
     app = create_app_from_json(str(spec_path))

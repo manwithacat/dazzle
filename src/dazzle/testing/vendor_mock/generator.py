@@ -12,21 +12,16 @@ import re
 import time
 from typing import Any
 
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from dazzle.api_kb.loader import ApiPack, load_pack
 from dazzle.testing.vendor_mock.data_generators import DataGenerator
 from dazzle.testing.vendor_mock.scenarios import ScenarioEngine
 from dazzle.testing.vendor_mock.state import MockStateStore
 
 logger = logging.getLogger(__name__)
-
-try:
-    from fastapi import FastAPI, Request
-    from fastapi.responses import JSONResponse
-    from starlette.middleware.base import BaseHTTPMiddleware
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
 
 
 def create_mock_server(
@@ -55,9 +50,6 @@ def create_mock_server(
         ValueError: If the pack is not found.
         RuntimeError: If FastAPI is not installed.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for mock servers")
-
     pack = load_pack(pack_name)
     if not pack:
         raise ValueError(f"API pack '{pack_name}' not found")

@@ -422,16 +422,7 @@ class TestRuntimeIntegration:
 # Server Integration Tests (with SQLite)
 # =============================================================================
 
-# Check if FastAPI is available
-try:
-    import fastapi  # noqa: F401
 
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
-
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.skipif(
     not __import__("os").environ.get("DATABASE_URL"),
     reason="DATABASE_URL not set",
