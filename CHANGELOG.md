@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.14] - 2026-05-28
+
+### Added
+
+- `tenant_host:` runtime now wires end-to-end (#1289 Slice 3 of 7). Replaced the slice-1 `NotImplementedError` stub with the real `TenantResolutionMiddleware` — Host parsing, slug validation, NEGATIVE-cache short-circuit, async Resolver lookup, 200 / 301 / 410 / 404 / 400 / 502 dispatch. `dazzle.back.runtime.app_factory._mount_tenant_resolution_middleware` walks `AppSpec.domain.entities` for `tenant_host:` blocks, groups by `domain:`, and adds one middleware per domain. The middleware's `lookup_fn` and `history_lookup_fn` delegate to the existing Repository layer (system-context, no per-tenant scoping — we are *resolving* which tenant the request belongs to). Resolver promoted to async to await Repository coroutines via a `_maybe_await` helper that accepts sync or async callables (keeps existing unit tests valid). Framework default 404 / 410 pages ship in `dazzle.back.runtime.tenant.templates`; projects override per-block via the dotted-path `not_found_template:` / `expired_template:` sub-fields. 17 unit tests across `test_tenant_middleware.py` (5), `test_tenant_resolver.py` (9), `test_tenant_cache.py` (7).
+
+### Agent Guidance
+
+- `tenant_host:` apps can now boot end-to-end. Run `dazzle serve` and hit `<slug>.<domain>` — the framework auto-mounts resolution, the cache, and the dispatch chain. Project-side `TenantResolutionMiddleware` modules (e.g. AegisMark's `pipeline/tenant/middleware.py`) are now redundant and can be deleted after pin-bumping. Slices 4-7 add cookie naming, the cross-tenant guard, auto-bust, and docs.
+
 ## [0.80.13] - 2026-05-28
 
 ### Added

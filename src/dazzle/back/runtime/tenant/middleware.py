@@ -7,7 +7,7 @@ auth dependency runs. See the design spec for the full lifecycle.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -49,7 +49,9 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._b = binding
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         host = (request.headers.get("host") or "").split(":")[0].lower()
 
         if host in self._b.canonical_hosts:

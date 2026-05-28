@@ -115,7 +115,7 @@ class Resolver:
         return ExpiredHistoryHit(old_slug=slug, new_slug=new_slug)
 
 
-async def _maybe_await(value):
+async def _maybe_await(value: Any) -> Any:
     """Await *value* iff it's a coroutine; return as-is otherwise."""
     if inspect.iscoroutine(value):
         return await value
