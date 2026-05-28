@@ -94,9 +94,8 @@ entity Trust:
     assert trust.tenant_host.order is None
 
 
-def test_stub_middleware_raises_not_implemented():
-    """The slice-1 stub raises NotImplementedError on construction."""
+def test_middleware_class_is_importable():
+    """The middleware class is importable (slice 3 supersedes the slice-1 stub)."""
     from dazzle.back.runtime.tenant.middleware import TenantResolutionMiddleware
 
-    with pytest.raises(NotImplementedError, match="slice 3"):
-        TenantResolutionMiddleware(app=None)
+    assert TenantResolutionMiddleware is not None

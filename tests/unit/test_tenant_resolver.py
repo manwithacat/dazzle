@@ -49,20 +49,20 @@ def test_expired_history_hit_is_distinct_type():
 # ---------------------------------------------------------------------------
 
 
-def test_lookup_returns_first_matching_entity():
+async def test_lookup_returns_first_matching_entity():
     rows = {("Trust", "acme"): {"id": _id(1), "slug": "acme", "name": "Acme"}}
     r = Resolver(
         probes=[EntityProbe("Trust", "slug"), EntityProbe("School", "slug")],
         history_probe=None,
         lookup_fn=lambda e, s: rows.get((e, s)),
     )
-    res = r.lookup("acme")
+    res = await r.lookup("acme")
     assert isinstance(res, ResolvedTenant)
     assert res.kind == "Trust"
     assert res.id == _id(1)
 
 
-def test_lookup_falls_through_to_second_entity():
+async def test_lookup_falls_through_to_second_entity():
     rows = {
         ("School", "westwood"): {"id": _id(2), "slug": "westwood", "name": "Westwood"},
     }
@@ -71,21 +71,21 @@ def test_lookup_falls_through_to_second_entity():
         history_probe=None,
         lookup_fn=lambda e, s: rows.get((e, s)),
     )
-    res = r.lookup("westwood")
+    res = await r.lookup("westwood")
     assert isinstance(res, ResolvedTenant)
     assert res.kind == "School"
 
 
-def test_lookup_returns_none_when_no_match_and_no_history():
+async def test_lookup_returns_none_when_no_match_and_no_history():
     r = Resolver(
         probes=[EntityProbe("Trust", "slug")],
         history_probe=None,
         lookup_fn=lambda e, s: None,
     )
-    assert r.lookup("missing") is None
+    assert await r.lookup("missing") is None
 
 
-def test_lookup_returns_history_hit_when_unexpired():
+async def test_lookup_returns_history_hit_when_unexpired():
     future = datetime.now(UTC) + timedelta(days=30)
     r = Resolver(
         probes=[EntityProbe("Trust", "slug")],
@@ -97,12 +97,12 @@ def test_lookup_returns_history_hit_when_unexpired():
             "expires_at": future,
         },
     )
-    res = r.lookup("acme")
+    res = await r.lookup("acme")
     assert isinstance(res, HistoryHit)
     assert res.new_slug == "acme-corp"
 
 
-def test_lookup_returns_expired_history_hit_when_past_ttl():
+async def test_lookup_returns_expired_history_hit_when_past_ttl():
     past = datetime.now(UTC) - timedelta(days=1)
     r = Resolver(
         probes=[EntityProbe("Trust", "slug")],
@@ -114,11 +114,11 @@ def test_lookup_returns_expired_history_hit_when_past_ttl():
             "expires_at": past,
         },
     )
-    res = r.lookup("acme")
+    res = await r.lookup("acme")
     assert isinstance(res, ExpiredHistoryHit)
 
 
-def test_lookup_accepts_iso_string_expires_at():
+async def test_lookup_accepts_iso_string_expires_at():
     """Repository may return expires_at as an ISO string; resolver normalises."""
     future_iso = (datetime.now(UTC) + timedelta(days=7)).isoformat()
     r = Resolver(
@@ -131,4 +131,4 @@ def test_lookup_accepts_iso_string_expires_at():
             "expires_at": future_iso,
         },
     )
-    assert isinstance(r.lookup("acme"), HistoryHit)
+    assert isinstance(await r.lookup("acme"), HistoryHit)

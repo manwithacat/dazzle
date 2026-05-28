@@ -31,6 +31,134 @@ _PROJECT_INIT_MODULE = "pipeline.serve.app_init"
 _PROJECT_INIT_HOOK = "register_middleware"
 
 
+def _resolve_template_or_default(dotted: str | None, default: Any) -> Any:
+    """Resolve a dotted `module:symbol` template path to a callable.
+
+    Returns the framework default callable when *dotted* is None. Raises
+    ImportError / AttributeError early so a missing project hook crashes
+    boot rather than silently falling back at request time.
+    """
+    if dotted is None:
+        return default
+    import importlib
+
+    module_name, _, attr = dotted.partition(":")
+    # The dotted path is sourced from the validator-checked
+    # `tenant_host.{not_found,expired}_template` IR field, which the
+    # validator pre-resolves via `importlib.util.find_spec` at validate
+    # time (Rule 5 in src/dazzle/core/validator.py). It is not user
+    # input at request time.
+    module = importlib.import_module(module_name)  # nosemgrep
+    return getattr(module, attr)
+
+
+def _mount_tenant_resolution_middleware(
+    app: "FastAPI",
+    appspec: AppSpec,
+    builder: "DazzleBackendApp",
+) -> None:
+    """#1289 slice 3: mount TenantResolutionMiddleware iff any entity has tenant_host:.
+
+    Walks the AppSpec for entities with a `tenant_host:` block, groups by
+    `domain:`, and adds one middleware per domain bound to a Resolver
+    whose `lookup_fn` reads from the framework's existing Repository
+    layer (system-context — no per-tenant scoping applied, since we are
+    *resolving* which tenant the request belongs to).
+    """
+    tenant_entities = [
+        e for e in appspec.domain.entities if getattr(e, "tenant_host", None) is not None
+    ]
+    if not tenant_entities:
+        return
+
+    from collections import defaultdict
+
+    from dazzle.back.runtime.tenant.cache import TenantCache
+    from dazzle.back.runtime.tenant.middleware import (
+        TenantHostBinding,
+        TenantResolutionMiddleware,
+    )
+    from dazzle.back.runtime.tenant.resolver import (
+        EntityProbe,
+        HistoryProbe,
+        Resolver,
+    )
+    from dazzle.back.runtime.tenant.templates import (
+        render_default_404,
+        render_default_410,
+    )
+
+    by_domain: dict[str, list[Any]] = defaultdict(list)
+    for e in tenant_entities:
+        # tenant_entities is filtered to entries with non-None tenant_host above.
+        assert e.tenant_host is not None
+        by_domain[e.tenant_host.domain].append(e)
+
+    repositories = builder.repositories
+
+    for domain, entities in by_domain.items():
+        ordered = sorted(entities, key=lambda e: e.tenant_host.order or 0)
+        probes = [EntityProbe(e.name, e.tenant_host.slug_field) for e in ordered]
+        first_th = ordered[0].tenant_host
+        assert first_th is not None  # filtered above
+
+        history_probe = HistoryProbe(first_th.history_entity) if first_th.history_entity else None
+
+        slug_field_by_entity = {e.name: e.tenant_host.slug_field for e in ordered}
+
+        def _make_slug_lookup(field_map: dict[str, str]) -> Any:
+            async def _lookup(entity_name: str, slug: str) -> dict[str, Any] | None:
+                repo = repositories.get(entity_name)
+                if repo is None:
+                    return None
+                field = field_map.get(entity_name, "slug")
+                result = await repo.list(filters={field: slug}, page_size=1)
+                items = result.get("items") or []
+                return items[0] if items else None
+
+            return _lookup
+
+        async def _history_lookup(entity_name: str, slug: str) -> dict[str, Any] | None:
+            repo = repositories.get(entity_name)
+            if repo is None:
+                return None
+            result = await repo.list(filters={"old_slug": slug}, page_size=1)
+            items = result.get("items") or []
+            return items[0] if items else None
+
+        binding = TenantHostBinding(
+            app_name=appspec.name,
+            domain=domain,
+            canonical_hosts=tuple(first_th.canonical_hosts),
+            cache=TenantCache(),
+            resolver=Resolver(
+                probes=probes,
+                history_probe=history_probe,
+                lookup_fn=_make_slug_lookup(slug_field_by_entity),
+                history_lookup_fn=_history_lookup if history_probe else None,
+            ),
+            not_found_renderer=_resolve_template_or_default(
+                first_th.not_found_template,
+                default=lambda host, _app=appspec.name: render_default_404(
+                    app_name=_app, host=host
+                ),
+            ),
+            expired_renderer=_resolve_template_or_default(
+                first_th.expired_template,
+                default=lambda old, new, dom, _app=appspec.name: render_default_410(
+                    app_name=_app, old_slug=old, new_slug=new, domain=dom
+                ),
+            ),
+        )
+        app.add_middleware(TenantResolutionMiddleware, binding=binding)
+        logger.info(
+            "Mounted TenantResolutionMiddleware for domain=%s (%d entit%s)",
+            domain,
+            len(ordered),
+            "y" if len(ordered) == 1 else "ies",
+        )
+
+
 def _invoke_project_post_build_hook(app: "FastAPI") -> None:
     import importlib
 
@@ -1030,6 +1158,8 @@ def create_app_factory(
         theme_css=theme_css,
         backend_url=os.environ.get("BACKEND_URL") or None,
     )
+
+    _mount_tenant_resolution_middleware(app, appspec, builder)
 
     _invoke_project_post_build_hook(app)
 

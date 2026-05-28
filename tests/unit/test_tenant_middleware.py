@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
+from fastapi import FastAPI, Request
+from fastapi.testclient import TestClient
+
+from dazzle.back.runtime.tenant.cache import TenantCache
+from dazzle.back.runtime.tenant.middleware import (
+    TenantHostBinding,
+    TenantResolutionMiddleware,
+)
+from dazzle.back.runtime.tenant.resolver import EntityProbe, Resolver
 from dazzle.back.runtime.tenant.templates import (
     render_default_404,
     render_default_410,
@@ -31,18 +42,6 @@ def test_default_templates_escape_html():
 # ---------------------------------------------------------------------------
 # TenantResolutionMiddleware
 # ---------------------------------------------------------------------------
-
-from uuid import uuid4
-
-from fastapi import FastAPI, Request
-from fastapi.testclient import TestClient
-
-from dazzle.back.runtime.tenant.cache import TenantCache
-from dazzle.back.runtime.tenant.middleware import (
-    TenantHostBinding,
-    TenantResolutionMiddleware,
-)
-from dazzle.back.runtime.tenant.resolver import EntityProbe, Resolver
 
 
 def _app_with_binding(binding: TenantHostBinding) -> FastAPI:

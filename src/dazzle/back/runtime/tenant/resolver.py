@@ -13,7 +13,8 @@ testable without database fixtures.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import inspect
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -58,11 +59,13 @@ class HistoryProbe:
     expires_field: str = "expires_at"
 
 
-LookupFn = Callable[[str, str], dict[str, Any] | None]
-"""Signature: lookup_fn(entity_name, slug) -> row dict or None."""
+LookupFn = Callable[[str, str], dict[str, Any] | None | Awaitable[dict[str, Any] | None]]
+"""Signature: lookup_fn(entity_name, slug) -> row dict or None.
+
+Accepts sync or async callables; the resolver awaits coroutines."""
 
 
-HistoryLookupFn = Callable[[str, str], dict[str, Any] | None]
+HistoryLookupFn = Callable[[str, str], dict[str, Any] | None | Awaitable[dict[str, Any] | None]]
 """Signature: history_lookup_fn(entity_name, old_slug) -> row dict or None."""
 
 
@@ -84,9 +87,9 @@ class Resolver:
         self._history_lookup = history_lookup_fn
         self._now = now_fn
 
-    def lookup(self, slug: str) -> ResolvedTenant | HistoryHit | ExpiredHistoryHit | None:
+    async def lookup(self, slug: str) -> ResolvedTenant | HistoryHit | ExpiredHistoryHit | None:
         for probe in self._probes:
-            row = self._lookup(probe.entity_name, slug)
+            row = await _maybe_await(self._lookup(probe.entity_name, slug))
             if row is None:
                 continue
             return ResolvedTenant(
@@ -99,7 +102,7 @@ class Resolver:
         if self._history is None or self._history_lookup is None:
             return None
 
-        h = self._history_lookup(self._history.entity_name, slug)
+        h = await _maybe_await(self._history_lookup(self._history.entity_name, slug))
         if h is None:
             return None
 
@@ -110,3 +113,10 @@ class Resolver:
         if expires > self._now():
             return HistoryHit(old_slug=slug, new_slug=new_slug)
         return ExpiredHistoryHit(old_slug=slug, new_slug=new_slug)
+
+
+async def _maybe_await(value):
+    """Await *value* iff it's a coroutine; return as-is otherwise."""
+    if inspect.iscoroutine(value):
+        return await value
+    return value

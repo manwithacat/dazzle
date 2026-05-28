@@ -73,7 +73,7 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
         result = cached
         if result is None:
             try:
-                result = self._b.resolver.lookup(slug)
+                result = await self._b.resolver.lookup(slug)
             except Exception:
                 logger.exception("tenant resolver lookup failed for %s", slug)
                 return Response("Tenant lookup failed", status_code=502)
