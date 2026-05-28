@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `dazzle qa trial` signing harness. Five persona-facing tools auto-register
+  when the app has any `signable: true` entity. Post-trial verifier grades
+  functional correctness, PAdES signature integrity, and per-route latency.
+- `EngagementLetter` (contact_manager) + `SlaWaiver` (support_tickets)
+  example signable entities, each with 5 trial scenarios covering happy
+  path, declined, token-expired, validator-rejected, already-signed.
+
+### Agent Guidance
+
+- When adding a new persona-facing tool to the signing harness, update
+  `docs/reference/document-signing.md` § "QA trial harness".
+  `tests/unit/test_qa/test_signing_docs_drift.py` enforces parity.
+
 ## [0.79.13] - 2026-05-27
 
 ### Added

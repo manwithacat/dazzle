@@ -302,3 +302,42 @@ The phase-4 surface covers the canonical happy path. Known gaps:
 - `src/dazzle/cli/signing.py` — `dazzle signing init`.
 - `src/dazzle/ui/runtime/static/js/islands/signing-pad.js` — the
   browser-side Island.
+
+## QA trial harness
+
+`dazzle qa trial` automatically grades signing flows when the app
+contains any `signable: true` entity. Five persona-facing tools are
+registered on top of the usual trial tool set:
+
+- `read_inbox` — list documents awaiting signature.
+- `open_signing_link` — open a link by entity + id + token.
+- `sign_document` — submit the signature (requires
+  `authority_confirmed: true`).
+- `decline_signing` — decline with a reason.
+- `tamper_token` — retry the GET with a mangled token.
+
+After the persona ends, the harness inspects the runtime DB, runs
+pyhanko on the signed PDF if one was produced, and merges a
+`signing_outcomes` block into the trial report. The block has these
+keys: `detected`, `expected_outcome_inferred`, `functional`,
+`signature_integrity`, `latency_ms`.
+
+### Provisioning
+
+The harness mints an ephemeral ECDSA cert chain into a per-run tmpdir
+and injects `SIGNING_CERT_PFX_B64`, `SIGNING_CERT_PASSWORD`,
+`SIGNING_TOKEN_SECRET` into the `dazzle serve` subprocess. Torn down
+on exit.
+
+### Validator-rejected scenarios
+
+Set `DAZZLE_QA_SIGNING_REJECT_IDS=<id>` and the project's validator
+hook will consult that list. Both `contact_manager` and
+`support_tickets` ship validator hooks that follow this convention.
+
+### Reference scenarios
+
+`examples/contact_manager/trial.toml` and
+`examples/support_tickets/trial.toml` each declare 5 signing scenarios
+(happy path, declined, token expired, validator-rejected,
+already-signed).
