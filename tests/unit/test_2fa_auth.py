@@ -19,6 +19,11 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+
+# FastAPI is a required core dependency. httpx/pytest-asyncio are dev-only;
+# skip async route tests if unavailable.
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from dazzle.back.runtime.auth import (
@@ -31,15 +36,6 @@ from dazzle.back.runtime.auth import (
     hash_password,
 )
 from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
-
-# FastAPI / httpx are dev-only deps; skip route tests if unavailable.
-try:
-    from fastapi import FastAPI
-    from fastapi.testclient import TestClient
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
 
 try:
     import httpx  # noqa: F401
@@ -311,7 +307,6 @@ def _make_auth_context(user: UserRecord, session: SessionRecord) -> AuthContext:
     )
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestLoginFlowWith2FA:
     """Route-level tests for the login endpoint with 2FA branching."""
 
@@ -451,7 +446,6 @@ class TestLoginFlowWith2FA:
         assert response.status_code == 401
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTwoFactorVerifyRoute:
     """Route-level tests for the /auth/2fa/verify endpoint."""
 
@@ -588,7 +582,7 @@ class TestTwoFactorVerifyRoute:
 
 
 @pytest.mark.skipif(
-    not (FASTAPI_AVAILABLE and HTTPX_AVAILABLE),
+    not HTTPX_AVAILABLE,
     reason="FastAPI + httpx + pytest-asyncio required",
 )
 class TestLoginFlowAsync:

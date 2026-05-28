@@ -15,14 +15,6 @@ if TYPE_CHECKING:
 
     from dazzle.core.ir.appspec import AppSpec
 
-# Check if FastAPI is available (needed for integration tests)
-try:
-    import fastapi  # noqa: F401
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
 # These imports are safe - they only depend on Pydantic
 from dazzle.back.runtime.test_routes import (
     AuthenticateRequest,
@@ -198,7 +190,6 @@ class TestSeedFieldFiltering:
 
 
 @pytest.mark.e2e
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTestRoutesIntegration:
     """Integration tests for test routes with real server.
 
@@ -463,7 +454,6 @@ class TestTestRoutesIntegration:
 
 
 @pytest.mark.e2e
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTestModeDisabled:
     """Test that test endpoints are not available when test mode is disabled."""
 

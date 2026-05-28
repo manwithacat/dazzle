@@ -33,6 +33,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from dazzle.back.runtime.auth import (
     AuthContext,
@@ -42,18 +44,6 @@ from dazzle.back.runtime.auth import (
     create_auth_routes,
     hash_password,
 )
-
-try:
-    from fastapi import FastAPI
-    from fastapi.testclient import TestClient
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
-
-pytestmark = pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
-
 
 # ---------------------------------------------------------------------------
 # Test helpers

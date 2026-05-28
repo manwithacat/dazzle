@@ -14,17 +14,6 @@ import pytest
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import DomainSpec
 
-# Check if FastAPI is available
-try:
-    import fastapi  # noqa: F401
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
-# Skip all tests in this module if FastAPI is not installed
-pytestmark = pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
-
 
 @dataclass
 class MockAuthOAuthProvider:

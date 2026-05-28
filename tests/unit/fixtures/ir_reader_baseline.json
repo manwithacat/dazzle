@@ -69,6 +69,7 @@
   "hless.ExpectedOutcome.target_stream",
   "hless.HLESSViolation.stream_name",
   "hless.IdempotencyStrategy.derivation",
+  "hless.IdempotencyStrategy.window",
   "hless.SideEffectPolicy.allowed_effects",
   "hless.SideEffectPolicy.external_effects_allowed",
   "hless.StreamSchema.compatibility",

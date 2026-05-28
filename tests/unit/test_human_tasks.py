@@ -15,14 +15,6 @@ import pytest
 
 from dazzle.core.process.adapter import TaskStatus
 
-# Check if FastAPI is available for route tests
-try:
-    import fastapi  # noqa: F401
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
 # =============================================================================
 # TaskContext Tests
 # =============================================================================
@@ -437,7 +429,6 @@ class TestProcessManagerTasks:
 # =============================================================================
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTaskRoutes:
     """Test task API route handlers."""
 

@@ -7,11 +7,21 @@ Banning them keeps the clean break from regressing (ADR-0003).
 
 import pathlib
 
-SRC = pathlib.Path(__file__).resolve().parents[2] / "src" / "dazzle"
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+SRC = ROOT / "src" / "dazzle"
+TESTS = ROOT / "tests"
+SELF = pathlib.Path(__file__).resolve()
 
 
 def _py_files() -> list[pathlib.Path]:
-    return [p for p in SRC.rglob("*.py") if "__pycache__" not in p.parts]
+    # Scan both src/ and tests/ — the dead flag must not survive anywhere.
+    # Exclude this guard file itself (it names the banned tokens on purpose).
+    return [
+        p
+        for root in (SRC, TESTS)
+        for p in root.rglob("*.py")
+        if "__pycache__" not in p.parts and p.resolve() != SELF
+    ]
 
 
 def test_no_fastapi_compat_module() -> None:

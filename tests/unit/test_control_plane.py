@@ -15,16 +15,7 @@ if TYPE_CHECKING:
 
     from dazzle.core.ir.appspec import AppSpec
 
-# Check if FastAPI is available (needed for integration tests)
-try:
-    import fastapi  # noqa: F401
 
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
-
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestControlPlaneIntegration:
     """Integration tests for control plane routes with real server.
 
@@ -127,7 +118,6 @@ class TestControlPlaneIntegration:
         assert response.status_code == 200
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestDevModeDisabled:
     """Test that control plane endpoints are not available when dev mode is disabled."""
 

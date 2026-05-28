@@ -17,7 +17,7 @@ import pytest
 
 # Runtime Backend
 from dazzle.back.converters import convert_appspec_to_backend
-from dazzle.back.runtime import FASTAPI_AVAILABLE, create_app
+from dazzle.back.runtime import create_app
 from dazzle.back.specs import BackendSpec
 from dazzle.core import ir
 from dazzle.ui.converters import convert_appspec_to_ui
@@ -357,7 +357,6 @@ class TestUIConversion:
 # =============================================================================
 
 
-@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestFastAPIRuntime:
     """Test AppSpec to FastAPI runtime generation."""

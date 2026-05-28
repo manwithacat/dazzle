@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.24] - 2026-05-28
+
+### Removed
+
+- Deleted the `_fastapi_compat` optional-import shim and every `FASTAPI_AVAILABLE` guard (32 source files + 7 test files). FastAPI is a required core dependency (it was promoted out of the `[serve]` extra because `dazzle.core` transitively imports `back.runtime` modules that hard-import fastapi), so the optional-import pattern was unreachable dead code. FastAPI symbols now import directly from `fastapi` / `fastapi.responses` / `fastapi.staticfiles` / `fastapi.encoders` — real types replace the shim's `Any`. The shim-specific `valid-type` mypy suppression was re-justified (it actually covers FastAPI's inherent dynamic per-entity request-body schema annotations, which mypy can't statically type — not the shim).
+
+### Agent Guidance
+
+- Never re-introduce `_fastapi_compat` or `FASTAPI_AVAILABLE` — `tests/unit/test_no_fastapi_compat.py` scans both `src/` and `tests/` and fails on either token. Import fastapi symbols directly from their real modules. (Note: `ir_reader_baseline.json` gained `hless.IdempotencyStrategy.window` — that field was only ever "read" via a spurious `.window` HTML-attr match cleared by the #795 dead-binding removal; it has no real consumer yet, HLESS being a spec layer.)
+
 ## [0.80.23] - 2026-05-28
 
 ### Changed
