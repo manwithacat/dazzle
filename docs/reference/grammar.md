@@ -1265,6 +1265,56 @@ Unknown discriminator values raise `E_SUBTYPE_PANEL_UNKNOWN_KIND`. Omitting
 a known subtype emits `W_SUBTYPE_PANEL_INCOMPLETE` in
 `AppSpec.metadata['link_warnings']`.
 
+### `tenant_host:` (v0.80.X, #1289)
+
+Declares Host-header tenant routing for an entity. When present, the framework
+auto-mounts `TenantResolutionMiddleware` that strips `<base_suffix>` from the
+incoming `Host` header, looks up the tenant by slug, and attaches a typed
+`ResolvedTenant` to `request.state.tenant`.
+
+```dsl
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+    canonical_hosts: [www.example.com, example.com]
+    cookie_scope: host
+    super_admin_role: super_admin
+    history_entity: TrustSlugHistory
+    not_found_template: pipeline.tenant.templates:render_404
+    expired_template: pipeline.tenant.templates:render_410
+    order: 1
+```
+
+Sub-fields: `domain:` (required), `slug_field:` (required, must reference a
+`slug:`-typed field on the same entity), `canonical_hosts:`, `cookie_scope:`
+(`host` | `apex`, default `host`), `super_admin_role:` (default
+`super_admin`), `history_entity:`, `not_found_template:` (dotted-path
+callable), `expired_template:` (dotted-path callable), `order:` (required
+when 2+ entities share a `domain:`).
+
+See the full design in
+[`docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md`](../superpowers/specs/2026-05-28-tenant-host-keyword-design.md).
+
+```ebnf
+entity_tenant_host_block = "tenant_host" ":" NEWLINE INDENT
+    tenant_host_field+
+    DEDENT ;
+
+tenant_host_field =
+    "domain"             ":" string  NEWLINE
+  | "slug_field"         ":" IDENT   NEWLINE
+  | "canonical_hosts"    ":" "[" host_list "]" NEWLINE
+  | "cookie_scope"       ":" ("host" | "apex") NEWLINE
+  | "super_admin_role"   ":" IDENT   NEWLINE
+  | "history_entity"     ":" IDENT   NEWLINE
+  | "not_found_template" ":" dotted_callable NEWLINE
+  | "expired_template"   ":" dotted_callable NEWLINE
+  | "order"              ":" NUMBER  NEWLINE ;
+```
+
 ## DSL Examples
 
 ### Core
