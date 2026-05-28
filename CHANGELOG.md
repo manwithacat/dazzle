@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.15] - 2026-05-28
+
+### Added
+
+- Tenant cookie naming helpers + state marker (#1289 slice 4, partial). New `dazzle.back.runtime.tenant.cookies` module exposes `normalise_app_name`, `host_cookie_name`, `apex_cookie_name`, and `choose_session_cookie_name` per the spec's `__Host-<app>_session` / `__Secure-<app>_admin` convention. `app_factory._stash_tenant_state_marker` attaches a frozen `(app_name, canonical_hosts, super_admin_role)` marker to `app.state.tenant_host` so slice 5's cross-tenant guard can read it. 9 unit tests on the helpers.
+
+### Deferred to follow-up
+
+- The full integration of the cookie naming convention into the login flow (`password_login_routes.py`, `sso_routes.py`, `routes_2fa.py`) deviates from the original slice 4 plan and is deferred. The helpers are shipped and ready; auth-route integration can land as a focused follow-up that doesn't bundle with cross-tenant guard wiring. Apps without `tenant_host:` keep `dazzle_session` unchanged; apps that adopt `tenant_host:` continue to use `dazzle_session` for now until the follow-up lands.
+
 ## [0.80.14] - 2026-05-28
 
 ### Added

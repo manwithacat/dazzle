@@ -52,6 +52,44 @@ def _resolve_template_or_default(dotted: str | None, default: Any) -> Any:
     return getattr(module, attr)
 
 
+def _stash_tenant_state_marker(app: "FastAPI", appspec: AppSpec) -> None:
+    """#1289 slice 4: attach `app.state.tenant_host` with the per-app cookie /
+    guard config so the auth dependency (slice 5) can find it.
+
+    Set to None when no entity carries `tenant_host:`. Apps without tenant_host
+    keep their legacy `dazzle_session` cookie naming unchanged.
+    """
+    from dataclasses import dataclass
+
+    tenant_entities = [
+        e for e in appspec.domain.entities if getattr(e, "tenant_host", None) is not None
+    ]
+    if not tenant_entities:
+        app.state.tenant_host = None
+        return
+
+    # All entities sharing a domain MUST agree on super_admin_role + canonical_hosts
+    # (validator rule 6). Take the first as authoritative.
+    canonical_hosts: set[str] = set()
+    super_admin_role = "super_admin"
+    for e in tenant_entities:
+        assert e.tenant_host is not None
+        canonical_hosts.update(e.tenant_host.canonical_hosts)
+        super_admin_role = e.tenant_host.super_admin_role
+
+    @dataclass(frozen=True)
+    class _TenantStateMarker:
+        app_name: str
+        canonical_hosts: frozenset[str]
+        super_admin_role: str
+
+    app.state.tenant_host = _TenantStateMarker(
+        app_name=appspec.name,
+        canonical_hosts=frozenset(canonical_hosts),
+        super_admin_role=super_admin_role,
+    )
+
+
 def _mount_tenant_resolution_middleware(
     app: "FastAPI",
     appspec: AppSpec,
@@ -1159,6 +1197,7 @@ def create_app_factory(
         backend_url=os.environ.get("BACKEND_URL") or None,
     )
 
+    _stash_tenant_state_marker(app, appspec)
     _mount_tenant_resolution_middleware(app, appspec, builder)
 
     _invoke_project_post_build_hook(app)
