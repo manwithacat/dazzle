@@ -92,3 +92,11 @@ entity Trust:
     assert trust.tenant_host.canonical_hosts == []
     assert trust.tenant_host.cookie_scope == "host"
     assert trust.tenant_host.order is None
+
+
+def test_stub_middleware_raises_not_implemented():
+    """The slice-1 stub raises NotImplementedError on construction."""
+    from dazzle.back.runtime.tenant.middleware import TenantResolutionMiddleware
+
+    with pytest.raises(NotImplementedError, match="slice 3"):
+        TenantResolutionMiddleware(app=None)
