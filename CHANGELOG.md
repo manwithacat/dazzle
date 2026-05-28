@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.17] - 2026-05-28
+
+### Added
+
+- Reference docs for `tenant_host:` (#1289 slice 7). New page `docs/reference/tenant-hosts.md` documents the full sub-field surface, the validator rules, the cache-bust API, and the cross-tenant guard. Linked from mkdocs nav under Reference.
+
+### Agent Guidance
+
+- When building a multi-tenant Dazzle app, use `tenant_host:` on the tenant root entity (per #1289). The framework auto-mounts host resolution, the cache, and (when slices 4-6's auth integration lands as a follow-up) cross-tenant guard + cookie naming. Project code at `pipeline/tenant/*` for these concerns should be deleted rather than maintained after pin-bumping. See `docs/reference/tenant-hosts.md`.
+
 ## [0.80.16] - 2026-05-28
 
 ### Added
