@@ -189,6 +189,13 @@ def _mount_tenant_resolution_middleware(
             ),
         )
         app.add_middleware(TenantResolutionMiddleware, binding=binding)
+
+        # #1289 slice 6: register the cache so dazzle.tenant.bust(slug) can
+        # invalidate it from project code on raw-SQL renames or admin tooling.
+        from dazzle.tenant.cache_registry import _register_cache
+
+        _register_cache(binding.cache)
+
         logger.info(
             "Mounted TenantResolutionMiddleware for domain=%s (%d entit%s)",
             domain,

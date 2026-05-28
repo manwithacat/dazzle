@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.16] - 2026-05-28
+
+### Added
+
+- Cross-tenant session guard truth table (#1289 slice 5, partial). New `dazzle.back.runtime.tenant.guard` module exposes `check_cross_tenant()` + typed exceptions (`CrossTenantForbidden`, `HostCookieMissingTenant`, `ApexCookieNotSuperAdmin`). Applies the truth table from the design spec: host cookie + matching tenant → pass; host cookie + mismatch → forbidden; host cookie on apex → missing tenant; apex cookie + super-admin → pass; apex cookie + non-admin → forbidden; no cookie → pass-through. 7 unit tests cover every row. Auth-dependency wiring deferred to follow-up.
+- Public `dazzle.tenant.bust(slug)` cache invalidation API (#1289 slice 6, partial). The app_factory tenant mount now registers each `TenantHostBinding.cache` with the public registry, so project code can call `dazzle.tenant.bust(slug)` after raw-SQL renames or migration fixups that bypass Repository. 3 unit tests. Auto-bust hook on `Repository.update` deferred to follow-up (the careful surgery on a 1500-line module sits better outside the bundled slice ship).
+
+### Deferred to follow-up
+
+- Auth-dependency integration of the cross-tenant guard
+- Auto-bust hook on `Repository.update` for slug-field changes
+- Login-flow integration of the cookie naming convention (carried over from slice 4)
+
 ## [0.80.15] - 2026-05-28
 
 ### Added
