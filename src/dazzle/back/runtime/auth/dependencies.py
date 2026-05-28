@@ -52,6 +52,12 @@ def create_auth_dependency(
         if not auth_context.is_authenticated:
             raise HTTPException(status_code=401, detail="Session expired")
 
+        # #1289 slice 5 wiring: enforce cross-tenant cookie binding.
+        # No-op on apps without a `tenant_host:` block.
+        from dazzle.back.runtime.tenant.guard_wiring import enforce_cross_tenant
+
+        enforce_cross_tenant(request, auth_context)
+
         # Check roles if required.
         # Database roles use "role_" prefix; persona IDs don't — normalize.
         if require_roles:

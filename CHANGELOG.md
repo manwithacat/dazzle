@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.18] - 2026-05-28
+
+### Added
+
+- Cross-tenant guard wired into the auth dependency (#1289 slice 5 follow-up). New `dazzle.back.runtime.tenant.guard_wiring.enforce_cross_tenant(request, auth_context)` bridges the framework-free `check_cross_tenant()` truth table to FastAPI: sniffs `__Host-<app>_session` / `__Secure-<app>_admin` cookies to classify cookie kind, normalises `AuthContext.roles` (with optional `role_` prefix stripped) to a single `user_role`, and translates the three typed guard exceptions to `HTTPException(403)`. Called from `create_auth_dependency.get_current_user` after session validation. No-op on apps without a `tenant_host:` block (and on apps that haven't adopted the new cookie names yet) — the wiring is dormant until the cookie-naming follow-up threads the new names through the login routes. 8 unit tests cover legacy app pass-through, host/apex cookie classification, and the full 403 matrix. `tests/unit/fixtures/ir_reader_baseline.json` updated to remove 6 `TenantHostSpec` fields that now have readers (canonical_hosts, expired_template, history_entity, not_found_template, slug_field, super_admin_role).
+
+### Agent Guidance
+
+- The cross-tenant security claim (`#1289`) now activates the moment the cookie-naming follow-up lands; no separate auth-dep edit is required. Two follow-ups remain on #1289: thread `host_cookie_name()` / `apex_cookie_name()` through `password_login_routes.py`, `sso_routes.py`, `routes_2fa.py`; add a post-commit `Repository.update` hook to auto-bust the tenant cache when a `slug:` field on a `tenant_host:` entity changes.
+
 ## [0.80.17] - 2026-05-28
 
 ### Added
