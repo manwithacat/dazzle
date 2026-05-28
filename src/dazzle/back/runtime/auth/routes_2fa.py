@@ -5,13 +5,10 @@ from datetime import timedelta
 from functools import partial
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    FastAPIRequest,
-    JSONResponse,
-    Response,
-)
+from fastapi import APIRouter, HTTPException, Response
+from fastapi import Request as FastAPIRequest
+from fastapi.responses import JSONResponse
+
 from dazzle.core.ir.security import TwoFactorConfig
 
 from .cookie_name import read_session_id, select_write_name
@@ -62,8 +59,6 @@ def _get_recovery_store(deps: _TwoFaDeps) -> Any:
 
 def _get_current_user(deps: _TwoFaDeps, request: FastAPIRequest) -> UserRecord:
     """Get authenticated user from session cookie."""
-    from fastapi import HTTPException
-
     session_id = read_session_id(request, default=deps.cookie_name)
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -84,7 +79,6 @@ async def _setup_totp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, st
     import io
 
     import segno
-    from fastapi import HTTPException
 
     from dazzle.back.runtime.totp import generate_totp_secret, get_totp_uri
 
@@ -114,8 +108,6 @@ async def _verify_totp_setup(
     deps: _TwoFaDeps, data: TwoFactorSetupRequest, request: FastAPIRequest
 ) -> dict[str, Any]:
     """Verify TOTP code to complete setup."""
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.totp import verify_totp
 
     user = _get_current_user(deps, request)
@@ -169,8 +161,6 @@ async def _challenge_2fa(deps: _TwoFaDeps, data: TwoFactorVerifyRequest) -> dict
 
     The session_token comes from the login response when 2FA is required.
     """
-    from fastapi import HTTPException
-
     # Validate the pending session
     auth_context = deps.auth_store.validate_session(data.session_token)
     if not auth_context.is_authenticated or not auth_context.user:
@@ -203,8 +193,6 @@ async def _verify_2fa(
 
     Accepts TOTP codes, email OTP codes, or recovery codes.
     """
-    from fastapi import HTTPException
-
     # Validate the pending session
     auth_context = deps.auth_store.validate_session(data.session_token)
     if not auth_context.is_authenticated or not auth_context.user:
@@ -287,8 +275,6 @@ async def _use_recovery_code(
 
 async def _regenerate_recovery_codes(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, Any]:
     """Generate new recovery codes (invalidates old ones)."""
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.recovery_codes import generate_recovery_codes
 
     user = _get_current_user(deps, request)
@@ -323,8 +309,6 @@ async def _get_2fa_status(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str
 
 async def _disable_totp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, str]:
     """Disable TOTP for the current user."""
-    from fastapi import HTTPException
-
     user = _get_current_user(deps, request)
     if not user.totp_enabled:
         raise HTTPException(status_code=400, detail="TOTP is not enabled")
@@ -334,8 +318,6 @@ async def _disable_totp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, 
 
 async def _disable_email_otp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, str]:
     """Disable email OTP for the current user."""
-    from fastapi import HTTPException
-
     user = _get_current_user(deps, request)
     if not user.email_otp_enabled:
         raise HTTPException(status_code=400, detail="Email OTP is not enabled")
@@ -368,9 +350,6 @@ def create_2fa_routes(
             from ``AppSpec.security.two_factor`` to let DSL authors override
             the policy at app-configuration time (#838).
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for 2FA routes")
-
     import dazzle.back.runtime.rate_limit as _rl
 
     router = APIRouter(prefix="/auth/2fa", tags=["Two-Factor Authentication"])

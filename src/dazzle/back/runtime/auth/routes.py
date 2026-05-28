@@ -6,13 +6,9 @@ from datetime import timedelta
 from functools import partial
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    APIRouter,
-    FastAPIRequest,
-    JSONResponse,
-    Response,
-)
+from fastapi import APIRouter, HTTPException, Response
+from fastapi import Request as FastAPIRequest
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from .cookie_name import names_to_clear, read_session_id, select_write_name
 from .crypto import cookie_secure, verify_password
@@ -50,8 +46,6 @@ class _AuthDeps:
 
 def _require_auth(deps: _AuthDeps, request: FastAPIRequest) -> Any:
     """Extract and validate session, return auth context or raise 401."""
-    from fastapi import HTTPException
-
     session_id = read_session_id(request, default=deps.cookie_name)
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -81,8 +75,6 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
 
     Returns session cookie on success, or 2FA challenge if enabled.
     """
-    from fastapi import HTTPException
-
     user = deps.auth_store.authenticate(credentials.email, credentials.password)
 
     if not user:
@@ -162,8 +154,6 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
     HTML form submissions (no JSON accept header) are redirected to /login.
     API callers receive a JSON response.
     """
-    from fastapi.responses import RedirectResponse
-
     session_id = read_session_id(request, default=deps.cookie_name)
 
     if session_id:
@@ -188,8 +178,6 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
 
 async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequest) -> Response:
     """Register a new user."""
-    from fastapi import HTTPException
-
     if deps.auth_store.get_user_by_email(data.email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -250,8 +238,6 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
 
 async def _get_me(deps: _AuthDeps, request: FastAPIRequest) -> dict[str, Any]:
     """Get current authenticated user."""
-    from fastapi import HTTPException
-
     session_id = read_session_id(request, default=deps.cookie_name)
 
     if not session_id:
@@ -279,8 +265,6 @@ async def _change_password(
     deps: _AuthDeps, data: ChangePasswordRequest, request: FastAPIRequest
 ) -> Response:
     """Change current user's password."""
-    from fastapi import HTTPException
-
     session_id = read_session_id(request, default=deps.cookie_name)
 
     if not session_id:
@@ -365,8 +349,6 @@ async def _reset_password(
     Validates the token, updates the password, invalidates existing sessions,
     and auto-logs the user in.
     """
-    from fastapi import HTTPException
-
     user = deps.auth_store.validate_password_reset_token(data.token)
 
     if not user:
@@ -405,8 +387,6 @@ async def _get_preferences(deps: _AuthDeps, request: FastAPIRequest) -> dict[str
 
 async def _set_preferences(deps: _AuthDeps, request: FastAPIRequest) -> dict[str, Any]:
     """Bulk set preferences. Body: {"preferences": {"key": "value", ...}}."""
-    from fastapi import HTTPException
-
     ctx = _require_auth(deps, request)
     body = await request.json()
     prefs = body.get("preferences", {})
@@ -463,9 +443,6 @@ def create_auth_routes(
         default_signup_roles: Roles to assign to newly registered users.
             Typically the first persona ID (e.g. ``["customer"]``).
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for auth routes")
-
     import dazzle.back.runtime.rate_limit as _rl
 
     router = APIRouter(prefix="/auth", tags=["Authentication"])

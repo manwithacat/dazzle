@@ -10,13 +10,13 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.db_url import normalise_postgres_scheme
 
 if TYPE_CHECKING:
     import psycopg
-    from fastapi import APIRouter
 
 
 # =============================================================================
@@ -418,7 +418,7 @@ class DeviceRegistry:
 def create_device_routes(
     device_registry: DeviceRegistry,
     get_current_user: Any,  # Auth dependency
-) -> "APIRouter":
+) -> APIRouter:
     """
     Create device registration routes.
 
@@ -429,13 +429,6 @@ def create_device_routes(
     Returns:
         FastAPI router with device endpoints
     """
-    try:
-        from fastapi import APIRouter, Depends, HTTPException
-    except ImportError:
-        raise RuntimeError("FastAPI is required for device routes")
-
-    from pydantic import BaseModel
-
     router = APIRouter(prefix="/devices", tags=["Devices"])
 
     class RegisterDeviceRequest(BaseModel):

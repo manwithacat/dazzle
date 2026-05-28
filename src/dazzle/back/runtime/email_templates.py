@@ -25,6 +25,9 @@ from typing import Any
 from urllib.parse import urlencode
 from uuid import uuid4
 
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import RedirectResponse, Response
+
 from dazzle.back.runtime.ops_database import OpsDatabase
 
 
@@ -647,12 +650,6 @@ def create_email_tracking_routes(template_engine: EmailTemplateEngine) -> Any:
     - Tracking pixel (open tracking)
     - Click redirect (click tracking)
     """
-    try:
-        from fastapi import APIRouter, Query, Request
-        from fastapi.responses import RedirectResponse, Response
-    except ImportError:
-        raise RuntimeError("FastAPI required for email tracking routes")
-
     router = APIRouter(prefix="/_ops/email", tags=["Email Tracking"])
 
     # Transparent 1x1 GIF

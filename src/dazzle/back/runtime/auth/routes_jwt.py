@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any
 
-from dazzle.back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, FastAPIRequest
+from fastapi import APIRouter, HTTPException
+from fastapi import Request as FastAPIRequest
+
 from dazzle.back.runtime.jwt_auth import JWTService
 from dazzle.back.runtime.token_store import TokenStore
 
@@ -39,8 +41,6 @@ async def _login_for_token(
     Accepts either OAuth2 form data or JSON body.
     Returns access_token and refresh_token.
     """
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.jwt_auth import TokenResponse
 
     # Extract credentials from either form or JSON
@@ -85,8 +85,6 @@ async def _refresh_access_token(
 
     Implements token rotation: old refresh token is invalidated.
     """
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.jwt_auth import TokenResponse
 
     # Validate refresh token
@@ -140,8 +138,6 @@ async def _get_me_jwt(deps: _JwtDeps, request: FastAPIRequest) -> dict[str, Any]
 
     Requires Authorization: Bearer <token> header.
     """
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.jwt_middleware import JWTMiddleware
 
     # Create temporary middleware to validate
@@ -176,8 +172,6 @@ async def _list_sessions(deps: _JwtDeps, request: FastAPIRequest) -> dict[str, A
 
     Requires JWT authentication.
     """
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.jwt_middleware import JWTMiddleware
 
     middleware = JWTMiddleware(deps.jwt_service, exclude_paths=[])
@@ -208,8 +202,6 @@ async def _list_sessions(deps: _JwtDeps, request: FastAPIRequest) -> dict[str, A
 
 async def _revoke_all_sessions(deps: _JwtDeps, request: FastAPIRequest) -> dict[str, int]:
     """Revoke all refresh tokens except current (logout from all devices)."""
-    from fastapi import HTTPException
-
     from dazzle.back.runtime.jwt_middleware import JWTMiddleware
 
     middleware = JWTMiddleware(deps.jwt_service, exclude_paths=[])
@@ -245,9 +237,6 @@ def create_jwt_auth_routes(
         jwt_service: JWT service for token creation
         token_store: Token store for refresh tokens
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is required for auth routes")
-
     from dazzle.back.runtime.jwt_auth import TokenResponse
 
     router = APIRouter(prefix="/auth", tags=["Authentication"])

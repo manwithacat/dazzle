@@ -7,6 +7,9 @@ Houses ``WorkspaceRouteBuilder`` which was previously defined inline in
 import logging
 from typing import Any
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 from dazzle.back.runtime.auth import AuthMiddleware
 from dazzle.back.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
@@ -23,12 +26,6 @@ from dazzle.back.runtime.workspace_region_handler import _workspace_region_handl
 from dazzle.core.ir import AppSpec
 
 logger = logging.getLogger(__name__)
-
-# FastAPI Request — imported lazily to avoid hard dependency at module level
-try:
-    from fastapi import Request
-except ImportError:
-    Request = None  # type: ignore[assignment, misc]
 
 
 class WorkspaceRouteBuilder:
@@ -376,8 +373,6 @@ class WorkspaceRouteBuilder:
                         sel_scope_field: str | None = None,
                     ) -> Any:
                         async def context_options(request: Request) -> Any:
-                            from fastapi.responses import JSONResponse
-
                             # SECURITY: apply scope predicates to context selector (#574)
                             scope_filters: dict[str, Any] | None = None
                             if sel_access and sel_auth_mw and getattr(sel_access, "scopes", None):

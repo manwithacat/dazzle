@@ -6,7 +6,7 @@ Provides the WebSocket endpoint and message handlers.
 
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 
 from dazzle.back.runtime.auth import AuthStore
 from dazzle.back.runtime.event_bus import EntityEventBus
@@ -165,11 +165,6 @@ def create_realtime_routes(
     Returns:
         The RealtimeContext being used
     """
-    try:
-        from fastapi import Query, WebSocket, WebSocketDisconnect  # noqa: F401
-    except ImportError:
-        raise RuntimeError("FastAPI is required for realtime routes")
-
     if context is None:
         context = RealtimeContext()
 

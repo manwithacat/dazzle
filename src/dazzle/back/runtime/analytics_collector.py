@@ -21,6 +21,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from fastapi import APIRouter, Header, Request
+
 from dazzle.back.runtime.ops_database import AnalyticsEvent, OpsDatabase
 
 logger = logging.getLogger(__name__)
@@ -543,11 +545,7 @@ def create_analytics_routes(collector: AnalyticsCollector) -> Any:
     Returns:
         FastAPI APIRouter
     """
-    try:
-        from fastapi import APIRouter, Header, Request
-        from pydantic import BaseModel
-    except ImportError:
-        raise RuntimeError("FastAPI required for analytics routes")
+    from pydantic import BaseModel
 
     router = APIRouter(prefix="/_analytics", tags=["Analytics"])
 

@@ -22,6 +22,9 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
+from fastapi import APIRouter, Header, Query, Request
+from fastapi.responses import StreamingResponse
+
 logger = logging.getLogger(__name__)
 
 
@@ -323,12 +326,6 @@ def create_sse_routes(stream_manager: SSEStreamManager) -> Any:
     Returns:
         FastAPI APIRouter with SSE endpoints
     """
-    try:
-        from fastapi import APIRouter, Header, Query, Request
-        from fastapi.responses import StreamingResponse
-    except ImportError:
-        raise RuntimeError("FastAPI required for SSE routes")
-
     router = APIRouter(prefix="/_ops/sse", tags=["SSE Streaming"])
 
     @router.get("/health")
