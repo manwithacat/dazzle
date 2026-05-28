@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.4] - 2026-05-28
+
+### Fixed
+
+- Signing page (`GET /sign/{entity}/{id}`) now server-renders the project's document template (or `.html.j2` file under `templates/letters/<entity>/`) so the document body is visible in raw HTML — not just inside the dynamic signing-pad island. (#1287)
+
+### Changed
+
+- `dazzle.signing.routes.create_signing_routes` now accepts an optional `project_root: Path` kwarg used to resolve default file-based signing templates. Callers that previously omitted it continue to work (file-based templates simply won't resolve).
+
 ## [0.80.3] - 2026-05-28
 
 ### Fixed

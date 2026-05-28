@@ -1643,6 +1643,7 @@ class DazzleBackendApp:
                     repositories=self._repositories,
                     file_service=self._file_service,
                     branding=self._resolve_pdf_branding(),
+                    project_root=self._project_root,
                 )
                 if signing_router is not None:
                     self._app.include_router(signing_router)

@@ -29,7 +29,7 @@ pytest.importorskip("fastapi")
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from dazzle.signing.routes import create_signing_routes  # noqa: E402
+from dazzle.signing.routes import _resolve_document_body, create_signing_routes  # noqa: E402
 
 # ---------------------------------------------------------------------
 # Fixtures
@@ -555,3 +555,139 @@ class TestFullSignFlow:
         # not the framework default.
         assert captured["generate_branding"] is branding
         assert captured["sign_branding"] is branding
+
+
+# ---------------------------------------------------------------------
+# _resolve_document_body — unit tests for all three branches (#1287)
+# ---------------------------------------------------------------------
+
+
+class TestResolveDocumentBody:
+    """Unit-level coverage for the three resolution branches."""
+
+    def _make_entity(self, *, signing_template: str | None = None) -> EntitySpec:
+        entity = _signable_entity("Contract")
+        if signing_template is not None:
+            entity = entity.model_copy(update={"signing_template": signing_template})
+        return entity
+
+    def test_signing_template_callable_wins(self) -> None:
+        """Branch 1: signing_template callable is invoked and its return used."""
+        from types import SimpleNamespace
+
+        import dazzle.signing.tokens as host
+
+        def render(*, entity: Any, row: Any) -> str:
+            return "<p>custom template</p>"
+
+        host._test_resolve_render = render  # type: ignore[attr-defined]
+        try:
+            entity = self._make_entity(
+                signing_template="dazzle.signing.tokens._test_resolve_render"
+            )
+            row = SimpleNamespace(id=uuid4())
+            result = _resolve_document_body(entity=entity, row=row, project_root=None)
+            assert result == "<p>custom template</p>"
+        finally:
+            del host._test_resolve_render  # type: ignore[attr-defined]
+
+    def test_file_template_used_when_present(self, tmp_path: Any) -> None:
+        """Branch 2: file-based .html.j2 template is found and rendered."""
+        from types import SimpleNamespace
+
+        letters_dir = tmp_path / "templates" / "letters" / "Contract"
+        letters_dir.mkdir(parents=True)
+        (letters_dir / "default.html.j2").write_text("<p>Party: {{ row.party }}</p>")
+
+        entity = self._make_entity()
+        row = SimpleNamespace(id=uuid4(), party="ACME Ltd")
+        result = _resolve_document_body(entity=entity, row=row, project_root=tmp_path)
+        assert "<p>Party: ACME Ltd</p>" in result
+
+    def test_stub_used_when_no_template_and_no_project_root(self) -> None:
+        """Branch 3: stub fallback when project_root is None."""
+        from types import SimpleNamespace
+
+        entity = self._make_entity()
+        row = SimpleNamespace(id=uuid4())
+        result = _resolve_document_body(entity=entity, row=row, project_root=None)
+        assert "placeholder" in result.lower() or "Contract" in result
+
+    def test_stub_used_when_no_file_exists(self, tmp_path: Any) -> None:
+        """Branch 3: stub fallback when project_root given but no file found."""
+        from types import SimpleNamespace
+
+        entity = self._make_entity()
+        row = SimpleNamespace(id=uuid4())
+        # tmp_path has no templates/letters/Contract/default.html.j2
+        result = _resolve_document_body(entity=entity, row=row, project_root=tmp_path)
+        assert "placeholder" in result.lower() or "Contract" in result
+
+
+# ---------------------------------------------------------------------
+# GET /sign — document body is present in server-rendered HTML (#1287)
+# ---------------------------------------------------------------------
+
+
+class TestGetPageEmbedDocumentBody:
+    """The signing GET page must include the document body in server HTML."""
+
+    def test_file_template_rendered_in_get_page(self, tmp_path: Any) -> None:
+        """When a .html.j2 file exists, GET /sign embeds its rendered content.
+
+        The mock repo returns a SimpleNamespace so getattr works, mirroring
+        the Pydantic model rows returned by the real repository.
+        """
+        from types import SimpleNamespace
+
+        letters_dir = tmp_path / "templates" / "letters" / "Contract"
+        letters_dir.mkdir(parents=True)
+        (letters_dir / "default.html.j2").write_text(
+            "<p>Party: {{ row.party }}</p><p>Scope: {{ row.scope }}</p>"
+        )
+
+        record_id = str(uuid4())
+
+        class _ModelRepo:
+            """Repo that returns SimpleNamespace rows (like a Pydantic model)."""
+
+            async def read(self, rid: Any) -> Any:
+                return SimpleNamespace(
+                    id=rid, status="viewed", party="Acme Corp", scope="Annual audit"
+                )
+
+            async def update(self, rid: Any, data: Any) -> None:
+                pass
+
+        entity = _signable_entity("Contract")
+        router = create_signing_routes(
+            [entity],
+            repositories={"Contract": _ModelRepo()},
+            project_root=tmp_path,
+        )
+        assert router is not None
+        from fastapi import FastAPI
+
+        app = FastAPI()
+        app.include_router(router)
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        token = mint_token(record_id, "a@example.com")
+        resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+        assert resp.status_code == 200
+        assert "Acme Corp" in resp.text
+        assert "Annual audit" in resp.text
+        assert 'class="signing-document"' in resp.text
+
+    def test_stub_shown_when_no_template(self) -> None:
+        """Without a template file or callable, stub text appears in GET page."""
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "viewed"}})
+        client = TestClient(app)
+        token = mint_token(record_id, "a@example.com")
+        resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+        assert resp.status_code == 200
+        # Stub body is still present; island is also present.
+        assert 'class="signing-document"' in resp.text
+        assert 'data-island="signing_pad"' in resp.text

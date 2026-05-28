@@ -33,6 +33,7 @@ import logging
 import re
 from collections.abc import Awaitable, Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -63,6 +64,7 @@ def create_signing_routes(
     repositories: dict[str, Any],
     branding: PdfBranding | None = None,
     file_service: Any | None = None,
+    project_root: Path | None = None,
 ) -> APIRouter | None:
     """Build the auto-mounted signing router.
 
@@ -84,6 +86,11 @@ def create_signing_routes(
             resulting URL. When ``None`` (file uploads disabled), the
             PDF is still returned inline and the row's
             ``signed_document`` stays null.
+        project_root: Optional path to the project root. Used to
+            resolve file-based signing templates under
+            ``templates/letters/<entity>/default.html.j2``. When
+            ``None``, file-based templates are not resolved and the
+            stub placeholder is used as fallback.
 
     Returns:
         ``None`` if no entity has ``signable: true``. Otherwise an
@@ -107,6 +114,7 @@ def create_signing_routes(
             request=request,
             signable=signable,
             repositories=repositories,
+            project_root=project_root,
         )
 
     @router.post("/api/sign/{entity_name}/{record_id}")
@@ -125,6 +133,7 @@ def create_signing_routes(
             repositories=repositories,
             branding=resolved_branding,
             file_service=file_service,
+            project_root=project_root,
         )
 
     return router
@@ -161,6 +170,7 @@ async def _handle_get(
     request: Request,
     signable: dict[str, EntitySpec],
     repositories: dict[str, Any],
+    project_root: Path | None = None,
 ) -> HTMLResponse:
     entity = _lookup_signable(entity_name, signable)
     repo = _lookup_repo(entity_name, repositories)
@@ -205,7 +215,13 @@ async def _handle_get(
             },
         )
 
-    body = _signing_page(entity_name=entity.name, record_id=str(record_id), token=token)
+    document_body = _resolve_document_body(entity=entity, row=row, project_root=project_root)
+    body = _signing_page(
+        entity_name=entity.name,
+        record_id=str(record_id),
+        token=token,
+        document_body=document_body,
+    )
     return HTMLResponse(body)  # nosemgrep
 
 
@@ -219,6 +235,7 @@ async def _handle_post(
     repositories: dict[str, Any],
     branding: PdfBranding,
     file_service: Any | None = None,
+    project_root: Path | None = None,
 ) -> Response:
     entity = _lookup_signable(entity_name, signable)
     repo = _lookup_repo(entity_name, repositories)
@@ -267,13 +284,10 @@ async def _handle_post(
 
         signature_png = base64.b64decode(body.signature_png_b64)
 
-    if entity.signing_template:
-        try:
-            document_body = _invoke_template(entity.signing_template, entity=entity, row=row)
-        except SigningError as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-    else:
-        document_body = _stub_document_body(entity_name=entity.name, record_id=record_id)
+    try:
+        document_body = _resolve_document_body(entity=entity, row=row, project_root=project_root)
+    except SigningError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     pdf = generate_pdf(
         document_body,
         signer_name=signatory_name,
@@ -441,6 +455,47 @@ def _invoke_template(dotted_path: str, *, entity: EntitySpec, row: Any) -> str:
     return result
 
 
+def _resolve_document_body(
+    *,
+    entity: EntitySpec,
+    row: Any,
+    project_root: Path | None,
+) -> str:
+    """Resolve the document body HTML for both GET and POST handlers.
+
+    Priority:
+        1. ``entity.signing_template`` — project-supplied Python callable.
+        2. ``<project_root>/templates/letters/<entity.name>/default.html.j2``
+           rendered by the minimal placeholder substitution renderer.
+        3. ``_stub_document_body`` fallback (phase-3d placeholder).
+
+    Raises:
+        SigningError: if the signing_template callable is found but
+            raises or returns a non-str value. File-based and stub
+            paths never raise.
+    """
+    if entity.signing_template:
+        return _invoke_template(entity.signing_template, entity=entity, row=row)
+
+    if project_root is not None:
+        from dazzle.signing.template_renderer import (
+            find_signing_template,
+            render_signing_template_file,
+        )
+
+        path = find_signing_template(project_root, entity.name)
+        if path is not None:
+            log.debug("Rendering signing template %s for %s", path, entity.name)
+            return render_signing_template_file(path, row=row, entity=entity)
+
+    record_id_str = str(getattr(row, "id", "") or "")
+    try:
+        record_uuid = UUID(record_id_str)
+    except (ValueError, AttributeError):
+        record_uuid = UUID(int=0)
+    return _stub_document_body(entity_name=entity.name, record_id=record_uuid)
+
+
 def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:
     """Placeholder document body for phase 3d.
 
@@ -460,7 +515,7 @@ def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:
     )
 
 
-def _signing_page(*, entity_name: str, record_id: str, token: str) -> str:
+def _signing_page(*, entity_name: str, record_id: str, token: str, document_body: str) -> str:
     import json
 
     safe_entity = html.escape(entity_name)
@@ -481,6 +536,10 @@ def _signing_page(*, entity_name: str, record_id: str, token: str) -> str:
         }
     )
     safe_props = html.escape(props, quote=True)
+    # document_body is rendered HTML from a trusted template path
+    # (project author's .html.j2 or signing_template callable).
+    # Field interpolations are already HTML-escaped by
+    # render_signing_template_file. The <section> wrapper is inert.
     return (
         "<!DOCTYPE html>"
         '<html lang="en"><head><meta charset="utf-8">'
@@ -490,6 +549,10 @@ def _signing_page(*, entity_name: str, record_id: str, token: str) -> str:
         '<body style="font-family: system-ui; max-width: 720px; margin: 2rem auto;">'
         f"<h1>Sign {safe_entity}</h1>"
         f"<p>Document identifier: <code>{safe_id}</code></p>"
+        '<section class="signing-document">'
+        f"{document_body}"
+        "</section>"
+        "<hr>"
         '<div data-island="signing_pad" '
         'data-island-src="/static/js/islands/signing-pad.js" '
         f'data-island-props="{safe_props}">'
