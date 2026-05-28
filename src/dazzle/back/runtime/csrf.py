@@ -72,6 +72,15 @@ class CSRFConfig:
             # project's supported_locales allow-list before writing
             # the cookie.
             "/_dazzle/i18n/",
+            # Native document signing routes (#1283). The HMAC signing token
+            # carried in the request (query-param on GET, body on POST) is a
+            # stronger per-resource credential than a session CSRF cookie, so
+            # CSRF double-submit is redundant here.  Both the signing page
+            # (GET /sign/…) and the submit endpoint (POST /api/sign/…) are
+            # exempt; unauthenticated signers never have a session cookie from
+            # which a CSRF cookie would be issued.
+            "/sign/",
+            "/api/sign/",
         ]
     )
 

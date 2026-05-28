@@ -19,8 +19,11 @@ import httpx
 from dazzle.agent.core import AgentTool
 from dazzle.qa.signing_seed import SeededDoc
 
-# Synthetic PNG stub — 1×1 transparent pixel, base64-encoded PKCS header only.
-_STUB_SIGNATURE = "data:image/png;base64,iVBORw0KGgo="
+# Minimal valid 10×10 white PNG (base64, no data-URL prefix).
+# A 1×1 minimal PNG passes PIL but is rejected by fpdf2's own PNG parser
+# ("broken data stream").  The 10×10 PIL-generated PNG is accepted by both.
+# Used as a stub signature image for the signing route's `signature_png_b64` field.
+_STUB_SIGNATURE_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFklEQVR4nGP8//8/A27AhEeOYeRKAwCl4wMRx3ocVQAAAABJRU5ErkJggg=="
 
 
 def build_signing_tools(
@@ -188,9 +191,12 @@ def _make_sign_document(*, base_url: str, action_sink: dict[str, Any]) -> AgentT
             )
 
         url = f"{base_url}/api/sign/{doc.entity}/{doc.id}"
+        # SignSubmission body: token is required; signature_png_b64 is the stub
+        # image; signatory_name defaults to the seeded email when omitted.
         payload = {
-            "signature_data_url": _STUB_SIGNATURE,
-            "authority_confirmed": True,
+            "token": doc.token,
+            "signature_png_b64": _STUB_SIGNATURE_PNG_B64,
+            "signatory_name": doc.signatory_email,
         }
         try:
             resp = httpx.post(url, json=payload, timeout=30.0)
@@ -235,9 +241,16 @@ def _make_decline_signing(*, base_url: str, action_sink: dict[str, Any]) -> Agen
                 "a document from the inbox."
             )
 
-        url = f"{base_url}/api/sign/{doc.entity}/{doc.id}/decline"
+        # Decline uses the same POST /api/sign/{entity}/{id} endpoint with
+        # decline=True + decline_reason in the SignSubmission body.
+        url = f"{base_url}/api/sign/{doc.entity}/{doc.id}"
+        payload = {
+            "token": doc.token,
+            "decline": True,
+            "decline_reason": reason,
+        }
         try:
-            resp = httpx.post(url, json={"reason": reason}, timeout=10.0)
+            resp = httpx.post(url, json=payload, timeout=10.0)
             _record_request(action_sink, method="POST", url=url, status=resp.status_code)
             return (
                 f"Declined {doc.entity}/{doc.id}: HTTP {resp.status_code}. "
