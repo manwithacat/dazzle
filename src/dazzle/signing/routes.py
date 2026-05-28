@@ -187,7 +187,8 @@ async def _handle_get(
     try:
         verified_id, _email = verify_token(token)
     except InvalidTokenError as exc:
-        body = _error_page(f"Invalid or expired link: {exc}")
+        log.info("Signing link validation failed for %s/%s: %s", entity_name, record_id, exc)
+        body = _error_page("Invalid or expired link")
         return HTMLResponse(body, status_code=403)  # nosemgrep
 
     if verified_id != str(record_id):

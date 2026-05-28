@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.9] - 2026-05-28
+
+### Security
+
+- CodeQL alert #133 (`py/stack-trace-exposure`, error severity): the GET signing-page handler at `src/dazzle/signing/routes.py:191` interpolated `InvalidTokenError` exception messages directly into the public 403 page (`_error_page(f"Invalid or expired link: {exc}")`). Underlying `verify_token` raises messages like `"Token decode failed: <binascii detail>"` (`tokens.py:71`) which would leak internal library state to anonymous callers. Switched to a fixed user-facing message ("Invalid or expired link") and logged the real exception at INFO via the module logger so ops can still diagnose token-rejection patterns.
+- CodeQL alert #132 (`py/url-redirection`, error severity) at `password_login_routes.py:99` dismissed as false positive: redirect path is hard-coded `/2fa/challenge`, the `next` query value is gated by `_is_safe_redirect_path` (rejects scheme/netloc/backslash) and URL-encoded via `_encode_next` (`quote(safe="/")`). CodeQL doesn't trace the multi-step sanitiser across the `if` guard. Matches the prior dismissal pattern on adjacent alerts #129/#130/#131/#126.
+
 ## [0.80.8] - 2026-05-28
 
 ### Fixed
