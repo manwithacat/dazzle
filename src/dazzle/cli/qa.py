@@ -331,6 +331,83 @@ def _provision_signing_env(
     return SigningSeedContext(env=env, inbox_path=inbox_path, seeded_docs=[])
 
 
+# Per-entity realistic seed payloads for the trial harness.
+# These align with the corresponding ``[[scenario]]`` business contexts in
+# the example apps' trial.toml — so when the persona reads the document
+# they see content matching what their persona was told to expect.
+#
+# Unknown entities fall through to _minimal_fields_for's per-field
+# type-based placeholders.
+_REALISTIC_SEED_OVERRIDES: dict[str, dict[str, Any]] = {
+    # contact_manager (parent for EngagementLetter ref)
+    "Contact": {
+        "first_name": "Marcus",
+        "last_name": "Chen",
+        "email": "marcus.chen@northwind-apparel.example",
+        "company": "Northwind Apparel Ltd",
+        "phone": "+44 20 7946 0958",
+        "is_favorite": False,
+    },
+    # contact_manager (signable)
+    "EngagementLetter": {
+        "party": "Northwind Apparel Ltd",
+        "scope_summary": (
+            "Q4 brand refresh: new logo system, updated colour palette, "
+            "typography rationale, and a 16-page brand book. Delivery in "
+            "three milestones over 12 weeks; £42,000 fixed fee + agreed "
+            "pass-through costs."
+        ),
+        "effective_date": "2026-10-01",
+        "signatory_name": "Priya Sharma",
+        "signatory_email": "priya.sharma@northwind-apparel.example",
+    },
+    # support_tickets (parent for SlaWaiver ref)
+    "Ticket": {
+        "title": "P1: Checkout API 503s across EU region",
+        "description": (
+            "Customer reported intermittent 503 errors on POST "
+            "/checkout/finalise from 14:02 UTC. Initial triage suggests "
+            "upstream payment processor connection-pool exhaustion."
+        ),
+        # ticket_number is unique — the suffix logic in _minimal_fields_for
+        # will append a run_id prefix to avoid collisions.
+        "ticket_number": "INC-2026-0428",
+        "subject": "Checkout API intermittent 503",
+        "status": "open",
+        "priority": "high",
+        "severity": "high",
+    },
+    # support_tickets (signable)
+    "SlaWaiver": {
+        "breach_summary": (
+            "P1 SLA target was 4-hour resolution. The incident on "
+            "INC-2026-0428 (Checkout API 503s) took 9 hours to fully "
+            "resolve. Root cause: upstream payment processor connection "
+            "pool exhaustion compounded by a deficient retry policy on "
+            "our side. Customer-visible impact: ~3.2% of EU checkouts "
+            "failed during the window."
+        ),
+        "waiver_terms": (
+            "In settlement of the SLA breach: "
+            "(a) 20% service credit applied to the November invoice; "
+            "(b) written postmortem delivered within 10 business days; "
+            "(c) retry-policy fix shipped to staging by Friday and to "
+            "production within 14 days; "
+            "(d) no further claims arising from the same incident."
+        ),
+        "signatory_role": "VP Customer Success",
+        "signatory_name": "Devon Park",
+        "signatory_email": "devon.park@retailco.example",
+    },
+    # fixtures/signing_validation
+    "TestDoc": {
+        "party": "Test Co Ltd",
+        "body": "Generic test document body. No signatures required for fixture.",
+        "signatory_email": "test@example.test",
+    },
+}
+
+
 def _placeholder_for_field_type(field: Any, *, _run_id: str | None = None) -> Any:
     """Return a valid placeholder value for a scalar (non-ref) field.
 
@@ -405,7 +482,100 @@ def _minimal_fields_for(entity: Any, *, _run_id: str | None = None) -> dict[str,
         if FieldModifier.REQUIRED not in field.modifiers:
             continue
         data[field.name] = _placeholder_for_field_type(field, _run_id=_run_id)
+
+    # Layer realistic overrides on top — these win over generic placeholders.
+    overrides = _REALISTIC_SEED_OVERRIDES.get(entity.name, {})
+    entity_field_names = {f.name for f in entity.fields}
+    for field_name, value in overrides.items():
+        # Only apply if the field actually exists on the entity (guard against
+        # DSL renames / removals without updating the overrides dict).
+        if field_name in entity_field_names:
+            data[field_name] = value
+
+    # Suffix unique-constrained STR and EMAIL fields so repeated seeds don't
+    # collide.  Note: _placeholder_for_field_type already suffixes EMAIL fields
+    # when it generates the placeholder, but when an override replaces the
+    # placeholder with a fixed value the suffix must be applied here instead.
+    if _run_id:
+        for field in entity.fields:
+            is_unique = FieldModifier.UNIQUE in field.modifiers
+            if not is_unique:
+                continue
+            if field.name not in data:
+                continue
+            if not isinstance(data[field.name], str):
+                continue
+            if field.type.kind == FieldTypeKind.STR:
+                data[field.name] = f"{data[field.name]}-{_run_id[:6]}"
+            elif field.type.kind == FieldTypeKind.EMAIL:
+                # For email fields, insert the suffix before the '@' so the
+                # value remains a syntactically valid email address.
+                email_val: str = data[field.name]
+                if "@" in email_val:
+                    local, domain = email_val.split("@", 1)
+                    data[field.name] = f"{local}-{_run_id[:6]}@{domain}"
+
     return data
+
+
+def _collect_parent_fixtures(
+    entity: Any,
+    by_name: dict[str, Any],
+    run_id: str,
+    fixture_prefix: str,
+    collected: list[dict[str, Any]],
+    visited: set[str],
+) -> dict[str, str]:
+    """Recursively collect parent fixture dicts for all required REF fields.
+
+    Returns a ``refs`` mapping of ``{field_name: fixture_id}`` for the
+    *entity* being processed.  Grandparent fixtures (required REFs on parent
+    entities) are prepended so they appear before their dependants in the
+    batch list — the seed endpoint processes fixtures in order.
+
+    *visited* prevents infinite recursion on self-referential entities.
+    """
+    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+
+    refs: dict[str, str] = {}
+    for field in entity.fields:
+        if field.type.kind != FieldTypeKind.REF:
+            continue
+        if FieldModifier.REQUIRED not in field.modifiers:
+            continue
+        target_name = field.type.ref_entity
+        if target_name in visited:
+            continue  # break cycle
+        target_entity = by_name.get(target_name)
+        if target_entity is None:
+            continue
+
+        parent_fixture_id = f"{fixture_prefix}_{target_name.lower()}"
+        visited_copy = visited | {target_name}
+
+        # Recurse: collect grandparent fixtures first so they appear before
+        # the parent fixture in the batch.
+        grandparent_refs = _collect_parent_fixtures(
+            target_entity,
+            by_name,
+            run_id,
+            parent_fixture_id,
+            collected,
+            visited_copy,
+        )
+
+        parent_fixture: dict[str, Any] = {
+            "id": parent_fixture_id,
+            "entity": target_name,
+            "data": _minimal_fields_for(target_entity, _run_id=run_id),
+        }
+        if grandparent_refs:
+            parent_fixture["refs"] = grandparent_refs
+        collected.append(parent_fixture)
+
+        refs[field.name] = parent_fixture_id
+
+    return refs
 
 
 def _build_signing_seed_batch(
@@ -414,15 +584,15 @@ def _build_signing_seed_batch(
     """Build a fixtures batch for one signable entity via ``/__test__/seed``.
 
     Walks the entity's fields to discover required ``ref`` FK fields, creates
-    a minimal parent fixture for each, and wires them up via ``refs:``.  The
-    signable entity itself is always the last fixture in the list under the
-    fixture-id ``"signable_row"``.
+    a minimal parent fixture for each, and wires them up via ``refs:``.
+    Required REFs on parent entities (grandparents, etc.) are resolved
+    recursively so multi-hop FK chains (e.g. SlaWaiver→Ticket→User) don't
+    produce 400 errors.  The signable entity itself is always the last fixture
+    in the list under the fixture-id ``"signable_row"``.
 
     Returns a list of fixture dicts ready for ``SeedRequest.fixtures``.
     """
     import uuid as _uuid_mod
-
-    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 
     # Short unique suffix so repeated seeds (e.g., re-running integration tests)
     # don't collide on unique-constrained fields (email, etc.).
@@ -431,38 +601,24 @@ def _build_signing_seed_batch(
     by_name = {e.name: e for e in app_spec.domain.entities}
 
     parent_fixtures: list[dict[str, Any]] = []
-    refs: dict[str, str] = {}
-
-    for field in entity.fields:
-        if field.type.kind != FieldTypeKind.REF:
-            continue
-        if FieldModifier.REQUIRED not in field.modifiers:
-            continue
-        target_name = field.type.ref_entity
-        target_entity = by_name.get(target_name)
-        if target_entity is None:
-            # Unresolvable ref — skip and let the seed fail loudly later.
-            continue
-        parent_fixture_id = f"parent_{target_name.lower()}"
-        parent_fixtures.append(
-            {
-                "id": parent_fixture_id,
-                "entity": target_name,
-                "data": _minimal_fields_for(target_entity, _run_id=run_id),
-            }
-        )
-        refs[field.name] = parent_fixture_id
+    refs = _collect_parent_fixtures(
+        entity, by_name, run_id, "parent", parent_fixtures, {entity.name}
+    )
 
     # Build the signable entity's own data dict: required non-ref scalar fields
     # plus the well-known signatory fields.
     signable_data = _minimal_fields_for(entity, _run_id=run_id)
-    # Override with meaningful signatory-specific values regardless of entity.
-    signable_data["signatory_email"] = signatory_email
-    signable_data["signatory_name"] = "Trial Signatory"
+    # status + signing_service are harness mechanics; always force.
     # status is an auto-injected enum; "sent" is the correct seed state.
     signable_data["status"] = "sent"
     # signing_service is auto-injected by the linker; "native" = Dazzle PDF+PKCS#7.
     signable_data["signing_service"] = "native"
+    # signatory fields: prefer the entity's realistic override (already applied
+    # by _minimal_fields_for via _REALISTIC_SEED_OVERRIDES); fall back to caller args.
+    if "signatory_email" not in signable_data:
+        signable_data["signatory_email"] = signatory_email
+    if "signatory_name" not in signable_data:
+        signable_data["signatory_name"] = "Trial Signatory"
 
     signable_fixture: dict[str, Any] = {
         "id": "signable_row",

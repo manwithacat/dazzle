@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.5] - 2026-05-28
+
+### Changed
+
+- Signing trial harness seed payloads now contain realistic synthetic content (per-entity overrides for Contact, Ticket, EngagementLetter, SlaWaiver, TestDoc) so the LLM persona can legitimately complete the happy-path signing flow instead of declining because the document looks like placeholder text. Unique-constrained string fields also get a run-id suffix to avoid collisions across repeated seed runs; unique EMAIL fields get the same suffix inserted before the `@` sign so the address remains syntactically valid.
+- `_build_signing_seed_batch` now resolves required REF fields recursively (e.g. SlaWaiver→Ticket→User multi-hop chain), so signable entities whose required parent entity itself has required FK refs no longer produce 400 errors at seed time.
+
 ## [0.80.4] - 2026-05-28
 
 ### Fixed
