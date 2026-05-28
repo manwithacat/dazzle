@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.1] - 2026-05-28
+
+### Fixed
+
+- `dazzle qa trial` signing harness now correctly seeds rows for Cedar-gated apps. Previously, `_insert_seed_row` POSTed to `/api/{entity}` which returned 403, silently disabling signing tools for the trial. Now uses `/__test__/seed` with FK-ref resolution. (#1285)
+
 ## [0.80.0] - 2026-05-28
 
 ### Added

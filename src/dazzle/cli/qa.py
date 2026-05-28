@@ -331,51 +331,148 @@ def _provision_signing_env(
     return SigningSeedContext(env=env, inbox_path=inbox_path, seeded_docs=[])
 
 
-def _insert_seed_row(
-    *, entity_name: str, base_url: str, signatory_email: str, test_secret: str = ""
-) -> str:
-    """Insert one seed row for *entity_name* via the runtime API.
+def _placeholder_for_field_type(field: Any, *, _run_id: str | None = None) -> Any:
+    """Return a valid placeholder value for a scalar (non-ref) field.
 
-    Posts only the fields that are common to all signable entities defined
-    by the trial harness (``signatory_email`` + ``status``), plus a set of
-    generic string fields that cover both ``EngagementLetter`` and
-    ``SlaWaiver``.  Fields unknown to a given entity are silently ignored
-    by the API.
+    Used by ``_build_signing_seed_batch`` to populate required fields on
+    parent fixture entities and on the signable entity itself.  The returned
+    value is always serialisable as JSON.
 
-    ``test_secret`` is forwarded as ``X-Test-Secret`` so the runtime auth
-    gate accepts the write (same pattern as ``_seed_demo_data_for_trial``).
-
-    Returns the new row's ``id`` (UUID string).
-    Raises ``httpx.HTTPStatusError`` on non-2xx responses — the caller
-    will surface the failure in the trial run.
+    ``_run_id`` is appended to unique-constrained string values (email,
+    unique str) so repeated calls within the same DB don't cause unique
+    violations.  The caller passes a short UUID prefix for this purpose.
     """
-    import httpx
+    from dazzle.core.ir.fields import FieldTypeKind
 
-    # Payload covers fields used by EngagementLetter + SlaWaiver +
-    # the minimal fixture TestDoc.  Entity-specific required fields not
-    # present here will cause a 422; that's an acceptable loud failure
-    # (Task 11 integration tests cover these flows end-to-end).
-    payload: dict[str, Any] = {
-        "signatory_email": signatory_email,
-        "signatory_name": "Trial Signatory",
-        "status": "sent",
-        # EngagementLetter fields
-        "party": "Trial Counterparty Ltd",
-        "scope_summary": "Trial-harness seed row.",
-        "effective_date": "2026-05-28",
-        # SlaWaiver fields
-        "breach_summary": "Trial-harness seed row.",
-        "waiver_terms": "Accepted for trial purposes.",
-        "signatory_role": "Authorised Signatory",
-        # TestDoc fields
-        "body": "Trial-harness seed body.",
+    kind = field.type.kind
+    if kind == FieldTypeKind.EMAIL:
+        suffix = f"-{_run_id}" if _run_id else ""
+        return f"trial-parent{suffix}@example.com"
+    if kind == FieldTypeKind.DATE:
+        return "2026-05-28"
+    if kind == FieldTypeKind.DATETIME:
+        return "2026-05-28T00:00:00Z"
+    if kind == FieldTypeKind.BOOL:
+        return False
+    if kind in (FieldTypeKind.INT, FieldTypeKind.FLOAT, FieldTypeKind.DECIMAL):
+        return 0
+    if kind == FieldTypeKind.UUID:
+        import uuid as _uuid_mod
+
+        return str(_uuid_mod.uuid4())
+    if kind == FieldTypeKind.ENUM:
+        vals = field.type.enum_values or []
+        return vals[0] if vals else ""
+    if kind == FieldTypeKind.MONEY:
+        return "0.00"
+    if kind in (FieldTypeKind.TEXT, FieldTypeKind.JSON):
+        return "Trial-harness seed."
+    # STR, URL, TIMEZONE and any unrecognised scalar → short string
+    return "Trial parent"
+
+
+def _minimal_fields_for(entity: Any, *, _run_id: str | None = None) -> dict[str, Any]:
+    """Return a minimal required-field payload for *entity* (no refs).
+
+    Only required, non-PK, non-relationship scalar fields are included.
+    Relationship fields (HAS_MANY / HAS_ONE / BELONGS_TO / EMBEDS /
+    LATEST_ONE / DESCENDANTS_OF / ANCESTORS_OF) and REF FK fields are
+    skipped — FK refs for required REF fields are handled via the
+    ``refs`` mapping in the fixture batch.
+
+    ``_run_id`` is forwarded to ``_placeholder_for_field_type`` to generate
+    unique values for fields with a uniqueness constraint (e.g. email).
+    """
+    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+
+    _REL_KINDS = {
+        FieldTypeKind.HAS_MANY,
+        FieldTypeKind.HAS_ONE,
+        FieldTypeKind.BELONGS_TO,
+        FieldTypeKind.EMBEDS,
+        FieldTypeKind.LATEST_ONE,
+        FieldTypeKind.DESCENDANTS_OF,
+        FieldTypeKind.ANCESTORS_OF,
+        FieldTypeKind.REF,  # refs go in the `refs:` mapping, not `data:`
     }
-    headers: dict[str, str] = {}
-    if test_secret:
-        headers["X-Test-Secret"] = test_secret
-    resp = httpx.post(f"{base_url}/api/{entity_name}", json=payload, headers=headers, timeout=10.0)
-    resp.raise_for_status()
-    return str(resp.json()["id"])
+
+    data: dict[str, Any] = {}
+    for field in entity.fields:
+        if FieldModifier.PK in field.modifiers:
+            continue
+        if field.type.kind in _REL_KINDS:
+            continue
+        if FieldModifier.REQUIRED not in field.modifiers:
+            continue
+        data[field.name] = _placeholder_for_field_type(field, _run_id=_run_id)
+    return data
+
+
+def _build_signing_seed_batch(
+    entity: Any, app_spec: Any, signatory_email: str
+) -> list[dict[str, Any]]:
+    """Build a fixtures batch for one signable entity via ``/__test__/seed``.
+
+    Walks the entity's fields to discover required ``ref`` FK fields, creates
+    a minimal parent fixture for each, and wires them up via ``refs:``.  The
+    signable entity itself is always the last fixture in the list under the
+    fixture-id ``"signable_row"``.
+
+    Returns a list of fixture dicts ready for ``SeedRequest.fixtures``.
+    """
+    import uuid as _uuid_mod
+
+    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+
+    # Short unique suffix so repeated seeds (e.g., re-running integration tests)
+    # don't collide on unique-constrained fields (email, etc.).
+    run_id = _uuid_mod.uuid4().hex[:8]
+
+    by_name = {e.name: e for e in app_spec.domain.entities}
+
+    parent_fixtures: list[dict[str, Any]] = []
+    refs: dict[str, str] = {}
+
+    for field in entity.fields:
+        if field.type.kind != FieldTypeKind.REF:
+            continue
+        if FieldModifier.REQUIRED not in field.modifiers:
+            continue
+        target_name = field.type.ref_entity
+        target_entity = by_name.get(target_name)
+        if target_entity is None:
+            # Unresolvable ref — skip and let the seed fail loudly later.
+            continue
+        parent_fixture_id = f"parent_{target_name.lower()}"
+        parent_fixtures.append(
+            {
+                "id": parent_fixture_id,
+                "entity": target_name,
+                "data": _minimal_fields_for(target_entity, _run_id=run_id),
+            }
+        )
+        refs[field.name] = parent_fixture_id
+
+    # Build the signable entity's own data dict: required non-ref scalar fields
+    # plus the well-known signatory fields.
+    signable_data = _minimal_fields_for(entity, _run_id=run_id)
+    # Override with meaningful signatory-specific values regardless of entity.
+    signable_data["signatory_email"] = signatory_email
+    signable_data["signatory_name"] = "Trial Signatory"
+    # status is an auto-injected enum; "sent" is the correct seed state.
+    signable_data["status"] = "sent"
+    # signing_service is auto-injected by the linker; "native" = Dazzle PDF+PKCS#7.
+    signable_data["signing_service"] = "native"
+
+    signable_fixture: dict[str, Any] = {
+        "id": "signable_row",
+        "entity": entity.name,
+        "data": signable_data,
+    }
+    if refs:
+        signable_fixture["refs"] = refs
+
+    return [*parent_fixtures, signable_fixture]
 
 
 def _seed_signable_rows(
@@ -383,22 +480,42 @@ def _seed_signable_rows(
 ) -> list[SeededDoc]:
     """For each signable entity in *app_spec*, insert one row + mint a token.
 
-    ``test_secret`` is forwarded to ``_insert_seed_row`` so the runtime auth
-    gate accepts the write.
+    Uses ``/__test__/seed`` (Cedar-bypass path) rather than the Cedar-gated
+    ``/api/{entity}`` endpoint, so this works on apps with Cedar policies.
+    Required FK refs are resolved via the AppSpec IR and included as parent
+    fixtures in the same batch (#1285).
 
     Returns a list of :class:`~dazzle.qa.signing_seed.SeededDoc` objects
     (one per signable entity) ready to write into the mock inbox.
     """
+    import httpx
+
+    headers: dict[str, str] = {}
+    if test_secret:
+        headers["X-Test-Secret"] = test_secret
+
     docs: list[SeededDoc] = []
     for entity in app_spec.domain.entities:
         if not getattr(entity, "signable", False):
             continue
-        row_id = _insert_seed_row(
-            entity_name=entity.name,
-            base_url=base_url,
-            signatory_email=signatory_email,
-            test_secret=test_secret,
+
+        fixtures = _build_signing_seed_batch(entity, app_spec, signatory_email)
+        resp = httpx.post(
+            f"{base_url}/__test__/seed",
+            json={"fixtures": fixtures},
+            headers=headers,
+            timeout=10.0,
         )
+        resp.raise_for_status()
+
+        created = resp.json().get("created", {})
+        row_id = str(created.get("signable_row", {}).get("id", ""))
+        if not row_id:
+            raise RuntimeError(
+                f"/__test__/seed response missing 'signable_row' id for {entity.name}; "
+                f"got created keys: {list(created)}"
+            )
+
         token = mint_token(record_id=row_id, email=signatory_email)
         docs.append(
             SeededDoc(
