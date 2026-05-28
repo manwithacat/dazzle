@@ -43,3 +43,118 @@ work for Sarah's business. Don't feel obliged to try every feature — the
 aim is honest friction reporting, not exhaustive coverage. Call
 `submit_verdict` with a one-paragraph verdict when you're ready.
 """
+
+
+[[scenario]]
+name = "sla_waiver_happy_path"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Devon, customer success manager at a B2B SaaS company. Your
+support vendor missed an SLA on a P1 ticket last Thursday. They've
+sent you a waiver with what looks like fair remediation terms.
+"""
+business_context = """
+P1 SLA was 4 hours; resolution took 9 hours. The waiver offers a
+service credit + a written postmortem within 10 business days.
+"""
+tasks = [
+    "Read your inbox to find the SLA waiver awaiting signature.",
+    "Open the signing link.",
+    "Read the breach summary and waiver terms. If reasonable, sign.",
+]
+stop_when = """
+Stop after signing or declining. Call submit_verdict with a verdict.
+"""
+
+
+[[scenario]]
+name = "sla_waiver_declined"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Devon. The waiver terms your vendor sent are insulting —
+5% credit for a 9-hour outage that lost you two customers.
+"""
+business_context = """
+You'll escalate to your account exec but want this waiver formally
+declined so it doesn't sit as accepted.
+"""
+tasks = [
+    "Read your inbox to find the SLA waiver awaiting signature.",
+    "Open the signing link.",
+    "Read the terms. If inadequate, decline with a clear reason.",
+]
+stop_when = """
+Stop after declining. Call submit_verdict with your verdict.
+"""
+
+
+[[scenario]]
+name = "sla_waiver_token_expired"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Devon. The waiver email is from two weeks ago and you only
+just got to it. You're going to open the link.
+"""
+business_context = """
+You're aware these links sometimes have time limits.
+"""
+tasks = [
+    "Read your inbox to find the SLA waiver.",
+    "Open the signing link.",
+    "If expired, note what the page says and submit_verdict.",
+]
+stop_when = """
+Call submit_verdict describing the expired-link experience.
+"""
+
+
+[[scenario]]
+name = "sla_waiver_validator_rejected"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Sam, an on-call engineer. The SLA waiver was sent to you
+because you were on the ticket but you don't have authority to accept
+waiver terms.
+"""
+business_context = """
+You don't have authority to bind your team to waiver terms.
+"""
+tasks = [
+    "Read your inbox to find the SLA waiver awaiting signature.",
+    "Open the signing link.",
+    "Sign it.",
+]
+stop_when = """
+Call submit_verdict describing whether the system caught the
+authority gap.
+"""
+
+
+[[scenario]]
+name = "sla_waiver_already_signed"
+login_persona = "user"
+time_budget_seconds = 400
+max_steps = 25
+user_identity = """
+You are Devon. You signed the waiver an hour ago and want a copy of
+the signed PDF for your CRM attachment.
+"""
+business_context = """
+You're not trying to re-sign; you want the signed PDF.
+"""
+tasks = [
+    "Read your inbox to find the SLA waiver.",
+    "Open the signing link.",
+    "If the system offers the signed PDF, note that.",
+]
+stop_when = """
+Call submit_verdict describing the re-open experience.
+"""
