@@ -10,13 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from fastapi import FastAPI
 from pydantic import BaseModel
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    FastAPI,
-)
-from dazzle.back.runtime._fastapi_compat import FastAPI as _FastAPI
 from dazzle.back.runtime.auth import (
     AuthMiddleware,
     AuthStore,
@@ -31,6 +27,7 @@ from dazzle.back.runtime.model_generator import (
     generate_update_schema,
 )
 from dazzle.back.runtime.repository import RepositoryFactory
+from dazzle.back.runtime.route_generator import RouteGenerator
 from dazzle.back.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle.back.runtime.service_loader import ServiceLoader
 from dazzle.back.runtime.workspace_aggregation import (  # noqa: F401
@@ -56,11 +53,6 @@ from dazzle.back.runtime.workspace_region_handler import _workspace_region_handl
 from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 from dazzle.core.ir import AppSpec
-
-if FASTAPI_AVAILABLE:
-    from dazzle.back.runtime.route_generator import RouteGenerator
-else:
-    RouteGenerator = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:
     from dazzle.back.events.framework import EventFramework
@@ -259,11 +251,6 @@ class DazzleBackendApp:
             sitespec_data: SiteSpec as dict for public site shell (v0.16.0)
             project_root: Project root for content file loading (v0.16.0)
         """
-        if not FASTAPI_AVAILABLE:
-            raise RuntimeError(
-                "FastAPI is not installed. Install with: pip install fastapi uvicorn"
-            )
-
         # Use config if provided, otherwise build from legacy parameters
         if config is None:
             config = ServerConfig()
@@ -453,7 +440,7 @@ class DazzleBackendApp:
     def _create_app(self) -> None:
         """Create the FastAPI app instance and apply middleware."""
         _maybe_configure_tracer()
-        self._app = _FastAPI(
+        self._app = FastAPI(
             title=self._appspec.name,
             description=self._appspec.title or f"Dazzle Backend: {self._appspec.name}",
             version=self._appspec.version,

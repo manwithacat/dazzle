@@ -11,7 +11,9 @@ from functools import partial
 from typing import Any
 from uuid import UUID
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from .file_storage import FileService, FileValidationError
 
@@ -67,8 +69,6 @@ async def _upload_file(
 
     Returns file metadata including ID and URLs.
     """
-    from fastapi import HTTPException
-
     from .image_processor import ThumbnailService
 
     thumbnail_service = ThumbnailService()
@@ -156,8 +156,6 @@ async def _upload_file(
 
 async def _get_file_info(deps: _FileDeps, file_id: str) -> dict[str, Any]:
     """Get file metadata."""
-    from fastapi import HTTPException
-
     try:
         uuid_id = UUID(file_id)
     except ValueError:
@@ -187,9 +185,6 @@ async def _get_file_info(deps: _FileDeps, file_id: str) -> dict[str, Any]:
 
 async def _download_file(deps: _FileDeps, file_id: str) -> Any:
     """Download file content."""
-    from fastapi import HTTPException
-    from fastapi.responses import Response
-
     try:
         uuid_id = UUID(file_id)
     except ValueError:
@@ -212,9 +207,6 @@ async def _download_file(deps: _FileDeps, file_id: str) -> Any:
 
 async def _stream_file(deps: _FileDeps, file_id: str) -> Any:
     """Stream file content."""
-    from fastapi import HTTPException
-    from fastapi.responses import StreamingResponse
-
     try:
         uuid_id = UUID(file_id)
     except ValueError:
@@ -255,9 +247,6 @@ async def _get_thumbnail(
 
     Generates on-the-fly if not cached.
     """
-    from fastapi import HTTPException
-    from fastapi.responses import Response
-
     from .image_processor import ImageProcessor, ThumbnailService
 
     thumbnail_service = ThumbnailService()
@@ -305,8 +294,6 @@ async def _get_thumbnail(
 
 async def _delete_file(deps: _FileDeps, file_id: str) -> dict[str, Any]:
     """Delete a file."""
-    from fastapi import HTTPException
-
     try:
         uuid_id = UUID(file_id)
     except ValueError:
@@ -330,8 +317,6 @@ async def _get_entity_files(
     field_name: str | None = None,
 ) -> dict[str, Any]:
     """Get all files associated with an entity."""
-    from fastapi import HTTPException
-
     try:
         files = deps.file_service.get_entity_files(entity, entity_id, field_name)
     except Exception as e:
@@ -385,11 +370,6 @@ def create_file_routes(
         prefix: URL prefix for routes
         require_auth: Whether to require authentication
     """
-    try:
-        from fastapi import File, Query, Request, UploadFile
-    except ImportError:
-        raise ImportError("FastAPI is required for file routes. Install with: pip install fastapi")
-
     import dazzle.back.runtime.rate_limit as _rl
 
     deps = _FileDeps(
@@ -458,11 +438,6 @@ def create_static_file_routes(
         base_path: Base path for uploaded files
         url_prefix: URL prefix for file access
     """
-    try:
-        from fastapi.staticfiles import StaticFiles
-    except ImportError:
-        raise ImportError("FastAPI is required for static files")
-
     from pathlib import Path
 
     path = Path(base_path)

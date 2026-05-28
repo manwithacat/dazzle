@@ -16,6 +16,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
+
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
 from dazzle.core.manifest import resolve_api_url
@@ -23,15 +26,6 @@ from dazzle.core.strings import to_api_plural
 from dazzle.ui.utils.expression_eval import evaluate_simple_condition
 
 logger = logging.getLogger(__name__)
-
-try:
-    from fastapi import APIRouter, Request
-    from fastapi.responses import HTMLResponse, RedirectResponse, Response
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
 
 # =============================================================================
 # Helpers
@@ -690,9 +684,6 @@ def create_experience_routes(
     Returns:
         FastAPI router with experience routes.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is not installed")
-
     if backend_url is None:
         backend_url = resolve_api_url()
 

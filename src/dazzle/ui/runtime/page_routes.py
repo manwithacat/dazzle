@@ -23,6 +23,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.manifest import resolve_api_url
@@ -31,15 +34,6 @@ from dazzle.render.access_messages import _forbidden_detail
 from dazzle.render.display_names import _inject_display_names
 
 logger = logging.getLogger(__name__)
-
-try:
-    from fastapi import APIRouter, HTTPException, Request
-    from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
 
 # =============================================================================
 # Helpers (module-level, no closure state)
@@ -2226,9 +2220,6 @@ def create_page_routes(
     Returns:
         FastAPI router with page routes.
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is not installed")
-
     if backend_url is None:
         backend_url = resolve_api_url()
 

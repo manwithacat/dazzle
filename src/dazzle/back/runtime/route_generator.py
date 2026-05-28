@@ -42,28 +42,18 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from fastapi import APIRouter as _APIRouter
+from fastapi import Depends, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from dazzle.back.runtime._fastapi_compat import (
-    FASTAPI_AVAILABLE,
-    Depends,
-    HTMLResponse,
-    HTTPException,
-    JSONResponse,
-    Query,
-    Request,
-)
-from dazzle.back.runtime._fastapi_compat import APIRouter as _APIRouter
+from dazzle.back.runtime.auth import AuthContext
+from dazzle.back.runtime.htmx_response import htmx_trigger_headers
 from dazzle.back.runtime.repository import ConstraintViolationError
 from dazzle.back.specs.endpoint import EndpointSpec, HttpMethod
 from dazzle.back.specs.service import OperationKind, ServiceSpec
 from dazzle.core.strings import to_api_plural
-
-if FASTAPI_AVAILABLE:
-    from dazzle.back.runtime.auth import AuthContext
-    from dazzle.back.runtime.htmx_response import htmx_trigger_headers
-else:
-    AuthContext = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:
     from dazzle.back.runtime.audit_log import AuditLogger
@@ -785,8 +775,6 @@ def _with_htmx_triggers(
     if not _is_htmx_request(request):
         return result
 
-    from fastapi.responses import JSONResponse as _JSONResponse
-
     # Serialize Pydantic models
     if hasattr(result, "model_dump"):
         body = result.model_dump(mode="json")
@@ -794,8 +782,6 @@ def _with_htmx_triggers(
         # Plain dicts may contain UUID or other non-JSON-serializable values
         # from the CRUD service layer.  Pre-convert via jsonable_encoder so
         # Starlette's JSONResponse (which uses stdlib json.dumps) doesn't crash.
-        from fastapi.encoders import jsonable_encoder
-
         body = jsonable_encoder(result)
     else:
         body = result
@@ -803,7 +789,7 @@ def _with_htmx_triggers(
     headers = htmx_trigger_headers(entity_name, action)
     if redirect_url:
         headers["HX-Redirect"] = redirect_url
-    return _JSONResponse(content=body, headers=headers)
+    return JSONResponse(content=body, headers=headers)
 
 
 async def _parse_request_body(request: Any) -> dict[str, Any]:
@@ -2293,8 +2279,6 @@ def _enforce_create_scope(
         # Create rules exist but none matches this role — default-deny.
         # Same shape as `_resolve_scope_filters` returning None on
         # list/read/update/delete.
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=403,
             detail={
@@ -2362,8 +2346,6 @@ def _enforce_create_scope(
                 entity_name,
             )
             continue
-
-    from fastapi import HTTPException
 
     raise HTTPException(
         status_code=403,
@@ -2904,8 +2886,6 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
         if hasattr(result, "model_dump"):
             item = result.model_dump(mode="json")
         elif isinstance(result, dict):
-            from fastapi.encoders import jsonable_encoder
-
             item = jsonable_encoder(result)
         else:
             return None
@@ -3366,8 +3346,6 @@ def create_create_handler(
         # the create with the right 4xx/5xx and a precise message
         # rather than silently persisting an unverified key.
         if storage_bindings:
-            from fastapi import HTTPException
-
             from dazzle.back.runtime.storage import (
                 StorageVerificationError,
                 verify_storage_field_keys,
@@ -4147,9 +4125,6 @@ class RouteGenerator:
             node_graph_specs: Optional dict mapping node entity names to graph metadata (#619)
             db_manager: Optional database manager for neighborhood queries (#619)
         """
-        if not FASTAPI_AVAILABLE:
-            raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
-
         self.services = services
         self.models = models
         self.schemas = schemas or {}
@@ -4679,9 +4654,6 @@ def generate_crud_routes(
     Returns:
         FastAPI router with CRUD routes
     """
-    if not FASTAPI_AVAILABLE:
-        raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
-
     router = _APIRouter()
     prefix = prefix or f"/{to_api_plural(entity_name)}"
     tags = tags or [entity_name]
@@ -4745,8 +4717,6 @@ def generate_crud_routes(
         summary=f"Update a single field on {entity_name}",
     )
     async def patch_field(entity_id: UUID, field_name: str, request: Request) -> Any:
-        from fastapi.responses import PlainTextResponse
-
         # Validate: reject protected / computed fields
         _PROTECTED_FIELDS = {"id", "created_at", "updated_at"}
         if field_name in _PROTECTED_FIELDS or field_name.endswith("_id"):
