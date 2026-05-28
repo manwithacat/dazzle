@@ -48,16 +48,16 @@ When creating custom Python code in a Dazzle project (not the framework itself),
 
 ## Authoring vs API Boundary (#1222)
 
-**Dazzle structural authoring stays in the Claude Code session.** The framework's MCP, knowledge graph, parser source, IR types, examples, and CLAUDE.md are scaffolding built around the assumption that an in-session agent does DSL synthesis with full Dazzle-specific context. An out-of-context API call lacks that context and cannot produce idiomatic DSL.
+**Dazzle structural authoring stays in the Claude Code session.** The MCP, KG, parser, IR types, examples, and CLAUDE.md all assume an in-session agent does DSL synthesis with full Dazzle context; an out-of-context API call can't produce idiomatic DSL.
 
 - ✅ **OK to delegate to API:** domain-neutral structural extraction (parse a SPEC.md into entities/personas/business rules), language tasks (summarise, translate, classify) — anything where the output is *data*, not Dazzle code.
 - ❌ **Not OK to delegate to API:** authoring or modifying `.dsl` files, IR types, parser dispatchers, schema migrations, examples, fixtures. The in-session agent does this work directly.
 
-If you find yourself wiring up an LLM call that writes Dazzle DSL, that's the warning sign. The right shape is: LLM call returns structured analysis → agent reads analysis + writes DSL using current Dazzle expertise.
+Warning sign: wiring an LLM call that *writes* DSL. Right shape: LLM call returns structured analysis → in-session agent writes the DSL with current Dazzle expertise.
 
 ## Counter-Prior Catalogue
 
-Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell scripts), call `knowledge counter_prior code_shape="<one-sentence description>"` to check the catalogue at `docs/counter-priors/` for matching pathologies (exceptions-as-control-flow, n+1, raw-sql, shell-strict, polymorphic associations, etc.). Same path for spec-driven structural choices via `query="<excerpt>"`. The bootstrap MCP entry point already surfaces antipattern flags from this catalogue; the explicit call is for everything outside the bootstrap moment. See `docs/counter-priors/INDEX.md` for the full list.
+Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell), call `knowledge counter_prior code_shape="<one-sentence description>"` to check `docs/counter-priors/` for matching pathologies (exceptions-as-control-flow, n+1, raw-sql, shell-strict, polymorphic-associations, …); use `query="<excerpt>"` for spec-driven structural choices. Bootstrap already surfaces these flags — the explicit call is for everything outside that moment. Full list: `docs/counter-priors/INDEX.md`.
 
 ## Commands
 
@@ -107,7 +107,7 @@ surface task_list "Tasks":
 
 *(This is the user-facing subset. The parser also dispatches on `app`, `test`, `flow`, `rule`, `message`, `channel`, `asset`, `document`, `template`, `demo`, `event_model`, `subscribe`, `projection`, `stream`, `hless`, `policies`, `tenancy`, `interfaces`, `data_products`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `job`, `audit`, `search`, `grant_schema`, `param`, `question`. The drift test in `tests/unit/test_docs_drift.py` asserts every name listed above actually exists in the parser.)*
 
-**On `hless`** — yes, the keyword is an acronym (HLESS = High-Level Event Semantics Specification). It's **deliberately** distinct from Kafka- and stack-flavoured terminology like "stream", "topic", "consumer-group". Dazzle's event semantics are aligned with academic event-systems literature — not Kafka's vocabulary. The keyword is a load-bearing signal of that distinction. **Don't propose renaming it** (this has been suggested + rejected — see #1069 API-003). The full rationale (semantic drift, vocabulary lock-in, human imprecision — the three failure modes HLESS addresses) is in [`docs/architecture/hless-deep-dive.md`](../docs/architecture/hless-deep-dive.md).
+**On `hless`** (HLESS = High-Level Event Semantics Specification): a deliberate, load-bearing break from Kafka/stack vocabulary ("stream", "topic", "consumer-group") — Dazzle's event semantics follow academic event-systems literature. **Don't propose renaming it** (suggested + rejected, #1069 API-003). Rationale — semantic drift, vocabulary lock-in, human imprecision — in [`docs/architecture/hless-deep-dive.md`](../docs/architecture/hless-deep-dive.md).
 
 **Scope rules** compile to a formal predicate algebra and are statically validated against the FK graph at `dazzle validate` time. Supported forms:
 - Direct: `school_id = current_user.school` — column equality check
@@ -331,4 +331,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.80.20 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.80.21 | **Python**: 3.12+ | **Status**: Production Ready

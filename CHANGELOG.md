@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.21] - 2026-05-28
+
+### Changed
+
+- Compressed four verbose prose sections in `.claude/CLAUDE.md` (`Authoring vs API Boundary`, `Counter-Prior Catalogue`, the `hless` note) with zero fact loss — tighter agent-facing guidance, no semantic change. Reference tables and the `**Constructs**:` list (guarded by `tests/unit/test_docs_drift.py`) are untouched.
+
 ## [0.80.20] - 2026-05-28
 
 ### Added
