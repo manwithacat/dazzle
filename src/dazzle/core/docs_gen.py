@@ -11,6 +11,7 @@ Usage:
 """
 
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -364,31 +365,39 @@ def _render_page(
     return "\n".join(lines)
 
 
+_AUTO_SOURCE_GENERATORS: dict[str, Callable[[], str]] = {}
+
+
+def register_auto_source(name: str, generator: Callable[[], str]) -> None:
+    """Register a live-inventory generator for an ``auto_source`` doc page.
+
+    Layers above core (e.g. ``dazzle.mcp``) register here — at import time of
+    their inventory module — so core never imports them. Keeps the core→mcp
+    isolation boundary clean (smells check 1.3).
+    """
+    _AUTO_SOURCE_GENERATORS[name] = generator
+
+
 def _generate_auto_source(source: str) -> str:
-    """Generate body content for an auto-source page.
+    """Generate body content for an auto-source page via the registry."""
+    generator = _AUTO_SOURCE_GENERATORS.get(source)
+    if generator is None:
+        raise ValueError(
+            f"Unknown auto_source {source!r}. Register it via "
+            "docs_gen.register_auto_source(...) (e.g. dazzle.mcp.server.docs_inventory) "
+            "or fix the doc_pages.toml entry."
+        )
+    return generator()
 
-    Each value of ``auto_source`` maps to a generator function that introspects
-    live code and returns markdown. New live-inventory pages register their
-    generator here.
+
+def render_mcp_tools_inventory(tools: list[Any]) -> str:
+    """Render the MCP tool inventory page from a list of tool objects.
+
+    The mcp layer owns the registry and supplies ``tools``; core only renders.
+    Registered as the ``mcp_tools`` auto-source from
+    ``dazzle.mcp.server.docs_inventory`` so core never imports ``dazzle.mcp``.
     """
-    if source == "mcp_tools":
-        return _generate_mcp_tools_inventory()
-    raise ValueError(
-        f"Unknown auto_source {source!r}. Register a generator in "
-        "docs_gen._generate_auto_source or fix the doc_pages.toml entry."
-    )
-
-
-def _generate_mcp_tools_inventory() -> str:
-    """Produce the MCP tool inventory page from the live tool registry.
-
-    Source of truth: dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools().
-    Run ``dazzle docs generate`` after adding/removing tools or operations to
-    refresh the published inventory.
-    """
-    from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
-
-    tools = sorted(get_all_consolidated_tools(), key=lambda t: t.name)
+    tools = sorted(tools, key=lambda t: t.name)
     total_ops = 0
     lines: list[str] = []
 

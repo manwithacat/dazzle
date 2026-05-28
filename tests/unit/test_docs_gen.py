@@ -1,5 +1,6 @@
 """Tests for documentation generator."""
 
+import dazzle.mcp.server.docs_inventory  # noqa: F401 — registers the mcp_tools auto-source
 from dazzle.core.docs_gen import (
     check_docs_coverage,
     generate_reference_docs,
@@ -61,9 +62,9 @@ class TestMcpToolsInventory:
     """Tests for the live MCP tool inventory page."""
 
     def test_inventory_renders_at_least_one_tool(self) -> None:
-        from dazzle.core.docs_gen import _generate_mcp_tools_inventory
+        from dazzle.mcp.server.docs_inventory import generate_mcp_tools_inventory
 
-        out = _generate_mcp_tools_inventory()
+        out = generate_mcp_tools_inventory()
         assert "## Tool index" in out
         assert "## Per-tool detail" in out
         # Spot-check a known stable tool.
@@ -73,10 +74,11 @@ class TestMcpToolsInventory:
 
     def test_inventory_counts_match_registry(self) -> None:
         """The header tally must match what the registry actually exposes."""
-        from dazzle.core.docs_gen import _extract_operations, _generate_mcp_tools_inventory
+        from dazzle.core.docs_gen import _extract_operations
+        from dazzle.mcp.server.docs_inventory import generate_mcp_tools_inventory
         from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
 
-        out = _generate_mcp_tools_inventory()
+        out = generate_mcp_tools_inventory()
         tools = get_all_consolidated_tools()
         total_ops = sum(len(_extract_operations(t.inputSchema)) for t in tools)
         assert f"**Live count:** {len(tools)} tools, {total_ops} operations." in out

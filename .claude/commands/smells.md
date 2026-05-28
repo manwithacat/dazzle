@@ -1,6 +1,6 @@
 Run a two-phase code smells analysis: regression checks against established rules, then a scan for new systemic patterns. This is a read-only analysis — do NOT make any code changes.
 
-**This command uses parallel subagents** — Phase 1 regression checks and Phase 2 pattern scans run concurrently across categories.
+**This command runs as a Workflow** (`.claude/workflows/smells.js`): the regression checks and the three pattern-category finders fan out as parallel agents, each returning schema-validated findings. This main loop then writes the report + log from the validated result and presents the summary. (Replaced the hand-rolled "dispatch 4 background subagents" prose — the Workflow gives deterministic fan-out + structured output.)
 
 ## Backward Compatibility Policy
 
@@ -10,141 +10,29 @@ Run a two-phase code smells analysis: regression checks against established rule
 - **Communicate breaking changes** via CHANGELOG.md entries and GitHub issue comments. That is sufficient notice.
 - **Flag duplication caused by compat shims** as a smell. Wrapper functions that exist solely for backward compatibility are themselves a code smell to be eliminated.
 
+(The workflow's finder prompts already encode this policy + the scope below.)
+
 ## Scope
 
 Focus on `src/dazzle/` — the merged tree (`back/`, `ui/`, `render/` all live under it since #1056). Ignore `tests/`, `examples/`, and auto-generated files.
 
----
+## 1. Run the workflow
 
-## Dispatch parallel analysis
-
-**Dispatch ALL of these subagents in a single message** using `run_in_background: true`. Omit the `model` override so each inherits the session model — these need judgment for pattern recognition (see the Subagent Model Policy in CLAUDE.md).
-
-### Subagent 1: Regression checks (Phase 1)
+Invoke the **Workflow** tool with `name: "smells"`. It returns:
 
 ```
-Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle. Report PASS or FAIL for each:
-
-1.1 No swallowed exceptions:
-  grep -rn "except Exception: pass" src/ --include="*.py"
-  grep -rn "except Exception:$" src/ --include="*.py" (check next line is just pass)
-  PASS = 0 bare except-pass patterns. Note: except Exception followed by logging is fine.
-
-1.2 No redundant except tuples:
-  grep -rn "except (ImportError, Exception)" src/ --include="*.py"
-  grep -rn "except (json.JSONDecodeError, Exception)" src/ --include="*.py"
-  grep -rn "except (JSONDecodeError, Exception)" src/ --include="*.py"
-  PASS = 0 results across all three.
-
-1.3 Core→MCP isolation:
-  grep -rn "from dazzle\.mcp" src/dazzle/core/
-  PASS = 0 results.
-
-1.4 No project_path: Any in handlers:
-  grep -rn "project_path: Any" src/dazzle/mcp/server/handlers/
-  PASS = 0 results.
-
-1.5 All fallback paths log at WARNING or above:
-  Spot-check patterns from 1.1 and 1.2.
-
-1.5a No silent handlers in event delivery path:
-  grep -rn "except" src/dazzle/back/events/ src/dazzle/back/channels/ --include="*.py" -A2 | grep -E "pass$|return$"
-  PASS = 0 silent handlers.
-
-1.5b getattr() with string literals:
-  grep -rn "getattr(" src/ --include="*.py" | wc -l
-  PASS = count < 200. TRACK = report count if >=200.
-
-1.6 Function length (aspirational):
-  Count functions >150 lines in src/. Report count and top 5 longest.
-
-1.7 Class length (aspirational):
-  Count classes >800 lines in src/. Report count and any offenders.
-
-1.8 Declarative Alpine @<event>.window bindings leak across HTMX morph nav
-  (issue #795 — fixed component must own listener lifecycle):
-  grep -rnE '@(pointer|mouse|key|resize|scroll|click|touch)[a-z]*\.window' src/dazzle/ui/ --include="*.html"
-  PASS = 0 results. Each hit is a latent lifecycle bug: move the listener
-  to the component's init()/destroy() via addEventListener/removeEventListener.
-
-Return results as:
-REGRESSION_RESULTS:
-| # | Check | Status | Details |
-(one row per check)
+{
+  regressions: [{id, check, status: PASS|FAIL|TRACK, details}],
+  patterns:    [{pattern, category, instances, root_cause, canonical_fix, done_criteria, enforcement}],
+  regressed:   <count of FAIL regressions>
+}
 ```
 
-### Subagent 2: Error handling & coupling patterns
+The finders inherit the session model (no `model` override) per the Subagent Model Policy in CLAUDE.md — pattern recognition is judgment work.
 
-```
-Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it). Ignore tests/, examples/, auto-generated files.
+## 2. Write the report
 
-Categories:
-1. Error handling — silent failures, inconsistent exception strategy, missing retries on I/O
-2. Coupling — layer violations, circular imports, inappropriate intimacy, fan-in >8
-
-For each pattern found (must have >=2 instances), report:
-PATTERN: <name>
-CATEGORY: error_handling|coupling
-INSTANCES: <count>
-ROOT_CAUSE: <why this keeps appearing>
-CANONICAL_FIX: <the one correct way to fix>
-DONE_CRITERIA: <a grep command to verify the fix>
-ENFORCEMENT: <how to prevent recurrence>
-```
-
-### Subagent 3: Duplication & type safety patterns
-
-```
-Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it). Ignore tests/, examples/, auto-generated files.
-
-Categories:
-1. Duplication — near-duplicate blocks >10 lines, copy-paste across handlers
-2. Type safety — Any where concrete types are known, # type: ignore masking real issues
-
-Approach:
-- Compare structurally similar files (e.g. MCP handlers, CLI commands) for duplication
-- Use Grep to find `Any` annotations and `# type: ignore` comments
-- Focus on patterns with >=2 instances
-
-For each pattern found, report:
-PATTERN: <name>
-CATEGORY: duplication|type_safety
-INSTANCES: <count>
-ROOT_CAUSE: <why>
-CANONICAL_FIX: <fix>
-DONE_CRITERIA: <verification command>
-ENFORCEMENT: <prevention>
-```
-
-### Subagent 4: Complexity & mutable globals
-
-```
-Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it). Ignore tests/, examples/, auto-generated files.
-
-Categories:
-1. Complexity — functions >80 lines, deeply nested conditionals (3+ levels), god classes
-2. Mutable globals — hidden singletons, module-level mutable state, thread-unsafe patterns
-
-Approach:
-- Use wc -l on source files to find the largest files (complexity hotspots)
-- Look for deeply nested if/for/while blocks
-- Search for module-level mutable dicts/lists/sets
-
-For each pattern found (>=2 instances), report:
-PATTERN: <name>
-CATEGORY: complexity|mutable_globals
-INSTANCES: <count>
-ROOT_CAUSE: <why>
-CANONICAL_FIX: <fix>
-DONE_CRITERIA: <verification command>
-ENFORCEMENT: <prevention>
-```
-
----
-
-## Collect and compile report
-
-Once ALL subagents complete, compile the results into:
+From the returned data, write `agent/smells-report.md`:
 
 ```
 ## Code Smells Report — [date]
@@ -152,27 +40,27 @@ Once ALL subagents complete, compile the results into:
 ### Regression Check Results
 | # | Check | Status | Details |
 |---|-------|--------|---------|
-(from Subagent 1)
+(one row per `regressions` entry)
 
 ### New Patterns Found
 | Pattern | Category | Instances | Root Cause | Fix |
 |---------|----------|-----------|------------|-----|
-(merged from Subagents 2-4, ordered by severity × instance count)
+(one row per `patterns` entry, ordered by severity × instance count)
 
 ### Recommended Next Actions
-1. [Highest priority pattern to fix]
-2. [Second priority]
-3. [Third priority]
+1. [highest-priority pattern]
+2. [second]
+3. [third]
 
 ### Comparison with Previous Round
 - Regressions: X checks regressed
-- New patterns: Y new patterns found
-- Resolved since last round: [list any that are gone]
+- New patterns: Y found
+- Resolved since last round: [diff against the previous agent/smells-report.md if present]
 ```
 
-Save the report to `agent/smells-report.md`.
+## 3. Append to the log
 
-Then append a timestamped summary to `agent/smells-log.md` (create if it doesn't exist):
+Append a timestamped summary to `agent/smells-log.md` (create if missing):
 
 ```
 ## Smells Run — [date]
@@ -182,4 +70,6 @@ Then append a timestamped summary to `agent/smells-log.md` (create if it doesn't
 - Commit: [current HEAD sha]
 ```
 
-Do NOT make any changes to the code. This is a read-only analysis.
+## 4. Report to the user
+
+Present the regression table and the top patterns. **Surface any FAIL regressions first** — those are the ones that broke an established rule. Do NOT make any code changes; this is read-only analysis.

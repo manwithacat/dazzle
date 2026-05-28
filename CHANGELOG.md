@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.23] - 2026-05-28
+
+### Changed
+
+- Migrated the three read-only scan commands (`/smells`, `/xproject`, `/fuzz` static sweep) to the Workflow tool: `.claude/workflows/{smells,xproject,fuzz}.js` do the parallel finder fan-out with schema-validated output; the command docs scout inputs and keep side effects (file writes, `gh` issue filing) in the main loop. `/check` rewritten to run its quality commands as inline parallel Bash (ruff-first to fix a fixer-vs-reader race) instead of a Haiku-subagent-per-command.
+
+### Fixed
+
+- **Core→MCP isolation** (smells 1.3): `core/docs_gen.py` no longer imports `dazzle.mcp`. The MCP-tools inventory generator moved to `dazzle/mcp/server/docs_inventory.py` and registers into core via a new `register_auto_source()` registry; `render_mcp_tools_inventory(tools)` in core is now a pure renderer.
+- **Alpine listener-lifecycle leak** (smells 1.8): removed redundant declarative `@pointermove.window`/`@pointerup.window` bindings from `ui/runtime/static/test-data-table.html` — the real `dzTable` component already owns those listeners in `init()`/`destroy()` (the #795-correct pattern).
+- **Silent IO/JSON-decode swallow**: new `dazzle.core.io_utils.load_json_or(path, default)` splits missing (silent) from corrupt (WARNING + default); migrated the `composition_references` manifest loader that previously overwrote a corrupt manifest silently.
+
+### Agent Guidance
+
+- `/smells`, `/xproject`, `/fuzz` now run as Workflows. Invoke via `name:` in a fresh session, or `scriptPath: .claude/workflows/<name>.js` to pick up mid-session edits (the `name:` registry snapshots at session start). List args may arrive stringified — the scripts coerce array/JSON-string/CSV. Workflow findings are LLM-generated and need verification before action (observed: inflated instance counts, occasional false positives).
+- Two smell-pattern fixes were **deferred as focused cycles** after inspection showed inflated counts: the `_fastapi_compat` consolidation (grep false-positives + missing shim symbols + load-bearing optional-import behavior) and the silent-swallow AST drift-gate.
+
 ## [0.80.22] - 2026-05-28
 
 ### Changed

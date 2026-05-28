@@ -1,6 +1,6 @@
 Run all quality checks on modified files. This is the on-demand quality gate — use it before shipping or when you want to validate your work.
 
-**This command uses parallel subagents** to run independent checks concurrently.
+**Runs the checks as parallel Bash calls in the main loop — not subagents.** At the session's context size the per-command isolation a subagent buys isn't worth the dispatch overhead: deterministic command output is cheap to read directly, and running inline keeps every result in one place. (This replaced the earlier "one Haiku subagent per command" design — the isolation stopped paying off at large context.)
 
 ## Steps
 
@@ -12,66 +12,33 @@ Run `git diff --name-only HEAD` to get the list of modified files. Categorize:
 - `parser_changed` = any files matching `src/dazzle/core/dsl_parser` in the diff
 - `mcp_changed` = any files matching `src/dazzle/mcp/` in the diff
 
-### 2. Dispatch parallel checks
+### 2. Lint + format FIRST (it mutates files)
 
-**Dispatch ALL applicable checks as background subagents in a single message.** Use `model: "claude-haiku-4-5-20251001"` for each — these are mechanical checks and Haiku 4.5 is both cheapest and fast. (The bare `haiku` alias was retired when Haiku 3 shut down; reach for the explicit 4.5 id.)
+Run this **alone, before** the parallel read-only checks — `ruff` rewrites files, so racing it against mypy/pytest would let them read half-written source (a latent bug in the old subagent fan-out, which ran the fixer concurrently with the readers):
 
-Always dispatch these two (they always apply):
-
-**Lint + format agent:**
-```
-Run lint and format checks on the Dazzle project:
-1. Run: ruff check src/ tests/ --fix && ruff format src/ tests/
-2. If ruff made changes, report which files were fixed
-3. If errors remain after --fix, list them
-Return: LINT: pass|fail (N issues)
+```bash
+ruff check src/ tests/ --fix && ruff format src/ tests/
 ```
 
-**Type check agent:**
-```
-Run mypy type checks on the Dazzle project (must match /ship and CI — keep all three in sync):
-1. Run: mypy src/dazzle --ignore-missing-imports --exclude 'eject'
-2. Report any errors with file paths and line numbers
-Return: MYPY: pass|fail (N errors)
-```
+Note which files ruff changed. If errors remain after `--fix`, record them for the report.
 
-Conditionally dispatch these based on what changed:
+### 3. Run the read-only checks in parallel
 
-**Unit tests agent** (if `py_changed`):
-```
-Run unit tests for the Dazzle project:
-1. Run: pytest tests/unit -x -q --tb=short -m "not slow"
-2. Report pass/fail count and any failure details
-Return: TESTS: pass|fail (N passed, M failed)
-```
+Issue all applicable commands as **separate Bash calls in a single message** so they run concurrently. Always run the type check; add the rest based on what changed in step 1:
 
-**DSL validation agent** (if `dsl_changed`):
-```
-Run DSL validation for the Dazzle project:
-1. Run: dazzle validate
-2. Report any parse or validation errors
-Return: DSL: pass|fail (details)
-```
+| Check | Run when | Command |
+|-------|----------|---------|
+| Type | always | `mypy src/dazzle --ignore-missing-imports --exclude 'eject'` |
+| Unit tests | `py_changed` | `pytest tests/unit -x -q --tb=short -m "not slow"` |
+| DSL validation | `dsl_changed` | `dazzle validate` |
+| Parser corpus | `parser_changed` | `pytest tests/parser_corpus/ -x -q --tb=short` |
+| MCP verify | `mcp_changed` | `python scripts/verify-mcp.py` |
 
-**Parser corpus agent** (if `parser_changed`):
-```
-Run parser corpus tests for the Dazzle project:
-1. Run: pytest tests/parser_corpus/ -x -q --tb=short
-2. Report pass/fail count
-Return: PARSER: pass|fail (N passed, M failed)
-```
+The type command **must stay identical to `/ship` and CI** — change one, change all three (see the gate-sync note in `ship.md`).
 
-**MCP verification agent** (if `mcp_changed`):
-```
-Run MCP tool verification for the Dazzle project:
-1. Run: python scripts/verify-mcp.py
-2. Report any missing or misconfigured tools
-Return: MCP: pass|fail (details)
-```
+### 4. Collect and report
 
-### 3. Collect and report
-
-As each subagent completes, collect its result. Once ALL are done, present a summary:
+Read each command's output and present a summary:
 
 ```
 ## Quality Check Results
@@ -80,7 +47,7 @@ As each subagent completes, collect its result. Once ALL are done, present a sum
 |-------|--------|---------|
 | Lint + format | PASS/FAIL | N issues |
 | Type check | PASS/FAIL | N errors |
-| Unit tests | PASS/FAIL | N passed, M failed |
+| Unit tests | SKIP/PASS/FAIL | N passed, M failed |
 | DSL validation | SKIP/PASS/FAIL | reason |
 | Parser corpus | SKIP/PASS/FAIL | reason |
 | MCP verification | SKIP/PASS/FAIL | reason |
@@ -91,4 +58,4 @@ As each subagent completes, collect its result. Once ALL are done, present a sum
 If everything passed, say: **"All checks passed. Ready to ship."**
 If anything failed, list what needs fixing.
 
-Do NOT commit or push. This is a read-only quality check.
+Do NOT commit or push. This is a read-only quality check (apart from `ruff --fix`'s in-place formatting).

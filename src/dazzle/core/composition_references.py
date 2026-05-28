@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.io_utils import load_json_or
+
 logger = logging.getLogger(__name__)
 
 # ── Data Models ──────────────────────────────────────────────────────
@@ -253,25 +255,22 @@ def promote_section(
         source=source,
     )
 
-    # Update manifest
+    # Update manifest. load_json_or surfaces a corrupt manifest at WARNING
+    # rather than silently overwriting it with just the new ref (data loss).
     manifest_path = section_dir / "manifest.json"
     existing_refs: list[ReferenceImage] = []
-    if manifest_path.exists():
-        try:
-            data = json.loads(manifest_path.read_text())
-            for entry in data.get("references", []):
-                existing_refs.append(
-                    ReferenceImage(
-                        filename=entry["filename"],
-                        label=entry.get("label", "good"),
-                        section_type=section_type,
-                        dimensions=entry.get("dimensions", []),
-                        description=entry.get("description", ""),
-                        source=entry.get("source", "unknown"),
-                    )
-                )
-        except (json.JSONDecodeError, OSError):
-            pass
+    data = load_json_or(manifest_path, {})
+    for entry in data.get("references", []):
+        existing_refs.append(
+            ReferenceImage(
+                filename=entry["filename"],
+                label=entry.get("label", "good"),
+                section_type=section_type,
+                dimensions=entry.get("dimensions", []),
+                description=entry.get("description", ""),
+                source=entry.get("source", "unknown"),
+            )
+        )
 
     existing_refs.append(ref)
     save_manifest(section_dir, existing_refs)

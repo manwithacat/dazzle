@@ -1,6 +1,6 @@
 Cross-app integration fuzz sweep — find bugs that `dazzle validate` doesn't catch, file them as GitHub issues, hand off to `/issues` to drain.
 
-**This command uses parallel subagents** — one per app — to scrape boot stderr / lint output for known-bug signatures across every example + fixture.
+**The static sweep runs as a Workflow** (`.claude/workflows/fuzz.js`) — one agent per example/fixture scrapes boot stderr + lint for known-bug signatures, in parallel, returning schema-validated findings. This main loop scouts the app list, passes it in, then keeps the **side effects** (gh dedup + issue filing) under its own control.
 
 ## Why this exists
 
@@ -16,67 +16,40 @@ The fuzz pattern that surfaced them: scrape **boot stderr** for known-bug signat
 
 ## Loop: Fuzz → File → Hand off → Repeat
 
-### Step 1: Discover apps
+### Step 1: Scout apps (main loop)
 
 ```bash
 ls -d examples/*/ fixtures/*/ 2>/dev/null
 ```
 
-Skip `examples/README.md` (not an app). Note: each app has `dsl/app.dsl` (or similar) and is bootable via `dazzle serve --local` from its own directory.
+Skip `examples/README.md` (not an app). Each app has `dsl/app.dsl` (or similar) and boots via `dazzle serve --local` from its own dir.
 
-### Step 2: Dispatch parallel fuzz agents
+### Step 2: Run the sweep workflow
 
-For every discovered app, dispatch one `Explore` subagent with `run_in_background: true`, omitting the `model` override so it inherits the session model — signature-scraping plus false-positive judgment (see the Subagent Model Policy in CLAUDE.md). **All in a single message.**
+Invoke the **Workflow** tool with `name: "fuzz"` and `args:` set to the JSON array of app paths from step 1 (actual array, not a stringified one). Each agent is an `Explore` subagent inheriting the session model (signature-scrape + false-positive judgment — see the Subagent Model Policy in CLAUDE.md), and applies the soft-finding allowlist below before reporting.
 
-Each subagent prompt (substitute `<APP_PATH>` and `<APP_NAME>`):
+It returns `{apps: [{app, status, bugs:[{severity, signature, detail, evidence}], soft:[...]}]}`.
 
-```
-Fuzz the Dazzle app at <APP_PATH>. Find INTEGRATION BUGS — things `dazzle validate` doesn't catch.
+### Step 3: Aggregate + dedup against GitHub (main loop)
 
-Run these checks. Use Bash. Report ONLY problems.
-
-1. `cd <APP_PATH> && dazzle validate 2>&1 | tail -5` — must pass.
-2. `cd <APP_PATH> && dazzle lint 2>&1 | grep -iE "ERROR|FAILED" | head -10` — flag errors only, ignore soft suggestions ("missing display_field", "no fitness.repr_fields", "no command palette" etc.).
-3. **Boot-stderr scrape** (the high-yield check):
-   `cd <APP_PATH> && timeout 8 dazzle serve --local 2>&1 | grep -iE "registered twice|duplicate|not a text-shaped|TypeError|Traceback|ImportError|ValueError|AttributeError|jinja2\\.exceptions|unresolved|UndefinedError" | head -15`
-   Each line that matches IS a bug.
-4. Search the DSL for uses of recently-shipped primitives (rich_text, x-optimistic, x-pull-to-refresh, x-swipe, x-flip, notification, search on, i18n.) and flag any USAGE (not just absence) that looks broken.
-
-Report format (terse, under 200 words):
-
-```
-APP: <APP_NAME>
-STATUS: OK | <N> issues
-BUGS:
-- <severity: HIGH|MEDIUM|LOW> — <one-line description with file:line if known>
-- ...
-SOFT (informational, not for issue-filing):
-- <list of lint suggestions>
-```
-
-If clean, just `STATUS: OK` and stop.
-```
-
-### Step 3: Aggregate findings
-
-Wait for all agents to complete. From the reports, build a deduped table:
+From the returned `apps`, build a deduped table keyed by bug `signature`:
 
 | Bug signature | Apps affected | Severity | Already filed? |
 |---|---|---|---|
 
 For each unique bug:
-- Run `gh issue list --state open --search "in:title <signature>"` to check it isn't already filed.
-- Run `gh issue list --state closed --limit 30 --search "<signature>"` to check it wasn't recently fixed (avoid filing duplicates of just-shipped fixes).
+- `gh issue list --state open --search "in:title <signature>"` — skip if already open.
+- `gh issue list --state closed --limit 30 --search "<signature>"` — skip if recently fixed (avoid dup of a just-shipped fix).
 
-### Step 4: File new issues
+### Step 4: File new issues (main loop)
 
-For each unfiled HIGH or MEDIUM bug, **write the body to a file first**, then pass it via `--body-file`. Inline heredocs mangle markdown — single-quoted ones preserve backslashes (so `\`backticks\`` show literally), double-quoted ones interpret them. Caught the hard way on #1000 (had to be re-edited).
+For each unfiled HIGH or MEDIUM bug, **write the body to a file first**, then pass it via `--body-file`. Inline heredocs mangle markdown — single-quoted ones preserve backslashes, double-quoted ones interpret them. (Caught the hard way on #1000.)
 
 ```bash
 cat > /tmp/fuzz-issue-body.md <<'EOF'
 Fuzz sweep (vX.Y.Z) found <symptom> in <apps affected>:
 
-<verbatim error output as a fenced code block — bare backticks, no escapes>
+<verbatim evidence as a fenced code block>
 
 **Repro:**
 ```bash
@@ -92,25 +65,20 @@ EOF
 gh issue create --title "<terse signature>" --label "needs-triage" --body-file /tmp/fuzz-issue-body.md
 ```
 
-LOW bugs (single-app cosmetic warnings) — list them in the summary but don't auto-file. The user can promote them if they want.
-
-False positives — explicitly flag and don't file. The fuzz agent may overreach (e.g. assert "no api_pack declared" without checking `dazzle.api_kb`). Skip if a quick verification disproves the claim.
+LOW bugs (single-app cosmetic) — list in the summary, don't auto-file. The workflow already demotes soft-allowlist items; if any slip through into `bugs`, demote them here.
 
 ### Step 5: Print fuzz summary
 
 ```
 ## Fuzz Sweep — <date>
-
 ### Apps scanned: <N>
 ### Bugs found: <N> (filed: <M>, soft: <K>)
 
 | App | Status | Bugs |
 |-----|--------|------|
-| ... | ... | ... |
 
 ### Filed issues
 - #<num>: <title>
-- ...
 
 ### Soft findings (not filed)
 - <app>: <description>
@@ -122,27 +90,22 @@ If any issues were filed:
 
 > Filed N issue(s). Run `/loop /issues` to drain them, or `/issues` for one pass.
 
-Then **stop**. The user (or the next `/issues` cycle) takes it from here.
-
-If no new issues were filed: report clean and stop.
+Then **stop**. If no new issues were filed: report clean and stop.
 
 ## Soft-finding allowlist
 
-These warnings are informational and should NEVER be filed as issues by this command:
+These warnings are informational and must NEVER be filed (the workflow finder prompt encodes the same list, but enforce it again on aggregation):
 
 - `entity 'X' has permissions but no surfaces` — intentional in shape-coverage fixtures
 - `no fitness.repr_fields` — fitness-evaluation hint, not a bug
-- `no command palette fragment` — capability suggestion
-- `no timeline workspace region` — capability suggestion
+- `no command palette fragment` / `no timeline workspace region` — capability suggestions
 - `5 fields in a single section` — multi-section form hint
-- `permit but no scope` warnings on `pra` and `shapes_validation` fixtures — intentional shape coverage
-- Sentinel `BL-XX` warnings — they're business-logic linker hints, not runtime bugs
-
-If a fuzz agent reports any of the above as a "bug", silently demote to "soft" and don't file.
+- `permit but no scope` on `pra` / `shapes_validation` fixtures — intentional shape coverage
+- Sentinel `BL-XX` warnings — business-logic linker hints, not runtime bugs
 
 ## Interactive (runtime) fuzz — complement to the static sweep above
 
-The static sweep above is fast and good at the boot-stderr signature class. It cannot exercise JavaScript components — race conditions in dz-richtext, htmx swap timing, paste edge cases, contenteditable selection bugs.
+The static sweep is fast and good at the boot-stderr signature class. It cannot exercise JavaScript components — race conditions in dz-richtext, htmx swap timing, paste edge cases, contenteditable selection bugs.
 
 For that, use the headless-Playwright runner at `src/dazzle/testing/fuzz_runtime/runner.py`. Per app it:
 
@@ -150,13 +113,6 @@ For that, use the headless-Playwright runner at `src/dazzle/testing/fuzz_runtime
 2. Authenticates as admin via `/__test__/authenticate`.
 3. Drives each supported widget through a battery of known-tricky interactions (selection, paste from corpus, undo/redo, lifecycle remount).
 4. Reports console errors, page errors, schema/structure assertions.
-
-Coverage matrix today:
-
-| Widget | Battery |
-|---|---|
-| dz-richtext | type → hidden sync, Ctrl+B (incl. block-vs-inline nesting check #1000), paste javascript:/`<script>`/h1/h4/Word styles, htmx-style remount lifecycle |
-| (more to come — combobox, picker, optimistic-UI form mid-mutation) | |
 
 **Run it directly:**
 
@@ -171,17 +127,13 @@ for c in report.failures:
 "
 ```
 
-**When to run interactive fuzz:**
-
-- After shipping a JS-touching primitive (any new `widget=`, Alpine directive, htmx-bridge change).
-- After a refactor of `dz-richtext.js`, `dz-alpine.js`, or `dz-widget-registry.js`.
-- When something feels off but the static sweep is clean.
+**When to run interactive fuzz:** after shipping a JS-touching primitive (any new `widget=`, Alpine directive, htmx-bridge change); after a refactor of `dz-richtext.js`, `dz-alpine.js`, or `dz-widget-registry.js`; when something feels off but the static sweep is clean.
 
 **Pattern the spike taught us** (see #1000): static tests prove the SHAPE of the JS is right (no `execCommand`, has `aria-pressed`, registers under `richtext`). They prove zero about its BEHAVIOUR. Real edge cases — like `<strong>` wrapping a block element when the selection spans a whole `<p>` — only surface in a real browser doing real interactions.
 
 ## When to run (static sweep)
 
-- After shipping a non-trivial framework primitive (a new `widget=`, fragment, channel, scope-pattern, etc.) — verify it doesn't break existing apps.
+- After shipping a non-trivial framework primitive (a new `widget=`, fragment, channel, scope-pattern) — verify it doesn't break existing apps.
 - Before a 0.X → 0.(X+1) minor bump — sanity-check the upcoming release.
-- On a recurring loop: `/loop 4h /fuzz` (or longer; 4h is once-an-overnight cadence).
+- On a recurring loop: `/loop 4h /fuzz` (once-an-overnight cadence).
 - Manually when something feels off and `validate` says clean.
