@@ -144,7 +144,7 @@ def test_token_tampered(running_signable_app) -> None:  # type: ignore[no-untype
     # expectation for token_invalid is 'sent', so the row at 'viewed' is a
     # discrepancy — grade is fail.  That is the correct runtime behaviour:
     # the server refused the tampered token, leaving the doc at 'viewed'.
-    assert outcome.functional["final_row_status"] in ("sent", "viewed")
+    assert outcome.functional["final_row_status"] == "viewed"
 
 
 def test_validator_rejected(running_signable_app_with_reject) -> None:  # type: ignore[no-untyped-def]
@@ -162,7 +162,7 @@ def test_validator_rejected(running_signable_app_with_reject) -> None:  # type: 
     result = by_name["sign_document"].handler(authority_confirmed=True)
 
     # Confirm the sign attempt was rejected by the validator (HTTP 400).
-    assert "400" in result or "Signed" in result  # tool returns the HTTP status
+    assert "400" in result  # tool returns the HTTP status
 
     outcome = verify_signing_outcome(
         action_sink=sink,
