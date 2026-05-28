@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
 from dazzle.core import ir
+from dazzle.core.lexer import Lexer, TokenType
 
 
 def test_tenant_host_spec_minimal_fields():
@@ -25,3 +28,10 @@ def test_tenant_host_spec_is_frozen():
     spec = ir.TenantHostSpec(domain="example.com", slug_field="slug")
     with pytest.raises(ValidationError):
         spec.domain = "other.com"  # type: ignore[misc]
+
+
+def test_lexer_emits_tenant_host_token():
+    """The lexer recognises `tenant_host` as a keyword."""
+    tokens = list(Lexer("tenant_host", Path("<test>")).tokenize())
+    assert tokens[0].type == TokenType.TENANT_HOST
+    assert tokens[0].value == "tenant_host"

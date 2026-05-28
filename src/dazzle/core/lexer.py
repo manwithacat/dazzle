@@ -185,6 +185,8 @@ class TokenType(Enum):
     SIGNING_VALIDATOR = "signing_validator"
     # v0.79.12 (#1283 phase 6a): project-supplied document template hook
     SIGNING_TEMPLATE = "signing_template"
+    # #1289: per-entity Host-header tenant resolution
+    TENANT_HOST = "tenant_host"
     # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity declaration
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities
