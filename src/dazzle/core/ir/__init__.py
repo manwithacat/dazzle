@@ -907,6 +907,7 @@ __all__ = [
     "AccessSpec",
     "ScopeRule",
     "TemporalSpec",
+    "TenantHostSpec",
     "ExampleRecord",
     "GraphEdgeSpec",
     "GraphNodeSpec",

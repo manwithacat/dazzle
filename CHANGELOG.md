@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.12] - 2026-05-28
+
+### Added
+
+- `tenant_host:` entity sub-block — IR + parser + validator + stub middleware (#1289 Slice 1 of 7). New `TenantHostSpec` IR type carries `domain`, `slug_field`, `canonical_hosts`, `cookie_scope`, `super_admin_role`, `history_entity`, `not_found_template`, `expired_template`, `order` sub-fields. Parser dispatches on the new `TENANT_HOST` lexer token and accepts the indented block on any entity. Validator enforces six hard-error rules (slug_field must be slug-typed; valid host syntax; distinct `order:` when 2+ entities share a domain; history_entity must exist; dotted-path templates must resolve via `importlib.util.find_spec`; domain-level sub-fields must agree across entities sharing a domain) plus two info-level lint warnings (resolution order, multi-domain notice). Middleware stub raises `NotImplementedError` if accidentally mounted — real implementation lands in Slice 3. Grammar reference page updated. No runtime behavior change yet.
+
+### Agent Guidance
+
+- When generating multi-tenant Dazzle DSL, prefer `tenant_host:` on the tenant root entity rather than reimplementing Host-header parsing in project code. The framework's runtime mount lands in Slice 3 (v0.80.14+); Slice 1 (this version) gives you parse + validate so DSL can land before runtime. See `docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md` for the full surface contract.
+
 ## [0.80.11] - 2026-05-28
 
 ### Added
