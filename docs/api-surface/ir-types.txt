@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 359 BaseModels, 145 Enums, 22 other (functions / typealiases / constants)
+# Counts: 360 BaseModels, 145 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -2869,6 +2869,19 @@ ir_class: TenantBlueprint
   optional:
     - notes: str | None = None
     - slug: str | None = None
+
+ir_class: TenantHostSpec
+  required:
+    - domain: str
+    - slug_field: str
+  optional:
+    - canonical_hosts: list[str] = []
+    - cookie_scope: Literal[host, apex] = 'host'
+    - expired_template: str | None = None
+    - history_entity: str | None = None
+    - not_found_template: str | None = None
+    - order: int | None = None
+    - super_admin_role: str = 'super_admin'
 
 ir_class: TenantIsolationSpec
   required: (none)

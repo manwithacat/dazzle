@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.13] - 2026-05-28
+
+### Added
+
+- Tenant resolution Cache + Resolver pure-logic modules (#1289 Slice 2 of 7). New `dazzle.back.runtime.tenant.cache.TenantCache` — thread-safe LRU with TTL + `NEGATIVE` sentinel for memoised cache-misses + `bust(slug)` for invalidation. New `dazzle.back.runtime.tenant.resolver.Resolver` — walks `EntityProbe` list in order, falls through to optional `HistoryProbe` lookup, returns one of `ResolvedTenant` / `HistoryHit` / `ExpiredHistoryHit` / `None`. Lookup is delegated via injected callables so the module is testable without DB fixtures. 16 unit tests across both modules. Still not wired to the middleware — that lands in Slice 3.
+
 ## [0.80.12] - 2026-05-28
 
 ### Added
