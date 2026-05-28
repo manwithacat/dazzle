@@ -287,6 +287,10 @@ def _tool_use_to_action(block: Any, reasoning: str) -> AgentAction:
 # Truncation limits for compressed history rendering (keeps LLM prompt bounded).
 _HISTORY_TARGET_MAX_LEN = 40
 _HISTORY_MSG_MAX_LEN = 60
+# Tool result content is critical for the LLM to make progress (e.g. read_inbox
+# must be shown in full so the LLM can copy entity/id/token verbatim).  Use a
+# much larger limit for tool result content stored in ActionResult.message.
+_TOOL_RESULT_MAX_LEN = 1200
 
 
 def _format_history_line(step: Step) -> str:
@@ -311,7 +315,13 @@ def _format_history_line(step: Step) -> str:
     elif r.state_changed is True:
         s += " -> state changed"
     elif r.message:
-        s += f" -> {r.message[:_HISTORY_MSG_MAX_LEN]}"
+        # Tool results must be shown in full so the LLM can read structured
+        # output (e.g. entity/id/token from read_inbox) without truncation.
+        # Other message paths (HTTP, anonymous) stay at the short limit.
+        msg_limit = (
+            _TOOL_RESULT_MAX_LEN if step.action.type.value == "tool" else _HISTORY_MSG_MAX_LEN
+        )
+        s += f" -> {r.message[:msg_limit]}"
     if r.console_errors_during_action:
         n = len(r.console_errors_during_action)
         first = r.console_errors_during_action[0][:_HISTORY_MSG_MAX_LEN]
@@ -1039,8 +1049,13 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
             if asyncio.iscoroutine(result):
                 result = await result
 
+            # Store the full tool result in message so _format_history_line
+            # can show it to the LLM without critical content being truncated.
+            # json.dumps adds escape overhead for multi-line strings; prefer
+            # str() which preserves newlines as-is for readability.
+            result_text = str(result) if isinstance(result, str) else json.dumps(result)
             return ActionResult(
-                message=f"Tool {tool.name}: {json.dumps(result)[:200]}",
+                message=f"Tool {tool.name}: {result_text[:_TOOL_RESULT_MAX_LEN]}",
                 data=result if isinstance(result, dict) else {"result": result},
             )
         except Exception as e:

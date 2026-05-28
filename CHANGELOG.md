@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.2] - 2026-05-28
+
+### Fixed
+
+- `dazzle qa trial` signing harness: `read_inbox` now formats inbox entries with entity, id, and token on separate labelled lines so the LLM can extract them unambiguously. `open_signing_link` now returns a corrective error message instead of a misleading "Opened signing page" when the entity/id pair doesn't match any seeded document.
+- Agent history compression truncated tool results to 60 chars, causing the LLM to loop on `read_inbox` without ever seeing the entity/id/token values. Tool results are now shown up to 1200 chars in compressed history, matching the token budget available.
+
 ## [0.80.1] - 2026-05-28
 
 ### Fixed

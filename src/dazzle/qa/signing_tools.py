@@ -94,19 +94,25 @@ def _make_read_inbox(*, inbox_path: Path, action_sink: dict[str, Any]) -> AgentT
         if not entries:
             return "Inbox is empty."
 
-        lines = ["Signing inbox:"]
+        lines = [f"Signing inbox ({len(entries)} pending):", ""]
         for i, entry in enumerate(entries, start=1):
             entity = entry.get("entity", "?")
             doc_id = entry.get("id", "?")
-            url = entry.get("signing_url", "")
+            token = entry.get("token", "?")
             email = entry.get("signatory_email", "")
-            lines.append(f"  {i}. {entity}/{doc_id} — signatory: {email} — URL: {url}")
+            lines.append(f"[{i}] entity: {entity}")
+            lines.append(f"    id: {doc_id}")
+            lines.append(f"    token: {token}")
+            lines.append(f"    signatory_email: {email}")
+            lines.append("")
         return "\n".join(lines)
 
     return AgentTool(
         name="read_inbox",
         description=(
             "Read the signing inbox and return all pending signing requests. "
+            "Each entry shows the entity, id, and token on separate lines — "
+            "copy them VERBATIM into open_signing_link. "
             "Call this first to discover which documents need to be signed."
         ),
         schema={
@@ -129,8 +135,15 @@ def _make_open_signing_link(
 
         # Match against seeded docs so downstream tools know the active document.
         matched = next((d for d in seeded_docs if d.entity == entity and d.id == id), None)
-        if matched is not None:
-            action_sink["active_doc"] = matched
+        if matched is None:
+            available = ", ".join(f"{d.entity}/{d.id}" for d in seeded_docs)
+            return (
+                f"No inbox entry matched entity={entity!r}, id={id!r}. "
+                f"Re-read the inbox; available documents: {available}. "
+                f"Pass entity, id, and token EXACTLY as shown."
+            )
+
+        action_sink["active_doc"] = matched
 
         url = f"{base_url}/sign/{entity}/{id}?token={token}"
         try:

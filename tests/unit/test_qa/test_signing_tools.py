@@ -220,3 +220,83 @@ def test_open_signing_link_matches_seeded_doc(tmp_path: Path) -> None:
     assert sink.get("active_doc") == doc
     assert isinstance(result, str)
     assert sink["invoked"][-1] == "open_signing_link"
+
+
+def test_read_inbox_machine_readable_format(tmp_path: Path) -> None:
+    """read_inbox formats each entry with entity, id, and token on separate labelled lines."""
+    inbox = tmp_path / "inbox.json"
+    inbox.write_text(
+        '[{"entity":"EngagementLetter","id":"abc-123","token":"tok-xyz",'
+        '"signing_url":"http://x/sign/EngagementLetter/abc-123?token=tok-xyz",'
+        '"signatory_email":"trial-signatory@example.com"}]'
+    )
+    sink: dict = {}
+    tools = build_signing_tools(
+        base_url="http://localhost:3000",
+        inbox_path=inbox,
+        seeded_docs=[],
+        action_sink=sink,
+    )
+    read_inbox = next(t for t in tools if t.name == "read_inbox")
+    result = _invoke(read_inbox, {})
+
+    # Each value must appear on its own labelled line, not merged with slashes
+    assert "entity: EngagementLetter" in result
+    assert "id: abc-123" in result
+    assert "token: tok-xyz" in result
+    # Must NOT have slashed pairing like "EngagementLetter/abc-123"
+    assert "EngagementLetter/abc-123" not in result
+
+
+def test_open_signing_link_returns_error_on_no_match(tmp_path: Path) -> None:
+    """open_signing_link returns a corrective error when entity/id don't match any seeded doc."""
+    inbox = tmp_path / "inbox.json"
+    inbox.write_text("[]")
+    doc = SeededDoc(
+        entity="EngagementLetter",
+        id="real-uuid",
+        token="real-token",
+        signing_url="http://localhost:3000/sign/EngagementLetter/real-uuid?token=real-token",
+        signatory_email="signer@example.com",
+    )
+    sink: dict = {}
+    tools = build_signing_tools(
+        base_url="http://localhost:3000",
+        inbox_path=inbox,
+        seeded_docs=[doc],
+        action_sink=sink,
+    )
+    open_link = next(t for t in tools if t.name == "open_signing_link")
+    result = _invoke(open_link, {"entity": "WrongEntity", "id": "wrong-id", "token": "tok"})
+
+    # Must contain the corrective error message
+    assert "No inbox entry matched" in result
+    # Must include the real seeded doc id to guide the LLM
+    assert "real-uuid" in result
+    # active_doc must remain unset
+    assert sink.get("active_doc") is None
+
+
+def test_open_signing_link_does_not_make_http_call_on_no_match(tmp_path: Path) -> None:
+    """open_signing_link must not make an HTTP call when entity/id don't match any seeded doc."""
+    inbox = tmp_path / "inbox.json"
+    inbox.write_text("[]")
+    doc = SeededDoc(
+        entity="EngagementLetter",
+        id="real-uuid",
+        token="real-token",
+        signing_url="http://localhost:3000/sign/EngagementLetter/real-uuid?token=real-token",
+        signatory_email="signer@example.com",
+    )
+    sink: dict = {}
+    tools = build_signing_tools(
+        base_url="http://localhost:3000",
+        inbox_path=inbox,
+        seeded_docs=[doc],
+        action_sink=sink,
+    )
+    open_link = next(t for t in tools if t.name == "open_signing_link")
+    _invoke(open_link, {"entity": "WrongEntity", "id": "wrong-id", "token": "tok"})
+
+    # requests list must be empty — no HTTP call was attempted
+    assert sink.get("requests", []) == []
