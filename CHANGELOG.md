@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.19] - 2026-05-28
+
+### Added
+
+- Per-request session cookie naming for `tenant_host:` apps (#1289 slice 4 follow-up). New `dazzle.back.runtime.auth.cookie_name` module exposes three helpers: `select_write_name(request, user_roles, default)` for issuing the right cookie on login/signup/2FA-verify/SSO/password-change/password-reset; `read_session_id(request, default)` for reading the session id from whichever recognised cookie is present (legacy preferred during the rollout window so existing sessions don't get logged out); `names_to_clear(request, default)` for logout flows that need to remove every possible name. Wired through every write surface: `password_login_routes.py`, `magic_link_routes.py`, `routes_2fa.py`, `sso_routes.py`, `routes.py` (JSON login/register/logout/change-password/reset-password). Wired through every read surface: `dependencies.py:get_current_user` / `create_deny_dependency` / `create_optional_auth_dependency`, `current.py:_resolve_auth`. 16 unit tests in `test_auth_cookie_name.py` cover both legacy and tenant_host modes including the canonical-host + super-admin → apex-cookie path.
+
+### Security
+
+- Activates the `#1289` cross-tenant cookie isolation at the browser layer: apps with a `tenant_host:` block now issue `__Host-<app>_session` cookies on tenant hosts (browser-enforced Path=/, Secure, no Domain — a session cookie set on `acme.example.com` cannot be transmitted to `other.example.com`), and `__Secure-<app>_admin` on the canonical host for users carrying the configured super-admin role. The cross-tenant guard wired in v0.80.18 is the belt-and-suspenders defence for non-browser HTTP clients. Single-tenant apps without `tenant_host:` are unaffected — `dazzle_session` is unchanged.
+
+### Agent Guidance
+
+- Apps adopting `tenant_host:` no longer need to set cookie names manually; the framework picks the right one per-request. The only remaining `#1289` follow-up is the auto-bust hook in `Repository.update` for slug-field changes (the public `dazzle.tenant.bust(slug)` API already handles manual invalidation).
+
 ## [0.80.18] - 2026-05-28
 
 ### Added

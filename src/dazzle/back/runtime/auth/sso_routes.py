@@ -28,6 +28,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import RedirectResponse
 
+from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.crypto import cookie_secure
 from dazzle.back.runtime.auth.sso_config import SsoProviderConfig, get_provider
 
@@ -212,7 +213,7 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         # SSO callback success — invalidate any pre-auth session cookie the
         # client presented so an attacker-planted id can't survive into the
         # authenticated state.
-        pre_auth_sid = request.cookies.get(cookie_name)
+        pre_auth_sid = read_session_id(request, default=cookie_name)
         session = auth_store.create_session(user)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
@@ -226,7 +227,11 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
 
         response = RedirectResponse(url=redirect_to, status_code=303)
         response.set_cookie(
-            key=cookie_name,
+            key=select_write_name(
+                request,
+                user_roles=list(getattr(user, "roles", []) or []),
+                default=cookie_name,
+            ),
             value=session.id,
             httponly=True,
             secure=cookie_secure(request),

@@ -14,6 +14,7 @@ from dazzle.back.runtime._fastapi_compat import (
     Response,
 )
 
+from .cookie_name import names_to_clear, read_session_id, select_write_name
 from .crypto import cookie_secure, verify_password
 from .events import emit_user_logged_in, emit_user_password_changed, emit_user_registered
 from .models import (
@@ -51,7 +52,7 @@ def _require_auth(deps: _AuthDeps, request: FastAPIRequest) -> Any:
     """Extract and validate session, return auth context or raise 401."""
     from fastapi import HTTPException
 
-    session_id = request.cookies.get(deps.cookie_name)
+    session_id = read_session_id(request, default=deps.cookie_name)
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
     ctx = deps.auth_store.validate_session(session_id)
@@ -116,7 +117,7 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
     # Session-fixation defence (#1198): regenerate the session id on login
     # success — invalidate any pre-auth session cookie the client presented
     # so an attacker-planted id can't survive into the authenticated state.
-    pre_auth_sid = request.cookies.get(deps.cookie_name)
+    pre_auth_sid = read_session_id(request, default=deps.cookie_name)
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
@@ -142,7 +143,7 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
     )
 
     response.set_cookie(
-        key=deps.cookie_name,
+        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
         value=session.id,
         httponly=True,
         secure=cookie_secure(request),
@@ -163,7 +164,7 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
     """
     from fastapi.responses import RedirectResponse
 
-    session_id = request.cookies.get(deps.cookie_name)
+    session_id = read_session_id(request, default=deps.cookie_name)
 
     if session_id:
         deps.auth_store.delete_session(session_id)
@@ -179,7 +180,8 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
         response = RedirectResponse(url="/", status_code=303)
     else:
         response = JSONResponse(content={"message": "Logout successful"})
-    response.delete_cookie(deps.cookie_name)
+    for name in names_to_clear(request, default=deps.cookie_name):
+        response.delete_cookie(name)
 
     return response
 
@@ -206,7 +208,7 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
     # registration success — invalidate any pre-auth session cookie the
     # client presented so an attacker-planted id can't survive into the
     # newly-authenticated state.
-    pre_auth_sid = request.cookies.get(deps.cookie_name)
+    pre_auth_sid = read_session_id(request, default=deps.cookie_name)
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
@@ -233,7 +235,7 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
     )
 
     response.set_cookie(
-        key=deps.cookie_name,
+        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
         value=session.id,
         httponly=True,
         secure=cookie_secure(request),
@@ -250,7 +252,7 @@ async def _get_me(deps: _AuthDeps, request: FastAPIRequest) -> dict[str, Any]:
     """Get current authenticated user."""
     from fastapi import HTTPException
 
-    session_id = request.cookies.get(deps.cookie_name)
+    session_id = read_session_id(request, default=deps.cookie_name)
 
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -279,7 +281,7 @@ async def _change_password(
     """Change current user's password."""
     from fastapi import HTTPException
 
-    session_id = request.cookies.get(deps.cookie_name)
+    session_id = read_session_id(request, default=deps.cookie_name)
 
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -311,7 +313,7 @@ async def _change_password(
     response = JSONResponse(content={"message": "Password changed successfully"})
 
     response.set_cookie(
-        key=deps.cookie_name,
+        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
         value=session.id,
         httponly=True,
         secure=cookie_secure(request),
@@ -384,7 +386,7 @@ async def _reset_password(
     response = JSONResponse(content={"message": "Password reset successful"})
 
     response.set_cookie(
-        key=deps.cookie_name,
+        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
         value=session.id,
         httponly=True,
         secure=cookie_secure(request),

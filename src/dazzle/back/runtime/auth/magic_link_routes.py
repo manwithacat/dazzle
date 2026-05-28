@@ -17,6 +17,7 @@ from urllib.parse import quote, urlparse
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
 
+from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.magic_link import (
     create_magic_link,
     validate_magic_link,
@@ -122,7 +123,7 @@ def create_magic_link_routes() -> APIRouter:
         # magic-link consumption — invalidate any pre-auth session cookie
         # the client presented so an attacker-planted id can't survive into
         # the authenticated state.
-        pre_auth_sid = request.cookies.get("dazzle_session")
+        pre_auth_sid = read_session_id(request)
         session = auth_store.create_session(user)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
@@ -132,7 +133,7 @@ def create_magic_link_routes() -> APIRouter:
 
         response = RedirectResponse(url=redirect_to, status_code=303)
         response.set_cookie(
-            key="dazzle_session",
+            key=select_write_name(request, user_roles=list(getattr(user, "roles", []) or [])),
             value=session.id,
             httponly=True,
             secure=request.url.scheme == "https",

@@ -42,7 +42,9 @@ def create_auth_dependency(
 
     async def get_current_user(request: FastAPIRequest) -> AuthContext:
         """Get current authenticated user."""
-        session_id = request.cookies.get(cookie_name)
+        from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+        session_id = read_session_id(request, default=cookie_name)
 
         if not session_id:
             raise HTTPException(status_code=401, detail="Not authenticated")
@@ -100,7 +102,9 @@ def create_deny_dependency(
 
     async def check_deny_roles(request: FastAPIRequest) -> AuthContext:
         """Reject users with denied roles."""
-        session_id = request.cookies.get(cookie_name)
+        from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+        session_id = read_session_id(request, default=cookie_name)
 
         if not session_id:
             return AuthContext()
@@ -146,7 +150,9 @@ def create_optional_auth_dependency(
 
     async def get_optional_user(request: FastAPIRequest) -> AuthContext:
         """Get current user if authenticated, or empty context."""
-        session_id = request.cookies.get(cookie_name)
+        from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+        session_id = read_session_id(request, default=cookie_name)
 
         if not session_id:
             return AuthContext()

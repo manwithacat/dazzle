@@ -14,6 +14,7 @@ from dazzle.back.runtime._fastapi_compat import (
 )
 from dazzle.core.ir.security import TwoFactorConfig
 
+from .cookie_name import read_session_id, select_write_name
 from .crypto import cookie_secure
 from .events import emit_user_logged_in
 from .models import TwoFactorSetupRequest, TwoFactorVerifyRequest, UserRecord
@@ -63,7 +64,7 @@ def _get_current_user(deps: _TwoFaDeps, request: FastAPIRequest) -> UserRecord:
     """Get authenticated user from session cookie."""
     from fastapi import HTTPException
 
-    session_id = request.cookies.get(deps.cookie_name)
+    session_id = read_session_id(request, default=deps.cookie_name)
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
     auth_context = deps.auth_store.validate_session(session_id)
@@ -239,7 +240,7 @@ async def _verify_2fa(
     # verification success — invalidate any pre-auth session cookie the
     # client presented (separate from the pending 2FA token deleted above)
     # so an attacker-planted id can't survive into the authenticated state.
-    pre_auth_sid = request.cookies.get(deps.cookie_name)
+    pre_auth_sid = read_session_id(request, default=deps.cookie_name)
     # Create a full session
     session = deps.auth_store.create_session(
         user,
@@ -263,7 +264,7 @@ async def _verify_2fa(
     )
 
     response.set_cookie(
-        key=deps.cookie_name,
+        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
         value=session.id,
         httponly=True,
         secure=cookie_secure(request),

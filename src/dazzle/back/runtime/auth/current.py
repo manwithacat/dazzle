@@ -68,10 +68,13 @@ def _resolve_auth(request: Any) -> AuthContext:
     if store is None:
         return AuthContext()
     try:
-        cookies = request.cookies
+        # touch .cookies to surface AttributeError for non-request-shaped inputs
+        request.cookies  # noqa: B018
     except AttributeError:
         return AuthContext()
-    session_id = cookies.get(_AuthStoreRef.cookie_name) if cookies else None
+    from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+    session_id = read_session_id(request, default=_AuthStoreRef.cookie_name)
     if not session_id:
         return AuthContext()
     try:

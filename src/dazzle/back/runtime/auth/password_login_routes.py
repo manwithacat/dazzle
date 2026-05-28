@@ -19,6 +19,7 @@ from urllib.parse import quote, urlparse
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
 
+from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.crypto import cookie_secure
 
 _logger = logging.getLogger(__name__)
@@ -50,12 +51,21 @@ def _encode_next(value: str) -> str:
     return quote(value, safe="/")
 
 
-def _set_session_cookie(response: RedirectResponse, request: Request, session_id: str) -> None:
-    """Attach the dazzle_session cookie to ``response`` with the same
-    flags the JSON `/auth/login` endpoint sets — httpOnly, samesite=lax,
-    secure when the request is HTTPS."""
+def _set_session_cookie(
+    response: RedirectResponse,
+    request: Request,
+    session_id: str,
+    *,
+    user_roles: list[str] | None = None,
+) -> None:
+    """Attach the session cookie to ``response`` with the same flags
+    the JSON ``/auth/login`` endpoint sets — httpOnly, samesite=lax,
+    secure when the request is HTTPS. The cookie name is per-request:
+    apps with ``tenant_host:`` get the spec'd ``__Host-`` / ``__Secure-``
+    names, single-tenant apps keep ``dazzle_session``.
+    """
     response.set_cookie(
-        key="dazzle_session",
+        key=select_write_name(request, user_roles=user_roles),
         value=session_id,
         httponly=True,
         secure=cookie_secure(request),
@@ -102,13 +112,15 @@ def create_password_login_routes() -> APIRouter:
         # login success — invalidate any pre-auth session cookie the client
         # presented so an attacker-planted id can't survive into the
         # authenticated state.
-        pre_auth_sid = request.cookies.get("dazzle_session")
+        pre_auth_sid = read_session_id(request)
         session = auth_store.create_session(user)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
-        _set_session_cookie(response, request, session.id)
+        _set_session_cookie(
+            response, request, session.id, user_roles=list(getattr(user, "roles", []) or [])
+        )
         return response
 
     @router.post("/auth/signup/password")
@@ -164,13 +176,15 @@ def create_password_login_routes() -> APIRouter:
         # signup success — invalidate any pre-auth session cookie the client
         # presented so an attacker-planted id can't survive into the
         # newly-authenticated state.
-        pre_auth_sid = request.cookies.get("dazzle_session")
+        pre_auth_sid = read_session_id(request)
         session = auth_store.create_session(user)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
-        _set_session_cookie(response, request, session.id)
+        _set_session_cookie(
+            response, request, session.id, user_roles=list(getattr(user, "roles", []) or [])
+        )
         return response
 
     return router
