@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.33] - 2026-05-29
+
+### Fixed
+
+- `examples/support_tickets/trial.toml`: the 5 `sla_waiver_*` signing scenarios used `login_persona = "user"`, but support_tickets has no `user` persona (it defines customer/agent/manager/admin) — the qa-trial harness logged in with an unmapped role and the post-signing redirect landed on `/app/workspaces/ticket_queue` with a 403 for the signer. Corrected to `login_persona = "customer"` (the persona that receives/signs waivers). Re-trial: friction 3 → 1 (the remaining one is praise), functional pass/signed. Found via the `/improve` trials lane (cycle 166); validates the signing flow (#1285–1287) qualitatively end-to-end. (contact_manager's `login_persona = "user"` is unaffected — it defines `persona user`.)
+
 ## [0.80.32] - 2026-05-29
 
 ### Fixed
