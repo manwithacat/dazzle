@@ -160,6 +160,53 @@ def test_inject_renders_popover_on_happy_path() -> None:
     assert 'data-step="welcome"' in prc.ctx.active_guide_html
 
 
+def test_inject_resets_stale_overlay_across_personas() -> None:
+    """#1293: the page ctx is captured once per route in
+    ``_make_page_handler``'s closure and shared across requests. An overlay
+    set for one persona must NOT persist into the next persona's request —
+    else an engineer's "Register Device" empty-state CTA bleeds onto a tester
+    who can't create Devices (the fieldtest_hub ``rbac:Device:tester:create``
+    contract failure). The injector must reset the overlay every request,
+    like ``_apply_anon_nav`` does for ``nav_items``."""
+    from dazzle.core import ir
+
+    step = ir.GuideStep(
+        name="welcome",
+        kind=ir.GuideStepKind.POPOVER,
+        title="Welcome",
+        body="Get started",
+        target="surface.task_list",
+        complete_on=ir.GuideCompleteOn(kind=ir.GuideCompleteOnKind.CLICK),
+    )
+    # Audience matches admin only — a tester's resolve returns None.
+    guide = ir.GuideSpec(
+        name="workspace_setup",
+        title="Setup",
+        audience="persona = admin",
+        steps=[step],
+        step_order=["welcome"],
+    )
+    repo = MagicMock()
+    repo.get = MagicMock(return_value=None)
+
+    # Request 1 — admin: guide resolves, overlay is populated on the ctx.
+    prc_admin = _prc(guides=[guide], repo=repo, user_roles=["role_admin"], view_name="task_list")
+    _inject_onboarding_step(prc_admin)
+    assert "<dz-onboarding-step" in prc_admin.ctx.active_guide_html
+
+    # Request 2 — a DIFFERENT persona hitting the SAME shared ctx object
+    # (the closure-captured per-route ctx). The guide's audience doesn't
+    # match, so resolve returns None. Pre-fix the admin overlay persisted on
+    # the shared ctx and rendered for this user; the reset must clear it.
+    prc_tester = _prc(guides=[guide], repo=repo, user_roles=["role_tester"], view_name="task_list")
+    prc_tester.ctx = prc_admin.ctx  # simulate the shared per-route ctx
+    _inject_onboarding_step(prc_tester)
+    assert prc_tester.ctx.active_guide_html == "", (
+        "stale overlay from the admin request bled into the tester request "
+        "via the shared per-route ctx (#1293)"
+    )
+
+
 def test_inject_skips_unsupported_kind(monkeypatch) -> None:
     """A guide with a kind the current Dazzle release doesn't render
     must NOT crash the page — overlay stays empty. v0.71.5 ships all

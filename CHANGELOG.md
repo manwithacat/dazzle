@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.40] - 2026-05-29
+
+### Fixed
+
+- **Cross-persona onboarding-overlay state bleed (#1293).** The page context is captured **once per route** in `_make_page_handler`'s closure and shared across every request to that route. `_inject_onboarding_step` set `ctx.active_guide_html` on the happy path but — unlike `nav_items` (reset each request by `_apply_anon_nav`) — **never reset it**. So once an engineer rendered `/app/device` (their guide's `register_device` empty-state CTA → `/device_create`), that overlay HTML persisted on the shared ctx and **bled into the next persona's render**: a tester/manager who can't create Devices saw the engineer's "Register Device" affordance. Now reset to `""` at the top of `_inject_onboarding_step`, before all 11 skip branches, so only the matching persona's overlay (re)populates it. This is a **real affordance leak** (same class as #1292), not a harness artifact — it surfaced under `dazzle ux verify --contracts --managed` (which renders multiple personas in one server lifetime, engineer-before-tester) as a deterministic `rbac:Device:{tester,manager}:create` failure, while single-persona `dazzle serve --local` repros passed because they never rendered engineer-first. Regression test: `test_onboarding_page_wiring.py::test_inject_resets_stale_overlay_across_personas`.
+
+### Agent Guidance
+
+- The page ctx in `page_routes._make_page_handler` is a **per-route singleton** captured at registration and mutated per request. Any field you set on `prc.ctx` during request handling **must** be reset every request (like `nav_items`/`is_authenticated`) or copied into `prc.ctx_overrides` (like `table`/`detail`/`form`) — otherwise it bleeds across requests and personas (#1293). Conditionally-set-but-never-reset is the bug shape. The broader robust fix (a per-request ctx copy that would also close the latent concurrency hazard on these shared mutations) is deferred; until then, follow the reset-or-override discipline.
+
 ## [0.80.39] - 2026-05-29
 
 ### Fixed

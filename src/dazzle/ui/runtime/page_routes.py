@@ -701,6 +701,20 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
     fragment. ``template_renderer._render_typed_body`` prepends it
     to the surface body.
     """
+    # #1293: the page ctx is captured once per route in
+    # ``_make_page_handler``'s closure and shared across every request to
+    # that route. ``active_guide_html`` is the one ctx field that's
+    # conditionally set (only on the happy path below) but never reset — so
+    # an overlay rendered for one persona (e.g. an engineer's "Register
+    # Device" empty-state CTA → ``/device_create``) persisted on the shared
+    # ctx and bled into the *next* persona's render, including a tester who
+    # can't create Devices. That tripped ``rbac:Device:{tester,manager}:create``
+    # under ``--managed`` (which renders multiple personas in one server
+    # lifetime) while single-persona local repros passed. Reset every request
+    # — the same discipline ``_apply_anon_nav`` uses for ``nav_items`` — so
+    # only the matching persona's overlay (re)populates it below.
+    prc.ctx.active_guide_html = ""
+
     appspec = prc.deps.appspec
     surface_name = prc.ctx.view_name or ""
 
