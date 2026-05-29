@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.43] - 2026-05-29
+
+### Changed
+
+- **`dazzle e2e run-viewport` now exits non-zero on failures/errors (#1295 promotion step 1 of 2).** Previously the CLI always exited 0 (it just echoed the JSON), so even after dropping `continue-on-error` the CI step would never actually gate — a blocking flip would have been a silent always-pass. It now `raise typer.Exit(code=1)` when the run has `total_failed > 0` or a run-level `error` (e.g. the persona-auth/loud-skip guard from v0.80.42). A clean run whose only non-passes are **skipped** persona-unreachable pages still exits 0 — skips are not regressions. The viewport CI step is still advisory (`continue-on-error` + `|| true`), so this is inert there today; it makes the eventual advisory→blocking flip a pure workflow change. Covered by `tests/unit/test_cli_run_viewport_exit.py` (clean/skipped→0, failures/error→1).
+
+### Agent Guidance
+
+- #1295's last remaining step is the advisory→blocking flip: drop `continue-on-error: true` (and the `|| true`) on the "Run viewport assertions" CI step once a post-v0.80.43 run is observed green. With v0.80.42 (self-auth + RBAC skip) and v0.80.43 (exit-code) in place, the step now produces a real signal (e.g. support_tickets: 16/16 passed, 14 skipped) and the CLI exits non-zero on real failure — so the flip is a one-line workflow change with no other code needed.
+
 ## [0.80.42] - 2026-05-29
 
 ### Fixed

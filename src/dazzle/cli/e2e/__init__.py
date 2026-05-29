@@ -427,6 +427,14 @@ def e2e_run_viewport(
     )
     result: dict[str, Any] = json.loads(raw)
     typer.echo(format_output(result, as_json=json_output))
+    # #1295 — exit non-zero on real failures/errors so the CI gate can bite.
+    # Today the run-viewport step is advisory (`continue-on-error` + `|| true`),
+    # so this is inert there; it makes the eventual advisory→blocking flip a
+    # pure workflow change (drop those two) rather than a silent always-pass.
+    # A clean run with only SKIPPED (persona-unreachable) pages still exits 0 —
+    # skips aren't failures.
+    if result.get("error") or result.get("total_failed", 0) > 0:
+        raise typer.Exit(code=1)
 
 
 @e2e_app.command("list-viewport-specs")
