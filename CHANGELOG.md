@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.30] - 2026-05-29
+
+### Agent Guidance
+
+- `/improve` and `/issues` can now run as independent concurrent loops without racing on `main`. `/issues` gained a "Step 0: Shared mutation lock" that coordinates through the same `.dazzle/improve.lock` (15-min TTL) `/improve`'s driver already honours: `/issues` runs read-only while `/improve` holds the lock, and acquires it itself across implement→ship so `/improve` yields in turn. One lock, bidirectional exclusion — no edit to `improve.md` needed (its Step 0a already aborts on a held lock). See `.claude/commands/issues.md` Step 0 + Step 6. Always release the lock immediately after the push and on any early exit; re-stamp mid-work if an implement→ship will exceed 15 min.
+
 ## [0.80.29] - 2026-05-29
 
 ### Fixed

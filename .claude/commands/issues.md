@@ -35,6 +35,16 @@ Every issue is classified into one tier during investigation (Step 2). The class
 
 ## Loop: Triage → Investigate → Implement → Ship → Repeat
 
+### Step 0: Shared mutation lock (coordinate with `/improve`)
+
+`/improve` and `/issues` may run as independent loops (separate sessions or cloud routines) on different cadences. Both push to `main`, so they must never mutate the repo concurrently. They coordinate through the **single** file lock `.dazzle/improve.lock` (`PID ISO-timestamp`, 15-min TTL) that `/improve`'s driver already honours — `/improve` aborts its cycle when this lock is held & fresh, so if `/issues` holds it across a ship, `/improve` yields. One lock, bidirectional exclusion.
+
+1. **At cycle start**, read `.dazzle/improve.lock`. If it exists and is **< 15 min old**, another loop (`/improve`) holds the repo → **run read-only only this cycle**: triage (Step 1) and third-party analysis comments are fine, but do **not** implement/commit/push/close. Then loop back (Step 8). If the lock is **> 15 min old**, treat it as stale and `rm -f` it.
+2. Triage + investigation (Steps 1–3) are read-only — they don't need the lock.
+3. **Immediately before implementing (Step 4), acquire the lock**: re-check it; if now held & fresh, defer (loop back to Step 1); otherwise write `issues-<PID> <ISO-timestamp>` to `.dazzle/improve.lock`. Hold it through Step 6 (ship/push).
+4. **Release** the lock (`rm -f .dazzle/improve.lock`) immediately after the push completes (Step 6), and on **any** early exit or error — never leave it held across the idle gap between cycles (that would starve `/improve`).
+5. If a single implement→ship will plausibly exceed 15 min, re-stamp the lock's timestamp mid-work so `/improve` doesn't treat it as stale and steal it.
+
 ### Step 1: Triage
 
 - Run `gh issue list --state open --limit 50 --json number,title,labels,author` to get all open issues with author info.
@@ -131,10 +141,12 @@ When there is only **1 issue**, skip parallel dispatch and investigate directly 
 
 ### Step 6: Ship
 
+- The shared mutation lock (Step 0) must be **held across this whole step** and released the instant the push (and any CI-fix re-push) is done.
 - Run `/bump patch` (or the appropriate level) so the push carries a unique version.
 - Commit the changes with a descriptive message referencing the issue number (e.g., "Fix X for issue #N").
 - Push to the remote.
 - Monitor CI with `gh run list --branch $(git branch --show-current) --limit 3` — if CI fails on your changes, fix and re-push. If CI fails on unrelated flaky tests, note it and move on.
+- **Release the lock** (`rm -f .dazzle/improve.lock`) once the push lands.
 
 ### Step 7: Close the issue
 
