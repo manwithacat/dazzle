@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.38] - 2026-05-29
+
+### Fixed
+
+- `examples/hr_records`: the `Role` entity's `role_list`/`role_create` surfaces were navigationally dead (defined but the `Role` entity appeared in no workspace region or nav group, so the dead-construct lint flagged them — `validator.py` marks a surface alive iff its entity is a workspace region `source`/`sources` or `nav_group` item). Added a `roles` region (`source: Role`) to the `org_chart` workspace (hr_admin/manager), making Role management reachable from the nav. Found via the `/improve` example-apps lane (cycle 167 Tier-1; fixed cycle 171). Drains the example-apps backlog to only residual info-level ux-block warnings.
+
 ## [0.80.37] - 2026-05-29
 
 ### Changed

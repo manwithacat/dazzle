@@ -598,6 +598,14 @@ workspace org_chart "Org Chart":
     source: Department
     display: list
 
+  # Job roles (title/level/department) are org reference data managed by
+  # hr_admin — surfacing them here makes role_list/role_create reachable
+  # from the workspace nav (was: defined but in no workspace → dead-construct
+  # lint; #improve example-apps row 121).
+  roles:
+    source: Role
+    display: list
+
   # TODO(#hr-hierarchy) + (#hr-temporal): manager chain visualisation.
   # The manager hierarchy is a temporal self-ref — drawing it requires
   # filtering ManagerLink to currently-active rows AND following the
