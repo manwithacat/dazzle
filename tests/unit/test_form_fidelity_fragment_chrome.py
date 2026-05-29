@@ -77,3 +77,54 @@ def test_scorer_still_fires_on_bare_fields() -> None:
     form_gaps = [g for g in gaps if g.target == "form"]
     assert len(form_gaps) == 1
     assert form_gaps[0].recommendation == "Add a <form> element."
+
+
+# --- #1291: the default (non-Fragment) render path must emit a submit button ---
+#
+# Before #1291 the legacy path wrapped fields in a <form> but emitted no
+# <button type="submit">, so any create/edit surface without `render: fragment`
+# rendered an unsubmittable form. These tests pin a cross-path invariant: every
+# form _render_typed_body produces carries exactly one submit button, matching
+# the Fragment path's canonical `dz-submit` markup and label convention
+# ("Create" on create, "Save" on edit).
+
+
+def _submit_buttons(html: str) -> list[str]:
+    """Return the inner text of every <button type="submit"> in *html*."""
+    import re
+
+    return re.findall(r'<button type="submit"[^>]*>(.*?)</button>', html, flags=re.DOTALL)
+
+
+def test_default_path_create_form_has_submit_button() -> None:
+    """A create FormContext renders exactly one submit button labelled 'Create'."""
+    form = FormContext(
+        entity_name="Widget",
+        title="Create Widget",
+        fields=[FieldContext(name="title", label="Title", field_type="string")],
+        action_url="/api/widgets",
+        method="post",
+        mode="create",
+    )
+    ctx = PageContext(page_title="Create Widget", layout="single_column", form=form)
+    html = _render_typed_body(ctx)
+    assert 'type="submit"' in html
+    assert 'class="dz-submit dz-submit--variant-primary"' in html
+    assert _submit_buttons(html) == ["Create"]
+
+
+def test_default_path_edit_form_has_submit_button() -> None:
+    """An edit FormContext renders exactly one submit button labelled 'Save'."""
+    form = FormContext(
+        entity_name="Widget",
+        title="Edit Widget",
+        fields=[FieldContext(name="title", label="Title", field_type="string")],
+        action_url="/api/widgets/123",
+        method="put",
+        mode="edit",
+    )
+    ctx = PageContext(page_title="Edit Widget", layout="single_column", form=form)
+    html = _render_typed_body(ctx)
+    assert _submit_buttons(html) == ["Save"]
+    # Edit forms post via hx-put; the submit lives inside the <form>.
+    assert html.index('type="submit"') > html.index("<form ")

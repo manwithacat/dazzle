@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.31] - 2026-05-29
+
+### Fixed
+
+- Create and edit forms on the default (non-Fragment) render path now emit a submit button (#1291). Previously `template_renderer._render_body_inner` wrapped fields in a `<form class="dz-form-stack">` but emitted no `<button type="submit">`, so any surface that did not set `render: fragment` rendered an **unsubmittable** form — the user could fill every field but had no way to submit. Only the Fragment path (`render: fragment`) and the experience-step path emitted a submit, which is why `simple_task`/`contact_manager`/`support_tickets` (all `render: fragment`) passed while `design_studio`/`hr_records`/`invoice_ops`/`project_tracker`/`component_showcase` failed their `create_form` contracts. Fix: the default path now appends the canonical `dz-submit dz-submit--variant-primary` button, labelled "Create" on create and "Save" on edit (mirroring the Fragment path's `_emit_submit` and the `fragment_adapter` label convention). This also repairs edit forms on the same path. Verified end-to-end: `examples/design_studio` went 37 passed / 4 failed → 41 passed / 0 failed. Regression pinned by two cross-path invariant tests in `tests/unit/test_form_fidelity_fragment_chrome.py` asserting every create/edit form `_render_typed_body` produces carries exactly one submit button.
+
 ## [0.80.30] - 2026-05-29
 
 ### Agent Guidance

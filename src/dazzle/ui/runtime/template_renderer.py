@@ -51,11 +51,22 @@ def _render_body_inner(context: PageContext) -> str:
         method = "put" if form.mode == "edit" else "post"
         action = escape(form.action_url, quote=True)
         entity = escape(form.entity_name, quote=True)
+        # Submit button. The default (non-Fragment) render path historically
+        # omitted this, so every create/edit form was unsubmittable unless the
+        # surface declared `render: fragment` (#1291). Mirror the Fragment
+        # path's canonical markup (`_render_forms._emit_submit`) and label
+        # convention (`fragment_adapter`: "Save" on edit, "Create" otherwise).
+        submit_label = "Save" if form.mode == "edit" else "Create"
+        submit_html = (
+            '<button type="submit" class="dz-submit dz-submit--variant-primary">'
+            f"{escape(submit_label)}</button>"
+        )
         return (
             f'<form class="dz-form-stack" hx-{method}="{action}" '
             f'hx-target="body" hx-swap="innerHTML" hx-ext="json-enc" '
             f'data-dazzle-form="{entity}" data-dazzle-form-mode="{escape(form.mode, quote=True)}">'
             f"{fields_html}"
+            f"{submit_html}"
             f"</form>"
         )
     if context.pdf_viewer is not None:
