@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.37] - 2026-05-29
+
+### Changed
+
+- Revived the orthogonal viewport/geometry QA dimension that was supposed to catch #1294 but had rotted (#1295). `dazzle.testing.viewport.DRAWER_PATTERN` now targets the **Fragment chrome** markup (`.dz-sidebar`, `.dz-sidebar-toggle`) instead of the retired legacy Jinja `app_shell.html` markup (`.drawer-side`, `label[for="dz-drawer"]`), and uses a **geometry property model** — it asserts the app-shell sidebar's computed `transform` is on-screen (≈ identity matrix) at desktop, which an off-screen `translateX(-256px)` (the #1294 regression) would fail. The pre-fix pattern asserted `visibility`, which cannot see a transform-based off-screen, so it could never have caught #1294.
+
+### Added
+
+- **Pattern-freshness guard** (`test_viewport.py::test_drawer_pattern_selectors_match_current_markup`): a browser-free unit test asserting every `DRAWER_PATTERN` selector matches an element the Fragment chrome actually renders. This deterministically catches the exact failure that let #1294 through — a viewport pattern silently pointing at retired markup after a renderer migration — without needing the live browser engine.
+- **`dazzle e2e run-viewport` wired into CI** (advisory) on the INTERACTION_WALK job: boots a server + runs the viewport/geometry assertions live (`--persona agent`, mobile+desktop). `continue-on-error` during the bring-up window so a new browser job can't red `main` on flake; promotion to a blocking gate is tracked on #1295. This makes the orthogonal dimension *live*, not merely defined — the root lesson of #1294 (a stale orthogonal layer is worse than none).
+
+### Agent Guidance
+
+- The viewport/geometry harness (`dazzle e2e run-viewport`, `dazzle.testing.viewport`) is the **orthogonal** QA dimension to the DOM/IR contract/fidelity checks — it catches geometry/visibility regressions (off-screen, overlap, responsive breakage) that DOM-presence checks structurally cannot. Keep its `ComponentPattern`s pointed at current markup: the `test_drawer_pattern_selectors_match_current_markup` freshness guard fails if a pattern rots against a renderer change, and `run-viewport` runs the live assertions in CI (advisory for now). When you change app-shell/sidebar/topbar markup, update `DRAWER_PATTERN` selectors to match. Background: `dev_docs/2026-05-29-orthogonal-qa-dimensions.md`.
+
 ## [0.80.36] - 2026-05-29
 
 ### Fixed

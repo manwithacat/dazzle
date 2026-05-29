@@ -85,9 +85,11 @@ class TestComponentPatterns:
         assert "mobile" in viewports
         assert "desktop" in viewports
 
-        # drawer: visibility + display in properties
+        # drawer: transform (geometry) + display in properties (#1295 — was
+        # visibility, which couldn't see an off-screen transform; that gap
+        # is why the pattern missed #1294).
         props = {a.property for a in DRAWER_PATTERN.assertions}
-        assert "visibility" in props
+        assert "transform" in props
         assert "display" in props
 
         # grid_1_2_3: all three viewports
@@ -544,3 +546,54 @@ class TestViewportMatrix:
     def test_four_viewports(self) -> None:
         assert len(VIEWPORT_MATRIX) == 4
         assert set(VIEWPORT_MATRIX.keys()) == {"mobile", "tablet", "desktop", "wide"}
+
+
+# ──────────── #1295 — pattern-freshness guard (browser-free) ────────────
+# The orthogonal viewport dimension is only useful if its selectors match
+# the markup the renderer ACTUALLY produces. Pre-#1295, DRAWER_PATTERN
+# silently pointed at retired legacy `.drawer-side`/`dz-drawer` markup after
+# the Fragment migration, so it could never have caught #1294. This guard
+# renders the current Fragment app-shell and asserts each DRAWER_PATTERN
+# selector matches a real element — deterministic, unit-suite, no browser.
+
+import re as _re  # noqa: E402
+
+from dazzle.render.fragment.escape import RawHTML  # noqa: E402
+from dazzle.render.fragment.htmx import URL  # noqa: E402
+from dazzle.render.fragment.primitives.containers import AppShell  # noqa: E402
+from dazzle.render.fragment.primitives.navigation import (  # noqa: E402
+    NavItem,
+    Sidebar,
+    Topbar,
+)
+from dazzle.render.fragment.renderer import FragmentRenderer  # noqa: E402
+
+
+def _render_app_shell_chrome() -> str:
+    sidebar = Sidebar(items=(NavItem(label="Home", href=URL("/app")),))
+    shell = AppShell(
+        body=RawHTML("<p>content</p>"),
+        sidebar=sidebar,
+        header=Topbar(title="App", show_sidebar_toggle=True),
+        sidebar_state="open",
+    )
+    return FragmentRenderer().render(shell)
+
+
+def test_drawer_pattern_selectors_match_current_markup() -> None:
+    """#1295 freshness guard — every DRAWER_PATTERN class selector must match
+    an element the Fragment chrome actually renders, so the pattern can't
+    silently rot against retired markup the way it did before #1294."""
+    html = _render_app_shell_chrome()
+    for assertion in DRAWER_PATTERN.assertions:
+        sel = assertion.selector
+        assert sel.startswith("."), (
+            f"freshness guard only validates class selectors; got {sel!r} — "
+            "extend the guard if DRAWER_PATTERN gains non-class selectors"
+        )
+        cls = sel[1:]
+        assert _re.search(rf'class="[^"]*\b{_re.escape(cls)}\b[^"]*"', html), (
+            f"DRAWER_PATTERN selector {sel!r} ({assertion.description!r}) matches "
+            "no element in the rendered Fragment app-shell — the pattern has "
+            "rotted against the current markup (cf. #1294/#1295)."
+        )

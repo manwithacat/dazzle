@@ -105,40 +105,46 @@ def _matches(expected: str | list[str], actual: str | None) -> bool:
 # Built-in patterns
 # ---------------------------------------------------------------------------
 
-# -- Drawer (app_shell.html) ------------------------------------------------
+# -- App-shell sidebar drawer (Fragment chrome) -----------------------------
+#
+# #1295 — UPDATED from the retired legacy Jinja `app_shell.html` markup.
+# The pre-#1295 pattern targeted `.drawer-side` / `label[for="dz-drawer"]`
+# (DaisyUI classes that vanished in the v0.67.44/45 Fragment migration) and
+# asserted `visibility` — which cannot see an off-screen `transform`. That
+# rot is exactly why this very pattern failed to catch #1294 (sidebar parked
+# at translateX(-256px), `visibility: visible`). Now it targets the Fragment
+# chrome (`.dz-sidebar` / `.dz-sidebar-toggle`) with a GEOMETRY property
+# model: at desktop the open sidebar's transform is the identity matrix
+# (on-screen); off-screen reads as matrix(1,0,0,1,-256,0). This is the
+# orthogonal dimension — geometry, not DOM presence.
 
 DRAWER_PATTERN = ComponentPattern(
     name="drawer",
     assertions=[
-        # Mobile: sidebar hidden, hamburger visible
+        # Sidebar slid ON-SCREEN at desktop (data-dz-sidebar=open default).
+        # Off-screen (the #1294 regression) reads as matrix(1,0,0,1,-256,0).
         ViewportAssertion(
-            selector=".drawer-side",
-            property="visibility",
-            expected="hidden",
-            viewport="mobile",
-            description="Sidebar hidden on mobile",
+            selector=".dz-sidebar",
+            property="transform",
+            expected=["none", "matrix(1, 0, 0, 1, 0, 0)"],
+            viewport="desktop",
+            description="Sidebar on-screen at desktop (transform ≈ identity)",
+        ),
+        # Toggle present + visible so the nav is reachable/collapsible at
+        # both viewports (the affordance whose absence broke #1294).
+        ViewportAssertion(
+            selector=".dz-sidebar-toggle",
+            property="display",
+            expected=["flex", "inline-flex", "block", "inline-block"],
+            viewport="desktop",
+            description="Sidebar toggle visible at desktop",
         ),
         ViewportAssertion(
-            selector='label[for="dz-drawer"].drawer-button',
+            selector=".dz-sidebar-toggle",
             property="display",
             expected=["flex", "inline-flex", "block", "inline-block"],
             viewport="mobile",
-            description="Hamburger button visible on mobile",
-        ),
-        # Desktop: sidebar visible when open, navbar toggle hidden
-        ViewportAssertion(
-            selector=".drawer-side",
-            property="visibility",
-            expected="visible",
-            viewport="desktop",
-            description="Sidebar visible on desktop",
-        ),
-        ViewportAssertion(
-            selector='label[for="dz-drawer"].drawer-button',
-            property="display",
-            expected="none",
-            viewport="desktop",
-            description="Hamburger button hidden on desktop",
+            description="Sidebar toggle visible on mobile (nav reachable)",
         ),
     ],
 )

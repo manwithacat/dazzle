@@ -627,6 +627,29 @@ jobs:
         exit $rc
       timeout-minutes: 8
 
+    # #1295 — orthogonal geometry/viewport dimension, run LIVE in CI. The
+    # DRAWER_PATTERN viewport assertions check the app-shell sidebar is
+    # on-screen at desktop (transform ≈ identity) + the toggle is visible —
+    # the dimension that missed #1294 (markup present, off-screen). Advisory
+    # (continue-on-error) during the bring-up window so a brand-new browser
+    # job can't red main on flake; promote to blocking once stable (#1295).
+    # Reuses this job's Playwright + postgres setup.
+    - name: Run viewport assertions (advisory, #1295)
+      continue-on-error: true
+      run: |
+        cd examples/support_tickets
+        python -m dazzle serve --test-mode --local --port 3000 > /tmp/viewport-server.log 2>&1 &
+        for i in $(seq 1 30); do
+          if curl -fsS -o /dev/null "http://localhost:3000/health" 2>/dev/null; then
+            echo "server ready after ${i}s"; break
+          fi
+          sleep 1
+        done
+        DAZZLE_SITE_URL="http://localhost:3000" DAZZLE_API_URL="http://localhost:3000" \
+          python -m dazzle e2e run-viewport --viewports mobile,desktop --persona agent --json || true
+        pkill -f "dazzle serve" || true
+      timeout-minutes: 6
+
     - name: Cleanup
       if: always()
       run: |
