@@ -682,3 +682,103 @@ def test_region_pattern_selectors_match_current_markup(pattern, primitive) -> No
             f"{type(primitive).__name__} — the pattern has rotted against the "
             "current Fragment markup (cf. #1294/#1295)."
         )
+
+
+# ──────────── #1295 — run-viewport must authenticate + skip RBAC pages ────────
+# The orthogonal viewport gate was a silent no-op in CI: nothing minted the
+# persona session, so every /app page rendered logged-out → all assertions
+# "Element not found". The runner now (a) mints the session before navigating,
+# (b) skips pages the persona can't reach instead of false-failing them, and
+# (c) loudly errors if a persona run evaluated nothing.
+
+from dazzle.testing import session_manager as _session_manager  # noqa: E402
+from dazzle.testing import viewport_auth as _viewport_auth  # noqa: E402
+from dazzle.testing.viewport_runner import ViewportRunner  # noqa: E402
+
+
+def test_ensure_persona_session_mints_when_missing(monkeypatch, tmp_path) -> None:
+    """Persona requested + no stored session → the runner mints one."""
+    exists_seq = iter([False, True])  # missing, then present after mint
+    monkeypatch.setattr(_viewport_auth, "ensure_session_exists", lambda *a, **k: next(exists_seq))
+    created: list[str] = []
+
+    class _FakeSM:
+        def __init__(self, project_path, base_url=None) -> None:
+            self.base_url = base_url
+
+        async def create_session(self, persona):  # noqa: ANN001
+            created.append(persona)
+            return object()
+
+    monkeypatch.setattr(_session_manager, "SessionManager", _FakeSM)
+
+    result = ViewportRunResult(project_name="t")
+    ViewportRunner(tmp_path)._ensure_persona_session(ViewportRunOptions(persona_id="agent"), result)
+    assert created == ["agent"]
+    assert result.error is None
+
+
+def test_ensure_persona_session_errors_when_auth_fails(monkeypatch, tmp_path) -> None:
+    """Persona requested but auth fails → hard error (not a silent anon run)."""
+    monkeypatch.setattr(_viewport_auth, "ensure_session_exists", lambda *a, **k: False)
+
+    class _FailSM:
+        def __init__(self, *a, **k) -> None: ...
+
+        async def create_session(self, persona):  # noqa: ANN001
+            raise RuntimeError("no test endpoint")
+
+    monkeypatch.setattr(_session_manager, "SessionManager", _FailSM)
+
+    result = ViewportRunResult(project_name="t")
+    ViewportRunner(tmp_path)._ensure_persona_session(ViewportRunOptions(persona_id="agent"), result)
+    assert result.error is not None
+    assert "could not authenticate persona 'agent'" in result.error
+
+
+def test_ensure_persona_session_noop_when_session_exists(monkeypatch, tmp_path) -> None:
+    """Existing session → no mint, no error."""
+    monkeypatch.setattr(_viewport_auth, "ensure_session_exists", lambda *a, **k: True)
+
+    def _boom(*a, **k):  # SessionManager must not be constructed
+        raise AssertionError("should not mint when a session already exists")
+
+    monkeypatch.setattr(_session_manager, "SessionManager", _boom)
+    result = ViewportRunResult(project_name="t")
+    ViewportRunner(tmp_path)._ensure_persona_session(ViewportRunOptions(persona_id="agent"), result)
+    assert result.error is None
+
+
+def test_skipped_pages_surface_in_json_and_markdown() -> None:
+    """RBAC-skipped pages are reported as skipped, not failed (#1295)."""
+    import json
+
+    result = ViewportRunResult(
+        project_name="t",
+        total_assertions=3,
+        total_passed=0,
+        total_failed=0,
+        total_skipped=3,
+    )
+    result.reports.append(
+        ViewportReport(
+            surface_or_page="/app/admin_only",
+            viewport="desktop",
+            viewport_size={"width": 1280, "height": 720},
+            results=[],
+            passed=0,
+            failed=0,
+            skipped=3,
+            skip_reason="app-shell not rendered (persona lacks access)",
+            persona_id="agent",
+            duration_ms=12.0,
+        )
+    )
+    data = json.loads(result.to_json())
+    assert data["total_skipped"] == 3
+    assert data["reports"][0]["skipped"] == 3
+    assert data["reports"][0]["skip_reason"]
+
+    md = result.to_markdown()
+    assert "SKIPPED" in md
+    assert "3 skipped" in md

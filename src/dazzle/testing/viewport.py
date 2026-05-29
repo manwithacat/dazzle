@@ -80,6 +80,11 @@ class ViewportReport:
     failed: int
     duration_ms: float
     persona_id: str | None = None
+    # #1295 — pages the persona can't reach (no app-shell rendered) are
+    # skipped, not failed: their assertions would all be false "Element not
+    # found". ``skipped`` counts those assertions; ``skip_reason`` explains why.
+    skipped: int = 0
+    skip_reason: str | None = None
 
 
 # ---------------------------------------------------------------------------

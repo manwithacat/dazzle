@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.42] - 2026-05-29
+
+### Fixed
+
+- **`run-viewport` now authenticates — the #1295 orthogonal gate was a silent no-op (#1295 follow-through).** Reading the live advisory CI output revealed the real reason the harness never caught anything: it ran **logged-out**. The runner reads a stored session cookie (`viewport_auth.load_persona_cookies`), but **nothing minted it** — so every `/app` page rendered anonymously and every app-shell assertion came back `actual=null` / "Element not found" (passing CI only because the step is `continue-on-error`). The selectors and the v0.80.41 `grid-column-count` model were already correct (`_render_shell.py` does emit `.dz-sidebar`/`.dz-sidebar-toggle`); the harness just never logged in. Now `ViewportRunner` **self-authenticates**: when `--persona` is given and no session exists, it mints one via `SessionManager.create_session` (the same `/__test__/authenticate` path the contract harness uses) before navigating. A requested-but-unauthenticatable persona is a **hard error**, not a silent anon run.
+- **`run-viewport` skips persona-unreachable pages instead of false-failing them (#1295).** Even authenticated, the runner asserted DRAWER/grid patterns on every derived `/app` page — including ones the persona is RBAC-denied (which render no app-shell → `actual=null`). It now gates on `.dz-app-shell` presence: a page with no shell is recorded as **skipped** (with a reason), not failed, so a persona-access boundary no longer reads as a regression. Added `skipped`/`skip_reason` to `ViewportReport` and `total_skipped` to `ViewportRunResult` (surfaced in `to_json`/`to_markdown`), plus a **loud guard**: if a persona run evaluates *nothing* (every page skipped), that's a run-level error — the silent-wash failure mode can't hide behind a green badge again.
+
+  Verified live against `examples/support_tickets` (`--persona agent`, desktop): **before** — 0 passed / all "Element not found"; **after** — 16/16 passed, 0 failed, 14 skipped (7 reachable pages assert sidebar-on-screen + toggle + `dz-dashboard-grid`=12 + `dz-metrics-grid`=4; 5 RBAC-blocked pages skipped). The gate is now a real, green, meaningful run.
+
+### Agent Guidance
+
+- `dazzle e2e run-viewport --persona X` is now self-sufficient: it mints the persona session against a `--test-mode` server, so you no longer pre-create `.dazzle/test_sessions/<persona>.json`. A green run with a nonzero `total_skipped` is expected (those are RBAC-unreachable pages, not failures). #1295 remains open for the last two promotion steps: (1) the CLI still exits 0 regardless of failures — for the advisory→blocking flip to actually gate, `run-viewport` must exit non-zero on `total_failed > 0` or `error`; (2) drop `continue-on-error` once a CI run is observed green. The lesson behind the whole thread: a "revived" orthogonal harness that doesn't authenticate is worse than none — it reports green while testing nothing.
+
 ## [0.80.41] - 2026-05-29
 
 ### Changed

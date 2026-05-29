@@ -57,6 +57,7 @@ class ViewportRunResult:
     total_assertions: int = 0
     total_passed: int = 0
     total_failed: int = 0
+    total_skipped: int = 0  # #1295 — assertions on persona-unreachable pages
     error: str | None = None
     visual_results: list[Any] = field(default_factory=list)  # list[ScreenshotResult]
 
@@ -69,6 +70,7 @@ class ViewportRunResult:
             "total_assertions": self.total_assertions,
             "total_passed": self.total_passed,
             "total_failed": self.total_failed,
+            "total_skipped": self.total_skipped,
             "error": self.error,
             "reports": [
                 {
@@ -77,6 +79,8 @@ class ViewportRunResult:
                     "viewport_size": r.viewport_size,
                     "passed": r.passed,
                     "failed": r.failed,
+                    "skipped": r.skipped,
+                    "skip_reason": r.skip_reason,
                     "duration_ms": r.duration_ms,
                     "persona_id": r.persona_id,
                     "results": [
@@ -118,12 +122,23 @@ class ViewportRunResult:
         status = "PASS" if self.total_failed == 0 else "FAIL"
         lines.append(f"# Viewport Assertion Report — {status}")
         lines.append("")
-        lines.append(f"**{self.total_passed}/{self.total_assertions}** assertions passed")
+        summary = f"**{self.total_passed}/{self.total_assertions}** assertions passed"
+        if self.total_skipped:
+            summary += f" · {self.total_skipped} skipped (persona-unreachable pages)"
+        lines.append(summary)
         if self.error:
             lines.append(f"\n> Error: {self.error}")
         lines.append("")
 
         for report in self.reports:
+            if report.skipped and not report.results:
+                lines.append(
+                    f"## [~] {report.surface_or_page} @ {report.viewport} "
+                    f"({report.viewport_size['width']}x{report.viewport_size['height']}) "
+                    f"— SKIPPED ({report.skipped}): {report.skip_reason or 'unreachable'}"
+                )
+                lines.append("")
+                continue
             marker = "+" if report.failed == 0 else "-"
             lines.append(
                 f"## [{marker}] {report.surface_or_page} @ {report.viewport} "
@@ -218,6 +233,19 @@ class ViewportRunner:
             result.completed_at = datetime.now(UTC)
             return result
 
+        # #1295 — authenticate as the persona BEFORE navigating. The runner
+        # reads a stored session cookie (viewport_auth.load_persona_cookies); if
+        # nothing minted it, every /app page renders logged-out and every
+        # app-shell assertion comes back "Element not found" — a silent no-op
+        # that masked the whole orthogonal gate in CI. Mint it now via the same
+        # test-mode endpoint the contract harness uses. A requested-but-
+        # unauthenticatable persona is a hard error, not a silent anon run.
+        if options.persona_id:
+            self._ensure_persona_session(options, result)
+            if result.error:
+                result.completed_at = datetime.now(UTC)
+                return result
+
         from dazzle.testing.browser_gate import get_browser_gate
 
         try:
@@ -226,8 +254,61 @@ class ViewportRunner:
         except Exception as exc:
             result.error = str(exc)
 
+        # #1295 — loud guard against a silent wash: if a persona was requested
+        # but NOTHING evaluated (every page skipped for lack of an app-shell),
+        # the run proved nothing — surface it instead of reporting a green
+        # "0 failed". This is the failure mode that hid the unauthenticated
+        # harness behind a passing badge.
+        evaluated = result.total_passed + result.total_failed
+        if options.persona_id and evaluated == 0 and result.total_skipped > 0 and not result.error:
+            result.error = (
+                f"0 of {result.total_skipped} viewport assertions evaluated — every page was "
+                f"skipped (no app-shell rendered) as persona '{options.persona_id}'. The run "
+                "proved nothing; likely an auth or page-access problem."
+            )
+
         result.completed_at = datetime.now(UTC)
         return result
+
+    def _ensure_persona_session(
+        self, options: ViewportRunOptions, result: ViewportRunResult
+    ) -> None:
+        """Ensure a stored session exists for ``options.persona_id``, minting
+        one via the test-mode auth endpoint if absent (#1295).
+
+        Sets ``result.error`` if a persona was requested but could not be
+        authenticated — viewport assertions are meaningless against logged-out
+        /app pages, so that is a hard failure rather than a silent anon run.
+        """
+        from dazzle.testing.viewport_auth import ensure_session_exists
+
+        persona = options.persona_id
+        if not persona:  # only called when a persona is requested; narrows type
+            return
+        if ensure_session_exists(self.project_path, persona, options.base_url):
+            return
+
+        import asyncio
+
+        from dazzle.testing.session_manager import SessionManager
+
+        auth_url = options.api_base_url or options.base_url
+        try:
+            manager = SessionManager(self.project_path, base_url=auth_url)
+            asyncio.run(manager.create_session(persona))
+        except Exception as exc:  # noqa: BLE001 — surfaced as a run-level error
+            result.error = (
+                f"could not authenticate persona '{persona}' at {auth_url}: {exc}. "
+                "Viewport assertions need an authenticated session to reach /app pages; "
+                "ensure the app is running with --test-mode."
+            )
+            return
+
+        if not ensure_session_exists(self.project_path, persona, options.base_url):
+            result.error = (
+                f"persona '{persona}' session was not created at {auth_url} "
+                "(no session token returned). Cannot run authenticated viewport assertions."
+            )
 
     def _run_matrix(
         self,
@@ -294,6 +375,39 @@ class ViewportRunner:
                     url = f"{options.base_url.rstrip('/')}{page_path}"
                     t0 = time.monotonic()
                     page.goto(url, wait_until="networkidle")
+
+                    # #1295 — skip pages the persona can't reach. Every derived
+                    # pattern targets an /app page that renders inside
+                    # `.dz-app-shell`; if the shell is absent the page 403'd /
+                    # redirected (RBAC) or errored, so the assertions would all
+                    # be false "Element not found". Record as skipped, not failed,
+                    # so a persona-access boundary doesn't read as a regression.
+                    try:
+                        shell_present = bool(
+                            page.evaluate("() => !!document.querySelector('.dz-app-shell')")
+                        )
+                    except Exception:
+                        shell_present = False
+                    if not shell_present:
+                        result.reports.append(
+                            ViewportReport(
+                                surface_or_page=page_path,
+                                viewport=vp_name,
+                                viewport_size=vp_size,
+                                results=[],
+                                passed=0,
+                                failed=0,
+                                skipped=len(assertions_for_page),
+                                skip_reason=(
+                                    "app-shell not rendered (persona lacks access "
+                                    "or page redirected)"
+                                ),
+                                persona_id=options.persona_id,
+                                duration_ms=(time.monotonic() - t0) * 1000,
+                            )
+                        )
+                        result.total_skipped += len(assertions_for_page)
+                        continue
 
                     # Batch evaluate computed styles
                     specs = [
