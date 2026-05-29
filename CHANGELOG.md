@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.44] - 2026-05-30
+
+### Fixed
+
+- **Dropped the `DASHBOARD_GRID` viewport pattern — it was a column-count fiction the live CI run caught (#1295).** The first authenticated advisory `run-viewport` CI run (v0.80.43, post-auth-fix) came back **24 passed / 1 failed / 23 skipped, zero "Element not found"** — proving the v0.80.42/43 auth+skip+exit-code fixes work in CI. The single failure was `Expected '1', got '12'` on `.dz-dashboard-grid` at **mobile**. Root cause (verified live): `.dz-dashboard-grid` is a **uniform 12-track grid at every viewport** — `grid-template-columns` resolves to 12 tracks at 375px (`195px 0px×11` — cards span all 12 columns so 11 collapse to 0px, giving one *visual* column) AND at 1280px. Its responsiveness is **per-card col-span**, not a column-count change, so `grid-column-count` is always 12 and can't express it — exactly the same fiction class as the per-stage `grid_1_2`/`grid_2_3` patterns and the container-query `DETAIL` view that v0.80.41 already excluded. I'd mistakenly kept `DASHBOARD_GRID` with a `mobile=1`/`desktop=12` assertion; only desktop verified locally, so CI's mobile run caught it. Removed the pattern (+ its derivation attachment, tests, freshness-guard case). Live re-verify against support_tickets (`--persona agent`, mobile+desktop): **23 passed, 0 failed, 17 skipped**. The real viewport-responsive region grids (`.dz-grid-list` 1/2/3, `.dz-metrics-grid` 1/2/4, `.dz-action-grid` 1/2/3) — which *do* change track count by breakpoint — remain asserted and pass.
+
+### Agent Guidance
+
+- This is the orthogonal viewport harness working exactly as intended: now that it authenticates (v0.80.42), it immediately caught a real unit-vs-live divergence in its *own* pattern set that desktop-only local testing missed. Lesson reinforced: a CSS grid's *responsiveness* is often expressed by per-child `grid-column: span N`, not by changing the container's `grid-template-columns` — so `grid-column-count` only works for containers whose **track count** actually varies by breakpoint (`.dz-grid-list`/`.dz-metrics-grid`/`.dz-action-grid`), never for span-based grids (`.dz-dashboard-grid`) or container-query layouts (`.dz-detail-row`). With this fix the advisory `run-viewport` step should be all-green (pass+skip, 0 failed) — the final observation gating the #1295 advisory→blocking promotion.
+
 ## [0.80.43] - 2026-05-29
 
 ### Changed

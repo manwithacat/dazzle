@@ -260,38 +260,24 @@ ACTION_GRID_PATTERN = ComponentPattern(
     ],
 )
 
-# Workspace dashboard container → `.dz-dashboard-grid`: 1 → 12 cols (48rem).
-# All workspace stages render into this one uniform 12-col grid; the per-stage
-# "2 vs 3 cols" feel is achieved by per-card col-spans, NOT a column-count
-# change on the container (which is why the old per-stage grid_1_2 / grid_2_3
-# patterns were fictions). tablet=768 is exactly the 48rem boundary, so we
-# assert only mobile (1) and desktop (12) to avoid an inclusive-boundary flake.
-DASHBOARD_GRID_PATTERN = ComponentPattern(
-    name="dashboard_grid",
-    assertions=[
-        ViewportAssertion(
-            selector=".dz-dashboard-grid",
-            property="grid-column-count",
-            expected="1",
-            viewport="mobile",
-            description="Dashboard grid single-column on mobile (<48rem)",
-        ),
-        ViewportAssertion(
-            selector=".dz-dashboard-grid",
-            property="grid-column-count",
-            expected="12",
-            viewport="desktop",
-            description="Dashboard grid 12-column on desktop (≥48rem)",
-        ),
-    ],
-)
+# NOTE — NO dashboard-grid pattern (#1295, removed after the live CI run caught
+# it). `.dz-dashboard-grid` is a uniform **12-track** grid at EVERY viewport
+# (verified live: `grid-template-columns` resolves to 12 tracks at 375px AND
+# 1280px — at mobile the cards span all 12 columns so 11 tracks collapse to
+# 0px, giving a single *visual* column). Its responsiveness is card col-span
+# based, NOT a column-count change — so `grid-column-count` is always 12 and
+# can't express it. This is the same fiction class as the old per-stage
+# grid_1_2/grid_2_3 patterns and the container-query DETAIL view: not
+# viewport-column-count-assertable, so deliberately excluded. The freshness
+# guard still pins that `.dz-dashboard-grid` is emitted; the real
+# viewport-responsive grids below (.dz-grid-list / .dz-metrics-grid /
+# .dz-action-grid) DO change track count by breakpoint and are asserted.
 
 ALL_PATTERNS: dict[str, ComponentPattern] = {
     "drawer": DRAWER_PATTERN,
     "grid": GRID_PATTERN,
     "metrics": METRICS_PATTERN,
     "action_grid": ACTION_GRID_PATTERN,
-    "dashboard_grid": DASHBOARD_GRID_PATTERN,
 }
 
 # ---------------------------------------------------------------------------
@@ -326,10 +312,11 @@ def derive_patterns_from_appspec(
     Returns ``{page_path: [ComponentPattern, ...]}``.
 
     * Workspace pages (``/app/workspaces/<name>``) get :data:`DRAWER_PATTERN`
-      (app-shell chrome) + :data:`DASHBOARD_GRID_PATTERN` (the uniform 12-col
-      card container every workspace renders) + one region pattern per region
-      ``display`` mode that maps to a responsive grid (GRID / METRICS /
-      SUMMARY / ACTION_GRID).
+      (app-shell chrome) + one region pattern per region ``display`` mode that
+      maps to a viewport-responsive grid (GRID / METRICS / SUMMARY /
+      ACTION_GRID). The ``.dz-dashboard-grid`` container itself is NOT asserted
+      — it's a uniform 12-track grid at every viewport (responsiveness is
+      card-span based, not column-count), so it isn't viewport-assertable (#1295).
     * List surfaces (``/app/<entity>``) get :data:`DRAWER_PATTERN` only — a
       list page renders a table, not a responsive column grid, so asserting
       grid columns there would be a false signal (#1295).
@@ -347,13 +334,13 @@ def derive_patterns_from_appspec(
     for ws in appspec.workspaces:
         path = f"/app/workspaces/{ws.name}"
 
-        # Every workspace renders the app-shell chrome + the dashboard-grid
-        # container (1 → 12 cols); region display modes add their own grids.
-        # Stage no longer maps to a pattern: all stages render the SAME
-        # 12-col `.dz-dashboard-grid` and vary only by per-card col-spans, so
-        # the old per-stage grid_1_2 / grid_2_3 patterns asserted a
-        # column-count change that never happens (#1295).
-        patterns: list[ComponentPattern] = [DRAWER_PATTERN, DASHBOARD_GRID_PATTERN]
+        # Every workspace renders the app-shell chrome; region display modes
+        # add their own viewport-responsive grids. The `.dz-dashboard-grid`
+        # container is NOT asserted — it's a uniform 12-track grid at every
+        # viewport (responsiveness is per-card col-span, not column-count), the
+        # same fiction class as the old per-stage grid_1_2 / grid_2_3 patterns
+        # (#1295 — confirmed by the live CI run).
+        patterns: list[ComponentPattern] = [DRAWER_PATTERN]
 
         # Region-level patterns (from display mode)
         for region in ws.regions:

@@ -11,7 +11,6 @@ import pytest
 from dazzle.testing.viewport import (
     ACTION_GRID_PATTERN,
     ALL_PATTERNS,
-    DASHBOARD_GRID_PATTERN,
     DRAWER_PATTERN,
     GRID_PATTERN,
     METRICS_PATTERN,
@@ -92,7 +91,7 @@ class TestComponentPatterns:
         # #1295 — region grids assert the synthetic `grid-column-count`, not
         # raw `grid-template-columns` (which getComputedStyle resolves to px
         # tracks, never the authored value — a guaranteed false negative).
-        for pattern in (GRID_PATTERN, METRICS_PATTERN, ACTION_GRID_PATTERN, DASHBOARD_GRID_PATTERN):
+        for pattern in (GRID_PATTERN, METRICS_PATTERN, ACTION_GRID_PATTERN):
             for a in pattern.assertions:
                 assert a.property == "grid-column-count", (
                     f"{pattern.name} assertion uses {a.property!r}, expected grid-column-count"
@@ -102,29 +101,29 @@ class TestComponentPatterns:
     def test_region_grids_target_fragment_classes(self) -> None:
         # #1295 — selectors must be the real Fragment region classes, not the
         # retired DaisyUI ones. The freshness guard below proves these match
-        # actual rendered markup.
+        # actual rendered markup. (No dashboard_grid: it's a uniform 12-track
+        # grid at every viewport — not viewport-column-count-assertable.)
         expected = {
             "grid": ".dz-grid-list",
             "metrics": ".dz-metrics-grid",
             "action_grid": ".dz-action-grid",
-            "dashboard_grid": ".dz-dashboard-grid",
         }
         for name, sel in expected.items():
             assert {a.selector for a in ALL_PATTERNS[name].assertions} == {sel}
 
     def test_grid_column_counts_match_css_breakpoints(self) -> None:
-        # Column counts read from regions.css / dashboard.css (40/64/48rem).
+        # Column counts read from regions.css (40/64rem). The real
+        # viewport-responsive region grids change track count by breakpoint;
+        # `.dz-dashboard-grid` does NOT (always 12 tracks) so it has no pattern.
         def counts(pattern):
             return {a.viewport: a.expected for a in pattern.assertions}
 
         assert counts(GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
         assert counts(METRICS_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "4"}
         assert counts(ACTION_GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
-        # dashboard grid skips the exact-48rem tablet boundary (768 == 48rem).
-        assert counts(DASHBOARD_GRID_PATTERN) == {"mobile": "1", "desktop": "12"}
 
     def test_all_patterns_dict_complete(self) -> None:
-        assert set(ALL_PATTERNS) == {"drawer", "grid", "metrics", "action_grid", "dashboard_grid"}
+        assert set(ALL_PATTERNS) == {"drawer", "grid", "metrics", "action_grid"}
 
     def test_all_patterns_have_assertions(self) -> None:
         for name, pattern in ALL_PATTERNS.items():
@@ -325,45 +324,46 @@ class TestDerivePatterns:
     @pytest.mark.parametrize(
         ("workspace", "path", "expected_patterns"),
         [
-            # #1295 — stages no longer add a per-stage grid pattern (all stages
-            # render the SAME 12-col dashboard grid, varying only by card
-            # col-span). Every workspace gets drawer + dashboard_grid; region
-            # display modes add their own responsive grids.
+            # #1295 — stages no longer add a per-stage grid pattern, and the
+            # `.dz-dashboard-grid` container is NOT asserted (uniform 12-track
+            # grid at every viewport; responsiveness is card-span based). Every
+            # workspace gets drawer; region display modes add their own
+            # viewport-responsive grids.
             (
                 {"name": "orders", "stage": "dual_pane_flow"},
                 "/app/workspaces/orders",
-                {"drawer", "dashboard_grid"},
+                {"drawer"},
             ),
             (
                 {"name": "status", "stage": "monitor_wall"},
                 "/app/workspaces/status",
-                {"drawer", "dashboard_grid"},
+                {"drawer"},
             ),
             (
                 {"name": "items", "stage": "focus_metric", "regions": [{"display": "GRID"}]},
                 "/app/workspaces/items",
-                {"drawer", "dashboard_grid", "grid"},
+                {"drawer", "grid"},
             ),
             (
                 {"name": "dash", "stage": "focus_metric", "regions": [{"display": "METRICS"}]},
                 "/app/workspaces/dash",
-                {"drawer", "dashboard_grid", "metrics"},
+                {"drawer", "metrics"},
             ),
             (
                 {"name": "summ", "stage": "focus_metric", "regions": [{"display": "SUMMARY"}]},
                 "/app/workspaces/summ",
-                {"drawer", "dashboard_grid", "metrics"},
+                {"drawer", "metrics"},
             ),
             (
                 {"name": "acts", "stage": "focus_metric", "regions": [{"display": "ACTION_GRID"}]},
                 "/app/workspaces/acts",
-                {"drawer", "dashboard_grid", "action_grid"},
+                {"drawer", "action_grid"},
             ),
             (
                 # DETAIL is container-query driven → no viewport pattern (#1295).
                 {"name": "detail", "stage": "focus_metric", "regions": [{"display": "DETAIL"}]},
                 "/app/workspaces/detail",
-                {"drawer", "dashboard_grid"},
+                {"drawer"},
             ),
         ],
         ids=[
@@ -382,12 +382,12 @@ class TestDerivePatterns:
         assert path in result
         assert {p.name for p in result[path]} == expected_patterns
 
-    def test_every_workspace_gets_drawer_and_dashboard_grid(self) -> None:
-        # #1295 — even a bare workspace renders the app-shell chrome + the
-        # uniform dashboard-grid container.
+    def test_every_workspace_gets_drawer(self) -> None:
+        # #1295 — a bare workspace renders the app-shell chrome (DRAWER). The
+        # dashboard-grid container is not asserted (always 12 tracks).
         spec = _mock_appspec(workspaces=[{"name": "home", "stage": "focus_metric"}])
         result = derive_patterns_from_appspec(spec)
-        assert {p.name for p in result["/app/workspaces/home"]} == {"drawer", "dashboard_grid"}
+        assert {p.name for p in result["/app/workspaces/home"]} == {"drawer"}
 
     def test_list_surface_gets_drawer_only(self) -> None:
         # #1295 — a list page is a table, not a responsive column grid; DRAWER
@@ -419,10 +419,9 @@ class TestDerivePatterns:
         )
         result = derive_patterns_from_appspec(spec)
         # Two GRID regions must not duplicate the grid pattern, nor the
-        # always-attached drawer / dashboard_grid.
+        # always-attached drawer.
         pattern_names = [p.name for p in result["/app/workspaces/dash"]]
         assert pattern_names.count("grid") == 1
-        assert pattern_names.count("dashboard_grid") == 1
         assert pattern_names.count("drawer") == 1
 
     def test_workspace_gets_drawer(self) -> None:
@@ -448,20 +447,19 @@ class TestGridColumnCounts:
             viewports = [a.viewport for a in pattern.assertions]
             assert viewports == ["mobile", "tablet", "desktop"]
 
-    def test_dashboard_grid_skips_tablet_boundary(self) -> None:
-        # 768px == 48rem exactly — inclusive boundary is flaky, so omit tablet.
-        viewports = [a.viewport for a in DASHBOARD_GRID_PATTERN.assertions]
-        assert viewports == ["mobile", "desktop"]
-
     def test_metrics_desktop_is_four_cols(self) -> None:
         desktop = [a for a in METRICS_PATTERN.assertions if a.viewport == "desktop"]
         assert len(desktop) == 1
         assert desktop[0].expected == "4"
 
-    def test_dashboard_desktop_is_twelve_cols(self) -> None:
-        desktop = [a for a in DASHBOARD_GRID_PATTERN.assertions if a.viewport == "desktop"]
-        assert len(desktop) == 1
-        assert desktop[0].expected == "12"
+    def test_no_dashboard_grid_pattern(self) -> None:
+        # #1295 — `.dz-dashboard-grid` is a uniform 12-track grid at every
+        # viewport (card-span responsiveness), so it is deliberately NOT a
+        # pattern. The live CI run caught a mobile=1 assertion failing (got 12).
+        assert "dashboard_grid" not in ALL_PATTERNS
+        for pattern in ALL_PATTERNS.values():
+            for a in pattern.assertions:
+                assert a.selector != ".dz-dashboard-grid"
 
 
 # ============================================================================
@@ -642,7 +640,6 @@ def test_drawer_pattern_selectors_match_current_markup() -> None:
 from dazzle.render.fragment.primitives.data import (  # noqa: E402
     ActionCard,
     ActionGrid,
-    DashboardGrid,
     GridCell,
     GridRegion,
     MetricsGrid,
@@ -658,7 +655,6 @@ _REGION_FRESHNESS_CASES = [
     (GRID_PATTERN, GridRegion(cells=(GridCell(title="x"),))),
     (METRICS_PATTERN, MetricsGrid(tiles=(MetricTile(label="x", value="1"),))),
     (ACTION_GRID_PATTERN, ActionGrid(cards=(ActionCard(label="x"),))),
-    (DASHBOARD_GRID_PATTERN, DashboardGrid()),
 ]
 
 
