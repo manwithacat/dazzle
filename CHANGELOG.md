@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.34] - 2026-05-29
+
+### Fixed
+
+- `examples/acme_billing`: the `billing` workspace had no `access:` declaration and no persona listing it as `default_workspace`, so it was open to all authenticated users (RBAC omission). Added `access: persona(admin, org_owner, auditor)` — the org-management personas who work with organizations/projects/invoices/memberships; project_member/external_contractor retain project-scoped access via their own surfaces. Found via the `/improve` example-apps lane (cycle 167 Tier-1 scan; fixed cycle 168). Note: acme_billing has no `dazzle_validate_baseline.json` entry, so this gap was previously ungated by the validate-drift test.
+
 ## [0.80.33] - 2026-05-29
 
 ### Fixed

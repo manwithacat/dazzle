@@ -233,6 +233,14 @@ surface membership_edit "Edit Membership":
 workspace billing "Acme Billing":
   purpose: "Manage organizations, projects, invoices and team memberships"
   stage: "simple_list"
+  # Gate the management workspace to the org-management personas. admin
+  # (cross-org), org_owner (their org), auditor (read-only review) all
+  # work with organizations/projects/invoices/memberships. project_member
+  # and external_contractor have project-scoped access via their own
+  # surfaces/scopes, not the full billing workspace (#improve row 120 —
+  # previously this workspace had no access: declaration, so it was open
+  # to all authenticated users).
+  access: persona(admin, org_owner, auditor)
 
   organizations:
     source: Organization
