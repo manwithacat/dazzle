@@ -340,15 +340,16 @@ def derive_patterns_from_appspec(
     """
     result: dict[str, list[ComponentPattern]] = {}
 
-    has_content = bool(appspec.workspaces) or bool(appspec.surfaces)
+    # #1295 — paths must be the real app-shell routes. Pre-fix this derived
+    # bare "/<name>" paths (and put DRAWER on "/", the marketing root that
+    # has NO app-shell), so `run-viewport` navigated to non-app-shell URLs
+    # and every assertion came back "Element not found" (0/37). The app-shell
+    # chrome (sidebar + toggle) renders on every /app page; workspaces live
+    # at /app/workspaces/<name>, entity-list surfaces at /app/<entity>.
 
-    # Drawer on root page for any app with navigable content
-    if has_content:
-        result.setdefault("/", []).append(DRAWER_PATTERN)
-
-    # Workspaces
+    # Workspaces — app-shell pages at /app/workspaces/<name>
     for ws in appspec.workspaces:
-        path = f"/{ws.name}"
+        path = f"/app/workspaces/{ws.name}"
 
         patterns: list[ComponentPattern] = []
 
@@ -379,11 +380,16 @@ def derive_patterns_from_appspec(
         if DRAWER_PATTERN not in result[path]:
             result[path].append(DRAWER_PATTERN)
 
-    # Surfaces (standalone, not in workspaces)
+    # Standalone list surfaces — entity-list pages at /app/<entity>. These
+    # are also /app pages, so they carry the app-shell drawer chrome.
     for surface in appspec.surfaces:
         mode = surface.mode.upper() if hasattr(surface.mode, "upper") else str(surface.mode).upper()
         if mode == "LIST":
-            path = f"/{surface.name}"
-            result.setdefault(path, []).append(GRID_1_2_PATTERN)
+            entity_slug = (getattr(surface, "entity_ref", "") or surface.name).lower()
+            path = f"/app/{entity_slug}"
+            result.setdefault(path, [])
+            for pat in (GRID_1_2_PATTERN, DRAWER_PATTERN):
+                if pat not in result[path]:
+                    result[path].append(pat)
 
     return result

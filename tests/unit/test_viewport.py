@@ -270,6 +270,10 @@ def _mock_appspec(
         s = MagicMock()
         s.name = s_def.get("name", "test_surface")
         s.mode = s_def.get("mode", "view")
+        # entity_ref drives the /app/<entity> list path (#1295); default None
+        # so the derivation falls back to the surface name. (Unset MagicMock
+        # attrs auto-create truthy mocks, so set it explicitly.)
+        s.entity_ref = s_def.get("entity_ref")
         s_mocks.append(s)
     spec.surfaces = s_mocks
 
@@ -284,30 +288,43 @@ class TestDerivePatterns:
         result = derive_patterns_from_appspec(spec)
         assert result == {}
 
-    def test_drawer_on_root_with_workspaces(self) -> None:
+    def test_drawer_on_workspace_app_page(self) -> None:
+        # #1295 — workspaces are app-shell pages at /app/workspaces/<name>;
+        # DRAWER attaches there, NOT on "/" (the marketing root has no shell).
         spec = _mock_appspec(workspaces=[{"name": "dashboard"}])
         result = derive_patterns_from_appspec(spec)
-        assert "/" in result
-        assert DRAWER_PATTERN in result["/"]
+        assert "/" not in result
+        assert "/app/workspaces/dashboard" in result
+        assert DRAWER_PATTERN in result["/app/workspaces/dashboard"]
 
-    def test_drawer_on_root_with_surfaces(self) -> None:
+    def test_drawer_on_list_surface_app_page(self) -> None:
+        # List surfaces are app-shell pages at /app/<entity> (entity_ref →
+        # slug, fallback to surface name).
         spec = _mock_appspec(surfaces=[{"name": "tasks", "mode": "list"}])
         result = derive_patterns_from_appspec(spec)
-        assert "/" in result
-        assert DRAWER_PATTERN in result["/"]
+        assert "/" not in result
+        assert "/app/tasks" in result
+        assert DRAWER_PATTERN in result["/app/tasks"]
+
+    def test_list_surface_uses_entity_slug(self) -> None:
+        spec = _mock_appspec(
+            surfaces=[{"name": "ticket_list", "mode": "list", "entity_ref": "Ticket"}]
+        )
+        result = derive_patterns_from_appspec(spec)
+        assert "/app/ticket" in result  # entity_ref lowercased, not surface name
 
     @pytest.mark.parametrize(
         ("workspace", "path", "expected_pattern"),
         [
-            ({"name": "orders", "stage": "dual_pane_flow"}, "/orders", "grid_1_2"),
-            ({"name": "status", "stage": "monitor_wall"}, "/status", "grid_2_3"),
+            ({"name": "orders", "stage": "dual_pane_flow"}, "/app/workspaces/orders", "grid_1_2"),
+            ({"name": "status", "stage": "monitor_wall"}, "/app/workspaces/status", "grid_2_3"),
             (
                 {
                     "name": "items",
                     "stage": "focus_metric",
                     "regions": [{"display": "GRID"}],
                 },
-                "/items",
+                "/app/workspaces/items",
                 "grid_1_2_3",
             ),
             (
@@ -316,7 +333,7 @@ class TestDerivePatterns:
                     "stage": "focus_metric",
                     "regions": [{"display": "METRICS"}],
                 },
-                "/dash",
+                "/app/workspaces/dash",
                 "stats",
             ),
             (
@@ -325,7 +342,7 @@ class TestDerivePatterns:
                     "stage": "focus_metric",
                     "regions": [{"display": "DETAIL"}],
                 },
-                "/detail",
+                "/app/workspaces/detail",
                 "detail_view",
             ),
         ],
@@ -348,25 +365,25 @@ class TestDerivePatterns:
         spec = _mock_appspec(workspaces=[{"name": "home", "stage": "focus_metric"}])
         result = derive_patterns_from_appspec(spec)
         # focus_metric has no grid patterns, only drawer
-        assert "/home" in result
-        pattern_names = [p.name for p in result["/home"]]
+        path = "/app/workspaces/home"
+        assert path in result
+        pattern_names = [p.name for p in result[path]]
         assert "drawer" in pattern_names
         assert "grid_1_2" not in pattern_names
 
     def test_list_surface_gets_grid_1_2(self) -> None:
         spec = _mock_appspec(surfaces=[{"name": "tasks", "mode": "list"}])
         result = derive_patterns_from_appspec(spec)
-        assert "/tasks" in result
-        pattern_names = [p.name for p in result["/tasks"]]
+        assert "/app/tasks" in result
+        pattern_names = [p.name for p in result["/app/tasks"]]
         assert "grid_1_2" in pattern_names
 
     def test_non_list_surface_no_pattern(self) -> None:
         spec = _mock_appspec(surfaces=[{"name": "create_task", "mode": "create"}])
         result = derive_patterns_from_appspec(spec)
-        # Root gets drawer
-        assert "/" in result
-        # But create surface itself doesn't get a pattern
-        assert "/create_task" not in result
+        # A create-only surface (no workspaces, no list surfaces) yields no
+        # patterns — no marketing-root drawer anymore (#1295).
+        assert result == {}
 
     def test_no_duplicate_patterns(self) -> None:
         spec = _mock_appspec(
@@ -383,14 +400,15 @@ class TestDerivePatterns:
         )
         result = derive_patterns_from_appspec(spec)
         # dual_pane_flow adds grid_1_2, but LIST regions shouldn't duplicate it
-        pattern_names = [p.name for p in result["/dash"]]
+        pattern_names = [p.name for p in result["/app/workspaces/dash"]]
         assert pattern_names.count("grid_1_2") == 1
 
     def test_workspace_gets_drawer(self) -> None:
         spec = _mock_appspec(workspaces=[{"name": "ops", "stage": "scanner_table"}])
         result = derive_patterns_from_appspec(spec)
-        assert "/ops" in result
-        pattern_names = [p.name for p in result["/ops"]]
+        path = "/app/workspaces/ops"
+        assert path in result
+        pattern_names = [p.name for p in result[path]]
         assert "drawer" in pattern_names
 
 

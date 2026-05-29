@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.39] - 2026-05-29
+
+### Fixed
+
+- Viewport-harness path derivation (#1295 follow-through). The first advisory `run-viewport` CI run (v0.80.37) came back **0 passed / 37 failed, every assertion "Element not found"** — because `derive_patterns_from_appspec` built **bare `/<name>` paths** (and put `DRAWER_PATTERN` on `"/"`, the marketing root that has no app-shell), so the runner never navigated to an app-shell page. Fixed to the real routes: workspaces → `/app/workspaces/<name>`, list surfaces → `/app/<entity>` (entity_ref slug, fallback to surface name), and the drawer chrome attaches to those `/app` pages (not `/`). The runner already authenticates (persona cookies), so with correct paths the `DRAWER_PATTERN` geometry assertions (sidebar on-screen + toggle visible — the #1294 dimension) now actually exercise an authenticated app-shell render. Unit-verified via `test_viewport.py` (paths assert `/app/...` shapes).
+
+### Agent Guidance
+
+- #1295 remains open: the path fix makes `DRAWER_PATTERN` functional, but `run-viewport` still isn't all-green because the **GRID/STATS/DETAIL/console patterns are also legacy-DaisyUI-stale** (selectors like `.grid.md:grid-cols-2` the Fragment substrate doesn't emit). Promoting the advisory `run-viewport` step to a blocking CI gate needs those patterns refreshed to the Fragment markup too — until then it stays `continue-on-error`. The unit-suite `DRAWER_PATTERN` freshness guard (v0.80.37) is the working blocking regression against pattern-rot meanwhile.
+
 ## [0.80.38] - 2026-05-29
 
 ### Fixed
