@@ -12,7 +12,7 @@ This endpoint is mounted unconditionally and is suitable for:
 
 import logging
 from typing import Annotated
-from urllib.parse import quote, urlparse
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -23,6 +23,7 @@ from dazzle.back.runtime.auth.magic_link import (
     validate_magic_link,
 )
 from dazzle.back.runtime.auth.mailer import get_mailer
+from dazzle.back.runtime.auth.redirect_safety import is_safe_redirect_path as _is_safe_redirect_path
 
 _logger = logging.getLogger(__name__)
 
@@ -41,37 +42,6 @@ def _build_magic_link_url(*, request: Request, token: str, next_path: str) -> st
     # guard and would otherwise be interpolated raw.
     next_param = f"?next={quote(next_path, safe='/')}" if next_path and next_path != "/" else ""
     return f"{base}/auth/magic/{token}{next_param}"
-
-
-def _is_safe_redirect_path(value: str) -> bool:
-    """Return True if ``value`` is safe to use as a same-origin redirect target.
-
-    Uses ``urllib.parse.urlparse`` to catch bypasses that string-prefix
-    checks miss — specifically backslash escaping (``/\\@evil.com``,
-    which modern browsers may normalize per the WHATWG URL spec to a
-    protocol-relative URL pointing at ``evil.com``).
-
-    A safe value must:
-
-    1. Contain no backslash. Browsers normalize ``\\`` to ``/`` in URL
-       parsing in some contexts, which can turn an apparently-local path
-       into a protocol-relative URL. Reject explicitly.
-    2. Have no ``scheme`` (``http://``, ``https://``, ``javascript:``,
-       ``data:``, etc.) — would escape the origin entirely.
-    3. Have no ``netloc`` (authority / host). This catches both
-       ``//evil.com`` (protocol-relative) and any malformed URL whose
-       authority parses out of the input.
-    4. Have a ``path`` that begins with ``/`` (absolute within-origin
-       path), excluding the empty string.
-
-    Closes CodeQL alert ``py/url-redirection`` at this call site.
-    """
-    if "\\" in value:
-        return False
-    parsed = urlparse(value)
-    if parsed.scheme or parsed.netloc:
-        return False
-    return parsed.path.startswith("/")
 
 
 def create_magic_link_routes() -> APIRouter:

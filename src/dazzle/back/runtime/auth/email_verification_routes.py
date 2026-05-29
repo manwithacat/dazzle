@@ -20,7 +20,6 @@ consistent with magic-link tokens.
 import logging
 import time
 from typing import Annotated
-from urllib.parse import urlparse
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -32,6 +31,9 @@ from dazzle.back.runtime.auth.email_verification import (
 )
 from dazzle.back.runtime.auth.events import emit_user_email_verified
 from dazzle.back.runtime.auth.mailer import get_verification_mailer
+from dazzle.back.runtime.auth.redirect_safety import (
+    is_safe_redirect_path as _is_safe_redirect_path,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -43,17 +45,6 @@ def _build_verify_url(*, request: Request, token: str, next_path: str) -> str:
     base = str(request.base_url).rstrip("/")
     next_param = f"&next={next_path}" if next_path and next_path != "/" else ""
     return f"{base}/auth/verify-email?token={token}{next_param}"
-
-
-def _is_safe_redirect_path(value: str) -> bool:
-    """Same shape as magic_link_routes._is_safe_redirect_path — keep them
-    in sync so the two flows have identical redirect-safety semantics."""
-    if "\\" in value:
-        return False
-    parsed = urlparse(value)
-    if parsed.scheme or parsed.netloc:
-        return False
-    return parsed.path.startswith("/")
 
 
 def create_email_verification_routes(

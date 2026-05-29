@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.26] - 2026-05-29
+
+### Changed
+
+- Consolidated the `_is_safe_redirect_path` open-redirect validator, which was duplicated (logic-identical) across 5 auth route modules (password_login, magic_link, sso, email_verification, two_factor_form). One shared implementation now lives in `dazzle/back/runtime/auth/redirect_safety.py:is_safe_redirect_path`; each module imports it under the same local name, so all call sites and test imports are unchanged. Eliminates the risk of one copy drifting into a real open redirect.
+
+### Security
+
+- Triaged + dismissed 6 false-positive CodeQL alerts (server-side code scanning): 3× `py/url-redirection` in auth routes (the redirect target is validated by `_is_safe_redirect_path` — rejects scheme/netloc/backslash, requires a same-origin `/`-path — which CodeQL doesn't recognize as a sanitizer), and 3× `py/incomplete-url-substring-sanitization` in test files (substring assertions on error-message / rendered-HTML strings, not URL host sanitization).
+
 ## [0.80.25] - 2026-05-29
 
 ### Security

@@ -19,24 +19,17 @@ Two endpoints:
 import logging
 from datetime import timedelta
 from typing import Annotated
-from urllib.parse import quote, urlparse
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.redirect_safety import (
+    is_safe_redirect_path as _is_safe_redirect_path,
+)
 
 _logger = logging.getLogger(__name__)
-
-
-def _is_safe_redirect_path(value: str) -> bool:
-    """Reject scheme/netloc/backslash redirect targets (Phase 1.A helper)."""
-    if "\\" in value:
-        return False
-    parsed = urlparse(value)
-    if parsed.scheme or parsed.netloc:
-        return False
-    return parsed.path.startswith("/")
 
 
 def create_two_factor_form_routes(

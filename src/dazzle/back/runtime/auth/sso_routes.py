@@ -23,30 +23,18 @@ routes. Unsafe values silently fall back to `/app`.
 import logging
 import secrets
 from typing import Annotated, Any
-from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.redirect_safety import (
+    is_safe_redirect_path as _is_safe_redirect_path,
+)
 from dazzle.back.runtime.auth.sso_config import SsoProviderConfig, get_provider
 
 _logger = logging.getLogger(__name__)
-
-
-def _is_safe_redirect_path(value: str) -> bool:
-    """Reject scheme/netloc/backslash redirect targets (Phase 1.A helper).
-
-    Identical contract to the helper in `magic_link_routes.py`:
-    only same-origin paths beginning with `/` survive.
-    """
-    if "\\" in value:
-        return False
-    parsed = urlparse(value)
-    if parsed.scheme or parsed.netloc:
-        return False
-    return parsed.path.startswith("/")
 
 
 def _build_callback_url(request: Request, provider_name: str) -> str:
