@@ -213,7 +213,13 @@ class _RenderShellMixin:
         bypass for the navigation. Set `skip_link_text=""` to disable
         (rare — almost always wrong).
         """
-        parts: list[str] = ['<div class="dz-app-shell">']
+        # #1294 — emit the sidebar open/closed state on the shell root so
+        # CSS slides the sidebar on-screen + offsets the content. Without
+        # it the sidebar parks off-screen (translateX(-100%)) and the nav
+        # is unreachable. Sanitised to the two valid values so a bad
+        # primitive value can't inject arbitrary attribute content.
+        sidebar_state = a.sidebar_state if a.sidebar_state in ("open", "closed") else "open"
+        parts: list[str] = [f'<div class="dz-app-shell" data-dz-sidebar="{sidebar_state}">']
         if a.skip_link_text:
             # Emit via the SkipLink primitive's renderer so the markup
             # stays consistent if someone composes one explicitly
@@ -221,8 +227,9 @@ class _RenderShellMixin:
             # own #main-content id.
             parts.append(self._emit_skip_link(SkipLink(text=a.skip_link_text), ctx))
         if a.sidebar is not None:
+            # id anchors the topbar toggle's aria-controls (#1294).
             parts.append(
-                f'<aside class="dz-app-sidebar">{self._emit(a.sidebar, ctx)}</aside>'  # type: ignore[arg-type]
+                f'<aside class="dz-app-sidebar" id="dz-app-sidebar">{self._emit(a.sidebar, ctx)}</aside>'  # type: ignore[arg-type]
             )
         parts.append('<div class="dz-app-content">')
         if a.header is not None:
@@ -298,12 +305,26 @@ class _RenderShellMixin:
         trailing_html = (
             self._emit(t.trailing, ctx) if t.trailing is not None else ""  # type: ignore[arg-type]
         )
+        # #1294 — built-in sidebar toggle. Emitted at the start of the
+        # leading area so the sidebar nav is reachable (and collapsible)
+        # on every app-shell page. The JS controller (dz-alpine.js) wires
+        # the click → flip `data-dz-sidebar` on `.dz-app-shell` + persist
+        # the `dz_sidebar` cookie; aria-expanded is synced on load + click.
+        toggle_html = ""
+        if t.show_sidebar_toggle:
+            toggle_html = (
+                '<button type="button" class="dz-sidebar-toggle" '
+                'data-dz-sidebar-toggle aria-controls="dz-app-sidebar" '
+                'aria-expanded="true" aria-label="Toggle navigation">'
+                '<span class="dz-sidebar-toggle__icon" aria-hidden="true"></span>'
+                "</button>"
+            )
         title_html = ""
         if t.title:
             title_html = f'<span class="dz-topbar-title-text">{ctx.escape(t.title)}</span>'
         return (
             f'<div class="dz-topbar">'
-            f'<div class="dz-topbar-leading">{leading_html}</div>'
+            f'<div class="dz-topbar-leading">{toggle_html}{leading_html}</div>'
             f'<div class="dz-topbar-title">{title_html}</div>'
             f'<div class="dz-topbar-trailing">{trailing_html}</div>'
             f"</div>"

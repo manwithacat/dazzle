@@ -235,6 +235,13 @@ class AppShell:
     """Surface-level purpose subtitle (UX-048). Rendered as a muted
     intro `<p class="dz-page-purpose">` above the body inside `<main>`
     when non-empty. Empty omits the element entirely."""
+    sidebar_state: str = "open"
+    """#1294 — open/closed state emitted as `data-dz-sidebar` on the
+    `.dz-app-shell` root. The CSS keys off it to slide the sidebar
+    on-screen (`open`) or off-screen (`closed`) and offset the content
+    area. Defaults to `"open"` so the nav is reachable on first paint;
+    callers thread the persisted value from `theme.get_sidebar_state()`
+    (the `dz_sidebar` cookie). Only `"open"`/`"closed"` are emitted."""
 
 
 @dataclass(frozen=True, slots=True)

@@ -168,8 +168,8 @@ def test_sidebar_inside_app_shell_inside_page_composes_full_chrome() -> None:
     )
     html = _render(page)
     assert "<!DOCTYPE html>" in html
-    assert '<div class="dz-app-shell">' in html
-    assert '<aside class="dz-app-sidebar">' in html
+    assert '<div class="dz-app-shell"' in html
+    assert '<aside class="dz-app-sidebar"' in html
     assert '<nav class="dz-sidebar"' in html
     assert "All Tasks" in html
     # Active state propagates

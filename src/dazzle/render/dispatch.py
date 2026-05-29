@@ -215,9 +215,16 @@ def build_app_chrome_page(
     extra_meta: tuple[tuple[str, str], ...] = (),
     og_meta: tuple[tuple[str, str], ...] = (),
     font_preconnect: tuple[str, ...] = (),
+    sidebar_state: str = "open",
 ) -> Page:
     """Build a fully-chromed Page — `Page → AppShell → Sidebar/Topbar
     + body` — from PageContext's nav data.
+
+    `sidebar_state` ("open"/"closed", #1294) is emitted as
+    `data-dz-sidebar` on the shell root so the sidebar nav renders
+    on-screen (default "open"); callers thread the persisted
+    `theme.get_sidebar_state()` cookie value. The topbar always gets a
+    sidebar toggle so the nav is collapsible/reachable at all viewports.
 
     Use this for primary app surfaces (workspace pages, list/view/
     create/edit). For routes without an app shell (errors, auth),
@@ -227,7 +234,7 @@ def build_app_chrome_page(
     app_name = (ctx.app_name or "Dazzle").strip()
     title = f"{page_title} — {app_name}" if page_title else app_name
     sidebar = _build_sidebar_from_ctx(ctx)
-    topbar = Topbar(title=app_name)
+    topbar = Topbar(title=app_name, show_sidebar_toggle=True)
     # Phase 4 app-shell migration (v0.67.44): thread the contract
     # `data-dazzle-view` / `data-dz-surface` / `data-dz-workspace`
     # attrs from PageContext into the typed AppShell so the same
@@ -242,6 +249,7 @@ def build_app_chrome_page(
         surface_name=getattr(ctx, "surface_name", "") or "",
         workspace_name=getattr(ctx, "workspace_name", "") or "",
         page_purpose=getattr(ctx, "page_purpose", "") or "",
+        sidebar_state=sidebar_state,
     )
     return Page(
         title=title,
@@ -268,6 +276,7 @@ def dispatch_render_page(
     og_meta: tuple[tuple[str, str], ...] = (),
     font_preconnect: tuple[str, ...] = (),
     chrome: bool = True,
+    sidebar_state: str = "open",
 ) -> str:
     """Build a Page and render it to HTML — convenience wrapper.
 
@@ -282,16 +291,33 @@ def dispatch_render_page(
     """
     from dazzle.render.fragment.renderer import FragmentRenderer
 
-    builder = build_app_chrome_page if chrome else build_page
-    page = builder(
-        ctx,
-        inner_html,
-        css_links=css_links,
-        js_scripts=js_scripts,
-        theme=theme,
-        favicon=favicon,
-        extra_meta=extra_meta,
-        og_meta=og_meta,
-        font_preconnect=font_preconnect,
-    )
+    # sidebar_state (#1294) only applies to the app-shell builder;
+    # build_page (error/auth routes) has no sidebar. Kwargs are passed
+    # explicitly per branch (not via a shared **dict) so the heterogeneous
+    # param types stay checkable by mypy.
+    if chrome:
+        page: Page = build_app_chrome_page(
+            ctx,
+            inner_html,
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
+            favicon=favicon,
+            extra_meta=extra_meta,
+            og_meta=og_meta,
+            font_preconnect=font_preconnect,
+            sidebar_state=sidebar_state,
+        )
+    else:
+        page = build_page(
+            ctx,
+            inner_html,
+            css_links=css_links,
+            js_scripts=js_scripts,
+            theme=theme,
+            favicon=favicon,
+            extra_meta=extra_meta,
+            og_meta=og_meta,
+            font_preconnect=font_preconnect,
+        )
     return FragmentRenderer().render(page)

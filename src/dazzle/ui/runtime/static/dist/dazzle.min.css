@@ -1,4 +1,4 @@
-/* dazzle v0.78.10 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.80.35 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -4813,6 +4813,46 @@ flex: none;
 display: flex;
 align-items: center;
 gap: var(--space-sm);
+}
+.dz-sidebar-toggle {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 2.25rem;
+height: 2.25rem;
+padding: 0;
+border: none;
+border-radius: var(--radius-md);
+background: transparent;
+color: var(--colour-text);
+cursor: pointer;
+}
+.dz-sidebar-toggle:hover {
+background: var(--colour-surface);
+}
+.dz-sidebar-toggle__icon,
+.dz-sidebar-toggle__icon::before,
+.dz-sidebar-toggle__icon::after {
+display: block;
+width: 1.125rem;
+height: 2px;
+background: currentColor;
+border-radius: 1px;
+}
+.dz-sidebar-toggle__icon {
+position: relative;
+}
+.dz-sidebar-toggle__icon::before,
+.dz-sidebar-toggle__icon::after {
+content: "";
+position: absolute;
+inset-inline-start: 0;
+}
+.dz-sidebar-toggle__icon::before {
+inset-block-start: -6px;
+}
+.dz-sidebar-toggle__icon::after {
+inset-block-start: 6px;
 }
 .dz-topbar-title {
 flex: 1 1 0;

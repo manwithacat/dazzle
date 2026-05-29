@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.36] - 2026-05-29
+
+### Fixed
+
+- App-shell navigation is reachable again (#1294). The typed-Fragment chrome rendered the sidebar permanently off-screen (`transform: translateX(-100%)`) with no toggle, because `_emit_app_shell` never emitted the `data-dz-sidebar` state the CSS keys off and `_emit_topbar` rendered no toggle — a Phase-4 (v0.67.44/45) migration regression that left every consumer's app non-navigable on the Fragment chrome path. Fix (full legacy parity): `AppShell` now emits `data-dz-sidebar` (default `"open"`, sanitized) on the shell root; the `<aside>` carries `id="dz-app-sidebar"`; `Topbar` (with `show_sidebar_toggle`, set by `build_app_chrome_page`) emits a hamburger `[data-dz-sidebar-toggle]` button; a vanilla controller in `dz-alpine.js` flips the state + persists it to the `dz_sidebar` cookie; `ThemeVariantMiddleware`/`get_sidebar_state()` read the cookie so SSR emits the persisted state on first paint (no flash on the main render path). Regression guarded by DOM-presence unit tests in `test_app_shell_primitive.py` + `test_topbar_primitive.py`.
+
+### Agent Guidance
+
+- **Why this app-wide regression escaped QA — correlated blind spots.** Every Dazzle QA layer that was green here (contract checker, fidelity scorer, conformance, card-safety) checks one dimension: *is the markup in the DOM/IR?* The bug lived in an orthogonal dimension (CSS geometry / interaction-reachability) — markup present, rendered off-screen. Self-authored DOM/IR checks share the renderer author's blind spots, so a green there is **not** assurance about geometry/visibility/behaviour. The catch came from a downstream consumer (AegisMark) testing orthogonally. The in-house orthogonal harness (`dazzle e2e run-viewport`, `dazzle.testing.viewport.DRAWER_PATTERN`) *exists* but had rotted — it targets retired legacy `.drawer-side`/`dz-drawer` markup, asserts `visibility` (not transform geometry), and its live engine isn't wired into CI. Lesson: weight self-authored green checks less; keep the orthogonal (geometry/vision/behaviour) dimension *live*; value consumer findings. Tracked: harness-health issue to revive `run-viewport` in CI + update `DRAWER_PATTERN` to the Fragment markup + a geometry property model. See `dev_docs/2026-05-29-orthogonal-qa-dimensions.md`.
+
 ## [0.80.35] - 2026-05-29
 
 ### Fixed

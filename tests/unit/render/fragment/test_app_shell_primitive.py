@@ -36,7 +36,7 @@ def test_app_shell_all_slots() -> None:
 
 def test_app_shell_emits_root_div_and_content_wrapper() -> None:
     html = _render(AppShell(body=Text("hi")))
-    assert '<div class="dz-app-shell">' in html
+    assert '<div class="dz-app-shell"' in html  # #1294: now carries data-dz-sidebar
     assert '<div class="dz-app-content">' in html
 
 
@@ -55,7 +55,7 @@ def test_app_shell_omits_sidebar_aside_when_no_sidebar() -> None:
 
 def test_app_shell_renders_sidebar_in_aside_when_provided() -> None:
     html = _render(AppShell(body=Text("body"), sidebar=Text("nav-stuff")))
-    assert '<aside class="dz-app-sidebar">' in html
+    assert '<aside class="dz-app-sidebar"' in html
     assert "nav-stuff" in html
 
 
@@ -109,8 +109,41 @@ def test_app_shell_inside_page_composes_full_chrome() -> None:
     html = _render(page)
     assert "<!DOCTYPE html>" in html
     assert '<body class="dz-page">' in html
-    assert '<div class="dz-app-shell">' in html
-    assert '<aside class="dz-app-sidebar">' in html
+    assert '<div class="dz-app-shell"' in html  # #1294: now carries data-dz-sidebar
+    assert '<aside class="dz-app-sidebar"' in html
     assert '<main class="dz-app-main" id="main-content">' in html
     assert '<section class="dz-surface">' in html
     assert "Tasks" in html
+
+
+# ──────────── #1294 — sidebar reachability (data-dz-sidebar) ────────────
+# Regression for the app-wide nav-unreachable bug: the Fragment app-shell
+# rendered the sidebar off-screen (translateX(-100%)) with no toggle
+# because the renderer never emitted the `data-dz-sidebar` state the CSS
+# keys off. These are the FAST DOM-presence guards; the orthogonal
+# geometry/viewport reachability check lives in the e2e harness (the
+# dimension that actually missed this — DOM presence alone did not).
+
+
+def test_app_shell_emits_data_dz_sidebar_open_by_default() -> None:
+    html = _render(AppShell(body=Text("hi"), sidebar=Text("nav")))
+    assert 'data-dz-sidebar="open"' in html
+
+
+def test_app_shell_emits_data_dz_sidebar_closed_when_set() -> None:
+    html = _render(AppShell(body=Text("hi"), sidebar=Text("nav"), sidebar_state="closed"))
+    assert 'data-dz-sidebar="closed"' in html
+
+
+def test_app_shell_sanitises_invalid_sidebar_state() -> None:
+    """A bad sidebar_state falls back to 'open' and can't inject markup."""
+    html = _render(AppShell(body=Text("hi"), sidebar_state='evil"><script>'))
+    assert 'data-dz-sidebar="open"' in html
+    assert "<script>" not in html
+
+
+def test_app_shell_sidebar_aside_has_id_for_toggle_target() -> None:
+    """The sidebar <aside> carries id='dz-app-sidebar' so the topbar
+    toggle's aria-controls resolves."""
+    html = _render(AppShell(body=Text("hi"), sidebar=Text("nav")))
+    assert 'id="dz-app-sidebar"' in html

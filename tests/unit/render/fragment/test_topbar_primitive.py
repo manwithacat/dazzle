@@ -126,3 +126,21 @@ def test_topbar_inside_app_shell_inside_page() -> None:
     assert '<div class="dz-topbar">' in html
     assert '<span class="dz-topbar-title-text">My App</span>' in html
     assert "alice" in html
+
+
+# ──────────── #1294 — sidebar toggle ────────────────────────────────────
+
+
+def test_topbar_emits_sidebar_toggle_when_enabled() -> None:
+    """Regression: with show_sidebar_toggle the topbar emits a
+    [data-dz-sidebar-toggle] button targeting the sidebar, so the nav is
+    reachable/collapsible at every viewport (#1294)."""
+    html = _render(Topbar(title="App", show_sidebar_toggle=True))
+    assert "data-dz-sidebar-toggle" in html
+    assert 'aria-controls="dz-app-sidebar"' in html
+    assert 'type="button"' in html
+
+
+def test_topbar_no_sidebar_toggle_by_default() -> None:
+    html = _render(Topbar(title="App"))
+    assert "data-dz-sidebar-toggle" not in html

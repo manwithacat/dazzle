@@ -54,6 +54,22 @@ VALID_VARIANTS: frozenset[str] = frozenset({"light", "dark"})
 # unit-test rendering paths that bypass the middleware).
 theme_variant_ctxvar: ContextVar[str] = ContextVar("dz_theme_variant", default=DEFAULT_VARIANT)
 
+# ── Sidebar open/closed state (#1294) ───────────────────────────────
+# The Fragment app-shell sidebar is driven by `data-dz-sidebar` on the
+# shell root (open → slid on-screen + content offset; closed → off-
+# screen). The state persists in the `dz_sidebar` cookie, written by
+# the topbar toggle's JS controller and read back here at request
+# ingress so SSR emits the correct initial attribute (no flash, and —
+# critically — the nav is reachable on first paint). Default "open" so
+# anonymous first-time visitors land on a desktop shell with visible
+# navigation. Mirrors the dz_theme cookie round-trip exactly.
+SIDEBAR_COOKIE_NAME = "dz_sidebar"
+DEFAULT_SIDEBAR_STATE = "open"
+VALID_SIDEBAR_STATES: frozenset[str] = frozenset({"open", "closed"})
+sidebar_state_ctxvar: ContextVar[str] = ContextVar(
+    "dz_sidebar_state", default=DEFAULT_SIDEBAR_STATE
+)
+
 
 # #938 — process-wide flag set once at server startup from
 # ``[ui] dark_mode_toggle`` in dazzle.toml. When ``False``:
@@ -122,6 +138,16 @@ def get_theme_variant() -> str:
     return theme_variant_ctxvar.get()
 
 
+def get_sidebar_state() -> str:
+    """Return the current request's app-shell sidebar state ("open" or
+    "closed"), or the default ("open") outside a request context.
+
+    Emitted as ``data-dz-sidebar`` on ``.dz-app-shell`` so the sidebar
+    renders on-screen (and the nav is reachable) on first paint (#1294).
+    """
+    return sidebar_state_ctxvar.get()
+
+
 class ThemeVariantMiddleware(BaseHTTPMiddleware):
     """Read the ``dz_theme`` cookie and publish a validated theme
     variant into :data:`theme_variant_ctxvar` for the lifetime of
@@ -145,13 +171,21 @@ class ThemeVariantMiddleware(BaseHTTPMiddleware):
         raw = request.cookies.get(COOKIE_NAME)
         variant = raw if raw in VALID_VARIANTS else DEFAULT_VARIANT
         token = theme_variant_ctxvar.set(variant)
+        # #1294 — same round-trip for the app-shell sidebar open/closed
+        # state. Unknown/absent → DEFAULT_SIDEBAR_STATE ("open") so a
+        # malformed cookie can't inject arbitrary `data-dz-sidebar`
+        # values and first-time visitors get a reachable nav.
+        raw_sidebar = request.cookies.get(SIDEBAR_COOKIE_NAME)
+        sidebar = raw_sidebar if raw_sidebar in VALID_SIDEBAR_STATES else DEFAULT_SIDEBAR_STATE
+        sidebar_token = sidebar_state_ctxvar.set(sidebar)
         try:
             return await call_next(request)
         finally:
-            # Restore the previous value so nested request-handlers
+            # Restore the previous values so nested request-handlers
             # (rare but possible with Starlette test clients) don't
             # leak state across boundaries.
             theme_variant_ctxvar.reset(token)
+            sidebar_state_ctxvar.reset(sidebar_token)
 
 
 def install_theme_middleware(app: ASGIApp) -> None:

@@ -101,9 +101,16 @@ def render_page(
         return rendered_content
 
     from dazzle.render.dispatch import dispatch_render_page
+    from dazzle.ui.runtime.theme import get_sidebar_state
 
+    # #1294 — thread the persisted sidebar open/closed state (dz_sidebar
+    # cookie, read by ThemeVariantMiddleware) into the chrome so SSR emits
+    # the correct `data-dz-sidebar` on first paint (no flash on this, the
+    # dominant app-surface render path). The JS controller is the universal
+    # fallback for any path that defaults to "open".
     return dispatch_render_page(
         context,
         rendered_content,
         chrome=(context.layout != "single_column"),
+        sidebar_state=get_sidebar_state(),
     )

@@ -110,6 +110,13 @@ class Topbar:
     title: str = ""
     leading: object | None = None
     trailing: object | None = None
+    show_sidebar_toggle: bool = False
+    """#1294 — when True, the renderer emits a built-in hamburger toggle
+    (`[data-dz-sidebar-toggle]`) at the start of the leading area. The JS
+    controller flips `data-dz-sidebar` on the `.dz-app-shell` root and
+    persists the choice to the `dz_sidebar` cookie, so the sidebar nav is
+    reachable (collapse on desktop, open/dismiss on narrow viewports).
+    `build_app_chrome_page` sets this True; standalone Topbars default off."""
 
 
 @dataclass(frozen=True, slots=True)

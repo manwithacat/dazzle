@@ -439,7 +439,7 @@ def test_fragment_chrome_now_emits_full_app_shell_chrome() -> None:
     client = _client_with_fragment_chrome("simple_task")
     body = client.get("/task").text
     # AppShell present
-    assert '<div class="dz-app-shell">' in body
+    assert '<div class="dz-app-shell"' in body
     assert '<div class="dz-app-content">' in body
     # Sidebar nav (from PageContext.nav_items / nav_groups)
     assert '<nav class="dz-sidebar"' in body
