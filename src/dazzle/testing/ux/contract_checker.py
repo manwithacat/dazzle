@@ -577,6 +577,28 @@ def _check_workspace(
     return errors
 
 
+def _href_targets_entity_op(href: str, entity: str, op_verb: str) -> bool:
+    """True when *href* is a create/edit link for *entity* specifically.
+
+    Scopes the match to the entity (#1292): the verb (``create``/``edit``)
+    must be present AND the entity name must appear as its own segment, so
+    ``/app/alert/create`` no longer matches a ``System`` contract and
+    ``/app/systemhealth/create`` no longer matches a ``System`` contract.
+    Segments are split on URL/surface separators (``/ _ - . ? # &``), which
+    covers both entity-page routes (``/app/system/create``) and surface
+    aliases (``system_create``).
+    """
+    entity_l = (entity or "").lower()
+    if not entity_l:
+        return False
+    lowered = href.lower()
+    if op_verb not in lowered:
+        return False
+    for sep in "/_-.?#&":
+        lowered = lowered.replace(sep, " ")
+    return entity_l in lowered.split()
+
+
 def _check_rbac(contract: RBACContract, tags: Tags) -> list[str]:
     errors: list[str] = []
 
@@ -585,22 +607,26 @@ def _check_rbac(contract: RBACContract, tags: Tags) -> list[str]:
     found = False
 
     if operation in ("create", "CREATE"):
-        # Look for create link
+        # Look for a create link scoped to THIS entity (#1292). A bare
+        # "create" substring also matched cross-entity hrefs (e.g.
+        # /app/alert/create tripping a System contract), producing false
+        # positives. Require the entity name as its own path/surface
+        # segment alongside the "create" verb.
         for tag_name, attrs in tags:
-            if tag_name == "a":
-                href = attrs.get("href", "") or ""
-                if "create" in href.lower():
-                    found = True
-                    break
+            if tag_name == "a" and _href_targets_entity_op(
+                attrs.get("href", "") or "", contract.entity, "create"
+            ):
+                found = True
+                break
 
     elif operation in ("update", "UPDATE"):
-        # Look for edit link
+        # Look for an edit link scoped to THIS entity (same fix as create).
         for tag_name, attrs in tags:
-            if tag_name == "a":
-                href = attrs.get("href", "") or ""
-                if "edit" in href.lower():
-                    found = True
-                    break
+            if tag_name == "a" and _href_targets_entity_op(
+                attrs.get("href", "") or "", contract.entity, "edit"
+            ):
+                found = True
+                break
 
     elif operation in ("delete", "DELETE"):
         # Look for delete button

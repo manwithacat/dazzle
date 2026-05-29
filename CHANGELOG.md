@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.32] - 2026-05-29
+
+### Fixed
+
+- Onboarding guide CTAs are now RBAC-gated (#1292). A guide step's `cta_target` pointing at a create/edit surface the guide's audience persona can't mutate is now a **hard build error** in the guide-concordance pass (`check_guide_concordance` → `_check_step_cta`), reusing the canonical `rbac.matrix` decision oracle so the verdict can't drift from the runtime/matrix. The long-deferred audience-permit check (the module docstring had falsely claimed it was implemented) is now real. Defence in depth: `page_routes._inject_onboarding_step` also suppresses the CTA at render time (`_suppress_inaccessible_cta`) when the persona can't mutate the target — so a guide authored before the lint never dangles an affordance that 403s. Read-only CTAs are not gated. Fixed the one offending example: `examples/ops_dashboard`'s `ops_first_run` guide showed `ops_engineer` a "Register System" CTA though System create is admin-only (#1123) — the two System-creation steps were removed (system registration is admin setup; the guide now onboards alert response, which `ops_engineer` can actually do). ops_dashboard contracts: 17 passed / 1 failed → 18 / 0.
+- The UX contract checker's RBAC create/edit-link match is now scoped to the contract's entity (#1292). `_check_rbac` previously matched any `href` containing `"create"`, so a cross-entity link (e.g. `/app/alert/create`) satisfied — or falsely tripped — a different entity's contract; `/app/systemhealth/create` could match a `System` contract. New `_href_targets_entity_op` helper requires the verb **and** the entity name as its own path/surface segment.
+
+### Agent Guidance
+
+- A guide's `cta_target` must point at a surface its `audience` persona can actually reach — a create/edit CTA the whole audience is hard-DENied now fails `dazzle validate`/build. Re-audience the guide or point the CTA at an accessible surface. (Background + the runtime backstop: `src/dazzle/core/guide_concordance.py` `_check_step_cta`.)
+- Known follow-up: surface `action_primary` create/edit affordances on list pages are **not** yet RBAC-suppressed (they bypass the `_handle_table` `create_url`/`_user_can_mutate` gate) — tracked in #1293 (found via fieldtest_hub `rbac:Device:{tester,manager}:create`).
+
 ## [0.80.31] - 2026-05-29
 
 ### Fixed

@@ -368,3 +368,64 @@ def test_inject_logs_rendered_on_happy_path(caplog) -> None:
     )
     assert any("guide=workspace_setup" in m for m in msgs)
     assert any("step=welcome" in m for m in msgs)
+
+
+# ---------------------------------------------------------------------------
+# #1292 — runtime CTA suppression backstop (_suppress_inaccessible_cta)
+# ---------------------------------------------------------------------------
+
+from dazzle.core import ir  # noqa: E402
+from dazzle.ui.runtime import page_routes  # noqa: E402
+from dazzle.ui.runtime.page_routes import _suppress_inaccessible_cta  # noqa: E402
+
+
+def _cta_step(cta_target: str) -> ir.GuideStep:
+    return ir.GuideStep(
+        name="register_system",
+        kind=ir.GuideStepKind.EMPTY_STATE,
+        title="t",
+        body="b",
+        target="surface.system_list",
+        complete_on=ir.GuideCompleteOn(kind=ir.GuideCompleteOnKind.CLICK),
+        cta_label="Register System",
+        cta_target=cta_target,
+    )
+
+
+def _appspec_with_surface(name: str, mode: str):
+    return SimpleNamespace(surfaces=[SimpleNamespace(name=name, mode=mode, entity_ref="System")])
+
+
+def _prc_stub():
+    return SimpleNamespace(deps=SimpleNamespace(), auth_ctx=SimpleNamespace())
+
+
+def test_cta_suppressed_when_persona_cannot_mutate(monkeypatch) -> None:
+    monkeypatch.setattr(page_routes, "_user_can_mutate", lambda *a, **k: False)
+    out = _suppress_inaccessible_cta(
+        _cta_step("surface.system_create"),
+        _prc_stub(),
+        _appspec_with_surface("system_create", "create"),
+    )
+    assert out.cta_target is None
+    assert out.cta_label is None
+
+
+def test_cta_preserved_when_persona_can_mutate(monkeypatch) -> None:
+    monkeypatch.setattr(page_routes, "_user_can_mutate", lambda *a, **k: True)
+    out = _suppress_inaccessible_cta(
+        _cta_step("surface.system_create"),
+        _prc_stub(),
+        _appspec_with_surface("system_create", "create"),
+    )
+    assert out.cta_target == "surface.system_create"
+
+
+def test_read_cta_never_suppressed(monkeypatch) -> None:
+    # A list/view CTA is not a mutation affordance — never gated, even if
+    # _user_can_mutate would deny.
+    monkeypatch.setattr(page_routes, "_user_can_mutate", lambda *a, **k: False)
+    out = _suppress_inaccessible_cta(
+        _cta_step("surface.alert_list"), _prc_stub(), _appspec_with_surface("alert_list", "list")
+    )
+    assert out.cta_target == "surface.alert_list"

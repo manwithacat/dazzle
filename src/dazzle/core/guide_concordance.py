@@ -14,8 +14,10 @@ Four checks, in order:
    is recognised; hless topic.event refs are checked against the
    project's ``streams`` block; ``field_filled`` paths resolve to a
    real ``(entity, field)`` pair.
-3. **CTA target** — ``cta_target`` is a real surface and the guide's
-   audience persona has ``permit:`` access to it.
+3. **CTA target** — ``cta_target`` is a real surface, and when it is a
+   create/edit surface the guide's audience persona(s) hold a ``permit:``
+   for that mutation on its entity (#1292). A CTA the whole audience is
+   hard-DENied fails the build — it would 403 at runtime.
 4. **Step-order integrity** — every name in ``GuideSpec.step_order``
    resolves to a step in ``GuideSpec.steps``. Duplicates fail. Steps
    not listed produce a warning string (not an error).
@@ -24,11 +26,10 @@ The pass returns ``(errors, warnings)`` — same shape as
 ``validate_references``. The caller raises ``LinkError`` if errors is
 non-empty.
 
-The audience predicate itself is NOT compiled here — it reuses the
-``scope:`` predicate algebra and is recorded as a raw string in v0.71.0.
-Predicate compilation lives in a later pass (v0.71.1) that runs after
-the FK graph is built; for the MVP we only check that the persona
-mentioned in the audience exists.
+The audience predicate's row-level scope is NOT compiled here — it reuses
+the ``scope:`` predicate algebra and is recorded as a raw string. What we
+check is coarser and sufficient for the CTA gate: the persona→role permit
+verdict for the target operation, via the canonical ``rbac.matrix`` oracle.
 """
 
 from __future__ import annotations
@@ -64,6 +65,8 @@ def check_guide_concordance(
     surface_by_name = {s.name: s for s in surfaces}
     entity_by_name = {e.name: e for e in entities}
     persona_ids = {p.id for p in personas}
+    # persona id → effective role, for the CTA audience-access check (#1292).
+    persona_roles = {p.id: (getattr(p, "effective_role", None) or p.id) for p in personas}
 
     hless_events: set[str] = set()
     for stream in streams:
@@ -75,8 +78,8 @@ def check_guide_concordance(
 
     for guide in guides:
         # ── audience persona ────────────────────────────────────────
-        for match in _PERSONA_REF.finditer(guide.audience or ""):
-            persona = match.group(1)
+        audience_personas = [m.group(1) for m in _PERSONA_REF.finditer(guide.audience or "")]
+        for persona in audience_personas:
             if persona not in persona_ids:
                 errors.append(
                     f"guide {guide.name!r}: audience references unknown "
@@ -109,7 +112,15 @@ def check_guide_concordance(
             _check_step_completion(
                 guide, step, surface_by_name, entity_by_name, hless_events, errors
             )
-            _check_step_cta(guide, step, surface_by_name, errors)
+            _check_step_cta(
+                guide,
+                step,
+                surface_by_name,
+                entity_by_name,
+                persona_roles,
+                audience_personas,
+                errors,
+            )
 
     return errors, warnings
 
@@ -271,15 +282,29 @@ def _check_step_cta(
     guide: ir.GuideSpec,
     step: ir.GuideStep,
     surface_by_name: dict[str, ir.SurfaceSpec],
+    entity_by_name: dict[str, ir.EntitySpec],
+    persona_roles: dict[str, str],
+    audience_personas: list[str],
     errors: list[str],
 ) -> None:
-    """``cta_target`` must point at a real surface.
+    """``cta_target`` must point at a real surface the audience can reach.
 
-    Permit-access check (does the audience persona have access?) is
-    deferred to v0.71.1 — needs the predicate algebra compiled. For
-    v0.71.0 we only validate existence; an inaccessible-surface CTA
-    will surface at runtime as a 403 and that's a separate failure
-    mode worth seeing in development.
+    Two checks:
+
+    1. **Existence** — ``cta_target`` is a ``surface.<name>`` path naming a
+       real surface.
+    2. **Audience access (#1292)** — when the CTA points at a create/edit
+       surface, at least one persona in the guide's audience must hold a
+       permit for that mutation on the surface's entity. A CTA every
+       audience persona is hard-DENied is a dead affordance (it 403s at
+       runtime), so it fails the build. Scoped/filtered permits still
+       pass — the persona can act, just on a row subset. Read-only CTAs
+       are not gated here.
+
+    The decision reuses the canonical RBAC oracle (``rbac.matrix``) rather
+    than re-deriving Cedar semantics, so this check can't drift from the
+    runtime/matrix verdict (lazy import — ``core/validator.py`` already
+    crosses the same core→rbac edge).
     """
     if not step.cta_target:
         return
@@ -290,7 +315,47 @@ def _check_step_cta(
         )
         return
     name = step.cta_target.removeprefix("surface.").split(".")[0]
-    if name not in surface_by_name:
+    surface = surface_by_name.get(name)
+    if surface is None:
         errors.append(
             f"guide {guide.name!r} step {step.name!r}: cta_target surface {name!r} does not exist"
+        )
+        return
+
+    # ── audience-access check (#1292) ────────────────────────────────
+    if not audience_personas:
+        return
+    mode_raw = getattr(surface, "mode", None)
+    mode_str = str(getattr(mode_raw, "value", mode_raw) or "").lower()
+    if "create" in mode_str:
+        operation = "create"
+    elif "edit" in mode_str or "update" in mode_str:
+        operation = "update"
+    else:
+        return  # read / list / detail CTA — not a mutation affordance
+    entity_name = getattr(surface, "entity_ref", None) or getattr(surface, "entity_name", None)
+    entity = entity_by_name.get(entity_name) if entity_name else None
+    access = getattr(entity, "access", None) if entity is not None else None
+    if access is None:
+        return  # no entity, or unprotected entity — nothing to deny
+
+    from dazzle.rbac.matrix import PolicyDecision, _resolve_decision
+
+    denied: list[tuple[str, str]] = []
+    audience_can_reach = False
+    for persona in audience_personas:
+        role = persona_roles.get(persona, persona)
+        if _resolve_decision(access, role, operation) == PolicyDecision.DENY:
+            denied.append((persona, role))
+        else:
+            audience_can_reach = True
+    if not audience_can_reach and denied:
+        denied_personas = [p for p, _ in denied]
+        denied_roles = sorted({r for _, r in denied})
+        errors.append(
+            f"guide {guide.name!r} step {step.name!r}: cta_target surface {name!r} "
+            f"performs {operation!r} on entity {entity_name!r}, but the guide's "
+            f"audience {denied_personas} cannot — role(s) {denied_roles} are DENied "
+            f"{operation!r} on {entity_name!r}, so the CTA would 403 at runtime. "
+            f"Re-audience the guide or point the CTA at a surface the audience can reach."
         )

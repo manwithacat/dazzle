@@ -591,3 +591,39 @@ class TestFindHiddenPrimaryActions:
         assert len(hidden) == 3
         labels = {h[0] for h in hidden}
         assert labels == {"Remove one", "Delete two", "Archive three"}
+
+
+class TestRBACEntityScoping:
+    """#1292: create/edit href matching must be scoped to the contract's
+    entity, so a cross-entity create link no longer satisfies (false-positive)
+    a different entity's RBAC contract."""
+
+    def test_href_helper_scopes_to_entity(self) -> None:
+        from dazzle.testing.ux.contract_checker import _href_targets_entity_op
+
+        # Correct entity, both route shapes.
+        assert _href_targets_entity_op("/app/system/create", "System", "create")
+        assert _href_targets_entity_op("/system_create", "System", "create")
+        assert _href_targets_entity_op("/app/system/123/edit", "System", "edit")
+        # Cross-entity create must NOT match a System contract.
+        assert not _href_targets_entity_op("/app/alert/create", "System", "create")
+        # Entity-name prefix collision must NOT match (systemhealth vs system).
+        assert not _href_targets_entity_op("/app/systemhealth/create", "System", "create")
+        # Right entity, wrong verb.
+        assert not _href_targets_entity_op("/app/system/123/edit", "System", "create")
+
+    def test_cross_entity_create_link_does_not_satisfy_contract(self) -> None:
+        contract = RBACContract(
+            entity="System", persona="ops_engineer", operation="create", expected_present=True
+        )
+        html = '<a href="/app/alert/create">New Alert</a>'  # different entity
+        result = check_contract(contract, html)
+        assert result.status == "failed"
+
+    def test_same_entity_create_link_satisfies_contract(self) -> None:
+        contract = RBACContract(
+            entity="System", persona="admin", operation="create", expected_present=True
+        )
+        html = '<a href="/app/system/create">Register System</a>'
+        result = check_contract(contract, html)
+        assert result.status == "passed", result.error

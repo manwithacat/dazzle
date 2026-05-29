@@ -290,6 +290,44 @@ def _user_can_mutate(
     return bool(_decision.allowed)
 
 
+def _suppress_inaccessible_cta(step: Any, prc: "_PageRequestContext", appspec: Any) -> Any:
+    """Strip a guide step's CTA when it points at a create/edit surface the
+    current persona can't mutate (#1292 runtime backstop).
+
+    Returns the step unchanged when the CTA is fine (read-only target,
+    unknown surface, or the persona can mutate). When suppressed, returns a
+    copy with ``cta_target``/``cta_label`` cleared so the step still renders
+    (and completes) but offers no dead navigation. Defence in depth behind
+    the validate-time guide-CTA access check in ``guide_concordance``.
+    """
+    cta = getattr(step, "cta_target", None)
+    if not cta or not str(cta).startswith("surface."):
+        return step
+    surface_name = cta.removeprefix("surface.").split(".")[0]
+    surface = next((s for s in appspec.surfaces if s.name == surface_name), None)
+    if surface is None:
+        return step
+    mode_raw = getattr(surface, "mode", None)
+    mode_str = str(getattr(mode_raw, "value", mode_raw) or "").lower()
+    if "create" in mode_str:
+        operation = "create"
+    elif "edit" in mode_str or "update" in mode_str:
+        operation = "update"
+    else:
+        return step  # read / list / detail CTA — not gated
+    if _user_can_mutate(prc.deps, surface_name, operation, prc.auth_ctx):
+        return step
+    logger.info(
+        "onboarding.inject:cta-suppressed step=%s cta_target=%s op=%s "
+        "(persona cannot %s the target entity — #1292 backstop)",
+        getattr(step, "name", "?"),
+        surface_name,
+        operation,
+        operation,
+    )
+    return step.model_copy(update={"cta_target": None, "cta_label": None})
+
+
 def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
     """Apply per-persona PersonaVariant overrides to a per-request table copy.
 
@@ -791,6 +829,11 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
             kind,
         )
         return
+    # Runtime backstop (#1292): drop a CTA pointing at a create/edit surface
+    # this persona can't mutate, so onboarding never dangles an affordance
+    # that 403s. Defence in depth behind the validate-time guide-CTA access
+    # check — a validate-passing app never trips this.
+    step = _suppress_inaccessible_cta(step, prc, appspec)
     try:
         prc.ctx.active_guide_html = render_step(step, guide_name=guide.name)
     except UnknownStepKindError:

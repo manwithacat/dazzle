@@ -309,3 +309,85 @@ def test_orphan_step_produces_warning_not_error() -> None:
     )
     assert errors == []
     assert any("orphan (never fires)" in w for w in warnings)
+
+
+# ---------------------------------------------------------------------------
+# CTA audience-access check (#1292)
+# ---------------------------------------------------------------------------
+
+from dazzle.core.ir import AccessSpec, PermissionKind, PermissionRule  # noqa: E402
+
+
+def _cta_surface(name: str, *, entity_ref: str, mode: str = "create"):
+    return SimpleNamespace(name=name, actions=[], sections=[], entity_ref=entity_ref, mode=mode)
+
+
+def _persona_role(pid: str, role: str | None = None):
+    return SimpleNamespace(id=pid, effective_role=role or pid)
+
+
+def _entity_create_only(name: str, *, allowed_role: str):
+    """Entity whose CREATE permit is restricted to a single role."""
+    return SimpleNamespace(
+        name=name,
+        fields=[],
+        access=AccessSpec(
+            permissions=[PermissionRule(operation=PermissionKind.CREATE, personas=[allowed_role])]
+        ),
+    )
+
+
+def test_cta_denied_for_audience_errors() -> None:
+    """A create CTA whose whole audience lacks create permission fails (#1292)."""
+    surfaces = [_cta_surface("system_create", entity_ref="System", mode="create")]
+    entities = [_entity_create_only("System", allowed_role="admin")]
+    personas = [_persona_role("ops_engineer"), _persona_role("admin")]
+    guide = _guide(
+        "ops_first_run",
+        audience="persona = ops_engineer",
+        steps=[_step("s1", target="surface.system_create", cta_target="surface.system_create")],
+    )
+    errors, _ = _run(guides=[guide], surfaces=surfaces, entities=entities, personas=personas)
+    assert any("system_create" in e and "cannot" in e for e in errors), errors
+
+
+def test_cta_allowed_for_audience_passes() -> None:
+    """A create CTA whose audience holds the create permit passes."""
+    surfaces = [_cta_surface("system_create", entity_ref="System", mode="create")]
+    entities = [_entity_create_only("System", allowed_role="admin")]
+    personas = [_persona_role("admin")]
+    guide = _guide(
+        "admin_setup",
+        audience="persona = admin",
+        steps=[_step("s1", target="surface.system_create", cta_target="surface.system_create")],
+    )
+    errors, _ = _run(guides=[guide], surfaces=surfaces, entities=entities, personas=personas)
+    assert errors == [], errors
+
+
+def test_cta_passes_when_any_audience_persona_permitted() -> None:
+    """Multi-persona audience: one permitted persona is enough."""
+    surfaces = [_cta_surface("system_create", entity_ref="System", mode="create")]
+    entities = [_entity_create_only("System", allowed_role="admin")]
+    personas = [_persona_role("ops_engineer"), _persona_role("admin")]
+    guide = _guide(
+        "mixed",
+        audience="persona = ops_engineer or persona = admin",
+        steps=[_step("s1", target="surface.system_create", cta_target="surface.system_create")],
+    )
+    errors, _ = _run(guides=[guide], surfaces=surfaces, entities=entities, personas=personas)
+    assert errors == [], errors
+
+
+def test_read_cta_not_gated_by_create_permit() -> None:
+    """A read/list CTA is not subjected to the create-permit check (#1292)."""
+    surfaces = [_cta_surface("alert_list", entity_ref="Alert", mode="list")]
+    entities = [_entity_create_only("Alert", allowed_role="admin")]
+    personas = [_persona_role("ops_engineer")]
+    guide = _guide(
+        "g",
+        audience="persona = ops_engineer",
+        steps=[_step("s1", target="surface.alert_list", cta_target="surface.alert_list")],
+    )
+    errors, _ = _run(guides=[guide], surfaces=surfaces, entities=entities, personas=personas)
+    assert errors == [], errors

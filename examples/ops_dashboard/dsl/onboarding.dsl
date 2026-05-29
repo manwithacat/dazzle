@@ -3,34 +3,18 @@ module ops_dashboard.guides
 use ops_dashboard.core
 
 # Onboarding for ops_dashboard. Two workspaces (command_center for
-# live monitoring, incident_review for post-mortem). New ops
-# engineers need to:
+# live monitoring, incident_review for post-mortem). A new ops
+# engineer's first job is to acknowledge an incoming alert to show
+# they're working it.
 #
-#   1. Register at least one System so alerts have something to
-#      attach to (without registered systems, alerts can't fire).
-#   2. Acknowledge an incoming alert to show they're working it.
-#
-# Admins set up the initial integrations and don't need overlays.
+# System registration is admin-only (#1123): admins set up the initial
+# integrations. The ops_engineer onboarding therefore does NOT offer a
+# "register a system" CTA — that surface 403s for this persona, and the
+# guide-concordance pass hard-errors on a CTA whose audience can't reach
+# it (#1292). Alert-response is what this persona can actually do.
 
-guide ops_first_run "Set up your operations console":
+guide ops_first_run "Respond to your first alert":
   audience: persona = ops_engineer
-
-  step register_system:
-    kind: empty_state
-    target: surface.system_list
-    title: "Register your first system"
-    body: "Alerts attach to systems. Add the production service or environment you're monitoring before alerts start flowing."
-    cta_label: "Register System"
-    cta_target: surface.system_create
-    complete_on: event entity.System.created
-
-  step name_system:
-    kind: popover
-    target: surface.system_create
-    title: "Name it after the deploy unit"
-    body: "Use the same name your CI/CD pipeline uses — that's how alerts will cross-reference."
-    placement: bottom
-    complete_on: field_filled surface.system_create.field.name
 
   step explore_alerts:
     kind: inline_card
@@ -49,7 +33,7 @@ guide ops_first_run "Set up your operations console":
     placement: "8000"
     complete_on: dismiss
 
-  step_order: [register_system, name_system, explore_alerts, ack_workflow]
+  step_order: [explore_alerts, ack_workflow]
 
   on_complete:
     redirect: surface.alert_list
