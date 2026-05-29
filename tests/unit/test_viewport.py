@@ -9,14 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dazzle.testing.viewport import (
+    ACTION_GRID_PATTERN,
     ALL_PATTERNS,
-    DETAIL_VIEW_PATTERN,
+    DASHBOARD_GRID_PATTERN,
     DRAWER_PATTERN,
-    GRID_1_2_3_PATTERN,
-    GRID_1_2_PATTERN,
-    GRID_1_3_PATTERN,
-    GRID_2_3_PATTERN,
-    STATS_PATTERN,
+    GRID_PATTERN,
+    METRICS_PATTERN,
     VIEWPORT_MATRIX,
     ViewportAssertion,
     ViewportAssertionResult,
@@ -77,9 +75,7 @@ class TestViewportAssertion:
 class TestComponentPatterns:
     """Built-in patterns have correct selectors/properties/viewports."""
 
-    def test_pattern_assertion_shapes(self) -> None:
-        """Combined: drawer viewports + visibility, grid_1_2_3 has 3 viewports,
-        grid_1_2 + grid_1_3 check grid-template-columns."""
+    def test_drawer_geometry_property_model(self) -> None:
         # drawer: mobile + desktop in viewports
         viewports = {a.viewport for a in DRAWER_PATTERN.assertions}
         assert "mobile" in viewports
@@ -92,44 +88,57 @@ class TestComponentPatterns:
         assert "transform" in props
         assert "display" in props
 
-        # grid_1_2_3: all three viewports
-        assert {a.viewport for a in GRID_1_2_3_PATTERN.assertions} == {
-            "mobile",
-            "tablet",
-            "desktop",
-        }
-
-        # grid_1_2 + grid_1_3 only check grid-template-columns
-        for pattern in (GRID_1_2_PATTERN, GRID_1_3_PATTERN):
+    def test_region_grids_use_column_count_property(self) -> None:
+        # #1295 — region grids assert the synthetic `grid-column-count`, not
+        # raw `grid-template-columns` (which getComputedStyle resolves to px
+        # tracks, never the authored value — a guaranteed false negative).
+        for pattern in (GRID_PATTERN, METRICS_PATTERN, ACTION_GRID_PATTERN, DASHBOARD_GRID_PATTERN):
             for a in pattern.assertions:
-                assert a.property == "grid-template-columns"
+                assert a.property == "grid-column-count", (
+                    f"{pattern.name} assertion uses {a.property!r}, expected grid-column-count"
+                )
+                assert isinstance(a.expected, str) and a.expected.isdigit()
 
-    def test_stats_pattern_checks_flex_direction(self) -> None:
-        for a in STATS_PATTERN.assertions:
-            assert a.property == "flex-direction"
+    def test_region_grids_target_fragment_classes(self) -> None:
+        # #1295 — selectors must be the real Fragment region classes, not the
+        # retired DaisyUI ones. The freshness guard below proves these match
+        # actual rendered markup.
+        expected = {
+            "grid": ".dz-grid-list",
+            "metrics": ".dz-metrics-grid",
+            "action_grid": ".dz-action-grid",
+            "dashboard_grid": ".dz-dashboard-grid",
+        }
+        for name, sel in expected.items():
+            assert {a.selector for a in ALL_PATTERNS[name].assertions} == {sel}
 
-    def test_detail_view_checks_display(self) -> None:
-        for a in DETAIL_VIEW_PATTERN.assertions:
-            assert a.property == "display"
+    def test_grid_column_counts_match_css_breakpoints(self) -> None:
+        # Column counts read from regions.css / dashboard.css (40/64/48rem).
+        def counts(pattern):
+            return {a.viewport: a.expected for a in pattern.assertions}
 
-    def test_grid_2_3_pattern_exists(self) -> None:
-        assert GRID_2_3_PATTERN.name == "grid_2_3"
-        viewports = {a.viewport for a in GRID_2_3_PATTERN.assertions}
-        assert "mobile" in viewports
-        assert "desktop" in viewports
+        assert counts(GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
+        assert counts(METRICS_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "4"}
+        assert counts(ACTION_GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
+        # dashboard grid skips the exact-48rem tablet boundary (768 == 48rem).
+        assert counts(DASHBOARD_GRID_PATTERN) == {"mobile": "1", "desktop": "12"}
 
     def test_all_patterns_dict_complete(self) -> None:
-        assert "drawer" in ALL_PATTERNS
-        assert "grid_1_2_3" in ALL_PATTERNS
-        assert "grid_1_2" in ALL_PATTERNS
-        assert "grid_1_3" in ALL_PATTERNS
-        assert "stats" in ALL_PATTERNS
-        assert "detail_view" in ALL_PATTERNS
-        assert "grid_2_3" in ALL_PATTERNS
+        assert set(ALL_PATTERNS) == {"drawer", "grid", "metrics", "action_grid", "dashboard_grid"}
 
     def test_all_patterns_have_assertions(self) -> None:
         for name, pattern in ALL_PATTERNS.items():
             assert len(pattern.assertions) > 0, f"Pattern {name} has no assertions"
+
+    def test_no_legacy_daisyui_selectors(self) -> None:
+        # #1295 — guard against the rot recurring: no pattern may target a
+        # Tailwind/DaisyUI escaped selector (`\\:`) or the retired `.stats`.
+        for pattern in ALL_PATTERNS.values():
+            for a in pattern.assertions:
+                assert "\\:" not in a.selector, (
+                    f"{pattern.name} uses a legacy escaped selector {a.selector!r}"
+                )
+                assert a.selector != ".stats"
 
 
 # ============================================================================
@@ -314,36 +323,47 @@ class TestDerivePatterns:
         assert "/app/ticket" in result  # entity_ref lowercased, not surface name
 
     @pytest.mark.parametrize(
-        ("workspace", "path", "expected_pattern"),
+        ("workspace", "path", "expected_patterns"),
         [
-            ({"name": "orders", "stage": "dual_pane_flow"}, "/app/workspaces/orders", "grid_1_2"),
-            ({"name": "status", "stage": "monitor_wall"}, "/app/workspaces/status", "grid_2_3"),
+            # #1295 — stages no longer add a per-stage grid pattern (all stages
+            # render the SAME 12-col dashboard grid, varying only by card
+            # col-span). Every workspace gets drawer + dashboard_grid; region
+            # display modes add their own responsive grids.
             (
-                {
-                    "name": "items",
-                    "stage": "focus_metric",
-                    "regions": [{"display": "GRID"}],
-                },
+                {"name": "orders", "stage": "dual_pane_flow"},
+                "/app/workspaces/orders",
+                {"drawer", "dashboard_grid"},
+            ),
+            (
+                {"name": "status", "stage": "monitor_wall"},
+                "/app/workspaces/status",
+                {"drawer", "dashboard_grid"},
+            ),
+            (
+                {"name": "items", "stage": "focus_metric", "regions": [{"display": "GRID"}]},
                 "/app/workspaces/items",
-                "grid_1_2_3",
+                {"drawer", "dashboard_grid", "grid"},
             ),
             (
-                {
-                    "name": "dash",
-                    "stage": "focus_metric",
-                    "regions": [{"display": "METRICS"}],
-                },
+                {"name": "dash", "stage": "focus_metric", "regions": [{"display": "METRICS"}]},
                 "/app/workspaces/dash",
-                "stats",
+                {"drawer", "dashboard_grid", "metrics"},
             ),
             (
-                {
-                    "name": "detail",
-                    "stage": "focus_metric",
-                    "regions": [{"display": "DETAIL"}],
-                },
+                {"name": "summ", "stage": "focus_metric", "regions": [{"display": "SUMMARY"}]},
+                "/app/workspaces/summ",
+                {"drawer", "dashboard_grid", "metrics"},
+            ),
+            (
+                {"name": "acts", "stage": "focus_metric", "regions": [{"display": "ACTION_GRID"}]},
+                "/app/workspaces/acts",
+                {"drawer", "dashboard_grid", "action_grid"},
+            ),
+            (
+                # DETAIL is container-query driven → no viewport pattern (#1295).
+                {"name": "detail", "stage": "focus_metric", "regions": [{"display": "DETAIL"}]},
                 "/app/workspaces/detail",
-                "detail_view",
+                {"drawer", "dashboard_grid"},
             ),
         ],
         ids=[
@@ -351,32 +371,31 @@ class TestDerivePatterns:
             "test_monitor_wall_stage",
             "test_region_grid_display",
             "test_region_metrics_display",
-            "test_region_detail_display",
+            "test_region_summary_display",
+            "test_region_action_grid_display",
+            "test_region_detail_display_dropped",
         ],
     )
-    def test_workspace_pattern(self, workspace, path, expected_pattern) -> None:
+    def test_workspace_pattern(self, workspace, path, expected_patterns) -> None:
         spec = _mock_appspec(workspaces=[workspace])
         result = derive_patterns_from_appspec(spec)
         assert path in result
-        pattern_names = [p.name for p in result[path]]
-        assert expected_pattern in pattern_names
+        assert {p.name for p in result[path]} == expected_patterns
 
-    def test_focus_metric_stage_no_grid_pattern(self) -> None:
+    def test_every_workspace_gets_drawer_and_dashboard_grid(self) -> None:
+        # #1295 — even a bare workspace renders the app-shell chrome + the
+        # uniform dashboard-grid container.
         spec = _mock_appspec(workspaces=[{"name": "home", "stage": "focus_metric"}])
         result = derive_patterns_from_appspec(spec)
-        # focus_metric has no grid patterns, only drawer
-        path = "/app/workspaces/home"
-        assert path in result
-        pattern_names = [p.name for p in result[path]]
-        assert "drawer" in pattern_names
-        assert "grid_1_2" not in pattern_names
+        assert {p.name for p in result["/app/workspaces/home"]} == {"drawer", "dashboard_grid"}
 
-    def test_list_surface_gets_grid_1_2(self) -> None:
+    def test_list_surface_gets_drawer_only(self) -> None:
+        # #1295 — a list page is a table, not a responsive column grid; DRAWER
+        # is the only viewport-assertable pattern.
         spec = _mock_appspec(surfaces=[{"name": "tasks", "mode": "list"}])
         result = derive_patterns_from_appspec(spec)
         assert "/app/tasks" in result
-        pattern_names = [p.name for p in result["/app/tasks"]]
-        assert "grid_1_2" in pattern_names
+        assert {p.name for p in result["/app/tasks"]} == {"drawer"}
 
     def test_non_list_surface_no_pattern(self) -> None:
         spec = _mock_appspec(surfaces=[{"name": "create_task", "mode": "create"}])
@@ -392,16 +411,19 @@ class TestDerivePatterns:
                     "name": "dash",
                     "stage": "dual_pane_flow",
                     "regions": [
-                        {"display": "LIST"},
-                        {"display": "LIST"},
+                        {"display": "GRID"},
+                        {"display": "GRID"},
                     ],
                 }
             ]
         )
         result = derive_patterns_from_appspec(spec)
-        # dual_pane_flow adds grid_1_2, but LIST regions shouldn't duplicate it
+        # Two GRID regions must not duplicate the grid pattern, nor the
+        # always-attached drawer / dashboard_grid.
         pattern_names = [p.name for p in result["/app/workspaces/dash"]]
-        assert pattern_names.count("grid_1_2") == 1
+        assert pattern_names.count("grid") == 1
+        assert pattern_names.count("dashboard_grid") == 1
+        assert pattern_names.count("drawer") == 1
 
     def test_workspace_gets_drawer(self) -> None:
         spec = _mock_appspec(workspaces=[{"name": "ops", "stage": "scanner_table"}])
@@ -413,40 +435,33 @@ class TestDerivePatterns:
 
 
 # ============================================================================
-# TestGridPatternDerivation
+# TestGridColumnCounts
 # ============================================================================
 
 
-class TestGridPatternDerivation:
-    """Stage grid patterns → correct grid column assertions."""
+class TestGridColumnCounts:
+    """#1295 — each region grid pattern has exactly one column-count
+    assertion per viewport, matching the CSS breakpoints."""
 
-    def test_grid_1_2_3_mobile_single_col(self) -> None:
-        mobile = [a for a in GRID_1_2_3_PATTERN.assertions if a.viewport == "mobile"]
-        assert len(mobile) == 1
-        assert isinstance(mobile[0].expected, list)
-        assert "1fr" in mobile[0].expected
+    def test_grid_one_assertion_per_viewport(self) -> None:
+        for pattern in (GRID_PATTERN, METRICS_PATTERN, ACTION_GRID_PATTERN):
+            viewports = [a.viewport for a in pattern.assertions]
+            assert viewports == ["mobile", "tablet", "desktop"]
 
-    def test_grid_1_2_3_tablet_two_cols(self) -> None:
-        tablet = [a for a in GRID_1_2_3_PATTERN.assertions if a.viewport == "tablet"]
-        assert len(tablet) == 1
-        assert isinstance(tablet[0].expected, list)
+    def test_dashboard_grid_skips_tablet_boundary(self) -> None:
+        # 768px == 48rem exactly — inclusive boundary is flaky, so omit tablet.
+        viewports = [a.viewport for a in DASHBOARD_GRID_PATTERN.assertions]
+        assert viewports == ["mobile", "desktop"]
 
-    def test_grid_1_2_3_desktop_three_cols(self) -> None:
-        desktop = [a for a in GRID_1_2_3_PATTERN.assertions if a.viewport == "desktop"]
+    def test_metrics_desktop_is_four_cols(self) -> None:
+        desktop = [a for a in METRICS_PATTERN.assertions if a.viewport == "desktop"]
         assert len(desktop) == 1
-        assert isinstance(desktop[0].expected, list)
+        assert desktop[0].expected == "4"
 
-    def test_grid_2_3_mobile_two_cols(self) -> None:
-        """Monitor wall: 2 cols on mobile."""
-        mobile = [a for a in GRID_2_3_PATTERN.assertions if a.viewport == "mobile"]
-        assert len(mobile) == 1
-        assert isinstance(mobile[0].expected, list)
-
-    def test_grid_2_3_desktop_three_cols(self) -> None:
-        """Monitor wall: 3 cols on desktop."""
-        desktop = [a for a in GRID_2_3_PATTERN.assertions if a.viewport == "desktop"]
+    def test_dashboard_desktop_is_twelve_cols(self) -> None:
+        desktop = [a for a in DASHBOARD_GRID_PATTERN.assertions if a.viewport == "desktop"]
         assert len(desktop) == 1
-        assert isinstance(desktop[0].expected, list)
+        assert desktop[0].expected == "12"
 
 
 # ============================================================================
@@ -614,4 +629,56 @@ def test_drawer_pattern_selectors_match_current_markup() -> None:
             f"DRAWER_PATTERN selector {sel!r} ({assertion.description!r}) matches "
             "no element in the rendered Fragment app-shell — the pattern has "
             "rotted against the current markup (cf. #1294/#1295)."
+        )
+
+
+# -- region-grid freshness (#1295) — same discipline for the grid patterns:
+# render each region primitive and assert its pattern's selector matches the
+# class it actually emits. This verifies the retarget away from the retired
+# DaisyUI selectors (`.grid.md:grid-cols-2`, `.stats`, `.sm:grid…`) landed on
+# real markup, not just another stale string — library-wide, the rot class
+# that let #1294 through.
+
+from dazzle.render.fragment.primitives.data import (  # noqa: E402
+    ActionCard,
+    ActionGrid,
+    DashboardGrid,
+    GridCell,
+    GridRegion,
+    MetricsGrid,
+    MetricTile,
+)
+
+
+def _class_present(cls: str, html: str) -> bool:
+    return bool(_re.search(rf'class="[^"]*\b{_re.escape(cls)}\b[^"]*"', html))
+
+
+_REGION_FRESHNESS_CASES = [
+    (GRID_PATTERN, GridRegion(cells=(GridCell(title="x"),))),
+    (METRICS_PATTERN, MetricsGrid(tiles=(MetricTile(label="x", value="1"),))),
+    (ACTION_GRID_PATTERN, ActionGrid(cards=(ActionCard(label="x"),))),
+    (DASHBOARD_GRID_PATTERN, DashboardGrid()),
+]
+
+
+@pytest.mark.parametrize(
+    ("pattern", "primitive"),
+    _REGION_FRESHNESS_CASES,
+    ids=[p.name for p, _ in _REGION_FRESHNESS_CASES],
+)
+def test_region_pattern_selectors_match_current_markup(pattern, primitive) -> None:
+    """#1295 freshness guard for the region grids — each pattern's selector
+    must match the class its region primitive actually renders, so a renderer
+    migration can't silently rot the selector back to "Element not found"
+    (the failure mode that let #1294 through, this time across the whole
+    pattern library)."""
+    html = FragmentRenderer().render(primitive)
+    for assertion in pattern.assertions:
+        sel = assertion.selector
+        assert sel.startswith("."), f"freshness guard only validates class selectors; got {sel!r}"
+        assert _class_present(sel[1:], html), (
+            f"{pattern.name} selector {sel!r} matches no element in the rendered "
+            f"{type(primitive).__name__} — the pattern has rotted against the "
+            "current Fragment markup (cf. #1294/#1295)."
         )

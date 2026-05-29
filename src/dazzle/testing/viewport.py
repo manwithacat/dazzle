@@ -149,174 +149,162 @@ DRAWER_PATTERN = ComponentPattern(
     ],
 )
 
-# -- Workspace card grid (grid.html): 1 → 2 → 3 cols ----------------------
+# -- Region grids (Fragment substrate) -------------------------------------
+#
+# #1295 — UPDATED from the retired legacy DaisyUI/Tailwind selectors
+# (`.grid.sm:grid-cols-2.lg:grid-cols-3`, `.stats`, `.sm:grid.sm:grid-cols-3`)
+# that the Fragment substrate never emitted — so every assertion came back
+# "Element not found" (the same silent-rot-after-migration class as DRAWER
+# pre-#1294). These now target the real Fragment region classes, verified
+# against freshly-rendered primitives by the freshness guard in
+# `test_viewport.py`.
+#
+# PROPERTY MODEL — `grid-column-count`, not raw `grid-template-columns`.
+# `getComputedStyle('grid-template-columns')` returns the *resolved* track
+# list in px (e.g. "388px 388px"), never the authored "repeat(2, …)" /
+# "1fr 1fr" — so a string compare against authored values would be a NEW
+# false negative (exactly the property-model mismatch that let #1294 through
+# with `visibility` vs `transform`). The runner's JS evaluator computes the
+# synthetic `grid-column-count` by counting resolved tracks, which is stable
+# across container widths. Breakpoints below are read from
+# `components/regions.css` + `components/dashboard.css`: region grids switch
+# at 40rem (640px) and 64rem (1024px); the dashboard grid at 48rem (768px).
+# The matrix is mobile=375 / tablet=768 / desktop=1280 / wide=1440.
 
-GRID_1_2_3_PATTERN = ComponentPattern(
-    name="grid_1_2_3",
+# GRID display → `.dz-grid-list`: 1 → 2 → 3 cols (40rem / 64rem).
+GRID_PATTERN = ComponentPattern(
+    name="grid",
     assertions=[
         ViewportAssertion(
-            selector=".grid.sm\\:grid-cols-2.lg\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(1, minmax(0, 1fr))", "1fr"],
+            selector=".dz-grid-list",
+            property="grid-column-count",
+            expected="1",
             viewport="mobile",
-            description="Single column grid on mobile",
+            description="Grid region single-column on mobile (<40rem)",
         ),
         ViewportAssertion(
-            selector=".grid.sm\\:grid-cols-2.lg\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(2, minmax(0, 1fr))", "1fr 1fr"],
+            selector=".dz-grid-list",
+            property="grid-column-count",
+            expected="2",
             viewport="tablet",
-            description="Two column grid on tablet",
+            description="Grid region two-column on tablet (≥40rem, <64rem)",
         ),
         ViewportAssertion(
-            selector=".grid.sm\\:grid-cols-2.lg\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(3, minmax(0, 1fr))", "1fr 1fr 1fr"],
+            selector=".dz-grid-list",
+            property="grid-column-count",
+            expected="3",
             viewport="desktop",
-            description="Three column grid on desktop",
+            description="Grid region three-column on desktop (≥64rem)",
         ),
     ],
 )
 
-# -- Console entity/surface list: 1 → 2 cols at md -------------------------
-
-GRID_1_2_PATTERN = ComponentPattern(
-    name="grid_1_2",
+# METRICS / SUMMARY display → `.dz-metrics-grid`: 1 → 2 → 4 cols (40rem / 64rem).
+METRICS_PATTERN = ComponentPattern(
+    name="metrics",
     assertions=[
         ViewportAssertion(
-            selector=".grid.md\\:grid-cols-2",
-            property="grid-template-columns",
-            expected=["repeat(1, minmax(0, 1fr))", "1fr"],
+            selector=".dz-metrics-grid",
+            property="grid-column-count",
+            expected="1",
             viewport="mobile",
-            description="Single column on mobile",
+            description="Metrics tiles single-column on mobile (<40rem)",
         ),
         ViewportAssertion(
-            selector=".grid.md\\:grid-cols-2",
-            property="grid-template-columns",
-            expected=["repeat(2, minmax(0, 1fr))", "1fr 1fr"],
-            viewport="desktop",
-            description="Two columns on desktop",
-        ),
-    ],
-)
-
-# -- Console dashboard stats: 1 → 3 cols at md -----------------------------
-
-GRID_1_3_PATTERN = ComponentPattern(
-    name="grid_1_3",
-    assertions=[
-        ViewportAssertion(
-            selector=".grid.md\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(1, minmax(0, 1fr))", "1fr"],
-            viewport="mobile",
-            description="Single column stats on mobile",
-        ),
-        ViewportAssertion(
-            selector=".grid.md\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(3, minmax(0, 1fr))", "1fr 1fr 1fr"],
-            viewport="desktop",
-            description="Three column stats on desktop",
-        ),
-    ],
-)
-
-# -- Workspace metrics: vertical → horizontal at lg ------------------------
-
-STATS_PATTERN = ComponentPattern(
-    name="stats",
-    assertions=[
-        ViewportAssertion(
-            selector=".stats",
-            property="flex-direction",
-            expected="column",
-            viewport="mobile",
-            description="Stats stacked vertically on mobile",
-        ),
-        ViewportAssertion(
-            selector=".stats",
-            property="flex-direction",
-            expected="row",
-            viewport="desktop",
-            description="Stats horizontal on desktop",
-        ),
-    ],
-)
-
-# -- Detail view: block → 3-col grid at sm ---------------------------------
-
-DETAIL_VIEW_PATTERN = ComponentPattern(
-    name="detail_view",
-    assertions=[
-        ViewportAssertion(
-            selector=".sm\\:grid.sm\\:grid-cols-3",
-            property="display",
-            expected="block",
-            viewport="mobile",
-            description="Detail fields stacked on mobile",
-        ),
-        ViewportAssertion(
-            selector=".sm\\:grid.sm\\:grid-cols-3",
-            property="display",
-            expected="grid",
+            selector=".dz-metrics-grid",
+            property="grid-column-count",
+            expected="2",
             viewport="tablet",
-            description="Detail fields in grid on tablet",
+            description="Metrics tiles two-column on tablet (≥40rem, <64rem)",
+        ),
+        ViewportAssertion(
+            selector=".dz-metrics-grid",
+            property="grid-column-count",
+            expected="4",
+            viewport="desktop",
+            description="Metrics tiles four-column on desktop (≥64rem)",
         ),
     ],
 )
 
-# -- Monitor wall: 2 → 3 cols at lg ----------------------------------------
-
-GRID_2_3_PATTERN = ComponentPattern(
-    name="grid_2_3",
+# ACTION_GRID display → `.dz-action-grid`: 1 → 2 → 3 cols (40rem / 64rem).
+ACTION_GRID_PATTERN = ComponentPattern(
+    name="action_grid",
     assertions=[
         ViewportAssertion(
-            selector=".grid.lg\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(2, minmax(0, 1fr))", "1fr 1fr"],
+            selector=".dz-action-grid",
+            property="grid-column-count",
+            expected="1",
             viewport="mobile",
-            description="Two column grid on mobile (monitor wall)",
+            description="Action cards single-column on mobile (<40rem)",
         ),
         ViewportAssertion(
-            selector=".grid.lg\\:grid-cols-3",
-            property="grid-template-columns",
-            expected=["repeat(3, minmax(0, 1fr))", "1fr 1fr 1fr"],
+            selector=".dz-action-grid",
+            property="grid-column-count",
+            expected="2",
+            viewport="tablet",
+            description="Action cards two-column on tablet (≥40rem, <64rem)",
+        ),
+        ViewportAssertion(
+            selector=".dz-action-grid",
+            property="grid-column-count",
+            expected="3",
             viewport="desktop",
-            description="Three column grid on desktop (monitor wall)",
+            description="Action cards three-column on desktop (≥64rem)",
+        ),
+    ],
+)
+
+# Workspace dashboard container → `.dz-dashboard-grid`: 1 → 12 cols (48rem).
+# All workspace stages render into this one uniform 12-col grid; the per-stage
+# "2 vs 3 cols" feel is achieved by per-card col-spans, NOT a column-count
+# change on the container (which is why the old per-stage grid_1_2 / grid_2_3
+# patterns were fictions). tablet=768 is exactly the 48rem boundary, so we
+# assert only mobile (1) and desktop (12) to avoid an inclusive-boundary flake.
+DASHBOARD_GRID_PATTERN = ComponentPattern(
+    name="dashboard_grid",
+    assertions=[
+        ViewportAssertion(
+            selector=".dz-dashboard-grid",
+            property="grid-column-count",
+            expected="1",
+            viewport="mobile",
+            description="Dashboard grid single-column on mobile (<48rem)",
+        ),
+        ViewportAssertion(
+            selector=".dz-dashboard-grid",
+            property="grid-column-count",
+            expected="12",
+            viewport="desktop",
+            description="Dashboard grid 12-column on desktop (≥48rem)",
         ),
     ],
 )
 
 ALL_PATTERNS: dict[str, ComponentPattern] = {
     "drawer": DRAWER_PATTERN,
-    "grid_1_2_3": GRID_1_2_3_PATTERN,
-    "grid_1_2": GRID_1_2_PATTERN,
-    "grid_1_3": GRID_1_3_PATTERN,
-    "stats": STATS_PATTERN,
-    "detail_view": DETAIL_VIEW_PATTERN,
-    "grid_2_3": GRID_2_3_PATTERN,
+    "grid": GRID_PATTERN,
+    "metrics": METRICS_PATTERN,
+    "action_grid": ACTION_GRID_PATTERN,
+    "dashboard_grid": DASHBOARD_GRID_PATTERN,
 }
 
 # ---------------------------------------------------------------------------
-# Stage → pattern mapping (derived from STAGE_DEFAULT_SPANS)
+# Display-mode → pattern mapping
 # ---------------------------------------------------------------------------
-
-# Maps workspace stage names to the grid patterns they imply.
-_STAGE_PATTERN_MAP: dict[str, list[str]] = {
-    "focus_metric": [],  # single column, no responsive grid change
-    "dual_pane_flow": ["grid_1_2"],  # md:grid-cols-2
-    "scanner_table": [],  # single column, full-width table
-    "monitor_wall": ["grid_2_3"],  # grid-cols-2 lg:grid-cols-3
-    "command_center": [],  # 12-col grid with explicit spans
-}
-
-# Maps workspace region display modes to patterns.
+#
+# Keyed by the UPPER-cased DisplayMode value (region.display.upper()). Only
+# modes whose region primitive emits a viewport-media-query-driven responsive
+# grid are listed — these are the ones a viewport-width harness can assert
+# deterministically. Notable omission: DETAIL (`.dz-detail-row`) switches via
+# an `@container (width > 32rem)` query, NOT a viewport media query, so a
+# viewport-width assertion can't express it without becoming a false signal —
+# it's deliberately excluded (#1295).
 _DISPLAY_PATTERN_MAP: dict[str, list[str]] = {
-    "GRID": ["grid_1_2_3"],
-    "METRICS": ["stats"],
-    "SUMMARY": ["stats"],
-    "DETAIL": ["detail_view"],
+    "GRID": ["grid"],
+    "METRICS": ["metrics"],
+    "SUMMARY": ["metrics"],
+    "ACTION_GRID": ["action_grid"],
 }
 
 
@@ -332,11 +320,14 @@ def derive_patterns_from_appspec(
 
     Returns ``{page_path: [ComponentPattern, ...]}``.
 
-    * Every app with workspaces or surfaces gets :data:`DRAWER_PATTERN`
-      on ``"/"``.
-    * Workspaces contribute stage-level and region-level patterns.
-    * Surfaces with ``mode="list"`` that are not embedded in a workspace
-      contribute ``GRID_1_2_PATTERN`` (the default list layout).
+    * Workspace pages (``/app/workspaces/<name>``) get :data:`DRAWER_PATTERN`
+      (app-shell chrome) + :data:`DASHBOARD_GRID_PATTERN` (the uniform 12-col
+      card container every workspace renders) + one region pattern per region
+      ``display`` mode that maps to a responsive grid (GRID / METRICS /
+      SUMMARY / ACTION_GRID).
+    * List surfaces (``/app/<entity>``) get :data:`DRAWER_PATTERN` only — a
+      list page renders a table, not a responsive column grid, so asserting
+      grid columns there would be a false signal (#1295).
     """
     result: dict[str, list[ComponentPattern]] = {}
 
@@ -351,14 +342,13 @@ def derive_patterns_from_appspec(
     for ws in appspec.workspaces:
         path = f"/app/workspaces/{ws.name}"
 
-        patterns: list[ComponentPattern] = []
-
-        # Stage-level patterns
-        if ws.stage:
-            stage_key = ws.stage.lower()
-            for pat_name in _STAGE_PATTERN_MAP.get(stage_key, []):
-                if pat_name in ALL_PATTERNS:
-                    patterns.append(ALL_PATTERNS[pat_name])
+        # Every workspace renders the app-shell chrome + the dashboard-grid
+        # container (1 → 12 cols); region display modes add their own grids.
+        # Stage no longer maps to a pattern: all stages render the SAME
+        # 12-col `.dz-dashboard-grid` and vary only by per-card col-spans, so
+        # the old per-stage grid_1_2 / grid_2_3 patterns asserted a
+        # column-count change that never happens (#1295).
+        patterns: list[ComponentPattern] = [DRAWER_PATTERN, DASHBOARD_GRID_PATTERN]
 
         # Region-level patterns (from display mode)
         for region in ws.regions:
@@ -372,24 +362,19 @@ def derive_patterns_from_appspec(
                 if pat_name in ALL_PATTERNS and ALL_PATTERNS[pat_name] not in patterns:
                     patterns.append(ALL_PATTERNS[pat_name])
 
-        if patterns:
-            result[path] = patterns
-
-        # Drawer pattern applies to workspace pages too
-        result.setdefault(path, [])
-        if DRAWER_PATTERN not in result[path]:
-            result[path].append(DRAWER_PATTERN)
+        result[path] = patterns
 
     # Standalone list surfaces — entity-list pages at /app/<entity>. These
-    # are also /app pages, so they carry the app-shell drawer chrome.
+    # are also /app pages, so they carry the app-shell drawer chrome. A list
+    # page renders a table, not a responsive column grid, so DRAWER is the
+    # only viewport-assertable pattern here (#1295).
     for surface in appspec.surfaces:
         mode = surface.mode.upper() if hasattr(surface.mode, "upper") else str(surface.mode).upper()
         if mode == "LIST":
             entity_slug = (getattr(surface, "entity_ref", "") or surface.name).lower()
             path = f"/app/{entity_slug}"
             result.setdefault(path, [])
-            for pat in (GRID_1_2_PATTERN, DRAWER_PATTERN):
-                if pat not in result[path]:
-                    result[path].append(pat)
+            if DRAWER_PATTERN not in result[path]:
+                result[path].append(DRAWER_PATTERN)
 
     return result

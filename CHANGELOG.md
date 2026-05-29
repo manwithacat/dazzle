@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.41] - 2026-05-29
+
+### Changed
+
+- **Viewport pattern library de-rotted to the Fragment substrate (#1295 follow-through).** After the v0.80.39 path fix made `DRAWER_PATTERN` reach an authenticated app-shell, the rest of the library was still legacy-DaisyUI-stale (`GRID_1_2_3`/`GRID_1_2`/`GRID_1_3`/`GRID_2_3`/`STATS`/`DETAIL_VIEW` targeting `.grid.md:grid-cols-2`, `.stats`, `.sm:grid.sm:grid-cols-3` — classes the Fragment renderer never emits, so every assertion came back "Element not found"). Replaced with four patterns grounded in the **real** region markup (verified against freshly-rendered primitives): `GRID_PATTERN` → `.dz-grid-list` (1/2/3 cols), `METRICS_PATTERN` → `.dz-metrics-grid` (1/2/4), `ACTION_GRID_PATTERN` → `.dz-action-grid` (1/2/3), `DASHBOARD_GRID_PATTERN` → `.dz-dashboard-grid` (1/12). Breakpoints read from `regions.css`/`dashboard.css` (40rem/64rem region grids; 48rem dashboard). **New `grid-column-count` property model**: `getComputedStyle('grid-template-columns')` returns the *resolved px track list* (`"388px 388px"`), never the authored `"repeat(2,…)"`, so a string compare would have been a new false negative (the same property-model mismatch class as #1294's `visibility`-vs-`transform`); the runner's JS now counts resolved tracks instead. Dropped the per-stage `grid_1_2`/`grid_2_3` patterns (all workspace stages render the *same* 12-col `.dz-dashboard-grid`, varying only by per-card col-span — a column-count change that never happens) and the `DETAIL_VIEW` pattern (`.dz-detail-row` switches via an `@container` query, not a viewport media query, so a viewport-width harness can't assert it without producing a false signal). List surfaces now carry DRAWER only (a list page is a table, not a responsive column grid).
+
+### Added
+
+- **Region-grid freshness guards** (`test_viewport.py::test_region_pattern_selectors_match_current_markup`): browser-free unit tests that render each region primitive (`GridRegion`/`MetricsGrid`/`ActionGrid`/`DashboardGrid`) and assert its pattern's selector matches the class actually emitted — extending the v0.80.37 `DRAWER_PATTERN` freshness guard across the whole library, so the selector-rot-after-renderer-migration failure mode that let #1294 through can't recur silently for any pattern.
+
+### Agent Guidance
+
+- The orthogonal viewport harness (`dazzle.testing.viewport`) asserts the synthetic **`grid-column-count`**, not raw `grid-template-columns` — the latter resolves to px tracks at runtime. When adding a responsive grid pattern, point its selector at a class a Fragment **primitive actually emits** (add a freshness-guard case rendering that primitive) and read the column counts from the component CSS media queries. Container-query layouts (`@container`) are *not* viewport-assertable — leave them out rather than encoding a false signal. #1295 stays open until the advisory `run-viewport` CI step is observed green/stable and promoted to a blocking gate (`continue-on-error` dropped).
+
 ## [0.80.40] - 2026-05-29
 
 ### Fixed

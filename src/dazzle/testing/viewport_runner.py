@@ -152,6 +152,16 @@ _JS_BATCH_EVAL = """
     const el = document.querySelector(s.selector);
     if (!el) return { selector: s.selector, property: s.property, actual: null };
     const style = window.getComputedStyle(el);
+    // #1295 — synthetic `grid-column-count`: getComputedStyle resolves
+    // `grid-template-columns` to a px track list (e.g. "388px 388px"),
+    // never the authored "repeat(2, …)" / "1fr 1fr", so a string compare
+    // would always fail. Count the resolved tracks instead — stable across
+    // container widths. A non-grid element (`none`/empty) reads as "0".
+    if (s.property === 'grid-column-count') {
+        const tracks = style.getPropertyValue('grid-template-columns').trim();
+        const count = (!tracks || tracks === 'none') ? 0 : tracks.split(/\\s+/).length;
+        return { selector: s.selector, property: s.property, actual: String(count) };
+    }
     return { selector: s.selector, property: s.property,
              actual: style.getPropertyValue(s.property) };
 })
