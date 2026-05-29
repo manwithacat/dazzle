@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.27] - 2026-05-29
+
+### Security
+
+- Narrowed the signing-route CSRF exemption (#1284). The signing trial harness (#1283) exempted the broad path prefixes `/sign/` and `/api/sign/` from CSRF via `startswith` matching, so any future route accidentally mounted deeper (e.g. `/api/sign/admin/...`) would silently inherit the exemption. The exemption is now an anchored regex matching only the exact route shape `/<sign|api/sign>/<entity>/<record_id>` where `record_id` is a UUID — mirroring the route's `record_id: UUID` path param. A deeper-nested or non-UUID-tailed path falls back to normal CSRF validation. No defect existed (only the two legitimate HMAC-authenticated signing routes lived under the prefix); this is a defence-in-depth narrowing before v1.0. New `CSRFConfig.exempt_path_regexes` field; guard tests in `tests/unit/test_csrf_exempt_paths.py` lock the contract (legitimate routes — both hyphenated and 32-char no-hyphen UUID spellings Pydantic accepts — stay exempt; admin-style and partial paths do not).
+
+### Agent Guidance
+
+- CSRF exemptions for parametric routes should use `CSRFConfig.exempt_path_regexes` (anchored, `fullmatch`ed) rather than broad `exempt_path_prefixes` whenever the safe surface is a fixed route shape — a `startswith` prefix silently exempts anything mounted deeper under it. Anchor the tail to its actual path-param type (e.g. a UUID) so the exemption tracks the reachable surface.
+
 ## [0.80.26] - 2026-05-29
 
 ### Changed

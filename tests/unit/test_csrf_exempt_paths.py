@@ -14,6 +14,8 @@ NOT in the default exempt list. GraphQL POSTs include mutations and must carry
 
 from __future__ import annotations
 
+import re
+
 from dazzle.back.runtime.csrf import CSRFConfig, configure_csrf_for_profile
 
 
@@ -78,3 +80,85 @@ class TestGraphQLNotExempt:
     def test_graphql_not_in_configured_paths(self) -> None:
         built = configure_csrf_for_profile("standard")
         assert "/graphql" not in built.exempt_paths
+
+
+class TestSigningExemptNarrowed:
+    """#1284: the signing-route CSRF exemption must match ONLY the exact
+    two-segment route shape, not a broad ``/api/sign/`` prefix. A future route
+    accidentally mounted deeper under that prefix (e.g. an admin endpoint) must
+    fall back to normal CSRF validation rather than silently inherit the
+    exemption.
+    """
+
+    def _matches_any_exempt(self, config: CSRFConfig, path: str) -> bool:
+        """Mirror the middleware's exemption logic for a state-changing path:
+        exact paths, prefixes, then anchored regexes."""
+        if path in config.exempt_paths:
+            return True
+        if any(path.startswith(p) for p in config.exempt_path_prefixes):
+            return True
+        return any(re.fullmatch(p, path) for p in config.exempt_path_regexes)
+
+    def test_no_broad_sign_prefix_remains(self) -> None:
+        config = CSRFConfig()
+        # The broad startswith prefixes that #1284 was opened to remove must
+        # be gone — replaced by anchored regexes.
+        assert "/sign/" not in config.exempt_path_prefixes
+        assert "/api/sign/" not in config.exempt_path_prefixes
+
+    def test_legitimate_signing_routes_exempt(self) -> None:
+        config = CSRFConfig()
+        uuid = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        for path in (
+            f"/sign/contract/{uuid}",
+            f"/api/sign/contract/{uuid}",
+            # entity_name is an opaque single segment; the record_id tail is
+            # anchored to a UUID, matching the route's ``record_id: UUID``.
+            f"/sign/letter/{uuid}",
+            f"/api/sign/letter/{uuid}",
+            # Pydantic's UUID validator accepts the 32-char no-hyphen spelling,
+            # so it is a reachable signing route and must stay exempt too.
+            f"/sign/contract/{uuid.replace('-', '')}",
+            f"/api/sign/contract/{uuid.replace('-', '')}",
+        ):
+            assert self._matches_any_exempt(config, path), path
+
+    def test_deeper_nested_routes_not_exempt(self) -> None:
+        config = CSRFConfig()
+        uuid = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        # The core #1284 anti-regression: a hypothetical admin route mounted
+        # under the prefix must NOT be exempt — including a two-segment route
+        # whose tail is not a UUID.
+        for path in (
+            "/api/sign/admin/revoke-all",
+            f"/api/sign/contract/{uuid}/delete",
+            "/sign/admin/purge",
+            f"/sign/contract/{uuid}/extra",
+        ):
+            assert not self._matches_any_exempt(config, path), path
+
+    def test_non_uuid_tail_not_exempt(self) -> None:
+        config = CSRFConfig()
+        # The record_id tail must be a UUID — a free-word tail is unreachable
+        # on the real route (FastAPI 422s it) and must not be exempt either.
+        for path in (
+            "/api/sign/letter/abc",
+            "/sign/letter/abc",
+            "/api/sign/admin/dashboard",
+        ):
+            assert not self._matches_any_exempt(config, path), path
+
+    def test_partial_and_sibling_paths_not_exempt(self) -> None:
+        config = CSRFConfig()
+        uuid = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        # The bare prefix, missing segments, or a same-stem sibling must not
+        # match the anchored pattern.
+        for path in (
+            "/api/sign/",
+            "/api/sign/contract",
+            "/sign/",
+            "/sign/contract",
+            f"/api/signups/contract/{uuid}",
+            f"/signatures/contract/{uuid}",
+        ):
+            assert not self._matches_any_exempt(config, path), path

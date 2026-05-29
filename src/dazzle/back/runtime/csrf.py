@@ -13,6 +13,7 @@ Implements the double-submit cookie pattern using a pure ASGI middleware
 from __future__ import annotations
 
 import logging
+import re
 import secrets
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -23,6 +24,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 SAFE_METHODS = frozenset({b"GET", b"HEAD", b"OPTIONS", b"TRACE"})
+
+# UUID shapes used to anchor the signing-route CSRF exemption to the route's
+# ``record_id: UUID`` path param (#1284). Both the canonical hyphenated
+# 8-4-4-4-12 form and the 32-char no-hyphen form are matched, because
+# Pydantic's ``UUID`` validator (which backs FastAPI path params) accepts both
+# — a hyphen-only anchor would wrongly CSRF-block a legitimate no-hyphen
+# submission. The ``urn:`` and brace-wrapped forms ``uuid.UUID`` also accepts
+# are not valid URL path segments, so they never reach the middleware.
+_UUID_RE = (
+    r"(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    r"|[0-9a-fA-F]{32})"
+)
 
 
 @dataclass
@@ -72,15 +85,31 @@ class CSRFConfig:
             # project's supported_locales allow-list before writing
             # the cookie.
             "/_dazzle/i18n/",
-            # Native document signing routes (#1283). The HMAC signing token
-            # carried in the request (query-param on GET, body on POST) is a
-            # stronger per-resource credential than a session CSRF cookie, so
-            # CSRF double-submit is redundant here.  Both the signing page
-            # (GET /sign/…) and the submit endpoint (POST /api/sign/…) are
-            # exempt; unauthenticated signers never have a session cookie from
-            # which a CSRF cookie would be issued.
-            "/sign/",
-            "/api/sign/",
+        ]
+    )
+    exempt_path_regexes: list[str] = field(
+        default_factory=lambda: [
+            # Native document signing routes (#1283, narrowed in #1284).
+            # The HMAC signing token carried in the request (query-param on
+            # GET, body on POST) is a stronger per-resource credential than a
+            # session CSRF cookie, so CSRF double-submit is redundant here.
+            # Both the signing page (GET /sign/<entity>/<id>) and the submit
+            # endpoint (POST /api/sign/<entity>/<id>) are exempt;
+            # unauthenticated signers never have a session cookie from which a
+            # CSRF cookie would be issued.
+            #
+            # The match is deliberately a regex anchored to the exact route
+            # shape — /<sign-or-api-sign>/<entity>/<record_id> where
+            # ``record_id`` is a UUID — rather than a broad `startswith`
+            # prefix. A future route mounted deeper or with a non-UUID tail —
+            # e.g. /api/sign/admin/revoke-all — does NOT silently inherit this
+            # exemption, but instead falls back to normal CSRF validation. The
+            # UUID anchor mirrors the route's ``record_id: UUID`` path param
+            # (a non-UUID tail is unreachable — FastAPI 422s it). Decline is a
+            # body flag on the same POST endpoint, not a subpath, so no extra
+            # pattern is required.
+            r"^/sign/[^/]+/" + _UUID_RE + r"$",
+            r"^/api/sign/[^/]+/" + _UUID_RE + r"$",
         ]
     )
 
@@ -138,6 +167,9 @@ class CSRFMiddleware:
     def __init__(self, app: Any, config: CSRFConfig) -> None:
         self.app = app
         self.config = config
+        # Precompile exempt-path regexes once at mount time; matched on the
+        # hot path for every state-changing request.
+        self._exempt_regexes = [re.compile(pattern) for pattern in config.exempt_path_regexes]
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope["type"] != "http":
@@ -168,6 +200,13 @@ class CSRFMiddleware:
 
         for prefix in self.config.exempt_path_prefixes:
             if path.startswith(prefix):
+                await self._pass_through(scope, receive, send, new_token)
+                return
+
+        for pattern in self._exempt_regexes:
+            # fullmatch (not match) so the trailing-anchor intent is structural
+            # rather than relying on a load-bearing ``$`` in each pattern.
+            if pattern.fullmatch(path):
                 await self._pass_through(scope, receive, send, new_token)
                 return
 
