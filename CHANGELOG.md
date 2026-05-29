@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.45] - 2026-05-30
+
+### Changed
+
+- **Promoted the `run-viewport` orthogonal geometry gate from advisory to BLOCKING in CI (#1295 — closes it).** Dropped `continue-on-error: true` and the `|| true` on the CI "Run viewport assertions" step; it now captures the runner's exit code, cleans up the server, and `exit $rc` so a real viewport failure reds `main`. This is the original #1295 acceptance ("`run-viewport` runs in CI and fails if the app-shell sidebar is off-screen"), now met. Promotion was gated on observing the live advisory run green/stable, which it now is: the v0.80.44 advisory run-viewport against an authenticated support_tickets render was **23 passed / 0 failed / 17 skipped, zero "Element not found"** — matching local. The full #1295 arc: revive + Fragment-markup selectors + `grid-column-count` model (v0.80.41), path derivation fix (v0.80.39), self-authentication + RBAC-page skip + loud all-skipped guard (v0.80.42), exit-non-zero on failure (v0.80.43), drop the always-12 dashboard-grid fiction (v0.80.44), promote to blocking (v0.80.45). The orthogonal dimension that should have caught #1294 is now live, authenticated, and gating. If post-promotion browser flake appears, re-add `continue-on-error: true` and reopen #1295.
+
+### Agent Guidance
+
+- The viewport/geometry gate is now a **blocking** CI check (the `interaction-walks` job's "Run viewport assertions" step). It boots support_tickets in `--test-mode`, self-authenticates as `--persona agent`, and asserts app-shell geometry (sidebar on-screen, toggle visible) + region grid column counts at mobile+desktop, skipping persona-unreachable pages. A change that pushes the app-shell sidebar off-screen, drops the toggle, or breaks a region grid's responsive column count will now fail CI — the correlated-blind-spot escape of #1294 is closed by a live, dimensionally-independent gate. Keep `dazzle.testing.viewport` patterns grounded in real rendered markup (freshness guards enforce this) and only assert `grid-column-count` on containers whose track count actually varies by breakpoint.
+
 ## [0.80.44] - 2026-05-30
 
 ### Fixed

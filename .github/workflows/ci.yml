@@ -627,15 +627,19 @@ jobs:
         exit $rc
       timeout-minutes: 8
 
-    # #1295 — orthogonal geometry/viewport dimension, run LIVE in CI. The
-    # DRAWER_PATTERN viewport assertions check the app-shell sidebar is
-    # on-screen at desktop (transform ≈ identity) + the toggle is visible —
-    # the dimension that missed #1294 (markup present, off-screen). Advisory
-    # (continue-on-error) during the bring-up window so a brand-new browser
-    # job can't red main on flake; promote to blocking once stable (#1295).
+    # #1295 — orthogonal geometry/viewport dimension, run LIVE in CI as a
+    # BLOCKING gate (promoted from advisory once the harness was proven —
+    # v0.80.42 self-auth + RBAC-skip, v0.80.43 exit-non-zero, v0.80.44 pattern
+    # set all-green; the v0.80.44 advisory run was 23 passed / 0 failed / 17
+    # skipped against an authenticated support_tickets render). The runner
+    # authenticates as --persona agent, asserts the app-shell sidebar is
+    # on-screen at desktop (transform ≈ identity) + the toggle is visible (the
+    # dimension that missed #1294 — markup present, off-screen) + region grid
+    # column counts, and skips persona-unreachable pages. `run-viewport` exits
+    # non-zero on any real failure (#1295), so this step now gates main.
+    # If flakes appear, re-add `continue-on-error: true` and reopen #1295.
     # Reuses this job's Playwright + postgres setup.
-    - name: Run viewport assertions (advisory, #1295)
-      continue-on-error: true
+    - name: Run viewport assertions (orthogonal geometry gate, #1295)
       run: |
         cd examples/support_tickets
         python -m dazzle serve --test-mode --local --port 3000 > /tmp/viewport-server.log 2>&1 &
@@ -645,9 +649,11 @@ jobs:
           fi
           sleep 1
         done
+        rc=0
         DAZZLE_SITE_URL="http://localhost:3000" DAZZLE_API_URL="http://localhost:3000" \
-          python -m dazzle e2e run-viewport --viewports mobile,desktop --persona agent --json || true
+          python -m dazzle e2e run-viewport --viewports mobile,desktop --persona agent --json || rc=$?
         pkill -f "dazzle serve" || true
+        exit $rc
       timeout-minutes: 6
 
     - name: Cleanup
