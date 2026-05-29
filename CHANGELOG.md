@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.28] - 2026-05-29
+
+### Changed
+
+- `/improve` example-apps lane now prunes stale `visual_quality` findings. The OBSERVE step deletes `PENDING` Tier-2 visual rows with `seen=1` older than 14 days before selecting work, and a new "Stale-finding TTL" hard rule documents the rationale. Single-observation visual findings age out behind framework releases — by pickup they're often already fixed, inflating `actionable_count` and wasting investigation re-confirming non-issues. The next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen` (cheap by design). Issue-linked (`FILED→#…`/`RESOLVED→#…`) and reinforced (`seen≥2`) rows are never pruned on age. Validated by cycle 157: rows 103/106 sat PENDING 14 days then proved stale (empty list-region empty-state had since been wired).
+
+### Agent Guidance
+
+- When running the `/improve` example-apps lane, prune stale single-observation `visual_quality` backlog rows (`seen=1`, `PENDING`, `ts` > 14 days) in OBSERVE rather than treating them as actionable — see `.claude/commands/improve/lanes/example-apps.md` (OBSERVE step + "Stale-finding TTL" hard rule). Never prune rows linked to a filed issue, a shipped fix, or reinforced (`seen≥2`) rows.
+
 ## [0.80.27] - 2026-05-29
 
 ### Security

@@ -28,7 +28,9 @@ Rows in `## Lane: example-apps` with status ∈ {`PENDING`, `IN_PROGRESS`}.
 
 ### 1. OBSERVE
 
-Read backlog section. Selection priority:
+Read backlog section. **First, prune stale findings** (see Stale-finding TTL under Hard rules): delete any `PENDING` `visual_quality` row with `seen=1` whose `ts=` is older than **14 days**. Don't action them and don't carry them — the next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen`. Never prune rows that track a filed issue (`FILED→#…`) or a shipped fix (`RESOLVED→#…`), and never prune reinforced rows (`seen≥2` — repeated observation is signal). Note the prune count in the cycle log.
+
+Then selection priority:
 1. `IN_PROGRESS` with attempts < 3 → resume it
 2. `IN_PROGRESS` with attempts ≥ 3 → mark `BLOCKED`, file issue if framework-related, pick next `PENDING`
 3. All gaps DONE/BLOCKED → run **explore phase** (Step 6 below)
@@ -112,3 +114,4 @@ Increments shared budget by 5 (significantly more expensive).
 - **One gap per cycle.** Don't chain.
 - **Three attempts then BLOCKED.** Never let a gap run forever.
 - **Framework-related gaps file issues, don't fix.** This lane targets app DSL only — framework fixes belong in `framework-ux` or /issues.
+- **Stale-finding TTL.** `visual_quality` rows come from Tier-2 `dazzle qa visual` scrapes (Step 6). A single-observation row (`seen=1`) that stays `PENDING` longer than **14 days** ages out behind framework releases — by pickup time the issue is often already fixed, so it inflates `actionable_count`, mis-biases lane selection, and wastes investigation re-confirming non-issues. **Delete such rows in OBSERVE rather than carrying them**; the next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen` (cheap by design). Exceptions that are NEVER pruned on age: rows linked to a filed issue (`FILED→#…`), rows recording a shipped fix (`RESOLVED→#…`), and reinforced rows (`seen≥2`, where repeated observation across scrapes is signal). Validated by cycle 157 (2026-05-29): rows 103/106 sat `PENDING` 14 days, then proved stale — the empty list-region empty-state had since been wired (confirmed by direct `ListRegion` render at v0.80.27).
