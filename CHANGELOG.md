@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.25] - 2026-05-29
+
+### Security
+
+- Suppressed a false-positive semgrep CRITICAL (`python.fastapi.db.generic-sql-fastapi`) in `route_generator.py`'s custom-operation handler. The generic taint rule flagged `request.json()` reaching `service.execute(...)`, but the input is Pydantic-validated and `service.execute` dispatches to the Repository, which builds **parameterized** queries (`cursor.execute(sql, params)`) — no string-built SQL. Annotated with `# nosemgrep` + an inline rationale, matching the existing convention across the data layer. No behaviour change.
+
 ## [0.80.24] - 2026-05-28
 
 ### Removed

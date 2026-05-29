@@ -3609,8 +3609,10 @@ def create_custom_handler(
 
         async def handler_with_input(request: Request) -> Any:
             body = await request.json()
+            # Pydantic-validated input → Dazzle service layer → parameterized
+            # Repository (cursor.execute(sql, params)); no string-built SQL.
             data = input_schema.model_validate(body)
-            result = await service.execute(**data.model_dump())
+            result = await service.execute(**data.model_dump())  # nosemgrep
             return result
 
         # Override annotations with the proper type so FastAPI recognizes it
