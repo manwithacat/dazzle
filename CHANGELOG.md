@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.35] - 2026-05-29
+
+### Fixed
+
+- Regenerated `examples/acme_billing/expected/compliance-auditspec.json` after the v0.80.34 workspace-access change (only the `dsl_hash` fingerprint changed — the compliance controls are identical). The `test_acme_billing_reference_drift` gate fingerprints the DSL, so any acme_billing DSL edit requires regenerating the committed auditspec reference. This un-reds `main` (v0.80.34 shipped with the stale reference because the example-apps fix gate ran only the 3 example-discovery tests, not the full `pytest -m "not e2e"` that includes the app-specific drift test).
+
+### Agent Guidance
+
+- An example-app DSL change can trip **app-specific reference-drift tests** (e.g. `test_acme_billing_reference_drift` pins `expected/{rbac-matrix,compliance-auditspec}.json` and fingerprints the DSL via `dsl_hash`). Run the full `pytest -m "not e2e"` — not just `dazzle validate` + the rbac-lint/validate-drift/cli-sweep discovery tests — before shipping any `examples/*/dsl/*.dsl` edit. To regenerate: `cd examples/<app> && python -m dazzle compliance compile`, then write the normalized auditspec (strip `generated_at` + `dsl_source`) to `expected/compliance-auditspec.json`; `python -m dazzle rbac matrix --format json > expected/rbac-matrix.json` for the matrix.
+
 ## [0.80.34] - 2026-05-29
 
 ### Fixed
