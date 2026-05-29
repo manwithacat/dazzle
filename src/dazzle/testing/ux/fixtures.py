@@ -103,8 +103,22 @@ def generate_seed_payload(
         if s.entity_ref and s.entity_ref not in _FRAMEWORK_ENTITIES
     }
 
-    for entity in appspec.domain.entities:
-        if entity.name not in surfaced_entities:
+    # Seed in FK-dependency order (referenced entities first) so a required
+    # FK on a referencing entity resolves to an already-emitted fixture id.
+    # In declaration order, an entity whose required FK target appears later
+    # gets its ref skipped (target not yet in `first_fixture_id`) → the
+    # /__test__/seed insert fails the NOT NULL constraint → that entity's
+    # table stays empty → `list_page` contracts spuriously fail with "no
+    # clickable rows". Topological ordering fixes FK-chain apps (e.g.
+    # acme_billing: Organization ← Project/User ← Invoice/Membership).
+    from dazzle.demo_data.loader import topological_sort_entities
+
+    entities_by_name = {e.name: e for e in appspec.domain.entities}
+    ordered_names = topological_sort_entities(appspec.domain.entities)
+
+    for entity_name in ordered_names:
+        entity = entities_by_name.get(entity_name)
+        if entity is None or entity.name not in surfaced_entities:
             continue
 
         for i in range(rows_per_entity):

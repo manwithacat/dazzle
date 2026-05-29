@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.29] - 2026-05-29
+
+### Fixed
+
+- `dazzle ux verify --contracts --managed` now seeds the database before checking, and seeds correctly for apps with FK chains. Two bugs: (1) the `--contracts` route never seeded (the reset+seed step only ran in the full-verify path), so data-bearing contracts like `list_page` failed spuriously ("no clickable rows") against an empty DB; (2) the seed helper POSTed per-entity, but `/__test__/seed` resolves cross-entity `refs` only within a single request, so FK-dependent entities never seeded — and `generate_seed_payload` emitted entities in declaration order, so even a single-POST insert could violate FK constraints. Fix: a shared `_reset_and_seed(project_root, api_url)` (one POST with all fixtures) wired into both the `--contracts` and full-verify routes, and `generate_seed_payload` now emits fixtures in FK-dependency order (via `demo_data.loader.topological_sort_entities`). Verified end-to-end: `examples/acme_billing` went 5 failed → 0 failed (25 fixtures seeded), `simple_task` unchanged (39/0). Regression pinned by `tests/unit/test_ux_fixtures.py::test_fk_chain_seeds_in_dependency_order`.
+
+### Agent Guidance
+
+- When the `/improve` ux-converge lane runs `dazzle ux verify --contracts --managed`, the command now self-seeds — so a `list_page`/empty-state failure is a real signal, not a "DB wasn't seeded" artifact. (Background: empty/under-seeded DBs were the recurring false-positive source — see `dev_docs/improve-log.md` cycles 158–162.)
+
 ## [0.80.28] - 2026-05-29
 
 ### Changed

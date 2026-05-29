@@ -37,3 +37,43 @@ class TestFixtureGeneration:
             assert "entity" in fixture
             assert "data" in fixture
             assert isinstance(fixture["data"], dict)
+
+    def test_fk_chain_seeds_in_dependency_order(self) -> None:
+        """Regression: fixtures are emitted FK-dependency-first so a required
+        FK resolves to an already-emitted fixture id.
+
+        In declaration order, an entity whose required-FK target is declared
+        later gets its ref skipped → the ``/__test__/seed`` insert fails the
+        NOT NULL constraint → that table stays empty → the entity's
+        ``list_page`` contract spuriously fails with "no clickable rows".
+        ``acme_billing`` is a real FK chain: Organization ← Project/User ←
+        Invoice/Membership.
+        """
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        project = Path(__file__).resolve().parents[2] / "examples" / "acme_billing"
+        appspec = load_project_appspec(project)
+        payload = generate_seed_payload(appspec)
+        fixtures = payload["fixtures"]
+
+        first_idx: dict[str, int] = {}
+        id_to_entity: dict[str, str] = {}
+        for i, fx in enumerate(fixtures):
+            first_idx.setdefault(fx["entity"], i)
+            id_to_entity[fx["id"]] = fx["entity"]
+
+        # The referenced parent must actually be seeded.
+        assert "Organization" in first_idx, "Organization fixtures missing"
+
+        # Every FK ref must point to an entity that first appears no later
+        # than the referencing fixture, so the seed endpoint can resolve it.
+        for i, fx in enumerate(fixtures):
+            for field_name, ref_id in (fx.get("refs") or {}).items():
+                ref_entity = id_to_entity.get(ref_id)
+                assert ref_entity is not None, (
+                    f"{fx['entity']}.{field_name} refs unknown fixture {ref_id!r}"
+                )
+                assert first_idx[ref_entity] <= i, (
+                    f"{fx['entity']}.{field_name} refs {ref_entity}, "
+                    f"which is seeded later — not FK-dependency-ordered"
+                )

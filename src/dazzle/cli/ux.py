@@ -106,6 +106,67 @@ def _pick_workspace_check_persona(appspec: Any, workspace_name: str) -> str:
     return "admin"
 
 
+def _reset_and_seed(project_root: Path, api_url: str) -> None:
+    """Reset and seed the running app's DB via the ``/__test__`` endpoints.
+
+    Contract verification — notably ``list_page`` (which requires at least
+    one row with a click-through ``hx-get``) — is meaningless against an
+    empty DB: an empty list renders no rows, so the contract spuriously
+    fails with "no clickable rows". Seeding gives every list a known row
+    set. ``generate_seed_payload`` emits fixtures in FK-dependency order,
+    and we seed per-entity in that order so required FKs resolve to
+    already-seeded parents (else the referencing entity's insert fails and
+    its table stays empty). Failures are logged, never fatal — a contract
+    run against partial data still beats no run.
+    """
+    import os
+
+    import httpx
+
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.testing.ux.fixtures import generate_seed_payload
+
+    secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+    headers = {"X-Test-Secret": secret} if secret else {}
+
+    try:
+        appspec = load_project_appspec(project_root)
+    except Exception as e:
+        console.print(f"[yellow]  seed skipped — failed to load appspec: {e}[/yellow]")
+        return
+
+    console.print("[dim]  resetting test data...[/dim]")
+    try:
+        httpx.post(f"{api_url}/__test__/reset", headers=headers, timeout=10)
+    except Exception as e:
+        console.print(f"[yellow]  reset failed: {e}[/yellow]")
+
+    fixtures = generate_seed_payload(appspec).get("fixtures", [])
+    if not fixtures:
+        return
+
+    # Seed ALL fixtures in a SINGLE request. The /__test__/seed endpoint
+    # resolves cross-entity `refs` only within one call (it builds the
+    # fixture-id→UUID map from `request.fixtures`), so a per-entity POST
+    # would leave every FK to a previously-seeded entity unresolved — the
+    # referencing insert then fails its NOT NULL/FK constraint and that
+    # table stays empty. generate_seed_payload emits FK-dependency-first,
+    # so the endpoint's in-order insert pass satisfies FK constraints.
+    try:
+        resp = httpx.post(
+            f"{api_url}/__test__/seed",
+            json={"fixtures": fixtures},
+            headers=headers,
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            console.print(f"[dim]  seeded {len(fixtures)} fixtures[/dim]")
+        else:
+            console.print(f"[yellow]  seed failed ({resp.status_code}): {resp.text[:200]}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]  seed failed: {e}[/yellow]")
+
+
 def _run_contracts(
     project_root: Path,
     strict: bool = False,
@@ -643,6 +704,13 @@ def verify_command(
             # the TCP port is accepting traffic, AND the test secret
             # is pinned before we hand off to the contracts check.
             with launch_interaction_server(project_root):
+                # Seed before checking — list_page and other data-bearing
+                # contracts are false-negatives against an empty DB. The
+                # full-verify path below already reset+seeds; the
+                # --contracts route must too so it's trustworthy when the
+                # autonomous improve loop runs it.
+                _, _api_url = _resolve_runtime_urls(project_root)
+                _reset_and_seed(project_root, _api_url)
                 raise typer.Exit(
                     _run_contracts(
                         project_root,
@@ -730,46 +798,9 @@ def verify_command(
     console.print(f"[bold]Running UX verification for {project_name}...[/bold]")
     console.print(f"[dim]  site: {site_url}  api: {api_url}[/dim]")
 
-    # Reset + seed test data so we start from a known state
-    import httpx
-
-    from dazzle.testing.ux.fixtures import generate_seed_payload
-
-    headers = runner._test_headers()
-    console.print("[dim]  resetting test data...[/dim]")
-    try:
-        resp = httpx.post(f"{api_url}/__test__/reset", headers=headers, timeout=10)
-        if resp.status_code == 200:
-            console.print("[dim]  reset OK[/dim]")
-        else:
-            console.print(f"[yellow]  reset returned {resp.status_code}[/yellow]")
-    except Exception as e:
-        console.print(f"[yellow]  reset failed: {e}[/yellow]")
-
-    seed_payload = generate_seed_payload(appspec)
-    fixtures = seed_payload.get("fixtures", [])
-    if fixtures:
-        # Seed per-entity to avoid one failure blocking all entities
-        by_entity: dict[str, list[dict[str, object]]] = {}
-        for f in fixtures:
-            by_entity.setdefault(f["entity"], []).append(f)
-
-        seeded = 0
-        for entity_name, entity_fixtures in by_entity.items():
-            try:
-                resp = httpx.post(
-                    f"{api_url}/__test__/seed",
-                    json={"fixtures": entity_fixtures},
-                    headers=headers,
-                    timeout=15,
-                )
-                if resp.status_code == 200:
-                    seeded += len(entity_fixtures)
-                else:
-                    console.print(f"[yellow]  seed {entity_name}: {resp.text[:120]}[/yellow]")
-            except Exception as e:
-                console.print(f"[yellow]  seed {entity_name}: {e}[/yellow]")
-        console.print(f"[dim]  seeded {seeded}/{len(fixtures)} fixtures[/dim]")
+    # Reset + seed test data so we start from a known state. Shared with
+    # the --contracts route via _reset_and_seed (seeds FK-dependency-first).
+    _reset_and_seed(project_root, api_url)
 
     results = asyncio.run(runner.run_all(inventory))
 
