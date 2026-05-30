@@ -62,3 +62,15 @@ class WorkspaceRegionContext:
     # from appspec.surfaces; empty dict means no row_action surfaces
     # in this app (cost-free).
     row_action_routes: dict[str, str] = field(default_factory=dict)
+    # #1303 — resolved per-row drill-to-detail URL template for row-oriented
+    # displays (list, task_inbox), e.g. "/app/assessment-event/{id}". Set by
+    # WorkspaceRouteBuilder when the region's source entity has a VIEW surface
+    # AND the region didn't opt out via `drill: none`; empty string means no
+    # row links. The list/task_inbox adapters substitute "{id}" per row.
+    detail_url_template: str = ""
+    # #1303 — entity_name → detail-URL template map for MULTI-source
+    # task_inbox regions (where each source is a different entity, so the
+    # single `detail_url_template` above isn't enough). Drill-gated the same
+    # way (empty when the region set `drill: none`). The task_inbox builder
+    # looks up each source's template by entity name.
+    entity_detail_urls: dict[str, str] = field(default_factory=dict)

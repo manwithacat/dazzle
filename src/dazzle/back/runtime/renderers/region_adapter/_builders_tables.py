@@ -193,6 +193,15 @@ class _BuildersTablesMixin:
         if row_action_spec is not None:
             row_action_label = row_action_spec.label
 
+        # #1303: per-row drill-to-detail. `detail_url_template` (e.g.
+        # "/app/assessment-event/{id}") is threaded in by the workspace
+        # route builder when the source entity has a VIEW surface and the
+        # region didn't `drill: none`. Track the dict items that actually
+        # produce rows so the resolved links stay index-aligned with
+        # `list_rows` (non-dict items are skipped below).
+        detail_url_template = str(ctx.get("detail_url_template") or "")
+        row_items: list[dict[str, Any]] = []
+
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -205,6 +214,7 @@ class _BuildersTablesMixin:
                 # (size="md", bordered=False).
                 row_cells.append(_render_typed_value(item, col))
             list_rows.append(tuple(row_cells))
+            row_items.append(item)
             if row_action_spec is not None:
                 visible = (
                     True
@@ -233,6 +243,15 @@ class _BuildersTablesMixin:
         except (TypeError, ValueError):
             total = len(list_rows)
 
+        # #1303: resolve per-row drill links (index-aligned with list_rows).
+        # Reuses the standalone list's helper so workspace + standalone
+        # share one substitution contract.
+        row_links: tuple[str | None, ...] = ()
+        if detail_url_template:
+            from dazzle.back.runtime.renderers.fragment_adapter import _resolve_row_links
+
+            row_links = _resolve_row_links(row_items, detail_url_template)
+
         body: Fragment = ListRegion(
             columns=tuple(list_columns),
             rows=tuple(list_rows),
@@ -242,6 +261,7 @@ class _BuildersTablesMixin:
             empty_message=str(empty_msg),
             row_action_label=row_action_label,
             row_actions=tuple(row_actions_list) if row_action_spec is not None else (),
+            row_links=row_links,
         )
 
         # If we have chrome, wrap the body in a Stack that also contains

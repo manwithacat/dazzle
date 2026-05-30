@@ -1067,6 +1067,14 @@ class WorkspaceRegion(BaseModel):
     # author `row_action:` ahead of full renderer support, the IR is
     # ready and the parser locks the shape.
     row_action: RowActionSpec | None = None
+    # #1303: per-row drill-to-detail on row-oriented displays (list,
+    # task_inbox). Values: None (default) → AUTO (rows link to
+    # `/app/<entity>/{id}` when the source entity has a VIEW surface,
+    # mirroring the standalone list); "none" → opt out (no row links even
+    # if a detail surface exists); "detail" → explicit auto (same as
+    # default, states intent). The runtime gates on VIEW-surface existence
+    # in all cases, so a drill link never points at a non-existent route.
+    drill: str | None = None
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

@@ -639,6 +639,7 @@ def _build_task_inbox_payload(
     items: list[dict[str, Any]],
     config: Any,
     items_per_source: dict[int, list[dict[str, Any]]] | None = None,
+    entity_detail_urls: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Build (task_inbox_items, task_inbox_chips) from already-scoped
     source rows (#1015).
@@ -669,21 +670,32 @@ def _build_task_inbox_payload(
     sources = list(getattr(config, "sources", []) or [])
     if not sources:
         return [], []
+    # #1303: entity → detail-URL template map (drill-gated upstream — empty
+    # when the region opted out via `drill: none`). Per-source lookup
+    # populates each item's drill_url.
+    detail_urls = entity_detail_urls or {}
 
     if items_per_source:
-        return _resolve_task_inbox_multi_source(sources, items_per_source)
+        return _resolve_task_inbox_multi_source(sources, items_per_source, detail_urls)
 
     # Single-source MVP fallback — used when the upstream fan-out
     # hasn't been wired yet.
     primary_template = None
+    primary_source = ""
     for src in sources:
         if getattr(src, "as_task", None) is not None:
             primary_template = getattr(src, "as_task", None)
+            primary_source = str(getattr(src, "source", "") or "")
             break
 
     inbox_items: list[dict[str, Any]] = []
     if primary_template is not None and items:
-        for entry in _items_from_template(items, primary_template, prefix=""):
+        for entry in _items_from_template(
+            items,
+            primary_template,
+            prefix="",
+            detail_url_template=detail_urls.get(primary_source, ""),
+        ):
             inbox_items.append(entry)
 
     inbox_chips: list[dict[str, Any]] = []
@@ -704,14 +716,20 @@ def _build_task_inbox_payload(
 
 
 def _items_from_template(
-    items: list[dict[str, Any]], template: Any, *, prefix: str
+    items: list[dict[str, Any]], template: Any, *, prefix: str, detail_url_template: str = ""
 ) -> list[dict[str, Any]]:
     """Materialise typed task items from an `as_task` template +
     pre-scoped row list. Shared by single- and multi-source paths.
 
     `prefix` namespaces the resulting `item_id` so multiple sources
     can produce items with the same row-level id without collision
-    (e.g. source 0's row "i1" → item_id "src0-i1")."""
+    (e.g. source 0's row "i1" → item_id "src0-i1").
+
+    `detail_url_template` (#1303), when set (e.g. "/app/assessment-event/{id}"),
+    is substituted per row to populate each item's `drill_url` so the inbox
+    item links to the entity detail. The task_inbox item renderer already
+    wraps items in `<a href=drill_url>` when set; an unresolvable template
+    (row missing the key) yields no link rather than crashing."""
     icon = str(getattr(template, "icon", "") or "")
     title_tmpl = str(getattr(template, "title", "") or "")
     meta_tmpl = str(getattr(template, "meta", "") or "")
@@ -737,6 +755,12 @@ def _items_from_template(
         meta = _interpolate_card_template(meta_tmpl, row) if meta_tmpl else ""
         urgency_raw = row.get("urgency") or row.get("severity") or row.get("priority") or "later"
         urgency = _coerce_urgency(str(urgency_raw))
+        drill_url = ""
+        if detail_url_template:
+            try:
+                drill_url = detail_url_template.format(**item)
+            except (KeyError, IndexError, ValueError):
+                drill_url = ""  # row missing the template key — no link
         out.append(
             {
                 "item_id": item_id,
@@ -744,7 +768,7 @@ def _items_from_template(
                 "title": title,
                 "meta": meta,
                 "urgency": urgency,
-                "drill_url": "",
+                "drill_url": drill_url,
             }
         )
     return out
@@ -835,6 +859,7 @@ def _coerce_pipeline_progress(raw: Any) -> tuple[int | None, bool]:
 def _resolve_task_inbox_multi_source(
     sources: list[Any],
     items_per_source: dict[int, list[dict[str, Any]]],
+    entity_detail_urls: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Fan-out resolution: each source's pre-scoped row list maps to
     typed items (as_task) or a count chip (count_as).
@@ -844,6 +869,7 @@ def _resolve_task_inbox_multi_source(
     base ordering. Chips emit in the same source order as the IR
     declares them.
     """
+    detail_urls = entity_detail_urls or {}
     inbox_items: list[dict[str, Any]] = []
     inbox_chips: list[dict[str, Any]] = []
     for idx, src in enumerate(sources):
@@ -851,7 +877,15 @@ def _resolve_task_inbox_multi_source(
         as_task = getattr(src, "as_task", None)
         count_as = str(getattr(src, "count_as", "") or "")
         if as_task is not None:
-            inbox_items.extend(_items_from_template(rows, as_task, prefix=f"src{idx}-"))
+            src_name = str(getattr(src, "source", "") or "")
+            inbox_items.extend(
+                _items_from_template(
+                    rows,
+                    as_task,
+                    prefix=f"src{idx}-",
+                    detail_url_template=detail_urls.get(src_name, ""),
+                )
+            )
         elif count_as:
             inbox_chips.append(
                 {

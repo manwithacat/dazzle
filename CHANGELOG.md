@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.52] - 2026-05-31
+
+### Added
+
+- **Workspace list & task_inbox region rows now drill to entity detail (#1303).** A workspace `display: list` region surfaced entity rows but, unlike the standalone `/app/<entity>` list, the rows weren't click-through to the detail — the only per-row affordance was `row_action:` (a POST). Now rows **auto-link** to `/app/<entity>/{id}` (an htmx `hx-get` clickable `<tr>`, the same shape the standalone list uses) whenever the source entity has a VIEW surface — mirroring how the standalone list's Create button auto-suppresses based on CREATE-surface existence. This lets dashboards reuse custom `render:` detail viewers (#1297/#1301) as one-click drill targets with zero extra wiring. A new region keyword **`drill: none`** opts a region out (e.g. a dashboard that intentionally doesn't navigate); `drill: detail` is the explicit form of the default. RBAC-safe: the detail route is independently scope-gated, so the worst case for a list-but-not-view persona is a dead link, never a data leak. task_inbox items get the same treatment — each item's `drill_url` is resolved per source from the entity→detail-URL map (the renderer already wrapped items in `<a href=drill_url>`; the fetcher just never set it). Adds `WorkspaceRegion.drill` (IR + parser), `ListRegion.row_links`, and threading through the workspace route builder / list adapter / task_inbox builder. Covered by `tests/unit/test_workspace_row_drill_1303.py`.
+
+### Agent Guidance
+
+- **Workspace list/task_inbox rows drill to detail by default (#1303)** when the source entity has a VIEW surface — no keyword needed; this reuses your custom `render:` detail viewer as the drill target. Add `drill: none` on the region to suppress row links (dashboards that shouldn't navigate). The link points at `/app/<entity>/{id}`, which only exists if a VIEW surface is registered — so a missing detail surface simply yields no link rather than a dead one. This composes with #1301: one VIEW surface per entity (with `render:` for a custom viewer) is the clean shape.
+
 ## [0.80.51] - 2026-05-30
 
 ### Fixed

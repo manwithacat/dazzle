@@ -103,6 +103,30 @@ class WorkspaceRouteBuilder:
                 if _surf.mode == SurfaceMode.CREATE and _surf.entity_ref:
                     row_action_routes[_surf.name] = f"/{to_api_plural(_surf.entity_ref)}"
 
+            # #1303 — entities that have a VIEW (detail) surface. Rows in a
+            # workspace list/task_inbox region drill to the entity detail
+            # (the same `/app/<slug>/{id}` route the standalone list links to)
+            # when the source has one, unless the region opts out via
+            # `drill: none`. Mirrors the `entities_with_create_surface` guard
+            # the standalone list uses to auto-suppress its Create button.
+            # app_prefix is "/app" at the page-route mount (app_factory.py).
+            _entity_detail_url_map = {
+                _surf.entity_ref: f"/app/{_surf.entity_ref.lower().replace('_', '-')}/{{id}}"
+                for _surf in appspec.surfaces
+                if _surf.mode == SurfaceMode.VIEW and _surf.entity_ref
+            }
+
+            def _detail_urls_for(region: Any) -> dict[str, str]:
+                """#1303 — drill-gated entity→detail-URL map for this region.
+                Empty when the region opted out via `drill: none`."""
+                if getattr(region, "drill", None) == "none":
+                    return {}
+                return _entity_detail_url_map
+
+            def _detail_url_template_for(region: Any, source: str) -> str:
+                """The single-source detail URL for a list region (or ``""``)."""
+                return _detail_urls_for(region).get(source, "")
+
             require_auth = self._enable_auth and not self._enable_test_mode
 
             # Build entity → list surface lookup for column projection (#357, #359)
@@ -176,6 +200,10 @@ class WorkspaceRouteBuilder:
                                 entity_access_specs=entity_access_specs,
                                 entity_ref_targets=self._entity_ref_targets,
                                 row_action_routes=row_action_routes,
+                                detail_url_template=_detail_url_template_for(
+                                    ir_region, _src_name
+                                ),  # #1303
+                                entity_detail_urls=_detail_urls_for(ir_region),  # #1303
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -282,6 +310,8 @@ class WorkspaceRouteBuilder:
                         entity_access_specs=entity_access_specs,
                         entity_ref_targets=self._entity_ref_targets,
                         row_action_routes=row_action_routes,
+                        detail_url_template=_detail_url_template_for(ir_region, _source),  # #1303
+                        entity_detail_urls=_detail_urls_for(ir_region),  # #1303
                     )
                     _ws_region_ctxs.append(_region_ctx)
 

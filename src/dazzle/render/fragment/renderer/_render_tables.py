@@ -641,10 +641,23 @@ class _RenderTablesMixin:
                 # URL, JSON-encoded bound args). Trust contract: builder
                 # owns escape for the values it pulls off row dicts.
                 cells_html += f'<td class="dz-list-row-action">{lst.row_actions[i]}</td>'
-            # Trailing space on `class="dz-list-row "` mirrors legacy
-            # `class="dz-list-row {{ attention_classes(...) }}{% if action_url %} is-clickable{% endif %}"`
-            # for the no-attention, no-action_url case.
-            tbody_rows.append(f'<tr class="dz-list-row ">{cells_html}</tr>')
+            # #1303: per-row drill-to-detail. When a row link is set, the
+            # <tr> carries an hx-get to the entity detail (full-page swap),
+            # the htmx-idiomatic clickable-row shape the standalone list uses
+            # (#1029) — not a cell <a>, which would break <td> nesting.
+            url = lst.row_links[i] if lst.row_links else None
+            if url:
+                url_attr = ctx.escape_attr(url)
+                tbody_rows.append(
+                    f'<tr class="dz-list-row is-clickable" '
+                    f'hx-get="{url_attr}" hx-target="body" hx-swap="innerHTML" '
+                    f'hx-push-url="true" tabindex="0">{cells_html}</tr>'
+                )
+            else:
+                # Trailing space on `class="dz-list-row "` mirrors legacy
+                # `class="dz-list-row {{ attention_classes(...) }}{% if action_url %} is-clickable{% endif %}"`
+                # for the no-attention, no-action_url case.
+                tbody_rows.append(f'<tr class="dz-list-row ">{cells_html}</tr>')
         tbody = f"<tbody>{''.join(tbody_rows)}</tbody>"
 
         table = (

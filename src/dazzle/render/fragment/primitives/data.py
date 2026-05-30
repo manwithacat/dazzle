@@ -384,6 +384,13 @@ class ListRegion:
     # arity stays stable). ``row_action_label`` is the column header.
     row_action_label: str = ""
     row_actions: tuple[str, ...] = ()
+    # #1303: optional per-row drill-to-detail URLs. When non-empty it must
+    # have the same arity as ``rows`` — one URL per row, ``None`` for rows
+    # that aren't drillable (missing the template's key). The renderer puts
+    # an ``hx-get`` to the URL on the ``<tr>`` (full-page swap, clickable
+    # row) when the entry is set — the htmx-idiomatic shape the standalone
+    # list uses (#1029), not a cell ``<a>`` which would break ``<td>`` nesting.
+    row_links: tuple[str | None, ...] = ()
 
     def __post_init__(self) -> None:
         for i, row in enumerate(self.rows):
@@ -396,6 +403,11 @@ class ListRegion:
             raise ValueError(
                 f"ListRegion row_actions arity mismatch: "
                 f"{len(self.row_actions)} actions, {len(self.rows)} rows"
+            )
+        if self.row_links and len(self.row_links) != len(self.rows):
+            raise ValueError(
+                f"ListRegion row_links arity mismatch: "
+                f"{len(self.row_links)} links, {len(self.rows)} rows"
             )
 
 

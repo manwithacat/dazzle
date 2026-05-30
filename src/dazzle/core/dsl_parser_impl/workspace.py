@@ -2743,6 +2743,7 @@ class _WorkspaceRegionState:
     task_inbox_config: ir.TaskInboxConfig | None = None
     entity_card_config: ir.EntityCardConfig | None = None
     row_action: ir.RowActionSpec | None = None  # #1148
+    drill: str | None = None  # #1303 — per-row drill-to-detail (detail|none)
 
 
 # ---------- Simple keyword-value branches ---------- #
@@ -3187,6 +3188,27 @@ def _kw_row_action(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
+def _kw_drill(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1303: ``drill: detail | none`` — per-row drill-to-detail control.
+
+    Unset → AUTO (link rows to the entity detail when a VIEW surface
+    exists). ``detail`` → explicit auto. ``none`` → suppress row links.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_tok = parser.expect_identifier_or_keyword()
+    value = str(value_tok.value)
+    if value not in ("detail", "none"):
+        raise make_parse_error(
+            f"Unknown drill value {value!r}. Expected 'detail' or 'none'.",
+            parser.file,
+            value_tok.line,
+            value_tok.column,
+        )
+    state.drill = value
+    parser.skip_newlines()
+
+
 def _kw_state_field(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -3439,6 +3461,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "task_inbox_config": _kw_task_inbox_config,
     "entity_card_config": _kw_entity_card_config,
     "row_action": _kw_row_action,  # #1148
+    "drill": _kw_drill,  # #1303
 }
 
 
@@ -3545,4 +3568,5 @@ def _build_workspace_region(
         task_inbox_config=state.task_inbox_config,
         entity_card_config=state.entity_card_config,
         row_action=state.row_action,
+        drill=state.drill,  # #1303
     )
