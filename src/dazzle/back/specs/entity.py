@@ -612,6 +612,14 @@ class EntitySpec(BaseModel):
     name: str = Field(description="Entity name")
     label: str | None = Field(default=None, description="Human-readable label")
     description: str | None = Field(default=None, description="Entity description")
+    # #1302: the human-readable label column (IR `EntitySpec.display_field`).
+    # Was dropped during conversion, so runtime consumers reading
+    # `entity_spec.display_field` (e.g. cohort_strip member labels, #1299)
+    # always saw an empty value and fell back to the raw id/UUID. Propagated
+    # from the IR by `convert_entities`.
+    display_field: str | None = Field(
+        default=None, description="Field used as the entity's human-readable label"
+    )
     fields: list[FieldSpec] = Field(default_factory=list, description="Entity fields")
     computed_fields: list[ComputedFieldSpec] = Field(
         default_factory=list, description="Computed (derived) fields"

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.51] - 2026-05-30
+
+### Fixed
+
+- **`convert_entities` now propagates `display_field` to the back-runtime `EntitySpec` (#1302) — completing #1299.** #1299 added a `source_display_field` fallback so a self-referential `member_via: id` cohort_strip cell labels from the source entity's `display_field` instead of the raw UUID. But the fix was defeated one layer up: the back-runtime `EntitySpec` (built by `dazzle.back.converters.entity_converter.convert_entities`) didn't carry `display_field` at all, so the `getattr(ctx.entity_spec, "display_field", "")` at the call site always resolved to `""` and the priority-3 fallback never fired — `member_via: id` still rendered the UUID at runtime. Added `display_field` to the back `EntitySpec` and propagated it in `convert_entities`. This is the general fix: any runtime consumer reading `entity_spec.display_field` (not just cohort_strip) now sees the declared value. Verified end-to-end — the workspace ctx's `entity_spec` is name-matched from the converted-entity list, so the value now reaches the #1299 call site. Covered by `tests/unit/test_entity_converter_display_field_1302.py`.
+
+### Agent Guidance
+
+- **The back-runtime `EntitySpec` (`dazzle.back.specs.entity`) is a *converted* projection of the IR `EntitySpec`, not the IR type itself** — fields exist only if `convert_entities` explicitly copies them. When a runtime consumer reads `entity_spec.<attr>` and gets an empty/missing value despite the DSL declaring it, check that `convert_entities` propagates that attr (the #1302 class of bug). Prefer fixing the converter (general) over re-deriving the value at each call site.
+
 ## [0.80.50] - 2026-05-30
 
 ### Fixed

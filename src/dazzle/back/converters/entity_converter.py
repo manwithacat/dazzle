@@ -782,6 +782,7 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         name=dazzle_entity.name,
         label=dazzle_entity.title or dazzle_entity.name,
         description=dazzle_entity.title,
+        display_field=dazzle_entity.display_field,  # #1302: was dropped in conversion
         fields=fields,
         computed_fields=computed_fields,
         invariants=invariants,
