@@ -13,8 +13,10 @@ Usage in route modules::
 """
 
 import functools
+import ipaddress
 import logging
 import os
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -23,6 +25,86 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Rate-limit key derivation (#1296)
+# ---------------------------------------------------------------------------
+
+
+def _is_loopback(host: str) -> bool:
+    """True if *host* is an IPv4/IPv6 loopback address (127.0.0.0/8, ::1)."""
+    if not host:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def make_rate_limit_key(trusted_proxies: int) -> Callable[..., str]:
+    """Build the slowapi ``key_func`` used to bucket requests (#1296).
+
+    Two behaviours the default ``slowapi.util.get_remote_address`` lacks:
+
+    * **Exempt the framework's internal loopback self-fetch.** The SSR page
+      handler fetches entity data over an internal HTTP call to
+      ``http://127.0.0.1:{PORT}`` (Heroku/Railway single-dyno). That request
+      arrives from a loopback address and carries **no** ``X-Forwarded-For``
+      (``_sync_fetch`` sends only a Cookie). Without this, every page render's
+      self-fetch for all users shares one bucket keyed on ``127.0.0.1`` →
+      saturates → loopback 429 → entity detail 404 / list empty. We give such
+      requests a unique-per-request key so they never accumulate toward a
+      limit. External traffic cannot forge a loopback origin (it arrives via
+      the proxy with a real client IP + XFF), so this opens no abuse vector.
+    * **Honor ``X-Forwarded-For`` behind trusted proxies.** With
+      ``trusted_proxies > 0``, the real client IP is taken ``trusted_proxies``
+      hops from the right of XFF (the entry the outermost trusted proxy added)
+      so per-user limiting actually works behind Heroku/Cloudflare. Default 0
+      preserves the spoofing-safe ``request.client.host`` behaviour.
+
+    The returned callable takes ``request`` (slowapi passes it when the
+    signature has a ``request`` parameter).
+    """
+
+    def key_func(request: Any) -> str:  # noqa: ANN401 — Starlette Request
+        client = getattr(request, "client", None)
+        host = getattr(client, "host", "") or ""
+        xff = ""
+        try:
+            xff = request.headers.get("X-Forwarded-For", "") or ""
+        except Exception:  # pragma: no cover — defensive
+            xff = ""
+
+        # Internal loopback self-fetch → unique key (effectively exempt).
+        if _is_loopback(host) and not xff:
+            return f"internal-loopback:{uuid.uuid4().hex}"
+
+        # Trusted-proxy-aware real client IP.
+        if trusted_proxies > 0 and xff:
+            parts = [p.strip() for p in xff.split(",") if p.strip()]
+            if len(parts) >= trusted_proxies:
+                return parts[-trusted_proxies]
+
+        return host or "anonymous"
+
+    return key_func
+
+
+def _resolve_trusted_proxies() -> int:
+    """Number of trusted proxy hops from ``DAZZLE_RATE_LIMIT_TRUSTED_PROXIES``.
+
+    0 (default) → no XFF trust (spoofing-safe). Set to 1 behind a single
+    trusted proxy (Heroku router, Cloudflare); N for N chained trusted proxies.
+    """
+    raw = os.environ.get("DAZZLE_RATE_LIMIT_TRUSTED_PROXIES", "").strip()
+    if not raw:
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        logger.warning("Invalid DAZZLE_RATE_LIMIT_TRUSTED_PROXIES=%r — ignoring (using 0)", raw)
+        return 0
 
 
 class _NoOpLimiter:
@@ -103,6 +185,9 @@ class RateLimitConfig:
     api_limit: str | None = None  # general API endpoints
     upload_limit: str | None = None  # file upload
     twofa_limit: str | None = None  # 2FA verification
+    # #1296: trusted proxy hops for X-Forwarded-For-aware client keying.
+    # 0 = spoofing-safe request.client.host; 1 for Heroku/Cloudflare.
+    trusted_proxies: int = 0
 
 
 def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
@@ -183,7 +268,6 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
     try:
         from slowapi import Limiter, _rate_limit_exceeded_handler
         from slowapi.errors import RateLimitExceeded
-        from slowapi.util import get_remote_address
     except ImportError:
         logger.warning(
             "slowapi not installed — rate limiting disabled. Install with: pip install slowapi"
@@ -192,8 +276,18 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
         app.state.rate_limit_config = RateLimitConfig()  # disabled
         return
 
-    limits.limiter = Limiter(key_func=get_remote_address)
+    # #1296: resolve trusted-proxy hops + use a key_func that (a) exempts the
+    # framework's internal loopback self-fetch and (b) honors X-Forwarded-For
+    # behind trusted proxies. Replaces slowapi's get_remote_address (which keys
+    # purely on request.client.host — collapsing all loopback self-fetches into
+    # one bucket and ignoring XFF so real per-user limiting fails behind a proxy).
+    config.trusted_proxies = _resolve_trusted_proxies()
+    limits.limiter = Limiter(key_func=make_rate_limit_key(config.trusted_proxies))
     app.state.limiter = limits.limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
-    logger.info("Rate limiting enabled (profile=%s)", profile)
+    logger.info(
+        "Rate limiting enabled (profile=%s, trusted_proxies=%d)",
+        profile,
+        config.trusted_proxies,
+    )

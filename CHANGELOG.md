@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.46] - 2026-05-30
+
+### Fixed
+
+- **Rate limiter no longer self-throttles the SSR internal loopback page-fetch (#1296).** On single-dyno deployments (Heroku/Railway: `PORT` set → backend URL resolves to `http://127.0.0.1:{PORT}`), the SSR page handler fetches entity data over an internal loopback HTTP call. The limiter keyed purely on `request.client.host` (slowapi's `get_remote_address`), so **every** page render's self-fetch for **all** users shared one `api_limit` (`60/minute`) bucket on `127.0.0.1` → saturated under light real use → loopback `429` → entity **detail** pages returned **404** and entity **list** pages rendered an empty table (`_fetch_json` maps non-200 → `{"error": …}` → `_handle_detail` raises 404). Replaced the key func: the framework's internal loopback self-fetch (loopback client **and** no `X-Forwarded-For` — `_sync_fetch` sends only a Cookie) now gets a unique-per-request key, so it never accumulates toward a limit. External traffic can't forge a loopback origin (it arrives via the proxy with a real IP + XFF), so this opens no abuse vector.
+- **Rate limiter now honors `X-Forwarded-For` behind trusted proxies (#1296, fix 3).** `get_remote_address` ignored XFF, so behind Heroku/Cloudflare **real per-user limiting didn't work** — every external user was bucketed under the proxy's connection IP. New `DAZZLE_RATE_LIMIT_TRUSTED_PROXIES` env (default **0** = spoofing-safe `request.client.host`, unchanged): set to **1** behind a single trusted proxy (Heroku router, Cloudflare), N for N chained hops. The real client IP is taken `trusted_proxies` hops from the right of XFF (the entry the outermost trusted proxy added); the client-spoofable leftmost entries are ignored, and insufficient XFF entries fall back to `client.host`. Covered by `tests/unit/test_rate_limit_key_1296.py` (21 tests).
+
+### Agent Guidance
+
+- **Deploying the #1296 fix on Heroku/single-dyno:** the entity-page 404/empty-list bug is fixed **automatically** on upgrade (the loopback self-fetch exemption needs no config). To *also* get correct per-user rate limiting behind the proxy, set `DAZZLE_RATE_LIMIT_TRUSTED_PROXIES=1` (Heroku router / Cloudflare = 1 hop). Leaving it at 0 is safe (no spoofing) but keeps external users bucketed by the proxy IP. The limiter's key func lives in `dazzle.back.runtime.rate_limit.make_rate_limit_key`; it replaced slowapi's `get_remote_address`. Note slowapi's `exempt_when()` receives no request, so per-request exemption must go through the `key_func` (which does receive the request) — hence the unique-key approach rather than a request filter.
+
 ## [0.80.45] - 2026-05-30
 
 ### Changed
