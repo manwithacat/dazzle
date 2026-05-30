@@ -473,6 +473,13 @@ class LensAggregatePrimary(BaseModel):
             entity that both the cohort source row and the aggregated
             row reference via a single ``ref`` field each. Mutually
             exclusive with ``via``.
+        format: Optional Python format spec applied to the computed
+            aggregate value when rendering the cell (#1300). Mirrors
+            bar_track's ``track_format``: a bare format spec (``".1f"``,
+            ``".0%"``) or a ``str.format`` template (``"{:,.2f}"``).
+            Empty (default) → the renderer applies a sensible numeric
+            default-round (2dp, trailing zeros trimmed) so an ``avg``
+            lens never emits a raw float like ``7.7500000000000000``.
     """
 
     aggregate: AggregateRef
@@ -485,6 +492,9 @@ class LensAggregatePrimary(BaseModel):
     # exclusive with `via:` (true-junction semantics) — set one or
     # the other, never both.
     share: str | None = None
+    # #1300: per-lens render format for the aggregate value. Empty →
+    # default-round in the renderer (_default_round_numeric).
+    format: str = ""
 
     model_config = ConfigDict(frozen=True)
 

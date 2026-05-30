@@ -14,6 +14,7 @@ the dispatcher and makes each compute independently testable.
 from typing import Any
 
 from dazzle.back.runtime.workspace_card_data import (
+    _apply_format_spec,
     _initials_from,
     _interpolate_card_template,
     _resolve_path,
@@ -261,12 +262,10 @@ def compute_bar_track(
     Accepts both str.format-template syntax (``"{:.0%}"``) and bare
     format-spec syntax (``".0%"``); detects by looking for ``{``.
     Malformed format specs fall back to raw str + a logger warning
-    (the dashboard doesn't crash on author error).
+    (the dashboard doesn't crash on author error) — see
+    ``workspace_card_data._apply_format_spec`` (shared with cohort_strip
+    aggregate lenses, #1300).
     """
-    import logging
-
-    logger = logging.getLogger(__name__)
-
     rows: list[dict[str, Any]] = []
     if not bucketed_metrics:
         return rows, 0.0
@@ -286,20 +285,11 @@ def compute_bar_track(
 
     for bucket, value in zip(bucketed_metrics, values, strict=True):
         fill_pct = max(0.0, min(100.0, (value / max_value) * 100.0)) if max_value else 0.0
-        try:
-            if not format_spec:
-                formatted = str(value)
-            elif "{" in format_spec:
-                formatted = format_spec.format(value)
-            else:
-                formatted = format(value, format_spec)
-        except (ValueError, TypeError, KeyError, IndexError):
-            logger.warning(
-                "bar_track region %r: invalid track_format %r — rendering raw value",
-                region_name,
-                format_spec,
-            )
-            formatted = str(value)
+        # #1300: shared format helper (was an inline try/except here). Same
+        # behaviour — empty spec → str, invalid spec → warn + raw value.
+        formatted = _apply_format_spec(
+            value, format_spec, context=f"bar_track region {region_name!r}"
+        )
         rows.append(
             {
                 "label": str(bucket.get("label") or ""),

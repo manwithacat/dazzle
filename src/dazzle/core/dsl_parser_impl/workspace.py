@@ -910,11 +910,12 @@ class WorkspaceParserMixin:
         ``where:`` clause. ``via:`` is optional and reuses the
         junction-binding grammar from scope rules (#530).
         """
-        _VALID_KEYS = {"aggregate", "via", "share"}
+        _VALID_KEYS = {"aggregate", "via", "share", "format"}
         aggregate_ref: ir.AggregateRef | None = None
         via_cond: ir.ViaCondition | None = None
         share_entity: str | None = None
         share_tok = None
+        format_spec: str = ""
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
@@ -933,6 +934,11 @@ class WorkspaceParserMixin:
             self.expect(TokenType.COLON)
             if key == "aggregate":
                 aggregate_ref = self.parse_aggregate_ref()
+                self.skip_newlines()
+            elif key == "format":
+                # #1300: per-lens render format for the aggregate value
+                # (mirrors bar_track's `track_format:`). String literal.
+                format_spec = str(self.expect(TokenType.STRING).value)
                 self.skip_newlines()
             elif key == "share":
                 # #1216: shared-parent JOIN. The cohort source row and
@@ -979,7 +985,9 @@ class WorkspaceParserMixin:
                 share_tok.line,
                 share_tok.column,
             )
-        return ir.LensAggregatePrimary(aggregate=aggregate_ref, via=via_cond, share=share_entity)
+        return ir.LensAggregatePrimary(
+            aggregate=aggregate_ref, via=via_cond, share=share_entity, format=format_spec
+        )
 
     def _parse_primary_composite_block(self) -> ir.CompositePrimarySpec:
         """#1144 part 2: parse the indented body of a

@@ -138,6 +138,29 @@ def test_parses_aggregate_with_via_clause() -> None:
     assert via.bindings[0].junction_field == "student_profile"
 
 
+def test_parses_aggregate_format_key() -> None:
+    """#1300: `format:` threads into LensAggregatePrimary.format (mirrors
+    bar_track's track_format) for per-lens render formatting."""
+    lens = _parse_lens(
+        """          primary_aggregate:
+            aggregate: avg(MarkingResult.score)
+            format: ".1f"
+"""
+    )
+    assert lens.primary_aggregate is not None
+    assert lens.primary_aggregate.format == ".1f"
+
+
+def test_aggregate_format_defaults_to_empty() -> None:
+    """No `format:` → empty (renderer applies its default-round)."""
+    lens = _parse_lens(
+        """          primary_aggregate:
+            aggregate: avg(MarkingResult.score)
+"""
+    )
+    assert lens.primary_aggregate.format == ""
+
+
 def test_parses_aggregate_with_share() -> None:
     """#1216: share: names the pivot entity that both the cohort source
     row and the aggregated row reference. No `via:` required."""

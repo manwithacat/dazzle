@@ -1592,6 +1592,7 @@ ir_class: LensAggregatePrimary
   required:
     - aggregate: AggregateRef
   optional:
+    - format: str = ''
     - share: str | None = None
     - via: ViaCondition | None = None
 

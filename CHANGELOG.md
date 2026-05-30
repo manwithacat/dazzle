@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.49] - 2026-05-30
+
+### Fixed
+
+- **cohort_strip cell labels now resolve to the source entity's `display_field` for self-referential `member_via` (#1299).** When `member_via: id` (the cohort members *are* the source entity, not a related profile), there is no `<member_via>_display` sibling and the scalar value is the row's own UUID — so cells rendered the raw UUID as the label. `_build_cohort_cells` now receives the source entity's `display_field` (threaded from `WorkspaceRegionContext.entity_spec`) and uses it (resolution priority 3, between the FK-display sibling and the raw-id fallback). Zero-config: entity-cohorts "just work"; the raw-id fallback is unchanged when no `display_field` is set.
+
+### Added
+
+- **Per-lens `format:` knob on cohort_strip `primary_aggregate` (#1300).** Mirrors bar_track's `track_format`: a bare Python format spec (`".1f"`, `".0%"`) or a `str.format` template (`"{:,.2f}"`) applied to the computed aggregate value. The format logic is now a shared `_apply_format_spec` helper used by both bar_track and cohort_strip (single implementation; invalid spec → warn + raw value, never raises into render). Adds `LensAggregatePrimary.format` (API-surface baseline `docs/api-surface/ir-types.txt` regenerated).
+
+### Changed
+
+- **cohort_strip aggregate values default-round when no `format:` is set (#1300).** An `avg` lens previously stringified the raw Decimal/float, rendering e.g. `7.7500000000000000`. With no `format:` knob the renderer now applies a sensible default (`_default_round_numeric`: 2dp, trailing zeros trimmed, integral results without a decimal point — `8.0`→`8`, `7.75`→`7.75`, `7.3333`→`7.33`). Non-numeric values pass through unchanged. Scalar/composite primaries are not affected — this is aggregate-only.
+
+### Agent Guidance
+
+- **Formatting a cohort_strip aggregate metric:** add `format: ".1f"` (or `".0%"`, `"{:,.0f}"`) under a lens's `primary_aggregate:` block — same spec grammar as bar_track's `track_format:`. Without it, `avg` lenses now auto-round to 2dp so you no longer see raw floats; add the knob only when you need a specific precision/percent/thousands form. **Labelling cohort members that are the source entity itself:** use `member_via: id` and the cells will label from the entity's `display_field` automatically (#1299) — no extra config; set `display_field` on the entity if its label isn't `name`.
+
 ## [0.80.48] - 2026-05-30
 
 ### Changed

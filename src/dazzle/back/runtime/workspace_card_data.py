@@ -17,6 +17,8 @@ Contents:
 """
 
 import datetime as _dt
+import logging
+import math
 import re
 from typing import Any
 
@@ -24,6 +26,8 @@ from typing import Any
 # they're reachable from ui/ without crossing the back↔ui boundary.
 # Re-exported here for back-internal callers.
 from dazzle.render.display_names import _inject_display_names, _resolve_display_name  # noqa: F401
+
+logger = logging.getLogger(__name__)
 
 # v0.61.55 (#892): profile_card template-string interpolation. Matches
 # `{{ field }}` and `{{ field.path.with.dots }}` — and (#1145 part 1)
@@ -213,11 +217,61 @@ def _initials_from(name: str) -> str:
     return "".join(w[0].upper() for w in words if w)
 
 
+def _apply_format_spec(value: Any, format_spec: str, *, context: str = "") -> str:
+    """Apply a Python format spec (or ``str.format`` template) to a value.
+
+    Shared (#1300) by bar_track's ``track_format`` and cohort_strip aggregate
+    lenses' ``primary_aggregate.format``. Empty spec → ``str(value)``. A spec
+    containing ``{`` is treated as a ``str.format`` template (``"{:.1f}"``);
+    otherwise as a ``format()`` spec (``".1f"``). An invalid spec warns and
+    falls back to the raw value — never raises into the render path.
+    """
+    if not format_spec:
+        return str(value)
+    try:
+        if "{" in format_spec:
+            return format_spec.format(value)
+        return format(value, format_spec)
+    except (ValueError, TypeError, KeyError, IndexError):
+        logger.warning(
+            "invalid format spec %r%s — rendering raw value",
+            format_spec,
+            f" ({context})" if context else "",
+        )
+        return str(value)
+
+
+def _default_round_numeric(value: Any) -> str:
+    """Render a numeric value cleanly when no explicit format is given (#1300).
+
+    Cohort aggregate lenses (``avg``) emit a Decimal/float that stringifies as
+    e.g. ``'7.7500000000000000'``. With no ``format:`` knob set we round to a
+    sensible default: 2 decimal places with trailing zeros trimmed, and
+    integral results rendered without a decimal point (``8.0`` → ``"8"``,
+    ``7.75`` → ``"7.75"``, ``7.3333`` → ``"7.33"``). Non-numeric values pass
+    through as ``str(value)`` unchanged (counts are already ints; a string
+    primary is left alone).
+    """
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    # nan/inf have no sensible rounded form and would blow up `int(...)`
+    # below (ValueError/OverflowError) — render them raw rather than crash.
+    if not math.isfinite(num):
+        return str(value)
+    rounded = round(num, 2)
+    if rounded == int(rounded):
+        return str(int(rounded))
+    return f"{rounded:.2f}".rstrip("0").rstrip(".")
+
+
 def _build_cohort_cells(
     *,
     items: list[dict[str, Any]],
     config: Any,
     active_lens_id: str,
+    source_display_field: str = "",
     row_action: Any = None,
     cohort_aggregate_values: dict[str, Any] | None = None,
     row_action_routes: dict[str, str] | None = None,
@@ -239,9 +293,12 @@ def _build_cohort_cells(
       1. The `member_via` FK target's `__display__` (resolved by
          _inject_display_names upstream)
       2. `<member_via>_display` sibling key
-      3. The member_via field's scalar value (id-shaped fallback)
-      4. The row's own `name` field
-      5. Empty string
+      3. The source entity's `display_field` column (#1299 — covers the
+         self-referential `member_via: id` case, where there is no FK
+         display sibling and the scalar value is the row's own UUID)
+      4. The member_via field's scalar value (id-shaped fallback)
+      5. The row's own `name` field
+      6. Empty string
 
     Tone derivation: when the active lens declares a numeric
     `threshold`, the renderer compares the primary value:
@@ -294,6 +351,12 @@ def _build_cohort_cells(
             member_name = _resolve_display_name(fk_value)
         else:
             member_name = str(item.get(f"{member_via}_display", "") or "")
+            if not member_name and source_display_field:
+                # #1299: self-referential member_via (e.g. `member_via: id`)
+                # has no `<member_via>_display` sibling — fk_value is the row's
+                # own PK (a UUID), not a name. Use the source entity's
+                # display_field column before the raw-id fallback below.
+                member_name = str(item.get(source_display_field, "") or "")
             if not member_name:
                 member_name = str(fk_value or "") or str(item.get("name", "") or "")
         # Primary value extraction. Three mutually-exclusive shapes
@@ -311,7 +374,20 @@ def _build_cohort_cells(
             # by compute_cohort_aggregate_primary. Missing key →
             # query failed / returned no rows → cell renders empty.
             primary_raw = aggregate_values.get(member_id)
-            primary_value = "" if primary_raw is None else str(primary_raw)
+            if primary_raw is None:
+                primary_value = ""
+            else:
+                # #1300: honour the lens's `format:` knob (mirrors bar_track's
+                # track_format); with no knob, default-round so an `avg` lens
+                # stops rendering raw floats like '7.7500000000000000'.
+                agg_format = str(getattr(aggregate_primary, "format", "") or "")
+                primary_value = (
+                    _apply_format_spec(
+                        primary_raw, agg_format, context=f"cohort lens {active_lens_id!r}"
+                    )
+                    if agg_format
+                    else _default_round_numeric(primary_raw)
+                )
         else:
             primary_raw = _resolve_path(item, primary_field) if primary_field else None
             primary_value = "" if primary_raw is None else str(primary_raw)

@@ -462,6 +462,12 @@ async def _build_dashboard_adapter_ctx(
                 items=inputs.items,
                 config=cohort_cfg,
                 active_lens_id=active_lens_id,
+                # #1299: the source entity's display_field, so a self-referential
+                # `member_via: id` resolves cell labels to the display name
+                # instead of the raw UUID.
+                source_display_field=str(
+                    getattr(getattr(ctx, "entity_spec", None), "display_field", "") or ""
+                ),
                 # #1148: thread the IR-declared row_action through so
                 # each cell can carry a per-row click-to-POST button.
                 row_action=getattr(ir_region, "row_action", None),
