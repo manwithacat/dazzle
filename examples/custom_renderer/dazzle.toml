@@ -32,4 +32,4 @@ assets = "auto"
 # surface in `dsl/app.dsl` with a `RenderValidationError`.
 # ─────────────────────────────────────────────────────────────────────
 [renderers]
-extra = ["word_cloud"]
+extra = ["word_cloud", "feedback_detail"]

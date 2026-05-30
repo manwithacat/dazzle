@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.47] - 2026-05-30
+
+### Added
+
+- **Custom per-entity detail viewers can now delegate to the generic detail rendering (#1297).** A `render: <name>` renderer on a `mode: view` surface already routes `/app/<entity>/{id}` detail pages through the project's registered handler (wired by "Plans 3+8", tested since #1028) — but the handler received only a flattened ctx dict, so it couldn't *fall through* to the standard field-section layout (the old Jinja `{% include "dz://components/detail_view.html" %}` move). The VIEW dispatch ctx now carries the original `DetailContext` under `ctx["detail_context"]`, and `render_detail_view` is exported from `dazzle.ui.runtime` as the canonical delegation helper. A viewer renders its bespoke chrome, then `render_detail_view(ctx["detail_context"])` for the generic body — lazy, so a full replacement costs nothing. Worked example: `examples/custom_renderer/app/render/feedback_detail.py` (+ a `mode: view` `feedback_detail` surface and `register_all`). Covered by 2 new tests appended to `tests/unit/test_dispatch_ctx_detail_view.py`.
+
+### Fixed
+
+- **Corrected the stale "Template Overrides" docs that sent #1297 down a dead end.** `docs/reference/htmx-templates.md` still documented the removed (ADR-0023 / #1042) Jinja `ChoiceLoader` + `dz://` + `{# dazzle:override … #}` mechanism and a non-existent `dazzle overrides scan|check|list` CLI as if usable — the exact recipe AegisMark followed to override `components/detail_view.html`, which silently became dead code. Replaced that section with the current extension points (custom renderers + `@primitive` registry) and a per-entity detail-viewer recipe. Also fixed the `dazzle.ui.runtime` module docstring's "Jinja2 templates" claim.
+
+### Agent Guidance
+
+- **Per-entity / custom detail viewers (the #1297 pattern).** There is **no** Jinja template-override mechanism (gone since ADR-0023) — do not try to override `components/detail_view.html` or use `{# dazzle:override #}` / `dz://` / `dazzle overrides`; that is all dead code. To customise a single entity's detail page, declare `render: <name>` on its `mode: view` surface, add the name to `[renderers] extra` in `dazzle.toml`, register a handler, and (if you want the standard layout plus extra chrome) delegate via `render_detail_view(ctx["detail_context"])`. See `examples/custom_renderer/` (README → "Per-entity detail viewers"). Scope: this covers the `/app/<entity>/{id}` workspace detail route; detail bodies rendered *inside an `experience` step* still use the generic inline renderer regardless of `render:` (non-blocking follow-up).
+
 ## [0.80.46] - 2026-05-30
 
 ### Fixed

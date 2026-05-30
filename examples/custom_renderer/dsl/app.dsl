@@ -39,3 +39,20 @@ surface tag_cloud "Feedback word cloud":
   uses entity Feedback
   mode: custom
   render: word_cloud
+
+# Per-entity detail viewer (#1297) — the modern replacement for the
+# removed Jinja `components/detail_view.html` override. `mode: view`
+# renders a single record; `render: feedback_detail` routes the detail
+# body through `app/render/feedback_detail.py`, which delegates to the
+# framework's generic detail rendering and wraps it with a bespoke
+# sentiment banner. If the `feedback_detail` handler isn't registered at
+# runtime, the framework falls back to the generic detail view (graceful
+# degrade), so this surface renders either way.
+surface feedback_detail "Feedback detail":
+  uses entity Feedback
+  mode: view
+  render: feedback_detail
+  section main:
+    field body "Feedback"
+    field sentiment "Tone"
+    field created_at "When"

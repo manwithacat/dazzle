@@ -1,6 +1,6 @@
 # HTMX Template Specification
 
-**Version:** 1.0.0 | **Status:** Active for HTMX patterns; **template-engine references stale** — see banner below | **MCP Resource:** `dazzle://docs/htmx-templates`
+**Version:** 1.0.1 | **Status:** Active for HTMX patterns; **template-engine references stale** — see banner below (the "Customising rendered output" section is current as of #1297) | **MCP Resource:** `dazzle://docs/htmx-templates`
 
 > **Status note (2026-05-25):** This document captures the HTMX interaction patterns Dazzle's UI runtime emits (server-rendered HTML, `hx-*` attributes, composable fragments). Those patterns are unchanged. The *template engine* mentioned below (Jinja2 `ChoiceLoader`, `TemplateResponse` etc.) was retired in #1042 (v0.67.92). Rendering now goes through the **typed Fragment substrate** — see [ADR-0023](../adr/0023-template-emission-patterns.md) and [`typed-fragment-pilot-guide.md`](../typed-fragment-pilot-guide.md). The conceptual HTMX-patterns content below still applies; the Jinja2-specific override mechanism does not.
 
@@ -257,67 +257,50 @@ This specification does not cover:
 
 ---
 
-## Template Overrides
+## Customising rendered output
 
-Projects can override framework templates by placing files with the same
-name in their `templates/` directory. The Jinja2 `ChoiceLoader` searches
-the project directory first, then the framework directory.
+> **Removed mechanism (ADR-0023 / #1042, v0.67.92).** Earlier versions
+> let projects override framework Jinja templates by dropping a
+> same-named file in `templates/` (a `ChoiceLoader` + `dz://` /
+> `{# dazzle:override … #}` / `{# dazzle:blocks … #}` scheme, and a
+> `dazzle overrides scan|check|list` CLI). **None of that exists any
+> more** — there is no Jinja engine to load project templates, and the
+> `dazzle overrides` commands were removed. If you are looking for the
+> old "override `components/detail_view.html`" recipe, it is dead code;
+> use a custom renderer instead (below). This was the dead end behind
+> [#1297](https://github.com/manwithacat/dazzle/issues/1297).
 
-### The `dz://` prefix
+Rendering now goes through the **typed Fragment substrate** (pure
+Python → HTML). Two supported extension points replace template
+overrides:
 
-A project override that needs to *extend* the framework template it
-replaces must use the `dz://` prefix to avoid circular inheritance:
+### 1. Custom renderers (`render: <name>`)
 
-```html
-{# dazzle:override base.html #}
-{# dazzle:blocks scripts_extra #}
-{% extends "dz://base.html" %}
+Declare `render: <name>` on a surface and register a handler. This is
+the canonical way to take over rendering for a specific surface —
+including a **per-entity detail viewer** on a `mode: view` surface. The
+handler can delegate back to the framework's generic rendering:
 
-{% block scripts_extra %}
-  {{ super() }}
-  <script src="/static/js/my-custom.js"></script>
-{% endblock %}
+```python
+from dazzle.ui.runtime import render_detail_view
+
+class ManuscriptViewer:
+    def render(self, surface, ctx) -> str:
+        detail = ctx["detail_context"]            # original DetailContext (#1297)
+        return f'<section>{self._panel(detail.item)}{render_detail_view(detail)}</section>'
 ```
 
-Without the `dz://` prefix, `{% extends "base.html" %}` resolves to the
-project's own file (ChoiceLoader priority), causing infinite recursion.
+See [`examples/custom_renderer/`](https://github.com/manwithacat/dazzle/tree/main/examples/custom_renderer)
+for the full two-halves-of-the-contract recipe (link-time `[renderers]
+extra` allowlist + runtime `register(...)`) and the worked per-entity
+detail-viewer (`app/render/feedback_detail.py`).
 
-### Declaration headers
+### 2. Custom primitives / renderers in `dazzle.toml`
 
-The `{# dazzle:override <target> #}` and `{# dazzle:blocks <block-list> #}`
-headers are optional but recommended. They register the override in
-`.dazzle/overrides.json` so the framework can check compatibility across
-upgrades.
+`[renderers] extra` (allowlist names) and the `@primitive` registry let
+projects add reusable renderers and Fragment primitives. Inspect what's
+registered with `dazzle inspect renderers` / `dazzle inspect primitives
+--runtime`.
 
-### Available blocks in `base.html`
-
-| Block | Purpose |
-|-------|---------|
-| `head_extra` | Additional `<head>` content (meta tags, stylesheets) |
-| `body` | Full page body (rarely overridden directly) |
-| `scripts_extra` | Additional `<script>` tags before `</body>` |
-
-Layout templates (`layouts/app_shell.html`, etc.) expose additional blocks
-for sidebar, navbar, and content areas.
-
-### CLI commands
-
-```bash
-dazzle overrides scan    # Scan project templates/ for override declarations
-dazzle overrides check   # Verify overrides are compatible with current framework
-dazzle overrides list    # List registered overrides from .dazzle/overrides.json
-```
-
-### How the loader works
-
-```
-Project templates/          Framework templates/
-  base.html ──────────┐
-                       ├── ChoiceLoader (project wins)
-  dz://base.html ─────┤── PrefixLoader (always framework)
-                       │
-                       └── Framework base.html
-```
-
-`template_renderer.py` configures this via `ChoiceLoader` + `PrefixLoader`
-with `"dz"` as the prefix and `"://"` as the delimiter.
+For the substrate itself, see [ADR-0023](../adr/0023-template-emission-patterns.md)
+and [`typed-fragment-pilot-guide.md`](../typed-fragment-pilot-guide.md).

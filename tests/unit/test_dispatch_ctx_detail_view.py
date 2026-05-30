@@ -132,3 +132,45 @@ def test_dispatch_ctx_detail_threads_related_groups_from_surface() -> None:
     rgs = ctx.get("related_groups", [])
     assert len(rgs) == 1
     assert rgs[0]["name"] == "comments"
+
+
+# ── #1297: per-entity detail-viewer delegation contract ──────────────────
+
+
+def test_dispatch_ctx_detail_threads_detail_context_for_delegation() -> None:
+    """#1297: the VIEW dispatch ctx carries the original DetailContext
+    under `detail_context` so a `render: <name>` custom detail viewer can
+    delegate to the framework's generic detail rendering (the modern
+    replacement for the removed Jinja `dz://components/detail_view.html`
+    fall-through). It must be the *same* object, not a copy."""
+    detail = DetailContext(
+        entity_name="Manuscript",
+        title="The Old Curiosity Shop",
+        fields=[FieldContext(name="title", label="Title")],
+        item={"title": "The Old Curiosity Shop"},
+    )
+    ctx = _build_dispatch_ctx(_RenderCtx(detail), _Surface())
+    assert ctx.get("detail_context") is detail
+
+
+def test_custom_detail_viewer_can_delegate_to_generic_render() -> None:
+    """#1297: a custom renderer holding `ctx["detail_context"]` can call
+    the exported `render_detail_view` helper to produce the standard
+    detail body, then wrap/append its own chrome. This pins the full
+    delegation round-trip the worked example (examples/custom_renderer)
+    relies on."""
+    from dazzle.ui.runtime import render_detail_view
+
+    detail = DetailContext(
+        entity_name="Manuscript",
+        title="The Old Curiosity Shop",
+        fields=[FieldContext(name="title", label="Title")],
+        item={"title": "The Old Curiosity Shop"},
+    )
+    ctx = _build_dispatch_ctx(_RenderCtx(detail), _Surface())
+    generic_html = render_detail_view(ctx["detail_context"])
+    assert generic_html  # non-empty
+    assert "The Old Curiosity Shop" in generic_html
+    # The viewer composes bespoke chrome around the delegated body.
+    composed = f'<section class="bespoke">BANNER{generic_html}</section>'
+    assert generic_html in composed

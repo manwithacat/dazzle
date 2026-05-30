@@ -1578,6 +1578,17 @@ def _build_dispatch_ctx(
             "transitions": transitions_out,
             "integration_actions": integration_actions_out,
             "external_link_actions": external_links_out,
+            # #1297: hand VIEW-mode custom renderers the original
+            # DetailContext so a per-entity detail viewer can *delegate*
+            # to the generic detail rendering — the modern replacement
+            # for the (removed, ADR-0023) Jinja `components/detail_view.html`
+            # `{% else %}{% include "dz://…" %}` fall-through. A renderer
+            # registered via `render: <name>` on a VIEW surface renders its
+            # bespoke chrome, then optionally appends/wraps the standard
+            # view via `render_detail_view(ctx["detail_context"])`. Lazy by
+            # construction: the generic HTML is only produced if the
+            # renderer asks for it, so the override case costs nothing.
+            "detail_context": detail,
         }
 
     return {}

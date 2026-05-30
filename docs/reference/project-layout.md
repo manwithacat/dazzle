@@ -137,5 +137,5 @@ can't ship a half-configured app.
 
 ## See Also
 
-- [Template Overrides](htmx-templates.md#template-overrides) — `dz://` prefix for template customization
+- [Customising rendered output](htmx-templates.md#customising-rendered-output) — custom renderers + per-entity detail viewers (replaces the removed Jinja template-override mechanism)
 - [CLI Reference](cli.md) — `dazzle init` command options

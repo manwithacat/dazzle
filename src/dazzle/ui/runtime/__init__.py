@@ -1,10 +1,11 @@
 """
 Dazzle UI Runtime
 
-Server-rendered UI runtime using Jinja2 templates, HTMX, and Alpine.js.
+Server-rendered UI runtime: typed Fragment primitives (rendered to HTML
+via pure Python — no Jinja2 since ADR-0023), HTMX, and Alpine.js.
 
 This module provides:
-- Template renderer (AppSpec -> Jinja2 -> HTML)
+- Template renderer (AppSpec -> typed Fragment tree -> HTML)
 - Template context models (PageContext, TableContext, etc.)
 - Page routes for server-rendered pages
 - Static preview generator
@@ -36,6 +37,7 @@ from dazzle.ui.runtime.combined_server import (
     run_backend_only,
     run_unified_server,
 )
+from dazzle.ui.runtime.detail_renderer import render_detail_view
 from dazzle.ui.runtime.dev_server import (
     DazzleDevServer,
     run_dev_server,
@@ -51,6 +53,12 @@ from dazzle.ui.runtime.template_renderer import render_page
 __all__ = [
     # Template rendering
     "render_page",
+    # Canonical delegation helper for custom per-entity detail viewers
+    # (#1297): a `render: <name>` renderer on a VIEW surface can render
+    # the standard detail body via `render_detail_view(ctx["detail_context"])`
+    # and then wrap/append its own chrome. Replaces the removed (ADR-0023)
+    # Jinja `components/detail_view.html` override + `dz://` fall-through.
+    "render_detail_view",
     "PageContext",
     "TableContext",
     "FormContext",
