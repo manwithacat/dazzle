@@ -454,6 +454,64 @@ class TestRouteCollisionPrefersSectioned:
         assert [f.name for f in ctx.form.fields] == ["owner", "trading_name", "utr"]
 
 
+class TestRouteCollisionPrefersRender:
+    """#1301: when two VIEW surfaces for the same entity collide on the same
+    route AND both have sections, the one declaring `render:` must win — its
+    custom detail renderer should dispatch, not be silently dropped."""
+
+    @staticmethod
+    def _view(name: str, *, render: str | None) -> ir.SurfaceSpec:
+        return ir.SurfaceSpec(
+            name=name,
+            title=name,
+            entity_ref="SoleTrader",
+            mode=SurfaceMode.VIEW,
+            render=render,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    title="Detail",
+                    elements=[ir.SurfaceElement(field_name="trading_name", label="Trading Name")],
+                )
+            ],
+            actions=[],
+        )
+
+    def _compile(self, surfaces: list[ir.SurfaceSpec]) -> dict:
+        appspec = ir.AppSpec(
+            name="test_app",
+            title="Test App",
+            version="0.1.0",
+            domain=ir.DomainSpec(entities=[_sole_trader_entity()]),
+            surfaces=surfaces,
+        )
+        return compile_appspec_to_templates(appspec)
+
+    def test_render_surface_wins_when_declared_second(self):
+        """The pre-#1301 bug: a no-render surface declared first beat a later
+        `render:` surface (both sectioned), so the custom renderer never ran."""
+        plain = self._view("assessment_detail", render=None)
+        custom = self._view("assessment_event_detail", render="class_summary_viewer")
+        contexts = self._compile([plain, custom])  # plain first
+        ctx = contexts["/soletrader/{id}"]
+        assert ctx.view_name == "assessment_event_detail"  # render: surface won
+
+    def test_render_surface_wins_when_declared_first(self):
+        custom = self._view("assessment_event_detail", render="class_summary_viewer")
+        plain = self._view("assessment_detail", render=None)
+        contexts = self._compile([custom, plain])  # custom first
+        ctx = contexts["/soletrader/{id}"]
+        assert ctx.view_name == "assessment_event_detail"
+
+    def test_no_render_collision_unchanged(self):
+        """When neither surface declares render:, the prior sections/order
+        tiebreak is unchanged (first sectioned surface wins)."""
+        a = self._view("first_detail", render=None)
+        b = self._view("second_detail", render=None)
+        contexts = self._compile([a, b])
+        assert contexts["/soletrader/{id}"].view_name == "first_detail"
+
+
 # =============================================================================
 # Related entity tabs (hub-and-spoke pattern, #301)
 # =============================================================================

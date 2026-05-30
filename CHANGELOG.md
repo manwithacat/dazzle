@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.50] - 2026-05-30
+
+### Fixed
+
+- **A VIEW surface's `render:` clause now wins a route collision against a no-render sibling (#1301).** Root cause was *not* the experience-step path (the issue's initial hypothesis) — it's the template-compiler's route-collision tiebreak. When two VIEW surfaces target the same entity (e.g. AegisMark's `assessment_detail` with no `render:` and `assessment_event_detail` with `render: class_summary_viewer`), both compile to `/app/<entity>/{id}`; the tiebreak (`template_compiler.py`) previously weighed only section-presence, so a no-render surface declared first silently beat the later `render:` surface and the custom detail viewer never dispatched. The tiebreak now scores `(has_render, has_sections)` — a `render:` clause is the more-specific intent and wins. Surfaces without `render:` are unaffected (sections/declaration-order tiebreak unchanged), so the generic detail + status-transition timeline still renders for every non-custom surface. (`CohortAssessment` worked already because it has a single VIEW surface — no collision.)
+
+### Changed
+
+- **Route-collision logging is now visible for the case that matters (#1301).** Default-route collisions are usually benign — the dropped surface is typically reachable via its workspace/experience route, so its `/app/<entity>/<mode>` URL is vestigial. The compiler now logs at WARNING **only** when the *dropped* surface carries a `render:` clause (a custom renderer that silently won't dispatch — possible only when both colliding surfaces declare `render:`, since `render:` now wins the tiebreak); benign collisions stay at DEBUG. Avoids spamming the many apps with intentional same-entity-mode surfaces.
+
+### Agent Guidance
+
+- **One VIEW surface per entity for the default `/app/<entity>/{id}` route.** Two VIEW surfaces on the same entity collide on that route and only one renders; if you need a custom detail viewer, put `render:` on the surface that should win (it now beats a no-render sibling, #1301) and consider removing the redundant plain VIEW surface (it's dead on the default route). The same collision applies to LIST/CREATE/EDIT modes. Surfaces reached via a workspace region or experience step get their own route and don't count toward this.
+
 ## [0.80.49] - 2026-05-30
 
 ### Fixed

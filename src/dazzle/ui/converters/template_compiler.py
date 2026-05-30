@@ -1619,26 +1619,37 @@ def compile_appspec_to_templates(
         route = route_map.get(surface.mode, f"/{surface.name}")
 
         if route in contexts:
-            # Route collision: two surfaces produce the same URL.
-            # Prefer the surface with explicit sections (more specific field
-            # definitions) over one that relies on entity-field fallback.
+            # Route collision: two surfaces produce the same default URL.
+            # Tiebreak (#1301): prefer a surface with an explicit `render:`
+            # clause (a custom renderer is the more-specific intent), then
+            # one with explicit sections (specific field definitions) over
+            # entity-field fallback. Pre-#1301 only sections were weighed,
+            # so a no-render surface declared first silently beat a later
+            # `render:` surface — the custom detail viewer never dispatched.
             prev = _route_surfaces[route]
-            if surface.sections and not prev.sections:
-                logger.debug(
-                    "Route %s: preferring surface '%s' (has sections) over '%s'",
-                    route,
-                    surface.name,
-                    prev.name,
-                )
+            prev_score = (bool(prev.render), bool(prev.sections))
+            new_score = (bool(surface.render), bool(surface.sections))
+            winner, loser = (surface, prev) if new_score > prev_score else (prev, surface)
+            if new_score > prev_score:
                 contexts[route] = ctx
                 _route_surfaces[route] = surface
-            else:
-                logger.debug(
-                    "Route %s: keeping surface '%s' over '%s'",
-                    route,
-                    prev.name,
-                    surface.name,
-                )
+            # Most default-route collisions are benign — the dropped surface
+            # is typically reachable via its workspace/experience route, so
+            # its default `/app/<entity>/<mode>` URL is vestigial. Only warn
+            # when the DROPPED surface carries a `render:` clause: that custom
+            # renderer silently won't dispatch on this route (the #1301
+            # footgun, now only possible when BOTH surfaces declare render:
+            # since render: wins the tiebreak). Benign collisions stay debug.
+            log = logger.warning if loser.render else logger.debug
+            log(
+                "Route %s collision: surface %r renders, %r dropped (winner render=%r, "
+                "dropped render=%r)",
+                route,
+                winner.name,
+                loser.name,
+                winner.render,
+                loser.render,
+            )
         else:
             contexts[route] = ctx
             _route_surfaces[route] = surface
