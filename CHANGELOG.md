@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.48] - 2026-05-30
+
+### Changed
+
+- **Raised the `standard` security profile's API rate limit 60→300/minute (#1298).** SSR list/workspace pages fan out several client API XHRs per view (list data + filter-option dropdowns + FTS/columns), and since #1196 every generated entity API route is rate-limited at the profile `api_limit`. At 60/minute a *single* user's normal navigation self-429'd — entity list/detail/workspace data endpoints returned 429 and surfaces rendered their empty state (the per-user keying from #1296 was confirmed correct; this was the limit *value*). 300/minute (~30–50 page views/min) fits the current client-hydrated fan-out. `strict` (30/min) and `basic` (none) are unchanged; the ASVS V13.2.2 ordering (strict ≤ standard) still holds.
+
+### Added
+
+- **Per-limit rate-limit env overrides (#1298).** New `DAZZLE_RATE_LIMIT_API`, `DAZZLE_RATE_LIMIT_AUTH`, `DAZZLE_RATE_LIMIT_UPLOAD`, `DAZZLE_RATE_LIMIT_2FA` env vars (each a slowapi `N/period` string, e.g. `300/minute`) let a deploy tune any single limit **without** dropping to the `basic` profile — which would also disable CSP/HSTS/`require_auth_by_default` and open CORS to `*`. Mirrors the `DAZZLE_RATE_LIMIT_TRUSTED_PROXIES` knob (#1296). Invalid values are logged and ignored (the profile default stands). Resolved in `rate_limit.py` `_apply_env_limit_overrides`, applied in `apply_rate_limiting`. Covered by `tests/unit/test_rate_limit_overrides_1298.py` (11 tests).
+
+### Fixed
+
+- **Corrected the stale rate-limiting docs in `docs/guides/security.md` (#1298).** The "API auth & rate limiting" row and "Gap 1" still claimed generated entity routes have "zero calls to the rate-limit decorator" and aren't auto-wired — obsolete since #1196 wired the profile `api_limit` onto every generated entity route (the very mechanism that produced #1298's 429s). Updated to reflect: entity API routes ARE rate-limited at the (now 300/min) profile limit; the residual gaps are the unconsumed per-entity `rate_limit:` DSL field and the un-wrapped workspace page / custom `service:` routes.
+
+### Agent Guidance
+
+- **Rate limiting is live on generated entity API routes (since #1196), keyed per-user (#1296), at the profile `api_limit` — `standard` is now 300/min (#1298).** To tune for an app whose SSR pages fan out many client XHRs, set `DAZZLE_RATE_LIMIT_API=<N>/minute` (and `_AUTH` / `_UPLOAD` / `_2FA`) per-deploy rather than switching to `basic` (which strips CSP/HSTS/auth/CORS). Do **not** reach for the per-entity `rate_limit:` DSL field — it is parsed into the IR but not consumed by the route generator. Limits live in `dazzle.back.runtime.rate_limit`; the knobs are env-resolved at server boot in `apply_rate_limiting`.
+
 ## [0.80.47] - 2026-05-30
 
 ### Added

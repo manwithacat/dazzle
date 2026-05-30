@@ -69,7 +69,7 @@ gap.
 | **CSRF** | Double-submit cookie pattern: `dazzle_csrf` cookie (HttpOnly=false so JS can read it), `X-CSRF-Token` header required on POST/PUT/DELETE/PATCH. Bearer-authenticated requests are exempt. Enabled on all security profiles. Default exempt list is enumerated in section 3 T3 below — health/docs endpoints, the auth router, webhooks, the `__test__` and `dev` mounts, the QA magic-link route, and idempotent consent/i18n cookie-setters. Source: `src/dazzle/back/runtime/csrf.py`. | App-level state-changing endpoints (e.g. a mounted `POST /graphql`) **must** echo the `dazzle_csrf` cookie back as `X-CSRF-Token` — they are not exempt by default. Use the `csrfFetch` client snippet in section 3 T3. Extend the exempt list via `ServerConfig.csrf_exempt_paths` (#1212) when an endpoint is intentionally Bearer-only or genuinely public. | None — but the default behaviour was previously undocumented; this surfaced as `403 {"detail":"CSRF token missing or invalid"}` on every `POST /graphql` from JS clients that copied the standard GraphQL fetch snippet. |
 | **Secrets management** | `env:VAR` indirection in `dazzle.toml` (`src/dazzle/core/manifest.py`) — database URL and OAuth credentials are never committed. DB URL masked in `/_dazzle/db-info` response (`subsystems/system_routes.py`). JWT secret auto-generated if not provided; minimum length 32 bytes enforced at startup. | Provide `DAZZLE_SECRET_KEY` as a strong random string (≥ 32 bytes) in production. Keep all secrets in your deployment platform's secret store, not in committed config files. | No framework-level secret redaction in log lines or error responses beyond the DB URL mask. A secret that appears in structured logging (e.g. via a misconfigured integration) will not be scrubbed. |
 | **Audit trail** | `AuditLogger` (`src/dazzle/back/runtime/audit_log.py`) writes every access-control decision (allow and deny, with policy match, user, IP, path, latency) to `_dazzle_audit_log` in PostgreSQL. Bounded async queue (default max 10 000 entries). Fail-closed on startup: server refuses to boot with audited entities and no `DATABASE_URL`. Queryable via `/_dazzle/audit/logs` (admin auth required). | Declare `audit:` on every entity that requires a durable access trail. Set a retention policy and archive/purge on a schedule appropriate to your compliance requirements. | `_dazzle_audit_log` is a regular PostgreSQL table — no append-only constraint, no signing. Opt-in tamper-evident hash chain available via `audit_integrity = "hash_chain"` in `ServerConfig` (#1197): each row's `row_hash = sha256(prev_hash || canonical_payload)` so a tampered row breaks the chain at that entry, and `AuditLogger.verify_chain()` reports the first mismatch. Default (`"none"`) leaves schema and write path byte-identical to pre-#1197 behaviour. The chain provides tamper evidence, not prevention. |
-| **API auth & rate limiting** | Rate-limit config per security profile (`src/dazzle/back/runtime/rate_limit.py`): `standard` — auth 10/min, API 60/min; `strict` — auth 5/min, API 30/min; `basic` — none. Rate limits are applied to the auth routes (login, register, forgot/reset password, 2FA verify) and file upload endpoints. Uses slowapi; falls back to no-op if not installed. | Install `slowapi` in production (`pip install slowapi`). Implement platform-level rate limiting (load balancer / API gateway) for generated business API routes. | Rate limits are **not auto-applied to generated entity routes** — `route_generator.py` has zero calls to the rate-limit decorator. The `rate_limit:` DSL field exists in the IR but is not wired to route generation. Protection for generated routes is opt-in or platform-level. |
+| **API auth & rate limiting** | Rate-limit config per security profile (`src/dazzle/back/runtime/rate_limit.py`): `standard` — auth 10/min, API **300/min**; `strict` — auth 5/min, API 30/min; `basic` — none. Generated **entity API routes** are auto-wrapped at the profile's `api_limit` (since #1196), as are the auth routes (login, register, forgot/reset password, 2FA verify) and file upload endpoints. Per-user keyed (XFF-aware behind trusted proxies, #1296). Uses slowapi; falls back to no-op if not installed. | Install `slowapi` in production (`pip install slowapi`). Tune any single limit per-deploy without changing the profile via `DAZZLE_RATE_LIMIT_API` / `_AUTH` / `_UPLOAD` / `_2FA` (e.g. `DAZZLE_RATE_LIMIT_API=600/minute`) — keeps CSP/HSTS/auth intact (#1298). Behind a proxy set `DAZZLE_RATE_LIMIT_TRUSTED_PROXIES` (#1296). | The uniform profile `api_limit` is applied to every generated entity route — the per-entity `rate_limit:` DSL field is still **not** consumed (no per-entity tuning via DSL). Workspace SSR **page** routes and custom `service:` routes are not auto-wrapped; protect those at the load balancer / API gateway. |
 | **Security headers & transport** | `src/dazzle/back/runtime/security_middleware.py` — `X-Frame-Options: DENY` (standard/strict), `X-Content-Type-Options: nosniff` (standard/strict), `Referrer-Policy: strict-origin-when-cross-origin` (standard/strict), `HSTS` (standard/strict), CSP in report-only mode on `standard`, CSP enforced on `strict`. CORS: wildcard on `basic`, same-origin on `standard`/`strict`. | Set `security_profile: standard` (at minimum) or `strict` in every production `app` block. Configure explicit CORS `allowed_origins` for `standard`/`strict` profiles — the framework leaves this `None` (same-origin only) by default when no origins are specified; if your app serves a separate SPA front-end, this must be set explicitly. Terminate TLS at the load balancer or use a reverse proxy. | CSP in `standard` profile is report-only (`Content-Security-Policy-Report-Only`), not enforced. The template set ships `'unsafe-inline'` on `script-src` and `style-src` because inline `<script>` and `<style>` blocks are still used in base shells; a nonce-based CSP is a follow-up. |
 | **PII & data export** | `pii()` field modifier and `classify` construct annotate fields by category (contact, identity, location, financial, health, etc.) and sensitivity. PII-annotated values are stripped from analytics events at runtime (`pii-privacy.md`). Bulk CSV export via `workspace_csv.py` runs through the same `resolve_request_user_context` auth gate as all other workspace routes — `permit:` / `scope:` are checked before any row is fetched. | Annotate PII fields with `pii()`. Gate bulk-export surfaces with `permit:` / `scope:` rules. No export-specific audit trail exists — if you need "who downloaded this export and when", add an `audit:` declaration on the entity, or log the export event in a custom service block. | No export-specific audit event is generated. The audit trail records entity-level read decisions, not "user downloaded CSV". |
 | **Input validation & XSS** | Pydantic validates every API request body against generated schemas. The typed Fragment substrate escapes all primitive text content by default at the HTML emission boundary via `dazzle.render.html.esc` (ADR-0023 Pattern A); only explicit `Raw(...)` primitives skip escaping. Query parameters used in HTML attributes are also escaped via `html.escape` in the route generator. | Do not pass user-controlled data into `Raw(...)` primitives, framework-internal `string.Template` Pattern B templates, or custom rendering without sanitisation. Validate business constraints beyond type-checking (e.g. enum ranges, numeric bounds) in service blocks. | No server-side input schema validation beyond what Pydantic derives from the DSL IR types. Custom service blocks that accept free-form input must validate it themselves. |
@@ -325,24 +325,29 @@ with the narrowest `permit:`/`scope:` rule appropriate to your risk model.
 
 These are real limitations. They are not presented as features.
 
-### Gap 1: Rate limiting is not auto-wired to generated entity routes
+### Gap 1: Rate limiting is partial — uniform profile limit, no per-entity DSL tuning
 
-**Source verification:** `src/dazzle/back/runtime/route_generator.py` contains
-zero calls to the rate-limit decorator. The `rate_limit:` DSL field in
-`src/dazzle/core/ir/governance.py` is parsed into the IR but is not consumed
-by the route generator.
+**Resolved (#1196):** Generated **entity API routes** ARE now auto-wrapped at
+the active profile's `api_limit` (`route_generator.py` `_add_route` →
+`limits.limiter.limit(limits.api_limit)`). They are per-user keyed and
+XFF-aware behind trusted proxies (#1296). The earlier "zero calls to the
+rate-limit decorator" statement is obsolete.
 
-**What is wired:** Auth endpoints (login, register, forgot/reset password, 2FA
-verify) and file upload endpoints are rate-limited at the profile limits when
-`slowapi` is installed.
+**What is wired:** Generated entity CRUD/API routes, auth endpoints (login,
+register, forgot/reset password, 2FA verify), and file upload endpoints —
+rate-limited at the profile limits when `slowapi` is installed. The `standard`
+default is **300/min** (#1298, raised from 60/min which self-429'd SSR pages
+that fan out multiple client XHRs). Tune any single limit per-deploy with
+`DAZZLE_RATE_LIMIT_{API,AUTH,UPLOAD,2FA}` without changing the profile.
 
-**What is not:** Generated entity CRUD routes, workspace routes, and any custom
-`service:` routes you register.
+**What is still not:** (a) the per-entity `rate_limit:` DSL field in
+`src/dazzle/core/ir/governance.py` is parsed into the IR but **not consumed** —
+all entity routes share the one profile `api_limit`, you can't set a stricter
+limit on a single hot entity via DSL; (b) workspace SSR **page** routes and
+custom `service:` routes you register are not auto-wrapped.
 
-**Mitigation while gap is open:** Apply rate limits at your load balancer or API
-gateway for generated API routes. For auth routes, ensure `slowapi` is installed.
-
-*(Tracked: #1196)*
+**Mitigation:** For per-entity limits and for page/service routes, apply rate
+limits at your load balancer / API gateway. Ensure `slowapi` is installed.
 
 ### Gap 2: Audit log has no tamper-resistance affordance
 

@@ -107,6 +107,92 @@ def _resolve_trusted_proxies() -> int:
         return 0
 
 
+# #1298: per-limit env overrides. A project on `standard` can raise (or lower)
+# any single limit per-deploy WITHOUT dropping to `basic` (which also disables
+# CSP/HSTS/require-auth and opens CORS). Mirrors the DAZZLE_RATE_LIMIT_TRUSTED_PROXIES
+# env knob (#1296). Maps env var → RateLimitConfig attribute.
+_LIMIT_OVERRIDE_ENV = {
+    "DAZZLE_RATE_LIMIT_API": "api_limit",
+    "DAZZLE_RATE_LIMIT_AUTH": "auth_limit",
+    "DAZZLE_RATE_LIMIT_UPLOAD": "upload_limit",
+    "DAZZLE_RATE_LIMIT_2FA": "twofa_limit",
+}
+
+_VALID_RATE_PERIODS = frozenset({"second", "minute", "hour", "day"})
+
+
+def _normalize_rate_string(value: str) -> str | None:
+    """Return the canonical ``N/period`` form of ``value``, or None if invalid.
+
+    Accepts a positive integer count, ``/``, and one of second/minute/hour/day
+    (trailing ``s`` tolerated, e.g. ``300/minutes``; surrounding whitespace
+    ignored). Returns the **canonical singular** form (``"300/minute"``) — never
+    the raw input — so a tolerated-but-noncanonical value (``"300/minutes"``,
+    ``" 60 / minute "``) is stored in a shape slowapi/limits definitely parses,
+    rather than crashing at route-decoration time (the validator's whole point
+    is to fail safe with a warn-and-ignore, not to launder a typo into a boot
+    crash). Validates the single-rate shape the profiles use, not slowapi's full
+    multi-rate grammar. No regex (ADR-0024 is parser-scoped, but a manual parse
+    is clearer here anyway).
+    """
+    parts = value.split("/")
+    if len(parts) != 2:
+        return None
+    count, period = parts[0].strip(), parts[1].strip().lower().rstrip("s")
+    # `isascii()` guard: str.isdigit() also accepts non-ASCII digits (e.g.
+    # Arabic-Indic "٣٠٠"), which would pass here but reach slowapi as a string
+    # its parser may choke on at route-decoration time. Require plain ASCII.
+    if not (count.isascii() and count.isdigit() and int(count) > 0):
+        return None
+    if period not in _VALID_RATE_PERIODS:
+        return None
+    return f"{int(count)}/{period}"
+
+
+def _valid_rate_string(value: str) -> bool:
+    """True if ``value`` is a parseable ``N/period`` rate string (see
+    ``_normalize_rate_string``)."""
+    return _normalize_rate_string(value) is not None
+
+
+def _apply_env_limit_overrides(config: "RateLimitConfig", profile: str = "") -> None:
+    """Override individual limits on ``config`` from env vars, in place.
+
+    Each ``DAZZLE_RATE_LIMIT_*`` env var (see ``_LIMIT_OVERRIDE_ENV``) replaces
+    the corresponding profile default when set to a valid ``N/period`` string.
+    The stored value is the **canonical** form (``_normalize_rate_string``), not
+    the raw env value. Invalid values are logged and ignored (the profile
+    default stands). Empty / unset vars are no-ops. No effect on ``basic`` (the
+    limiter is a no-op stub there regardless).
+
+    ``profile`` is included in the override log so a security audit can see when
+    a ``strict`` deploy has had its posture loosened by an env override — the
+    override is deliberate (operator-set) so we don't clamp it, but we make it
+    visible.
+    """
+    for env_var, attr in _LIMIT_OVERRIDE_ENV.items():
+        raw = os.environ.get(env_var, "").strip()
+        if not raw:
+            continue
+        normalized = _normalize_rate_string(raw)
+        if normalized is None:
+            logger.warning(
+                "Invalid %s=%r — expected 'N/period' (e.g. '300/minute'); "
+                "ignoring (using profile default)",
+                env_var,
+                raw,
+            )
+            continue
+        setattr(config, attr, normalized)
+        logger.info(
+            "Rate-limit override on %s profile: %s=%s (from %s)",
+            profile or "?",
+            attr,
+            normalized,
+            env_var,
+        )
+
+
 class _NoOpLimiter:
     """Stub that makes @limiter.limit() a pass-through when slowapi is absent."""
 
@@ -128,7 +214,7 @@ class _Limits:
 
     limiter: Any = field(default_factory=_NoOpLimiter)
     auth_limit: str = "10/minute"
-    api_limit: str = "60/minute"
+    api_limit: str = "300/minute"  # #1298: matches the standard-profile default
     upload_limit: str = "10/minute"
     twofa_limit: str = "5/minute"
 
@@ -205,7 +291,14 @@ def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
     elif profile == "standard":
         return RateLimitConfig(
             auth_limit="10/minute",
-            api_limit="60/minute",
+            # #1298: raised 60→300/minute. SSR list/workspace pages fan out
+            # several client API XHRs per view (list data + filter-option
+            # dropdowns + FTS/columns), so 60/minute self-429'd a *single*
+            # user under normal navigation. 300/minute (~30-50 page views/min)
+            # fits the current client-hydrated fan-out. Projects that need a
+            # different value set DAZZLE_RATE_LIMIT_API (see
+            # _apply_env_limit_overrides) instead of dropping to `basic`.
+            api_limit="300/minute",
             upload_limit="10/minute",
             twofa_limit="5/minute",
         )
@@ -233,6 +326,9 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
     """
     # No global statement needed — attribute writes on existing instance
     config = configure_rate_limits_for_profile(profile)
+    # #1298: apply per-limit env overrides (e.g. DAZZLE_RATE_LIMIT_API=300/minute)
+    # so a deploy can tune any single limit without dropping the whole profile.
+    _apply_env_limit_overrides(config, profile)
     app.state.rate_limit_config = config
 
     # Publish limit strings on the limits container for route decorators
