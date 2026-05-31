@@ -147,3 +147,31 @@ class TestJsonReport:
         payload = json.loads(_render_json_report(results))
         assert payload["passed"] is False
         assert payload["count"] == 2
+
+
+class TestContextSelectorWalk:
+    """#1304: `_build_context_selector_walk` discovers workspaces declaring a
+    `context_selector` from the appspec and emits one self-navigating gesture
+    each — generic, so projects without one get a clean no-op."""
+
+    def test_support_tickets_yields_agent_console_gesture(self) -> None:
+        from pathlib import Path
+
+        from dazzle.cli.ux_interactions import _build_context_selector_walk
+        from dazzle.testing.ux.interactions import ContextSelectInteraction
+
+        root = Path(__file__).resolve().parents[2] / "examples" / "support_tickets"
+        walk = _build_context_selector_walk(root)
+
+        assert walk, "expected a context_select gesture for support_tickets' agent_console"
+        assert all(isinstance(g, ContextSelectInteraction) for g in walk)
+        assert "agent_console" in {g.workspace for g in walk}
+
+    def test_project_without_context_selector_yields_empty(self) -> None:
+        from pathlib import Path
+
+        from dazzle.cli.ux_interactions import _build_context_selector_walk
+
+        # simple_task has no context_selector → no gesture (clean N/A).
+        root = Path(__file__).resolve().parents[2] / "examples" / "simple_task"
+        assert _build_context_selector_walk(root) == []

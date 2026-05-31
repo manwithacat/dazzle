@@ -31,6 +31,7 @@ from dazzle.testing.ux.interactions import (
     CardAddInteraction,
     CardDragInteraction,
     CardRemoveReachableInteraction,
+    ContextSelectInteraction,
     Interaction,
     InteractionResult,
     run_walk,
@@ -158,6 +159,34 @@ def _build_default_walk(
     return walk
 
 
+def _build_context_selector_walk(project_root: Path) -> list[Interaction]:
+    """One :class:`ContextSelectInteraction` per workspace that declares a
+    ``context_selector`` (#1304).
+
+    Generic: discovered from the appspec, so projects without a
+    context_selector get no such gesture (clean N/A) and projects with one
+    (e.g. support_tickets' ``agent_console``) get a runtime gate that the
+    selector populates AND that picking an option re-scopes the regions. Each
+    gesture self-navigates to its workspace, so this is independent of the
+    persona's landing page.
+
+    No defensive load guard: this is only ever called after
+    :func:`launch_interaction_server` has already booted this same
+    ``project_root`` (the enclosing ``with`` in :func:`run_interaction_walk`),
+    so the appspec is loadable by construction. A genuine load error here would
+    be a real, surprising failure worth surfacing — not silently swallowing
+    into "no gestures".
+    """
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    appspec = load_project_appspec(project_root)
+    return [
+        ContextSelectInteraction(workspace=ws.name)
+        for ws in getattr(appspec, "workspaces", [])
+        if getattr(ws, "context_selector", None) is not None
+    ]
+
+
 def _render_human_report(results: list[InteractionResult]) -> str:
     if not results:
         return "No interactions ran (layout had no cards and no catalog entries)."
@@ -279,6 +308,10 @@ def run_interaction_walk(
 
                     card_ids, catalog, editable = _layout_card_ids_and_catalog(page)
                     walk = _build_default_walk(card_ids, catalog, editable=editable)
+                    # #1304: append a context_selector gesture per workspace
+                    # that declares one (self-navigating, so independent of the
+                    # landing page). Extends — doesn't replace — the card walk.
+                    walk = walk + _build_context_selector_walk(project_root)
                     if not walk:
                         # Diagnostic dump — walk builds against either the
                         # post-#948 SSR `data-card-*` attributes or the

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.56] - 2026-05-31
+
+### Added
+
+- **INTERACTION_WALK gesture for `context_selector` (#1304) — closes the verification loop.** A new browser gesture (`dazzle.testing.ux.interactions.context_select.ContextSelectInteraction`) navigates to a workspace's context selector, asserts the `<select>` **populates** (guards the context-options projection fix — an empty selector means it's failing), then picks a non-default option and asserts a region **refetches scoped to that `context_id`** (guards the change→refetch wiring). Data-independent (asserts the refetch fires, not row content), so it holds in a fresh CI tenant. Discovered generically from the appspec — one gesture per workspace declaring a `context_selector`, a clean no-op for projects without one — so it rides the existing `dazzle ux verify --interactions` CI job (the INTERACTION_WALK gate) against support_tickets' `agent_console` with no workflow change. Verified live: the walk reports `[PASS] context_select` (17 options, region refetched with the selected id). With this, both #1304 defects (multi-hop scoping + the inert selector) are fixed, verified end-to-end, and gated.
+
 ## [0.80.55] - 2026-05-31
 
 ### Fixed
