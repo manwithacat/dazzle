@@ -84,6 +84,30 @@ class UICheckResult:
 
 
 @dataclass
+class CleanupReport:
+    """#1307: outcome of ``DazzleClient.cleanup_created_entities``.
+
+    Pre-#1307 cleanup returned a bare ``(deleted, failed)`` tuple and counted
+    every HTTP 404 at teardown as a *failure* — producing the alarming
+    ``"N failed"`` line even though a 404 means the row is already gone (cleanup
+    succeeded). The three-way split makes the report honest:
+
+    - ``deleted`` — rows actually removed (200/204).
+    - ``absent``  — rows already gone (404). Success for cleanup's purpose.
+    - ``failed``  — genuine failures (auth/server/network); the row may persist.
+
+    ``created_types`` is the set of entity types this run created, captured
+    before the tracking list is cleared, so the caller can run the post-cleanup
+    residue scan (``detect_residue``) over exactly those types.
+    """
+
+    deleted: int = 0
+    absent: int = 0
+    failed: int = 0
+    created_types: list[str] = field(default_factory=list)
+
+
+@dataclass
 class TestCaseResult:
     """Result of executing a complete test case."""
 
@@ -496,23 +520,38 @@ class DazzleClient:
             logger.debug("ignored exception in test_runner.py:457", exc_info=True)
             return None
 
-    def delete_entity(self, entity_name: str, entity_id: str) -> bool:
-        """Delete an entity by ID. Tries __test__ route first, then standard REST."""
+    def delete_entity(self, entity_name: str, entity_id: str) -> str:
+        """Delete an entity by ID. Tries __test__ route first, then standard REST.
+
+        Returns a three-state outcome (#1307):
+
+        - ``"deleted"`` — the row was removed (HTTP 200/204).
+        - ``"absent"``  — the row was already gone (HTTP 404). For *cleanup*
+          this is success, not failure: a 404 means the target id does not
+          exist, so there is nothing to clean up. Counting it as a failure
+          produced the misleading ``"N failed"`` teardown alarm.
+        - ``"failed"``  — a genuine failure (auth/permission/server error/
+          network) where the row may still exist.
+        """
         try:
             if self._test_routes_available is not False:
                 resp = self._request(
                     "DELETE", self.api_url + "/__test__/entity/" + entity_name + "/" + entity_id
                 )
                 if resp.status_code == 200:
-                    return True
+                    return "deleted"
                 if resp.status_code == 403:
                     # Missing X-Test-Secret — don't fall through to REST
-                    return False
+                    return "failed"
                 if resp.status_code == 404 and "Unknown entity" not in resp.text:
+                    # Ambiguous: either the test route is unavailable OR the id
+                    # is already gone. Preserve the established behaviour — mark
+                    # test routes unavailable and fall through to REST, which
+                    # disambiguates (a REST 404 → genuinely absent).
                     self._test_routes_available = False
                 elif resp.status_code >= 500:
                     # Server error — don't waste time on REST fallback
-                    return False
+                    return "failed"
 
             endpoint = self._entity_endpoint(entity_name)
             resp = self._request(
@@ -520,10 +559,15 @@ class DazzleClient:
                 self.api_url + endpoint + "/" + entity_id,
                 headers=self._auth_headers(),
             )
-            return resp.status_code in (200, 204)
+            if resp.status_code in (200, 204):
+                return "deleted"
+            if resp.status_code == 404:
+                # Row already gone — for cleanup this is success, not failure.
+                return "absent"
+            return "failed"
         except Exception:
             logger.debug("ignored exception in test_runner.py:485", exc_info=True)
-            return False
+            return "failed"
 
     def _build_fk_reverse_map(self) -> dict[str, list[tuple[str, str]]]:
         """Build a map of parent_entity → [(child_entity, fk_field), ...] from the app spec.
@@ -601,17 +645,22 @@ class DazzleClient:
         reversed_entities.sort(key=lambda pair: type_order.get(pair[0], max_order))
         return reversed_entities
 
-    def cleanup_created_entities(self) -> tuple[int, int]:
+    def cleanup_created_entities(self) -> CleanupReport:
         """Delete all tracked entities in dependency-safe order.
 
         Uses the FK graph to topologically sort tracked entities so children
         are deleted before parents. Only deletes entities that were created
-        during this test run — no API queries for untracked records.
-        Uses multi-pass for remaining FK constraint failures.
-        Returns (deleted_count, failed_count).
+        during this test run — **no API queries for untracked records** (the
+        #410 invariant; the residue scan is a *separate* phase, see
+        ``detect_residue``). Uses multi-pass for remaining FK constraint
+        failures.
+
+        Returns a :class:`CleanupReport` (#1307) splitting deleted / absent
+        (404 → already gone) / failed, plus the set of created entity types.
         """
+        created_types = sorted({name for name, _id in self._created_entities})
         if not self._created_entities:
-            return (0, 0)
+            return CleanupReport(created_types=created_types)
 
         # Build FK graph and sort tracked entities
         fk_map = self._build_fk_reverse_map()
@@ -627,26 +676,71 @@ class DazzleClient:
         pending = unique_pending
 
         deleted = 0
+        absent = 0
         max_passes = 3
 
         for pass_num in range(max_passes):
             still_pending: list[tuple[str, str]] = []
-            pass_deleted = 0
+            pass_progress = 0
             for entity_name, entity_id in pending:
-                if self.delete_entity(entity_name, entity_id):
+                outcome = self.delete_entity(entity_name, entity_id)
+                if outcome == "deleted":
                     deleted += 1
-                    pass_deleted += 1
+                    pass_progress += 1
+                elif outcome == "absent":
+                    # Already gone — success for cleanup. Don't retry (a 404
+                    # won't become a 200 on a later pass).
+                    absent += 1
+                    pass_progress += 1
                 else:
                     still_pending.append((entity_name, entity_id))
             pending = still_pending
             if not pending:
                 break
             # Bail if no progress after first pass — retrying won't help
-            if pass_num > 0 and pass_deleted == 0:
+            if pass_num > 0 and pass_progress == 0:
                 break
 
         self._created_entities.clear()
-        return (deleted, len(pending))
+        return CleanupReport(
+            deleted=deleted,
+            absent=absent,
+            failed=len(pending),
+            created_types=created_types,
+        )
+
+    def detect_residue(self, entity_types: list[str]) -> dict[str, int]:
+        """Count test-data rows still present after cleanup (#1307).
+
+        A SEPARATE phase from ``cleanup_created_entities`` (which is delete-only,
+        per the #410 invariant) — this one *does* query the API. For each given
+        entity type it lists the rows and counts those bearing this run's
+        test-data signature (``is_generated_test_value`` — every runner-created
+        row carries at least one generated string field). A nonzero count means
+        cleanup left rows behind: rows the runner created but whose ids it never
+        tracked (e.g. cascade-created children, or an id the create response
+        didn't surface), which tracked-id deletion can't reach.
+
+        Returns ``{entity_type: leftover_count}`` for types with residue > 0.
+        Best-effort: a per-type query failure is skipped, not fatal.
+        """
+        from dazzle.core.field_values import is_generated_test_value
+
+        residue: dict[str, int] = {}
+        for entity_name in sorted(set(entity_types)):
+            try:
+                rows = self.get_entities(entity_name)
+            except Exception:
+                logger.debug("residue scan: get_entities(%s) failed", entity_name, exc_info=True)
+                continue
+            count = sum(
+                1
+                for row in rows
+                if isinstance(row, dict) and any(is_generated_test_value(v) for v in row.values())
+            )
+            if count:
+                residue[entity_name] = count
+        return residue
 
     def get_spec(self) -> dict[str, Any] | None:
         """Get the app spec."""
@@ -1080,14 +1174,41 @@ class TestRunner:
             if on_progress is not None:
                 on_progress(msg)
 
-        # Cleanup created entities
+        # Cleanup created entities (#1307: honest deleted/absent/failed split +
+        # a separate residue scan so an incomplete cleanup is loud, not silent).
         if self._cleanup and self.client:
-            deleted, failed = self.client.cleanup_created_entities()
-            if deleted or failed:
-                msg = f"Cleanup: {deleted} deleted, {failed} failed"
+            report = self.client.cleanup_created_entities()
+            parts: list[str] = []
+            if report.deleted:
+                parts.append(f"{report.deleted} deleted")
+            if report.absent:
+                parts.append(f"{report.absent} already absent (404)")
+            if report.failed:
+                parts.append(f"{report.failed} failed")
+            if parts:
+                msg = "Cleanup: " + ", ".join(parts)
                 print(f"    {msg}")
                 if on_progress is not None:
                     on_progress(msg)
+
+            # Residue scan (separate phase — queries the API). Catches rows the
+            # runner created but never tracked (cascade children / untracked
+            # ids), which tracked-id deletion can't reach — so cleanup that
+            # reports success doesn't silently orphan rows.
+            residue = self.client.detect_residue(report.created_types)
+            if residue:
+                total_residue = sum(residue.values())
+                top = sorted(residue.items(), key=lambda kv: (-kv[1], kv[0]))
+                breakdown = ", ".join(f"{name}={n}" for name, n in top[:8])
+                more = "" if len(top) <= 8 else f", +{len(top) - 8} more"
+                rmsg = (
+                    f"Cleanup residue: {total_residue} test-data rows still present "
+                    f"after teardown (tracking missed them — likely cascade-created "
+                    f"or untracked ids): {breakdown}{more}"
+                )
+                print(f"    {rmsg}")
+                if on_progress is not None:
+                    on_progress(rmsg)
 
         self.client.close()
         result.completed_at = datetime.now()

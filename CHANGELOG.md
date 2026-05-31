@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.60] - 2026-05-31
+
+### Fixed
+
+- **`dazzle test dsl-run --cleanup` no longer counts already-gone rows as failures, and now reports residue (#1307).** A `--cleanup` run on a 57-entity app reported `Cleanup: 0 deleted, 1040 failed` — every teardown DELETE 404'd — while silently orphaning 752 rows it had created. Investigation established the framework has **no persisted/cached id-ledger** (the reported root cause): `DazzleClient._created_entities` is in-memory, rebuilt each run from this run's live POST 2xx `id` bodies. So the orphans come from ids the tracking never captured (cascade-created children, or a create whose response didn't surface the row's id), which tracked-id deletion can't reach. Two framework fixes, both independent of that unconfirmed upstream mechanism: (1) **a 404 at teardown is now `absent` (already gone = success), not `failed`** — `delete_entity` returns a three-state outcome (`deleted`/`absent`/`failed`) and `cleanup_created_entities` returns a `CleanupReport`, so the teardown line reads `Cleanup: N already absent (404)` instead of the misleading `N failed`; (2) **a separate post-cleanup residue scan** (`detect_residue`) lists each created entity type and counts rows still bearing this run's generated test-data signature (`is_generated_test_value`, kept beside the value generator and parity-gated), emitting `Cleanup residue: 752 test-data rows still present after teardown … Contact=412, Company=136, …` — so an incomplete cleanup is **loud, not silently masked** by fix (1). The residue scan is deliberately a separate phase: `cleanup_created_entities` stays delete-only (preserving the #410 "no API queries during cleanup" invariant). Follow-up to #407 (child-before-parent ordering) and #1210 (post-step tracking).
+
+### Agent Guidance
+
+- **`DazzleClient.delete_entity` now returns `"deleted" | "absent" | "failed"`** (was `bool`), and `cleanup_created_entities` returns a `CleanupReport(deleted, absent, failed, created_types)` (was `(deleted, failed)`). Callers/mocks updated in the same commit (clean break, no shim). A teardown 404 is `absent`, counted as success — never `failed`.
+- **A cleanup that reports success must prove the rows are gone.** Tracked-id deletion can't reach rows the runner created but never tracked (cascade children / untracked ids). `detect_residue` scans for the test-data signature post-cleanup so orphaning is surfaced. When the runner generates rows it may later clean up, route both generation and recognition through `dazzle.core.field_values` (`generate_field_value_from_str` / `is_generated_test_value`) so the signature can't drift — parity is gated by `tests/unit/test_cleanup_residue_1307.py`.
+
 ## [0.80.59] - 2026-05-31
 
 ### Fixed

@@ -335,3 +335,32 @@ def generate_field_value_from_str(
             value = value[:max_length]
 
     return value
+
+
+# Test-data signature (#1307). The dsl-run --cleanup residue detector uses this
+# to recognise rows the test runner created — every runner-created row carries
+# at least one string field generated above, and those generated strings share
+# a small set of distinctive prefixes. Kept HERE, beside the generator, so the
+# two never drift; parity is gated by tests/unit/test_field_value_signature.py.
+_TEST_EMAIL_RE = re.compile(r"^test(_[0-9a-f]+)?@example\.com$")
+#: Prefixes `generate_field_value_from_str` emits for str/text/file/else fields.
+_TEST_VALUE_PREFIXES: tuple[str, ...] = ("Test ", "test_")
+
+
+def is_generated_test_value(value: Any) -> bool:
+    """Return True if *value* looks like a string this module generated.
+
+    Recognises the distinctive shapes `generate_field_value_from_str` emits for
+    string-bearing fields — ``"Test <name>…"`` / ``"Test description for …"``
+    (str/text), ``test…@example.com`` (email), and the ``test_…`` prefix
+    (file/fallback). Deliberately conservative (high precision over recall): a
+    real-data row is very unlikely to start with ``"Test "`` or be a
+    ``@example.com`` test address, so this won't misclassify production rows as
+    test residue. Truncated values keep their prefix, so prefix-matching still
+    holds after max_length truncation.
+    """
+    if not isinstance(value, str):
+        return False
+    if _TEST_EMAIL_RE.match(value):
+        return True
+    return value.startswith(_TEST_VALUE_PREFIXES)

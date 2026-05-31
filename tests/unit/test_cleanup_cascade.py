@@ -177,9 +177,10 @@ class TestTopoSortForDelete:
 
 class TestCleanupCreatedEntities:
     def test_empty_list(self, client: DazzleClient) -> None:
-        deleted, failed = client.cleanup_created_entities()
-        assert deleted == 0
-        assert failed == 0
+        report = client.cleanup_created_entities()
+        assert report.deleted == 0
+        assert report.failed == 0
+        assert report.absent == 0
 
     def test_deletes_children_before_parents(self, client: DazzleClient) -> None:
         """Cleanup deletes child entities before parents using topo sort."""
@@ -190,11 +191,11 @@ class TestCleanupCreatedEntities:
         ]
         fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
         client._build_fk_reverse_map = MagicMock(return_value=fk_map)  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
-        deleted, failed = client.cleanup_created_entities()
-        assert deleted == 3
-        assert failed == 0
+        report = client.cleanup_created_entities()
+        assert report.deleted == 3
+        assert report.failed == 0
 
         # Children deleted before parent
         calls = [c.args for c in client.delete_entity.call_args_list]
@@ -212,17 +213,18 @@ class TestCleanupCreatedEntities:
         fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
         client._build_fk_reverse_map = MagicMock(return_value=fk_map)  # type: ignore[method-assign]
         client.get_entities = MagicMock(return_value=[])  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
         client.cleanup_created_entities()
-        # get_entities should NOT be called during cleanup (was the #410 bug)
+        # get_entities should NOT be called during cleanup (was the #410 bug;
+        # #1307 keeps the residue scan in the separate detect_residue phase).
         client.get_entities.assert_not_called()
 
     def test_builds_fk_map_once(self, client: DazzleClient) -> None:
         """FK map is fetched once, not per entity."""
         client._created_entities = [("A", "1"), ("B", "2")]
         client._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
         client.cleanup_created_entities()
         client._build_fk_reverse_map.assert_called_once()
@@ -233,19 +235,34 @@ class TestCleanupCreatedEntities:
         client._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
 
         # Fail first attempt, succeed on second
-        client.delete_entity = MagicMock(side_effect=[False, True])  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(side_effect=["failed", "deleted"])  # type: ignore[method-assign]
 
-        deleted, failed = client.cleanup_created_entities()
-        assert deleted == 1
-        assert failed == 0
+        report = client.cleanup_created_entities()
+        assert report.deleted == 1
+        assert report.failed == 0
+
+    def test_404_counts_as_absent_not_failed(self, client: DazzleClient) -> None:
+        """#1307: a 404 at teardown means the row is already gone — count it as
+        `absent` (success), never `failed`. This is the misleading-`N failed`
+        alarm fix, and 'absent' rows are NOT retried."""
+        client._created_entities = [("A", "1"), ("A", "2")]
+        client._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(side_effect=["deleted", "absent"])  # type: ignore[method-assign]
+
+        report = client.cleanup_created_entities()
+        assert report.deleted == 1
+        assert report.absent == 1
+        assert report.failed == 0
+        # 'absent' is terminal — exactly one delete attempt per id, no retry.
+        assert client.delete_entity.call_count == 2
 
     def test_deduplicates_tracked_entities(self, client: DazzleClient) -> None:
         """Same entity tracked twice is only deleted once."""
         client._created_entities = [("A", "1"), ("A", "1")]
         client._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
-        deleted, failed = client.cleanup_created_entities()
-        assert deleted == 1
-        assert failed == 0
+        report = client.cleanup_created_entities()
+        assert report.deleted == 1
+        assert report.failed == 0
         client.delete_entity.assert_called_once_with("A", "1")
