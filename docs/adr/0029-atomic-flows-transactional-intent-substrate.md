@@ -147,6 +147,18 @@ This ADR uses debits=credits only as the *recognisable illustration* of the cons
   - **Slice 4 — flow-level invariants:** temporal (per-row) first; the aggregate/conservation form is gated on the separate ADR-0009 extension below.
 - **Flow-level aggregate-invariant algebra** — a separate **follow-up ADR**, not this one: extend ADR-0009 with an `AggregateCheck` (a cross-step aggregate over the flow's touched rows). The team has historically resisted opening the closed algebra (#1306); debits=credits is the reference case but **belongs to ADR-0015 for true ledgers** (see *The ADR-0015 boundary*). Not part of #1313.
 
+### Implementation findings (2026-06-01 — from reading the shipped `atomic` vertical)
+
+A first pass at #1313 read the current IR / parser / executor / routes and found Slice 1 is **less cleanly separable than the decomposition above implies**; the corrected build order:
+
+1. **`creates → steps` is a structural IR refactor, not an add.** `AtomicFlowSpec.creates: list[FlowCreate]` must become an ordered `steps` union (`FlowCreate` + `FlowUpdate`/`FlowEndDate`), rippling through the parser, executor (`for create in flow.creates`), validator, and the `ir-types` api-surface baseline. Best shipped **IR-first** (per the project's staged-IR-first convention): IR + parser + validator land with the executor raising a clear `NotImplementedError` for the new step kinds, runtime in the next slice.
+2. **A non-create step needs a target-row selector** — *which existing row* an update/end-date mutates. Open design decision (the "`self`/entity binding" question): reuse the existing `FlowFieldValue` mechanism (`input.<id>` / `above.<Entity>`) as the selector is the lowest-friction, model-consistent default.
+3. **Per-step scope enforcement needs an *in-transaction* probe**, distinct from #1311's `build_create_scope_probe` (which opens its **own** connection). The atomic executor holds one connection for the whole flow, so the probe must run on *that* connection (a fresh cursor) to stay inside the transaction and see in-flow state — otherwise `above`-chained scope is inconsistent. A new `make_in_txn_create_scope_probe(conn)` is required.
+4. **`current_user.<attr>` scope (the motivating `department` case) needs the full `auth_context`**, which is **not** middleware-exposed on the request (the CRUD path threads it explicitly from the cedar handler). The atomic route extracts only roles today; closing invariant 2 for the motivating reassign requires threading the principal (`user_id` + `auth_context`) and the per-entity access specs + FK graph from `server.py` into the executor.
+5. **Conformance projection is coupled to enforcement.** Projecting atomic steps into `testing/` conformance *before* per-step enforcement lands would flag atomic non-compliant. Only **api-surface visibility** (Slice F — list the dynamically-registered `POST /api/atomic/<name>` routes via an appspec-driven pass) is cleanly separable and shippable independently.
+
+**Corrected Slice-1 order:** (1a) the `creates → steps` IR + parser + validator, IR-first with an executor stub for non-create kinds; (1b) in-transaction per-step scope enforcement + audit + principal/access-spec threading (the security core, invariants 2/5/6); (1c) the analysis-IR projection into rbac matrix + conformance + api-surface. Each is its own commit; 1b is the one that must not be rushed.
+
 ## Cross-reference
 
 - **ADR-0028 — tidied to consume this ADR (done, v0.80.65):** its #1313 section cites this model as the definition of "guarded multi-entity mutation"; its rule 3 (optimistic concurrency) defers the scope-parent-consistency clause to invariant 4 here; #1311/#1312 marked shipped.

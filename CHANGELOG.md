@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.66] - 2026-06-01
+
+### Changed
+
+- **ADR-0029: recorded implementation findings from reading the shipped `atomic` vertical; corrected the #1313 Slice-1 build order.** A first pass at #1313 read the current IR / parser / executor / routes and found Slice 1 is less cleanly separable than the ADR's decomposition implied: (1) `AtomicFlowSpec.creates → steps` is a *structural* IR refactor (not additive) rippling through parser / executor / validator / `ir-types` baseline — best shipped IR-first with an executor stub for new step kinds; (2) a non-create step needs a target-row selector (the `self`/binding open question — proposed default: reuse the `FlowFieldValue` `input.<id>` / `above.<Entity>` mechanism); (3) per-step scope needs an *in-transaction* probe distinct from #1311's separate-connection `build_create_scope_probe`; (4) the motivating `current_user.<attr>` scope needs the full `auth_context`, which is **not** middleware-exposed (the CRUD path threads it explicitly) — so the atomic route must thread the principal + per-entity access specs + FK graph from `server.py`; (5) conformance projection is coupled to enforcement (only api-surface visibility is cleanly separable). Corrected Slice-1 order documented in ADR-0029 Implementation status: (1a) `creates → steps` IR + parser + validator (IR-first, executor stub); (1b) in-transaction per-step scope + audit + principal threading (the security core — must not be rushed); (1c) the analysis-IR projection into matrix / conformance / api-surface.
+
+### Agent Guidance
+
+- **Before implementing #1313, the `atomic` step model is a `creates → steps` refactor, and the DSL syntax for non-create steps (`update` / `end-date`) is an open grammar decision** (target-row selection included). Ship it IR-first (project convention): IR + parser + validator with the executor raising `NotImplementedError` for new kinds, runtime in the next slice. The per-step scope enforcement (1b) needs an in-transaction probe (the executor holds one connection for the flow) and the full `auth_context` threaded into the atomic route — it is **not** a drop-in reuse of #1311's `build_create_scope_probe`.
+
 ## [0.80.65] - 2026-06-01
 
 ### Changed
