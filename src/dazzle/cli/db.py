@@ -11,6 +11,7 @@ Wraps Alembic's programmatic API for managing PostgreSQL schema migrations:
 """
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,8 @@ import typer
 from rich.console import Console
 
 from dazzle.cli.utils import load_project_appspec
+
+logger = logging.getLogger(__name__)
 
 db_app = typer.Typer(
     help="Database migration commands (Alembic)",
@@ -149,6 +152,38 @@ def _validate_revision_widths(cfg: object, target: str) -> None:
         )
 
 
+def _redact_url(url: str) -> str:
+    """Mask any password in a DB URL for safe display (`user:***@host/db`)."""
+    import re
+
+    return re.sub(r"(://[^:/@]+:)[^@/]+@", r"\1***@", url)
+
+
+def _safe_current_revision(cfg: Any) -> str | None:
+    """Read the applied revision from ``alembic_version`` (None if unstamped).
+
+    Best-effort: any failure returns ``None`` so reporting never breaks the
+    upgrade itself (the upgrade is the source of truth; this is for display).
+    """
+    try:
+        from alembic.runtime.migration import MigrationContext
+        from sqlalchemy import create_engine
+
+        url = cfg.get_main_option("sqlalchemy.url")
+        if not url:
+            return None
+        engine = create_engine(url)
+        try:
+            with engine.connect() as conn:
+                return MigrationContext.configure(conn).get_current_revision()
+        finally:
+            engine.dispose()
+    except Exception:
+        # Display-only introspection — never let it break the upgrade report.
+        logger.debug("Could not read current alembic revision", exc_info=True)
+        return None
+
+
 @db_app.command(name="upgrade")
 def upgrade_command(
     revision: str = typer.Argument(
@@ -160,11 +195,26 @@ def upgrade_command(
     from alembic import command
 
     cfg = _get_alembic_cfg()
+    # #1308: surface the target DB so a misresolved connection (the bug that
+    # made `upgrade` silently hit the wrong database) is immediately visible.
+    target = cfg.get_main_option("sqlalchemy.url") or ""
+    console.print(f"[dim]Target database: {_redact_url(target)}[/dim]")
 
     try:
         _validate_revision_widths(cfg, revision)
+        before = _safe_current_revision(cfg)
         command.upgrade(cfg, revision)
-        console.print(f"[green]Upgraded to: {revision}[/green]")
+        after = _safe_current_revision(cfg)
+        # #1308: report the actual transition, not a blind "Upgraded to: head".
+        # A no-op (before == after) is now stated honestly rather than
+        # masquerading as success — the exact trap the issue flagged.
+        if before == after:
+            console.print(
+                f"[yellow]Already at {after or '(base)'} — no pending migrations "
+                f"to apply (database unchanged).[/yellow]"
+            )
+        else:
+            console.print(f"[green]Upgraded: {before or '(base)'} → {after or '(base)'}[/green]")
     except Exception as e:
         console.print(f"[red]Upgrade failed: {e}[/red]")
         raise typer.Exit(1)
@@ -477,6 +527,43 @@ def _resolve_tenant_schema(tenant: str) -> str:
     return slug_to_schema_name(tenant)
 
 
+def _default_db_env(project_root: Path) -> str:
+    """Environment profile `dazzle db` targets when no `--env`/`DAZZLE_ENV` is set.
+
+    #1308: the CLI session env (`get_active_env`) defaults to ``""`` — "no
+    profile" — but the app and `dazzle serve` default to the ``development``
+    environment (`get_dazzle_env`). With an empty env_name, `resolve_database_url`
+    *skips the `[environments.*]` profile branch entirely* and falls through to
+    the hardcoded default DB (``postgresql://localhost:5432/dazzle``). So
+    ``dazzle db upgrade`` silently operated on a *different* database than the
+    one the dev app uses — typically already at head — and reported success
+    while applying nothing.
+
+    Fix: when no env is explicitly selected, target the SAME environment the app
+    uses (`get_dazzle_env`, which honours ``DAZZLE_ENV`` and defaults to
+    ``development``) — but ONLY when ``dazzle.toml`` actually declares that
+    ``[environments.<name>]`` profile. Otherwise return ``""`` to preserve the
+    profile-less resolution path (DATABASE_URL → ``[database].url`` → default)
+    for projects that don't use environment profiles. Fail-safe: any load error
+    returns ``""`` (existing behaviour).
+    """
+    toml_path = project_root / "dazzle.toml"
+    if not toml_path.exists():
+        return ""
+    try:
+        from dazzle.core.environment import get_dazzle_env
+        from dazzle.core.manifest import load_manifest
+
+        candidate = get_dazzle_env().value
+        manifest = load_manifest(toml_path)
+    except Exception:
+        # Fail-safe: a malformed manifest shouldn't crash url resolution —
+        # fall back to the legacy profile-less path.
+        logger.debug("Could not resolve default db env from dazzle.toml", exc_info=True)
+        return ""
+    return candidate if candidate in manifest.environments else ""
+
+
 def _resolve_url(database_url: str) -> str:
     """Resolve database URL from flag, env, or manifest.
 
@@ -484,6 +571,10 @@ def _resolve_url(database_url: str) -> str:
     values take effect without the user having to export them in their
     shell (#814). Shell exports still win because ``load_project_dotenv``
     only sets variables that aren't already set.
+
+    When no environment is explicitly selected (`--env` / ``DAZZLE_ENV``),
+    falls back to the app's default environment profile (#1308 — see
+    ``_default_db_env``) so db commands hit the same database as `serve`.
     """
     from dazzle.cli.dotenv import load_project_dotenv
     from dazzle.cli.env import get_active_env
@@ -492,10 +583,12 @@ def _resolve_url(database_url: str) -> str:
     project_root = Path.cwd().resolve()
     load_project_dotenv(project_root)
 
+    env_name = get_active_env() or _default_db_env(project_root)
+
     return resolve_db_url(
         explicit_url=database_url,
         project_root=project_root,
-        env_name=get_active_env(),
+        env_name=env_name,
     )
 
 

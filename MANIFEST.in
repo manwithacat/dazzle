@@ -16,6 +16,12 @@ recursive-include src/dazzle/ui/runtime/static *.js *.css
 # Include LSP grammar files
 recursive-include src/dazzle/lsp/grammars *.json
 
+# Include Alembic migration assets (#1308) — the `dazzle db` CLI loads these by
+# file path (script.py.mako template, alembic.ini, and the framework baseline
+# migrations under versions/, which is not a Python package). Needed in the
+# sdist; the wheel inclusion is handled by [tool.setuptools.package-data].
+recursive-include src/dazzle/back/alembic *.mako *.ini *.py
+
 # Include test data but not test code
 recursive-include tests/fixtures *.dsl *.toml
 

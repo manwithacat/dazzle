@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.59] - 2026-05-31
+
+### Fixed
+
+- **`dazzle db upgrade` no longer silently no-ops in development mode (#1308 bug 1).** With the database URL declared only under `[environments.development]` in `dazzle.toml`, `dazzle db upgrade` (and `current`/`history`/`status`) operated on the **wrong database** and reported success while applying nothing — `alembic_version` never advanced. Root cause: the db CLI resolved the URL via `get_active_env()`, which defaults to `""` ("no profile"), so `resolve_database_url` skipped the `[environments.*]` branch entirely and fell through to the hardcoded default `postgresql://localhost:5432/dazzle` (typically already at head → no-op, exit 0). The app and `dazzle serve` were unaffected because they use `get_dazzle_env()` (defaults to `development`). Fix: when no `--env`/`DAZZLE_ENV` is set, `dazzle db` now targets the same environment the app uses — but only when `dazzle.toml` declares that `[environments.<name>]` profile (projects without profiles keep the legacy DATABASE_URL → `[database].url` → default resolution). `dazzle db upgrade` additionally now **prints the (redacted) target database** and reports the **actual revision transition** (`Upgraded: <before> → <after>`, or an honest `Already at <rev> — no pending migrations` on a no-op) instead of a blind `Upgraded to: head` — so a misresolved connection can never again masquerade as success. The explicit-`--env`/`DAZZLE_ENV=production` path (used by the Heroku release phase) is unchanged.
+- **Alembic migration assets are now shipped in the wheel (#1308 bug 2).** `script.py.mako`, `alembic.ini`, and — critically — the framework's own `0001–0004` baseline migrations under `src/dazzle/back/alembic/versions/` were **absent from every published wheel**. `versions/` has no `__init__.py`, so `[tool.setuptools.packages.find]` with `namespaces = false` never discovered it, and there was no `package-data` entry to ship the files as data. Result: `dazzle db revision --autogenerate` failed (missing template) and a fresh `pip install dazzle-dsl` had no framework migrations at all (invisible to local dev because the repo install is editable). Fix: added a `"dazzle.back.alembic" = ["*.mako", "*.ini", "versions/*.py"]` package-data entry plus a matching `MANIFEST.in` recursive-include. Verified by building a wheel and confirming all assets are present under `dazzle/back/alembic/`. Gated by `tests/unit/test_alembic_assets_packaging_1308.py` (config invariants + runtime-path existence) and `tests/unit/test_db_cli_env_resolution_1308.py`.
+
+### Agent Guidance
+
+- **A migration command that prints success must prove it.** Fail-silent is the dangerous failure mode (#1308): `dazzle db upgrade` now surfaces the target DB and the real `before → after` revision, never a blind echo of the requested target. When adding a command that mutates external state, report the *observed* state change, not the *requested* one.
+- **Data files loaded by path (not import) need explicit `package-data` — especially under a non-package dir.** A directory without `__init__.py` is invisible to `packages.find` (`namespaces = false`), so its files (Alembic `versions/*.py`, templates, `.ini`) silently vanish from the wheel. Editable installs hide this; only a built wheel reveals it. When adding such assets, add a `package-data` glob + `MANIFEST.in` entry and verify against an actual `python -m build` wheel.
+
 ## [0.80.58] - 2026-05-31
 
 ### Documentation
