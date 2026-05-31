@@ -19,7 +19,7 @@ when it enforces at runtime, and what the canonical idiom looks like.
 |---|---|---|---|
 | `list` | Pre-query — folded into the SQL `WHERE` of the LIST endpoint. | "will see 0 records" | ✅ Enforced since v0.45.0 |
 | `read` | Pre-query — folded into the WHERE of the read-by-id query. (Plumbed via the same path as `list` in v0.71.19.) | "will see 0 records" | ✅ Enforced since v0.71.19 |
-| `update` | Pre-write — folded into the WHERE of the pre-read that the permit-gate uses; if the predicate rejects the target row, the request 404s before the update SQL runs. | "the request will 404 at runtime — add a `scope: update:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.19 |
+| `update` | Pre-write, **two-sided** (#1312, ADR-0028): (1) **source** — folded into the WHERE of the permit-gate pre-read; if it rejects the target row the request 404s before the update SQL runs. (2) **destination** — the row's would-be-final state (`existing ⊕ changed fields`) is re-validated against the same `scope: update:` rule before the write, so an update can't repoint an FK to move an in-scope row INTO a foreign scope. Destination denial is a 404 (indistinguishable from a missing row). | "the request will 404 at runtime — add a `scope: update:` rule or `scope: all as: <persona>`" | ✅ Source since v0.71.19; destination since #1312 |
 | `delete` | Same as `update`. | Same as `update`. | ✅ Enforced since v0.71.19 |
 | `create` | Pre-write — predicate is evaluated against the payload AFTER framework defaulting (`current_user` injection, persona-backed refs) but BEFORE service insert. 403 with `scope_create_denied` detail if the predicate rejects. Simple leaves (ColumnCheck / UserAttrCheck / PathCheck depth 1 / BoolComposite) evaluate in-Python against the payload; FK-path (depth > 1) and ExistsCheck/NotExistsCheck resolve via a payload-time SQL probe (#1311, ADR-0028). | "the inserted row will 403 at runtime — add a `scope: create:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.22 (simple) / #1311 (FK-path + EXISTS) |
 
@@ -329,8 +329,19 @@ runs (in order):
    the user's role. If no matching rule, returns 404. If `scope:
    all`, falls through to the unscoped read. Otherwise refetches
    the target row with the scope predicate as part of the SQL
-   `WHERE` clause; if no row comes back, returns 404.
-4. **Operation** — runs the actual UPDATE/DELETE on the validated row.
+   `WHERE` clause; if no row comes back, returns 404. This validates
+   the **source** row — the row as it exists *before* the update.
+4. **Destination re-validation — UPDATE only (#1312, ADR-0028)** —
+   after schema validation and before the write, the row's
+   would-be-final state (the scope-validated `existing` row with the
+   request's changed fields overlaid) is re-checked against the same
+   `scope: update:` rule. This closes the gap where an in-scope row
+   could be moved *into* a foreign scope by repointing an FK the
+   pre-read never re-examined. FK-path / EXISTS destination guards
+   resolve via the same payload-time probe as create-scope (#1311);
+   denial is a 404. A `scope: update: all` rule or an update that
+   doesn't touch any scope-key column is a no-op here.
+5. **Operation** — runs the actual UPDATE/DELETE on the validated row.
 
 The 404 (rather than 403) on scope rejection is deliberate: it
 makes scope-denied rows indistinguishable from non-existent rows,

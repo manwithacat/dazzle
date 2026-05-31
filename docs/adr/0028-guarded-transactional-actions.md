@@ -70,8 +70,16 @@ A guarded action **MUST NOT** rely on a denormalized, client-settable scope key 
   The link-time check now only rejects a pathologically deep FK path
   (> 4 hops). The override path (`policy.check_entity_op`) builds the same
   probe from the entity's service. The guard stays in the algebra (ADR-0009).
-- **#1312 (update-destination revalidation)** and **#1313 (extend `atomic`)**
-  — pending; both compose with the #1311 probe for their FK-path halves.
+- **#1312 (update-destination revalidation) — shipped.** The UPDATE path now
+  re-validates the row's would-be-final state (`existing ⊕ changed fields`)
+  against `scope: update:` after the source pre-read and before the write
+  (`route_generator._enforce_update_scope`, also wired into the override path
+  `policy.check_entity_op`). An in-scope row can no longer be moved *into* a
+  foreign scope by repointing an FK; FK-path / EXISTS destination guards reuse
+  the #1311 probe. Denial is an IDOR-shaped 404.
+- **#1313 (extend `atomic`)** — pending; its per-step FK-path guard composes
+  with the #1311 probe and should land consistently with #1312's
+  source+destination semantics.
 
 ## Cross-reference
 

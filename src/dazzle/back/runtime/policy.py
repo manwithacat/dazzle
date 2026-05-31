@@ -125,9 +125,14 @@ async def check_entity_op(
             ``"delete"``.
         row_id: target row's primary key for read/update/delete. Required
             for those ops; ignored for ``create`` and ``list``.
-        payload: insert payload for ``create``. Required for that op;
-            ignored otherwise. Should be the row as it will land in
-            DB (post-defaulting, post-``current_user`` injection).
+        payload: for ``create``, the insert payload (required) — the row as
+            it will land in DB (post-defaulting, post-``current_user``
+            injection). For ``update``, the changed-fields payload (optional);
+            when provided it triggers the same ``scope: update:`` DESTINATION
+            re-validation the framework route runs (#1312) — the row's
+            would-be-final state must satisfy the update scope rule, so an
+            update can't move a row INTO a foreign scope. Ignored for
+            list/read/delete.
 
     Returns:
         The fetched row dict (for read/update/delete), or ``None``
@@ -258,7 +263,29 @@ async def check_entity_op(
             row_id,
             user_id,
         )
-        raise HTTPException(status_code=404, detail="not found")
+        # Detail string MUST match the destination-guard 404 below
+        # (`_enforce_update_scope` → `_deny_update_destination` → "Not found")
+        # so a scope denial is byte-indistinguishable from a missing row in
+        # this path too (IDOR-avoidance, #1312).
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # #1312 (ADR-0028): for an update with a payload, re-validate the
+    # DESTINATION — the source pre-read above only checked the existing row.
+    # Same enforcement the framework UPDATE route runs; 404 on denial.
+    if op == "update" and payload is not None:
+        from dazzle.back.runtime.route_generator import _enforce_update_scope
+
+        _enforce_update_scope(
+            cedar_access_spec=info.cedar_access_spec,
+            existing=existing,
+            new_values=payload,
+            user_id=user_id,
+            user_roles=user_roles_raw,
+            entity_name=entity_name,
+            auth_context=auth_ctx,
+            service=info.service,
+            fk_graph=info.fk_graph,
+        )
     return existing
 
 

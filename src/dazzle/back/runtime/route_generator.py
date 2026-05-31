@@ -2506,6 +2506,157 @@ def _enforce_create_scope(
     )
 
 
+def _row_to_payload_dict(row: Any) -> dict[str, Any]:
+    """Normalise a pre-read row (Pydantic model or dict) to a JSON-shaped dict.
+
+    Mirrors the create path's ``data.model_dump(mode="json")`` so UUID /
+    datetime values compare as strings against ``current_user.<attr>`` (always
+    str). An unrecognised shape yields an empty dict (the merge then falls back
+    to the new values alone).
+    """
+    if row is None:
+        return {}
+    if hasattr(row, "model_dump"):
+        dumped = row.model_dump(mode="json")
+        return dumped if isinstance(dumped, dict) else {}
+    if isinstance(row, dict):
+        return dict(row)
+    return {}
+
+
+def _enforce_update_scope(
+    *,
+    cedar_access_spec: "EntityAccessSpec | None",
+    existing: Any,
+    new_values: dict[str, Any],
+    user_id: str | None,
+    user_roles: list[str],
+    entity_name: str,
+    auth_context: "AuthContext | None",
+    service: Any = None,
+    fk_graph: "FKGraph | None" = None,
+) -> None:
+    """`scope: update:` DESTINATION enforcement (#1312, ADR-0028).
+
+    The pre-read (`_scoped_pre_read`) already validated the *source* row
+    against ``scope: update:`` — but it never checked the *new* values the
+    payload moves the row to. So an update that repoints an FK / scope-key
+    column could move an in-scope row INTO a foreign scope. This re-validates
+    the row's **would-be-final state** (the scope-validated ``existing`` row
+    with the changed fields overlaid) against the same ``scope: update:``
+    rule(s).
+
+    Outcomes mirror `_enforce_create_scope`, with two deliberate differences:
+
+    - **Denial → 404, not 403.** Per ADR-0028 rule 4 / the IDOR-avoidance
+      contract, a destination denial is indistinguishable from a missing row
+      (and the source pre-read already 404s the same way). The structured
+      reason goes to the server log, not the client.
+    - The payload checked is ``{**existing, **new_values}`` — so a scope-key
+      column the partial update doesn't touch keeps its already-validated
+      value, and only a column the payload actually changes can flip the
+      verdict.
+
+    FK-path (depth > 1) and EXISTS destination guards resolve via the same
+    payload-time SQL probe as create-scope (#1311); simple leaves stay
+    pure-Python. No ``scope: update:`` rules, or a matched ``all`` rule → no-op.
+    """
+    if cedar_access_spec is None:
+        return
+    scopes = getattr(cedar_access_spec, "scopes", None)
+    if not scopes:
+        return
+
+    update_rules: list[Any] = []
+    for r in scopes:
+        rule_op = getattr(r, "operation", None)
+        if rule_op is None:
+            continue
+        rule_op_val = rule_op.value if hasattr(rule_op, "value") else str(rule_op)
+        if rule_op_val == "update":
+            update_rules.append(r)
+    if not update_rules:
+        return
+
+    normalised_roles = {_normalize_role(r) for r in (user_roles or [])}
+    matched: list[Any] = [
+        r
+        for r in update_rules
+        if "*" in (list(getattr(r, "personas", []) or []))
+        or (normalised_roles & set(getattr(r, "personas", []) or []))
+    ]
+    if not matched:
+        # Update rules exist but none matches this role. The source pre-read
+        # under the same rules should already have 404'd, but default-deny
+        # here too for safety (IDOR-shaped 404).
+        _deny_update_destination(entity_name, user_id, "no matching scope: update: rule")
+
+    # Any matched rule with `all` (no predicate) → unrestricted destination.
+    for r in matched:
+        if getattr(r, "predicate", None) is None and getattr(r, "condition", None) is None:
+            return
+
+    # The would-be-final row: scope-validated source row with the changed
+    # fields overlaid. A scope-key column the partial payload doesn't set keeps
+    # its existing (already-validated) value.
+    merged = {**_row_to_payload_dict(existing), **new_values}
+
+    user_attrs = _LazyUserAttrs(auth_context)
+
+    from dazzle.back.runtime.scope_create_eval import (
+        ScopeCreateUnsupportedError,
+        check_create_predicate,
+    )
+    from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+
+    probe = build_create_scope_probe(service, entity_name)
+    schema = get_current_tenant_schema()
+
+    for r in matched:
+        predicate = getattr(r, "predicate", None)
+        if predicate is None:
+            continue
+        try:
+            if check_create_predicate(
+                predicate,
+                merged,
+                user_id=str(user_id) if user_id else "",
+                user_attrs=user_attrs,
+                probe=probe,
+                fk_graph=fk_graph,
+                entity_name=entity_name,
+                schema=schema,
+            ):
+                return  # destination satisfies a matched rule — allow
+        except ScopeCreateUnsupportedError:
+            logger.warning(
+                "scope: update: destination predicate needs a payload-time "
+                "probe but none was available (no repository/DB on the "
+                "service). Denying. entity=%s",
+                entity_name,
+            )
+            continue
+
+    _deny_update_destination(
+        entity_name, user_id, "new values do not satisfy the scope: update: predicate"
+    )
+
+
+def _deny_update_destination(entity_name: str, user_id: str | None, reason: str) -> None:
+    """Raise the IDOR-shaped 404 for an update-destination denial (#1312).
+
+    The client sees a plain 404 (indistinguishable from a missing row, matching
+    the source pre-read); operators get the reason in the server log.
+    """
+    logger.info(
+        "scope: update: destination denied entity=%s user=%s reason=%s",
+        entity_name,
+        user_id,
+        reason,
+    )
+    raise HTTPException(status_code=404, detail="Not found")
+
+
 def _should_bypass_tenant_filter(
     auth_context: "AuthContext | None",
     admin_personas: list[str] | None,
@@ -3648,6 +3799,26 @@ def create_update_handler(spec: RouteSpec) -> Callable[..., Any]:
                 ) from exc
 
         data = input_schema.model_validate(body)
+
+        # #1312 (ADR-0028): scope: update: DESTINATION enforcement. The
+        # pre-read validated the source row; this re-validates the row's
+        # would-be-final state (existing ⊕ changed fields) so an update can't
+        # repoint an FK to move the row INTO a foreign scope. Runs BEFORE the
+        # write; 404 on denial (IDOR-avoidance, matching the pre-read). Uses
+        # `exclude_unset` so untouched scope-key columns keep their existing
+        # (already-validated) value rather than being treated as nulled.
+        _enforce_update_scope(
+            cedar_access_spec=cedar_access_spec,
+            existing=existing,
+            new_values=data.model_dump(mode="json", exclude_unset=True),
+            user_id=current_user,
+            user_roles=list(user_roles or []),
+            entity_name=entity_name,
+            auth_context=_extra.get("auth_context"),
+            service=service,
+            fk_graph=spec.handler.fk_graph,
+        )
+
         kwargs: dict[str, Any] = {"operation": "update", "id": id, "data": data}
         if current_user is not None:
             kwargs["current_user"] = current_user

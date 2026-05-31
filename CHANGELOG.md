@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.64] - 2026-05-31
+
+### Fixed
+
+- **Security: `update` now re-validates the destination scope — a row can no longer be moved INTO a foreign scope (#1312; trajectory 2 of ADR-0028).** The UPDATE path enforced scope only against the **pre-read of the existing row**, then passed the new payload to the service unchecked — so an update that repoints an FK / scope-key column (e.g. a Head of Department setting `teaching_group` to another department's class) was accepted, moving an in-scope row out of scope, because the *destination* was never validated. New `route_generator._enforce_update_scope` re-checks the row's **would-be-final state** (`{**existing, **changed_fields}`, using `model_dump(exclude_unset=True)` so an untouched scope-key column keeps its already-validated value) against the same `scope: update:` rule, **after** the source pre-read and **before** the write. FK-path (depth > 1) and EXISTS destination guards reuse the #1311 payload-time probe; simple leaves stay pure-Python. Denial is an **IDOR-shaped 404** (byte-indistinguishable from a missing row — the `policy` path's pre-read 404 detail was aligned to match). Wired into both the framework UPDATE route and the override path (`policy.check_entity_op` now also re-validates when an `update` payload is supplied). Fail-closed: no probe available for an FK-path destination → 404; no matching rule for the role → 404; a matched `scope: update: all` → no-op.
+
+### Agent Guidance
+
+- **`scope: update:` is now two-sided** — it validates both the source row (pre-read) **and** the destination (the row's would-be-final state) on every update. An update that repoints an FK into a scope the caller can't write is rejected with a 404. No DSL change is required; existing `scope: update:` rules gain destination enforcement automatically. If a `# dazzle:implements` override wants the same guard, pass the update `payload` to `check_entity_op(request, Entity, "update", row_id=…, payload=…)` (previously ignored for update). Trajectory 2 of ADR-0028; #1313 (extend `atomic`) remains open.
+
 ## [0.80.63] - 2026-05-31
 
 ### Added
