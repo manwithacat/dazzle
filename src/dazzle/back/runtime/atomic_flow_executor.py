@@ -83,24 +83,36 @@ def execute_atomic_flow(
     # happen for free.
     with db_manager.connection() as conn:
         cursor = conn.cursor()
-        for create in flow.creates:
+        for step in flow.steps:
+            if isinstance(step, ir.FlowUpdate):
+                # Slice 1a (ADR-0029): `update` steps are parsed + validated
+                # but not yet executed. The runtime (in-transaction per-step
+                # scope enforcement + audit) lands in slice 1b — see ADR-0029
+                # Implementation status. Raising inside the with-block rolls
+                # the transaction back; the route maps this to 501.
+                raise NotImplementedError(
+                    f"atomic `update` step (target entity {step.entity!r}) is "
+                    "parsed and validated but not yet executed — the runtime "
+                    "lands in #1313 slice 1b (ADR-0029)."
+                )
+            # FlowCreate
             row_id = uuid4()
             try:
-                data = _build_row_data(create, inputs, above_ids, row_id)
+                data = _build_row_data(step, inputs, above_ids, row_id)
             except KeyError as exc:
                 raise AtomicFlowError(
-                    create.entity,
+                    step.entity,
                     f"unresolved reference {exc!s} (validator gap?)",
                 ) from exc
             columns = ", ".join(quote_identifier(k) for k in data.keys())
             placeholders = ", ".join(placeholder for _ in data)
-            table = quote_identifier(create.entity)
+            table = quote_identifier(step.entity)
             sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
             try:
                 cursor.execute(sql, list(data.values()))  # nosemgrep
             except Exception as exc:
-                raise AtomicFlowError(create.entity, str(exc)) from exc
-            above_ids[create.entity] = row_id
+                raise AtomicFlowError(step.entity, str(exc)) from exc
+            above_ids[step.entity] = row_id
     return above_ids
 
 

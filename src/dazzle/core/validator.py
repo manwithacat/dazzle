@@ -2411,7 +2411,9 @@ def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
     warnings.append(
         f"[Preview] {len(appspec.atomic_flows)} atomic flow(s) defined. "
-        "Runtime execution (single transaction, route generation) lands in slice 3c.ii."
+        "`create` steps execute (single transaction); `update` steps are "
+        "parsed + validated but not yet executed (runtime lands in #1313 "
+        "slice 1b, ADR-0029)."
     )
 
     entity_map = {e.name: e for e in appspec.domain.entities}
@@ -2419,8 +2421,8 @@ def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     for flow in appspec.atomic_flows:
         prefix = f"atomic flow '{flow.name}'"
 
-        if not flow.creates:
-            errors.append(f"{prefix}: must declare at least one `create` block.")
+        if not flow.steps:
+            errors.append(f"{prefix}: must declare at least one `create` or `update` step.")
         if not flow.permit_execute:
             errors.append(f"{prefix}: must declare `permit: execute: role(...)`.")
 
@@ -2431,45 +2433,78 @@ def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 errors.append(f"{prefix}: duplicate input '{inp.name}'.")
             input_names.add(inp.name)
 
-        # Track entities created so far (left-to-right) for above-ref validation
+        # Track entities created so far (left-to-right) for above-ref validation.
         seen_entities: set[str] = set()
-        for create in flow.creates:
-            if create.entity in seen_entities:
+
+        def _check_ref(
+            value: ir.FlowFieldValue,
+            ctx: str,
+            _seen: set[str],
+            _prefix: str,
+            _inputs: set[str],
+        ) -> None:
+            """Validate an input/above reference inside a step.
+
+            ``_prefix`` / ``_inputs`` are passed explicitly (not closed over)
+            so the helper doesn't bind the enclosing loop variables.
+            """
+            if value.kind == ir.FlowFieldValueKind.INPUT_REF:
+                if value.input_name not in _inputs:
+                    errors.append(
+                        f"{_prefix}: {ctx} references undeclared input '{value.input_name}'."
+                    )
+            elif value.kind == ir.FlowFieldValueKind.ABOVE_REF:
+                if value.above_entity not in _seen:
+                    errors.append(
+                        f"{_prefix}: {ctx} references above.{value.above_entity}."
+                        f"{value.above_field} but '{value.above_entity}' is not "
+                        f"created earlier in this flow."
+                    )
+                if value.above_field != "id":
+                    errors.append(
+                        f"{_prefix}: {ctx} uses above.{value.above_entity}."
+                        f"{value.above_field}; only '.id' is supported in this release."
+                    )
+
+        for step in flow.steps:
+            is_update = isinstance(step, ir.FlowUpdate)
+            kind = "update" if is_update else "create"
+
+            # One create per entity per flow (MVP). Updates may target an
+            # entity freely (incl. one a create also touches), so they are
+            # exempt from the uniqueness check.
+            if not is_update and step.entity in seen_entities:
                 errors.append(
-                    f"{prefix}: create target '{create.entity}' appears more than once "
+                    f"{prefix}: create target '{step.entity}' appears more than once "
                     f"(one create per entity per flow in this release)."
                 )
-            target = entity_map.get(create.entity)
+
+            target = entity_map.get(step.entity)
             if target is None:
-                errors.append(f"{prefix}: create targets unknown entity '{create.entity}'.")
-                seen_entities.add(create.entity)
+                errors.append(f"{prefix}: {kind} targets unknown entity '{step.entity}'.")
+                if not is_update:
+                    seen_entities.add(step.entity)
                 continue
+
+            # An update's target row-selector must resolve to an existing row.
+            # (Direct isinstance so the type-checker narrows `step` to FlowUpdate.)
+            if isinstance(step, ir.FlowUpdate):
+                _check_ref(
+                    step.target, f"update {step.entity} target", seen_entities, prefix, input_names
+                )
+
             target_fields = {f.name for f in target.fields}
-            for field_name, value in create.assignments.items():
+            for field_name, value in step.assignments.items():
                 if field_name not in target_fields:
                     errors.append(
-                        f"{prefix}: create {create.entity} assigns to unknown field '{field_name}'."
+                        f"{prefix}: {kind} {step.entity} assigns to unknown field '{field_name}'."
                     )
-                if value.kind == ir.FlowFieldValueKind.INPUT_REF:
-                    if value.input_name not in input_names:
-                        errors.append(
-                            f"{prefix}: create {create.entity}.{field_name} references "
-                            f"undeclared input '{value.input_name}'."
-                        )
-                elif value.kind == ir.FlowFieldValueKind.ABOVE_REF:
-                    if value.above_entity not in seen_entities:
-                        errors.append(
-                            f"{prefix}: create {create.entity}.{field_name} references "
-                            f"above.{value.above_entity}.{value.above_field} but "
-                            f"'{value.above_entity}' is not created earlier in this flow."
-                        )
-                    if value.above_field != "id":
-                        errors.append(
-                            f"{prefix}: create {create.entity}.{field_name} uses "
-                            f"above.{value.above_entity}.{value.above_field}; only "
-                            f"'.id' is supported in this release."
-                        )
-            seen_entities.add(create.entity)
+                _check_ref(
+                    value, f"{kind} {step.entity}.{field_name}", seen_entities, prefix, input_names
+                )
+
+            if not is_update:
+                seen_entities.add(step.entity)
 
     return errors, warnings
 

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.67] - 2026-06-01
+
+### Added
+
+- **#1313 Slice 1a — non-create `atomic` step kinds (IR + parser + validator, staged IR-first; ADR-0029).** `atomic` flows can now declare `update` steps alongside `create`: `update <Entity>(<target>):` where `<target>` is an `input.<id>` / `above.<Entity>.id` row-selector (reusing the existing `FlowFieldValue` mechanism) and the indented `field: value` lines are the assignments. "End-dating" a row is just an update that sets the entity's temporal end column — there is no separate step kind (the single-`update`-kind grammar). This is the authoring surface for the canonical guarded reassign (end-date the source + create the destination). New IR: `FlowUpdate` + the `AtomicFlowStep` discriminated union (`kind` = `create`/`update`). The parser dispatches the `update` keyword, the validator field-checks update assignments + the target selector exactly like creates, and steps keep declaration order.
+- **Per the project's staged-IR-first convention, the executor stubs `update` steps:** a flow containing an `update` step parses + validates clean, but executing it raises `NotImplementedError`, which the route surfaces as a **501** (`atomic_step_not_implemented`). The in-transaction per-step scope enforcement + audit runtime lands in Slice 1b (see ADR-0029 Implementation status).
+
+### Changed
+
+- **`AtomicFlowSpec.creates: list[FlowCreate]` → `steps: list[AtomicFlowStep]` (clean break, ADR-0003).** The IR now carries an ordered, mixed-kind step list rather than a creates-only list; the parser, executor, and validator are updated in the same commit. The `ir-types` api-surface baseline is regenerated (+`FlowUpdate` BaseModel, +`AtomicFlowStep` typealias, `AtomicFlowSpec.creates`→`steps`). Note: the new union is named `AtomicFlowStep`, **not** `FlowStep` — the latter is the pre-existing E2E `flow` construct's step type.
+
+### Agent Guidance
+
+- **`atomic` flows now take `update` steps, but they don't execute yet (Slice 1a).** Author `update <Entity>(input.<id>):` to declare a mutation/end-date of an existing row; it parses + validates, but calling a flow that contains one returns 501 until Slice 1b wires the runtime. Read the IR via `AtomicFlowSpec.steps` (was `.creates`), dispatching on `FlowCreate` / `FlowUpdate`. The step union is `ir.AtomicFlowStep` (not `ir.FlowStep`, which belongs to the E2E flow construct).
+
 ## [0.80.66] - 2026-06-01
 
 ### Changed

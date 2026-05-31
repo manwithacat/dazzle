@@ -106,7 +106,7 @@ atomic onboard "Onboard Starter":
             ("legal_name", True),
             ("role_id", True),
         ]
-        assert [c.entity for c in af.creates] == ["Person", "Employment"]
+        assert [s.entity for s in af.steps] == ["Person", "Employment"]
 
     def test_input_ref_assignment(self) -> None:
         dsl = (
@@ -121,7 +121,7 @@ atomic onboard "X":
 """
         )
         frag = _parse_fragment(dsl)
-        v = frag.atomic_flows[0].creates[0].assignments["legal_name"]
+        v = frag.atomic_flows[0].steps[0].assignments["legal_name"]
         assert v.kind == ir.FlowFieldValueKind.INPUT_REF
         assert v.input_name == "legal_name"
 
@@ -139,7 +139,7 @@ atomic onboard "X":
 """
         )
         frag = _parse_fragment(dsl)
-        v = frag.atomic_flows[0].creates[1].assignments["person"]
+        v = frag.atomic_flows[0].steps[1].assignments["person"]
         assert v.kind == ir.FlowFieldValueKind.ABOVE_REF
         assert v.above_entity == "Person"
         assert v.above_field == "id"
@@ -156,7 +156,7 @@ atomic onboard "X":
 """
         )
         frag = _parse_fragment(dsl)
-        v = frag.atomic_flows[0].creates[0].assignments["legal_name"]
+        v = frag.atomic_flows[0].steps[0].assignments["legal_name"]
         assert v.kind == ir.FlowFieldValueKind.LITERAL
         assert v.literal == "Alice"
 
@@ -172,7 +172,7 @@ atomic onboard "X":
 """
         )
         frag = _parse_fragment(dsl)
-        v = frag.atomic_flows[0].creates[0].assignments["legal_name"]
+        v = frag.atomic_flows[0].steps[0].assignments["legal_name"]
         assert v.kind == ir.FlowFieldValueKind.LITERAL
         assert v.literal == "alice"
 
@@ -189,6 +189,35 @@ atomic onboard "X":
         )
         frag = _parse_fragment(dsl)
         assert frag.atomic_flows[0].permit_execute == ["hr_admin", "super_admin"]
+
+    def test_update_step_parses(self) -> None:
+        """#1313: `update <Entity>(<target>):` parses into a FlowUpdate with a
+        row-selector target + assignments, preserving declaration order."""
+        dsl = (
+            _base_entities()
+            + """
+atomic reassign "Reassign":
+  permit:
+    execute: role(admin)
+  input person_id: uuid required
+  input new_email: email required
+  update Person(input.person_id):
+    email: input.new_email
+  create Employment:
+    person: above.Person.id
+"""
+        )
+        frag = _parse_fragment(dsl)
+        steps = frag.atomic_flows[0].steps
+        assert [type(s).__name__ for s in steps] == ["FlowUpdate", "FlowCreate"]
+        upd = steps[0]
+        assert isinstance(upd, ir.FlowUpdate)
+        assert upd.entity == "Person"
+        assert upd.kind == "update"
+        assert upd.target.kind == ir.FlowFieldValueKind.INPUT_REF
+        assert upd.target.input_name == "person_id"
+        assert upd.assignments["email"].kind == ir.FlowFieldValueKind.INPUT_REF
+        assert upd.assignments["email"].input_name == "new_email"
 
 
 class TestAtomicFlowValidator:
@@ -284,7 +313,7 @@ atomic onboard "X":
         )
         appspec = _appspec(dsl)
         errors, _ = validate_atomic_flows(appspec)
-        assert any("must declare at least one `create` block" in e for e in errors)
+        assert any("must declare at least one `create` or `update` step" in e for e in errors)
 
     def test_duplicate_input_errors(self) -> None:
         dsl = (
@@ -336,3 +365,37 @@ atomic onboard "X":
         appspec = _appspec(dsl)
         errors, _ = validate_atomic_flows(appspec)
         assert any("only '.id' is supported" in e for e in errors)
+
+    def test_update_target_undeclared_input_errors(self) -> None:
+        """#1313: an update's target row-selector must resolve to a declared
+        input (or an earlier-created above-ref)."""
+        dsl = (
+            _base_entities()
+            + """
+atomic change "X":
+  permit:
+    execute: role(admin)
+  update Person(input.never_declared):
+    legal_name: "x"
+"""
+        )
+        appspec = _appspec(dsl)
+        errors, _ = validate_atomic_flows(appspec)
+        assert any("undeclared input 'never_declared'" in e and "target" in e for e in errors)
+
+    def test_update_unknown_field_errors(self) -> None:
+        """#1313: update assignments are field-checked like creates."""
+        dsl = (
+            _base_entities()
+            + """
+atomic change "X":
+  permit:
+    execute: role(admin)
+  input pid: uuid required
+  update Person(input.pid):
+    not_a_field: "x"
+"""
+        )
+        appspec = _appspec(dsl)
+        errors, _ = validate_atomic_flows(appspec)
+        assert any("unknown field 'not_a_field'" in e for e in errors)

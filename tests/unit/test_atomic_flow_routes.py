@@ -55,7 +55,7 @@ def _simple_flow() -> ir.AtomicFlowSpec:
                 required=False,
             ),
         ],
-        creates=[
+        steps=[
             ir.FlowCreate(
                 entity="Person",
                 assignments={

@@ -21,8 +21,9 @@ service + route generation lands in slices 3c.ii / 3c.iii.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .fields import FieldType
 from .location import SourceLocation
@@ -75,13 +76,43 @@ class FlowCreate(BaseModel):
     """A single create step within an atomic flow.
 
     Maps a target entity to a dict of field assignments. The order of
-    creates within the flow is the order they execute in.
+    steps within the flow is the order they execute in.
     """
 
+    kind: Literal["create"] = "create"
     entity: str
     assignments: dict[str, FlowFieldValue]
 
     model_config = ConfigDict(frozen=True)
+
+
+class FlowUpdate(BaseModel):
+    """An update step within an atomic flow (#1313, ADR-0029).
+
+    Targets an existing row of ``entity`` — selected by ``target`` (an
+    ``input.<id>`` or ``above.<Entity>.id`` reference resolving to the
+    row's primary key) — and applies ``assignments``. "End-dating" a row
+    is just an update that sets the entity's temporal end column; there is
+    no separate step kind (the single-`update`-kind grammar, ADR-0029).
+
+    Status: IR + parser + validator only (slice 1a). The executor
+    **stubs** this step kind (raises ``NotImplementedError``) until the
+    in-transaction per-step scope-enforcement runtime lands in slice 1b.
+    """
+
+    kind: Literal["update"] = "update"
+    entity: str
+    target: FlowFieldValue
+    assignments: dict[str, FlowFieldValue]
+
+    model_config = ConfigDict(frozen=True)
+
+
+# A step within an atomic flow — discriminated on ``kind`` so the parser /
+# executor / validator can dispatch uniformly and steps keep declaration order.
+# Named ``AtomicFlowStep`` (not ``FlowStep``) to avoid colliding with the E2E
+# `flow` construct's pre-existing ``FlowStep`` (`FlowStepKind.SNAPSHOT`, ...).
+AtomicFlowStep = Annotated[FlowCreate | FlowUpdate, Field(discriminator="kind")]
 
 
 class FlowFailureMode(StrEnum):
@@ -91,11 +122,13 @@ class FlowFailureMode(StrEnum):
 
 
 class AtomicFlowSpec(BaseModel):
-    """An atomic multi-entity creation operation.
+    """An atomic multi-entity mutation operation.
 
-    All creates execute in a single DB transaction. ``above.<Entity>``
-    references resolve to values produced by earlier creates in the
-    flow; the framework executes them in declaration order.
+    All steps execute in a single DB transaction. ``above.<Entity>``
+    references resolve to values produced by earlier steps in the flow;
+    the framework executes them in declaration order. Steps may be
+    ``create`` (FlowCreate) or ``update`` (FlowUpdate); the executor
+    currently runs creates and stubs updates (slice 1a, ADR-0029).
     """
 
     name: str
@@ -104,7 +137,7 @@ class AtomicFlowSpec(BaseModel):
     permit_execute: list[str]  # role names allowed to execute the flow
     on_failure: FlowFailureMode = FlowFailureMode.ROLLBACK_ALL
     inputs: list[FlowInput]
-    creates: list[FlowCreate]
+    steps: list[AtomicFlowStep]
     location: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)

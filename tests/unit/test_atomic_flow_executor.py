@@ -57,7 +57,7 @@ def _flow_two_creates() -> ir.AtomicFlowSpec:
         label="Onboard",
         permit_execute=["admin"],
         inputs=[_input("legal_name", ir.FieldTypeKind.STR)],
-        creates=[
+        steps=[
             ir.FlowCreate(
                 entity="Person",
                 assignments={
@@ -129,7 +129,7 @@ class TestReferenceResolution:
             label="X",
             permit_execute=["admin"],
             inputs=[],
-            creates=[
+            steps=[
                 ir.FlowCreate(
                     entity="Person",
                     assignments={
@@ -187,10 +187,43 @@ class TestReturnValue:
             label="Noop",
             permit_execute=["admin"],
             inputs=[],
-            creates=[],
+            steps=[],
         )
         db = _make_db()
         result = execute_atomic_flow(flow, {}, db)
         assert result == {}
         # No cursor.execute calls.
+        assert db._mock_cursor.execute.call_count == 0
+
+
+class TestUpdateStepStub:
+    """#1313 slice 1a: `update` steps parse + validate but the executor stubs
+    them (NotImplementedError) until the slice-1b runtime lands."""
+
+    def _flow_with_update(self) -> ir.AtomicFlowSpec:
+        return ir.AtomicFlowSpec(
+            name="reassign",
+            label="Reassign",
+            permit_execute=["admin"],
+            inputs=[_input("pid", ir.FieldTypeKind.UUID)],
+            steps=[
+                ir.FlowUpdate(
+                    entity="Person",
+                    target=ir.FlowFieldValue(
+                        kind=ir.FlowFieldValueKind.INPUT_REF, input_name="pid"
+                    ),
+                    assignments={
+                        "legal_name": ir.FlowFieldValue(
+                            kind=ir.FlowFieldValueKind.LITERAL, literal="x"
+                        )
+                    },
+                ),
+            ],
+        )
+
+    def test_update_step_raises_not_implemented(self) -> None:
+        db = _make_db()
+        with pytest.raises(NotImplementedError, match="slice 1b"):
+            execute_atomic_flow(self._flow_with_update(), {"pid": "p-1"}, db)
+        # The stub raises before any INSERT runs.
         assert db._mock_cursor.execute.call_count == 0

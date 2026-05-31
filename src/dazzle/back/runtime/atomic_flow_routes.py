@@ -180,6 +180,14 @@ def _run(flow: ir.AtomicFlowSpec, body: BaseModel, db_manager: Any) -> dict[str,
     inputs = body.model_dump(mode="python")
     try:
         created = execute_atomic_flow(flow, inputs, db_manager)
+    except NotImplementedError as exc:
+        # Slice 1a (ADR-0029): a flow containing an `update` step is
+        # parse/validate-clean but not yet executable. Surface a clean 501
+        # rather than a 500 stacktrace until the slice-1b runtime lands.
+        raise HTTPException(
+            status_code=501,
+            detail={"error": "atomic_step_not_implemented", "message": str(exc)},
+        ) from exc
     except AtomicFlowError as exc:
         raise HTTPException(
             status_code=400,

@@ -67,7 +67,7 @@ class AtomicFlowParserMixin:
         permit_execute: list[str] = []
         on_failure = ir.FlowFailureMode.ROLLBACK_ALL
         inputs: list[ir.FlowInput] = []
-        creates: list[ir.FlowCreate] = []
+        steps: list[ir.AtomicFlowStep] = []
 
         while not self.match(TokenType.DEDENT, TokenType.EOF):
             self.skip_newlines()
@@ -98,7 +98,9 @@ class AtomicFlowParserMixin:
             elif tok.type == TokenType.INPUT:
                 inputs.append(self._parse_atomic_input())
             elif tok.type == TokenType.CREATE:
-                creates.append(self._parse_atomic_create())
+                steps.append(self._parse_atomic_create())
+            elif tok.type == TokenType.UPDATE:
+                steps.append(self._parse_atomic_update())
             else:
                 # Unknown key — skip the line to avoid getting stuck.
                 self.advance()
@@ -114,7 +116,7 @@ class AtomicFlowParserMixin:
             permit_execute=permit_execute,
             on_failure=on_failure,
             inputs=inputs,
-            creates=creates,
+            steps=steps,
         )
 
     def _parse_atomic_permit(self) -> list[str]:
@@ -186,6 +188,37 @@ class AtomicFlowParserMixin:
         if self.match(TokenType.DEDENT):
             self.advance()
         return ir.FlowCreate(entity=str(entity), assignments=assignments)
+
+    def _parse_atomic_update(self) -> ir.FlowUpdate:
+        """Parse an ``update <Entity>(<target>):`` block (#1313).
+
+        ``<target>`` selects the existing row to mutate — an ``input.<id>``
+        or ``above.<Entity>.id`` reference (the same value forms a create
+        assignment accepts), resolving to the row's primary key. Indented
+        ``field: value`` lines are the assignments (an "end-date" is just
+        an assignment to the entity's temporal end column).
+        """
+        self.expect(TokenType.UPDATE)
+        entity = self.expect_identifier_or_keyword().value
+        self.expect(TokenType.LPAREN)
+        target = self._parse_flow_field_value()
+        self.expect(TokenType.RPAREN)
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        assignments: dict[str, ir.FlowFieldValue] = {}
+        while not self.match(TokenType.DEDENT, TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT, TokenType.EOF):
+                break
+            field_tok = self.expect_identifier_or_keyword()
+            field_name = str(field_tok.value)
+            self.expect(TokenType.COLON)
+            assignments[field_name] = self._parse_flow_field_value()
+            self.skip_newlines()
+        if self.match(TokenType.DEDENT):
+            self.advance()
+        return ir.FlowUpdate(entity=str(entity), target=target, assignments=assignments)
 
     def _parse_flow_field_value(self) -> ir.FlowFieldValue:
         """Parse the right-hand side of a ``field: value`` in a create.

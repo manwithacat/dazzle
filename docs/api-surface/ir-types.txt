@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 360 BaseModels, 145 Enums, 22 other (functions / typealiases / constants)
+# Counts: 361 BaseModels, 145 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -250,11 +250,11 @@ ir_class: AssetSpec
 
 ir_class: AtomicFlowSpec
   required:
-    - creates: list[FlowCreate]
     - inputs: list[FlowInput]
     - label: str
     - name: str
     - permit_execute: list[str]
+    - steps: list[Annotated[FlowCreate | FlowUpdate, annotation=NoneType required=True discriminator='kind']]
   optional:
     - intent: str | None = None
     - location: SourceLocation | None = None
@@ -1011,7 +1011,8 @@ ir_class: FlowCreate
   required:
     - assignments: dict[str, FlowFieldValue]
     - entity: str
-  optional: (none)
+  optional:
+    - kind: Literal[create] = 'create'
 
 ir_class: FlowFieldValue
   required:
@@ -1059,6 +1060,14 @@ ir_class: FlowStep
     - fixture_ref: str | None = None
     - target: str | None = None
     - value: str | None = None
+
+ir_class: FlowUpdate
+  required:
+    - assignments: dict[str, FlowFieldValue]
+    - entity: str
+    - target: FlowFieldValue
+  optional:
+    - kind: Literal[update] = 'update'
 
 ir_class: FontStackSpec
   required: (none)
@@ -4528,6 +4537,7 @@ category: constant
 
 category: function
   - AggregateFunc (callable, type=_LiteralGenericAlias)
+  - AtomicFlowStep (callable, type=_AnnotatedAlias)
   - DateExpr (callable, type=_AnnotatedAlias)
   - ScopePredicate (callable, type=_AnnotatedAlias)
   - create_default_sitespec (callable, type=function)

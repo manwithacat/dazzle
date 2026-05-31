@@ -40,11 +40,13 @@ from .archetype import (
 # E2E Flows
 from .atomic_flows import (
     AtomicFlowSpec,
+    AtomicFlowStep,
     FlowCreate,
     FlowFailureMode,
     FlowFieldValue,
     FlowFieldValueKind,
     FlowInput,
+    FlowUpdate,
 )
 
 # Audit trail (#956)
@@ -1046,12 +1048,14 @@ __all__ = [
     "UsabilityRule",
     "A11yRule",
     "E2ETestSpec",
-    # #1228 — atomic multi-entity flows
+    # #1228 / #1313 — atomic multi-entity flows
     "AtomicFlowSpec",
+    "AtomicFlowStep",
     "FlowFieldValue",
     "FlowFieldValueKind",
     "FlowInput",
     "FlowCreate",
+    "FlowUpdate",
     "FlowFailureMode",
     # Layout
     "AttentionSignalKind",
