@@ -83,6 +83,20 @@ async def compute_region_render_inputs(
     ctx_region = ctx.ctx_region
     display = ctx_region.display
 
+    # #1305: aggregate / GROUP BY paths re-scope by the workspace
+    # context_selector. `scope_only_filters` deliberately excludes the region
+    # `filter:` (the #887 tenant-bounding contract), but the `current_context`
+    # slice of that filter IS a context boundary — it must reach the aggregate
+    # query so charts/metrics narrow on selector change, just like the list
+    # path does. `context_filters` is keyed on the source entity's FK columns,
+    # so it composes with `scope_only_filters` for every `ctx.source`-based
+    # aggregate below. (Overlay series may target a different source and is
+    # handled separately.)
+    agg_scope_filters: dict[str, Any] = {
+        **(scope_only_filters or {}),
+        **(fetched.context_filters or {}),
+    }
+
     # ─── Phase 4: cross-display aggregates ─────────────────────────────
 
     # Scope-gated aggregate metrics (#887): when scope is denied,
@@ -95,7 +109,7 @@ async def compute_region_render_inputs(
             ctx.repositories,
             total,
             items,
-            scope_filters=scope_only_filters,
+            scope_filters=agg_scope_filters,  # #1305: scope + context selector
             delta=ctx_region.delta,  # #884
             source_entity=ctx.source,  # #888 Phase 1
             tones=getattr(ctx_region, "tones", None),  # v0.61.65
@@ -135,7 +149,7 @@ async def compute_region_render_inputs(
             group_by,
             items,
             bucket_values=kanban_columns or None,
-            scope_filters=scope_only_filters,
+            scope_filters=agg_scope_filters,  # #1305: scope + context selector
             source_entity=ctx.source,
         )
 
@@ -165,6 +179,12 @@ async def compute_region_render_inputs(
     if ir_overlays and display in {"LINE_CHART", "AREA_CHART"} and group_by and not scope_denied:
         for overlay in ir_overlays:
             ovl_source = overlay.source or ctx.source
+            # #1305: the context slice is keyed on `ctx.source`'s FK columns,
+            # so it only composes with an overlay that shares that source.
+            # A different-source overlay keeps the pure scope slice.
+            ovl_scope_filters = (
+                agg_scope_filters if ovl_source == ctx.source else scope_only_filters
+            )
             try:
                 # Per ADR-0024 _compute_bucketed_aggregates consumes typed
                 # AggregateRef directly — no stringification.
@@ -175,7 +195,7 @@ async def compute_region_render_inputs(
                     group_by,
                     items=[],  # overlay computes its own buckets via fast path
                     bucket_values=kanban_columns or None,
-                    scope_filters=scope_only_filters,
+                    scope_filters=ovl_scope_filters,
                     source_entity=ovl_source,
                 )
                 overlay_series_data.append({"label": overlay.label, "buckets": overlay_buckets})
@@ -218,7 +238,7 @@ async def compute_region_render_inputs(
             ctx_region.action_cards or [],
             ctx.repositories,
             ctx.source,
-            scope_only_filters,
+            agg_scope_filters,  # #1305: scope + context selector
             scope_denied,
         )
 
@@ -229,7 +249,7 @@ async def compute_region_render_inputs(
             ctx_region.pipeline_stages or [],
             ctx.repositories,
             ctx.source,
-            scope_only_filters,
+            agg_scope_filters,  # #1305: scope + context selector
             scope_denied,
         )
 
@@ -261,7 +281,7 @@ async def compute_region_render_inputs(
             ir_group_by_dims,
             source_entity=ctx.source,
             source_entity_spec=ctx.entity_spec,
-            scope_filters=scope_only_filters,
+            scope_filters=agg_scope_filters,  # #1305: scope + context selector
         )
 
     # Queue: state-machine transitions + API endpoint.
@@ -356,7 +376,7 @@ async def compute_region_render_inputs(
                     lens=active_lens,
                     source_entity=ctx.source,
                     repositories=ctx.repositories,
-                    scope_only_filters=scope_only_filters,
+                    scope_only_filters=agg_scope_filters,  # #1305: scope + context selector
                 )
 
     return RegionRenderInputs(

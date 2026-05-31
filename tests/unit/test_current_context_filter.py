@@ -267,3 +267,131 @@ class TestCurrentContextMultiHop1304:
             context_id="tg-10A",
         )
         assert not any(k.endswith("__in_subquery") for k in filters)
+
+
+def _and(left: Any, right: Any) -> Any:
+    """Build an IR ConditionExpr AND node (no .kind, uses .operator)."""
+    return SimpleNamespace(
+        operator=SimpleNamespace(value="and"), left=left, right=right, comparison=None
+    )
+
+
+class TestContextOnlyExtraction1305:
+    """#1305: ``context_only=True`` isolates the ``current_context`` slice of a
+    compound region filter so the aggregate / GROUP BY paths re-scope by the
+    context selector — *without* dragging the row-level literal predicates into
+    the aggregate query (which would violate the #887 tenant-bounding contract).
+
+    Pre-#1305: ``current_context`` reached the list fetch but the bar_chart /
+    group_by / aggregate path used only ``scope_only_filters`` (the pure scope
+    slice), so the chart returned the same buckets regardless of ``?context_id``.
+    """
+
+    _ALL_REF_TARGETS = {"AssessmentEvent": {"teaching_group_id": "TeachingGroup"}}
+
+    def test_context_only_drops_literal_keeps_context(self) -> None:
+        """`teaching_group = current_context and status = "marked"` under
+        context_only must yield ONLY the context term — the literal `status`
+        is the row-level filter #887 keeps out of aggregates."""
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        cond = _and(
+            _ir_cmp("teaching_group", "current_context"),
+            _ir_cmp("status", "marked"),
+        )
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-1",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            context_id="tg-10A",
+            context_only=True,
+        )
+        assert filters == {"teaching_group": "tg-10A"}
+
+    def test_context_only_drops_current_user_keeps_context(self) -> None:
+        """`owner = current_user and teaching_group = current_context` under
+        context_only keeps only the context term (current_user is a scope-ish
+        predicate already applied to the aggregate via scope_only_filters)."""
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        cond = _and(
+            _ir_cmp("owner", "current_user"),
+            _ir_cmp("teaching_group", "current_context"),
+        )
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-123",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            context_id="tg-777",
+            context_only=True,
+        )
+        assert filters == {"teaching_group": "tg-777"}
+
+    def test_context_only_two_hop_builds_subquery_only(self) -> None:
+        """The 2-hop dotted context term (the #1305 core) still resolves to an
+        FK-path `__in_subquery` under context_only; the AND'd literal drops."""
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        cond = _and(
+            _ir_cmp("assessment_event.teaching_group", "current_context"),
+            _ir_cmp("status", "marked"),
+        )
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-1",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            ref_targets={"assessment_event_id": "AssessmentEvent"},
+            context_id="tg-10A",
+            all_ref_targets=self._ALL_REF_TARGETS,
+            context_only=True,
+        )
+        assert "status" not in filters
+        assert "assessment_event_id__in_subquery" in filters
+        sql, params = filters["assessment_event_id__in_subquery"]
+        assert '"teaching_group_id"' in sql
+        assert params == ["tg-10A"]
+
+    def test_context_only_no_context_term_is_empty(self) -> None:
+        """A filter with no current_context term yields no context filters —
+        the aggregate then uses scope_only_filters unchanged."""
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        cond = _and(_ir_cmp("owner", "current_user"), _ir_cmp("status", "marked"))
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-1",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            context_id="tg-10A",
+            context_only=True,
+        )
+        assert filters == {}
+
+    def test_context_only_no_context_id_is_empty(self) -> None:
+        """Selector cleared (context_id=None) ⇒ no context filter even with a
+        current_context term, so the aggregate stays unbound on that axis."""
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        cond = _ir_cmp("teaching_group", "current_context")
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-1",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            context_id=None,
+            context_only=True,
+        )
+        assert filters == {}

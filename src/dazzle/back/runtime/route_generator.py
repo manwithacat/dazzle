@@ -1088,6 +1088,7 @@ def _extract_condition_filters(
     ref_targets: dict[str, str] | None = None,
     context_id: str | None = None,
     all_ref_targets: dict[str, dict[str, str]] | None = None,
+    context_only: bool = False,
 ) -> None:
     """Recursively extract SQL filters from a condition tree.
 
@@ -1111,6 +1112,16 @@ def _extract_condition_filters(
     selected entity id when provided (#857).  If ``context_id`` is ``None``
     (no selection), the condition is skipped so the existing persona scope
     applies unfiltered.
+
+    ``context_only`` (#1305): when True, emit *only* the ``current_context``
+    predicate(s) and skip every ``current_user`` / literal / via-check branch.
+    The aggregate / GROUP BY region paths use this to isolate the
+    context-selector slice of a compound region ``filter:`` (e.g.
+    ``assessment_event.teaching_group = current_context and status = "marked"``)
+    so the chart re-scopes by ``context_id`` the same way the list path does —
+    *without* re-mixing the row-level ``status`` predicate into the aggregate
+    query (the #887 tenant-bounding contract). AND trees are still walked so a
+    nested ``current_context`` comparison is found.
     """
     kind = getattr(condition, "kind", "")
 
@@ -1139,7 +1150,12 @@ def _extract_condition_filters(
         else:
             op_val = op.value if hasattr(op, "value") else str(op)
 
-        if field and value == "current_user" and op_val in ("=", "eq", "equals"):
+        if (
+            field
+            and value == "current_user"
+            and op_val in ("=", "eq", "equals")
+            and not context_only
+        ):
             # Prefer DSL User entity ID over auth user ID so comparisons
             # against ref User fields work correctly (#546).
             resolved = _resolve_user_attribute("entity_id", auth_context)
@@ -1149,6 +1165,7 @@ def _extract_condition_filters(
             and isinstance(value, str)
             and value.startswith("current_user.")
             and op_val in ("=", "eq", "equals")
+            and not context_only
         ):
             attr_name = value[len("current_user.") :]
             _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
@@ -1163,6 +1180,7 @@ def _extract_condition_filters(
             and isinstance(value, str | int | float | bool)
             and value != "current_user"
             and value != "current_context"
+            and not context_only  # #1305: aggregate path wants only the context slice
         ):
             if op_val in ("=", "eq", "equals"):
                 _set_filter(field, value)
@@ -1198,6 +1216,7 @@ def _extract_condition_filters(
                     ref_targets,
                     context_id,
                     all_ref_targets,
+                    context_only,
                 )
             if right:
                 _extract_condition_filters(
@@ -1209,10 +1228,15 @@ def _extract_condition_filters(
                     ref_targets,
                     context_id,
                     all_ref_targets,
+                    context_only,
                 )
         return
 
     if kind == "via_check":
+        # #1305: a junction (via) check is a scope/relationship predicate, not
+        # the context-selector slice — skip it when isolating context filters.
+        if context_only:
+            return
         junction_entity = getattr(condition, "via_junction_entity", None)
         bindings = getattr(condition, "via_bindings", None)
         if junction_entity and bindings:
@@ -1242,7 +1266,12 @@ def _extract_condition_filters(
         else:
             raw_value = cond_value
 
-        if field and raw_value == "current_user" and op_val in ("=", "eq", "equals"):
+        if (
+            field
+            and raw_value == "current_user"
+            and op_val in ("=", "eq", "equals")
+            and not context_only
+        ):
             # Prefer DSL User entity ID over auth user ID so comparisons
             # against ref User fields work correctly (#546).
             resolved = _resolve_user_attribute("entity_id", auth_context)
@@ -1252,6 +1281,7 @@ def _extract_condition_filters(
             and isinstance(raw_value, str)
             and raw_value.startswith("current_user.")
             and op_val in ("=", "eq", "equals")
+            and not context_only
         ):
             attr_name = raw_value[len("current_user.") :]
             _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
@@ -1266,6 +1296,7 @@ def _extract_condition_filters(
             and isinstance(raw_value, str | int | float | bool)
             and raw_value != "current_user"
             and raw_value != "current_context"
+            and not context_only  # #1305: aggregate path wants only the context slice
         ):
             if op_val in ("=", "eq", "equals"):
                 _set_filter(field, raw_value)
@@ -1302,6 +1333,7 @@ def _extract_condition_filters(
                     ref_targets,
                     context_id,
                     all_ref_targets,
+                    context_only,
                 )
             if right:
                 _extract_condition_filters(
@@ -1313,14 +1345,17 @@ def _extract_condition_filters(
                     ref_targets,
                     context_id,
                     all_ref_targets,
+                    context_only,
                 )
         # OR and other logical operators require post-fetch filtering
         # which is handled by the visibility system already
         return
 
     # Via-check condition (IR path)
+    # #1305: a junction (via) check is a scope/relationship predicate, not the
+    # context-selector slice — skip it when isolating context filters.
     via_cond = getattr(condition, "via_condition", None)
-    if via_cond is not None:
+    if via_cond is not None and not context_only:
         bindings_dicts = [
             {"junction_field": b.junction_field, "target": b.target, "operator": b.operator}
             for b in via_cond.bindings

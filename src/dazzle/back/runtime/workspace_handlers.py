@@ -91,6 +91,38 @@ async def _fetch_region_json(
             if _scope_only_filters_batch:
                 filters = {**(filters or {}), **_scope_only_filters_batch}
 
+            # #1305: isolate the `current_context` slice so the aggregate
+            # metrics below re-scope by the context selector (batch JSON path),
+            # mirroring the single-region path in compute_region_render_inputs.
+            _ctx_id_batch = (filter_context or {}).get("current_context")
+            if ir_filter is not None and _ctx_id_batch:
+                try:
+                    from dazzle.back.runtime.route_generator import (
+                        _extract_condition_filters,
+                    )
+
+                    _ctx_filters_batch: dict[str, Any] = {}
+                    _extract_condition_filters(
+                        ir_filter,
+                        user_id or (filter_context or {}).get("current_user_id", ""),
+                        _ctx_filters_batch,
+                        logger,
+                        auth_context,
+                        ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
+                        context_id=_ctx_id_batch,
+                        all_ref_targets=ctx.entity_ref_targets,
+                        context_only=True,
+                    )
+                    if _ctx_filters_batch:
+                        _scope_only_filters_batch = {
+                            **(_scope_only_filters_batch or {}),
+                            **_ctx_filters_batch,
+                        }
+                except Exception:
+                    logger.warning(
+                        "Failed to isolate current_context filter (batch)", exc_info=True
+                    )
+
             limit = ctx.ctx_region.limit or page_size
             include_rels = ctx.auto_include or None
             if _scope_denied:

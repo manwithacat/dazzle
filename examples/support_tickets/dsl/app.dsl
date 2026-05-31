@@ -555,6 +555,33 @@ workspace agent_console "Agent Console":
     action: comment_detail
     empty: "No comments on this agent's tickets"
 
+  # 1-hop aggregate (the #1305 case): category distribution of the selected
+  # agent's tickets. A bar_chart with group_by + aggregate must re-scope by
+  # current_context exactly as the list region above does — pre-#1305 the
+  # current_context predicate reached the list fetch but NOT the GROUP BY.
+  agent_category_chart:
+    source: Ticket
+    filter: assigned_to = current_context
+    display: bar_chart
+    group_by: category
+    aggregate:
+      count: count(Ticket)
+    empty: "No tickets for this agent"
+
+  # 2-hop dotted aggregate (the #1305 core, parallel to #1304's 2-hop list):
+  # count of the selected agent's ticket comments, bucketed. The dotted
+  # current_context path (Comment -> ticket -> assigned_to) must scope the
+  # aggregate query — proving the FK-path `__in_subquery` filter survives the
+  # GROUP BY path, not just the list path.
+  agent_comment_chart:
+    source: Comment
+    filter: ticket.assigned_to = current_context
+    display: bar_chart
+    group_by: is_internal
+    aggregate:
+      count: count(Comment)
+    empty: "No comments for this agent"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================

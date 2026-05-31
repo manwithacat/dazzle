@@ -54,6 +54,15 @@ class RegionItemsResult:
     so their GROUP BY queries stay tenant-bounded without re-applying
     the row-level filters.
 
+    ``context_filters`` (#1305) is the ``current_context`` slice of the
+    region ``filter:`` — the context-selector boundary, isolated from the
+    row-level ``status``/literal predicates. It rides *alongside*
+    ``scope_only_filters`` into the aggregate paths so a bar_chart /
+    group_by / metric region re-scopes when the workspace
+    ``context_selector`` changes, exactly as the list path does. Empty
+    when no ``context_id`` is bound (selector cleared) or the filter has
+    no ``current_context`` term.
+
     ``scope_denied`` is the default-deny flag (#887): aggregate
     paths suppress their queries when this is True so an unfiltered
     SQL aggregate can't leak cross-tenant counts.
@@ -62,6 +71,7 @@ class RegionItemsResult:
     items: list[dict[str, Any]] = field(default_factory=list)
     total: int = 0
     scope_only_filters: dict[str, Any] | None = None
+    context_filters: dict[str, Any] | None = None  # #1305
     # Default-deny: any failure path that skips scope evaluation
     # MUST surface as a denial — initialised True here to match the
     # original handler's #887 semantics.
@@ -165,6 +175,34 @@ async def fetch_region_items(
         if scope_only_filters:
             filters = {**(filters or {}), **scope_only_filters}
 
+        # Step 4b (#1305): isolate the `current_context` slice of the region
+        # filter so the aggregate paths can re-scope by the context selector
+        # without re-mixing the row-level literals (#887). The list query above
+        # already resolved current_context into `filters`; this second pass
+        # extracts JUST the context terms (same FK-path resolution as #1304),
+        # which `compute_region_render_inputs` merges into the aggregate
+        # scope filters. Empty when no context_id is bound or no current_context
+        # term exists.
+        context_filters: dict[str, Any] = {}
+        if ir_filter is not None and user_ctx.filter_context.get("current_context"):
+            try:
+                from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+                _extract_condition_filters(
+                    ir_filter,
+                    user_ctx.user_id or "",
+                    context_filters,
+                    logger,
+                    user_ctx.auth_ctx_for_filters,
+                    ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
+                    context_id=user_ctx.filter_context.get("current_context"),
+                    all_ref_targets=ctx.entity_ref_targets,
+                    context_only=True,
+                )
+            except Exception:
+                logger.warning("Failed to isolate current_context filter", exc_info=True)
+                context_filters = {}
+
         # Step 5: page-size for grouped displays (#889).
         include_rels = ctx.auto_include
         if (
@@ -201,6 +239,7 @@ async def fetch_region_items(
             items=items,
             total=total,
             scope_only_filters=scope_only_filters,
+            context_filters=context_filters or None,
             scope_denied=scope_denied,
         )
 

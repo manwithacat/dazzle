@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.57] - 2026-05-31
+
+### Fixed
+
+- **`current_context` region filters now scope `bar_chart` / `group_by` / `aggregate` regions, not just lists (#1305).** #1304 fixed multi-hop `current_context` filters and gated them on the **list** path; the same filter was silently ignored on the **aggregate / GROUP BY** path — a `bar_chart` region with a `group_by` + `aggregate` + a `current_context` filter returned the same buckets regardless of `?context_id`. Root cause: the region fetch only carried `scope_only_filters` (the pure scope slice) into the aggregate paths — deliberately excluding the region `filter:` to keep row-level predicates out of GROUP BY queries (the #887 tenant-bounding contract) — which also dropped the `current_context` term. But `current_context` is a **context boundary**, not a row filter: it should re-scope the whole dashboard (charts included) when the workspace `context_selector` changes. Fix: `fetch_region_items` now isolates the `current_context` slice of the region filter (new `context_only=True` mode on `_extract_condition_filters`, reusing #1304's FK-path resolution so 1-hop **and** 2-hop dotted paths resolve) and carries it as `RegionItemsResult.context_filters`; `compute_region_render_inputs` merges it with `scope_only_filters` for **every** `ctx.source`-based aggregate (metrics, bucketed/bar_chart, pivot, overlay, action_grid, pipeline_steps, cohort_strip). The row-level `status = "marked"`-style predicates still stay out of the aggregate (#887 preserved); only the context term is threaded. The batch JSON path (`_fetch_region_json`) gets the same treatment for its metrics aggregate. Covered by `tests/unit/test_current_context_filter.py` (5 new `context_only` tests) and a PG-backed e2e gate (`tests/integration/test_context_selector_aggregate_1305.py`): two new `agent_console` bar_chart regions (1-hop `assigned_to = current_context`; 2-hop dotted `ticket.assigned_to = current_context`) whose bucket totals must follow `?context_id` — agent A → 3 / 2, agent B → 5 / 0, no-context → 8 — proving the dotted-path `__in_subquery` filter survives the GROUP BY, not just the list fetch.
+
+### Agent Guidance
+
+- **`current_context` is a scope boundary, not a row filter** (#1305). When adding a new region aggregate path, thread the context slice (`RegionItemsResult.context_filters`) alongside `scope_only_filters` — a chart/metric that scopes to a `context_selector` must re-aggregate on selection change. The split exists because #887 keeps row-level region `filter:` predicates out of GROUP BY queries; `current_context` is the one term in that filter that *does* belong in the aggregate. Isolate it with `_extract_condition_filters(..., context_only=True)`.
+
 ## [0.80.56] - 2026-05-31
 
 ### Added
