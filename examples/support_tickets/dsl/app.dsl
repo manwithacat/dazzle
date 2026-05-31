@@ -519,6 +519,43 @@ workspace my_tickets "My Tickets":
     empty: "You have not submitted any tickets yet"
 
 # =============================================================================
+# CONTEXT-SELECTOR SCENARIO (#1304 verification)
+# Pick an agent from the selector; both regions re-scope to that agent.
+# Exercises: workspace `context_selector` + a 1-hop `current_context` filter
+# (`assigned_to = current_context`) and a 2-hop dotted one
+# (`ticket.assigned_to = current_context`, Comment -> ticket -> assigned_to).
+# Backed by the deterministic backend gate (tests/) + an INTERACTION_WALK
+# gesture that drives the <select> and asserts the regions re-scope.
+# =============================================================================
+
+workspace agent_console "Agent Console":
+  purpose: "Pick an agent to see the tickets assigned to them and the comments on those tickets"
+  stage: "simple_list"
+
+  context_selector:
+    entity: User
+    display_field: name
+
+  # 1-hop: tickets directly assigned to the selected agent.
+  agent_tickets:
+    source: Ticket
+    filter: assigned_to = current_context
+    sort: priority desc
+    display: list
+    action: ticket_detail
+    empty: "No tickets assigned to this agent"
+
+  # 2-hop dotted (the #1304 case): comments on tickets assigned to the
+  # selected agent — Comment -> ticket -> assigned_to.
+  agent_ticket_comments:
+    source: Comment
+    filter: ticket.assigned_to = current_context
+    sort: created_at desc
+    display: list
+    action: comment_detail
+    empty: "No comments on this agent's tickets"
+
+# =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
 

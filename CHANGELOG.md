@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.54] - 2026-05-31
+
+### Added
+
+- **End-to-end regression gate for `current_context` region scoping (#1304).** `examples/support_tickets` gains an `agent_console` workspace that exercises the full pattern — a workspace `context_selector` (pick a User) driving a **1-hop** region (`assigned_to = current_context`) and a **2-hop dotted** region (`ticket.assigned_to = current_context`, Comment→ticket→assigned_to). A new PG-backed e2e test (`tests/integration/test_context_selector_scoping_1304.py` + `support_tickets_harness.py`, `@pytest.mark.e2e`/`postgres`) boots the app against a disposable seeded DB and asserts the region endpoints scope by `?context_id`: agent A → exactly A's tickets/comments, agent B → B's, no cross-leak. This locks in the v0.80.53 backend fix end-to-end against support_tickets' **bare-named** FK columns (`Ticket.assigned_to`, not `assigned_to_id`) — the exact case the model-aware FK-path resolution handles and a blanket `_id` suffix would have broken. (Defect A — the inert `context_selector` `<select>` — remains open on #1304, pending live browser diagnosis.)
+
 ## [0.80.53] - 2026-05-31
 
 ### Fixed
