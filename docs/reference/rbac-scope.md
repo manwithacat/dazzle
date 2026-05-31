@@ -225,6 +225,81 @@ Members can't update or delete because the `permit:` gate rejects
 them. The scope rules document the policy and silence the
 `no_scope_rule` lint without needing a per-op carve-out.
 
+### Pattern E — Relationship through a junction (`via`)
+
+When visibility depends on a *many-to-many* relationship rather than
+a column the entity carries directly, scope through a junction entity
+with `via`. This compiles to an `EXISTS`/`IN` subquery against the
+junction (`ExistsCheck` in the algebra — ADR-0009):
+
+```dsl
+scope:
+  # A rater sees a row only if a UserRole junction links them to it.
+  read: via UserRole(user = current_user, role.code = co_rater)
+    as: rater
+  # Exclusion: hide rows the caller has explicitly blocked.
+  list: not via BlockList(user = current_user, resource = id)
+    as: member
+```
+
+`via JunctionEntity(junction_col = current_user[.attr], junction_col = id)`
+compiles to
+`WHERE id IN (SELECT junction_col FROM JunctionEntity WHERE junction_col = $current_user)`;
+`not via …` compiles to `NOT EXISTS`. Every binding names its column
+explicitly, and each is validated against the FK graph at
+`dazzle validate` time.
+
+#### `via` is a **single junction hop** (#1306)
+
+`via` expresses exactly **one** junction. It scopes an entity that has
+a *direct* link to the scoping pivot (or to a junction that carries
+`current_user`). An entity that reaches the pivot only **through an
+intermediate entity** — a two-junction path — **cannot** be `via`-scoped,
+because no single junction's binding reaches `current_user` in one hop.
+
+Concrete case (a parent portal scoping `AssessmentEvent` to "my child's
+assessments"): `AssessmentEvent` is class-level (school, teaching_group,
+…) and has no `student` field. The child link runs
+`AssessmentEvent ← Manuscript.student_profile → ParentContact.parent_user`
+— two junctions:
+
+```
+AssessmentEvent.id IN (
+  SELECT assessment_event FROM Manuscript
+  WHERE student_profile IN (
+    SELECT student FROM ParentContact WHERE parent_user = $current_user))
+```
+
+There is no `via` form for this. (Extending the algebra to a chained
+two-junction `via` was considered and **declined** in #1306: it would
+mean standing up a second multi-hop predicate path with its own
+fail-closed and validate-time-reject hardening, for marginal
+expressivity over the workaround below. The algebra stays closed — per
+ADR-0009, novel rule forms require an explicit, deliberate extension.)
+
+**Supported pattern — denormalize the link.** Add the pivot reference
+to the entity as a real FK and scope on that *single* hop, which the
+hardened single-junction / FK-path machinery already handles
+(determinism and fail-closed are inherited):
+
+```dsl
+entity AssessmentEvent "Assessment Event":
+  ...
+  # Denormalized child link, maintained when a Manuscript is created.
+  student_profile: ref StudentProfile optional
+
+scope:
+  read: via ParentContact(student = student_profile, parent_user = current_user)
+    as: parent
+```
+
+**Anti-pattern — do NOT fall back to an over-broad `filter:`.** Replacing
+the unexpressible `via` with `filter: school = current_user.school`
+silently widens the row set to the **whole tenant** (the parent sees the
+entire school's events, not their child's). That is a confidentiality
+regression masquerading as a working scope. If you can't express the
+intended scope with a single hop, denormalize — don't widen.
+
 ## Runtime behaviour
 
 When a request hits an UPDATE or DELETE endpoint, the framework

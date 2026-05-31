@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.58] - 2026-05-31
+
+### Documentation
+
+- **`via` scope is a single junction hop — documented the limit + the supported workaround (#1306).** A `via` scope clause expresses exactly one junction (`ExistsCheck` in the predicate algebra); an entity that reaches the scoping pivot only *through an intermediate* entity (a two-junction path, e.g. a parent portal scoping `AssessmentEvent` to "my child's assessments" via `Manuscript → ParentContact`) cannot be `via`-scoped, because no single junction binding reaches `current_user` in one hop. `docs/reference/rbac-scope.md` gains **Pattern E — Relationship through a junction (`via`)**, which documents the `via`/`not via` form, states the single-hop limit, and prescribes the supported answer: **denormalize the pivot link onto the entity and scope on that single hop** (which inherits the existing machinery's determinism + fail-closed). It also calls out the anti-pattern explicitly — falling back to a broad `filter:` (e.g. `school = current_user.school`) silently widens the row set to the whole tenant, a confidentiality regression masquerading as a working scope. ADR-0009 now records the `ExistsCheck` single-junction bound in its predicate table and consequences.
+
+### Agent Guidance
+
+- **Don't paper over an inexpressible `via` scope with a broad `filter:`** (#1306). `via` is one junction hop. If a scope needs two junctions (entity → intermediate → pivot), denormalize the pivot reference onto the entity and scope on that single hop — never substitute a wider `filter:` predicate, which leaks rows across the tenant. A chained two-junction `via` was considered and **declined**: the algebra (ADR-0009) stays closed; novel rule forms require a deliberate extension, and the denormalized-FK pattern reduces the problem to the already-hardened single-hop case. See `docs/reference/rbac-scope.md` Pattern E.
+
 ## [0.80.57] - 2026-05-31
 
 ### Fixed

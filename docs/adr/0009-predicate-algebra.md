@@ -23,7 +23,7 @@ Scope rules compile to a **closed formal predicate algebra** with six types:
 | `ColumnCheck` | Direct column equality: `status = archived` |
 | `UserAttrCheck` | User attribute equality: `school_id = current_user.school` |
 | `PathCheck` | Depth-N FK traversal: `manuscript.assessment_event.school_id = current_user.school` |
-| `ExistsCheck` | EXISTS / NOT EXISTS via junction table |
+| `ExistsCheck` | EXISTS / NOT EXISTS via a **single** junction table (one hop) |
 | `BoolComposite` | AND / OR / NOT over sub-predicates |
 | `Tautology` / `Contradiction` | Constant truth values for default-deny and open access |
 
@@ -43,7 +43,7 @@ SQL generation is a pure function over the algebra: `predicate → SQL fragment`
 
 ### Negative
 
-- Expressiveness is bounded by the six predicate types — novel rule forms require extending the algebra
+- Expressiveness is bounded by the six predicate types — novel rule forms require extending the algebra. Notably, `ExistsCheck` is a **single** junction hop: an entity that reaches the scoping pivot only *through an intermediate* entity (a two-junction path) cannot be `via`-scoped. The supported answer is to denormalize the link onto the entity and scope on that single hop — see `docs/reference/rbac-scope.md` Pattern E. A chained two-junction `via` was declined in #1306 (it would require a second multi-hop predicate path with its own fail-closed + validate-time-reject hardening; keeping the algebra closed was judged the better trade).
 - Link-time validation adds a mandatory parse+validate step before serving
 - Existing DSL files with informal scope rules require migration
 
