@@ -1,11 +1,14 @@
-"""Unit tests for `dazzle.back.runtime.scope_create_eval` (#1124, v0.71.22).
+"""Unit tests for `dazzle.back.runtime.scope_create_eval` (#1124, #1311).
 
-v1 enforcement supports the simple-predicate subset: ColumnCheck,
-UserAttrCheck, PathCheck depth 1, Tautology / Contradiction, and
-BoolComposite over those. FK-path (depth > 1) and ExistsCheck are
-rejected at link time by the linker; at runtime the walker raises
-ScopeCreateUnsupportedError if those leak through (defensive
-backstop).
+The simple-predicate subset (ColumnCheck, UserAttrCheck, PathCheck
+depth 1, Tautology / Contradiction, BoolComposite over those) is
+evaluated in pure Python against the payload — covered here.
+
+FK-path (depth > 1) and ExistsCheck predicates resolve via a
+payload-time SQL probe (#1311); the probe machinery is covered in
+`test_scope_create_probe.py`. When NO probe is supplied (as in the
+backstop tests below), those shapes raise ScopeCreateUnsupportedError
+rather than silently passing un-enforced.
 """
 
 from __future__ import annotations
@@ -122,14 +125,15 @@ def test_path_check_depth_one_passes() -> None:
     assert check_create_predicate(p, {"status": "draft"}, user_id="u-1") is True
 
 
-def test_path_check_depth_two_raises_at_runtime() -> None:
-    """v1 doesn't support FK-path predicates — the linker rejects
-    these at link time, but the runtime walker also raises as a
-    defensive backstop in case IR bypassed the linker."""
+def test_path_check_depth_two_without_probe_raises() -> None:
+    """A depth>1 FK-path predicate needs a payload-time probe (#1311).
+    With no probe supplied, the walker raises rather than passing an
+    un-enforced predicate — a defensive backstop. (With a probe it is
+    supported; see test_scope_create_probe.py.)"""
     p = PathCheck(
         path=["manuscript", "school_id"], op=CompOp.EQ, value=ValueRef(literal="school-42")
     )
-    with pytest.raises(ScopeCreateUnsupportedError, match="PathCheck with depth > 1"):
+    with pytest.raises(ScopeCreateUnsupportedError, match="depth > 1"):
         check_create_predicate(p, {"manuscript": "m-1"}, user_id="u-1")
 
 
@@ -203,7 +207,10 @@ def test_bool_composite_not_inverts() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_exists_check_raises_at_runtime() -> None:
+def test_exists_check_without_probe_raises() -> None:
+    """An ExistsCheck needs a payload-time probe (#1311). With no probe
+    supplied, the walker raises rather than passing un-enforced. (With a
+    probe it is supported; see test_scope_create_probe.py.)"""
     p = ExistsCheck(
         target_entity="TeamMembership",
         bindings=[

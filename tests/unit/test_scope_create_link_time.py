@@ -1,14 +1,13 @@
-"""Link-time validation tests for `scope: create:` predicate shapes (#1124).
+"""Link-time validation tests for `scope: create:` predicate shapes (#1124, #1311).
 
-v1 enforcement supports a narrow subset (ColumnCheck, UserAttrCheck,
-PathCheck depth 1, BoolComposite, Tautology, Contradiction). The
-linker rejects unsupported shapes — FK-path predicates with depth > 1,
-ExistsCheck / NotExistsCheck — at link time so users see the
-rejection during `dazzle validate`, not at request time.
-
-The rejection raises `RenderValidationError` (subclass of ValueError)
-with a clear message naming the unsupported shape and pointing at
-`docs/reference/rbac-scope.md` + #1124.
+As of #1311 (ADR-0028) the runtime evaluator resolves FK-path
+(depth > 1) and ExistsCheck / NotExistsCheck create-scope predicates
+via a payload-time SQL probe, so those shapes now LINK CLEANLY (they
+were rejected at link time under #1124 v1). The only remaining
+link-time rejection is a pathologically deep FK path (more than
+`linker._MAX_SCOPE_CREATE_FK_DEPTH` hops), which raises
+`RenderValidationError` (subclass of ValueError) naming the path and
+pointing at `docs/reference/rbac-scope.md` + ADR-0028.
 """
 
 from __future__ import annotations
@@ -18,7 +17,13 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.core.linker import RenderValidationError, build_appspec
+from dazzle.core.ir.predicates import CompOp, PathCheck, ValueRef
+from dazzle.core.linker import (
+    _MAX_SCOPE_CREATE_FK_DEPTH,
+    RenderValidationError,
+    _assert_scope_create_predicate_depth_bounded,
+    build_appspec,
+)
 from dazzle.core.parser import parse_modules
 
 _DSL_BASE = """module test
@@ -114,17 +119,17 @@ entity Task "Task":
 
 
 # ---------------------------------------------------------------------------
-# v1 unsupported shapes — must raise at link time
+# #1311 (ADR-0028): FK-path + EXISTS create-scope now link cleanly — the
+# runtime resolves them via a payload-time SQL probe.
 # ---------------------------------------------------------------------------
 
 
-def test_fk_path_predicate_on_create_is_rejected_at_link_time() -> None:
-    """`scope: create: team.org_id = current_user.org_id as: member`
-    is a depth-2 PathCheck (FK traversal). v1 rejects with a clear
-    message naming the path and pointing at the docs."""
-    with pytest.raises(RenderValidationError, match="FK-path"):
-        _link(
-            """
+def test_fk_path_predicate_on_create_is_supported() -> None:
+    """`scope: create: team.name = "Engineering" as: member` is a
+    depth-2 PathCheck (one FK hop). #1311 resolves it via a payload-time
+    probe, so it links cleanly (was rejected under #1124 v1)."""
+    _link(
+        """
 entity TaskWithFK "Task":
   id: uuid pk
   title: str(200) required
@@ -135,16 +140,16 @@ entity TaskWithFK "Task":
     create: team.name = "Engineering"
       as: member
 """
-        )
+    )
 
 
-def test_exists_check_on_create_is_rejected_at_link_time() -> None:
-    """`scope: create: via TeamMembership(user_id = current_user,
-    team_id = id) as: member` is an ExistsCheck. v1 rejects with a
-    clear message."""
-    with pytest.raises(RenderValidationError, match="ExistsCheck"):
-        _link(
-            """
+def test_exists_check_on_create_is_supported() -> None:
+    """`scope: create: via TeamMembership(user = current_user,
+    team = team) as: member` is an ExistsCheck. #1311 resolves it via a
+    payload-time EXISTS probe, so it links cleanly (was rejected under
+    #1124 v1)."""
+    _link(
+        """
 entity TaskWithExists "Task":
   id: uuid pk
   title: str(200) required
@@ -155,7 +160,39 @@ entity TaskWithExists "Task":
     create: via TeamMembership(user = current_user, team = team)
       as: member
 """
-        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# Bounded FK-path depth — a pathologically deep path still rejects at link time.
+# ---------------------------------------------------------------------------
+
+
+def test_fk_path_within_depth_cap_is_accepted() -> None:
+    """A path at exactly the hop cap is accepted (no raise).
+
+    The depth assertion only reads ``rule.personas``, so a lightweight
+    stub stands in for a full ScopeRule.
+    """
+    from types import SimpleNamespace
+
+    path = [f"hop{i}" for i in range(_MAX_SCOPE_CREATE_FK_DEPTH)] + ["name"]
+    pred = PathCheck(path=path, op=CompOp.EQ, value=ValueRef(literal="x"))
+    rule = SimpleNamespace(personas=["member"])
+    # Exactly _MAX hops — must not raise.
+    _assert_scope_create_predicate_depth_bounded(pred, "Task", rule)
+
+
+def test_fk_path_beyond_depth_cap_is_rejected() -> None:
+    """A path exceeding the hop cap raises a clear depth error."""
+    from types import SimpleNamespace
+
+    # _MAX + 1 hops → path length _MAX + 2.
+    path = [f"hop{i}" for i in range(_MAX_SCOPE_CREATE_FK_DEPTH + 1)] + ["name"]
+    pred = PathCheck(path=path, op=CompOp.EQ, value=ValueRef(literal="x"))
+    rule = SimpleNamespace(personas=["member"])
+    with pytest.raises(RenderValidationError, match="too deep"):
+        _assert_scope_create_predicate_depth_bounded(pred, "Task", rule)
 
 
 # ---------------------------------------------------------------------------

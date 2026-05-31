@@ -208,6 +208,8 @@ async def check_entity_op(
             user_id=user_id,
             user_roles=user_roles_raw,
             request=request,
+            service=getattr(info, "service", None),
+            fk_graph=getattr(info, "fk_graph", None),
         )
         return None
 
@@ -308,14 +310,18 @@ def _check_scope_create(
     user_id: str,
     user_roles: list[str],
     request: Request,
+    service: Any = None,
+    fk_graph: Any = None,
 ) -> None:
     """Walk `scope: create:` rules; raise HTTPException(403) on reject.
 
     Mirrors the logic in `route_generator._enforce_create_scope` so
     overrides see the same enforcement as framework-generated CREATE
-    routes. v1 supports the simple-predicate subset (ColumnCheck,
-    UserAttrCheck, PathCheck depth 1, BoolComposite); FK-path and
-    EXISTS are rejected at link time.
+    routes. Simple leaves (ColumnCheck, UserAttrCheck, PathCheck depth 1,
+    BoolComposite) evaluate in-Python; FK-path (depth > 1) and EXISTS
+    leaves resolve via a payload-time SQL probe built from the entity's
+    ``service`` repository (#1311, ADR-0028). When no service/DB is
+    available the probe-requiring shapes fail closed (default-deny 403).
     """
     scopes = getattr(access_spec, "scopes", None) or []
     create_rules = [
@@ -361,22 +367,37 @@ def _check_scope_create(
     auth_ctx = getattr(request.state, "auth_context", None) if hasattr(request, "state") else None
     user_attrs = _LazyUserAttrs(auth_ctx)
 
+    from dazzle.back.runtime.route_generator import build_create_scope_probe
     from dazzle.back.runtime.scope_create_eval import (
         ScopeCreateUnsupportedError,
         check_create_predicate,
     )
+    from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+
+    probe = build_create_scope_probe(service, entity_name)
+    schema = get_current_tenant_schema()
 
     for r in matched:
         predicate = getattr(r, "predicate", None)
         if predicate is None:
             continue
         try:
-            if check_create_predicate(predicate, payload, user_id=user_id, user_attrs=user_attrs):
+            if check_create_predicate(
+                predicate,
+                payload,
+                user_id=user_id,
+                user_attrs=user_attrs,
+                probe=probe,
+                fk_graph=fk_graph,
+                entity_name=entity_name,
+                schema=schema,
+            ):
                 return
         except ScopeCreateUnsupportedError:
             logger.warning(
-                "policy.check_entity_op:create-predicate-unsupported entity=%s — "
-                "link-time validator should have caught this",
+                "policy.check_entity_op:create-predicate-no-probe entity=%s — "
+                "FK-path / EXISTS create-scope needs a repository-backed probe "
+                "but none was available; denying.",
                 entity_name,
             )
             continue

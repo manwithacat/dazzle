@@ -2302,6 +2302,54 @@ class _LazyUserAttrs(dict):  # type: ignore[type-arg]
         return True
 
 
+def build_create_scope_probe(
+    service: Any,
+    entity_name: str,
+) -> Callable[[str, list[Any]], bool] | None:
+    """Build a sync ``scope: create:`` payload-time probe (#1311, ADR-0028).
+
+    The probe runs a parameterised ``SELECT 1 WHERE <expr> LIMIT 1`` on the
+    service's repository connection — which already applies the active tenant
+    schema to ``search_path`` — and returns whether it yielded a row. It lets
+    the create-scope walker evaluate FK-path (depth > 1) and EXISTS predicates
+    against the live DB at payload time, BEFORE the insert, fail-closed.
+
+    Returns None when the service exposes no repository/DB (custom services,
+    test doubles); the walker treats a None probe as "cannot evaluate" and
+    raises :class:`ScopeCreateUnsupportedError`, which the enforcer maps to a
+    default-deny 403.
+
+    Shared by the framework CREATE route (:func:`_enforce_create_scope`) and
+    the override path (``policy._check_scope_create``) so both evaluate the
+    same boundary.
+    """
+    repo = getattr(service, "_repository", None) if service is not None else None
+    db = getattr(repo, "db", None) if repo is not None else None
+    if db is None:
+        return None
+
+    def _probe(sql: str, params: list[Any]) -> bool:
+        full_sql = f"SELECT 1 WHERE {sql} LIMIT 1"
+        try:
+            with db.connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(full_sql, params)  # nosemgrep
+                return cursor.fetchone() is not None
+        except Exception:
+            # ADR-0028 rule 4: fail closed, never leak internal detail. A
+            # malformed probe (or a transient DB error) denies the create
+            # rather than 500-ing or silently allowing it; the warning log
+            # carries the detail for operators.
+            logger.warning(
+                "scope: create: probe query failed — denying (fail-closed). entity=%s",
+                entity_name,
+                exc_info=True,
+            )
+            return False
+
+    return _probe
+
+
 def _enforce_create_scope(
     *,
     cedar_access_spec: "EntityAccessSpec | None",
@@ -2310,6 +2358,8 @@ def _enforce_create_scope(
     user_roles: list[str],
     entity_name: str,
     auth_context: "AuthContext | None",
+    service: Any = None,
+    fk_graph: "FKGraph | None" = None,
 ) -> None:
     """`scope: create:` enforcement (#1124, v0.71.22).
 
@@ -2398,19 +2448,25 @@ def _enforce_create_scope(
     # code's resolver was always empty regardless of the attribute name.
     user_attrs = _LazyUserAttrs(auth_context)
 
-    # Run the v1-supported walker against the predicate. Any matched
-    # rule passing the walker is enough to allow the insert (OR of
-    # matched rules). If none pass → 403.
+    # Run the walker against the predicate. Any matched rule passing the
+    # walker is enough to allow the insert (OR of matched rules). If none
+    # pass → 403. FK-path (depth > 1) and EXISTS predicates resolve via a
+    # payload-time SQL probe on the entity's repository (#1311, ADR-0028);
+    # simple leaves stay pure-Python against the payload.
     from dazzle.back.runtime.scope_create_eval import (
         ScopeCreateUnsupportedError,
         check_create_predicate,
     )
+    from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+
+    probe = build_create_scope_probe(service, entity_name)
+    schema = get_current_tenant_schema()
 
     for r in matched:
         predicate = getattr(r, "predicate", None)
         if predicate is None:
             # Condition-tree fallback (legacy path). Not supported on
-            # create v1 — the linker rejects this case too. Defensive:
+            # create — the linker rejects this case too. Defensive:
             # default-deny if we hit it at runtime.
             continue
         try:
@@ -2419,14 +2475,20 @@ def _enforce_create_scope(
                 payload,
                 user_id=str(user_id) if user_id else "",
                 user_attrs=user_attrs,
+                probe=probe,
+                fk_graph=fk_graph,
+                entity_name=entity_name,
+                schema=schema,
             ):
                 return  # at least one matched rule passes — allow
         except ScopeCreateUnsupportedError:
-            # Should have been caught at link time. Log + default-deny.
+            # A probe-requiring shape with no probe available (no DB on the
+            # service). Fail closed — default-deny rather than allow an
+            # un-enforced FK-path / EXISTS create-scope predicate.
             logger.warning(
-                "scope: create: predicate has an unsupported shape at "
-                "runtime — link-time validation should have caught this. "
-                "entity=%s",
+                "scope: create: predicate needs a payload-time probe but "
+                "none was available (no repository/DB on the service). "
+                "Denying. entity=%s",
                 entity_name,
             )
             continue
@@ -3476,15 +3538,15 @@ def create_create_handler(
 
         data = input_schema.model_validate(body)
 
-        # v0.71.22 (#1124): scope: create: enforcement. Predicate is
+        # #1124 / #1311: scope: create: enforcement. Predicate is
         # evaluated AFTER current_user / persona-backed-ref injection
         # (so `created_by = current_user as: member` evaluates against
         # the resolved payload) but BEFORE service.execute, so a
-        # predicate rejection 403s without ever touching the DB. v1
-        # supports simple predicates only (ColumnCheck, UserAttrCheck,
-        # PathCheck depth 1, BoolComposite); FK-path and EXISTS are
-        # rejected at link time by the linker. See
-        # docs/reference/rbac-scope.md.
+        # predicate rejection 403s before the insert. Simple leaves
+        # (ColumnCheck, UserAttrCheck, PathCheck depth 1, BoolComposite)
+        # evaluate in-Python against the payload; FK-path (depth > 1) and
+        # EXISTS leaves resolve via a payload-time SQL probe on the
+        # entity's repository (ADR-0028). See docs/reference/rbac-scope.md.
         _scope_user_roles = list(_extra.get("user_roles") or [])
         # `mode="json"` so UUID / datetime payload fields are normalised to
         # their string form. The create-scope walker compares them against
@@ -3499,6 +3561,8 @@ def create_create_handler(
             user_roles=_scope_user_roles,
             entity_name=entity_name,
             auth_context=_extra.get("auth_context"),
+            service=service,
+            fk_graph=spec.handler.fk_graph,
         )
 
         # Handle idempotent duplicate: unique constraint on idempotency_key

@@ -50,6 +50,22 @@ class CurrentUserRef:
     """Marker: the route handler must resolve this to the current user's entity UUID."""
 
 
+@dataclass(frozen=True)
+class PayloadFieldRef:
+    """Marker: resolve to the create payload's value for ``field_name``.
+
+    Used only by the ``scope: create:`` payload-time probe (#1311). At
+    create time the root row does not exist yet, so a PathCheck's root FK
+    column — or an ExistsCheck binding that references an entity column /
+    ``id`` — must bind to the *incoming payload's* value rather than a
+    column on a (non-existent) root row. The create-scope walker
+    (``scope_create_eval``) substitutes ``payload[field_name]`` (trying the
+    relation-name / ``<name>_id`` variants) before executing the probe SQL.
+    """
+
+    field_name: str
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -260,31 +276,27 @@ def _qualify_table(name: str, schema: str | None) -> str:
     return ident
 
 
-def _compile_path_check(
+def _path_check_subquery(
     predicate: PathCheck,
     entity_name: str,
     fk_graph: FKGraph,
     *,
     schema: str | None = None,
-) -> tuple[str, list[Any]]:
-    """Compile a PathCheck to a nested IN (SELECT …) expression.
+) -> tuple[str, str, str, list[Any]]:
+    """Decompose a PathCheck into the pieces both compile forms need.
 
-    The path is walked inside-out.  For a depth-2 path on entity ``Feedback``
-    with path ``["manuscript", "assessment_event", "school_id"]`` the result
-    is::
+    Returns ``(root_fk_field, root_target_table, where_body, params)`` where
+    ``root_target_table`` is the (schema-qualified) table the root FK points
+    at, and ``where_body`` is the WHERE condition that lives on that table —
+    the terminal comparison for a 1-hop path, or a nested ``"fk" IN (SELECT
+    "id" FROM … )`` for deeper paths. The full existing-row subquery is then
+    ``SELECT "id" FROM <root_target_table> WHERE <where_body>``.
 
-        "manuscript_id" IN (
-            SELECT "id" FROM "Manuscript"
-            WHERE "assessment_event_id" IN (
-                SELECT "id" FROM "AssessmentEvent"
-                WHERE "school_id" = %s
-            )
-        )
-
-    Algorithm:
-    1. Walk path segments (all but the last) to collect FK hops.
-    2. The last segment is the terminal comparison field on the final entity.
-    3. Build subqueries from the innermost outward.
+    For a depth-3 path on ``Feedback`` with
+    ``["manuscript", "assessment_event", "school_id"]`` the pieces are
+    ``root_fk_field="manuscript_id"``, ``root_target_table='"Manuscript"'``,
+    ``where_body='"assessment_event_id" IN (SELECT "id" FROM "AssessmentEvent"
+    WHERE "school_id" = %s)'``.
     """
     path = predicate.path
 
@@ -325,33 +337,79 @@ def _compile_path_check(
         innermost_condition = f"{quote_identifier(terminal_field)} {value_op} %s"
         params = list(value_params)
 
-    # Build subqueries from inside out.
-    # The innermost SELECT is on the target entity of the last hop, selecting
-    # the terminal comparison field.
+    # Walk hops from the deepest toward the root, accumulating the WHERE body
+    # that lives on each successive entity's *target* table. The innermost
+    # body is the terminal condition on the final entity.
     _last_from, last_fk_field, last_target_entity = hops[-1]
+    from_table = _qualify_table(last_target_entity, schema)
+    where_body = innermost_condition
+    # FK on the preceding entity that points into `from_table`.
+    match_fk = last_fk_field
 
-    # Innermost: SELECT "id" FROM final_entity WHERE <condition>
-    # We select PKs so the parent subquery can match its FK against them.
-    inner_sql = (
-        f'SELECT "id" FROM {_qualify_table(last_target_entity, schema)} WHERE {innermost_condition}'
-    )
-    # The FK column in the preceding entity that points into this subquery
-    inner_match_fk = last_fk_field
-
-    # Walk remaining hops outward (second-to-last toward root, reversed)
     for _from_entity, fk_field, target_entity in reversed(hops[:-1]):
-        # Each layer: SELECT "id" FROM intermediate WHERE fk_to_next IN (deeper)
-        inner_sql = (
-            f'SELECT "id" '
-            f"FROM {_qualify_table(target_entity, schema)} "
-            f"WHERE {quote_identifier(inner_match_fk)} IN ({inner_sql})"
-        )
-        inner_match_fk = fk_field
+        inner_select = f'SELECT "id" FROM {from_table} WHERE {where_body}'
+        from_table = _qualify_table(target_entity, schema)
+        where_body = f"{quote_identifier(match_fk)} IN ({inner_select})"
+        match_fk = fk_field
 
-    # Outermost clause: root fk_field IN (subquery)
     root_fk_field = hops[0][1]
-    sql = f"{quote_identifier(root_fk_field)} IN ({inner_sql})"
-    return sql, params
+    return root_fk_field, from_table, where_body, params
+
+
+def _compile_path_check(
+    predicate: PathCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
+    """Compile a PathCheck to a nested ``"<root_fk>" IN (SELECT …)`` expression.
+
+    Filters an *existing* root row. For a depth-3 path on ``Feedback`` with
+    ``["manuscript", "assessment_event", "school_id"]`` the result is::
+
+        "manuscript_id" IN (
+            SELECT "id" FROM "Manuscript"
+            WHERE "assessment_event_id" IN (
+                SELECT "id" FROM "AssessmentEvent" WHERE "school_id" = %s
+            )
+        )
+    """
+    root_fk_field, root_target_table, where_body, params = _path_check_subquery(
+        predicate, entity_name, fk_graph, schema=schema
+    )
+    inner_sql = f'SELECT "id" FROM {root_target_table} WHERE {where_body}'
+    return f"{quote_identifier(root_fk_field)} IN ({inner_sql})", params
+
+
+def compile_path_check_probe(
+    predicate: PathCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
+    """Compile a depth>1 PathCheck into a create-scope probe expression (#1311).
+
+    Unlike :func:`_compile_path_check` (which binds the root FK *column* of an
+    existing row), the create-scope probe has no root row yet — so it matches
+    the *payload's* root FK value against the target table's ``id``. The
+    returned SQL is a boolean expression suitable for ``SELECT 1 WHERE <sql>``::
+
+        EXISTS (SELECT 1 FROM "TeachingGroup" WHERE "id" = %s AND ("department" = %s))
+
+    The payload FK is bound as ``"id" = %s`` (uuid column on the left, param on
+    the right — the type-coercion-safe shape, matching the existing
+    ``"<col>" = current_user`` enforcement). ``params[0]`` is a
+    :class:`PayloadFieldRef` for the root FK column (the walker substitutes the
+    payload's value); the remaining params are the terminal-condition value
+    markers (``CurrentUserRef`` / ``UserAttrRef`` / literals), in order.
+    """
+    root_fk_field, root_target_table, where_body, params = _path_check_subquery(
+        predicate, entity_name, fk_graph, schema=schema
+    )
+    sql = f'EXISTS (SELECT 1 FROM {root_target_table} WHERE "id" = %s AND ({where_body}))'
+    return sql, [PayloadFieldRef(root_fk_field), *params]
 
 
 def _compile_dotted_junction_predicate(
@@ -416,8 +474,17 @@ def _compile_exists_check(
     fk_graph: FKGraph | None = None,
     *,
     schema: str | None = None,
+    payload_mode: bool = False,
 ) -> tuple[str, list[Any]]:
-    """Compile an ExistsCheck to an [NOT] EXISTS (SELECT 1 FROM …) expression."""
+    """Compile an ExistsCheck to an [NOT] EXISTS (SELECT 1 FROM …) expression.
+
+    ``payload_mode`` (#1311): when True, bindings whose target is an entity
+    column or ``id`` resolve to a :class:`PayloadFieldRef` placeholder rather
+    than a ``"<entity>"."<col>"`` reference. This is the create-scope probe
+    form — at create time the root row does not exist, so entity-side values
+    come from the incoming payload. ``current_user`` / ``current_user.<attr>``
+    / ``null`` targets are unaffected.
+    """
     target = _qualify_table(predicate.target_entity, schema)
     conditions: list[str] = []
     params: list[Any] = []
@@ -436,13 +503,22 @@ def _compile_exists_check(
             value_sql = "%s"
             extra_params.append(CurrentUserRef())
         elif target_val == "id":
-            value_sql = f"{quote_identifier(entity_name)}.{quote_identifier('id')}"
+            if payload_mode:
+                value_sql = "%s"
+                extra_params.append(PayloadFieldRef("id"))
+            else:
+                value_sql = f"{quote_identifier(entity_name)}.{quote_identifier('id')}"
         elif target_val == "null":
             pass  # handled specially below
         elif target_val.startswith("current_user."):
             attr = target_val[len("current_user.") :]
             value_sql = "%s"
             extra_params.append(UserAttrRef(attr))
+        elif payload_mode:
+            # Entity column referenced from a not-yet-existent root row →
+            # bind to the create payload's value (#1311).
+            value_sql = "%s"
+            extra_params.append(PayloadFieldRef(target_val))
         else:
             value_sql = f"{quote_identifier(entity_name)}.{quote_identifier(target_val)}"
 
@@ -482,6 +558,30 @@ def _compile_exists_check(
     exists_kw = "NOT EXISTS" if predicate.negated else "EXISTS"
     sql = f"{exists_kw} (SELECT 1 FROM {target} WHERE {where_clause})"
     return sql, params
+
+
+def compile_exists_check_probe(
+    predicate: ExistsCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
+    """Compile an ExistsCheck into a create-scope probe expression (#1311).
+
+    Like :func:`_compile_exists_check` but entity-column / ``id`` bindings
+    resolve to :class:`PayloadFieldRef` markers (the root row does not exist
+    yet at create time). The returned SQL is an ``[NOT] EXISTS (…)`` boolean
+    expression suitable for ``SELECT 1 WHERE <sql>``.
+
+    Note: a binding whose target is the root entity's own ``id`` is
+    effectively unsatisfiable at create time — the row's id isn't in the
+    payload yet, so it resolves to NULL → no match → deny. That's fail-closed
+    and correct, but such a binding is almost never what an author wants on a
+    *create* rule (the common shape references a payload FK column, e.g.
+    ``via M(user = current_user, team = team)``).
+    """
+    return _compile_exists_check(predicate, entity_name, fk_graph, schema=schema, payload_mode=True)
 
 
 def _compile_bool_composite(

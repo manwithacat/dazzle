@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.63] - 2026-05-31
+
+### Added
+
+- **FK-path + EXISTS `scope: create:` predicates via a payload-time SQL probe (#1311 — the #1124 v2 unlock; trajectory 1 of ADR-0028).** `scope: create:` was depth-1 / payload-only: a `PathCheck` deeper than one hop (`teaching_group.department = current_user.department`) and any `ExistsCheck` (`via Junction(...)`) were rejected at link time, with denormalization as the only workaround — which ADR-0028 proved **spoofable** (the depth-1 walker reads the payload's scope-key column verbatim, never re-deriving it from the source FK). Create-scope is now a **hybrid** walker: simple leaves (ColumnCheck / UserAttrCheck / PathCheck depth 1 / BoolComposite) still evaluate in-Python against the payload; FK-path (depth > 1) and EXISTS / NOT-EXISTS leaves resolve via a payload-time SQL probe — `EXISTS (SELECT 1 FROM <target> WHERE "id" = %s AND (<rest>))` for a path (the payload's root FK looked up against the DB), `[NOT] EXISTS (SELECT 1 FROM <junction> WHERE …)` for a junction — run on the entity's repository connection *before* the insert, fail-closed. This closes the spoof **inside the predicate algebra** (ADR-0009): the boundary stays statically validated, RBAC-matrix-visible, and conformance-checked rather than buried in handler code. Both the framework CREATE route (`route_generator._enforce_create_scope`) and the override path (`policy.check_entity_op` / `# dazzle:implements`) build the same probe from the entity's registered service, so they enforce identically. Scope keys are always derived from the authenticated principal (`current_user` resolves to the DSL User-entity id, consistent with the read/list/update/delete path), never the request body. FK paths are bounded at 4 hops (a deeper path is rejected at link time). New: `predicate_compiler.compile_path_check_probe` / `compile_exists_check_probe` + `PayloadFieldRef` marker; `route_generator.build_create_scope_probe`. Probe SQL puts the uuid column on the left of every `= %s` (the coercion-safe shape the read/list path already relies on). `docs/reference/rbac-scope.md` rewritten accordingly.
+
+### Changed
+
+- **`scope: create:` link-time validation no longer rejects FK-path / EXISTS shapes (#1311).** The `linker` check that raised `RenderValidationError` for `PathCheck` depth > 1 and `ExistsCheck` on `create` is replaced by a bounded FK-path **depth cap** (`_MAX_SCOPE_CREATE_FK_DEPTH = 4`); those shapes now link cleanly and resolve at runtime via the probe. The runtime walker (`scope_create_eval.check_create_predicate`) gains `probe` / `fk_graph` / `entity_name` / `schema` parameters; with no probe supplied (programmatic construction, a service without a DB) a probe-requiring shape raises `ScopeCreateUnsupportedError`, which both enforcers map to a default-deny (fail-closed).
+
+### Agent Guidance
+
+- **FK-path and junction (`via`) predicates now work on `scope: create:`** — express a multi-hop write boundary directly (`scope: create: teaching_group.department = current_user.department`) instead of denormalizing a client-settable scope key (spoofable, ADR-0028). The framework resolves the FK chain against the DB at payload time, fail-closed. Paths are capped at 4 hops. This is trajectory 1 of ADR-0028; #1312 (update-destination revalidation) and #1313 (extend `atomic`) compose with the same probe for their FK-path halves and remain open. Not yet validated end-to-end against a live Postgres (probe machinery is unit-tested with an injected fake; the SQL mirrors the proven read/list scope path) — exercise an FK-path create-scope rule in an example app to close that gap.
+
 ## [0.80.62] - 2026-05-31
 
 ### Added

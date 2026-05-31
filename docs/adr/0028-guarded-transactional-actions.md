@@ -60,6 +60,19 @@ A guarded action **MUST NOT** rely on a denormalized, client-settable scope key 
 2. **Re-parent everything onto the state machine** (model the move as a guarded transition). Rejected — `TransitionGuard.guard_expr` only sees the in-memory row (no DB lookup, only a scalar `current_user`, so it can reach neither the destination's FK path nor `current_user.department`), and transition-effect creates bypass scope enforcement. The state machine is the right model for the *source* transition but is structurally single-row.
 3. **Bless denormalization for create-scope.** Rejected — spoofable (verified); documented here as an anti-pattern.
 
+## Implementation status
+
+- **#1311 (FK-path + EXISTS create-scope) — shipped.** `scope: create:`
+  now accepts `PathCheck` depth > 1 and `ExistsCheck` / `NotExistsCheck`,
+  resolved by a payload-time SQL probe (`scope_create_eval` hybrid walker +
+  `predicate_compiler.compile_path_check_probe` /
+  `compile_exists_check_probe`, run via `route_generator.build_create_scope_probe`).
+  The link-time check now only rejects a pathologically deep FK path
+  (> 4 hops). The override path (`policy.check_entity_op`) builds the same
+  probe from the entity's service. The guard stays in the algebra (ADR-0009).
+- **#1312 (update-destination revalidation)** and **#1313 (extend `atomic`)**
+  — pending; both compose with the #1311 probe for their FK-path halves.
+
 ## Cross-reference
 
-`docs/reference/rbac-scope.md` points the `create`-scope FK-path rejection (and the `ScopeCreateUnsupportedError` / link-time `RenderValidationError`) at this ADR as the sanctioned pattern, rather than at denormalization.
+`docs/reference/rbac-scope.md` documents the create-scope hybrid walker (in-Python simple leaves + payload-time probe for FK-path / EXISTS) and points the denormalization anti-pattern at this ADR as the sanctioned alternative.

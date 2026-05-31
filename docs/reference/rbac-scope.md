@@ -21,7 +21,7 @@ when it enforces at runtime, and what the canonical idiom looks like.
 | `read` | Pre-query — folded into the WHERE of the read-by-id query. (Plumbed via the same path as `list` in v0.71.19.) | "will see 0 records" | ✅ Enforced since v0.71.19 |
 | `update` | Pre-write — folded into the WHERE of the pre-read that the permit-gate uses; if the predicate rejects the target row, the request 404s before the update SQL runs. | "the request will 404 at runtime — add a `scope: update:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.19 |
 | `delete` | Same as `update`. | Same as `update`. | ✅ Enforced since v0.71.19 |
-| `create` | Pre-write — predicate is evaluated against the payload AFTER framework defaulting (`current_user` injection, persona-backed refs) but BEFORE service insert. 403 with `scope_create_denied` detail if the predicate rejects. v1 supports ColumnCheck / UserAttrCheck / PathCheck depth 1 / BoolComposite; FK-path (depth > 1) and ExistsCheck are rejected at link time (see #1124 for the v2 roadmap). | "the inserted row will 403 at runtime — add a `scope: create:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.22 (simple predicates) |
+| `create` | Pre-write — predicate is evaluated against the payload AFTER framework defaulting (`current_user` injection, persona-backed refs) but BEFORE service insert. 403 with `scope_create_denied` detail if the predicate rejects. Simple leaves (ColumnCheck / UserAttrCheck / PathCheck depth 1 / BoolComposite) evaluate in-Python against the payload; FK-path (depth > 1) and ExistsCheck/NotExistsCheck resolve via a payload-time SQL probe (#1311, ADR-0028). | "the inserted row will 403 at runtime — add a `scope: create:` rule or `scope: all as: <persona>`" | ✅ Enforced since v0.71.22 (simple) / #1311 (FK-path + EXISTS) |
 
 The `update` / `delete` enforcement landed in v0.71.19 as part of
 closing #1123 ("RBAC no_scope_rule lint fires 56× across own
@@ -35,19 +35,27 @@ systems; this release closes that gap for `update` and `delete`.
 
 `create` predicates are conceptually different from `read` / `list` /
 `update` / `delete`: there's no existing row to filter against —
-there's a payload waiting to become a row. v0.71.22 (#1124) ships
-enforcement for the simple-predicate subset:
+there's a payload waiting to become a row. Enforcement is a **hybrid**
+walker (#1124 v0.71.22 for the simple subset; #1311 / ADR-0028 for
+FK-path + EXISTS):
 
-- **What's supported:** `ColumnCheck` (`field op literal`),
-  `UserAttrCheck` (`field op current_user[.attr]`), `PathCheck`
-  depth 1, `Tautology` / `Contradiction`, and `BoolComposite`
-  (`and` / `or` / `not`) over those. This covers ~80% of real-world
-  scope-create rules.
-- **What's rejected at link time:** `PathCheck` with depth > 1
-  (FK-path predicates like `manuscript.school_id = current_user.school`)
-  and `ExistsCheck` / `NotExistsCheck` (junction-table predicates
-  like `via TeamMembership(...)`). These need a payload-time SQL
-  probe that v1 doesn't implement; tracked under #1124 v2.
+- **Evaluated in-Python against the payload (no DB roundtrip):**
+  `ColumnCheck` (`field op literal`), `UserAttrCheck`
+  (`field op current_user[.attr]`), `PathCheck` depth 1,
+  `Tautology` / `Contradiction`, and `BoolComposite`
+  (`and` / `or` / `not`) over those.
+- **Resolved via a payload-time SQL probe (#1311):** `PathCheck` with
+  depth > 1 (FK-path predicates like
+  `teaching_group.department = current_user.department`) and
+  `ExistsCheck` / `NotExistsCheck` (junction-table predicates like
+  `via TeamMembership(user = current_user, team = team)`). The probe
+  resolves the FK chain / junction membership against the DB *using
+  the payload's FK value* — `%s IN (SELECT … WHERE …)` /
+  `EXISTS (SELECT 1 FROM junction WHERE …)` — BEFORE the insert,
+  fail-closed. This keeps the boundary **in the predicate algebra**
+  (ADR-0009): statically validated, RBAC-matrix-visible, and
+  conformance-checked, rather than buried in handler code. FK paths
+  are bounded (≤ 4 hops); a deeper path is rejected at link time.
 
 Predicate evaluation runs AFTER framework defaulting — specifically
 after `inject_current_user_refs` (#774) has filled `current_user`
@@ -57,28 +65,22 @@ against the resolved payload, so members can omit `created_by` from
 the request body and the framework's auto-injection brings the
 predicate to True.
 
-When the v1 supported set isn't enough, express the constraint via:
-
-- **`invariant:` blocks** — predicate-style checks the framework
-  evaluates at insert time. Good for "the new row's `X` must equal
-  `Y`" rules that don't depend on user context.
-- **Service-layer hooks** — register a pre-create hook on the
-  service that rejects payloads failing your check. Good for rules
-  that need FK-path or junction-table semantics until #1124 v2
-  lands.
-
-> **Do NOT denormalize a scope key onto the entity to satisfy depth-1
-> create-scope** (e.g. copying `department` onto a row to write
-> `scope: create: department = current_user.department`). A
-> client-settable denormalized column is **spoofable** — create-scope
-> reads the payload value verbatim and never re-derives it from the
-> source FK, so a caller sends `department=mine` with a foreign
-> `teaching_group` and the row lands in the wrong scope. When the
-> boundary is a multi-hop FK path on a write — especially a multi-step
-> "move" that touches a source *and* a destination — follow the
-> **guarded transactional action** pattern and its normative rules
-> (derive scope keys from the authenticated principal; validate every
-> touched entity; one transaction; fail closed). See
+> **Do NOT denormalize a scope key onto the entity to "simplify" a
+> create boundary** (e.g. copying `department` onto a row to write
+> `scope: create: department = current_user.department` instead of the
+> FK-path form). A client-settable denormalized column is
+> **spoofable** — a depth-1 ColumnCheck reads the payload value
+> verbatim and never re-derives it from the source FK, so a caller
+> sends `department=mine` with a foreign `teaching_group` and the row
+> lands in the wrong scope. Express the real boundary as the FK-path
+> predicate (`scope: create: teaching_group.department =
+> current_user.department`) — the #1311 probe derives the destination's
+> department from the FK against the DB, closing the spoof. When the
+> operation is a multi-step "move" that touches a source *and* a
+> destination, follow the **guarded transactional action** pattern and
+> its normative rules (derive scope keys from the authenticated
+> principal; validate every touched entity; one transaction; fail
+> closed). See
 > [ADR-0028](../adr/0028-guarded-transactional-actions.md).
 
 ## Syntax
@@ -106,8 +108,9 @@ entity Task "Task":
     read: all
       as: admin, manager
 
-    # Create — declared but not yet enforced (#1124). The framework
-    # treats this as documentation-of-intent for now.
+    # Create — enforced at request time (#1124 simple shapes; #1311
+    # FK-path + EXISTS via payload-time probe). `all` = unrestricted
+    # create for these personas.
     create: all
       as: admin, manager, member
 
@@ -450,12 +453,16 @@ predicate against the post-default payload.
 - **Wrapper can't find Request or named path param** → 500 with
   diagnostic detail. Framework-bug-shaped, not user-error-shaped.
 
-### v1 supported predicate shapes for `scope: create:` enforcement
+### Supported predicate shapes for `scope: create:` enforcement
 
-Same as the framework's own create-route enforcement (#1124):
-ColumnCheck, UserAttrCheck, PathCheck depth 1, BoolComposite over
-those. FK-path (depth > 1) and ExistsCheck/NotExistsCheck are rejected
-at link time.
+Same as the framework's own create-route enforcement: ColumnCheck,
+UserAttrCheck, PathCheck (any bounded depth), ExistsCheck /
+NotExistsCheck, and BoolComposite over those. Depth-1 shapes evaluate
+in-Python against the payload; FK-path (depth > 1) and EXISTS shapes
+resolve via the same payload-time SQL probe (#1311, ADR-0028) — the
+override path (`check_entity_op`) builds the probe from the entity's
+registered service, so it enforces identically to the framework
+create route.
 
 ## Further reading
 
