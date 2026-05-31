@@ -1,0 +1,155 @@
+# ADR-0029 — Atomic Flows: the Schema-Local Transactional-Intent Substrate
+
+**Status:** Proposed (refined per design review 2026-06-01 — see *Implementation status* for the #1313 re-decomposition and the deferred items; ready for Accept once the conservation/ADR-0015 boundary stance is confirmed).
+**Issue:** #1320 (proposal). Consumed by #1313 (extend `atomic`, ADR-0028), which becomes the first concrete consumer of the model defined here rather than its definition.
+**Relates:** ADR-0009 (predicate algebra), ADR-0010 (permit/scope separation), ADR-0015 (TigerBeetle ledgers — owns the literal double-entry / conserved-quantity case; see *The ADR-0015 boundary*), ADR-0020 (process / lifecycle transitions — overlapping "transition-with-effects" territory; seam flagged open), ADR-0025 (entity-level authorization), ADR-0028 (guarded transactional actions), #1228 (atomic runtime), #1311 (FK-path create-scope — shipped v0.80.63), #1312 (update-destination revalidation — shipped v0.80.64)
+
+## Decision
+
+Promote `atomic` from "a multi-step transactional executor that needs some authorization wiring" to **the** model of a mutation to the AppSpec schema. A single guarded CRUD operation is the degenerate **n=1** case of an atomic flow; the guarded department-scoped reassign (ADR-0028's motivating case, which #1313 makes real — the shipped `atomic` runtime is create-only today) is the **n=k** case. `rbac/`, `testing/`, and `specs/` reason about **one** object — *a transactional intent over declared entities* — not two unrelated authorization paths (per-operation CRUD scope here, atomic flows there).
+
+The generalisation is in the **concept and the analysis surface**. It is explicitly **not** a runtime merge:
+
+1. **Unify the model — via a named shared projection, not just shared prose.** The matrix, conformance, the spec extractor, and the API-surface audit see every mutation — n=1 or n=k — through one lens: a set of declared steps over AppSpec entities, executed in one transaction, each step authorized by the predicate algebra, the whole intent recorded as an audit fact, optionally subject to a **flow-level invariant** spanning steps. Concretely, this requires a **common analysis IR**: every step (create / update / end-date / delete), and the n=1 CRUD operation, projects to the same `(entity, op, scope_predicate)` tuple the entity-level RBAC matrix already consumes. n=1 emits one tuple; an n=k flow emits k. The matrix/conformance/spec-extractor read *that projection*, so unification is structural (one IR shape both producers normalise into), not two analyzers behind one diagram. **Building this projection is the load-bearing part of #1313 — without it the "one object" claim is cosmetic.**
+2. **Specialise the runtime.** The shipped n=1 CRUD path stays a fast-pathed special case. This ADR does **not** rewrite the CRUD executor to route through the multi-step engine; the abstraction unifies, the runtime specialises. (The shared projection above is a read-side *analysis* artifact derived from the IR — it does not couple the two runtimes.)
+
+This reframe is what makes ADR-0028's #1313 (wiring `atomic_flows` into `rbac/`/`testing/`/`specs/`) load-bearing rather than incidental: it is the price of the unification, not a tidy-up.
+
+## The schema-local boundary (load-bearing definition)
+
+> `atomic` is Dazzle's **schema-local transaction primitive**. It is for multi-step mutations over entities declared in the AppSpec, executed inside one database transaction, with **every touched entity — and every entity its guards read — authorized through the entity-level `permit:`/`scope:` model applied to each step as if it were a standalone guarded operation** (FK-path create-scope, #1311, and destination revalidation, #1312, included).
+>
+> It is **not** a general command/action system, **not** a workflow engine, and **not** a place for arbitrary handler-time authorization. If an operation needs external side effects, long-running orchestration, human approval, compensation, or resources outside the DSL-defined schema, it belongs in a process/service/integration layer, not in `atomic`.
+
+**"Schema-local" is defined precisely, and carries the boundary** via three clauses: (a) every entity an atomic *writes* is declared in the AppSpec; (b) every entity its guards *read* is declared in the AppSpec; and (c) the entire effect is a set of rows committed in **one** database transaction. The definition (these three clauses plus normative invariants 1–2) carries the boundary; the use-case list below is illustrative, not normative.
+
+Most exclusions follow from failing one of the three clauses. Two grey cases pass all three yet still need an explicit ruling, because the clauses alone don't adjudicate them:
+
+- **An idempotency key / retry.** Re-invoking a flow with the same key is a cross-invocation concern the single-transaction clause is silent on. A flow has no compensation and no mid-flight retry (invariant 7, no blocking); a *whole-flow* retry after a serialization failure (see invariant 4) is the caller's concern, keyed exactly as ADR-0015 keys a `transaction`. Atomic flows MAY carry an `idempotency_key`; they do not retry internally.
+- **A DB-generated / computed scope-key column.** "In the AppSpec, one transaction" — yet a column the DB populates *after* the app-layer guard runs is the exact spoofing vector ADR-0028 flagged (and condemned). It remains out of bounds: a guard MUST read a column whose value is known at guard time, not one the DB derives post-check. (This is hypothetical for Dazzle-native apps — the DSL exposes no author-declarable DB-side derivation without a hand-rolled trigger, itself an ADR-0017 violation.)
+
+A useful one-line test for an agent reading the AppSpec: **an atomic flow is a manifest, not a script.** Declared steps the framework executes and orders — not author code that runs *between* steps.
+
+Two exclusions deserve their *reason* stated, because the reason is sharper than the prohibition:
+
+- **Compensation is definitionally absent, not merely out of scope.** Compensation (the saga pattern) exists *because* a system cannot roll back. `atomic`'s entire value is that it **can** — single transaction, rollback-all. If an operation needs compensation, it has already left the single-transaction world, which is the boundary. There is nothing to compensate *for* inside an atomic flow.
+- **"Human approval" excludes a blocking gate, not a modelled workflow.** A transaction cannot wait on external-actor latency, so no step may *block* on a human. An approval *state machine* is fine — it is modelled as transitions (ADR-0028, alt. 2), each of which may itself be an atomic. The line is **latency-holding vs. state-modelling**: no step blocks on an external actor; a transaction cannot wait.
+
+## What this buys (why the unification is real, not cosmetic)
+
+Each capability below is something the n=1 CRUD model **structurally cannot express** — which is the evidence that this is a genuine generalisation and not a rename.
+
+1. **Derived step ordering — for the DAG-of-creates family; declared order elsewhere.** Because Dazzle owns the FK graph, a *create-only* transactional intent over a DAG of FKs (invoice + line items; order + lines + reservations) does not require the author to order the steps — the framework topologically sorts them parent-before-child. The current `atomic` requires hand-ordered steps even here; schema-ownership is what makes *declarative-and-safe* possible for this family. **Honest limit (the FK graph does not determine order in general):** two steps on the *same* entity (temporal end-date-then-create), the *reverse*-of-topo order of a merge fan-out (repoint children, then retire the now-childless parent), and *cyclic / self-referential* FKs (`Employee.manager → Employee`) are all under-determined or undefined by FK topology — the ordering constraint there is temporal/semantic, not structural. For those, the flow **falls back to the author's declared step order** (today's behaviour), and the framework MUST detect FK cycles rather than loop. Derived ordering is therefore a convenience for the create-DAG case, not a universal property; `dazzle.core.ir.fk_graph` has neither a topological sort nor cycle detection today, so this is net-new code, not a free consequence of "Dazzle owns the FK graph." It is a **deferred** #1313 follow-up (see Implementation status), not part of the first slice.
+2. **Audit-as-reified-intent.** The audit record (ADR-0028 #1313d) is not an add-on field; the **intent itself is the audit fact** — principal, semantic action, and the authorizing predicate under which it was permitted ("Head of Department reassigned pupil X from group A to group B, authorised under `teaching_group.department = current_user.department`"). That is a who-did-what-under-what-authority record that maps onto a regulatory audit trail, not three opaque row diffs. It commits **in the same transaction** — which the single-transaction guarantee gives for free.
+3. **Flow-level (cross-step) invariants.** A single mutation has no "across the steps" to constrain; a flow does. A flow may carry a declared invariant over the rows it touches. These split into two shapes with very different cost:
+   - **Per-row / cross-row consistency (in scope, shippable):** the canonical case is **temporal consistency** — "the old row is end-dated *iff* the new row is created" / "exactly one `is_current` row per key after the cut." This is expressible *today* as per-row checks over the two touched rows in the ADR-0009 algebra; it needs no new predicate class. **This is the in-scope flow-invariant story.**
+   - **Conserved-quantity / aggregate (deferred; needs an algebra extension; bounded by ADR-0015):** an invariant like `sum(posting.amount) = 0` is an **aggregate over the set of just-touched rows** — a categorically different shape from ADR-0009's closed, row-scoped algebra (a HAVING/post-commit check, not a row filter). Expressing it requires *extending* ADR-0009 with an `AggregateCheck` class — a deliberately-resisted move (cf. #1306, where a chained-junction extension was declined to keep the algebra closed). **It is therefore explicitly out of this ADR's Accepted scope and deferred to a follow-up ADR** (the ADR-0009 aggregate extension). Moreover, the headline conserved-quantity case — double-entry — *already has a sanctioned, storage-level home*: ADR-0015's `ledger`/`transaction` constructs (TigerBeetle, with DB-level `debits ≤ credits`). See *Prior art* and *the ADR-0015 boundary*, below: conservation invariants over a true ledger belong in ADR-0015, not here; an atomic flow-level conservation invariant, if ever admitted, is for the non-ledger remainder and only via the deferred algebra extension.
+
+   The strongest *shippable* evidence the model generalises beyond "auditable FK change" is therefore the temporal case, not conservation.
+
+## The use-case surface (scope of the concept)
+
+The motivating example (ADR-0028) is an auditable FK repoint. That is the **narrowest** member of the **smallest** of three families. The model covers any operation whose unit of correctness is *"several rows change together, under one authority, and the why matters as much as the what."* Concretely:
+
+- **Temporal / bitemporal mutations** (end-date-and-supersede): SCD Type-2 history, `is_current` + history table, validity intervals. Price/address/contract/fee/tax-code changes. *Largest-volume category; mostly not about FKs at all.* Correctness is "old and new states are consistent across the cut."
+- **Lifecycle transitions with side-effect rows:** the state-machine transition that also writes ledger/audit/notification rows (ADR-0028 noted transition-effect creates bypass scope enforcement and `TransitionGuard` cannot reach the DB — atomic is the fix). The transition *is* the atomic; the state machine models the source, the atomic carries the multi-row effect. **Seam with ADR-0020 (open):** ADR-0020 (Proposed) is *also* extending `process`/transitions (evidence predicates, an `order` relation), so two Proposed ADRs touch "transition-with-effects" from opposite ends. The intended hand-off is: the `process`/state-machine owns the *source transition and its guard*; when the transition fires it *invokes* an atomic that carries the multi-row effect. The construct that names the atomic from a transition (a transition `effect:` referencing a flow? an `hless` event the flow subscribes to?) is **not yet decided** — flagged as an open question here and in ADR-0020; it must be settled before a lifecycle-with-effects flow ships, but it does not block #1313's first slice (a directly-invoked atomic route).
+- **Conserved-quantity mutations:** double-entry postings, stock movements, quota/seat allocation, balance transfers. Correctness is "a quantity is preserved across the steps" — a *flow-level invariant*, not a per-entity guard.
+- **Atomic creates with dependent children** (the n>1 create, not a repoint): invoice + line items; order + lines + reservations. One declared intent with derived FK ordering.
+- **Cascading/coordinated deletes or archives under one authority:** off-boarding, where the audit-as-intent property is the whole point (one authorised act, not seven orphaned deletions).
+- **Merge / dedupe:** fan-out FK repoint (repoint all children B→A, retire B), all-or-nothing, catastrophic if half-applied.
+
+These reduce to three kinds: **temporal** (consistency across a cut), **conservation** (a preserved quantity), and **compositional integrity** (rows that only make sense together). "Auditable FK change" is one instance of the compositional kind.
+
+## Normative invariants
+
+A transactional intent (atomic flow) **MUST**:
+
+1. **Touch and read only AppSpec-declared entities** (schema-local). Every entity the flow mutates, *and every entity its guards read*, is declared in the AppSpec.
+2. **Authorize every step to the standalone-guarded-operation standard** — the entity-level `permit:`/`scope:` model applied per step, including FK-path create-scope (#1311) and destination revalidation (#1312). The guarantee is *not* "atomic reuses today's CRUD authz"; it is "each step meets the same standard a standalone guarded mutation must meet." **Step-kind → scope-op mapping (normative, because the new step kinds are not all 1:1 with the five CRUD ops):**
+   - *create* step → `scope: create:` (FK-path probe, #1311).
+   - *update* step → `scope: update:` source **and** destination revalidation (#1312).
+   - *end-date / supersede* step → authorized as **`scope: update:`** (it is physically an UPDATE setting the temporal end column), with destination revalidation if it touches a scope key. There is no separate `end-date` scope op; `rbac-scope.md`'s decision table is the source of truth and must name this mapping.
+   - *delete* step (e.g. the merge fan-out's retire-parent) → `scope: delete:`; each repointed child in a fan-out is an *update* step and runs #1312 destination revalidation against the merge target's scope.
+   The "standalone-guarded-operation standard" is exactly these CRUD-op rules; a step kind with no CRUD-op mapping is not admissible until one is defined.
+3. **Commit the entire effect in one DB transaction**, rollback-all on any failure.
+4. **Hold consistency across every row the flow *reads for authorization*, not only the rows it *writes***. The scope-determining parent rows (whose *attributes* a guard predicate reads — `PathCheck` / `UserAttrCheck` shapes) MUST be read under a share lock (`SELECT … FOR SHARE`) within the transaction. Three sharp edges this invariant carries (each lifted out of ADR-0028's rule 3, where the TOCTOU sat awkwardly):
+   - **Deterministic lock order.** A flow that locks multiple scope-parents (e.g. source dept + destination dept in a reassign) MUST acquire them in a deterministic order (canonically: by entity name, then PK) so two concurrent flows can't deadlock by locking the same parents in opposite orders. Lock order ≠ FK-topo order (invariant: this is its own ordering rule).
+   - **`FOR SHARE` does not cover membership (`ExistsCheck` / junction) scopes.** A row-share lock on a parent does not lock the *junction set* whose membership an `ExistsCheck` scope reads, so a concurrent insert/delete of a junction row can still flip an EXISTS verdict (a phantom). Junction-membership TOCTOU is **out of scope for the share-lock mechanism**; closing it needs a different mechanism (e.g. locking the junction predicate's range, or SERIALIZABLE) and is deferred — flag, don't silently claim coverage.
+   - **The "or declare a sufficient isolation level" path is not free.** Dazzle's runtime uses a pooled connection at READ COMMITTED with no per-transaction isolation API today; raising a pooled connection to SERIALIZABLE requires (a) explicit reset on return to avoid leaking the setting to the next leaseholder and (b) serialization-failure **retry** logic — which conflicts with the no-compensation, single-shot model. So the isolation-level escape hatch is *unimplemented plumbing*, not an author one-liner; until specified, `FOR SHARE` on attribute-scope parents is the only supported mechanism. This whole invariant (beyond ADR-0028's already-shipped optimistic-concurrency guard) is a **deferred** #1313 follow-up.
+5. **Record the intent as an audit fact in the same transaction** (principal, semantic action, authorizing predicate).
+6. **Fail closed**; a denied boundary is indistinguishable from a missing row (the IDOR-avoidance contract in `rbac-scope.md`); no internal error detail (stack/SQL) leaks.
+
+A transactional intent **MUST NOT**:
+
+7. **Block on an external actor or produce a non-transactional side effect** — a transaction cannot wait, and a side effect cannot roll back.
+8. **Express its guard, or its flow-level invariant, as imperative handler logic** when the predicate algebra can express it. Guards and invariants stay **declared and introspectable** (ADR-0009) so they are visible to the matrix, conformance, and the API-surface audit. (See the analyzability obligation below — this is the difference between a flow invariant and "a `CHECK` constraint with extra steps.")
+
+A flow-level invariant **MUST** be checkable from the rows the flow touches and nothing else. Two sub-shapes, two states:
+
+- **Per-row / cross-row consistency over declared columns (in scope):** temporal consistency ("end-dated iff superseded"), and any condition expressible as ADR-0009 per-row predicates over the touched rows. Shippable today.
+- **Aggregate over the touched set (`sum(posting.amount) = 0`) (deferred):** schema-local in principle, but requires the ADR-0009 `AggregateCheck` extension (a deliberately-resisted opening of the closed algebra) — **out of this ADR's Accepted scope, pending that follow-up**; and for true ledgers, owned by ADR-0015 instead (see boundary below).
+
+An invariant requiring an *external* fact (this sum matches a bank feed) is **reconciliation** — a service-layer concern, out of scope regardless.
+
+## Prior art: TigerBeetle, and where the analogy stops
+
+The flow-level-invariant capability is not speculative; it is the central, battle-proven idea of TigerBeetle, arrived at here from the opposite direction (generalising up from "guarded FK repoint" rather than specialising down from "ledger"):
+
+- **The idea we adopt — the transactional intent as a validated, atomic, first-class primitive that *owns its invariants*.** In TigerBeetle a transfer is not "two updates the application coordinates"; it is an object the database validates (balance, account existence, debits=credits, idempotency) and commits atomically, so the application *cannot* express an unbalanced or partial transfer. An atomic flow with a flow-level conservation invariant is the same move: the cross-row correctness condition is lifted out of handler code into a primitive the framework validates. TigerBeetle's two-phase transfer (pending → post/void) maps onto our lifecycle-with-side-effect-rows family.
+
+- **The idea we deliberately reject — schema elimination.** TigerBeetle gets its guarantees by giving up the general schema: two fixed record types, no arbitrary FK graph, one hard-coded invariant. That radical narrowing *is* the source of its determinism and its unbypassable guarantee. Dazzle keeps the general relational schema and the arbitrary FK graph (we are a general LOB framework, not a ledger engine), so we **cannot** acquire TigerBeetle's guarantees the way it does — by construction-eliminating everything that could violate them.
+
+Keeping the general schema imposes two obligations TigerBeetle does not carry, both **normative** here:
+
+- **Analyzability (invariant 8).** TigerBeetle has one hard-coded invariant; we admit a *space* of author-declared ones (conservation, temporal, compositional). For these to be more than imperative postconditions, the flow-level invariant MUST be a declared, introspectable predicate in the ADR-0009 algebra, visible to the same surfaces as everything else. Reinventing TigerBeetle's *ambition* while quietly reintroducing unanalyzable handler logic would re-open exactly the hole ADR-0028 closed.
+- **Enforcement scope (honest limit).** TigerBeetle owns its storage, so its invariant is unbypassable on every path. Dazzle does not. **The flow-level invariant is enforced for mutations expressed as atomic flows; it is not a storage-level constraint. A hand-written route, a migration, or a `# dazzle:implements` override that touches the same rows outside the flow can still violate it unless separately constrained** (e.g. a DB-level `CHECK`/trigger, itself subject to ADR-0017). TigerBeetle does not have to write that sentence; we do.
+
+The accurate framing: **atomic flows bring TigerBeetle's *philosophy* — invariant-owning transactional primitives — to a *general relational schema*. TigerBeetle achieves unbypassable guarantees by eliminating the general schema; Dazzle keeps it and therefore enforces the same *kind of intent* — an invariant the primitive owns — at the flow boundary only, not the storage layer, in exchange for analyzability across arbitrary author-declared entities and invariants.** (Deliberately *not* "the same class of guarantee": TigerBeetle's is unbypassable-by-construction; a flow-boundary check holds only on the flow path — a different *kind*, per the honest limit above. Saying "same class" would contradict that limit.) The failure mode this realisation could tempt is progressively narrowing Dazzle to recapture TigerBeetle's guarantees — which would trade away the generality that is the whole point.
+
+### The ADR-0015 boundary (where the literal ledger case lives)
+
+ADR-0015 (Accepted) already mandates TigerBeetle as **the** engine for double-entry, with `ledger`/`transaction` DSL constructs and DB-level `debits ≤ credits` enforcement. So the canonical conservation invariant — debits = credits — **has a sanctioned, storage-level home, and it is not here.** The boundary:
+
+- **A true ledger / double-entry / balance-conserving domain → ADR-0015 `ledger`/`transaction`.** Storage-level, unbypassable, idempotency-keyed. ADR-0029 does not relitigate this; using a flow-level conservation invariant *instead of* a `ledger` for money is an anti-pattern (a weaker, bypassable version of a guarantee ADR-0015 gives at the storage layer).
+- **Atomic flow-level conservation invariants, if ever admitted, are for the *non-ledger* remainder** (e.g. a one-off quota/seat reallocation that isn't worth a ledger) — *and only via the deferred ADR-0009 aggregate extension*. Until that extension exists, conservation is simply not an atomic-flow capability; reach for `ledger` or a DB `CHECK`.
+
+This ADR uses debits=credits only as the *recognisable illustration* of the conserved-quantity shape, not as a capability it ships — the shippable conservation story is ADR-0015's, and the shippable *flow-invariant* story here is temporal (per-row).
+
+## Why not a general command / workflow system
+
+1. **It forfeits the single-transaction guarantee.** Workflow/saga engines exist *because* their steps cannot share one transaction; their compensation machinery is the price of that. Admitting orchestration, external effects, or human-latency gates moves the construct off the schema-local boundary and re-introduces compensation — the thing atomic's single transaction makes unnecessary.
+2. **It forfeits algebra-visibility (ADR-0009).** Glue between steps is handler code; handler code is invisible to the matrix/conformance/api-audit unless hand-wired. The model is valuable precisely because the *whole intent* — steps, guards, ordering, invariant, audit — is declared and analyzable.
+3. **It is a different layer with a different name.** External effects, long-running orchestration, approval-with-waiting, compensation, and non-schema resources are the process/service/integration layer's job. Conflating them with a schema-local transaction primitive produces a god-object that is neither a clean transaction primitive nor a competent workflow engine.
+
+## Consequences
+
+- **Positive:** one analyzable mutation model for the whole framework (n=1 and n=k uniform to matrix/conformance/spec-extractor); derived step ordering from the FK graph; reified-intent audit with a regulatory-grade trail; flow-level invariants (conservation/temporal) that single mutations cannot express; a principled answer to "isn't this a worse TigerBeetle?" that situates the design against recognised prior art.
+- **Negative:** the wiring of `atomic_flows` into `rbac/`/`testing/`/`specs/` (ADR-0028 #1313) becomes **load-bearing** — concept generalisation without it is just a renamed executor. Flow-level invariants are enforced at the flow boundary, not at storage; out-of-flow paths require separate constraint. Analyzable invariants (invariant 8) are more work than imperative postconditions, and are a precondition of the model's value, not an optimisation.
+- **Neutral:** `atomic` becomes the canonical home for all multi-entity mutation; standalone CRUD is a documented n=1 special case under the same model, retaining its fast path.
+
+## Alternatives Considered
+
+1. **Leave `atomic` as a narrow multi-step executor; keep CRUD authz separate.** Rejected — two unrelated authorization surfaces is exactly what this dissolves; it is the source of the ADR-0028 gap recurring per-feature.
+2. **Generalise all the way to a command / workflow system.** Rejected — forfeits the single-transaction guarantee and algebra-visibility; that is a saga engine, not a schema primitive. The seductive-but-fatal version of this idea.
+3. **Merge the runtimes — CRUD becomes literally an n=1 atomic execution.** Rejected — cost for no behavioural gain; rewrites a shipped, fast-pathed CRUD executor for conceptual tidiness. Unify the model, specialise the runtime.
+4. **Recapture TigerBeetle's unbypassable guarantee by narrowing Dazzle's schema.** Rejected — trades away the general relational schema that is Dazzle's reason to exist; the right trade is flow-boundary enforcement + analyzability over an arbitrary schema (see *Prior art*).
+5. **Express flow-level invariants as imperative postconditions in the executor.** Rejected — invisible to matrix/conformance/api-audit; reintroduces the unanalyzable-authz problem one level up (a "`CHECK` with extra steps"). Invariants stay in the algebra (invariant 8).
+
+## Implementation status
+
+- **Model definition (this ADR)** — proposed; no runtime change of its own. It reframes the target of #1313 and supplies the normative invariants for it and for #1312's FK-path half.
+- **#1311 (FK-path + EXISTS create-scope)** — shipped (v0.80.63, per ADR-0028); supplies the per-step authorization standard invariant 2 requires.
+- **#1312 (update-destination revalidation)** — shipped (v0.80.64, per ADR-0028); supplies the update / end-date step's destination guard.
+- **#1313 (extend `atomic`) — pending, re-decomposed.** #1313 is the first consumer, but ADR-0029 must NOT load every invariant onto it. The decomposition:
+  - **Slice 1 — the unification payload (first, shippable):** non-create step kinds (update / end-date / delete) + `self`/entity binding; per-step scope routing through the shipped #1311/#1312 machinery (with the invariant-2 step-kind→scope-op mapping); the in-transaction audit fact (invariant 5); fail-closed/no-leak (invariant 6); and **the common analysis-IR projection** that makes `atomic_flows` visible to `rbac/`/`testing/`/`specs/` (Decision §1 — the actual point of the ADR). Single transaction + optimistic-concurrency (ADR-0028 rule 3) is already shipped in the `atomic` runtime.
+  - **Slice 2 — derived ordering (follow-up):** topological sort + cycle detection, **for the create-DAG family only**; declared-order fallback elsewhere (What this buys §1).
+  - **Slice 3 — scope-parent share-lock hardening (follow-up):** `FOR SHARE` on attribute-scope parents + deterministic lock ordering (invariant 4); junction-membership TOCTOU and the isolation-level hatch remain open.
+  - **Slice 4 — flow-level invariants:** temporal (per-row) first; the aggregate/conservation form is gated on the separate ADR-0009 extension below.
+- **Flow-level aggregate-invariant algebra** — a separate **follow-up ADR**, not this one: extend ADR-0009 with an `AggregateCheck` (a cross-step aggregate over the flow's touched rows). The team has historically resisted opening the closed algebra (#1306); debits=credits is the reference case but **belongs to ADR-0015 for true ledgers** (see *The ADR-0015 boundary*). Not part of #1313.
+
+## Cross-reference
+
+- **ADR-0028 — tidied to consume this ADR (done, v0.80.65):** its #1313 section cites this model as the definition of "guarded multi-entity mutation"; its rule 3 (optimistic concurrency) defers the scope-parent-consistency clause to invariant 4 here; #1311/#1312 marked shipped.
+- **ADR-0015 (TigerBeetle ledgers) — boundary added:** the conserved-quantity / double-entry case lives in `ledger`/`transaction` (storage-level), not in an atomic flow-level invariant. See *The ADR-0015 boundary*.
+- **ADR-0020 (process / transitions) — seam flagged open:** which construct invokes an atomic when a lifecycle transition fires is undecided; settle before a lifecycle-with-effects flow ships.
+- `docs/reference/rbac-scope.md` to gain a section on atomic flows as the canonical multi-entity mutation model, pointing the per-step authorization standard at #1311's hybrid walker, and to carry the invariant-2 step-kind → scope-op mapping (incl. the `end-date` → `scope: update:` rule) in its decision table.

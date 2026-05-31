@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.65] - 2026-06-01
+
+### Changed
+
+- **ADR-0029 (Proposed) refined per design review; ADR-0028 tidied to consume it.** ADR-0029 promotes `atomic` to **the** schema-local transactional-intent substrate (n=1 CRUD as the degenerate case of an n=k guarded mutation; one analysis model for `rbac/`/`testing/`/`specs/`). A design-review pass (an independent adversarial critique + synthesis) sharpened eight points before it moves toward Accepted: (1) the unification is now structural — a named common `(entity, op, scope_predicate)` projection both n=1 and n=k normalise into, not shared prose; (2) derived FK-graph step ordering is scoped to the create-DAG family with an explicit declared-order fallback + required cycle detection (temporal / merge / self-ref FKs are under-determined by topology); (3) the cross-step **aggregate** invariant (`sum=0`) is descoped to a follow-up ADR-0009 `AggregateCheck` extension, with the in-scope flow-invariant story re-led by **temporal** (per-row) consistency; (4) a new **ADR-0015 boundary** — double-entry / conserved-quantity belongs in `ledger`/`transaction` (storage-level), not a bypassable flow invariant; (5) invariant 4 (scope-parent share-lock) gains deterministic lock ordering, an explicit "`FOR SHARE` doesn't cover `ExistsCheck`/junction phantoms" caveat, and a note that the isolation-level hatch is unimplemented in the pooled-connection model; (6) the schema-local boundary is stated as three clauses (writes / guard-reads / one transaction) with idempotency-key + generated-column grey cases called out; (7) the invariant-2 **step-kind → scope-op mapping** is made normative (end-date → `scope: update:` + destination revalidation); (8) the ADR-0020 transition-with-effects seam is flagged open. **#1313 is re-decomposed**: per-step scope routing + in-transaction audit + the analysis-surface projection ship first; derived ordering, the share-lock, and aggregate invariants are deferred follow-ups. ADR-0028 now marks #1311/#1312 shipped, points #1313 at ADR-0029's model, and defers its rule-3 scope-parent clause to ADR-0029 invariant 4. ADR INDEX updated.
+
+### Agent Guidance
+
+- **`atomic` is becoming the canonical schema-local multi-entity mutation model (ADR-0029, Proposed).** Before building #1313, read ADR-0029: it defines the boundary (writes + guard-reads in the AppSpec, one DB transaction — not a workflow/saga/command engine, no compensation), the per-step authorization standard (each step authorized as its CRUD op; **end-date authorizes as `scope: update:`**), and the audit-as-reified-intent property. Two hard boundaries: conserved-quantity/double-entry → ADR-0015 `ledger` (not a flow invariant); transition-with-side-effects → seam with ADR-0020 (open). The first #1313 slice is per-step scope routing + audit + making `atomic_flows` visible to `rbac/`/`testing/`/`specs/` — not derived ordering or flow-level aggregate invariants (deferred).
+
 ## [0.80.64] - 2026-05-31
 
 ### Fixed

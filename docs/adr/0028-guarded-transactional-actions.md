@@ -1,8 +1,8 @@
 # ADR-0028 — Guarded Transactional Actions: Compose, Don't Add a Primitive
 
-**Status:** Accepted (v0.80.62)
-**Issue:** #1310 (proposal). Decomposes into #1311 (FK-path create-scope, the #1124 v2 unlock), #1312 (update-destination revalidation), and #1313 (extend `atomic` #1228).
-**Relates:** ADR-0009 (predicate algebra), ADR-0010 (permit/scope separation), ADR-0025 (entity-level authorization)
+**Status:** Accepted (v0.80.62). #1311 + #1312 shipped (v0.80.63 / v0.80.64); #1313 pending, now scoped by ADR-0029.
+**Issue:** #1310 (proposal). Decomposes into #1311 (FK-path create-scope, the #1124 v2 unlock — shipped), #1312 (update-destination revalidation — shipped), and #1313 (extend `atomic` #1228 — pending).
+**Relates:** ADR-0009 (predicate algebra), ADR-0010 (permit/scope separation), ADR-0025 (entity-level authorization), **ADR-0029 (atomic flows = the schema-local transactional-intent substrate — supersedes this ADR's #1313 framing and absorbs rule 3's scope-parent clause as its invariant 4)**
 
 ## Decision
 
@@ -12,7 +12,7 @@ Dazzle will **not** address this with a new top-level `action:` primitive, and w
 
 1. **FK-path authorization on `create` — #1311 (the #1124 v2 unlock).** Lift the depth-1 limit on `scope: create:` via the already-roadmapped payload-time SQL probe, so `scope: create: teaching_group.department = current_user.department` works. This closes the spoofing hole **inside the algebra** — statically validated at link time, visible to the RBAC matrix and conformance.
 2. **Re-validate the destination on `update` — #1312.** The update path today checks only the *pre-read of the existing row*; it never validates the *new* FK value the payload moves the row to. Add destination revalidation so an in-scope row cannot be moved **into** a foreign scope.
-3. **Extend `atomic` (#1228), don't fork it — #1313.** `atomic` already owns the single-transaction, rollback-all, multi-step executor and route emission. Add (a) non-create step kinds (update / end-date), (b) optional entity binding (`self`), (c) routing of every step through scope enforcement so the FK-path guard applies to each touched entity, (d) an audit record, and (e) wiring `atomic_flows` into `rbac/`, `testing/`, and `specs/` (it is invisible to all three today).
+3. **Extend `atomic` (#1228), don't fork it — #1313.** `atomic` already owns the single-transaction, rollback-all, multi-step executor and route emission. Add (a) non-create step kinds (update / end-date), (b) optional entity binding (`self`), (c) routing of every step through scope enforcement so the FK-path guard applies to each touched entity, (d) an audit record, and (e) wiring `atomic_flows` into `rbac/`, `testing/`, and `specs/` (it is invisible to all three today). **As of ADR-0029 this is no longer a tidy-up but the first consumer of a unified model — `atomic` as *the* schema-local transactional-intent substrate, with n=1 CRUD as its degenerate case. ADR-0029 owns the model definition and the normative invariants; #1313 implements the minimal first slice (see ADR-0029 Implementation status for the re-decomposition).**
 
 **The security rules below are normative regardless of how the operation is implemented** (DSL `atomic`, a `# dazzle:implements` route override, or hand-written until the above lands).
 
@@ -36,7 +36,7 @@ A guarded transactional action **MUST**:
 
 1. **Derive every scope key** (role, tenant/owner/department ids) **from the authenticated principal**, never from the request body. Client-supplied scope keys are spoofable.
 2. **Validate the authorization boundary for *every* entity the operation touches** — source *and* destination — not only the row being mutated. (Guarding the source transition but not the destination create is the #1310 hole.)
-3. **Execute in a single transaction** with an **optimistic-concurrency guard** (e.g. `is_current = TRUE` + rowcount), so a concurrent change can't interleave.
+3. **Execute in a single transaction** with an **optimistic-concurrency guard** (e.g. `is_current = TRUE` + rowcount), so a concurrent change can't interleave. *(The sharper sub-clause — that the operation must also stay consistent across the scope-determining **parent** rows its guards read, not only the rows it writes — is lifted into ADR-0029 invariant 4, where it belongs: it is a property of a transactional intent, not of a single guarded mutation.)*
 4. **Fail closed** and **never leak internal error detail** (no stack/SQL in the response; a denied boundary is indistinguishable from a missing row, per the IDOR-avoidance contract in `rbac-scope.md`).
 
 A guarded action **MUST NOT** rely on a denormalized, client-settable scope key to satisfy depth-1 create-scope (spoofable, see above), and **SHOULD NOT** express its guard as imperative handler logic when the predicate algebra (extended per #1124 v2) can express it — keeping the guard in the algebra is what makes it visible to the RBAC matrix, conformance, and the API-surface audit.
@@ -77,10 +77,17 @@ A guarded action **MUST NOT** rely on a denormalized, client-settable scope key 
   `policy.check_entity_op`). An in-scope row can no longer be moved *into* a
   foreign scope by repointing an FK; FK-path / EXISTS destination guards reuse
   the #1311 probe. Denial is an IDOR-shaped 404.
-- **#1313 (extend `atomic`)** — pending; its per-step FK-path guard composes
-  with the #1311 probe and should land consistently with #1312's
-  source+destination semantics.
+- **#1313 (extend `atomic`)** — pending, and **re-scoped by ADR-0029**.
+  Its per-step FK-path guard composes with the #1311 probe and lands
+  consistently with #1312's source+destination semantics. ADR-0029 promotes
+  the target from "wire the executor into the analysis surfaces" to "the first
+  consumer of the schema-local transactional-intent model"; see ADR-0029
+  Implementation status for the minimal-first-slice decomposition (per-step
+  scope routing + in-transaction audit + analysis-surface wiring first;
+  derived ordering, the scope-parent share-lock, and flow-level invariants are
+  deferred follow-ups).
 
 ## Cross-reference
 
-`docs/reference/rbac-scope.md` documents the create-scope hybrid walker (in-Python simple leaves + payload-time probe for FK-path / EXISTS) and points the denormalization anti-pattern at this ADR as the sanctioned alternative.
+- `docs/reference/rbac-scope.md` documents the create-scope hybrid walker (in-Python simple leaves + payload-time probe for FK-path / EXISTS) and points the denormalization anti-pattern at this ADR as the sanctioned alternative.
+- **ADR-0029** generalises #1313's target: `atomic` is *the* schema-local transactional-intent substrate. This ADR's rule 3 scope-parent sub-clause is absorbed there as invariant 4. Read ADR-0029 before implementing #1313.
