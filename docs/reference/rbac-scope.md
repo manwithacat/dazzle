@@ -67,6 +67,20 @@ When the v1 supported set isn't enough, express the constraint via:
   that need FK-path or junction-table semantics until #1124 v2
   lands.
 
+> **Do NOT denormalize a scope key onto the entity to satisfy depth-1
+> create-scope** (e.g. copying `department` onto a row to write
+> `scope: create: department = current_user.department`). A
+> client-settable denormalized column is **spoofable** — create-scope
+> reads the payload value verbatim and never re-derives it from the
+> source FK, so a caller sends `department=mine` with a foreign
+> `teaching_group` and the row lands in the wrong scope. When the
+> boundary is a multi-hop FK path on a write — especially a multi-step
+> "move" that touches a source *and* a destination — follow the
+> **guarded transactional action** pattern and its normative rules
+> (derive scope keys from the authenticated principal; validate every
+> touched entity; one transaction; fail closed). See
+> [ADR-0028](../adr/0028-guarded-transactional-actions.md).
+
 ## Syntax
 
 ```dsl

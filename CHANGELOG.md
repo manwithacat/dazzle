@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.62] - 2026-05-31
+
+### Added
+
+- **ADR-0028 — Guarded transactional actions: compose, don't add a primitive (#1310).** Codifies the answer to a real gap (verified in code): operations whose authorization boundary is a multi-hop FK path on the **write** path, and/or which are multi-step atomic mutations — the canonical case being a department-scoped "reassign" that end-dates a source row and creates a destination, guarded on **both**. The proposal (#1310) suggested a new `action:` DSL primitive with in-handler guards; the ADR **rejects** that and instead routes the capability through three existing trajectories, keeping authorization in the predicate algebra (ADR-0009): **#1311** (FK-path `create`-scope — the #1124 v2 "payload-time SQL probe" unlock), **#1312** (re-validate the *destination* FK on `update` — an incidental standalone security gap: update-scope today only pre-reads the existing row and never checks the new FK value, so a row can be moved *into* a foreign scope), and **#1313** (extend `atomic` #1228 with non-create steps, per-step scope enforcement, audit, and matrix/conformance/api-audit visibility — rather than forking it into a new construct that would overload the `action` keyword). The ADR's normative rules (derive scope keys from the authenticated principal; validate **every** touched entity, source and destination; one transaction; fail closed; no internal-error leak) hold regardless of implementation. `docs/reference/rbac-scope.md` now cross-references it and explicitly flags **denormalize-for-create-scope as a spoofable anti-pattern** (create-scope reads the payload value verbatim with no FK-consistency derivation — confirmed against `scope_create_eval.py`).
+
+### Agent Guidance
+
+- **Don't propose an `action:` primitive or in-handler authorization guards** (ADR-0028). A "guarded transactional action" is a composition: FK-path scope in the algebra (#1311), update-destination revalidation (#1312), and extending `atomic` (#1313) — not a new construct (`action` is already a loaded keyword; `atomic` already owns the transactional-multi-step plumbing) and not imperative handler guards (they regress the statically-validated, matrix-visible predicate algebra). When `create`-scope rejects an FK-path predicate, the sanctioned answer is the guarded-action pattern, **never** a denormalized client-settable scope key (spoofable).
+
 ## [0.80.61] - 2026-05-31
 
 ### Fixed
