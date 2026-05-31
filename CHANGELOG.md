@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.53] - 2026-05-31
+
+### Fixed
+
+- **Multi-hop dotted `current_context` filters now scope correctly (#1304, backend half).** A region filter like `assessment_event.teaching_group = current_context` (source Manuscript, where `teaching_group` is an FK on the intermediate `AssessmentEvent`) silently no-op'd — it returned ALL rows with no context selected and matched none after a context change. Two causes, both fixed: (1) `workspace_region_fetch.py` / `workspace_handlers.py` (batch path) didn't thread the source entity's FK→target map (`ref_targets`) into `_extract_condition_filters`, so the dotted key fell through unmapped and the repo ignored it (match-all); (2) `_build_fk_path_subquery` filtered the intermediate entity on the bare relation name (`teaching_group`) instead of the FK column (`teaching_group_id`). The column is now resolved against the **target entity's own FK map** (threaded as `all_ref_targets`): an FK relation resolves to its `_id` column, while a scalar column stays bare — model-aware, because a blanket `_id` suffix is wrong (it would break bare-named FK paths like the working `teacher.user = current_user`, #1232). Now the dotted path compiles to `… WHERE "teaching_group_id" = <context_id>`, scoping to the picked context. Bounded to the 2-hop case (matches the FK-path depth the scope-predicate compiler handles); 1-hop was already correct. Covered by `tests/unit/test_current_context_filter.py` (4 new tests incl. the scalar-stays-bare regression guard). **Still open in #1304:** the `context_selector` `<select>` change→refetch wiring (the inert-picker symptom) — that half needs live browser verification and is tracked separately on the issue.
+
 ## [0.80.52] - 2026-05-31
 
 ### Added

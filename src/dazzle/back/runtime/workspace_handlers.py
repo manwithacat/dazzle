@@ -64,7 +64,11 @@ async def _fetch_region_json(
                         filters,
                         logger,
                         auth_context,
+                        # #1304: thread FK→target map for multi-hop dotted
+                        # `current_context` resolution (batch JSON path).
+                        ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
                         context_id=(filter_context or {}).get("current_context"),
+                        all_ref_targets=ctx.entity_ref_targets,  # #1304
                     )
                     if not filters:
                         filters = None

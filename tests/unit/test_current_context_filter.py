@@ -178,3 +178,92 @@ class TestBackwardsCompatibility:
         )
 
         assert filters == {"status": "active"}
+
+
+class TestCurrentContextMultiHop1304:
+    """#1304: multi-hop dotted `current_context` resolves via an FK-path
+    subquery. Pre-fix: `ref_targets` wasn't threaded so the dotted key fell
+    through unmapped (match-all), and `_build_fk_path_subquery` filtered on
+    the bare field (`teaching_group`) instead of the FK column
+    (`teaching_group_id`). The target column is resolved against the TARGET
+    entity's FK map (model-dependent — not a blanket `_id` suffix, which would
+    break bare-named FKs like `teacher.user`)."""
+
+    # Global entity → FK-map: AssessmentEvent has an FK column teaching_group_id.
+    _ALL_REF_TARGETS = {"AssessmentEvent": {"teaching_group_id": "TeachingGroup"}}
+
+    def test_two_hop_dotted_current_context_builds_id_subquery(self) -> None:
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        # `assessment_event.teaching_group = current_context` on a Manuscript
+        # region: assessment_event is an FK to AssessmentEvent; teaching_group
+        # is an FK on AssessmentEvent (column teaching_group_id).
+        cond = _ir_cmp("assessment_event.teaching_group", "current_context")
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-1",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            ref_targets={"assessment_event_id": "AssessmentEvent"},
+            context_id="tg-10A",
+            all_ref_targets=self._ALL_REF_TARGETS,
+        )
+
+        # Resolves to a subquery keyed on the FK column (the `_id` form,
+        # because teaching_group_id is an FK on the target entity).
+        assert "assessment_event_id__in_subquery" in filters
+        sql, params = filters["assessment_event_id__in_subquery"]
+        assert '"teaching_group_id"' in sql
+        assert '"AssessmentEvent"' in sql
+        assert params == ["tg-10A"]
+
+    def test_scalar_target_field_stays_bare(self) -> None:
+        """A target field that is NOT an FK on the target entity (e.g. a
+        scalar `user` column) must stay bare — a blanket `_id` suffix would
+        break the working `teacher.user = current_user` case (#1232)."""
+        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+
+        result = _build_fk_path_subquery(
+            "teacher.user",
+            "user-uuid",
+            {"teacher": "StaffMember"},
+            {},  # StaffMember has no FK map entry → `user` is a scalar column
+        )
+        assert result is not None
+        _fk, sql, _params = result
+        assert '"user"' in sql
+        assert "user_id" not in sql
+
+    def test_explicit_id_suffix_not_double_suffixed(self) -> None:
+        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+
+        result = _build_fk_path_subquery(
+            "assessment_event.teaching_group_id",
+            "tg-10A",
+            {"assessment_event_id": "AssessmentEvent"},
+            self._ALL_REF_TARGETS,
+        )
+        assert result is not None
+        _fk, sql, _params = result
+        assert '"teaching_group_id"' in sql
+        assert "teaching_group_id_id" not in sql  # no double-suffix
+
+    def test_two_hop_without_ref_targets_does_not_build_subquery(self) -> None:
+        """Without ref_targets the dotted path can't resolve — documents that
+        the fetch path MUST thread ref_targets (the #1304 root gap)."""
+        from dazzle.back.runtime.route_generator import _extract_condition_filters
+
+        cond = _ir_cmp("assessment_event.teaching_group", "current_context")
+        filters: dict[str, Any] = {}
+        _extract_condition_filters(
+            cond,
+            "user-1",
+            filters,
+            logging.getLogger(__name__),
+            auth_context=None,
+            ref_targets=None,
+            context_id="tg-10A",
+        )
+        assert not any(k.endswith("__in_subquery") for k in filters)

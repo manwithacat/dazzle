@@ -907,13 +907,26 @@ def _build_fk_path_subquery(
     field: str,
     resolved_value: Any,
     ref_targets: dict[str, str],
+    all_ref_targets: dict[str, dict[str, str]] | None = None,
 ) -> tuple[str, str, list[Any]] | None:
     """Build a subquery for a left-side dotted path like ``manuscript.student``.
 
     Given field="manuscript.student", resolves:
-    - ``manuscript`` → FK field ``manuscript_id`` on current entity
-    - target entity ``Manuscript`` (from ref_targets["manuscript_id"])
-    - ``student`` → column ``student_id`` on target entity (with _id suffix inferred)
+    - ``manuscript`` → FK field on the current entity (``manuscript`` or
+      ``manuscript_id``, whichever ``ref_targets`` carries)
+    - target entity ``Manuscript`` (from ``ref_targets``)
+    - ``student`` → the column to match on the target entity
+
+    The target column (#1304) is resolved against the *target* entity's own
+    FK map in ``all_ref_targets`` (entity → {fk_field: target}): if
+    ``<target_field>_id`` is an FK on the target entity, the dotted segment
+    names an FK *relation* and the column is ``<target_field>_id``; otherwise
+    the segment is taken literally (a scalar column, e.g. ``user``). This is
+    model-dependent — some projects name FK fields ``teacher`` (bare), others
+    ``teaching_group_id`` — so a blanket ``_id`` suffix is wrong (it broke the
+    bare-named ``teacher.user = current_user`` case). When ``all_ref_targets``
+    is absent (scope-rule callers that don't thread it), the segment is taken
+    literally, preserving the pre-#1304 behaviour.
 
     Returns (fk_field, subquery_sql, params) or None if the path can't be resolved.
     """
@@ -926,7 +939,7 @@ def _build_fk_path_subquery(
     relation_name, target_field = parts
 
     # Resolve relation name to FK field on current entity.
-    # Convention: relation "manuscript" → FK field "manuscript_id"
+    # Convention: relation "manuscript" → FK field "manuscript_id" (or bare).
     fk_candidates = [f"{relation_name}_id", relation_name]
     target_entity = None
     fk_field = None
@@ -940,8 +953,15 @@ def _build_fk_path_subquery(
         return None
 
     target_table = quote_identifier(target_entity)
-    # The target field may or may not have _id suffix — try both
-    target_col = quote_identifier(target_field)
+    # Resolve target_field → actual column via the target entity's FK map.
+    target_fks = (all_ref_targets or {}).get(target_entity, {})
+    if target_field in target_fks:
+        target_col_name = target_field  # FK relation, bare-named on target
+    elif f"{target_field}_id" in target_fks:
+        target_col_name = f"{target_field}_id"  # FK relation → `_id` column
+    else:
+        target_col_name = target_field  # literal/scalar column (e.g. `user`)
+    target_col = quote_identifier(target_col_name)
 
     subquery_sql = f'SELECT "id" FROM {target_table} WHERE {target_col} = %s'  # nosemgrep
     return fk_field, subquery_sql, [resolved_value]
@@ -1067,6 +1087,7 @@ def _extract_condition_filters(
     auth_context: "AuthContext | None" = None,
     ref_targets: dict[str, str] | None = None,
     context_id: str | None = None,
+    all_ref_targets: dict[str, dict[str, str]] | None = None,
 ) -> None:
     """Recursively extract SQL filters from a condition tree.
 
@@ -1101,7 +1122,7 @@ def _extract_condition_filters(
             filters[f"{fld}__in_subquery"] = ("SELECT NULL WHERE FALSE", [])
             return
         if "." in fld and ref_targets:
-            result = _build_fk_path_subquery(fld, val, ref_targets)
+            result = _build_fk_path_subquery(fld, val, ref_targets, all_ref_targets)
             if result:
                 fk_field, sql, params = result
                 filters[f"{fk_field}__in_subquery"] = (sql, params)
@@ -1169,11 +1190,25 @@ def _extract_condition_filters(
             right = getattr(condition, "logical_right", None)
             if left:
                 _extract_condition_filters(
-                    left, user_id, filters, _logger, auth_context, ref_targets, context_id
+                    left,
+                    user_id,
+                    filters,
+                    _logger,
+                    auth_context,
+                    ref_targets,
+                    context_id,
+                    all_ref_targets,
                 )
             if right:
                 _extract_condition_filters(
-                    right, user_id, filters, _logger, auth_context, ref_targets, context_id
+                    right,
+                    user_id,
+                    filters,
+                    _logger,
+                    auth_context,
+                    ref_targets,
+                    context_id,
+                    all_ref_targets,
                 )
         return
 
@@ -1259,11 +1294,25 @@ def _extract_condition_filters(
             right = getattr(condition, "right", None)
             if left:
                 _extract_condition_filters(
-                    left, user_id, filters, _logger, auth_context, ref_targets, context_id
+                    left,
+                    user_id,
+                    filters,
+                    _logger,
+                    auth_context,
+                    ref_targets,
+                    context_id,
+                    all_ref_targets,
                 )
             if right:
                 _extract_condition_filters(
-                    right, user_id, filters, _logger, auth_context, ref_targets, context_id
+                    right,
+                    user_id,
+                    filters,
+                    _logger,
+                    auth_context,
+                    ref_targets,
+                    context_id,
+                    all_ref_targets,
                 )
         # OR and other logical operators require post-fetch filtering
         # which is handled by the visibility system already

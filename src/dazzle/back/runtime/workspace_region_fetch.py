@@ -105,7 +105,18 @@ async def fetch_region_items(
                     filters,
                     logger,
                     user_ctx.auth_ctx_for_filters,
+                    # #1304: thread the source entity's FK→target map so a
+                    # multi-hop dotted `current_context` filter (e.g.
+                    # `assessment_event.teaching_group = current_context`)
+                    # resolves to an FK-path subquery instead of a raw dotted
+                    # key the repo can't map (which silently matched all rows).
+                    ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
                     context_id=user_ctx.filter_context.get("current_context"),
+                    # #1304: the global entity→FK-map so a 2-hop dotted path
+                    # resolves the *target* entity's FK column correctly
+                    # (`teaching_group` → `teaching_group_id`) rather than
+                    # blindly suffixing `_id` (which broke bare-named FKs).
+                    all_ref_targets=ctx.entity_ref_targets,
                 )
                 if not filters:
                     filters = None
