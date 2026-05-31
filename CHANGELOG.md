@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.55] - 2026-05-31
+
+### Fixed
+
+- **`context_selector` no longer renders an inert (empty) `<select>` when a context-entity row violates the entity's current enum (#1304 Defect A).** Live diagnosis overturned the static theory (which blamed the JS wiring): the selector's options endpoint (`/api/workspaces/{ws}/context-options`) listed the context entity through the **full entity Pydantic model** (`Repository._row_to_model`), so a single row with an out-of-enum value — e.g. a `User` with `role` `role_staff` (demo data) or `admin` (a persona the `User.role` enum doesn't include) — raised a **422 and failed the entire endpoint**. The `<select>` then stayed empty, so selecting did nothing (the consumer's exact symptom). Fix: `context-options` now projects only `id` + the display field (`Repository.list(select_fields=[...])`), and `Repository.list` returns **raw dicts** for any `select_fields` projection (a column subset can't form a valid full entity model). One non-conforming row can no longer take down the selector. Verified live (the selector now populates 17/17 users incl. the `role_staff` rows) and gated by `tests/integration/test_context_selector_scoping_1304.py` (seeds an out-of-enum row, asserts the selector still populates). The JS change→refetch wiring was already correct (it rewrites each region's `hx-get` + fires `htmx.ajax`), and region scoping is covered by the v0.80.54 gate — so with options populating, pick→re-scope now works end-to-end.
+
+### Agent Guidance
+
+- **`Repository.list(select_fields=[...])` returns dicts, not entity models** (#1304). A projection is a column subset that can't satisfy the full model's validators, so it's returned as raw dicts — and it's the robust way to list an entity for a picker/dropdown without one malformed row 422-ing the whole query. (All prior `select_fields` callers also passed `include`, so they already took the dict path; this only newly affects projection-without-include.)
+
 ## [0.80.54] - 2026-05-31
 
 ### Added

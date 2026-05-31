@@ -195,3 +195,67 @@ async def test_no_context_id_control(app) -> None:
         "context_id=A and context_id=B produced identical agent_tickets bodies "
         "— the 1-hop current_context filter is not discriminating."
     )
+
+
+# ---------------------------------------------------------------------------
+# context-options robustness (#1304 Defect A root cause)
+# ---------------------------------------------------------------------------
+
+
+async def test_context_options_survives_out_of_enum_row(app) -> None:
+    """The context_selector's options endpoint must populate even when a
+    context-entity row holds a value outside the entity's current enum.
+
+    Pre-fix, ``context-options`` listed Users through the full entity Pydantic
+    model (``_row_to_model``); a single row whose ``role`` was outside the
+    ``customer/agent/manager`` enum (e.g. ``role_staff`` from demo data, or an
+    ``admin`` persona the enum doesn't include) raised a 422 and the WHOLE
+    endpoint failed — so the ``<select>`` stayed empty and "selecting did
+    nothing". The fix projects only ``id`` + ``display_field`` (raw dicts), so
+    one non-conforming row can't take down the selector.
+    """
+    import datetime as _dt
+    import uuid as _uuid
+
+    import psycopg
+
+    from tests.integration.support_tickets_harness import _sql_insert
+
+    bad_id = str(_uuid.uuid4())
+    bad_label = "Wanda OutOfEnum"
+    with psycopg.connect(app._db_url, autocommit=True) as conn:
+        _sql_insert(
+            conn,
+            "User",
+            {
+                "id": bad_id,
+                "email": f"wanda-{bad_id[:8]}@demo.test",
+                "name": bad_label,
+                "role": "role_staff",  # NOT in the customer/agent/manager enum
+                "is_active": True,
+                "created_at": _dt.datetime.now(_dt.UTC),
+            },
+        )
+
+    client = await app.client_as("manager")
+    try:
+        resp = await client.get(f"/api/workspaces/{_WS}/context-options")
+    finally:
+        await client.aclose()
+
+    assert resp.status_code == 200, (
+        f"context-options 422'd on an out-of-enum row (pre-#1304-fix behaviour): "
+        f"{resp.status_code} {resp.text[:300]!r}"
+    )
+    options = resp.json().get("options", [])
+    # The selector must be populated (not empty) AND must include the
+    # non-conforming row — the projection returns it by id+label regardless of
+    # its enum-invalid role.
+    assert len(options) >= 1, (
+        f"selector options empty — selector would be inert: {resp.text[:300]!r}"
+    )
+    labels = {o.get("label") for o in options}
+    assert bad_label in labels, (
+        f"the out-of-enum User is missing from options ({sorted(labels)}); "
+        "the projection should surface every row by id+label."
+    )

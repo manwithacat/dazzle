@@ -1186,11 +1186,22 @@ class Repository(Generic[T]):
             or _has_latest_one
             or _has_traversal
             or self._subtype_join_sql is not None
+            or select_fields
         ):
             # Return dicts with nested data and/or computed/derived fields.
             # #1237: subtype JOINs append base columns that the child Pydantic
             # model would silently drop via `extra='ignore'`, so route through
             # the dict path (mirrors the read() fix shipped in v0.72.0).
+            # #1304: a `select_fields` projection returns a SUBSET of columns,
+            # which can never satisfy the full entity model's validators —
+            # `_row_to_model` would raise (missing required fields, or an
+            # out-of-enum value on a column the projection didn't even ask
+            # for, since `_row_to_model` validates the whole row). A projection
+            # is "give me these columns as data", so return raw dicts. Existing
+            # `select_fields` callers all also pass `include`, so they already
+            # took this branch — this only newly affects projection-without-
+            # include (the context_selector options query, which must be robust
+            # to rows that don't conform to the current entity enum).
             items = [self._convert_row_dict(row) for row in row_dicts]
         else:
             items = [self._row_to_model(row) for row in rows]

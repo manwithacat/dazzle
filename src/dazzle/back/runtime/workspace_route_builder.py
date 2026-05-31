@@ -481,8 +481,19 @@ class WorkspaceRouteBuilder:
                                         exc_info=True,
                                     )
 
+                            # #1304: project only id + the display field. The
+                            # selector needs nothing else, and a projection
+                            # makes the query robust to rows that don't satisfy
+                            # the full entity model (e.g. an out-of-enum `role`
+                            # on some User row) — which previously 422'd the
+                            # whole endpoint via `_row_to_model`, leaving the
+                            # selector empty and inert.
+                            _select = ["id"] + ([display] if display and display != "id" else [])
                             result = await sel_repo.list(
-                                page=1, page_size=500, filters=scope_filters
+                                page=1,
+                                page_size=500,
+                                filters=scope_filters,
+                                select_fields=_select,
                             )
                             items = result.get("items", []) if isinstance(result, dict) else result
                             options = []
