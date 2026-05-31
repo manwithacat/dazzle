@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.61] - 2026-05-31
+
+### Fixed
+
+- **Parallel alembic baseline roots no longer break `db upgrade head` (#1309 — regression from #1308).** Shipping the framework baseline migrations in the wheel (v0.80.59) meant that for any project whose own first migration is a *parallel root* (`down_revision = None`, authored before the framework shipped baselines), the chained `version_locations` now surfaced **two** heads — so `dazzle db upgrade head` failed with alembic's "Multiple head revisions are present" and the Heroku release phase broke (deploy slug builds, release never promotes). Three-part fix:
+  1. **`0001_framework_baseline` is now idempotent** — it skips when `_dazzle_params` already exists (checked via the dialect-agnostic SQLAlchemy inspector, so the PostgreSQL runtime and the SQLite structural-test sandbox both work). Pre-existing projects created that table at runtime via `ensure_dazzle_params_table()`, so an unguarded `create_table` would fail "relation already exists"; the guard makes applying the framework chain to an already-populated DB safe (`0001` skips, `0002` no-ops, `0003` replaces a function, `0004` widens a column).
+  2. **New `dazzle db reconcile-baseline`** generates a project-side **merge migration** whose `down_revision` is the tuple of all current heads (the canonical alembic answer), collapsing the trees back to a single head. It's written to the project's `.dazzle/migrations/versions` dir (never the read-only framework dir in the wheel). Workflow: run it, commit the merge file, then `dazzle db upgrade head`.
+  3. **`db upgrade head` and `db revision` give actionable guidance** instead of alembic's raw multi-head error — "N parallel baseline roots are present … run `dazzle db reconcile-baseline`". The guard only fires on the ambiguous `head` target; an explicit `upgrade heads` is left untouched.
+
+  The whole reconcile→upgrade flow is verified against real alembic in `tests/unit/test_db_baseline_reconcile_1309.py` (two parallel roots → merge migration → single head; the framework-root ancestry trace for the real `0004`-head case; `0001` idempotency).
+
+### Agent Guidance
+
+- **Framework + project migrations are independent lineages; reconcile parallel heads with a merge migration, not by re-parenting.** A project predating the framework baselines has a parallel root, so chaining `version_locations` yields multiple heads. `dazzle db reconcile-baseline` is the supported, history-preserving fix (one merge migration → single head). Any framework migration that may run against a DB the runtime already bootstrapped (e.g. `_dazzle_params`) **must be idempotent** — guard DDL with `sqlalchemy.inspect(bind).has_table(...)` (dialect-agnostic), not a PG-only `to_regclass`, so the SQLite structural tests still pass.
+
 ## [0.80.60] - 2026-05-31
 
 ### Fixed

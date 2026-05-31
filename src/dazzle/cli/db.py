@@ -100,6 +100,19 @@ def revision_command(
     cfg = _get_alembic_cfg()
     project_versions = str(_get_project_versions_dir())
 
+    # #1309: alembic refuses to author a revision when multiple heads exist
+    # (it can't pick a parent). Give the actionable reconcile guidance instead
+    # of the raw "Multiple head revisions" error.
+    heads = _get_heads(cfg)
+    if len(heads) > 1:
+        console.print(
+            f"[red]Cannot create a revision: {len(heads)} migration heads are "
+            f"present ({', '.join(heads)}).[/red]\n"
+            f"[dim]  Run `dazzle db reconcile-baseline` to merge them into a "
+            f"single head first (see #1309).[/dim]"
+        )
+        raise typer.Exit(1)
+
     try:
         command.revision(
             cfg,
@@ -152,6 +165,65 @@ def _validate_revision_widths(cfg: object, target: str) -> None:
         )
 
 
+#: The framework's baseline migration root (#1309). A project whose own first
+#: migration predates the framework shipping baselines has `down_revision=None`
+#: — a parallel root to this one — so chaining both version dirs yields two
+#: heads. Used to give a precise "parallel baseline roots" diagnosis.
+_FRAMEWORK_BASELINE_ROOT = "0001_framework_baseline"
+
+
+def _get_heads(cfg: object) -> list[str]:
+    """Return the current head revision ids across the chained version dirs."""
+    from alembic.script import ScriptDirectory
+
+    return list(ScriptDirectory.from_config(cfg).get_heads())  # type: ignore[arg-type]
+
+
+def _guard_single_head(cfg: object, target: str) -> None:
+    """Refuse an ambiguous ``upgrade head`` when multiple heads exist (#1309).
+
+    Shipping the framework baseline migrations (v0.80.59, #1308) added a second
+    alembic head for projects whose own baseline is a parallel root — so
+    ``upgrade head`` fails with alembic's raw "Multiple head revisions" error
+    and the Heroku release phase breaks. Intercept it here with actionable
+    guidance: run ``dazzle db reconcile-baseline`` (generates a project-side
+    merge migration → single head). Only guards the literal ``head`` target;
+    an explicit ``heads`` or a specific revision is left untouched.
+    """
+    if target != "head":
+        return
+    heads = _get_heads(cfg)
+    if len(heads) <= 1:
+        return
+    has_framework_root = _FRAMEWORK_BASELINE_ROOT in heads or any(
+        _revision_traces_to_framework_root(cfg, h) for h in heads
+    )
+    detail = (
+        "parallel baseline roots (framework + project)" if has_framework_root else "multiple heads"
+    )
+    raise RuntimeError(
+        f"Refusing to `upgrade head`: {len(heads)} {detail} are present "
+        f"({', '.join(heads)}).\n"
+        f"Run `dazzle db reconcile-baseline` to generate a merge migration "
+        f"that unifies them into a single head, commit it, then re-run "
+        f"`dazzle db upgrade head`. See #1309."
+    )
+
+
+def _revision_traces_to_framework_root(cfg: object, head: str) -> bool:
+    """True if *head*'s ancestry includes the framework baseline root."""
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(cfg)  # type: ignore[arg-type]
+    try:
+        for rev in script.iterate_revisions(head, "base"):
+            if rev.revision == _FRAMEWORK_BASELINE_ROOT:
+                return True
+    except Exception:
+        logger.debug("Could not trace ancestry for head %s", head, exc_info=True)
+    return False
+
+
 def _redact_url(url: str) -> str:
     """Mask any password in a DB URL for safe display (`user:***@host/db`)."""
     import re
@@ -201,6 +273,7 @@ def upgrade_command(
     console.print(f"[dim]Target database: {_redact_url(target)}[/dim]")
 
     try:
+        _guard_single_head(cfg, revision)  # #1309: actionable error on parallel heads
         _validate_revision_widths(cfg, revision)
         before = _safe_current_revision(cfg)
         command.upgrade(cfg, revision)
@@ -218,6 +291,56 @@ def upgrade_command(
     except Exception as e:
         console.print(f"[red]Upgrade failed: {e}[/red]")
         raise typer.Exit(1)
+
+
+@db_app.command(name="reconcile-baseline")
+def reconcile_baseline_command() -> None:
+    """Merge parallel migration heads into one (#1309).
+
+    Shipping the framework baseline migrations (v0.80.59) added a second alembic
+    head for any project whose own first migration predates them (a parallel
+    root, ``down_revision = None``). That makes ``dazzle db upgrade head`` and
+    ``dazzle db revision`` fail with "Multiple head revisions".
+
+    This generates a project-side **merge migration** whose ``down_revision`` is
+    the tuple of all current heads — the canonical alembic answer — collapsing
+    the trees back to a single head so every db command works again. The merge
+    file is written to the project's ``.dazzle/migrations/versions`` dir (NOT
+    the read-only framework dir in the wheel); commit it, then run
+    ``dazzle db upgrade head``. (With ``0001`` now idempotent, applying the
+    framework chain to an already-populated DB is safe: ``0001`` skips,
+    ``0002`` no-ops, ``0003`` replaces a function, ``0004`` widens a column.)
+    """
+    from alembic.script import ScriptDirectory
+    from alembic.util import rev_id as _new_rev_id
+
+    cfg = _get_alembic_cfg()
+    script = ScriptDirectory.from_config(cfg)
+    heads = list(script.get_heads())
+
+    if len(heads) <= 1:
+        console.print(
+            f"[green]Single head ({heads[0] if heads else 'none'}) — nothing to reconcile.[/green]"
+        )
+        return
+
+    project_versions = str(_get_project_versions_dir())
+    new_rev = _new_rev_id()
+    try:
+        script.generate_revision(
+            new_rev,
+            message="merge framework + project baselines (#1309)",
+            head=tuple(heads),  # tuple of heads → a merge revision
+            version_path=project_versions,
+        )
+    except Exception as e:
+        console.print(f"[red]Reconcile failed: {e}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]Merge migration created: {new_rev}[/green] — heads unified")
+    console.print(f"[dim]  Merged heads: {', '.join(heads)}[/dim]")
+    console.print(f"[dim]  → {project_versions}/[/dim]")
+    console.print("[dim]  Commit the merge file, then run `dazzle db upgrade head`.[/dim]")
 
 
 @db_app.command(name="downgrade")
