@@ -128,3 +128,19 @@ def test_validate_unknown_binding_errors() -> None:
 def test_validate_valid_invoke_clean() -> None:
     errs = _errors("fulfil_order(order: self, warehouse: input.warehouse)")
     assert errs == [], errs
+
+
+def test_transition_atomic_fixture_validates_clean() -> None:
+    # The shipped fixture: an on_transition invoke that parses + validates with
+    # the real linker (anchors, atomic_flows populated).
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    appspec = load_project_appspec(Path("fixtures/transition_atomic"))
+    order = next(e for e in appspec.domain.entities if e.name == "Order")
+    assert order.state_machine is not None
+    t = next(tr for tr in order.state_machine.transitions if tr.to_state == "fulfilled")
+    assert t.invoke_flow is not None
+    assert t.invoke_flow.flow_name == "fulfil_order"
+
+    errs, _ = validate_transition_invocations(appspec)
+    assert errs == [], errs

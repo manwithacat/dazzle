@@ -1,0 +1,10 @@
+[project]
+name = "transition_atomic"
+version = "0.1.0"
+root = "transition_atomic.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
