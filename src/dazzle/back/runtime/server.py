@@ -1475,6 +1475,21 @@ class DazzleBackendApp:
             )
             self._app.include_router(atomic_router)
 
+            # #1317 — if any flow opts into strict in-transaction audit, create
+            # the `_dazzle_atomic_audit` side-table ONCE here at boot (own
+            # connection, committed independently) — race-free, vs a per-request
+            # CREATE TABLE IF NOT EXISTS inside the mutation transaction.
+            from dazzle.core.ir import FlowAuditMode
+
+            if any(
+                getattr(f, "audit_mode", None) == FlowAuditMode.STRICT
+                for f in self._appspec.atomic_flows
+            ):
+                from dazzle.back.runtime.atomic_flow_executor import ensure_atomic_audit_table
+
+                with self._db_manager.connection() as _audit_conn:
+                    ensure_atomic_audit_table(_audit_conn)
+
         # Grant management routes (#629)
         if self._appspec and self._appspec.grant_schemas and self._db_manager:
             from dazzle.back.runtime.grant_routes import create_grant_routes

@@ -41,6 +41,7 @@ from .archetype import (
 from .atomic_flows import (
     AtomicFlowSpec,
     AtomicFlowStep,
+    FlowAuditMode,
     FlowCreate,
     FlowFailureMode,
     FlowFieldValue,
@@ -1057,6 +1058,7 @@ __all__ = [
     "FlowCreate",
     "FlowUpdate",
     "FlowFailureMode",
+    "FlowAuditMode",
     # Layout
     "AttentionSignalKind",
     "LayoutSignal",

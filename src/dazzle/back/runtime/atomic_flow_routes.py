@@ -191,7 +191,15 @@ def _make_handler(
                     )
             # `user` is the AuthContext from the auth dependency; pass it through
             # so the executor can enforce per-step scope (#1313 1b/1c).
-            audit_sink: list[dict[str, str]] | None = [] if audit_logger is not None else None
+            #
+            # #1317 — a `audit: strict` flow writes its audit in-transaction inside
+            # the executor (atomic with the mutation), so the async path here is
+            # only for the default async-enqueue flows. For strict flows pass no
+            # sink; the executor materialises its own and writes it on the flow
+            # connection.
+            strict = flow.audit_mode == ir.FlowAuditMode.STRICT
+            use_async_audit = audit_logger is not None and not strict
+            audit_sink: list[dict[str, str]] | None = [] if use_async_audit else None
             result = _run(
                 flow,
                 body,
@@ -204,7 +212,8 @@ def _make_handler(
             # The flow committed (a denial would have raised); record each
             # touched entity as an audit fact via the async logger (#1313,
             # ADR-0029 invariant 5 — async-enqueue), correlated by flow name.
-            if audit_logger is not None and audit_sink:
+            # Strict flows already recorded in-transaction; skip the async path.
+            if use_async_audit and audit_sink:
                 await _log_flow_audit(audit_logger, flow.name, user, audit_sink)
             return result
 

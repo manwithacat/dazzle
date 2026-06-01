@@ -114,6 +114,23 @@ class FlowUpdate(BaseModel):
 AtomicFlowStep = Annotated[FlowCreate | FlowUpdate, Field(discriminator="kind")]
 
 
+class FlowAuditMode(StrEnum):
+    """How a flow's per-step audit fact is recorded (#1317, ADR-0029 invariant 5).
+
+    - ``ASYNC`` (default): one ``allow`` fact per committed step is enqueued on
+      the async ``AuditLogger`` *after* the flow commits (best-effort; dropped on
+      queue overflow / crash before drain). The shipped #1313 slice-1e behaviour.
+    - ``STRICT``: each committed step's audit row is written to the dedicated
+      ``_dazzle_atomic_audit`` side-table on the flow's **own connection, inside
+      the transaction**, so the audit commits or rolls back atomically with the
+      mutation (no drop, no async-drainer race). The upgrade path for flows that
+      need a guaranteed trail.
+    """
+
+    ASYNC = "async"
+    STRICT = "strict"
+
+
 class FlowFailureMode(StrEnum):
     """How the framework handles a create failure mid-flow."""
 
@@ -135,6 +152,7 @@ class AtomicFlowSpec(BaseModel):
     intent: str | None = None
     permit_execute: list[str]  # role names allowed to execute the flow
     on_failure: FlowFailureMode = FlowFailureMode.ROLLBACK_ALL
+    audit_mode: FlowAuditMode = FlowAuditMode.ASYNC  # #1317 — per-flow `audit:` opt-in
     inputs: list[FlowInput]
     steps: list[AtomicFlowStep]
     location: SourceLocation | None = None

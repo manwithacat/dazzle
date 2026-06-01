@@ -30,8 +30,10 @@ transitions.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -39,6 +41,119 @@ from dazzle.back.runtime.query_builder import quote_identifier
 from dazzle.core import ir
 
 logger = logging.getLogger(__name__)
+
+# Dedicated strict-audit side-table (#1317, ADR-0029 invariant 5). Written on the
+# flow's OWN connection inside the transaction (so the audit row commits/rolls
+# back atomically with the mutation), distinct from the async, hash-chained
+# `_dazzle_audit_log`. Deliberately NOT hash-chained — a per-flow in-transaction
+# insert into the chained log would race/fork the single async drainer.
+_ATOMIC_AUDIT_TABLE = "_dazzle_atomic_audit"
+
+
+def ensure_atomic_audit_table(conn: Any) -> None:
+    """Create the strict-audit side-table if absent (idempotent).
+
+    Called **once at server boot** when an app declares any ``audit: strict``
+    flow (``server.py``, atomic-router wiring), on its own connection — NOT per
+    request: a per-request ``CREATE TABLE IF NOT EXISTS`` inside the flow
+    transaction would let two concurrent first-creations race into a ``pg_type``
+    unique violation and roll back a legitimate mutation. The in-transaction
+    writer (`_write_strict_atomic_audit`) then assumes the table exists.
+    ``CREATE TABLE IF NOT EXISTS`` mirrors how ``_dazzle_audit_log`` self-inits
+    (``audit_log.AuditLogger._init_db``) — strict atomic audit needs no Alembic
+    migration. Table/index names are fixed framework literals (no interpolation).
+    """
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS _dazzle_atomic_audit (
+            id TEXT PRIMARY KEY,
+            timestamp TEXT NOT NULL,
+            flow_name TEXT NOT NULL,
+            user_id TEXT,
+            user_email TEXT,
+            user_roles TEXT,
+            operation TEXT NOT NULL,
+            entity_name TEXT NOT NULL,
+            entity_id TEXT,
+            decision TEXT NOT NULL,
+            matched_policy TEXT
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_atomic_audit_flow "
+        "ON _dazzle_atomic_audit(flow_name, timestamp)"
+    )
+
+
+def query_atomic_audit(
+    conn: Any, *, flow: str | None = None, limit: int = 100
+) -> list[dict[str, Any]]:
+    """Read strict atomic-audit rows (#1317), newest first.
+
+    The read path for the ``_dazzle_atomic_audit`` side-table. ``conn`` should use
+    a dict row factory (``psycopg.rows.dict_row``). Optionally filter by
+    ``flow`` name. Raises if the table doesn't exist (no strict flow has run);
+    callers that want a graceful "no rows yet" should catch that.
+    """
+    cur = conn.cursor()
+    if flow:
+        cur.execute(
+            "SELECT * FROM _dazzle_atomic_audit WHERE flow_name = %s "
+            "ORDER BY timestamp DESC LIMIT %s",
+            [flow, limit],
+        )
+    else:
+        cur.execute(
+            "SELECT * FROM _dazzle_atomic_audit ORDER BY timestamp DESC LIMIT %s",
+            [limit],
+        )
+    return [dict(r) for r in cur.fetchall()]
+
+
+def _write_strict_atomic_audit(
+    cursor: Any,
+    flow_name: str,
+    auth_context: Any,
+    committed_steps: list[dict[str, str]],
+) -> None:
+    """Write one ``allow`` audit row per committed step to the side-table.
+
+    Runs on the flow's ``cursor`` *inside the flow transaction* (#1317): the rows
+    commit with the mutation, and a denied/rolled-back flow writes nothing (the
+    inserts roll back with everything else). ``matched_policy`` is ``atomic:<flow>``,
+    mirroring the async path's correlation tag.
+    """
+    user = getattr(auth_context, "user", None)
+    user_id = str(user.id) if user is not None and getattr(user, "id", None) is not None else None
+    user_email = getattr(user, "email", None) if user is not None else None
+    user_roles = json.dumps(list(getattr(auth_context, "roles", []) or []))
+    ts = datetime.now(UTC).isoformat()
+    matched_policy = f"atomic:{flow_name}"
+    sql = (
+        "INSERT INTO _dazzle_atomic_audit "
+        "(id, timestamp, flow_name, user_id, user_email, user_roles, operation, "
+        "entity_name, entity_id, decision, matched_policy) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    )
+    for step in committed_steps:
+        cursor.execute(
+            sql,
+            [
+                str(uuid4()),
+                ts,
+                flow_name,
+                user_id,
+                user_email,
+                user_roles,
+                step["operation"],
+                step["entity"],
+                step.get("entity_id"),
+                "allow",
+                matched_policy,
+            ],
+        )
 
 
 class AtomicFlowError(Exception):
@@ -307,6 +422,17 @@ def execute_atomic_flow(
     above_ids: dict[str, UUID] = {}
     placeholder = db_manager.placeholder
     _enforce = access_specs is not None and auth_context is not None
+    # #1317 — `audit: strict` writes the audit side-table in-transaction. It
+    # needs the per-step intents regardless of whether the (async) caller passed
+    # a sink, so materialise one when strict and none was supplied. The strict
+    # write does NOT require a principal — an unauthenticated flow (test/legacy
+    # wiring) still records a row with null user fields, so opting into a
+    # guaranteed trail never silently degrades to *no* audit (the async path the
+    # author upgraded from would at least have run). `_write_strict_atomic_audit`
+    # tolerates a None `auth_context`.
+    strict_audit = flow.audit_mode == ir.FlowAuditMode.STRICT
+    if strict_audit and audit_sink is None:
+        audit_sink = []
 
     # Open one connection for the whole flow. The pool's exit-handler
     # commits on clean exit and rolls back on exception, so re-raising
@@ -369,6 +495,17 @@ def execute_atomic_flow(
                 audit_sink.append(
                     {"entity": step.entity, "operation": "create", "entity_id": str(row_id)}
                 )
+
+        # #1317 — strict audit: write one row per committed step to the side-table
+        # on THIS connection, before the with-block commits. The audit rows commit
+        # atomically with the mutation; any earlier deny/failure already raised and
+        # rolled the whole flow back (this line is unreachable), so a rolled-back
+        # flow records nothing. The side-table is created once at boot (see
+        # `server.py`, gated on any `audit: strict` flow) — NOT per request, which
+        # would race two concurrent first-creations into a pg_type unique violation
+        # and roll back a legitimate mutation.
+        if strict_audit and audit_sink:
+            _write_strict_atomic_audit(cursor, flow.name, auth_context, audit_sink)
     return above_ids
 
 

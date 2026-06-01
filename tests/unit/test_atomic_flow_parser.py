@@ -25,8 +25,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
 from dazzle.core.validator import validate_atomic_flows
 
 
@@ -107,6 +110,70 @@ atomic onboard "Onboard Starter":
             ("role_id", True),
         ]
         assert [s.entity for s in af.steps] == ["Person", "Employment"]
+
+    def test_audit_defaults_to_async(self) -> None:
+        # #1317 — no `audit:` line → ASYNC (the shipped slice-1e behaviour).
+        dsl = (
+            _base_entities()
+            + """
+atomic onboard "X":
+  permit:
+    execute: role(admin)
+  input legal_name: str(200) required
+  create Person:
+    legal_name: input.legal_name
+"""
+        )
+        af = _parse_fragment(dsl).atomic_flows[0]
+        assert af.audit_mode == ir.FlowAuditMode.ASYNC
+
+    def test_audit_strict_parses(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+atomic onboard "X":
+  permit:
+    execute: role(admin)
+  audit: strict
+  input legal_name: str(200) required
+  create Person:
+    legal_name: input.legal_name
+"""
+        )
+        af = _parse_fragment(dsl).atomic_flows[0]
+        assert af.audit_mode == ir.FlowAuditMode.STRICT
+
+    def test_audit_async_explicit_parses(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+atomic onboard "X":
+  permit:
+    execute: role(admin)
+  audit: async
+  input legal_name: str(200) required
+  create Person:
+    legal_name: input.legal_name
+"""
+        )
+        af = _parse_fragment(dsl).atomic_flows[0]
+        assert af.audit_mode == ir.FlowAuditMode.ASYNC
+
+    def test_audit_invalid_value_errors(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+atomic onboard "X":
+  permit:
+    execute: role(admin)
+  audit: bogus
+  input legal_name: str(200) required
+  create Person:
+    legal_name: input.legal_name
+"""
+        )
+        with pytest.raises(ParseError, match="audit"):
+            _parse_fragment(dsl)
 
     def test_input_ref_assignment(self) -> None:
         dsl = (

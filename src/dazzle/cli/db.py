@@ -398,6 +398,48 @@ def history_command(
         raise typer.Exit(1)
 
 
+@db_app.command(name="audit-atomic")
+def audit_atomic_command(
+    flow: str = typer.Option("", "--flow", help="Filter by atomic flow name"),
+    limit: int = typer.Option(50, "--limit", help="Max rows to show"),
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+) -> None:
+    """Show strict in-transaction atomic-flow audit rows (#1317).
+
+    Reads the `_dazzle_atomic_audit` side-table written by `audit: strict`
+    flows (one `allow` row per committed step, atomic with the mutation).
+    """
+    import psycopg
+    from psycopg.rows import dict_row
+
+    from dazzle.back.runtime.atomic_flow_executor import query_atomic_audit
+
+    url = _resolve_url(database_url)
+    if not url:
+        console.print("[red]No database URL — set DATABASE_URL or pass --database-url.[/red]")
+        raise typer.Exit(1)
+    try:
+        with psycopg.connect(url, row_factory=dict_row) as conn:
+            rows = query_atomic_audit(conn, flow=flow or None, limit=limit)
+    except psycopg.errors.UndefinedTable:
+        console.print(
+            "[dim]No _dazzle_atomic_audit table yet — no `audit: strict` flow has run.[/dim]"
+        )
+        return
+    except Exception as exc:
+        console.print(f"[red]Failed to read atomic audit: {exc}[/red]")
+        raise typer.Exit(1)
+    if not rows:
+        console.print("[dim]No atomic-audit rows.[/dim]")
+        return
+    for r in rows:
+        who = r.get("user_email") or r.get("user_id") or "?"
+        console.print(
+            f"{r['timestamp']}  [cyan]{r['flow_name']}[/cyan]  "
+            f"{r['operation']} {r['entity_name']}/{r.get('entity_id')}  by {who}"
+        )
+
+
 @db_app.command(name="stamp")
 def stamp_command(
     revision: str = typer.Argument(

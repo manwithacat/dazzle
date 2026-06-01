@@ -66,6 +66,7 @@ class AtomicFlowParserMixin:
         intent: str | None = None
         permit_execute: list[str] = []
         on_failure = ir.FlowFailureMode.ROLLBACK_ALL
+        audit_mode = ir.FlowAuditMode.ASYNC
         inputs: list[ir.FlowInput] = []
         steps: list[ir.AtomicFlowStep] = []
 
@@ -95,6 +96,24 @@ class AtomicFlowParserMixin:
                     )
                 on_failure = ir.FlowFailureMode.ROLLBACK_ALL
                 self.skip_newlines()
+            elif tok.type == TokenType.AUDIT:
+                # `audit: strict | async` — per-flow audit durability (#1317).
+                self.advance()
+                self.expect(TokenType.COLON)
+                mode_tok = self.expect_identifier_or_keyword()
+                mode_val = str(mode_tok.value)
+                if mode_val == "strict":
+                    audit_mode = ir.FlowAuditMode.STRICT
+                elif mode_val == "async":
+                    audit_mode = ir.FlowAuditMode.ASYNC
+                else:
+                    raise make_parse_error(
+                        f"`audit:` only accepts `strict` or `async`; got `{mode_val}`.",
+                        self.file,
+                        mode_tok.line,
+                        mode_tok.column,
+                    )
+                self.skip_newlines()
             elif tok.type == TokenType.INPUT:
                 inputs.append(self._parse_atomic_input())
             elif tok.type == TokenType.CREATE:
@@ -115,6 +134,7 @@ class AtomicFlowParserMixin:
             intent=intent,
             permit_execute=permit_execute,
             on_failure=on_failure,
+            audit_mode=audit_mode,
             inputs=inputs,
             steps=steps,
         )

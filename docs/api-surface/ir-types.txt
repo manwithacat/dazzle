@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 361 BaseModels, 145 Enums, 23 other (functions / typealiases / constants)
+# Counts: 361 BaseModels, 146 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -256,6 +256,7 @@ ir_class: AtomicFlowSpec
     - permit_execute: list[str]
     - steps: list[Annotated[FlowCreate | FlowUpdate, annotation=NoneType required=True discriminator='kind']]
   optional:
+    - audit_mode: FlowAuditMode = <FlowAuditMode.ASYNC: 'async'>
     - intent: str | None = None
     - location: SourceLocation | None = None
     - on_failure: FlowFailureMode = <FlowFailureMode.ROLLBACK_ALL: 'rollback_all'>
@@ -3796,6 +3797,11 @@ enum: FlowAssertionKind
     - TEXT_CONTAINS = 'text_contains'
     - VALIDATION_ERROR = 'validation_error'
     - VISIBLE = 'visible'
+
+enum: FlowAuditMode
+  members:
+    - ASYNC = 'async'
+    - STRICT = 'strict'
 
 enum: FlowFailureMode
   members:

@@ -380,6 +380,89 @@ async def test_atomic_create_admin_unrestricted(app: _ScopeRuntimeApp) -> None:
 
 
 # ---------------------------------------------------------------------------
+# #1317 — strict in-transaction audit (the `enrol_student_strict` flow,
+# `audit: strict`): the audit row is written to `_dazzle_atomic_audit` on the
+# flow's own connection, so it commits with the mutation and rolls back with it.
+# ---------------------------------------------------------------------------
+
+
+async def _atomic_enrol_strict(app: _ScopeRuntimeApp, who: str, *, label: str, group_id: str):
+    client = await app.client_as(who)
+    return await _csrf_post(
+        client, "/api/atomic/enrol_student_strict", {"label": label, "group": group_id}
+    )
+
+
+def _atomic_audit_rows(db_url: str, flow: str | None = None) -> list[dict[str, Any]]:
+    """Read `_dazzle_atomic_audit`; tolerate the table not existing.
+
+    The booted app (scope_runtime declares `enrol_student_strict`) creates the
+    side-table once at boot (#1317), so it normally exists with zero or more
+    rows; the UndefinedTable tolerance is a defensive fallback.
+    """
+    import psycopg
+    from psycopg.rows import dict_row
+
+    try:
+        with psycopg.connect(db_url, row_factory=dict_row) as conn:
+            cur = conn.cursor()
+            if flow:
+                cur.execute("SELECT * FROM _dazzle_atomic_audit WHERE flow_name = %s", [flow])
+            else:
+                cur.execute("SELECT * FROM _dazzle_atomic_audit")
+            return list(cur.fetchall())
+    except psycopg.errors.UndefinedTable:
+        return []
+
+
+async def test_strict_atomic_audit_row_commits_with_the_mutation(
+    app: _ScopeRuntimeApp,
+) -> None:
+    """An own-dept strict enrol commits, and exactly one in-transaction audit
+    row lands in `_dazzle_atomic_audit` — atomic with the INSERT."""
+    resp = await _atomic_enrol_strict(
+        app, "teacher_math", label="Strict maths", group_id=app.math_group_id
+    )
+    assert resp.status_code < 400, (
+        f"own-dept strict enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
+    )
+
+    rows = _atomic_audit_rows(app._db_url, flow="enrol_student_strict")
+    assert len(rows) == 1, f"expected exactly one strict-audit row, got {len(rows)}"
+    row = rows[0]
+    assert row["decision"] == "allow"
+    assert row["operation"] == "create"
+    assert row["entity_name"] == "Enrolment"
+    assert row["matched_policy"] == "atomic:enrol_student_strict"
+    assert row["entity_id"]  # the committed Enrolment id
+
+
+async def test_strict_atomic_audit_rolls_back_with_a_denied_flow(
+    app: _ScopeRuntimeApp,
+) -> None:
+    """A foreign-dept strict enrol is denied (403) and rolls back — NO audit row
+    is left behind (the in-transaction write rolls back with the mutation),
+    proving the strict audit is atomic, not best-effort."""
+    resp = await _atomic_enrol_strict(
+        app, "teacher_math", label="Strict smuggle", group_id=app.science_group_id
+    )
+    assert resp.status_code == 403, (
+        f"foreign-dept strict enrol should 403, got {resp.status_code}: {resp.text[:300]}"
+    )
+
+    assert _atomic_audit_rows(app._db_url, flow="enrol_student_strict") == [], (
+        "a denied/rolled-back strict flow must leave no audit row"
+    )
+
+    import psycopg
+
+    with psycopg.connect(app._db_url) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT count(*) FROM "Enrolment" WHERE "label" = %s', ["Strict smuggle"])
+        assert cur.fetchone()[0] == 0, "denied strict flow must not persist the Enrolment either"
+
+
+# ---------------------------------------------------------------------------
 # #1313 — atomic `update` step execution + scope: update: (source + destination)
 # in-transaction, against real Postgres
 # ---------------------------------------------------------------------------

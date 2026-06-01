@@ -34,3 +34,22 @@ atomic reassign_enrolment "Reassign Enrolment":
 
   update Enrolment(input.enrolment):
     teaching_group: input.group
+
+
+# #1317 — strict in-transaction audit. Same department-scoped enrolment as
+# `enrol_student`, but `audit: strict` writes the audit row to the
+# `_dazzle_atomic_audit` side-table on the flow's own connection, atomic with
+# the INSERT: an own-dept enrol commits the audit row WITH the row; a
+# foreign-dept enrol is denied (403) and the audit row rolls back too.
+atomic enrol_student_strict "Enrol Student (strict audit)":
+  intent: "Department-scoped enrolment with strict in-transaction audit"
+  permit:
+    execute: role(teacher, admin)
+  audit: strict
+
+  input label: str(120) required
+  input group: ref TeachingGroup required
+
+  create Enrolment:
+    label: input.label
+    teaching_group: input.group

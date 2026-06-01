@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.76] - 2026-06-01
+
+### Added
+
+- **#1317 — atomic flows support strict in-transaction audit via per-flow `audit: strict` (ADR-0029 invariant 5).** A new per-flow opt-in: `audit: strict` (default `audit: async`) on the `atomic` block makes each committed step's audit row write to a dedicated `_dazzle_atomic_audit` side-table **on the flow's own connection, inside the transaction** — so the audit row commits or rolls back **atomically with the mutation** (no drop, no async-drainer race). This is the upgrade path from the default async-enqueue (#1313 slice 1e), which stays best-effort (one `allow` fact per committed step via the async `AuditLogger` after commit).
+  - **Atomic, not best-effort:** an own-scope strict flow commits its audit row *with* the `INSERT`/`UPDATE`; a scope-denied flow rolls the audit row back *with* everything else (a denied flow records nothing). Verified against real Postgres (`tests/integration/test_scope_runtime_pg.py` — the new `enrol_student_strict` flow: commit → exactly one `_dazzle_atomic_audit` row; foreign-dept deny → 403, zero rows, zero `Enrolment` rows).
+  - **No Alembic migration:** the side-table self-inits via `CREATE TABLE IF NOT EXISTS` (mirroring how `_dazzle_audit_log` initialises), avoiding a new migration + the package-data/wheel concern. Deliberately **not** hash-chained — a per-flow in-transaction insert into the chained `_dazzle_audit_log` would race/fork its single async drainer.
+  - **IR + grammar:** new `FlowAuditMode` enum (`async` | `strict`) + `AtomicFlowSpec.audit_mode` field; the parser accepts `audit: strict|async` on the `atomic` block (invalid values are a parse error). IR-first per the staged convention.
+  - **Read path:** `dazzle db audit-atomic [--flow <name>] [--limit N]` + a `query_atomic_audit` helper.
+
+### Changed
+
+- **api-surface (ir-types baseline):** `dazzle.core.ir` now exports `FlowAuditMode`, and `AtomicFlowSpec` gains an `audit_mode` field — `docs/api-surface/ir-types.txt` regenerated (146 enums).
+
+### Agent Guidance
+
+- **Atomic flows can now opt into guaranteed audit.** Add `audit: strict` to an `atomic` block when the flow needs a *guaranteed* trail (a money-mover, a compliance-critical mutation): the audit row is written in the flow transaction and is atomic with the mutation, queryable via `dazzle db audit-atomic`. The default (`audit: async`, or omitting the line) keeps the best-effort async-enqueue. Strict audit requires an authenticated principal (no `auth_context` ⇒ no row); it's a framework table (`_dazzle_atomic_audit`), self-initialised, no migration. Remaining ADR-0029 follow-ups: #1315 (derived FK ordering), #1318/#1319 (Tier-3 ADR seams).
+
 ## [0.80.75] - 2026-06-01
 
 ### Security

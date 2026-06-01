@@ -471,3 +471,57 @@ class TestCollectPathCheckParentLocks:
             )
             == {}
         )
+
+
+# ---------------------------------------------------------------------------
+# #1317 — strict in-transaction audit writer
+# ---------------------------------------------------------------------------
+
+
+class TestStrictAtomicAuditWrite:
+    """`_write_strict_atomic_audit` pins the row shape, incl. the null-principal
+    path (an unauthenticated strict flow still records, with null user fields —
+    the #1317 review fix so opting into strict never silently drops ALL audit)."""
+
+    def test_write_with_null_principal_uses_null_user_fields(self) -> None:
+        from unittest.mock import MagicMock
+
+        from dazzle.back.runtime.atomic_flow_executor import _write_strict_atomic_audit
+
+        cur = MagicMock()
+        _write_strict_atomic_audit(
+            cur,
+            "enrol_student_strict",
+            None,  # no auth_context (unauthenticated/legacy wiring)
+            [{"entity": "Enrolment", "operation": "create", "entity_id": "row-1"}],
+        )
+        assert cur.execute.call_count == 1
+        params = cur.execute.call_args[0][1]
+        # (id, timestamp, flow_name, user_id, user_email, user_roles, operation,
+        #  entity_name, entity_id, decision, matched_policy)
+        assert params[2] == "enrol_student_strict"
+        assert params[3] is None  # user_id
+        assert params[4] is None  # user_email
+        assert params[5] == "[]"  # user_roles (json) — no roles, not dropped
+        assert params[6] == "create"
+        assert params[7] == "Enrolment"
+        assert params[8] == "row-1"
+        assert params[9] == "allow"
+        assert params[10] == "atomic:enrol_student_strict"
+
+    def test_write_one_row_per_committed_step(self) -> None:
+        from unittest.mock import MagicMock
+
+        from dazzle.back.runtime.atomic_flow_executor import _write_strict_atomic_audit
+
+        cur = MagicMock()
+        _write_strict_atomic_audit(
+            cur,
+            "f",
+            None,
+            [
+                {"entity": "A", "operation": "create", "entity_id": "1"},
+                {"entity": "B", "operation": "update", "entity_id": "2"},
+            ],
+        )
+        assert cur.execute.call_count == 2
