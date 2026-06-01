@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.80] - 2026-06-01
+
+### Added
+
+- **#1319 — a lifecycle transition can invoke an atomic flow in its own transaction (ADR-0032 Slice B; the seam is complete).** Building on the Slice A surface (v0.80.79), a state-machine transition declaring `invoke <flow>(...)` now actually runs the named `atomic` flow **in the same database transaction as the status write** — the state change and its multi-row effect commit together or roll back together. This is the atomicity ADR-0032 exists for.
+  - **Runtime:** `repository.update(conn=...)` joins a caller-owned transaction; `CRUDService.update` intercepts a transition carrying `invoke_flow` and runs the status `UPDATE` + `execute_atomic_flow_on_conn(...)` on one connection (`_update_with_invoke`). Each effect step is scope-enforced as the triggering principal (the full `AuthContext` is now threaded route→service; `access_specs`/`fk_graph` are wired onto each service at boot via `set_invoke_context`). The runtime `StateTransitionSpec` carries `invoke_flow` through the IR→runtime conversion.
+  - **Failure semantics:** a flow failure surfaces as a clean `400` (`transition_invoke_failed`) and rolls the **whole transition** back (status unchanged); a per-step scope denial propagates as `403`/`404`. Fail-closed: an unauthenticated path reaching an invoke transition gets `403`, never an unscoped effect.
+  - **v1 limits (validate-time rejected):** `invoke` on an `auto` transition (no user principal — the service-principal story is deferred), and on soft-delete / temporal / subtype-polymorphic entities (the shared read-back is a plain `SELECT`).
+  - **Verified real-Postgres** (`tests/integration/test_transition_invoke_pg.py`): a `submitted -> fulfilled` transition commits the status AND creates the effect `Shipment` together; a unique-violating flow returns `400` and leaves the status `submitted` with no effect row. Adversarially reviewed — hot-path non-regression and atomicity confirmed sound (three findings fixed); full `not e2e` suite green (16,903) with no regression to the CRUD update hot path.
+
+### Agent Guidance
+
+- **Transition-invoked atomic flows are live and atomic.** `on_transition: from -> to: invoke <flow>(arg: self, x: input.x)` now runs `<flow>` in the status-write transaction — the state change and the flow's effects are one atomic unit (a flow failure rolls the transition back). `self` = the transitioning row's id; `input.<name>` = a field from the update request; each effect step is scope-enforced as the triggering user. v1 is **manual transitions on plain entities only** (rejected at validate time on `auto` transitions and soft-delete/temporal/subtype entities). ADR-0032 is fully implemented; the whole ADR-0029 atomic-flow cluster is now complete.
+
 ## [0.80.79] - 2026-06-01
 
 ### Added
