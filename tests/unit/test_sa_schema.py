@@ -5,7 +5,7 @@ Verifies type mapping, FK handling, self-references, and topological ordering.
 """
 
 import pytest
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, Integer, Text, Uuid
+from sqlalchemy import JSON, Boolean, Date, DateTime, Integer, Numeric, Text, Uuid
 
 from dazzle.back.runtime.sa_schema import (
     _field_type_to_sa,
@@ -50,7 +50,7 @@ class TestScalarTypeMapping:
         [
             (ScalarType.STR, Text),  # test_str_maps_to_text
             (ScalarType.INT, Integer),  # test_int_maps_to_integer
-            (ScalarType.DECIMAL, Float),  # test_decimal_maps_to_float
+            (ScalarType.DECIMAL, Numeric),  # test_decimal_maps_to_numeric (#1321)
             (ScalarType.BOOL, Boolean),  # test_bool_maps_to_boolean
             (ScalarType.DATE, Date),  # test_date_maps_to_date
             (ScalarType.DATETIME, DateTime),  # test_datetime_maps_to_datetime
@@ -61,7 +61,7 @@ class TestScalarTypeMapping:
         ids=[
             "test_str_maps_to_text",
             "test_int_maps_to_integer",
-            "test_decimal_maps_to_float",
+            "test_decimal_maps_to_numeric",
             "test_bool_maps_to_boolean",
             "test_date_maps_to_date",
             "test_datetime_maps_to_datetime",

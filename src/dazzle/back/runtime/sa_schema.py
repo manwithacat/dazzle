@@ -63,7 +63,9 @@ def _scalar_type_to_sa(scalar_type: ScalarType) -> Any:
         ScalarType.STR: sa.Text(),
         ScalarType.TEXT: sa.Text(),
         ScalarType.INT: sa.Integer(),
-        ScalarType.DECIMAL: sa.Float(),
+        # DECIMAL → exact NUMERIC (#1321); precision/scale applied in
+        # _field_type_to_sa where they're available. FLOAT stays IEEE-754.
+        ScalarType.DECIMAL: sa.Numeric(),
         ScalarType.FLOAT: sa.Float(),
         ScalarType.BOOL: sa.Boolean(),
         ScalarType.DATE: sa.Date(),
@@ -81,6 +83,11 @@ def _field_type_to_sa(field_type: FieldType) -> Any:
     """Convert a DSL FieldType to a SQLAlchemy column type instance."""
     sa = _ensure_sa()
     if field_type.kind == "scalar" and field_type.scalar_type:
+        # decimal(p,s) → NUMERIC(p,s) for exact arithmetic (#1321). Precision is
+        # optional → unconstrained NUMERIC; scale defaults to 0 in Postgres when
+        # precision is given without scale, so only pass scale when declared.
+        if field_type.scalar_type == ScalarType.DECIMAL and field_type.precision is not None:
+            return sa.Numeric(field_type.precision, field_type.scale)
         return _scalar_type_to_sa(field_type.scalar_type)
     if field_type.kind == "ref":
         return sa.Uuid()

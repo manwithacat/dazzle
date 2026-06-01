@@ -104,7 +104,9 @@ def _scalar_type_to_postgres(scalar_type: ScalarType) -> str:
         ScalarType.STR: "TEXT",
         ScalarType.TEXT: "TEXT",
         ScalarType.INT: "INTEGER",
-        ScalarType.DECIMAL: "DOUBLE PRECISION",
+        # DECIMAL → exact NUMERIC (#1321); precision/scale applied in
+        # _field_type_to_postgres where they're available. FLOAT stays IEEE-754.
+        ScalarType.DECIMAL: "NUMERIC",
         ScalarType.FLOAT: "DOUBLE PRECISION",
         ScalarType.BOOL: "BOOLEAN",
         ScalarType.DATE: "DATE",
@@ -121,6 +123,12 @@ def _scalar_type_to_postgres(scalar_type: ScalarType) -> str:
 def _field_type_to_postgres(field_type: FieldType) -> str:
     """Convert FieldType to PostgreSQL column type."""
     if field_type.kind == "scalar" and field_type.scalar_type:
+        # decimal(p,s) → NUMERIC(p,s) for exact arithmetic (#1321). Precision is
+        # optional → unconstrained NUMERIC; scale only when declared.
+        if field_type.scalar_type == ScalarType.DECIMAL and field_type.precision is not None:
+            if field_type.scale is not None:
+                return f"NUMERIC({field_type.precision}, {field_type.scale})"
+            return f"NUMERIC({field_type.precision})"
         return _scalar_type_to_postgres(field_type.scalar_type)
     elif field_type.kind == "enum":
         return "TEXT"

@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.80.81] - 2026-06-01
+## [0.80.82] - 2026-06-01
+
+### Fixed
+
+- **#1321 — `decimal(p,s)` columns now emit `NUMERIC(p,s)`, not `DOUBLE PRECISION`.** `precision`/`scale` were carried correctly through the IR (`core.ir.fields`) and the backend spec (`back.specs.entity`) but discarded at the two documented-mirror DDL mappers (`sa_schema._field_type_to_sa`, `pg_backend._field_type_to_postgres`), which emitted a binary float. Every decimal column was silently subject to IEEE-754 representation error and plan-order-dependent summation. Both mappers now thread precision/scale into an exact `NUMERIC` (`sa.Numeric(p, s)` / `NUMERIC(p, s)`); precision omitted → unconstrained `NUMERIC`. `FLOAT` stays `DOUBLE PRECISION` (IEEE-754 is intended there). This also aligns storage with the runtime model, which already typed decimal fields as `Decimal` (`model_generator`) — previously a `float` was read back and *lossily* coerced to `Decimal`; now psycopg returns an exact `Decimal`.
+  - **`MONEY` is unaffected** — it is expanded upstream into an integer `_minor` + `_currency` column pair (exact), never reaching these mappers as a decimal.
+  - **No framework migration:** no framework entity declares a `decimal` column, so `NUMERIC` reaches only user-app schemas (created fresh via `create_all()`). Existing user apps with decimal data migrate via `ALTER COLUMN … TYPE NUMERIC` (already a sanctioned safe-cast, `test_safe_casts`).
+  - Regression test: `tests/unit/test_decimal_numeric_ddl.py` pins both DDL paths; the stale `test_decimal_maps_to_float` assertion in `test_sa_schema.py` is corrected to `Numeric`.
+
+### Agent Guidance
+
+- A `decimal` DSL field is now exact (`NUMERIC`) end-to-end and reads back as `decimal.Decimal`. Use `decimal` (not `float`) for any money-adjacent or summed quantity; `float` remains IEEE-754 for sensors/scores/weights. This is the A2-determinism precondition ADR-0030 calls out for aggregate/conservation paths.
+
 
 ### Added
 
