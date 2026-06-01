@@ -1466,6 +1466,10 @@ class DazzleBackendApp:
                 self._db_manager,
                 user_role_extractor=lambda user: list(getattr(user, "roles", []) or []),
                 auth_dep=auth_dep,
+                # #1313 slice 1b — per-step scope: create: enforcement. Same
+                # access specs + FK graph the policy registry uses above.
+                access_specs=cedar_access_specs,
+                fk_graph=_fk_graph,
             )
             self._app.include_router(atomic_router)
 

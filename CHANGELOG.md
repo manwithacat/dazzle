@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.70] - 2026-06-01
+
+> Note: 0.80.69 was skipped — a pre-commit lint reject aborted the commit after the tag/push step had already run, leaving a `v0.80.69` tag on the wrong tree; the tag was deleted and this work re-shipped cleanly as 0.80.70.
+
+### Added
+
+- **#1313 Slice 1b — per-step `scope: create:` enforcement in the `atomic`-flow executor (ADR-0029 invariant 2).** The atomic executor previously did raw `INSERT`s that **bypassed scope entirely** — any caller permitted to *execute* a flow could create rows in any scope. Now each `create` step is routed through the same guard a standalone create gets (`route_generator._enforce_create_scope`, the #1124/#1311 enforcer) **before** its INSERT, using an **in-transaction probe** — `SELECT 1 WHERE <expr>` on a fresh cursor of the *flow's own connection*, so FK-path / EXISTS create-scope resolves inside the flow transaction and sees rows created by earlier steps. Scope keys are derived from the authenticated principal (the `AuthContext` the route already receives), never the payload (invariant 1). A denial raises `HTTPException(403)` from inside the transaction → the **whole flow rolls back** (fail-closed, invariant 6); the probe itself also fails closed (a probe error denies + rolls back rather than 500-ing). Wired in `server.py` (the atomic router now gets the per-entity access specs + FK graph it already builds for the policy registry). Verified end-to-end against **real Postgres** via `fixtures/scope_runtime` + `tests/integration/test_scope_runtime_pg.py`: a teacher's atomic enrol into an own-department group commits; into a foreign-department group **403s and rolls back (no row persisted)**; an admin (matching `scope: create: all`) is unrestricted.
+- `_enforce_create_scope` gains an optional `probe` parameter so callers can inject the in-transaction probe; CRUD callers omit it and the default separate-connection `build_create_scope_probe` is built (no behaviour change for CRUD).
+
+### Changed
+
+- **`atomic` `update` steps remain stubbed (501).** Slice 1b enforces scope on `create` steps; `update`-step execution (and its `scope: update:` destination guard) + the in-transaction **audit fact** (ADR-0029 invariant 5) are the remaining follow-ups for the construct.
+
+### Agent Guidance
+
+- **`atomic` create steps are now scope-enforced — the executor no longer bypasses `scope: create:`.** A flow's executor must satisfy each created entity's `scope: create:` rule (FK-path/EXISTS resolved in-transaction), not just the flow's `permit: execute:` role gate; a foreign-scope create 403s and rolls the flow back. Derive nothing from the payload for authorization — the principal's `AuthContext` is threaded through. When extending the atomic runtime (update-step execution, audit), add a real-Postgres case to `tests/integration/test_scope_runtime_pg.py` (the `enrol_student` flow in `fixtures/scope_runtime` is the template).
+
 ## [0.80.68] - 2026-06-01
 
 ### Added

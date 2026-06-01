@@ -16,8 +16,12 @@ runtime against a **real Postgres**, via `tests/integration/test_scope_runtime_p
 - **#1312 — `scope: update:` DESTINATION revalidation** (trajectory 2).
   Repointing an in-scope enrolment's `teaching_group` into a foreign
   department must 404 (the would-be-final row fails scope).
-- **#1313 (slice 1b, pending)** — a guarded `atomic` reassign flow will be
-  added here once per-step in-transaction scope enforcement lands.
+- **#1313 slice 1b — per-step `scope: create:` in an `atomic` flow** (shipped).
+  The `enrol_student` flow creates an `Enrolment`; its create step is enforced
+  by the same FK-path `scope: create:` via an **in-transaction probe**. The
+  test proves a teacher's own-department atomic enrol commits, a foreign-department
+  one 403s **and rolls back** (no row persisted), and an admin (`scope: create:
+  all`) is unrestricted. (Update-step execution + audit are later follow-ups.)
 
 ## Domain
 

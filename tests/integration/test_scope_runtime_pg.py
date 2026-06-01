@@ -287,3 +287,58 @@ async def test_update_repoint_into_foreign_department_is_denied(app: _ScopeRunti
     assert resp.status_code == 404, (
         f"foreign-dept repoint should 404, got {resp.status_code}: {resp.text[:300]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1313 slice 1b — per-step `scope: create:` enforcement inside an atomic flow
+# (in-transaction probe), against real Postgres
+# ---------------------------------------------------------------------------
+
+
+async def _atomic_enrol(app: _ScopeRuntimeApp, who: str, *, label: str, group_id: str) -> Any:
+    client = await app.client_as(who)
+    return await _csrf_post(
+        client, "/api/atomic/enrol_student", {"label": label, "group": group_id}
+    )
+
+
+async def test_atomic_create_in_own_department_is_allowed(app: _ScopeRuntimeApp) -> None:
+    """A teacher's atomic enrol into an own-department group satisfies the
+    per-step `scope: create:` (FK-path) and commits."""
+    resp = await _atomic_enrol(
+        app, "teacher_math", label="Atomic maths", group_id=app.math_group_id
+    )
+    assert resp.status_code < 400, (
+        f"own-dept atomic enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
+    )
+
+
+async def test_atomic_create_in_foreign_department_is_denied_and_rolls_back(
+    app: _ScopeRuntimeApp,
+) -> None:
+    """A teacher's atomic enrol into a foreign-department group is denied (403)
+    by the in-transaction per-step scope probe, and the flow rolls back — the
+    raw-INSERT-bypasses-scope hole is closed."""
+    resp = await _atomic_enrol(
+        app, "teacher_math", label="Atomic smuggle", group_id=app.science_group_id
+    )
+    assert resp.status_code == 403, (
+        f"foreign-dept atomic enrol should 403, got {resp.status_code}: {resp.text[:300]}"
+    )
+
+    # Roll-back check: the denied enrolment must not have been persisted.
+    import psycopg
+
+    with psycopg.connect(app._db_url) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT count(*) FROM "Enrolment" WHERE "label" = %s', ["Atomic smuggle"])
+        assert cur.fetchone()[0] == 0, "denied atomic create must not persist any row"
+
+
+async def test_atomic_create_admin_unrestricted(app: _ScopeRuntimeApp) -> None:
+    resp = await _atomic_enrol(
+        app, "admin", label="Atomic admin cross-dept", group_id=app.science_group_id
+    )
+    assert resp.status_code < 400, (
+        f"admin atomic enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
+    )

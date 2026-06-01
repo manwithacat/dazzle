@@ -2360,8 +2360,15 @@ def _enforce_create_scope(
     auth_context: "AuthContext | None",
     service: Any = None,
     fk_graph: "FKGraph | None" = None,
+    probe: "Callable[[str, list[Any]], bool] | None" = None,
 ) -> None:
     """`scope: create:` enforcement (#1124, v0.71.22).
+
+    ``probe`` (optional, #1313): inject a create-scope probe instead of building
+    one from ``service``. The atomic-flow executor passes an *in-transaction*
+    probe (bound to the flow's connection) so FK-path / EXISTS scope is resolved
+    inside the flow's transaction; CRUD callers omit it and the default
+    separate-connection probe (:func:`build_create_scope_probe`) is built.
 
     Walks any matching ``scope: create:`` rules against the post-default
     payload and raises HTTPException(403) if any matching rule rejects
@@ -2459,7 +2466,8 @@ def _enforce_create_scope(
     )
     from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
 
-    probe = build_create_scope_probe(service, entity_name)
+    if probe is None:
+        probe = build_create_scope_probe(service, entity_name)
     schema = get_current_tenant_schema()
 
     for r in matched:

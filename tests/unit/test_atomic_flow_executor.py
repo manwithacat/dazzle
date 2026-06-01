@@ -14,6 +14,7 @@ These tests pin the in-process semantics of ``execute_atomic_flow``:
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -223,7 +224,74 @@ class TestUpdateStepStub:
 
     def test_update_step_raises_not_implemented(self) -> None:
         db = _make_db()
-        with pytest.raises(NotImplementedError, match="slice 1b"):
+        with pytest.raises(NotImplementedError, match="not yet executed"):
             execute_atomic_flow(self._flow_with_update(), {"pid": "p-1"}, db)
         # The stub raises before any INSERT runs.
         assert db._mock_cursor.execute.call_count == 0
+
+
+class TestPerStepScopeEnforcement:
+    """#1313 slice 1b: each create step is routed through scope: create:
+    enforcement when auth_context + access_specs are supplied. (Real-Postgres
+    behaviour is covered end-to-end in
+    tests/integration/test_scope_runtime_pg.py; these unit tests pin the
+    wiring + the fail-closed propagation with the CRUD enforcer mocked.)"""
+
+    def _principal(self) -> Any:
+        from types import SimpleNamespace
+
+        return SimpleNamespace(user=SimpleNamespace(id="u-1"), roles=["admin"])
+
+    def test_each_create_is_routed_through_scope(self, monkeypatch: Any) -> None:
+        import dazzle.back.runtime.route_generator as rg
+
+        seen: list[str] = []
+
+        def _fake_enforce(**kwargs: Any) -> None:
+            seen.append(kwargs["entity_name"])
+
+        monkeypatch.setattr(rg, "_enforce_create_scope", _fake_enforce)
+        db = _make_db()
+        execute_atomic_flow(
+            _flow_two_creates(),
+            {"legal_name": "Alice"},
+            db,
+            auth_context=self._principal(),
+            access_specs={"Person": object(), "Employment": object()},
+        )
+        # Enforcement invoked once per create step, in declaration order.
+        assert seen == ["Person", "Employment"]
+
+    def test_scope_denial_rolls_back_before_insert(self, monkeypatch: Any) -> None:
+        from fastapi import HTTPException
+
+        import dazzle.back.runtime.route_generator as rg
+
+        def _deny(**kwargs: Any) -> None:
+            raise HTTPException(status_code=403, detail="scope_create_denied")
+
+        monkeypatch.setattr(rg, "_enforce_create_scope", _deny)
+        db = _make_db()
+        with pytest.raises(HTTPException) as exc:
+            execute_atomic_flow(
+                _flow_two_creates(),
+                {"legal_name": "Alice"},
+                db,
+                auth_context=self._principal(),
+                access_specs={"Person": object()},
+            )
+        assert exc.value.status_code == 403
+        # Denial fires BEFORE the INSERT — nothing is written (fail-closed).
+        assert db._mock_cursor.execute.call_count == 0
+
+    def test_no_enforcement_without_principal_or_specs(self, monkeypatch: Any) -> None:
+        """Legacy/test wiring (no auth_context or access_specs) runs unguarded."""
+        import dazzle.back.runtime.route_generator as rg
+
+        def _boom(**kwargs: Any) -> None:
+            raise AssertionError("enforcement must not run without auth_context+access_specs")
+
+        monkeypatch.setattr(rg, "_enforce_create_scope", _boom)
+        db = _make_db()
+        execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)  # no kwargs
+        assert db._mock_cursor.execute.call_count == 2  # both creates ran

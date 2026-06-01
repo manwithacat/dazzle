@@ -73,6 +73,8 @@ def build_atomic_flow_router(
     *,
     user_role_extractor: Callable[[Any], list[str]] | None = None,
     auth_dep: Callable[..., Any] | None = None,
+    access_specs: dict[str, Any] | None = None,
+    fk_graph: Any = None,
 ) -> APIRouter:
     """Build a router exposing ``POST /api/atomic/<name>`` per flow.
 
@@ -85,8 +87,14 @@ def build_atomic_flow_router(
             handler checks the intersection with ``flow.permit_execute``.
             If omitted, permit enforcement is skipped (acceptable for
             test wiring; production wiring should always pass one).
-        auth_dep: FastAPI dependency yielding the authenticated user.
-            If omitted, the route is unauthenticated (test-only).
+        auth_dep: FastAPI dependency yielding the authenticated user
+            (an ``AuthContext`` in production wiring). If omitted, the
+            route is unauthenticated (test-only).
+        access_specs: ``{entity_name: EntityAccessSpec}`` — when provided
+            (with an ``AuthContext``-yielding ``auth_dep``), each create
+            step is routed through ``scope: create:`` enforcement inside
+            the flow transaction (#1313 slice 1b, ADR-0029).
+        fk_graph: FK graph for FK-path / EXISTS create-scope probe SQL.
 
     Returns:
         An ``APIRouter`` with prefix ``/api/atomic``.
@@ -100,6 +108,8 @@ def build_atomic_flow_router(
             db_manager,
             user_role_extractor=user_role_extractor,
             auth_dep=auth_dep,
+            access_specs=access_specs,
+            fk_graph=fk_graph,
         )
     return router
 
@@ -111,6 +121,8 @@ def _register_one(
     *,
     user_role_extractor: Callable[[Any], list[str]] | None,
     auth_dep: Callable[..., Any] | None,
+    access_specs: dict[str, Any] | None = None,
+    fk_graph: Any = None,
 ) -> None:
     """Register a single flow's POST endpoint."""
     InputModel = build_input_model(flow)
@@ -123,6 +135,8 @@ def _register_one(
         permitted,
         user_role_extractor=user_role_extractor,
         auth_dep=auth_dep,
+        access_specs=access_specs,
+        fk_graph=fk_graph,
     )
     handler.__name__ = f"atomic_{flow.name}"
     handler.__doc__ = flow.intent or flow.label
@@ -145,6 +159,8 @@ def _make_handler(
     *,
     user_role_extractor: Callable[[Any], list[str]] | None,
     auth_dep: Callable[..., Any] | None,
+    access_specs: dict[str, Any] | None = None,
+    fk_graph: Any = None,
 ) -> Callable[..., Any]:
     """Build the actual FastAPI handler closure for one flow."""
     if auth_dep is not None:
@@ -163,7 +179,16 @@ def _make_handler(
                             f"{sorted(permitted)}; user has {sorted(user_roles)}."
                         ),
                     )
-            return _run(flow, body, db_manager)
+            # `user` is the AuthContext from the auth dependency; pass it through
+            # so the executor can enforce per-step scope: create: (#1313 1b).
+            return _run(
+                flow,
+                body,
+                db_manager,
+                auth_context=user,
+                access_specs=access_specs,
+                fk_graph=fk_graph,
+            )
 
         return authed_handler
 
@@ -175,11 +200,32 @@ def _make_handler(
     return open_handler
 
 
-def _run(flow: ir.AtomicFlowSpec, body: BaseModel, db_manager: Any) -> dict[str, Any]:
-    """Execute the flow and translate errors into HTTP responses."""
+def _run(
+    flow: ir.AtomicFlowSpec,
+    body: BaseModel,
+    db_manager: Any,
+    *,
+    auth_context: Any = None,
+    access_specs: dict[str, Any] | None = None,
+    fk_graph: Any = None,
+) -> dict[str, Any]:
+    """Execute the flow and translate errors into HTTP responses.
+
+    A ``scope: create:`` denial raises ``HTTPException(403)`` from inside the
+    executor (the flow transaction rolls back); it propagates unchanged — only
+    ``NotImplementedError`` (stubbed step) and ``AtomicFlowError`` (DB failure)
+    are translated here.
+    """
     inputs = body.model_dump(mode="python")
     try:
-        created = execute_atomic_flow(flow, inputs, db_manager)
+        created = execute_atomic_flow(
+            flow,
+            inputs,
+            db_manager,
+            auth_context=auth_context,
+            access_specs=access_specs,
+            fk_graph=fk_graph,
+        )
     except NotImplementedError as exc:
         # Slice 1a (ADR-0029): a flow containing an `update` step is
         # parse/validate-clean but not yet executable. Surface a clean 501
