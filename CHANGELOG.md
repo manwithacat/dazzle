@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.75] - 2026-06-01
+
+### Security
+
+- **#1316 — atomic flows now share-lock the FK-path scope parent against a TOCTOU race (ADR-0029 invariant 4).** Before the in-transaction `scope: create:` / `scope: update:` probe reads the directly-referenced FK-path scope parent, the atomic executor now pins that row with `SELECT … FOR SHARE` on the flow's own connection (`_collect_pathcheck_parent_locks` + `_acquire_scope_parent_share_locks` in `atomic_flow_executor.py`). This closes the read-then-write window where a concurrent `UPDATE` could move the parent out of the principal's scope *between* the scope check and the flow's commit — without the lock, READ COMMITTED lets the check pass against the old value while the parent silently moves. The lock blocks the conflicting writer until the flow commits or rolls back, and releases with the transaction.
+  - **Deterministic lock order** — tables sorted, then pks sorted, one row at a time via the proven `"id" = %s FOR SHARE` shape — so two concurrent flows acquire overlapping locks in the same global order and cannot deadlock.
+  - **Scope (option A, "smallest correct step"):** only the **directly-referenced (root) FK-path parent** is pinned, which **fully closes the TOCTOU for depth-2 FK-path scopes** (the common case, incl. the `scope_runtime` fixtures) for both create steps and update *destinations*. Explicitly **deferred + documented:** deeper (>2-hop) intermediate rows, the update *source*-row parent, `UserAttrCheck` principal-backing rows, and `ExistsCheck` / junction-membership phantoms (a row lock can't express set membership).
+  - **Isolation-level escape hatch STRUCK** (ADR-0029 invariant 4, per the issue's "spec it or strike it"): raising a pooled connection to SERIALIZABLE needs reset-on-return + whole-flow retry that conflict with the no-compensation model; `FOR SHARE` on attribute-scope parents is the only supported mechanism. If membership/phantom coverage is later needed it returns as its own ADR.
+  - **Verified against real Postgres:** a new `tests/integration/test_scope_parent_lock_pg.py` proves the `FOR SHARE` lock genuinely blocks a concurrent `UPDATE` until release; the existing `test_scope_runtime_pg.py` (13 cases, enrol + reassign) confirms no regression to the shipped #1311/#1312/#1313 scope semantics.
+
+### Agent Guidance
+
+- **Atomic-flow scope parents are TOCTOU-hardened for the common (depth-2) case.** An atomic `create`/`update` step now share-locks the directly-referenced FK-path scope parent before its scope check, so a concurrent move of that parent can't slip a row into a foreign scope mid-flow. Coverage is the *root* hop only — deeper FK chains, update-source rows, principal-attribute rows, and junction-membership (`via`) scopes are documented-deferred, NOT covered; don't assume a multi-hop or EXISTS scope is race-safe. The SERIALIZABLE escape hatch is struck (won't be added as an author one-liner). Remaining ADR-0029 follow-ups: #1315 (derived FK ordering), #1317 (strict in-transaction audit), #1318/#1319 (Tier-3 ADR seams).
+
 ## [0.80.74] - 2026-06-01
 
 ### Added

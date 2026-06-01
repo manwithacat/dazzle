@@ -349,3 +349,125 @@ class TestPerStepScopeEnforcement:
         db = _make_db()
         execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)  # no kwargs
         assert db._mock_cursor.execute.call_count == 2  # both creates ran
+
+
+# ---------------------------------------------------------------------------
+# #1316 — scope-parent FOR SHARE lock target collection (ADR-0029 invariant 4)
+# ---------------------------------------------------------------------------
+
+
+class TestCollectPathCheckParentLocks:
+    """`_collect_pathcheck_parent_locks` extracts the directly-referenced
+    FK-path scope-parent rows to share-lock before the scope probe."""
+
+    def _fk_graph(self) -> Any:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.core.ir.fk_graph import FKGraph
+
+        appspec = load_project_appspec(Path("fixtures/scope_runtime"))
+        return FKGraph.from_entities(appspec.domain.entities)
+
+    def _create_rule(self, op: str = "create") -> Any:
+        from types import SimpleNamespace
+
+        from dazzle.core.ir.predicates import CompOp, PathCheck, ValueRef
+
+        # Enrolment's depth-2 FK-path create-scope: teaching_group.department.
+        pred = PathCheck(
+            path=["teaching_group", "department"],
+            op=CompOp.EQ,
+            value=ValueRef(user_attr="department"),
+        )
+        return SimpleNamespace(operation=SimpleNamespace(value=op), personas=["*"], predicate=pred)
+
+    def test_depth2_create_collects_root_target(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+
+        spec = SimpleNamespace(scopes=[self._create_rule("create")])
+        group_id = "11111111-1111-1111-1111-111111111111"
+        locks = _collect_pathcheck_parent_locks(
+            entity="Enrolment",
+            payload={"teaching_group": group_id},
+            access_specs={"Enrolment": spec},
+            fk_graph=self._fk_graph(),
+            operations=("create",),
+        )
+        assert len(locks) == 1
+        (table, pks) = next(iter(locks.items()))
+        assert "TeachingGroup" in table  # root FK target table (schema-qualified+quoted)
+        assert pks == {group_id}
+
+    def test_operation_filter_excludes_other_ops(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+
+        spec = SimpleNamespace(scopes=[self._create_rule("create")])
+        # Asking for update locks must not pick up the create rule.
+        locks = _collect_pathcheck_parent_locks(
+            entity="Enrolment",
+            payload={"teaching_group": "11111111-1111-1111-1111-111111111111"},
+            access_specs={"Enrolment": spec},
+            fk_graph=self._fk_graph(),
+            operations=("update",),
+        )
+        assert locks == {}
+
+    def test_update_locks_unchanged_fk_from_merged_payload(self) -> None:
+        # #1316 review finding: an update that does NOT change the scope FK still
+        # authorizes against the existing parent (the probe binds the merged
+        # would-be-final row), so the lock must be collected from the merged
+        # payload — keyed off the existing DB column value — not just new_values.
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+
+        spec = SimpleNamespace(scopes=[self._create_rule("update")])
+        existing_fk = "22222222-2222-2222-2222-222222222222"
+        # merged = {**existing (DB column key), **new_values} with FK unchanged.
+        merged = {"teaching_group_id": existing_fk, "label": "renamed"}
+        locks = _collect_pathcheck_parent_locks(
+            entity="Enrolment",
+            payload=merged,
+            access_specs={"Enrolment": spec},
+            fk_graph=self._fk_graph(),
+            operations=("update",),
+        )
+        assert len(locks) == 1
+        (table, pks) = next(iter(locks.items()))
+        assert "TeachingGroup" in table
+        assert pks == {existing_fk}
+
+    def test_missing_payload_fk_collects_nothing(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+
+        spec = SimpleNamespace(scopes=[self._create_rule("create")])
+        # Payload omits the FK → nothing to lock (the probe fail-closes anyway).
+        locks = _collect_pathcheck_parent_locks(
+            entity="Enrolment",
+            payload={"label": "x"},
+            access_specs={"Enrolment": spec},
+            fk_graph=self._fk_graph(),
+            operations=("create",),
+        )
+        assert locks == {}
+
+    def test_no_access_spec_returns_empty(self) -> None:
+        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+
+        assert (
+            _collect_pathcheck_parent_locks(
+                entity="Enrolment",
+                payload={"teaching_group": "x"},
+                access_specs=None,
+                fk_graph=None,
+                operations=("create",),
+            )
+            == {}
+        )

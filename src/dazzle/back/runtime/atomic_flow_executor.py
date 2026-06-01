@@ -86,6 +86,118 @@ def _make_in_txn_probe(conn: Any) -> Callable[[str, list[Any]], bool]:
     return _probe
 
 
+def _collect_pathcheck_parent_locks(
+    *,
+    entity: str,
+    payload: dict[str, Any],
+    access_specs: dict[str, Any] | None,
+    fk_graph: Any,
+    operations: tuple[str, ...],
+) -> dict[str, set[str]]:
+    """Collect ``scope-parent table → payload-referenced pk`` for ``entity``'s
+    depth>1 FK-path ``scope:`` predicates (#1316, ADR-0029 invariant 4).
+
+    The scope probe reads the directly-referenced parent row to decide the
+    create/update; between that read and the flow's commit a concurrent
+    ``UPDATE`` could move the parent out of the principal's scope (a TOCTOU).
+    The caller share-locks the rows collected here *before* the probe so the
+    parent is pinned for the rest of the transaction.
+
+    Only the **root** FK-target row (the one the payload directly names, via the
+    same ``PayloadFieldRef`` the probe binds) is collected — this fully closes
+    the race for **depth-2** FK-path scopes (the common case, incl. the
+    ``scope_runtime`` fixtures). For depth>2 paths only the root hop is locked;
+    deeper intermediate hops, and ``ExistsCheck`` / junction-membership scopes,
+    remain a documented, deferred narrowing (the share-lock can't express them).
+    Reuses ``_path_check_subquery`` (root table + FK field) and ``_payload_value``
+    (the same payload-key resolution the probe uses) so the lock target can't
+    drift from what the probe checks.
+    """
+    spec = access_specs.get(entity) if access_specs else None
+    if spec is None or fk_graph is None:
+        return {}
+    scopes = getattr(spec, "scopes", None) or []
+    if not scopes:
+        return {}
+
+    # Cross-module private imports: the atomic executor is already tightly
+    # coupled to the CRUD scope machinery (it reuses `_enforce_create_scope`),
+    # so reusing the compiler's path decomposition + the eval's payload-key
+    # resolver keeps the lock target identical to what the probe binds.
+    from dazzle.back.runtime.predicate_compiler import _path_check_subquery
+    from dazzle.back.runtime.scope_create_eval import _payload_value
+    from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+    from dazzle.core.ir.predicates import BoolComposite, PathCheck
+
+    schema = get_current_tenant_schema()
+    locks: dict[str, set[str]] = {}
+
+    def _walk(p: Any) -> None:
+        if isinstance(p, PathCheck) and len(p.path) >= 2:
+            try:
+                root_fk_field, root_target_table, _where, _params = _path_check_subquery(
+                    p, entity, fk_graph, schema=schema
+                )
+            except Exception:
+                # A malformed path can't be locked — the probe will fail-close
+                # it anyway; don't let lock-collection break the flow.
+                logger.debug(
+                    "scope-parent lock: skipping unresolvable PathCheck %r on %s",
+                    getattr(p, "path", None),
+                    entity,
+                    exc_info=True,
+                )
+                return
+            value = _payload_value(payload, root_fk_field)
+            if value is not None:
+                locks.setdefault(root_target_table, set()).add(str(value))
+        elif isinstance(p, BoolComposite):
+            for child in p.children:
+                _walk(child)
+
+    for rule in scopes:
+        rule_op = getattr(rule, "operation", None)
+        if rule_op is None:
+            continue
+        rule_op_val = rule_op.value if hasattr(rule_op, "value") else str(rule_op)
+        if rule_op_val not in operations:
+            continue
+        predicate = getattr(rule, "predicate", None)
+        if predicate is not None:
+            _walk(predicate)
+    return locks
+
+
+def _acquire_scope_parent_share_locks(conn: Any, entity: str, locks: dict[str, set[str]]) -> None:
+    """``SELECT … FOR SHARE`` the collected scope-parent rows on the flow's
+    connection, in a deterministic ``(table, pk)`` order (#1316).
+
+    A ``FOR SHARE`` row lock blocks a concurrent ``UPDATE`` / ``DELETE`` of that
+    parent until this flow commits or rolls back, so the scope check the probe
+    is about to run stays true through commit. Tables (and pks within a table)
+    are locked in sorted order so two concurrent flows acquire overlapping locks
+    in the same global order and cannot deadlock. The locks release with the
+    transaction. A lock failure denies fail-closed (``AtomicFlowError`` → the
+    whole flow rolls back) rather than 500-ing.
+    """
+    if not locks:
+        return
+    try:
+        # Deterministic global order: tables sorted, then pks sorted within each
+        # table, locked one row at a time. Using the single-value ``"id" = %s``
+        # shape (the proven #1311 probe shape) avoids the ``uuid = text[]``
+        # operator mismatch a bound ``ANY(%s)`` list of pk strings would hit.
+        cur = conn.cursor()
+        for table in sorted(locks):
+            for pk in sorted(locks[table]):
+                # `table` is already schema-qualified + quote_identifier'd by
+                # `_path_check_subquery`; `pk` is bound, never interpolated.
+                sql = f'SELECT "id" FROM {table} WHERE "id" = %s FOR SHARE'
+                cur.execute(sql, [pk])  # nosemgrep — identifier compiler-built; pk bound
+    except Exception as exc:
+        raise AtomicFlowError(entity, f"scope-parent lock failed: {exc}") from exc
+
+
 def _enforce_create_step_scope(
     *,
     entity: str,
@@ -94,6 +206,7 @@ def _enforce_create_step_scope(
     access_specs: dict[str, Any] | None,
     fk_graph: Any,
     probe: Callable[[str, list[Any]], bool] | None,
+    conn: Any = None,
 ) -> None:
     """Route one create step through ``scope: create:`` (#1313 slice 1b).
 
@@ -102,6 +215,10 @@ def _enforce_create_step_scope(
     probe. Scope keys are derived from ``auth_context`` (never the payload).
     Raises ``HTTPException(403)`` on denial; the caller's transaction rolls back.
     Entities with no access spec are unguarded (matches CRUD behaviour).
+
+    Before the scope probe, the directly-referenced FK-path scope parent is
+    share-locked on ``conn`` (#1316) so it can't move out of scope between the
+    check and commit.
     """
     spec = access_specs.get(entity) if access_specs else None
     if spec is None:
@@ -116,6 +233,21 @@ def _enforce_create_step_scope(
     # `model_dump(mode="json")` shape. FK-path / EXISTS leaves go through the
     # probe (SQL) and are unaffected by this.
     payload = {k: (str(v) if isinstance(v, UUID) else v) for k, v in data.items()}
+    # #1316 — TOCTOU hardening: pin the FK-path create-scope parent under
+    # FOR SHARE before the probe reads it. Only when in-transaction enforcement
+    # is active (probe + conn present).
+    if probe is not None and conn is not None:
+        _acquire_scope_parent_share_locks(
+            conn,
+            entity,
+            _collect_pathcheck_parent_locks(
+                entity=entity,
+                payload=payload,
+                access_specs=access_specs,
+                fk_graph=fk_graph,
+                operations=("create",),
+            ),
+        )
     _enforce_create_scope(
         cedar_access_spec=spec,
         payload=payload,
@@ -222,6 +354,7 @@ def execute_atomic_flow(
                     access_specs=access_specs,
                     fk_graph=fk_graph,
                     probe=probe,
+                    conn=conn,
                 )
             columns = ", ".join(quote_identifier(k) for k in data.keys())
             placeholders = ", ".join(placeholder for _ in data)
@@ -351,6 +484,7 @@ def _execute_update_step(
             access_specs=access_specs,
             fk_graph=fk_graph,
             probe=probe,
+            conn=conn,
         )
 
     if not new_values:
@@ -377,6 +511,7 @@ def _enforce_update_step_scope(
     access_specs: dict[str, Any] | None,
     fk_graph: Any,
     probe: Callable[[str, list[Any]], bool] | None,
+    conn: Any = None,
 ) -> None:
     """Enforce a ``scope: update:`` step (source + destination) in-transaction.
 
@@ -385,6 +520,10 @@ def _enforce_update_step_scope(
     flow's in-transaction probe. UUID values are normalised to str for
     simple-leaf comparisons (FK-path/EXISTS go through the probe). Raises
     HTTPException(404) on denial; the caller's transaction rolls back.
+
+    Before the scope probe, the would-be-destination FK-path scope parent (the
+    parent the update repoints *into*) is share-locked on ``conn`` (#1316) so a
+    concurrent move can't slip it out of scope between the check and commit.
     """
     spec = access_specs.get(entity) if access_specs else None
     if spec is None:
@@ -396,6 +535,27 @@ def _enforce_update_step_scope(
     user_roles = list(getattr(auth_context, "roles", []) or [])
     norm_existing = {k: (str(v) if isinstance(v, UUID) else v) for k, v in existing.items()}
     norm_new = {k: (str(v) if isinstance(v, UUID) else v) for k, v in new_values.items()}
+    # #1316 — pin the destination FK-path scope parent under FOR SHARE before
+    # the probe. Key the lock off the **would-be-final** row
+    # (``{**existing, **new_values}``) — the SAME dict ``_enforce_update_scope``
+    # binds its destination probe from — so the parent is pinned both when the
+    # update *repoints* the scope FK and when it leaves the FK unchanged (a
+    # scope-key column the partial update doesn't set keeps its existing value,
+    # and the probe still authorizes against that unchanged parent). Source-row
+    # pinning + depth>2 hops remain deferred (see `_collect_pathcheck_parent_locks`).
+    if probe is not None and conn is not None:
+        merged_payload = {**norm_existing, **norm_new}
+        _acquire_scope_parent_share_locks(
+            conn,
+            entity,
+            _collect_pathcheck_parent_locks(
+                entity=entity,
+                payload=merged_payload,
+                access_specs=access_specs,
+                fk_graph=fk_graph,
+                operations=("update",),
+            ),
+        )
     _enforce_update_scope(
         cedar_access_spec=spec,
         existing=norm_existing,
