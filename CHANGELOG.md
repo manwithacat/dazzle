@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.79] - 2026-06-01
+
+### Added
+
+- **#1319 — lifecycle transition → atomic seam, Slice A surface (ADR-0032, accepted; staged).** A state-machine `on_transition:` may now declare `invoke <flow>(<bindings>)` to name an `atomic` flow as a transition effect, with explicit input binding from the transition context:
+  ```dsl
+  on_transition:
+    submitted -> fulfilled:
+      invoke fulfil_order(order: self, warehouse: input.warehouse)
+  ```
+  `self` = the transitioning row; `input.<name>` = a transition input; literals supported. **This slice is surface-only**: the binding is parsed, cross-reference-validated, and analyzable — it is **not yet wired into the live update path** (the shared-transaction runtime integration is Slice B).
+  - **IR:** `InvokeSourceKind` / `InvokeBinding` / `InvokeFlowSpec` + `StateTransition.invoke_flow` (ir-types baseline regenerated).
+  - **Validator:** the invoked flow must exist; every binding must name a real flow input; every *required* flow input must be bound; a `self` binding must target a `ref <ThisEntity>` input.
+  - **Executor seam:** `execute_atomic_flow` is factored into a behaviour-preserving `execute_atomic_flow_on_conn(flow, inputs, conn, placeholder, …)` that runs the whole flow on a **caller-provided connection** — the hook Slice B uses to run the flow in the transition's own transaction (status write + flow commit/rollback together). Verified behaviour-identical (37 unit + 17 real-PG scope_runtime cases unchanged).
+  - **Fixture:** `fixtures/transition_atomic` (`invoke:` parses + validates clean).
+  - **Slice B (separate, reviewed):** the shared-transaction hot-path integration — `repository.update` conn-injection, `CRUDService.update` interception, `AuthContext`/`access_specs` threading, real-PG atomicity tests. *Code finding:* the status `UPDATE` currently commits before transition effects fire (today's effects are post-commit), so Slice B brings the status write into the executor's transaction — a core-update-path change.
+
+### Agent Guidance
+
+- **Transitions can declare an atomic-flow effect (surface live, runtime in Slice B).** Add `invoke <flow>(arg: self, other: input.x)` under an `on_transition: from -> to:` to bind an `atomic` flow to a state change; the validator checks the flow exists + all required inputs are bound + `self` matches the entity. Today this is *declared + analyzable only* — it does not yet execute on the live update path (ADR-0032 Slice B wires the shared transaction). `execute_atomic_flow_on_conn` is the seam for running a flow on an externally-owned connection. ADR-0032 is Accepted (staged); ADR-0020 remains Proposed but the transition runtime exists.
+
 ## [0.80.78] - 2026-06-01
 
 ### Added
