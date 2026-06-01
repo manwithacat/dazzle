@@ -64,6 +64,10 @@ class PersonaSpec(BaseModel):
     link_via: str = "email"  # Join field (default: email)
     interactive: bool = True
     role: str | None = None  # #1147: explicit role; falls back to .id
+    # #1324: the persona's single nav binding (`uses nav <name>`). Navigation
+    # is per-persona-global — a persona has exactly one sidebar — so this is a
+    # scalar, not a list. Resolved by ui/converters/nav_builder.build_persona_nav.
+    nav_ref: str | None = None
 
     @property
     def effective_role(self) -> str:
