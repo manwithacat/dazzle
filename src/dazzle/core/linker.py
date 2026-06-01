@@ -734,8 +734,8 @@ def _derive_flow_invariant_anchors(
     ``anchor_input``. The first such FK-equality-to-input term (declared order)
     wins — a flow locks one anchor in v1. If no term resolves to an FK on the
     entity, the anchor stays ``None`` and the validator (Task 5) rejects the
-    invariant as unanchored. ``filter_predicate`` is left ``None`` (reserved);
-    the filter is enforced from ``raw_filter`` directly later (Task 7).
+    invariant as unanchored. The filter itself is enforced from ``raw_filter``
+    directly at runtime (no compiled predicate in v1).
     """
     result: list[ir.AtomicFlowSpec] = []
     for flow in atomic_flows:

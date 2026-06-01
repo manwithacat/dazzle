@@ -206,10 +206,10 @@ class AtomicFlowParserMixin:
           ``(column, kind, value)`` triples for the linker to compile (Task 4).
         - ``<rhs>`` is a numeric literal OR ``input.<name>.<field>``.
 
-        Produces a *raw* ``FlowInvariant``: ``filter_predicate``,
-        ``anchor_entity`` and ``anchor_input`` stay ``None`` (filled by the
-        linker); ``agg_fn``/``entity``/``field``/``op``/``rhs``/``raw_filter``
-        are populated here.
+        Produces a *raw* ``FlowInvariant``: ``anchor_entity`` and
+        ``anchor_input`` stay ``None`` (derived by the linker);
+        ``agg_fn``/``entity``/``field``/``op``/``rhs``/``raw_filter`` are
+        populated here.
         """
         kw_tok = self.expect(TokenType.INVARIANT)
         self.expect(TokenType.COLON)
@@ -265,7 +265,6 @@ class AtomicFlowParserMixin:
             agg_fn=agg_fn,
             entity=entity,
             field=field,
-            filter_predicate=None,
             anchor_entity=None,
             anchor_input=None,
             op=op,

@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .fields import FieldType
 from .location import SourceLocation
-from .predicates import CompOp, ScopePredicate
+from .predicates import CompOp
 
 
 class FlowFieldValueKind(StrEnum):
@@ -157,22 +157,23 @@ class FlowInvariant(BaseModel):
     """A flow-level aggregate invariant (#1318, ADR-0031).
 
     Asserts ``<agg_fn>(<entity>.<field> where <filter>) <op> <rhs>`` holds at
-    commit, else the whole flow rolls back. ``filter_predicate``,
-    ``anchor_entity`` and ``anchor_input`` are ``None`` in raw parser output and
-    filled in by the linker.
+    commit, else the whole flow rolls back. ``anchor_entity`` / ``anchor_input``
+    are ``None`` in raw parser output and derived by the linker (the lockable
+    anchor row the invariant's ``FOR UPDATE`` pins); ``None`` after linking ⇒
+    unanchored ⇒ rejected by the validator.
 
     ``raw_filter`` carries the parser-captured ``where`` filter terms — a
     conjunction (AND) of ``<column> = (input.<name> | literal)`` equalities — as
     a frozen tuple of ``(column, kind, value)`` triples where ``kind`` ∈
-    {"input", "literal"}. The linker compiles these into ``filter_predicate``
-    (a ``ScopePredicate``) in Task 4; until then it is the raw provenance the
-    linker reads.
+    {"input", "literal"}. v1 enforces the filter by building ``WHERE`` SQL
+    directly from ``raw_filter`` (resolving input/literal values against the
+    flow inputs at enforcement); a compiled ``ScopePredicate`` form is a
+    deliberately-deferred richer-filter extension (ADR-0031 honest limits).
     """
 
     agg_fn: FlowAggregateFn
     entity: str
     field: str | None  # None only for COUNT
-    filter_predicate: ScopePredicate | None
     anchor_entity: str | None
     anchor_input: str | None
     op: CompOp

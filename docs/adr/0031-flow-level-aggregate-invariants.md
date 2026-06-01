@@ -80,6 +80,7 @@ An in-transaction aggregate check is only a *guarantee* if two concurrent flows 
 - **Arithmetic / multi-term RHS expressions** (`<= budget.total - budget.committed`) — deferred; v1 RHS is a literal or a single anchor-row field.
 - **Unanchored / global aggregates** (a sum with no single anchor row to lock — e.g. a tenant-wide cap with no parent row) — there is no single row to `FOR UPDATE`, so the concurrency guarantee does not hold. v1 **rejects** such invariants at validate time rather than silently shipping an unsound check; an advisory-lock mechanism for them is a possible follow-up.
 - **Cross-entity aggregates** (an invariant spanning more than one target entity in one expression) — deferred; v1 is one aggregate over one entity's set.
+- **Richer `where` filters.** v1 implements the set-defining filter as a bounded **conjunction of `<column> = (input.<name> | literal)` equalities** (`FlowInvariant.raw_filter`), enforced by building the `WHERE` SQL directly from those terms (input/literal values resolved against the flow inputs at runtime). This covers the motivating anchored aggregates. A full ADR-0009 `ScopePredicate`-compiled filter (FK paths, `EXISTS`, boolean composition) is a deliberately-deferred extension — v1 carries no compiled `filter_predicate` field (it would be permanently unread; YAGNI).
 
 ## Implementation sketch (gated on acceptance)
 
