@@ -11,6 +11,7 @@ from pathlib import Path
 
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.validator import validate_transition_invocations
 
 
 def test_invoke_flow_ir() -> None:
@@ -57,3 +58,73 @@ entity Order "Order":
         ("order", ir.InvokeSourceKind.SELF, None),
         ("warehouse", ir.InvokeSourceKind.INPUT, "warehouse"),
     ]
+
+
+def _appspec(dsl: str) -> ir.AppSpec:
+    frag = parse_dsl(dsl, Path("t.dz"))[-1]
+    return ir.AppSpec(
+        name="t",
+        version="0.0.0",
+        domain=ir.DomainSpec(entities=list(frag.entities)),
+        surfaces=[],
+        atomic_flows=list(frag.atomic_flows),
+    )
+
+
+_ORDER_ENTITY = """\
+module t
+app a "A"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[submitted,fulfilled]=submitted
+  warehouse: str(40)
+
+  transitions:
+    submitted -> fulfilled: role(admin)
+
+  on_transition:
+    submitted -> fulfilled:
+      invoke {invoke}
+"""
+
+_FLOW = """\
+atomic fulfil_order "Fulfil":
+  permit:
+    execute: role(admin)
+  input order: ref Order required
+  input warehouse: str(40) required
+  create Shipment:
+    order: input.order
+
+entity Shipment "Shipment":
+  id: uuid pk
+  order: ref Order required
+"""
+
+
+def _errors(invoke: str) -> list[str]:
+    dsl = _ORDER_ENTITY.format(invoke=invoke) + _FLOW
+    errs, _ = validate_transition_invocations(_appspec(dsl))
+    return errs
+
+
+def test_validate_unknown_flow_errors() -> None:
+    errs = _errors("nonexistent(order: self, warehouse: input.warehouse)")
+    assert any("unknown atomic flow" in e for e in errs), errs
+
+
+def test_validate_missing_required_binding_errors() -> None:
+    # `warehouse` (required) not bound.
+    errs = _errors("fulfil_order(order: self)")
+    assert any("does not bind required input 'warehouse'" in e for e in errs), errs
+
+
+def test_validate_unknown_binding_errors() -> None:
+    errs = _errors("fulfil_order(order: self, warehouse: input.warehouse, bogus: self)")
+    assert any("binds unknown input 'bogus'" in e for e in errs), errs
+
+
+def test_validate_valid_invoke_clean() -> None:
+    errs = _errors("fulfil_order(order: self, warehouse: input.warehouse)")
+    assert errs == [], errs

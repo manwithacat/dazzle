@@ -27,6 +27,7 @@ from .validator import (
     validate_slas,
     validate_surfaces,
     validate_tenancy_partition_key,
+    validate_transition_invocations,
     validate_ux_specs,
     validate_visibility_bool_field_scope_coverage,
     validate_webhooks,
@@ -142,6 +143,11 @@ def lint_appspec(
 
     # #1228 Phase 3c — atomic multi-entity flows
     errors, warnings = validate_atomic_flows(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1319 / ADR-0032 — transition `invoke <flow>(...)` cross-references
+    errors, warnings = validate_transition_invocations(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
