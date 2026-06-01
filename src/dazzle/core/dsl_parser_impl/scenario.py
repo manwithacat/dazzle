@@ -469,6 +469,7 @@ class _PersonaState:
     link_via: str = "email"
     interactive: bool = True
     role: str | None = None  # #1147: explicit role override
+    nav_ref: str | None = None  # #1324: uses nav <name>
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -573,6 +574,22 @@ def _p_kw_interactive(parser: Any, state: _PersonaState) -> None:
     parser.skip_newlines()
 
 
+def _p_kw_uses_nav(parser: Any, state: _PersonaState) -> None:
+    """``uses nav <name>`` — bind the persona's single nav definition (#1324)."""
+    parser.advance()  # consume `uses`
+    if not parser.match(TokenType.NAV):
+        token = parser.current_token()
+        raise make_parse_error(
+            "Expected `nav` after `uses` in a persona block (`uses nav <name>`)",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.advance()  # consume `nav`
+    state.nav_ref = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
 # ---------- Dispatch tables ---------- #
 
 
@@ -580,6 +597,7 @@ _PERSONA_KEYWORDS: dict[TokenType, KeywordParser[_PersonaState]] = {
     TokenType.DESCRIPTION: _p_kw_description,
     TokenType.GOALS: _p_kw_goals,
     TokenType.PROFICIENCY: _p_kw_proficiency,
+    TokenType.USES: _p_kw_uses_nav,
 }
 
 
@@ -619,4 +637,5 @@ def _build_persona(persona_id: str, label: str, state: _PersonaState) -> ir.Pers
         link_via=state.link_via,
         interactive=state.interactive,
         role=state.role,
+        nav_ref=state.nav_ref,
     )
