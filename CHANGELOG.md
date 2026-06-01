@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.81] - 2026-06-01
+
+### Added
+
+- **ADR-0030 — PostgreSQL capability admission rubric + scored catalogue (Accepted).** Single-platform support (ADR-0008) is a constraint to *exploit*: the compiler may emit Postgres-specific declarative constructs unconditionally. A construct is Core-admissible only if it passes four independent criteria — **A1** IR-derived & forward-projectable, **A2** effect-deterministic, **A3** transactionally contained, **A4** migration-evolvable — plus mechanical sub-checks N (non-Turing-complete) and P (provenance, feeding the *enforcement* obligation: conformance must flag hand-rolled equivalents). The catalogue scores the Postgres surface into Tier A/B/C with an `Impl` column separating *admissible-in-principle* from *shipped today* (Tier A is ~half net-new: CHECK, EXCLUDE, DEFERRABLE, ranges, data-modifying CTE).
+  - This is a **revision of an external-reviewer draft** that corrected three framing errors found by an adversarial pass against the codebase: (1) the "Open question" was malformed — ADR-0017 governs the migration *channel*, not DB-side logic (that prohibition lives in ADR-0009 / ADR-0029 invariant 8), so the original "Gate G" was redundant with A1; (2) the original C1/C2 "round-trip (SQL→IR)" criterion was untestable — Dazzle generation is one-way IR→SQL with no re-extraction, so the criterion is reframed as forward-derivability; (3) the SSI/`SERIALIZABLE`+retry recommendation contradicted #1316 (struck) and is demoted to Tier C, with `FOR SHARE` named as the ADR-0029 invariant-4 mechanism.
+  - Surfaced and filed **#1321**: `DECIMAL`/`MONEY` columns are stored as `DOUBLE PRECISION` (float) — `precision`/`scale` are carried through the IR and backend spec but dropped at the DDL mappers; should be `NUMERIC(p,s)`. Precondition for A2 on any aggregate/conservation path.
+
+### Changed
+
+- **ADR-0029** line 29 corrected: a hand-rolled trigger is excluded by the analysability principle (ADR-0009 / invariant 8), *not* by ADR-0017 (which governs the migration channel, not the construct) — per ADR-0030's revision note.
+
+### Agent Guidance
+
+- **Before proposing that Dazzle compile to a Postgres-specific construct** (CHECK, EXCLUDE, DEFERRABLE, generated column, range type, data-modifying CTE, ON CONFLICT, isolation level, trigger, etc.), score it against **ADR-0030**'s four criteria (A1–A4). Two recurring traps the rubric encodes: (a) Dazzle has **no SQL→IR re-extraction** — the IR is canonical and SQL is a forward-only projection, so "analysable" means *IR-resident*, never "reconstructed from the DB"; (b) **SSI/`SERIALIZABLE` is Tier C** (struck per #1316) — reach for `FOR SHARE` on scope-parent rows, not an isolation-level bump. Conservation invariants are never a DB trigger: true ledgers → ADR-0015, the non-ledger remainder → ADR-0031's `invariant:` construct. `ENUM` is Tier B (migration-hostile) — default to `TEXT` for evolving state sets.
+
 ## [0.80.80] - 2026-06-01
 
 ### Added
