@@ -117,9 +117,10 @@ class TestStubGenerator:
         # Check output type
         assert "class ProcessOrderResult(TypedDict):" in stub
         assert "confirmation_number: str" in stub
-        assert "estimated_delivery: str" in stub
-        # #1322: decimal → exact Decimal, with its import emitted.
+        # #1322: native temporal + exact decimal types, with imports emitted.
+        assert "from datetime import date" in stub
         assert "from decimal import Decimal" in stub
+        assert "estimated_delivery: date" in stub
         assert "total_cost: Decimal" in stub
 
     # === TypeScript Stub Generation ===
@@ -177,6 +178,9 @@ class TestStubGenerator:
         assert generator._dsl_to_python_type("decimal(10,2)") == "Decimal"
         assert generator._dsl_to_python_type("money") == "Money"
         assert generator._dsl_to_python_type("bool") == "bool"
+        # #1322 follow-up: native temporal types (matching the entity model layer).
+        assert generator._dsl_to_python_type("date") == "date"
+        assert generator._dsl_to_python_type("datetime") == "datetime"
         assert generator._dsl_to_python_type("json") == "dict"
 
     def test_dsl_to_typescript_type_mappings(self, generator: StubGenerator) -> None:
@@ -192,6 +196,9 @@ class TestStubGenerator:
             == "{ currency: string; amount_minor: number }"
         )
         assert generator._dsl_to_typescript_type("bool") == "boolean"
+        # Temporal types cross the wire as ISO strings (JSON has no date type).
+        assert generator._dsl_to_typescript_type("date") == "string"
+        assert generator._dsl_to_typescript_type("datetime") == "string"
         assert generator._dsl_to_typescript_type("json") == "Record<string, unknown>"
 
     # === File Generation ===

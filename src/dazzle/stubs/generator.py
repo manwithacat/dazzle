@@ -49,8 +49,12 @@ class StubGenerator:
         "decimal": "Decimal",
         "money": "Money",
         "bool": "bool",
-        "date": "str",  # ISO format
-        "datetime": "str",  # ISO format
+        # #1322 follow-up: native temporal types, matching the entity-model layer
+        # (model_generator types DATE→date, DATETIME→datetime). Imports emitted by
+        # _python_type_imports(). The /_dazzle invoke endpoint passes raw ISO
+        # strings today (no coercion) — marshalling to these types is #1323.
+        "date": "date",
+        "datetime": "datetime",
         "json": "dict",
         "email": "str",
     }
@@ -202,6 +206,9 @@ class StubGenerator:
         used |= {self._dsl_to_python_type(f.type_name) for f in service.outputs}
 
         stdlib: list[str] = []
+        datetime_names = [n for n in ("date", "datetime") if n in used]
+        if datetime_names:
+            stdlib.append(f"from datetime import {', '.join(datetime_names)}")
         if "Decimal" in used:
             stdlib.append("from decimal import Decimal")
         typing_names: list[str] = []

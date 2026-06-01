@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.80.83] - 2026-06-01
+## [0.80.84] - 2026-06-01
+
+### Changed
+
+- **Service-stub generator: `date`/`datetime` now type as native `date`/`datetime` in Python stubs (follow-up to #1322).** Completes the move to semantic stub types: every DSL type now maps to its richest Python representation, matching the entity-model layer (`model_generator` types `DATE→date`, `DATETIME→datetime`). The needed `from datetime import date, datetime` import is emitted (grouped with the other stdlib imports). TypeScript stays `string` (JSON has no temporal type — the honest wire form). Decision recorded after tracing the runtime: the stub-invoke boundary (`/_dazzle/services/{id}/invoke`) passes raw JSON with no coercion, so stub types are a *contract* (domain intent), not a literal guarantee — the semantic interpretation is the most useful and internally consistent one.
+- Filed **#1323** for the runtime half: the invoke boundary should marshal the raw JSON `payload` into the declared input types (`date`/`datetime`/`Decimal`/`Money`/`UUID`), so the now-semantic stub contract is honored rather than aspirational.
+
+### Agent Guidance
+
+- DSL→Python stub types are now uniformly semantic: `date`/`datetime` → `date`/`datetime`, `decimal` → `Decimal`, `money` → `Money` (TS: temporal/decimal → `string`, money → `{ currency, amount_minor }`). These describe the *domain contract*; until #1323 lands, a stub invoked via `/_dazzle/services/{id}/invoke` still receives raw JSON, so an implementer should marshal (parse ISO strings, build `Money`) at the top of the body.
+
 
 ### Fixed
 
