@@ -221,6 +221,7 @@ def build_appspec(
     # (#1315). Declared `steps` order is preserved; `derived_step_order` carries
     # the FK-topological permutation when (and only when) reordering is needed.
     atomic_flows = _derive_atomic_step_orders(merged_fragment.atomic_flows, fk_graph)
+    atomic_flows = _derive_flow_invariant_anchors(atomic_flows, fk_graph)
 
     # 10b. Derive verifiable triples
     from .ir.triples import derive_triples
@@ -716,6 +717,51 @@ def _derive_atomic_step_orders(
             result.append(flow)
             continue
         result.append(flow.model_copy(update={"derived_step_order": derived}))
+    return result
+
+
+def _derive_flow_invariant_anchors(
+    atomic_flows: list[ir.AtomicFlowSpec],
+    fk_graph: FKGraph,
+) -> list[ir.AtomicFlowSpec]:
+    """Derive each flow invariant's lockable anchor at link time (#1318, ADR-0031).
+
+    An invariant ``<agg>(<entity>.<field> where <filter>) <op> <rhs>`` is enforced
+    against the rows the flow touches. To lock it to the right scope, the linker
+    finds the **anchor**: a ``where`` term ``<column> = input.<name>`` where
+    ``<column>`` (or ``<column>_id``) is an **FK on the invariant's ``entity``**.
+    The FK's target entity becomes ``anchor_entity`` and ``name`` becomes
+    ``anchor_input``. The first such FK-equality-to-input term (declared order)
+    wins — a flow locks one anchor in v1. If no term resolves to an FK on the
+    entity, the anchor stays ``None`` and the validator (Task 5) rejects the
+    invariant as unanchored. ``filter_predicate`` is left ``None`` (reserved);
+    the filter is enforced from ``raw_filter`` directly later (Task 7).
+    """
+    result: list[ir.AtomicFlowSpec] = []
+    for flow in atomic_flows:
+        if not flow.invariants:
+            result.append(flow)
+            continue
+        new_invariants: list[ir.FlowInvariant] = []
+        for inv in flow.invariants:
+            anchor_entity: str | None = None
+            anchor_input: str | None = None
+            for column, kind, value in inv.raw_filter:
+                if kind != "input":
+                    continue
+                try:
+                    _fk_field, target = fk_graph.resolve_segment(inv.entity, column)
+                except ValueError:
+                    continue  # `column` is not an FK on the invariant's entity
+                anchor_entity = target
+                anchor_input = value
+                break  # first FK-equality-to-input term wins (v1: one anchor)
+            new_invariants.append(
+                inv.model_copy(
+                    update={"anchor_entity": anchor_entity, "anchor_input": anchor_input}
+                )
+            )
+        result.append(flow.model_copy(update={"invariants": new_invariants}))
     return result
 
 
