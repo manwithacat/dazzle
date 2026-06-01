@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .fields import FieldType
 from .location import SourceLocation
+from .predicates import CompOp, ScopePredicate
 
 
 class FlowFieldValueKind(StrEnum):
@@ -131,6 +132,49 @@ class FlowAuditMode(StrEnum):
     STRICT = "strict"
 
 
+class FlowAggregateFn(StrEnum):
+    """Aggregate function in a flow-level invariant (#1318, ADR-0031)."""
+
+    SUM = "sum"
+    COUNT = "count"
+
+
+class InvariantRhs(BaseModel):
+    """Right-hand bound of a flow invariant: a literal OR an anchor-row field.
+
+    Exactly one form is populated: ``literal`` for `= 0` / `<= 1000`; the
+    ``anchor_input`` + ``anchor_field`` pair for `<= input.budget.total`.
+    """
+
+    literal: int | float | None = None
+    anchor_input: str | None = None
+    anchor_field: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class FlowInvariant(BaseModel):
+    """A flow-level aggregate invariant (#1318, ADR-0031).
+
+    Asserts ``<agg_fn>(<entity>.<field> where <filter>) <op> <rhs>`` holds at
+    commit, else the whole flow rolls back. ``filter_predicate``,
+    ``anchor_entity`` and ``anchor_input`` are ``None`` in raw parser output and
+    filled in by the linker.
+    """
+
+    agg_fn: FlowAggregateFn
+    entity: str
+    field: str | None  # None only for COUNT
+    filter_predicate: ScopePredicate | None
+    anchor_entity: str | None
+    anchor_input: str | None
+    op: CompOp
+    rhs: InvariantRhs
+    location: SourceLocation | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class FlowFailureMode(StrEnum):
     """How the framework handles a create failure mid-flow."""
 
@@ -155,6 +199,7 @@ class AtomicFlowSpec(BaseModel):
     audit_mode: FlowAuditMode = FlowAuditMode.ASYNC  # #1317 — per-flow `audit:` opt-in
     inputs: list[FlowInput]
     steps: list[AtomicFlowStep]
+    invariants: list[FlowInvariant] = []
     derived_step_order: list[int] | None = None
     """#1315 — execution order as indices into ``steps``, derived parent-before-child
     from the FK graph at link time for the **create-DAG family** (all-create, no
