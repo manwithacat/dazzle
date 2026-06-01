@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.78] - 2026-06-01
+
+### Added
+
+- **#1318 — atomic flows support flow-level aggregate invariants (ADR-0031, accepted).** An `atomic` block may declare one or more `invariant:` clauses asserting an aggregate over a row-filtered set, enforced **in the flow transaction before commit** — a violation rolls the whole flow back (fail-closed). The construct is **distinct from the ADR-0009 scope-predicate algebra** (which stays closed + row-scoped, honoring #1306): it is a separate flow-level assertion.
+  - **Shape:** `invariant: <sum|count>(<Entity>[.<field>] where <filter>) <op> <rhs>`. `sum` requires a numeric field; `count` omits it. `<op>` ∈ `= <= >= < >`. `<filter>` is an AND of `<column> = (input.<name> | literal)` terms. `<rhs>` is a numeric literal **or** `input.<name>.<field>` (a field on a flow-anchor row — a dynamic cap). Examples: `sum(Posting.amount where transaction = input.txn) = 0` (conservation), `count(Approver where request = input.request) >= 2` (quorum), `sum(Allocation.amount where budget = input.budget) <= input.budget.total` (dynamic cap).
+  - **Concurrency soundness:** before computing the aggregate, the invariant's **anchor row** (the row its filter pins — the `Transaction`, the `Budget`, derived at link time from the `<fk> = input.<name>` term) is locked `SELECT … FOR UPDATE`, so two flows mutating the same set serialize and a cap can't be busted by a concurrent flow (reuses the #1316 lock philosophy; SERIALIZABLE stays struck). An **unanchored** aggregate (no lockable anchor) is rejected at validate time.
+  - **Analyzability (ADR-0029 inv 8):** invariants are projected into the RBAC matrix (`AccessMatrix.atomic_flows[].invariants`, e.g. `"sum(Posting.amount) = 0"`).
+  - **Boundary:** true double-entry conservation stays in `ledger`/`transaction` (ADR-0015, storage-level); this is the bypassable non-ledger remainder (caps/quorums/cardinality), guarding the flow boundary, not storage. Deferred: `min`/`max`/`avg`, expression RHS, unanchored/global aggregates, cross-entity aggregates, and the richer `ScopePredicate`-compiled filter (v1 builds `WHERE` from the bounded `raw_filter` directly).
+  - Implemented IR-first (the #1313–#1317 cadence): IR → parser → linker anchor-derivation → validator → in-transaction enforcement (`atomic_flow_invariants.py`) → matrix projection. Real-Postgres verified (balanced commits / unbalanced rolls back / anchor-lock serializes concurrent flows); adversarially reviewed.
+
+### Changed
+
+- **api-surface (ir-types baseline):** new `FlowInvariant` / `InvariantRhs` / `FlowAggregateFn` IR types + `AtomicFlowSpec.invariants`; `docs/api-surface/ir-types.txt` regenerated. ADR-0031 marked **Accepted**.
+
+### Agent Guidance
+
+- **Atomic flows can assert aggregate invariants.** Add `invariant: sum(E.f where <fk> = input.X) <op> <bound>` to an `atomic` block to enforce a balance/cap/quorum over a set at commit (rolls back on violation). The filter MUST include a `<fk> = input.<name>` term naming a lockable anchor row (else it's rejected as unanchored). It's the **non-ledger** remainder — reach for `ledger`/`transaction` (ADR-0015) for true double-entry conservation; this guards the flow boundary, not storage (a direct CRUD insert bypasses it). v1 is `sum`/`count` only, literal-or-anchor-field RHS, single-entity, single-anchor. Remaining ADR-0029 follow-up: #1319 (lifecycle-transition→atomic seam, ADR-0032 proposed).
+
 ## [0.80.77] - 2026-06-01
 
 ### Added
