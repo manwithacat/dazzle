@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from dazzle.core.ir import domain as ir_domain
+from dazzle.core.ir.state_machine import InvokeFlowSpec
 
 from .auth import EntityAccessSpec
 
@@ -363,6 +364,11 @@ class StateTransitionSpec(BaseModel):
     trigger: TransitionTrigger = Field(default=TransitionTrigger.MANUAL, description="Trigger type")
     guards: list[TransitionGuardSpec] = Field(default_factory=list, description="Guard conditions")
     auto_spec: AutoTransitionSpec | None = Field(default=None, description="Auto transition config")
+    # #1319 / ADR-0032 Slice B — an atomic flow this transition invokes in the
+    # status-write transaction (carries the core IR spec directly; frozen).
+    invoke_flow: InvokeFlowSpec | None = Field(
+        default=None, description="Atomic flow invoked on this transition (#1319)"
+    )
 
     model_config = ConfigDict(frozen=True)
 

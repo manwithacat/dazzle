@@ -1490,6 +1490,17 @@ class DazzleBackendApp:
                 with self._db_manager.connection() as _audit_conn:
                     ensure_atomic_audit_table(_audit_conn)
 
+            # #1319 / ADR-0032 Slice B — wire the transition→atomic invoke context
+            # into each CRUD service so a status transition carrying `invoke_flow`
+            # runs the named flow in its status-write transaction, each step
+            # scope-enforced. cedar_access_specs + _fk_graph are the same maps the
+            # atomic router above received; the registry keys flows by name.
+            _atomic_flow_registry = {f.name: f for f in self._appspec.atomic_flows}
+            for _svc in self._services.values():
+                _setter = getattr(_svc, "set_invoke_context", None)
+                if _setter is not None:
+                    _setter(_atomic_flow_registry, cedar_access_specs, _fk_graph)
+
         # Grant management routes (#629)
         if self._appspec and self._appspec.grant_schemas and self._db_manager:
             from dazzle.back.runtime.grant_routes import create_grant_routes

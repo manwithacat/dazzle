@@ -144,3 +144,29 @@ def test_transition_atomic_fixture_validates_clean() -> None:
 
     errs, _ = validate_transition_invocations(appspec)
     assert errs == [], errs
+
+
+def test_validate_rejects_invoke_on_auto_transition() -> None:
+    # An `auto` (scheduled/system) transition has no user principal → reject a
+    # guarded invoke at validate time (ADR-0032 Slice B).
+    dsl = (
+        """\
+module t
+app a "A"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[submitted,fulfilled]=submitted
+  warehouse: str(40)
+
+  transitions:
+    submitted -> fulfilled: auto after 1 days
+
+  on_transition:
+    submitted -> fulfilled:
+      invoke fulfil_order(order: self, warehouse: input.warehouse)
+"""
+        + _FLOW
+    )
+    errs, _ = validate_transition_invocations(_appspec(dsl))
+    assert any("auto" in e for e in errs), errs

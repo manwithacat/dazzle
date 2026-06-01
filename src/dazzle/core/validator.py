@@ -2638,6 +2638,16 @@ def validate_transition_invocations(appspec: ir.AppSpec) -> tuple[list[str], lis
                 f"entity '{entity.name}' transition {t.from_state} -> {t.to_state}: "
                 f"invoke {inv.flow_name}"
             )
+            # A guarded effect needs a principal; an `auto` (scheduled/system)
+            # transition has none, so reject `invoke` on it at validate time
+            # (ADR-0032 — the service-principal story for system transitions is
+            # deferred). A manual (user-triggered) transition carries the PUT caller.
+            if t.trigger == ir.TransitionTrigger.AUTO:
+                errors.append(
+                    f"{prefix} on an `auto` transition: a transition-invoked atomic flow "
+                    "needs an authenticated principal, which an auto/scheduled transition "
+                    "lacks (ADR-0032 — use a manual transition)."
+                )
             flow = flows_by_name.get(inv.flow_name)
             if flow is None:
                 errors.append(f"{prefix} references unknown atomic flow '{inv.flow_name}'.")

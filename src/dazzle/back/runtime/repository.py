@@ -679,6 +679,20 @@ class Repository(Generic[T]):
         converted = {k: _db_to_python(v, self._field_types.get(k)) for k, v in data.items()}
         return self.model_class(**converted)
 
+    def _read_on_conn(self, conn: Any, id: UUID) -> T | dict[str, Any] | None:
+        """Read a row by id on a caller-provided connection (#1319, ADR-0032 Slice B).
+
+        Used by ``update(conn=...)`` so the post-write read happens in the caller's
+        still-open transaction (seeing its own uncommitted write). The runtime
+        connection uses a dict row factory, so ``_row_to_model`` converts it.
+        """
+        ph = self.db.placeholder
+        table = quote_identifier(self.table_name)
+        cursor = conn.cursor()
+        cursor.execute(f'SELECT * FROM {table} WHERE "id" = {ph}', [str(id)])  # nosemgrep
+        row = cursor.fetchone()
+        return self._row_to_model(row) if row is not None else None
+
     async def create(self, data: dict[str, Any]) -> T:
         """
         Create a new entity.
@@ -862,13 +876,21 @@ class Repository(Generic[T]):
 
         return self._row_to_model(row)
 
-    async def update(self, id: UUID, data: dict[str, Any]) -> T | dict[str, Any] | None:
+    async def update(
+        self, id: UUID, data: dict[str, Any], *, conn: Any | None = None
+    ) -> T | dict[str, Any] | None:
         """
         Update an existing entity.
 
         Args:
             id: Entity ID
             data: Fields to update (only non-None values)
+            conn: when provided (#1319, ADR-0032 Slice B), run the UPDATE on this
+                caller-owned connection (NOT a fresh one) and read the row back on
+                the SAME connection — so the write joins the caller's transaction
+                (the caller commits/rolls back). The post-update read then sees the
+                still-uncommitted write. When ``None`` (the default for every
+                existing caller), behaviour is unchanged: open + commit own conn.
 
         Returns:
             Updated entity or None if not found
@@ -911,10 +933,16 @@ class Repository(Generic[T]):
 
         start = time.perf_counter()
         try:
-            with self.db.connection() as conn:
+            if conn is not None:
+                # #1319 Slice B — join the caller's transaction; the caller commits.
                 cursor = conn.cursor()
                 cursor.execute(sql, values)  # nosemgrep
                 rowcount = cursor.rowcount
+            else:
+                with self.db.connection() as own_conn:
+                    cursor = own_conn.cursor()
+                    cursor.execute(sql, values)  # nosemgrep
+                    rowcount = cursor.rowcount
         except _INTEGRITY_ERRORS as exc:
             raise _translate_integrity_error(exc, self.table_name) from exc
         latency_ms = (time.perf_counter() - start) * 1000
@@ -923,9 +951,18 @@ class Repository(Generic[T]):
         if rowcount == 0:
             return None
 
-        result = await self.read(id)
+        if conn is not None:
+            # Read back on the SAME (uncommitted) connection so the response
+            # reflects the write the caller's transaction is about to commit.
+            result = self._read_on_conn(conn, id)
+        else:
+            result = await self.read(id)
 
-        if slug_field is not None and slug_field in update_data:
+        # Slug cache busting fires only on the own-connection path: the write is
+        # committed by the time we bust. On the shared-tx (conn) path the caller
+        # owns the commit boundary; tenant_host + invoke-transition is not a v1
+        # combination (busting a not-yet-committed slug would be premature).
+        if conn is None and slug_field is not None and slug_field in update_data:
             new_slug = str(update_data[slug_field])
             if old_slug != new_slug:
                 from dazzle.tenant.cache_registry import bust

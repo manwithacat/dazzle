@@ -3855,6 +3855,12 @@ def create_update_handler(spec: RouteSpec) -> Callable[..., Any]:
         if user_roles is not None:
             kwargs["user_roles"] = user_roles
         kwargs["is_superuser"] = is_superuser
+        # #1319 / ADR-0032 Slice B — thread the full AuthContext so a status
+        # transition's `invoke <flow>` runs each effect step scope-enforced as the
+        # triggering principal (only a bare `current_user` string survived before).
+        auth_ctx = _extra.get("auth_context")
+        if auth_ctx is not None:
+            kwargs["auth_context"] = auth_ctx
         result = await service.execute(**kwargs)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")

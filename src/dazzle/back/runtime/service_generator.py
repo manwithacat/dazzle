@@ -114,6 +114,29 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         self._pre_update_hooks: list[Callable[..., Any]] = []
         self._pre_delete_hooks: list[Callable[..., Any]] = []
 
+        # #1319 / ADR-0032 Slice B — transition `invoke <flow>` context, injected
+        # post-construction (set_invoke_context) once the route layer has built
+        # the access-spec map + FK graph. None until then ⇒ no invoke support.
+        self._atomic_flows: dict[str, Any] = {}
+        self._invoke_access_specs: dict[str, Any] | None = None
+        self._invoke_fk_graph: Any = None
+
+    def set_invoke_context(
+        self,
+        atomic_flows: dict[str, Any],
+        access_specs: dict[str, Any] | None,
+        fk_graph: Any,
+    ) -> None:
+        """Wire the transition→atomic invoke dependencies (#1319, ADR-0032 Slice B).
+
+        Called from the route-setup phase (where the per-entity access specs + FK
+        graph exist) so a status transition carrying ``invoke_flow`` can run the
+        named atomic flow IN the status-write transaction, each step scope-enforced.
+        """
+        self._atomic_flows = atomic_flows
+        self._invoke_access_specs = access_specs
+        self._invoke_fk_graph = fk_graph
+
     def on_created(self, callback: EntityEventCallback) -> None:
         """Register a callback to be called after entity creation."""
         self._on_created_callbacks.append(callback)
@@ -295,6 +318,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         user_roles: list[str] | None = None,
         current_user: str | None = None,
         is_superuser: bool = False,
+        auth_context: Any = None,
     ) -> T | dict[str, Any] | None:
         """
         Update an existing entity.
@@ -357,6 +381,10 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             except Exception as e:
                 logger.warning("Pre-update hook failed for %s: %s", self.entity_name, e)
 
+        # #1319 — the matched transition (if a status change) drives the
+        # invoke-atomic shared-tx path below.
+        matched_transition: Any = None
+
         # Validate state machine transition if entity has a state machine
         if self.state_machine:
             # Construct GrantStore for has_grant() guards if DB is available
@@ -385,6 +413,8 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 )
                 if result is not None and not result.is_valid and result.error is not None:
                     raise result.error
+                if result is not None and result.is_valid:
+                    matched_transition = result.transition
             finally:
                 # Best-effort connection close; suppressing here doesn't mask the
                 # checked failure inside the with-block above (#smells-1.1).
@@ -409,7 +439,15 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         if self.entity_spec and self._repository:
             await self._validate_references(update_data)
 
-        if self._repository:
+        # #1319 / ADR-0032 Slice B — if the matched transition invokes an atomic
+        # flow, run the status write AND the flow in ONE transaction (both commit
+        # or both roll back). Otherwise the normal single-statement update path.
+        invoke_flow = getattr(matched_transition, "invoke_flow", None)
+        if self._repository and invoke_flow is not None:
+            updated = await self._update_with_invoke(
+                id, update_data, current_data, invoke_flow, auth_context
+            )
+        elif self._repository:
             updated = await self._repository.update(id, update_data)
         else:
             # Fallback to in-memory
@@ -431,6 +469,96 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             await self._notify_updated(str(id), updated_data, current_data)
 
         return updated
+
+    async def _update_with_invoke(
+        self,
+        id: UUID,
+        update_data: dict[str, Any],
+        current_data: dict[str, Any],
+        invoke_flow: Any,
+        auth_context: Any,
+    ) -> T | dict[str, Any] | None:
+        """Run the status write + the invoked atomic flow in ONE transaction (#1319).
+
+        Both the entity's status ``UPDATE`` and the atomic flow's steps execute on a
+        single connection: they commit together on clean exit, or any failure
+        (scope denial, flow invariant, constraint) rolls **both** back. This is the
+        atomicity ADR-0032 exists for — a state change and its multi-row effect
+        succeed or fail as one unit.
+        """
+        from dazzle.back.runtime.atomic_flow_executor import execute_atomic_flow_on_conn
+
+        assert self._repository is not None  # caller guards this
+        flow = self._atomic_flows.get(invoke_flow.flow_name)
+        if flow is None:
+            raise RuntimeError(
+                f"transition on '{self.entity_name}' invokes atomic flow "
+                f"'{invoke_flow.flow_name}', which is not registered"
+            )
+        # Fail-closed: a scope-enforced effect needs an authenticated principal.
+        # The live update route always has one; a no-user path firing an invoke is
+        # a misconfiguration, not a user error.
+        if auth_context is None:
+            raise RuntimeError(
+                f"transition invoke '{invoke_flow.flow_name}' requires an authenticated "
+                "principal — a guarded effect cannot run unscoped (#1319)"
+            )
+
+        from dazzle.back.runtime.atomic_flow_executor import AtomicFlowError
+
+        merged = {**current_data, **update_data}
+        flow_inputs = self._resolve_invoke_inputs(invoke_flow, id, merged)
+        db = self._repository.db
+        try:
+            with db.connection() as conn:
+                updated = await self._repository.update(id, update_data, conn=conn)
+                execute_atomic_flow_on_conn(
+                    flow,
+                    flow_inputs,
+                    conn,
+                    db.placeholder,
+                    auth_context=auth_context,
+                    access_specs=self._invoke_access_specs,
+                    fk_graph=self._invoke_fk_graph,
+                )
+        except AtomicFlowError as exc:
+            # The flow failed (constraint / DB error); the `with` block already
+            # rolled BOTH the status write and the flow back. Surface a clean 400
+            # (mirrors the atomic HTTP route) rather than a 500. A per-step scope
+            # denial raises HTTPException(403/404) instead, which propagates as-is.
+            from fastapi import HTTPException
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "transition_invoke_failed",
+                    "flow": invoke_flow.flow_name,
+                    "failed_at": exc.failed_at,
+                    "message": str(exc),
+                },
+            ) from exc
+        return updated
+
+    @staticmethod
+    def _resolve_invoke_inputs(
+        invoke_flow: Any, entity_id: UUID, merged: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Build the atomic-flow inputs from a transition's invoke bindings (#1319).
+
+        ``self`` → the transitioning row's id; ``input.<name>`` → the value from the
+        merged (current ⊕ update) row data; literal → the literal.
+        """
+        from dazzle.core.ir.state_machine import InvokeSourceKind
+
+        inputs: dict[str, Any] = {}
+        for b in invoke_flow.bindings:
+            if b.source_kind == InvokeSourceKind.SELF:
+                inputs[b.flow_input] = str(entity_id)
+            elif b.source_kind == InvokeSourceKind.INPUT:
+                inputs[b.flow_input] = merged.get(b.source_name)
+            else:
+                inputs[b.flow_input] = b.literal
+        return inputs
 
     async def delete(self, id: UUID) -> bool:
         """Delete an entity by ID."""

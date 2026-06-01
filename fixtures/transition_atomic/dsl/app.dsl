@@ -27,7 +27,10 @@ entity Order "Order":
 
 entity Shipment "Shipment":
   id: uuid pk
-  order: ref Order required
+  # `unique` lets the atomicity test force a deterministic flow failure: a flow
+  # creating a second Shipment for an order that already has one violates this,
+  # which must roll back the status transition too.
+  order: ref Order required unique
   warehouse: str(40) required
 
   permit:
@@ -44,3 +47,25 @@ atomic fulfil_order "Fulfil Order":
   create Shipment:
     order: input.order
     warehouse: input.warehouse
+
+
+surface order_list "Orders":
+  uses entity Order
+  mode: list
+  section main:
+    field status "Status"
+    field warehouse "Warehouse"
+
+surface order_edit "Edit Order":
+  uses entity Order
+  mode: edit
+  section main:
+    field status "Status"
+    field warehouse "Warehouse"
+
+surface shipment_list "Shipments":
+  uses entity Shipment
+  mode: list
+  section main:
+    field order "Order"
+    field warehouse "Warehouse"
