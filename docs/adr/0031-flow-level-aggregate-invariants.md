@@ -1,6 +1,6 @@
 # ADR-0031 — Flow-Level Aggregate Invariants for Atomic Flows
 
-**Status:** Proposed (design brainstormed 2026-06-01; not yet accepted — no implementation until accepted).
+**Status:** Accepted 2026-06-01 (brainstormed + accepted same day; implementation tracked by #1318, IR-first per the staged convention).
 **Issue:** #1318 (proposal). Follow-up to ADR-0029, which descoped cross-step aggregate invariants to this ADR.
 **Relates:** ADR-0009 (predicate algebra — kept closed + row-scoped; this construct sits *beside* it, not inside it), ADR-0015 (TigerBeetle ledgers — owns the literal double-entry / conserved-quantity case; this construct is the non-ledger remainder), ADR-0017 (no DB-side logic — the invariant is enforced in the app's flow transaction, not a DB trigger/CHECK), ADR-0028 (guarded transactional actions), ADR-0029 (atomic flows as the transactional-intent substrate; invariants 5/6/8), #1316 (scope-parent `FOR SHARE` TOCTOU hardening — the lock philosophy this reuses; SERIALIZABLE struck there), #1306 (a prior decline of opening the closed algebra — the precedent this ADR honours).
 
