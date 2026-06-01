@@ -115,6 +115,44 @@ class AutoTransitionSpec(BaseModel):
             return self.delay_value * SECONDS_PER_DAY
 
 
+class InvokeSourceKind(StrEnum):
+    """Where a transition→flow input binding draws its value (#1319, ADR-0032)."""
+
+    SELF = "self"  # the transitioning entity row (its id)
+    INPUT = "input"  # input.<name> — a transition action input
+    LITERAL = "literal"
+
+
+class InvokeBinding(BaseModel):
+    """One ``<flow_input>: <source>`` binding in a transition ``invoke`` effect.
+
+    Maps an atomic-flow input to a value drawn from the transition context:
+    ``self`` (the transitioning row), ``input.<name>`` (a transition input), or a
+    literal. (#1319, ADR-0032.)
+    """
+
+    flow_input: str
+    source_kind: InvokeSourceKind
+    source_name: str | None = None  # for INPUT: the transition input name
+    literal: str | int | float | bool | None = None  # for LITERAL
+
+    model_config = ConfigDict(frozen=True)
+
+
+class InvokeFlowSpec(BaseModel):
+    """A transition effect that invokes a named ``atomic`` flow (#1319, ADR-0032).
+
+    Slice A surface: the flow + its input bindings are declared and analyzable.
+    The shared-transaction runtime wiring (status write + flow commit together)
+    is Slice B.
+    """
+
+    flow_name: str
+    bindings: list[InvokeBinding]
+
+    model_config = ConfigDict(frozen=True)
+
+
 class StateTransition(BaseModel):
     """
     A single state transition definition.
@@ -125,6 +163,8 @@ class StateTransition(BaseModel):
         trigger: How the transition is triggered (manual or auto)
         guards: Conditions that must be met for the transition
         auto_spec: Specification for automatic transitions
+        effects: post-commit side-effects (create/update) fired on the transition
+        invoke_flow: an atomic flow this transition invokes (#1319, ADR-0032)
     """
 
     from_state: str
@@ -133,6 +173,7 @@ class StateTransition(BaseModel):
     guards: list[TransitionGuard] = Field(default_factory=list)
     auto_spec: AutoTransitionSpec | None = None
     effects: list[StepEffect] = Field(default_factory=list)
+    invoke_flow: InvokeFlowSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

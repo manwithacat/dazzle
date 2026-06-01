@@ -687,6 +687,9 @@ from .sla import (
 # State Machines (v0.7.0)
 from .state_machine import (
     AutoTransitionSpec,
+    InvokeBinding,
+    InvokeFlowSpec,
+    InvokeSourceKind,
     StateMachineSpec,
     StateTransition,
     TimeUnit,
@@ -1086,6 +1089,9 @@ __all__ = [
     "TimeUnit",
     "TransitionTrigger",
     "TransitionGuard",
+    "InvokeSourceKind",
+    "InvokeBinding",
+    "InvokeFlowSpec",
     "AutoTransitionSpec",
     "StateTransition",
     "StateMachineSpec",

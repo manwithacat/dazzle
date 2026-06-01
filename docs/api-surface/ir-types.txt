@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 363 BaseModels, 147 Enums, 23 other (functions / typealiases / constants)
+# Counts: 365 BaseModels, 148 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -1431,6 +1431,20 @@ ir_class: InvariantSpec
     - invariant_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
     - message: str | None = None
 
+ir_class: InvokeBinding
+  required:
+    - flow_input: str
+    - source_kind: InvokeSourceKind
+  optional:
+    - literal: str | int | float | bool | None = None
+    - source_name: str | None = None
+
+ir_class: InvokeFlowSpec
+  required:
+    - bindings: list[InvokeBinding]
+    - flow_name: str
+  optional: (none)
+
 ir_class: IslandEventSpec
   required:
     - name: str
@@ -2609,6 +2623,7 @@ ir_class: StateTransition
     - auto_spec: AutoTransitionSpec | None = None
     - effects: list[StepEffect] = []
     - guards: list[TransitionGuard] = []
+    - invoke_flow: InvokeFlowSpec | None = None
     - trigger: TransitionTrigger = <TransitionTrigger.MANUAL: 'manual'>
 
 ir_class: StatusListEntrySpec
@@ -3949,6 +3964,12 @@ enum: LogicalOperator
   members:
     - AND = 'and'
     - OR = 'or'
+
+enum: InvokeSourceKind
+  members:
+    - INPUT = 'input'
+    - LITERAL = 'literal'
+    - SELF = 'self'
 
 enum: JobBackoff
   members:
