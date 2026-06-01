@@ -398,6 +398,15 @@ def verify_cmd(
         f"RBAC verification: {report.total} cells | {report.passed} passed | "
         f"{report.violated} violated | {report.warnings} warnings"
     )
+    # #1314 — atomic-flow permit-gate probes, reported separately from CRUD cells.
+    flow_violations = [f for f in report.flows if f.result.value == "VIOLATION"]
+    if report.flows:
+        flow_passed = sum(1 for f in report.flows if f.result.value == "PASS")
+        flow_warn = sum(1 for f in report.flows if f.result.value == "WARNING")
+        typer.echo(
+            f"Atomic flows: {len(report.flows)} probes | {flow_passed} passed | "
+            f"{len(flow_violations)} violated | {flow_warn} warnings"
+        )
     typer.echo(f"Report: {report_path}")
     for cell in report.cells:
         if cell.result.value == "VIOLATION":
@@ -406,7 +415,13 @@ def verify_cmd(
                 f"expected {cell.expected.value}, got HTTP {cell.observed_status}",
                 err=True,
             )
-    if report.violated > 0:
+    for flow in flow_violations:
+        typer.echo(
+            f"  VIOLATION  atomic:{flow.flow} as {flow.role}: "
+            f"expected {flow.expected.value}, got HTTP {flow.observed_status}",
+            err=True,
+        )
+    if report.violated > 0 or flow_violations:
         raise typer.Exit(code=1)
 
 

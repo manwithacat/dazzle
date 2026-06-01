@@ -33,6 +33,34 @@ EXTRA_ROUTE_FILES: tuple[Path, ...] = (REPO_ROOT / "src" / "dazzle" / "signing" 
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "websocket"}
 
+# Production routes registered *dynamically* (via `router.add_api_route(...)`),
+# which the AST decorator walk above cannot see — it only matches
+# `@router.<method>` decorations. Entries here are pattern rows the api-surface
+# gate would otherwise miss.
+#
+# Scope: only genuinely *public, production* dynamic surfaces belong here.
+# `debug_routes.py` / `test_routes.py` / `metrics_routes.py` also call
+# `add_api_route`, but those are dev/test-mode-only and are intentionally NOT
+# part of the public surface — so this is a curated allowlist, not a blanket
+# `add_api_route` recogniser (which would over-capture them).
+#
+# Atomic-flow routes (#1228/#1313, ADR-0029): `atomic_flow_routes.py`
+# `_register_one` registers one `POST /api/atomic/<flow>` endpoint per parsed
+# `AtomicFlowSpec` via `router.add_api_route(f"/{flow.name}", ...)`. Flow names
+# are per-app, so the framework-level baseline pins the route as a
+# `{flow_name}` pattern (#1314). The `/api/atomic` prefix comes from
+# `APIRouter(prefix="/api/atomic")` in `build_atomic_flow_router`; the handler
+# name mirrors `handler.__name__ = f"atomic_{flow.name}"`.
+_DYNAMIC_ROUTES: tuple[dict[str, str], ...] = (
+    {
+        "method": "POST",
+        "path": "/api/atomic/{flow_name}",
+        "handler": "atomic_{flow_name}",
+        "signature": "(body, user) -> dict",
+        "module": "atomic_flow_routes",
+    },
+)
+
 
 def _path_from_decorator(call: ast.Call) -> str | None:
     if not call.args:
@@ -128,6 +156,8 @@ def _collect_routes() -> list[dict[str, str]]:
     for extra in EXTRA_ROUTE_FILES:
         if extra.exists():
             out.extend(_walk_module(extra))
+    # Curated dynamic routes the AST walk structurally can't see.
+    out.extend(dict(r) for r in _DYNAMIC_ROUTES)
     out.sort(key=lambda r: (r["module"], r["path"], r["method"], r["handler"]))
     return out
 
@@ -143,7 +173,8 @@ def snapshot_runtime_urls() -> str:
     lines.append("# DAZZLE Runtime URLs — API Surface (cycle 5 of #961)")
     lines.append("#")
     lines.append(
-        "# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py (+ EXTRA_ROUTE_FILES)"
+        "# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py "
+        "(+ EXTRA_ROUTE_FILES, + curated _DYNAMIC_ROUTES)"
     )
     lines.append("# Regenerate: dazzle inspect api runtime-urls --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")

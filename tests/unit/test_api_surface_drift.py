@@ -138,6 +138,18 @@ def test_runtime_urls_includes_known_modules():
         assert f"module: {module}\n" in snapshot, f"Missing module: {module}"
 
 
+def test_runtime_urls_includes_atomic_flow_dynamic_route():
+    """The dynamically-registered atomic-flow surface (#1314) must be captured.
+
+    `atomic_flow_routes.py` registers `POST /api/atomic/<flow>` via
+    `add_api_route`, which the AST decorator walk can't see; the curated
+    `_DYNAMIC_ROUTES` entry pins it as a `{flow_name}` pattern.
+    """
+    snapshot = urls_mod.snapshot_runtime_urls()
+    assert "module: atomic_flow_routes\n" in snapshot, "Missing atomic_flow_routes module"
+    assert "POST | /api/atomic/{flow_name}" in snapshot, "Missing atomic-flow pattern route"
+
+
 def test_runtime_urls_no_trailing_whitespace():
     """Pre-commit strips trailing whitespace; the snapshot must match post-strip."""
     snapshot = urls_mod.snapshot_runtime_urls()

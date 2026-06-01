@@ -1,6 +1,6 @@
 # DAZZLE Runtime URLs — API Surface (cycle 5 of #961)
 #
-# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py (+ EXTRA_ROUTE_FILES)
+# Source of truth: AST walk of src/dazzle/back/runtime/*_routes.py (+ EXTRA_ROUTE_FILES, + curated _DYNAMIC_ROUTES)
 # Regenerate: dazzle inspect api runtime-urls --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
@@ -10,13 +10,17 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 54 routes across 15 modules
+# Counts: 55 routes across 16 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
     handler: trigger_deploy(request: Request) -> JSONResponse
   POST | /deploys/{deploy_id}/rollback
     handler: rollback_deploy(deploy_id: str, request: Request) -> JSONResponse
+
+module: atomic_flow_routes
+  POST | /api/atomic/{flow_name}
+    handler: atomic_{flow_name}(body, user) -> dict
 
 module: audit_history_routes
   GET | /{entity_type}/{entity_id}

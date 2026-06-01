@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.74] - 2026-06-01
+
+### Added
+
+- **#1314 — atomic flows are now runtime-conformance-verified and visible in the api-surface (ADR-0029 analysis projection, runtime pieces).** The slice-1d matrix projection (v0.80.72) is now *verified* and *visible*, closing the two runtime halves of "atomic visible to the analysis surface":
+  - **Conformance.** The dynamic RBAC verifier probes `POST /api/atomic/<name>` per `(flow, role)` (`_probe_atomic_flows` → new `VerifiedFlow` result type + `compare_flow` truth table) and asserts each flow's `permit: execute` gate: a role **not** in `permit_execute` must be rejected by the role gate (403), a permitted role must clear it. Results are carried in `VerificationReport.flows` (additive — CRUD `cells` counts unchanged) and surfaced by `dazzle rbac verify` as a second summary line, with flow violations folded into its exit-code gate. Per-step `scope:` correctness (own-scope commits / foreign-scope 403/404 + rollback) is **not** re-asserted here — the generic verifier can't seed scope-parent rows — so it stays integration-tested in `tests/integration/test_scope_runtime_pg.py`.
+  - **api-surface visibility.** `atomic_flow_routes.py` registers `POST /api/atomic/<flow>` via dynamic `add_api_route`, invisible to the AST decorator walk in `runtime_urls.py`. A curated `_DYNAMIC_ROUTES` entry now pins it in `docs/api-surface/runtime-urls.txt` as the `POST /api/atomic/{flow_name}` pattern (flow names are per-app). This is a *curated allowlist*, not a blanket `add_api_route` recogniser — `debug_routes` / `test_routes` / `metrics_routes` also use `add_api_route` but are dev/test-only and intentionally stay out of the public surface.
+
+### Agent Guidance
+
+- **`dazzle rbac verify` now verifies atomic-flow permit gates** — it probes each `POST /api/atomic/<name>` per role and reports an "Atomic flows: N probes" line; a permitted role wrongly rejected, or an unpermitted role that executes, is a VIOLATION that fails the run. It verifies the **permit projection only**; per-step `scope:` enforcement remains covered by the real-PG integration test. When adding a *new public, dynamically-registered* route (via `add_api_route`), add a curated `_DYNAMIC_ROUTES` entry in `api_surface/runtime_urls.py` and regenerate the baseline (`dazzle inspect api runtime-urls --write`) — do **not** make the walker recognise `add_api_route` generically (it would pull in dev/test/debug routes). With #1314 shipped, the remaining ADR-0029 follow-ups are #1315 (derived FK ordering), #1316 (TOCTOU share-lock), #1317 (strict in-transaction audit), #1318/#1319 (the two Tier-3 ADR seams).
+
 ## [0.80.73] - 2026-06-01
 
 ### Added

@@ -8,7 +8,7 @@ invocation without pulling in the full verification harness.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -75,6 +75,51 @@ class VerifiedCell:
 
 
 @dataclass
+class VerifiedFlow:
+    """Verification result for one ``(atomic flow, role)`` permit-gate probe (#1314).
+
+    The dynamic verifier probes ``POST /api/atomic/<name>`` per projected flow
+    (``AccessMatrix.atomic_flows``) as each role and checks the flow's
+    ``permit: execute`` gate: a non-permitted role must be rejected (403) by the
+    role gate, a permitted role must clear it. This verifies the
+    ``AtomicFlowProjection.roles`` claim — the *permit* path. Per-step
+    ``scope: create:`` / ``scope: update:`` correctness (own-scope commits /
+    foreign-scope 403/404 + rollback) is enforced inside the flow transaction
+    and is covered end-to-end against real Postgres in
+    ``tests/integration/test_scope_runtime_pg.py``; it is deliberately *not*
+    re-asserted here (the generic verifier cannot seed scope-parent rows).
+    """
+
+    flow: str
+    role: str
+    expected: PolicyDecision  # PERMIT if role ∈ flow.permit_execute, else DENY
+    observed_status: int
+    result: CellResult
+    detail: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "flow": self.flow,
+            "role": self.role,
+            "expected": self.expected.value,
+            "observed_status": self.observed_status,
+            "result": self.result.value,
+            "detail": self.detail,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> VerifiedFlow:
+        return cls(
+            flow=d["flow"],
+            role=d["role"],
+            expected=PolicyDecision(d["expected"]),
+            observed_status=d["observed_status"],
+            result=CellResult(d["result"]),
+            detail=d.get("detail", ""),
+        )
+
+
+@dataclass
 class VerificationReport:
     """Full RBAC verification report produced by `verify()`."""
 
@@ -93,6 +138,11 @@ class VerificationReport:
     A zeroed report (total=0) with `error` set means verification could
     not run — distinct from a clean run of an app with no cells.
     """
+    flows: list[VerifiedFlow] = field(default_factory=list)
+    """Atomic-flow permit-gate probe results (#1314), additive to the CRUD
+    ``cells``. The cell counts (``total``/``passed``/``violated``/``warnings``)
+    stay CRUD-only so existing consumers are unchanged; flow violations are
+    surfaced separately by the CLI and folded into its exit-code gate."""
 
     def to_json(self) -> dict[str, object]:
         """Return a JSON-serialisable representation of the report."""
@@ -108,6 +158,7 @@ class VerificationReport:
             "violated": self.violated,
             "warnings": self.warnings,
             "error": self.error,
+            "flows": [f.to_dict() for f in self.flows],
         }
 
     def save(self, path: Path) -> None:
@@ -148,6 +199,7 @@ class VerificationReport:
             )
 
         cells = [VerifiedCell.from_dict(c) for c in raw.get("cells", [])]
+        flows = [VerifiedFlow.from_dict(f) for f in raw.get("flows", [])]
 
         return cls(
             app_name=raw["app_name"],
@@ -160,6 +212,7 @@ class VerificationReport:
             violated=raw["violated"],
             warnings=raw["warnings"],
             error=raw.get("error"),
+            flows=flows,
         )
 
 
@@ -254,4 +307,51 @@ def compare_cell(
             return CellResult.VIOLATION
         return CellResult.WARNING
 
+    return CellResult.WARNING
+
+
+def compare_flow(
+    expected: PolicyDecision,
+    observed_status: int,
+    *,
+    role_gate_rejected: bool,
+) -> CellResult:
+    """Compare an atomic-flow probe against the flow's permit-gate expectation (#1314).
+
+    The verifier probes ``POST /api/atomic/<name>`` per role and checks only the
+    flow's ``permit: execute`` role gate (the ``AtomicFlowProjection.roles``
+    claim). ``role_gate_rejected`` is True when a 403 came from the *role* gate
+    (its detail names the required roles) rather than from per-step scope
+    enforcement — the role gate fires before any body/scope processing.
+
+    Truth table
+    -----------
+    DENY (role ∉ permit)   + 403 role-gate             → PASS    (correctly rejected by the gate)
+    DENY                   + 403 non-role-gate         → WARNING (rejected, but by scope not the gate —
+                                                                  the gate may be bypassed; flag for review)
+    DENY                   + 200                        → VIOLATION (unpermitted role executed the flow)
+    DENY                   + other                      → WARNING (inconclusive, e.g. 422 body gap)
+    PERMIT (role ∈ permit) + 403 role-gate             → VIOLATION (permitted role wrongly rejected)
+    PERMIT                 + 200 / 400 / 403-scope / 404 → PASS  (role gate cleared; downstream is
+                                                                  scope/data, integration-tested)
+    PERMIT                 + other (422 / 5xx)          → WARNING (probe couldn't construct a scenario)
+
+    The DENY+403 case requires the *role-gate* marker for PASS: an unpermitted
+    role is hit by the role gate before any scope check, so a 403 from scope
+    instead (``role_gate_rejected=False``) means the gate may have been bypassed
+    and scope incidentally saved it — a blind spot a verifier must surface, not
+    pass. Per-step scope correctness is NOT decided here — see ``VerifiedFlow``.
+    """
+    if expected == PolicyDecision.DENY:
+        if observed_status == 200:
+            return CellResult.VIOLATION
+        if observed_status == 403:
+            return CellResult.PASS if role_gate_rejected else CellResult.WARNING
+        return CellResult.WARNING
+
+    # Any PERMIT* variant: the role holds the execute grant.
+    if role_gate_rejected:
+        return CellResult.VIOLATION
+    if observed_status in (200, 400, 403, 404):
+        return CellResult.PASS
     return CellResult.WARNING

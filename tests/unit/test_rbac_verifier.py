@@ -7,7 +7,14 @@ import pytest
 
 from dazzle.rbac.audit import AccessDecisionRecord
 from dazzle.rbac.matrix import AccessMatrix, PolicyDecision, PolicyWarning
-from dazzle.rbac.verifier import CellResult, VerificationReport, VerifiedCell, compare_cell
+from dazzle.rbac.verifier import (
+    CellResult,
+    VerificationReport,
+    VerifiedCell,
+    VerifiedFlow,
+    compare_cell,
+    compare_flow,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -629,3 +636,162 @@ class TestVerificationReportSerialization:
 
         assert len(loaded.cells[0].audit_records) == 1
         assert loaded.cells[0].audit_records[0].request_id == "req-saved"
+
+
+# ---------------------------------------------------------------------------
+# #1314 — compare_flow (atomic-flow permit-gate truth table)
+# ---------------------------------------------------------------------------
+
+
+class TestCompareFlowDeny:
+    """A role NOT in the flow's `permit: execute` must be rejected by the gate."""
+
+    def test_deny_403_role_gate_is_pass(self):
+        assert compare_flow(PolicyDecision.DENY, 403, role_gate_rejected=True) == CellResult.PASS
+
+    def test_deny_403_without_role_gate_marker_is_warning(self):
+        # For an unpermitted role the role gate fires before any scope check, so
+        # a 403 that did NOT come from the role gate means the gate may have been
+        # bypassed and scope incidentally denied — surface it (WARNING), don't
+        # silently pass the exact RBAC-leak class this probe targets.
+        assert (
+            compare_flow(PolicyDecision.DENY, 403, role_gate_rejected=False) == CellResult.WARNING
+        )
+
+    def test_deny_200_is_violation(self):
+        # An unpermitted role executed the flow — the permit gate leaked.
+        assert (
+            compare_flow(PolicyDecision.DENY, 200, role_gate_rejected=False) == CellResult.VIOLATION
+        )
+
+    def test_deny_422_is_warning(self):
+        assert (
+            compare_flow(PolicyDecision.DENY, 422, role_gate_rejected=False) == CellResult.WARNING
+        )
+
+
+class TestCompareFlowPermit:
+    """A role IN the flow's `permit: execute` must clear the role gate."""
+
+    def test_permit_role_gate_403_is_violation(self):
+        # A permitted role rejected BY THE ROLE GATE contradicts the projection.
+        assert (
+            compare_flow(PolicyDecision.PERMIT, 403, role_gate_rejected=True)
+            == CellResult.VIOLATION
+        )
+
+    def test_permit_200_is_pass(self):
+        assert compare_flow(PolicyDecision.PERMIT, 200, role_gate_rejected=False) == CellResult.PASS
+
+    def test_permit_scope_403_is_pass(self):
+        # 403 from per-step scope (not the role gate) means the gate cleared —
+        # scope correctness is integration-tested, not asserted here.
+        assert compare_flow(PolicyDecision.PERMIT, 403, role_gate_rejected=False) == CellResult.PASS
+
+    @pytest.mark.parametrize("status", [400, 404])
+    def test_permit_downstream_4xx_is_pass(self, status):
+        assert (
+            compare_flow(PolicyDecision.PERMIT, status, role_gate_rejected=False) == CellResult.PASS
+        )
+
+    @pytest.mark.parametrize("status", [422, 500])
+    def test_permit_inconclusive_is_warning(self, status):
+        assert (
+            compare_flow(PolicyDecision.PERMIT, status, role_gate_rejected=False)
+            == CellResult.WARNING
+        )
+
+
+# ---------------------------------------------------------------------------
+# #1314 — VerifiedFlow serialization + report carry
+# ---------------------------------------------------------------------------
+
+
+def make_flow(**overrides) -> VerifiedFlow:
+    defaults: dict = {
+        "flow": "enrol_student",
+        "role": "teacher",
+        "expected": PolicyDecision.PERMIT,
+        "observed_status": 200,
+        "result": CellResult.PASS,
+        "detail": "",
+    }
+    defaults.update(overrides)
+    return VerifiedFlow(**defaults)
+
+
+class TestVerifiedFlow:
+    def test_to_dict_round_trip(self):
+        flow = make_flow(role="viewer", expected=PolicyDecision.DENY, observed_status=403)
+        restored = VerifiedFlow.from_dict(flow.to_dict())
+        assert restored == flow
+
+    def test_report_carries_flows_through_save_load(self, tmp_path: Path):
+        violation = make_flow(
+            role="viewer",
+            expected=PolicyDecision.DENY,
+            observed_status=200,
+            result=CellResult.VIOLATION,
+            detail="unpermitted role executed flow",
+        )
+        report = make_report(flows=[make_flow(), violation])
+        path = tmp_path / "report.json"
+        report.save(path)
+        loaded = VerificationReport.load(path)
+
+        assert len(loaded.flows) == 2
+        assert loaded.flows[1].result == CellResult.VIOLATION
+        assert loaded.flows[1].expected == PolicyDecision.DENY
+
+    def test_to_json_includes_flows_key(self):
+        d = make_report(flows=[make_flow()]).to_json()
+        assert "flows" in d
+        assert d["flows"][0]["flow"] == "enrol_student"
+
+    def test_flows_default_empty(self):
+        # Backward-compatible: a report saved before #1314 (no `flows` key) loads
+        # with an empty flow list rather than raising.
+        assert make_report().flows == []
+
+
+# ---------------------------------------------------------------------------
+# #1314 — _minimal_flow_inputs (atomic-flow body construction)
+# ---------------------------------------------------------------------------
+
+
+class TestMinimalFlowInputs:
+    def test_scope_runtime_enrol_student_body(self):
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.rbac.verifier import _minimal_flow_inputs
+
+        appspec = load_project_appspec(Path("fixtures/scope_runtime"))
+        body = _minimal_flow_inputs("enrol_student", appspec, baseline={"TeachingGroup": "tg-42"})
+
+        # `input label: str(120)` → a str; `input group: ref TeachingGroup` →
+        # resolved against the seeded baseline row id.
+        assert body["label"] == "seed-label"
+        assert body["group"] == "tg-42"
+
+    def test_ref_falls_back_to_placeholder_uuid(self):
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.rbac.verifier import _minimal_flow_inputs
+
+        appspec = load_project_appspec(Path("fixtures/scope_runtime"))
+        body = _minimal_flow_inputs("enrol_student", appspec, baseline={})
+
+        # No seeded TeachingGroup → a syntactically-valid placeholder UUID so the
+        # body clears Pydantic validation and the role gate stays observable.
+        assert body["group"] == "00000000-0000-0000-0000-000000000001"
+
+    def test_unknown_flow_returns_empty(self):
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.rbac.verifier import _minimal_flow_inputs
+
+        appspec = load_project_appspec(Path("fixtures/scope_runtime"))
+        assert _minimal_flow_inputs("nonexistent_flow", appspec, baseline={}) == {}

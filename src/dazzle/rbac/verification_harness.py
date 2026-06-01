@@ -21,11 +21,13 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
 from dazzle.core.strings import to_api_plural
-from dazzle.rbac.matrix import AccessMatrix
+from dazzle.rbac.matrix import AccessMatrix, PolicyDecision
 from dazzle.rbac.verification_types import (
     CellResult,
     VerifiedCell,
+    VerifiedFlow,
     compare_cell,
+    compare_flow,
 )
 
 if TYPE_CHECKING:
@@ -872,3 +874,143 @@ async def _probe_all_cells(
                         )
                     )
     return cells
+
+
+def _minimal_flow_inputs(
+    flow_name: str,
+    appspec: Any,
+    *,
+    baseline: dict[str, str],
+) -> dict[str, Any]:
+    """Build the smallest valid JSON body for an atomic flow's ``inputs:`` block.
+
+    Mirrors ``build_input_model``'s ``_TYPE_MAP`` so every value passes the
+    auto-generated Pydantic model (a 422 would mask the permit-gate verdict).
+    A ``ref`` input resolves against the seeded ``baseline`` row id for its
+    target entity; with no seeded target it falls back to a syntactically-valid
+    placeholder UUID — enough to clear body validation so the role gate (which
+    fires before any scope/FK check) is observable.
+    """
+    from dazzle.core.ir.fields import FieldTypeKind
+
+    flow = next((f for f in (appspec.atomic_flows or []) if f.name == flow_name), None)
+    if flow is None:
+        return {}
+
+    _placeholder_uuid = "00000000-0000-0000-0000-000000000001"
+    body: dict[str, Any] = {}
+    for inp in flow.inputs:
+        kind = inp.type.kind
+        if kind == FieldTypeKind.REF:
+            ref_entity = inp.type.ref_entity
+            body[inp.name] = (baseline.get(ref_entity) if ref_entity else None) or _placeholder_uuid
+        elif kind == FieldTypeKind.UUID:
+            body[inp.name] = _placeholder_uuid
+        elif kind == FieldTypeKind.INT:
+            body[inp.name] = 1
+        elif kind == FieldTypeKind.MONEY:
+            body[inp.name] = 1  # _TYPE_MAP: MONEY → int (minor units)
+        elif kind in (FieldTypeKind.FLOAT, FieldTypeKind.DECIMAL):
+            body[inp.name] = 1.0
+        elif kind == FieldTypeKind.BOOL:
+            body[inp.name] = False
+        elif kind == FieldTypeKind.DATE:
+            body[inp.name] = "2000-01-01"
+        elif kind == FieldTypeKind.DATETIME:
+            body[inp.name] = "2000-01-01T00:00:00Z"
+        else:
+            # STR/TEXT/EMAIL/URL/SLUG/TIMEZONE and any unmapped kind → str.
+            body[inp.name] = f"seed-{inp.name}"
+    return body
+
+
+def _is_role_gate_403(response: Any) -> bool:
+    """True when a 403 came from the atomic flow's *role* gate, not scope.
+
+    The permit-gate rejection in ``atomic_flow_routes._make_handler`` carries a
+    detail of the form ``"Atomic flow '<name>' requires one of [...]; user has
+    [...]."``. A per-step ``scope:`` denial raises a 403 with a different body,
+    so the marker substring distinguishes the two.
+
+    A decode failure on ``response.text`` propagates to ``_probe_atomic_flows``'s
+    probe ``try/except`` (recorded as a WARNING) rather than being swallowed here.
+    """
+    return "requires one of" in response.text
+
+
+async def _probe_atomic_flows(
+    matrix: AccessMatrix,
+    creds: dict[str, tuple[str, str]],
+    baseline: dict[str, str],
+    *,
+    transport: Any,
+    appspec: Any,
+) -> list[VerifiedFlow]:
+    """Probe ``POST /api/atomic/<name>`` per (flow, role); verify the permit gate.
+
+    For each projected atomic flow (``matrix.atomic_flows``) and each role, POST
+    the flow with a minimal valid body and check the ``permit: execute`` gate: a
+    non-permitted role must be rejected (403 from the role gate), a permitted
+    role must clear it. Per-step scope correctness is integration-tested
+    separately (see ``VerifiedFlow`` / ``compare_flow``).
+    """
+    from contextlib import AsyncExitStack
+
+    flows_out: list[VerifiedFlow] = []
+    if not matrix.atomic_flows:
+        return flows_out
+
+    base_url = "http://verifier.local"
+    for role in matrix.roles:
+        if role not in creds:
+            continue
+        email, password = creds[role]
+        async with AsyncExitStack() as stack:
+            try:
+                client = await stack.enter_async_context(
+                    _open_role_client(transport, base_url, email, password)
+                )
+            except Exception as exc:
+                for proj in matrix.atomic_flows:
+                    expected = PolicyDecision.PERMIT if role in proj.roles else PolicyDecision.DENY
+                    flows_out.append(
+                        VerifiedFlow(
+                            flow=proj.name,
+                            role=role,
+                            expected=expected,
+                            observed_status=0,
+                            result=CellResult.WARNING,
+                            detail=f"role login failed: {exc}",
+                        )
+                    )
+                continue
+
+            for proj in matrix.atomic_flows:
+                expected = PolicyDecision.PERMIT if role in proj.roles else PolicyDecision.DENY
+                body = _minimal_flow_inputs(proj.name, appspec, baseline=baseline)
+                try:
+                    resp = await client.request(
+                        "POST",
+                        f"/api/atomic/{proj.name}",
+                        json=body,
+                        headers=_csrf_headers(client),
+                    )
+                    status = resp.status_code
+                    role_gate_rejected = status == 403 and _is_role_gate_403(resp)
+                    result = compare_flow(expected, status, role_gate_rejected=role_gate_rejected)
+                    detail = ""
+                except Exception as exc:
+                    status = 0
+                    result = CellResult.WARNING
+                    detail = f"probe error: {exc}"
+                flows_out.append(
+                    VerifiedFlow(
+                        flow=proj.name,
+                        role=role,
+                        expected=expected,
+                        observed_status=status,
+                        result=result,
+                        detail=detail,
+                    )
+                )
+    return flows_out

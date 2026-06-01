@@ -34,8 +34,10 @@ from dazzle.rbac.verification_harness import (
     _csrf_headers,
     _DisposableDatabase,
     _minimal_body_for_entity,
+    _minimal_flow_inputs,
     _open_role_client,
     _probe_all_cells,
+    _probe_atomic_flows,
     _probe_cell,
     _probe_transport,
     _ProbeResult,
@@ -53,15 +55,19 @@ from dazzle.rbac.verification_types import (
     CellResult,
     VerificationReport,
     VerifiedCell,
+    VerifiedFlow,
     compare_cell,
+    compare_flow,
 )
 
 __all__ = [
     # Public types
     "CellResult",
     "VerifiedCell",
+    "VerifiedFlow",
     "VerificationReport",
     "compare_cell",
+    "compare_flow",
     "verify",
     # Re-exported private helpers (importers rely on these)
     "_SUPERUSER_EMAIL",
@@ -78,8 +84,10 @@ __all__ = [
     "_create_capable_role",
     "_csrf_headers",
     "_minimal_body_for_entity",
+    "_minimal_flow_inputs",
     "_open_role_client",
     "_probe_all_cells",
+    "_probe_atomic_flows",
     "_probe_cell",
     "_probe_transport",
     "_scope_create_overlay",
@@ -127,6 +135,7 @@ async def verify(
     matrix = generate_access_matrix(appspec)
 
     cells: list[VerifiedCell] = []
+    flows: list[VerifiedFlow] = []
     try:
         async with _DisposableDatabase(server_url) as db_url:
             async with _verifier_app_context(project_root, db_url) as ctx:
@@ -147,6 +156,16 @@ async def verify(
                     appspec=ctx.appspec,
                 )
                 cells = await _probe_all_cells(ctx, matrix, creds, baseline, transport=transport)
+                # #1314 — probe atomic-flow routes (POST /api/atomic/<name>) to
+                # verify each flow's `permit: execute` gate. Additive to `cells`;
+                # per-step scope correctness is integration-tested separately.
+                flows = await _probe_atomic_flows(
+                    matrix,
+                    creds,
+                    baseline,
+                    transport=transport,
+                    appspec=ctx.appspec,
+                )
     except Exception as exc:
         # App-boot / database-provisioning failure — return an empty report
         # rather than raising, so callers can render a consistent result.
@@ -182,4 +201,5 @@ async def verify(
         passed=passed,
         violated=violated,
         warnings=warnings,
+        flows=flows,
     )
