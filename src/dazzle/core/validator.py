@@ -2662,6 +2662,13 @@ def validate_transition_invocations(appspec: ir.AppSpec) -> tuple[list[str], lis
                             f"{prefix} binds `self` to input '{b.flow_input}', which is a "
                             f"ref {ref_entity}, not ref {entity.name} (the transitioning entity)."
                         )
+                elif b.source_kind == ir.InvokeSourceKind.INPUT and not b.source_name:
+                    # An `input.<name>` binding must carry the transition input name
+                    # (the runtime resolves the value from it in Slice B).
+                    errors.append(
+                        f"{prefix} binds input '{b.flow_input}' from a transition input "
+                        "but names no source (expected `input.<name>`)."
+                    )
 
             for name, fi in flow_inputs.items():
                 if fi.required and name not in bound:
