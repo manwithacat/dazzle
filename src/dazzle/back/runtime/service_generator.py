@@ -496,12 +496,21 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 f"'{invoke_flow.flow_name}', which is not registered"
             )
         # Fail-closed: a scope-enforced effect needs an authenticated principal.
-        # The live update route always has one; a no-user path firing an invoke is
-        # a misconfiguration, not a user error.
+        # The live (authed) update route always has one; an unauthenticated path
+        # (auth disabled / test-mode) reaching an invoke transition is a config
+        # error — surface a clean 403, never run the guarded effect unscoped.
+        from fastapi import HTTPException
+
         if auth_context is None:
-            raise RuntimeError(
-                f"transition invoke '{invoke_flow.flow_name}' requires an authenticated "
-                "principal — a guarded effect cannot run unscoped (#1319)"
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "transition_invoke_unauthenticated",
+                    "message": (
+                        f"transition invoke '{invoke_flow.flow_name}' requires an "
+                        "authenticated principal — a guarded effect cannot run unscoped"
+                    ),
+                },
             )
 
         from dazzle.back.runtime.atomic_flow_executor import AtomicFlowError
@@ -512,6 +521,15 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         try:
             with db.connection() as conn:
                 updated = await self._repository.update(id, update_data, conn=conn)
+                if updated is None:
+                    # rowcount==0: the row vanished (concurrent delete) between the
+                    # pre-read and this UPDATE. Raise so the transaction rolls back
+                    # BEFORE the flow runs — otherwise the effect would commit with
+                    # no status transition having happened.
+                    raise AtomicFlowError(
+                        self.entity_name,
+                        "status row not found at update time (concurrent delete?)",
+                    )
                 execute_atomic_flow_on_conn(
                     flow,
                     flow_inputs,

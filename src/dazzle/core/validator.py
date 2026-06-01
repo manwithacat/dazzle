@@ -2638,6 +2638,20 @@ def validate_transition_invocations(appspec: ir.AppSpec) -> tuple[list[str], lis
                 f"entity '{entity.name}' transition {t.from_state} -> {t.to_state}: "
                 f"invoke {inv.flow_name}"
             )
+            # v1 limit (ADR-0032 Slice B): the shared-tx path reads the row back on
+            # the flow connection with a plain SELECT, which does not reproduce the
+            # soft-delete / temporal / subtype-JOIN logic the normal read applies.
+            # Reject invoke on those entity types until the shared read handles them.
+            if getattr(entity, "soft_delete", None) or getattr(entity, "temporal", None):
+                errors.append(
+                    f"{prefix} on a soft-delete/temporal entity is not supported in this "
+                    "release (transition invoke is v1-limited to plain entities)."
+                )
+            if getattr(entity, "subtype_of", None) or getattr(entity, "subtypes", None):
+                errors.append(
+                    f"{prefix} on a subtype-polymorphic entity is not supported in this "
+                    "release (transition invoke is v1-limited to plain entities)."
+                )
             # A guarded effect needs a principal; an `auto` (scheduled/system)
             # transition has none, so reject `invoke` on it at validate time
             # (ADR-0032 — the service-principal story for system transitions is
