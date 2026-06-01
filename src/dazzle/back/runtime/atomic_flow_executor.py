@@ -419,25 +419,53 @@ def execute_atomic_flow(
         HTTPException(403): a step's ``scope: create:`` predicate denied the
             insert — the whole flow transaction is rolled back (fail-closed).
     """
+    # Open one connection for the whole flow. The pool's exit-handler commits on
+    # clean exit and rolls back on exception, so re-raising any AtomicFlowError
+    # (or a scope HTTPException) from inside the with-block rolls back for free.
+    with db_manager.connection() as conn:
+        return execute_atomic_flow_on_conn(
+            flow,
+            inputs,
+            conn,
+            db_manager.placeholder,
+            auth_context=auth_context,
+            access_specs=access_specs,
+            fk_graph=fk_graph,
+            audit_sink=audit_sink,
+        )
+
+
+def execute_atomic_flow_on_conn(
+    flow: ir.AtomicFlowSpec,
+    inputs: dict[str, Any],
+    conn: Any,
+    placeholder: str,
+    *,
+    auth_context: Any = None,
+    access_specs: dict[str, Any] | None = None,
+    fk_graph: Any = None,
+    audit_sink: list[dict[str, str]] | None = None,
+) -> dict[str, UUID]:
+    """Execute an atomic flow on an externally-provided connection (#1319, ADR-0032).
+
+    Identical semantics to :func:`execute_atomic_flow`, but the CALLER owns the
+    connection and its transaction boundary (commit/rollback). This lets a
+    lifecycle transition (ADR-0032 Slice B) run the flow in the SAME transaction
+    as its status write — both commit or both roll back. Any exception raised here
+    propagates to the caller, whose ``with``/transaction context rolls back.
+    """
     above_ids: dict[str, UUID] = {}
-    placeholder = db_manager.placeholder
     _enforce = access_specs is not None and auth_context is not None
-    # #1317 — `audit: strict` writes the audit side-table in-transaction. It
-    # needs the per-step intents regardless of whether the (async) caller passed
-    # a sink, so materialise one when strict and none was supplied. The strict
-    # write does NOT require a principal — an unauthenticated flow (test/legacy
-    # wiring) still records a row with null user fields, so opting into a
-    # guaranteed trail never silently degrades to *no* audit (the async path the
-    # author upgraded from would at least have run). `_write_strict_atomic_audit`
-    # tolerates a None `auth_context`.
+    # #1317 — `audit: strict` writes the audit side-table in-transaction. It needs
+    # the per-step intents regardless of whether the (async) caller passed a sink,
+    # so materialise one when strict and none was supplied. The strict write does
+    # NOT require a principal — an unauthenticated flow (test/legacy wiring) still
+    # records a row with null user fields. `_write_strict_atomic_audit` tolerates a
+    # None `auth_context`.
     strict_audit = flow.audit_mode == ir.FlowAuditMode.STRICT
     if strict_audit and audit_sink is None:
         audit_sink = []
 
-    # Open one connection for the whole flow. The pool's exit-handler
-    # commits on clean exit and rolls back on exception, so re-raising
-    # any AtomicFlowError (or a scope HTTPException) from inside the
-    # with-block lets the rollback happen for free.
     # #1315 — run in FK-derived parent-before-child order for create-DAG flows;
     # `derived_step_order` is None for declared-order flows (updates / cyclic FKs).
     if flow.derived_step_order is not None:
@@ -445,86 +473,82 @@ def execute_atomic_flow(
     else:
         ordered_steps = list(flow.steps)
 
-    with db_manager.connection() as conn:
-        cursor = conn.cursor()
-        probe = _make_in_txn_probe(conn) if _enforce else None
-        for step in ordered_steps:
-            if isinstance(step, ir.FlowUpdate):
-                _execute_update_step(
-                    step,
-                    inputs,
-                    above_ids,
-                    conn,
-                    cursor,
-                    placeholder,
-                    enforce=_enforce,
-                    auth_context=auth_context,
-                    access_specs=access_specs,
-                    fk_graph=fk_graph,
-                    probe=probe,
-                    audit_sink=audit_sink,
-                )
-                continue
-            # FlowCreate
-            row_id = uuid4()
-            try:
-                data = _build_row_data(step, inputs, above_ids, row_id)
-            except KeyError as exc:
-                raise AtomicFlowError(
-                    step.entity,
-                    f"unresolved reference {exc!s} (validator gap?)",
-                ) from exc
-            # Per-step `scope: create:` enforcement (#1313 slice 1b). Routes the
-            # create through the SAME guard a standalone create gets (#1124/#1311),
-            # but with an in-transaction probe. Scope keys come from the principal,
-            # never the payload. Denial raises HTTPException(403) → the whole flow
-            # rolls back (fail-closed). Runs BEFORE the INSERT.
-            if _enforce:
-                _enforce_create_step_scope(
-                    entity=step.entity,
-                    data=data,
-                    auth_context=auth_context,
-                    access_specs=access_specs,
-                    fk_graph=fk_graph,
-                    probe=probe,
-                    conn=conn,
-                )
-            columns = ", ".join(quote_identifier(k) for k in data.keys())
-            placeholders = ", ".join(placeholder for _ in data)
-            table = quote_identifier(step.entity)
-            sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-            try:
-                cursor.execute(sql, list(data.values()))  # nosemgrep
-            except Exception as exc:
-                raise AtomicFlowError(step.entity, str(exc)) from exc
-            above_ids[step.entity] = row_id
-            if audit_sink is not None:
-                audit_sink.append(
-                    {"entity": step.entity, "operation": "create", "entity_id": str(row_id)}
-                )
+    cursor = conn.cursor()
+    probe = _make_in_txn_probe(conn) if _enforce else None
+    for step in ordered_steps:
+        if isinstance(step, ir.FlowUpdate):
+            _execute_update_step(
+                step,
+                inputs,
+                above_ids,
+                conn,
+                cursor,
+                placeholder,
+                enforce=_enforce,
+                auth_context=auth_context,
+                access_specs=access_specs,
+                fk_graph=fk_graph,
+                probe=probe,
+                audit_sink=audit_sink,
+            )
+            continue
+        # FlowCreate
+        row_id = uuid4()
+        try:
+            data = _build_row_data(step, inputs, above_ids, row_id)
+        except KeyError as exc:
+            raise AtomicFlowError(
+                step.entity,
+                f"unresolved reference {exc!s} (validator gap?)",
+            ) from exc
+        # Per-step `scope: create:` enforcement (#1313 slice 1b). Routes the create
+        # through the SAME guard a standalone create gets (#1124/#1311), but with an
+        # in-transaction probe. Scope keys come from the principal, never the
+        # payload. Denial raises HTTPException(403) → the whole flow rolls back
+        # (fail-closed). Runs BEFORE the INSERT.
+        if _enforce:
+            _enforce_create_step_scope(
+                entity=step.entity,
+                data=data,
+                auth_context=auth_context,
+                access_specs=access_specs,
+                fk_graph=fk_graph,
+                probe=probe,
+                conn=conn,
+            )
+        columns = ", ".join(quote_identifier(k) for k in data.keys())
+        placeholders = ", ".join(placeholder for _ in data)
+        table = quote_identifier(step.entity)
+        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+        try:
+            cursor.execute(sql, list(data.values()))  # nosemgrep
+        except Exception as exc:
+            raise AtomicFlowError(step.entity, str(exc)) from exc
+        above_ids[step.entity] = row_id
+        if audit_sink is not None:
+            audit_sink.append(
+                {"entity": step.entity, "operation": "create", "entity_id": str(row_id)}
+            )
 
-        # #1318 — flow-level aggregate invariants (ADR-0031). Enforced AFTER the
-        # step loop and BEFORE the strict-audit write + commit, so a violation
-        # rolls back the mutations AND any audit rows. Each invariant locks its
-        # anchor FOR UPDATE, runs a scope-free aggregate over the touched set, and
-        # compares against the bound; a violation raises AtomicFlowError → the
-        # whole flow rolls back (the route maps it to HTTP 400). Fail-closed: any
-        # enforcement error also propagates and rolls back.
-        if flow.invariants:
-            from dazzle.back.runtime.atomic_flow_invariants import enforce_flow_invariants
+    # #1318 — flow-level aggregate invariants (ADR-0031). Enforced AFTER the step
+    # loop and BEFORE the strict-audit write + commit, so a violation rolls back the
+    # mutations AND any audit rows. Each invariant locks its anchor FOR UPDATE, runs
+    # a scope-free aggregate over the touched set, and compares against the bound; a
+    # violation raises AtomicFlowError → the whole flow rolls back (the route maps it
+    # to HTTP 400). Fail-closed: any enforcement error also propagates and rolls back.
+    if flow.invariants:
+        from dazzle.back.runtime.atomic_flow_invariants import enforce_flow_invariants
 
-            enforce_flow_invariants(conn, flow, inputs, fk_graph)
+        enforce_flow_invariants(conn, flow, inputs, fk_graph)
 
-        # #1317 — strict audit: write one row per committed step to the side-table
-        # on THIS connection, before the with-block commits. The audit rows commit
-        # atomically with the mutation; any earlier deny/failure already raised and
-        # rolled the whole flow back (this line is unreachable), so a rolled-back
-        # flow records nothing. The side-table is created once at boot (see
-        # `server.py`, gated on any `audit: strict` flow) — NOT per request, which
-        # would race two concurrent first-creations into a pg_type unique violation
-        # and roll back a legitimate mutation.
-        if strict_audit and audit_sink:
-            _write_strict_atomic_audit(cursor, flow.name, auth_context, audit_sink)
+    # #1317 — strict audit: write one row per committed step to the side-table on
+    # THIS connection, before commit. The audit rows commit atomically with the
+    # mutation; any earlier deny/failure already raised and rolled the whole flow
+    # back (this line is unreachable), so a rolled-back flow records nothing. The
+    # side-table is created once at boot (see `server.py`, gated on any `audit:
+    # strict` flow) — NOT per request.
+    if strict_audit and audit_sink:
+        _write_strict_atomic_audit(cursor, flow.name, auth_context, audit_sink)
     return above_ids
 
 

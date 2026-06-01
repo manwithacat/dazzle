@@ -525,3 +525,30 @@ class TestStrictAtomicAuditWrite:
             ],
         )
         assert cur.execute.call_count == 2
+
+
+class TestExecuteOnConn:
+    """#1319 / ADR-0032 Slice A — `execute_atomic_flow_on_conn` runs on a
+    caller-provided connection (so a transition can share its transaction)."""
+
+    def test_runs_on_provided_conn_without_opening_one(self) -> None:
+        from dazzle.back.runtime.atomic_flow_executor import execute_atomic_flow_on_conn
+
+        cursor = MagicMock()
+        conn = MagicMock()
+        conn.cursor = MagicMock(return_value=cursor)
+
+        result = execute_atomic_flow_on_conn(
+            _flow_two_creates(), {"legal_name": "Alice"}, conn, "%s"
+        )
+        # One INSERT per create, on the PROVIDED cursor.
+        assert cursor.execute.call_count == 2
+        assert set(result.keys()) == {"Person", "Employment"}
+
+    def test_wrapper_delegates_to_on_conn(self) -> None:
+        # execute_atomic_flow opens a connection then delegates; the steps run
+        # on that connection's cursor.
+        db = _make_db()
+        execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)
+        assert db.connection.call_count == 1
+        assert db._mock_cursor.execute.call_count == 2
