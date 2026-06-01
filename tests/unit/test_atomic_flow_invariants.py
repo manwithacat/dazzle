@@ -1,6 +1,7 @@
 import tempfile
 from pathlib import Path
 
+from dazzle.back.runtime.atomic_flow_invariants import build_invariant_sql
 from dazzle.core import ir
 from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
@@ -128,6 +129,47 @@ atomic post "Post":
     )
     errs = _flow_invariant_errors(appspec)
     assert any("numeric" in e for e in errs), errs
+
+
+# ---------------------------------------------------------------------------
+# #1318 Task 6 — pure aggregate SQL builder (build_invariant_sql)
+# ---------------------------------------------------------------------------
+
+
+def test_build_invariant_sql_sum_with_where():
+    sql, params = build_invariant_sql(
+        ir.FlowAggregateFn.SUM, "Posting", "amount", [("transaction", "abc")]
+    )
+    assert sql == ('SELECT COALESCE(SUM("amount"), 0) FROM "Posting" WHERE "transaction" = %s')
+    assert params == ["abc"]
+
+
+def test_build_invariant_sql_sum_multiple_where_terms():
+    sql, params = build_invariant_sql(
+        ir.FlowAggregateFn.SUM, "Posting", "amount", [("transaction", "t"), ("kind", "debit")]
+    )
+    assert sql == (
+        'SELECT COALESCE(SUM("amount"), 0) FROM "Posting" WHERE "transaction" = %s AND "kind" = %s'
+    )
+    assert params == ["t", "debit"]
+
+
+def test_build_invariant_sql_count():
+    sql, params = build_invariant_sql(
+        ir.FlowAggregateFn.COUNT, "Posting", None, [("transaction", "t")]
+    )
+    assert sql == 'SELECT COUNT(*) FROM "Posting" WHERE "transaction" = %s'
+    assert params == ["t"]
+
+
+def test_build_invariant_sql_no_where_terms():
+    sql, params = build_invariant_sql(ir.FlowAggregateFn.COUNT, "Posting", None, [])
+    assert sql == 'SELECT COUNT(*) FROM "Posting"'
+    assert params == []
+
+    sql2, params2 = build_invariant_sql(ir.FlowAggregateFn.SUM, "Posting", "amount", [])
+    assert sql2 == 'SELECT COALESCE(SUM("amount"), 0) FROM "Posting"'
+    assert params2 == []
 
 
 def test_validate_accepts_valid_invariant():

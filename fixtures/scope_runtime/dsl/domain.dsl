@@ -125,3 +125,51 @@ entity Enrolment "Enrolment":
       as: teacher
     update: all
       as: admin
+
+
+# =============================================================================
+# #1318 / ADR-0031 — flow-level aggregate invariants. The `balanced_post` flow
+# (flows.dsl) creates a Posting inside a transaction and asserts the postings of
+# that transaction sum to zero at commit, else the whole flow rolls back. These
+# entities are admin-only + unscoped — the invariant, not scope, is under test.
+# =============================================================================
+
+entity Transaction "Transaction":
+  intent: "Anchor row for the balanced-post invariant"
+
+  id: uuid pk
+  label: str(80) required
+
+  permit:
+    create: role(admin)
+    read: role(admin)
+    list: role(admin)
+
+  scope:
+    create: all
+      as: admin
+    read: all
+      as: admin
+    list: all
+      as: admin
+
+
+entity Posting "Posting":
+  intent: "Aggregate set for the balanced-post invariant (sum(amount) = 0)"
+
+  id: uuid pk
+  transaction: ref Transaction required
+  amount: int required
+
+  permit:
+    create: role(admin)
+    read: role(admin)
+    list: role(admin)
+
+  scope:
+    create: all
+      as: admin
+    read: all
+      as: admin
+    list: all
+      as: admin

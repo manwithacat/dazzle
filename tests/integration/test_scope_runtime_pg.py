@@ -74,6 +74,9 @@ class _ScopeRuntimeApp:
         self.science_group_id = ""
         self.math_enrolment_id = ""
         self.science_enrolment_id = ""
+        # #1318 — flow-level invariant anchor (a Transaction) + its seeded
+        # counter-posting amount (the flow appends the balancing posting).
+        self.txn_id = ""
 
     async def client_as(self, who: str) -> httpx.AsyncClient:
         import httpx
@@ -137,6 +140,7 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
     app.science_group_id = _mk_id()
     app.math_enrolment_id = _mk_id()
     app.science_enrolment_id = _mk_id()
+    app.txn_id = _mk_id()
 
     with psycopg.connect(db_url) as conn:
         _sql_insert(conn, "Department", {"id": app.math_dept_id, "name": "Mathematics"})
@@ -211,6 +215,16 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
                 "teaching_group": app.science_group_id,
                 "status": "active",
             },
+        )
+        # #1318 — a Transaction anchor + a seeded posting of -5. The
+        # `balanced_post` flow appends one posting; the transaction's postings
+        # must net to zero. The test passes a=5 (balanced → commits) or a≠5
+        # (unbalanced → rolls back).
+        _sql_insert(conn, "Transaction", {"id": app.txn_id, "label": "Ledger txn"})
+        _sql_insert(
+            conn,
+            "Posting",
+            {"id": _mk_id(), "transaction": app.txn_id, "amount": -5},
         )
         conn.commit()
 
@@ -552,3 +566,51 @@ async def test_denied_atomic_flow_writes_no_audit_fact(app: _ScopeRuntimeApp) ->
     assert resp.status_code == 403, resp.text[:300]
     rows = app.audit_rows(matched_policy="atomic:enrol_student")
     assert rows == [], "a denied/rolled-back atomic flow must not write an audit fact"
+
+
+# ---------------------------------------------------------------------------
+# #1318 — flow-level aggregate invariant (ADR-0031): the `balanced_post` flow
+# appends a Posting and asserts the transaction's postings net to zero at
+# commit. A balanced set commits; an unbalanced set rolls the whole flow back
+# (400). The seed leaves one posting of -5 on the transaction, so a=5 balances.
+# ---------------------------------------------------------------------------
+
+
+async def _atomic_balanced_post(app: _ScopeRuntimeApp, who: str, *, txn_id: str, a: int) -> Any:
+    client = await app.client_as(who)
+    return await _csrf_post(client, "/api/atomic/balanced_post", {"txn": txn_id, "a": a})
+
+
+def _posting_count(db_url: str, txn_id: str) -> int:
+    import psycopg
+
+    with psycopg.connect(db_url) as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT count(*) FROM "Posting" WHERE "transaction" = %s', [txn_id])
+        return int(cur.fetchone()[0])
+
+
+async def test_invariant_balanced_commits(app: _ScopeRuntimeApp) -> None:
+    """Seed posting -5 + flow posting +5 ⇒ sum 0 ⇒ the invariant holds and the
+    flow commits (the appended posting persists)."""
+    before = _posting_count(app._db_url, app.txn_id)
+    resp = await _atomic_balanced_post(app, "admin", txn_id=app.txn_id, a=5)
+    assert resp.status_code < 400, (
+        f"balanced post should commit, got {resp.status_code}: {resp.text[:300]}"
+    )
+    assert _posting_count(app._db_url, app.txn_id) == before + 1, (
+        "a balanced post must persist the appended posting"
+    )
+
+
+async def test_invariant_unbalanced_rolls_back(app: _ScopeRuntimeApp) -> None:
+    """Seed posting -5 + flow posting +3 ⇒ sum -2 ≠ 0 ⇒ the invariant is violated,
+    the flow rolls back (400), and the appended posting is NOT persisted."""
+    before = _posting_count(app._db_url, app.txn_id)
+    resp = await _atomic_balanced_post(app, "admin", txn_id=app.txn_id, a=3)
+    assert resp.status_code == 400, (
+        f"unbalanced post should 400, got {resp.status_code}: {resp.text[:300]}"
+    )
+    assert _posting_count(app._db_url, app.txn_id) == before, (
+        "a violated invariant must roll back the appended posting"
+    )

@@ -36,6 +36,28 @@ atomic reassign_enrolment "Reassign Enrolment":
     teaching_group: input.group
 
 
+# #1318 / ADR-0031 — flow-level aggregate invariant. Creates one Posting against
+# a transaction and asserts the transaction's postings sum to zero at commit. The
+# validator allows only one create per entity per flow, so the flow contributes
+# one posting (`amount: input.a`); the test seeds the counter-posting, so the
+# invariant fires over the *set* (seeded + created). A balanced set (sum = 0)
+# commits; an unbalanced set rolls the whole flow back (400). The invariant locks
+# the Transaction anchor FOR UPDATE before aggregating.
+atomic balanced_post "Balanced post":
+  intent: "Append a posting; the transaction's postings must net to zero"
+  permit:
+    execute: role(admin)
+
+  input txn: ref Transaction required
+  input a: int required
+
+  create Posting:
+    transaction: input.txn
+    amount: input.a
+
+  invariant: sum(Posting.amount where transaction = input.txn) = 0
+
+
 # #1317 — strict in-transaction audit. Same department-scoped enrolment as
 # `enrol_student`, but `audit: strict` writes the audit row to the
 # `_dazzle_atomic_audit` side-table on the flow's own connection, atomic with

@@ -503,6 +503,18 @@ def execute_atomic_flow(
                     {"entity": step.entity, "operation": "create", "entity_id": str(row_id)}
                 )
 
+        # #1318 — flow-level aggregate invariants (ADR-0031). Enforced AFTER the
+        # step loop and BEFORE the strict-audit write + commit, so a violation
+        # rolls back the mutations AND any audit rows. Each invariant locks its
+        # anchor FOR UPDATE, runs a scope-free aggregate over the touched set, and
+        # compares against the bound; a violation raises AtomicFlowError → the
+        # whole flow rolls back (the route maps it to HTTP 400). Fail-closed: any
+        # enforcement error also propagates and rolls back.
+        if flow.invariants:
+            from dazzle.back.runtime.atomic_flow_invariants import enforce_flow_invariants
+
+            enforce_flow_invariants(conn, flow, inputs, fk_graph)
+
         # #1317 — strict audit: write one row per committed step to the side-table
         # on THIS connection, before the with-block commits. The audit rows commit
         # atomically with the mutation; any earlier deny/failure already raised and
