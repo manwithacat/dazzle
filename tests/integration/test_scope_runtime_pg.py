@@ -61,9 +61,10 @@ def _sql_insert(conn: Any, table: str, row: dict[str, Any]) -> None:
 class _ScopeRuntimeApp:
     """Boots scope_runtime + holds seeded ids and per-role client factories."""
 
-    def __init__(self, transport: Any, db_url: str) -> None:
+    def __init__(self, transport: Any, db_url: str, audit_logger: Any = None) -> None:
         self._transport = transport
         self._db_url = db_url
+        self._audit_logger = audit_logger
         self.creds: dict[str, tuple[str, str]] = {}  # role-key -> (email, password)
         # Seeded ids the tests reference.
         self.math_dept_id = ""
@@ -85,6 +86,22 @@ class _ScopeRuntimeApp:
         )
         await _login(client, _BASE_URL, email, password)
         return client
+
+    def audit_rows(self, **where: str) -> list[dict[str, Any]]:
+        """Flush the async audit queue, then query _dazzle_audit_log."""
+        if self._audit_logger is not None:
+            self._audit_logger.drain()
+        import psycopg
+        from psycopg.rows import dict_row
+
+        clause = " AND ".join(f"{k} = %s" for k in where)
+        sql = "SELECT * FROM _dazzle_audit_log"
+        if clause:
+            sql += f" WHERE {clause}"  # nosemgrep — keys are test-controlled column names
+        with psycopg.connect(self._db_url, row_factory=dict_row) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(where.values()))
+                return list(cur.fetchall())
 
 
 async def _csrf_post(client: httpx.AsyncClient, url: str, body: dict[str, Any]) -> httpx.Response:
@@ -211,7 +228,11 @@ async def _booted() -> AsyncIterator[_ScopeRuntimeApp]:
         auth_store = built.builder.auth_store
         assert auth_store is not None, "scope_runtime has auth enabled"
         transport = _probe_transport(httpx.ASGITransport(app=built.app))
-        app = _ScopeRuntimeApp(transport=transport, db_url=db_url)
+        app = _ScopeRuntimeApp(
+            transport=transport,
+            db_url=db_url,
+            audit_logger=getattr(built.builder, "audit_logger", None),
+        )
         _seed(app, auth_store, db_url)
         try:
             yield app
@@ -416,3 +437,35 @@ async def test_atomic_reassign_of_foreign_source_is_denied(app: _ScopeRuntimeApp
     assert resp.status_code == 404, (
         f"foreign-source reassign should 404, got {resp.status_code}: {resp.text[:300]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1313 — audit fact per committed atomic step (ADR-0029 invariant 5,
+# async-enqueue), against real Postgres
+# ---------------------------------------------------------------------------
+
+
+async def test_atomic_commit_writes_audit_fact(app: _ScopeRuntimeApp) -> None:
+    """A committed atomic create writes an `allow` audit row for the touched
+    entity, correlated by flow name (`atomic:enrol_student`)."""
+    resp = await _atomic_enrol(
+        app, "teacher_math", label="Audited maths", group_id=app.math_group_id
+    )
+    assert resp.status_code < 400, resp.text[:300]
+    rows = app.audit_rows(matched_policy="atomic:enrol_student")
+    assert rows, "a committed atomic create must write an audit fact"
+    row = rows[0]
+    assert row["operation"] == "create"
+    assert row["entity_name"] == "Enrolment"
+    assert row["decision"] == "allow"
+
+
+async def test_denied_atomic_flow_writes_no_audit_fact(app: _ScopeRuntimeApp) -> None:
+    """A scope-denied atomic flow rolls back and records no audit fact for the
+    denied step (nothing committed ⇒ nothing to record)."""
+    resp = await _atomic_enrol(
+        app, "teacher_math", label="Denied audit", group_id=app.science_group_id
+    )
+    assert resp.status_code == 403, resp.text[:300]
+    rows = app.audit_rows(matched_policy="atomic:enrol_student")
+    assert rows == [], "a denied/rolled-back atomic flow must not write an audit fact"

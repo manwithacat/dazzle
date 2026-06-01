@@ -136,6 +136,7 @@ def execute_atomic_flow(
     auth_context: Any = None,
     access_specs: dict[str, Any] | None = None,
     fk_graph: Any = None,
+    audit_sink: list[dict[str, str]] | None = None,
 ) -> dict[str, UUID]:
     """Execute one atomic flow.
 
@@ -157,6 +158,11 @@ def execute_atomic_flow(
             using an in-transaction probe. When omitted (legacy/test wiring),
             steps run unguarded as before.
         fk_graph: FK graph for FK-path / EXISTS create-scope probe SQL.
+        audit_sink: if provided, the executor appends one
+            ``{"entity", "operation", "entity_id"}`` dict per *committed* step
+            (#1313, ADR-0029 invariant 5). The caller logs them after the flow
+            commits — a denied/rolled-back flow leaves the sink unchanged for
+            its denied step (nothing happened ⇒ nothing to record).
 
     Returns:
         Map of ``EntityName → generated UUID``.
@@ -191,6 +197,7 @@ def execute_atomic_flow(
                     access_specs=access_specs,
                     fk_graph=fk_graph,
                     probe=probe,
+                    audit_sink=audit_sink,
                 )
                 continue
             # FlowCreate
@@ -225,6 +232,10 @@ def execute_atomic_flow(
             except Exception as exc:
                 raise AtomicFlowError(step.entity, str(exc)) from exc
             above_ids[step.entity] = row_id
+            if audit_sink is not None:
+                audit_sink.append(
+                    {"entity": step.entity, "operation": "create", "entity_id": str(row_id)}
+                )
     return above_ids
 
 
@@ -302,6 +313,7 @@ def _execute_update_step(
     access_specs: dict[str, Any] | None,
     fk_graph: Any,
     probe: Callable[[str, list[Any]], bool] | None,
+    audit_sink: list[dict[str, str]] | None = None,
 ) -> None:
     """Execute one ``update`` step (#1313): resolve the target row, enforce
     ``scope: update:`` (source + destination) in-transaction, then UPDATE.
@@ -350,6 +362,10 @@ def _execute_update_step(
         cursor.execute(sql, [*new_values.values(), target_id])  # nosemgrep
     except Exception as exc:
         raise AtomicFlowError(step.entity, str(exc)) from exc
+    if audit_sink is not None:
+        audit_sink.append(
+            {"entity": step.entity, "operation": "update", "entity_id": str(target_id)}
+        )
 
 
 def _enforce_update_step_scope(

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.73] - 2026-06-01
+
+### Added
+
+- **#1313 — `atomic` flows now write an audit fact per committed step (ADR-0029 invariant 5, async-enqueue).** After a flow commits, each touched entity is recorded as an `allow` audit row via the existing async `AuditLogger` (the same path CRUD uses), correlated by flow name in `matched_policy` (`atomic:<flow>`) — a who-did-what-under-which-flow trail. The executor collects per-step `{entity, operation, entity_id}` intents in an `audit_sink`; the route logs them *after* the flow commits, so a scope-denied / rolled-back flow records **nothing** (nothing happened ⇒ nothing to record). Wired from `server.py` (the atomic router now receives the app's `audit_logger`). Verified against real Postgres (`tests/integration/test_scope_runtime_pg.py`): a committed atomic create writes an `allow`/`create`/`Enrolment` fact tagged `atomic:enrol_student`; a foreign-scope (denied) flow writes none.
+  - **Deliberate relaxation of invariant 5's strict "same transaction":** Dazzle's `_dazzle_audit_log` is a tamper-evident hash-chain written by a single async drainer, so a strict in-transaction insert would race/fork the chain. The async-enqueue trade is documented in ADR-0029 (invariant-5 note): a committed flow's audit is best-effort (dropped on queue overflow / crash before drain); a strict in-transaction side-table is the upgrade path if guaranteed atomic audit is later required.
+
+### Agent Guidance
+
+- **Atomic flows are audited** — every committed `create`/`update` step emits an `allow` fact in `_dazzle_audit_log`, tagged `atomic:<flow>` in `matched_policy`. It's async (best-effort), not in the flow transaction; denied/rolled-back flows emit nothing. With #1313 slices 1a–1e shipped, the guarded transactional action (per-step scope-enforced create + update, matrix-visible, audited) is complete; the remaining ADR-0029 follow-ups are conformance-verification of atomic routes and api-surface visibility of the dynamic atomic routes.
+
 ## [0.80.72] - 2026-06-01
 
 ### Added

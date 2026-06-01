@@ -75,6 +75,7 @@ def build_atomic_flow_router(
     auth_dep: Callable[..., Any] | None = None,
     access_specs: dict[str, Any] | None = None,
     fk_graph: Any = None,
+    audit_logger: Any = None,
 ) -> APIRouter:
     """Build a router exposing ``POST /api/atomic/<name>`` per flow.
 
@@ -95,6 +96,11 @@ def build_atomic_flow_router(
             step is routed through ``scope: create:`` enforcement inside
             the flow transaction (#1313 slice 1b, ADR-0029).
         fk_graph: FK graph for FK-path / EXISTS create-scope probe SQL.
+        audit_logger: when provided (with an authed ``auth_dep``), each
+            committed step is recorded as an audit fact via the async
+            ``AuditLogger`` after the flow commits (#1313, ADR-0029 invariant
+            5 — async-enqueue; see the ADR note on the relaxation vs strict
+            in-transaction audit).
 
     Returns:
         An ``APIRouter`` with prefix ``/api/atomic``.
@@ -110,6 +116,7 @@ def build_atomic_flow_router(
             auth_dep=auth_dep,
             access_specs=access_specs,
             fk_graph=fk_graph,
+            audit_logger=audit_logger,
         )
     return router
 
@@ -123,6 +130,7 @@ def _register_one(
     auth_dep: Callable[..., Any] | None,
     access_specs: dict[str, Any] | None = None,
     fk_graph: Any = None,
+    audit_logger: Any = None,
 ) -> None:
     """Register a single flow's POST endpoint."""
     InputModel = build_input_model(flow)
@@ -137,6 +145,7 @@ def _register_one(
         auth_dep=auth_dep,
         access_specs=access_specs,
         fk_graph=fk_graph,
+        audit_logger=audit_logger,
     )
     handler.__name__ = f"atomic_{flow.name}"
     handler.__doc__ = flow.intent or flow.label
@@ -161,6 +170,7 @@ def _make_handler(
     auth_dep: Callable[..., Any] | None,
     access_specs: dict[str, Any] | None = None,
     fk_graph: Any = None,
+    audit_logger: Any = None,
 ) -> Callable[..., Any]:
     """Build the actual FastAPI handler closure for one flow."""
     if auth_dep is not None:
@@ -180,15 +190,23 @@ def _make_handler(
                         ),
                     )
             # `user` is the AuthContext from the auth dependency; pass it through
-            # so the executor can enforce per-step scope: create: (#1313 1b).
-            return _run(
+            # so the executor can enforce per-step scope (#1313 1b/1c).
+            audit_sink: list[dict[str, str]] | None = [] if audit_logger is not None else None
+            result = _run(
                 flow,
                 body,
                 db_manager,
                 auth_context=user,
                 access_specs=access_specs,
                 fk_graph=fk_graph,
+                audit_sink=audit_sink,
             )
+            # The flow committed (a denial would have raised); record each
+            # touched entity as an audit fact via the async logger (#1313,
+            # ADR-0029 invariant 5 — async-enqueue), correlated by flow name.
+            if audit_logger is not None and audit_sink:
+                await _log_flow_audit(audit_logger, flow.name, user, audit_sink)
+            return result
 
         return authed_handler
 
@@ -200,6 +218,33 @@ def _make_handler(
     return open_handler
 
 
+async def _log_flow_audit(
+    audit_logger: Any, flow_name: str, user: Any, audit_sink: list[dict[str, str]]
+) -> None:
+    """Record each committed atomic step as an audit fact via the async logger.
+
+    One ``decision="allow"`` row per touched entity, correlated by the flow name
+    in ``matched_policy`` (``atomic:<flow>``). Best-effort (the logger drops on
+    queue overflow); the flow has already committed.
+    """
+    u = getattr(user, "user", None)
+    user_id = str(u.id) if u is not None and getattr(u, "id", None) is not None else None
+    user_email = getattr(u, "email", None) if u is not None else None
+    user_roles = list(getattr(user, "roles", []) or [])
+    for intent in audit_sink:
+        await audit_logger.log_decision(
+            operation=intent["operation"],
+            entity_name=intent["entity"],
+            entity_id=intent["entity_id"],
+            decision="allow",
+            matched_policy=f"atomic:{flow_name}",
+            policy_effect="permit",
+            user_id=user_id,
+            user_email=user_email,
+            user_roles=user_roles,
+        )
+
+
 def _run(
     flow: ir.AtomicFlowSpec,
     body: BaseModel,
@@ -208,6 +253,7 @@ def _run(
     auth_context: Any = None,
     access_specs: dict[str, Any] | None = None,
     fk_graph: Any = None,
+    audit_sink: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Execute the flow and translate errors into HTTP responses.
 
@@ -225,6 +271,7 @@ def _run(
             auth_context=auth_context,
             access_specs=access_specs,
             fk_graph=fk_graph,
+            audit_sink=audit_sink,
         )
     except NotImplementedError as exc:
         # Defensive: `create` + `update` steps now execute; no step kind is
