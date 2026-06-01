@@ -19,8 +19,15 @@ import logging
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from dazzle.core.ir.money import money_from_dict
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.services import ServiceFieldSpec
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +42,62 @@ class ServiceInvocationError(Exception):
     """Raised when a service invocation fails."""
 
     pass
+
+
+class ServiceInputCoercionError(Exception):
+    """Raised when a JSON payload value can't be coerced to its declared type."""
+
+    pass
+
+
+def _coerce_value(base_type: str, value: Any) -> Any:
+    """Coerce one JSON value to the Python type a stub signature declares.
+
+    Mirrors the stub generator's ``DSL_TO_PYTHON_TYPES`` (``stubs/generator.py``):
+    only ``date``/``datetime``/``decimal``/``money`` need active coercion. Types
+    that map to a JSON-native Python type — ``str``/``int``/``bool``/``dict``, and
+    ``uuid`` which the contract keeps as ``str`` — pass through unchanged.
+    """
+    if base_type == "date":
+        return date.fromisoformat(value)
+    if base_type == "datetime":
+        # Tolerate a trailing 'Z' (the pattern used elsewhere in the runtime).
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if base_type == "decimal":
+        return Decimal(str(value))
+    if base_type == "money":
+        return money_from_dict(value)
+    return value
+
+
+def coerce_service_inputs(
+    inputs: list[ServiceFieldSpec], payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Coerce a raw JSON ``payload`` into a domain service's declared input types.
+
+    The invoke endpoint receives an untyped JSON body, but stub signatures are
+    generated with semantic Python types (``date``/``datetime``/``Decimal``/
+    ``Money``; see #1321/#1322). This bridges the two so a stub receives the
+    types its signature declares rather than raw JSON scalars.
+
+    Only keys present in ``payload`` are coerced; a key with no declared input
+    (or a ``None`` value) passes through untouched. Fail-closed: a value that
+    can't be coerced to its declared type raises ``ServiceInputCoercionError``.
+    """
+    declared = {f.name: f.type_name.split("(")[0].lower() for f in inputs}
+    coerced: dict[str, Any] = {}
+    for key, value in payload.items():
+        base = declared.get(key)
+        if base is None or value is None:
+            coerced[key] = value
+            continue
+        try:
+            coerced[key] = _coerce_value(base, value)
+        except (ValueError, TypeError, KeyError, InvalidOperation) as e:
+            raise ServiceInputCoercionError(
+                f"Input '{key}' could not be coerced to {base}: {e}"
+            ) from e
+    return coerced
 
 
 @dataclass

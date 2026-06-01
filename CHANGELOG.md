@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.80.84] - 2026-06-01
+## [0.80.85] - 2026-06-02
+
+### Fixed
+
+- **#1323 — domain-service stub invocation now coerces the JSON payload into the declared input types.** The `/_dazzle/services/{id}/invoke` endpoint splatted a raw `dict[str, Any]` JSON body straight into the stub (`function(**payload)`), so `date`/`datetime`/`decimal`/`money` inputs reached the stub as un-coerced ISO strings / numbers / dicts — contradicting the now-semantic stub signatures (#1321/#1322). A new reusable `coerce_service_inputs(inputs, payload)` (in `service_loader.py`) mirrors the stub generator's `DSL_TO_PYTHON_TYPES`: `date`/`datetime` parse from ISO (trailing `Z` tolerated), `decimal` → exact `Decimal(str(v))`, `money` → `Money` via `money_from_dict`; JSON-native types (`str`/`int`/`bool`/`dict`, and `uuid` which the contract keeps as `str`) pass through. The endpoint looks up the contract via `ctx.appspec.get_domain_service(id)` and fails closed with HTTP 400 on a value that can't be coerced. Input-only by design — output validation against the result TypedDict is deliberately deferred (the issue flagged it as "consider").
+  - Note: `/_dazzle/services/{id}/invoke` is currently the *only* stub-invocation path (a `tags=["System"]` harness); the coercer is a standalone, reusable helper so a future production invocation path (computed fields, validation hooks, llm intents) inherits the same marshalling rather than re-deriving it.
+
+### Agent Guidance
+
+- Raw JSON crossing into a domain-service stub is now marshalled to the stub's declared types (`date`/`datetime`/`Decimal`/`Money`). When adding a *new* invocation path for domain-service stubs, route inputs through `coerce_service_inputs(spec.inputs, payload)` (`back/runtime/service_loader.py`) rather than splatting the raw body — it is the single source of truth for the DSL-type → Python-value mapping at the invoke boundary, mirroring the stub generator's type map.
+
 
 ### Changed
 

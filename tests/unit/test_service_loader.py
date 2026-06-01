@@ -9,14 +9,70 @@ import pytest
 
 from dazzle.back.runtime.service_loader import (
     LoadedService,
+    ServiceInputCoercionError,
     ServiceInvocationError,
     ServiceLoader,
     ServiceLoadError,
+    coerce_service_inputs,
     create_service_loader,
 )
+from dazzle.core.ir.money import Money
+from dazzle.core.ir.services import ServiceFieldSpec
 
 if TYPE_CHECKING:
     pass
+
+
+class TestCoerceServiceInputs:
+    """#1323 — coerce a raw JSON payload into a service's declared input types."""
+
+    @staticmethod
+    def _inputs(**type_by_name: str) -> list[ServiceFieldSpec]:
+        return [ServiceFieldSpec(name=n, type_name=t) for n, t in type_by_name.items()]
+
+    def test_money_dict_becomes_money(self) -> None:
+        inputs = self._inputs(fee="money")
+        out = coerce_service_inputs(inputs, {"fee": {"currency": "GBP", "amount_minor": 1999}})
+        assert out["fee"] == Money(currency="GBP", amount_minor=1999)
+
+    def test_iso_strings_become_date_and_datetime(self) -> None:
+        from datetime import date, datetime
+
+        inputs = self._inputs(on="date", at="datetime")
+        out = coerce_service_inputs(inputs, {"on": "2026-06-02", "at": "2026-06-02T09:30:00"})
+        assert out["on"] == date(2026, 6, 2)
+        assert out["at"] == datetime(2026, 6, 2, 9, 30, 0)
+
+    def test_datetime_tolerates_trailing_z(self) -> None:
+        out = coerce_service_inputs(self._inputs(at="datetime"), {"at": "2026-06-02T09:30:00Z"})
+        assert out["at"].utcoffset() is not None  # parsed as tz-aware, not rejected
+
+    def test_decimal_from_number_or_string_is_exact(self) -> None:
+        from decimal import Decimal
+
+        out = coerce_service_inputs(self._inputs(rate="decimal(10,2)"), {"rate": "19.99"})
+        assert out["rate"] == Decimal("19.99")
+        # a JSON number must not round-trip through float and lose precision
+        got = coerce_service_inputs(self._inputs(rate="decimal"), {"rate": 0.1})["rate"]
+        assert got == Decimal("0.1")
+
+    def test_json_native_types_pass_through(self) -> None:
+        # uuid stays str (per the stub contract); json stays dict; int/str unchanged.
+        inputs = self._inputs(id="uuid", blob="json", n="int", s="str")
+        payload = {"id": "abc-123", "blob": {"k": 1}, "n": 5, "s": "x"}
+        assert coerce_service_inputs(inputs, payload) == payload
+
+    def test_undeclared_key_and_none_pass_through(self) -> None:
+        inputs = self._inputs(on="date")
+        out = coerce_service_inputs(inputs, {"extra": "untouched", "on": None})
+        assert out == {"extra": "untouched", "on": None}
+
+    def test_malformed_value_fails_closed(self) -> None:
+        with pytest.raises(ServiceInputCoercionError):
+            coerce_service_inputs(self._inputs(on="date"), {"on": "not-a-date"})
+        with pytest.raises(ServiceInputCoercionError):
+            # money missing required key
+            coerce_service_inputs(self._inputs(fee="money"), {"fee": {"amount_minor": 100}})
 
 
 class TestServiceLoader:

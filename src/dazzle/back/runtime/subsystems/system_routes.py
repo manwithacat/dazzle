@@ -451,7 +451,11 @@ class SystemRoutesSubsystem:
 
     def _setup_system_routes(self, ctx: SubsystemContext) -> None:
         """Register domain service stubs, health check, spec, and db-info routes."""
-        from dazzle.back.runtime.service_loader import ServiceLoader
+        from dazzle.back.runtime.service_loader import (
+            ServiceInputCoercionError,
+            ServiceLoader,
+            coerce_service_inputs,
+        )
 
         # Load domain service stubs
         assert ctx.services_dir is not None, (
@@ -487,8 +491,18 @@ class SystemRoutesSubsystem:
                 """Invoke a domain service stub."""
                 if not service_loader.has_service(service_id):
                     raise HTTPException(status_code=404, detail=f"Service not found: {service_id}")
+                # Coerce the raw JSON body into the service's declared input types
+                # (date/datetime/Decimal/Money) so the stub receives the types its
+                # generated signature declares, not raw JSON scalars (#1323).
+                kwargs = payload or {}
+                spec = ctx.appspec.get_domain_service(service_id)
+                if spec is not None:
+                    try:
+                        kwargs = coerce_service_inputs(spec.inputs, kwargs)
+                    except ServiceInputCoercionError as e:
+                        raise HTTPException(status_code=400, detail=str(e)) from e
                 try:
-                    result = service_loader.invoke(service_id, **(payload or {}))
+                    result = service_loader.invoke(service_id, **kwargs)
                     return {"result": result}
                 except Exception as e:
                     logger.error("Service invocation failed for %s: %s", service_id, e)
