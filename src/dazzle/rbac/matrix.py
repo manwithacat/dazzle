@@ -70,6 +70,25 @@ class PolicyWarning:
     """Human-readable description."""
 
 
+@dataclass(frozen=True)
+class AtomicFlowProjection:
+    """How an `atomic` flow projects onto the access surface (#1313, ADR-0029).
+
+    A flow's ``permit_execute`` roles can perform each step's operation on the
+    step's entity **via the flow** — a grant path distinct from the entity's
+    direct CRUD ``permit:``. Surfaced as its own structure (not folded into the
+    CRUD ``cells``) so the matrix stays analyzable without conflating the two
+    paths: the conformance verifier probes CRUD routes, whereas a flow runs at
+    ``POST /api/atomic/<name>`` and enforces ``scope: create:`` /
+    ``scope: update:`` per step (the same predicate algebra, #1311/#1312).
+    """
+
+    name: str
+    label: str
+    roles: tuple[str, ...]
+    steps: tuple[tuple[str, str], ...]  # ordered (entity, operation) per step
+
+
 # Canonical operation list — order matters for table rendering.
 OPERATIONS: list[str] = ["list", "read", "create", "update", "delete"]
 
@@ -342,12 +361,16 @@ class AccessMatrix:
         roles: list[str],
         entities: list[str],
         operations: list[str],
+        atomic_flows: list[AtomicFlowProjection] | None = None,
     ) -> None:
         self._cells = cells
         self.warnings = warnings
         self.roles = roles
         self.entities = entities
         self.operations = operations
+        # #1313 (ADR-0029): atomic-flow grant paths, projected separately from
+        # the CRUD `cells` (see AtomicFlowProjection).
+        self.atomic_flows = atomic_flows or []
 
     def get(self, role: str, entity: str, operation: str) -> PolicyDecision:
         """Return the decision for (role, entity, operation).
@@ -379,6 +402,18 @@ class AccessMatrix:
                     row_parts.append(decision.value)
                 lines.append(f"| {col_sep.join(row_parts)} |")
 
+        # #1313 — atomic flows render as their own section (a distinct grant
+        # path; not part of the per-(role,entity,op) CRUD grid above).
+        if self.atomic_flows:
+            lines.append("")
+            lines.append("#### Atomic flows")
+            lines.append("")
+            lines.append("| flow | execute roles | steps (entity:op) |")
+            lines.append("| --- | --- | --- |")
+            for f in self.atomic_flows:
+                steps = ", ".join(f"{e}:{op}" for (e, op) in f.steps)
+                lines.append(f"| {f.name} | {', '.join(f.roles)} | {steps} |")
+
         return "\n".join(lines)
 
     def to_json(self) -> dict[str, object]:
@@ -405,12 +440,23 @@ class AccessMatrix:
             for w in self.warnings
         ]
 
+        atomic_serialized: list[dict[str, object]] = [
+            {
+                "name": f.name,
+                "label": f.label,
+                "roles": list(f.roles),
+                "steps": [{"entity": e, "operation": op} for (e, op) in f.steps],
+            }
+            for f in self.atomic_flows
+        ]
+
         return {
             "roles": self.roles,
             "entities": self.entities,
             "operations": self.operations,
             "cells": cells_serialized,
             "warnings": warnings_serialized,
+            "atomic_flows": atomic_serialized,
         }
 
     def to_csv(self) -> str:
@@ -584,12 +630,35 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
             )
         )
 
+    # #1313 (ADR-0029): project atomic flows onto the access surface — a flow's
+    # permit_execute roles can do each step's op on the step's entity via the
+    # flow. Kept separate from `cells` (distinct grant path; see
+    # AtomicFlowProjection) so the CRUD matrix + conformance verifier are
+    # unaffected.
+    from dazzle.core.ir.atomic_flows import FlowUpdate
+
+    atomic_projections: list[AtomicFlowProjection] = []
+    for flow in appspec.atomic_flows or []:
+        steps = tuple(
+            (step.entity, "update" if isinstance(step, FlowUpdate) else "create")
+            for step in flow.steps
+        )
+        atomic_projections.append(
+            AtomicFlowProjection(
+                name=flow.name,
+                label=flow.label,
+                roles=tuple(flow.permit_execute),
+                steps=steps,
+            )
+        )
+
     return AccessMatrix(
         cells=cells,
         warnings=warnings,
         roles=roles,
         entities=entities,
         operations=operations,
+        atomic_flows=atomic_projections,
     )
 
 

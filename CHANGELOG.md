@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.72] - 2026-06-01
+
+### Added
+
+- **#1313 — `atomic` flows are now visible in the RBAC matrix (ADR-0029 analysis-IR projection, matrix piece).** `generate_access_matrix` projects each flow onto an `AtomicFlowProjection` — `name`, `label`, the `permit_execute` roles, and the ordered `(entity, operation)` of its steps (`create`→create, `update`→update) — surfaced in `AccessMatrix.to_json()` (a new `atomic_flows` key) and `to_table()` (an "Atomic flows" section). This starts paying down ADR-0029's central claim that one analyzable model should see *every* mutation (n=1 CRUD and n=k flows). **Crucially, the projection is a distinct grant path, deliberately NOT folded into the per-`(role, entity, op)` CRUD `cells`**: a flow runs at `POST /api/atomic/<name>` and enforces `scope: create:` / `scope: update:` per step, which is a different route + path from direct CRUD — folding it into the CRUD cells would conflate "create E via flow F" with "create E directly" and would make the conformance verifier (which probes CRUD routes) mis-verify. Keeping it separate leaves the CRUD matrix + verifier byte-unchanged.
+
+### Agent Guidance
+
+- **`dazzle rbac matrix` now surfaces atomic flows** as their own section / `atomic_flows` JSON key (flow → execute-roles → `(entity, op)` steps), separate from the CRUD grid. Read it there to see what a flow authorizes; don't expect a flow's grants in the `(role, entity, op)` cells (distinct grant path — the flow route is `/api/atomic/<name>`, scope-enforced per step). Remaining #1313 follow-ups: in-transaction audit (ADR-0029 invariant 5), conformance verification of atomic routes, and api-surface visibility of the dynamic atomic routes.
+
 ## [0.80.71] - 2026-06-01
 
 ### Added

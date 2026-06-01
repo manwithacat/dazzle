@@ -678,3 +678,73 @@ def test_no_scope_rule_message_create_says_will_403() -> None:
     assert "403" in w.message
     # No longer says "not yet enforced" — that was the pre-v0.71.22 message.
     assert "not yet enforced" not in w.message
+
+
+# ---------------------------------------------------------------------------
+# #1313 (ADR-0029): atomic-flow projection — visible in the matrix as a
+# distinct grant path, NOT folded into the per-(role,entity,op) CRUD cells.
+# ---------------------------------------------------------------------------
+
+
+def _atomic_flow():
+    from dazzle.core import ir
+
+    return ir.AtomicFlowSpec(
+        name="enrol",
+        label="Enrol Student",
+        permit_execute=["teacher", "admin"],
+        inputs=[],
+        steps=[
+            ir.FlowCreate(entity="Enrolment", assignments={}),
+            ir.FlowUpdate(
+                entity="Enrolment",
+                target=ir.FlowFieldValue(kind=ir.FlowFieldValueKind.INPUT_REF, input_name="x"),
+                assignments={},
+            ),
+        ],
+    )
+
+
+def test_atomic_flow_projected_separately() -> None:
+    appspec = AppSpec(
+        name="t",
+        domain=DomainSpec(entities=[_make_entity("Enrolment", access=None)]),
+        personas=[_make_persona("teacher"), _make_persona("admin")],
+        atomic_flows=[_atomic_flow()],
+    )
+    m = generate_access_matrix(appspec)
+    assert len(m.atomic_flows) == 1
+    proj = m.atomic_flows[0]
+    assert proj.name == "enrol"
+    assert proj.roles == ("teacher", "admin")
+    # FlowCreate → create, FlowUpdate → update, in declaration order.
+    assert proj.steps == (("Enrolment", "create"), ("Enrolment", "update"))
+    # Surfaced in JSON + table…
+    j = m.to_json()
+    assert j["atomic_flows"][0]["name"] == "enrol"
+    assert j["atomic_flows"][0]["steps"] == [
+        {"entity": "Enrolment", "operation": "create"},
+        {"entity": "Enrolment", "operation": "update"},
+    ]
+    assert "Atomic flows" in m.to_table()
+
+
+def test_atomic_projection_does_not_pollute_crud_cells() -> None:
+    """The flow's (entity, op) does NOT become a CRUD cell — the unprotected
+    entity's cells are unchanged, so the conformance verifier is unaffected."""
+    appspec = AppSpec(
+        name="t",
+        domain=DomainSpec(entities=[_make_entity("Enrolment", access=None)]),
+        personas=[_make_persona("teacher")],
+        atomic_flows=[_atomic_flow()],
+    )
+    m = generate_access_matrix(appspec)
+    # The CRUD cell reflects the entity's own (absent) rules, not the flow.
+    assert m.get("teacher", "Enrolment", "create") == PolicyDecision.PERMIT_UNPROTECTED
+
+
+def test_no_atomic_flows_empty_projection() -> None:
+    appspec = _make_appspec([_make_entity("Task", access=None)], [_make_persona("admin")])
+    m = generate_access_matrix(appspec)
+    assert m.atomic_flows == []
+    assert m.to_json()["atomic_flows"] == []
