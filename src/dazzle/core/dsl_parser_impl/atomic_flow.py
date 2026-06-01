@@ -69,6 +69,7 @@ class AtomicFlowParserMixin:
         audit_mode = ir.FlowAuditMode.ASYNC
         inputs: list[ir.FlowInput] = []
         steps: list[ir.AtomicFlowStep] = []
+        invariants: list[ir.FlowInvariant] = []
 
         while not self.match(TokenType.DEDENT, TokenType.EOF):
             self.skip_newlines()
@@ -120,6 +121,8 @@ class AtomicFlowParserMixin:
                 steps.append(self._parse_atomic_create())
             elif tok.type == TokenType.UPDATE:
                 steps.append(self._parse_atomic_update())
+            elif tok.type == TokenType.INVARIANT:
+                invariants.append(self._parse_atomic_invariant())
             else:
                 # Unknown key — skip the line to avoid getting stuck.
                 self.advance()
@@ -137,6 +140,7 @@ class AtomicFlowParserMixin:
             audit_mode=audit_mode,
             inputs=inputs,
             steps=steps,
+            invariants=invariants,
         )
 
     def _parse_atomic_permit(self) -> list[str]:
@@ -187,6 +191,170 @@ class AtomicFlowParserMixin:
             required = True
         self.skip_newlines()
         return ir.FlowInput(name=str(name), type=ftype, required=required)
+
+    def _parse_atomic_invariant(self) -> ir.FlowInvariant:
+        """Parse one ``invariant:`` line (#1318, ADR-0031).
+
+        Shape::
+
+            invariant: <sum|count> ( <Entity> [. <field>] where <filter> ) <op> <rhs>
+
+        - ``count`` omits ``.field``; ``sum`` requires it.
+        - ``<op>`` ∈ ``= <= >= < >``.
+        - ``<filter>`` is a conjunction (AND) of ``<column> = (input.<name> |
+          literal)`` equality terms — captured raw into ``raw_filter`` as
+          ``(column, kind, value)`` triples for the linker to compile (Task 4).
+        - ``<rhs>`` is a numeric literal OR ``input.<name>.<field>``.
+
+        Produces a *raw* ``FlowInvariant``: ``filter_predicate``,
+        ``anchor_entity`` and ``anchor_input`` stay ``None`` (filled by the
+        linker); ``agg_fn``/``entity``/``field``/``op``/``rhs``/``raw_filter``
+        are populated here.
+        """
+        kw_tok = self.expect(TokenType.INVARIANT)
+        self.expect(TokenType.COLON)
+
+        # Aggregate function: only `sum` / `count` are keyword tokens; anything
+        # else (e.g. `avg`) lexes as an identifier and is rejected here.
+        fn_tok = self.current_token()
+        if fn_tok.type == TokenType.SUM:
+            agg_fn = ir.FlowAggregateFn.SUM
+        elif fn_tok.type == TokenType.COUNT:
+            agg_fn = ir.FlowAggregateFn.COUNT
+        else:
+            raise make_parse_error(
+                f"`invariant:` aggregate must be `sum` or `count`; got `{fn_tok.value}`.",
+                self.file,
+                fn_tok.line,
+                fn_tok.column,
+            )
+        self.advance()
+
+        self.expect(TokenType.LPAREN)
+        entity = str(self.expect_identifier_or_keyword().value)
+
+        field: str | None = None
+        if self.match(TokenType.DOT):
+            self.advance()
+            field = str(self.expect_identifier_or_keyword().value)
+
+        if agg_fn == ir.FlowAggregateFn.SUM and field is None:
+            raise make_parse_error(
+                f"`sum(...)` invariant requires a field — write `sum({entity}.<field> where ...)`.",
+                self.file,
+                kw_tok.line,
+                kw_tok.column,
+            )
+        if agg_fn == ir.FlowAggregateFn.COUNT and field is not None:
+            raise make_parse_error(
+                f"`count(...)` invariant takes no field — write `count({entity} where ...)`.",
+                self.file,
+                kw_tok.line,
+                kw_tok.column,
+            )
+
+        self.expect(TokenType.WHERE)
+        raw_filter = self._parse_invariant_filter()
+        self.expect(TokenType.RPAREN)
+
+        op = self._parse_invariant_op()
+        rhs = self._parse_invariant_rhs()
+        self.skip_newlines()
+
+        return ir.FlowInvariant(
+            agg_fn=agg_fn,
+            entity=entity,
+            field=field,
+            filter_predicate=None,
+            anchor_entity=None,
+            anchor_input=None,
+            op=op,
+            rhs=rhs,
+            raw_filter=raw_filter,
+        )
+
+    def _parse_invariant_filter(self) -> tuple[tuple[str, str, str], ...]:
+        """Parse the ``where`` filter: AND-joined ``<col> = (input.<n> | literal)``.
+
+        Returns a tuple of ``(column, kind, value)`` triples where ``kind`` ∈
+        {"input", "literal"}. The v1 grammar is deliberately bounded — no
+        ADR-0009 algebra (PathCheck/ExistsCheck/current_user); the linker
+        compiles these raw terms into a ``ScopePredicate`` in Task 4.
+        """
+        terms: list[tuple[str, str, str]] = []
+        while True:
+            col_tok = self.expect_identifier_or_keyword()
+            column = str(col_tok.value)
+            self.expect(TokenType.EQUALS)
+            val_tok = self.current_token()
+            if val_tok.type == TokenType.INPUT:
+                self.advance()
+                self.expect(TokenType.DOT)
+                name = str(self.expect_identifier_or_keyword().value)
+                terms.append((column, "input", name))
+            elif val_tok.type == TokenType.NUMBER:
+                self.advance()
+                terms.append((column, "literal", str(val_tok.value)))
+            elif val_tok.type == TokenType.STRING:
+                self.advance()
+                terms.append((column, "literal", str(val_tok.value)))
+            else:
+                raise make_parse_error(
+                    "`invariant:` filter value must be `input.<name>` or a literal; "
+                    f"got `{val_tok.value}`.",
+                    self.file,
+                    val_tok.line,
+                    val_tok.column,
+                )
+            if self.match(TokenType.AND):
+                self.advance()
+                continue
+            break
+        return tuple(terms)
+
+    def _parse_invariant_op(self) -> ir.CompOp:
+        """Parse the comparison operator: ``= <= >= < >``."""
+        tok = self.current_token()
+        op_map = {
+            TokenType.EQUALS: ir.CompOp.EQ,
+            TokenType.LESS_EQUAL: ir.CompOp.LTE,
+            TokenType.GREATER_EQUAL: ir.CompOp.GTE,
+            TokenType.LESS_THAN: ir.CompOp.LT,
+            TokenType.GREATER_THAN: ir.CompOp.GT,
+        }
+        op = op_map.get(tok.type)
+        if op is None:
+            raise make_parse_error(
+                f"`invariant:` comparison must be one of `= <= >= < >`; got `{tok.value}`.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()
+        return op
+
+    def _parse_invariant_rhs(self) -> ir.InvariantRhs:
+        """Parse the RHS bound: a numeric literal OR ``input.<name>.<field>``."""
+        tok = self.current_token()
+        if tok.type == TokenType.NUMBER:
+            self.advance()
+            raw = str(tok.value)
+            value: int | float = int(raw) if raw.lstrip("-").isdigit() else float(raw)
+            return ir.InvariantRhs(literal=value)
+        if tok.type == TokenType.INPUT:
+            self.advance()
+            self.expect(TokenType.DOT)
+            name = str(self.expect_identifier_or_keyword().value)
+            self.expect(TokenType.DOT)
+            anchor_field = str(self.expect_identifier_or_keyword().value)
+            return ir.InvariantRhs(anchor_input=name, anchor_field=anchor_field)
+        raise make_parse_error(
+            "`invariant:` right-hand side must be a numeric literal or "
+            f"`input.<name>.<field>`; got `{tok.value}`.",
+            self.file,
+            tok.line,
+            tok.column,
+        )
 
     def _parse_atomic_create(self) -> ir.FlowCreate:
         """Parse a ``create <Entity>:`` block of field assignments."""

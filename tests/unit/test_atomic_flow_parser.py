@@ -257,6 +257,110 @@ atomic onboard "X":
         frag = _parse_fragment(dsl)
         assert frag.atomic_flows[0].permit_execute == ["hr_admin", "super_admin"]
 
+    def test_invariant_count_parses(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+atomic onboard "X":
+  permit:
+    execute: role(admin)
+  input role_id: uuid required
+  create Person:
+    legal_name: "x"
+  invariant: count(Employment where person = input.role_id) >= 1
+"""
+        )
+        af = _parse_fragment(dsl).atomic_flows[0]
+        assert len(af.invariants) == 1
+        inv = af.invariants[0]
+        assert inv.agg_fn == ir.FlowAggregateFn.COUNT
+        assert inv.entity == "Employment"
+        assert inv.field is None
+        assert inv.op == ir.CompOp.GTE
+        assert inv.rhs.literal == 1
+        # raw filter captured for the linker: column `person` = input `role_id`
+        assert inv.raw_filter == (("person", "input", "role_id"),)
+
+    def test_invariant_sum_with_literal_rhs(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+entity Transaction "Transaction":
+  id: uuid pk
+
+entity Posting "Posting":
+  id: uuid pk
+  transaction: ref Transaction required
+  amount: decimal(12,2) required
+
+atomic post "X":
+  permit:
+    execute: role(admin)
+  input txn: uuid required
+  create Person:
+    legal_name: "x"
+  invariant: sum(Posting.amount where transaction = input.txn) = 0
+"""
+        )
+        af = _parse_fragment(dsl).atomic_flows[0]
+        assert len(af.invariants) == 1
+        inv = af.invariants[0]
+        assert inv.agg_fn == ir.FlowAggregateFn.SUM
+        assert inv.entity == "Posting"
+        assert inv.field == "amount"
+        assert inv.op == ir.CompOp.EQ
+        assert inv.rhs.literal == 0
+        assert inv.raw_filter == (("transaction", "input", "txn"),)
+
+    def test_invariant_anchor_input_rhs(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+entity Budget "Budget":
+  id: uuid pk
+  total: decimal(12,2) required
+
+entity Allocation "Allocation":
+  id: uuid pk
+  budget: ref Budget required
+  amount: decimal(12,2) required
+
+atomic allocate "X":
+  permit:
+    execute: role(admin)
+  input budget: uuid required
+  create Person:
+    legal_name: "x"
+  invariant: sum(Allocation.amount where budget = input.budget) <= input.budget.total
+"""
+        )
+        af = _parse_fragment(dsl).atomic_flows[0]
+        inv = af.invariants[0]
+        assert inv.agg_fn == ir.FlowAggregateFn.SUM
+        assert inv.entity == "Allocation"
+        assert inv.field == "amount"
+        assert inv.op == ir.CompOp.LTE
+        assert inv.rhs.literal is None
+        assert inv.rhs.anchor_input == "budget"
+        assert inv.rhs.anchor_field == "total"
+        assert inv.raw_filter == (("budget", "input", "budget"),)
+
+    def test_invariant_bad_aggregate_errors(self) -> None:
+        dsl = (
+            _base_entities()
+            + """
+atomic onboard "X":
+  permit:
+    execute: role(admin)
+  input role_id: uuid required
+  create Person:
+    legal_name: "x"
+  invariant: avg(Employment where person = input.role_id) >= 1
+"""
+        )
+        with pytest.raises(ParseError, match="sum"):
+            _parse_fragment(dsl)
+
     def test_update_step_parses(self) -> None:
         """#1313: `update <Entity>(<target>):` parses into a FlowUpdate with a
         row-selector target + assignments, preserving declaration order."""

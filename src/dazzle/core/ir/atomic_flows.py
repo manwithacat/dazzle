@@ -160,6 +160,13 @@ class FlowInvariant(BaseModel):
     commit, else the whole flow rolls back. ``filter_predicate``,
     ``anchor_entity`` and ``anchor_input`` are ``None`` in raw parser output and
     filled in by the linker.
+
+    ``raw_filter`` carries the parser-captured ``where`` filter terms — a
+    conjunction (AND) of ``<column> = (input.<name> | literal)`` equalities — as
+    a frozen tuple of ``(column, kind, value)`` triples where ``kind`` ∈
+    {"input", "literal"}. The linker compiles these into ``filter_predicate``
+    (a ``ScopePredicate``) in Task 4; until then it is the raw provenance the
+    linker reads.
     """
 
     agg_fn: FlowAggregateFn
@@ -170,6 +177,7 @@ class FlowInvariant(BaseModel):
     anchor_input: str | None
     op: CompOp
     rhs: InvariantRhs
+    raw_filter: tuple[tuple[str, str, str], ...] = ()
     location: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)

@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 361 BaseModels, 146 Enums, 23 other (functions / typealiases / constants)
+# Counts: 363 BaseModels, 147 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -259,6 +259,7 @@ ir_class: AtomicFlowSpec
     - audit_mode: FlowAuditMode = <FlowAuditMode.ASYNC: 'async'>
     - derived_step_order: list[int] | None = None
     - intent: str | None = None
+    - invariants: list[FlowInvariant] = []
     - location: SourceLocation | None = None
     - on_failure: FlowFailureMode = <FlowFailureMode.ROLLBACK_ALL: 'rollback_all'>
 
@@ -1032,6 +1033,20 @@ ir_class: FlowInput
   optional:
     - required: bool = False
 
+ir_class: FlowInvariant
+  required:
+    - agg_fn: FlowAggregateFn
+    - anchor_entity: str | None
+    - anchor_input: str | None
+    - entity: str
+    - field: str | None
+    - filter_predicate: Annotated[ColumnCheck | ColumnRefCheck | UserAttrCheck | PathCheck | ExistsCheck | BoolComposite | Tautology | Contradiction, annotation=NoneType required=True discriminator='kind'] | None
+    - op: CompOp
+    - rhs: InvariantRhs
+  optional:
+    - location: SourceLocation | None = None
+    - raw_filter: tuple[tuple[str, str, str], Ellipsis] = ()
+
 ir_class: FlowPrecondition
   required: (none)
   optional:
@@ -1401,6 +1416,13 @@ ir_class: InvariantLiteral
   required:
     - value: int | float | str | bool | None
   optional: (none)
+
+ir_class: InvariantRhs
+  required: (none)
+  optional:
+    - anchor_field: str | None = None
+    - anchor_input: str | None = None
+    - literal: int | float | None = None
 
 ir_class: InvariantSpec
   required: (none)
@@ -3773,6 +3795,11 @@ enum: FieldTypeKind
     - TIMEZONE = 'timezone'
     - URL = 'url'
     - UUID = 'uuid'
+
+enum: FlowAggregateFn
+  members:
+    - COUNT = 'count'
+    - SUM = 'sum'
 
 enum: FlowAssertionKind
   members:
