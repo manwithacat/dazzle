@@ -1,6 +1,6 @@
 (function() {
   /**
-   * This adds the "preload" extension to htmx. The extension will
+   * This adds the "preload" extension to htmx. The extension will 
     * preload the targets of elements with "preload" attribute if:
     * - they also have `href`, `hx-get` or `data-hx-get` attributes
     * - they are radio buttons, checkboxes, select elements and submit
@@ -33,7 +33,7 @@
 
       // Intercept HTMX preload requests on `htmx:beforeRequest` and
       // send them as XHR requests instead to avoid side-effects,
-      // such as showing loading indicators while preloading data.
+      // such as showing loading indicators while preloading data. 
       if (name === 'htmx:beforeRequest') {
         const requestHeaders = event.detail.requestConfig.headers
         if (!("HX-Preloaded" in requestHeaders
@@ -58,7 +58,7 @@
   /**
    * Initialize `node`, set up event handlers based on own or inherited
    * `preload` attributes and set `node.preloadState` to `READY`.
-   *
+   * 
    * `node.preloadState` can have these values:
    * - `READY` - event handlers have been set up and node is ready to preload
    * - `TIMEOUT` - a triggering event has been fired, but `node` is not
@@ -96,7 +96,7 @@
       }
       return
     }
-
+    
     // Process node configuration from preload attribute
     let preloadAttr = getClosestAttribute(node, 'preload');
     node.preloadAlways = preloadAttr && preloadAttr.includes('always');
@@ -136,8 +136,8 @@
   /**
    * Return event handler which can be called by event listener to start
    * the preloading process of `node` with or without a timeout
-   * @param {Node} node
-   * @param {boolean=} needsTimeout
+   * @param {Node} node 
+   * @param {boolean=} needsTimeout 
    * @returns {function(): void}
    */
   function getEventHandler(node, needsTimeout = false) {
@@ -168,7 +168,7 @@
    * Preload the target of node, which can be:
    *  - hx-get or data-hx-get attribute
    *  - href or form action attribute
-   * @param {Node} node
+   * @param {Node} node 
    */
   function load(node) {
     // Do not preload uninitialized nodes, nodes which are in process
@@ -214,7 +214,7 @@
         sendGetRequest(url, node.form, formData)
         return
       }
-
+      
       // select
       const inputName = node.name || node.control.name;
       if (node.tagName === 'SELECT') {
@@ -252,8 +252,8 @@
    * and before passing them to a HTTP request because cache is
    * sensitive to GET parameter order e.g., cached `/link?a=1&b=2`
    * will not be used for `/link?b=2&a=1`.
-   * @param {HTMLFormElement} form
-   * @param {FormData} formData
+   * @param {HTMLFormElement} form 
+   * @param {FormData} formData 
    * @returns {FormData}
    */
   function forceFormDataInOrder(form, formData) {
@@ -277,13 +277,13 @@
   /**
    * Send GET request with `hx-request` headers as if `sourceNode`
    * target was loaded. Send alternated values if `formData` is set.
-   *
+   * 
    * Note that this request is intercepted and sent as XMLHttpRequest.
    * It is necessary to use `htmx.ajax` to acquire correct headers which
    * HTMX and extensions add based on `sourceNode`. But it cannot be used
-   * to perform the request due to side-effects e.g. loading indicators.
-   * @param {string} url
-   * @param {Node} sourceNode
+   * to perform the request due to side-effects e.g. loading indicators. 
+   * @param {string} url 
+   * @param {Node} sourceNode 
    * @param {FormData=} formData
    */
   function sendHxGetRequest(url, sourceNode, formData = undefined) {
@@ -314,10 +314,10 @@
   /**
    * Process request response by marking node `DONE` to prevent repeated
    * requests, except if preload attribute contains `always`,
-   * and load linked resources (e.g. images) returned in the response
+   * and load linked resources (e.g. images) returned in the response 
    * if `preload-images` attribute is `true`
-   * @param {Node} node
-   * @param {string} responseText
+   * @param {Node} node 
+   * @param {string} responseText 
    */
   function processResponse(node, responseText) {
     node.preloadState = node.preloadAlways ? 'READY' : 'DONE'
@@ -330,8 +330,8 @@
 
   /**
    * Gets attribute value from node or one of its parents
-   * @param {Node} node
-   * @param {string} attribute
+   * @param {Node} node 
+   * @param {string} attribute 
    * @returns { string | undefined }
    */
   function getClosestAttribute(node, attribute) {
@@ -344,7 +344,7 @@
   /**
    * Determines if node is valid for preloading and should be
    * initialized by setting up event listeners and handlers
-   * @param {Node} node
+   * @param {Node} node 
    * @returns {boolean}
    */
   function isValidNodeForPreloading(node) {
@@ -374,7 +374,7 @@
    * Determine if node is a form element which can be preloaded,
    * i.e., `radio`, `checkbox`, `select` or `submit` button
    * or a `label` of a form element which can be preloaded.
-   * @param {Node} node
+   * @param {Node} node 
    * @returns {boolean}
    */
   function isPreloadableFormElement(node) {
