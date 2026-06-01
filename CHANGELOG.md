@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.68] - 2026-06-01
+
+### Added
+
+- **`fixtures/scope_runtime` + real-Postgres verification of the scope-enforcement runtime (#1311 / #1312).** A new framework-validation fixture (auth-enabled, `Department ← User.department`, `TeachingGroup`, `Enrolment`) and integration test (`tests/integration/test_scope_runtime_pg.py`, marked `postgres`) boot the app in-process against a disposable Postgres and exercise the scope tools over HTTP that were previously only unit-tested with an injected fake probe — closing the "verify the runtime path, not just the unit" gap the #1311/#1312 adversarial reviews both flagged:
+  - **#1311 FK-path (depth-2) create-scope**: a teacher creating an `Enrolment` whose `teaching_group` is in their own department succeeds; a group in a *foreign* department is rejected **403** — proving the payload-time `EXISTS (… "id" = %s …)` probe runs correctly against real SQL (str→uuid coercion, tenant search_path), and that the denormalization spoof is genuinely closed end-to-end. Admin (unscoped) creates anywhere.
+  - **#1312 update-destination**: a teacher repointing an in-scope enrolment's `teaching_group` into a foreign department gets **404** (the would-be-final row fails scope); an in-department repoint succeeds.
+  Runs in CI's `postgres-tests` job; skipped locally without `TEST_DATABASE_URL`/`DATABASE_URL`. This fixture is the live-PG test substrate for #1313 slice 1b (the guarded `atomic` reassign) as it lands.
+
+### Agent Guidance
+
+- **Verify scope-runtime changes against real Postgres via `fixtures/scope_runtime`.** When touching create-scope (#1311), update-destination (#1312), or — once it lands — atomic per-step enforcement (#1313), add/extend a case in `tests/integration/test_scope_runtime_pg.py` rather than relying solely on the injected-fake unit tests. Run it locally with `TEST_DATABASE_URL=postgresql://…/<scratch> pytest tests/integration/test_scope_runtime_pg.py -m postgres`; CI's `postgres-tests` job runs it against a real `postgres:16`.
+
 ## [0.80.67] - 2026-06-01
 
 ### Added

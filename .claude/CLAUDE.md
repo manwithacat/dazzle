@@ -207,7 +207,7 @@ Drift gate: `tests/unit/test_api_surface_drift.py` (21 tests). Adding `--write` 
 
 Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`, `custom_renderer`, `pra`, `component_showcase`, `project_tracker`, `design_studio`, `llm_ticket_classifier`
 
-Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`
+Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `scope_runtime` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`)
 
 ## LSP Server
 
@@ -335,4 +335,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.80.67 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.80.68 | **Python**: 3.12+ | **Status**: Production Ready
