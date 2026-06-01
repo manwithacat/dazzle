@@ -178,3 +178,56 @@ class FKGraph:
             current_entity = target_entity
 
         return steps
+
+    def creation_order(self, entities: list[str]) -> list[str] | None:
+        """Topologically sort *entities* parent-before-child by FK edges (#1315).
+
+        Returns an ordering in which every entity appears **after** the entities
+        it has an FK to (within the given set) — i.e. a parent (FK *target*) is
+        created before a child (FK *source*), so a create-DAG flow can reference
+        ``above.<Parent>.id`` regardless of the author's declared step order.
+
+        Only FK edges **among the given entities** are considered (an FK to an
+        entity outside the set is a pre-existing row, not a flow step, so it does
+        not constrain ordering). Among entities that are ready at the same time,
+        the original (declared) order is preserved, so the result is
+        deterministic and minimally surprising.
+
+        Returns ``None`` when the FK edges among *entities* contain a cycle
+        (incl. a self-referential FK like ``Employee.manager → Employee``) — the
+        order is then under-determined by topology, and the caller falls back to
+        the author's declared order (ADR-0029 "What this buys §1"). Detecting the
+        cycle here is what stops the sort from looping.
+
+        Duplicate entries in *entities* return ``None`` (an ambiguous mapping the
+        caller should treat as "no derived order"; the validator reports the
+        one-create-per-entity violation separately).
+        """
+        if len(set(entities)) != len(entities):
+            return None
+        in_set = set(entities)
+        # deps[E] = the entities in the set that E has an FK to (must precede E).
+        deps: dict[str, set[str]] = {}
+        for e in entities:
+            targets = {t for t in self._edges.get(e, {}).values() if t in in_set and t != e}
+            if e in self._edges.get(e, {}).values():
+                # Self-referential FK → cyclic for ordering purposes.
+                return None
+            deps[e] = targets
+
+        ordered: list[str] = []
+        placed: set[str] = set()
+        # Kahn's algorithm, iterating in declared order for deterministic output.
+        while len(ordered) < len(entities):
+            progressed = False
+            for e in entities:
+                if e in placed:
+                    continue
+                if deps[e] <= placed:  # all of e's in-set FK targets already placed
+                    ordered.append(e)
+                    placed.add(e)
+                    progressed = True
+            if not progressed:
+                # Remaining entities form a cycle — no valid parent-before-child order.
+                return None
+        return ordered

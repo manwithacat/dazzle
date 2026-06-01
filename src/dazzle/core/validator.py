@@ -2466,7 +2466,17 @@ def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"{value.above_field}; only '.id' is supported in this release."
                     )
 
-        for step in flow.steps:
+        # #1315 — validate `above`-ref resolution against the EXECUTION order
+        # (the FK-derived order when set, else declared). A create-DAG the author
+        # wrote out-of-order is reordered parent-before-child by the linker, so
+        # its forward `above`-refs are legal; a flow with no derived order is
+        # checked in declared order (an `above`-ref to a not-yet-created entity
+        # is still an error there).
+        if flow.derived_step_order is not None:
+            ordered_steps = [flow.steps[i] for i in flow.derived_step_order]
+        else:
+            ordered_steps = list(flow.steps)
+        for step in ordered_steps:
             is_update = isinstance(step, ir.FlowUpdate)
             kind = "update" if is_update else "create"
 

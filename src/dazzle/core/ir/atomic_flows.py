@@ -155,6 +155,13 @@ class AtomicFlowSpec(BaseModel):
     audit_mode: FlowAuditMode = FlowAuditMode.ASYNC  # #1317 — per-flow `audit:` opt-in
     inputs: list[FlowInput]
     steps: list[AtomicFlowStep]
+    derived_step_order: list[int] | None = None
+    """#1315 — execution order as indices into ``steps``, derived parent-before-child
+    from the FK graph at link time for the **create-DAG family** (all-create, no
+    same-entity repeat, no FK cycle). ``None`` ⇒ run ``steps`` in declared order
+    (updates / same-entity / cyclic FKs, where order is temporal/semantic, not
+    structural). Declared ``steps`` order is preserved either way (provenance +
+    analysis); the executor consumes this when set."""
     location: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)

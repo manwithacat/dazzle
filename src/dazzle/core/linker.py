@@ -14,6 +14,7 @@ from .errors import (
 from .ir.audit import AUDIT_ENTRY_FIELDS
 from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from .ir.fk_graph import FKGraph
 from .ir.jobs import JOB_RUN_FIELDS
 from .ir.llm import AI_JOB_FIELDS
 from .ir.onboarding_state import ONBOARDING_STATE_FIELDS
@@ -216,6 +217,11 @@ def build_appspec(
     fk_graph = FKGraph.from_entities(list(entities))
     entities = _compile_scope_predicates(entities, fk_graph, build_scope_predicate)
 
+    # 10a.1 — derive parent-before-child step order for create-DAG atomic flows
+    # (#1315). Declared `steps` order is preserved; `derived_step_order` carries
+    # the FK-topological permutation when (and only when) reordering is needed.
+    atomic_flows = _derive_atomic_step_orders(merged_fragment.atomic_flows, fk_graph)
+
     # 10b. Derive verifiable triples
     from .ir.triples import derive_triples
 
@@ -269,7 +275,7 @@ def build_appspec(
         data_products=merged_fragment.data_products,
         documents=merged_fragment.documents,
         e2e_flows=merged_fragment.e2e_flows,
-        atomic_flows=merged_fragment.atomic_flows,
+        atomic_flows=atomic_flows,
         event_model=merged_fragment.event_model,
         fixtures=merged_fragment.fixtures,
         hless_pragma=merged_fragment.hless_pragma,
@@ -667,6 +673,78 @@ def _unknown_renderer_message(name: str, known: set[str], location: str) -> str:
         "       )\n\n"
         "See examples/custom_renderer/ for a worked end-to-end example."
     )
+
+
+def _derive_atomic_step_orders(
+    atomic_flows: list[ir.AtomicFlowSpec],
+    fk_graph: FKGraph,
+) -> list[ir.AtomicFlowSpec]:
+    """Set ``derived_step_order`` on create-DAG atomic flows (#1315, ADR-0029 §1).
+
+    A flow qualifies only when every step is a ``create`` (no ``update`` — those
+    carry temporal/semantic order the FK graph can't express) and its create
+    entities topologically sort by FK (no cycle). For a qualifying flow the
+    framework derives parent-before-child order so the author need not hand-order
+    the steps. Declared ``steps`` order is left untouched; the permutation lives
+    in ``derived_step_order``. A flow already in a valid declared order (the
+    common case) keeps ``derived_step_order = None`` — no reorder needed, so
+    existing flows are byte-unchanged and the executor runs declared order.
+    """
+    result: list[ir.AtomicFlowSpec] = []
+    for flow in atomic_flows:
+        steps = flow.steps
+        # Only the all-create family is FK-orderable; any update → declared order.
+        if not steps or any(isinstance(s, ir.FlowUpdate) for s in steps):
+            result.append(flow)
+            continue
+        if not _above_refs_are_all_fk_edges(steps, fk_graph):
+            # Some `above.E.id` is assigned to a non-FK field, so FK-topo order
+            # would not guarantee E is created before the referencing step.
+            # Don't reorder — keep the author's declared (resolvable) order.
+            result.append(flow)
+            continue
+        entities = [s.entity for s in steps]
+        order = fk_graph.creation_order(entities)
+        if order is None:
+            # FK cycle / duplicate / self-ref → fall back to declared order.
+            result.append(flow)
+            continue
+        index_of = {e: i for i, e in enumerate(entities)}
+        derived = [index_of[e] for e in order]
+        if derived == list(range(len(steps))):
+            # Declared order already parent-before-child — nothing to carry.
+            result.append(flow)
+            continue
+        result.append(flow.model_copy(update={"derived_step_order": derived}))
+    return result
+
+
+def _above_refs_are_all_fk_edges(
+    steps: list[ir.AtomicFlowStep],
+    fk_graph: FKGraph,
+) -> bool:
+    """True iff every ``above.E.id`` in *steps* is assigned to an FK field → E.
+
+    FK-topological reorder only guarantees an ``above``-ref resolves when the
+    referencing assignment is the FK that points at E (so the topo sort, which
+    orders FK targets before sources, places E first). If an ``above``-ref is
+    assigned to a non-FK field, FK topology says nothing about their relative
+    order, so we must NOT reorder (the caller keeps declared order).
+    """
+    for step in steps:
+        # Only FlowCreate reaches here (caller filtered updates); narrow for mypy.
+        if not isinstance(step, ir.FlowCreate):
+            return False
+        for field, value in step.assignments.items():
+            if value.kind != ir.FlowFieldValueKind.ABOVE_REF:
+                continue
+            try:
+                _fk_field, target = fk_graph.resolve_segment(step.entity, field)
+            except ValueError:
+                return False  # `field` is not an FK on this entity
+            if target != value.above_entity:
+                return False  # FK points somewhere other than the referenced entity
+    return True
 
 
 def _compile_scope_predicates(

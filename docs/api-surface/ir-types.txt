@@ -257,6 +257,7 @@ ir_class: AtomicFlowSpec
     - steps: list[Annotated[FlowCreate | FlowUpdate, annotation=NoneType required=True discriminator='kind']]
   optional:
     - audit_mode: FlowAuditMode = <FlowAuditMode.ASYNC: 'async'>
+    - derived_step_order: list[int] | None = None
     - intent: str | None = None
     - location: SourceLocation | None = None
     - on_failure: FlowFailureMode = <FlowFailureMode.ROLLBACK_ALL: 'rollback_all'>

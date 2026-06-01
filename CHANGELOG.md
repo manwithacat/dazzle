@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.77] - 2026-06-01
+
+### Added
+
+- **#1315 — atomic create-DAG flows derive parent-before-child step order from the FK graph (ADR-0029 "What this buys" §1).** An author no longer has to hand-order the steps of a create-only flow: when every step is a `create`, the create entities form a DAG (no FK cycle / self-ref), and every `above.<E>.id` is assigned to a genuine FK field, the linker derives a parent-before-child order and stores it as `AtomicFlowSpec.derived_step_order` (indices into `steps`). The executor runs steps in that order; the validator checks `above`-ref resolution in *execution* order, so a create-DAG declared out-of-FK-order (e.g. line items before the invoice they reference) now links + validates instead of erroring.
+  - **Declared order preserved** — `steps` is untouched (provenance + analysis); `derived_step_order` carries the permutation, and is `None` when no reorder is needed (declared order already parent-before-child) so existing flows are byte-unchanged.
+  - **Honest limits, declared-order fallback:** any `update` step, a same-entity repeat, a cyclic/self-referential FK (`Employee.manager → Employee`), or an `above`-ref to a non-FK field all leave `derived_step_order = None` (the order is temporal/semantic there, not structural). New `FKGraph.creation_order` (Kahn topo-sort) **detects FK cycles and returns None rather than looping**.
+  - This FK-topological order is distinct from the deterministic scope-parent lock order (#1316, invariant 4).
+
+### Changed
+
+- **api-surface (ir-types baseline):** `AtomicFlowSpec` gains a `derived_step_order: list[int] | None` field — `docs/api-surface/ir-types.txt` regenerated.
+
+### Agent Guidance
+
+- **Create-DAG atomic flows can be written in any order.** For a flow whose steps are all `create` and whose children reference parents via `above.<Parent>.id` (FK fields), you no longer need to hand-order parents first — the framework topologically sorts them (`derived_step_order`). Order still matters and is preserved for `update`/end-date steps, same-entity sequences, and self-referential/cyclic FKs (those run in declared order). Don't rely on derived ordering for non-FK `above`-refs — it falls back to declared order there. Remaining ADR-0029 follow-ups: #1318/#1319 (Tier-3 ADR seams, deferred with notes).
+
 ## [0.80.76] - 2026-06-01
 
 ### Added

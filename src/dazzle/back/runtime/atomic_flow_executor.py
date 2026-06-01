@@ -438,10 +438,17 @@ def execute_atomic_flow(
     # commits on clean exit and rolls back on exception, so re-raising
     # any AtomicFlowError (or a scope HTTPException) from inside the
     # with-block lets the rollback happen for free.
+    # #1315 — run in FK-derived parent-before-child order for create-DAG flows;
+    # `derived_step_order` is None for declared-order flows (updates / cyclic FKs).
+    if flow.derived_step_order is not None:
+        ordered_steps = [flow.steps[i] for i in flow.derived_step_order]
+    else:
+        ordered_steps = list(flow.steps)
+
     with db_manager.connection() as conn:
         cursor = conn.cursor()
         probe = _make_in_txn_probe(conn) if _enforce else None
-        for step in flow.steps:
+        for step in ordered_steps:
             if isinstance(step, ir.FlowUpdate):
                 _execute_update_step(
                     step,

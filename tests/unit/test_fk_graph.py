@@ -198,3 +198,58 @@ class TestPathResolution:
     def test_resolve_target_returns_none_for_missing(self, chain_graph: FKGraph) -> None:
         """resolve_target returns None for non-existent FK field."""
         assert chain_graph.resolve_target("Manuscript", "bogus_id") is None
+
+
+# ---------------------------------------------------------------------------
+# #1315 — creation_order (FK-topological parent-before-child sort)
+# ---------------------------------------------------------------------------
+
+
+class TestCreationOrder:
+    def _graph(self) -> FKGraph:
+        # Invoice (root) ← Order(invoice) ← LineItem(order); plus an independent Tag.
+        invoice = _entity("Invoice", [_pk()])
+        order = _entity("Order", [_pk(), _field("invoice_id", FieldTypeKind.REF, ref="Invoice")])
+        line = _entity("LineItem", [_pk(), _field("order_id", FieldTypeKind.REF, ref="Order")])
+        tag = _entity("Tag", [_pk()])
+        return FKGraph.from_entities([invoice, order, line, tag])
+
+    def test_orders_parents_before_children(self) -> None:
+        graph = self._graph()
+        # Declared child-first; expect parent-before-child.
+        order = graph.creation_order(["LineItem", "Order", "Invoice"])
+        assert order is not None
+        assert order.index("Invoice") < order.index("Order") < order.index("LineItem")
+
+    def test_already_ordered_is_stable(self) -> None:
+        graph = self._graph()
+        assert graph.creation_order(["Invoice", "Order", "LineItem"]) == [
+            "Invoice",
+            "Order",
+            "LineItem",
+        ]
+
+    def test_independent_entities_keep_declared_order(self) -> None:
+        graph = self._graph()
+        # Invoice and Tag have no FK between them → declared order preserved.
+        assert graph.creation_order(["Tag", "Invoice"]) == ["Tag", "Invoice"]
+
+    def test_self_referential_fk_returns_none(self) -> None:
+        emp = _entity("Employee", [_pk(), _field("manager_id", FieldTypeKind.REF, ref="Employee")])
+        graph = FKGraph.from_entities([emp])
+        assert graph.creation_order(["Employee"]) is None
+
+    def test_cycle_returns_none(self) -> None:
+        a = _entity("A", [_pk(), _field("b_id", FieldTypeKind.REF, ref="B")])
+        b = _entity("B", [_pk(), _field("a_id", FieldTypeKind.REF, ref="A")])
+        graph = FKGraph.from_entities([a, b])
+        assert graph.creation_order(["A", "B"]) is None
+
+    def test_duplicate_entities_returns_none(self) -> None:
+        graph = self._graph()
+        assert graph.creation_order(["Invoice", "Invoice"]) is None
+
+    def test_fk_to_outside_set_does_not_constrain(self) -> None:
+        graph = self._graph()
+        # Only Order in the set; its FK target Invoice is outside → no constraint.
+        assert graph.creation_order(["Order"]) == ["Order"]
