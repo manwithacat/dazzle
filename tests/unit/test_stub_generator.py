@@ -79,8 +79,10 @@ class TestStubGenerator:
         stub = generator.generate_stub(sample_service, "python")
 
         assert "from typing import TypedDict" in stub
+        # #1322: money is the canonical Money value object, with its import emitted.
+        assert "from dazzle.core.ir.money import Money" in stub
         assert "class CalculateVatResult(TypedDict):" in stub
-        assert "vat_amount: float" in stub
+        assert "vat_amount: Money" in stub
         assert "breakdown: dict" in stub
 
     def test_generate_python_stub_signature(
@@ -116,7 +118,9 @@ class TestStubGenerator:
         assert "class ProcessOrderResult(TypedDict):" in stub
         assert "confirmation_number: str" in stub
         assert "estimated_delivery: str" in stub
-        assert "total_cost: float" in stub
+        # #1322: decimal → exact Decimal, with its import emitted.
+        assert "from decimal import Decimal" in stub
+        assert "total_cost: Decimal" in stub
 
     # === TypeScript Stub Generation ===
 
@@ -137,7 +141,8 @@ class TestStubGenerator:
         stub = generator.generate_stub(sample_service, "typescript")
 
         assert "export interface CalculateVatResult {" in stub
-        assert "vat_amount: number;" in stub
+        # #1322: money mirrors Money.model_dump() ({currency, amount_minor}).
+        assert "vat_amount: { currency: string; amount_minor: number };" in stub
         assert "breakdown: Record<string, unknown>;" in stub
 
     def test_generate_typescript_stub_signature(
@@ -167,9 +172,10 @@ class TestStubGenerator:
         assert generator._dsl_to_python_type("str") == "str"
         assert generator._dsl_to_python_type("str(200)") == "str"
         assert generator._dsl_to_python_type("int") == "int"
-        assert generator._dsl_to_python_type("decimal") == "float"
-        assert generator._dsl_to_python_type("decimal(10,2)") == "float"
-        assert generator._dsl_to_python_type("money") == "float"
+        # #1322: exact types matching the runtime model.
+        assert generator._dsl_to_python_type("decimal") == "Decimal"
+        assert generator._dsl_to_python_type("decimal(10,2)") == "Decimal"
+        assert generator._dsl_to_python_type("money") == "Money"
         assert generator._dsl_to_python_type("bool") == "bool"
         assert generator._dsl_to_python_type("json") == "dict"
 
@@ -178,8 +184,13 @@ class TestStubGenerator:
         assert generator._dsl_to_typescript_type("uuid") == "string"
         assert generator._dsl_to_typescript_type("str") == "string"
         assert generator._dsl_to_typescript_type("int") == "number"
-        assert generator._dsl_to_typescript_type("decimal") == "number"
-        assert generator._dsl_to_typescript_type("money") == "number"
+        # #1322: decimal as string (precision-preserving); money as the
+        # {currency, amount_minor} object the runtime serializes.
+        assert generator._dsl_to_typescript_type("decimal") == "string"
+        assert (
+            generator._dsl_to_typescript_type("money")
+            == "{ currency: string; amount_minor: number }"
+        )
         assert generator._dsl_to_typescript_type("bool") == "boolean"
         assert generator._dsl_to_typescript_type("json") == "Record<string, unknown>"
 

@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.80.82] - 2026-06-01
+## [0.80.83] - 2026-06-01
+
+### Fixed
+
+- **#1322 — service-stub generator now types `decimal`/`money` to match the runtime, not `float`.** Generated Python/TypeScript service stubs annotated `decimal` and `money` as `float`/`number`, contradicting the runtime (decimal fields are `Decimal`; money is the canonical `Money` value object — exact integer minor units + currency). A user implementing a stub got a signature that disagreed with the values the framework actually passes. Now:
+  - **Python:** `decimal` → `Decimal`, `money` → `Money`. The stub emits the needed imports (`from decimal import Decimal`, `from dazzle.core.ir.money import Money`), grouped stdlib-then-first-party. The import scan covers inputs *and* outputs, so a `money`/`decimal` parameter (not just a result field) pulls its import in. Also fixed a latent gap where an unmapped DSL type fell back to `Any` without importing it.
+  - **TypeScript:** `decimal` → `string` (JSON `number` is IEEE-754 and cannot carry arbitrary-precision decimals safely), `money` → `{ currency: string; amount_minor: number }` (exactly `Money.model_dump()`).
+  - Follow-up to #1321 (which fixed the *storage* mapping `decimal`→`NUMERIC`); this aligns the generated *type contract*. `date`/`datetime`→`str` is unchanged (out of scope). Tests in `test_stub_generator.py` updated to the new expectations and strengthened to assert the imports are emitted.
+
+### Agent Guidance
+
+- Generated service stubs now reflect exact money/decimal types: a `decimal` field is `Decimal` (Python) / `string` (TS), and a `money` field is the `Money` object (Python) / `{ currency, amount_minor }` (TS). When implementing a stub body, treat money as `Money` (use `from_money`/`to_money` from `dazzle.core.ir.money` to convert to/from `Decimal`), never a bare `float`.
+
 
 ### Fixed
 

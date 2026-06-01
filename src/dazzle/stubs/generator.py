@@ -42,8 +42,12 @@ class StubGenerator:
         "str": "str",
         "text": "str",
         "int": "int",
-        "decimal": "float",
-        "money": "float",
+        # #1322: exact types, matching the runtime model (model_generator types
+        # DECIMAL as Decimal). money is the canonical Money value object
+        # (exact integer minor units + currency); float was lossy and dropped
+        # the currency. Imports are emitted by _python_type_imports().
+        "decimal": "Decimal",
+        "money": "Money",
         "bool": "bool",
         "date": "str",  # ISO format
         "datetime": "str",  # ISO format
@@ -57,8 +61,11 @@ class StubGenerator:
         "str": "string",
         "text": "string",
         "int": "number",
-        "decimal": "number",
-        "money": "number",
+        # #1322: JSON `number` is IEEE-754 double — it cannot safely carry an
+        # arbitrary-precision decimal, so decimal crosses the wire as a string.
+        # money mirrors Money.model_dump() exactly ({currency, amount_minor}).
+        "decimal": "string",
+        "money": "{ currency: string; amount_minor: number }",
         "bool": "boolean",
         "date": "string",
         "datetime": "string",
@@ -183,9 +190,44 @@ class StubGenerator:
 
         return "\n".join(lines) + "\n"
 
+    def _python_type_imports(self, service: DomainServiceSpec) -> list[str]:
+        """Compute the import lines a Python stub needs for its annotated types.
+
+        Scans inputs (used in the signature) and outputs (used in the result
+        TypedDict) so an import is emitted whenever a type that requires one
+        appears anywhere in the contract. Grouped stdlib-then-first-party with a
+        blank separator (isort convention).
+        """
+        used = {self._dsl_to_python_type(f.type_name) for f in service.inputs}
+        used |= {self._dsl_to_python_type(f.type_name) for f in service.outputs}
+
+        stdlib: list[str] = []
+        if "Decimal" in used:
+            stdlib.append("from decimal import Decimal")
+        typing_names: list[str] = []
+        if service.outputs:
+            typing_names.append("TypedDict")
+        if "Any" in used:  # default for unmapped DSL types — was previously unimported
+            typing_names.append("Any")
+        if typing_names:
+            stdlib.append(f"from typing import {', '.join(sorted(typing_names))}")
+
+        first_party: list[str] = []
+        if "Money" in used:
+            first_party.append("from dazzle.core.ir.money import Money")
+
+        imports = sorted(stdlib)
+        if first_party:
+            if imports:
+                imports.append("")
+            imports.extend(first_party)
+        return imports
+
     def _generate_python_types(self, service: DomainServiceSpec) -> str:
         """Generate Python type definitions."""
-        lines = ["from typing import TypedDict", ""]
+        lines: list[str] = list(self._python_type_imports(service))
+        if lines:
+            lines.append("")
 
         if service.outputs:
             lines.append(f"class {service.result_type_name()}(TypedDict):")
