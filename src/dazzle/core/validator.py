@@ -2516,6 +2516,96 @@ def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
             if not is_update:
                 seen_entities.add(step.entity)
 
+        # #1318 / ADR-0031 — flow-level aggregate invariants. Each invariant
+        # asserts `<agg_fn>(<entity>.<field> where <filter>) <op> <rhs>` at
+        # commit; here we statically check its references resolve and that it
+        # names a lockable anchor row.
+        _NUMERIC_KINDS = {
+            ir.FieldTypeKind.INT,
+            ir.FieldTypeKind.FLOAT,
+            ir.FieldTypeKind.DECIMAL,
+            ir.FieldTypeKind.MONEY,
+        }
+        for inv in flow.invariants:
+            inv_prefix = f"{prefix}: invariant {inv.agg_fn}({inv.entity}...)"
+
+            target = entity_map.get(inv.entity)
+            if target is None:
+                errors.append(f"{inv_prefix}: unknown entity '{inv.entity}'.")
+                continue
+
+            target_field_map = {f.name: f for f in target.fields}
+
+            # sum requires an existing numeric field; count takes no field.
+            if inv.agg_fn == ir.FlowAggregateFn.SUM:
+                fld = target_field_map.get(inv.field) if inv.field else None
+                if fld is None:
+                    errors.append(
+                        f"{inv_prefix}: sum field '{inv.field}' does not exist on '{inv.entity}'."
+                    )
+                elif fld.type.kind not in _NUMERIC_KINDS:
+                    errors.append(
+                        f"{inv_prefix}: sum field '{inv.field}' on '{inv.entity}' is "
+                        f"not numeric (got {fld.type.kind})."
+                    )
+
+            # The load-bearing rejection: an aggregate with no lockable anchor.
+            if inv.anchor_entity is None or inv.anchor_input is None:
+                errors.append(
+                    f"{inv_prefix}: unanchored aggregate invariant: needs a "
+                    f"`<fk> = input.<name>` filter term naming a lockable anchor "
+                    f"row (see ADR-0031)."
+                )
+            elif inv.anchor_input not in input_names:
+                errors.append(
+                    f"{inv_prefix}: anchor references undeclared input '{inv.anchor_input}'."
+                )
+
+            # Filter columns must exist on the target entity (allow the `_id`
+            # FK-suffix spelling, matching the column-naming convention).
+            for column, _kind, _value in inv.raw_filter:
+                if column not in target_field_map and (column + "_id") not in target_field_map:
+                    errors.append(
+                        f"{inv_prefix}: filter references unknown column '{column}' "
+                        f"on '{inv.entity}'."
+                    )
+
+            # RHS: literal needs no check; the field form must resolve to a
+            # numeric field on the named input's referenced entity.
+            rhs = inv.rhs
+            if rhs.anchor_input is not None:
+                rhs_input = next((i for i in flow.inputs if i.name == rhs.anchor_input), None)
+                if rhs_input is None:
+                    errors.append(
+                        f"{inv_prefix}: RHS references undeclared input '{rhs.anchor_input}'."
+                    )
+                else:
+                    rhs_entity_name = rhs_input.type.ref_entity
+                    rhs_entity = entity_map.get(rhs_entity_name) if rhs_entity_name else None
+                    if rhs_entity is None:
+                        errors.append(
+                            f"{inv_prefix}: RHS input '{rhs.anchor_input}' does not "
+                            f"reference a known entity."
+                        )
+                    else:
+                        rhs_field_map = {f.name: f for f in rhs_entity.fields}
+                        rhs_field = (
+                            rhs_field_map.get(rhs.anchor_field) if rhs.anchor_field else None
+                        )
+                        if rhs_field is None:
+                            errors.append(
+                                f"{inv_prefix}: RHS field '{rhs.anchor_field}' does not "
+                                f"exist on '{rhs_entity.name}'."
+                            )
+                        elif rhs_field.type.kind not in _NUMERIC_KINDS:
+                            errors.append(
+                                f"{inv_prefix}: RHS field '{rhs.anchor_field}' on "
+                                f"'{rhs_entity.name}' is not numeric "
+                                f"(got {rhs_field.type.kind})."
+                            )
+            elif rhs.literal is None:
+                errors.append(f"{inv_prefix}: invariant RHS is empty.")
+
     return errors, warnings
 
 
