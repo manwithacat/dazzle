@@ -2411,9 +2411,9 @@ def validate_atomic_flows(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
     warnings.append(
         f"[Preview] {len(appspec.atomic_flows)} atomic flow(s) defined. "
-        "`create` steps execute (single transaction); `update` steps are "
-        "parsed + validated but not yet executed (runtime lands in #1313 "
-        "slice 1b, ADR-0029)."
+        "`create` + `update` steps execute in a single transaction with per-step "
+        "scope enforcement (#1313, ADR-0029). Pending: in-transaction audit + "
+        "matrix/conformance/specs visibility."
     )
 
     entity_map = {e.name: e for e in appspec.domain.entities}

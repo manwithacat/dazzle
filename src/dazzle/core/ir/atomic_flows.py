@@ -95,9 +95,8 @@ class FlowUpdate(BaseModel):
     is just an update that sets the entity's temporal end column; there is
     no separate step kind (the single-`update`-kind grammar, ADR-0029).
 
-    Status: IR + parser + validator only (slice 1a). The executor
-    **stubs** this step kind (raises ``NotImplementedError``) until the
-    in-transaction per-step scope-enforcement runtime lands in slice 1b.
+    The executor resolves the target row, enforces ``scope: update:`` (source
+    + destination, #1312) in-transaction, then issues the UPDATE (#1313).
     """
 
     kind: Literal["update"] = "update"

@@ -72,6 +72,7 @@ class _ScopeRuntimeApp:
         self.math_group2_id = ""
         self.science_group_id = ""
         self.math_enrolment_id = ""
+        self.science_enrolment_id = ""
 
     async def client_as(self, who: str) -> httpx.AsyncClient:
         import httpx
@@ -118,6 +119,7 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
     app.math_group2_id = _mk_id()
     app.science_group_id = _mk_id()
     app.math_enrolment_id = _mk_id()
+    app.science_enrolment_id = _mk_id()
 
     with psycopg.connect(db_url) as conn:
         _sql_insert(conn, "Department", {"id": app.math_dept_id, "name": "Mathematics"})
@@ -178,6 +180,18 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
                 "id": app.math_enrolment_id,
                 "label": "Existing maths enrolment",
                 "teaching_group": app.math_group_id,
+                "status": "active",
+            },
+        )
+        # A science-department enrolment — used by the atomic-reassign
+        # source-check test (a maths teacher must not touch it).
+        _sql_insert(
+            conn,
+            "Enrolment",
+            {
+                "id": app.science_enrolment_id,
+                "label": "Existing science enrolment",
+                "teaching_group": app.science_group_id,
                 "status": "active",
             },
         )
@@ -341,4 +355,64 @@ async def test_atomic_create_admin_unrestricted(app: _ScopeRuntimeApp) -> None:
     )
     assert resp.status_code < 400, (
         f"admin atomic enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# #1313 — atomic `update` step execution + scope: update: (source + destination)
+# in-transaction, against real Postgres
+# ---------------------------------------------------------------------------
+
+
+async def _atomic_reassign(
+    app: _ScopeRuntimeApp, who: str, *, enrolment_id: str, group_id: str
+) -> Any:
+    client = await app.client_as(who)
+    return await _csrf_post(
+        client,
+        "/api/atomic/reassign_enrolment",
+        {"enrolment": enrolment_id, "group": group_id},
+    )
+
+
+async def test_atomic_reassign_within_department_is_allowed(app: _ScopeRuntimeApp) -> None:
+    """Moving an own-department enrolment to another own-department group passes
+    both the source and destination scope: update: checks."""
+    resp = await _atomic_reassign(
+        app, "teacher_math", enrolment_id=app.math_enrolment_id, group_id=app.math_group2_id
+    )
+    assert resp.status_code < 400, (
+        f"in-dept reassign should succeed, got {resp.status_code}: {resp.text[:300]}"
+    )
+
+
+async def test_atomic_reassign_to_foreign_department_is_denied(app: _ScopeRuntimeApp) -> None:
+    """Reassigning an own enrolment to a foreign-department group fails the
+    DESTINATION check → 404 + rollback (group unchanged)."""
+    resp = await _atomic_reassign(
+        app, "teacher_math", enrolment_id=app.math_enrolment_id, group_id=app.science_group_id
+    )
+    assert resp.status_code == 404, (
+        f"foreign-dept reassign should 404, got {resp.status_code}: {resp.text[:300]}"
+    )
+    import psycopg
+
+    with psycopg.connect(app._db_url) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT "teaching_group" FROM "Enrolment" WHERE "id" = %s', [app.math_enrolment_id]
+        )
+        assert str(cur.fetchone()[0]) == app.math_group_id, (
+            "denied reassign must not change the row"
+        )
+
+
+async def test_atomic_reassign_of_foreign_source_is_denied(app: _ScopeRuntimeApp) -> None:
+    """A maths teacher must not touch a science-department enrolment even when
+    moving it INTO maths — the SOURCE check (the row they can't see) denies it."""
+    resp = await _atomic_reassign(
+        app, "teacher_math", enrolment_id=app.science_enrolment_id, group_id=app.math_group_id
+    )
+    assert resp.status_code == 404, (
+        f"foreign-source reassign should 404, got {resp.status_code}: {resp.text[:300]}"
     )

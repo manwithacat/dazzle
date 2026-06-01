@@ -197,9 +197,11 @@ class TestReturnValue:
         assert db._mock_cursor.execute.call_count == 0
 
 
-class TestUpdateStepStub:
-    """#1313 slice 1a: `update` steps parse + validate but the executor stubs
-    them (NotImplementedError) until the slice-1b runtime lands."""
+class TestUpdateStepExecution:
+    """#1313: `update` steps now execute — resolve the target row, enforce
+    scope: update: (source+destination) in-transaction, then UPDATE. (Real-PG
+    + scope behaviour is covered in tests/integration/test_scope_runtime_pg.py;
+    these unit tests pin the SQL shape + the enforcement hand-off with mocks.)"""
 
     def _flow_with_update(self) -> ir.AtomicFlowSpec:
         return ir.AtomicFlowSpec(
@@ -222,12 +224,64 @@ class TestUpdateStepStub:
             ],
         )
 
-    def test_update_step_raises_not_implemented(self) -> None:
+    def test_update_step_reads_then_issues_update(self) -> None:
         db = _make_db()
-        with pytest.raises(NotImplementedError, match="not yet executed"):
-            execute_atomic_flow(self._flow_with_update(), {"pid": "p-1"}, db)
-        # The stub raises before any INSERT runs.
-        assert db._mock_cursor.execute.call_count == 0
+        # The in-txn source read returns an existing row.
+        db._mock_cursor.fetchone = MagicMock(return_value={"id": "p-1", "legal_name": "old"})
+        execute_atomic_flow(self._flow_with_update(), {"pid": "p-1"}, db)  # no enforcement
+        calls = [c.args[0] for c in db._mock_cursor.execute.call_args_list]
+        # First the source SELECT, then the UPDATE.
+        assert any(s.startswith("SELECT *") and '"Person"' in s for s in calls)
+        upd = [s for s in calls if s.startswith("UPDATE")]
+        assert upd and '"Person"' in upd[0] and '"legal_name" = %s' in upd[0]
+
+    def test_update_target_not_found_errors(self) -> None:
+        db = _make_db()
+        db._mock_cursor.fetchone = MagicMock(return_value=None)  # row absent
+        with pytest.raises(AtomicFlowError, match="not found"):
+            execute_atomic_flow(self._flow_with_update(), {"pid": "missing"}, db)
+
+    def test_update_target_not_found_is_idor_404_when_enforcing(self) -> None:
+        """With scope enforced, a missing target is an IDOR-shaped 404 (not a
+        distinguishable 400) — indistinguishable from a scope-denied row."""
+        from types import SimpleNamespace
+
+        from fastapi import HTTPException
+
+        db = _make_db()
+        db._mock_cursor.fetchone = MagicMock(return_value=None)  # row absent
+        with pytest.raises(HTTPException) as exc:
+            execute_atomic_flow(
+                self._flow_with_update(),
+                {"pid": "missing"},
+                db,
+                auth_context=SimpleNamespace(user=SimpleNamespace(id="u-1"), roles=["admin"]),
+                access_specs={"Person": object()},
+            )
+        assert exc.value.status_code == 404
+
+    def test_update_routed_through_scope_when_enforcing(self, monkeypatch: Any) -> None:
+        import dazzle.back.runtime.route_generator as rg
+
+        seen: list[tuple[str, bool]] = []
+
+        def _fake_update_enforce(**kwargs: Any) -> None:
+            seen.append((kwargs["entity_name"], kwargs["also_check_source"]))
+
+        monkeypatch.setattr(rg, "_enforce_update_scope", _fake_update_enforce)
+        db = _make_db()
+        db._mock_cursor.fetchone = MagicMock(return_value={"id": "p-1", "legal_name": "old"})
+        from types import SimpleNamespace
+
+        execute_atomic_flow(
+            self._flow_with_update(),
+            {"pid": "p-1"},
+            db,
+            auth_context=SimpleNamespace(user=SimpleNamespace(id="u-1"), roles=["admin"]),
+            access_specs={"Person": object()},
+        )
+        # Update routed through scope: update: with source-check enabled.
+        assert seen == [("Person", True)]
 
 
 class TestPerStepScopeEnforcement:

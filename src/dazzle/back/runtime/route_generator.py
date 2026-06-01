@@ -2543,8 +2543,20 @@ def _enforce_update_scope(
     auth_context: "AuthContext | None",
     service: Any = None,
     fk_graph: "FKGraph | None" = None,
+    probe: "Callable[[str, list[Any]], bool] | None" = None,
+    also_check_source: bool = False,
 ) -> None:
     """`scope: update:` DESTINATION enforcement (#1312, ADR-0028).
+
+    ``probe`` (#1313): inject an in-transaction probe (atomic-flow executor)
+    instead of building a separate-connection one.
+
+    ``also_check_source`` (#1313): also validate the *source* (``existing``)
+    row against ``scope: update:``. The framework UPDATE route validates the
+    source via ``_scoped_pre_read`` before calling this, so it passes False;
+    the atomic executor has no such pre-read, so it passes True — otherwise a
+    flow could mutate a row the principal can't see (claiming a foreign row by
+    moving it into scope).
 
     The pre-read (`_scoped_pre_read`) already validated the *source* row
     against ``scope: update:`` — but it never checked the *new* values the
@@ -2604,11 +2616,6 @@ def _enforce_update_scope(
         if getattr(r, "predicate", None) is None and getattr(r, "condition", None) is None:
             return
 
-    # The would-be-final row: scope-validated source row with the changed
-    # fields overlaid. A scope-key column the partial payload doesn't set keeps
-    # its existing (already-validated) value.
-    merged = {**_row_to_payload_dict(existing), **new_values}
-
     user_attrs = _LazyUserAttrs(auth_context)
 
     from dazzle.back.runtime.scope_create_eval import (
@@ -2617,37 +2624,52 @@ def _enforce_update_scope(
     )
     from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
 
-    probe = build_create_scope_probe(service, entity_name)
+    if probe is None:
+        probe = build_create_scope_probe(service, entity_name)
     schema = get_current_tenant_schema()
 
-    for r in matched:
-        predicate = getattr(r, "predicate", None)
-        if predicate is None:
-            continue
-        try:
-            if check_create_predicate(
-                predicate,
-                merged,
-                user_id=str(user_id) if user_id else "",
-                user_attrs=user_attrs,
-                probe=probe,
-                fk_graph=fk_graph,
-                entity_name=entity_name,
-                schema=schema,
-            ):
-                return  # destination satisfies a matched rule — allow
-        except ScopeCreateUnsupportedError:
-            logger.warning(
-                "scope: update: destination predicate needs a payload-time "
-                "probe but none was available (no repository/DB on the "
-                "service). Denying. entity=%s",
-                entity_name,
-            )
-            continue
+    def _passes(payload: dict[str, Any]) -> bool:
+        """True if ``payload`` satisfies any matched scope: update: rule."""
+        for r in matched:
+            predicate = getattr(r, "predicate", None)
+            if predicate is None:
+                continue
+            try:
+                if check_create_predicate(
+                    predicate,
+                    payload,
+                    user_id=str(user_id) if user_id else "",
+                    user_attrs=user_attrs,
+                    probe=probe,
+                    fk_graph=fk_graph,
+                    entity_name=entity_name,
+                    schema=schema,
+                ):
+                    return True
+            except ScopeCreateUnsupportedError:
+                logger.warning(
+                    "scope: update: predicate needs a payload-time probe but "
+                    "none was available. Denying. entity=%s",
+                    entity_name,
+                )
+                continue
+        return False
 
-    _deny_update_destination(
-        entity_name, user_id, "new values do not satisfy the scope: update: predicate"
-    )
+    # Source check (atomic path only): the principal must already be able to
+    # touch the existing row — otherwise a flow could claim a foreign row by
+    # moving it into scope. The framework route validates this via the pre-read.
+    if also_check_source and not _passes(_row_to_payload_dict(existing)):
+        _deny_update_destination(
+            entity_name, user_id, "source row does not satisfy the scope: update: predicate"
+        )
+
+    # Destination check: the would-be-final row (existing ⊕ changed fields). A
+    # scope-key column the partial update doesn't set keeps its existing value.
+    merged = {**_row_to_payload_dict(existing), **new_values}
+    if not _passes(merged):
+        _deny_update_destination(
+            entity_name, user_id, "new values do not satisfy the scope: update: predicate"
+        )
 
 
 def _deny_update_destination(entity_name: str, user_id: str | None, reason: str) -> None:

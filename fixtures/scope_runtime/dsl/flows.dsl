@@ -18,3 +18,19 @@ atomic enrol_student "Enrol Student":
   create Enrolment:
     label: input.label
     teaching_group: input.group
+
+
+# Atomic flow exercising #1313 update-step execution + scope: update: (source +
+# destination) in-transaction. Reassigning an enrolment to a group is allowed
+# only when BOTH the existing row (source) and the would-be-final row
+# (destination) are in the teacher's department; otherwise 404 + rollback.
+atomic reassign_enrolment "Reassign Enrolment":
+  intent: "Move an enrolment to a different teaching group, scope-guarded"
+  permit:
+    execute: role(teacher, admin)
+
+  input enrolment: ref Enrolment required
+  input group: ref TeachingGroup required
+
+  update Enrolment(input.enrolment):
+    teaching_group: input.group

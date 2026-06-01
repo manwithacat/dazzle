@@ -227,9 +227,9 @@ def _run(
             fk_graph=fk_graph,
         )
     except NotImplementedError as exc:
-        # Slice 1a (ADR-0029): a flow containing an `update` step is
-        # parse/validate-clean but not yet executable. Surface a clean 501
-        # rather than a 500 stacktrace until the slice-1b runtime lands.
+        # Defensive: `create` + `update` steps now execute; no step kind is
+        # currently stubbed. If a future step kind is added IR-first (executor
+        # stub), this surfaces a clean 501 rather than a 500 stacktrace.
         raise HTTPException(
             status_code=501,
             detail={"error": "atomic_step_not_implemented", "message": str(exc)},

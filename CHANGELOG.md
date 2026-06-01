@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.71] - 2026-06-01
+
+### Added
+
+- **#1313 — `atomic` `update` steps now execute, with `scope: update:` source + destination enforcement in-transaction (ADR-0029).** `update <Entity>(<target>):` steps were parse/validate-clean but stubbed (501); they now run. The executor resolves the target row, **reads it in-transaction** on the flow connection, enforces `scope: update:` against **both** the source (`existing`) row and the would-be-final (`existing ⊕ changed`) row — reusing `route_generator._enforce_update_scope` (#1312) with a new `also_check_source=True` (the flow has no route pre-read to validate the source) and the flow's in-transaction probe — then issues the `UPDATE`. Denial → IDOR-shaped **404** → whole-flow rollback (fail-closed); a missing target id is the same 404 when scope is enforced (indistinguishable from scope-denied, matching the CRUD contract). This completes the guarded **reassign** (end-date source + create destination, each step scope-enforced in one transaction — the ADR-0028 motivating case). `_enforce_update_scope` gains `probe` + `also_check_source` params (CRUD callers omit both → unchanged: destination-only, separate-connection probe). Verified against **real Postgres** (`fixtures/scope_runtime` `reassign_enrolment` flow + `tests/integration/test_scope_runtime_pg.py`, 11/11): in-dept reassign commits; foreign-destination 404s with the row unchanged; a maths teacher reassigning a science enrolment (foreign **source**) 404s.
+
+### Agent Guidance
+
+- **`atomic` `update` steps are live and fully scope-guarded.** An update step must satisfy `scope: update:` for **both** the row it targets (source — you can't touch a row you can't see) and the row's would-be-final state (destination — you can't move it into a foreign scope); either failure 404s and rolls the whole flow back. "End-dating" is just an `update` that sets the temporal end column. Remaining #1313 follow-ups: the in-transaction audit fact (ADR-0029 invariant 5) and the analysis-IR projection (atomic visibility to rbac matrix / conformance / api-surface). Cover atomic scope changes with a real-PG case in `tests/integration/test_scope_runtime_pg.py`.
+
 ## [0.80.70] - 2026-06-01
 
 > Note: 0.80.69 was skipped — a pre-commit lint reject aborted the commit after the tag/push step had already run, leaving a `v0.80.69` tag on the wrong tree; the tag was deleted and this work re-shipped cleanly as 0.80.70.
