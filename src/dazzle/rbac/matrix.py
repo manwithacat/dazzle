@@ -16,6 +16,7 @@ import csv
 import io
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.conditions import ConditionExpr
@@ -26,6 +27,9 @@ from dazzle.core.ir.domain import (
     PolicyEffect,
     ScopeRule,
 )
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.atomic_flows import FlowInvariant
 
 
 class PolicyDecision(StrEnum):
@@ -87,6 +91,10 @@ class AtomicFlowProjection:
     label: str
     roles: tuple[str, ...]
     steps: tuple[tuple[str, str], ...]  # ordered (entity, operation) per step
+    invariants: tuple[str, ...] = ()
+    """#1318 (ADR-0031): the flow's declared aggregate invariants, each rendered
+    to a stable human string (e.g. ``"sum(Posting.amount) = 0"``) so the
+    transactional guarantee is visible in the matrix (ADR-0029 inv 8)."""
 
 
 # Canonical operation list — order matters for table rendering.
@@ -100,6 +108,33 @@ _OPERATION_NAMES: dict[str, str] = {
     PermissionKind.UPDATE: "update",
     PermissionKind.DELETE: "delete",
 }
+
+
+# #1318 (ADR-0031): comparison-operator symbols for rendering a flow invariant
+# to a stable human string. Restricted to the operators an aggregate invariant
+# can use; imported lazily-typed via CompOp at call sites.
+_OP_SYM: dict[str, str] = {
+    "EQ": "=",
+    "LTE": "<=",
+    "GTE": ">=",
+    "LT": "<",
+    "GT": ">",
+    "NEQ": "!=",
+}
+
+
+def _render_invariant(inv: FlowInvariant) -> str:
+    """Render a flow invariant to a stable human string (#1318, ADR-0031).
+
+    Format: ``<agg_fn>(<entity>[.<field>]) <op> <rhs>`` — e.g.
+    ``sum(Posting.amount) = 0`` or ``count(LineItem) <= input.budget.max_items``.
+    """
+    field = f".{inv.field}" if inv.field else ""
+    if inv.rhs.literal is not None:
+        rhs_str = str(inv.rhs.literal)
+    else:
+        rhs_str = f"input.{inv.rhs.anchor_input}.{inv.rhs.anchor_field}"
+    return f"{inv.agg_fn.value}({inv.entity}{field}) {_OP_SYM[inv.op.name]} {rhs_str}"
 
 
 def _condition_has_field_filter(condition: ConditionExpr | None) -> bool:
@@ -408,11 +443,12 @@ class AccessMatrix:
             lines.append("")
             lines.append("#### Atomic flows")
             lines.append("")
-            lines.append("| flow | execute roles | steps (entity:op) |")
-            lines.append("| --- | --- | --- |")
+            lines.append("| flow | execute roles | steps (entity:op) | invariants |")
+            lines.append("| --- | --- | --- | --- |")
             for f in self.atomic_flows:
                 steps = ", ".join(f"{e}:{op}" for (e, op) in f.steps)
-                lines.append(f"| {f.name} | {', '.join(f.roles)} | {steps} |")
+                invariants = "; ".join(f.invariants) if f.invariants else "—"
+                lines.append(f"| {f.name} | {', '.join(f.roles)} | {steps} | {invariants} |")
 
         return "\n".join(lines)
 
@@ -446,6 +482,7 @@ class AccessMatrix:
                 "label": f.label,
                 "roles": list(f.roles),
                 "steps": [{"entity": e, "operation": op} for (e, op) in f.steps],
+                "invariants": list(f.invariants),
             }
             for f in self.atomic_flows
         ]
@@ -643,12 +680,14 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
             (step.entity, "update" if isinstance(step, FlowUpdate) else "create")
             for step in flow.steps
         )
+        invariants = tuple(_render_invariant(inv) for inv in flow.invariants)
         atomic_projections.append(
             AtomicFlowProjection(
                 name=flow.name,
                 label=flow.label,
                 roles=tuple(flow.permit_execute),
                 steps=steps,
+                invariants=invariants,
             )
         )
 

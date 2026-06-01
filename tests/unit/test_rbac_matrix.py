@@ -748,3 +748,90 @@ def test_no_atomic_flows_empty_projection() -> None:
     m = generate_access_matrix(appspec)
     assert m.atomic_flows == []
     assert m.to_json()["atomic_flows"] == []
+
+
+def _atomic_flow_with_invariant():
+    """A flow carrying a `sum(Posting.amount where ...) = 0` invariant (#1318)."""
+    from dazzle.core import ir
+
+    return ir.AtomicFlowSpec(
+        name="balanced_post",
+        label="Balanced Posting",
+        permit_execute=["accountant"],
+        inputs=[],
+        steps=[ir.FlowCreate(entity="Posting", assignments={})],
+        invariants=[
+            ir.FlowInvariant(
+                agg_fn=ir.FlowAggregateFn.SUM,
+                entity="Posting",
+                field="amount",
+                filter_predicate=None,
+                anchor_entity="Transaction",
+                anchor_input="txn",
+                op=ir.CompOp.EQ,
+                rhs=ir.InvariantRhs(literal=0),
+            )
+        ],
+    )
+
+
+def test_atomic_flow_invariant_surfaced() -> None:
+    """A flow's invariants render to stable human strings in the matrix (#1318)."""
+    appspec = AppSpec(
+        name="t",
+        domain=DomainSpec(entities=[_make_entity("Posting", access=None)]),
+        personas=[_make_persona("accountant")],
+        atomic_flows=[_atomic_flow_with_invariant()],
+    )
+    m = generate_access_matrix(appspec)
+    assert m.atomic_flows[0].invariants == ("sum(Posting.amount) = 0",)
+    j = m.to_json()
+    assert j["atomic_flows"][0]["invariants"] == ["sum(Posting.amount) = 0"]
+    # Rendered in the table's Atomic flows section too.
+    assert "sum(Posting.amount) = 0" in m.to_table()
+
+
+def test_atomic_flow_invariant_anchor_rhs() -> None:
+    """An anchor-field rhs renders as ``input.<input>.<field>`` (#1318)."""
+    from dazzle.core import ir
+
+    flow = ir.AtomicFlowSpec(
+        name="capped",
+        label="Capped",
+        permit_execute=["mgr"],
+        inputs=[],
+        steps=[ir.FlowCreate(entity="LineItem", assignments={})],
+        invariants=[
+            ir.FlowInvariant(
+                agg_fn=ir.FlowAggregateFn.COUNT,
+                entity="LineItem",
+                field=None,
+                filter_predicate=None,
+                anchor_entity="Budget",
+                anchor_input="budget",
+                op=ir.CompOp.LTE,
+                rhs=ir.InvariantRhs(anchor_input="budget", anchor_field="max_items"),
+            )
+        ],
+    )
+    appspec = AppSpec(
+        name="t",
+        domain=DomainSpec(entities=[_make_entity("LineItem", access=None)]),
+        personas=[_make_persona("mgr")],
+        atomic_flows=[flow],
+    )
+    m = generate_access_matrix(appspec)
+    assert m.atomic_flows[0].invariants == ("count(LineItem) <= input.budget.max_items",)
+
+
+def test_atomic_flow_without_invariant_empty_tuple() -> None:
+    """A flow with no invariants serialises ``invariants: []`` (additive shape)."""
+    appspec = AppSpec(
+        name="t",
+        domain=DomainSpec(entities=[_make_entity("Enrolment", access=None)]),
+        personas=[_make_persona("teacher"), _make_persona("admin")],
+        atomic_flows=[_atomic_flow()],
+    )
+    m = generate_access_matrix(appspec)
+    assert m.atomic_flows[0].invariants == ()
+    assert m.to_json()["atomic_flows"][0]["invariants"] == []
