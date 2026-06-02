@@ -8,6 +8,7 @@ from dazzle.ui.converters.nav_builder import (
     NavLink,
     NavModel,
     build_all_persona_navs,
+    build_anon_nav,
     build_persona_nav,
 )
 
@@ -214,3 +215,135 @@ def test_build_all_persona_navs_keys_by_persona_id(tmp_path: Path):
     assert set(navs.keys()) == {"teacher", "admin"}
     assert navs["teacher"].auto_discovered is False
     assert navs["admin"].auto_discovered is True
+
+
+# ---------------------------------------------------------------------------
+# Workspace-target access filtering (#1324 slice 3a, correctness fix)
+# ---------------------------------------------------------------------------
+
+# A curated nav item can target a WORKSPACE name (not an entity). Such items
+# must be filtered by WORKSPACE access, not the entity matrix. Here the curated
+# nav points at the `classroom` workspace which `teacher` is allowed into.
+_WORKSPACE_TARGET_DSL = """module test
+app TestApp "Test Application"
+
+entity Assignment "Assignment":
+  id: uuid pk
+  title: str(200) required
+
+surface assignment_list "Assignments":
+  uses entity Assignment
+  mode: list
+  section main "Assignments":
+    field title "Title"
+
+workspace classroom "Classroom":
+  purpose: "Teaching workspace"
+  access: persona(teacher)
+
+  assignment_list:
+    source: Assignment
+    display: list
+
+nav teaching:
+  group "Spaces":
+    item classroom
+
+persona teacher "Teacher":
+  uses nav teaching
+
+persona stranger "Stranger":
+  uses nav teaching
+"""
+
+
+def test_curated_workspace_target_not_dropped_by_entity_matrix(tmp_path: Path):
+    appspec = _appspec(_WORKSPACE_TARGET_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    # The entity matrix would DENY `classroom` as an entity (it isn't one).
+    # The old code called matrix.get(role, "classroom", "list") → DENY and
+    # dropped the link. Workspace targets must instead be filtered by
+    # workspace access, which permits `teacher`.
+    matrix = _StubMatrix(deny={("teacher", "classroom")})
+    model = build_persona_nav(appspec, persona, matrix)
+
+    all_links = [link for group in model.groups for link in group.links]
+    ws_link = next(link for link in all_links if link.entity == "classroom")
+    assert ws_link.route == "/workspaces/classroom"
+
+
+def test_curated_workspace_target_dropped_when_workspace_denied(tmp_path: Path):
+    appspec = _appspec(_WORKSPACE_TARGET_DSL, tmp_path)
+    persona = next(p for p in appspec.personas if p.id == "stranger")
+
+    # `stranger` is NOT in classroom's `access: persona(teacher)` → the
+    # workspace link must be dropped even though the (entity) matrix permits.
+    model = build_persona_nav(appspec, persona, _StubMatrix())
+
+    entities = {link.entity for group in model.groups for link in group.links}
+    assert "classroom" not in entities
+
+
+# ---------------------------------------------------------------------------
+# build_anon_nav — only anon-safe items (#1324 slice 3a, mirrors #1127)
+# ---------------------------------------------------------------------------
+
+# #1127 anon-safety: a workspace is anon-safe iff `workspace_allowed_personas`
+# returns None (no persona gate). `open_space` declares no access → anon-safe;
+# `gated_space` declares `access: persona(...)` → never anon-safe.
+_ANON_DSL = """module test
+app TestApp "Test Application"
+
+entity Public "Public":
+  id: uuid pk
+  title: str(200) required
+
+entity Private "Private":
+  id: uuid pk
+  name: str(200) required
+
+surface public_list "Public":
+  uses entity Public
+  mode: list
+  section main "Public":
+    field title "Title"
+
+surface private_list "Private":
+  uses entity Private
+  mode: list
+  section main "Private":
+    field name "Name"
+
+workspace open_space "Open Space":
+  purpose: "Open to everyone"
+
+  public_list:
+    source: Public
+    display: list
+
+workspace gated_space "Gated Space":
+  purpose: "Members only"
+  access: persona(member)
+
+  private_list:
+    source: Private
+    display: list
+
+persona member "Member":
+  default_workspace: gated_space
+"""
+
+
+def test_build_anon_nav_only_anon_safe(tmp_path: Path):
+    appspec = _appspec(_ANON_DSL, tmp_path)
+
+    model = build_anon_nav(appspec, _StubMatrix())
+
+    assert isinstance(model, NavModel)
+    assert model.auto_discovered is True
+    entities = {link.entity for group in model.groups for link in group.links}
+    # `Public` is surfaced by the open (anon-safe) workspace → present.
+    assert "Public" in entities
+    # `Private` is only behind the gated workspace → never anon-safe.
+    assert "Private" not in entities

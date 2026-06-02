@@ -17,7 +17,7 @@ from dazzle.ui.converters.workspace_converter import workspace_allowed_personas
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
     from dazzle.core.ir.personas import PersonaSpec
-    from dazzle.core.ir.workspaces import NavSpec
+    from dazzle.core.ir.workspaces import NavSpec, WorkspaceSpec
     from dazzle.rbac.matrix import AccessMatrix
 
 
@@ -62,19 +62,50 @@ def _persona_can_list(matrix: AccessMatrix, role: str, entity: str) -> bool:
     return matrix.get(role, entity, "list") != PolicyDecision.DENY
 
 
+def _workspace_for(appspec: AppSpec, target: str) -> WorkspaceSpec | None:
+    """Return the WorkspaceSpec named ``target``, or ``None`` if ``target`` is
+    not a declared workspace (i.e. it should be treated as an entity)."""
+    for ws in appspec.workspaces or []:
+        if ws.name == target:
+            return ws
+    return None
+
+
+def _persona_can_reach(
+    appspec: AppSpec,
+    target: str,
+    persona: PersonaSpec,
+    matrix: AccessMatrix,
+) -> bool:
+    """FR-3 access filter for a nav item's target, dispatching on target kind.
+
+    A curated ``NavItemIR.entity`` may name a **workspace** rather than an
+    entity. Workspaces aren't in the RBAC entity matrix, so the entity-matrix
+    check (``_persona_can_list``) would wrongly DENY them. Disambiguate by
+    name: if ``target`` matches a declared workspace, filter by **workspace
+    access** (``workspace_allowed_personas``); otherwise filter by the entity
+    matrix. ``_auto_discover`` only emits entity sources, so it stays on the
+    entity-matrix path."""
+    ws = _workspace_for(appspec, target)
+    if ws is not None:
+        personas = list(getattr(appspec, "personas", []) or [])
+        allowed = workspace_allowed_personas(ws, personas)  # None = all personas
+        return allowed is None or persona.id in set(allowed)
+    return _persona_can_list(matrix, persona.effective_role, target)
+
+
 def _resolve_curated(
     appspec: AppSpec,
     nav_def: NavSpec,
     persona: PersonaSpec,
     matrix: AccessMatrix,
 ) -> list[NavGroup]:
-    role = persona.effective_role
     out: list[NavGroup] = []
     for g in nav_def.groups:
         links: list[NavLink] = []
         for item in g.items:
-            if not _persona_can_list(matrix, role, item.entity):
-                continue  # FR-3: drop dead links
+            if not _persona_can_reach(appspec, item.entity, persona, matrix):
+                continue  # FR-3: drop dead links (entity- or workspace-gated)
             route = _route_for(appspec, item.entity)
             if route is None:
                 continue
@@ -137,3 +168,41 @@ def build_all_persona_navs(appspec: AppSpec, matrix: AccessMatrix) -> dict[str, 
     return {
         p.id: build_persona_nav(appspec, p, matrix) for p in getattr(appspec, "personas", []) or []
     }
+
+
+def build_anon_nav(appspec: AppSpec, matrix: AccessMatrix) -> NavModel:
+    """The sidebar for an UNAUTHENTICATED visitor (#1324, mirroring #1127).
+
+    Anon-safety is **not** an RBAC-matrix concept — the matrix has no anon /
+    unauthenticated role. Per #1127 (``template_compiler``), a workspace is
+    anon-safe iff ``workspace_allowed_personas(ws, personas) is None`` — i.e.
+    it declares no persona gate (no ``access: persona(...)`` and no persona
+    claiming it as ``default_workspace``). An entity link is anon-safe once an
+    anon-safe workspace surfaces it; gated workspaces can't retract it. This
+    builder discovers exactly those items, so anon behaviour matches #1127.
+
+    The ``matrix`` still filters entity sources by list access
+    (``_persona_can_list`` keyed on the persona-less ``""`` role, which DENYs
+    under any real matrix and PERMITs under an open/unprotected one) — the same
+    posture as the authenticated auto-discover path."""
+    personas = list(getattr(appspec, "personas", []) or [])
+    seen: set[str] = set()
+    links: list[NavLink] = []
+    for ws in getattr(appspec, "workspaces", []) or []:
+        # #1127: anon-safe iff the workspace declared no persona gate.
+        if workspace_allowed_personas(ws, personas) is not None:
+            continue
+        for region in ws.regions:
+            region_sources = ([region.source] if region.source else []) + list(
+                getattr(region, "sources", []) or []
+            )
+            for src in region_sources:
+                if src in seen or not _persona_can_list(matrix, "", src):
+                    continue
+                route = _route_for(appspec, src)
+                if route is None:
+                    continue
+                seen.add(src)
+                links.append(NavLink(label=src, route=route, entity=src))
+    groups = [NavGroup(label="", icon=None, collapsed=False, links=tuple(links))] if links else []
+    return NavModel(groups=tuple(groups), auto_discovered=True)
