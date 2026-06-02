@@ -1146,10 +1146,18 @@ class NavItemIR(BaseModel):
     Attributes:
         entity: Entity or workspace name to link to
         icon: Optional Lucide icon name (e.g., "file-text", "check-circle")
+        when: Optional render-time VISIBILITY condition (#1324 FR-4). Same
+            ``ConditionExpr`` shape as ``RowActionSpec.visible_when``. When
+            set, the item is hidden if the condition evaluates falsy against
+            roles/grants/per-tenant config at render time. Visibility only —
+            NOT access control (the RBAC matrix still gates reachability).
+            ``None`` = always visible. Inert until slice B wires the render
+            filter; this field is parsed but not yet read by the renderer.
     """
 
     entity: str
     icon: str | None = None
+    when: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -1162,12 +1170,19 @@ class NavGroupSpec(BaseModel):
         icon: Optional Lucide icon name for the group header
         collapsed: Whether the group starts collapsed (default: False)
         items: Navigation items within this group
+        when: Optional render-time VISIBILITY condition (#1324 FR-4). Same
+            ``ConditionExpr`` shape as ``RowActionSpec.visible_when``. When
+            set, the whole group is hidden if the condition evaluates falsy
+            against roles/grants/per-tenant config at render time. Visibility
+            only — NOT access control. ``None`` = always visible. Inert until
+            slice B wires the render filter.
     """
 
     label: str
     icon: str | None = None
     collapsed: bool = False
     items: list[NavItemIR] = Field(default_factory=list)
+    when: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 

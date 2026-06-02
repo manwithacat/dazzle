@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **#1324 FR-4 slice A — conditional navigation (IR + parser + condition vocab + lint; ADDITIVE/INERT).** A nav group header or item may carry an optional render-time VISIBILITY `when:` condition — the same `ConditionExpr` idiom as `RowActionSpec.visible_when:`:
+  ```dsl
+  nav teacher_nav:
+    group "Integrations" icon=plug when: tenant_config.mis_connected:
+      Class
+      Manuscript when: tenant_config.beta_features
+  ```
+  New IR fields `NavGroupSpec.when` / `NavItemIR.when` (`ConditionExpr | None`). The parser threads `when:` into both the group header (before the block-opening colon) and item lines (after the optional `icon=`). New condition vocabulary `tenant_config.<key>`: a comparison field with that prefix resolves from `context["tenant_config"]` in the UI condition evaluator (`dazzle.ui.utils.condition_eval`); a bare flag (`when: tenant_config.mis_connected`) parses to an implicit `= true` truthy comparison. `validate_nav_curation` (FR-6) gains a WARNING when a nav `when` references a `tenant_config.<key>` not declared in `tenancy.per_tenant_config`. **Visibility only — NOT access control** (the RBAC matrix still gates reachability). **Inert this slice**: the field is parsed but not yet read by the renderer; rendered nav is UNCHANGED until slice B wires the render filter. Regenerated the `ir-types` API-surface baseline for the two new fields.
+
+### Agent Guidance
+
+- Nav groups/items now accept `when: <ConditionExpr>` for render-time visibility. Use the `tenant_config.<key>` namespace for per-tenant flags (declare the key in `tenancy.per_tenant_config` or lint warns). It is NOT an access gate — RBAC still governs reachability. The field is inert until #1324 slice B.
+
 ## [0.80.93] - 2026-06-02
 
 ### Added

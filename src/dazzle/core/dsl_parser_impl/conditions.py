@@ -191,6 +191,22 @@ class ConditionParserMixin:
                 next_part = self.expect_identifier_or_keyword().value
                 field = f"{field}.{next_part}"
 
+        # Bare reference with no following operator → implicit truthy check
+        # (#1324 FR-4: `when: tenant_config.mis_connected` reads as
+        # `tenant_config.mis_connected = true`). Only a *field* reference can
+        # stand alone this way; a function call still requires an operator.
+        # The terminators below are every token that can legitimately follow
+        # a comparison in a condition expression: end-of-line/block, a
+        # block-opening colon (nav header `when: <cond>:`), a closing paren,
+        # or a boolean connective.
+        if field is not None and self._at_bare_reference_terminator():
+            return ir.Comparison(
+                field=field,
+                function=None,
+                operator=ir.ComparisonOperator.EQUALS,
+                value=ir.ConditionValue(literal=True),
+            )
+
         # Parse operator
         operator = self._parse_comparison_operator()
 
@@ -202,6 +218,20 @@ class ConditionParserMixin:
             function=function,
             operator=operator,
             value=value,
+        )
+
+    def _at_bare_reference_terminator(self) -> bool:
+        """True when the current token ends a bare (operator-less) reference."""
+        return bool(
+            self.match(
+                TokenType.NEWLINE,
+                TokenType.COLON,
+                TokenType.RPAREN,
+                TokenType.DEDENT,
+                TokenType.EOF,
+                TokenType.AND,
+                TokenType.OR,
+            )
         )
 
     def _parse_comparison_operator(self) -> ir.ComparisonOperator:

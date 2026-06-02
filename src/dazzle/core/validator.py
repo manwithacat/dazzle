@@ -1054,6 +1054,36 @@ def validate_workspace_primary_actions(appspec: ir.AppSpec) -> tuple[list[str], 
     return errors, warnings
 
 
+_TENANT_CONFIG_PREFIX = "tenant_config."
+
+
+def _collect_tenant_config_refs(condition: ir.ConditionExpr | None) -> list[str]:
+    """Walk a ConditionExpr and collect the ``<key>`` of every
+    ``tenant_config.<key>`` field reference (#1324 FR-4).
+
+    Recurses through compound (AND/OR/NOT) nodes and reads the LHS ``field``
+    of each leaf comparison. A bare flag (``tenant_config.mis_connected``)
+    parses to an implicit ``= true`` comparison whose ``field`` carries the
+    full dotted path, so reading ``comparison.field`` covers both the bare and
+    the explicit (``tenant_config.tier = "pro"``) forms. Role/grant/via leaves
+    have no ``tenant_config`` field and contribute nothing.
+    """
+    if condition is None:
+        return []
+    keys: list[str] = []
+    # Compound node: recurse both sides.
+    if condition.left is not None:
+        keys.extend(_collect_tenant_config_refs(condition.left))
+    if condition.right is not None:
+        keys.extend(_collect_tenant_config_refs(condition.right))
+    # Leaf comparison.
+    if condition.comparison is not None and condition.comparison.field:
+        field = condition.comparison.field
+        if field.startswith(_TENANT_CONFIG_PREFIX):
+            keys.append(field[len(_TENANT_CONFIG_PREFIX) :])
+    return keys
+
+
 def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Lint per-persona-global navigation curation (#1324 FR-6).
 
@@ -1142,6 +1172,35 @@ def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     warnings.append(
                         f"nav '{nav.name}' item '{target}' does not match any entity or workspace."
                     )
+
+    # --- Diagnostic 4: nav `when` references undeclared tenant_config (#1324 FR-4) ---
+    # A nav group/item may carry a render-time VISIBILITY `when` condition. When
+    # that condition references `tenant_config.<key>`, the key must be declared
+    # in `tenancy.per_tenant_config` (a key→type map); otherwise the runtime has
+    # nothing to resolve and the group/item silently never shows. WARN per
+    # undeclared key. Only tenant_config refs are checked here — role/grant refs
+    # are validated by the access-control validators, not nav curation.
+    declared_config_keys: set[str] = set()
+    if appspec.tenancy is not None:
+        declared_config_keys = set(appspec.tenancy.per_tenant_config.keys())
+
+    for nav in appspec.navs:
+        for group in nav.groups:
+            for key in _collect_tenant_config_refs(group.when):
+                if key not in declared_config_keys:
+                    warnings.append(
+                        f"nav '{nav.name}' group '{group.label}' `when` condition "
+                        f"references tenant_config.{key!r}, which is not declared in "
+                        f"tenancy.per_tenant_config."
+                    )
+            for item in group.items:
+                for key in _collect_tenant_config_refs(item.when):
+                    if key not in declared_config_keys:
+                        warnings.append(
+                            f"nav '{nav.name}' item '{item.entity}' `when` condition "
+                            f"references tenant_config.{key!r}, which is not declared in "
+                            f"tenancy.per_tenant_config."
+                        )
 
     # --- Diagnostic 3: ignored author-declared workspace nav_groups ----------
     # Discriminator: framework admin-platform workspaces are named with a

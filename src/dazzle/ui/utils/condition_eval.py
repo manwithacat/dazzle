@@ -20,6 +20,11 @@ from dazzle.core.comparison import eval_comparison_op as _eval_comparison_op
 # Condition Expression Evaluator
 # =============================================================================
 
+# #1324 FR-4: reference prefix for the per-tenant-config namespace. A
+# condition field of the form ``tenant_config.<key>`` resolves from
+# ``context["tenant_config"]`` rather than the entity record.
+_TENANT_CONFIG_PREFIX = "tenant_config."
+
 
 def evaluate_condition(
     condition: dict[str, Any],
@@ -133,8 +138,18 @@ def _evaluate_comparison(
     if not field or not operator:
         return True
 
-    # Get the actual value from the record
-    record_value = record.get(field)
+    # Resolve the left-hand reference. ``tenant_config.<key>`` (#1324 FR-4)
+    # is a context namespace, not a record field: it resolves from
+    # ``context["tenant_config"]`` (per-tenant config exposed at render time),
+    # NOT from the entity record. Everything else resolves from the record as
+    # before, so roles/grants/plain-field comparisons are unchanged.
+    if field.startswith(_TENANT_CONFIG_PREFIX):
+        key = field[len(_TENANT_CONFIG_PREFIX) :]
+        tenant_config = context.get("tenant_config") or {}
+        record_value = tenant_config.get(key) if isinstance(tenant_config, dict) else None
+    else:
+        # Get the actual value from the record
+        record_value = record.get(field)
 
     # Resolve the comparison value (handle "current_user" etc.)
     resolved_value = _resolve_value(value, context)

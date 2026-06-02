@@ -2638,18 +2638,24 @@ class WorkspaceParserMixin:
         Parse a nav_group block within a workspace.
 
         Syntax:
-            nav_group "Label" [icon=name] [collapsed]:
-              entity_name [icon=name]
+            nav_group "Label" [icon=name] [collapsed] [when: <cond>]:
+              entity_name [icon=name] [when: <cond>]
               ...
+
+        ``when: <cond>`` (#1324 FR-4) is an optional render-time VISIBILITY
+        condition on the group header and/or per item — the same
+        ``ConditionExpr`` idiom as ``RowActionSpec.visible_when:``. It is
+        parsed here but inert until slice B wires the render filter.
         """
         self.advance()  # consume nav_group
 
         # Label (required string)
         label = self.expect(TokenType.STRING).value
 
-        # Optional inline attributes: icon=name, collapsed
+        # Optional inline attributes: icon=name, collapsed, when: <cond>
         icon = None
         collapsed = False
+        when: ir.ConditionExpr | None = None
         while not self.match(TokenType.COLON):
             if self.match(TokenType.ICON):
                 self.advance()
@@ -2658,6 +2664,10 @@ class WorkspaceParserMixin:
             elif self.match(TokenType.COLLAPSED):
                 self.advance()
                 collapsed = True
+            elif self.match(TokenType.WHEN):
+                self.advance()
+                self.expect(TokenType.COLON)
+                when = self.parse_condition_expr()
             else:
                 break
 
@@ -2673,14 +2683,20 @@ class WorkspaceParserMixin:
 
             entity = self.expect_identifier_or_keyword().value
             item_icon = None
+            item_when: ir.ConditionExpr | None = None
 
-            # Optional icon=name on nav item
-            if self.match(TokenType.ICON):
-                self.advance()
-                self.expect(TokenType.EQUALS)
-                item_icon = self._parse_hyphenated_identifier()
+            # Optional icon=name and/or when: <cond> on nav item.
+            while self.match(TokenType.ICON, TokenType.WHEN):
+                if self.match(TokenType.ICON):
+                    self.advance()
+                    self.expect(TokenType.EQUALS)
+                    item_icon = self._parse_hyphenated_identifier()
+                else:  # WHEN
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    item_when = self.parse_condition_expr()
 
-            items.append(ir.NavItemIR(entity=entity, icon=item_icon))
+            items.append(ir.NavItemIR(entity=entity, icon=item_icon, when=item_when))
             self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
@@ -2690,6 +2706,7 @@ class WorkspaceParserMixin:
             icon=icon,
             collapsed=collapsed,
             items=items,
+            when=when,
         )
 
     def parse_workspace_region(self) -> ir.WorkspaceRegion:

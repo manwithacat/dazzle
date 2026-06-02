@@ -2597,6 +2597,65 @@ workspace dashboard "Dashboard":
         # the linker is what prepends the inherited groups.
         assert ws.nav_groups == []
 
+    def test_nav_group_when_on_header_and_item(self):
+        """#1324 FR-4 slice A: an optional ``when: <cond>`` on a nav group
+        header and on a nav item parses into ``NavGroupSpec.when`` /
+        ``NavItemIR.when`` as a ConditionExpr. Same idiom as
+        ``RowActionSpec.visible_when`` (``visible_when: <expr>``).
+        Render-time VISIBILITY only — inert until slice B."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Class "Class":
+  id: uuid pk
+
+entity Manuscript "Manuscript":
+  id: uuid pk
+
+nav teacher_nav:
+  group "Integrations" icon=plug when: tenant_config.mis_connected:
+    Class
+    Manuscript when: tenant_config.beta_features
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        nav = fragment.navs[0]
+        group = nav.groups[0]
+        assert group.label == "Integrations"
+        assert group.icon == "plug"
+        # Group-level `when:` parsed as a ConditionExpr.
+        assert group.when is not None
+        assert group.when.comparison is not None
+        assert group.when.comparison.field == "tenant_config.mis_connected"
+        # First item carries no `when:` — stays None.
+        assert group.items[0].entity == "Class"
+        assert group.items[0].when is None
+        # Second item carries an item-level `when:`.
+        assert group.items[1].entity == "Manuscript"
+        assert group.items[1].when is not None
+        assert group.items[1].when.comparison is not None
+        assert group.items[1].when.comparison.field == "tenant_config.beta_features"
+
+    def test_nav_group_without_when_defaults_none(self):
+        """No `when:` → both group and item `when` default to None."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  nav_group "Work":
+    Task
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        group = fragment.workspaces[0].nav_groups[0]
+        assert group.when is None
+        assert group.items[0].when is None
+
     def test_nav_definition_composition_with_workspace_groups(self):
         """Workspace's own `group/nav_group` blocks compose with the
         inherited definition; linker prepends inherited then appends own."""

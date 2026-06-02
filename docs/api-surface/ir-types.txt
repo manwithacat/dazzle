@@ -1865,12 +1865,14 @@ ir_class: NavGroupSpec
     - collapsed: bool = False
     - icon: str | None = None
     - items: list[NavItemIR] = []
+    - when: ConditionExpr | None = None
 
 ir_class: NavItemIR
   required:
     - entity: str
   optional:
     - icon: str | None = None
+    - when: ConditionExpr | None = None
 
 ir_class: NavItemSpec
   required:

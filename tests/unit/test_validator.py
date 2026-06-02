@@ -1477,6 +1477,105 @@ persona member "Member":
         _errors, warnings = validate_nav_curation(appspec)
         assert not any("_platform_admin" in w and "ignored" in w for w in warnings), warnings
 
+    # --- Diagnostic 4: undeclared tenant_config in nav `when` (#1324 FR-4) ---
+
+    @staticmethod
+    def _tenant_flag_cond(key: str) -> ir.ConditionExpr:
+        """A bare ``tenant_config.<key>`` flag → implicit ``= true`` truthy
+        comparison, as parse_condition_expr emits it."""
+        return ir.ConditionExpr(
+            comparison=ir.Comparison(
+                field=f"tenant_config.{key}",
+                operator=ir.ComparisonOperator.EQUALS,
+                value=ir.ConditionValue(literal=True),
+            )
+        )
+
+    def _nav_appspec_with_when(
+        self,
+        *,
+        group_when: ir.ConditionExpr | None = None,
+        item_when: ir.ConditionExpr | None = None,
+        declared_keys: dict[str, str] | None = None,
+    ) -> ir.AppSpec:
+        nav = ir.NavSpec(
+            name="membernav",
+            groups=[
+                ir.NavGroupSpec(
+                    label="Main",
+                    when=group_when,
+                    items=[ir.NavItemIR(entity="Task", when=item_when)],
+                )
+            ],
+        )
+        persona = ir.PersonaSpec(id="member", label="Member", nav_ref="membernav")
+        # Task is listable by member so no dead-link noise crowds the assertion.
+        task = ir.EntitySpec(
+            name="Task",
+            label="Task",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                    modifiers=[ir.FieldModifier.PK],
+                )
+            ],
+        )
+        tenancy = (
+            ir.TenancySpec(per_tenant_config=declared_keys) if declared_keys is not None else None
+        )
+        return ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[task]),
+            personas=[persona],
+            navs=[nav],
+            tenancy=tenancy,
+        )
+
+    def test_group_when_undeclared_tenant_config_warns(self) -> None:
+        appspec = self._nav_appspec_with_when(
+            group_when=self._tenant_flag_cond("mis_connected"),
+            declared_keys={"locale": "str"},
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any(
+            "membernav" in w and "tenant_config" in w and "mis_connected" in w for w in warnings
+        ), warnings
+
+    def test_item_when_undeclared_tenant_config_warns(self) -> None:
+        appspec = self._nav_appspec_with_when(
+            item_when=self._tenant_flag_cond("beta_features"),
+            declared_keys={"locale": "str"},
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any(
+            "membernav" in w and "tenant_config" in w and "beta_features" in w for w in warnings
+        ), warnings
+
+    def test_declared_tenant_config_key_no_warning(self) -> None:
+        appspec = self._nav_appspec_with_when(
+            group_when=self._tenant_flag_cond("mis_connected"),
+            declared_keys={"mis_connected": "bool"},
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert not any("tenant_config" in w for w in warnings), warnings
+
+    def test_no_tenancy_declared_tenant_config_ref_warns(self) -> None:
+        """No tenancy block at all → a tenant_config ref is undeclared → warn."""
+        appspec = self._nav_appspec_with_when(
+            group_when=self._tenant_flag_cond("mis_connected"),
+            declared_keys=None,
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any(
+            "membernav" in w and "tenant_config" in w and "mis_connected" in w for w in warnings
+        ), warnings
+
+    def test_no_when_no_tenant_config_warning(self) -> None:
+        appspec = self._nav_appspec_with_when(declared_keys={"locale": "str"})
+        _errors, warnings = validate_nav_curation(appspec)
+        assert not any("tenant_config" in w for w in warnings), warnings
+
 
 def _appspec(dsl: str, tmp_path: Path) -> ir.AppSpec:
     """Helper to parse DSL, link, and return AppSpec."""

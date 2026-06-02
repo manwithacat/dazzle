@@ -1590,9 +1590,11 @@
               dict({
                 'entity': 'SystemHealth',
                 'icon': None,
+                'when': None,
               }),
             ]),
             'label': 'Observability',
+            'when': None,
           }),
           dict({
             'collapsed': False,
@@ -1601,9 +1603,11 @@
               dict({
                 'entity': 'DeployHistory',
                 'icon': None,
+                'when': None,
               }),
             ]),
             'label': 'Operations',
+            'when': None,
           }),
         ]),
         'nav_ref': None,
