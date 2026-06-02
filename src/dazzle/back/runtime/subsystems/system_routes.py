@@ -19,6 +19,64 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.server")
 
 
+def _mount_static_files(
+    app: Any,
+    *,
+    project_root: Any = None,
+    extra_static_dirs: Any = None,
+) -> None:
+    """Mount the framework + project static file routes on ``app``.
+
+    Registration order is load-bearing (#1330): Starlette matches mounts in
+    registration order and stops at the first prefix match. The MORE-SPECIFIC
+    ``/static/themes`` mount (project-local ``<project>/themes/``) MUST be
+    registered BEFORE the catch-all ``/static`` mount — otherwise ``/static``
+    swallows ``/static/themes/*.css`` into ``CombinedStaticFiles`` (which looks
+    under ``<project>/static`` + framework_static, not ``<project>/themes/``) and
+    every project theme stylesheet 404s.
+
+    Extracted from ``SystemRoutesSubsystem._setup_system_routes`` so the mount
+    ordering is unit-testable in isolation.
+    """
+    from pathlib import Path
+
+    from dazzle import ui as dazzle_ui
+    from dazzle.back.runtime.static_files import CombinedStaticFiles
+
+    framework_static = Path(dazzle_ui.__file__).parent / "runtime" / "static"
+    if not framework_static.is_dir():
+        return
+
+    dirs: list[Path] = []
+    # Consumer-supplied static dirs win (issue #793). Keeps consumer assets from
+    # being shadowed by framework assets of the same name.
+    if extra_static_dirs:
+        dirs.extend(Path(d) for d in extra_static_dirs)
+    if project_root:
+        dirs.append(Path(project_root) / "static")
+    dirs.append(framework_static)
+
+    # v0.61.41 (Phase B Patch 5): mount project-local themes under /static/themes/
+    # so `<project>/themes/<name>.css` is served without nesting under
+    # `/static/css/themes/`. Theme authors get a clean discoverable location at
+    # the project root; the URL split keeps framework + project themes distinct.
+    #
+    # #1330: register this specific mount BEFORE the catch-all /static below
+    # (see the docstring) — order is the whole fix.
+    if project_root:
+        project_themes_dir = Path(project_root) / "themes"
+        if project_themes_dir.is_dir():
+            from starlette.staticfiles import StaticFiles
+
+            app.mount(
+                "/static/themes",
+                StaticFiles(directory=str(project_themes_dir)),
+                name="project_themes",
+            )
+
+    app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
+
+
 class SystemRoutesSubsystem:
     name = "system_routes"
 
@@ -655,41 +713,14 @@ class SystemRoutesSubsystem:
         except ImportError:
             pass  # dazzle_ui not installed (CLI-only context)
 
-        # Mount static files from project dir + framework dir
+        # Mount static files from project dir + framework dir. Mount ordering
+        # is load-bearing (#1330) — see `_mount_static_files`.
         try:
-            from pathlib import Path
-
-            from dazzle import ui as dazzle_ui
-            from dazzle.back.runtime.static_files import CombinedStaticFiles
-
-            framework_static = Path(dazzle_ui.__file__).parent / "runtime" / "static"
-            if framework_static.is_dir():
-                dirs: list[Path] = []
-                # Consumer-supplied static dirs win (issue #793). Keeps consumer
-                # assets from being shadowed by framework assets of the same name.
-                if ctx.extra_static_dirs:
-                    dirs.extend(Path(d) for d in ctx.extra_static_dirs)
-                if ctx.project_root:
-                    dirs.append(ctx.project_root / "static")
-                dirs.append(framework_static)
-                ctx.app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
-
-                # v0.61.41 (Phase B Patch 5): mount project-local themes
-                # under /static/themes/ so `<project>/themes/<name>.css`
-                # is served without nesting under `/static/css/themes/`.
-                # Theme authors get a clean discoverable location at the
-                # project root; the URL split keeps framework + project
-                # themes distinct (resolved by the registry at startup).
-                if ctx.project_root:
-                    project_themes_dir = ctx.project_root / "themes"
-                    if project_themes_dir.is_dir():
-                        from starlette.staticfiles import StaticFiles
-
-                        ctx.app.mount(
-                            "/static/themes",
-                            StaticFiles(directory=str(project_themes_dir)),
-                            name="project_themes",
-                        )
+            _mount_static_files(
+                ctx.app,
+                project_root=ctx.project_root,
+                extra_static_dirs=ctx.extra_static_dirs,
+            )
         except ImportError:
             pass  # dazzle_ui not installed — static files served externally
         except Exception:

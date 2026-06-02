@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.3] - 2026-06-02
+
+### Fixed
+
+- **#1330 — project themes at `<project>/themes/*.css` no longer 404.** The catch-all `/static` mount (`CombinedStaticFiles` over `<project>/static` + framework static) was registered *before* the more-specific `/static/themes` mount. Starlette matches mounts in registration order and stops at the first prefix match, so `/static` always won and routed `/static/themes/<name>.css` into `CombinedStaticFiles` — which looks under `<project>/static` + framework static, never `<project>/themes/` → 404 on every project theme stylesheet. The static-mount logic is now extracted into `_mount_static_files`, which registers the specific `/static/themes` mount **before** the catch-all `/static`. Added regression tests pinning both the registration order and an end-to-end GET that serves the project theme's bytes (the previous tests only asserted the `<link>` URL appeared in HTML — which is exactly why the 404 shipped undetected).
+
+### Agent Guidance
+
+- When mounting Starlette/FastAPI sub-apps, **register the most-specific path prefix first** — Starlette matches mounts in registration order and stops at the first prefix match, so a catch-all (`/static`) registered before a nested mount (`/static/themes`) silently shadows it. Assert serve behaviour (a real GET → 200 with expected bytes), not just that a URL string is emitted, when testing static routes.
+
 ## [0.81.2] - 2026-06-02
 
 ### Fixed
