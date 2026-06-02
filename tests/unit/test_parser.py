@@ -2738,6 +2738,57 @@ workspace dashboard "Dashboard":
         assert ws.nav_groups[2].items[0].icon == "note-pencil"
 
 
+class TestWorkspacePrimaryActionsParsing:
+    """Test `primary_actions:` heading-CTA block parsing (#1324 FR-5)."""
+
+    def test_primary_actions_surface_and_workspace(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Invoice "Invoice":
+  id: uuid pk
+
+surface create_invoice "New Invoice":
+  uses entity Invoice
+  mode: create
+
+workspace reports "Reports":
+  primary_actions:
+    action "New Invoice" -> surface create_invoice
+    action "Dashboard" -> workspace ops_dashboard
+  metrics:
+    source: Invoice
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = next(w for w in fragment.workspaces if w.name == "reports")
+        assert len(ws.primary_actions) == 2
+        a0 = ws.primary_actions[0]
+        assert a0.label == "New Invoice"
+        assert a0.target_kind == "surface"
+        assert a0.target == "create_invoice"
+        a1 = ws.primary_actions[1]
+        assert a1.label == "Dashboard"
+        assert a1.target_kind == "workspace"
+        assert a1.target == "ops_dashboard"
+
+    def test_no_primary_actions_block_yields_empty_list(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Invoice "Invoice":
+  id: uuid pk
+
+workspace reports "Reports":
+  metrics:
+    source: Invoice
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.primary_actions == []
+
+
 class TestContextSelectorParsing:
     """Test context_selector parsing within workspaces (#432)."""
 

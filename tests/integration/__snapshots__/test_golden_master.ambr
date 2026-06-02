@@ -1607,6 +1607,8 @@
           }),
         ]),
         'nav_ref': None,
+        'primary_actions': list([
+        ]),
         'purpose': None,
         'regions': list([
           dict({

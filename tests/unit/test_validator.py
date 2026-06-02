@@ -26,6 +26,7 @@ from dazzle.core.validator import (
     validate_services,
     validate_surfaces,
     validate_ux_specs,
+    validate_workspace_primary_actions,
 )
 
 # =============================================================================
@@ -1208,6 +1209,110 @@ class TestValidatePersonaNavRefs:
         )
         errors, _ = validate_persona_nav_refs(appspec)
         assert errors == []
+
+
+class TestValidateWorkspacePrimaryActions:
+    """A workspace `primary_actions:` target must resolve (#1324 FR-5)."""
+
+    def _surface(self, name: str) -> ir.SurfaceSpec:
+        return ir.SurfaceSpec(name=name, mode=ir.SurfaceMode.CREATE, entity_ref="Invoice")
+
+    def test_unknown_surface_target_is_error(self) -> None:
+        ws = ir.WorkspaceSpec(
+            name="reports",
+            primary_actions=[
+                ir.WorkspacePrimaryActionSpec(
+                    label="New Invoice", target_kind="surface", target="nope"
+                )
+            ],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            surfaces=[],
+            workspaces=[ws],
+        )
+        errors, _ = validate_workspace_primary_actions(appspec)
+        assert any("reports" in e and "nope" in e and "surface" in e for e in errors)
+
+    def test_unknown_workspace_target_is_error(self) -> None:
+        ws = ir.WorkspaceSpec(
+            name="reports",
+            primary_actions=[
+                ir.WorkspacePrimaryActionSpec(
+                    label="Dashboard", target_kind="workspace", target="missing_ws"
+                )
+            ],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            workspaces=[ws],
+        )
+        errors, _ = validate_workspace_primary_actions(appspec)
+        assert any("reports" in e and "missing_ws" in e and "workspace" in e for e in errors)
+
+    def test_valid_targets_no_error(self) -> None:
+        target_ws = ir.WorkspaceSpec(name="ops_dashboard")
+        ws = ir.WorkspaceSpec(
+            name="reports",
+            primary_actions=[
+                ir.WorkspacePrimaryActionSpec(
+                    label="New Invoice", target_kind="surface", target="create_invoice"
+                ),
+                ir.WorkspacePrimaryActionSpec(
+                    label="Dashboard", target_kind="workspace", target="ops_dashboard"
+                ),
+            ],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            surfaces=[self._surface("create_invoice")],
+            workspaces=[ws, target_ws],
+        )
+        errors, _ = validate_workspace_primary_actions(appspec)
+        assert errors == []
+
+    def test_no_primary_actions_no_error(self) -> None:
+        ws = ir.WorkspaceSpec(name="reports")
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            workspaces=[ws],
+        )
+        errors, _ = validate_workspace_primary_actions(appspec)
+        assert errors == []
+
+    def test_wired_into_lint_appspec(self, tmp_path: Path) -> None:
+        """A real parse→link→lint run surfaces the unknown-target error."""
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.lint import lint_appspec
+        from dazzle.core.parser import parse_modules
+
+        dsl = """
+module t
+app MyApp "My App"
+
+entity Invoice "Invoice":
+  id: uuid pk
+
+workspace reports "Reports":
+  primary_actions:
+    action "Go" -> surface does_not_exist
+  metrics:
+    source: Invoice
+"""
+        dsl_dir = tmp_path / "dsl"
+        dsl_dir.mkdir()
+        (dsl_dir / "app.dsl").write_text(dsl)
+        (tmp_path / "dazzle.toml").write_text(
+            '[project]\nname = "t"\nversion = "0.1.0"\nroot = "t"\n[modules]\npaths = ["./dsl"]\n'
+        )
+        modules = parse_modules([dsl_dir / "app.dsl"])
+        appspec = build_appspec(modules, "t")
+        errors, _warnings, _rel = lint_appspec(appspec, extended=False)
+        assert any("does_not_exist" in e for e in errors)
 
 
 class TestValidateNavCuration:

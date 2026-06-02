@@ -75,6 +75,7 @@ def test_make_workspace_handler_preserves_request_annotation() -> None:
         ws_nav_groups=[],
         ws_app_name="test_app",
         primary_action_candidates=[],
+        authored_actions=[],
     )
     sig = inspect.signature(handler)
     request_param = sig.parameters.get("request")
@@ -104,6 +105,7 @@ def test_make_workspace_handler_returns_callable_with_only_request_param() -> No
         ws_nav_groups=[],
         ws_app_name="t",
         primary_action_candidates=[],
+        authored_actions=[],
     )
     params = list(inspect.signature(handler).parameters.keys())
     assert params == ["request"]
@@ -123,6 +125,7 @@ def test_handler_factories_produce_async_callables() -> None:
         ws_nav_groups=[],
         ws_app_name="t",
         primary_action_candidates=[],
+        authored_actions=[],
     )
     assert inspect.iscoroutinefunction(page_handler)
     assert inspect.iscoroutinefunction(ws_handler)

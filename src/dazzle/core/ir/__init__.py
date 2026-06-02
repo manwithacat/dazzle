@@ -854,6 +854,7 @@ from .workspaces import (
     ToneBandSpec,
     WorkspaceAccessLevel,
     WorkspaceAccessSpec,
+    WorkspacePrimaryActionSpec,
     WorkspaceRegion,
     WorkspaceSpec,
 )
@@ -982,6 +983,7 @@ __all__ = [
     "RowActionSpec",
     "StatusListEntrySpec",
     "ToneBandSpec",
+    "WorkspacePrimaryActionSpec",
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences

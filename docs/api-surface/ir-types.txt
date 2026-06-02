@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 365 BaseModels, 148 Enums, 23 other (functions / typealiases / constants)
+# Counts: 366 BaseModels, 148 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -3302,6 +3302,13 @@ ir_class: WorkspaceLayout
     - stage_options: dict[str, Any] = {}
     - time_horizon: str = 'daily'
 
+ir_class: WorkspacePrimaryActionSpec
+  required:
+    - label: str
+    - target: str
+    - target_kind: Literal[surface, workspace]
+  optional: (none)
+
 ir_class: WorkspaceRegion
   required:
     - name: str
@@ -3372,6 +3379,7 @@ ir_class: WorkspaceSpec
     - context_selector: ContextSelectorSpec | None = None
     - nav_groups: list[NavGroupSpec] = []
     - nav_ref: str | None = None
+    - primary_actions: list[WorkspacePrimaryActionSpec] = []
     - purpose: str | None = None
     - regions: list[WorkspaceRegion] = []
     - source: SourceLocation | None = None

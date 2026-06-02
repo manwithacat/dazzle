@@ -545,9 +545,19 @@ workspace_decl ::= "workspace" IDENT STRING? ":" NEWLINE
                    INDENT
                      ("purpose" ":" STRING NEWLINE)?
                      ("access" ":" IDENT NEWLINE)?
+                     primary_actions_block?
                      workspace_region+
                      ux_block?
                    DEDENT ;
+
+(* #1324 FR-5: declarative heading CTA buttons. Each action references a
+   declared surface or workspace by name (validated at lint time). Authored
+   actions render AFTER the auto-inferred create-surface CTAs (#827). *)
+primary_actions_block
+              ::= "primary_actions" ":" NEWLINE
+                  INDENT
+                    ("action" STRING "->" ("surface" | "workspace") IDENT NEWLINE)+
+                  DEDENT ;
 
 workspace_region
               ::= IDENT ":" NEWLINE

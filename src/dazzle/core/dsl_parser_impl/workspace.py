@@ -2390,6 +2390,7 @@ class WorkspaceParserMixin:
             ux=state.ux_spec,
             access=state.access_spec,
             context_selector=state.context_selector,
+            primary_actions=state.primary_actions,
             source=loc,
         )
 
@@ -2441,11 +2442,79 @@ class WorkspaceParserMixin:
         if self.match(TokenType.UX):
             state.ux_spec = self.parse_ux_block()
             return True
+        if (
+            self.match(TokenType.IDENTIFIER)
+            and self.current_token().value == "primary_actions"
+            and self.peek_token().type == TokenType.COLON
+        ):
+            # #1324 FR-5: `primary_actions:` heading-CTA block. Intercepted
+            # here (an IDENTIFIER, not a keyword token) BEFORE the region
+            # fallback below; the COLON peek disambiguates it from a region
+            # that an author happened to name `primary_actions`.
+            state.primary_actions.extend(self._parse_workspace_primary_actions())
+            return True
         if self.match(TokenType.IDENTIFIER):
             # Fallback: any unrecognised identifier names a workspace region.
             state.regions.append(self.parse_workspace_region())
             return True
         return False
+
+    def _parse_workspace_primary_actions(
+        self,
+    ) -> list[ir.WorkspacePrimaryActionSpec]:
+        """Parse a ``primary_actions:`` block (#1324 FR-5).
+
+        Syntax::
+
+            primary_actions:
+              action "New Invoice" -> surface create_invoice
+              action "Dashboard" -> workspace ops_dashboard
+
+        Each line is ``action "<label>" -> (surface|workspace) <name>``.
+        ``action`` is the ACTION keyword token; ``surface``/``workspace`` are
+        the SURFACE/WORKSPACE keyword tokens; the name after them is an
+        identifier-or-keyword (mirrors `uses nav <name>` / nav-item parsing).
+        """
+        self.advance()  # consume `primary_actions` identifier
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        actions: list[ir.WorkspacePrimaryActionSpec] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            self.expect(TokenType.ACTION)
+            label = self.expect(TokenType.STRING).value
+            self.expect(TokenType.ARROW)
+            if self.match(TokenType.SURFACE):
+                self.advance()
+                target_kind: str = "surface"
+            elif self.match(TokenType.WORKSPACE):
+                self.advance()
+                target_kind = "workspace"
+            else:
+                tok = self.current_token()
+                raise make_parse_error(
+                    "Expected `surface` or `workspace` after `->` in a "
+                    f"primary_actions action, got {tok.value!r}.",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            target = self.expect_identifier_or_keyword().value
+            actions.append(
+                ir.WorkspacePrimaryActionSpec(
+                    label=label,
+                    target_kind=target_kind,  # type: ignore[arg-type]
+                    target=target,
+                )
+            )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return actions
 
     # Parsed access specs are enforced at request time in
     # src/dazzle/ui/runtime/surface_access.py:check_surface_access().
@@ -2676,6 +2745,8 @@ class _WorkspaceState:
     ux_spec: ir.UXSpec | None = None
     access_spec: ir.WorkspaceAccessSpec | None = None
     context_selector: ir.ContextSelectorSpec | None = None
+    # #1324 FR-5: authored heading-CTA buttons (primary_actions: block).
+    primary_actions: list[ir.WorkspacePrimaryActionSpec] = field(default_factory=list)
 
 
 @dataclass

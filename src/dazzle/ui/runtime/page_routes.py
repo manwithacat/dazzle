@@ -2044,6 +2044,7 @@ def _make_workspace_handler(
     ws_nav_groups: list[dict[str, Any]],
     ws_app_name: str,
     primary_action_candidates: list[dict[str, str]],
+    authored_actions: list[dict[str, str]],
 ) -> Any:
     """Closure factory for `/app/workspaces/{name}` routes — same
     rationale as `_make_page_handler` (issue #1034). Pre-fix this
@@ -2062,6 +2063,7 @@ def _make_workspace_handler(
             ws_nav_groups,
             ws_app_name,
             primary_action_candidates,
+            authored_actions,
             request,
         )
 
@@ -2123,6 +2125,56 @@ def _build_workspace_primary_action_candidates(
     return actions
 
 
+def _resolve_workspace_authored_actions(
+    workspace: Any,
+    *,
+    app_prefix: str,
+    surfaces_by_name: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Resolve a workspace's authored `primary_actions:` to `{label, route}` (#1324 FR-5).
+
+    Each authored action references a declared surface or workspace by name
+    (already validated at lint time). The route is a plain GET nav target:
+
+    * ``target_kind == "workspace"`` → ``f"{app_prefix}/workspaces/{target}"``
+    * ``target_kind == "surface"``   → the surface's canonical route, computed
+      with the SAME ``route_map`` as ``template_compiler.compile_appspec_to_templates``
+      so heading CTAs and the rest of the app agree on surface URLs.
+
+    There is NO per-action persona gating in v1: the workspace page's own
+    access already gates visibility, so the caller appends these unconditionally
+    AFTER the (permission-filtered) inferred create-CTAs. Unresolvable targets
+    (which lint would already have errored on) are skipped defensively.
+    """
+    from dazzle.core.ir import SurfaceMode
+
+    resolved: list[dict[str, str]] = []
+    for action in getattr(workspace, "primary_actions", []) or []:
+        if action.target_kind == "workspace":
+            resolved.append(
+                {
+                    "label": action.label,
+                    "route": f"{app_prefix}/workspaces/{action.target}",
+                }
+            )
+            continue
+        # target_kind == "surface": mirror the canonical surface route map.
+        surface = surfaces_by_name.get(action.target)
+        if surface is None:
+            continue  # lint already errors on unknown targets; skip defensively
+        entity_name = surface.entity_ref or "item"
+        entity_slug = entity_name.lower().replace("_", "-")
+        route_map = {
+            SurfaceMode.LIST: f"{app_prefix}/{entity_slug}",
+            SurfaceMode.CREATE: f"{app_prefix}/{entity_slug}/create",
+            SurfaceMode.EDIT: f"{app_prefix}/{entity_slug}/{{id}}/edit",
+            SurfaceMode.VIEW: f"{app_prefix}/{entity_slug}/{{id}}",
+        }
+        route = route_map.get(surface.mode, f"{app_prefix}/{surface.name}")
+        resolved.append({"label": action.label, "route": route})
+    return resolved
+
+
 async def _workspace_handler(
     deps: _PageRouterConfig,
     ws_context: Any,
@@ -2133,6 +2185,7 @@ async def _workspace_handler(
     ws_groups: list[dict[str, Any]],
     ws_app_name: str,
     primary_action_candidates: list[dict[str, str]],
+    authored_actions: list[dict[str, str]],
     request: Request,
 ) -> Response:
     """Handle a workspace page route."""
@@ -2244,6 +2297,13 @@ async def _workspace_handler(
                     "route": cand["route"],
                 }
             )
+
+    # #1324 FR-5: APPEND authored heading CTAs AFTER the inferred create-CTAs.
+    # No per-action persona gating in v1 — the workspace page's own access
+    # (enforced above) gates visibility, so authored actions show to anyone
+    # who can see the workspace. Targets are pre-resolved to {label, route}
+    # at registration time (already validated at lint time).
+    primary_actions.extend(authored_actions)
 
     # Phase 4 app-shell migration (v0.67.44): the workspace page
     # renders unconditionally through the typed-Fragment substrate.
@@ -2692,6 +2752,21 @@ def create_page_routes(
             for ws in workspaces
         }
 
+        # #1324 FR-5: pre-resolve each workspace's AUTHORED heading CTAs to
+        # {label, route}. These APPEND AFTER the inferred create-CTAs above
+        # (which are permission-filtered per request); authored actions carry
+        # no per-action persona gating in v1, so they're surfaced
+        # unconditionally to anyone who can see the workspace.
+        _surfaces_by_name: dict[str, Any] = {s.name: s for s in surfaces}
+        ws_authored_actions: dict[str, list[dict[str, str]]] = {
+            ws.name: _resolve_workspace_authored_actions(
+                ws,
+                app_prefix=app_prefix,
+                surfaces_by_name=_surfaces_by_name,
+            )
+            for ws in workspaces
+        }
+
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
         # Build nav groups per workspace from nav_group declarations (v0.38.0).
@@ -2744,6 +2819,7 @@ def create_page_routes(
             _ws_entity_items = ws_entity_nav.get(workspace.name, [])
             _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
             _ws_primary = ws_primary_actions.get(workspace.name, [])
+            _ws_authored = ws_authored_actions.get(workspace.name, [])
 
             # Issue #1034: closure factory instead of `functools.partial`
             # so FastAPI sees the `Request` annotation on the handler.
@@ -2776,6 +2852,7 @@ def create_page_routes(
                 ws_nav_groups=_ws_nav_groups,
                 ws_app_name=ws_app_name,
                 primary_action_candidates=_ws_primary,
+                authored_actions=_ws_authored,
             )
             router.get(_ws_reg_path, response_class=HTMLResponse)(handler)
 

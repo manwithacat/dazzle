@@ -8,6 +8,7 @@ information needs into cohesive user experiences.
 from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -1191,6 +1192,35 @@ class NavSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class WorkspacePrimaryActionSpec(BaseModel):
+    """A declarative call-to-action button in a workspace heading (#1324 FR-5).
+
+    Authored via a ``primary_actions:`` block on a workspace. Each entry
+    references a declared SURFACE or WORKSPACE by name (validated at lint
+    time — an unknown target is a validation ERROR). The renderer emits a
+    plain nav link (``<a href hx-boost>``, GET) — no method/confirm/POST.
+
+    NOTE: this is the PLURAL heading-CTA list, distinct from the SINGULAR
+    ``primary_action: str | None`` on :class:`WorkspaceRegion` (which names
+    the commit surface of a confirm_action_panel — a different concept).
+
+    There is NO per-action persona gating in v1: the workspace page's own
+    access gates visibility, so authored actions show to anyone who can see
+    the workspace.
+
+    Attributes:
+        label: Button text (e.g. "New Invoice").
+        target_kind: Whether ``target`` names a surface or a workspace.
+        target: The declared surface/workspace name to link to.
+    """
+
+    label: str
+    target_kind: Literal["surface", "workspace"]
+    target: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class ContextSelectorSpec(BaseModel):
     """Specifies a context selector dropdown for a workspace.
 
@@ -1245,6 +1275,14 @@ class WorkspaceSpec(BaseModel):
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
     context_selector: ContextSelectorSpec | None = None  # v0.38.0
+    # #1324 FR-5: authored heading CTA buttons. Each references a declared
+    # surface or workspace by name (validated at lint time). At the build
+    # site these APPEND AFTER the auto-inferred create-surface CTAs (#827);
+    # inference is unchanged. Empty list = legacy behaviour (inferred only).
+    # NOTE: this PLURAL list is the workspace-heading CTA set — distinct
+    # from the SINGULAR `WorkspaceRegion.primary_action` (the commit surface
+    # of a confirm_action_panel).
+    primary_actions: list[WorkspacePrimaryActionSpec] = Field(default_factory=list)
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 

@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **#1324 FR-5 — declarative workspace `primary_actions:`.** Authors can declare heading CTA buttons on a workspace:
+  ```dsl
+  workspace reports "Reports":
+    primary_actions:
+      action "New Invoice" -> surface create_invoice
+      action "Dashboard" -> workspace ops_dashboard
+  ```
+  Each action references a declared SURFACE or WORKSPACE by name (no literal routes). New IR `WorkspacePrimaryActionSpec` (`label`, `target_kind: "surface"|"workspace"`, `target`) + `WorkspaceSpec.primary_actions` list (distinct from the singular `WorkspaceRegion.primary_action` commit surface). Parser handles the `primary_actions:` INDENT block via the `->` ARROW token. `validate_workspace_primary_actions` (in `core/validator.py`, wired into `lint_appspec`) errors on unknown targets. At the build site authored actions APPEND AFTER the auto-inferred create-surface CTAs (#827) — inference unchanged — resolving surface targets via the same route map as `template_compiler`. The renderer emits a plain GET nav link (`<a href hx-boost>`); no method/confirm/POST. No per-action persona gating in v1 — the workspace page's own access gates visibility.
+
+### Agent Guidance
+
+- Workspace heading CTAs are now declarative: add a `primary_actions:` block with `action "<label>" -> (surface|workspace) <name>` lines. Targets must be declared surfaces/workspaces (lint errors otherwise). They render after the auto-inferred "New X" create buttons.
+- Regenerated the `ir-types` API-surface baseline (`docs/api-surface/ir-types.txt`) for the new `WorkspacePrimaryActionSpec` type + `WorkspaceSpec.primary_actions` field, and updated the `test_golden_master` IR snapshot.
+
 ## [0.80.92] - 2026-06-02
 
 ### Added

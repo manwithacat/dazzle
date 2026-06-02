@@ -1016,6 +1016,44 @@ def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]
     return errors, warnings
 
 
+def validate_workspace_primary_actions(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate that each workspace `primary_actions:` target resolves (#1324 FR-5).
+
+    An authored heading-CTA action references a declared SURFACE or WORKSPACE
+    by name (parsed into ``WorkspaceSpec.primary_actions``). When
+    ``target_kind == "surface"`` the target MUST match a declared surface
+    name (``appspec.surfaces``); when ``"workspace"``, a declared workspace
+    name (``appspec.workspaces``). An unresolved target is a validation ERROR.
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    declared_surfaces = {s.name for s in appspec.surfaces}
+    declared_workspaces = {ws.name for ws in appspec.workspaces}
+
+    for ws in appspec.workspaces:
+        for action in ws.primary_actions:
+            if action.target_kind == "surface":
+                if action.target not in declared_surfaces:
+                    errors.append(
+                        f"workspace '{ws.name}' primary action \"{action.label}\" "
+                        f"targets surface '{action.target}', but no such surface "
+                        f"is declared"
+                    )
+            elif action.target_kind == "workspace":
+                if action.target not in declared_workspaces:
+                    errors.append(
+                        f"workspace '{ws.name}' primary action \"{action.label}\" "
+                        f"targets workspace '{action.target}', but no such workspace "
+                        f"is declared"
+                    )
+
+    return errors, warnings
+
+
 def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Lint per-persona-global navigation curation (#1324 FR-6).
 
