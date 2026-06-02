@@ -9,9 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.86] - 2026-06-02
+
 ### Added
 
-- **#1324 (Navigation Model Redesign, slice 1) — validate-time check that a persona's `uses nav <name>` resolves.** `PersonaSpec.nav_ref` (parsed in slice 1.2) must reference a declared top-level `nav <name>:` block; an unresolved reference is now a validation ERROR, e.g. `persona 'teacher' uses nav 'nonexistent', but no \`nav nonexistent:\` is declared`. New `validate_persona_nav_refs(appspec)` in `core/validator.py`, wired into `lint_appspec`. To make the declared nav names reachable at validation time, `AppSpec` now carries a `navs: list[NavSpec]` field (additive; populated by the linker from the merged module fragment, mirroring the existing per-workspace nav resolution). API-surface `ir-types` baseline regenerated for the new `AppSpec.navs` field (and the previously-unregenerated `PersonaSpec.nav_ref` from slice 1.1).
+- **#1324 (Navigation Model Redesign, slice 1 of 4) — per-persona nav binding (additive; IR + parser + validation).** Lays the groundwork for the per-persona-global navigation model. Workspace-level nav is unchanged and still live; the renderer cutover and the removal of workspace nav happen in slice 3.
+  - **`PersonaSpec.nav_ref: str | None`** — a persona's single nav binding. Navigation will be per-persona-global (one sidebar per persona), so this is a scalar, not a list.
+  - **Parser:** `persona X: uses nav Y` parses into `PersonaSpec.nav_ref` (dispatch-table keyword in the persona block).
+  - **Validation:** `validate_persona_nav_refs(appspec)` (in `core/validator.py`, wired into `lint_appspec`) makes an unresolved `nav_ref` a validation ERROR — e.g. `persona 'teacher' uses nav 'nonexistent', but no \`nav nonexistent:\` is declared`.
+  - **`AppSpec.navs: list[NavSpec]`** — top-level `nav` defs are now surfaced on the AppSpec (additive; populated by the linker from the merged module fragment), so validation — and slice 2's nav builder — can resolve declared nav names. API-surface `ir-types` baseline regenerated for `AppSpec.navs` + `PersonaSpec.nav_ref`; golden-master snapshot regenerated for the additive `navs` key.
 
 ## [0.80.85] - 2026-06-02
 
