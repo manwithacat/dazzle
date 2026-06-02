@@ -2696,6 +2696,26 @@ class WorkspaceParserMixin:
                     self.expect(TokenType.COLON)
                     item_when = self.parse_condition_expr()
 
+            # #1328: a nav group lists ONE bare entity/workspace name per line —
+            # there is NO `item` keyword. A stray trailing identifier (the classic
+            # `item Contact` misuse, which previously parsed as a phantom `item`
+            # entry plus `Contact` and was silently dropped) is now a hard parse
+            # error directing the author to the canonical bare-name form.
+            if not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+                stray = self.current_token()
+                if entity == "item":
+                    msg = (
+                        "nav groups list a bare entity or workspace name per line — "
+                        f"there is no `item` keyword. Write `{stray.value}` instead of "
+                        f"`item {stray.value}`."
+                    )
+                else:
+                    msg = (
+                        "nav group items take one entity or workspace name per line; "
+                        f"unexpected `{stray.value}` after `{entity}`."
+                    )
+                raise make_parse_error(msg, self.file, stray.line, stray.column)
+
             items.append(ir.NavItemIR(entity=entity, icon=item_icon, when=item_when))
             self.skip_newlines()
 

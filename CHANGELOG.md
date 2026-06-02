@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.96] - 2026-06-02
+
+### Changed
+
+- **#1328 — `nav_group`/`nav` items now reject a leading `item` keyword with a clear parse error.** A nav group lists ONE bare entity-or-workspace name per line; there is no `item` keyword. Previously `item Contact` silently parsed as a phantom `item` entry (dropped at render because it resolves to no route) plus `Contact` — a confusing footgun. It now raises a clear error directing the author to the canonical bare-name form (`Contact`, not `item Contact`); a stray trailing token on any item line is likewise rejected (`one entity or workspace name per line`). Chose strict rejection over forgiving sugar per the DSL philosophy (precision/one-canonical-form over ergonomics). Fixtures migrated to bare names; `docs/reference/grammar.md` gains the `nav_group_block` production documenting the bare-name + `icon=`/`when:` syntax.
+
+### Agent Guidance
+
+- In a `nav <name>:` def or workspace `nav_group`, list targets as **bare names** — one entity or workspace per line (`Contact`, `Invoice`), optionally with `icon=` and a `when:` visibility condition. Do **not** write `item Contact` (no `item` keyword — it's a parse error).
+
 ## [0.80.95] - 2026-06-02
 
 ### Added

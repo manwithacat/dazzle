@@ -65,8 +65,8 @@ surface secret_list "Secrets":
 
 nav teaching:
   group "Marking":
-    item Assignment
-    item Secret
+    Assignment
+    Secret
 
 persona teacher "Teacher":
   uses nav teaching
@@ -197,7 +197,7 @@ workspace classroom "Classroom":
 
 nav teaching:
   group "Marking":
-    item Assignment
+    Assignment
 
 persona teacher "Teacher":
   uses nav teaching
@@ -247,7 +247,7 @@ workspace classroom "Classroom":
 
 nav teaching:
   group "Spaces":
-    item classroom
+    classroom
 
 persona teacher "Teacher":
   uses nav teaching
@@ -382,8 +382,8 @@ surface audit_record_list:
 
 nav teaching:
   group "Marking":
-    item LessonPlan
-    item AuditRecord
+    LessonPlan
+    AuditRecord
 
 persona teacher "Teacher":
   uses nav teaching
@@ -514,8 +514,8 @@ surface secret_list "Secrets":
 
 nav teaching:
   group "Beta" when: tenant_config.beta_features = true:
-    item Assignment
-    item Secret when: role(admin)
+    Assignment
+    Secret when: role(admin)
 
 persona teacher "Teacher":
   uses nav teaching

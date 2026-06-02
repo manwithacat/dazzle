@@ -559,6 +559,18 @@ primary_actions_block
                     ("action" STRING "->" ("surface" | "workspace") IDENT NEWLINE)+
                   DEDENT ;
 
+(* Navigation: a top-level `nav <name>:` def (or a workspace `nav_group`) lists
+   ONE bare entity-or-workspace name per line — there is NO `item` keyword
+   (#1328: `item Contact` is a parse error; write `Contact`). Each line and the
+   group header may carry an optional `icon=` and a render-time VISIBILITY
+   `when: <condition>` clause (#1324 FR-4). *)
+nav_group_block
+              ::= ("nav_group" | "group") STRING
+                  ("icon" "=" IDENT)? "collapsed"? ("when" ":" condition)? ":" NEWLINE
+                  INDENT
+                    (IDENT ("icon" "=" IDENT)? ("when" ":" condition)? NEWLINE)+
+                  DEDENT ;
+
 workspace_region
               ::= IDENT ":" NEWLINE
                   INDENT

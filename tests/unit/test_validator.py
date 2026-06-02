@@ -1599,7 +1599,7 @@ app TestApp "Test Application"
 
 nav teaching:
   group "Marking":
-    item Assignment
+    Assignment
 
 persona teacher "Teacher":
   uses nav teaching
