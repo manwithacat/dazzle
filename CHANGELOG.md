@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.4] - 2026-06-02
+
+### Fixed
+
+- **#1327 — entity-list row Alpine bindings no longer throw "Unexpected token" on the `:class` / `x-if` attributes.** `_render_table_row` interpolated the row id from `json.dumps(item_id)` — a *double*-quoted JS literal (`"<id>"`) — into *double*-quoted Alpine attributes (`:class="…"`, two `x-if="…"`). The inner `"` terminated the HTML attribute early, so Alpine received a truncated expression. Those three sites now use a *single*-quoted JS literal (`'<id>'`, mirroring the checkbox's existing `selected.has('<id>')`); the id is JS-escaped (`\`/`'`) then HTML-escaped so non-UUID string ids stay correct. The `@dblclick='…'` handler lives in a *single*-quoted attribute, so it correctly keeps the double-quoted literal. Regression tests added for the `:class`/`x-if` bindings, balanced-quote invariant, and an embedded-apostrophe id.
+
+### Agent Guidance
+
+- When emitting Alpine/HTMX expressions into HTML attributes, match the JS string-literal quote to the *opposite* of the attribute's quote: a value going into a double-quoted attribute (`:class="…"`) must use single-quoted JS literals, and vice-versa. `json.dumps` always emits double quotes, so it's unsafe inside double-quoted attributes — build a single-quoted literal (JS-escape then HTML-escape) instead.
+
 ## [0.81.3] - 2026-06-02
 
 ### Fixed

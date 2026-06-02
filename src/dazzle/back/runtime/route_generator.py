@@ -474,6 +474,15 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     item_id = str(item.get("id", "") or "")
     item_id_attr = _html_mod.escape(item_id, quote=True)
     item_id_json = json.dumps(item_id)
+    # #1327: `item_id_json` is a *double*-quoted JS literal ("<id>"). Embedded in
+    # a double-quoted Alpine attribute (`:class="…"`, `x-if="…"`) its inner `"`
+    # terminates the HTML attribute early → Alpine "Unexpected token". For those
+    # attributes use a *single*-quoted JS literal instead (mirrors the checkbox's
+    # `selected.has('…')` at the cell below). JS-escape `\`/`'` then HTML-escape
+    # so non-UUID string ids stay correct. `item_id_json` is still used inside
+    # the single-quoted `@dblclick='…'` attribute, where double quotes are safe.
+    _item_id_js_escaped = item_id.replace("\\", "\\\\").replace("'", "\\'")
+    item_id_js = "'" + _html_mod.escape(_item_id_js_escaped, quote=True) + "'"
 
     # Row label: first non-{ref,badge,bool,currency} column else id; ref dicts
     # resolve via `_ref_display_name`.
@@ -490,9 +499,9 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
 
     # Row state Alpine binds — emitted as a single :class attribute.
     row_state_class = (
-        f"{{'is-selected': selected.has({item_id_json}), "
-        f"'is-saving': editing && editing.rowId === {item_id_json} && editing.saving, "
-        f"'is-error': editing && editing.rowId === {item_id_json} && editing.error}}"
+        f"{{'is-selected': selected.has({item_id_js}), "
+        f"'is-saving': editing && editing.rowId === {item_id_js} && editing.saving, "
+        f"'is-error': editing && editing.rowId === {item_id_js} && editing.error}}"
     )
 
     detail_hx_attrs = ""
@@ -572,13 +581,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             if cell_value is not None:
                 title_attr = f' title="{_html_mod.escape(str(cell_value), quote=True)}"'
             display_template_html = (
-                f"<template x-if=\"!isEditing({item_id_json}, '{col_key_attr}')\">"
+                f"<template x-if=\"!isEditing({item_id_js}, '{col_key_attr}')\">"
                 f'<span class="dz-tr-cell-display" '
                 f"@dblclick='startEdit({item_id_json}, \"{col_key_attr}\", {edit_val_for_dblclick})'"
                 f"{title_attr}>{display_html}</span></template>"
             )
             edit_template_html = (
-                f"<template x-if=\"isEditing({item_id_json}, '{col_key_attr}')\">"
+                f"<template x-if=\"isEditing({item_id_js}, '{col_key_attr}')\">"
                 f"{edit_html}</template>"
             )
             cell_inner = f"{edit_template_html}{display_template_html}"
