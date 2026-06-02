@@ -8,6 +8,8 @@ Authorization: only roles listed in the matching ``GrantSchemaSpec.granted_by``
 field may create or manage grants.
 """
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
@@ -18,14 +20,15 @@ from dazzle.back.runtime.auth import AuthContext
 
 def create_grant_routes(
     *,
-    conn_factory: Any,
+    db_manager: Any,
     appspec: Any,
     auth_dep: Any = None,
 ) -> APIRouter:
     """Create grant management routes.
 
     Args:
-        conn_factory: Callable returning a psycopg Connection for GrantStore.
+        db_manager: Database backend exposing ``.connection()`` (a context
+            manager that leases a pooled connection and rolls back on return).
         appspec: The AppSpec for looking up GrantSchemaSpec definitions.
         auth_dep: FastAPI auth dependency that requires authentication.
 
@@ -34,10 +37,22 @@ def create_grant_routes(
     """
     router = APIRouter(prefix="/_dazzle/grants", tags=["Grants"])
 
-    def _get_store() -> Any:
+    @contextmanager
+    def _store() -> Iterator[Any]:
+        """Lease a pooled connection for the duration of one grant operation.
+
+        #1331: GrantStore must run on a short-lived pooled connection, not the
+        shared app-lifetime get_persistent_connection(). Its writes commit
+        explicitly (and persist); any read that didn't commit is rolled back by
+        the pool on return, so the connection never parks idle-in-transaction
+        holding ACCESS SHARE on _grants. A single lease spans the whole handler,
+        so read-then-write routes (approve/reject/cancel/revoke) stay on one
+        connection.
+        """
         from dazzle.back.runtime.grant_store import GrantStore
 
-        return GrantStore(conn_factory())
+        with db_manager.connection() as conn:
+            yield GrantStore(conn)
 
     def _get_user_id(auth_context: AuthContext) -> str:
         if not auth_context or not auth_context.is_authenticated:
@@ -109,13 +124,15 @@ def create_grant_routes(
             status: str | None = Query(None),
         ) -> dict[str, Any]:
             _get_user_id(auth_context)
-            store = _get_store()
-            grants = store.list_grants(
-                scope_entity=scope_entity,
-                scope_id=_parse_uuid(scope_id, "scope_id") if scope_id else None,
-                principal_id=_parse_uuid(principal_id, "principal_id") if principal_id else None,
-                status=status,
-            )
+            with _store() as store:
+                grants = store.list_grants(
+                    scope_entity=scope_entity,
+                    scope_id=_parse_uuid(scope_id, "scope_id") if scope_id else None,
+                    principal_id=(
+                        _parse_uuid(principal_id, "principal_id") if principal_id else None
+                    ),
+                    status=status,
+                )
             return {"grants": grants}
 
         @router.post("", summary="Create a grant", status_code=201)
@@ -144,17 +161,17 @@ def create_grant_routes(
             rel_spec = _get_relation_spec(schema_name, relation)
             approval_mode = str(rel_spec.approval) if rel_spec.approval else "auto"
 
-            store = _get_store()
-            grant = store.create_grant(
-                schema_name=schema_name,
-                relation=relation,
-                principal_id=principal_id,
-                scope_entity=scope_entity,
-                scope_id=scope_id,
-                granted_by_id=user_id,
-                approval_mode=approval_mode,
-                expires_at=body.get("expires_at"),
-            )
+            with _store() as store:
+                grant = store.create_grant(
+                    schema_name=schema_name,
+                    relation=relation,
+                    principal_id=principal_id,
+                    scope_entity=scope_entity,
+                    scope_id=scope_id,
+                    granted_by_id=user_id,
+                    approval_mode=approval_mode,
+                    expires_at=body.get("expires_at"),
+                )
             return {"grant": grant}
 
         @router.post("/{grant_id}/approve", summary="Approve a pending grant")
@@ -163,19 +180,19 @@ def create_grant_routes(
             auth_context: AuthContext = Depends(auth_dep),
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
-            store = _get_store()
-            try:
-                grant = store._get_grant(grant_id)
-            except ValueError:
-                raise HTTPException(status_code=404, detail="Grant not found")
+            with _store() as store:
+                try:
+                    grant = store._get_grant(grant_id)
+                except ValueError:
+                    raise HTTPException(status_code=404, detail="Grant not found")
 
-            user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                user_roles = _get_user_roles(auth_context)
+                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
-            try:
-                result = store.approve_grant(grant_id, user_id)
-            except ValueError as e:
-                raise HTTPException(status_code=422, detail=str(e))
+                try:
+                    result = store.approve_grant(grant_id, user_id)
+                except ValueError as e:
+                    raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
         @router.post("/{grant_id}/reject", summary="Reject a pending grant")
@@ -184,19 +201,19 @@ def create_grant_routes(
             auth_context: AuthContext = Depends(auth_dep),
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
-            store = _get_store()
-            try:
-                grant = store._get_grant(grant_id)
-            except ValueError:
-                raise HTTPException(status_code=404, detail="Grant not found")
+            with _store() as store:
+                try:
+                    grant = store._get_grant(grant_id)
+                except ValueError:
+                    raise HTTPException(status_code=404, detail="Grant not found")
 
-            user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                user_roles = _get_user_roles(auth_context)
+                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
-            try:
-                result = store.reject_grant(grant_id, user_id)
-            except ValueError as e:
-                raise HTTPException(status_code=422, detail=str(e))
+                try:
+                    result = store.reject_grant(grant_id, user_id)
+                except ValueError as e:
+                    raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
         @router.post("/{grant_id}/cancel", summary="Cancel a pending grant")
@@ -206,19 +223,19 @@ def create_grant_routes(
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
             parsed_id = _parse_uuid(grant_id, "grant_id")
-            store = _get_store()
-            try:
-                grant = store._get_grant(parsed_id)
-            except ValueError:
-                raise HTTPException(status_code=404, detail="Grant not found")
+            with _store() as store:
+                try:
+                    grant = store._get_grant(parsed_id)
+                except ValueError:
+                    raise HTTPException(status_code=404, detail="Grant not found")
 
-            user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                user_roles = _get_user_roles(auth_context)
+                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
-            try:
-                result = store.cancel_grant(parsed_id, UUID(user_id))
-            except ValueError as e:
-                raise HTTPException(status_code=422, detail=str(e))
+                try:
+                    result = store.cancel_grant(parsed_id, UUID(user_id))
+                except ValueError as e:
+                    raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
         @router.delete("/{grant_id}", summary="Revoke an active grant")
@@ -227,19 +244,19 @@ def create_grant_routes(
             auth_context: AuthContext = Depends(auth_dep),
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
-            store = _get_store()
-            try:
-                grant = store._get_grant(grant_id)
-            except ValueError:
-                raise HTTPException(status_code=404, detail="Grant not found")
+            with _store() as store:
+                try:
+                    grant = store._get_grant(grant_id)
+                except ValueError:
+                    raise HTTPException(status_code=404, detail="Grant not found")
 
-            user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                user_roles = _get_user_roles(auth_context)
+                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
-            try:
-                result = store.revoke_grant(grant_id, user_id)
-            except ValueError as e:
-                raise HTTPException(status_code=422, detail=str(e))
+                try:
+                    result = store.revoke_grant(grant_id, user_id)
+                except ValueError as e:
+                    raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
     return router

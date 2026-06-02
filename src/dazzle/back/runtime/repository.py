@@ -835,12 +835,17 @@ class Repository(Generic[T]):
         # If relations requested, load them and return dict
         if include and self._relation_loader:
             row_dict = dict(row)
-            row_dicts = self._relation_loader.load_relations(
-                self.entity_spec.name,
-                [row_dict],
-                include,
-                conn=self.db.get_persistent_connection(),
-            )
+            # #1331: relation loading runs SELECTs on a *pooled* connection
+            # scoped to this operation. The pool rolls back on return, so the
+            # connection never parks idle-in-transaction holding ACCESS SHARE
+            # (the old shared get_persistent_connection() did → blocked DDL).
+            with self.db.connection() as rel_conn:
+                row_dicts = self._relation_loader.load_relations(
+                    self.entity_spec.name,
+                    [row_dict],
+                    include,
+                    conn=rel_conn,
+                )
             if _has_latest_one:
                 row_dicts = _resolve_latest_one_fields(
                     row_dicts, self.entity_spec, self.db, as_of=as_of
@@ -1172,20 +1177,24 @@ class Repository(Generic[T]):
                 )
                 # Load any relations that couldn't use the JOIN path
                 # (no display_field, or to-many) via the batched fallback.
+                # #1331: pooled connection scoped to this op (see find_by_id).
                 if display_join_fallback:
+                    with self.db.connection() as rel_conn:
+                        row_dicts = self._relation_loader.load_relations(
+                            self.entity_spec.name,
+                            row_dicts,
+                            display_join_fallback,
+                            conn=rel_conn,
+                        )
+            else:
+                # #1331: pooled connection scoped to this op (see find_by_id).
+                with self.db.connection() as rel_conn:
                     row_dicts = self._relation_loader.load_relations(
                         self.entity_spec.name,
                         row_dicts,
-                        display_join_fallback,
-                        conn=self.db.get_persistent_connection(),
+                        include,
+                        conn=rel_conn,
                     )
-            else:
-                row_dicts = self._relation_loader.load_relations(
-                    self.entity_spec.name,
-                    row_dicts,
-                    include,
-                    conn=self.db.get_persistent_connection(),
-                )
 
         # #1223 Phase 3a.v.ii: resolve latest_one fields if any exist.
         # Forces dict-return (same coercion as `include` / computed).

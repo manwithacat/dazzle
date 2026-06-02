@@ -137,13 +137,18 @@ async def resolve_request_user_context(
                     if db_mgr:
                         break
             if db_mgr:
-                grant_conn = db_mgr.get_persistent_connection()
-                grant_store = GrantStore(grant_conn)
                 from uuid import UUID as _UUID
 
-                active_grants = grant_store.list_grants(
-                    principal_id=_UUID(user_id), status="active"
-                )
+                # #1331: lease a pooled connection scoped to this read. The pool
+                # rolls back on return, so this grant lookup (run on every
+                # workspace render) never parks the connection idle-in-transaction
+                # holding ACCESS SHARE on _grants — the bug the shared
+                # get_persistent_connection() caused.
+                with db_mgr.connection() as grant_conn:
+                    grant_store = GrantStore(grant_conn)
+                    active_grants = grant_store.list_grants(
+                        principal_id=_UUID(user_id), status="active"
+                    )
                 filter_context["active_grants"] = active_grants
             else:
                 filter_context["active_grants"] = []

@@ -151,14 +151,12 @@ class RelationLoader:
 
     registry: RelationRegistry
     entity_map: dict[str, EntitySpec]
-    _conn_factory: Any = None  # Function that returns a connection
     _placeholder: str = "%s"
 
     def __init__(
         self,
         registry: RelationRegistry,
         entities: list[EntitySpec],
-        conn_factory: Any = None,
         placeholder: str = "%s",
     ):
         """
@@ -167,12 +165,17 @@ class RelationLoader:
         Args:
             registry: Relation registry
             entities: List of entity specs
-            conn_factory: Function that returns a database connection
             placeholder: SQL placeholder style (default "%s" for PostgreSQL)
+
+        Note (#1331): the loader no longer owns a connection factory. Callers
+        MUST pass a live ``conn`` to :meth:`load_relations` — and that conn
+        should be a short-lived, pooled connection (``db.connection()``), never
+        the shared app-lifetime ``get_persistent_connection()``. A reused
+        non-autocommit connection that only ran ``SELECT``s parks
+        ``idle in transaction`` holding ``ACCESS SHARE`` and blocks DDL.
         """
         self.registry = registry
         self.entity_map = {e.name: e for e in entities}
-        self._conn_factory = conn_factory
         self._placeholder = placeholder
 
     def load_relations(
@@ -180,7 +183,7 @@ class RelationLoader:
         entity_name: str,
         rows: list[dict[str, Any]],
         include: list[str],
-        conn: Any | None = None,
+        conn: Any,
     ) -> list[dict[str, Any]]:
         """
         Load relations for a list of entity rows.
@@ -189,7 +192,9 @@ class RelationLoader:
             entity_name: Name of the entity
             rows: List of entity data dicts
             include: List of relation names to include
-            conn: Optional database connection
+            conn: Live database connection. MUST be a short-lived, pooled
+                connection (`db.connection()`); never the shared app-lifetime
+                `get_persistent_connection()` — see the class docstring (#1331).
 
         Returns:
             Rows with nested relation data
@@ -197,9 +202,12 @@ class RelationLoader:
         if not include or not rows:
             return rows
 
-        conn = conn or (self._conn_factory() if self._conn_factory else None)
-        if not conn:
-            return rows
+        if conn is None:
+            raise ValueError(
+                "load_relations requires a live `conn`; pass a pooled "
+                "db.connection() (see #1331 — the conn_factory fallback was "
+                "removed because a reused connection leaks idle-in-transaction)."
+            )
 
         result = [dict(row) for row in rows]
 
@@ -241,7 +249,12 @@ class RelationLoader:
         table = quote_identifier(relation.to_entity)
         sql = f"SELECT * FROM {table} WHERE id IN ({placeholders})"
 
-        cursor = conn.execute(sql, list(fk_values))
+        # `table` is a quote_identifier()'d entity name from the relation
+        # registry (framework-controlled); `placeholders` are %s markers and the
+        # fk values are passed as bound params — no user input is concatenated.
+        cursor = conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+            sql, list(fk_values)
+        )
         related_rows = cursor.fetchall()
 
         # Build lookup by ID, injecting __display__ if entity has display_field
@@ -270,7 +283,11 @@ class RelationLoader:
                 _nested_table = quote_identifier(_nested_entity)
                 _nested_placeholders = ", ".join(self._placeholder for _ in _nested_fk_ids)
                 _nested_sql = f"SELECT id, {quote_identifier(_nested_display_key)} FROM {_nested_table} WHERE id IN ({_nested_placeholders})"
-                _nested_cursor = conn.execute(_nested_sql, list(_nested_fk_ids))
+                # Identifiers are quote_identifier()'d (registry-controlled);
+                # ids are bound params — no user input concatenated.
+                _nested_cursor = conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+                    _nested_sql, list(_nested_fk_ids)
+                )
                 _nested_map = {
                     str(nr["id"]): nr[_nested_display_key] for nr in _nested_cursor.fetchall()
                 }
@@ -315,7 +332,11 @@ class RelationLoader:
         fk_col = quote_identifier(fk_field)
         sql = f"SELECT * FROM {table} WHERE {fk_col} IN ({placeholders})"
 
-        cursor = conn.execute(sql, list(ids))
+        # `table`/`fk_col` are quote_identifier()'d (registry-controlled);
+        # ids are bound params — no user input concatenated.
+        cursor = conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+            sql, list(ids)
+        )
         related_rows = cursor.fetchall()
 
         # Group by FK

@@ -65,7 +65,7 @@ class TestCheckGrantedByUsesRelation:
 
         # Build routes — this exercises the closure
         router = create_grant_routes(
-            conn_factory=MagicMock,
+            db_manager=MagicMock(),
             appspec=appspec,
             auth_dep=lambda: None,
         )
@@ -107,7 +107,7 @@ class TestExtractRoles:
         schema = _make_schema("test", [rel])
         appspec = _make_appspec({"test": schema})
 
-        router = create_grant_routes(conn_factory=MagicMock, appspec=appspec, auth_dep=lambda: None)
+        router = create_grant_routes(db_manager=MagicMock(), appspec=appspec, auth_dep=lambda: None)
         assert router is not None
 
     def test_compound_or_expression(self):
@@ -139,5 +139,5 @@ class TestExtractRoles:
         schema = _make_schema("compound_test", [rel])
         appspec = _make_appspec({"compound_test": schema})
 
-        router = create_grant_routes(conn_factory=MagicMock, appspec=appspec, auth_dep=lambda: None)
+        router = create_grant_routes(db_manager=MagicMock(), appspec=appspec, auth_dep=lambda: None)
         assert router is not None

@@ -773,7 +773,6 @@ class DazzleBackendApp:
         relation_loader = RelationLoader(
             registry=relation_registry,
             entities=self._entities,
-            conn_factory=self._db_manager.get_persistent_connection,
         )
 
         repo_factory = RepositoryFactory(
@@ -1506,7 +1505,7 @@ class DazzleBackendApp:
             from dazzle.back.runtime.grant_routes import create_grant_routes
 
             grant_router = create_grant_routes(
-                conn_factory=self._db_manager.get_persistent_connection,
+                db_manager=self._db_manager,
                 appspec=self._appspec,
                 auth_dep=auth_dep,
             )

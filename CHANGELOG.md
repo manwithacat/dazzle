@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.6] - 2026-06-02
+
+### Fixed
+
+- **#1331 — request-path relation loading and grant reads no longer park a connection `idle in transaction` (holding `ACCESS SHARE`, blocking DDL).** Follow-up to #1325, same class of bug on the request path. `RelationLoader` and `GrantStore` ran their `SELECT`s on `PostgresBackend.get_persistent_connection()` — a single, shared, app-lifetime, **non-autocommit** connection. Reads never committed, so after a relation load (`SELECT … FROM "Contact"`) or a grant lookup (`SELECT … FROM _grants`) the shared connection sat `idle in transaction` indefinitely, holding `ACCESS SHARE` on those tables (blocking `ALTER TABLE`/Alembic migrations) and pinning the xmin horizon (VACUUM bloat). Both now run on a **pooled** connection leased per operation via `db.connection()` (the pool rolls back on return), so the connection is released clean after each request. Read-then-write grant routes (approve/reject/cancel/revoke) hold a single lease across both ops, preserving write atomicity. This also removes the shared-sync-connection concurrency hazard for these paths. `RelationLoader.load_relations` now **requires** a live `conn` (the silent `conn_factory` fallback that reached for the shared connection was removed) so a missing connection fails loud instead of re-introducing the leak.
+
+### Agent Guidance
+
+- Never run request-path reads on `get_persistent_connection()` — it's a single shared, non-autocommit, app-lifetime connection, so an uncommitted `SELECT` leaves it `idle in transaction` holding `ACCESS SHARE` (blocks DDL) until the next write or restart. Use the pooled `db.connection()` context manager (leased per operation, rolled back on return). When a helper needs a connection, pass a pooled one in for the operation's duration rather than letting the helper own a long-lived connection.
+
 ## [0.81.5] - 2026-06-02
 
 ### Fixed
