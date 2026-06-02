@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.92] - 2026-06-02
+
+### Added
+
+- **#1324 FR-6 — navigation curation lint (`dazzle lint`).** A static `validate_nav_curation(appspec)` (in `core/validator.py`, wired into `lint_appspec`) emits warnings for the nav failure modes the per-persona model can have, reframed for the shipped model (drift is now impossible by construction, so that diagnostic is gone):
+  1. **Auto-discovery reliance** — a persona with no `uses nav` (its sidebar is auto-discovered); bind one to make navigation explicit.
+  2. **Dead curated item** — a `nav` def item that *no* persona bound to that nav can LIST (entity → RBAC matrix DENY for all bound personas; workspace → none allowed); it would be silently filtered out at render. Plus "nav not used by any persona" and "item matches neither entity nor workspace" variants.
+  3. **Ignored workspace nav_groups** — an author-declared workspace (non-framework, i.e. not a `_`-prefixed synthetic name) with `nav_groups`, which are now ignored for author-facing nav (use `persona X: uses nav Y`).
+  Warnings only; reuses the RBAC matrix `core/validator` already computes. Across the example corpus only auto-discovery-reliance fires (apps whose personas legitimately lack `uses nav`); zero dead-link/ignored false positives.
+
+### Changed
+
+- **`workspace_allowed_personas` relocated to `core/access.py`** as the single canonical source, re-exported from `ui/converters/workspace_converter.py` (all existing callers unchanged). Removes the duplicated copy FR-6 had added to `core/validator.py` — access-resolution logic now lives in one place (no drift risk).
+
+### Agent Guidance
+
+- `dazzle lint` now flags navigation curation issues. If a persona should have a curated sidebar, give it `uses nav <name>` (a bare-name `nav` def) rather than relying on auto-discovery; ensure every `nav` item is LIST-able by the personas bound to that nav (else it's a dead link, filtered at render); and don't put `nav_group` on an author workspace (ignored — author nav is per-persona).
+
 ## [0.80.91] - 2026-06-02
 
 ### Added
