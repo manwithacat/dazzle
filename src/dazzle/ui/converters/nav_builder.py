@@ -57,6 +57,32 @@ def _route_for(appspec: AppSpec, target: str) -> str | None:
     return None
 
 
+def _titleize(name: str) -> str:
+    return name.replace("_", " ").title()
+
+
+def _label_for(appspec: AppSpec, target: str) -> str:
+    """Human-friendly nav label for a target (entity or workspace name).
+
+    Mirrors the legacy label precedence exactly (template_compiler /
+    page_routes), so the nav_model renderer produces the same sidebar copy:
+
+    - Workspace target → ``ws.title`` else ``ws.name.replace("_"," ").title()``
+      (page_routes.py ~2588, template_compiler.py:1402).
+    - Entity target → its LIST surface's ``title`` else
+      ``entity.replace("_"," ").title()`` (template_compiler.py:1459 / :1505).
+    """
+    ws = _workspace_for(appspec, target)
+    if ws is not None:
+        return ws.title or _titleize(ws.name)
+    for surface in appspec.surfaces or []:
+        if surface.mode.value == "list" and surface.entity_ref == target:
+            if surface.title:
+                return surface.title
+            break
+    return _titleize(target)
+
+
 def _persona_can_list(matrix: AccessMatrix, role: str, entity: str) -> bool:
     """FR-3: a persona may see a nav link only if its role isn't DENYed list access."""
     return matrix.get(role, entity, "list") != PolicyDecision.DENY
@@ -110,7 +136,12 @@ def _resolve_curated(
             if route is None:
                 continue
             links.append(
-                NavLink(label=item.entity, route=route, icon=item.icon, entity=item.entity)
+                NavLink(
+                    label=_label_for(appspec, item.entity),
+                    route=route,
+                    icon=item.icon,
+                    entity=item.entity,
+                )
             )
         if links:
             out.append(
@@ -143,7 +174,7 @@ def _auto_discover(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix)
                 if route is None:
                     continue
                 seen.add(src)
-                links.append(NavLink(label=src, route=route, entity=src))
+                links.append(NavLink(label=_label_for(appspec, src), route=route, entity=src))
     return [NavGroup(label="", icon=None, collapsed=False, links=tuple(links))] if links else []
 
 
@@ -203,6 +234,6 @@ def build_anon_nav(appspec: AppSpec, matrix: AccessMatrix) -> NavModel:
                 if route is None:
                     continue
                 seen.add(src)
-                links.append(NavLink(label=src, route=route, entity=src))
+                links.append(NavLink(label=_label_for(appspec, src), route=route, entity=src))
     groups = [NavGroup(label="", icon=None, collapsed=False, links=tuple(links))] if links else []
     return NavModel(groups=tuple(groups), auto_discovered=True)

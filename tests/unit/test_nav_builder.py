@@ -347,3 +347,133 @@ def test_build_anon_nav_only_anon_safe(tmp_path: Path):
     assert "Public" in entities
     # `Private` is only behind the gated workspace → never anon-safe.
     assert "Private" not in entities
+
+
+# ---------------------------------------------------------------------------
+# Human-friendly nav labels (#1324 fix): mirror legacy precedence
+#   entity target  → list-surface `title` else `entity.replace("_"," ").title()`
+#   workspace target → `ws.title` else `ws.name.replace("_"," ").title()`
+# ---------------------------------------------------------------------------
+
+# Entity `LessonPlan` whose LIST surface carries a human title "Lesson Plans";
+# entity `SystemHealth` whose list surface has NO title (titleized fallback).
+_LABEL_DSL = """module test
+app TestApp "Test Application"
+
+entity LessonPlan "Lesson Plan":
+  id: uuid pk
+  title: str(200) required
+
+entity AuditRecord "Audit Record":
+  id: uuid pk
+  name: str(200) required
+
+surface lesson_plan_list "Lesson Plans":
+  uses entity LessonPlan
+  mode: list
+  section main "Lesson Plans":
+    field title "Title"
+
+surface audit_record_list:
+  uses entity AuditRecord
+  mode: list
+  section main "AuditRecord":
+    field name "Name"
+
+nav teaching:
+  group "Marking":
+    item LessonPlan
+    item AuditRecord
+
+persona teacher "Teacher":
+  uses nav teaching
+"""
+
+
+def test_curated_link_uses_list_surface_title(tmp_path: Path):
+    appspec = _appspec(_LABEL_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    model = build_persona_nav(appspec, persona, _StubMatrix())
+
+    all_links = [link for group in model.groups for link in group.links]
+    lp = next(link for link in all_links if link.entity == "LessonPlan")
+    # Surface title "Lesson Plans" wins over the raw entity name.
+    assert lp.label == "Lesson Plans"
+    assert lp.entity == "LessonPlan"  # raw target preserved for routing
+
+
+def test_curated_link_titleizes_when_no_surface_title(tmp_path: Path):
+    appspec = _appspec(_LABEL_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    model = build_persona_nav(appspec, persona, _StubMatrix())
+
+    all_links = [link for group in model.groups for link in group.links]
+    ar = next(link for link in all_links if link.entity == "AuditRecord")
+    # No surface title → titleize the raw entity name (legacy precedence:
+    # `entity.replace("_"," ").title()`): "AuditRecord" → "Auditrecord".
+    assert ar.label == "AuditRecord".replace("_", " ").title()
+    assert ar.entity == "AuditRecord"  # raw target preserved for routing
+
+
+# Auto-discover path: workspace region sources whose list surfaces carry titles.
+_LABEL_AUTO_DSL = """module test
+app TestApp "Test Application"
+
+entity LessonPlan "Lesson Plan":
+  id: uuid pk
+  title: str(200) required
+
+surface lesson_plan_list "Lesson Plans":
+  uses entity LessonPlan
+  mode: list
+  section main "Lesson Plans":
+    field title "Title"
+
+workspace classroom "Classroom":
+  purpose: "Teaching workspace"
+
+  lesson_plan_list:
+    source: LessonPlan
+    display: list
+
+persona teacher "Teacher":
+  role: teacher
+"""
+
+
+def test_auto_discover_link_uses_list_surface_title(tmp_path: Path):
+    appspec = _appspec(_LABEL_AUTO_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    model = build_persona_nav(appspec, persona, _StubMatrix())
+
+    all_links = [link for group in model.groups for link in group.links]
+    lp = next(link for link in all_links if link.entity == "LessonPlan")
+    assert lp.label == "Lesson Plans"
+
+
+def test_workspace_target_link_uses_workspace_title(tmp_path: Path):
+    appspec = _appspec(_WORKSPACE_TARGET_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    matrix = _StubMatrix(deny={("teacher", "classroom")})
+    model = build_persona_nav(appspec, persona, matrix)
+
+    all_links = [link for group in model.groups for link in group.links]
+    ws_link = next(link for link in all_links if link.entity == "classroom")
+    # Workspace `classroom "Classroom"` → its title "Classroom".
+    assert ws_link.label == "Classroom"
+
+
+def test_anon_link_uses_list_surface_title(tmp_path: Path):
+    appspec = _appspec(_ANON_DSL, tmp_path)
+
+    model = build_anon_nav(appspec, _StubMatrix())
+
+    all_links = [link for group in model.groups for link in group.links]
+    pub = next(link for link in all_links if link.entity == "Public")
+    # `public_list "Public"` surface title → "Public" (same as titleized here,
+    # but exercises the surface-title path on the anon builder).
+    assert pub.label == "Public"
