@@ -149,6 +149,12 @@ def _make_prc(
         get_auth_context=get_auth_context,
         entity_cedar_specs=None,
         route_entity=None,
+        # #1324 slice 3b: _inject_auth_context now also resolves a precomputed
+        # NavModel from deps.persona_navs/anon_nav. These tests exercise the
+        # legacy nav_items/nav_groups path (which stays as fallback), so empty
+        # precomputed navs are fine here — nav_model resolves to None/anon.
+        persona_navs={},
+        anon_nav=None,
     )
     return SimpleNamespace(ctx=ctx, deps=deps, request=MagicMock(), auth_ctx=None)
 

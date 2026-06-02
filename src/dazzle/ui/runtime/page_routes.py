@@ -29,9 +29,17 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.manifest import resolve_api_url
+from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
 from dazzle.render.display_names import _inject_display_names
+from dazzle.ui.converters.nav_builder import (
+    NavGroup,
+    NavLink,
+    NavModel,
+    build_all_persona_navs,
+    build_anon_nav,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -557,6 +565,12 @@ class _PageRouterConfig:
     surface_workspace: dict[str, str] = field(default_factory=dict)
     # Route path → entity name — for filtering sidebar nav items by entity permit (#583)
     route_entity: dict[str, str] = field(default_factory=dict)
+    # #1324 slice 3b: precomputed per-persona navs (keyed by persona id) +
+    # the anon-visitor nav, built once at boot from the RBAC matrix. Every
+    # page render sets `ctx.nav_model` from these so the sidebar can no
+    # longer drift between the workspace-page and entity-page paths.
+    persona_navs: dict[str, NavModel] = field(default_factory=dict)
+    anon_nav: NavModel | None = None
 
 
 # =============================================================================
@@ -582,6 +596,68 @@ class _PageRequestContext:
 # =============================================================================
 # _page_handler helper functions
 # =============================================================================
+
+
+def _reconcile_nav_route(appspec: ir.AppSpec, app_prefix: str, link: NavLink) -> str:
+    """#1324 slice 3b: map a NavLink's placeholder route to the real runtime route.
+
+    ``nav_builder`` emits route placeholders (``/workspaces/<name>`` and
+    ``/list/<Entity>``) deliberately, deferring app_prefix/slug reconciliation
+    to the renderer (see ``nav_builder._route_for``). The runtime registers
+    workspace pages at ``<app_prefix>/workspaces/<name>`` and entity-list pages
+    at ``<app_prefix>/<entity-slug>`` (slug = ``name.lower().replace("_","-")``,
+    matching ``route_entity`` construction below). Reconcile by the link's
+    ``entity`` target so active-state highlighting (current_route == href) works
+    and the hrefs point at live routes. Falls back to the placeholder route if
+    the target can't be classified."""
+    target = link.entity or ""
+    if target:
+        for ws in getattr(appspec, "workspaces", []) or []:
+            if ws.name == target:
+                return f"{app_prefix}/workspaces/{ws.name}"
+        slug = target.lower().replace("_", "-")
+        return f"{app_prefix}/{slug}"
+    return link.route
+
+
+def _reconcile_nav_model(appspec: ir.AppSpec, app_prefix: str, model: NavModel) -> NavModel:
+    """Rebuild a NavModel with runtime-reconciled link routes (#1324 slice 3b)."""
+    new_groups = tuple(
+        NavGroup(
+            label=g.label,
+            icon=g.icon,
+            collapsed=g.collapsed,
+            links=tuple(
+                NavLink(
+                    label=link.label,
+                    route=_reconcile_nav_route(appspec, app_prefix, link),
+                    icon=link.icon,
+                    entity=link.entity,
+                )
+                for link in g.links
+            ),
+        )
+        for g in model.groups
+    )
+    return NavModel(groups=new_groups, auto_discovered=model.auto_discovered)
+
+
+def _resolve_nav_model(deps: _PageRouterConfig, roles: list[str] | None) -> NavModel | None:
+    """#1324 slice 3b: pick the precomputed NavModel for the current request.
+
+    Authenticated: the first role whose ``role_``-stripped id is a known
+    persona selects that persona's nav. No matching persona (or no/empty
+    roles) falls back to the anon nav — the same posture the legacy
+    per-persona swap took (an authed user with an unrecognised role has the
+    anon visitor's nav reach). Returns ``None`` only if the anon nav itself
+    wasn't precomputed (older config), in which case the caller leaves the
+    legacy ``nav_items``/``nav_groups`` path to build the sidebar.
+    """
+    for role in roles or []:
+        nav = deps.persona_navs.get(role.removeprefix("role_"))
+        if nav is not None:
+            return nav
+    return deps.anon_nav
 
 
 def _apply_anon_nav(prc: _PageRequestContext) -> None:
@@ -620,6 +696,14 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
         # than collapsing the sidebar to nothing. The anon-leak path
         # closed by #1127 is the production shape: auth IS configured,
         # but the request has no session yet (handled below).
+        #
+        # #1324 slice 3b: leave ``nav_model`` unset here so the sidebar seam
+        # falls back to the legacy full declared nav. This branch is the
+        # "developer opted out of access control" mode — there are no persona
+        # gates to enforce and no session to resolve a persona from, so
+        # collapsing to the anon nav (a strict subset) would wrongly hide
+        # workspaces. The anon nav is for the production shape (auth IS
+        # configured, request has no session) handled in the else-branch below.
         return
     try:
         prc.auth_ctx = await _resolve_auth_context(prc.deps.get_auth_context, prc.request)
@@ -632,6 +716,12 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
             # per-persona nav variants compiled from workspace access.
             roles = getattr(prc.auth_ctx.user, "roles", None) or []
             prc.ctx.user_roles = list(roles)
+            # #1324 slice 3b: the sidebar now renders from the precomputed
+            # per-persona NavModel. Resolve it from the user's roles (anon
+            # nav if no role matches a persona). The legacy nav_items/
+            # nav_groups swap below stays as dead-code fallback (removed in
+            # a later task).
+            prc.ctx.nav_model = _resolve_nav_model(prc.deps, list(roles))
             matched_persona = False
             if prc.ctx.nav_by_persona and roles:
                 for role in roles:
@@ -681,11 +771,15 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
             # #1127: auth wiring present but request is anon (no user or
             # not authenticated) — apply the anon-safe nav.
             _apply_anon_nav(prc)
+            # #1324 slice 3b: drive the sidebar from the precomputed anon nav.
+            prc.ctx.nav_model = prc.deps.anon_nav
     except Exception:
         logger.warning("Failed to resolve auth context for page", exc_info=True)
         # Fail closed: an exception while resolving auth must not leave
         # the full unfiltered nav exposed (#1127).
         _apply_anon_nav(prc)
+        # #1324 slice 3b: fail closed for the NavModel path too.
+        prc.ctx.nav_model = prc.deps.anon_nav
 
 
 def _inject_onboarding_step(prc: _PageRequestContext) -> None:
@@ -2171,12 +2265,21 @@ async def _workspace_handler(
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=workspace_inner, headers=headers)  # nosemgrep
 
+    # #1324 slice 3b: render the sidebar from the precomputed per-persona (or
+    # anon) NavModel — the same source the entity-page path uses — so the two
+    # paths can no longer drift. Only when auth is wired: with no auth context
+    # (developer opted out of access control) there's no persona/session to
+    # resolve, so leave nav_model unset and fall back to the legacy full
+    # declared nav, mirroring _inject_auth_context's no-auth branch. The legacy
+    # nav_items/nav_groups stay populated as dead-code fallback (removed later).
+    _nav_model = _resolve_nav_model(deps, user_roles) if deps.get_auth_context is not None else None
     page_ctx = PageContext(
         page_title=ws_title,
         app_name=ws_app_name,
         nav_items=[NavItemContext(label=n["label"], route=n["route"]) for n in visible_nav],
         nav_groups=ws_groups,
         current_route=effective_route,
+        nav_model=_nav_model,
     )
     app_state = request.app.state
     css_links = tuple(
@@ -2349,6 +2452,16 @@ def create_page_routes(
         _slug = _entity.name.lower().replace("_", "-")
         route_entity[f"{app_prefix}/{_slug}"] = _entity.name
 
+    # #1324 slice 3b: precompute the per-persona + anon NavModels once at boot.
+    # The RBAC matrix is a pure function of the appspec; the runtime did not
+    # previously materialise it, so we build it here and feed the nav builder.
+    _nav_matrix = generate_access_matrix(appspec)
+    persona_navs = {
+        pid: _reconcile_nav_model(appspec, app_prefix, nav)
+        for pid, nav in build_all_persona_navs(appspec, _nav_matrix).items()
+    }
+    anon_nav = _reconcile_nav_model(appspec, app_prefix, build_anon_nav(appspec, _nav_matrix))
+
     deps = _PageRouterConfig(
         appspec=appspec,
         backend_url=backend_url,
@@ -2362,6 +2475,8 @@ def create_page_routes(
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,
         route_entity=route_entity,
+        persona_navs=persona_navs,
+        anon_nav=anon_nav,
     )
 
     # Register routes — sort by specificity so FastAPI matches the most-specific

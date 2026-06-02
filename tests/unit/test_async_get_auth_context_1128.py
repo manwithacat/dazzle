@@ -72,6 +72,10 @@ def _make_prc(get_auth_context: object | None) -> SimpleNamespace:
         get_auth_context=get_auth_context,
         entity_cedar_specs=None,
         route_entity=None,
+        # #1324 slice 3b: _inject_auth_context resolves a precomputed NavModel
+        # from these. This test only checks auth round-tripping, so empties.
+        persona_navs={},
+        anon_nav=None,
     )
     return SimpleNamespace(ctx=ctx, deps=deps, request=MagicMock(), auth_ctx=None)
 

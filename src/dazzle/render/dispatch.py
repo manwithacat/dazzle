@@ -140,13 +140,74 @@ def _safe_url(value: str) -> URL | None:
         return None
 
 
+def _sidebar_from_nav_model(model: Any, ctx: PageContext) -> Sidebar:
+    """Translate a precomputed `NavModel` into a typed Sidebar primitive (#1324).
+
+    Each `NavGroup` with a non-empty label becomes a collapsible fragment
+    `NavGroup` (curated section). The auto-discover path emits a single group
+    with `label == ""` (flat) — its links render as top-level `Sidebar.items`,
+    not a titled group. Active state mirrors `current_route` against each
+    link's route, matching the legacy `_build_sidebar_from_ctx` behaviour.
+    """
+    current = (getattr(ctx, "current_route", "") or "").rstrip("/")
+
+    flat_items: list[NavItem] = []
+    groups: list[NavGroup] = []
+    for ng in model.groups:
+        nav_items: list[NavItem] = []
+        for link in ng.links:
+            href = _safe_url(getattr(link, "route", "") or "")
+            if href is None:
+                continue
+            nav_items.append(
+                NavItem(
+                    label=getattr(link, "label", "") or "",
+                    href=href,
+                    active=(href.value.rstrip("/") == current),
+                    icon=getattr(link, "icon", None) or "",
+                )
+            )
+        if not nav_items:
+            continue
+        if (ng.label or "").strip():
+            # Curated, titled group → collapsible NavGroup.
+            groups.append(
+                NavGroup(
+                    label=ng.label,
+                    items=tuple(nav_items),
+                    icon=getattr(ng, "icon", None) or "",
+                    collapsed=bool(getattr(ng, "collapsed", False)),
+                )
+            )
+        else:
+            # Flat (auto-discovered) group → top-level sidebar items.
+            flat_items.extend(nav_items)
+
+    app_name = (ctx.app_name or "Dazzle").strip()
+    return Sidebar(
+        items=tuple(flat_items),
+        groups=tuple(groups),
+        header=Text(app_name),
+    )
+
+
 def _build_sidebar_from_ctx(ctx: PageContext) -> Sidebar:
     """Translate PageContext nav data into a typed Sidebar primitive.
+
+    #1324 slice 3b: when the precomputed per-persona/anon `NavModel` is set on
+    the context (`ctx.nav_model`), build the sidebar from it via
+    `_sidebar_from_nav_model`. The legacy `nav_items`/`nav_groups` logic below
+    stays as a fallback for any render path that hasn't set `nav_model` yet
+    (its removal is a later task once every path sets nav_model).
 
     `nav_items` (flat) and `nav_groups` (collapsible) both flow through;
     the Sidebar header carries the app name. Active state mirrors
     `current_route` against each item's route.
     """
+    model = getattr(ctx, "nav_model", None)
+    if model is not None:
+        return _sidebar_from_nav_model(model, ctx)
+
     current = (getattr(ctx, "current_route", "") or "").rstrip("/")
 
     flat_items: list[NavItem] = []
