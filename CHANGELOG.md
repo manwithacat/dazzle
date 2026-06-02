@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.89] - 2026-06-02
+
+### Changed
+
+- **#1324 (Navigation Model Redesign, slice 3b of 4) — workspace + entity page sidebars now render from the precomputed per-persona `NavModel`.** The main render path is cut over to the unified builder, so a workspace page and an entity page show the **same** sidebar for the same persona (the anti-drift invariant), built once per persona at app boot.
+  - **Boot precompute:** `create_page_router` computes the RBAC matrix once and stores `persona_navs: dict[str, NavModel]` + `anon_nav` on `_PageRouterConfig`, with a boot-time route reconciler mapping the builder's logical targets to the real registered routes (`<app_prefix>/<entity-slug>`, `<app_prefix>/workspaces/<name>`).
+  - **Render seam:** `render/dispatch.py` builds the `Sidebar` from `ctx.nav_model` when set (`_sidebar_from_nav_model`), falling back to the legacy `nav_items`/`nav_groups` path otherwise. Both the entity-page (`_inject_auth_context`) and workspace-page (`_workspace_handler`) paths set `ctx.nav_model` (persona-matched; `anon_nav` when authenticated-but-anonymous; legacy full nav preserved for no-auth-wiring apps — fail-closed, no anonymous full-nav leak).
+  - **Labels:** nav links use human-friendly titles (list-surface `title`, else titleized name), matching the legacy presentation.
+  - Anonymous users get `build_anon_nav` (anon-safe only, #1127 rule preserved). **Admin platform + experience routes are unchanged** this slice — they don't set `nav_model`, so they keep rendering via the legacy path until their migration (slice 3c). Old nav producers remain as dead-but-live fallback; removed in slice 3d.
+
 ## [0.80.88] - 2026-06-02
 
 ### Added
