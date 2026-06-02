@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.87] - 2026-06-02
+
+### Added
+
+- **#1324 (Navigation Model Redesign, slice 2 of 4) — the unified per-persona nav builder (`ui/converters/nav_builder.py`, isolated; not yet wired).** A pure module that will become the single source of every persona's sidebar.
+  - **`NavModel` / `NavGroup` / `NavLink`** — frozen, ordered nav model + an `auto_discovered` flag.
+  - **`build_persona_nav(appspec, persona, matrix)`** — resolves a persona's nav: (1) curated from `persona.nav_ref` → the matching `appspec.navs` def; (2) auto-discover fallback (union of the persona's accessible workspaces' region-source entities, `auto_discovered=True`); (3) access-filter (FR-3): drops any item the persona can't LIST (`matrix.get(role, entity, "list") == DENY`), keeping `PERMIT`/`PERMIT_SCOPED`. Filter applies on both paths → no dead links.
+  - **`build_all_persona_navs(appspec, matrix)`** — precomputes every persona's `NavModel` once, keyed by persona id (the link-time precompute slice 3 wires into the renderers).
+  - Pure functions, no runtime coupling; the renderer cutover and removal of the three legacy builders happen in slice 3.
+
 ## [0.80.86] - 2026-06-02
 
 ### Added
