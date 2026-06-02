@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.94] - 2026-06-02
+
 ### Added
 
 - **#1324 FR-4 slice A — conditional navigation (IR + parser + condition vocab + lint; ADDITIVE/INERT).** A nav group header or item may carry an optional render-time VISIBILITY `when:` condition — the same `ConditionExpr` idiom as `RowActionSpec.visible_when:`:
