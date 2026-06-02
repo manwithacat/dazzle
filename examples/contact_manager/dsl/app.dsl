@@ -13,8 +13,23 @@ app contact_manager "Contact Manager":
 persona admin "Administrator":
   default_workspace: _platform_admin
 
+# #1324: curated per-persona navigation. The `user` persona gets an
+# explicit, hand-ordered sidebar via `uses nav contact_nav` (below);
+# `admin` is left without a binding so it auto-discovers its sidebar
+# from accessible workspaces — exercising both nav paths in one app.
 persona user "User":
   default_workspace: contacts
+  uses nav contact_nav
+
+# Curated sidebar for the `user` persona (#1324). Each item is a bare
+# entity or workspace name (no `item` keyword): an entity resolves to its
+# list surface, a workspace to its page. Both targets here are real —
+# Contact has a `mode: list` surface and `contacts` is a declared workspace.
+nav contact_nav:
+  group "Contacts":
+    Contact
+  group "Browse":
+    contacts
 
 # Entity for contact information with LLM cognition metadata.
 #
