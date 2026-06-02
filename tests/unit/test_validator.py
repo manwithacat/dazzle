@@ -7,9 +7,14 @@ for semantic correctness.
 Refactored to use helper functions and parameterization where applicable.
 """
 
+from pathlib import Path
+
 import pytest
 
 from dazzle.core import ir
+from dazzle.core.linker import build_appspec
+from dazzle.core.lint import lint_appspec
+from dazzle.core.parser import parse_modules
 from dazzle.core.validator import (
     extended_lint,
     validate_entities,
@@ -1202,3 +1207,59 @@ class TestValidatePersonaNavRefs:
         )
         errors, _ = validate_persona_nav_refs(appspec)
         assert errors == []
+
+
+def _appspec(dsl: str, tmp_path: Path) -> ir.AppSpec:
+    """Helper to parse DSL, link, and return AppSpec."""
+    dsl_dir = tmp_path / "dsl"
+    dsl_dir.mkdir()
+    (dsl_dir / "app.dsl").write_text(dsl)
+    (tmp_path / "dazzle.toml").write_text(
+        '[project]\nname = "test"\nversion = "0.1.0"\nroot = "test"\n[modules]\npaths = ["./dsl"]\n'
+    )
+    modules = parse_modules([dsl_dir / "app.dsl"])
+    return build_appspec(modules, "test")
+
+
+class TestPersonaNavRefPipelineIntegration:
+    """Integration test: persona nav_ref validation through full parse→link→lint."""
+
+    def test_resolved_nav_ref_passes_full_pipeline(self, tmp_path: Path) -> None:
+        """DSL with a resolved persona nav_ref must parse, link, and lint without error."""
+        dsl = """module test
+app TestApp "Test Application"
+
+nav teaching:
+  group "Marking":
+    item Assignment
+
+persona teacher "Teacher":
+  uses nav teaching
+"""
+        appspec = _appspec(dsl, tmp_path)
+        errors, _warnings, _relevance = lint_appspec(appspec, suggest=False)
+
+        # Assert: no error about unresolved nav_ref
+        assert not any("uses nav" in e and "teaching" in e for e in errors), errors
+
+        # Assert: appspec.navs was populated by the linker
+        assert appspec.navs is not None, "appspec.navs should be populated"
+        assert len(appspec.navs) > 0, "appspec.navs should contain at least one nav"
+        nav_names = [n.name for n in appspec.navs]
+        assert "teaching" in nav_names, f"Expected 'teaching' nav, got {nav_names}"
+
+    def test_unresolved_nav_ref_fails_full_pipeline(self, tmp_path: Path) -> None:
+        """DSL with an unresolved persona nav_ref must produce a validation error."""
+        dsl = """module test
+app TestApp "Test Application"
+
+persona teacher "Teacher":
+  uses nav missing
+"""
+        appspec = _appspec(dsl, tmp_path)
+        errors, _warnings, _relevance = lint_appspec(appspec, suggest=False)
+
+        # Assert: lint_appspec includes the persona nav_ref error
+        assert any("missing" in e for e in errors), (
+            f"Expected error mentioning 'missing' nav, got {errors}"
+        )
