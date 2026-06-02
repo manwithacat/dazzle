@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.88] - 2026-06-02
+
+### Added
+
+- **#1324 (Navigation Model Redesign, slice 3a of 4) — nav_builder hardening (additive; still unwired).** Two pure additions to `ui/converters/nav_builder.py` ahead of the renderer cutover:
+  - **Workspace-target access filtering** — a curated nav item may target a *workspace* (not just an entity); `_persona_can_reach` now filters workspace-targets by workspace access (`workspace_allowed_personas`) instead of the entity RBAC matrix (which would wrongly DENY a non-entity name). Entity targets keep the entity-matrix filter. Fixes a gap found in the slice-2 review.
+  - **`build_anon_nav(appspec, matrix)`** — the unauthenticated-user sidebar, produced by the unified builder. Mirrors the existing #1127 anon-safety rule exactly: a workspace is anon-safe iff it has no persona gate (`workspace_allowed_personas(ws) is None`); persona-gated items never leak to anon. `auto_discovered=True`.
+  - Still not wired to any renderer — the workspace/entity renderer cutover and the removal of workspace-level nav land in the remaining slice-3 work.
+
 ## [0.80.87] - 2026-06-02
 
 ### Added
