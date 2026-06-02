@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.91] - 2026-06-02
+
+### Added
+
+- **#1324 (Navigation Model Redesign, slice 4) — worked per-persona nav example + the shipped resolution.** `examples/contact_manager` now binds a curated top-level `nav contact_nav:` to its `user` persona via `uses nav`, while `admin` is left unbound (auto-discovers) — exercising both author-facing paths in a real app, with an end-to-end test (real RBAC matrix) asserting `user` gets the curated nav (`auto_discovered=False`) and `admin` auto-discovers.
+  - **Resolution of #1324 FR-1/FR-2/FR-3 (per decision to stop at convergence):** author-facing navigation is now per-persona-global — a persona binds one `nav` def (`persona X: uses nav Y`); workspace and entity pages render the *same* precomputed `NavModel` for that persona (no drift), access-filtered so it contains no link the persona can't follow (FR-3). `WorkspaceSpec.nav_groups` is **retained as a framework-internal construct** (used by the auto-generated admin platform and experience routes), which continue to render via the legacy path. The clean split: per-persona `nav` is the author-facing model; workspace `nav_groups` is framework-internal. FR-4 (`when=`), FR-5 (workspace `primary_actions:`), and FR-6 (drift/dead-link lint) remain as independent follow-ups.
+
+### Agent Guidance
+
+- **Author navigation per persona:** declare a top-level `nav <name>:` block (groups of bare `<Entity>` / `<workspace>` names — note: **no `item` keyword**, a bare name per line) and bind it with `persona <id>: uses nav <name>`. A persona has exactly one sidebar, shown identically on every page; a persona with no `uses nav` auto-discovers its accessible entities. Items the persona can't LIST are dropped automatically. Do **not** rely on `nav_group` on a *workspace* for author-facing nav — that's now a framework-internal construct (admin platform / experiences) and is ignored for author pages.
+
 ## [0.80.90] - 2026-06-02
 
 ### Fixed
