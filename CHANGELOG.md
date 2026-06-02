@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.8] - 2026-06-02
+
+### Fixed
+
+- **`scripts/build_dist.py` no longer warns `missing pickr.css` on every build.** `pickr.css` was removed in #976 (`widget=color` uses native `<input type="color">`) and dropped from `css_loader.CSS_SOURCE_FILES`, but the parallel `CSS_SOURCES` list in `build_dist.py` still referenced it — so each `dist/` rebuild printed a spurious warning and skipped it. Removed the stale entry; the emitted bundle is byte-identical (the missing file contributed nothing).
+
 ## [0.81.7] - 2026-06-02
 
 ### Changed

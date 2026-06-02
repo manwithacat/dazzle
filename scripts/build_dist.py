@@ -33,7 +33,8 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("vendor", STATIC / "vendor" / "tom-select.css"),
     ("vendor", STATIC / "vendor" / "flatpickr.css"),
     # quill.snow.css removed in #977 cycle 4 — replaced by dz-richtext.
-    ("vendor", STATIC / "vendor" / "pickr.css"),
+    # pickr.css removed in #976 — `widget=color` uses native <input type="color">,
+    # no vendor CSS required (mirrors css_loader.CSS_SOURCE_FILES).
     ("tokens", STATIC / "css" / "tokens.css"),
     ("tokens", STATIC / "css" / "design-system.css"),
     ("base", STATIC / "css" / "base.css"),
