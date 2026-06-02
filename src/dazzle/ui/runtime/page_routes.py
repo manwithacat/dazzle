@@ -642,22 +642,38 @@ def _reconcile_nav_model(appspec: ir.AppSpec, app_prefix: str, model: NavModel) 
     return NavModel(groups=new_groups, auto_discovered=model.auto_discovered)
 
 
-def _resolve_nav_model(deps: _PageRouterConfig, roles: list[str] | None) -> NavModel | None:
-    """#1324 slice 3b: pick the precomputed NavModel for the current request.
+def _resolve_nav_model(
+    deps: _PageRouterConfig, roles: list[str] | None, *, authenticated: bool
+) -> NavModel | None:
+    """#1324: pick the precomputed NavModel for the current request.
 
-    Authenticated: the first role whose ``role_``-stripped id is a known
-    persona selects that persona's nav. No matching persona (or no/empty
-    roles) falls back to the anon nav — the same posture the legacy
-    per-persona swap took (an authed user with an unrecognised role has the
-    anon visitor's nav reach). Returns ``None`` only if the anon nav itself
-    wasn't precomputed (older config), in which case the caller leaves the
-    legacy ``nav_items``/``nav_groups`` path to build the sidebar.
+    The fallback semantics distinguish unauthenticated from authenticated-but-
+    no-persona-match (the #1324 slice-3b regression fixed here):
+
+    - **Unauthenticated** (no session) → the anon nav. This is the only case
+      where anon reach is correct; an unauthenticated request must never see
+      the full nav.
+    - **Authenticated, a role matches a persona** → that persona's NavModel.
+    - **Authenticated, NO role matches a persona** → ``None``. The caller
+      leaves the legacy ``nav_items``/``nav_groups`` path to build the sidebar.
+      This is the critical case: ``admin``/``super_admin`` are role NAMES, not
+      entries in ``appspec.personas``, so ``persona_navs`` has no key for them.
+      Slice 3b wrongly returned the anon nav here, collapsing the admin platform
+      workspace's curated ``nav_groups`` to the anonymous-visitor nav. Falling
+      through to the legacy path renders the workspace's own curated nav.
+    - **anon nav not precomputed** (older config) → ``None`` (legacy path).
     """
     for role in roles or []:
         nav = deps.persona_navs.get(role.removeprefix("role_"))
         if nav is not None:
             return nav
-    return deps.anon_nav
+    if not authenticated:
+        # Genuinely-unauthenticated request: the anon-safe subset (never the
+        # full nav). Returns None when no anon nav was precomputed.
+        return deps.anon_nav
+    # Authenticated but no role matched a persona (e.g. admin/super_admin):
+    # fall through to the legacy curated nav rather than the anon subset.
+    return None
 
 
 def _apply_anon_nav(prc: _PageRequestContext) -> None:
@@ -716,12 +732,13 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
             # per-persona nav variants compiled from workspace access.
             roles = getattr(prc.auth_ctx.user, "roles", None) or []
             prc.ctx.user_roles = list(roles)
-            # #1324 slice 3b: the sidebar now renders from the precomputed
-            # per-persona NavModel. Resolve it from the user's roles (anon
-            # nav if no role matches a persona). The legacy nav_items/
-            # nav_groups swap below stays as dead-code fallback (removed in
-            # a later task).
-            prc.ctx.nav_model = _resolve_nav_model(prc.deps, list(roles))
+            # #1324: the sidebar now renders from the precomputed per-persona
+            # NavModel. This branch is the AUTHENTICATED path (auth_ctx.user is
+            # set), so pass authenticated=True: a role matching a persona picks
+            # that persona's nav; a role matching NONE (e.g. role_admin, which
+            # is a role name not a persona) returns None so the legacy curated
+            # nav_groups below render — NOT the anon nav (the slice-3b regression).
+            prc.ctx.nav_model = _resolve_nav_model(prc.deps, list(roles), authenticated=True)
             matched_persona = False
             if prc.ctx.nav_by_persona and roles:
                 for role in roles:
@@ -2265,14 +2282,24 @@ async def _workspace_handler(
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=workspace_inner, headers=headers)  # nosemgrep
 
-    # #1324 slice 3b: render the sidebar from the precomputed per-persona (or
-    # anon) NavModel — the same source the entity-page path uses — so the two
-    # paths can no longer drift. Only when auth is wired: with no auth context
+    # #1324: render the sidebar from the precomputed per-persona (or anon)
+    # NavModel — the same source the entity-page path uses — so the two paths
+    # can no longer drift. Only when auth is wired: with no auth context
     # (developer opted out of access control) there's no persona/session to
     # resolve, so leave nav_model unset and fall back to the legacy full
-    # declared nav, mirroring _inject_auth_context's no-auth branch. The legacy
-    # nav_items/nav_groups stay populated as dead-code fallback (removed later).
-    _nav_model = _resolve_nav_model(deps, user_roles) if deps.get_auth_context is not None else None
+    # declared nav, mirroring _inject_auth_context's no-auth branch.
+    #
+    # ``is_authenticated`` is the resolved auth state (True only when the
+    # request carried a valid session; user_roles is populated only then).
+    # Passing it through is what fixes the slice-3b admin regression: an
+    # authenticated admin (role_admin, which matches no persona) now resolves to
+    # None and falls through to the workspace's curated nav_groups, while a
+    # genuinely-anonymous request (no session) still gets the anon nav.
+    _nav_model = (
+        _resolve_nav_model(deps, user_roles, authenticated=is_authenticated)
+        if deps.get_auth_context is not None
+        else None
+    )
     page_ctx = PageContext(
         page_title=ws_title,
         app_name=ws_app_name,

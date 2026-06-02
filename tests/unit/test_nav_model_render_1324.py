@@ -242,18 +242,31 @@ def test_reconcile_maps_entity_and_workspace_routes_to_runtime_shape() -> None:
 
 def test_resolve_nav_model_matches_persona_by_role() -> None:
     deps = _deps({"engineer": _PERSONA_NAV}, _ANON_NAV)
-    assert _resolve_nav_model(deps, ["role_engineer"]) is _PERSONA_NAV
+    assert _resolve_nav_model(deps, ["role_engineer"], authenticated=True) is _PERSONA_NAV
 
 
-def test_resolve_nav_model_unmatched_role_falls_back_to_anon() -> None:
+def test_resolve_nav_model_authed_unmatched_role_returns_none() -> None:
+    """#1324 regression fix: an AUTHENTICATED user whose roles match no persona
+    must fall through to the legacy curated nav (return None), NOT collapse to
+    the anon nav. ``admin``/``super_admin`` are role NAMES, not persona entries,
+    so the admin platform workspace has no persona_navs key — pre-fix it got the
+    anon visitor's nav, hiding the curated admin nav_groups."""
     deps = _deps({"engineer": _PERSONA_NAV}, _ANON_NAV)
-    assert _resolve_nav_model(deps, ["role_unknown"]) is _ANON_NAV
+    assert _resolve_nav_model(deps, ["role_admin"], authenticated=True) is None
+    assert _resolve_nav_model(deps, ["role_unknown"], authenticated=True) is None
 
 
-def test_resolve_nav_model_no_roles_falls_back_to_anon() -> None:
+def test_resolve_nav_model_unauthenticated_falls_back_to_anon() -> None:
+    """Genuinely-unauthenticated requests get the anon nav — never the full nav."""
     deps = _deps({"engineer": _PERSONA_NAV}, _ANON_NAV)
-    assert _resolve_nav_model(deps, []) is _ANON_NAV
-    assert _resolve_nav_model(deps, None) is _ANON_NAV
+    assert _resolve_nav_model(deps, [], authenticated=False) is _ANON_NAV
+    assert _resolve_nav_model(deps, None, authenticated=False) is _ANON_NAV
+
+
+def test_resolve_nav_model_no_anon_precomputed_returns_none() -> None:
+    """Older config without a precomputed anon nav → None (legacy path builds it)."""
+    deps = _deps({"engineer": _PERSONA_NAV}, None)
+    assert _resolve_nav_model(deps, [], authenticated=False) is None
 
 
 def _make_prc(
@@ -321,8 +334,13 @@ async def test_inject_no_auth_wiring_leaves_nav_model_unset() -> None:
 
 
 @pytest.mark.asyncio
-async def test_inject_authenticated_unmatched_role_sets_anon_nav_model() -> None:
-    user = SimpleNamespace(email="u@x", username="u", roles=["role_unknown"], is_superuser=False)
+async def test_inject_authenticated_unmatched_role_falls_back_to_legacy_nav() -> None:
+    """#1324 regression fix (admin platform workspace): an AUTHENTICATED user
+    whose role matches no persona (e.g. ``role_admin``) must leave nav_model
+    unset (None) so the sidebar falls through to the legacy curated nav_groups
+    — NOT collapse to the anon visitor's nav. Pre-fix slice 3b returned the anon
+    nav here, collapsing the admin sidebar to the anonymous-visitor nav."""
+    user = SimpleNamespace(email="u@x", username="u", roles=["role_admin"], is_superuser=False)
     auth_ctx = SimpleNamespace(is_authenticated=True, user=user, preferences={})
 
     def _resolver(_req: object) -> SimpleNamespace:
@@ -334,4 +352,4 @@ async def test_inject_authenticated_unmatched_role_sets_anon_nav_model() -> None
         anon_nav=_ANON_NAV,
     )
     await _inject_auth_context(prc)
-    assert prc.ctx.nav_model is _ANON_NAV
+    assert prc.ctx.nav_model is None
