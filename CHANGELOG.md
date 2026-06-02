@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.90] - 2026-06-02
+
+### Fixed
+
+- **#1324 — admin-platform sidebar regression from slice 3b (v0.80.89).** An authenticated user whose role matched no persona (notably `admin`/`super_admin`, which are role names, not `appspec.personas` entries) was shown the **anonymous** sidebar, because `_resolve_nav_model` returned `anon_nav` for *any* no-match. The admin platform workspace renders through `_workspace_handler` (which sets `nav_model`), so the curated admin `nav_groups` were bypassed. Fix: `_resolve_nav_model` now takes an explicit `authenticated` flag — an authenticated user with no matching persona falls through to the **legacy** nav (rendering the curated `nav_groups`), and `anon_nav` is used **only** for genuinely-unauthenticated requests. Verified no anonymous-full-nav leak is introduced (every unauthenticated path still routes to anon). Regression + corrected-semantics tests added. This is the correct fallback regardless of the pending admin-platform nav-model decision (slice 3c).
+
 ## [0.80.89] - 2026-06-02
 
 ### Changed
