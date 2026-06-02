@@ -311,3 +311,44 @@ def test_renderer_escapes_drill_urls_and_region_name() -> None:
     assert '"><script>' not in html
     assert '"><svg' not in html
     assert '"><img>' not in html
+
+
+# ── CSS (#1326) ──
+
+
+def _regions_css() -> str:
+    from pathlib import Path
+
+    import dazzle.ui as dazzle_ui
+
+    css_path = (
+        Path(dazzle_ui.__file__).parent
+        / "runtime"
+        / "static"
+        / "css"
+        / "components"
+        / "regions.css"
+    )
+    return css_path.read_text(encoding="utf-8")
+
+
+def test_task_inbox_chip_has_count_label_separator_css() -> None:
+    """#1326: the chip rendered count + label glued together ("0manuscripts")
+    because the `.dz-task-inbox-chip*` family had NO css. The chip must now
+    style a separator (inline-flex + gap) between the count and label spans."""
+    css = _regions_css()
+    # The chip rule exists and is an inline-flex pill with a gap (the gap is
+    # what separates the count span from the label span).
+    chip_idx = css.find(".dz-task-inbox-chip {")
+    assert chip_idx != -1, ".dz-task-inbox-chip rule missing"
+    rule = css[chip_idx : css.find("}", chip_idx)]
+    assert "inline-flex" in rule
+    assert "gap:" in rule
+
+
+def test_task_inbox_chip_count_and_label_styled() -> None:
+    """The count and label spans each have a rule, so the chip reads as a
+    proper pill rather than unstyled glued text."""
+    css = _regions_css()
+    assert ".dz-task-inbox-chip-count {" in css
+    assert ".dz-task-inbox-chip-label {" in css

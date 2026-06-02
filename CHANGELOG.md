@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.5] - 2026-06-02
+
+### Fixed
+
+- **#1326 — task_inbox summary chips no longer render count and label glued together ("0manuscripts").** The renderer emits the count and label as two adjacent `<span>`s, but the entire `.dz-task-inbox-chip*` family had **no CSS at all** (only `.dz-progress-chip` existed), so nothing separated them. Added a task_inbox region section to `regions.css`: `.dz-task-inbox-chip` is now an `inline-flex` pill with a `gap` between count and label (mirroring `.dz-progress-chip`), and `.dz-task-inbox-chip-count` / `.dz-task-inbox-chip-label` get count-emphasis / muted-label treatment. The `.dz-task-inbox-chips` row is a wrapping flex container. Regression tests assert the chip carries the inline-flex + gap separator and that the count/label spans are styled.
+
 ## [0.81.4] - 2026-06-02
 
 ### Fixed
