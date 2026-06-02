@@ -7,6 +7,7 @@ from dazzle.ui.converters.nav_builder import (
     NavGroup,
     NavLink,
     NavModel,
+    build_all_persona_navs,
     build_persona_nav,
 )
 
@@ -113,3 +114,103 @@ def test_access_filter_drops_denied_entity(tmp_path: Path):
     entities = {link.entity for group in model.groups for link in group.links}
     assert "Assignment" in entities
     assert "Secret" not in entities
+
+
+# ---------------------------------------------------------------------------
+# build_persona_nav — auto-discover fallback (#1324 Task 2.4)
+# ---------------------------------------------------------------------------
+
+# DSL with a workspace whose regions source two entities (each with a list
+# surface) and a persona with NO `uses nav` → auto-discover fallback path.
+_AUTO_DSL = """module test
+app TestApp "Test Application"
+
+entity Assignment "Assignment":
+  id: uuid pk
+  title: str(200) required
+
+entity Submission "Submission":
+  id: uuid pk
+  name: str(200) required
+
+surface assignment_list "Assignments":
+  uses entity Assignment
+  mode: list
+  section main "Assignments":
+    field title "Title"
+
+surface submission_list "Submissions":
+  uses entity Submission
+  mode: list
+  section main "Submissions":
+    field name "Name"
+
+workspace classroom "Classroom":
+  purpose: "Teaching workspace"
+
+  assignment_list:
+    source: Assignment
+    display: list
+
+  submission_list:
+    source: Submission
+    display: list
+
+persona teacher "Teacher":
+  role: teacher
+"""
+
+
+def test_auto_discover_when_no_nav_ref(tmp_path: Path):
+    appspec = _appspec(_AUTO_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    model = build_persona_nav(appspec, persona, _StubMatrix())
+
+    assert model.auto_discovered is True
+    entities = {link.entity for group in model.groups for link in group.links}
+    assert "Assignment" in entities
+    assert "Submission" in entities
+
+
+# DSL with a curated nav (teacher) AND a second persona (admin) with no nav.
+_ALL_PERSONAS_DSL = """module test
+app TestApp "Test Application"
+
+entity Assignment "Assignment":
+  id: uuid pk
+  title: str(200) required
+
+surface assignment_list "Assignments":
+  uses entity Assignment
+  mode: list
+  section main "Assignments":
+    field title "Title"
+
+workspace classroom "Classroom":
+  purpose: "Teaching workspace"
+
+  assignment_list:
+    source: Assignment
+    display: list
+
+nav teaching:
+  group "Marking":
+    item Assignment
+
+persona teacher "Teacher":
+  uses nav teaching
+
+persona admin "Admin":
+  role: admin
+"""
+
+
+def test_build_all_persona_navs_keys_by_persona_id(tmp_path: Path):
+    appspec = _appspec(_ALL_PERSONAS_DSL, tmp_path)
+
+    navs = build_all_persona_navs(appspec, _StubMatrix())
+
+    assert set(navs.keys()) == {"teacher", "admin"}
+    assert navs["teacher"].auto_discovered is False
+    assert navs["admin"].auto_discovered is True

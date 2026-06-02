@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from dazzle.rbac.matrix import PolicyDecision  # runtime import (ui may import rbac)
+from dazzle.ui.converters.workspace_converter import workspace_allowed_personas
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
@@ -87,17 +88,52 @@ def _resolve_curated(
     return out
 
 
+def _auto_discover(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix) -> list[NavGroup]:
+    """Union of the persona's accessible workspaces' entity list-surfaces (FR-3).
+
+    `workspace_allowed_personas` returns ``None`` (visible to all personas) or a
+    list of persona **ID strings** — compare against ``persona.id`` directly."""
+    role = persona.effective_role
+    personas = list(getattr(appspec, "personas", []) or [])
+    seen: set[str] = set()
+    links: list[NavLink] = []
+    for ws in getattr(appspec, "workspaces", []) or []:
+        allowed = workspace_allowed_personas(ws, personas)  # None = all personas
+        if allowed is not None and persona.id not in set(allowed):
+            continue
+        for region in ws.regions:
+            region_sources = ([region.source] if region.source else []) + list(
+                getattr(region, "sources", []) or []
+            )
+            for src in region_sources:
+                if src in seen or not _persona_can_list(matrix, role, src):
+                    continue
+                route = _route_for(appspec, src)
+                if route is None:
+                    continue
+                seen.add(src)
+                links.append(NavLink(label=src, route=route, entity=src))
+    return [NavGroup(label="", icon=None, collapsed=False, links=tuple(links))] if links else []
+
+
 def build_persona_nav(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix) -> NavModel:
     """The single source of a persona's sidebar (#1324).
 
     Curated path: if the persona binds a `uses nav <name>` that resolves to a
     declared `nav <name>:`, build groups from it (FR-3 access-filtered).
-    Otherwise fall back to auto-discovery — implemented in the next task; for
-    now this returns an empty auto-discovered placeholder."""
+    Otherwise fall back to auto-discovery over the persona's accessible
+    workspaces' entity list-surfaces."""
     if persona.nav_ref is not None:
         nav_def = next((n for n in appspec.navs if n.name == persona.nav_ref), None)
         if nav_def is not None:
             groups = _resolve_curated(appspec, nav_def, persona, matrix)
             return NavModel(groups=tuple(groups), auto_discovered=False)
-    # Auto-discover fallback implemented in the next task; placeholder for now.
-    return NavModel(groups=(), auto_discovered=True)
+    groups = _auto_discover(appspec, persona, matrix)
+    return NavModel(groups=tuple(groups), auto_discovered=True)
+
+
+def build_all_persona_navs(appspec: AppSpec, matrix: AccessMatrix) -> dict[str, NavModel]:
+    """Precompute every persona's nav once (link/build time). Keyed by persona.id."""
+    return {
+        p.id: build_persona_nav(appspec, p, matrix) for p in getattr(appspec, "personas", []) or []
+    }
