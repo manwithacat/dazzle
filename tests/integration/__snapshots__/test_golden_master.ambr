@@ -1036,6 +1036,8 @@
     'messages': list([
     ]),
     'name': 'simple_test',
+    'navs': list([
+    ]),
     'notifications': list([
     ]),
     'params': list([

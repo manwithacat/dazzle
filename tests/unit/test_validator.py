@@ -16,6 +16,7 @@ from dazzle.core.validator import (
     validate_experiences,
     validate_foreign_models,
     validate_integrations,
+    validate_persona_nav_refs,
     validate_services,
     validate_surfaces,
     validate_ux_specs,
@@ -1155,3 +1156,49 @@ class TestWorkspaceFilterFKTraversal:
         )
         errors, _ = validate_ux_specs(appspec)
         assert any("bogus_field" in e for e in errors)
+
+
+# =============================================================================
+# Persona nav_ref Resolution Tests (#1324)
+# =============================================================================
+
+
+class TestValidatePersonaNavRefs:
+    """A persona's `uses nav <name>` must resolve to a declared `nav <name>:`."""
+
+    def test_unresolved_persona_nav_ref_is_error(self) -> None:
+        """A persona referencing an undeclared nav produces a validation error."""
+        persona = ir.PersonaSpec(id="teacher", label="Teacher", nav_ref="nonexistent")
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[persona],
+            navs=[],
+        )
+        errors, _ = validate_persona_nav_refs(appspec)
+        assert any("teacher" in e and "nonexistent" in e for e in errors)
+
+    def test_resolved_persona_nav_ref_no_error(self) -> None:
+        """A persona referencing a declared nav produces no such error."""
+        persona = ir.PersonaSpec(id="teacher", label="Teacher", nav_ref="teaching")
+        nav = ir.NavSpec(name="teaching", groups=[])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[persona],
+            navs=[nav],
+        )
+        errors, _ = validate_persona_nav_refs(appspec)
+        assert errors == []
+
+    def test_persona_without_nav_ref_no_error(self) -> None:
+        """A persona with nav_ref=None is unaffected."""
+        persona = ir.PersonaSpec(id="teacher", label="Teacher")
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[persona],
+            navs=[],
+        )
+        errors, _ = validate_persona_nav_refs(appspec)
+        assert errors == []

@@ -83,7 +83,7 @@ from .tests import TestSpec
 from .triples import VerifiableTriple
 from .views import ViewSpec
 from .webhooks import WebhookSpec
-from .workspaces import WorkspaceSpec
+from .workspaces import NavSpec, WorkspaceSpec
 
 
 class AppSpec(BaseModel):
@@ -120,6 +120,9 @@ class AppSpec(BaseModel):
     domain: DomainSpec
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
     workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension (old)
+    # Shared nav definitions (v0.61.95, #926). Top-level `nav <name>:` blocks,
+    # referenced by `WorkspaceSpec.nav_ref` and `PersonaSpec.nav_ref` (#1324).
+    navs: list[NavSpec] = Field(default_factory=list)
     experiences: list[ExperienceSpec] = Field(default_factory=list)
     apis: list[APISpec] = Field(default_factory=list)
     domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0

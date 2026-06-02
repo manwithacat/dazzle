@@ -266,6 +266,7 @@ def build_appspec(
         triples=triples,
         surfaces=surfaces,
         workspaces=workspaces,
+        navs=merged_fragment.navs,  # v0.61.95 (#926); persona nav_ref check (#1324)
         experiences=merged_fragment.experiences,
         apis=merged_fragment.apis,
         domain_services=merged_fragment.domain_services,  # #1070

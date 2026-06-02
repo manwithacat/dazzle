@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **#1324 (Navigation Model Redesign, slice 1) — validate-time check that a persona's `uses nav <name>` resolves.** `PersonaSpec.nav_ref` (parsed in slice 1.2) must reference a declared top-level `nav <name>:` block; an unresolved reference is now a validation ERROR, e.g. `persona 'teacher' uses nav 'nonexistent', but no \`nav nonexistent:\` is declared`. New `validate_persona_nav_refs(appspec)` in `core/validator.py`, wired into `lint_appspec`. To make the declared nav names reachable at validation time, `AppSpec` now carries a `navs: list[NavSpec]` field (additive; populated by the linker from the merged module fragment, mirroring the existing per-workspace nav resolution). API-surface `ir-types` baseline regenerated for the new `AppSpec.navs` field (and the previously-unregenerated `PersonaSpec.nav_ref` from slice 1.1).
+
 ## [0.80.85] - 2026-06-02
 
 ### Fixed

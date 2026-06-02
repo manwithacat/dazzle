@@ -157,6 +157,7 @@ ir_class: AppSpec
     - llm_models: list[LLMModelSpec] = []
     - messages: list[MessageSpec] = []
     - metadata: dict[str, Any] = {}
+    - navs: list[NavSpec] = []
     - notifications: list[NotificationSpec] = []
     - params: list[ParamSpec] = []
     - personas: list[PersonaSpec] = []
@@ -2060,6 +2061,7 @@ ir_class: PersonaSpec
     - goals: list[str] = []
     - interactive: bool = True
     - link_via: str = 'email'
+    - nav_ref: str | None = None
     - proficiency_level: Literal[novice, intermediate, expert] = 'intermediate'
     - role: str | None = None
 

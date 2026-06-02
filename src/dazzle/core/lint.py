@@ -18,6 +18,7 @@ from .validator import (
     validate_lifecycles,
     validate_money_fields,
     validate_notifications,
+    validate_persona_nav_refs,
     validate_process_step_service_refs,
     validate_rbac_matrix_diagnostics,
     validate_role_references_against_enum,
@@ -201,6 +202,12 @@ def lint_appspec(
 
     # Fitness repr_fields declaration (Agent-Led Fitness v1)
     errors, warnings = validate_fitness_repr_fields(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Persona nav_ref resolution (#1324 — `uses nav <name>` must reference
+    # a declared top-level `nav <name>:` block)
+    errors, warnings = validate_persona_nav_refs(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

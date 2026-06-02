@@ -988,6 +988,33 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate that each persona's `uses nav <name>` resolves (#1324).
+
+    A persona binds a single sidebar via ``uses nav <name>`` (parsed into
+    ``PersonaSpec.nav_ref``). The referenced name MUST match a declared
+    top-level ``nav <name>:`` block (collected into ``AppSpec.navs``).
+    An unresolved reference is a validation ERROR.
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    declared_navs = {nav.name for nav in appspec.navs}
+    for persona in appspec.personas:
+        if persona.nav_ref is None:
+            continue
+        if persona.nav_ref not in declared_navs:
+            errors.append(
+                f"persona '{persona.id}' uses nav '{persona.nav_ref}', but no "
+                f"`nav {persona.nav_ref}:` is declared"
+            )
+
+    return errors, warnings
+
+
 def _validate_condition_fields(
     condition: ir.ConditionExpr,
     entity: ir.EntitySpec | None,
