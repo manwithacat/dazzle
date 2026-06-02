@@ -1015,6 +1015,144 @@ def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]
     return errors, warnings
 
 
+def _workspace_allowed_personas(
+    workspace: ir.WorkspaceSpec,
+    personas: list[ir.PersonaSpec],
+) -> list[str] | None:
+    """Return the persona IDs allowed to access a workspace, or None for all.
+
+    Replicates the resolution rules of
+    ``ui.converters.workspace_converter.workspace_allowed_personas`` so that
+    core does NOT take a dependency on the ui layer (ADR layering). Keep in
+    sync with that function:
+
+    1. Explicit ``access.allow_personas`` (non-empty) — exactly those.
+    2. Explicit ``access.deny_personas`` (non-empty, no allow) — all but those.
+    3. Implicit ``persona.default_workspace`` claimants — those personas.
+    4. Otherwise ``None`` — visible to everyone (no filter).
+    """
+    ws_access = getattr(workspace, "access", None)
+    if ws_access is not None:
+        allow = list(getattr(ws_access, "allow_personas", None) or [])
+        deny = list(getattr(ws_access, "deny_personas", None) or [])
+        if allow:
+            return allow
+        if deny:
+            return [p.id for p in personas if p.id not in deny]
+    claimants = [p.id for p in personas if p.default_workspace == workspace.name]
+    if claimants:
+        return claimants
+    return None
+
+
+def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Lint per-persona-global navigation curation (#1324 FR-6).
+
+    All three diagnostics are WARNINGS (the errors list is always empty):
+
+    1. **Auto-discovery reliance** — a persona with no ``uses nav`` binding
+       gets an auto-discovered sidebar; warn so the author can make it
+       explicit.
+    2. **Dead curated nav item** — a ``nav`` lists an entity/workspace that
+       NO persona bound to that nav can reach (entity: matrix LIST denied for
+       all bound personas; workspace: not allowed for any bound persona), so
+       the runtime access-filter drops it (dead link). Also warns when an
+       item resolves to neither an entity nor a workspace, and once when a
+       declared nav has no bound persona at all (then skips its item checks).
+    3. **Ignored workspace nav_groups** — author-declared (non ``_``-prefixed)
+       workspace ``nav_groups`` are framework-internal now and ignored for the
+       author-facing sidebar.
+
+    Returns:
+        Tuple of (errors, warnings) — errors is always empty.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    # --- Diagnostic 1: auto-discovery reliance -------------------------------
+    for persona in appspec.personas:
+        if persona.nav_ref is None:
+            warnings.append(
+                f"persona '{persona.id}' has no explicit nav (uses nav) — its "
+                f"sidebar is auto-discovered; bind one with `uses nav <name>` "
+                f"to make navigation explicit."
+            )
+
+    # --- Diagnostic 2: dead curated nav item ---------------------------------
+    # Compute the RBAC matrix once (reused exactly as the other validators do).
+    matrix = None
+    try:
+        from dazzle.rbac.matrix import PolicyDecision, generate_access_matrix
+
+        matrix = generate_access_matrix(appspec)
+    except ImportError:
+        matrix = None
+    except Exception:
+        # Matrix generation can fail on incomplete AppSpecs during early
+        # development; degrade gracefully rather than blocking lint.
+        matrix = None
+
+    entity_names = {e.name for e in appspec.domain.entities}
+    workspaces_by_name = {ws.name: ws for ws in appspec.workspaces}
+
+    for nav in appspec.navs:
+        bound = [p for p in appspec.personas if p.nav_ref == nav.name]
+        if not bound:
+            warnings.append(
+                f"nav '{nav.name}' is not used by any persona (no `uses nav {nav.name}`)."
+            )
+            continue
+
+        bound_ids = ", ".join(p.id for p in bound)
+        for group in nav.groups:
+            for item in group.items:
+                target = item.entity
+                if target in entity_names:
+                    # Dead if NO bound persona can LIST the entity.
+                    if matrix is not None and all(
+                        matrix.get(p.effective_role, target, "list") == PolicyDecision.DENY
+                        for p in bound
+                    ):
+                        warnings.append(
+                            f"nav '{nav.name}' lists entity '{target}', but no "
+                            f"persona using it ({bound_ids}) can LIST it — it "
+                            f"will be filtered out (dead link)."
+                        )
+                elif target in workspaces_by_name:
+                    ws = workspaces_by_name[target]
+                    allowed = _workspace_allowed_personas(ws, appspec.personas)
+                    # None means "everyone allowed". Dead if no bound persona
+                    # is in the allowed set.
+                    if allowed is not None and not any(p.id in allowed for p in bound):
+                        warnings.append(
+                            f"nav '{nav.name}' lists workspace '{target}', but no "
+                            f"persona using it ({bound_ids}) can reach it — it "
+                            f"will be filtered out (dead link)."
+                        )
+                else:
+                    warnings.append(
+                        f"nav '{nav.name}' item '{target}' does not match any entity or workspace."
+                    )
+
+    # --- Diagnostic 3: ignored author-declared workspace nav_groups ----------
+    # Discriminator: framework admin-platform workspaces are named with a
+    # leading underscore (`_platform_admin`, `_tenant_admin` — built by
+    # core/admin_builder._build_admin_workspaces). This is the same #824
+    # reserved-name convention every other workspace lint rule uses, so reuse
+    # `_is_framework_synthetic_name`. Author workspaces have no such prefix;
+    # their nav_groups are framework-internal now and ignored for the sidebar.
+    for ws in appspec.workspaces:
+        if ws.nav_groups and not _is_framework_synthetic_name(ws.name):
+            warnings.append(
+                f"workspace '{ws.name}' declares nav_groups, but author-facing "
+                f"navigation is per-persona now (`persona X: uses nav Y`); these "
+                f"nav_groups are ignored for the sidebar. (Workspace nav_groups "
+                f"are framework-internal.)"
+            )
+
+    return errors, warnings
+
+
 def _validate_condition_fields(
     condition: ir.ConditionExpr,
     entity: ir.EntitySpec | None,

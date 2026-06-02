@@ -17,6 +17,7 @@ from .validator import (
     validate_ledgers,
     validate_lifecycles,
     validate_money_fields,
+    validate_nav_curation,
     validate_notifications,
     validate_persona_nav_refs,
     validate_process_step_service_refs,
@@ -208,6 +209,13 @@ def lint_appspec(
     # Persona nav_ref resolution (#1324 — `uses nav <name>` must reference
     # a declared top-level `nav <name>:` block)
     errors, warnings = validate_persona_nav_refs(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Navigation curation lint (#1324 FR-6 — auto-discovery reliance, dead
+    # curated nav items, ignored author-declared workspace nav_groups). All
+    # WARNINGS.
+    errors, warnings = validate_nav_curation(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

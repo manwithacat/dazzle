@@ -48,15 +48,25 @@
     },
     "examples/pra": {
       "expected_errors": 7,
-      "expected_warnings_min": 335,
+      "expected_warnings_min": 350,
       "expected_error_patterns": [
         "uses 'decimal' type for monetary value. Use 'money' type instead"
       ],
-      "rationale": "pra is the largest example, kept as a kitchen-sink exercise of every DSL form including decimal stream-schema fields. The 7 errors are the validator's money-only rule (#1061) firing on the 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. The 335+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design \u2014 fixing these would lose the example's coverage."
+      "rationale": "pra is the largest example, kept as a kitchen-sink exercise of every DSL form including decimal stream-schema fields. The 7 errors are the validator's money-only rule (#1061) firing on the 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. The 350+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design plus 15 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 fixing these would lose the example's coverage."
     },
     "examples/project_tracker": {
       "expected_errors": 0,
       "expected_warnings_min": 37
+    },
+    "examples/acme_billing": {
+      "expected_errors": 0,
+      "expected_warnings_min": 12,
+      "rationale": "Includes 5 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) — these are informational nudges, not defects."
+    },
+    "examples/hr_records": {
+      "expected_errors": 0,
+      "expected_warnings_min": 12,
+      "rationale": "Includes 4 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) — these are informational nudges, not defects."
     },
     "fixtures/rbac_validation": {
       "expected_errors": 0,

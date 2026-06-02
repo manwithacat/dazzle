@@ -21,6 +21,7 @@ from dazzle.core.validator import (
     validate_experiences,
     validate_foreign_models,
     validate_integrations,
+    validate_nav_curation,
     validate_persona_nav_refs,
     validate_services,
     validate_surfaces,
@@ -1207,6 +1208,169 @@ class TestValidatePersonaNavRefs:
         )
         errors, _ = validate_persona_nav_refs(appspec)
         assert errors == []
+
+
+class TestValidateNavCuration:
+    """Navigation curation lint (#1324 FR-6) — WARNINGS only.
+
+    Three diagnostics: auto-discovery reliance, dead curated nav items,
+    and ignored author-declared workspace nav_groups.
+    """
+
+    # --- Diagnostic 1: auto-discovery reliance ---------------------------
+
+    def test_persona_without_nav_warns_auto_discovery(self) -> None:
+        """A persona with nav_ref=None gets an auto-discovery-reliance warning."""
+        persona = ir.PersonaSpec(id="teacher", label="Teacher")
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[persona],
+            navs=[],
+        )
+        errors, warnings = validate_nav_curation(appspec)
+        assert errors == []
+        assert any(
+            "teacher" in w and "auto-discovered" in w and "uses nav" in w for w in warnings
+        ), warnings
+
+    def test_persona_with_nav_no_auto_discovery_warning(self) -> None:
+        """A persona WITH an explicit nav gets no auto-discovery warning for it."""
+        persona = ir.PersonaSpec(id="teacher", label="Teacher", nav_ref="teaching")
+        nav = ir.NavSpec(name="teaching", groups=[])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[persona],
+            navs=[nav],
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert not any("teacher" in w and "auto-discovered" in w for w in warnings), warnings
+
+    # --- Diagnostic 2: dead curated nav item -----------------------------
+
+    def test_dead_curated_item_warns(self, tmp_path: Path) -> None:
+        """A nav listing an entity the bound persona can't LIST → dead-link warning."""
+        dsl = """module test
+app TestApp "Test"
+
+entity Secret "Secret":
+  id: uuid pk
+  name: str(100) required
+  permit:
+    list: role(admin) or role(manager)
+    read: role(admin) or role(manager)
+    create: role(admin)
+    update: role(admin)
+    delete: role(admin)
+
+nav membernav:
+  group "Main":
+    Secret
+
+persona member "Member":
+  uses nav membernav
+"""
+        appspec = _appspec(dsl, tmp_path)
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any("membernav" in w and "Secret" in w and "dead link" in w for w in warnings), (
+            warnings
+        )
+
+    def test_listable_curated_item_no_dead_warning(self, tmp_path: Path) -> None:
+        """A nav listing an entity the bound persona CAN list → no dead-link warning."""
+        dsl = """module test
+app TestApp "Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  permit:
+    list: role(admin) or role(member)
+    read: role(admin) or role(member)
+    create: role(admin)
+    update: role(admin)
+    delete: role(admin)
+
+nav membernav:
+  group "Main":
+    Task
+
+persona member "Member":
+  uses nav membernav
+"""
+        appspec = _appspec(dsl, tmp_path)
+        _errors, warnings = validate_nav_curation(appspec)
+        assert not any("dead link" in w for w in warnings), warnings
+
+    def test_nav_item_matching_nothing_warns(self) -> None:
+        """A nav item that is neither an entity nor a workspace warns."""
+        nav = ir.NavSpec(
+            name="membernav",
+            groups=[ir.NavGroupSpec(label="Main", items=[ir.NavItemIR(entity="Bogus")])],
+        )
+        persona = ir.PersonaSpec(id="member", label="Member", nav_ref="membernav")
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[persona],
+            navs=[nav],
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any("membernav" in w and "Bogus" in w and "does not match" in w for w in warnings), (
+            warnings
+        )
+
+    def test_nav_with_no_bound_persona_warns(self) -> None:
+        """A nav no persona binds to warns once and skips per-item checks."""
+        nav = ir.NavSpec(
+            name="orphan",
+            groups=[ir.NavGroupSpec(label="Main", items=[ir.NavItemIR(entity="Bogus")])],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[],
+            navs=[nav],
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any("orphan" in w and "not used by any persona" in w for w in warnings), warnings
+        # Per-item checks are skipped — no dead/does-not-match warning for Bogus.
+        assert not any("Bogus" in w for w in warnings), warnings
+
+    # --- Diagnostic 3: ignored workspace nav_groups ----------------------
+
+    def test_author_workspace_nav_groups_warns(self) -> None:
+        """An author workspace (no leading _) declaring nav_groups warns."""
+        ws = ir.WorkspaceSpec(
+            name="dashboard",
+            nav_groups=[ir.NavGroupSpec(label="Main", items=[ir.NavItemIR(entity="Task")])],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[],
+            workspaces=[ws],
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert any("dashboard" in w and "nav_groups" in w and "ignored" in w for w in warnings), (
+            warnings
+        )
+
+    def test_framework_workspace_nav_groups_no_warning(self) -> None:
+        """A _-prefixed (framework) workspace with nav_groups does NOT warn."""
+        ws = ir.WorkspaceSpec(
+            name="_platform_admin",
+            nav_groups=[ir.NavGroupSpec(label="Main", items=[ir.NavItemIR(entity="Task")])],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[]),
+            personas=[],
+            workspaces=[ws],
+        )
+        _errors, warnings = validate_nav_curation(appspec)
+        assert not any("_platform_admin" in w and "ignored" in w for w in warnings), warnings
 
 
 def _appspec(dsl: str, tmp_path: Path) -> ir.AppSpec:
