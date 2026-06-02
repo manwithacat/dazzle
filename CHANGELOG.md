@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-06-02
+
+### Changed
+
+- **Milestone: Navigation Model Redesign complete (#1324, FR-1 through FR-6).** Author-facing navigation is now **per-persona-global** — a persona binds one `nav` def (`persona X: uses nav Y`) and sees the same sidebar on every page (no per-page-type drift), access-filtered so it contains no link the persona can't LIST. Built across v0.80.86–v0.80.96 (see those entries for detail):
+  - **FR-1/2/3** — converge the three legacy nav builders into one precomputed-per-persona `NavModel`; per-persona binding; build-time access filtering. `WorkspaceSpec.nav_groups` retained as a framework-internal construct (admin platform / experiences).
+  - **FR-5** — declarative workspace `primary_actions:` heading CTAs (`action "…" -> surface|workspace …`).
+  - **FR-6** — `dazzle lint` nav-curation warnings (auto-discovery reliance, dead curated items, ignored author `nav_groups`, undeclared `tenant_config` keys).
+  - **FR-4** — conditional/feature-gated nav: an optional render-time-evaluated `when:` condition (over roles/grants/per-tenant config) hides groups/items; visibility-only.
+  - **#1328** — `nav_group` items are bare names; a leading `item` keyword is now a clear parse error.
+- This release also encompasses the preceding type-correctness chain: **#1321** (`decimal`→`NUMERIC` storage), **#1322** (stub `decimal`/`money` typing), **#1323** (domain-service stub payload coercion), and ADR-0030 (PostgreSQL capability admission rubric).
+
 ## [0.80.96] - 2026-06-02
 
 ### Changed
