@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.2] - 2026-06-02
+
+### Fixed
+
+- **#1329 — `dazzle db upgrade` now honours a bare `DATABASE_URL` on deploy targets again.** #1308 made `db` commands auto-target the app's default environment profile so they match `serve`. But a profile's literal `database_url` resolves at priority 2 in `resolve_database_url` — *before* the priority-3 `DATABASE_URL` env var — so on a Heroku dyno (which sets `DATABASE_URL` but never `DAZZLE_ENV`) the *implicitly*-selected `development` profile's `localhost` URL shadowed the dyno's `DATABASE_URL`, and migrations ran against the wrong database. `_default_db_env` now only auto-selects the default profile when the environment was chosen **explicitly** via `DAZZLE_ENV` (which keeps its profile, as the user asked for it) **or** when `DATABASE_URL` is absent (the local-dev case #1308 fixed). An explicit `--env` still wins (handled upstream). The documented precedence (`DATABASE_URL` env > `[database].url`) is restored for the implicit-default case without regressing #1308's local `db`↔`serve` parity.
+
+### Agent Guidance
+
+- The db-URL precedence has one subtlety: an environment *profile*'s literal `database_url` outranks the `DATABASE_URL` env var (priority 2 vs 3). So a profile is only auto-selected for `db` commands when chosen explicitly (`--env`/`DAZZLE_ENV`) or when no `DATABASE_URL` is set — otherwise a deploy target's `DATABASE_URL` would be shadowed. For a profile that *should* defer to the env var, use `database_url_env = "DATABASE_URL"` (or `url = "env:DATABASE_URL"`), not a literal URL.
+
 ## [0.81.1] - 2026-06-02
 
 ### Fixed

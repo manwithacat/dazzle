@@ -711,10 +711,34 @@ def _default_db_env(project_root: Path) -> str:
     profile-less resolution path (DATABASE_URL → ``[database].url`` → default)
     for projects that don't use environment profiles. Fail-safe: any load error
     returns ``""`` (existing behaviour).
+
+    #1329: a bare ``DATABASE_URL`` (e.g. a Heroku dyno that never sets
+    ``DAZZLE_ENV``) must still win. A profile's literal ``database_url`` is
+    resolved at priority 2 in ``resolve_database_url`` — *before* the priority-3
+    ``DATABASE_URL`` env var — so auto-selecting the *implicitly*-defaulted
+    ``development`` profile would shadow the dyno's ``DATABASE_URL`` and deploy
+    migrations against the wrong (often ``localhost``) database. So we only
+    auto-select the default profile when the environment was chosen
+    *explicitly* via ``DAZZLE_ENV`` (which keeps its priority-2 win, as the user
+    asked for that profile) OR when ``DATABASE_URL`` is absent (the local-dev
+    case #1308 fixed). An explicit ``--env`` is handled upstream in
+    ``_resolve_url`` (`get_active_env`) and always wins regardless.
     """
+    import os
+
+    from dazzle.core.environment import DAZZLE_ENV_VAR
+
     toml_path = project_root / "dazzle.toml"
     if not toml_path.exists():
         return ""
+
+    dazzle_env_explicit = bool(os.environ.get(DAZZLE_ENV_VAR, "").strip())
+    database_url_present = bool(os.environ.get("DATABASE_URL", "").strip())
+    if not dazzle_env_explicit and database_url_present:
+        # Implicitly-defaulted profile would shadow a present DATABASE_URL —
+        # defer to the profile-less path so DATABASE_URL (priority 3) wins.
+        return ""
+
     try:
         from dazzle.core.environment import get_dazzle_env
         from dazzle.core.manifest import load_manifest

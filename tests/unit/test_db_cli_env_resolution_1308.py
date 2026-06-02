@@ -41,8 +41,11 @@ def _write_toml(tmp_path: Path, extra: str = "") -> Path:
 
 @pytest.fixture(autouse=True)
 def _clear_dazzle_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ensure DAZZLE_ENV is unset so get_dazzle_env() returns its default."""
+    """Ensure DAZZLE_ENV and DATABASE_URL are unset so the #1308 tests exercise
+    the implicit-default + no-DATABASE_URL path deterministically (the #1329
+    tests opt back into DATABASE_URL explicitly)."""
     monkeypatch.delenv("DAZZLE_ENV", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
 
 class TestDefaultDbEnv1308:
@@ -111,6 +114,85 @@ class TestDefaultDbEnv1308:
         url = resolve_database_url(manifest, explicit_url="", env_name=env_name)
         assert "myapp_dev" in url
         assert url != _DEFAULT_DATABASE_URL
+
+
+class TestDefaultDbEnv1329:
+    """#1329: a bare DATABASE_URL must win over an *implicitly*-defaulted profile.
+
+    #1308 made `db` commands auto-target the app's default environment so they
+    match `serve`. But a profile's literal `database_url` resolves at priority 2,
+    *before* the priority-3 DATABASE_URL env var — so on a Heroku dyno (no
+    DAZZLE_ENV) the implicitly-selected development profile's localhost URL
+    shadowed the dyno's DATABASE_URL, deploying migrations against the wrong DB.
+    """
+
+    def test_database_url_wins_over_implicit_default_profile(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """DATABASE_URL set + no DAZZLE_ENV + declared dev profile → '' so the
+        profile-less path lets DATABASE_URL (priority 3) win."""
+        monkeypatch.setenv("DATABASE_URL", "postgresql://prod@dyno:5432/heroku_db")
+        _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.development]
+                database_url = "postgresql://james@localhost:5432/myapp_dev"
+            """),
+        )
+        assert _default_db_env(tmp_path) == ""
+
+    def test_explicit_dazzle_env_still_wins_over_database_url(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An *explicit* DAZZLE_ENV keeps its profile even when DATABASE_URL is
+        set — the user asked for that profile."""
+        monkeypatch.setenv("DATABASE_URL", "postgresql://prod@dyno:5432/heroku_db")
+        monkeypatch.setenv("DAZZLE_ENV", "development")
+        _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.development]
+                database_url = "postgresql://james@localhost:5432/myapp_dev"
+            """),
+        )
+        assert _default_db_env(tmp_path) == "development"
+
+    def test_no_database_url_keeps_1308_local_dev_parity(self, tmp_path: Path) -> None:
+        """Without DATABASE_URL (the local-dev case) the #1308 behaviour stands:
+        auto-select the development profile so `db` matches `serve`."""
+        _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.development]
+                database_url = "postgresql://james@localhost:5432/myapp_dev"
+            """),
+        )
+        assert _default_db_env(tmp_path) == "development"
+
+    def test_end_to_end_database_url_resolves_for_heroku(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """End-to-end: with DATABASE_URL set and no DAZZLE_ENV, the resolved URL
+        is the dyno's DATABASE_URL — NOT the dev profile's localhost URL."""
+        from dazzle.core.manifest import load_manifest, resolve_database_url
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql://prod@dyno:5432/heroku_db")
+        _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.development]
+                database_url = "postgresql://james@localhost:5432/myapp_dev"
+            """),
+        )
+        env_name = _default_db_env(tmp_path)
+        manifest = load_manifest(tmp_path / "dazzle.toml")
+        url = resolve_database_url(manifest, explicit_url="", env_name=env_name)
+        assert "heroku_db" in url
+        assert "myapp_dev" not in url
 
 
 class TestRedactUrl1308:
