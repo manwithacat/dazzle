@@ -477,3 +477,69 @@ def test_anon_link_uses_list_surface_title(tmp_path: Path):
     # `public_list "Public"` surface title → "Public" (same as titleized here,
     # but exercises the surface-title path on the anon builder).
     assert pub.label == "Public"
+
+
+# ---------------------------------------------------------------------------
+# #1324 FR-4: curated path copies `when` (model_dump) onto NavLink/NavGroup
+# ---------------------------------------------------------------------------
+
+# Curated nav whose group carries a tenant_config gate and whose item carries
+# a role gate — both parse to ConditionExpr via the real parser.
+_WHEN_DSL = """module test
+app TestApp "Test Application"
+
+tenancy:
+  per_tenant_config:
+    beta_features: bool
+
+entity Assignment "Assignment":
+  id: uuid pk
+  title: str(200) required
+
+entity Secret "Secret":
+  id: uuid pk
+  name: str(200) required
+
+surface assignment_list "Assignments":
+  uses entity Assignment
+  mode: list
+  section main "Assignments":
+    field title "Title"
+
+surface secret_list "Secrets":
+  uses entity Secret
+  mode: list
+  section main "Secrets":
+    field name "Name"
+
+nav teaching:
+  group "Beta" when: tenant_config.beta_features = true:
+    item Assignment
+    item Secret when: role(admin)
+
+persona teacher "Teacher":
+  uses nav teaching
+"""
+
+
+def test_curated_copies_group_and_item_when_as_model_dump(tmp_path: Path):
+    """FR-4 layer 1: `_resolve_curated` carries the model_dump'd ConditionExpr
+    onto the NavGroup (`when`) and the gated NavLink (`when`)."""
+    appspec = _appspec(_WHEN_DSL, tmp_path)
+    persona = _teacher(appspec)
+
+    model = build_persona_nav(appspec, persona, _StubMatrix())
+
+    assert len(model.groups) == 1
+    group = model.groups[0]
+    # Group `when` is a model_dump'd dict (not the ConditionExpr object).
+    assert isinstance(group.when, dict)
+    assert group.when["comparison"]["field"] == "tenant_config.beta_features"
+
+    assignment = next(link for link in group.links if link.entity == "Assignment")
+    secret = next(link for link in group.links if link.entity == "Secret")
+    # Ungated item → when stays None.
+    assert assignment.when is None
+    # Gated item → model_dump'd role check.
+    assert isinstance(secret.when, dict)
+    assert secret.when["role_check"]["role_name"] == "admin"

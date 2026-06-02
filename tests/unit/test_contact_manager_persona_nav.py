@@ -60,3 +60,36 @@ def test_contact_manager_admin_persona_auto_discovers() -> None:
 
     model = build_persona_nav(appspec, admin, matrix)
     assert model.auto_discovered is True
+
+
+def test_contact_manager_browse_group_gated_by_tenant_config() -> None:
+    """#1324 FR-4 worked example: the committed ``Browse`` group declares
+    ``when: tenant_config.show_browse = true``. It carries the model_dump'd
+    condition through the NavModel, and the render-time sidebar filter hides it
+    when the tenant flag is false and shows it when true — visibility only, the
+    ``contacts`` workspace stays reachable (RBAC unchanged)."""
+    from dazzle.render.context import PageContext
+    from dazzle.render.dispatch import _sidebar_from_nav_model
+
+    appspec = load_project_appspec(EXAMPLE_ROOT)
+    matrix = generate_access_matrix(appspec)
+    user = next(p for p in appspec.personas if p.id == "user")
+    model = build_persona_nav(appspec, user, matrix)
+
+    # The condition is carried onto the Browse NavGroup (model_dump'd dict).
+    browse = next(g for g in model.groups if g.label == "Browse")
+    assert isinstance(browse.when, dict)
+    assert browse.when["comparison"]["field"] == "tenant_config.show_browse"
+
+    # Tenant with the flag OFF → "Browse" group hidden from the sidebar.
+    off = _sidebar_from_nav_model(
+        model, PageContext(page_title="x", tenant_config={"show_browse": False})
+    )
+    assert "Browse" not in {g.label for g in off.groups}
+    assert "Contacts" in {g.label for g in off.groups}
+
+    # Tenant with the flag ON → "Browse" group present.
+    on = _sidebar_from_nav_model(
+        model, PageContext(page_title="x", tenant_config={"show_browse": True})
+    )
+    assert "Browse" in {g.label for g in on.groups}

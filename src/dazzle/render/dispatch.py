@@ -149,13 +149,34 @@ def _sidebar_from_nav_model(model: Any, ctx: PageContext) -> Sidebar:
     not a titled group. Active state mirrors `current_route` against each
     link's route, matching the legacy `_build_sidebar_from_ctx` behaviour.
     """
+    # #1324 FR-4: evaluate nav ``when`` conditions at render time. The NavModel
+    # is precomputed at boot (tenant-independent), so visibility against the
+    # request's roles + per-tenant config is resolved here. Build the eval
+    # context once: strip the ``role_`` prefix from roles (matching
+    # page_routes' role_ctx) and pass per-tenant config so ``tenant_config.<key>``
+    # references resolve. Visibility only — route access (RBAC) is unchanged.
+    from dazzle.ui.utils.condition_eval import evaluate_condition
+
+    eval_ctx = {
+        "user_roles": [r.removeprefix("role_") for r in (getattr(ctx, "user_roles", None) or [])],
+        "tenant_config": getattr(ctx, "tenant_config", {}) or {},
+    }
+
     current = (getattr(ctx, "current_route", "") or "").rstrip("/")
 
     flat_items: list[NavItem] = []
     groups: list[NavGroup] = []
     for ng in model.groups:
+        # Group-level ``when``: hide the whole group (header + links) if falsy.
+        group_when = getattr(ng, "when", None)
+        if group_when and not evaluate_condition(group_when, {}, eval_ctx):
+            continue
         nav_items: list[NavItem] = []
         for link in ng.links:
+            # Link-level ``when``: drop this link if it evaluates falsy.
+            link_when = getattr(link, "when", None)
+            if link_when and not evaluate_condition(link_when, {}, eval_ctx):
+                continue
             href = _safe_url(getattr(link, "route", "") or "")
             if href is None:
                 continue

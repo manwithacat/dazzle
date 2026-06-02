@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **#1324 FR-4 slice B — conditional navigation is now LIVE at render.** The `when:` condition on a nav group header / item (parsed inert in slice A) is now evaluated at render time and filters the sidebar. The per-persona `NavModel` is precomputed at boot (tenant-independent), so `when` is carried through the model as a model_dump'd `ConditionExpr` dict and evaluated per-request against the caller's roles + per-tenant config. The four hops:
+  1. `nav_builder._resolve_curated` copies `NavGroupSpec.when` / `NavItemIR.when` (`.model_dump()`) onto the frozen `NavGroup.when` / `NavLink.when` (auto-discover / anon paths emit `None`).
+  2. `page_routes._reconcile_nav_model` preserves `when` on rebuilt groups + links (dropping it here would silently disable the feature — the FR-4 analogue of the slice-3b route bug).
+  3. `PageContext` gains `tenant_config: dict`, populated from `request.state.tenant_config` (TenantMiddleware) at both render sites (`_inject_auth_context` entity-page path, `_workspace_handler` workspace-page path); `{}` when the app has no tenancy. The workspace path now also threads `user_roles`.
+  4. `render/dispatch._sidebar_from_nav_model` builds `eval_ctx = {"user_roles": [strip role_ prefix], "tenant_config": ...}` once, then skips any group whose `when` evaluates falsy and drops any link whose `when` evaluates falsy; a group emptied by link-filtering is dropped (existing empty-group handling). Conditions evaluate via `evaluate_condition(when_dict, {}, eval_ctx)` (record `{}`; `tenant_config.<key>` resolves from `eval_ctx["tenant_config"]`, `role(...)` from `user_roles`).
+  Worked example: `examples/contact_manager` declares `tenancy.per_tenant_config: show_browse: bool` and gates its `nav contact_nav` "Browse" group with `when: tenant_config.show_browse = true` — hidden when the tenant flag is false, shown when true. **Visibility only — NOT access control** (the `contacts` workspace stays reachable by URL; RBAC is unchanged).
+
+### Agent Guidance
+
+- Nav `when:` conditions (group + item) are now enforced at render — visibility only, never a route/RBAC gate. They evaluate against the request's roles (`role(...)`) and per-tenant config (`tenant_config.<key>`, resolved from `request.state.tenant_config`). To gate a nav group/item by a per-tenant flag, declare the key in `tenancy.per_tenant_config:` and write `when: tenant_config.<key> = true` (or a bare `when: tenant_config.<key>` for truthy). A group whose every link is filtered out disappears entirely. The condition flows IR→render through four hops (`_resolve_curated` → `_reconcile_nav_model` → `PageContext.tenant_config` → `_sidebar_from_nav_model`); any new nav rebuild must copy `when` through or the feature silently breaks.
+
 ## [0.80.94] - 2026-06-02
 
 ### Added

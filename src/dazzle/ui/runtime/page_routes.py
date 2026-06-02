@@ -633,9 +633,15 @@ def _reconcile_nav_model(appspec: ir.AppSpec, app_prefix: str, model: NavModel) 
                     route=_reconcile_nav_route(appspec, app_prefix, link),
                     icon=link.icon,
                     entity=link.entity,
+                    # #1324 FR-4: preserve the render-time visibility condition
+                    # through reconciliation. Dropping it here would silently
+                    # disable conditional nav (the FR-4 analogue of the slice-3b
+                    # route bug — see _resolve_nav_model docstring).
+                    when=link.when,
                 )
                 for link in g.links
             ),
+            when=g.when,
         )
         for g in model.groups
     )
@@ -705,6 +711,13 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
     ``async def`` auth dependency (FastAPI-idiomatic). Pre-async
     sync callables continue to work unchanged.
     """
+    # #1324 FR-4: expose per-tenant config to render-time nav ``when`` eval.
+    # Set unconditionally (independent of auth wiring) so ``tenant_config.<key>``
+    # references resolve on every render path. ``{}`` when the app has no
+    # tenancy or the request carries no tenant state (defensive — not all apps
+    # run behind TenantMiddleware).
+    prc.ctx.tenant_config = getattr(getattr(prc.request, "state", None), "tenant_config", {}) or {}
+
     if prc.deps.get_auth_context is None:
         # No auth wiring at all — the app has opted out of access
         # control. Persona gates have no enforcement layer in this
@@ -2367,6 +2380,12 @@ async def _workspace_handler(
         nav_groups=ws_groups,
         current_route=effective_route,
         nav_model=_nav_model,
+        # #1324 FR-4: roles + per-tenant config for render-time nav ``when``
+        # eval. ``user_roles`` carries the ``role_``-prefixed names (the sidebar
+        # filter strips the prefix, matching the entity-page path). ``{}`` for
+        # tenant_config when the app has no tenancy / no tenant state.
+        user_roles=list(user_roles),
+        tenant_config=getattr(getattr(request, "state", None), "tenant_config", {}) or {},
     )
     app_state = request.app.state
     css_links = tuple(

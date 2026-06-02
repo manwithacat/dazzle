@@ -450,6 +450,12 @@ class PageContext(BaseModel):
     user_name: str = ""
     user_roles: list[str] = Field(default_factory=list)
     user_preferences: dict[str, str] = Field(default_factory=dict)
+    # #1324 FR-4: per-tenant config exposed to render-time condition eval. Set
+    # from ``request.state.tenant_config`` (TenantMiddleware) at render time;
+    # ``{}`` for apps without ``tenancy: per_tenant_config:``. Consumed by the
+    # nav ``when`` filter in ``dazzle.render.dispatch._sidebar_from_nav_model``
+    # to resolve ``tenant_config.<key>`` references against the current tenant.
+    tenant_config: dict[str, Any] = Field(default_factory=dict)
 
     # Pre-rendered HTML fragment for the active guide step (v0.71.3).
     # Computed by page_routes._inject_onboarding_step from the active

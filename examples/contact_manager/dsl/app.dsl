@@ -10,6 +10,13 @@ module contact_manager.core
 app contact_manager "Contact Manager":
   security_profile: basic
 
+# #1324 FR-4: per-tenant config flag gating a nav group at render time.
+# `show_browse` toggles the "Browse" sidebar group per tenant via the
+# `when: tenant_config.show_browse = true` clause on `nav contact_nav`.
+tenancy:
+  per_tenant_config:
+    show_browse: bool
+
 persona admin "Administrator":
   default_workspace: _platform_admin
 
@@ -28,7 +35,10 @@ persona user "User":
 nav contact_nav:
   group "Contacts":
     Contact
-  group "Browse":
+  # #1324 FR-4: the "Browse" group is hidden unless the tenant enables the
+  # `show_browse` per-tenant config flag — render-time VISIBILITY only (the
+  # `contacts` workspace stays reachable by direct URL / RBAC is unchanged).
+  group "Browse" when: tenant_config.show_browse = true:
     contacts
 
 # Entity for contact information with LLM cognition metadata.

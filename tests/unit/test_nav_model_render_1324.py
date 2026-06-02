@@ -353,3 +353,160 @@ async def test_inject_authenticated_unmatched_role_falls_back_to_legacy_nav() ->
     )
     await _inject_auth_context(prc)
     assert prc.ctx.nav_model is None
+
+
+# ---------------------------------------------------------------------------
+# #1324 FR-4: conditional nav — `when` survives reconcile + filters at render
+# ---------------------------------------------------------------------------
+
+# A tenant_config gate (group) + a role gate (link), as model_dump'd dicts.
+_TC_GATE = {
+    "comparison": {
+        "field": "tenant_config.beta_features",
+        "operator": "=",
+        "value": {"literal": True},
+    },
+}
+_ROLE_GATE = {"role_check": {"role_name": "admin"}}
+
+_WHEN_NAV = NavModel(
+    groups=(
+        NavGroup(
+            label="Beta",
+            icon=None,
+            collapsed=False,
+            links=(
+                NavLink(label="Always", route="/list/Always"),
+                NavLink(label="AdminOnly", route="/list/AdminOnly", when=_ROLE_GATE),
+            ),
+            when=_TC_GATE,
+        ),
+        NavGroup(
+            label="Core",
+            icon=None,
+            collapsed=False,
+            links=(NavLink(label="Home", route="/list/Home"),),
+        ),
+    ),
+    auto_discovered=False,
+)
+
+
+def test_reconcile_preserves_when_on_groups_and_links() -> None:
+    """FR-4 layer 2: `_reconcile_nav_model` must copy `when` through (the
+    reconciler rebuilds NavGroup/NavLink and would otherwise drop it)."""
+    from dazzle.core import ir
+    from dazzle.ui.runtime.page_routes import _reconcile_nav_model
+
+    appspec = ir.AppSpec(
+        name="app",
+        title="App",
+        version="0.1.0",
+        domain=ir.DomainSpec(entities=[]),
+        surfaces=[],
+        workspaces=[],
+        personas=[],
+    )
+    reconciled = _reconcile_nav_model(appspec, "/app", _WHEN_NAV)
+
+    beta = reconciled.groups[0]
+    assert beta.when == _TC_GATE
+    admin_link = next(link for link in beta.links if link.label == "AdminOnly")
+    assert admin_link.when == _ROLE_GATE
+    # Ungated group/link keep None.
+    assert reconciled.groups[1].when is None
+    assert reconciled.groups[0].links[0].when is None
+
+
+# --- render filter: tenant_config flag gates the whole group ----------------
+
+
+def test_group_when_tenant_config_false_hides_group() -> None:
+    ctx = PageContext(page_title="x", tenant_config={"beta_features": False})
+    sidebar = _sidebar_from_nav_model(_WHEN_NAV, ctx)
+    group_labels = {g.label for g in sidebar.groups}
+    # The tenant_config-gated "Beta" group is hidden; "Core" survives.
+    assert "Beta" not in group_labels
+    assert "Core" in group_labels
+
+
+def test_group_when_tenant_config_true_shows_group() -> None:
+    ctx = PageContext(
+        page_title="x",
+        tenant_config={"beta_features": True},
+        user_roles=["role_admin"],  # also satisfies the admin-only link inside
+    )
+    sidebar = _sidebar_from_nav_model(_WHEN_NAV, ctx)
+    group_labels = {g.label for g in sidebar.groups}
+    assert "Beta" in group_labels
+    beta = next(g for g in sidebar.groups if g.label == "Beta")
+    link_labels = {i.label for i in beta.items}
+    # Both links present: "Always" (no gate) + "AdminOnly" (admin satisfied).
+    assert link_labels == {"Always", "AdminOnly"}
+
+
+# --- render filter: role gate on a single link ------------------------------
+
+
+def test_link_when_role_hidden_for_non_admin() -> None:
+    """Group passes (tenant_config true) but the admin-only link is dropped for
+    a non-admin; the ungated link survives."""
+    ctx = PageContext(
+        page_title="x",
+        tenant_config={"beta_features": True},
+        user_roles=["role_viewer"],
+    )
+    sidebar = _sidebar_from_nav_model(_WHEN_NAV, ctx)
+    beta = next(g for g in sidebar.groups if g.label == "Beta")
+    link_labels = {i.label for i in beta.items}
+    assert link_labels == {"Always"}
+    assert "AdminOnly" not in link_labels
+
+
+def test_link_when_role_shown_for_admin() -> None:
+    ctx = PageContext(
+        page_title="x",
+        tenant_config={"beta_features": True},
+        user_roles=["role_admin"],
+    )
+    sidebar = _sidebar_from_nav_model(_WHEN_NAV, ctx)
+    beta = next(g for g in sidebar.groups if g.label == "Beta")
+    assert "AdminOnly" in {i.label for i in beta.items}
+
+
+def test_group_with_all_links_filtered_out_is_dropped() -> None:
+    """A surviving group whose every link is filtered out → drop the group
+    (mirrors the existing empty-group handling)."""
+    model = NavModel(
+        groups=(
+            NavGroup(
+                label="OnlyAdmin",
+                icon=None,
+                collapsed=False,
+                links=(NavLink(label="AdminOnly", route="/list/AdminOnly", when=_ROLE_GATE),),
+            ),
+        ),
+        auto_discovered=False,
+    )
+    ctx = PageContext(page_title="x", user_roles=["role_viewer"])
+    sidebar = _sidebar_from_nav_model(model, ctx)
+    # Group header would be a flat? No — it has a label, so it'd be a NavGroup,
+    # but all its links are filtered → it must not appear at all.
+    assert sidebar.groups == ()
+    assert sidebar.items == ()
+
+
+def test_no_when_conditions_unaffected() -> None:
+    """Regression: a NavModel with no `when` anywhere renders identically
+    regardless of roles/tenant_config (visibility-only, opt-in)."""
+    ctx_plain = PageContext(page_title="x", current_route="/list/Ticket")
+    ctx_roles = PageContext(
+        page_title="x",
+        current_route="/list/Ticket",
+        user_roles=["role_admin"],
+        tenant_config={"anything": True},
+    )
+    a = _sidebar_from_nav_model(_PERSONA_NAV, ctx_plain)
+    b = _sidebar_from_nav_model(_PERSONA_NAV, ctx_roles)
+    assert a.groups == b.groups
+    assert a.items == b.items

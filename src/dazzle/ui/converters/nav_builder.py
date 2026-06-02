@@ -9,7 +9,7 @@ same precomputed NavModel for the current persona, so the three legacy builders
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.rbac.matrix import PolicyDecision  # runtime import (ui may import rbac)
 from dazzle.ui.converters.workspace_converter import workspace_allowed_personas
@@ -27,6 +27,13 @@ class NavLink:
     route: str
     icon: str | None = None
     entity: str | None = None  # target entity/workspace name (filtering + FR-6 lint)
+    # #1324 FR-4: render-time VISIBILITY condition (model_dump'd ConditionExpr,
+    # mirroring the ``visible_condition: dict`` convention). ``None`` = always
+    # visible. Evaluated at render time against roles + per-tenant config; the
+    # link is hidden when it evaluates falsy. Visibility only — NOT access
+    # control (the RBAC matrix still gates reachability). Only the curated path
+    # populates this; auto-discover / anon paths leave it ``None``.
+    when: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +42,10 @@ class NavGroup:
     icon: str | None
     collapsed: bool
     links: tuple[NavLink, ...]
+    # #1324 FR-4: render-time VISIBILITY condition for the whole group
+    # (model_dump'd ConditionExpr). ``None`` = always visible. When it evaluates
+    # falsy at render time, the entire group (header + links) is hidden.
+    when: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -141,11 +152,18 @@ def _resolve_curated(
                     route=route,
                     icon=item.icon,
                     entity=item.entity,
+                    when=(item.when.model_dump() if item.when else None),
                 )
             )
         if links:
             out.append(
-                NavGroup(label=g.label, icon=g.icon, collapsed=g.collapsed, links=tuple(links))
+                NavGroup(
+                    label=g.label,
+                    icon=g.icon,
+                    collapsed=g.collapsed,
+                    links=tuple(links),
+                    when=(g.when.model_dump() if g.when else None),
+                )
             )
     return out
 
