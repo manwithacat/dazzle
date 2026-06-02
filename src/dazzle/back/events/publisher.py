@@ -137,7 +137,7 @@ class OutboxPublisher:
 
         self._running = True
         try:
-            self._conn = await self._connect_fn()
+            self._conn = await self._open_connection()
         except Exception:
             self._running = False
             logger.error("Failed to connect to event database", exc_info=True)
@@ -239,6 +239,26 @@ class OutboxPublisher:
                 )
                 await asyncio.sleep(backoff)
 
+    async def _open_connection(self) -> Any:
+        """Open a fresh connection in autocommit mode.
+
+        The publisher coordinates across instances through the outbox's
+        ``lock_token``/``lock_expires_at`` columns, so it must never hold a
+        long-lived transaction. Without autocommit, every poll's claim
+        (``UPDATE`` + ``SELECT`` in :meth:`EventOutbox.fetch_pending`) opens an
+        implicit transaction that — on the common *no-events* poll — is never
+        committed, leaving the connection ``idle in transaction`` holding
+        ``AccessShare`` on ``_dazzle_event_outbox`` and blocking DDL such as the
+        Alembic migrations (#1325). Autocommit keeps the steady-state poll
+        connection plainly ``idle``; the per-batch claim is wrapped in an
+        explicit transaction in :meth:`_process_batch` to stay atomic.
+        """
+        conn = await self._connect_fn()
+        # psycopg3 async connections require set_autocommit(); the `.autocommit`
+        # property setter raises on an AsyncConnection.
+        await conn.set_autocommit(True)
+        return conn
+
     async def _try_rollback(self) -> None:
         """Attempt to rollback a failed transaction to recover the connection."""
         if not self._conn:
@@ -258,7 +278,7 @@ class OutboxPublisher:
             self._conn = None
 
         try:
-            self._conn = await self._connect_fn()
+            self._conn = await self._open_connection()
             logger.info(
                 "Publisher reconnected to database",
                 extra={"publisher_id": self._config.publisher_id},
@@ -280,13 +300,21 @@ class OutboxPublisher:
         if not self._conn:
             return 0
 
-        # Fetch pending entries with lock
-        entries = await self._outbox.fetch_pending(
-            self._conn,
-            limit=self._config.batch_size,
-            lock_token=self._config.publisher_id,
-            lock_duration_seconds=self._config.lock_duration,
-        )
+        # Claim a batch atomically. The connection is in autocommit mode
+        # (see `_open_connection`), so wrapping the two-statement claim (lock
+        # UPDATE + SELECT) in an explicit transaction keeps it atomic without
+        # leaving the connection idle-in-transaction afterwards (#1325).
+        # Publishing + mark-published run *outside* this transaction (each
+        # statement auto-commits) so we never hold row/table locks across the
+        # bus round-trip — the outbox lock_token columns provide cross-publisher
+        # exclusion instead.
+        async with self._conn.transaction():
+            entries = await self._outbox.fetch_pending(
+                self._conn,
+                limit=self._config.batch_size,
+                lock_token=self._config.publisher_id,
+                lock_duration_seconds=self._config.lock_duration,
+            )
 
         if not entries:
             return 0
@@ -396,7 +424,7 @@ class OutboxPublisher:
         """
         if not self._conn:
             try:
-                self._conn = await self._connect_fn()
+                self._conn = await self._open_connection()
             except Exception:
                 logger.error("Failed to connect to event database for drain", exc_info=True)
                 raise

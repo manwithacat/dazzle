@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.1] - 2026-06-02
+
+### Fixed
+
+- **#1325 — OutboxPublisher no longer leaks an idle-in-transaction connection on the no-events poll.** The publisher's long-lived connection was created in psycopg's default (non-autocommit) mode, so every poll's claim (`UPDATE` + `SELECT` in `fetch_pending`) opened an implicit transaction that — on the common *no-events* path — was never committed. The connection sat `idle in transaction` indefinitely, holding `AccessShare` on `_dazzle_event_outbox` and blocking DDL (e.g. Alembic migrations / the #1321 `decimal`→`NUMERIC` `ALTER TABLE`). The publisher now opens its connection in **autocommit** mode (`_open_connection` → `set_autocommit(True)`, applied in `start`, `_reconnect`, and `drain`); the per-batch claim is wrapped in an explicit `conn.transaction()` to stay atomic, while publish + mark-published run outside it so the bus round-trip never holds row/table locks (the outbox `lock_token` columns provide cross-publisher exclusion). Steady-state polls now leave the connection plainly `idle`.
+
+### Agent Guidance
+
+- Background DB pollers that reuse one connection must run in **autocommit** mode (or commit/rollback every iteration). A non-autocommit psycopg connection that only ever issues `SELECT`/no-op `UPDATE` parks `idle in transaction` and silently blocks DDL on the tables it touched. Wrap any multi-statement atomic unit in an explicit `conn.transaction()`; never rely on the implicit transaction draining itself.
+
 ## [0.81.0] - 2026-06-02
 
 ### Changed

@@ -58,6 +58,15 @@ def _mock_pg_conn() -> Any:
     conn.commit = AsyncMock()
     conn.close = AsyncMock()
     conn.rollback = AsyncMock()
+    # psycopg3 async API: set_autocommit() is a coroutine; transaction() is a
+    # *sync* method returning an async-context-manager (NOT a coroutine, which
+    # is what a bare AsyncMock attribute would produce). Model both so the
+    # publisher's autocommit + per-batch claim transaction (#1325) works.
+    conn.set_autocommit = AsyncMock()
+    txn_cm = MagicMock()
+    txn_cm.__aenter__ = AsyncMock(return_value=None)
+    txn_cm.__aexit__ = AsyncMock(return_value=None)
+    conn.transaction = MagicMock(return_value=txn_cm)
     return conn
 
 
@@ -860,6 +869,61 @@ class TestOutboxPublisher:
         # Events should be in bus
         all_events = await bus.get_all_events("app.Order")
         assert len(all_events) == 3
+
+    @pytest.mark.asyncio
+    async def test_connection_opened_in_autocommit(self) -> None:
+        """#1325: the publisher must put its connection in autocommit mode so
+        the steady-state no-events poll never parks idle-in-transaction holding
+        AccessShare on the outbox table (which blocks DDL)."""
+        bus = DevBusMemory()
+        outbox = EventOutbox()
+        mock_conn = _mock_pg_conn()
+
+        async def _connect() -> Any:
+            return mock_conn
+
+        publisher = OutboxPublisher(
+            bus=bus,
+            outbox=outbox,
+            config=PublisherConfig(poll_interval=0.1),
+            connect=_connect,
+        )
+
+        await publisher.start()
+        try:
+            mock_conn.set_autocommit.assert_awaited_once_with(True)
+        finally:
+            await publisher.stop()
+
+    @pytest.mark.asyncio
+    async def test_batch_claim_wrapped_in_transaction(self) -> None:
+        """#1325: the per-batch claim runs inside an explicit transaction so the
+        lock UPDATE + SELECT stay atomic even though the connection is in
+        autocommit mode."""
+        bus = DevBusMemory()
+        outbox = EventOutbox()
+        mock_conn = _mock_pg_conn()
+        # No pending events: fetch_pending's SELECT returns empty.
+        empty_cursor = _mock_cursor(rows=[])
+        mock_conn.execute = AsyncMock(return_value=empty_cursor)
+
+        async def _connect() -> Any:
+            return mock_conn
+
+        publisher = OutboxPublisher(
+            bus=bus,
+            outbox=outbox,
+            config=PublisherConfig(poll_interval=0.1),
+            connect=_connect,
+        )
+        publisher._conn = await _connect()
+
+        processed = await publisher._process_batch()
+
+        assert processed == 0
+        # The claim was wrapped in conn.transaction() and the connection is
+        # never left idle-in-transaction (no leaked open transaction).
+        mock_conn.transaction.assert_called()
 
 
 # =============================================================================
