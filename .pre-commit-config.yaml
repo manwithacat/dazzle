@@ -16,9 +16,13 @@ repos:
         # strip caused ~50 agent-Edit failures across recent releases
         # (#1063) because the file changes between Edit and the next
         # Edit's read-cache, breaking the agent's mental model.
-        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$
+        # Also exclude hash-pinned vendored deps and generated dist/ bundles:
+        # the update-vendors bot commits them byte-exact (via Actions, which
+        # bypasses pre-commit) and vendor_hashes.json pins their checksum, so
+        # whitespace-normalising them here corrupts the integrity hash.
+        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$|/static/(vendor|dist)/
       - id: end-of-file-fixer
-        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$
+        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$|/static/(vendor|dist)/
       - id: check-yaml
         exclude: mkdocs\.yml$  # Uses PyYAML-specific tags
       - id: check-toml
@@ -29,6 +33,7 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
         args: ['--fix=lf']
+        exclude: /static/(vendor|dist)/
 
   # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit

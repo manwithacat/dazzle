@@ -17,7 +17,7 @@
     "htmx-ext-loading-states.js": "sha256:e54e21080fb548556293ce8d396755e80de19b4338d370e0ce6ad73fd342aace",
     "htmx-ext-multi-swap.js": "sha256:22dd50b3773541c9e504b3749306cc004d14fd6c39a3179474c245748a9b4705",
     "htmx-ext-path-deps.js": "sha256:fd9e12f2e9585154e730bf8589f1fee6438f66b07866f427f02e2d9dab94705b",
-    "htmx-ext-preload.js": "sha256:3422ae206de1ea6290d5fa806dee2be1d5c6dcc9aab0dbddd48818412bba1e55",
+    "htmx-ext-preload.js": "sha256:7504ccd4c10e44b0aed3d62f30156e8a0abc7b9f18f3980f0fad58b465563466",
     "htmx-ext-remove-me.js": "sha256:71b3dfc7c9c04a75ef667193c48118e006d5a76c38a96ec87aa34f27d9c38633",
     "htmx-ext-response-targets.js": "sha256:811d992edad4523f12f999688668b79cb2900e57a43c41eb0c26ae7f6669c418",
     "htmx-ext-sse.js": "sha256:3b5992a541619babefc4c169505af474df5c3039da51e59b96ccf9241ecd61d2",

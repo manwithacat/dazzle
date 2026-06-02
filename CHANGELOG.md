@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.7] - 2026-06-02
+
+### Changed
+
+- **Vendor JS refresh + committed `dist/` bundle rebuilt to current source (supersedes PR #1320).** Pulled the bot's vendored `htmx-ext-preload.js` update (+ `vendor_hashes.json`) onto current `main` and regenerated `dist/dazzle.min.{css,js}` + `dazzle-icons.min.js` via `scripts/build_dist.py`. The committed bundle had drifted to `v0.80.35` (the bot's PR only rebuilt to `v0.80.77` from a stale base), so source CSS changes since then — including the #1326 `task_inbox` chip styles — were absent from the *committed* bundle. They were always present in the *published wheel* (the `publish-pypi` `rebuild-dist` job rebuilds `dist/` from source), but a `dazzle serve` from a git checkout / editable install served the stale committed bundle. The bundle is now current (`v0.81.x` source → contains `.dz-task-inbox-chip*`), so checkout/editable installs render recent CSS without a manual rebuild.
+- **Pre-commit no longer whitespace-normalises vendored/generated assets.** The `trailing-whitespace`/`end-of-file-fixer`/`mixed-line-ending` hooks now exclude `*/static/vendor/` and `*/static/dist/`. The update-vendors bot commits those byte-exact via Actions (bypassing pre-commit) and `vendor_hashes.json` pins their checksum, so a local commit that stripped trailing whitespace corrupted the integrity hash. Excluding them keeps a local rebuild-and-commit hash-consistent with the bot's.
+
+### Agent Guidance
+
+- The runtime links the **pre-built** `/static/dist/dazzle.min.css|js` (`app_chrome.py`), not live-concatenated source. CI and `publish-pypi` rebuild `dist/` from source via `scripts/build_dist.py`, but the **committed** `dist/` is a checked-in artifact that drifts. After a source CSS/JS change that must be visible from a git checkout (not just the published wheel), run `python scripts/build_dist.py` and commit the regenerated bundle.
+
 ## [0.81.6] - 2026-06-02
 
 ### Fixed
