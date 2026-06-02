@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.95] - 2026-06-02
+
 ### Added
 
 - **#1324 FR-4 slice B — conditional navigation is now LIVE at render.** The `when:` condition on a nav group header / item (parsed inert in slice A) is now evaluated at render time and filters the sidebar. The per-persona `NavModel` is precomputed at boot (tenant-independent), so `when` is carried through the model as a model_dump'd `ConditionExpr` dict and evaluated per-request against the caller's roles + per-tenant config. The four hops:
