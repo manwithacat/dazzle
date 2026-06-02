@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from . import ir
+from .access import workspace_allowed_personas
 
 # =============================================================================
 # Validation Constants
@@ -1015,36 +1016,6 @@ def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]
     return errors, warnings
 
 
-def _workspace_allowed_personas(
-    workspace: ir.WorkspaceSpec,
-    personas: list[ir.PersonaSpec],
-) -> list[str] | None:
-    """Return the persona IDs allowed to access a workspace, or None for all.
-
-    Replicates the resolution rules of
-    ``ui.converters.workspace_converter.workspace_allowed_personas`` so that
-    core does NOT take a dependency on the ui layer (ADR layering). Keep in
-    sync with that function:
-
-    1. Explicit ``access.allow_personas`` (non-empty) — exactly those.
-    2. Explicit ``access.deny_personas`` (non-empty, no allow) — all but those.
-    3. Implicit ``persona.default_workspace`` claimants — those personas.
-    4. Otherwise ``None`` — visible to everyone (no filter).
-    """
-    ws_access = getattr(workspace, "access", None)
-    if ws_access is not None:
-        allow = list(getattr(ws_access, "allow_personas", None) or [])
-        deny = list(getattr(ws_access, "deny_personas", None) or [])
-        if allow:
-            return allow
-        if deny:
-            return [p.id for p in personas if p.id not in deny]
-    claimants = [p.id for p in personas if p.default_workspace == workspace.name]
-    if claimants:
-        return claimants
-    return None
-
-
 def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Lint per-persona-global navigation curation (#1324 FR-6).
 
@@ -1120,7 +1091,7 @@ def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         )
                 elif target in workspaces_by_name:
                     ws = workspaces_by_name[target]
-                    allowed = _workspace_allowed_personas(ws, appspec.personas)
+                    allowed = workspace_allowed_personas(ws, appspec.personas)
                     # None means "everyone allowed". Dead if no bound persona
                     # is in the allowed set.
                     if allowed is not None and not any(p.id in allowed for p in bound):
