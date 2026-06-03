@@ -32,6 +32,12 @@ class TestCsrfDisposition:
         d = csrf_disposition("POST", path, _h(), CFG)
         assert d is Disposition.NA_SIGNATURE
 
+    def test_sign_route_non_uuid_tail_is_protected_session(self) -> None:
+        # The load-bearing UUID anchor on the sign regex (#1284): a non-UUID
+        # tail must NOT derive NA_SIGNATURE — it falls back to CSRF validation.
+        d = csrf_disposition("POST", "/api/sign/contract/not-a-uuid", _h(), CFG)
+        assert d is Disposition.PROTECTED_SESSION
+
     def test_auth_prefix_is_na_preauth(self) -> None:
         d = csrf_disposition("POST", "/auth/login", _h(), CFG)
         assert d is Disposition.NA_PREAUTH

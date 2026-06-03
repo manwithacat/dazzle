@@ -68,6 +68,11 @@ class CSRFConfig:
     cookie_name: str = "dazzle_csrf"
     header_name: str = "X-CSRF-Token"
     token_length: int = 32
+    # Pre-auth exempt surface (spec §4.1 NA_PREAUTH). Unlike the
+    # disposition-named ``na_signature_*`` fields below, ``exempt_paths`` /
+    # ``exempt_path_prefixes`` keep their generic names because they are the
+    # pre-existing app-facing config surface; ``csrf_disposition`` derives
+    # NA_PREAUTH from them.
     exempt_paths: list[str] = field(
         default_factory=lambda: [
             "/health",
@@ -107,7 +112,6 @@ class CSRFConfig:
             "/_dazzle/i18n/",
         ]
     )
-    exempt_path_regexes: list[str] = field(default_factory=list)
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
     # shared-secret signature IS the control; CSRF is categorically N/A. Moved
     # out of the generic exempt lists so the disposition is explicit + auditable.
@@ -263,6 +267,9 @@ def csrf_disposition(
 
     ``signature_regexes`` accepts the middleware's precompiled patterns; when
     None it compiles from ``config.na_signature_regexes``.
+
+    ``method`` is currently unread; it is the classification signal for the
+    Phase-4 ``UNAUTH_MUTATING`` disposition (see the enum).
     """
     auth = _get_header(headers, b"authorization") or ""
     if auth.startswith("Bearer "):
@@ -321,9 +328,8 @@ class CSRFMiddleware:
     def __init__(self, app: Any, config: CSRFConfig) -> None:
         self.app = app
         self.config = config
-        # Precompile exempt-path regexes once at mount time; matched on the
+        # Precompile NA_SIGNATURE regexes once at mount time; matched on the
         # hot path for every state-changing request.
-        self._exempt_regexes = [re.compile(pattern) for pattern in config.exempt_path_regexes]
         self._na_signature_regexes = [
             re.compile(pattern) for pattern in config.na_signature_regexes
         ]
@@ -353,7 +359,7 @@ class CSRFMiddleware:
         # Classify + admit via the disposition predicate (spec §4.1/§4.5). This
         # consolidates the former exact/prefix/regex exemptions, the Bearer
         # check, the Phase-2 origin gate, and the double-submit token check into
-        # one predicate that the compliance report can also enumerate.
+        # one predicate (which a later phase's compliance report will enumerate).
         disposition = csrf_disposition(
             scope.get("method", "GET"),
             path,

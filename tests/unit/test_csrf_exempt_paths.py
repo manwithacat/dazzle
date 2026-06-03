@@ -105,8 +105,6 @@ class TestSigningExemptNarrowed:
             return True
         if any(path.startswith(p) for p in config.na_signature_prefixes):
             return True
-        if any(re.fullmatch(p, path) for p in config.exempt_path_regexes):
-            return True
         return any(re.fullmatch(p, path) for p in config.na_signature_regexes)
 
     def test_no_broad_sign_prefix_remains(self) -> None:
