@@ -40,6 +40,10 @@ class _StubUser:
 class _StubSession:
     def __init__(self, sid: str = "sess-1") -> None:
         self.id = sid
+        # Declarative-CSRF Phase 1: the SSO callback now also reads
+        # session.csrf_secret to set the session-bound dazzle_csrf cookie,
+        # so the stub must mirror that field of the real SessionRecord.
+        self.csrf_secret = f"csrf-{sid}"
 
 
 class _StubAuthStore:

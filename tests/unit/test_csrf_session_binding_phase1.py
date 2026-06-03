@@ -351,3 +351,110 @@ class TestCsrfCookieAtSiblingSites:
         assert response.status_code == 303
         assert "/2fa/challenge" in response.headers["location"]
         assert _csrf_set_cookie(response) is None
+
+    # --- magic_link_routes.py: magic-link consumption (303) --------------
+
+    def test_magic_link_consume_sets_csrf_from_session(self) -> None:
+        from dazzle.back.runtime.auth import magic_link_routes as mlr
+        from dazzle.back.runtime.auth.magic_link_routes import (
+            create_magic_link_routes,
+        )
+
+        store = _mock_store()
+        client = self._app(create_magic_link_routes(), store)
+
+        user = _make_user("magic@example.com")
+        session = _make_session(user, sid="magic-session-B")
+        store.get_user_by_id.return_value = user
+        store.create_session.return_value = session
+
+        original_validate = mlr.validate_magic_link
+        mlr.validate_magic_link = MagicMock(return_value=user.id)
+        try:
+            response = client.get("/auth/magic/sometoken")
+        finally:
+            mlr.validate_magic_link = original_validate
+
+        assert response.status_code == 303
+        header = _csrf_set_cookie(response)
+        assert header is not None, "no dazzle_csrf cookie set on magic-link consume"
+        assert f"dazzle_csrf={session.csrf_secret}" in header
+        assert "httponly" not in header.lower()
+
+    # --- sso_routes.py: OAuth callback (303) -----------------------------
+
+    def test_sso_callback_sets_csrf_from_session(self) -> None:
+        """Drive the SSO callback with a fake OAuth client whose create_session
+        returns a real SessionRecord (so .csrf_secret exists). Mirrors the
+        proven fake harness in tests/integration/test_sso_routes.py."""
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from starlette.middleware.sessions import SessionMiddleware
+
+        from dazzle.back.runtime.auth.sso_config import SsoProviderConfig
+        from dazzle.back.runtime.auth.sso_routes import create_sso_routes
+
+        user = _make_user("sso@example.com")
+        session = _make_session(user, sid="sso-session-B")
+
+        class _SsoStore:
+            def get_user_by_email(self, email: str) -> Any:
+                return user
+
+            def create_session(self, u: Any) -> Any:
+                return session
+
+            def delete_session(self, sid: str) -> None:  # pragma: no cover - unused here
+                pass
+
+        class _FakeClient:
+            async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+                return {"userinfo": {"email": "sso@example.com", "email_verified": True}}
+
+        provider = SsoProviderConfig(
+            name="google",
+            display_name="Google",
+            client_id="id",
+            client_secret="secret",
+            discovery_url="https://accounts.google.com/.well-known/openid-configuration",
+            scopes="openid email profile",
+        )
+
+        app = FastAPI()
+        app.add_middleware(SessionMiddleware, secret_key="test-secret")
+        app.state.sso_providers = (provider,)
+        app.state.auth_store = _SsoStore()
+        app.state._sso_clients = {"google": _FakeClient()}
+        app.include_router(create_sso_routes())
+        client = TestClient(app, follow_redirects=False)
+
+        response = client.get("/auth/sso/google/callback?code=fake-code")
+
+        assert response.status_code == 303
+        header = _csrf_set_cookie(response)
+        assert header is not None, "no dazzle_csrf cookie set on SSO callback"
+        assert f"dazzle_csrf={session.csrf_secret}" in header
+        assert "httponly" not in header.lower()
+
+
+class TestEverySessionSiteSetsCsrfCookie:
+    """Guard: any auth module that writes an auth session cookie (value=session.id)
+    MUST also set the session-bound dazzle_csrf cookie. Prevents a new login path
+    from silently shipping without CSRF wiring (the #1336/#1337 failure class)."""
+
+    def test_all_browser_session_modules_set_dazzle_csrf(self) -> None:
+        import re
+        from pathlib import Path
+
+        auth_dir = Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/auth"
+        offenders = []
+        for py in sorted(auth_dir.glob("*.py")):
+            src = py.read_text(encoding="utf-8")
+            # A module that sets an auth session cookie from a session id...
+            sets_auth_cookie = bool(re.search(r"value=session\.id|value=session_id", src))
+            if sets_auth_cookie and "dazzle_csrf" not in src:
+                offenders.append(py.name)
+        assert not offenders, (
+            "These auth modules set an auth session cookie but no session-bound "
+            f"dazzle_csrf cookie — CSRF wiring gap: {offenders}"
+        )

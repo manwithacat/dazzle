@@ -225,6 +225,18 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             secure=cookie_secure(request),
             samesite="lax",
         )
+        # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted
+        # on SSO-callback success. httponly=False so htmx/JS can echo it into the
+        # X-CSRF-Token header. Mirrors the auth cookie's flags above (no max_age =
+        # session cookie). See
+        # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
+        response.set_cookie(
+            key="dazzle_csrf",
+            value=session.csrf_secret,
+            httponly=False,
+            secure=cookie_secure(request),
+            samesite="lax",
+        )
         return response
 
     return router

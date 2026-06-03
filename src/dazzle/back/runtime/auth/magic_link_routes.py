@@ -109,6 +109,18 @@ def create_magic_link_routes() -> APIRouter:
             secure=request.url.scheme == "https",
             samesite="lax",
         )
+        # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted
+        # on magic-link consumption. httponly=False so htmx/JS can echo it into the
+        # X-CSRF-Token header. Mirrors the auth cookie's flags above (no max_age =
+        # session cookie). See
+        # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
+        response.set_cookie(
+            key="dazzle_csrf",
+            value=session.csrf_secret,
+            httponly=False,
+            secure=request.url.scheme == "https",
+            samesite="lax",
+        )
         return response
 
     @router.post("/auth/login/magic-link")
