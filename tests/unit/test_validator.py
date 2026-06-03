@@ -955,6 +955,36 @@ class TestDeadConstructDetection:
 
     # --- No false positives for well-connected specs ---
 
+    # --- Per-persona nav defs keep entities/surfaces alive (#1332) ---
+
+    def test_surface_reachable_via_nav_def_is_not_dead(self) -> None:
+        """An entity living only in a top-level `nav` def keeps its CRUD surfaces
+        alive — mirrors the workspace nav_groups reachability rule (#1324, #1332).
+
+        Regression for #1332: migrating workspace ``nav_groups`` into per-persona
+        ``nav <name>:`` defs must not flag the moved entities' surfaces as dead.
+        """
+        entity = make_entity(name="Beneficiary")
+        surface = self._make_surface(name="beneficiary_list", entity_ref="Beneficiary")
+        nav = ir.NavSpec(
+            name="advisor",
+            groups=[
+                ir.NavGroupSpec(
+                    label="Records",
+                    items=[ir.NavItemIR(entity="Beneficiary")],
+                )
+            ],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            surfaces=[surface],
+            navs=[nav],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("Dead construct" in w and "beneficiary_list" in w for w in warnings)
+        assert not any("Dead construct" in w and "Beneficiary" in w for w in warnings)
+
     def test_fully_connected_spec_has_no_dead_warnings(self) -> None:
         task = make_entity(name="Task")
         user = make_entity(

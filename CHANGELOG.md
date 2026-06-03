@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.9] - 2026-06-03
+
+### Fixed
+
+- **Dead-construct lint now harvests per-persona `nav` defs (#1332).** The `validate` dead-construct reference collector iterated `workspace.nav_groups` but never the top-level `appspec.navs` (`nav <name>:` blocks bound via `persona X: uses nav Y`, introduced in #1324). Migrating a workspace's `nav_groups` into per-persona `nav` defs — exactly what the `validate_nav_curation` lint recommends — therefore made every entity living only in a `nav` def look unreferenced, flagging all of its CRUD surfaces as "Dead construct" (a downstream app reported 8 → 113 false dead-construct warnings after a faithful 1:1 migration). Added sibling loops to both the entity and surface reachability collectors in `validator.py` mirroring the existing `nav_groups` harvest, so entities reachable only through a `nav` def (and their surfaces) are correctly treated as alive.
+
 ## [0.81.8] - 2026-06-02
 
 ### Fixed

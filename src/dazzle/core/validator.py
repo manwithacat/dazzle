@@ -1676,6 +1676,15 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
             if mapping.entity_ref:
                 used_entities.add(mapping.entity_ref)
 
+    # Entities referenced by per-persona nav defs (#1324, #1332). A `nav <name>:`
+    # block bound via `persona X: uses nav Y` links to entity nav routes exactly
+    # like workspace nav_groups, so an entity living only in a nav def is reachable.
+    for nav in appspec.navs:
+        for group in nav.groups:
+            for nav_item in group.items:
+                if nav_item.entity in all_entities:
+                    used_entities.add(nav_item.entity)
+
     unused_entities = all_entities - used_entities - platform_entities
     if unused_entities:
         for name in sorted(unused_entities):
@@ -1721,6 +1730,16 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
                 if src in all_entities:
                     workspace_entities.add(src)
         for nav_group in workspace.nav_groups:
+            for nav_item in nav_group.items:
+                if nav_item.entity in all_entities:
+                    workspace_entities.add(nav_item.entity)
+    # Per-persona nav defs (#1324, #1332): entities living only in a top-level
+    # `nav <name>:` block (bound via `persona X: uses nav Y`) are navigable via
+    # their entity nav routes exactly like workspace nav_groups items. Without
+    # this, migrating workspace nav_groups → nav defs (which the nav-curation
+    # lint recommends) flags every such entity's CRUD surfaces as dead.
+    for nav in appspec.navs:
+        for nav_group in nav.groups:
             for nav_item in nav_group.items:
                 if nav_item.entity in all_entities:
                     workspace_entities.add(nav_item.entity)
