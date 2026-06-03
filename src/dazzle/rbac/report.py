@@ -190,9 +190,15 @@ def generate_report(report: VerificationReport, format: str = "markdown") -> str
             "> Run `dazzle rbac verify` with a reachable PostgreSQL server to generate a full report.",
             "",
         ]
+    # Lazy import: report.py imports only from dazzle.rbac at module level
+    # (see header). Keep the back-runtime symbol local to avoid pulling the
+    # FastAPI runtime into the rbac import graph at module load.
+    from dazzle.back.runtime.csrf import CSRFConfig, render_csrf_policy
+
     lines.extend(_render_summary(report))
     lines.extend(_render_matrix_table(report))
     lines.extend(_render_violations(report))
+    lines.extend(render_csrf_policy(CSRFConfig(enabled=True)))
     lines.extend(_render_methodology())
 
     return "\n".join(lines)

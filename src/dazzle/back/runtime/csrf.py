@@ -318,6 +318,43 @@ def csrf_admits(
     return bool(header_token and csrf_cookie and header_token == csrf_cookie)
 
 
+def render_csrf_policy(config: CSRFConfig) -> list[str]:
+    """Render the CSRF disposition policy as Markdown lines for the audit report.
+
+    Lists every exemption rule with its derived disposition and rationale, so an
+    agent/auditor can see WHAT is exempt from CSRF and WHY — rather than
+    inferring protection from absence (spec §6).
+    """
+    if not config.enabled:
+        return ["## CSRF Policy", "", "> CSRF protection is **disabled**.", ""]
+    lines = [
+        "## CSRF Policy",
+        "",
+        "State-changing requests default to **PROTECTED_SESSION** (origin-primary "
+        "gate + session-bound double-submit token). The rules below derive a "
+        "non-protected disposition because the request is authenticated by a "
+        "caller-presented credential, so CSRF is categorically N/A:",
+        "",
+        "| Rule | Match | Disposition |",
+        "| --- | --- | --- |",
+    ]
+    for prefix in config.na_signature_prefixes:
+        lines.append(f"| `{prefix}` | prefix | NA_SIGNATURE |")
+    for rx in config.na_signature_regexes:
+        lines.append(f"| `{rx}` | regex | NA_SIGNATURE |")
+    for path in config.exempt_paths:
+        lines.append(f"| `{path}` | exact | NA_PREAUTH |")
+    for prefix in config.exempt_path_prefixes:
+        lines.append(f"| `{prefix}` | prefix | NA_PREAUTH |")
+    if config.trusted_origins:
+        lines.append("")
+        lines.append("Trusted cross-origin embedders (admitted despite Host mismatch):")
+        for origin in config.trusted_origins:
+            lines.append(f"- `{origin}`")
+    lines.append("")
+    return lines
+
+
 class CSRFMiddleware:
     """Pure ASGI middleware for double-submit cookie CSRF protection.
 
