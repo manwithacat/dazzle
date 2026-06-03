@@ -48,6 +48,10 @@ class SessionRecord(BaseModel):
     expires_at: datetime
     ip_address: str | None = None
     user_agent: str | None = None
+    # Declarative-CSRF Phase 1: the CSRF token is the session's own secret,
+    # minted with the session and rotated only on session lifecycle events
+    # (login/logout). See docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
+    csrf_secret: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
 
 
 class AuthContext(BaseModel):
