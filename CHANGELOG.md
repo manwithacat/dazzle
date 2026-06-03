@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.16] - 2026-06-03
+
+### Changed
+
+- **CSRF admission is now origin-primary (declarative-CSRF Phase 2).** `Sec-Fetch-Site` + `Origin` (compared against the request `Host`) are the primary admission gate for state-changing requests: a same-origin request admits **without** a token, a provably cross-site or same-site (sibling-subdomain) request is **rejected even with a valid token**, and only a request carrying **no** origin signal falls back to the Phase-1 session-bound double-submit token. The gate sits after the existing path/Bearer exemptions and before token validation; both signals are browser-set and unforgeable cross-site, so the change is strictly stronger than token-only. Per-request `Origin`==`Host` comparison makes `tenant_host` multi-tenancy work with zero configuration (cross-tenant subdomain POSTs reject by default); a `csrf_trusted_origins` allowlist (`ServerConfig.csrf_trusted_origins`, empty by default) covers same-site embedders. The host-authority comparison is bypass-safe (subdomain-suffix, userinfo-`@`, path injection, `null`, default-port all reject). Spec §4.2: `docs/superpowers/specs/2026-06-03-declarative-csrf-design.md`; plan: `docs/superpowers/plans/2026-06-03-declarative-csrf-phase2.md`.
+
+### Agent Guidance
+
+- CSRF admission for browser writes is now decided by `origin_disposition` in `back/runtime/csrf.py` (origin-primary, token-fallback). The helper returns a tri-state `bool | None` (admit / reject / no-signal→token) — callers MUST use `is True` / `is False` identity checks, never truthiness, or the `None` fallback leg collapses. Same-origin requests need no token; do not add token requirements back. The gate currently runs for all non-exempt, non-Bearer unsafe requests (safe over-application) — Phase 3's `csrf_disposition` derivation will scope it to session-authed requests and classify anonymous mutating POSTs explicitly.
+
 ## [0.81.15] - 2026-06-03
 
 ### Changed
