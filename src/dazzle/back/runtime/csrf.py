@@ -112,6 +112,11 @@ class CSRFConfig:
             r"^/api/sign/[^/]+/" + _UUID_RE + r"$",
         ]
     )
+    # Phase 2 (declarative CSRF §4.2): origins to admit even when they don't
+    # match the request Host (e.g. a same-site embedder). Same-origin requests
+    # never need to be listed — they pass via the Origin==Host check. Empty by
+    # default: a vanilla app admits only its own origin.
+    trusted_origins: list[str] = field(default_factory=list)
 
 
 def configure_csrf_for_profile(
@@ -154,6 +159,52 @@ def _get_header(headers: list[tuple[bytes, bytes]], name: bytes) -> str | None:
     for key, value in headers:
         if key == name:
             return value.decode("latin-1")
+    return None
+
+
+def _origin_host(origin: str) -> str | None:
+    """Return the host[:port] authority of an Origin header, or None.
+
+    `Origin` is `scheme://host[:port]`. Returns None for the opaque value
+    "null" (sandboxed iframe / some privacy modes) so it never matches a Host.
+    """
+    if not origin or origin == "null":
+        return None
+    after_scheme = origin.split("://", 1)[-1]
+    return after_scheme.split("/", 1)[0] or None
+
+
+def origin_disposition(
+    headers: list[tuple[bytes, bytes]],
+    host: str | None,
+    config: CSRFConfig,
+) -> bool | None:
+    """Decide admission from the request's origin signals (spec §4.2).
+
+    Returns:
+        True  — admit (same-origin / trusted).
+        False — reject (provably cross-site / same-site / mismatched origin).
+        None  — no origin signal at all; caller should fall back to the token.
+    """
+    trusted = set(config.trusted_origins)
+    sec_fetch_site = _get_header(headers, b"sec-fetch-site")
+    origin = _get_header(headers, b"origin")
+    origin_host = _origin_host(origin) if origin else None
+
+    if sec_fetch_site is not None:
+        if sec_fetch_site in ("same-origin", "none"):
+            return True
+        if origin and origin in trusted:
+            return True
+        return False
+
+    if origin is not None:
+        if origin in trusted:
+            return True
+        if origin_host is not None and host is not None and origin_host == host:
+            return True
+        return False
+
     return None
 
 
