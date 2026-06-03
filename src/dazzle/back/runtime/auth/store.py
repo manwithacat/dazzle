@@ -682,6 +682,18 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     csrf_secret TEXT
                 )
             """)
+            # Idempotent add for pre-existing sessions tables (dev path doesn't
+            # run Alembic; production gets this via migration 0005). Mirrors the
+            # users-table ALTER pattern above. ADD COLUMN IF NOT EXISTS is a
+            # Postgres extension (the auth store runtime is PG per ADR-0008); the
+            # try/except keeps the SQLite-in-tests path graceful.
+            try:
+                cursor.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS csrf_secret TEXT")
+            except Exception:
+                logger.warning(
+                    "Schema migration for sessions.csrf_secret raised — continuing",
+                    exc_info=True,
+                )
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     token TEXT PRIMARY KEY,
