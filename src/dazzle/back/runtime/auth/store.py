@@ -678,7 +678,8 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     created_at TEXT NOT NULL,
                     expires_at TEXT NOT NULL,
                     ip_address TEXT,
-                    user_agent TEXT
+                    user_agent TEXT,
+                    csrf_secret TEXT
                 )
             """)
             cursor.execute("""
