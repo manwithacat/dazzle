@@ -267,6 +267,23 @@ class CSRFMiddleware:
             await self._pass_through(scope, receive, send, new_token)
             return
 
+        # Origin-primary admission gate (Phase 2, spec §4.2). Sec-Fetch-Site /
+        # Origin are browser-set and unforgeable cross-site, so a same-origin
+        # request admits without a token; a provably cross-site/same-site one is
+        # rejected even with a token. Only a request with NO origin signal
+        # (legacy/non-browser) falls through to the double-submit token check.
+        # NOTE: the `is True` / `is False` identity checks are deliberate — a
+        # truthiness test (`if verdict:`) would collapse the None fallback leg.
+        host = _get_header(headers, b"host")
+        verdict = origin_disposition(headers, host, self.config)
+        if verdict is True:
+            await self._pass_through(scope, receive, send, new_token)
+            return
+        if verdict is False:
+            await self._send_403(send)
+            return
+        # verdict is None -> fall through to token validation below.
+
         # Validate CSRF token
         header_name_bytes = self.config.header_name.lower().encode()
         header_token = _get_header(headers, header_name_bytes)

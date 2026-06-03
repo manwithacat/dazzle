@@ -1,6 +1,8 @@
 """Phase 2: Sec-Fetch-Site + Origin admission gate (spec §4.2)."""
 
-from dazzle.back.runtime.csrf import CSRFConfig, origin_disposition
+import asyncio
+
+from dazzle.back.runtime.csrf import CSRFConfig, CSRFMiddleware, origin_disposition
 
 
 def _h(**kw) -> list[tuple[bytes, bytes]]:
@@ -96,3 +98,102 @@ class TestFailClosedAndPrecedence:
         # authority and rejected — documenting the no-normalization behavior.
         hdrs = _h(origin="https://app.example.com:443", host="app.example.com")
         assert origin_disposition(hdrs, "app.example.com", CFG) is False
+
+
+async def _drive(config, *, method, path, headers_extra):
+    headers = list(headers_extra)
+    scope = {"type": "http", "method": method, "path": path, "headers": headers}
+    status = {"code": 0}
+
+    async def inner(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"ok"})
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message):
+        if message["type"] == "http.response.start":
+            status["code"] = message["status"]
+
+    await CSRFMiddleware(inner, config)(scope, receive, send)
+    return status["code"]
+
+
+class TestMiddlewareOriginGate:
+    def test_same_origin_post_admits_without_token(self) -> None:
+        status = asyncio.run(
+            _drive(
+                CSRFConfig(enabled=True),
+                method="POST",
+                path="/academicyears",
+                headers_extra=_h(sec_fetch_site="same-origin", host="app.example.com"),
+            )
+        )
+        assert status == 200
+
+    def test_cross_site_post_rejected_even_with_valid_token(self) -> None:
+        status = asyncio.run(
+            _drive(
+                CSRFConfig(enabled=True),
+                method="POST",
+                path="/academicyears",
+                headers_extra=_h(
+                    sec_fetch_site="cross-site",
+                    cookie="dazzle_csrf=abc",
+                    x_csrf_token="abc",
+                    host="app.example.com",
+                ),
+            )
+        )
+        assert status == 403
+
+    def test_no_origin_signal_falls_back_to_token_pass(self) -> None:
+        status = asyncio.run(
+            _drive(
+                CSRFConfig(enabled=True),
+                method="POST",
+                path="/academicyears",
+                headers_extra=_h(
+                    cookie="dazzle_csrf=abc", x_csrf_token="abc", host="app.example.com"
+                ),
+            )
+        )
+        assert status == 200
+
+    def test_no_origin_signal_falls_back_to_token_reject(self) -> None:
+        status = asyncio.run(
+            _drive(
+                CSRFConfig(enabled=True),
+                method="POST",
+                path="/academicyears",
+                headers_extra=_h(host="app.example.com"),
+            )
+        )
+        assert status == 403
+
+    def test_exempt_path_still_exempt_regardless_of_origin(self) -> None:
+        status = asyncio.run(
+            _drive(
+                CSRFConfig(enabled=True),
+                method="POST",
+                path="/webhooks/stripe",
+                headers_extra=_h(sec_fetch_site="cross-site", host="app.example.com"),
+            )
+        )
+        assert status == 200
+
+    def test_bearer_still_exempt_regardless_of_origin(self) -> None:
+        status = asyncio.run(
+            _drive(
+                CSRFConfig(enabled=True),
+                method="POST",
+                path="/api/x",
+                headers_extra=_h(
+                    authorization="Bearer tok",
+                    sec_fetch_site="cross-site",
+                    host="app.example.com",
+                ),
+            )
+        )
+        assert status == 200
