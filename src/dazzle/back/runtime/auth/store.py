@@ -522,18 +522,17 @@ class SessionStoreMixin:
         """Mint a fresh CSRF secret for an existing session and return it.
 
         Rotates the token within a session's lifetime without forcing re-login
-        (used by later-phase privilege-change call sites; Phase 1 ships the
-        primitive). Returns the new secret.
+        (the privilege-change-rotation primitive). Raises if no session matches —
+        rotating a non-existent session is a programming error, surfaced loudly
+        rather than returning an un-persisted secret (anti-silent-failure).
         """
         new_secret = secrets.token_urlsafe(32)
-        # NOTE (Phase 1): no rowcount check — a non-existent session_id silently
-        # returns an un-persisted secret. Harmless until Phase 4 adds the
-        # privilege-change call sites, which must guard the no-match case
-        # (see docs/superpowers/specs/2026-06-03-declarative-csrf-design.md §9).
-        self._execute(
+        rowcount = self._execute_modify(
             "UPDATE sessions SET csrf_secret = %s WHERE id = %s",
             (new_secret, session_id),
         )
+        if rowcount == 0:
+            raise LookupError(f"cannot regenerate CSRF secret: no session {session_id!r}")
         return new_secret
 
     def validate_session(self, session_id: str) -> AuthContext:

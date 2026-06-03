@@ -357,6 +357,11 @@ class TestSessions:
         assert new_secret != session.csrf_secret
         assert auth_store.get_session(session.id).csrf_secret == new_secret
 
+    def test_regenerate_session_csrf_raises_for_unknown_session(self, auth_store: Any) -> None:
+        """Rotating a non-existent session surfaces loudly, not a silent secret."""
+        with pytest.raises((LookupError, ValueError)):
+            auth_store.regenerate_session_csrf("does-not-exist")
+
     def test_get_session_warns_on_null_csrf_secret(
         self, auth_store: Any, test_user: Any, caplog: Any
     ) -> None:
