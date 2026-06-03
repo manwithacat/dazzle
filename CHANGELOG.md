@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.14] - 2026-06-03
+
+### Fixed
+
+- **Generated /app forms no longer 403 on every write — the htmx CSRF echo is now wired and bundled (#1337).** The CSRF middleware (`back/runtime/csrf.py`) is enabled for *every* security profile and 403s any state-changing request whose `X-CSRF-Token` header doesn't echo the `dazzle_csrf` cookie — but **no front-end code attached that header on /app pages**. (The `configRequest` listener in `dz-alpine.js` only injects bulk-action IDs; the feedback widget reads a `<meta name=csrf-token>` that's never emitted but survives because `/feedbackreports` is CSRF-exempt.) So every create/edit/delete from a generated form 403'd in a real browser — universal, all profiles, all roles — masked in CI only because the test clients (`htmx_client.py`, `rbac/verification_harness.py`, `test_runner.py`) echo the cookie by hand. Surfaced once #1336 let the FK combobox mount, so a browser QA harness could finally submit a form. Fix: new `static/js/dz-csrf.js` registers a global `htmx:configRequest` handler that copies the `dazzle_csrf` cookie into the `X-CSRF-Token` header on every htmx request (reads the cookie fresh each time, so it's robust to rotation; warns once-per-page when a write goes out with no cookie to echo). Bundled into `dist/dazzle.min.js`, so it loads on every app page. The token is already session-stable (the middleware only mints a new one when the cookie is absent — never per request), so the inherited header survives htmx swaps, multi-tab, and the back button.
+
+### Agent Guidance
+
+- CSRF on /app pages is handled transport-side by `dz-csrf.js` (bundled) — handler/DSL authors never touch CSRF tokens. When adding any always-on browser capability that the HTMX substrate needs (CSRF, a vendor widget runtime, an event-bus shim), bundle it into `dist/dazzle.min.js` via `scripts/build_dist.py` (or, for large vendor libs served separately, `app_chrome.js_scripts`) **and** add a test asserting the capability is present in the *shipped bundle*, not just referenced in a manifest list — a list-level check passes vacuously when the capability is simply absent (the lesson #1336 → #1337 both taught). See `tests/unit/test_csrf_wiring_1337.py` for the pattern: pin the middleware contract *and* the bundled wiring. A fuller declarative/origin-gated CSRF design (Sec-Fetch-Site primary gate, CSRF as an auditable action property) is tracked separately.
+
 ## [0.81.13] - 2026-06-03
 
 ### Fixed

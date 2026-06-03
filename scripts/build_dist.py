@@ -100,7 +100,13 @@ JS_SOURCES = [
     STATIC / "js" / "dz-alpine.js",
     STATIC / "js" / "dashboard-builder.js",
     STATIC / "vendor" / "alpine.min.js",
-    # Dazzle runtime (a11y + islands + bridge + widget registry)
+    # Dazzle runtime (csrf + a11y + islands + bridge + widget registry)
+    # #1337: dz-csrf.js wires the htmx:configRequest CSRF echo. Bundled (not a
+    # standalone <script>) so it loads on every app page the dist bundle does —
+    # which is all of them, since app_chrome.js_scripts always points at the
+    # bundle. Ordered first in the runtime block so the listener is registered
+    # before any other runtime code can trigger an htmx request.
+    STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
     STATIC / "js" / "dz-component-bridge.js",
@@ -129,6 +135,7 @@ ICONS_SOURCES = [
 FRAMEWORK_JS = {
     "dz-alpine.js",
     "workspace-editor.js",
+    "dz-csrf.js",
     "dz-a11y.js",
     "dz-islands.js",
     "pdf-viewer.js",
