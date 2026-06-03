@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.15] - 2026-06-03
+
 ### Changed
 
 - **CSRF token is now session-bound (declarative-CSRF Phase 1, #1337 follow-up).** The `dazzle_csrf` token is the server-side session's own `csrf_secret` (new `sessions.csrf_secret` column, Alembic `0005` + idempotent bootstrap), set from the session at every browser-login site (password, register, 2FA, form-login/signup, SSO, magic-link) and cleared at logout — replacing the free-floating random cookie that never rotated. The token now rotates on every new session (login) and is cleared on logout. The CSRF middleware defers to a route-set `dazzle_csrf` cookie instead of clobbering it with a freshly-minted one, so the session-bound value actually reaches the browser. Double-submit validation semantics are unchanged; this is the foundation for the origin-primary admission gate and auth-class derivation in later phases. A static guard test (`TestEverySessionSiteSetsCsrfCookie`) fails if a new login route ships without the CSRF cookie. Spec: `docs/superpowers/specs/2026-06-03-declarative-csrf-design.md`; plan: `docs/superpowers/plans/2026-06-03-declarative-csrf-phase1.md`.
