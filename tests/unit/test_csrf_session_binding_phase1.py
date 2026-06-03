@@ -2,9 +2,14 @@
 
 import importlib.util
 import os
+import secrets
+import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -130,3 +135,219 @@ class TestLoginCsrfCookie:
         cleared = csrf_clears[0]
         assert 'dazzle_csrf=""' in cleared or "dazzle_csrf=;" in cleared
         assert "expires=" in cleared.lower() or "max-age=0" in cleared.lower()
+
+
+# ---------------------------------------------------------------------------
+# Task 4 follow-up: the dazzle_csrf cookie is bound at the 2FA + form-login
+# session sites too (routes_2fa.py, two_factor_form_routes.py,
+# password_login_routes.py). These reuse the MagicMock auth-store harness from
+# test_auth_session_fixation.py — no DATABASE_URL needed, and a SessionRecord
+# already carries a real csrf_secret via its default_factory.
+# ---------------------------------------------------------------------------
+
+
+@contextmanager
+def _mock_totp_module(verify_return: bool) -> Iterator[MagicMock]:
+    """Inject a mock `dazzle.back.runtime.totp` so 2FA verify can run."""
+    mock_module = MagicMock()
+    mock_module.verify_totp = MagicMock(return_value=verify_return)
+    key = "dazzle.back.runtime.totp"
+    original = sys.modules.get(key)
+    sys.modules[key] = mock_module
+    try:
+        yield mock_module
+    finally:
+        if original is None:
+            sys.modules.pop(key, None)
+        else:
+            sys.modules[key] = original
+
+
+def _make_user(email: str = "user@example.com", **kwargs: Any) -> Any:
+    from dazzle.back.runtime.auth import UserRecord, hash_password
+
+    return UserRecord(email=email, password_hash=hash_password("password"), **kwargs)
+
+
+def _make_session(user: Any, sid: str | None = None) -> Any:
+    return SessionRecord(
+        id=sid or secrets.token_urlsafe(32),
+        user_id=user.id,
+        expires_at=datetime.now(UTC) + timedelta(minutes=60),
+    )
+
+
+def _make_auth_context(user: Any, session: Any) -> Any:
+    from dazzle.back.runtime.auth import AuthContext
+
+    return AuthContext(user=user, session=session, is_authenticated=True, roles=user.roles)
+
+
+def _mock_store() -> MagicMock:
+    store = MagicMock()
+    store.authenticate.return_value = None
+    store.get_user_by_email.return_value = None
+    return store
+
+
+def _csrf_set_cookie(response: Any) -> str | None:
+    """Return the dazzle_csrf Set-Cookie header value, or None if absent.
+
+    Reads raw Set-Cookie headers so cookies on a 303 RedirectResponse (which
+    httpx does not surface via response.cookies after a non-followed redirect)
+    are still observable.
+    """
+    for header in response.headers.get_list("set-cookie"):
+        if header.startswith("dazzle_csrf="):
+            return header
+    return None
+
+
+class TestCsrfCookieAtSiblingSites:
+    """dazzle_csrf is bound at the 2FA + form-login fresh-session cookie sites."""
+
+    def _app(self, router: Any, store: MagicMock) -> Any:
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        app = FastAPI()
+        app.state.auth_store = store
+        app.include_router(router)
+        return TestClient(app, follow_redirects=False)
+
+    # --- routes_2fa.py: JSON 2FA verification (_verify_2fa) ----------------
+
+    def test_json_2fa_verify_sets_csrf_from_session(self) -> None:
+        from dazzle.back.runtime.auth import create_2fa_routes
+
+        store = _mock_store()
+        client = self._app(create_2fa_routes(store), store)
+
+        user = _make_user("totp@example.com", totp_enabled=True)
+        pending = _make_session(user, sid="pending-2fa")
+        full = _make_session(user, sid="full-session-B")
+        store.validate_session.return_value = _make_auth_context(user, pending)
+        store.get_totp_secret.return_value = "JBSWY3DPEHPK3PXP"
+        store.create_session.return_value = full
+
+        with _mock_totp_module(verify_return=True):
+            response = client.post(
+                "/auth/2fa/verify",
+                json={"code": "123456", "method": "totp", "session_token": "pending-2fa"},
+            )
+
+        assert response.status_code == 200
+        header = _csrf_set_cookie(response)
+        assert header is not None, "no dazzle_csrf cookie set on 2FA verify"
+        assert f"dazzle_csrf={full.csrf_secret}" in header
+        assert "httponly" not in header.lower()
+
+    # --- two_factor_form_routes.py: form 2FA verification (303) -----------
+
+    def test_form_2fa_verify_sets_csrf_from_session(self) -> None:
+        from dazzle.back.runtime.auth.two_factor_form_routes import (
+            create_two_factor_form_routes,
+        )
+
+        store = _mock_store()
+        client = self._app(create_two_factor_form_routes(), store)
+
+        user = _make_user("totp@example.com", totp_enabled=True)
+        pending = _make_session(user, sid="pending-2fa")
+        full = _make_session(user, sid="full-session-B")
+        store.validate_session.return_value = _make_auth_context(user, pending)
+        store.get_totp_secret.return_value = "JBSWY3DPEHPK3PXP"
+        store.create_session.return_value = full
+
+        with _mock_totp_module(verify_return=True):
+            response = client.post(
+                "/auth/2fa/verify/submit",
+                data={"session_token": "pending-2fa", "method": "totp", "code": "123456"},
+            )
+
+        assert response.status_code == 303
+        header = _csrf_set_cookie(response)
+        assert header is not None, "no dazzle_csrf cookie set on form 2FA verify"
+        assert f"dazzle_csrf={full.csrf_secret}" in header
+        assert "httponly" not in header.lower()
+
+    # --- password_login_routes.py: form login + signup (303) -------------
+
+    def test_form_login_sets_csrf_from_session(self) -> None:
+        from dazzle.back.runtime.auth.password_login_routes import (
+            create_password_login_routes,
+        )
+
+        store = _mock_store()
+        client = self._app(create_password_login_routes(), store)
+
+        user = _make_user("formuser@example.com")
+        session = _make_session(user, sid="new-session-B")
+        store.authenticate.return_value = user
+        store.create_session.return_value = session
+
+        response = client.post(
+            "/auth/login/password",
+            data={"email": "formuser@example.com", "password": "password"},
+        )
+
+        assert response.status_code == 303
+        header = _csrf_set_cookie(response)
+        assert header is not None, "no dazzle_csrf cookie set on form login"
+        assert f"dazzle_csrf={session.csrf_secret}" in header
+        assert "httponly" not in header.lower()
+
+    def test_form_signup_sets_csrf_from_session(self) -> None:
+        from dazzle.back.runtime.auth.password_login_routes import (
+            create_password_login_routes,
+        )
+
+        store = _mock_store()
+        client = self._app(create_password_login_routes(), store)
+
+        user = _make_user("newform@example.com")
+        session = _make_session(user, sid="new-session-B")
+        store.get_user_by_email.return_value = None
+        store.create_user.return_value = user
+        store.create_session.return_value = session
+
+        response = client.post(
+            "/auth/signup/password",
+            data={
+                "email": "newform@example.com",
+                "name": "New Form User",
+                "password": "password",
+                "confirm_password": "password",
+            },
+        )
+
+        assert response.status_code == 303
+        header = _csrf_set_cookie(response)
+        assert header is not None, "no dazzle_csrf cookie set on form signup"
+        assert f"dazzle_csrf={session.csrf_secret}" in header
+        assert "httponly" not in header.lower()
+
+    def test_pending_2fa_challenge_sets_no_csrf_cookie(self) -> None:
+        """A 2FA-enabled form login redirects to the challenge with only a
+        pending (pre-auth) session — it must NOT mint a session-bound CSRF
+        cookie, since the user is not yet authenticated."""
+        from dazzle.back.runtime.auth.password_login_routes import (
+            create_password_login_routes,
+        )
+
+        store = _mock_store()
+        client = self._app(create_password_login_routes(), store)
+
+        user = _make_user("2fauser@example.com", totp_enabled=True)
+        pending = _make_session(user, sid="pending-challenge")
+        store.authenticate.return_value = user
+        store.create_session.return_value = pending
+
+        response = client.post(
+            "/auth/login/password",
+            data={"email": "2fauser@example.com", "password": "password"},
+        )
+
+        assert response.status_code == 303
+        assert "/2fa/challenge" in response.headers["location"]
+        assert _csrf_set_cookie(response) is None

@@ -45,6 +45,7 @@ def _set_session_cookie(
     response: RedirectResponse,
     request: Request,
     session_id: str,
+    csrf_secret: str,
     *,
     user_roles: list[str] | None = None,
 ) -> None:
@@ -53,11 +54,24 @@ def _set_session_cookie(
     secure when the request is HTTPS. The cookie name is per-request:
     apps with ``tenant_host:`` get the spec'd ``__Host-`` / ``__Secure-``
     names, single-tenant apps keep ``dazzle_session``.
+
+    Also sets the declarative-CSRF Phase 1 cookie (``dazzle_csrf``) bound to
+    this session's secret. httponly=False so htmx/JS can echo it into the
+    X-CSRF-Token header. Both cookies omit ``max_age`` to match the auth
+    cookie's session-cookie style at this endpoint. See
+    docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
     """
     response.set_cookie(
         key=select_write_name(request, user_roles=user_roles),
         value=session_id,
         httponly=True,
+        secure=cookie_secure(request),
+        samesite="lax",
+    )
+    response.set_cookie(
+        key="dazzle_csrf",
+        value=csrf_secret,
+        httponly=False,
         secure=cookie_secure(request),
         samesite="lax",
     )
@@ -109,7 +123,11 @@ def create_password_login_routes() -> APIRouter:
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         _set_session_cookie(
-            response, request, session.id, user_roles=list(getattr(user, "roles", []) or [])
+            response,
+            request,
+            session.id,
+            session.csrf_secret,
+            user_roles=list(getattr(user, "roles", []) or []),
         )
         return response
 
@@ -173,7 +191,11 @@ def create_password_login_routes() -> APIRouter:
         redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         _set_session_cookie(
-            response, request, session.id, user_roles=list(getattr(user, "roles", []) or [])
+            response,
+            request,
+            session.id,
+            session.csrf_secret,
+            user_roles=list(getattr(user, "roles", []) or []),
         )
         return response
 

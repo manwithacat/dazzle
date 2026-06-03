@@ -119,6 +119,19 @@ def create_two_factor_form_routes(
             samesite="lax",
             max_age=session_expires_days * 24 * 60 * 60,
         )
+        # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted
+        # on form-based 2FA-verification success. httponly=False so htmx/JS can
+        # echo it into the X-CSRF-Token header. Cookies set on a 303 redirect are
+        # honoured by the browser. See
+        # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
+        response.set_cookie(
+            key="dazzle_csrf",
+            value=session.csrf_secret,
+            httponly=False,
+            secure=cookie_secure(request),
+            samesite="lax",
+            max_age=session_expires_days * 24 * 60 * 60,
+        )
         return response
 
     @router.post("/auth/2fa/email-otp-send/submit")

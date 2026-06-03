@@ -260,6 +260,19 @@ async def _verify_2fa(
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 
+    # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted on
+    # 2FA-verification success. httponly=False so htmx/JS can echo it into the
+    # X-CSRF-Token header. See
+    # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
+    response.set_cookie(
+        key="dazzle_csrf",
+        value=session.csrf_secret,
+        httponly=False,
+        secure=cookie_secure(request),
+        samesite="lax",
+        max_age=deps.session_expires_days * 24 * 60 * 60,
+    )
+
     await emit_user_logged_in(user, session_id=session.id, method="2fa")
 
     return response
