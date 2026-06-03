@@ -341,6 +341,11 @@ def render_csrf_policy(config: CSRFConfig) -> list[str]:
         "non-protected disposition because the request is authenticated by a "
         "caller-presented credential, so CSRF is categorically N/A:",
         "",
+        "> Reflects the framework-default policy for the resolved config. "
+        "App-registered extras (`ServerConfig.csrf_exempt_paths` / "
+        "`csrf_trusted_origins`, set programmatically) appear only when the live "
+        "config is passed in.",
+        "",
         "| Rule | Match | Disposition |",
         "| --- | --- | --- |",
     ]
