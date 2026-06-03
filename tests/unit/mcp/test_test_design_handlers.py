@@ -132,6 +132,11 @@ get_test_gaps_handler = _td.get_test_gaps_handler
 save_test_designs_handler = _td.save_test_designs_handler
 get_test_designs_handler = _td.get_test_designs_handler
 get_coverage_actions_handler = _td.get_coverage_actions_handler
+
+# Pure predicate from the gaps submodule (loaded via the isolation dance above).
+_state_transition_flow_covered = sys.modules[
+    "dazzle.mcp.server.handlers.test_design.gaps"
+]._state_transition_flow_covered
 get_runtime_coverage_gaps_handler = _td.get_runtime_coverage_gaps_handler
 save_runtime_coverage_handler = _td.save_runtime_coverage_handler
 _parse_test_design_action = _td._parse_test_design_action
@@ -469,6 +474,34 @@ class TestGetTestDesignsHandler:
         design = designs_list[0]
         # Full details should include description
         assert "description" in design
+
+
+class TestStateTransitionFlowCovered:
+    """Regression for #1335: gap check must accept the `_as_{persona}` suffix
+    that generate_state_machine_flows emits for role-guarded transitions."""
+
+    BARE = "CohortAssessment_transition_marking_to_marked"
+
+    def test_role_guarded_transition_covered_by_suffixed_flow(self) -> None:
+        # A role-guarded transition emits only `_as_{persona}` flows — no bare id.
+        flow_ids = {f"{self.BARE}_as_teacher", f"{self.BARE}_as_head_of_dept"}
+        assert _state_transition_flow_covered(self.BARE, flow_ids) is True
+
+    def test_unguarded_transition_covered_by_bare_flow(self) -> None:
+        assert _state_transition_flow_covered(self.BARE, {self.BARE}) is True
+
+    def test_uncovered_transition_is_a_gap(self) -> None:
+        # Only a no-persona skip stub exists — genuinely untested by any persona.
+        flow_ids = {f"{self.BARE}_skipped_no_persona"}
+        assert _state_transition_flow_covered(self.BARE, flow_ids) is False
+
+    def test_no_flows_is_a_gap(self) -> None:
+        assert _state_transition_flow_covered(self.BARE, set()) is False
+
+    def test_no_false_match_on_unrelated_prefix(self) -> None:
+        # A different transition that merely shares a string prefix must not count.
+        other = {"CohortAssessment_transition_marking_to_marked_late_as_teacher"}
+        assert _state_transition_flow_covered(self.BARE, other) is False
 
 
 class TestGetTestGapsHandler:

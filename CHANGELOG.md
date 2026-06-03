@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.12] - 2026-06-03
+
+### Fixed
+
+- **`test_design(gaps)` no longer flags every role-guarded state transition as untested (#1335).** The untested-state-transition check built the *bare* flow id `{Entity}_transition_{from}_to_{to}` and exact-matched it against the generated E2E flows — but `generate_state_machine_flows` emits the bare id **only** for unguarded transitions (`persona is None`). A role-guarded transition resolves to its carrying personas and emits one flow per persona with an `_as_{persona.id}` suffix, so the bare-id match never succeeded and every role-guarded transition was reported as a false `untested_state_transition` gap (a downstream app saw 100 of 104 transition gaps as false positives). The check now accepts either the bare id (unguarded) or any `_as_{persona}`-suffixed flow (role-guarded), via the new pure helper `_state_transition_flow_covered`. Genuine gaps — system/automated transitions that emit only a `_skipped_no_persona` stub — are still reported.
+
 ## [0.81.11] - 2026-06-03
 
 ### Added

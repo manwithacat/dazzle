@@ -10,6 +10,19 @@ from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 logger = logging.getLogger("dazzle.mcp")
 
 
+def _state_transition_flow_covered(flow_id: str, flow_ids: "set[str]") -> bool:
+    """True if a generated E2E flow covers this state transition (#1335).
+
+    ``generate_state_machine_flows`` emits the bare ``flow_id`` only for
+    UNGUARDED transitions (``persona is None``). A role-guarded transition
+    resolves to its carrying personas and emits one flow per persona with an
+    ``_as_{persona.id}`` suffix instead. Accept either shape, or every
+    role-guarded transition is reported as an untested gap.
+    """
+    suffix_prefix = flow_id + "_as_"
+    return any(fid == flow_id or fid.startswith(suffix_prefix) for fid in flow_ids)
+
+
 @wrap_handler_errors
 def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
@@ -98,6 +111,7 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
                 )
 
     # Check for untested state transitions
+    flow_ids = {f.id for f in testspec.flows}
     for entity in app_spec.domain.entities:
         if entity.state_machine:
             sm = entity.state_machine
@@ -106,7 +120,7 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
                 flow_id = (
                     f"{entity.name}_transition_{transition.from_state}_to_{transition.to_state}"
                 )
-                if not any(f.id == flow_id for f in testspec.flows):
+                if not _state_transition_flow_covered(flow_id, flow_ids):
                     gaps.append(
                         TestGap(
                             category=TestGapCategory.UNTESTED_STATE_TRANSITION,
