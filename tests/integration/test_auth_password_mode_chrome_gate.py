@@ -47,6 +47,10 @@ _MIN_SITESPEC = {
 class _StubSession:
     def __init__(self, session_id: str = "session-abc") -> None:
         self.id = session_id
+        # Mirror the real SessionRecord.csrf_secret (declarative-CSRF Phase 1):
+        # the form-login/signup routes now read session.csrf_secret to set the
+        # session-bound dazzle_csrf cookie.
+        self.csrf_secret = f"csrf-{session_id}"
 
 
 class _StubUser:
