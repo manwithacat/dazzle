@@ -356,6 +356,24 @@ class TestSessions:
         assert new_secret != session.csrf_secret
         assert auth_store.get_session(session.id).csrf_secret == new_secret
 
+    def test_get_session_warns_on_null_csrf_secret(
+        self, auth_store: Any, test_user: Any, caplog: Any
+    ) -> None:
+        """A NULL csrf_secret (migration backfill gap) is surfaced loudly."""
+        import logging
+
+        session = auth_store.create_session(test_user)
+        auth_store._execute("UPDATE sessions SET csrf_secret = NULL WHERE id = %s", (session.id,))
+
+        with caplog.at_level(logging.WARNING):
+            loaded = auth_store.get_session(session.id)
+
+        # Robust: still returns a usable record rather than crashing.
+        assert loaded is not None
+        assert isinstance(loaded.csrf_secret, str) and len(loaded.csrf_secret) >= 32
+        # Loud: the anomaly was logged.
+        assert any("csrf_secret" in r.message for r in caplog.records)
+
 
 # =============================================================================
 # AuthContext Tests

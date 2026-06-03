@@ -489,6 +489,23 @@ class SessionStoreMixin:
         row = self._execute_one("SELECT * FROM sessions WHERE id = %s", (session_id,))
 
         if row:
+            # Pass the stored secret through verbatim so the model's
+            # default_factory does NOT silently mint a fresh one on every load
+            # (which would break double-submit validation). Migration 0005
+            # backfills every existing row, so a NULL/empty value here is an
+            # unexpected invariant violation — surface it loudly rather than
+            # silently fabricating a (non-functional) secret, per the
+            # silent-failure counter-prior. We still mint a transient secret so
+            # the load doesn't crash on a legacy row.
+            stored_csrf = row.get("csrf_secret")
+            if not stored_csrf:
+                logger.warning(
+                    "Session %s has no csrf_secret (migration backfill gap?) — "
+                    "minting a transient secret; this session's CSRF token will "
+                    "not be stable until re-login.",
+                    row["id"],
+                )
+                stored_csrf = secrets.token_urlsafe(32)
             return SessionRecord(
                 id=row["id"],
                 user_id=UUID(row["user_id"]),
@@ -496,13 +513,7 @@ class SessionStoreMixin:
                 expires_at=datetime.fromisoformat(row["expires_at"]),
                 ip_address=row["ip_address"],
                 user_agent=row["user_agent"],
-                # Pass the stored secret through verbatim so the model's
-                # default_factory does NOT silently mint a fresh one on every
-                # load (which would break double-submit validation). The Task 2
-                # migration backfills existing rows, but a legacy/NULL row would
-                # fail validation (field is ``str``) — so mint a fresh secret in
-                # that one edge case to stay robust.
-                csrf_secret=row.get("csrf_secret") or secrets.token_urlsafe(32),
+                csrf_secret=stored_csrf,
             )
 
         return None
@@ -515,6 +526,10 @@ class SessionStoreMixin:
         primitive). Returns the new secret.
         """
         new_secret = secrets.token_urlsafe(32)
+        # NOTE (Phase 1): no rowcount check — a non-existent session_id silently
+        # returns an un-persisted secret. Harmless until Phase 4 adds the
+        # privilege-change call sites, which must guard the no-match case
+        # (see docs/superpowers/specs/2026-06-03-declarative-csrf-design.md §9).
         self._execute(
             "UPDATE sessions SET csrf_secret = %s WHERE id = %s",
             (new_secret, session_id),
