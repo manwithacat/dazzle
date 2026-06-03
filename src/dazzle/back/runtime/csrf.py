@@ -120,7 +120,9 @@ class CSRFConfig:
 
 
 def configure_csrf_for_profile(
-    profile: str, extra_exempt_paths: list[str] | None = None
+    profile: str,
+    extra_exempt_paths: list[str] | None = None,
+    extra_trusted_origins: list[str] | None = None,
 ) -> CSRFConfig:
     """Get CSRF configuration based on security profile.
 
@@ -133,12 +135,22 @@ def configure_csrf_for_profile(
             endpoints (e.g. a public-read GraphQL gateway authenticated by
             Bearer) without mutating ``app.state.csrf_config`` after boot
             (#1212).
+        extra_trusted_origins: Optional list of additional origins to admit
+            even when they don't match the request Host (spec §4.2). Merged
+            with the (empty) default ``trusted_origins``; duplicates are
+            silently de-duplicated. Use this from a downstream app's
+            ``ServerConfig.csrf_trusted_origins`` to admit a same-site
+            embedder without mutating ``app.state.csrf_config`` after boot.
     """
     config = CSRFConfig(enabled=True)
     if extra_exempt_paths:
         for path in extra_exempt_paths:
             if path not in config.exempt_paths:
                 config.exempt_paths.append(path)
+    if extra_trusted_origins:
+        for origin in extra_trusted_origins:
+            if origin not in config.trusted_origins:
+                config.trusted_origins.append(origin)
     return config
 
 
@@ -360,7 +372,10 @@ class CSRFMiddleware:
 
 
 def apply_csrf_protection(
-    app: Any, profile: str, extra_exempt_paths: list[str] | None = None
+    app: Any,
+    profile: str,
+    extra_exempt_paths: list[str] | None = None,
+    extra_trusted_origins: list[str] | None = None,
 ) -> None:
     """Apply CSRF protection middleware to a FastAPI application.
 
@@ -369,8 +384,14 @@ def apply_csrf_protection(
         profile: Security profile name (``basic``/``standard``/``strict``).
         extra_exempt_paths: Optional list of additional exact paths to mark as
             CSRF-exempt. See :func:`configure_csrf_for_profile` (#1212).
+        extra_trusted_origins: Optional list of additional origins to admit.
+            See :func:`configure_csrf_for_profile`.
     """
-    config = configure_csrf_for_profile(profile, extra_exempt_paths=extra_exempt_paths)
+    config = configure_csrf_for_profile(
+        profile,
+        extra_exempt_paths=extra_exempt_paths,
+        extra_trusted_origins=extra_trusted_origins,
+    )
     app.state.csrf_config = config
 
     if not config.enabled:

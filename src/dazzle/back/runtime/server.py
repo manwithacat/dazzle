@@ -151,6 +151,12 @@ class ServerConfig:
     # `docs/guides/security.md` section 3 T3 — `POST /graphql` is NOT in it.
     csrf_exempt_paths: list[str] = field(default_factory=list)
 
+    # Phase 2 (declarative CSRF §4.2): extra origins to admit even when they
+    # don't match the request Host (e.g. a same-site embedder). Threaded into
+    # `csrf.configure_csrf_for_profile` as `extra_trusted_origins`; merged with
+    # the (empty) default and de-duped.
+    csrf_trusted_origins: list[str] = field(default_factory=list)
+
     # Audit log tamper-resistance (#1197). Opt-in. Default "none" preserves
     # today's behaviour exactly — no schema change, no extra SELECT-prev-hash.
     # "hash_chain" enables a per-row sha256 chain (column `row_hash`) so a
@@ -317,6 +323,8 @@ class DazzleBackendApp:
         self._cors_origins = config.cors_origins
         # #1212 — opt-in extra CSRF-exempt paths from ServerConfig.
         self._csrf_exempt_paths = list(config.csrf_exempt_paths)
+        # Phase 2 — opt-in extra CSRF-trusted origins from ServerConfig.
+        self._csrf_trusted_origins = list(config.csrf_trusted_origins)
         # Event system (v0.18.0)
         self._event_framework: EventFramework | None = None
         # NOTE: _sitespec_data and _project_root are already set above (lines 201-203)
@@ -496,6 +504,7 @@ class DazzleBackendApp:
             self._app,
             self._security_profile,
             extra_exempt_paths=self._csrf_exempt_paths or None,
+            extra_trusted_origins=self._csrf_trusted_origins or None,
         )
 
         # GZip compression (v0.33.0) — must be added before other middleware
