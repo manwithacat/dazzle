@@ -238,12 +238,23 @@ class CSRFMiddleware:
         # Wrap send to inject the CSRF cookie into response headers
         scheme = "https" if scope.get("scheme") == "https" else "http"
         cookie_header = self._build_cookie_header(new_token, secure=(scheme == "https"))
+        cookie_prefix = (self.config.cookie_name + "=").encode()
 
         async def send_with_cookie(message: dict[str, Any]) -> None:
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
-                headers.append((b"set-cookie", cookie_header.encode()))
-                message = {**message, "headers": headers}
+                # Defer to a cookie the downstream route already set (e.g. a login
+                # route binding dazzle_csrf to the session secret). Browsers keep
+                # the last Set-Cookie of a given name, so appending a second one
+                # here would clobber the session-bound cookie with a transient
+                # middleware-minted token. (#1337 declarative-CSRF Phase 1.)
+                already_set = any(
+                    key == b"set-cookie" and value.startswith(cookie_prefix)
+                    for key, value in headers
+                )
+                if not already_set:
+                    headers.append((b"set-cookie", cookie_header.encode()))
+                    message = {**message, "headers": headers}
             await send(message)
 
         await self.app(scope, receive, send_with_cookie)

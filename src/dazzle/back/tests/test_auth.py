@@ -221,6 +221,7 @@ class TestAuthStore:
 # =============================================================================
 
 
+@pytest.mark.postgres
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestSessions:
     """Tests for session management."""
