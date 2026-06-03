@@ -1643,6 +1643,15 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     platform_entities = {
         e.name for e in appspec.domain.entities if getattr(e, "domain", None) == "platform"
     }
+    # Entities whose lifecycle is owned outside the nav graph (#1333):
+    # `managed_by: route|pipeline|wizard|external`. They are reachable only
+    # via a custom route/pipeline/wizard/external system, so they (and their
+    # CRUD surfaces) are intentionally absent from workspace/nav references —
+    # not dead code. Orthogonal to `domain: platform`: the entity keeps its
+    # real business domain and is NOT framework-injected.
+    managed_entities = {
+        e.name for e in appspec.domain.entities if getattr(e, "managed_by", None) is not None
+    }
     all_surfaces = {s.name for s in appspec.surfaces}
     surface_locs = {s.name: s.source for s in appspec.surfaces}
     # --- Collect all entity references ---
@@ -1685,7 +1694,7 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
                 if nav_item.entity in all_entities:
                     used_entities.add(nav_item.entity)
 
-    unused_entities = all_entities - used_entities - platform_entities
+    unused_entities = all_entities - used_entities - platform_entities - managed_entities
     if unused_entities:
         for name in sorted(unused_entities):
             loc = entity_locs.get(name)
@@ -1743,6 +1752,10 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
             for nav_item in nav_group.items:
                 if nav_item.entity in all_entities:
                     workspace_entities.add(nav_item.entity)
+    # Lifecycle-owned-outside-the-graph entities (#1333): their CRUD surfaces
+    # are reached via the custom route/pipeline/wizard/external mechanism, so
+    # they are alive even without a workspace/nav reference.
+    workspace_entities |= managed_entities
     for surface in appspec.surfaces:
         if surface.entity_ref and surface.entity_ref in workspace_entities:
             used_surfaces.add(surface.name)

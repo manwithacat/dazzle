@@ -44,6 +44,8 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.34.0 Platform Capability Keywords**: `soft_delete`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
 
+**#1333 Entity lifecycle marker**: `managed_by`
+
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
 **v0.3.1 keywords**: `engine_hint`, `stage`
@@ -1264,6 +1266,27 @@ entity Vehicle "Vehicle":
 
 Multiple inheritance is not supported (one identifier only). Multi-level
 hierarchies (A subtype_of B subtype_of C) are rejected at linker time.
+
+### `managed_by:` (#1333)
+
+Marks an entity whose lifecycle is owned **outside** the workspace/nav
+graph — reachable only via a custom route, a pipeline/job, a multi-step
+wizard, or an external system. One of `route | pipeline | wizard | external`.
+
+```dsl
+entity OnboardingProgress "Onboarding Progress":
+  managed_by: route
+  id: uuid pk
+  stage: str(40) required
+```
+
+Its sole effect is to **exempt the entity and its CRUD surfaces from the
+dead-construct lint** — they are intentionally absent from any workspace or
+`nav` reference, but are not dead code. It is deliberately orthogonal to
+`domain:`: unlike `domain: platform`, `managed_by:` does **not** reclassify
+the entity's business domain, mark it framework-injected, or skip
+modeling/fitness rules. Use `domain: platform` for framework-synthetic
+entities; use `managed_by:` for your own route/pipeline/wizard-driven ones.
 
 ### `subtype_panel:` (v0.71.184, #1217 Phase 3e.v)
 

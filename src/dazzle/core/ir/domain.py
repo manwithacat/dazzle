@@ -32,6 +32,24 @@ class ConstraintKind(StrEnum):
     INDEX = "index"
 
 
+class ManagedBy(StrEnum):
+    """How an entity's lifecycle is driven (#1333).
+
+    Marks an entity as intentionally reachable only through a mechanism
+    outside the workspace/surface navigation graph — a custom route, a
+    pipeline/job, a multi-step wizard, or an external system. The marker's
+    sole effect is to exempt the entity (and its CRUD surfaces) from the
+    dead-construct lint. It is deliberately orthogonal to ``domain``: unlike
+    ``domain: platform`` it does NOT reclassify the entity's business domain,
+    mark it framework-injected, or skip modeling/fitness rules.
+    """
+
+    ROUTE = "route"
+    PIPELINE = "pipeline"
+    WIZARD = "wizard"
+    EXTERNAL = "external"
+
+
 class Constraint(BaseModel):
     """
     Entity-level constraint (unique or index).
@@ -435,6 +453,11 @@ class EntitySpec(BaseModel):
     source: SourceLocation | None = None
     # v0.80.7 (#1289): host-header tenant routing configuration
     tenant_host: TenantHostSpec | None = None
+    # #1333: lifecycle-ownership marker. When set, the entity is reachable
+    # only via a mechanism outside the nav graph (route/pipeline/wizard/
+    # external), so the dead-construct lint exempts it and its surfaces.
+    # Orthogonal to `domain` — does NOT reclassify the business domain.
+    managed_by: ManagedBy | None = None
 
     model_config = ConfigDict(frozen=True)
 

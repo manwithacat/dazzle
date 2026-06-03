@@ -9,9 +9,11 @@ from pathlib import Path
 import pytest
 
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
 from dazzle.core.ir import (
     BulkConfig,
     BulkFormat,
+    ManagedBy,
     NotificationChannel,
     NotificationPreference,
     TimeBucket,
@@ -52,6 +54,87 @@ entity Task "Task":
 """
         )
         assert frag.entities[0].soft_delete is False
+
+
+# =============================================================================
+# managed_by lifecycle-ownership marker (#1333)
+# =============================================================================
+
+
+class TestManagedBy:
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("route", ManagedBy.ROUTE),
+            ("pipeline", ManagedBy.PIPELINE),
+            ("wizard", ManagedBy.WIZARD),
+            ("external", ManagedBy.EXTERNAL),
+        ],
+    )
+    def test_managed_by_values(self, value, expected):
+        frag = _parse(
+            f"""\
+module test
+entity OnboardingProgress "Onboarding Progress":
+  managed_by: {value}
+  id: uuid pk
+  title: str(200)
+"""
+        )
+        assert frag.entities[0].managed_by is expected
+
+    def test_managed_by_default_none(self):
+        frag = _parse(
+            """\
+module test
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+"""
+        )
+        assert frag.entities[0].managed_by is None
+
+    def test_managed_by_rejects_unknown_value(self):
+        with pytest.raises(ParseError, match="managed_by"):
+            _parse(
+                """\
+module test
+entity Task "Task":
+  managed_by: bogus
+  id: uuid pk
+"""
+            )
+
+    def test_managed_by_does_not_touch_domain(self):
+        """The marker is orthogonal to `domain` — it must NOT reclassify the
+        business domain (the whole point vs. `domain: platform`)."""
+        frag = _parse(
+            """\
+module test
+entity Invoice "Invoice":
+  managed_by: pipeline
+  domain: billing
+  id: uuid pk
+"""
+        )
+        entity = frag.entities[0]
+        assert entity.managed_by is ManagedBy.PIPELINE
+        assert entity.domain == "billing"
+
+    def test_managed_by_usable_as_identifier_in_patterns(self):
+        """`managed_by` is in KEYWORD_AS_IDENTIFIER_TYPES (like soft_delete),
+        so it stays legal as an identifier in value positions — e.g. a
+        patterns tag — even though it dispatches as a keyword at entity-body
+        statement position (the same as every other entity keyword)."""
+        frag = _parse(
+            """\
+module test
+entity Thing "Thing":
+  patterns: managed_by, audited
+  id: uuid pk
+"""
+        )
+        assert "managed_by" in frag.entities[0].patterns
 
 
 # =============================================================================

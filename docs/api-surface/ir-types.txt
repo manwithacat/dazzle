@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 366 BaseModels, 148 Enums, 23 other (functions / typealiases / constants)
+# Counts: 366 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -754,6 +754,7 @@ ir_class: EntitySpec
     - is_singleton: bool = False
     - is_tenant_root: bool = False
     - lifecycle: LifecycleSpec | None = None
+    - managed_by: ManagedBy | None = None
     - patterns: list[str] = []
     - publishes: list[PublishSpec] = []
     - seed_template: SeedTemplateSpec | None = None
@@ -4021,6 +4022,13 @@ enum: LogoMode
   members:
     - IMAGE = 'image'
     - TEXT = 'text'
+
+enum: ManagedBy
+  members:
+    - EXTERNAL = 'external'
+    - PIPELINE = 'pipeline'
+    - ROUTE = 'route'
+    - WIZARD = 'wizard'
 
 enum: MappingTriggerType
   members:

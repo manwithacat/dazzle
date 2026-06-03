@@ -187,6 +187,10 @@ class TokenType(Enum):
     SIGNING_TEMPLATE = "signing_template"
     # #1289: per-entity Host-header tenant resolution
     TENANT_HOST = "tenant_host"
+    # #1333: entity lifecycle owned outside the DSL graph (route/pipeline/
+    # wizard/external). Exempts the entity + its surfaces from the
+    # dead-construct lint, orthogonally to `domain: platform`.
+    MANAGED_BY = "managed_by"
     # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity declaration
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities

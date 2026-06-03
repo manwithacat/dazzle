@@ -851,6 +851,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # v0.34.0 Platform Capability Keywords
     TokenType.SOFT_DELETE,
     TokenType.TEMPORAL,
+    # #1333 lifecycle-ownership marker (can also be a field name)
+    TokenType.MANAGED_BY,
     TokenType.DISPLAY_FIELD,
     TokenType.SEARCHABLE,
     TokenType.BULK,

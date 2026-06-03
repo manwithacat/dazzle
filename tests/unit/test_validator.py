@@ -985,6 +985,39 @@ class TestDeadConstructDetection:
         assert not any("Dead construct" in w and "beneficiary_list" in w for w in warnings)
         assert not any("Dead construct" in w and "Beneficiary" in w for w in warnings)
 
+    # --- managed_by exempts entity + surfaces from dead-construct (#1333) ---
+
+    def test_managed_by_entity_and_surfaces_not_dead(self) -> None:
+        """An entity marked `managed_by:` is reachable only via a custom
+        route/pipeline/wizard/external mechanism — it and its CRUD surfaces
+        are exempt from the dead-construct lint, like `domain: platform` but
+        without reclassifying the domain (#1333).
+        """
+        entity = ir.EntitySpec(
+            name="OnboardingProgress",
+            title="Onboarding Progress",
+            fields=[make_id_field()],
+            managed_by=ir.ManagedBy.ROUTE,
+        )
+        surface = self._make_surface(
+            name="onboarding_progress_list", entity_ref="OnboardingProgress"
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            surfaces=[surface],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("Dead construct" in w and "OnboardingProgress" in w for w in warnings)
+        assert not any("Dead construct" in w and "onboarding_progress_list" in w for w in warnings)
+
+    def test_unmarked_orphan_entity_still_dead(self) -> None:
+        """Sanity: the exemption is opt-in — an unmarked orphan is still flagged."""
+        entity = make_entity(name="Orphan")
+        appspec = ir.AppSpec(name="Test", domain=ir.DomainSpec(entities=[entity]), surfaces=[])
+        warnings = extended_lint(appspec)
+        assert any("Dead construct: entity 'Orphan'" in w for w in warnings)
+
     def test_fully_connected_spec_has_no_dead_warnings(self) -> None:
         task = make_entity(name="Task")
         user = make_entity(

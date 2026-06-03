@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.11] - 2026-06-03
+
+### Added
+
+- **`managed_by:` entity marker — dead-construct exemption for route/pipeline/wizard/external-owned entities (#1333).** A new entity-body keyword `managed_by: route | pipeline | wizard | external` marks an entity whose lifecycle is owned *outside* the workspace/nav graph. Its sole effect is to exempt the entity **and its CRUD surfaces** from the dead-construct lint — they're intentionally absent from any workspace or `nav` reference but are not dead code. It is deliberately orthogonal to `domain:`: unlike `domain: platform`, `managed_by:` does **not** reclassify the entity's business domain, mark it framework-injected, or skip modeling/fitness rules (so e.g. an `OnboardingProgress` entity stays in its real domain for ROPA/compliance inventory while no longer false-flagging as dead). New `ir.ManagedBy` StrEnum + `EntitySpec.managed_by` field; parsed like the `soft_delete` flag (lexer token, `KEYWORD_AS_IDENTIFIER_TYPES` allow-list, entity parse branch); unknown values raise an author-time error. Validator exempts marked entities in both the entity and surface dead-construct collectors.
+
+### Agent Guidance
+
+- **Choosing `managed_by:` vs `domain: platform`.** Use `domain: platform` only for framework-synthetic entities (AIJob, FeedbackReport, SystemMetric, …) — it reclassifies the domain and marks the entity framework-injected. For *your own* entities that are reachable only via a custom route, pipeline/job, wizard, or external system, use `managed_by:` instead — it silences the dead-construct lint without distorting the business domain. See `docs/reference/grammar.md` → `managed_by:`.
+
 ## [0.81.10] - 2026-06-03
 
 ### Fixed

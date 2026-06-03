@@ -181,6 +181,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
+          'managed_by': None,
           'name': 'Task',
           'patterns': list([
           ]),
@@ -416,6 +417,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
+          'managed_by': None,
           'name': 'SystemHealth',
           'patterns': list([
             'system',
@@ -670,6 +672,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
+          'managed_by': None,
           'name': 'SystemMetric',
           'patterns': list([
             'system',
@@ -929,6 +932,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
+          'managed_by': None,
           'name': 'DeployHistory',
           'patterns': list([
             'system',

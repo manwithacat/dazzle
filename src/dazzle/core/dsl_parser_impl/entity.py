@@ -41,6 +41,8 @@ class _EntityParseContext:
     temporal: ir.TemporalSpec | None = None
     # Tenant host routing spec (v0.80.7, #1289 slice 1)
     tenant_host: ir.TenantHostSpec | None = None
+    # Lifecycle-ownership marker (#1333): route/pipeline/wizard/external
+    managed_by: ir.ManagedBy | None = None
     bulk_config: ir.BulkConfig | None = None
     # Seed template (v0.38.0)
     seed_template: ir.SeedTemplateSpec | None = None
@@ -185,6 +187,8 @@ class EntityParserMixin:
             elif self.match(TokenType.TENANT_HOST):
                 self._parse_tenant_host_block(ctx)
                 continue
+            elif self.match(TokenType.MANAGED_BY):
+                ctx.managed_by = self._parse_entity_managed_by()
             else:
                 self._parse_entity_field_declaration(ctx)
                 continue  # field parsing handles its own skip_newlines
@@ -212,6 +216,27 @@ class EntityParserMixin:
         self.expect(TokenType.COLON)
         result: str = self.expect_identifier_or_keyword().value
         return result
+
+    def _parse_entity_managed_by(self) -> ir.ManagedBy:
+        """Parse ``managed_by: route|pipeline|wizard|external`` (#1333).
+
+        Marks the entity's lifecycle as owned outside the nav graph, which
+        exempts it and its surfaces from the dead-construct lint. Rejects
+        any value outside the known set with a clear author-time error.
+        """
+        self.advance()
+        self.expect(TokenType.COLON)
+        tok = self.expect_identifier_or_keyword()
+        try:
+            return ir.ManagedBy(tok.value)
+        except ValueError:
+            allowed = ", ".join(m.value for m in ir.ManagedBy)
+            raise make_parse_error(
+                f"managed_by: expects one of [{allowed}], got {tok.value!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            ) from None
 
     def _parse_entity_patterns(self) -> list[str]:
         """Parse ``patterns: a, b, c`` declaration."""
@@ -1091,6 +1116,7 @@ class EntityParserMixin:
             graph_edge=ctx.graph_edge,
             graph_node=ctx.graph_node,
             tenant_host=ctx.tenant_host,
+            managed_by=ctx.managed_by,
             source=loc,
         )
 
