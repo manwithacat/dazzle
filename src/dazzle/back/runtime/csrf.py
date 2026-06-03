@@ -16,6 +16,7 @@ import logging
 import re
 import secrets
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -36,6 +37,27 @@ _UUID_RE = (
     r"(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
     r"|[0-9a-fA-F]{32})"
 )
+
+
+class Disposition(StrEnum):
+    """How a state-changing request relates to CSRF (spec §4.1).
+
+    CSRF is a control on *ambient authority* (the session cookie). A request
+    authenticated by a caller-presented credential is structurally immune, so it
+    derives an ``NA_*`` disposition rather than being CSRF-validated.
+
+    NOTE: ``UNAUTH_MUTATING`` and ``ESCAPE_HATCH`` are defined for completeness
+    but are NOT produced by ``csrf_disposition`` in this phase — they require
+    request-time session-presence detection and the DSL escape-hatch knob, which
+    land in Phase 4. The classifier currently returns only the other four.
+    """
+
+    PROTECTED_SESSION = "protected_session"
+    NA_BEARER = "na_bearer"
+    NA_SIGNATURE = "na_signature"
+    NA_PREAUTH = "na_preauth"
+    UNAUTH_MUTATING = "unauth_mutating"
+    ESCAPE_HATCH = "escape_hatch"
 
 
 @dataclass
@@ -67,8 +89,6 @@ class CSRFConfig:
     )
     exempt_path_prefixes: list[str] = field(
         default_factory=lambda: [
-            "/webhooks/",
-            "/api/v1/webhooks/",
             "/__test__/",
             "/dazzle/dev/",
             "/auth/",
@@ -87,27 +107,34 @@ class CSRFConfig:
             "/_dazzle/i18n/",
         ]
     )
-    exempt_path_regexes: list[str] = field(
+    exempt_path_regexes: list[str] = field(default_factory=list)
+    # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
+    # shared-secret signature IS the control; CSRF is categorically N/A. Moved
+    # out of the generic exempt lists so the disposition is explicit + auditable.
+    na_signature_prefixes: list[str] = field(
+        default_factory=lambda: ["/webhooks/", "/api/v1/webhooks/"]
+    )
+    # Native document signing routes (#1283, narrowed in #1284).
+    # The HMAC signing token carried in the request (query-param on
+    # GET, body on POST) is a stronger per-resource credential than a
+    # session CSRF cookie, so CSRF double-submit is redundant here.
+    # Both the signing page (GET /sign/<entity>/<id>) and the submit
+    # endpoint (POST /api/sign/<entity>/<id>) are exempt;
+    # unauthenticated signers never have a session cookie from which a
+    # CSRF cookie would be issued.
+    #
+    # The match is deliberately a regex anchored to the exact route
+    # shape — /<sign-or-api-sign>/<entity>/<record_id> where
+    # ``record_id`` is a UUID — rather than a broad `startswith`
+    # prefix. A future route mounted deeper or with a non-UUID tail —
+    # e.g. /api/sign/admin/revoke-all — does NOT silently inherit this
+    # exemption, but instead falls back to normal CSRF validation. The
+    # UUID anchor mirrors the route's ``record_id: UUID`` path param
+    # (a non-UUID tail is unreachable — FastAPI 422s it). Decline is a
+    # body flag on the same POST endpoint, not a subpath, so no extra
+    # pattern is required.
+    na_signature_regexes: list[str] = field(
         default_factory=lambda: [
-            # Native document signing routes (#1283, narrowed in #1284).
-            # The HMAC signing token carried in the request (query-param on
-            # GET, body on POST) is a stronger per-resource credential than a
-            # session CSRF cookie, so CSRF double-submit is redundant here.
-            # Both the signing page (GET /sign/<entity>/<id>) and the submit
-            # endpoint (POST /api/sign/<entity>/<id>) are exempt;
-            # unauthenticated signers never have a session cookie from which a
-            # CSRF cookie would be issued.
-            #
-            # The match is deliberately a regex anchored to the exact route
-            # shape — /<sign-or-api-sign>/<entity>/<record_id> where
-            # ``record_id`` is a UUID — rather than a broad `startswith`
-            # prefix. A future route mounted deeper or with a non-UUID tail —
-            # e.g. /api/sign/admin/revoke-all — does NOT silently inherit this
-            # exemption, but instead falls back to normal CSRF validation. The
-            # UUID anchor mirrors the route's ``record_id: UUID`` path param
-            # (a non-UUID tail is unreachable — FastAPI 422s it). Decline is a
-            # body flag on the same POST endpoint, not a subpath, so no extra
-            # pattern is required.
             r"^/sign/[^/]+/" + _UUID_RE + r"$",
             r"^/api/sign/[^/]+/" + _UUID_RE + r"$",
         ]
@@ -218,6 +245,70 @@ def origin_disposition(
         return False
 
     return None
+
+
+def csrf_disposition(
+    method: str,
+    path: str,
+    headers: list[tuple[bytes, bytes]],
+    config: CSRFConfig,
+    *,
+    signature_regexes: list[Any] | None = None,
+) -> Disposition:
+    """Classify a request's CSRF disposition from its auth-class signals (§4.1).
+
+    Returns NA_BEARER / NA_SIGNATURE / NA_PREAUTH / PROTECTED_SESSION.
+    (UNAUTH_MUTATING / ESCAPE_HATCH are Phase 4 — see the enum.) Default-deny:
+    anything not positively classified NA_* is PROTECTED_SESSION.
+
+    ``signature_regexes`` accepts the middleware's precompiled patterns; when
+    None it compiles from ``config.na_signature_regexes``.
+    """
+    auth = _get_header(headers, b"authorization") or ""
+    if auth.startswith("Bearer "):
+        return Disposition.NA_BEARER
+
+    for prefix in config.na_signature_prefixes:
+        if path.startswith(prefix):
+            return Disposition.NA_SIGNATURE
+    sig_res = signature_regexes
+    if sig_res is None:
+        sig_res = [re.compile(p) for p in config.na_signature_regexes]
+    for pattern in sig_res:
+        if pattern.fullmatch(path):
+            return Disposition.NA_SIGNATURE
+
+    if path in config.exempt_paths:
+        return Disposition.NA_PREAUTH
+    for prefix in config.exempt_path_prefixes:
+        if path.startswith(prefix):
+            return Disposition.NA_PREAUTH
+
+    return Disposition.PROTECTED_SESSION
+
+
+def csrf_admits(
+    disposition: Disposition,
+    headers: list[tuple[bytes, bytes]],
+    host: str | None,
+    csrf_cookie: str | None,
+    config: CSRFConfig,
+) -> bool:
+    """Decide admission for a classified request (spec §4.2/§4.5).
+
+    NA_* / ESCAPE_HATCH / UNAUTH_MUTATING admit. PROTECTED_SESSION runs the
+    origin-primary gate (Phase 2) with the double-submit token as fallback.
+    """
+    if disposition is not Disposition.PROTECTED_SESSION:
+        return True
+
+    verdict = origin_disposition(headers, host, config)
+    if verdict is True:
+        return True
+    if verdict is False:
+        return False
+    header_token = _get_header(headers, config.header_name.lower().encode())
+    return bool(header_token and csrf_cookie and header_token == csrf_cookie)
 
 
 class CSRFMiddleware:
