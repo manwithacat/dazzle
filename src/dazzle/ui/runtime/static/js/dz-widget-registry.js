@@ -22,7 +22,12 @@
   // ── Tom Select widgets ──────────────────────────────────────────────
 
   function mountTomSelect(el, options) {
-    if (typeof TomSelect === "undefined") return null;
+    if (typeof TomSelect === "undefined") {
+      console.warn(
+        "[dz-widget-registry] TomSelect vendor JS not loaded — combobox/FK-ref widget left inert. Ensure /static/vendor/tom-select.min.js is served (see app_chrome.js_scripts).",
+      );
+      return null;
+    }
     var defaults = {
       plugins: options.plugins || [],
       maxItems: options.maxItems || null,
@@ -118,9 +123,18 @@
 
   // ── Flatpickr widgets ───────────────────────────────────────────────
 
+  function warnFlatpickrMissing() {
+    console.warn(
+      "[dz-widget-registry] flatpickr vendor JS not loaded — datepicker/daterange widget left inert. Ensure /static/vendor/flatpickr.min.js is served (see app_chrome.js_scripts).",
+    );
+  }
+
   bridge.registerWidget("datepicker", {
     mount: function (el, options) {
-      if (typeof flatpickr === "undefined") return null;
+      if (typeof flatpickr === "undefined") {
+        warnFlatpickrMissing();
+        return null;
+      }
       var defaults = {
         dateFormat: options.dateFormat || "Y-m-d",
         altInput: true,
@@ -138,7 +152,10 @@
 
   bridge.registerWidget("daterange", {
     mount: function (el, options) {
-      if (typeof flatpickr === "undefined") return null;
+      if (typeof flatpickr === "undefined") {
+        warnFlatpickrMissing();
+        return null;
+      }
       var defaults = {
         mode: "range",
         dateFormat: options.dateFormat || "Y-m-d",

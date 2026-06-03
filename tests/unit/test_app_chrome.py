@@ -20,8 +20,12 @@ class TestResolveAppChrome:
         assert chrome.css_links == ("/static/dist/dazzle.min.css",)
         # #1276: lucide UMD precedes the framework bundle so window.lucide
         # exists when dazzle.min.js calls lucide.createIcons().
+        # #1336: vendor widget JS (TomSelect, flatpickr) loads on every app
+        # page (mirrors the always-on vendor CSS) before the framework bundle.
         assert chrome.js_scripts == (
             "/static/dist/dazzle-icons.min.js",
+            "/static/vendor/tom-select.min.js",
+            "/static/vendor/flatpickr.min.js",
             "/static/dist/dazzle.min.js",
         )
         assert chrome.theme is None
@@ -98,6 +102,25 @@ class TestResolveAppChrome:
         assert lucide_idx < bundle_idx, (
             "lucide UMD must precede the framework bundle so window.lucide "
             f"is defined before dazzle.min.js runs: {chrome.js_scripts}"
+        )
+
+    def test_vendor_widget_js_loaded_before_framework_bundle_1336(self) -> None:
+        """#1336: combobox/FK-ref (TomSelect) and datepicker (flatpickr)
+        widgets render an inert empty control unless the vendor JS is loaded.
+        The vendor CSS was always bundled but the matching JS was never wired
+        into the typed-substrate chrome, so every required-FK create form was
+        unsubmittable. The vendor scripts must appear in js_scripts and load
+        before the framework bundle that runs mountWidgets()."""
+        chrome = resolve_app_chrome(None, project_root=None, manifest=None)
+        scripts = chrome.js_scripts
+        ts_idx = next((i for i, s in enumerate(scripts) if s.endswith("/tom-select.min.js")), -1)
+        fp_idx = next((i for i, s in enumerate(scripts) if s.endswith("/flatpickr.min.js")), -1)
+        bundle_idx = next((i for i, s in enumerate(scripts) if s.endswith("/dazzle.min.js")), -1)
+        assert ts_idx >= 0, f"tom-select.min.js missing from js_scripts: {scripts}"
+        assert fp_idx >= 0, f"flatpickr.min.js missing from js_scripts: {scripts}"
+        assert ts_idx < bundle_idx and fp_idx < bundle_idx, (
+            "vendor widget JS must precede the framework bundle so the globals "
+            f"exist when mountWidgets() runs: {scripts}"
         )
 
     def test_use_cdn_does_not_affect_default_urls(self) -> None:

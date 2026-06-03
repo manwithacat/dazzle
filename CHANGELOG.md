@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.13] - 2026-06-03
+
+### Fixed
+
+- **Vendor widget JS (TomSelect, flatpickr) now loads on every app page — combobox/FK-ref and datepicker widgets were silently no-op'ing on every form (#1336).** `css_loader.py` bundled the vendor *CSS* unconditionally, but the matching vendor *JS* was never wired into the typed-substrate chrome after the #1042 Jinja removal — `AppChrome.js_scripts` only listed lucide + the framework bundle. Every `data-dz-widget=combobox` / `data-dz-ref-api` `<select>` rendered inert (the mount bails on `window.TomSelect` being undefined), so **a required FK could not be selected on any create/edit form** — records with required FKs were unsubmittable through the UI (reproduced local + prod). `resolve_app_chrome` and the `AppChrome` default now emit `/static/vendor/tom-select.min.js` and `/static/vendor/flatpickr.min.js` before the framework bundle (defer ordering guarantees the globals exist when the bundle's `mountWidgets()` runs on `DOMContentLoaded`), mirroring the always-on vendor CSS. The silent `return null` bails in `dz-widget-registry.js` now `console.warn` so a future regression fails loudly.
+
+### Removed
+
+- **`dazzle.back.runtime.asset_manifest` (`collect_required_assets`) deleted (#1336).** It derived per-surface vendor-asset keys for the pre-#1042 `base.html` conditional-script blocks, which no longer exist — the function had no live caller (only its own test) and misleadingly looked like the thing that should load vendor JS. Vendor JS now loads unconditionally via `AppChrome` (see Fixed above).
+
+### Agent Guidance
+
+- Vendor widget runtimes load **unconditionally** on every app page via `AppChrome.js_scripts` (`app_chrome.py`), mirroring the always-on vendor CSS in `css_loader.py`. When adding a new vendor-JS-backed widget, add its script there — do **not** reintroduce per-surface conditional asset derivation. The `dz-widget-registry.js` mounts now `console.warn` when a vendor global is missing, so a dropped script surfaces in the console instead of a silent inert control.
+
 ## [0.81.12] - 2026-06-03
 
 ### Fixed
