@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.18] - 2026-06-04
+
+### Added
+
+- **ADR-0033 — CSRF as an auth-class-derived disposition (declarative-CSRF capstone).** Documents the architecture shipped across Phases 1–3 (CSRF is a control on ambient authority; admission derives from the request's authentication class; the disposition predicate + origin-primary gate + session-bound token + auditable policy) and records the **deliberately-deferred** items with rationale (the `<body hx-headers>` transport switch, the guarded-action seam, the test-harness refactor, and `ESCAPE_HATCH`/`UNAUTH_MUTATING` runtime classification + the DSL escape hatch) so their absence is a decision, not an oversight.
+
+### Fixed
+
+- **`regenerate_session_csrf` now raises on an unknown session instead of returning an un-persisted secret (declarative-CSRF M3).** The privilege-change-rotation primitive used a rowcount-less UPDATE, so rotating a non-existent/expired session silently returned a secret that was never stored. It now uses `_execute_modify` and raises `LookupError` on a zero-row match — surfacing the programming error loudly (anti-silent-failure) rather than handing back a phantom secret.
+
+### Changed
+
+- **The CSRF compliance-report policy (`render_csrf_policy`) now states it reflects the framework-default policy.** App-registered `ServerConfig.csrf_exempt_paths`/`csrf_trusted_origins` are set programmatically (not in the manifest) and the offline `dazzle rbac report` can't observe them, so the rendered policy carries an explicit note that it shows the framework defaults unless the live config is passed in — preventing an auditor from over-trusting it. (Live-config threading was investigated and dropped as YAGNI: the report is generated offline where the live `ServerConfig` isn't available.)
+
 ## [0.81.17] - 2026-06-03
 
 ### Changed
