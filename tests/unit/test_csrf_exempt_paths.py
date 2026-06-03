@@ -27,8 +27,11 @@ class TestDefaultExemptListPreserved:
         # A handful of stable defaults from src/dazzle/back/runtime/csrf.py.
         for exact in ("/health", "/docs", "/_dazzle/consent"):
             assert exact in config.exempt_paths, exact
-        for prefix in ("/auth/", "/webhooks/", "/_dazzle/i18n/"):
+        for prefix in ("/auth/", "/_dazzle/i18n/"):
             assert prefix in config.exempt_path_prefixes, prefix
+        # /webhooks/ moved to na_signature_prefixes (NA_SIGNATURE disposition,
+        # declarative-CSRF Phase 3) — same value, new field.
+        assert "/webhooks/" in config.na_signature_prefixes
 
     def test_configure_with_no_extras_matches_default(self) -> None:
         default = CSRFConfig()
@@ -92,12 +95,19 @@ class TestSigningExemptNarrowed:
 
     def _matches_any_exempt(self, config: CSRFConfig, path: str) -> bool:
         """Mirror the middleware's exemption logic for a state-changing path:
-        exact paths, prefixes, then anchored regexes."""
+        exact paths, prefixes, then anchored regexes. Since declarative-CSRF
+        Phase 3 the signing routes derive NA_SIGNATURE from
+        ``na_signature_prefixes`` / ``na_signature_regexes`` rather than the
+        generic exempt lists, so they are consulted here too."""
         if path in config.exempt_paths:
             return True
         if any(path.startswith(p) for p in config.exempt_path_prefixes):
             return True
-        return any(re.fullmatch(p, path) for p in config.exempt_path_regexes)
+        if any(path.startswith(p) for p in config.na_signature_prefixes):
+            return True
+        if any(re.fullmatch(p, path) for p in config.exempt_path_regexes):
+            return True
+        return any(re.fullmatch(p, path) for p in config.na_signature_regexes)
 
     def test_no_broad_sign_prefix_remains(self) -> None:
         config = CSRFConfig()

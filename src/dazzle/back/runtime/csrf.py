@@ -324,6 +324,9 @@ class CSRFMiddleware:
         # Precompile exempt-path regexes once at mount time; matched on the
         # hot path for every state-changing request.
         self._exempt_regexes = [re.compile(pattern) for pattern in config.exempt_path_regexes]
+        self._na_signature_regexes = [
+            re.compile(pattern) for pattern in config.na_signature_regexes
+        ]
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope["type"] != "http":
@@ -347,56 +350,23 @@ class CSRFMiddleware:
             await self._pass_through(scope, receive, send, new_token)
             return
 
-        # Check exemptions
-        if path in self.config.exempt_paths:
-            await self._pass_through(scope, receive, send, new_token)
-            return
-
-        for prefix in self.config.exempt_path_prefixes:
-            if path.startswith(prefix):
-                await self._pass_through(scope, receive, send, new_token)
-                return
-
-        for pattern in self._exempt_regexes:
-            # fullmatch (not match) so the trailing-anchor intent is structural
-            # rather than relying on a load-bearing ``$`` in each pattern.
-            if pattern.fullmatch(path):
-                await self._pass_through(scope, receive, send, new_token)
-                return
-
-        # Bearer auth exempt
-        auth = _get_header(headers, b"authorization") or ""
-        if auth.startswith("Bearer "):
-            await self._pass_through(scope, receive, send, new_token)
-            return
-
-        # Origin-primary admission gate (Phase 2, spec §4.2). Sec-Fetch-Site /
-        # Origin are browser-set and unforgeable cross-site, so a same-origin
-        # request admits without a token; a provably cross-site/same-site one is
-        # rejected even with a token. Only a request with NO origin signal
-        # (legacy/non-browser) falls through to the double-submit token check.
-        # NOTE: the `is True` / `is False` identity checks are deliberate — a
-        # truthiness test (`if verdict:`) would collapse the None fallback leg.
+        # Classify + admit via the disposition predicate (spec §4.1/§4.5). This
+        # consolidates the former exact/prefix/regex exemptions, the Bearer
+        # check, the Phase-2 origin gate, and the double-submit token check into
+        # one predicate that the compliance report can also enumerate.
+        disposition = csrf_disposition(
+            scope.get("method", "GET"),
+            path,
+            headers,
+            self.config,
+            signature_regexes=self._na_signature_regexes,
+        )
         host = _get_header(headers, b"host")
-        verdict = origin_disposition(headers, host, self.config)
-        if verdict is True:
+        if csrf_admits(disposition, headers, host, csrf_token, self.config):
             await self._pass_through(scope, receive, send, new_token)
             return
-        if verdict is False:
-            await self._send_403(send)
-            return
-        # verdict is None -> fall through to token validation below.
-
-        # Validate CSRF token
-        header_name_bytes = self.config.header_name.lower().encode()
-        header_token = _get_header(headers, header_name_bytes)
-        if not header_token or not csrf_token or header_token != csrf_token:
-            # Reject — send 403 directly without touching the body
-            await self._send_403(send)
-            return
-
-        # Valid CSRF — pass through
-        await self._pass_through(scope, receive, send, new_token)
+        await self._send_403(send)
+        return
 
     async def _pass_through(
         self, scope: dict[str, Any], receive: Any, send: Any, new_token: str | None
