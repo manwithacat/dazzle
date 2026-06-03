@@ -327,6 +327,12 @@ def render_csrf_policy(config: CSRFConfig) -> list[str]:
     """
     if not config.enabled:
         return ["## CSRF Policy", "", "> CSRF protection is **disabled**.", ""]
+
+    def _cell(value: str) -> str:
+        # Escape Markdown table-cell delimiters so regex alternations (the
+        # UUID-anchored sign patterns contain `|`) don't break the table.
+        return value.replace("\\", "\\\\").replace("|", "\\|").replace("`", "\\`")
+
     lines = [
         "## CSRF Policy",
         "",
@@ -339,18 +345,18 @@ def render_csrf_policy(config: CSRFConfig) -> list[str]:
         "| --- | --- | --- |",
     ]
     for prefix in config.na_signature_prefixes:
-        lines.append(f"| `{prefix}` | prefix | NA_SIGNATURE |")
+        lines.append(f"| `{_cell(prefix)}` | prefix | NA_SIGNATURE |")
     for rx in config.na_signature_regexes:
-        lines.append(f"| `{rx}` | regex | NA_SIGNATURE |")
+        lines.append(f"| `{_cell(rx)}` | regex | NA_SIGNATURE |")
     for path in config.exempt_paths:
-        lines.append(f"| `{path}` | exact | NA_PREAUTH |")
+        lines.append(f"| `{_cell(path)}` | exact | NA_PREAUTH |")
     for prefix in config.exempt_path_prefixes:
-        lines.append(f"| `{prefix}` | prefix | NA_PREAUTH |")
+        lines.append(f"| `{_cell(prefix)}` | prefix | NA_PREAUTH |")
     if config.trusted_origins:
         lines.append("")
         lines.append("Trusted cross-origin embedders (admitted despite Host mismatch):")
         for origin in config.trusted_origins:
-            lines.append(f"- `{origin}`")
+            lines.append(f"- `{_cell(origin)}`")
     lines.append("")
     return lines
 
