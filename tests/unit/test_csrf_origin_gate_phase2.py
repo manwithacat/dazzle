@@ -68,3 +68,31 @@ class TestTrustedOrigins:
 class TestNoSignalFallsBack:
     def test_no_origin_no_fetch_metadata_returns_none(self) -> None:
         assert origin_disposition(_h(host="app.example.com"), "app.example.com", CFG) is None
+
+
+class TestFailClosedAndPrecedence:
+    def test_unknown_sec_fetch_site_rejects(self) -> None:
+        # A garbage/unknown Sec-Fetch-Site value must fail CLOSED (reject), not open.
+        assert origin_disposition(_h(sec_fetch_site="bogus"), "app.example.com", CFG) is False
+
+    def test_sec_fetch_site_same_origin_wins_over_mismatched_origin(self) -> None:
+        # Both headers present (the real-browser case): the unforgeable
+        # Sec-Fetch-Site=same-origin admits even if an Origin header is present
+        # and mismatched — Sec-Fetch-Site takes precedence.
+        hdrs = _h(sec_fetch_site="same-origin", origin="https://evil.com", host="app.example.com")
+        assert origin_disposition(hdrs, "app.example.com", CFG) is True
+
+    def test_sec_fetch_site_cross_site_wins_over_matching_origin(self) -> None:
+        # Inverse precedence: Sec-Fetch-Site=cross-site rejects even if the Origin
+        # header happens to match the Host (the strong signal wins).
+        hdrs = _h(
+            sec_fetch_site="cross-site", origin="https://app.example.com", host="app.example.com"
+        )
+        assert origin_disposition(hdrs, "app.example.com", CFG) is False
+
+    def test_explicit_default_port_origin_does_not_match_bare_host(self) -> None:
+        # Browsers omit default ports, so Origin "https://app.example.com" (no :443)
+        # matches Host "app.example.com". An explicit :443 is treated as a distinct
+        # authority and rejected — documenting the no-normalization behavior.
+        hdrs = _h(origin="https://app.example.com:443", host="app.example.com")
+        assert origin_disposition(hdrs, "app.example.com", CFG) is False
