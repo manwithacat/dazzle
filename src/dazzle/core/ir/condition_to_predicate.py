@@ -38,8 +38,10 @@ def condition_expr_to_scope_predicate(expr: ConditionExpr | None) -> ScopePredic
     "no where-clause" path through the aggregate runtime.
 
     Raises ``ValueError`` when the input contains a role check, grant
-    check, or via condition — those aren't part of the aggregate
-    where-clause grammar.
+    check, via condition, or a dotted (FK-path) field — those aren't part
+    of the aggregate where-clause grammar and have no SQL-compilation path
+    here. FK-path traversal belongs to the RBAC scope path
+    (``build_scope_predicate`` → ``PathCheck``), not aggregate where-clauses.
     """
     if expr is None:
         return Tautology()
@@ -74,6 +76,20 @@ def condition_expr_to_scope_predicate(expr: ConditionExpr | None) -> ScopePredic
         return Tautology()
 
     field_name: str = cmp.field
+
+    if "." in field_name:
+        # Dotted (FK-path) fields have no compilation path here: this
+        # builder emits a flat ColumnCheck, which compile_predicate would
+        # render as a quoted compound identifier (e.g. "E"."a.b") — invalid
+        # SQL, silently. FK-path traversal is the RBAC scope path's job
+        # (build_scope_predicate → PathCheck → compile_predicate nested
+        # join), not the aggregate where-clause grammar's. Fail loud rather
+        # than emit broken SQL (#1334). Mirrors the role/grant/via rejects.
+        raise ValueError(
+            f"dotted field path {field_name!r} is not supported in aggregate "
+            "where-clauses (no FK-join compilation path); use a direct column"
+        )
+
     op = _operator_to_comp_op(cmp.operator.value)
     val = cmp.value
 

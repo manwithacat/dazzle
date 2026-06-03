@@ -125,3 +125,15 @@ def test_via_condition_rejected() -> None:
     )
     with pytest.raises(ValueError, match="via"):
         condition_expr_to_scope_predicate(expr)
+
+
+def test_dotted_field_rejected() -> None:
+    """A dotted (FK-path) field has no FK-join compilation path in the
+    aggregate where-clause builder — a flat ColumnCheck would compile to an
+    invalid quoted compound identifier (e.g. "E"."a.b"). Fail loud instead
+    of emitting broken SQL (#1334). FK-path traversal is the RBAC scope
+    path's job (build_scope_predicate → PathCheck), not this builder's.
+    """
+    expr = _cmp("cohort_assessment.uploaded_by", ComparisonOperator.EQUALS, "x")
+    with pytest.raises(ValueError, match="dotted field path"):
+        condition_expr_to_scope_predicate(expr)

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.10] - 2026-06-03
+
+### Fixed
+
+- **Aggregate where-clause builder fails loud on dotted (FK-path) fields instead of emitting invalid SQL (#1334).** Investigation of #1334 found the issue's premise non-reproducible: 2-hop RBAC scope conditions (e.g. `cohort_assessment.uploaded_by = current_user`) already compile to the correct `"fk_id" IN (SELECT "id" FROM ... WHERE ...)` join via `build_scope_predicate` → `PathCheck` → the predicate compiler, and `dazzle validate` already raises an author-time error on broken paths (`terminal field ... does not exist` / `no FK for segment ...`). The broken `"E"."a.b"` output in the report came from a *different* path — `condition_expr_to_scope_predicate`, the aggregate/reporting `where:`-clause translator (used only by `workspace_aggregation.py`), which has no FK-join compilation path and would render a dotted field as an invalid quoted compound identifier. That builder now raises `ValueError` on a dotted field, mirroring its existing role/grant/via/date rejections, so the one genuinely-silent broken-SQL site fails loud. The correct RBAC-path behaviour remains pinned by existing tests (`test_predicate_builder`, `test_predicate_compiler`, `test_validate_scope_predicates`).
+
 ## [0.81.9] - 2026-06-03
 
 ### Fixed
