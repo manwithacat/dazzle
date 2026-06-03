@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.17] - 2026-06-03
+
+### Changed
+
+- **CSRF admission is now a single auditable disposition predicate (declarative-CSRF Phase 3).** `CSRFMiddleware` classifies every state-changing request into a `Disposition` (`NA_BEARER` / `NA_SIGNATURE` / `NA_PREAUTH` / `PROTECTED_SESSION`) via `csrf_disposition`, then admits via `csrf_admits` (origin-primary gate + token fallback for `PROTECTED_SESSION`, admit for the rest) — consolidating the Phase-2 gate, the Bearer check, and the former hardcoded exempt lists (exact/prefix/regex) into one predicate. The `__call__` ladder of seven near-identical exemption blocks collapses to `classify → admit?`. Behavior is bit-for-bit unchanged (verified by a 585-case differential); the win is that the CSRF policy is now explicit and surfaced in the RBAC compliance report (`render_csrf_policy`) so every exemption and its rationale is auditable rather than inferred from absence. Signature-authenticated routes (webhooks, doc signing) carry an explicit `NA_SIGNATURE` disposition (new `na_signature_prefixes`/`na_signature_regexes` config); the dead `exempt_path_regexes` field was removed. Spec §4.1/§4.5/§6.
+
+### Agent Guidance
+
+- CSRF admission is decided by two pure functions in `back/runtime/csrf.py`: `csrf_disposition(method, path, headers, config) -> Disposition` (classify by auth class — Bearer/signature/pre-auth/protected, default-deny) and `csrf_admits(disposition, headers, host, csrf_cookie, config) -> bool`. To exempt a new framework endpoint, add it to the disposition-labeled config rule that matches its auth class (`na_signature_*` for HMAC/signature endpoints; `exempt_paths`/`exempt_path_prefixes` for pre-auth/idempotent ones) — never a generic untyped list. The CSRF policy is rendered into the compliance report by `render_csrf_policy`. The spec's `<body hx-headers>` transport switch was dropped (the central `dz-csrf.js` is simpler); `UNAUTH_MUTATING`/`ESCAPE_HATCH` runtime classification, the DSL escape hatch, the guarded-action seam, and live-config audit threading are Phase 4.
+
 ## [0.81.16] - 2026-06-03
 
 ### Changed
