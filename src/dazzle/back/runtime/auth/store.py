@@ -468,8 +468,8 @@ class SessionStoreMixin:
 
         self._execute(
             """
-            INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent, csrf_secret)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 session.id,
@@ -478,6 +478,7 @@ class SessionStoreMixin:
                 session.expires_at.isoformat(),
                 session.ip_address,
                 session.user_agent,
+                session.csrf_secret,
             ),
         )
 
@@ -495,9 +496,30 @@ class SessionStoreMixin:
                 expires_at=datetime.fromisoformat(row["expires_at"]),
                 ip_address=row["ip_address"],
                 user_agent=row["user_agent"],
+                # Pass the stored secret through verbatim so the model's
+                # default_factory does NOT silently mint a fresh one on every
+                # load (which would break double-submit validation). The Task 2
+                # migration backfills existing rows, but a legacy/NULL row would
+                # fail validation (field is ``str``) — so mint a fresh secret in
+                # that one edge case to stay robust.
+                csrf_secret=row.get("csrf_secret") or secrets.token_urlsafe(32),
             )
 
         return None
+
+    def regenerate_session_csrf(self, session_id: str) -> str:
+        """Mint a fresh CSRF secret for an existing session and return it.
+
+        Rotates the token within a session's lifetime without forcing re-login
+        (used by later-phase privilege-change call sites; Phase 1 ships the
+        primitive). Returns the new secret.
+        """
+        new_secret = secrets.token_urlsafe(32)
+        self._execute(
+            "UPDATE sessions SET csrf_secret = %s WHERE id = %s",
+            (new_secret, session_id),
+        )
+        return new_secret
 
     def validate_session(self, session_id: str) -> AuthContext:
         """

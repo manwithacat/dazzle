@@ -335,6 +335,27 @@ class TestSessions:
         context = auth_store.validate_session(valid.id)
         assert context.is_authenticated is True
 
+    def test_create_session_persists_csrf_secret(self, auth_store: Any, test_user: Any) -> None:
+        """The csrf_secret survives a store round-trip (not a fresh default)."""
+        session = auth_store.create_session(test_user)
+
+        loaded = auth_store.get_session(session.id)
+
+        assert loaded is not None
+        # The round-trip: loaded secret must equal the persisted one, NOT a
+        # freshly-minted default_factory value.
+        assert loaded.csrf_secret == session.csrf_secret
+        assert len(loaded.csrf_secret) >= 32
+
+    def test_regenerate_session_csrf_changes_secret(self, auth_store: Any, test_user: Any) -> None:
+        """Regenerating rotates the secret and persists the new value."""
+        session = auth_store.create_session(test_user)
+
+        new_secret = auth_store.regenerate_session_csrf(session.id)
+
+        assert new_secret != session.csrf_secret
+        assert auth_store.get_session(session.id).csrf_secret == new_secret
+
 
 # =============================================================================
 # AuthContext Tests
