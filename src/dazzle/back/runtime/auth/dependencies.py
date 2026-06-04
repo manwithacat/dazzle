@@ -10,21 +10,30 @@ from .store import AuthStore
 
 
 def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
-    """Bind the RLS tenant id contextvar from the authenticated user (Phase B).
+    """Bind the RLS tenant id + scope-attr GUCs from the authenticated user.
 
-    The shared_schema RLS fence reads ``dazzle.tenant_id`` per transaction
-    (``pg_backend.connection()`` sets it from this contextvar at lease time).
+    Phase B binds ``dazzle.tenant_id`` (the shared_schema fence discriminator);
+    Phase C additionally binds the app-wide set of ``dazzle.user_<attr>`` GUCs
+    that the intra-tenant per-verb scope policies read. Both are set on the
+    leased connection per transaction (``pg_backend.connection()`` reads the
+    contextvars at lease time).
+
     Auth in Dazzle is a per-route FastAPI dependency resolved *before* the
-    handler body runs — so the user's tenant only becomes available here, after
-    ``TenantMiddleware`` and before any DB query. Setting the contextvar at this
-    point therefore guarantees the GUC is bound within the same transaction as
-    the fenced query.
+    handler body runs — so the user's attributes only become available here, after
+    ``TenantMiddleware`` and before any DB query. Setting the contextvars at this
+    point therefore guarantees the GUCs are bound within the same transaction as
+    the fenced/scoped query.
 
-    The tenant id is resolved via the same ``current_user.tenant_id`` lookup the
-    scope filters use (built-in fields → preferences). A missing / unresolvable
-    tenant is left unbound — the fence then denies (fail-closed). The value is
-    never empty-string (companion §6.3): ``_resolve_user_attribute`` only returns
-    a concrete scalar or the deny sentinel.
+    Each attribute is resolved via the same ``current_user.<attr>`` lookup the
+    app-layer scope filters use (built-in fields → preferences). A missing /
+    unresolvable attribute (``__RBAC_DENY__``) is left unbound — its GUC stays
+    unset so the fence / scope predicate denies (fail-closed). Values are never
+    empty-string (companion §6.3): ``_resolve_user_attribute`` only returns a
+    concrete scalar or the deny sentinel.
+
+    The app-wide attr set is registered once at startup
+    (``register_rls_user_attr_names``); when empty (non-``shared_schema`` / no
+    scope rules) this resolves only ``tenant_id`` exactly as Phase B did.
 
     asyncio gives each request task its own contextvar copy, so the binding dies
     with the task — no explicit reset needed (mirrors the audit-context wiring).
@@ -34,12 +43,29 @@ def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
     # Local import: route_generator imports auth at module load, so importing it
     # at top level here would create a circular import.
     from dazzle.back.runtime.route_generator import _resolve_user_attribute
-    from dazzle.back.runtime.tenant_isolation import set_current_tenant_id
+    from dazzle.back.runtime.tenant_isolation import (
+        get_rls_user_attr_names,
+        set_current_rls_user_attrs,
+        set_current_tenant_id,
+    )
 
     tenant_id = _resolve_user_attribute("tenant_id", auth_context)
     # "__RBAC_DENY__" means the attribute was absent — leave unbound (fail-closed).
     if isinstance(tenant_id, str) and tenant_id and tenant_id != "__RBAC_DENY__":
         set_current_tenant_id(tenant_id)
+
+    # Phase C — resolve every scope-referenced current_user attr into the
+    # dazzle.user_<attr> GUC map. An attr that resolves to the deny sentinel (or
+    # a non-scalar) is omitted → its GUC stays unset → its predicate denies.
+    user_attr_names = get_rls_user_attr_names()
+    if user_attr_names:
+        resolved: dict[str, str] = {}
+        for attr in user_attr_names:
+            value = _resolve_user_attribute(attr, auth_context)
+            if isinstance(value, str) and value and value != "__RBAC_DENY__":
+                resolved[f"user_{attr}"] = value
+        if resolved:
+            set_current_rls_user_attrs(resolved)
 
 
 def create_auth_dependency(

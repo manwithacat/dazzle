@@ -187,6 +187,35 @@ def _tenancy_metadata_kwargs(appspec: AppSpec) -> dict[str, Any]:
     }
 
 
+def _compute_rls_user_attr_names(entities: list[Any]) -> set[str]:
+    """App-wide set of ``current_user`` attrs referenced by any scope rule (Phase C).
+
+    The union of
+    :func:`~dazzle.back.runtime.predicate_compiler.collect_user_attr_refs` over
+    every scoped entity's ``access.scopes`` predicates. This is the exact set of
+    ``dazzle.user_<attr>`` GUCs the runtime must set per request so the per-verb
+    scope policies' ``current_setting('dazzle.user_<attr>', true)`` resolves.
+
+    Registered once at startup (``register_rls_user_attr_names``) so the auth
+    dependency resolves only these attrs per request without re-walking trees.
+    A ``current_user`` reference (the user's PK) contributes ``"id"``. Entities
+    without scope rules contribute nothing.
+    """
+    from dazzle.back.runtime.predicate_compiler import collect_user_attr_refs
+
+    names: set[str] = set()
+    for entity in entities:
+        access = getattr(entity, "access", None)
+        scopes = getattr(access, "scopes", None) if access is not None else None
+        if not scopes:
+            continue
+        for rule in scopes:
+            predicate = getattr(rule, "predicate", None)
+            if predicate is not None:
+                names |= collect_user_attr_refs(predicate)
+    return names
+
+
 def _maybe_configure_tracer() -> None:
     """Configure the OTel tracer when ``dazzle perf trace`` set the env.
 
@@ -291,6 +320,15 @@ class DazzleBackendApp:
 
         self._appspec = appspec
         self._entities = convert_entities(appspec.domain.entities)
+        # RLS tenancy Phase C — register the app-wide set of current_user attrs
+        # referenced by any scope rule (only under shared_schema; empty otherwise).
+        # The auth dependency resolves exactly these into dazzle.user_<attr> GUCs
+        # per request. Registered unconditionally (empty when not applicable) so a
+        # prior app instance in the same process can't leak a stale set.
+        self._rls_user_attr_names = self._compute_rls_user_attr_names_for_appspec()
+        from dazzle.back.runtime.tenant_isolation import register_rls_user_attr_names
+
+        register_rls_user_attr_names(self._rls_user_attr_names)
         self._service_specs, self._endpoint_specs = convert_surfaces_to_services(
             appspec.surfaces, appspec.domain
         )
@@ -709,6 +747,21 @@ class DazzleBackendApp:
             len(searches),
             "y" if len(searches) == 1 else "ies",
         )
+
+    def _compute_rls_user_attr_names_for_appspec(self) -> set[str]:
+        """The app-wide scope-attr set under ``shared_schema``, else empty (Phase C).
+
+        Gated on ``tenancy: mode: shared_schema`` (mirrors ``_apply_rls_policies``):
+        only then do per-verb scope policies exist, so only then are
+        ``dazzle.user_<attr>`` GUCs needed. Other isolation modes / non-tenant apps
+        get an empty set → the per-request bind is a no-op.
+        """
+        from dazzle.core.ir import TenancyMode
+
+        tenancy = self._appspec.tenancy
+        if tenancy is None or tenancy.isolation.mode != TenancyMode.SHARED_SCHEMA:
+            return set()
+        return _compute_rls_user_attr_names(self._entities)
 
     def _apply_rls_policies(self, engine: Any) -> None:
         """Apply RLS tenant fence + per-verb scope/baseline policies (Phase B + C).

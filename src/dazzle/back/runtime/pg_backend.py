@@ -73,6 +73,41 @@ def _set_tenant_context(conn: Any, tenant_id: str | None) -> None:
     )
 
 
+def _set_rls_user_attrs(conn: Any, attrs: dict[str, str] | None) -> None:
+    """Set the per-transaction ``dazzle.user_<attr>`` GUCs for scope policies.
+
+    RLS tenancy Phase C. The per-verb intra-tenant scope policies read
+    ``current_setting('dazzle.user_<attr>', true)::<type>`` (companion §6); this
+    binds each of those GUCs from the authenticated user's resolved attributes so
+    the leased connection's RLS scope predicates evaluate against the right
+    subject. The map is the per-request value produced by the auth dependency and
+    carried on the ``_current_rls_user_attrs`` contextvar — keys are already
+    ``"user_<attr>"`` (so the GUC name is ``dazzle.<key>``); values are the
+    resolved scalar strings.
+
+    - ``None`` / empty → **no-op**: no GUC is set, so every scope predicate that
+      needs one sees a missing ``current_setting`` → ``NULL`` → matches no rows
+      (fail-closed — correct for unauthenticated / no-scope requests and for an
+      attr that resolved to the RBAC-deny sentinel, which the binder already
+      dropped from the map).
+    - Each name **and** value is passed as a **bind parameter** to ``set_config``
+      — never string-interpolated. The GUC *name* is dynamic (one per referenced
+      attr) but is still a bind param, so a hostile attr value can never reach the
+      SQL text. ``is_local = true`` makes each setting transaction-scoped, so it
+      lives exactly for the queries on this leased connection (companion §6.1/§6.2).
+    """
+    if not attrs:
+        return
+    for key, value in attrs.items():
+        # ``set_config(name, value, true)`` — both name and value are bind
+        # parameters (never interpolated). ``key`` is ``"user_<attr>"`` → the GUC
+        # name is ``dazzle.<key>`` = ``dazzle.user_<attr>``.
+        conn.execute(
+            pgsql.SQL("SELECT set_config(%s, %s, true)"),  # nosemgrep
+            [f"dazzle.{key}", value],
+        )
+
+
 def _create_table_sql(table_name: str, columns: str) -> pgsql.Composed:
     """Build a safe CREATE TABLE statement."""
     return pgsql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(
@@ -296,6 +331,7 @@ class PostgresBackend:
         it takes precedence over the instance's search_path.
         """
         from dazzle.back.runtime.tenant_isolation import (
+            get_current_rls_user_attrs,
             get_current_tenant_id,
             get_current_tenant_schema,
         )
@@ -304,12 +340,16 @@ class PostgresBackend:
         # RLS tenancy Phase B — bind dazzle.tenant_id for the shared_schema fence.
         # None (unauthenticated / non-tenant) leaves the GUC unset → fence denies.
         tenant_id = get_current_tenant_id()
+        # RLS tenancy Phase C — bind the dazzle.user_<attr> GUCs the intra-tenant
+        # scope policies read. Empty (no scope rules / unauthenticated) → no-op.
+        rls_user_attrs = get_current_rls_user_attrs()
 
         if self._pool is not None:
             with self._pool.connection() as conn:
                 if effective_search_path:
                     _set_search_path(conn, effective_search_path)
                 _set_tenant_context(conn, tenant_id)
+                _set_rls_user_attrs(conn, rls_user_attrs)
                 try:
                     yield PgConnectionWrapper(conn)
                 except Exception:
@@ -326,6 +366,7 @@ class PostgresBackend:
             if effective_search_path:
                 _set_search_path(conn, effective_search_path)
             _set_tenant_context(conn, tenant_id)
+            _set_rls_user_attrs(conn, rls_user_attrs)
             yield PgConnectionWrapper(conn)
             conn.commit()
         except Exception:
