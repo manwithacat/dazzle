@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.24] - 2026-06-04
+
+### Added
+
+- **RLS-backed row tenancy — Phase D (production enforcement + static surfaces)** (ratifies as ADR-0034). The tenant fence + scope policies (Phases B/C) are now **applied in production**, not just on the dev `create_all` path. `dazzle db upgrade` applies the RLS policies after migrations (in `shared_schema` mode, on the owner-capable migration role); `dazzle db apply-rls` applies them explicitly; both idempotent. A shared `rls_schema.build_all_rls_ddl(appspec, entities)` (extracted from the dev apply) + `describe_rls_policies(...) -> [PolicyDescriptor]` are the single source of truth for emitted DDL and the expected-policy-set, reused by apply / inspect / drift. New `dazzle inspect rls` shows the generated policy set per tenant-scoped table (`--runtime` cross-references live `pg_policies`). `dazzle db verify` gains a **shape-based RLS drift gate** (RLS disabled / missing / extra / wrong-cmd policy per table) that exits non-zero. Verified against real PostgreSQL (`tests/integration/test_rls_apply_and_drift_pg.py`: apply produces exactly the described policy set + RLS enabled/forced, idempotent re-apply, drift detected on dropped policy / disabled RLS).
+
+### Agent Guidance
+
+- **RLS DDL (ENABLE/FORCE/CREATE POLICY) requires table ownership** — it runs in the deploy/migrate path (`dazzle db upgrade` / `dazzle db apply-rls`) as the owner role, **never** at `dazzle serve` startup (the runtime connects as the non-owner `dazzle_app`). Production now enforces RLS via `dazzle db upgrade` (or an explicit `dazzle db apply-rls`); `--no-rls` skips it, and a failed apply after a successful migration exits non-zero (never silently unenforced).
+- **`dazzle db verify` now fails CI on RLS drift** (shape-based: RLS-disabled / missing / extra / wrong-cmd policy per tenant-scoped table — not qual-text). Use `dazzle inspect rls [--runtime]` to see generated-vs-live policies.
+- Non-goals (deferred): provable-RBAC asserting against live `pg_policies` (a future `dazzle rbac verify --rls`), persona-gated DB policies (#604), and exact policy-body equivalence drift. **Phase E** (provision / excise / DB-enforced containment — closes #1338/#1339) is the remaining phase.
+
 ## [0.81.23] - 2026-06-04
 
 ### Added

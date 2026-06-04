@@ -95,6 +95,31 @@ class TestApplyRlsSharedSchema:
         assert result.exit_code == 0
         assert '"applied": 1' in result.output
 
+    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db._resolve_url")
+    @patch("dazzle.cli.db.load_project_appspec")
+    def test_apply_failure_exits_nonzero_with_owner_hint(
+        self,
+        mock_load: MagicMock,
+        mock_resolve: MagicMock,
+        mock_run: MagicMock,
+    ) -> None:
+        # The likeliest prod failure: running as the non-owner dazzle_app role →
+        # InsufficientPrivilege. The command must exit non-zero with a clean
+        # owner-role hint, not dump a raw asyncpg traceback.
+        mock_load.return_value = _shared_schema_appspec()
+        mock_resolve.return_value = "postgresql://localhost/db"
+        mock_run.side_effect = RuntimeError("permission denied for table Project")
+
+        result = runner.invoke(db_app, ["apply-rls"])
+
+        assert result.exit_code == 1
+        assert mock_run.called
+        assert "Failed to apply RLS policies" in result.output
+        assert "permission denied" in result.output
+        # The owner-role hint is surfaced (Rich word-wraps; match a fragment).
+        assert "OWNS the tables" in result.output
+
 
 class TestDbUpgradeRlsHook:
     """The `dazzle db upgrade` post-migration RLS hook (_apply_rls_after_upgrade).

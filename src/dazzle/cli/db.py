@@ -1066,7 +1066,6 @@ def _is_shared_schema(appspec: Any) -> bool:
 @db_app.command(name="apply-rls")
 def apply_rls_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
-    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Apply row-level-security policies to the database (production enforcement).
@@ -1080,6 +1079,10 @@ def apply_rls_command(
     ``CREATE POLICY`` require table ownership; the runtime ``dazzle_app`` role
     cannot run this DDL. ``dazzle db upgrade`` applies it automatically after
     migrations (same owner role); use this command to apply it separately.
+
+    No ``--tenant`` flag: RLS apply only runs in ``shared_schema`` mode, where
+    the policies live on the shared ``public`` tables — it is never a per-tenant
+    (schema-isolated) operation.
     """
     import json as json_mod
 
@@ -1099,12 +1102,24 @@ def apply_rls_command(
 
     entities = convert_entities(appspec.domain.entities)
     url = _resolve_url(database_url)
-    schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     async def _run(conn: Any) -> Any:
         return await apply_rls_policies(conn, appspec, entities)
 
-    applied = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
+    # RLS apply always targets the shared public schema — no per-tenant
+    # search_path. Wrap loud: the likeliest prod failure is running as the
+    # non-owner runtime role (dazzle_app) → InsufficientPrivilege; surface a
+    # clean owner-role hint instead of a raw asyncpg traceback (matches the
+    # db-upgrade hook's error handling).
+    try:
+        applied = asyncio.run(_run_with_connection(project_root, url, _run))
+    except Exception as e:
+        console.print(f"[red]Failed to apply RLS policies: {e}[/red]")
+        console.print(
+            "[dim]Apply must run as a role that OWNS the tables (e.g. dazzle_owner), "
+            "not the runtime dazzle_app.[/dim]"
+        )
+        raise typer.Exit(1)
 
     if as_json:
         console.print(json_mod.dumps({"applied": applied}))

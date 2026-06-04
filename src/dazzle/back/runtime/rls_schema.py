@@ -181,8 +181,10 @@ class PolicyDescriptor:
             ``scope_delete`` (Phase C).
         cmd: The SQL command the policy applies to — ``ALL`` for the fence /
             baseline, or ``SELECT`` / ``INSERT`` / ``UPDATE`` / ``DELETE`` for a
-            per-verb scope policy. Matches ``pg_policies.cmd`` (PG reports ``*``
-            for ALL — the live-query caller normalises that).
+            per-verb scope policy. Matches ``pg_policies.cmd`` — the view returns
+            human-readable ``ALL`` for a ``FOR ALL`` policy (the underlying
+            ``pg_policy.polcmd`` catalog uses ``*``, but the view translates it,
+            so the drift comparison needs no normalization).
         permissive: ``True`` for a ``PERMISSIVE`` policy (baseline + every
             scope policy), ``False`` for the ``RESTRICTIVE`` ``tenant_fence``.
             Matches ``pg_policies.permissive`` (``'PERMISSIVE'`` / ``'RESTRICTIVE'``).
