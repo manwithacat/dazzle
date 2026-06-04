@@ -79,3 +79,6 @@ def test_role_ddl_three_roles_idempotent_no_bypass_on_app() -> None:
     assert "BYPASSRLS" not in app_line
     # idempotent (guarded create — DO block / IF NOT EXISTS pattern)
     assert "pg_roles" in ddl or "IF NOT EXISTS" in ddl
+    # PG15+ (CVE-2022-2625): schema USAGE must be granted or the LOGIN roles
+    # cannot resolve any object in public and the table grants are inert.
+    assert "GRANT USAGE ON SCHEMA public" in ddl

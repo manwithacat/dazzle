@@ -151,6 +151,11 @@ def create_deny_dependency(
                     detail=f"Access denied for roles: {list(user_roles & denied)}",
                 )
 
+        # Bind the RLS tenant id here too: if this deny-gate is ever used
+        # standalone on a tenant-scoped route the GUC would otherwise be unset.
+        # The bind is guarded on is_authenticated and fail-closed, so the
+        # empty/unauthenticated early returns above need no equivalent call.
+        _bind_rls_tenant_id(auth_context)
         return auth_context
 
     return check_deny_roles

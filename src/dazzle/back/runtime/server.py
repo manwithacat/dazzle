@@ -800,7 +800,20 @@ class DazzleBackendApp:
                     # RLS tenancy Phase B — apply the tenant fence + permissive
                     # baseline after the base schema lands. Idempotent
                     # (drop-before-create); no-op unless tenancy is shared_schema.
-                    self._apply_rls_policies(engine)
+                    # Wrapped in its own try so a fence-apply failure is logged
+                    # LOUDLY (ERROR) and re-raised — a silent WARNING would let
+                    # the app boot fence-less with shared-schema tenancy
+                    # unenforced. The re-raise is still caught by the outer
+                    # dev-mode guard below; the point is the explicit ERROR line.
+                    try:
+                        self._apply_rls_policies(engine)
+                    except Exception as rls_exc:
+                        logger.error(
+                            "RLS policy apply FAILED — tenant fence NOT installed; "
+                            "shared-schema tenancy is unenforced until fixed: %s",
+                            rls_exc,
+                        )
+                        raise
                 finally:
                     engine.dispose()
             except Exception as exc:

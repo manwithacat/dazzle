@@ -149,6 +149,10 @@ def build_rls_role_ddl(
             "dazzle_bypass",
             _login_options(bypass_password) + " BYPASSRLS",
         ),
+        # Schema USAGE. On PostgreSQL 15+ (CVE-2022-2625) the public schema no
+        # longer grants USAGE to PUBLIC, so the LOGIN roles cannot resolve any
+        # object in ``public`` — the table privileges below are inert without it.
+        "GRANT USAGE ON SCHEMA public TO dazzle_app, dazzle_bypass",
         # Table privileges. RLS still applies on top of these for dazzle_app;
         # dazzle_bypass holds BYPASSRLS so the grants are its only gate.
         "GRANT SELECT, INSERT, UPDATE, DELETE\n"
