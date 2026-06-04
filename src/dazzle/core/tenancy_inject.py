@@ -56,6 +56,9 @@ def inject_partition_key(
             entity.name == tenant_name
             or entity.name in excluded
             or entity.archetype_kind in (ir.ArchetypeKind.USER, ir.ArchetypeKind.SETTINGS)
+            # Framework/platform entities (AIJob, AuditEntry, admin, …) are
+            # cross-tenant by design and managed by the framework — never auto-fenced.
+            or entity.domain == "platform"
             or any(f.name == partition_key for f in entity.fields)
             or has_tenant_ref
         ):

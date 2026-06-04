@@ -11,6 +11,7 @@ def _entity(
     *fields: ir.FieldSpec,
     is_tenant_root: bool = False,
     archetype: ir.ArchetypeKind | None = None,
+    domain: str | None = None,
 ) -> ir.EntitySpec:
     base = [
         ir.FieldSpec(
@@ -25,6 +26,7 @@ def _entity(
         fields=base + list(fields),
         is_tenant_root=is_tenant_root,
         archetype_kind=archetype,
+        domain=domain,
     )
 
 
@@ -144,3 +146,18 @@ def test_injects_on_tenant_settings_archetype() -> None:
         if f.type.kind == ir.FieldTypeKind.REF and f.type.ref_entity == "Workspace"
     ]
     assert len(tenant_refs) == 1
+
+
+def test_skips_platform_domain_entities() -> None:
+    # Framework/platform entities (AIJob, AuditEntry, admin, …) are cross-tenant
+    # by design and managed by the framework — they must never be auto-fenced,
+    # while ordinary user-domain entities still get tenant_id.
+    entities = [
+        _entity("Workspace", is_tenant_root=True),
+        _entity("AuditEntry", domain="platform"),
+        _entity("Task"),
+    ]
+    out = inject_partition_key(entities, _shared_schema_tenancy())
+    by_name = {e.name: e for e in out}
+    assert all(f.name != "tenant_id" for f in by_name["AuditEntry"].fields)
+    assert by_name["Task"].fields[0].name == "tenant_id"

@@ -390,7 +390,9 @@ def _tenant_table_args(
 
     Emits, in order: ``UNIQUE(tenant_id, id)``, one composite FK per
     intra-tenant ref, one ``UNIQUE(tenant_id, <col>)`` per author-unique
-    column, and a ``(tenant_id, id)`` leading index.
+    column, and a standalone ``(tenant_id)`` index — ``UNIQUE(tenant_id, id)``
+    already provides a covering index, so a ``(tenant_id, id)`` composite would
+    be redundant.
 
     Composite FKs that close a cycle (self-ref or a cycle detected by
     :func:`_find_circular_refs`) are emitted with ``use_alter=True`` so the

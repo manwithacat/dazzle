@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.21] - 2026-06-04
+
+### Added
+
+- **RLS-backed row tenancy — Phase A (discriminator substrate)** (ratifies as ADR-0034; design `docs/superpowers/specs/2026-06-04-rls-tenancy-design.md` + generation-rules companion). The substrate the RLS enforcement layer (Phase B) sits on. Under `tenancy: mode: shared_schema`, the `partition_key` (`tenant_id`) is now **framework-injected** as a uniform `ref <TenantEntity> required` on every tenant-scoped entity (`src/dazzle/core/tenancy_inject.py`, a new post-merge linker stage) — the archetype's per-app-named injection is retired. `tenancy.entities_excluded` opts an entity out; the tenant entity, `user`/`settings` archetypes, **framework/platform entities (`domain="platform"`: AIJob, AuditEntry, FeedbackReport, JobRun, OnboardingState, admin — cross-tenant by design)**, and entities already referencing the tenant are skipped. Generated schemas now emit, for tenant-scoped entities: `UNIQUE(tenant_id, id)`; **composite intra-tenant FKs** `(tenant_id, fk) → parent(tenant_id, id)` (closing the FK-integrity-bypasses-RLS hole ahead of Phase B); tenant-scoped uniqueness (`UNIQUE(tenant_id, <key>)` — a bare `unique` field is no longer globally unique in a `shared_schema` app); and a `tenant_id`-leading index. Verified against real PostgreSQL (`tests/integration/test_tenant_rls_constraints_pg.py` + `fixtures/tenant_rls`): cross-tenant composite-FK references are rejected and uniqueness is per-tenant. **Greenfield only** — existing deployed schemas are not migrated; existing apps that hand-declare `tenant_id` keep working (injection skips an already-declared column).
+
+### Changed
+
+- **`build_metadata` gains keyword-only `partition_key` / `tenant_scoped`** (api-surface baseline `docs/api-surface/public-helpers.txt` regenerated). Non-tenant apps are unaffected — the construction rules apply only under `shared_schema` for entities carrying the discriminator; the non-tenant code path is byte-identical.
+
+### Agent Guidance
+
+- Do **not** hand-declare `tenant_id` on entities in a `shared_schema` app — the framework injects it uniformly. Opt reference/global tables out via `tenancy.entities_excluded`. The tenant identity is the declared `archetype: tenant` entity; the `public.tenants` 1:1 registry linkage and **RLS enforcement / runtime `set_config` context / the three-role model are Phase B/E — not yet wired**. Phase A is schema construction only.
+- Uniqueness on tenant-scoped entities is **per-tenant by construction** (`UNIQUE(tenant_id, …)`). Intra-tenant FKs are **composite**; a ref to a `global`/excluded entity stays single-column.
+- **Known gap for Phase B:** `user_membership` archetype entities keep their per-app-named tenant ref (e.g. `workspace`) and are **not** in the tenant-scoped set, so they receive **no composite FK** — the cross-tenant reference hole (companion §2.2) is open for membership rows until auth-store tenant-scoping lands (its own phase, a prerequisite for Phase B's "composite FKs close the hole universally" assumption). Do not assume universal composite-FK coverage in Phase B.
+
 ## [0.81.20] - 2026-06-04
 
 ### Added
