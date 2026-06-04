@@ -1,7 +1,9 @@
 # Ephemeral Test-Tenant Lifecycle — Design Spec
 
+> **⚠️ Partially superseded (2026-06-04).** §2's keystone (operate on the existing row-level model via `is_tenant_root` scope paths; no new isolation mode) is superseded by [`2026-06-04-rls-tenancy-design.md`](2026-06-04-rls-tenancy-design.md), which adopts a framework-owned uniform `tenant_id` discriminator enforced by generated RLS. **Slice 0 (shipped v0.81.20) is preserved and foundational.** Slice 1's FK-closure excision engine is replaced by delete-by-`tenant_id`; Slices 1–2 (#1338/#1339) now deliver in that spec's Phase E. This document remains the record of the lifecycle requirements and the Slice-0 work.
+
 **Date:** 2026-06-04
-**Status:** Approved design — ready for implementation planning (large; sliced)
+**Status:** §2 superseded by the RLS-tenancy spec; Slice 0 shipped; Slices 1–2 re-homed to RLS-tenancy Phase E
 **Author:** Brainstormed with @manwithacat
 **Issues:** #1338 (first-class tenant excision), #1339 (signed/contained QA auth + ephemeral test-tenant provisioning). Both originate from AegisMark's QA harness (the one that surfaced framework bugs #1336/#1337).
 **Relates:** ADR-0008 (PostgreSQL-only runtime), `is_tenant_root` (v0.10.3, `core/ir/domain.py:396`), `FKGraph.creation_order` (#1315, `core/ir/fk_graph.py:182`), existing tenant isolation (#957, #1209, #1289 `tenant_host`), ADR-0017 (all schema changes via Alembic).
