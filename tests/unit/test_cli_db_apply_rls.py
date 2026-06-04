@@ -94,3 +94,137 @@ class TestApplyRlsSharedSchema:
 
         assert result.exit_code == 0
         assert '"applied": 1' in result.output
+
+
+class TestDbUpgradeRlsHook:
+    """The `dazzle db upgrade` post-migration RLS hook (_apply_rls_after_upgrade).
+
+    alembic's `command.upgrade` + the DB-touching revision helpers are mocked so
+    the migration "succeeds" without a real DB; the connection runner
+    (`asyncio.run`, which wraps `_run_with_connection(... apply_rls_policies ...)`)
+    is mocked to control success-vs-raise. We assert on whether that runner was
+    invoked (= the apply path was reached) — consistent with the existing db CLI
+    mocking style.
+    """
+
+    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.load_project_appspec")
+    @patch("dazzle.cli.db._safe_current_revision")
+    @patch("dazzle.cli.db._validate_revision_widths")
+    @patch("dazzle.cli.db._guard_single_head")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.upgrade")
+    def test_non_shared_schema_skips_apply(
+        self,
+        mock_upgrade: MagicMock,
+        mock_cfg: MagicMock,
+        _guard: MagicMock,
+        _widths: MagicMock,
+        mock_rev: MagicMock,
+        mock_load: MagicMock,
+        mock_run: MagicMock,
+    ) -> None:
+        # Migration "succeeds"; report path: before != after so it prints Upgraded.
+        mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
+        mock_rev.side_effect = ["base", "head"]
+        mock_load.return_value = _non_tenant_appspec()
+
+        result = runner.invoke(db_app, ["upgrade"])
+
+        assert result.exit_code == 0
+        # No-op for a non-shared_schema app — the connection runner is NOT driven.
+        assert not mock_run.called
+
+    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.load_project_appspec")
+    @patch("dazzle.cli.db._safe_current_revision")
+    @patch("dazzle.cli.db._validate_revision_widths")
+    @patch("dazzle.cli.db._guard_single_head")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.upgrade")
+    def test_no_rls_flag_skips_apply(
+        self,
+        mock_upgrade: MagicMock,
+        mock_cfg: MagicMock,
+        _guard: MagicMock,
+        _widths: MagicMock,
+        mock_rev: MagicMock,
+        mock_load: MagicMock,
+        mock_run: MagicMock,
+    ) -> None:
+        mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
+        mock_rev.side_effect = ["base", "head"]
+        # Even on a shared_schema app, --no-rls must skip the apply entirely
+        # (so load_project_appspec isn't even reached for the hook).
+        mock_load.return_value = _shared_schema_appspec()
+
+        result = runner.invoke(db_app, ["upgrade", "--no-rls"])
+
+        assert result.exit_code == 0
+        assert not mock_run.called
+
+    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.load_project_appspec")
+    @patch("dazzle.cli.db._safe_current_revision")
+    @patch("dazzle.cli.db._validate_revision_widths")
+    @patch("dazzle.cli.db._guard_single_head")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.upgrade")
+    def test_apply_failure_exits_nonzero_and_surfaces_error(
+        self,
+        mock_upgrade: MagicMock,
+        mock_cfg: MagicMock,
+        _guard: MagicMock,
+        _widths: MagicMock,
+        mock_rev: MagicMock,
+        mock_load: MagicMock,
+        mock_run: MagicMock,
+    ) -> None:
+        # The load-bearing branch: migration succeeded, but the RLS apply RAISES.
+        # The command must exit non-zero and surface the error — never silently
+        # leave a migrated-but-unenforced schema.
+        mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
+        mock_rev.side_effect = ["base", "head"]
+        mock_load.return_value = _shared_schema_appspec()
+        mock_run.side_effect = RuntimeError("permission denied for table Project")
+
+        result = runner.invoke(db_app, ["upgrade"])
+
+        assert result.exit_code == 1
+        assert mock_run.called
+        # The error is surfaced (not swallowed) with the operator remediation.
+        # (Rich word-wraps console output, so match on un-split fragments rather
+        # than the full unbroken sentence.)
+        assert "applying RLS policies failed" in result.output
+        assert "permission denied" in result.output
+        assert "NOT enforced" in result.output
+        assert "dazzle db apply-rls" in result.output
+
+    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.load_project_appspec")
+    @patch("dazzle.cli.db._safe_current_revision")
+    @patch("dazzle.cli.db._validate_revision_widths")
+    @patch("dazzle.cli.db._guard_single_head")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.upgrade")
+    def test_happy_path_applies_and_exits_zero(
+        self,
+        mock_upgrade: MagicMock,
+        mock_cfg: MagicMock,
+        _guard: MagicMock,
+        _widths: MagicMock,
+        mock_rev: MagicMock,
+        mock_load: MagicMock,
+        mock_run: MagicMock,
+    ) -> None:
+        mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
+        mock_rev.side_effect = ["base", "head"]
+        mock_load.return_value = _shared_schema_appspec()
+        mock_run.return_value = 5  # 5 RLS statements applied
+
+        result = runner.invoke(db_app, ["upgrade"])
+
+        assert result.exit_code == 0
+        assert mock_run.called
+        assert "Applied 5 RLS policy statements" in result.output
+        assert "owner role" in result.output
