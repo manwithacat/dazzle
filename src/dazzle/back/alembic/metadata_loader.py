@@ -62,5 +62,19 @@ def load_target_metadata() -> sqlalchemy.MetaData:
         manifest.project_root,
         known_renderers=known_renderer_names(manifest),
     )
+    from dazzle.back.runtime.sa_schema import scoped_entity_names
+    from dazzle.core import ir
+
     entities = convert_entities(appspec.domain.entities)
+    # RLS Phase A: under shared_schema, emit tenant-scoped constraints
+    # (composite FKs, UNIQUE(tenant_id, …), tenant_id-leading index).
+    tenancy = appspec.tenancy
+    if tenancy is not None and tenancy.isolation.mode == ir.TenancyMode.SHARED_SCHEMA:
+        pk = tenancy.isolation.partition_key
+        return build_metadata(
+            entities,
+            surfaces=list(appspec.surfaces),
+            partition_key=pk,
+            tenant_scoped=scoped_entity_names(appspec.domain.entities, pk),
+        )
     return build_metadata(entities, surfaces=list(appspec.surfaces))

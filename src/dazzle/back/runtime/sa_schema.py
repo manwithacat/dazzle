@@ -151,8 +151,20 @@ def _field_to_column(
     entity_name: str,
     entity_names: set[str],
     circular_edges: set[tuple[str, str]] | None = None,
+    *,
+    suppress_fk: bool = False,
+    suppress_unique: bool = False,
 ) -> Any:
-    """Convert a single FieldSpec into a SQLAlchemy ``Column``."""
+    """Convert a single FieldSpec into a SQLAlchemy ``Column``.
+
+    ``suppress_fk`` / ``suppress_unique`` exist for the tenant-scoped path
+    (RLS Phase A): when an intra-tenant ref becomes a table-level *composite*
+    FK ``(tenant_id, fk) → parent(tenant_id, id)`` the column's own
+    single-column FK must not also be emitted, and when an author-unique
+    column is rewritten to a tenant-scoped ``UNIQUE(tenant_id, <col>)`` the
+    column-level ``unique`` must be dropped. Both default False so the
+    non-tenant path is byte-identical to before.
+    """
     sa = _ensure_sa()
     col_type = _field_type_to_sa(field.type)
 
@@ -169,7 +181,9 @@ def _field_to_column(
         )
 
     # Unique
-    if getattr(field, "is_unique", False) or getattr(field, "unique", False):
+    if not suppress_unique and (
+        getattr(field, "is_unique", False) or getattr(field, "unique", False)
+    ):
         kwargs["unique"] = True
 
     # Default
@@ -178,7 +192,7 @@ def _field_to_column(
 
     # Foreign key for ref fields
     fk_args: list[Any] = []
-    if field.type.kind == "ref" and field.type.ref_entity:
+    if not suppress_fk and field.type.kind == "ref" and field.type.ref_entity:
         ref_entity = field.type.ref_entity
         if ref_entity in entity_names:
             # use_alter=True defers FK to ALTER TABLE, breaking circular DDL deps
@@ -312,6 +326,111 @@ def _list_index_specs(
 
 
 # ---------------------------------------------------------------------------
+# Tenant-scoped construction rules (RLS Phase A)
+# ---------------------------------------------------------------------------
+
+
+def scoped_entity_names(entities: list[Any], partition_key: str) -> set[str]:
+    """Entities carrying the tenant discriminator column (tenant-scoped).
+
+    An entity is tenant-scoped iff it declares a field named ``partition_key``
+    (covers both framework-injected and hand-declared discriminators). Takes
+    a plain entity list (not an ``AppSpec``) so it is importable without an
+    ``AppSpec`` type dependency — pass ``appspec.domain.entities``.
+    """
+    return {e.name for e in entities if any(f.name == partition_key for f in e.fields)}
+
+
+def _tenant_composite_ref_fields(
+    entity: EntitySpec,
+    partition_key: str,
+    tenant_scoped: set[str],
+) -> list[FieldSpec]:
+    """Ref fields on ``entity`` whose target is also tenant-scoped.
+
+    These become table-level composite FKs ``(tenant_id, fk) →
+    parent(tenant_id, id)`` (§4.1); the partition-key field itself is
+    excluded (it FKs the tenant entity directly, single-column).
+    """
+    out: list[FieldSpec] = []
+    for field in entity.fields:
+        if field.name == partition_key:
+            continue
+        if (
+            field.type.kind == "ref"
+            and field.type.ref_entity
+            and field.type.ref_entity in tenant_scoped
+        ):
+            out.append(field)
+    return out
+
+
+def _tenant_unique_fields(entity: EntitySpec, partition_key: str) -> list[FieldSpec]:
+    """Author-declared unique columns to rewrite as ``UNIQUE(tenant_id, col)``.
+
+    Skips ``id`` (already covered by ``UNIQUE(tenant_id, id)``) and the
+    partition key itself.
+    """
+    out: list[FieldSpec] = []
+    for field in entity.fields:
+        if field.name in ("id", partition_key):
+            continue
+        if getattr(field, "is_unique", False) or getattr(field, "unique", False):
+            out.append(field)
+    return out
+
+
+def _tenant_table_args(
+    entity: EntitySpec,
+    partition_key: str,
+    tenant_scoped: set[str],
+    circular_edges: set[tuple[str, str]] | None = None,
+) -> list[Any]:
+    """Extra table-level args for a tenant-scoped entity (§1.1, §4.1, §4.2, §5).
+
+    Emits, in order: ``UNIQUE(tenant_id, id)``, one composite FK per
+    intra-tenant ref, one ``UNIQUE(tenant_id, <col>)`` per author-unique
+    column, and a ``(tenant_id, id)`` leading index.
+
+    Composite FKs that close a cycle (self-ref or a cycle detected by
+    :func:`_find_circular_refs`) are emitted with ``use_alter=True`` so the
+    constraint lands as a deferred ``ALTER TABLE`` — exactly as the
+    single-column path does for circular refs — keeping
+    ``metadata.create_all`` orderable.
+    """
+    sa = _ensure_sa()
+    args: list[Any] = [
+        sa.UniqueConstraint(partition_key, "id", name=f"uq_{entity.name}_{partition_key}_id"),
+    ]
+    for field in _tenant_composite_ref_fields(entity, partition_key, tenant_scoped):
+        target = field.type.ref_entity
+        is_self_ref = target == entity.name
+        is_circular = circular_edges is not None and (entity.name, target) in circular_edges
+        needs_alter = is_self_ref or is_circular
+        args.append(
+            sa.ForeignKeyConstraint(
+                [partition_key, field.name],
+                [f"{target}.{partition_key}", f"{target}.id"],
+                name=f"fk_{entity.name}_{field.name}",
+                use_alter=needs_alter,
+            )
+        )
+    for field in _tenant_unique_fields(entity, partition_key):
+        args.append(
+            sa.UniqueConstraint(
+                partition_key,
+                field.name,
+                name=f"uq_{entity.name}_{partition_key}_{field.name}",
+            )
+        )
+    # Standalone (tenant_id) index (§1.1). A (tenant_id, id) composite would
+    # duplicate the implicit index from UNIQUE(tenant_id, id) above, so this
+    # leads with — and contains only — the partition key.
+    args.append(sa.Index(f"ix_{entity.name}_{partition_key}", partition_key))
+    return args
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -319,6 +438,9 @@ def _list_index_specs(
 def build_metadata(
     entities: list[EntitySpec],
     surfaces: list[SurfaceSpec] | None = None,
+    *,
+    partition_key: str | None = None,
+    tenant_scoped: set[str] | None = None,
 ) -> sqlalchemy.MetaData:
     """Convert a list of EntitySpec into a SQLAlchemy ``MetaData``.
 
@@ -368,6 +490,11 @@ def build_metadata(
 
     list_indexes = _list_index_specs(db_entities, surfaces)
 
+    # RLS Phase A: the set of entity names carrying the discriminator. Empty
+    # set (or partition_key=None) ⇒ every entity takes the byte-identical
+    # non-tenant path below.
+    scoped_names: set[str] = tenant_scoped or set()
+
     for entity in db_entities:
         # #1217 Phase 3(e): table-per-type child. Only emit subtype-specific
         # columns; the shared identifier comes from the base's id via a FK,
@@ -399,7 +526,27 @@ def build_metadata(
                     _field_to_column(field, entity.name, entity_names, circular_edges)
                 )
             sa.Table(entity.name, metadata, *tpt_columns)
+            # Table-per-type children carry no tenant_id of their own — they share
+            # the base row's id (id is PK+FK to the base) and inherit the base's
+            # tenant_id + UNIQUE(tenant_id, id). So they correctly receive no
+            # tenant-scoped constraints here. (Subtype-table RLS interaction is a
+            # Phase-B concern.)
             continue
+
+        # RLS Phase A: is this entity tenant-scoped? When so, intra-tenant ref
+        # FKs become table-level composite FKs (column FK suppressed) and
+        # author-unique columns become tenant-scoped UNIQUE (column unique
+        # suppressed). Non-scoped entities keep the byte-identical path.
+        is_tenant_scoped = bool(partition_key) and entity.name in scoped_names
+        if is_tenant_scoped:
+            assert partition_key is not None  # narrowed by is_tenant_scoped
+            composite_ref_names = {
+                f.name for f in _tenant_composite_ref_fields(entity, partition_key, scoped_names)
+            }
+            unique_field_names = {f.name for f in _tenant_unique_fields(entity, partition_key)}
+        else:
+            composite_ref_names = set()
+            unique_field_names = set()
 
         columns = []
 
@@ -409,7 +556,16 @@ def build_metadata(
             columns.append(sa.Column("id", sa.Text(), primary_key=True))
 
         for field in entity.fields:
-            columns.append(_field_to_column(field, entity.name, entity_names, circular_edges))
+            columns.append(
+                _field_to_column(
+                    field,
+                    entity.name,
+                    entity_names,
+                    circular_edges,
+                    suppress_fk=field.name in composite_ref_names,
+                    suppress_unique=field.name in unique_field_names,
+                )
+            )
 
         # Build composite list-path indexes that target this entity. Index
         # objects bound to a Table flow into the table's `.indexes` set
@@ -427,7 +583,12 @@ def build_metadata(
                 continue
             index_args.append(sa.Index(index_name, scope_col, sort_col))
 
-        sa.Table(entity.name, metadata, *columns, *index_args)
+        tenant_args: list[Any] = []
+        if is_tenant_scoped:
+            assert partition_key is not None  # narrowed by is_tenant_scoped
+            tenant_args = _tenant_table_args(entity, partition_key, scoped_names, circular_edges)
+
+        sa.Table(entity.name, metadata, *columns, *index_args, *tenant_args)
 
     return metadata
 

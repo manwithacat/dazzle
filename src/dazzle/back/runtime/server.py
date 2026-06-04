@@ -165,6 +165,28 @@ class ServerConfig:
     audit_integrity: str = "none"  # "none" | "hash_chain"
 
 
+def _tenancy_metadata_kwargs(appspec: AppSpec) -> dict[str, Any]:
+    """Tenant-scoping kwargs for ``build_metadata`` (RLS Phase A).
+
+    Returns ``partition_key`` + ``tenant_scoped`` only under
+    ``tenancy: mode: shared_schema``; otherwise an empty dict so the
+    non-tenant ``build_metadata`` path is unchanged. An entity is
+    tenant-scoped iff it carries the partition_key field (covers both
+    framework-injected and hand-declared discriminators).
+    """
+    from dazzle.back.runtime.sa_schema import scoped_entity_names
+    from dazzle.core.ir import TenancyMode
+
+    tenancy = appspec.tenancy
+    if tenancy is None or tenancy.isolation.mode != TenancyMode.SHARED_SCHEMA:
+        return {}
+    pk = tenancy.isolation.partition_key
+    return {
+        "partition_key": pk,
+        "tenant_scoped": scoped_entity_names(appspec.domain.entities, pk),
+    }
+
+
 def _maybe_configure_tracer() -> None:
     """Configure the OTel tracer when ``dazzle perf trace`` set the env.
 
@@ -591,7 +613,11 @@ class DazzleBackendApp:
             logger.warning("Could not list tenants for schema migration: %s", exc)
             return
 
-        metadata = build_metadata(self._entities, surfaces=list(self._appspec.surfaces))
+        metadata = build_metadata(
+            self._entities,
+            surfaces=list(self._appspec.surfaces),
+            **_tenancy_metadata_kwargs(self._appspec),
+        )
         # Normalise Heroku-style postgres:// alias before adding driver suffix
         sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
 
@@ -716,7 +742,11 @@ class DazzleBackendApp:
 
                 from dazzle.back.runtime.sa_schema import build_metadata
 
-                metadata = build_metadata(self._entities, surfaces=list(self._appspec.surfaces))
+                metadata = build_metadata(
+                    self._entities,
+                    surfaces=list(self._appspec.surfaces),
+                    **_tenancy_metadata_kwargs(self._appspec),
+                )
                 # Normalise Heroku-style postgres:// alias before adding driver suffix
                 sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
                 engine = _sa_create_engine(sa_url)
