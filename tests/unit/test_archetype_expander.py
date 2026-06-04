@@ -163,7 +163,16 @@ entity Organization "Organization":
         assert tenant.is_tenant_root is True
 
     def test_tenant_fk_injection(self):
-        """Non-settings entities get tenant FK injected."""
+        """Tenant discriminator is injected post-merge under shared_schema (RLS Phase A).
+
+        The old per-app-named FK injection inside ``expand_archetypes`` (which
+        had no tenancy context) was removed in RLS tenancy Phase A. Injection now
+        runs in the linker via ``inject_partition_key`` only when a
+        ``tenancy: mode: shared_schema`` block is present, and emits a *uniform*
+        ``tenant_id`` ref rather than a per-app ``organization`` ref.
+        """
+        from dazzle.core.tenancy_inject import inject_partition_key
+
         dsl = """
 module test
 app Test "Test"
@@ -180,15 +189,24 @@ entity Contact "Contact":
         module, symbols = _create_test_module(dsl)
         expanded = expand_archetypes(list(module.fragment.entities), symbols)
 
+        # expand_archetypes no longer injects any tenant FK on its own.
         contact = next(e for e in expanded if e.name == "Contact")
-        field_names = [f.name for f in contact.fields]
-        # Should have organization FK (lowercase tenant name)
-        assert "organization" in field_names
+        assert "organization" not in [f.name for f in contact.fields]
+        assert "tenant_id" not in [f.name for f in contact.fields]
 
-        # Check it's a ref to Organization
-        org_field = next(f for f in contact.fields if f.name == "organization")
-        assert org_field.type.kind == ir.FieldTypeKind.REF
-        assert org_field.type.ref_entity == "Organization"
+        # Under shared_schema, the post-merge injector adds a uniform tenant_id ref.
+        tenancy = ir.TenancySpec(
+            isolation=ir.TenantIsolationSpec(
+                mode=ir.TenancyMode.SHARED_SCHEMA, partition_key="tenant_id"
+            )
+        )
+        injected = inject_partition_key(expanded, tenancy)
+        contact = next(e for e in injected if e.name == "Contact")
+        tid = contact.fields[0]
+        assert tid.name == "tenant_id"
+        assert tid.type.kind == ir.FieldTypeKind.REF
+        assert tid.type.ref_entity == "Organization"
+        assert ir.FieldModifier.REQUIRED in tid.modifiers
 
     def test_tenant_fk_not_injected_into_settings(self):
         """Settings entities don't get tenant FK (system-wide)."""

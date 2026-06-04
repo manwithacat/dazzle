@@ -41,10 +41,9 @@ def expand_archetypes(
     # Second pass: apply semantic archetype expansions (inject fields)
     expanded = [_apply_semantic_archetype(entity, expanded) for entity in expanded]
 
-    # Third pass: inject tenant FK if there's a tenant entity
-    tenant_entity = _find_tenant_entity(expanded)
-    if tenant_entity:
-        expanded = _inject_tenant_fk(expanded, tenant_entity)
+    # Tenant discriminator is injected post-merge (tenancy-aware) in linker.py
+    # under shared_schema — see tenancy_inject.inject_partition_key. (The old
+    # per-app-named Stage-5 injection here was removed in RLS tenancy Phase A.)
 
     return expanded
 
@@ -504,74 +503,6 @@ def _find_tenant_entity(entities: list[ir.EntitySpec]) -> ir.EntitySpec | None:
         if entity.is_tenant_root or entity.archetype_kind == ir.ArchetypeKind.TENANT:
             return entity
     return None
-
-
-def _inject_tenant_fk(
-    entities: list[ir.EntitySpec],
-    tenant_entity: ir.EntitySpec,
-) -> list[ir.EntitySpec]:
-    """
-    Inject tenant FK into all entities that don't already have one.
-
-    Skips:
-    - The tenant entity itself
-    - Entities with archetype: settings (system-wide, not tenant-scoped)
-    - Entities with archetype: user (users are system-wide)
-    - Entities that already have a ref to the tenant entity
-
-    Args:
-        entities: List of entities
-        tenant_entity: The tenant root entity
-
-    Returns:
-        List of entities with tenant FK injected
-    """
-    tenant_name = tenant_entity.name
-    # Use lowercase entity name as field name (e.g., Company -> company)
-    tenant_field_name = tenant_name[0].lower() + tenant_name[1:]
-
-    result = []
-    for entity in entities:
-        # Skip the tenant entity itself
-        if entity.name == tenant_name:
-            result.append(entity)
-            continue
-
-        # Skip settings entities (system-wide, not tenant-scoped)
-        if entity.archetype_kind == ir.ArchetypeKind.SETTINGS:
-            result.append(entity)
-            continue
-
-        # Skip user entities (users are system-wide, membership handles tenant scope)
-        if entity.archetype_kind == ir.ArchetypeKind.USER:
-            result.append(entity)
-            continue
-
-        # Check if entity already has a reference to the tenant
-        has_tenant_ref = any(
-            f.type.kind == ir.FieldTypeKind.REF and f.type.ref_entity == tenant_name
-            for f in entity.fields
-        )
-
-        if has_tenant_ref:
-            result.append(entity)
-            continue
-
-        # Inject tenant FK field
-        tenant_field = ir.FieldSpec(
-            name=tenant_field_name,
-            type=ir.FieldType(
-                kind=ir.FieldTypeKind.REF,
-                ref_entity=tenant_name,
-            ),
-            modifiers=[ir.FieldModifier.REQUIRED],
-        )
-
-        # Prepend tenant field to entity fields
-        new_fields = [tenant_field] + list(entity.fields)
-        result.append(entity.model_copy(update={"fields": new_fields}))
-
-    return result
 
 
 # =============================================================================
