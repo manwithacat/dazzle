@@ -790,6 +790,20 @@ def _compile_exists_check(
             # bind to the create payload's value (#1311).
             value_sql = "%s"
             extra_params.append(PayloadFieldRef(target_val))
+        elif policy is not None:
+            # Policy mode (Phase C): the EXISTS subquery body is standalone DDL,
+            # so the root entity is NOT in scope — a `"<entity>"."<col>"`
+            # reference would resolve wrongly / error at policy-eval time. Fail
+            # loud at generation time (mirrors the dotted-junction guard above),
+            # caught by _apply_rls_policies' loud halt rather than emitting a
+            # broken policy. (Param mode below is correct — the route handler
+            # supplies the root row — and is intentionally unchanged.)
+            raise ValueError(
+                "policy mode does not support entity-column ExistsCheck binding "
+                f"targets (junction_field='{binding.junction_field}', "
+                f"target='{target_val}'); use current_user, current_user.<attr>, "
+                "id, null, or a literal"
+            )
         else:
             value_sql = f"{quote_identifier(entity_name)}.{quote_identifier(target_val)}"
 
@@ -1030,7 +1044,14 @@ def compile_predicate_policy(
     sql, params = _compile_predicate_impl(
         predicate, entity_name, fk_graph, schema=schema, policy=ctx
     )
-    assert not params, "policy mode must not produce bind params"
+    # Always-on guard (NOT `assert` — stripped under -O/-OO). A future compiler
+    # bug emitting %s/params in policy mode would otherwise silently produce a
+    # broken policy body (literal "%s" → Postgres compares against the string
+    # "%s" → silent total-deny, very hard to debug).
+    if params:
+        raise AssertionError(
+            f"policy mode produced bind params (predicate compiler bug): {params!r}"
+        )
     return sql
 
 

@@ -394,3 +394,88 @@ class TestEntityTypeResolver:
         )
         with pytest.raises(ValueError):
             resolver("Doc", "nonexistent")
+
+
+# ---------------------------------------------------------------------------
+# ExistsCheck in policy mode (Phase C final review FIX 2)
+# ---------------------------------------------------------------------------
+
+
+def _junction_graph() -> FKGraph:
+    """Graph with a Team junction so ExistsCheck bindings resolve."""
+    graph = FKGraph()
+    graph._edges = {
+        "Project": [FKEdge("Project", "owner_id", "User")],
+        "TeamMembership": [
+            FKEdge("TeamMembership", "user_id", "User"),
+            FKEdge("TeamMembership", "project_id", "Project"),
+        ],
+    }
+    graph._fields = {
+        "Project": {"id", "owner_id", "name"},
+        "TeamMembership": {"id", "user_id", "project_id", "role"},
+        "User": {"id"},
+    }
+    return graph
+
+
+def _junction_types(entity: str, field: str) -> str:
+    table = {
+        ("TeamMembership", "user_id"): "uuid",
+        ("TeamMembership", "project_id"): "uuid",
+        ("TeamMembership", "role"): "text",
+    }
+    try:
+        return table[(entity, field)]
+    except KeyError:
+        raise ValueError(f"no pg type for {entity}.{field}")
+
+
+class TestExistsCheckPolicyMode:
+    def test_supported_bindings_compile(self) -> None:
+        # current_user + id + null are the supported policy-mode forms.
+        p = ExistsCheck(
+            target_entity="TeamMembership",
+            bindings=[
+                ExistsBinding(junction_field="user_id", target="current_user"),
+                ExistsBinding(junction_field="project_id", target="id"),
+                ExistsBinding(junction_field="role", target="null"),
+            ],
+        )
+        sql = compile_predicate_policy(
+            p, "Project", _junction_graph(), entity_types=_junction_types
+        )
+        assert "%s" not in sql
+        assert sql.startswith("EXISTS (SELECT 1 FROM ")
+        # current_user → GUC ::uuid cast on the junction column's type
+        assert "current_setting('dazzle.user_id', true)::uuid" in sql
+        # id → correlated reference to the outer row's PK
+        assert '"project_id" = "Project"."id"' in sql
+        # null → IS NULL
+        assert '"role" IS NULL' in sql
+
+    def test_current_user_attr_binding_compiles(self) -> None:
+        p = ExistsCheck(
+            target_entity="TeamMembership",
+            bindings=[
+                ExistsBinding(junction_field="role", target="current_user.role"),
+            ],
+        )
+        sql = compile_predicate_policy(
+            p, "Project", _junction_graph(), entity_types=_junction_types
+        )
+        assert "%s" not in sql
+        assert "current_setting('dazzle.user_role', true)::text" in sql
+
+    def test_entity_column_target_raises(self) -> None:
+        # A binding target that is an arbitrary entity column (not
+        # current_user / current_user.<attr> / id / null) is unsupported in
+        # policy mode → fail loud at generation time.
+        p = ExistsCheck(
+            target_entity="TeamMembership",
+            bindings=[
+                ExistsBinding(junction_field="project_id", target="owner_id"),
+            ],
+        )
+        with pytest.raises(ValueError, match="entity-column"):
+            compile_predicate_policy(p, "Project", _junction_graph(), entity_types=_junction_types)

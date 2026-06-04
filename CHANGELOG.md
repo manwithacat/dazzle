@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.23] - 2026-06-04
+
+### Added
+
+- **RLS-backed row tenancy — Phase C (intra-tenant scope → RLS)** (ratifies as ADR-0034). Per-persona row-visibility (`scope:` rules) is now DB-enforced *within* a tenant, not just by app-layer filters. The scope predicate compiler gains a **policy-body mode** (`compile_predicate_policy`): a param-free SQL string where `current_user.*` → `current_setting('dazzle.user_<attr>', true)::<type>` (cast to the column's IR type), and literals are safely inlined (`_inline_sql_literal`, single-quote-escaped). `build_rls_scope_policy_ddl` emits **per-verb permissive policies** for scoped entities — `scope_select` (read+list OR-unioned, companion §2.1), `scope_insert` (WITH CHECK), `scope_update` (USING+WITH CHECK), `scope_delete` (USING) — and **drops the permissive `tenant_baseline`** for those entities (the restrictive `tenant_fence` from Phase B still ANDs over everything). The runtime sets the `dazzle.user_<attr>` GUCs per transaction for the app-wide set of referenced attrs (`collect_user_attr_refs`), parameterised + fail-closed, with a shared `USER_GUC_PREFIX` module-load drift guard so the name the policy reads always equals the name the runtime sets. Proven against real PostgreSQL as a non-superuser `dazzle_app` (`tests/integration/test_rls_scope_enforcement_pg.py`: intra-tenant scope enforced, read/list union, verb coverage, cross-tenant still blocked, fail-closed). The param-mode compiler path (Phase B fence + all route-layer scope filters) is byte-unchanged; app-layer scope filters retained as defense-in-depth.
+
+### Agent Guidance
+
+- **A verb with no `scope:` rule on a scoped entity is DENIED at the DB** (no permissive policy → the restrictive fence rejects it). Declare a scope rule for every verb a persona should reach.
+- **Sharp edge — unscoped (`as: <persona> → all` / no condition) + scoped personas on the same verb:** an unscoped rule compiles to `true`, which OR's into the per-verb policy and makes it **permissive for every session** (RLS cannot distinguish persona at the DB — only the app-layer `permit:`/role gate can). So if one persona has `scope: read: all` and another has a row condition on the same verb, the DB policy admits all rows and the **app-layer role gate is the only thing enforcing the scoped persona's restriction**. This is consistent with "`permit:`/role stays app-layer," but author with care. Multiple *conditioned* rules for one verb are OR-unioned at the DB (union of personas' visible rows) — this is more permissive than the app layer's current first-match (TODO #604); persona-gated DB policies are a Phase D consideration. Not a leak (app filters deny at least as narrowly).
+- **`current_user` against an FK column** resolves to the referent's PK → the GUC is `dazzle.user_entity_id` (not `dazzle.user_id`); the runtime sets whatever `collect_user_attr_refs` yields, kept in lockstep via `USER_GUC_PREFIX`.
+- Still open: prod policy apply + `dazzle inspect rls` + drift gate (Phase D); excision/provisioning (Phase E); dotted-junction `via` bindings in a scope rule raise (fail-loud) in policy mode — not yet supported.
+
 ## [0.81.22] - 2026-06-04
 
 ### Added
