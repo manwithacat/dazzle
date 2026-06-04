@@ -13,6 +13,7 @@ Two marker types are returned in the params list instead of resolved values:
 Neither marker is resolved here; the compiler is purely structural.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -67,6 +68,148 @@ class PayloadFieldRef:
 
 
 # ---------------------------------------------------------------------------
+# Policy-body (param-free) mode (Phase C)
+# ---------------------------------------------------------------------------
+
+#: A ``(entity_name, field_name) -> pg_type_name`` resolver. Returns the
+#: PostgreSQL type *name* (e.g. ``"uuid"``, ``"text"``) for a column, used to
+#: cast a ``current_setting(...)`` GUC read to the column's type. The resolver
+#: must raise (any exception) when a type can't be resolved so policy
+#: generation fails loudly rather than emitting a wrong-typed policy.
+EntityTypeResolver = Callable[[str, str], str]
+
+#: The fixed GUC prefix for per-request user attributes (mirrors Phase B's
+#: ``dazzle.tenant_id``). ``current_user`` → ``dazzle.user_id``; a named
+#: attribute ``a`` → ``dazzle.user_<a>``.
+_USER_GUC_PREFIX = "dazzle.user_"
+
+
+@dataclass(frozen=True)
+class _PolicyCtx:
+    """Threaded through the ``_compile_*`` functions to switch to policy mode.
+
+    When ``None`` is threaded (the default), the compiler emits the
+    byte-for-byte unchanged param-mode output (``%s`` + marker params). When a
+    ``_PolicyCtx`` is present, value emit points instead inline a self-contained
+    SQL token (GUC read + cast, or an escaped literal) and return no params.
+    """
+
+    #: Resolves a column to its pg type name for the GUC cast.
+    types: EntityTypeResolver
+
+
+def _inline_sql_literal(value: str | int | float | bool | None) -> str:
+    """Render a scalar to a safe, self-contained SQL literal token.
+
+    - ``None`` → ``NULL``
+    - ``bool`` → ``true`` / ``false`` (checked before ``int`` — ``bool`` is an
+      ``int`` subclass)
+    - ``str`` → single-quoted with SQL-standard ``'`` → ``''`` escaping
+    - ``int`` / ``float`` → ``str(value)``
+
+    Scope-rule literals are author/IR-controlled, but every value is rendered
+    safely regardless (no raw value ever reaches the policy string).
+    """
+    if value is None:
+        return "NULL"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    # str — SQL-standard single-quote escaping.
+    escaped = value.replace("'", "''")
+    return f"'{escaped}'"
+
+
+# Map a DSL scalar type → the PostgreSQL type *name* used in a ``::<type>``
+# cast. Mirrors ``sa_schema._scalar_type_to_sa`` but yields a name string
+# rather than a SQLAlchemy type instance.
+_SCALAR_TO_PG_NAME: dict[str, str] = {
+    "str": "text",
+    "text": "text",
+    "int": "integer",
+    "decimal": "numeric",
+    "float": "double precision",
+    "bool": "boolean",
+    "date": "date",
+    "datetime": "timestamptz",
+    "uuid": "uuid",
+    "email": "text",
+    "url": "text",
+    "slug": "text",
+    "json": "jsonb",
+    "timezone": "text",
+}
+
+
+def _field_type_to_pg(field_type: Any) -> str:
+    """Map a DSL ``FieldType`` to a PostgreSQL type-name string for a cast.
+
+    Mirrors ``sa_schema._field_type_to_sa`` but returns a name (``"uuid"``,
+    ``"text"``, ``"integer"``, ``"boolean"``, ``"numeric"``, ``"timestamptz"``,
+    …) suitable for ``current_setting(...)::<name>``.
+
+    - ``kind="ref"`` → ``uuid`` (FK columns are uuid)
+    - ``kind="scalar"`` → mapped via :data:`_SCALAR_TO_PG_NAME`
+    - ``kind="enum"`` → ``text`` (enums are stored as TEXT)
+
+    Raises:
+        ValueError: when the scalar type can't be mapped to a pg type name.
+    """
+    kind = getattr(field_type, "kind", None)
+    if kind == "ref":
+        return "uuid"
+    if kind == "enum":
+        return "text"
+    if kind == "scalar":
+        scalar = field_type.scalar_type
+        scalar_val = scalar.value if hasattr(scalar, "value") else str(scalar)
+        pg = _SCALAR_TO_PG_NAME.get(scalar_val)
+        if pg is None:
+            raise ValueError(f"No pg cast type for scalar type {scalar_val!r}")
+        return pg
+    raise ValueError(f"No pg cast type for field type kind {kind!r}")
+
+
+def build_entity_type_resolver(entities: list[Any]) -> EntityTypeResolver:
+    """Build an :data:`EntityTypeResolver` from a list of ``EntitySpec``.
+
+    The returned callable maps ``(entity_name, field_name)`` to the column's
+    pg type name (via :func:`_field_type_to_pg`). It raises ``ValueError`` for
+    an unknown ``(entity, field)`` pair so policy generation fails loudly.
+    """
+    table: dict[tuple[str, str], str] = {}
+    for entity in entities:
+        ename = entity.name
+        for field in entity.fields:
+            table[(ename, field.name)] = _field_type_to_pg(field.type)
+
+    def resolver(entity_name: str, field_name: str) -> str:
+        try:
+            return table[(entity_name, field_name)]
+        except KeyError:
+            raise ValueError(
+                f"No pg type for column {entity_name}.{field_name} "
+                f"(cannot cast its GUC in an RLS policy body)"
+            ) from None
+
+    return resolver
+
+
+def _guc_read(name: str, pg_type: str) -> str:
+    """Render a ``current_setting('dazzle.user_<name>', true)::<type>`` token.
+
+    The ``true`` (missing-ok) argument is always passed so an unset GUC reads
+    NULL → the predicate fails closed rather than erroring.
+    """
+    # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
+    # Closed templated DDL over IR-controlled values: `name` is an IR field/attr
+    # identifier and `pg_type` comes from the closed `_SCALAR_TO_PG_NAME` map —
+    # neither is request data. The literal channel uses `_inline_sql_literal`.
+    return f"current_setting('{_USER_GUC_PREFIX}{name}', true)::{pg_type}"
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -114,20 +257,52 @@ def _resolve_segment(fk_graph: FKGraph, entity: str, segment: str) -> tuple[str,
     )
 
 
-def _compile_value_ref(value: ValueRef) -> tuple[str | None, list[Any]]:
+def _compile_value_ref(
+    value: ValueRef,
+    *,
+    policy: _PolicyCtx | None = None,
+    pg_type: str | None = None,
+) -> tuple[str | None, list[Any]]:
     """Return ``(sql_fragment_or_None, params)`` for a value reference.
 
     Returns ``None`` for the SQL fragment when the value produces an inline SQL
     token (e.g. NULL) rather than a placeholder.
+
+    Default (``policy is None``) — **param mode**, byte-for-byte unchanged:
+    ``current_user`` → ``("%s", [CurrentUserRef()])``, ``user_attr`` →
+    ``("%s", [UserAttrRef(...)])``, literal → ``("%s", [value.literal])``.
+
+    Policy mode (``policy`` set) — **param-free**: ``current_user`` →
+    ``(current_setting('dazzle.user_id', true)::<pg_type>, [])``, ``user_attr a``
+    → ``(current_setting('dazzle.user_a', true)::<pg_type>, [])``, literal →
+    ``(_inline_sql_literal(value.literal), [])``. ``pg_type`` is the GUC cast
+    type (the *column's* pg type) and is required for ``current_user`` /
+    ``user_attr`` in policy mode (raises ``ValueError`` if missing).
     """
     if value.literal_null:
         return None, []  # caller emits IS NULL / IS NOT NULL directly
+
+    if policy is None:
+        if value.current_user:
+            return "%s", [CurrentUserRef()]
+        if value.user_attr is not None:
+            return "%s", [UserAttrRef(value.user_attr)]
+        # scalar literal (str, int, float, bool, or None-valued literal)
+        return "%s", [value.literal]
+
+    # --- policy mode: inline self-contained tokens, no params ---
     if value.current_user:
-        return "%s", [CurrentUserRef()]
+        if pg_type is None:
+            raise ValueError("policy mode: cannot cast a current_user GUC without a column pg type")
+        return _guc_read("id", pg_type), []
     if value.user_attr is not None:
-        return "%s", [UserAttrRef(value.user_attr)]
-    # scalar literal (str, int, float, bool, or None-valued literal)
-    return "%s", [value.literal]
+        if pg_type is None:
+            raise ValueError(
+                f"policy mode: cannot cast user attr {value.user_attr!r} "
+                "GUC without a column pg type"
+            )
+        return _guc_read(value.user_attr, pg_type), []
+    return _inline_sql_literal(value.literal), []
 
 
 def _op_to_sql(op: CompOp) -> str:
@@ -158,6 +333,7 @@ def _compile_column_check(
     entity_name: str = "",
     schema: str | None = None,
     fk_graph: FKGraph | None = None,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, list[Any]]:
     col = _qualify_column(predicate.field, entity_name, schema, fk_graph)
     op_sql = _op_to_sql(predicate.op)
@@ -172,8 +348,14 @@ def _compile_column_check(
         # Fallback for any other op (unusual but safe)
         return f"{col} {op_sql} NULL", []
 
-    _, params = _compile_value_ref(value)
-    return f"{col} {op_sql} %s", params
+    pg_type = (
+        _resolve_column_pg_type(predicate.field, entity_name, fk_graph, policy)
+        if policy is not None
+        else None
+    )
+    token, params = _compile_value_ref(value, policy=policy, pg_type=pg_type)
+    rhs = token if policy is not None else "%s"
+    return f"{col} {op_sql} {rhs}", params
 
 
 def _compile_user_attr_check(
@@ -182,10 +364,31 @@ def _compile_user_attr_check(
     entity_name: str = "",
     schema: str | None = None,
     fk_graph: FKGraph | None = None,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, list[Any]]:
     col = _qualify_column(predicate.field, entity_name, schema, fk_graph)
     op_sql = _op_to_sql(predicate.op)
-    return f"{col} {op_sql} %s", [UserAttrRef(predicate.user_attr)]
+    if policy is None:
+        return f"{col} {op_sql} %s", [UserAttrRef(predicate.user_attr)]
+    pg_type = _resolve_column_pg_type(predicate.field, entity_name, fk_graph, policy)
+    return f"{col} {op_sql} {_guc_read(predicate.user_attr, pg_type)}", []
+
+
+def _resolve_column_pg_type(
+    field: str,
+    entity_name: str,
+    fk_graph: FKGraph | None,
+    policy: _PolicyCtx,
+) -> str:
+    """Resolve the pg cast type for a column in policy mode.
+
+    Mirrors :func:`_resolve_field_on_entity` so the type is looked up against
+    the *same* column name the SQL references (bare name, else ``<field>_id``).
+    Delegates to the ``policy.types`` resolver, which raises ``ValueError`` when
+    the type can't be resolved — propagated so policy generation fails loudly.
+    """
+    resolved_field = _resolve_field_on_entity(field, entity_name, fk_graph)
+    return policy.types(entity_name, resolved_field)
 
 
 def _compile_column_ref_check(
@@ -282,6 +485,7 @@ def _path_check_subquery(
     fk_graph: FKGraph,
     *,
     schema: str | None = None,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, str, str, list[Any]]:
     """Decompose a PathCheck into the pieces both compile forms need.
 
@@ -323,8 +527,15 @@ def _path_check_subquery(
         # Accept it as-is (may be on an entity not in the graph, e.g. in tests)
         terminal_field = terminal_segment
 
-    # Compile the value
-    _, value_params = _compile_value_ref(predicate.value)
+    # Compile the value. In policy mode the GUC cast type is the *terminal*
+    # column's type (resolved against the final entity in the path). Only
+    # resolved when a value token is actually needed (not for IS NULL).
+    pg_type = (
+        policy.types(current_entity, terminal_field)
+        if policy is not None and not predicate.value.literal_null
+        else None
+    )
+    value_token, value_params = _compile_value_ref(predicate.value, policy=policy, pg_type=pg_type)
     value_op = _op_to_sql(predicate.op)
 
     if predicate.value.literal_null:
@@ -334,7 +545,8 @@ def _path_check_subquery(
             innermost_condition = f"{quote_identifier(terminal_field)} IS NOT NULL"
         params: list[Any] = []
     else:
-        innermost_condition = f"{quote_identifier(terminal_field)} {value_op} %s"
+        rhs = value_token if policy is not None else "%s"
+        innermost_condition = f"{quote_identifier(terminal_field)} {value_op} {rhs}"
         params = list(value_params)
 
     # Walk hops from the deepest toward the root, accumulating the WHERE body
@@ -362,6 +574,7 @@ def _compile_path_check(
     fk_graph: FKGraph,
     *,
     schema: str | None = None,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, list[Any]]:
     """Compile a PathCheck to a nested ``"<root_fk>" IN (SELECT …)`` expression.
 
@@ -374,9 +587,12 @@ def _compile_path_check(
                 SELECT "id" FROM "AssessmentEvent" WHERE "school_id" = %s
             )
         )
+
+    In policy mode the structure is unchanged; only the terminal value token
+    differs (an inlined literal or a ``current_setting(...)::<type>`` GUC read).
     """
     root_fk_field, root_target_table, where_body, params = _path_check_subquery(
-        predicate, entity_name, fk_graph, schema=schema
+        predicate, entity_name, fk_graph, schema=schema, policy=policy
     )
     inner_sql = f'SELECT "id" FROM {root_target_table} WHERE {where_body}'
     return f"{quote_identifier(root_fk_field)} IN ({inner_sql})", params
@@ -468,6 +684,20 @@ def _compile_dotted_junction_predicate(
     return f"{quote_identifier(root_fk)} IN ({inner_sql})"
 
 
+def _exists_binding_pg_type(
+    predicate: ExistsCheck,
+    junction_field: str,
+    policy: _PolicyCtx,
+) -> str:
+    """Resolve the GUC cast type for an ExistsCheck binding in policy mode.
+
+    The binding compares ``junction_field`` (a column on the junction
+    ``target_entity``) to a GUC value, so the cast type is the junction
+    column's pg type. Raises ``ValueError`` (via the resolver) if unresolvable.
+    """
+    return policy.types(predicate.target_entity, junction_field)
+
+
 def _compile_exists_check(
     predicate: ExistsCheck,
     entity_name: str,
@@ -475,6 +705,7 @@ def _compile_exists_check(
     *,
     schema: str | None = None,
     payload_mode: bool = False,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, list[Any]]:
     """Compile an ExistsCheck to an [NOT] EXISTS (SELECT 1 FROM …) expression.
 
@@ -484,6 +715,12 @@ def _compile_exists_check(
     form — at create time the root row does not exist, so entity-side values
     come from the incoming payload. ``current_user`` / ``current_user.<attr>``
     / ``null`` targets are unaffected.
+
+    ``policy`` (Phase C): policy-body mode. ``current_user`` /
+    ``current_user.<attr>`` bindings emit a ``current_setting(...)::<type>`` GUC
+    read instead of ``%s`` + marker; the cast type is the junction column's
+    pg type. Mutually exclusive with ``payload_mode``. Dotted junction-field
+    bindings are not yet supported in policy mode (raise ``ValueError``).
     """
     target = _qualify_table(predicate.target_entity, schema)
     conditions: list[str] = []
@@ -496,12 +733,23 @@ def _compile_exists_check(
 
         target_val = binding.target
 
+        if policy is not None and is_dotted:
+            raise ValueError(
+                "policy mode does not support dotted junction-field bindings "
+                f"('{binding.junction_field}') yet"
+            )
+
         # Resolve right-hand value first — shared between dotted and flat paths.
         value_sql: str | None = None
         extra_params: list[Any] = []
         if target_val == "current_user":
-            value_sql = "%s"
-            extra_params.append(CurrentUserRef())
+            if policy is not None:
+                value_sql = _guc_read(
+                    "id", _exists_binding_pg_type(predicate, binding.junction_field, policy)
+                )
+            else:
+                value_sql = "%s"
+                extra_params.append(CurrentUserRef())
         elif target_val == "id":
             if payload_mode:
                 value_sql = "%s"
@@ -512,8 +760,13 @@ def _compile_exists_check(
             pass  # handled specially below
         elif target_val.startswith("current_user."):
             attr = target_val[len("current_user.") :]
-            value_sql = "%s"
-            extra_params.append(UserAttrRef(attr))
+            if policy is not None:
+                value_sql = _guc_read(
+                    attr, _exists_binding_pg_type(predicate, binding.junction_field, policy)
+                )
+            else:
+                value_sql = "%s"
+                extra_params.append(UserAttrRef(attr))
         elif payload_mode:
             # Entity column referenced from a not-yet-existent root row →
             # bind to the create payload's value (#1311).
@@ -590,20 +843,31 @@ def _compile_bool_composite(
     fk_graph: FKGraph,
     *,
     schema: str | None = None,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, list[Any]]:
-    """Compile a BoolComposite (AND / OR / NOT) node."""
+    """Compile a BoolComposite (AND / OR / NOT) node.
+
+    In param mode (``policy is None``) children are compiled via the public
+    :func:`compile_predicate` (unchanged — each gets its own perf span). In
+    policy mode children route through :func:`_compile_predicate_impl` with the
+    policy context threaded, so the whole tree renders param-free.
+    """
+
+    def _child(child: ScopePredicate) -> tuple[str, list[Any]]:
+        if policy is None:
+            return compile_predicate(child, entity_name, fk_graph, schema=schema)
+        return _compile_predicate_impl(child, entity_name, fk_graph, schema=schema, policy=policy)
+
     if predicate.op is BoolOp.NOT:
         assert len(predicate.children) == 1
-        child_sql, child_params = compile_predicate(
-            predicate.children[0], entity_name, fk_graph, schema=schema
-        )
+        child_sql, child_params = _child(predicate.children[0])
         return f"NOT ({child_sql})", child_params
 
     joiner = " AND " if predicate.op is BoolOp.AND else " OR "
     parts: list[str] = []
     all_params: list[Any] = []
     for child in predicate.children:
-        child_sql, child_params = compile_predicate(child, entity_name, fk_graph, schema=schema)
+        child_sql, child_params = _child(child)
         parts.append(f"({child_sql})")
         all_params.extend(child_params)
 
@@ -651,37 +915,160 @@ def _compile_predicate_impl(
     fk_graph: FKGraph,
     *,
     schema: str | None = None,
+    policy: _PolicyCtx | None = None,
 ) -> tuple[str, list[Any]]:
     match predicate:
         case Tautology():
-            return "", []
+            # Policy bodies need a self-contained boolean; param mode keeps the
+            # empty fragment (callers omit the WHERE).
+            return ("true", []) if policy is not None else ("", [])
 
         case Contradiction():
-            return "FALSE", []
+            return ("false", []) if policy is not None else ("FALSE", [])
 
         case ColumnCheck():
             return _compile_column_check(
-                predicate, entity_name=entity_name, schema=schema, fk_graph=fk_graph
+                predicate,
+                entity_name=entity_name,
+                schema=schema,
+                fk_graph=fk_graph,
+                policy=policy,
             )
 
         case ColumnRefCheck():
+            # Column-vs-column — param-free in both modes (not used by RBAC).
             return _compile_column_ref_check(
                 predicate, entity_name=entity_name, schema=schema, fk_graph=fk_graph
             )
 
         case UserAttrCheck():
             return _compile_user_attr_check(
-                predicate, entity_name=entity_name, schema=schema, fk_graph=fk_graph
+                predicate,
+                entity_name=entity_name,
+                schema=schema,
+                fk_graph=fk_graph,
+                policy=policy,
             )
 
         case PathCheck():
-            return _compile_path_check(predicate, entity_name, fk_graph, schema=schema)
+            return _compile_path_check(
+                predicate, entity_name, fk_graph, schema=schema, policy=policy
+            )
 
         case ExistsCheck():
-            return _compile_exists_check(predicate, entity_name, fk_graph, schema=schema)
+            return _compile_exists_check(
+                predicate, entity_name, fk_graph, schema=schema, policy=policy
+            )
 
         case BoolComposite():
-            return _compile_bool_composite(predicate, entity_name, fk_graph, schema=schema)
+            return _compile_bool_composite(
+                predicate, entity_name, fk_graph, schema=schema, policy=policy
+            )
 
+        case _:
+            raise TypeError(f"Unknown predicate type: {type(predicate)!r}")
+
+
+# ---------------------------------------------------------------------------
+# Policy-body public API (Phase C)
+# ---------------------------------------------------------------------------
+
+
+def compile_predicate_policy(
+    predicate: ScopePredicate,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    entity_types: EntityTypeResolver,
+    schema: str | None = None,
+) -> str:
+    """Compile a :class:`ScopePredicate` to a param-free RLS policy-body fragment.
+
+    Same algebra and SQL shapes as :func:`compile_predicate`, but every value
+    token is self-contained: ``current_user`` →
+    ``current_setting('dazzle.user_id', true)::<col-type>``, ``current_user.<a>``
+    → ``current_setting('dazzle.user_<a>', true)::<col-type>``, literals are
+    inlined via :func:`_inline_sql_literal`. ``Tautology`` → ``"true"``,
+    ``Contradiction`` → ``"false"``.
+
+    Args:
+        predicate: The predicate tree to compile.
+        entity_name: The root entity being filtered.
+        fk_graph: The FK graph (PathCheck / ExistsCheck path resolution).
+        entity_types: A ``(entity, field) -> pg_type_name`` resolver for GUC
+            casts (see :func:`build_entity_type_resolver`). Must raise when a
+            type can't be resolved — propagated so policy generation fails loud.
+        schema: Optional schema name (subquery table-qualification), as in
+            :func:`compile_predicate`.
+
+    Returns:
+        A self-contained SQL WHERE fragment (no leading ``WHERE``, no ``%s``,
+        no bind params) suitable for an RLS ``CREATE POLICY`` body.
+
+    Raises:
+        ValueError: If a needed GUC cast type can't be resolved.
+    """
+    ctx = _PolicyCtx(types=entity_types)
+    sql, params = _compile_predicate_impl(
+        predicate, entity_name, fk_graph, schema=schema, policy=ctx
+    )
+    assert not params, "policy mode must not produce bind params"
+    return sql
+
+
+# ---------------------------------------------------------------------------
+# current_user attribute collection (Phase C)
+# ---------------------------------------------------------------------------
+
+
+def collect_user_attr_refs(predicate: ScopePredicate) -> set[str]:
+    """Return every ``current_user.<attr>`` name referenced in *predicate*.
+
+    Walks the predicate tree (mirroring ``scope_create_eval._walk``) collecting:
+
+    - ``ColumnCheck`` / ``PathCheck`` value refs: ``current_user`` → ``"id"``,
+      ``current_user.<attr>`` → ``<attr>``.
+    - ``UserAttrCheck``: its ``user_attr``.
+    - ``ExistsCheck`` bindings: ``current_user`` → ``"id"``,
+      ``current_user.<attr>`` → ``<attr>``.
+
+    The union of these across all of an app's scope rules is the set of
+    ``dazzle.user_<attr>`` GUCs the runtime must set per request (Phase C
+    Task 3).
+    """
+    refs: set[str] = set()
+    _collect_user_attr_refs(predicate, refs)
+    return refs
+
+
+def _value_ref_user_attr(value: ValueRef) -> str | None:
+    """The ``current_user`` attr name a value ref carries, or ``None``."""
+    if value.current_user:
+        return "id"
+    if value.user_attr is not None:
+        return value.user_attr
+    return None
+
+
+def _collect_user_attr_refs(predicate: ScopePredicate, refs: set[str]) -> None:
+    match predicate:
+        case Tautology() | Contradiction() | ColumnRefCheck():
+            return
+        case ColumnCheck() | PathCheck():
+            attr = _value_ref_user_attr(predicate.value)
+            if attr is not None:
+                refs.add(attr)
+        case UserAttrCheck():
+            refs.add(predicate.user_attr)
+        case ExistsCheck():
+            for binding in predicate.bindings:
+                target = binding.target
+                if target == "current_user":
+                    refs.add("id")
+                elif target.startswith("current_user."):
+                    refs.add(target[len("current_user.") :])
+        case BoolComposite():
+            for child in predicate.children:
+                _collect_user_attr_refs(child, refs)
         case _:
             raise TypeError(f"Unknown predicate type: {type(predicate)!r}")
