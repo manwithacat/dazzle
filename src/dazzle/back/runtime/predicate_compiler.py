@@ -124,9 +124,11 @@ def _inline_sql_literal(value: str | int | float | bool | None) -> str:
 # Map a DSL scalar type → the PostgreSQL type *name* used in a ``::<type>``
 # cast. Mirrors ``sa_schema._scalar_type_to_sa`` but yields a name string
 # rather than a SQLAlchemy type instance.
+# Scalars are mapped explicitly where the pg type is *not* text; everything
+# else (str/text/email/url/slug/timezone/file/image/richtext/…) falls back to
+# ``text`` in :func:`_field_type_to_pg` — exactly mirroring
+# ``sa_schema._scalar_type_to_sa``'s ``.get(scalar_type, sa.Text())`` default.
 _SCALAR_TO_PG_NAME: dict[str, str] = {
-    "str": "text",
-    "text": "text",
     "int": "integer",
     "decimal": "numeric",
     "float": "double precision",
@@ -134,27 +136,27 @@ _SCALAR_TO_PG_NAME: dict[str, str] = {
     "date": "date",
     "datetime": "timestamptz",
     "uuid": "uuid",
-    "email": "text",
-    "url": "text",
-    "slug": "text",
     "json": "jsonb",
-    "timezone": "text",
 }
 
 
 def _field_type_to_pg(field_type: Any) -> str:
     """Map a DSL ``FieldType`` to a PostgreSQL type-name string for a cast.
 
-    Mirrors ``sa_schema._field_type_to_sa`` but returns a name (``"uuid"``,
-    ``"text"``, ``"integer"``, ``"boolean"``, ``"numeric"``, ``"timestamptz"``,
-    …) suitable for ``current_setting(...)::<name>``.
+    Mirrors ``sa_schema._field_type_to_sa`` (incl. its Text fallback for any
+    unlisted scalar) but returns a name (``"uuid"``, ``"text"``, ``"integer"``,
+    ``"boolean"``, ``"numeric"``, ``"timestamptz"``, …) suitable for
+    ``current_setting(...)::<name>``.
 
     - ``kind="ref"`` → ``uuid`` (FK columns are uuid)
-    - ``kind="scalar"`` → mapped via :data:`_SCALAR_TO_PG_NAME`
     - ``kind="enum"`` → ``text`` (enums are stored as TEXT)
+    - ``kind="scalar"`` → :data:`_SCALAR_TO_PG_NAME`, else ``text`` (so
+      ``str``/``email``/``url``/``slug``/``timezone``/``file``/``image``/
+      ``richtext``/… all resolve to ``text``, matching the SA bridge).
 
     Raises:
-        ValueError: when the scalar type can't be mapped to a pg type name.
+        ValueError: only when the *kind* itself is unrecognised (a malformed
+            FieldType) — a genuinely-unmappable shape, not a text-ish scalar.
     """
     kind = getattr(field_type, "kind", None)
     if kind == "ref":
@@ -164,34 +166,47 @@ def _field_type_to_pg(field_type: Any) -> str:
     if kind == "scalar":
         scalar = field_type.scalar_type
         scalar_val = scalar.value if hasattr(scalar, "value") else str(scalar)
-        pg = _SCALAR_TO_PG_NAME.get(scalar_val)
-        if pg is None:
-            raise ValueError(f"No pg cast type for scalar type {scalar_val!r}")
-        return pg
+        # Non-text scalars are mapped explicitly; everything else → text.
+        return _SCALAR_TO_PG_NAME.get(scalar_val, "text")
     raise ValueError(f"No pg cast type for field type kind {kind!r}")
 
 
 def build_entity_type_resolver(entities: list[Any]) -> EntityTypeResolver:
-    """Build an :data:`EntityTypeResolver` from a list of ``EntitySpec``.
+    """Build a lazy :data:`EntityTypeResolver` from a list of ``EntitySpec``.
 
-    The returned callable maps ``(entity_name, field_name)`` to the column's
-    pg type name (via :func:`_field_type_to_pg`). It raises ``ValueError`` for
-    an unknown ``(entity, field)`` pair so policy generation fails loudly.
+    Resolution is **on demand**: a column's pg type is computed (via
+    :func:`_field_type_to_pg`) only when a scope policy actually references it,
+    then cached. A column never referenced in a scope comparison never triggers
+    :func:`_field_type_to_pg`, so an app with (say) a ``richtext`` field on an
+    unscoped entity can't break resolver construction.
+
+    The callable raises ``ValueError`` for an unknown ``(entity, field)`` pair
+    so policy generation fails loudly when a *referenced* column truly has no
+    type.
     """
-    table: dict[tuple[str, str], str] = {}
+    # (entity, field) -> FieldType, built without computing any pg type.
+    field_types: dict[tuple[str, str], Any] = {}
     for entity in entities:
         ename = entity.name
         for field in entity.fields:
-            table[(ename, field.name)] = _field_type_to_pg(field.type)
+            field_types[(ename, field.name)] = field.type
+
+    cache: dict[tuple[str, str], str] = {}
 
     def resolver(entity_name: str, field_name: str) -> str:
+        key = (entity_name, field_name)
+        if key in cache:
+            return cache[key]
         try:
-            return table[(entity_name, field_name)]
+            field_type = field_types[key]
         except KeyError:
             raise ValueError(
                 f"No pg type for column {entity_name}.{field_name} "
                 f"(cannot cast its GUC in an RLS policy body)"
             ) from None
+        pg = _field_type_to_pg(field_type)  # lazy — only for referenced columns
+        cache[key] = pg
+        return pg
 
     return resolver
 

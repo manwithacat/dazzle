@@ -18,6 +18,8 @@ from dazzle.core.ir.predicates import (
     ColumnCheck,
     CompOp,
     Contradiction,
+    ExistsBinding,
+    ExistsCheck,
     PathCheck,
     Tautology,
     UserAttrCheck,
@@ -28,9 +30,11 @@ pytest.importorskip("fastapi")
 
 from dazzle.back.runtime.predicate_compiler import (
     _inline_sql_literal,
+    build_entity_type_resolver,
     collect_user_attr_refs,
     compile_predicate_policy,
 )
+from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 from dazzle.core.ir.fk_graph import FKEdge, FKGraph
 
 
@@ -287,3 +291,106 @@ class TestCollectUserAttrRefs:
     def test_empty_for_literal_only(self) -> None:
         p = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="archived"))
         assert collect_user_attr_refs(p) == set()
+
+    def test_exists_check_bindings(self) -> None:
+        # current_user → "id"; current_user.<attr> → "<attr>"; plain entity-side
+        # bindings (id / column names) contribute nothing.
+        p = ExistsCheck(
+            target_entity="TeamMembership",
+            bindings=[
+                ExistsBinding(junction_field="user_id", target="current_user"),
+                ExistsBinding(junction_field="team_id", target="current_user.team"),
+                ExistsBinding(junction_field="resource_id", target="id"),
+            ],
+        )
+        assert collect_user_attr_refs(p) == {"id", "team"}
+
+    def test_exists_check_current_user_only(self) -> None:
+        p = ExistsCheck(
+            target_entity="Membership",
+            bindings=[ExistsBinding(junction_field="user_id", target="current_user")],
+        )
+        assert collect_user_attr_refs(p) == {"id"}
+
+
+# ---------------------------------------------------------------------------
+# build_entity_type_resolver — lazy + complete (review FIX 1)
+# ---------------------------------------------------------------------------
+
+
+def _scalar(st: ScalarType) -> FieldType:
+    return FieldType(kind="scalar", scalar_type=st)
+
+
+class TestEntityTypeResolver:
+    def test_resolves_referenced_columns(self) -> None:
+        entities = [
+            EntitySpec(
+                name="Doc",
+                fields=[
+                    FieldSpec(name="id", type=_scalar(ScalarType.UUID)),
+                    FieldSpec(name="status", type=_scalar(ScalarType.STR)),
+                    FieldSpec(name="amount", type=_scalar(ScalarType.INT)),
+                    FieldSpec(name="owner_id", type=FieldType(kind="ref", ref_entity="User")),
+                ],
+            ),
+        ]
+        resolver = build_entity_type_resolver(entities)
+        assert resolver("Doc", "status") == "text"
+        assert resolver("Doc", "amount") == "integer"
+        assert resolver("Doc", "owner_id") == "uuid"
+        assert resolver("Doc", "id") == "uuid"
+
+    def test_unreferenced_richtext_does_not_break_construction(self) -> None:
+        # A richtext/file/image column on an entity must NOT break resolver
+        # construction (it's never resolved unless referenced) — and even when
+        # resolved it falls back to text, mirroring the SA bridge.
+        entities = [
+            EntitySpec(
+                name="Article",
+                fields=[
+                    FieldSpec(name="id", type=_scalar(ScalarType.UUID)),
+                    FieldSpec(name="body", type=_scalar(ScalarType.RICHTEXT)),
+                    FieldSpec(name="attachment", type=_scalar(ScalarType.FILE)),
+                    FieldSpec(name="cover", type=_scalar(ScalarType.IMAGE)),
+                    FieldSpec(name="owner_id", type=FieldType(kind="ref", ref_entity="User")),
+                ],
+            ),
+        ]
+        # Construction must not raise even though richtext/file/image exist.
+        resolver = build_entity_type_resolver(entities)
+        # An unrelated, scope-referenced column still resolves correctly.
+        assert resolver("Article", "owner_id") == "uuid"
+        # And if a richtext/file/image IS referenced, it resolves to text
+        # (no raise) — matching sa_schema's Text fallback.
+        assert resolver("Article", "body") == "text"
+        assert resolver("Article", "attachment") == "text"
+        assert resolver("Article", "cover") == "text"
+
+    def test_unreferenced_richtext_compile_unrelated_predicate(self) -> None:
+        # Compiling a policy for a predicate that references only `status`
+        # must succeed even though the entity also has a richtext column.
+        entities = [
+            EntitySpec(
+                name="Article",
+                fields=[
+                    FieldSpec(name="id", type=_scalar(ScalarType.UUID)),
+                    FieldSpec(name="status", type=_scalar(ScalarType.STR)),
+                    FieldSpec(name="body", type=_scalar(ScalarType.RICHTEXT)),
+                ],
+            ),
+        ]
+        resolver = build_entity_type_resolver(entities)
+        graph = FKGraph()
+        graph._edges = {"Article": []}
+        graph._fields = {"Article": {"id", "status", "body"}}
+        p = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="published"))
+        sql = compile_predicate_policy(p, "Article", graph, entity_types=resolver)
+        assert sql == '"Article"."status" = \'published\''
+
+    def test_unknown_referenced_column_raises(self) -> None:
+        resolver = build_entity_type_resolver(
+            [EntitySpec(name="Doc", fields=[FieldSpec(name="id", type=_scalar(ScalarType.UUID))])]
+        )
+        with pytest.raises(ValueError):
+            resolver("Doc", "nonexistent")
