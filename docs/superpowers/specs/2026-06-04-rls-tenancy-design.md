@@ -49,10 +49,14 @@ The decisive property is that **the tenant discriminator and its isolation predi
 
 ## 4. Architecture
 
+> **Authoritative companion:** `/Volumes/SSD/Dazzle/docs/superpowers/specs/2026-06-04-rls-tenancy-generation-rules.md` pins the exact DDL the generator emits and fixes five correctness defects latent in the templates below. **Where this section and the companion differ on a concrete artefact (policy form, role model, context primitive), the companion is authoritative.** Load-bearing corrections it makes, in brief: (1) **deny-all** — a fenced table needs ≥1 *permissive* policy per permitted verb (a `RESTRICTIVE` fence only subtracts), so tenant-flat entities get a `tenant_baseline USING(true)`; (2) **FK integrity bypasses RLS** → every intra-tenant FK is *composite* `(tenant_id, fk) REFERENCES parent(tenant_id, id)` with `UNIQUE(tenant_id, id)` on the parent; (3) `current_setting('dazzle.tenant_id', true)` (missing-ok arg required for fail-closed); (4) context set via parameterised `set_config(name, value, true)`, **not** `SET LOCAL` (which can't bind params → injection surface); (5) uniqueness is tenant-scoped (`UNIQUE(tenant_id, …)`). Plus a three-role model (`dazzle_owner`/`dazzle_app`/`dazzle_bypass`) and **greenfield-only** scope (no backfill/rebuilds). The subsections below are the design intent; defer to the companion for emitted SQL.
+
 ### 4.1 The discriminator
-- A `tenant_id UUID NOT NULL` column (FK → `public.tenants.id`) injected by the framework on every **tenant-scoped** entity's table. Indexed.
-- A first-class **global/shared-entity** concept for non-tenant data: reference/lookup tables and the framework-global `users` table carry no `tenant_id` and get no tenant policy. Entities are tenant-scoped by default; `global`/`shared` is an explicit DSL opt-out.
+- A `tenant_id UUID NOT NULL` column (FK → `public.tenants.id`) injected by the framework on every **tenant-scoped** entity's table. Indexed, leading (companion §5).
 - Set by the framework on insert from the request's tenant context — never author-supplied.
+- A first-class **global/shared-entity** concept for *non-tenant reference data only* (lookup/reference tables): no `tenant_id`, no tenant policy, referenced by single-column FKs. Entities are tenant-scoped **by default**; `global`/`shared` is an explicit DSL opt-out (name TBD against the grammar drift test).
+
+**Resolved decision — users are tenant-scoped (single-tenant-per-user), not global** (resolves companion §8). `users` carries `tenant_id` and takes the fence like every other entity; email uniqueness is per-tenant (`UNIQUE(tenant_id, email)` — the same person may be a distinct user in two tenants). **There are no cross-tenant data flows at the DB engine level**; if one tenant must interact with another, that is modelled as **events (HLESS)**, never shared rows or cross-tenant queries. Consequences to carry into the plan: (a) authentication must **resolve the tenant first** (host/subdomain → tenant context, building on `tenant_host` #1289) and then authenticate against that tenant's `users` — a rework of the framework auth store, which today keeps `users`/`sessions` global in `public`; (b) `dazzle_bypass` is needed only for **excision and ops/migrations**, not for any application-level cross-tenant analytics (there is none by design).
 
 ### 4.2 RLS generation (the closed grammar)
 - Generated into Alembic migrations (ADR-0017): `ALTER TABLE x ENABLE ROW LEVEL SECURITY; ALTER TABLE x FORCE ROW LEVEL SECURITY; CREATE POLICY …`.
@@ -62,10 +66,12 @@ The decisive property is that **the tenant discriminator and its isolation predi
 - **Closed grammar invariant:** policy bodies may contain *only* what the predicate algebra emits. No arbitrary SQL, no function calls beyond `current_setting`, no volatility. This is the enforcement of §0.
 
 ### 4.3 Runtime context contract
-- At transaction start the app issues `SET LOCAL dazzle.tenant_id = …` plus `SET LOCAL dazzle.user_* = …` for each `current_user.*` attribute the scope rules reference (derived from the IR — the set of referenced attrs is statically known). Analog of today's `search_path`-setting and current-user injection.
-- **Fail closed:** if the context is unset, `current_setting('dazzle.tenant_id', true)` is NULL → the tenant policy matches no rows. Missing context denies, never leaks. Pinned by test.
-- **Role model:** the app connects as a **non-owner** role; tables use `FORCE ROW LEVEL SECURITY` so the owner/superuser bypass doesn't apply to the app. Migrations run as owner (bypass, intentional).
-- **Pooling:** `SET LOCAL` is transaction-scoped, correct under PgBouncer transaction pooling. (Contrast: session-level `SET` would leak across pooled clients.)
+*(Authoritative detail in companion §6; summary here.)*
+- At transaction start the app issues parameterised `set_config('dazzle.tenant_id', $1, true)` plus one `set_config('dazzle.user_*', …, true)` per `current_user.*` attribute the scope rules reference (the referenced set is statically known from the IR). `set_config(..., true)` is the transaction-scoped, **bind-parameter-able** form — `SET LOCAL` cannot bind params and is an injection surface, so it is not used.
+- **Fail closed:** unset context → `current_setting('dazzle.tenant_id', true)` is NULL → fence matches no rows (reads) and `WITH CHECK` rejects writes. **"No tenant" is *unset*, never empty-string** (`''::uuid` raises a hard error). Pinned by test.
+- **Transactions mandatory:** `set_config(..., true)` is transaction-scoped, so every tenant-scoped access runs inside an explicit transaction (autocommit loses the context → safe-but-baffling empty result). Correct under PgBouncer transaction pooling; session-scoped `set_config(..., false)` is forbidden (leaks across pooled clients).
+- **Role model (three roles):** runtime connects as `dazzle_app` (non-owner, no `BYPASSRLS`); tables use `FORCE ROW LEVEL SECURITY` (subjects the owner to policies too). DDL migrations run as `dazzle_owner`. Excision and cross-tenant analytics run as `dazzle_bypass` (`BYPASSRLS`) — so "I am outside the tenant ring" is never ambient. Provable-RBAC/role-guard asserts `dazzle_app` lacks `rolbypassrls`.
+- **Middleware fails loud:** asserts `dazzle.tenant_id` is set before issuing tenant-scoped work (engine fail-closed + middleware fail-loud = defence in depth).
 
 ### 4.4 App-layer filters become optional defense-in-depth
 Single source of truth = the predicate algebra. RLS is authoritative; the existing inline `WHERE` injection may remain as optional belt-and-suspenders but can be retired. Because both are compiled from the same predicates, they cannot diverge.
