@@ -494,6 +494,186 @@ def oauth_providers_command(
 
 
 # =============================================================================
+# inspect rls — the generated (and --runtime live) RLS policy set
+# =============================================================================
+
+
+def _rls_entry(desc: Any) -> InspectEntry:
+    """Turn a :class:`PolicyDescriptor` into an :class:`InspectEntry`.
+
+    The ``detail`` column leads with the entity (table) name so the human and
+    JSON output group by table, then the SQL command + PERMISSIVE/RESTRICTIVE —
+    the shape the drift gate compares. ``source`` is the descriptor's provenance
+    (``framework`` for the fence/baseline, ``scope-rule`` for a per-verb policy).
+    """
+    kind = "PERMISSIVE" if desc.permissive else "RESTRICTIVE"
+    return InspectEntry(
+        name=desc.name,
+        source=desc.source,
+        detail=f"{desc.entity}  {desc.cmd}  {kind}",
+        declared=True,
+    )
+
+
+@inspect_app.command("rls")
+def rls_command(
+    project: Path | None = typer.Option(None, "--project", "-p", help="Project root"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of human text"),
+    runtime: bool = typer.Option(
+        False,
+        "--runtime",
+        help=(
+            "Connect to the database and cross-reference the generated policy "
+            "set against live pg_policies (needs DATABASE_URL). Off by default "
+            "(manifest-only, no DB)."
+        ),
+    ),
+) -> None:
+    """List the row-level-security policies the framework generates per tenant-scoped entity.
+
+    Manifest-only by default: derives the expected policy set from the linked
+    AppSpec (the same shape ``dazzle db apply-rls`` applies and ``dazzle db
+    verify`` gates) — one entry per policy a tenant-scoped entity gets:
+    ``tenant_fence`` (RESTRICTIVE, framework) + ``tenant_baseline`` (PERMISSIVE,
+    framework) for a tenant-flat entity, or ``tenant_fence`` + per-verb
+    ``scope_*`` (PERMISSIVE, scope-rule) for a DSL-``scope:``-governed entity.
+    Apps with no row-level tenancy yield an empty result + a note.
+
+    With ``--runtime``, also queries the live database's ``pg_policies`` /
+    ``pg_class`` per tenant-scoped table and reports drift (expected-but-missing,
+    unexpected-extra, RLS-not-enabled) as ``mismatches``.
+    """
+    project_root = _resolve_project_root(project)
+    appspec = _load_appspec(project_root)
+
+    # convert_entities gives the back-spec entities describe_rls_policies needs
+    # (the scoped-vs-flat partition iterates these, mirroring build_all_rls_ddl).
+    from dazzle.back.converters.entity_converter import convert_entities
+    from dazzle.back.runtime.rls_schema import describe_rls_policies
+
+    entities = convert_entities(appspec.domain.entities)
+    descriptors = describe_rls_policies(appspec, entities)
+
+    entries = [_rls_entry(d) for d in descriptors]
+    result = InspectResult(ext_point="rls", entries=entries)
+
+    if not descriptors:
+        result.notes.append(
+            "no row-level tenancy (tenancy: mode: shared_schema) — this app has "
+            "no tenant-scoped entities, so no RLS policies are generated."
+        )
+        _emit(result, output_json)
+        return
+
+    if not runtime:
+        result.notes.append(
+            "Manifest-only view — pass --runtime to cross-reference the generated "
+            "policy set against live pg_policies (needs DATABASE_URL set)."
+        )
+        _emit(result, output_json)
+        return
+
+    _rls_runtime_crossref(project_root, appspec, entities, descriptors, result)
+    _emit(result, output_json)
+
+
+def _rls_runtime_crossref(
+    project_root: Path,
+    appspec: Any,
+    entities: list[Any],
+    descriptors: list[Any],
+    result: InspectResult,
+) -> None:
+    """Connect to the DB and fold live ``pg_policies`` drift into ``result``.
+
+    A thin live-query: per tenant-scoped table, fetch the live policy names +
+    whether RLS is enabled/forced, and record drift (expected-but-missing,
+    unexpected-extra policy, RLS-not-enabled) as ``mismatches`` + a ``runtime``
+    note. The authoritative, shape-by-shape drift gate (cmd + permissive checks,
+    exit-non-zero) is ``dazzle db verify`` (Phase D Task 4 — ``detect_rls_drift``);
+    this surface is the operator's at-a-glance "is it live?" view.
+    """
+    import asyncio
+
+    from dazzle.cli.db import _resolve_url, _run_with_connection
+
+    expected_by_table: dict[str, set[str]] = {}
+    for d in descriptors:
+        expected_by_table.setdefault(d.entity, set()).add(d.name)
+
+    url = _resolve_url("")
+
+    async def _run(conn: Any) -> dict[str, dict[str, Any]]:
+        live: dict[str, dict[str, Any]] = {}
+        for table in expected_by_table:
+            policy_rows = await conn.fetch(
+                "SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = $1",
+                table,
+            )
+            class_row = await conn.fetchrow(
+                "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
+                "WHERE relname = $1 AND relnamespace = 'public'::regnamespace",
+                table,
+            )
+            live[table] = {
+                "policies": {r["policyname"] for r in policy_rows},
+                "enabled": bool(class_row["relrowsecurity"]) if class_row else False,
+                "forced": bool(class_row["relforcerowsecurity"]) if class_row else False,
+            }
+        return live
+
+    try:
+        live = asyncio.run(_run_with_connection(project_root, url, _run))
+    except Exception as exc:  # pragma: no cover - boot/connection failure path
+        result.notes.append(
+            f"--runtime DB query failed: {type(exc).__name__}: {exc} "
+            "(needs a reachable DATABASE_URL; for the generated view, omit --runtime)"
+        )
+        return
+
+    result.notes.append(
+        "--runtime: cross-referenced against live pg_policies. For the "
+        "authoritative drift gate (cmd + permissive checks, CI exit code) use "
+        "`dazzle db verify`."
+    )
+
+    # Mark each expected entry registered-or-not against the live set.
+    live_pairs: set[tuple[str, str]] = set()
+    for table, info in live.items():
+        for pname in info["policies"]:
+            live_pairs.add((table, pname))
+
+    for entry in result.entries:
+        table = entry.detail.split()[0]
+        entry.registered = (table, entry.name) in live_pairs
+
+    for table, expected_names in sorted(expected_by_table.items()):
+        info = live.get(table, {"policies": set(), "enabled": False, "forced": False})
+        if not info["enabled"] or not info["forced"]:
+            result.mismatches.append(
+                f"`{table}` does not have RLS enabled+forced "
+                f"(enabled={info['enabled']}, forced={info['forced']})"
+            )
+        for missing in sorted(expected_names - info["policies"]):
+            result.mismatches.append(
+                f"`{table}` is missing expected policy `{missing}` (not applied?)"
+            )
+        for extra in sorted(info["policies"] - expected_names):
+            result.mismatches.append(
+                f"`{table}` has unexpected policy `{extra}` (not in the generated set)"
+            )
+            result.entries.append(
+                InspectEntry(
+                    name=extra,
+                    source="runtime",
+                    detail=f"{table}  (live-only)",
+                    declared=False,
+                    registered=True,
+                )
+            )
+
+
+# =============================================================================
 # inspect api — rehosts the existing inspect-api subcommands (#961)
 # =============================================================================
 

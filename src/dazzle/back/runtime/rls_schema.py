@@ -37,6 +37,7 @@ real-PG test fixture can provision loginable roles).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from dazzle.back.runtime.query_builder import quote_identifier
@@ -155,6 +156,166 @@ def build_all_rls_ddl(appspec: Any, entities: list[Any]) -> list[str]:
     statements.extend(build_rls_policy_ddl(sorted(flat_names), partition_key=pk))
 
     return statements
+
+
+@dataclass(frozen=True)
+class PolicyDescriptor:
+    """One expected RLS policy on a tenant-scoped table — the shape-level view.
+
+    This is the shared, DB-free description of a single policy the framework
+    generates for a tenant-scoped entity. It is the *shape* (name + table +
+    command verb + permissive/restrictive + provenance), deliberately NOT the
+    compiled predicate body — exactly the granularity the inspector reports and
+    the drift gate compares against live ``pg_policies`` (per the plan's
+    "shape-based, not qual-text" contract).
+
+    Both ``dazzle inspect rls`` (Phase D Task 3) and the RLS drift gate
+    (``detect_rls_drift``, Task 4) consume this so the "expected policy set"
+    never diverges between the surface that shows it and the gate that verifies
+    it.
+
+    Attributes:
+        entity: The entity / table name the policy is on (unquoted IR name).
+        name: The policy name — ``tenant_fence`` / ``tenant_baseline`` (Phase B)
+            or ``scope_select`` / ``scope_insert`` / ``scope_update`` /
+            ``scope_delete`` (Phase C).
+        cmd: The SQL command the policy applies to — ``ALL`` for the fence /
+            baseline, or ``SELECT`` / ``INSERT`` / ``UPDATE`` / ``DELETE`` for a
+            per-verb scope policy. Matches ``pg_policies.cmd`` (PG reports ``*``
+            for ALL — the live-query caller normalises that).
+        permissive: ``True`` for a ``PERMISSIVE`` policy (baseline + every
+            scope policy), ``False`` for the ``RESTRICTIVE`` ``tenant_fence``.
+            Matches ``pg_policies.permissive`` (``'PERMISSIVE'`` / ``'RESTRICTIVE'``).
+        source: Provenance — ``"framework"`` for the fence / baseline (a fixed
+            framework construction), ``"scope-rule"`` for a per-verb policy
+            derived from a DSL ``scope:`` rule.
+    """
+
+    entity: str
+    name: str
+    cmd: str
+    permissive: bool
+    source: str
+
+
+# SQL verb per scope-policy name — the inverse of :data:`_SCOPE_POLICY_NAME`,
+# used by :func:`describe_rls_policies` to attach the right ``cmd`` to each
+# scope policy a scoped entity gets.
+_SCOPE_NAME_TO_VERB: dict[str, str] = {
+    "scope_select": "SELECT",
+    "scope_insert": "INSERT",
+    "scope_update": "UPDATE",
+    "scope_delete": "DELETE",
+}
+
+
+def describe_rls_policies(appspec: Any, entities: list[Any]) -> list[PolicyDescriptor]:
+    """Describe the expected RLS policy set for an appspec — the shared shape view.
+
+    The DB-free, shape-level companion to :func:`build_all_rls_ddl`: instead of
+    DDL strings it returns one :class:`PolicyDescriptor` per policy the framework
+    *would* create, computed from the SAME per-entity partition logic
+    (``scoped_entity_names`` + the scoped-vs-flat split). ``dazzle inspect rls``
+    lists these; the drift gate compares them against live ``pg_policies``.
+
+    Per tenant-scoped entity:
+
+    - **scoped entity** (≥1 ``access.scopes`` rule) → the restrictive
+      ``tenant_fence`` (framework) plus one permissive ``scope_<verb>`` per
+      verb that has ≥1 scope rule (read + list both → ``scope_select``); the
+      permissive ``tenant_baseline`` is intentionally absent.
+    - **tenant-flat entity** (no scope rules) → the restrictive ``tenant_fence``
+      (framework) + the permissive ``tenant_baseline`` (framework).
+
+    Returns an empty list for every non-tenant app, every non-``shared_schema``
+    isolation mode, and every app with no tenant-scoped entity — matching
+    :func:`build_all_rls_ddl`.
+
+    Args:
+        appspec: The application IR (``.tenancy``, ``.domain.entities``).
+        entities: The converted back-spec entities (each with ``.name`` and an
+            optional ``.access.scopes``) — the list iterated for the
+            scoped-vs-flat partition, mirroring :func:`build_all_rls_ddl`.
+
+    Returns:
+        A flat list of :class:`PolicyDescriptor`, ordered by entity name then by
+        a stable per-entity policy order (fence first, then baseline or the
+        scope policies in SELECT/INSERT/UPDATE/DELETE order).
+    """
+    from dazzle.back.runtime.sa_schema import scoped_entity_names
+    from dazzle.core.ir import TenancyMode
+
+    tenancy = getattr(appspec, "tenancy", None)
+    if tenancy is None or tenancy.isolation.mode != TenancyMode.SHARED_SCHEMA:
+        return []
+
+    pk = tenancy.isolation.partition_key
+    scoped = scoped_entity_names(appspec.domain.entities, pk)
+    if not scoped:
+        return []
+
+    descriptors: list[PolicyDescriptor] = []
+    for entity in sorted((e for e in entities if e.name in scoped), key=lambda e: e.name):
+        access = getattr(entity, "access", None)
+        has_scopes = access is not None and bool(getattr(access, "scopes", None))
+
+        # The restrictive tenant fence is present on EVERY tenant-scoped table
+        # (both scoped and tenant-flat) — see _enable_force_fence.
+        descriptors.append(
+            PolicyDescriptor(
+                entity=entity.name,
+                name="tenant_fence",
+                cmd="ALL",
+                permissive=False,
+                source="framework",
+            )
+        )
+
+        if not has_scopes:
+            # Tenant-flat → permissive framework baseline.
+            descriptors.append(
+                PolicyDescriptor(
+                    entity=entity.name,
+                    name="tenant_baseline",
+                    cmd="ALL",
+                    permissive=True,
+                    source="framework",
+                )
+            )
+            continue
+
+        # Scoped → one permissive scope policy per verb that has ≥1 rule. The
+        # verb set per entity is computed exactly as build_rls_scope_policy_ddl
+        # does: read + list both fold into SELECT.
+        _op_value_to_verb = {
+            "read": "SELECT",
+            "list": "SELECT",
+            "create": "INSERT",
+            "update": "UPDATE",
+            "delete": "DELETE",
+        }
+        covered_verbs: set[str] = set()
+        for rule in access.scopes:  # type: ignore[union-attr]  # has_scopes guards access is not None
+            op = rule.operation
+            op_val = op.value if hasattr(op, "value") else str(op)
+            verb = _op_value_to_verb.get(op_val)
+            if verb is not None:
+                covered_verbs.add(verb)
+
+        # Emit in the same stable order build_rls_scope_policy_ddl uses.
+        for policy_name, verb in _SCOPE_NAME_TO_VERB.items():
+            if verb in covered_verbs:
+                descriptors.append(
+                    PolicyDescriptor(
+                        entity=entity.name,
+                        name=policy_name,
+                        cmd=verb,
+                        permissive=True,
+                        source="scope-rule",
+                    )
+                )
+
+    return descriptors
 
 
 def build_rls_policy_ddl(
