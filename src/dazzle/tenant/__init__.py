@@ -7,11 +7,17 @@ Opt-in via dazzle.toml:
 """
 
 from .cache_registry import _active_caches, _clear_registry, _register_cache, bust
-from .config import SLUG_PATTERN, slug_to_schema_name, validate_slug
+from .config import (
+    RESERVED_SLUG_PREFIXES,
+    SLUG_PATTERN,
+    slug_to_schema_name,
+    validate_slug,
+)
 from .provisioner import TenantProvisioner
 from .registry import TenantRecord, TenantRegistry
 
 __all__ = [
+    "RESERVED_SLUG_PREFIXES",
     "SLUG_PATTERN",
     "TenantProvisioner",
     "TenantRecord",

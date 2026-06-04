@@ -86,6 +86,30 @@ class TestSlugValidation:
     def test_max_valid_length(self) -> None:
         validate_slug("a" * 56)
 
+    def test_rejects_reserved_qa_underscore_prefix(self) -> None:
+        # The actually-reachable hole: `qa_*` is a grammar-valid slug, so it
+        # must be explicitly reserved for test tenants.
+        with pytest.raises(ValueError, match="reserved"):
+            validate_slug("qa_run_123")
+
+    def test_rejects_reserved_qa_hyphen_prefix(self) -> None:
+        # Hyphen form is grammar-invalid anyway, but the reserved check fires
+        # first with the clearer message.
+        with pytest.raises(ValueError, match="reserved"):
+            validate_slug("qa-run-123")
+
+    def test_allow_reserved_permits_qa_prefix(self) -> None:
+        # The Slice-2 provisioner mints qa-namespaced test tenants via this seam.
+        validate_slug("qa_run_123", allow_reserved=True)
+
+    def test_qa_substring_not_at_start_is_allowed(self) -> None:
+        # Only a leading `qa-`/`qa_` is reserved; `qa` elsewhere is fine.
+        validate_slug("acme_qa_team")
+
+    def test_bare_qa_without_separator_is_allowed(self) -> None:
+        # `qantas` is not in the reserved namespace — only `qa` + separator is.
+        validate_slug("qantas")
+
 
 class TestSlugToSchemaName:
     def test_prefixes_with_tenant(self) -> None:
