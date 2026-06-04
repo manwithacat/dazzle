@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.20] - 2026-06-04
+
+### Added
+
+- **Ephemeral test-tenant lifecycle — Slice 0 (shared substrate)** (#1338 + #1339). The small, dependency-free foundation both the tenant-excision RFC (#1338) and the QA-auth + ephemeral-provisioning RFC (#1339) build on. Two pieces:
+  - **`is_test` boolean on the tenant registry record** (`public.tenants`). The *load-bearing*, queryable test-tenant marker (a column, not a forgeable slug prefix) that the future containment check and excision reaper filter on. Fresh installs get it via the registry's `CREATE TABLE`; already-migrated trees via the new framework Alembic migration `0006_tenant_is_test` (canonical schema-change path per ADR-0017) **and** a convergent boot-time `ALTER ... ADD COLUMN IF NOT EXISTS` — both required because `public.tenants` is owned by `TenantRegistry.ensure_table()`, not by Alembic's DSL metadata (mirrors the existing `config`-column bootstrap). `TenantRegistry.create()` gains `is_test=` / `allow_reserved=` keyword seams. Verified end-to-end against real Postgres (`tests/integration/test_tenant_is_test_pg.py`).
+  - **Reserved `qa-` / `qa_` slug namespace** in `tenant/config.py:validate_slug`. A normal tenant create can no longer claim a `qa`-namespaced slug; an `allow_reserved=True` seam lets the (Slice-2) test-tenant provisioner mint them. Both separators are reserved: `qa-` is the spec's human-visible marker (already grammar-invalid since the registry slug grammar forbids hyphens) and `qa_` is the grammar-valid form a real create could otherwise have claimed — reserving both closes the reachable hole while honouring the spec's intent.
+
+### Agent Guidance
+
+- **Test tenants are identified by the queryable `is_test` column, never by a slug prefix.** Filter on `is_test`; the `qa-`/`qa_` namespace is a human-visible reservation and belt-and-suspenders, not the source of truth.
+- **New columns on the `public.tenants` registry table need both paths:** a hand-authored framework migration in `src/dazzle/back/alembic/versions/` (mirror `0005`/`0006` — idempotent, dialect-agnostic, guarded on existence) **and** the `CREATE TABLE` + idempotent boot-time `ALTER` in `tenant/registry.py`. That table is bootstrapped by `ensure_table()`, not Alembic's DSL metadata, so the two convergent paths are both required (each guards on existence). The column DDL must match across both (`BOOLEAN NOT NULL DEFAULT false`) so `dazzle db verify` sees no drift.
+
 ## [0.81.19] - 2026-06-04
 
 ### Added
