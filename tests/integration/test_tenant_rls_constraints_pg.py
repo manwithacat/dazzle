@@ -132,20 +132,27 @@ def test_composite_fk_rejects_cross_tenant_reference(engine: sa.Engine) -> None:
     by the composite FK ``(tenant_id, project) -> Project(tenant_id, id)``."""
     md, _pk = _build_fixture_metadata()
     workspace = md.tables["Workspace"]
+    member = md.tables["Member"]
     project = md.tables["Project"]
     task = md.tables["Task"]
 
     tenant_a = _new_id()
     tenant_b = _new_id()
     project_id = _new_id()
+    member_id = _new_id()
 
     with engine.begin() as conn:
         conn.execute(workspace.insert(), [{"id": tenant_a, "name": "Tenant A"}])
         conn.execute(workspace.insert(), [{"id": tenant_b, "name": "Tenant B"}])
-        # Project lives in tenant A.
+        # Project now carries `owner ref Member required` (Phase C), so seed a
+        # Member to own it. Project lives in tenant A.
+        conn.execute(
+            member.insert(),
+            [{"tenant_id": tenant_a, "id": member_id, "email": "owner@example.test"}],
+        )
         conn.execute(
             project.insert(),
-            [{"tenant_id": tenant_a, "id": project_id, "name": "A's project"}],
+            [{"tenant_id": tenant_a, "id": project_id, "name": "A's project", "owner": member_id}],
         )
 
     # A same-tenant Task is fine (control).

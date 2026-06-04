@@ -117,6 +117,8 @@ class _RlsHarness:
     bypass_role: str
     tenant_a: str
     tenant_b: str
+    member_a: str
+    member_b: str
 
     def _conn_url(self, role: str, password: str) -> str:
         """A psycopg connection URL for ``role`` against the scratch DB."""
@@ -205,18 +207,42 @@ def harness() -> Iterator[_RlsHarness]:
         # which bypasses the fence — this is the setup, not an assertion.
         tenant_a = _new_id()
         tenant_b = _new_id()
+        # Project now carries an `owner ref Member required` column (Phase C
+        # added the intra-tenant scoped shape to the shared fixture), so seed a
+        # Member per tenant to own each project. The fence proof here is
+        # unchanged — it only ever reads/writes by tenant_id.
+        member_a = _new_id()
+        member_b = _new_id()
         with admin_engine.begin() as conn:
             ws = md.tables["Workspace"]
+            member = md.tables["Member"]
             project = md.tables["Project"]
             conn.execute(
                 ws.insert(),
                 [{"id": tenant_a, "name": "Tenant A"}, {"id": tenant_b, "name": "Tenant B"}],
             )
             conn.execute(
+                member.insert(),
+                [
+                    {"tenant_id": tenant_a, "id": member_a, "email": "a@example.test"},
+                    {"tenant_id": tenant_b, "id": member_b, "email": "b@example.test"},
+                ],
+            )
+            conn.execute(
                 project.insert(),
                 [
-                    {"tenant_id": tenant_a, "id": _new_id(), "name": "A's project"},
-                    {"tenant_id": tenant_b, "id": _new_id(), "name": "B's project"},
+                    {
+                        "tenant_id": tenant_a,
+                        "id": _new_id(),
+                        "name": "A's project",
+                        "owner": member_a,
+                    },
+                    {
+                        "tenant_id": tenant_b,
+                        "id": _new_id(),
+                        "name": "B's project",
+                        "owner": member_b,
+                    },
                 ],
             )
 
@@ -232,6 +258,8 @@ def harness() -> Iterator[_RlsHarness]:
             bypass_role=bypass_role,
             tenant_a=tenant_a,
             tenant_b=tenant_b,
+            member_a=member_a,
+            member_b=member_b,
         )
     finally:
         if admin_engine is not None:
@@ -297,8 +325,8 @@ def test_cross_tenant_write_blocked(harness: _RlsHarness) -> None:
                 conn.execute("SELECT set_config('dazzle.tenant_id', %s, true)", (harness.tenant_a,))
                 # tenant_id = B while context = A → WITH CHECK fails.
                 conn.execute(
-                    'INSERT INTO "Project" (tenant_id, id, name) VALUES (%s, %s, %s)',
-                    (harness.tenant_b, _new_id(), "smuggled into B"),
+                    'INSERT INTO "Project" (tenant_id, id, name, owner) VALUES (%s, %s, %s, %s)',
+                    (harness.tenant_b, _new_id(), "smuggled into B", harness.member_b),
                 )
 
     # Positive control: an INSERT with the matching tenant_id succeeds.
@@ -306,8 +334,8 @@ def test_cross_tenant_write_blocked(harness: _RlsHarness) -> None:
         with conn.transaction():
             conn.execute("SELECT set_config('dazzle.tenant_id', %s, true)", (harness.tenant_a,))
             conn.execute(
-                'INSERT INTO "Project" (tenant_id, id, name) VALUES (%s, %s, %s)',
-                (harness.tenant_a, _new_id(), "legit A project"),
+                'INSERT INTO "Project" (tenant_id, id, name, owner) VALUES (%s, %s, %s, %s)',
+                (harness.tenant_a, _new_id(), "legit A project", harness.member_a),
             )
 
 
@@ -327,8 +355,8 @@ def test_fail_closed_on_missing_context(harness: _RlsHarness) -> None:
         with pytest.raises(pg_errors.InsufficientPrivilege, match="row-level security policy"):
             with conn.transaction():
                 conn.execute(
-                    'INSERT INTO "Project" (tenant_id, id, name) VALUES (%s, %s, %s)',
-                    (harness.tenant_a, _new_id(), "no-context insert"),
+                    'INSERT INTO "Project" (tenant_id, id, name, owner) VALUES (%s, %s, %s, %s)',
+                    (harness.tenant_a, _new_id(), "no-context insert", harness.member_a),
                 )
 
 
