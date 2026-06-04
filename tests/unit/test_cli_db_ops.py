@@ -47,7 +47,8 @@ class TestDbVerifyCommand:
         mock_load.return_value = appspec
 
         # Post-#840 the runner returns {"fk": ..., "money": ...}; #1340 adds
-        # "signable" (signable schema-drift) so all three appear in one output.
+        # "signable" (signable schema-drift); Phase D adds "rls" (RLS policy
+        # drift) so all four appear in one output.
         mock_run.return_value = {
             "fk": {"checks": [], "total_issues": 0},
             "money": {
@@ -58,6 +59,7 @@ class TestDbVerifyCommand:
                 "errors": [],
             },
             "signable": [],
+            "rls": [],
         }
 
         result = runner.invoke(db_app, ["verify"])

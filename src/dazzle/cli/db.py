@@ -907,14 +907,31 @@ def verify_command(
     schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.money_migration import repair_money_drifts
+    from dazzle.db.rls_drift import detect_rls_drift
     from dazzle.db.signable_drift import detect_signable_drift
     from dazzle.db.verify import db_verify_impl
+
+    # Phase D: the RLS drift check compares live pg_policies/pg_class against the
+    # generated policy set (describe_rls_policies). It is a no-op for every non-
+    # shared_schema app (the expected set is empty), so the converted entities are
+    # only needed when row-level tenancy is in play.
+    rls_entities: list[Any] = []
+    if _is_shared_schema(appspec):
+        from dazzle.back.converters.entity_converter import convert_entities
+
+        rls_entities = convert_entities(appspec.domain.entities)
 
     async def _run(conn: Any) -> Any:
         fk_result = await db_verify_impl(entities=entities, conn=conn)
         money_result = await repair_money_drifts(conn, list(entities), apply=fix_money)
         signable_result = await detect_signable_drift(conn, list(entities))
-        return {"fk": fk_result, "money": money_result, "signable": signable_result}
+        rls_result = await detect_rls_drift(conn, appspec, rls_entities)
+        return {
+            "fk": fk_result,
+            "money": money_result,
+            "signable": signable_result,
+            "rls": rls_result,
+        }
 
     result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
@@ -1002,13 +1019,33 @@ def verify_command(
     else:
         console.print("\n[green]No signable schema drift.[/green]")
 
+    # Phase D: RLS policy drift — a tenant-scoped table whose live RLS shape
+    # (enabled/forced + policy name/cmd/permissive set) diverges from the
+    # generated set. Shape-based, not qual-text. The fix is `dazzle db apply-rls`
+    # (or `dazzle db upgrade`), run as the table owner. No section for non-
+    # shared_schema apps (the expected set is empty → detect returns []).
+    rls_drifts = result["rls"]
+    if rls_drifts:
+        console.print("\n[bold]RLS policy drift (Phase D):[/bold]")
+        for drift in rls_drifts:
+            console.print(f"  [red]✗[/red] {drift['entity']}:")
+            for issue in drift["issues"]:
+                console.print(f"      [red]-[/red] {issue}")
+        console.print(
+            "\n[yellow]Live RLS policies have drifted from the generated set. "
+            "Re-apply as the table owner:[/yellow]\n"
+            "    [dim]dazzle db apply-rls[/dim]   [dim](or `dazzle db upgrade`)[/dim]"
+        )
+    elif _is_shared_schema(appspec):
+        console.print("\n[green]No RLS policy drift.[/green]")
+
     # #1035 (v0.67.21): exit non-zero when verify surfaced any FK
     # issues — orphans, column mismatches, or money-column drift. The
     # exit code lets `dazzle db verify` be wired into CI / nightly
     # quality swarms without a wrapper that has to re-parse stdout.
-    # #1340 extends this to signable schema drift.
+    # #1340 extends this to signable schema drift; Phase D to RLS drift.
     money_drift = money_result["drift_count"] + money_result["partial_count"]
-    if fk_orphans or fk_warnings or money_drift or signable_drifts:
+    if fk_orphans or fk_warnings or money_drift or signable_drifts or rls_drifts:
         raise typer.Exit(1)
 
 
