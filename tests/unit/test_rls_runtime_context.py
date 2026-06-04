@@ -52,6 +52,7 @@ def test_apply_rls_policies_noop_when_no_tenancy() -> None:
     app = MagicMock(spec=DazzleBackendApp)
     app._appspec = MagicMock()
     app._appspec.tenancy = None
+    app._entities = []  # build_all_rls_ddl takes (appspec, entities); gate is on tenancy
 
     engine = MagicMock()
     DazzleBackendApp._apply_rls_policies(app, engine)
@@ -68,6 +69,7 @@ def test_apply_rls_policies_noop_when_not_shared_schema() -> None:
     app._appspec = MagicMock()
     app._appspec.tenancy = MagicMock()
     app._appspec.tenancy.isolation.mode = TenancyMode.SCHEMA_PER_TENANT
+    app._entities = []  # build_all_rls_ddl takes (appspec, entities); gate is on mode
 
     engine = MagicMock()
     DazzleBackendApp._apply_rls_policies(app, engine)
