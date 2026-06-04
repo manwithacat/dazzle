@@ -4,7 +4,10 @@ Runtime server - creates and runs a FastAPI application from AppSpec.
 This module provides the main entry point for running a Dazzle backend application.
 """
 
+import contextlib
 import logging
+import os
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -505,6 +508,37 @@ class DazzleBackendApp:
     # Build phases — called in order by build()
     # ------------------------------------------------------------------
 
+    @contextlib.asynccontextmanager
+    async def _lifespan(self, app: FastAPI) -> AsyncIterator[None]:
+        """Modern FastAPI lifespan replacing the deprecated ``on_event`` hooks.
+
+        Reads instance state at *startup* time (after ``build()`` has fully
+        populated ``self._db_manager`` / ``self._audit_logger`` / pool sizes),
+        so it is safe to attach at ``FastAPI(...)`` construction even though
+        those attributes are set in later build phases.
+
+        Startup: open the DB connection pool (#438), then start the audit
+        logger if one was configured. The audit logger's ``start()`` is
+        deferred to here so a running event loop is guaranteed (#1214) — Py3.12
+        removed the implicit event-loop acquisition that the prior sync
+        construction path relied on.
+
+        Shutdown: stop the audit logger (if configured), then close the pool —
+        mirroring the previous ordering (pool opens first, closes last).
+        """
+        pool_min = int(os.environ.get("DAZZLE_DB_POOL_MIN", "2"))
+        pool_max = int(os.environ.get("DAZZLE_DB_POOL_MAX", "10"))
+        assert self._db_manager is not None
+        self._db_manager.open_pool(min_size=pool_min, max_size=pool_max)
+        if self._audit_logger is not None:
+            self._audit_logger.start()
+        try:
+            yield
+        finally:
+            if self._audit_logger is not None:
+                await self._audit_logger.stop()
+            self._db_manager.close_pool()
+
     def _create_app(self) -> None:
         """Create the FastAPI app instance and apply middleware."""
         _maybe_configure_tracer()
@@ -512,6 +546,7 @@ class DazzleBackendApp:
             title=self._appspec.name,
             description=self._appspec.title or f"Dazzle Backend: {self._appspec.name}",
             version=self._appspec.version,
+            lifespan=self._lifespan,
         )
         _maybe_instrument_for_perf(self._app)
 
@@ -817,8 +852,6 @@ class DazzleBackendApp:
 
     def _setup_database(self) -> None:
         """Initialize database backend, run migrations, create repositories."""
-        import os
-
         if not self._database_url:
             raise ValueError(
                 "database_url is required. Set DATABASE_URL environment variable "
@@ -903,21 +936,9 @@ class DazzleBackendApp:
         if self._tenant_config and self._tenant_config.isolation == "schema":
             self._migrate_tenant_schemas()
 
-        # Open connection pool and register lifecycle events (#438)
-        pool_min = int(os.environ.get("DAZZLE_DB_POOL_MIN", "2"))
-        pool_max = int(os.environ.get("DAZZLE_DB_POOL_MAX", "10"))
-        db_manager = self._db_manager
-
-        assert self._app is not None
-        app = self._app
-
-        @app.on_event("startup")
-        async def _open_db_pool() -> None:
-            db_manager.open_pool(min_size=pool_min, max_size=pool_max)
-
-        @app.on_event("shutdown")
-        async def _close_db_pool() -> None:
-            db_manager.close_pool()
+        # Connection pool open/close is handled by the app lifespan
+        # (``_lifespan``), which reads ``DAZZLE_DB_POOL_MIN/MAX`` at startup
+        # time. See ``_create_app`` (#438).
 
         # Build relation loader for nested ref resolution (#272)
         from dazzle.back.runtime.relation_loader import RelationLoader, RelationRegistry
@@ -1351,27 +1372,19 @@ class DazzleBackendApp:
                 database_url=self._database_url,
                 audit_integrity=self._config.audit_integrity,
             )
-            # Defer start() to the FastAPI startup event so a running
-            # loop is guaranteed (#1214). Py3.12 removed the implicit
-            # event-loop acquisition that ``asyncio.ensure_future``
-            # previously relied on, so starting from this sync
-            # construction path raises ``RuntimeError`` when no loop
-            # is current. Mirrors the ``_open_db_pool`` pattern above.
-            assert self._app is not None
-            _audit_app = self._app
-            _audit_logger_for_events = audit_logger
-
-            @_audit_app.on_event("startup")
-            async def _start_audit_logger() -> None:
-                _audit_logger_for_events.start()
-
-            @_audit_app.on_event("shutdown")
-            async def _stop_audit_logger() -> None:
-                await _audit_logger_for_events.stop()
-
             # Keep a handle on the builder so callers (graceful shutdown,
             # in-process tests) can deterministically `drain()` the audit
             # queue instead of racing the 1s background flush timer.
+            #
+            # start()/stop() are driven by the app lifespan (``_lifespan``),
+            # not called here: start() is deferred to lifespan startup so a
+            # running event loop is guaranteed (#1214). Py3.12 removed the
+            # implicit event-loop acquisition that ``asyncio.ensure_future``
+            # previously relied on, so starting from this sync construction
+            # path raises ``RuntimeError`` when no loop is current. The
+            # lifespan reads ``self._audit_logger`` at startup time, so this
+            # assignment must precede app startup (it does — it runs at build
+            # time, well before the lifespan fires).
             self._audit_logger = audit_logger
 
         # Project route overrides — registered first for priority (v0.29.0)
