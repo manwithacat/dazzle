@@ -1,0 +1,10 @@
+[project]
+name = "tenant_rls"
+version = "0.1.0"
+root = "tenant_rls.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
