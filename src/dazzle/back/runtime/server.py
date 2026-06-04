@@ -778,53 +778,51 @@ class DazzleBackendApp:
         if may_create_schema:
             # Development/test convenience only. Production schema changes must
             # go through Alembic so broken migration state is not hidden.
+            from sqlalchemy import create_engine as _sa_create_engine
+
+            from dazzle.back.runtime.sa_schema import build_metadata
+
+            metadata = build_metadata(
+                self._entities,
+                surfaces=list(self._appspec.surfaces),
+                **_tenancy_metadata_kwargs(self._appspec),
+            )
+            # Normalise Heroku-style postgres:// alias before adding driver suffix
+            sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
+            # ONE engine for both steps; disposed exactly once in the finally so
+            # create_engine is called a single time.
+            engine = _sa_create_engine(sa_url)
             try:
-                from sqlalchemy import create_engine as _sa_create_engine
-
-                from dazzle.back.runtime.sa_schema import build_metadata
-
-                metadata = build_metadata(
-                    self._entities,
-                    surfaces=list(self._appspec.surfaces),
-                    **_tenancy_metadata_kwargs(self._appspec),
-                )
-                # Normalise Heroku-style postgres:// alias before adding driver suffix
-                sa_url = add_psycopg_driver(normalise_postgres_scheme(self._database_url))
-                engine = _sa_create_engine(sa_url)
+                # Tolerant best-effort for dev schema conflicts ONLY: create_all
+                # + the FTS indexes. A failure here is downgraded to a WARNING
+                # and boot continues (the create-all-convenience invariant).
                 try:
                     metadata.create_all(engine)
                     # #954 cycle 2 — apply tsvector + GIN index DDL after the
                     # base schema lands. Idempotent (IF NOT EXISTS); safe to
                     # re-run on every dev boot.
                     self._apply_search_indexes(engine)
-                finally:
-                    engine.dispose()
-            except Exception as exc:
-                # Best-effort for dev schema conflicts ONLY — create_all and the
-                # FTS indexes are tolerant. The RLS fence is NOT (see below).
-                logger.warning("Development schema create_all failed: %s", exc)
+                except Exception as exc:
+                    logger.warning("Development schema create_all failed: %s", exc)
 
-            # RLS tenancy Phase B — apply the tenant fence + permissive baseline
-            # OUTSIDE the tolerant try/except above (C-1): a fence-apply failure
-            # MUST halt boot for a shared_schema app rather than be downgraded to
-            # a WARNING that lets the app serve tenant traffic fence-less. Uses a
-            # fresh engine (the one above is already disposed) and lets the
-            # exception propagate after logging it loudly. No-op for non-tenant /
-            # non-shared_schema apps, so this never raises for them.
-            rls_engine = _sa_create_engine(
-                add_psycopg_driver(normalise_postgres_scheme(self._database_url))
-            )
-            try:
-                self._apply_rls_policies(rls_engine)
-            except Exception as rls_exc:
-                logger.error(
-                    "RLS policy apply FAILED — tenant fence NOT installed; "
-                    "shared-schema tenancy is unenforced. Halting boot: %s",
-                    rls_exc,
-                )
-                raise
+                # RLS tenancy Phase B — apply the tenant fence + permissive
+                # baseline OUTSIDE the tolerant except above (C-1), on the SAME
+                # engine: a fence-apply failure MUST halt boot for a shared_schema
+                # app rather than be downgraded to a WARNING that lets the app
+                # serve tenant traffic fence-less. The exception propagates after
+                # being logged loudly. No-op for non-tenant / non-shared_schema
+                # apps, so it never raises for them.
+                try:
+                    self._apply_rls_policies(engine)
+                except Exception as rls_exc:
+                    logger.error(
+                        "RLS policy apply FAILED — tenant fence NOT installed; "
+                        "shared-schema tenancy is unenforced. Halting boot: %s",
+                        rls_exc,
+                    )
+                    raise
             finally:
-                rls_engine.dispose()
+                engine.dispose()
         else:
             logger.info("Skipping startup schema creation in production; Alembic owns schema.")
 
