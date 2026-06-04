@@ -55,15 +55,18 @@ def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
         set_current_tenant_id(tenant_id)
 
     # Phase C — resolve every scope-referenced current_user attr into the
-    # dazzle.user_<attr> GUC map. An attr that resolves to the deny sentinel (or
-    # a non-scalar) is omitted → its GUC stays unset → its predicate denies.
+    # per-request GUC map, keyed by the bare attr name (the connection layer
+    # prefixes it with the shared USER_GUC_PREFIX → dazzle.user_<attr>). An attr
+    # that resolves to the deny sentinel, an empty string, or a non-scalar is
+    # omitted → its GUC stays unset → its predicate denies (fail-closed;
+    # companion §6.3 — an empty-string GUC would also be a hard cast error).
     user_attr_names = get_rls_user_attr_names()
     if user_attr_names:
         resolved: dict[str, str] = {}
         for attr in user_attr_names:
             value = _resolve_user_attribute(attr, auth_context)
             if isinstance(value, str) and value and value != "__RBAC_DENY__":
-                resolved[f"user_{attr}"] = value
+                resolved[attr] = value
         if resolved:
             set_current_rls_user_attrs(resolved)
 

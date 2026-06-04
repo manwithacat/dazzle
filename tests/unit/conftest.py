@@ -161,6 +161,28 @@ def _manage_sys_modules_mocks(request: pytest.FixtureRequest) -> Any:
         _clean_parent_attr(k)
 
 
+@pytest.fixture(autouse=True)
+def _reset_rls_user_attr_registry() -> Any:
+    """Reset the Phase C app-wide RLS user-attr registry around every unit test.
+
+    ``register_rls_user_attr_names`` writes a module-global in
+    ``dazzle.back.runtime.tenant_isolation`` (the app-wide set of scope-referenced
+    ``current_user`` attrs, set at app startup). Tests that build a
+    ``DazzleBackendApp`` or call the registry directly would otherwise leak that
+    set into later test modules. Not a production risk (one app per process), but
+    keeping it empty by default makes the auth-dep's user-GUC bind a no-op unless
+    a test opts in — so the registry can't surprise an unrelated test. Lazy import
+    keeps this independent of the sys.modules-mock machinery above.
+    """
+    from dazzle.back.runtime.tenant_isolation import register_rls_user_attr_names
+
+    register_rls_user_attr_names(set())
+    try:
+        yield
+    finally:
+        register_rls_user_attr_names(set())
+
+
 @pytest.fixture
 def make_entity():
     """Factory for mock EntitySpec objects with ref fields (for dazzle.db tests)."""

@@ -13,8 +13,9 @@ from typing import Any
 
 from psycopg import sql as pgsql
 
+from dazzle.back.runtime.predicate_compiler import _USER_GUC_PREFIX
 from dazzle.back.runtime.query_builder import quote_identifier
-from dazzle.back.runtime.rls_schema import TENANT_GUC
+from dazzle.back.runtime.rls_schema import TENANT_GUC, USER_GUC_PREFIX
 from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 
@@ -27,6 +28,18 @@ logger = logging.getLogger(__name__)
 assert TENANT_GUC == "dazzle.tenant_id", (
     f"TENANT_GUC ({TENANT_GUC!r}) drifted from the set_config literal in "
     "_set_tenant_context — update both together."
+)
+
+# Drift guard (Phase C, C-2): the GUC name the runtime SETS in
+# ``_set_rls_user_attrs`` (``f"{USER_GUC_PREFIX}{attr}"``) must equal the name the
+# scope policy READS (``predicate_compiler`` builds it from ``_USER_GUC_PREFIX``).
+# Both derive from the single source of truth in ``rls_schema`` — this assertion
+# pins that they are the same object/value at import time, so a future edit to one
+# can't silently total-deny every scope predicate.
+assert _USER_GUC_PREFIX == USER_GUC_PREFIX == "dazzle.user_", (
+    f"USER_GUC_PREFIX drift: predicate_compiler={_USER_GUC_PREFIX!r}, "
+    f"rls_schema={USER_GUC_PREFIX!r} — the policy reads and the runtime sets must "
+    "agree (shared constant in rls_schema)."
 )
 
 
@@ -81,9 +94,15 @@ def _set_rls_user_attrs(conn: Any, attrs: dict[str, str] | None) -> None:
     binds each of those GUCs from the authenticated user's resolved attributes so
     the leased connection's RLS scope predicates evaluate against the right
     subject. The map is the per-request value produced by the auth dependency and
-    carried on the ``_current_rls_user_attrs`` contextvar — keys are already
-    ``"user_<attr>"`` (so the GUC name is ``dazzle.<key>``); values are the
-    resolved scalar strings.
+    carried on the ``_current_rls_user_attrs`` contextvar — keyed by the **bare
+    attr name** (``"id"``, ``"school_id"``, …); values are the resolved scalar
+    strings.
+
+    The GUC name is built as ``f"{USER_GUC_PREFIX}{attr}"`` from the SAME
+    framework constant the policy body reads (``predicate_compiler`` re-exports it
+    as ``_USER_GUC_PREFIX``). So the name the runtime SETS is, by construction,
+    the name the policy READS — they can never drift (mirrors the ``TENANT_GUC``
+    drift-guard; the module-load assertion below pins it).
 
     - ``None`` / empty → **no-op**: no GUC is set, so every scope predicate that
       needs one sees a missing ``current_setting`` → ``NULL`` → matches no rows
@@ -98,13 +117,13 @@ def _set_rls_user_attrs(conn: Any, attrs: dict[str, str] | None) -> None:
     """
     if not attrs:
         return
-    for key, value in attrs.items():
+    for attr, value in attrs.items():
         # ``set_config(name, value, true)`` — both name and value are bind
-        # parameters (never interpolated). ``key`` is ``"user_<attr>"`` → the GUC
-        # name is ``dazzle.<key>`` = ``dazzle.user_<attr>``.
+        # parameters (never interpolated). The name is derived from the shared
+        # USER_GUC_PREFIX so it equals the name the scope policy reads.
         conn.execute(
             pgsql.SQL("SELECT set_config(%s, %s, true)"),  # nosemgrep
-            [f"dazzle.{key}", value],
+            [f"{USER_GUC_PREFIX}{attr}", value],
         )
 
 

@@ -54,6 +54,18 @@ if TYPE_CHECKING:
 # pg_backend imports this same constant so the two never drift.
 TENANT_GUC = "dazzle.tenant_id"
 
+# The fixed GUC name prefix for per-request user attributes that the intra-tenant
+# scope policies read (Phase C). A scope policy body reads
+# ``current_setting('dazzle.user_<attr>', true)`` and the runtime
+# (``pg_backend._set_rls_user_attrs``) sets ``set_config('dazzle.user_<attr>', …)``
+# — the name the policy READS must equal the name the runtime SETS or the
+# predicate silently total-denies. Both sides derive that name from THIS one
+# constant (predicate_compiler imports it for the policy body; pg_backend imports
+# it for set_config, with a module-load assert) so they can never drift (mirrors
+# the TENANT_GUC drift-guard, C-2). ``current_user`` → ``dazzle.user_id``; a named
+# attribute ``a`` → ``dazzle.user_<a>``.
+USER_GUC_PREFIX = "dazzle.user_"
+
 
 def build_rls_policy_ddl(
     tenant_scoped_names: list[str],

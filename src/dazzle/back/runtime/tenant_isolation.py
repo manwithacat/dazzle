@@ -12,9 +12,11 @@ connection lease:
     dependency (after ``current_user`` resolves, before the handler queries).
   * ``_current_rls_user_attrs`` — the per-request resolved ``current_user.*``
     attribute map for the intra-tenant scope policies (RLS tenancy Phase C). Keyed
-    ``"user_<attr>"`` → value; ``connection()`` sets one
-    ``set_config('dazzle.user_<attr>', value, true)`` GUC per entry so the per-verb
-    scope policies' ``current_setting('dazzle.user_<attr>', true)`` resolves. An
+    by the **bare attr name** (``"id"``, ``"school_id"``, …) → value;
+    ``connection()`` sets one ``set_config('dazzle.user_<attr>', value, true)`` GUC
+    per entry (the ``dazzle.user_`` prefix comes from the shared
+    ``rls_schema.USER_GUC_PREFIX``) so the per-verb scope policies'
+    ``current_setting('dazzle.user_<attr>', true)`` resolves. An
     attr that can't be resolved is simply absent from the map → its GUC stays
     unset → that predicate denies (fail-closed). Set per request from the same
     auth dependency that binds ``_current_tenant_id``.
@@ -79,8 +81,9 @@ def set_current_tenant_id(tenant_id: str) -> Token[str | None]:
 def get_current_rls_user_attrs() -> dict[str, str]:
     """Get the per-request resolved ``current_user.*`` GUC map (Phase C).
 
-    Keys are ``"user_<attr>"`` (so ``connection()`` sets
-    ``dazzle.user_<attr>``); values are the resolved scalar strings. Returns an
+    Keys are the bare attr name (``"id"``, ``"school_id"``, …; ``connection()``
+    prefixes each with ``dazzle.user_`` from the shared constant); values are the
+    resolved scalar strings. Returns an
     empty dict when nothing is bound — no scope policies, unauthenticated
     requests, or a non-``shared_schema`` app — and ``connection()`` then sets no
     ``dazzle.user_*`` GUCs (each scope predicate that needs one denies).

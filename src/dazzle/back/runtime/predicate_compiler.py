@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from dazzle.back.runtime.query_builder import quote_identifier
+from dazzle.back.runtime.rls_schema import USER_GUC_PREFIX
 from dazzle.core.ir.fk_graph import FKEdge, FKGraph
 from dazzle.core.ir.predicates import (
     BoolComposite,
@@ -80,8 +81,10 @@ EntityTypeResolver = Callable[[str, str], str]
 
 #: The fixed GUC prefix for per-request user attributes (mirrors Phase B's
 #: ``dazzle.tenant_id``). ``current_user`` → ``dazzle.user_id``; a named
-#: attribute ``a`` → ``dazzle.user_<a>``.
-_USER_GUC_PREFIX = "dazzle.user_"
+#: attribute ``a`` → ``dazzle.user_<a>``. Re-exported from the single source of
+#: truth in ``rls_schema`` (next to ``TENANT_GUC``) so the name the policy body
+#: READS and the name ``pg_backend`` SETS can never drift (C-2 drift-guard).
+_USER_GUC_PREFIX = USER_GUC_PREFIX
 
 
 @dataclass(frozen=True)
