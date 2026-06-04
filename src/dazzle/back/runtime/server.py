@@ -711,18 +711,27 @@ class DazzleBackendApp:
         )
 
     def _apply_rls_policies(self, engine: Any) -> None:
-        """Apply the RLS tenant fence + permissive baseline to *engine* (Phase B).
+        """Apply RLS tenant fence + per-verb scope/baseline policies (Phase B + C).
 
         Mirrors :meth:`_apply_search_indexes`: runtime-applied DDL post
-        ``create_all`` (not an Alembic migration — see the Phase B plan). Gated on
-        ``tenancy: mode: shared_schema``; a no-op for every other isolation mode
-        (and for non-tenant apps), so behaviour is unchanged there.
+        ``create_all`` (not an Alembic migration — see the Phase B/C plans). Gated
+        on ``tenancy: mode: shared_schema``; a no-op for every other isolation
+        mode (and for non-tenant apps), so behaviour is unchanged there.
 
-        For each tenant-scoped DOMAIN entity it emits ``ENABLE`` + ``FORCE ROW
-        LEVEL SECURITY``, the restrictive ``tenant_fence`` and the permissive
-        ``tenant_baseline`` (idempotent — drop-before-create). The role DDL is
-        **not** run here (roles are cluster/deploy-level). App-layer scope filters
-        remain in force as defence-in-depth, so a skipped apply cannot leak.
+        For each tenant-scoped entity it emits ``ENABLE`` + ``FORCE ROW LEVEL
+        SECURITY`` and the restrictive ``tenant_fence`` (Phase B), then:
+
+        - **scoped entity** (≥1 ``access.scopes`` rule): Phase C per-verb
+          permissive policies (``scope_select``/``scope_insert``/
+          ``scope_update``/``scope_delete``) compiled from the scope predicate
+          algebra; the permissive ``tenant_baseline`` is dropped (a verb without
+          a scope rule is denied at the DB).
+        - **tenant-flat entity** (no scope rules): Phase B's permissive
+          ``tenant_baseline`` (all verbs).
+
+        All DDL is idempotent (drop-before-create). The role DDL is **not** run
+        here (roles are cluster/deploy-level). App-layer scope filters remain in
+        force as defence-in-depth, so a skipped apply cannot leak.
         """
         from dazzle.core.ir import TenancyMode
 
@@ -732,23 +741,68 @@ class DazzleBackendApp:
 
         from sqlalchemy import text as _sa_text
 
-        from dazzle.back.runtime.rls_schema import build_rls_policy_ddl
+        from dazzle.back.runtime.predicate_compiler import build_entity_type_resolver
+        from dazzle.back.runtime.rls_schema import (
+            build_rls_policy_ddl,
+            build_rls_scope_policy_ddl,
+        )
         from dazzle.back.runtime.sa_schema import scoped_entity_names
 
         pk = tenancy.isolation.partition_key
         scoped = scoped_entity_names(self._appspec.domain.entities, pk)
-        statements = build_rls_policy_ddl(sorted(scoped), partition_key=pk)
+        if not scoped:
+            return
+
+        fk_graph = getattr(self._appspec, "fk_graph", None)
+        # Lazy (entity, field) -> pg-type resolver for the GUC casts in scope
+        # policy bodies — built once over the converted back-spec entities (the
+        # same shape compile_predicate_policy + build_entity_type_resolver
+        # expect). Computes a column's type only when a policy references it.
+        entity_types = build_entity_type_resolver(self._entities)
+
+        # Partition the tenant-scoped entities into "has scope rules" (Phase C
+        # per-verb policies) vs "tenant-flat" (Phase B baseline). A scope rule
+        # without an FK graph cannot compile a policy body → fail loud rather
+        # than silently fall back to a permissive baseline (which would widen the
+        # intra-tenant authorization the scope rule meant to enforce).
+        statements: list[str] = []
+        flat_names: list[str] = []
+        scoped_with_rules = 0
+        for entity in self._entities:
+            if entity.name not in scoped:
+                continue
+            access = getattr(entity, "access", None)
+            has_scopes = access is not None and bool(getattr(access, "scopes", None))
+            if has_scopes:
+                if fk_graph is None:
+                    raise ValueError(
+                        f"RLS scope policy for {entity.name!r} requires the FK "
+                        "graph (appspec.fk_graph) but it is missing"
+                    )
+                statements.extend(
+                    build_rls_scope_policy_ddl(entity, fk_graph, entity_types, partition_key=pk)
+                )
+                scoped_with_rules += 1
+            else:
+                flat_names.append(entity.name)
+
+        # Tenant-flat entities keep Phase B's fence + permissive baseline.
+        statements.extend(build_rls_policy_ddl(sorted(flat_names), partition_key=pk))
+
         if not statements:
             return
         with engine.begin() as conn:
             for stmt in statements:
                 conn.execute(_sa_text(stmt))
         logger.info(
-            "Applied RLS tenant fence (%d statement%s) over %d tenant-scoped entit%s",
+            "Applied RLS policies (%d statement%s) over %d tenant-scoped entit%s "
+            "(%d scoped, %d tenant-flat)",
             len(statements),
             "" if len(statements) == 1 else "s",
             len(scoped),
             "y" if len(scoped) == 1 else "ies",
+            scoped_with_rules,
+            len(flat_names),
         )
 
     def _setup_models(self) -> None:
