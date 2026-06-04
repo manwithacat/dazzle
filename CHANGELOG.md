@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.25] - 2026-06-05
+
+### Fixed
+
+- **`asyncpg` was an undeclared dependency** — `dazzle.db.connection.get_connection` (the async driver behind every `dazzle db` command: `upgrade`/`verify`/`reset`/`cleanup` and the Phase-D RLS `apply-rls`/drift) imports `asyncpg`, but it was missing from `pyproject.toml` (only present in dev envs by coincidence). On a clean install — CI, the PyPI wheel, a fresh prod deploy — `dazzle db …` would `ImportError: No module named 'asyncpg'`. Promoted to a core dependency (alongside `psycopg`). Surfaced by the Phase-D RLS apply/drift real-PG integration test (the first real-PG test exercising the async `db` path), which red'd the `PostgreSQL Tests` CI job on the v0.81.24 merge.
+
 ## [0.81.24] - 2026-06-04
 
 ### Added
