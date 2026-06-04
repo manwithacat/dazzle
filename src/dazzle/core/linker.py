@@ -582,6 +582,13 @@ _SIGNABLE_AUTO_FIELDS: tuple[tuple[str, FieldType, tuple[FieldModifier, ...]], .
     ("expires_at", FieldType(kind=FieldTypeKind.DATETIME), (FieldModifier.OPTIONAL,)),
 )
 
+# Public, ordered tuple of the column names auto-injected on `signable: true`
+# entities. Each is a plain single-column scalar/datetime/enum/file field, so the
+# column name equals the field name — used by the schema-drift detector
+# (`dazzle db verify`, #1340) to flag a signable table frozen at a stale shape
+# before a create 500s on a missing signing column.
+SIGNABLE_AUTO_FIELD_NAMES: tuple[str, ...] = tuple(name for name, _t, _m in _SIGNABLE_AUTO_FIELDS)
+
 
 def _inject_signable_fields(entities: list[ir.EntitySpec]) -> list[ir.EntitySpec]:
     """Inject the 11 signing fields + default audit on `signable: true`

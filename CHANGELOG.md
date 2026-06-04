@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.19] - 2026-06-04
+
+### Added
+
+- **`dazzle db verify` now detects signable schema drift (#1340).** A `signable: true` entity gets ~10 signing columns auto-injected by the linker; if its table was frozen at a stale, pre-signable shape (an early baseline migration) and never reconciled, every create INSERT 500s on the first missing column (`UndefinedColumn: signing_token_hash`). The IR and runtime are correct — both emit all the columns — so this is schema-history drift, not a framework defect. `dazzle db verify` now names the exact missing signing columns per entity and points to the Alembic remediation (`dazzle db revision --autogenerate && dazzle db upgrade`), and exits non-zero, turning an opaque per-create 500 into a clear pre-flight diagnostic. New `dazzle/db/signable_drift.py` (purely diagnostic — never ALTERs the table, per ADR-0017); `linker.SIGNABLE_AUTO_FIELD_NAMES` exposes the canonical signing-column set.
+
 ## [0.81.18] - 2026-06-04
 
 ### Added

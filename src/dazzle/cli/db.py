@@ -840,12 +840,14 @@ def verify_command(
     schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.money_migration import repair_money_drifts
+    from dazzle.db.signable_drift import detect_signable_drift
     from dazzle.db.verify import db_verify_impl
 
     async def _run(conn: Any) -> Any:
         fk_result = await db_verify_impl(entities=entities, conn=conn)
         money_result = await repair_money_drifts(conn, list(entities), apply=fix_money)
-        return {"fk": fk_result, "money": money_result}
+        signable_result = await detect_signable_drift(conn, list(entities))
+        return {"fk": fk_result, "money": money_result, "signable": signable_result}
 
     result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
@@ -912,12 +914,34 @@ def verify_command(
     else:
         console.print("\n[green]No legacy money-column drift.[/green]")
 
+    # #1340: signable entities frozen at a stale schema (missing the auto-
+    # injected signing columns) 500 on every create. Surface the drift here
+    # with the exact missing columns + the Alembic remediation, instead of an
+    # opaque per-create UndefinedColumn 500.
+    signable_drifts = result["signable"]
+    if signable_drifts:
+        console.print("\n[bold]Signable schema drift (#1340):[/bold]")
+        for drift in signable_drifts:
+            console.print(
+                f"  [red]✗[/red] {drift['entity']} is missing signing column(s): "
+                f"{', '.join(drift['missing'])}"
+            )
+        console.print(
+            "\n[yellow]A `signable: true` table is frozen at a stale shape. "
+            "Reconcile via a migration (ADR-0017):[/yellow]\n"
+            '    [dim]dazzle db revision -m "add signing columns" --autogenerate[/dim]\n'
+            "    [dim]dazzle db upgrade[/dim]"
+        )
+    else:
+        console.print("\n[green]No signable schema drift.[/green]")
+
     # #1035 (v0.67.21): exit non-zero when verify surfaced any FK
     # issues — orphans, column mismatches, or money-column drift. The
     # exit code lets `dazzle db verify` be wired into CI / nightly
     # quality swarms without a wrapper that has to re-parse stdout.
+    # #1340 extends this to signable schema drift.
     money_drift = money_result["drift_count"] + money_result["partial_count"]
-    if fk_orphans or fk_warnings or money_drift:
+    if fk_orphans or fk_warnings or money_drift or signable_drifts:
         raise typer.Exit(1)
 
 

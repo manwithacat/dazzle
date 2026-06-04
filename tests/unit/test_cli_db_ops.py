@@ -46,8 +46,8 @@ class TestDbVerifyCommand:
         appspec.domain.entities = []
         mock_load.return_value = appspec
 
-        # Post-#840 the runner returns {"fk": ..., "money": ...} so both
-        # checks appear in one verify output.
+        # Post-#840 the runner returns {"fk": ..., "money": ...}; #1340 adds
+        # "signable" (signable schema-drift) so all three appear in one output.
         mock_run.return_value = {
             "fk": {"checks": [], "total_issues": 0},
             "money": {
@@ -57,6 +57,7 @@ class TestDbVerifyCommand:
                 "applied_count": 0,
                 "errors": [],
             },
+            "signable": [],
         }
 
         result = runner.invoke(db_app, ["verify"])
