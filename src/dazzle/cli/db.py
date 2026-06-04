@@ -262,8 +262,21 @@ def upgrade_command(
         "head",
         help="Target revision (default: head)",
     ),
+    no_rls: bool = typer.Option(
+        False,
+        "--no-rls",
+        help="Skip applying RLS policies after the upgrade (apply them separately "
+        "with `dazzle db apply-rls`).",
+    ),
 ) -> None:
-    """Apply pending migrations (upgrade to target revision)."""
+    """Apply pending migrations (upgrade to target revision).
+
+    In ``shared_schema`` tenancy mode, RLS policies are applied automatically
+    after the migrations succeed — as the SAME owner-capable role that just ran
+    the DDL migrations (so it has the table ownership ``CREATE POLICY`` /
+    ``FORCE ROW LEVEL SECURITY`` require). Pass ``--no-rls`` to skip and apply
+    them separately with ``dazzle db apply-rls``.
+    """
     from alembic import command
 
     cfg = _get_alembic_cfg()
@@ -291,6 +304,60 @@ def upgrade_command(
     except Exception as e:
         console.print(f"[red]Upgrade failed: {e}[/red]")
         raise typer.Exit(1)
+
+    # Phase D: apply RLS policies after a successful migration, in shared_schema
+    # mode, on the SAME owner-capable role that just ran the DDL migrations
+    # (CREATE POLICY / FORCE ROW LEVEL SECURITY need table ownership; the runtime
+    # dazzle_app role cannot). If this raises, the schema is already migrated, so
+    # do NOT silently leave RLS unapplied — log ERROR + re-raise.
+    if no_rls:
+        return
+    _apply_rls_after_upgrade(target)
+
+
+def _apply_rls_after_upgrade(resolved_url: str) -> None:
+    """Apply RLS policies after a successful ``dazzle db upgrade`` (Phase D).
+
+    No-op for non-``shared_schema`` apps. Runs on a fresh connection resolved
+    from the SAME URL the migrations used — the owner-capable deploy role — so it
+    has the table ownership the RLS DDL requires. Re-raises on failure (ERROR
+    logged) so a successful migration is never silently left without RLS.
+    """
+    project_root = Path.cwd().resolve()
+    try:
+        appspec = load_project_appspec(project_root)
+    except Exception:
+        # No loadable appspec (e.g. running upgrade outside a project) — nothing
+        # to apply. Migrations may still be a valid standalone operation.
+        logger.debug("Could not load appspec for post-upgrade RLS apply", exc_info=True)
+        return
+
+    if not _is_shared_schema(appspec):
+        return
+
+    from dazzle.back.converters.entity_converter import convert_entities
+    from dazzle.db.rls_apply import apply_rls_policies
+
+    entities = convert_entities(appspec.domain.entities)
+
+    async def _run(conn: Any) -> Any:
+        return await apply_rls_policies(conn, appspec, entities)
+
+    try:
+        applied = asyncio.run(_run_with_connection(project_root, resolved_url, _run))
+    except Exception as e:
+        logger.error("Failed to apply RLS policies after upgrade: %s", e, exc_info=True)
+        console.print(
+            f"[red]Migration succeeded but applying RLS policies failed: {e}[/red]\n"
+            "[dim]The schema is migrated but RLS is NOT enforced. Re-run "
+            "`dazzle db apply-rls` as the table owner once resolved.[/dim]"
+        )
+        raise typer.Exit(1)
+
+    console.print(
+        f"[green]Applied {applied} RLS policy statement{'' if applied == 1 else 's'} "
+        f"(owner role).[/green]"
+    )
 
 
 @db_app.command(name="reconcile-baseline")
@@ -943,6 +1010,76 @@ def verify_command(
     money_drift = money_result["drift_count"] + money_result["partial_count"]
     if fk_orphans or fk_warnings or money_drift or signable_drifts:
         raise typer.Exit(1)
+
+
+def _is_shared_schema(appspec: Any) -> bool:
+    """True when the appspec declares row-level (``shared_schema``) tenancy.
+
+    The RLS apply/inspect/drift surfaces are no-ops for every other isolation
+    mode (and for non-tenant apps), mirroring ``build_all_rls_ddl``'s gate.
+    """
+    from dazzle.core.ir import TenancyMode
+
+    tenancy = getattr(appspec, "tenancy", None)
+    if tenancy is None:
+        return False
+    return bool(tenancy.isolation.mode == TenancyMode.SHARED_SCHEMA)
+
+
+@db_app.command(name="apply-rls")
+def apply_rls_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Apply row-level-security policies to the database (production enforcement).
+
+    Generates the tenant fence + intra-tenant scope policy DDL from the DSL and
+    applies it to the live database. Idempotent (DROP-then-CREATE), so safe to
+    re-run.
+
+    CRITICAL — run this as a role that OWNS the tables (the deploy/owner role,
+    e.g. ``dazzle_owner``). ``ENABLE/FORCE ROW LEVEL SECURITY`` and
+    ``CREATE POLICY`` require table ownership; the runtime ``dazzle_app`` role
+    cannot run this DDL. ``dazzle db upgrade`` applies it automatically after
+    migrations (same owner role); use this command to apply it separately.
+    """
+    import json as json_mod
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+
+    if not _is_shared_schema(appspec):
+        msg = "No row-level tenancy (tenancy: mode: shared_schema); nothing to apply."
+        if as_json:
+            console.print(json_mod.dumps({"applied": 0, "note": msg}))
+        else:
+            console.print(f"[dim]{msg}[/dim]")
+        return
+
+    from dazzle.back.converters.entity_converter import convert_entities
+    from dazzle.db.rls_apply import apply_rls_policies
+
+    entities = convert_entities(appspec.domain.entities)
+    url = _resolve_url(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
+
+    async def _run(conn: Any) -> Any:
+        return await apply_rls_policies(conn, appspec, entities)
+
+    applied = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
+
+    if as_json:
+        console.print(json_mod.dumps({"applied": applied}))
+        return
+
+    console.print(
+        f"\n[green]Applied {applied} RLS policy statement{'' if applied == 1 else 's'}.[/green]"
+    )
+    console.print(
+        "[dim]Note: this must run as a role that owns the tables (the deploy/owner "
+        "role) — the runtime dazzle_app role cannot run RLS DDL.[/dim]"
+    )
 
 
 @db_app.command(name="reset")
