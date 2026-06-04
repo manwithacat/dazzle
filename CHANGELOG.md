@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.26] - 2026-06-05
+
+### Changed
+
+- **FastAPI app startup/shutdown migrated from `@app.on_event` to a `lifespan` context manager.** The four deprecated `on_event("startup"|"shutdown")` handlers (DB-pool open/close + audit-logger start/stop, all on the one app) are consolidated into a single `lifespan` passed at app construction — removing the `on_event is deprecated` warnings and future-proofing against FastAPI removing the hook. Behavior is identical (pool opens first / closes last; audit logger brackets inside); verified by a lifespan test asserting the pool-open + audit start/stop side effects actually run (audit-present and audit-absent paths) and that no `on_event` deprecation warning remains.
+
 ## [0.81.25] - 2026-06-05
 
 ### Fixed
