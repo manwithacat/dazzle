@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.tenants (
     schema_name TEXT UNIQUE NOT NULL,
     status TEXT NOT NULL DEFAULT 'active',
     config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_test BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 )"""
@@ -39,28 +40,38 @@ _ALTER_ADD_CONFIG_SQL = (
     "ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS config JSONB NOT NULL DEFAULT '{}'::jsonb"
 )
 
+# #1339 slice 0 — idempotent column add for the test-tenant marker. The
+# canonical schema-change path is the Alembic migration 0006 (ADR-0017); this
+# ALTER is the registry table's own boot-time bootstrap (public.tenants is
+# owned by ensure_table(), not Alembic's DSL metadata), mirroring config above
+# so the CLI `dazzle tenant create` path works without a separate
+# `dazzle db upgrade`. Both paths guard on existence and converge.
+_ALTER_ADD_IS_TEST_SQL = (
+    "ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS is_test BOOLEAN NOT NULL DEFAULT false"
+)
+
 _INSERT_SQL = """\
-INSERT INTO public.tenants (slug, display_name, schema_name)
-VALUES (%s, %s, %s)
-RETURNING id, slug, display_name, schema_name, status, config, created_at, updated_at"""
+INSERT INTO public.tenants (slug, display_name, schema_name, is_test)
+VALUES (%s, %s, %s, %s)
+RETURNING id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at"""
 
 _SELECT_BY_SLUG = """\
-SELECT id, slug, display_name, schema_name, status, config, created_at, updated_at
+SELECT id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at
 FROM public.tenants WHERE slug = %s"""
 
 _SELECT_ALL = """\
-SELECT id, slug, display_name, schema_name, status, config, created_at, updated_at
+SELECT id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at
 FROM public.tenants ORDER BY created_at"""
 
 _UPDATE_STATUS = """\
 UPDATE public.tenants SET status = %s, updated_at = now()
 WHERE slug = %s
-RETURNING id, slug, display_name, schema_name, status, config, created_at, updated_at"""
+RETURNING id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at"""
 
 _UPDATE_CONFIG = """\
 UPDATE public.tenants SET config = %s, updated_at = now()
 WHERE slug = %s
-RETURNING id, slug, display_name, schema_name, status, config, created_at, updated_at"""
+RETURNING id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at"""
 
 
 @dataclass
@@ -79,6 +90,9 @@ class TenantRecord:
     # AppSpec; raw values stored as JSONB and coerced via
     # `dazzle.tenant.config_coercion` at read time.
     config: dict[str, Any] = field(default_factory=dict)
+    # #1339 slice 0 — marks an ephemeral test tenant. A queryable column
+    # (not a forgeable slug prefix) is the load-bearing test-tenant marker.
+    is_test: bool = False
 
 
 def _row_to_record(row: dict[str, Any]) -> TenantRecord:
@@ -99,6 +113,7 @@ def _row_to_record(row: dict[str, Any]) -> TenantRecord:
         created_at=str(row["created_at"]),
         updated_at=str(row["updated_at"]),
         config=dict(raw_config) if isinstance(raw_config, dict) else {},
+        is_test=bool(row.get("is_test", False)),
     )
 
 
@@ -114,14 +129,16 @@ class TenantRegistry:
     def ensure_table(self) -> None:
         """Create the tenants table if it doesn't exist.
 
-        Also runs the cycle-7 idempotent ALTER to back-fill the
-        `config` column on tables created before this version. Both
-        statements are idempotent — safe to call repeatedly at boot.
+        Also runs the idempotent ALTERs to back-fill the `config`
+        (cycle 7) and `is_test` (#1339 slice 0) columns on tables
+        created before those versions. All statements are idempotent —
+        safe to call repeatedly at boot.
         """
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(_CREATE_TABLE_SQL)
                 cur.execute(_ALTER_ADD_CONFIG_SQL)
+                cur.execute(_ALTER_ADD_IS_TEST_SQL)
             conn.commit()
 
     def update_config(self, slug: str, config: dict[str, Any]) -> TenantRecord:
@@ -143,13 +160,25 @@ class TenantRegistry:
             raise ValueError(f"Tenant '{slug}' not found")
         return _row_to_record(row)
 
-    def create(self, slug: str, display_name: str) -> TenantRecord:
-        """Insert a tenant record. Raises ValueError for invalid slugs."""
-        validate_slug(slug)
+    def create(
+        self,
+        slug: str,
+        display_name: str,
+        *,
+        is_test: bool = False,
+        allow_reserved: bool = False,
+    ) -> TenantRecord:
+        """Insert a tenant record. Raises ValueError for invalid slugs.
+
+        ``is_test`` marks the row as an ephemeral test tenant (#1339).
+        ``allow_reserved`` lets the test-tenant provisioner mint a
+        `qa`-namespaced slug; normal creates must leave it ``False``.
+        """
+        validate_slug(slug, allow_reserved=allow_reserved)
         schema_name = slug_to_schema_name(slug)
         with self._connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(_INSERT_SQL, (slug, display_name, schema_name))
+                cur.execute(_INSERT_SQL, (slug, display_name, schema_name, is_test))
                 row = cur.fetchone()
             conn.commit()
         return _row_to_record(row)
