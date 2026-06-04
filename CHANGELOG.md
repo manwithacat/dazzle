@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.22] - 2026-06-04
+
+### Added
+
+- **RLS-backed row tenancy — Phase B (DB-enforced tenant fence)** (ratifies as ADR-0034; design + generation-rules companion under `docs/superpowers/specs/`). The tenant boundary is now enforced by **PostgreSQL Row-Level Security**, not just app-layer filters. Under `tenancy: mode: shared_schema`, each tenant-scoped entity gets (runtime-applied post-`create_all`, mirroring the search-index pattern): `ENABLE` + `FORCE ROW LEVEL SECURITY`, a **restrictive `tenant_fence`** (`tenant_id = current_setting('dazzle.tenant_id', true)::uuid`, USING + WITH CHECK), and a **permissive `tenant_baseline`** (so a fenced table isn't deny-all). The runtime sets `dazzle.tenant_id` per transaction via parameterised `set_config(...,true)` from the authenticated user's tenant (`_set_tenant_context` in the connection lease, mirroring `_set_search_path`); **fail-closed** — an unset context matches no rows and rejects writes. A three-role model (`dazzle_owner`/`dazzle_app`/`dazzle_bypass`, `dazzle_app` non-bypass) is generated for deploys. Proven against real PostgreSQL by `tests/integration/test_rls_enforcement_pg.py` (cross-tenant read/write blocked, fail-closed, empty-context hard error, restrictive-only=deny-all, owner-no-bypass-under-FORCE, role attributes) — connecting as a verified non-superuser `dazzle_app` and mutation-tested. Greenfield only.
+
+### Agent Guidance
+
+- **RLS enforcement requires connecting as a non-superuser, non-owner role (`dazzle_app`).** Superusers always bypass RLS; the table owner bypasses unless `FORCE` (which is set). In local dev with a superuser `DATABASE_URL`, RLS is present but **bypassed** — app-layer scope filters enforce there; prod connects as `dazzle_app`. Provision roles via `build_rls_role_ddl()`.
+- **Tenant context is per-transaction:** the `dazzle.tenant_id` GUC is set with `set_config(...,true)` (transaction-scoped), so tenant-scoped DB access must run **inside a transaction** (psycopg3 is non-autocommit, so the standard `connection()` path is fine). An unset/empty context fails closed (empty string is a hard `uuid` error — never set it). The engine fails closed; the companion's fail-*loud* middleware assertion (§6.3) is deferred.
+- **Testing RLS WITH CHECK violations:** a write blocked by an RLS policy raises psycopg `InsufficientPrivilege` (SQLSTATE 42501, "new row violates row-level security policy") — **not** `CheckViolation`. Assert the former in RLS tests.
+- **Production does not auto-apply RLS yet.** The policy apply runs in the dev `create_all` path only; in production (Alembic owns the schema) the generated policy DDL must be applied by a deploy step (run `build_rls_policy_ddl(...)` output) until Phase D wires migration + a drift gate. **App-layer scope filters remain the active tenant-isolation enforcement everywhere in Phase B** — the RLS fence is additive hardening, fully enforced once applied + the app connects as `dazzle_app`.
+- **Still open (don't assume):** intra-tenant per-verb scope policies (Phase C) — Phase B keeps app-layer scope filters as defense-in-depth; the `USER_MEMBERSHIP` composite-FK gap and auth-table fencing (auth-rework phase) still stand. `partition_key` other than `tenant_id` is supported (the GUC name is the fixed framework constant `dazzle.tenant_id`, decoupled from the column).
+
 ## [0.81.21] - 2026-06-04
 
 ### Added

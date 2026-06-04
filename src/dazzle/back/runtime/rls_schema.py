@@ -39,8 +39,14 @@ from __future__ import annotations
 
 from dazzle.back.runtime.query_builder import quote_identifier
 
-# GUC namespace for the per-transaction tenant context (companion §6).
-_GUC_NAMESPACE = "dazzle"
+# Fixed framework GUC name for the per-transaction tenant context (companion §6).
+# This is deliberately INDEPENDENT of the app's partition_key column: the runtime
+# (``pg_backend._set_tenant_context``) always sets ``dazzle.tenant_id``, so the
+# fence must always READ ``dazzle.tenant_id`` — only the fenced *column* varies
+# per app. Tying the GUC name to the partition_key (e.g. ``dazzle.org_id``) would
+# make the fence read a GUC the runtime never sets → silent total-deny (C-2).
+# pg_backend imports this same constant so the two never drift.
+TENANT_GUC = "dazzle.tenant_id"
 
 
 def build_rls_policy_ddl(
@@ -57,9 +63,11 @@ def build_rls_policy_ddl(
     Args:
         tenant_scoped_names: Entity (table) names to fence. Framework-controlled
             identifiers from the IR — never user input.
-        partition_key: The tenant discriminator column (e.g. ``"tenant_id"``).
-            Parameter-driven, not hardcoded: the fence body and GUC name are
-            both derived from it.
+        partition_key: The tenant discriminator *column* (e.g. ``"tenant_id"``).
+            Drives the fenced column only — the GUC the fence reads is always the
+            fixed framework constant :data:`TENANT_GUC` (``dazzle.tenant_id``),
+            never derived from this, so the runtime and fence cannot disagree on
+            the GUC name (C-2).
 
     Returns:
         A flat list of DDL statements. Empty list when there are no entities.
@@ -67,10 +75,11 @@ def build_rls_policy_ddl(
     statements: list[str] = []
 
     col = quote_identifier(partition_key)
-    guc = f"{_GUC_NAMESPACE}.{partition_key}"
     # missing-ok current_setting → fail-closed (companion §1.3). Used verbatim
-    # for both USING and WITH CHECK on the fence.
-    fence_body = f"{col} = current_setting('{guc}', true)::uuid"
+    # for both USING and WITH CHECK on the fence. The GUC name is the FIXED
+    # framework constant (not the partition_key) so it matches what the runtime
+    # sets via set_config — see TENANT_GUC.
+    fence_body = f"{col} = current_setting('{TENANT_GUC}', true)::uuid"
 
     for name in tenant_scoped_names:
         table = quote_identifier(name)
@@ -98,7 +107,11 @@ def build_rls_policy_ddl(
         )
 
         # §1.4 — permissive baseline. Without ≥1 permissive policy the fenced
-        # table is deny-all, invisible even to a correctly-scoped session.
+        # table is deny-all, invisible even to a correctly-scoped session. The
+        # baseline exists ONLY to make the table not deny-all; its
+        # ``WITH CHECK (true)`` is safe because the RESTRICTIVE tenant_fence is
+        # ANDed over every permissive policy, so the net write check is the
+        # fence's tenant_id match — the baseline never widens it.
         statements.append(
             f"DROP POLICY IF EXISTS tenant_baseline ON {table}"
         )  # nosemgrep: closed templated DDL over IR-controlled identifiers, parameterless

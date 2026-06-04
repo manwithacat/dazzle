@@ -32,11 +32,14 @@ def test_idempotent_drop_before_create() -> None:
 
 
 def test_custom_partition_key() -> None:
+    # C-2: a custom partition_key drives only the fenced COLUMN; the GUC the
+    # fence reads is the FIXED framework constant dazzle.tenant_id (the same one
+    # the runtime sets). It must NOT become dazzle.org_id, which the runtime
+    # never sets → silent total-deny.
     ddl = "\n".join(build_rls_policy_ddl(["Project"], partition_key="org_id"))
-    assert (
-        "org_id = current_setting('dazzle.org_id', true)::uuid" in ddl
-        or "\"org_id\" = current_setting('dazzle.org_id', true)::uuid" in ddl
-    )
+    assert "\"org_id\" = current_setting('dazzle.tenant_id', true)::uuid" in ddl
+    # the partition-key-derived GUC name must never appear
+    assert "dazzle.org_id" not in ddl
 
 
 def test_empty_when_no_entities() -> None:

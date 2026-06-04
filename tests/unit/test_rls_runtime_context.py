@@ -73,3 +73,35 @@ def test_apply_rls_policies_noop_when_not_shared_schema() -> None:
     DazzleBackendApp._apply_rls_policies(app, engine)
 
     assert not engine.begin.called  # only shared_schema gets the fence
+
+
+def test_apply_rls_failure_propagates_out_of_setup_database() -> None:
+    """C-1: an RLS-apply failure must HALT boot, not be swallowed by the
+    tolerant dev-mode create_all try/except (which would boot fence-less).
+    """
+    from unittest.mock import patch
+
+    import pytest
+
+    from dazzle.back.runtime.server import DazzleBackendApp
+
+    app = MagicMock(spec=DazzleBackendApp)
+    app._database_url = "postgresql://localhost/x"
+    app._entities = []
+    app._appspec = MagicMock()
+    app._appspec.surfaces = []
+    # _apply_rls_policies blows up (e.g. permissions / DDL error).
+    app._apply_rls_policies.side_effect = RuntimeError("fence DDL failed")
+    app._should_create_schema_on_startup.return_value = True
+
+    with (
+        patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
+        patch("sqlalchemy.create_engine"),
+        patch("dazzle.back.runtime.sa_schema.build_metadata"),
+        patch("dazzle.back.runtime.server._tenancy_metadata_kwargs", return_value={}),
+        pytest.raises(RuntimeError, match="fence DDL failed"),
+    ):
+        DazzleBackendApp._setup_database(app)
+
+    # The tolerant create_all/_apply_search_indexes path must NOT swallow it.
+    assert app._apply_rls_policies.called

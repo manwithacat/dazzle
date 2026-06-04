@@ -14,10 +14,20 @@ from typing import Any
 from psycopg import sql as pgsql
 
 from dazzle.back.runtime.query_builder import quote_identifier
+from dazzle.back.runtime.rls_schema import TENANT_GUC
 from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 
 logger = logging.getLogger(__name__)
+
+# Drift guard (C-2): the inline GUC literal in ``_set_tenant_context`` below must
+# equal the framework constant the fence DDL reads. If TENANT_GUC ever changes,
+# this assertion fires at import time rather than letting the runtime set one GUC
+# while the fence reads another (which would silently total-deny).
+assert TENANT_GUC == "dazzle.tenant_id", (
+    f"TENANT_GUC ({TENANT_GUC!r}) drifted from the set_config literal in "
+    "_set_tenant_context — update both together."
+)
 
 
 def _set_search_path(conn: Any, schema: str) -> None:
@@ -36,7 +46,10 @@ def _set_tenant_context(conn: Any, tenant_id: str | None) -> None:
     RLS tenancy Phase B. The PostgreSQL row-level-security fence reads
     ``current_setting('dazzle.tenant_id', true)`` (companion spec §1.3 / §6); this
     binds that GUC to the authenticated user's tenant so the leased connection is
-    physically scoped to one tenant.
+    physically scoped to one tenant. The GUC name is the fixed framework constant
+    :data:`dazzle.back.runtime.rls_schema.TENANT_GUC` — the SAME constant the
+    fence DDL reads — so the runtime and the fence can never disagree on the name
+    even when the app's partition_key column is custom (C-2).
 
     - When ``tenant_id`` is ``None`` this is a **no-op**: no GUC is set, the
       ``current_setting`` is missing → ``NULL`` → the fence matches no rows and
@@ -51,6 +64,9 @@ def _set_tenant_context(conn: Any, tenant_id: str | None) -> None:
     """
     if tenant_id is None:
         return
+    # The GUC name is the fixed framework constant TENANT_GUC; the literal below
+    # must stay in lockstep with it (the module-load assertion guards drift). The
+    # tenant id is always a bind parameter — never interpolated.
     conn.execute(
         pgsql.SQL("SELECT set_config('dazzle.tenant_id', %s, true)"),  # nosemgrep
         [tenant_id],
@@ -323,6 +339,11 @@ class PostgresBackend:
         Get a persistent connection for the application lifecycle.
 
         Returns a wrapped psycopg connection (reuses existing if available).
+
+        WARNING: this does NOT set the RLS tenant context (``dazzle.tenant_id``)
+        — unlike :meth:`connection`. Using it against an RLS-fenced table will
+        fail-closed (no rows / rejected writes) because the GUC is unset. Prefer
+        :meth:`connection` for any tenant-scoped access (see #1331).
         """
         import psycopg
         from psycopg.rows import dict_row
