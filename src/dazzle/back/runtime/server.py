@@ -710,6 +710,47 @@ class DazzleBackendApp:
             "y" if len(searches) == 1 else "ies",
         )
 
+    def _apply_rls_policies(self, engine: Any) -> None:
+        """Apply the RLS tenant fence + permissive baseline to *engine* (Phase B).
+
+        Mirrors :meth:`_apply_search_indexes`: runtime-applied DDL post
+        ``create_all`` (not an Alembic migration — see the Phase B plan). Gated on
+        ``tenancy: mode: shared_schema``; a no-op for every other isolation mode
+        (and for non-tenant apps), so behaviour is unchanged there.
+
+        For each tenant-scoped DOMAIN entity it emits ``ENABLE`` + ``FORCE ROW
+        LEVEL SECURITY``, the restrictive ``tenant_fence`` and the permissive
+        ``tenant_baseline`` (idempotent — drop-before-create). The role DDL is
+        **not** run here (roles are cluster/deploy-level). App-layer scope filters
+        remain in force as defence-in-depth, so a skipped apply cannot leak.
+        """
+        from dazzle.core.ir import TenancyMode
+
+        tenancy = self._appspec.tenancy
+        if tenancy is None or tenancy.isolation.mode != TenancyMode.SHARED_SCHEMA:
+            return
+
+        from sqlalchemy import text as _sa_text
+
+        from dazzle.back.runtime.rls_schema import build_rls_policy_ddl
+        from dazzle.back.runtime.sa_schema import scoped_entity_names
+
+        pk = tenancy.isolation.partition_key
+        scoped = scoped_entity_names(self._appspec.domain.entities, pk)
+        statements = build_rls_policy_ddl(sorted(scoped), partition_key=pk)
+        if not statements:
+            return
+        with engine.begin() as conn:
+            for stmt in statements:
+                conn.execute(_sa_text(stmt))
+        logger.info(
+            "Applied RLS tenant fence (%d statement%s) over %d tenant-scoped entit%s",
+            len(statements),
+            "" if len(statements) == 1 else "s",
+            len(scoped),
+            "y" if len(scoped) == 1 else "ies",
+        )
+
     def _setup_models(self) -> None:
         """Generate Pydantic models and create/update schemas from the spec."""
         self._models = generate_all_entity_models(self._entities)
@@ -756,6 +797,10 @@ class DazzleBackendApp:
                     # base schema lands. Idempotent (IF NOT EXISTS); safe to
                     # re-run on every dev boot.
                     self._apply_search_indexes(engine)
+                    # RLS tenancy Phase B — apply the tenant fence + permissive
+                    # baseline after the base schema lands. Idempotent
+                    # (drop-before-create); no-op unless tenancy is shared_schema.
+                    self._apply_rls_policies(engine)
                 finally:
                     engine.dispose()
             except Exception as exc:

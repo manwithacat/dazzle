@@ -30,6 +30,33 @@ def _set_search_path(conn: Any, schema: str) -> None:
     conn.execute(stmt)  # nosemgrep
 
 
+def _set_tenant_context(conn: Any, tenant_id: str | None) -> None:
+    """Set the per-transaction ``dazzle.tenant_id`` GUC for the RLS fence.
+
+    RLS tenancy Phase B. The PostgreSQL row-level-security fence reads
+    ``current_setting('dazzle.tenant_id', true)`` (companion spec §1.3 / §6); this
+    binds that GUC to the authenticated user's tenant so the leased connection is
+    physically scoped to one tenant.
+
+    - When ``tenant_id`` is ``None`` this is a **no-op**: no GUC is set, the
+      ``current_setting`` is missing → ``NULL`` → the fence matches no rows and
+      rejects writes (fail-closed — the correct behaviour for unauthenticated /
+      no-tenant requests against fenced tables).
+    - When present, the value is passed as a **bind parameter** to ``set_config``
+      — never string-interpolated (``SET LOCAL`` cannot take a bind param, which
+      is why ``set_config(name, value, true)`` is used). ``is_local = true`` makes
+      the setting transaction-scoped, so it lives exactly for the queries that run
+      on this leased connection before the surrounding block commits (companion
+      §6.1/§6.2).
+    """
+    if tenant_id is None:
+        return
+    conn.execute(
+        pgsql.SQL("SELECT set_config('dazzle.tenant_id', %s, true)"),  # nosemgrep
+        [tenant_id],
+    )
+
+
 def _create_table_sql(table_name: str, columns: str) -> pgsql.Composed:
     """Build a safe CREATE TABLE statement."""
     return pgsql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(
@@ -252,14 +279,21 @@ class PostgresBackend:
         If a tenant schema is set via context var (by TenantMiddleware),
         it takes precedence over the instance's search_path.
         """
-        from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+        from dazzle.back.runtime.tenant_isolation import (
+            get_current_tenant_id,
+            get_current_tenant_schema,
+        )
 
         effective_search_path = get_current_tenant_schema() or self.search_path
+        # RLS tenancy Phase B — bind dazzle.tenant_id for the shared_schema fence.
+        # None (unauthenticated / non-tenant) leaves the GUC unset → fence denies.
+        tenant_id = get_current_tenant_id()
 
         if self._pool is not None:
             with self._pool.connection() as conn:
                 if effective_search_path:
                     _set_search_path(conn, effective_search_path)
+                _set_tenant_context(conn, tenant_id)
                 try:
                     yield PgConnectionWrapper(conn)
                 except Exception:
@@ -275,6 +309,7 @@ class PostgresBackend:
         try:
             if effective_search_path:
                 _set_search_path(conn, effective_search_path)
+            _set_tenant_context(conn, tenant_id)
             yield PgConnectionWrapper(conn)
             conn.commit()
         except Exception:

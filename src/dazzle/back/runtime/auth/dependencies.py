@@ -9,6 +9,39 @@ from .models import AuthContext
 from .store import AuthStore
 
 
+def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
+    """Bind the RLS tenant id contextvar from the authenticated user (Phase B).
+
+    The shared_schema RLS fence reads ``dazzle.tenant_id`` per transaction
+    (``pg_backend.connection()`` sets it from this contextvar at lease time).
+    Auth in Dazzle is a per-route FastAPI dependency resolved *before* the
+    handler body runs — so the user's tenant only becomes available here, after
+    ``TenantMiddleware`` and before any DB query. Setting the contextvar at this
+    point therefore guarantees the GUC is bound within the same transaction as
+    the fenced query.
+
+    The tenant id is resolved via the same ``current_user.tenant_id`` lookup the
+    scope filters use (built-in fields → preferences). A missing / unresolvable
+    tenant is left unbound — the fence then denies (fail-closed). The value is
+    never empty-string (companion §6.3): ``_resolve_user_attribute`` only returns
+    a concrete scalar or the deny sentinel.
+
+    asyncio gives each request task its own contextvar copy, so the binding dies
+    with the task — no explicit reset needed (mirrors the audit-context wiring).
+    """
+    if not auth_context.is_authenticated:
+        return
+    # Local import: route_generator imports auth at module load, so importing it
+    # at top level here would create a circular import.
+    from dazzle.back.runtime.route_generator import _resolve_user_attribute
+    from dazzle.back.runtime.tenant_isolation import set_current_tenant_id
+
+    tenant_id = _resolve_user_attribute("tenant_id", auth_context)
+    # "__RBAC_DENY__" means the attribute was absent — leave unbound (fail-closed).
+    if isinstance(tenant_id, str) and tenant_id and tenant_id != "__RBAC_DENY__":
+        set_current_tenant_id(tenant_id)
+
+
 def create_auth_dependency(
     auth_store: AuthStore,
     cookie_name: str = "dazzle_session",
@@ -69,6 +102,7 @@ def create_auth_dependency(
                     detail=f"Required roles: {require_roles}",
                 )
 
+        _bind_rls_tenant_id(auth_context)
         return auth_context
 
     return get_current_user
@@ -148,6 +182,8 @@ def create_optional_auth_dependency(
         if not session_id:
             return AuthContext()
 
-        return auth_store.validate_session(session_id)
+        auth_context = auth_store.validate_session(session_id)
+        _bind_rls_tenant_id(auth_context)
+        return auth_context
 
     return get_optional_user
