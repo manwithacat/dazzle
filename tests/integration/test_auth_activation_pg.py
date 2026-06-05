@@ -96,3 +96,80 @@ def test_set_session_active_membership_rejects_suspended(scratch_url: str) -> No
 
     ok = store.set_session_active_membership(session.id, m.id, identity_id=uid)
     assert ok is False
+
+
+# ── Task 4: activation at password login / signup ────────────────────────────
+
+
+def _app_with_store(store):
+    """Minimal FastAPI app wiring the password-login router to `store`."""
+    from fastapi import FastAPI
+
+    from dazzle.back.runtime.auth.password_login_routes import (
+        create_password_login_routes,
+    )
+
+    app = FastAPI()
+    app.state.auth_store = store
+    app.state.auth_password_mode_enabled = True
+    app.include_router(create_password_login_routes())
+    return app
+
+
+def _client(app):
+    from fastapi.testclient import TestClient
+
+    return TestClient(app, follow_redirects=False)
+
+
+def test_password_login_single_membership_auto_activates(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="solo@b.test", password="pw123456")
+    store.create_membership(tenant_id="t-1", identity_id=str(user.id), roles=["admin"])
+
+    resp = _client(_app_with_store(store)).post(
+        "/auth/login/password", data={"email": "solo@b.test", "password": "pw123456"}
+    )
+    assert resp.status_code == 303
+    sid = resp.cookies.get("dazzle_session")
+    assert sid is not None
+    ctx = store.validate_session(sid)
+    assert ctx.active_membership is not None
+    assert ctx.active_membership.tenant_id == "t-1"
+    assert resp.headers["location"] == "/app"
+
+
+def test_password_login_multi_membership_redirects_to_picker(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="multi@b.test", password="pw123456")
+    store.create_membership(tenant_id="t-1", identity_id=str(user.id), roles=["admin"])
+    store.create_membership(tenant_id="t-2", identity_id=str(user.id), roles=["member"])
+
+    resp = _client(_app_with_store(store)).post(
+        "/auth/login/password", data={"email": "multi@b.test", "password": "pw123456"}
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/auth/select-org"
+    sid = resp.cookies.get("dazzle_session")
+    ctx = store.validate_session(sid)
+    assert ctx.active_membership is None  # not yet chosen
+
+
+def test_password_login_no_membership_redirects_to_no_orgs(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    store.create_user(email="orphan@b.test", password="pw123456")
+
+    resp = _client(_app_with_store(store)).post(
+        "/auth/login/password", data={"email": "orphan@b.test", "password": "pw123456"}
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/auth/no-orgs"

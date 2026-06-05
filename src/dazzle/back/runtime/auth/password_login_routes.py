@@ -16,11 +16,16 @@ import logging
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.org_activation import (
+    FORBIDDEN_SENTINEL,
+    _login_redirect_for_outcome,
+    activate_session_for_login,
+)
 from dazzle.back.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
@@ -117,10 +122,15 @@ def create_password_login_routes() -> APIRouter:
         # presented so an attacker-planted id can't survive into the
         # authenticated state.
         pre_auth_sid = read_session_id(request)
-        session = auth_store.create_session(user)
+        # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
+        outcome = activate_session_for_login(auth_store, user, request)
+        safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
+        membership_id, redirect_to = _login_redirect_for_outcome(outcome, safe_next)
+        if redirect_to == FORBIDDEN_SENTINEL:
+            raise HTTPException(status_code=403, detail="no membership for this organization")
+        session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
-        redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         _set_session_cookie(
             response,
@@ -185,10 +195,18 @@ def create_password_login_routes() -> APIRouter:
         # presented so an attacker-planted id can't survive into the
         # newly-authenticated state.
         pre_auth_sid = read_session_id(request)
-        session = auth_store.create_session(user)
+        # Phase 2 (auth Plan 1b): a brand-new user has no memberships yet, so this
+        # resolves to NoOrgs → /auth/no-orgs (honest until Plan 1c auto-provisions
+        # a single-org membership at signup). Host-pinned signup with no membership
+        # there → 403.
+        outcome = activate_session_for_login(auth_store, user, request)
+        safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
+        membership_id, redirect_to = _login_redirect_for_outcome(outcome, safe_next)
+        if redirect_to == FORBIDDEN_SENTINEL:
+            raise HTTPException(status_code=403, detail="no membership for this organization")
+        session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
-        redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         _set_session_cookie(
             response,
