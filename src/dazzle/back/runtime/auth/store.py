@@ -665,6 +665,19 @@ class SessionStoreMixin:
         """Delete all sessions for a user."""
         return int(self._execute_modify("DELETE FROM sessions WHERE user_id = %s", (str(user_id),)))
 
+    def delete_sessions_for_membership(self, membership_id: str) -> int:
+        """Delete sessions currently acting as ``membership_id`` (auth Plan 4c).
+
+        Used by SCIM deactivate/deprovision: suspending one org's membership must
+        kill the identity's *sessions in that org* — sessions where they're acting as
+        a different org's membership survive (multi-org-correct revocation).
+        """
+        return int(
+            self._execute_modify(
+                "DELETE FROM sessions WHERE active_membership_id = %s", (membership_id,)
+            )
+        )
+
     def count_active_sessions(self, user_id: UUID | None = None) -> int:
         """
         Count active (non-expired) sessions.
@@ -1207,6 +1220,32 @@ class SessionStoreMixin:
             if d in verified:
                 return self._row_to_connection(row)
         return None
+
+    def get_scim_connection_by_bearer(self, token: str) -> "ConnectionRecord | None":  # noqa: F821
+        """Authenticate a SCIM request: the active SCIM connection whose stored bearer
+        matches ``token`` (auth Plan 4c), or ``None``.
+
+        Constant-time comparison (``hmac.compare_digest``) against each candidate's
+        decrypted ``secrets['scim_bearer']`` so a timing side-channel can't reveal the
+        token byte-by-byte. Fail-closed: an empty token, or a connection with no stored
+        bearer, never matches. The bearer is high-entropy, so the small per-connection
+        timing signal (how many candidates were compared) can't help forge it.
+        """
+        import hmac
+
+        if not token:
+            return None
+        match: ConnectionRecord | None = None
+        for row in self._execute(
+            "SELECT * FROM connections WHERE status = 'active' AND type = 'scim'"
+        ):
+            conn = self._row_to_connection(row)
+            stored = (conn.secrets or {}).get("scim_bearer") or ""
+            # Compare as bytes so a non-ASCII presented token fails closed (no match)
+            # instead of raising in compare_digest.
+            if stored and hmac.compare_digest(str(stored).encode("utf-8"), token.encode("utf-8")):
+                match = conn  # don't break — compare all candidates (uniform work)
+        return match
 
     def set_connection_domains(self, connection_id: str, domains: list[str]) -> None:
         """Set the *claimed* domain list (advisory — never routes until verified)."""

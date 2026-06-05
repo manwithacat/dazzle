@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.51] - 2026-06-06
+
+### Added
+
+- **Auth Plan 4c.i — SCIM provisioning kernel + bearer auth** (plan `docs/superpowers/plans/2026-06-06-auth-plan-4c-i-scim-kernel.md`; spec §5). The security substance of SCIM 2.0: authenticate an IdP's bearer to its connection/org and turn provisioning intents into identity + membership state changes (the SCIM REST/JSON endpoints are 4c.ii). `scim_provisioning.py`: `provision_scim_user` (create-or-update — resolve/create the global identity by **verified** email, ensure an org membership reflecting `active` + the group→role mapping, idempotent re-push), `set_scim_user_active` (the `active` PATCH toggle), `deprovision_scim_user` (DELETE). Two new store primitives: **`get_scim_connection_by_bearer`** — constant-time (`hmac.compare_digest` over bytes), fail-closed (empty token / no stored bearer / non-SCIM connection never match) — and **`delete_sessions_for_membership`** — multi-org-correct revocation (deletes only sessions acting as that one membership; other orgs' sessions survive). Load-bearing invariants, all mirroring 4b.ii: **anti-hijack** (a SCIM connection may only provision emails within its `verified_domains`; none → provisions nobody), **deactivate → suspend + revoke** (`active:false` suspends the membership AND kills its sessions, so access is lost immediately), **org-scoped** (every lookup/mutation matches `connection.tenant_id` — org A's bearer can't touch org B), and **default-deny roles** (reuses `map_groups_to_roles`). Adversarially reviewed (silent-failure-hunter): bearer-auth, anti-hijack, deactivate-revokes, and org-scoping all confirmed sound; **one HIGH fixed in-slice** — the role-sync skipped updates when the target set was empty, so removing a user from all IdP groups silently retained their last (possibly admin) roles; de-escalation-to-zero now applies. Proven against real Postgres (`tests/integration/test_connections_pg.py`).
+
+### Agent Guidance
+
+- **SCIM provisioning is org-scoped and authoritative.** A SCIM connection's bearer (stored in `secrets["scim_bearer"]`, encrypted at rest; authenticate via `get_scim_connection_by_bearer`) only acts within that connection's org, and only for emails in its **verified** domains — so verifying domains (Plan 4b.iv) gates SCIM too. `active:false`/DELETE suspend/remove the membership AND revoke its sessions (`delete_sessions_for_membership`) — access is cut immediately; the global identity and the user's sessions in *other* orgs survive. Roles are projected from IdP groups via `connection.group_mapping` (default-deny) and **fully synced on every push** including down to zero — never grant a role outside the mapping, and expect a re-push with no groups to strip all roles. The wire-format REST endpoints + a bearer-minting CLI are the next slice (4c.ii).
+
 ## [0.81.50] - 2026-06-06
 
 ### Added

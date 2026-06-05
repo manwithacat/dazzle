@@ -144,6 +144,32 @@ def test_claim_verified_domain_unknown_connection(store_url: str) -> None:
     assert store.claim_verified_domain("nonexistent", "acme.test") is False
 
 
+def test_get_scim_connection_by_bearer(store_url: str) -> None:
+    store = _store(store_url)
+    c = store.create_connection(
+        tenant_id="org-1", type="scim", config={}, secrets={"scim_bearer": "tok-123"}, domains=[]
+    )
+    # An OIDC connection with no bearer must never match.
+    store.create_connection(tenant_id="org-2", type="oidc", config={}, secrets={}, domains=[])
+    assert store.get_scim_connection_by_bearer("tok-123").id == c.id
+    assert store.get_scim_connection_by_bearer("wrong-token") is None
+    assert store.get_scim_connection_by_bearer("") is None
+
+
+def test_delete_sessions_for_membership_is_org_scoped(store_url: str) -> None:
+    store = _store(store_url)
+    user = store.create_user(email="jane@acme.test", password="pw-placeholder-1")
+    m1 = store.create_membership(tenant_id="org-1", identity_id=str(user.id))
+    m2 = store.create_membership(tenant_id="org-2", identity_id=str(user.id))
+    store.create_session(user, active_membership_id=m1.id)
+    store.create_session(user, active_membership_id=m2.id)
+    assert store.count_active_sessions(user.id) == 2
+    # Revoke only the org-1 membership's sessions; the org-2 session survives.
+    assert store.delete_sessions_for_membership(m1.id) == 1
+    assert store.count_active_sessions(user.id) == 1
+    assert store.delete_sessions_for_membership(m1.id) == 0  # idempotent
+
+
 def test_migration_0011_creates_connections(store_url: str) -> None:
     from alembic import command
     from alembic.config import Config
