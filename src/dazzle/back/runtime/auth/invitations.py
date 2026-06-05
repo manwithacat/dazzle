@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from psycopg.errors import UniqueViolation as _UniqueViolation
+
 INVITATIONS_DDL = """
 CREATE TABLE IF NOT EXISTS invitations (
     token TEXT PRIMARY KEY,
@@ -174,18 +176,26 @@ def accept_invitation(
     if not email_verified:
         raise InvitationError("unverified", "verify your email address before accepting")
     # Already a member of this org? Don't duplicate (uq_memberships_tenant_identity).
+    # NOTE: this matches a membership of ANY status — a *suspended* prior member is
+    # told ``already_member`` (reactivate them rather than re-invite). A *removed*
+    # member has no row, so re-invite works.
     for m in store.get_memberships_for_identity(identity_id):
         if m.tenant_id == inv.org_id:
             raise InvitationError("already_member", "already a member of this organization")
 
-    membership = store.create_membership(
-        tenant_id=inv.org_id,
-        identity_id=identity_id,
-        roles=inv.roles,
-        invited_by=inv.invited_by,
-        actor_id=inv.invited_by,
-        reason="invitation accepted",
-    )
+    try:
+        membership = store.create_membership(
+            tenant_id=inv.org_id,
+            identity_id=identity_id,
+            roles=inv.roles,
+            invited_by=inv.invited_by,
+            actor_id=inv.invited_by,
+            reason="invitation accepted",
+        )
+    except _UniqueViolation as exc:
+        # A concurrent accept won the (org, identity) unique constraint between our
+        # guard read and this insert — surface a clean already_member, not a 500.
+        raise InvitationError("already_member", "already a member of this organization") from exc
     store._execute_modify(
         "UPDATE invitations SET accepted_at = %s WHERE token = %s",
         (datetime.now(UTC).isoformat(), token),

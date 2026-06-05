@@ -25,6 +25,16 @@ def _product_name(request: Request) -> str:
     return str(brand.get("product_name", "Dazzle"))
 
 
+def _is_wellformed_token(token: str) -> bool:
+    """A real invitation token is ``secrets.token_urlsafe`` → ``[A-Za-z0-9_-]``.
+
+    Reject anything else BEFORE it reaches the DB lookup / a ``URL(...)`` (a token
+    with a ``:`` would otherwise raise in the Fragment URL scheme check → 500). A
+    malformed token is treated as a not-found invitation (fail-closed).
+    """
+    return bool(token) and len(token) <= 256 and all(c.isalnum() or c in "-_" for c in token)
+
+
 def create_invitation_routes() -> APIRouter:
     router = APIRouter(tags=["auth"])
 
@@ -78,20 +88,28 @@ def create_invitation_routes() -> APIRouter:
 
     @router.get("/auth/accept-invite/{token}", response_class=HTMLResponse, include_in_schema=False)
     async def accept_page(request: Request, token: str) -> str:
-        from dazzle.back.runtime.auth.invitation_views import build_accept_invite_view
+        from dazzle.back.runtime.auth.invitation_views import (
+            build_accept_invite_view,
+            build_invite_result_view,
+        )
         from dazzle.back.runtime.auth.invitations import get_invitation
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         store = request.app.state.auth_store
+        # Malformed / not-found / used → a token-free invalid page (never embed an
+        # untrusted token into a URL — a `:` would 500 the Fragment URL builder).
+        if not _is_wellformed_token(token):
+            return FragmentRenderer().render(
+                build_invite_result_view(
+                    product_name=_product_name(request), message="This invitation link is invalid."
+                )
+            )
         inv = get_invitation(store, token)
         if inv is None or inv.accepted_at is not None:
             return FragmentRenderer().render(
-                build_accept_invite_view(
+                build_invite_result_view(
                     product_name=_product_name(request),
-                    org_name="(invalid or already-used invitation)",
-                    roles=[],
-                    token=token,
-                    signed_in_email=None,
+                    message="This invitation is invalid or has already been used.",
                 )
             )
         session_id = read_session_id(request)
@@ -118,6 +136,8 @@ def create_invitation_routes() -> APIRouter:
         from dazzle.back.runtime.auth.invitations import InvitationError, accept_invitation
 
         store = request.app.state.auth_store
+        if not _is_wellformed_token(token):
+            return HTMLResponse("Cannot accept invitation: invalid token", status_code=400)
         session_id = read_session_id(request)
         ctx = store.validate_session(session_id) if session_id else None
         if ctx is None or not ctx.is_authenticated or ctx.user is None:

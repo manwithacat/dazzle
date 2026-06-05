@@ -225,6 +225,37 @@ def test_migration_0010_creates_invitations(store_url: str) -> None:
     assert ver is not None and ver[0] == "0010_invitations"
 
 
+def test_accept_unique_violation_maps_to_already_member(store_url: str) -> None:
+    # A membership created between accept's guard-read and its insert (i.e. a
+    # concurrent winner) must surface as a clean already_member, not a 500/raw
+    # UniqueViolation. Simulate by monkeypatching get_memberships_for_identity to
+    # report "no membership" while the row in fact already exists.
+    from dazzle.back.runtime.auth.invitations import (
+        InvitationError,
+        accept_invitation,
+        create_invitation,
+    )
+
+    store = _store(store_url)
+    inviter = store.create_user(email="admin@acme.test", password="pw123456", roles=["owner"])
+    invitee = store.create_user(email="bob@acme.test", password="pw123456", roles=[])
+    # The race winner: a membership already exists, but the guard read won't see it.
+    store.create_membership(tenant_id="org-1", identity_id=str(invitee.id), roles=["member"])
+    token = create_invitation(
+        store, org_id="org-1", email="bob@acme.test", roles=["admin"], invited_by=str(inviter.id)
+    )
+    store.get_memberships_for_identity = lambda _id: []  # type: ignore[method-assign]
+    with pytest.raises(InvitationError) as ei:
+        accept_invitation(
+            store,
+            token,
+            identity_id=str(invitee.id),
+            accepting_email="bob@acme.test",
+            email_verified=True,
+        )
+    assert ei.value.reason == "already_member"  # UniqueViolation mapped, not a 500
+
+
 def _invite_app(store, org_admin_roles):
     from fastapi import FastAPI
 
