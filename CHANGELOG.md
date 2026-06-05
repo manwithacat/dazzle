@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.33] - 2026-06-05
+
+### Fixed
+
+- **Auth migration integration tests pinned to explicit revisions** (test-only). `test_migration_0007_applies_on_a_pre_0007_db` upgraded to alembic `head` and asserted the resulting version was `0007_memberships`; once Plan 1c added migration `0008_organizations`, `head` moved and the assertion failed on CI's postgres job (e2e/postgres-marked, so the unit gate didn't see it). Both auth-migration tests now `upgrade` to their specific revision (`0007_memberships` / `0008_organizations`) rather than `head`, so each stays pinned to its migration in isolation as the chain grows.
+
 ## [0.81.32] - 2026-06-05
 
 ### Added
