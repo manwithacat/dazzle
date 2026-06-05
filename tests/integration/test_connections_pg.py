@@ -120,6 +120,30 @@ def test_delete_connection(store_url: str) -> None:
     assert store.get_connection(conn.id) is None
 
 
+def test_claim_verified_domain_enforces_one_owner(store_url: str) -> None:
+    store = _store(store_url)
+    c1 = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={}, domains=["acme.test"]
+    )
+    c2 = store.create_connection(
+        tenant_id="org-2", type="oidc", config={}, secrets={}, domains=["acme.test"]
+    )
+    # First connection claims the domain; the second cannot (one owner per domain).
+    assert store.claim_verified_domain(c1.id, "acme.test") is True
+    assert store.claim_verified_domain(c2.id, "acme.test") is False
+    # Idempotent re-claim by the owner.
+    assert store.claim_verified_domain(c1.id, "ACME.test.") is True  # normalized
+    routed = store.get_connection_by_verified_domain("acme.test")
+    assert routed is not None and routed.id == c1.id
+    # The losing connection never got the domain in its verified list.
+    assert "acme.test" not in (store.get_connection(c2.id).verified_domains or [])
+
+
+def test_claim_verified_domain_unknown_connection(store_url: str) -> None:
+    store = _store(store_url)
+    assert store.claim_verified_domain("nonexistent", "acme.test") is False
+
+
 def test_migration_0011_creates_connections(store_url: str) -> None:
     from alembic import command
     from alembic.config import Config

@@ -1208,14 +1208,71 @@ class SessionStoreMixin:
                 return self._row_to_connection(row)
         return None
 
+    def set_connection_domains(self, connection_id: str, domains: list[str]) -> None:
+        """Set the *claimed* domain list (advisory — never routes until verified)."""
+        import json
+
+        self._execute_modify(
+            "UPDATE connections SET domains = %s, updated_at = %s WHERE id = %s",
+            (json.dumps(domains), datetime.now(UTC).isoformat(), connection_id),
+        )
+
     def set_connection_verified_domains(self, connection_id: str, verified: list[str]) -> None:
-        """Set the verified-domain list — the output of a domain-ownership check."""
+        """Set the verified-domain list — the output of a domain-ownership check.
+
+        Low-level blind overwrite. For domain *verification* prefer
+        :meth:`claim_verified_domain`, which enforces one-owner-per-domain atomically.
+        """
         import json
 
         self._execute_modify(
             "UPDATE connections SET verified_domains = %s, updated_at = %s WHERE id = %s",
             (json.dumps(verified), datetime.now(UTC).isoformat(), connection_id),
         )
+
+    def claim_verified_domain(self, connection_id: str, domain: str) -> bool:
+        """Atomically claim ``domain`` as verified for ``connection_id``.
+
+        Returns ``True`` when this connection owns the domain after the call (newly
+        claimed OR already its own — idempotent), ``False`` when a *different* active
+        connection already verified it (one verified owner per domain).
+
+        Serialized via a single advisory lock (mirrors the ``membership_events``
+        pattern) so concurrent verifications can neither both claim the same domain
+        (the cross-connection TOCTOU) nor lost-update a connection's domain list when
+        two domains are verified for it at once — the connection's current list is
+        re-read fresh inside the locked transaction, never trusting a caller snapshot.
+        """
+        import json
+
+        from dazzle.back.runtime.auth.domain_verification import CONNECTION_DOMAIN_LOCK_KEY
+
+        norm = domain.strip().lower().rstrip(".")
+        with self._transaction() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (CONNECTION_DOMAIN_LOCK_KEY,))
+            # Authoritative owner scan (active connections only).
+            cur.execute("SELECT id, verified_domains FROM connections WHERE status = 'active'")
+            for row in cur.fetchall():
+                verified = [
+                    x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")
+                ]
+                if norm in verified:
+                    return bool(row["id"] == connection_id)  # ours → True (idempotent); else False
+            # Unowned — append to THIS connection's fresh list (re-read inside the txn).
+            cur.execute("SELECT verified_domains FROM connections WHERE id = %s", (connection_id,))
+            row = cur.fetchone()
+            if row is None:
+                return False  # no such connection
+            current = {x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")}
+            cur.execute(
+                "UPDATE connections SET verified_domains = %s, updated_at = %s WHERE id = %s",
+                (
+                    json.dumps(sorted(current | {norm})),
+                    datetime.now(UTC).isoformat(),
+                    connection_id,
+                ),
+            )
+            return True
 
     def delete_connection(self, connection_id: str) -> bool:
         return bool(

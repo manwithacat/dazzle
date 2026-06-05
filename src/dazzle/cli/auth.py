@@ -723,3 +723,11 @@ def migrate(
         )
         for email in result.users_skipped:
             console.print(f"    - {email}")
+
+
+# `dazzle auth connection ...` — per-org enterprise SSO connection management +
+# DNS-TXT domain verification (auth Plan 4b.iv). Defined in a sibling module to keep
+# this file focused; the connection commands resolve the store via `_get_auth_store`.
+from dazzle.cli.auth_connection import connection_app  # noqa: E402
+
+auth_app.add_typer(connection_app, name="connection")

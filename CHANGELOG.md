@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.49] - 2026-06-06
+
+### Added
+
+- **Auth Plan 4b.iv — connection admin CLI + DNS-TXT domain verification** (plan `docs/superpowers/plans/2026-06-06-auth-plan-4b-iv-domain-verification.md`; spec §5). Domain verification is the anti-hijack gate: a domain only routes email→org / lets an IdP assert identities once its ownership is DNS-proven. `domain_verification.py`: the verification token is **HMAC-SHA256(`DAZZLE_CONNECTION_SECRET`, "domain-verify:<conn_id>:<domain>")** — deterministic (no storage/migration), unforgeable without the deployment key, and per-(connection, domain) so a token for one pair never verifies another; the admin publishes `dazzle-verify=<token>` as a DNS TXT record. `verify_domain` looks it up through an injectable resolver seam (`DnspythonResolver` default — `dnspython` in the `[sso]` extra, lazy-imported; a DNS error yields no-match, never a silent pass), then claims the domain via the new **`store.claim_verified_domain`** — an advisory-lock-serialized atomic claim (mirrors the `membership_events` lock) that enforces **one verified owner per domain** (the uniqueness promise deferred at `store.py:1198`) and re-reads the connection's list fresh inside the transaction so concurrent verifications can't both win a domain or lost-update the list. The admin surface is the **`dazzle auth connection`** CLI (`create` / `list` / `add-domain` / `show-verification` / `verify-domain` / `delete`) — DB access is the authz, like the rest of `dazzle auth` (agent/devops-driven). Adversarially reviewed (silent-failure-hunter): token unforgeability, fail-closed, exact TXT matching, and CLI secret hygiene all confirmed sound; the one HIGH (the original non-atomic one-owner-per-domain TOCTOU) was fixed in-slice with the atomic `claim_verified_domain` (proven against real Postgres in `tests/integration/test_connections_pg.py`).
+
+### Agent Guidance
+
+- **Verifying a domain is what activates an enterprise connection** — until a domain is DNS-verified it neither routes (`?email=`) nor lets its IdP assert identities. Flow: `dazzle auth connection create --tenant <org> --issuer … --client-id … --client-secret …` (prefer the `DAZZLE_OIDC_CLIENT_SECRET` env var so the secret stays out of argv) → `add-domain <conn> <domain>` (prints the `dazzle-verify=<token>` TXT record to publish) → publish the TXT in DNS → `verify-domain <conn> <domain>`. The token is HMAC-derived from `DAZZLE_CONNECTION_SECRET` (no key → can't verify), per-(connection, domain), and a domain can be verified by **only one** connection (atomic, race-safe). This is the prerequisite for the forthcoming `dazzle auth connection doctor` (config-vs-missing + activation runbook). `dnspython` ships in the `[sso]` extra.
+
 ## [0.81.48] - 2026-06-05
 
 ### Added
