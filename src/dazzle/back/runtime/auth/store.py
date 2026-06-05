@@ -957,6 +957,14 @@ class SessionStoreMixin:
         )
         return [self._row_to_membership(r) for r in rows]
 
+    def get_memberships_for_tenant(self, tenant_id: str) -> list[MembershipRecord]:
+        """Current roster: all memberships in an org (auth Plan 2b — access review)."""
+        rows = self._execute(
+            "SELECT * FROM memberships WHERE tenant_id = %s ORDER BY created_at",
+            (tenant_id,),
+        )
+        return [self._row_to_membership(r) for r in rows]
+
     # -- Membership lifecycle events (auth Plan 2a — compliance evidence) -----
 
     def _row_to_event(self, row: dict[str, Any]) -> "MembershipEvent":  # noqa: F821
