@@ -8,7 +8,7 @@ The flow (one scratch DB per test, dropped in ``finally``):
 
 1. **apply + idempotency** — load ``fixtures/tenant_rls``, ``create_all`` as the
    owner (sync SQLAlchemy, mirroring the Phase B/C harness), then run the async
-   ``apply_rls_policies`` against the same scratch DB via asyncpg. Assert
+   ``apply_rls_policies`` against the same scratch DB via psycopg3. Assert
    ``pg_policies`` / ``pg_class`` show the fence + baseline + scope policies and
    RLS enabled+forced on the tenant-scoped tables. Re-apply → no error, identical
    policy set (the DDL is DROP-then-CREATE).
@@ -16,11 +16,12 @@ The flow (one scratch DB per test, dropped in ``finally``):
 3. **drift detected** — drop ``tenant_fence`` on ``Project`` → ``detect_rls_drift``
    reports exactly that table's missing fence and nothing for the clean tables.
 
-``apply_rls_policies`` / ``detect_rls_drift`` are async (asyncpg); the existing
-Phase B/C tests use sync psycopg. Here we use sync SQLAlchemy for ``create_all``
-setup (as those tests do) and drive the async funcs via ``asyncio.run`` against
-an asyncpg connection to the same scratch DB, mirroring how
-``dazzle.db.connection.get_connection`` builds the conn.
+``apply_rls_policies`` / ``detect_rls_drift`` are async (psycopg3 since #1341);
+the existing Phase B/C tests use sync psycopg. Here we use sync SQLAlchemy for
+``create_all`` setup (as those tests do) and drive the async funcs via
+``asyncio.run`` over the REAL ``dazzle.db.connection.get_connection`` factory
+against the same scratch DB — exercising the exact conn the ``dazzle db`` CLI
+uses in production.
 
 Marked ``e2e`` + ``postgres``: skipped without ``TEST_DATABASE_URL`` /
 ``DATABASE_URL``; CI's ``postgres-tests`` job runs it against real PostgreSQL.
@@ -92,8 +93,9 @@ class _ApplyHarness:
     pk: str
     scoped: list[str]
 
-    def asyncpg_url(self) -> str:
-        # asyncpg wants a plain postgresql:// URL (no +psycopg suffix).
+    def conn_url(self) -> str:
+        # get_connection → psycopg.AsyncConnection.connect wants a plain
+        # postgresql:// URL (no +psycopg SQLAlchemy-dialect suffix).
         return self.scratch_url.replace("postgresql+psycopg://", "postgresql://")
 
 
@@ -144,11 +146,15 @@ def harness() -> Iterator[_ApplyHarness]:
             admin.execute(f'DROP DATABASE IF EXISTS "{scratch}"')  # nosemgrep — uuid-derived
 
 
-async def _with_asyncpg(url: str, coro_factory: Any) -> Any:
-    """Open an asyncpg connection to ``url``, run ``coro_factory(conn)``, close."""
-    import asyncpg
+async def _with_conn(url: str, coro_factory: Any) -> Any:
+    """Open a psycopg3 async conn via the production db-CLI factory, run, close.
 
-    conn = await asyncpg.connect(url)
+    Uses the real ``dazzle.db.connection.get_connection`` so the test drives the
+    exact connection (autocommit + dict rows) the ``dazzle db`` CLI uses.
+    """
+    from dazzle.db.connection import get_connection
+
+    conn = await get_connection(explicit_url=url)
     try:
         return await coro_factory(conn)
     finally:
@@ -187,7 +193,7 @@ def test_apply_creates_expected_policies_and_is_idempotent(harness: _ApplyHarnes
     async def _apply(conn: Any) -> int:
         return await apply_rls_policies(conn, harness.appspec, harness.entities)
 
-    count = asyncio.run(_with_asyncpg(harness.asyncpg_url(), _apply))
+    count = asyncio.run(_with_conn(harness.conn_url(), _apply))
     assert count > 0, "expected a non-empty RLS DDL set for the shared_schema fixture"
 
     # Project is the scoped entity: restrictive fence + per-verb scope policies
@@ -216,7 +222,7 @@ def test_apply_creates_expected_policies_and_is_idempotent(harness: _ApplyHarnes
     )
 
     # Idempotency: re-apply → no error, identical policy set + count.
-    count2 = asyncio.run(_with_asyncpg(harness.asyncpg_url(), _apply))
+    count2 = asyncio.run(_with_conn(harness.conn_url(), _apply))
     assert count2 == count, "re-apply changed the statement count (not idempotent)"
     assert _live_policy_names(harness.scratch_url, "Project") == project_policies
     assert _rls_flags(harness.scratch_url, "Project") == (True, True)
@@ -233,8 +239,8 @@ def test_no_drift_after_clean_apply(harness: _ApplyHarness) -> None:
     async def _drift(conn: Any) -> list[dict[str, Any]]:
         return await detect_rls_drift(conn, harness.appspec, harness.entities)
 
-    asyncio.run(_with_asyncpg(harness.asyncpg_url(), _apply))
-    drifts = asyncio.run(_with_asyncpg(harness.asyncpg_url(), _drift))
+    asyncio.run(_with_conn(harness.conn_url(), _apply))
+    drifts = asyncio.run(_with_conn(harness.conn_url(), _drift))
     assert drifts == [], f"a clean apply must show NO drift, got {drifts}"
 
 
@@ -250,14 +256,14 @@ def test_drift_detected_after_policy_dropped(harness: _ApplyHarness) -> None:
     async def _drift(conn: Any) -> list[dict[str, Any]]:
         return await detect_rls_drift(conn, harness.appspec, harness.entities)
 
-    asyncio.run(_with_asyncpg(harness.asyncpg_url(), _apply))
+    asyncio.run(_with_conn(harness.conn_url(), _apply))
 
     # Drop the fence on Project (as the owner/admin — DDL is not RLS-governed).
-    sync_url = harness.asyncpg_url()
+    sync_url = harness.conn_url()
     with psycopg.connect(sync_url, autocommit=True) as admin:
         admin.execute('DROP POLICY tenant_fence ON "Project"')
 
-    drifts = asyncio.run(_with_asyncpg(harness.asyncpg_url(), _drift))
+    drifts = asyncio.run(_with_conn(harness.conn_url(), _drift))
 
     by_entity = {d["entity"]: d for d in drifts}
     assert "Project" in by_entity, f"Project drift not detected; got {drifts}"
@@ -283,13 +289,13 @@ def test_drift_detected_when_rls_disabled(harness: _ApplyHarness) -> None:
     async def _drift(conn: Any) -> list[dict[str, Any]]:
         return await detect_rls_drift(conn, harness.appspec, harness.entities)
 
-    asyncio.run(_with_asyncpg(harness.asyncpg_url(), _apply))
+    asyncio.run(_with_conn(harness.conn_url(), _apply))
 
-    sync_url = harness.asyncpg_url()
+    sync_url = harness.conn_url()
     with psycopg.connect(sync_url, autocommit=True) as admin:
         admin.execute('ALTER TABLE "Member" DISABLE ROW LEVEL SECURITY')
 
-    drifts = asyncio.run(_with_asyncpg(harness.asyncpg_url(), _drift))
+    drifts = asyncio.run(_with_conn(harness.conn_url(), _drift))
     by_entity = {d["entity"]: d for d in drifts}
     assert "Member" in by_entity, f"Member drift not detected; got {drifts}"
     assert any("not enabled" in i for i in by_entity["Member"]["issues"])

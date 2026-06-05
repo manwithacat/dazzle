@@ -1,10 +1,10 @@
 """Tests for dazzle.db.reset — truncate entity tables in dependency order."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 
 from dazzle.db.reset import db_reset_impl
+
+from ._fake_pg import scalar_conn
 
 
 class TestDbResetImpl:
@@ -14,15 +14,13 @@ class TestDbResetImpl:
         student = make_entity("Student", {"school": "School"})
         exclusion = make_entity("Exclusion", {"student": "Student"})
 
-        conn = AsyncMock()
-        conn.execute = AsyncMock(return_value=None)
-        conn.fetchval = AsyncMock(return_value=10)
+        conn = scalar_conn(10)
 
         result = await db_reset_impl(entities=[school, student, exclusion], conn=conn)
 
         assert result["truncated"] == 3
         # Verify leaf-first ordering in calls
-        calls = [c for c in conn.execute.call_args_list if "TRUNCATE" in str(c)]
+        calls = conn.execute_calls("TRUNCATE")
         assert len(calls) == 3
         # Exclusion (leaf) should be truncated first
         assert "Exclusion" in str(calls[0])
@@ -32,9 +30,7 @@ class TestDbResetImpl:
     async def test_preserves_auth_tables(self, make_entity) -> None:
         """Entity named 'Task' should still be truncated — only internal auth tables preserved."""
         task = make_entity("Task")
-        conn = AsyncMock()
-        conn.execute = AsyncMock(return_value=None)
-        conn.fetchval = AsyncMock(return_value=5)
+        conn = scalar_conn(5)
 
         result = await db_reset_impl(entities=[task], conn=conn)
         assert result["truncated"] == 1
@@ -44,9 +40,7 @@ class TestDbResetImpl:
         e1 = make_entity("Config")
         e2 = make_entity("Task")
 
-        conn = AsyncMock()
-        conn.execute = AsyncMock(return_value=None)
-        conn.fetchval = AsyncMock(return_value=5)
+        conn = scalar_conn(5)
 
         result = await db_reset_impl(entities=[e1, e2], conn=conn, preserve={"Config"})
         assert result["truncated"] == 1
@@ -55,13 +49,12 @@ class TestDbResetImpl:
     @pytest.mark.asyncio
     async def test_dry_run(self, make_entity) -> None:
         task = make_entity("Task")
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(return_value=42)
+        conn = scalar_conn(42)
 
         result = await db_reset_impl(entities=[task], conn=conn, dry_run=True)
         assert result["dry_run"] is True
         assert result["would_truncate"] == 1
-        conn.execute.assert_not_called()
+        assert conn.execute_calls("TRUNCATE") == []
 
     @pytest.mark.asyncio
     async def test_skips_virtual_entities(self, make_entity) -> None:
@@ -76,14 +69,12 @@ class TestDbResetImpl:
         system_health = make_entity("SystemHealth")
         system_metric = make_entity("SystemMetric")
 
-        conn = AsyncMock()
-        conn.execute = AsyncMock(return_value=None)
-        conn.fetchval = AsyncMock(return_value=5)
+        conn = scalar_conn(5)
 
         result = await db_reset_impl(entities=[real, system_health, system_metric], conn=conn)
         # Only the real entity should be truncated; virtual ones skipped.
         assert result["truncated"] == 1
-        truncate_calls = [c for c in conn.execute.call_args_list if "TRUNCATE" in str(c)]
+        truncate_calls = conn.execute_calls("TRUNCATE")
         assert len(truncate_calls) == 1
         assert "Task" in str(truncate_calls[0])
         assert "SystemHealth" not in str(truncate_calls[0])

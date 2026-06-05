@@ -596,6 +596,7 @@ def _rls_runtime_crossref(
     import asyncio
 
     from dazzle.cli.db import _resolve_url, _run_with_connection
+    from dazzle.db.connection import fetchall, fetchrow
 
     expected_by_table: dict[str, set[str]] = {}
     for d in descriptors:
@@ -606,14 +607,16 @@ def _rls_runtime_crossref(
     async def _run(conn: Any) -> dict[str, dict[str, Any]]:
         live: dict[str, dict[str, Any]] = {}
         for table in expected_by_table:
-            policy_rows = await conn.fetch(
-                "SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = $1",
-                table,
+            policy_rows = await fetchall(
+                conn,
+                "SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = %s",
+                (table,),
             )
-            class_row = await conn.fetchrow(
+            class_row = await fetchrow(
+                conn,
                 "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
-                "WHERE relname = $1 AND relnamespace = 'public'::regnamespace",
-                table,
+                "WHERE relname = %s AND relnamespace = 'public'::regnamespace",
+                (table,),
             )
             live[table] = {
                 "policies": {r["policyname"] for r in policy_rows},

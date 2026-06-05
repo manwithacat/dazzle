@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.27] - 2026-06-05
+
+### Changed
+
+- **`dazzle db` CLI migrated off `asyncpg` onto psycopg3 — psycopg3 is now the single Postgres driver across the whole codebase** (#1341). The async `dazzle db` path (`dazzle.db.connection.get_connection`) previously opened a raw `asyncpg` connection; it now returns a `psycopg.AsyncConnection` (`autocommit=True`, `dict_row`) — the same driver the request runtime (`back/runtime/pg_backend.py`), SQLAlchemy/Alembic, and the tenant registry already use. Reads go through three small helpers in `connection.py` (`fetchval` / `fetchrow` / `fetchall`) over the psycopg3 cursor protocol; asyncpg `$1/$2` positional params became `%s` (in `money_migration`, `rls_drift`, `signable_drift`, `inspect rls --runtime`); native `await conn.execute(<ddl>)` sites are unchanged. The Phase-D RLS `apply-rls`/drift real-PG integration test now drives the real `get_connection`. `autocommit=True` mirrors the prior asyncpg per-statement-commit semantics (the CLI is one-shot ops — TRUNCATE / DELETE / CREATE POLICY / `SET search_path`).
+
+### Removed
+
+- **`asyncpg` removed from core dependencies** (#1341). It was promoted to core in v0.81.25 only as a band-aid for an undeclared-import CI red; with the db CLI on psycopg3 it has no remaining users in `src/`. Removes the second-driver footprint and the PgBouncer transaction-pooling footgun (asyncpg's default server-side prepared-statement cache) from the deploy-critical `dazzle db upgrade` / `apply-rls` / `verify` path.
+
+### Agent Guidance
+
+- **psycopg3 is the only Postgres driver — do not reintroduce asyncpg.** For new async `dazzle db`-side reads, use the `fetchval` / `fetchrow` / `fetchall` helpers in `dazzle.db.connection` (psycopg3 `%s` params, passed as a tuple; rows are `dict_row` mappings — read columns by name, not index). Raw DDL/DML goes through `await conn.execute(sql)` (commits immediately under the CLI connection's `autocommit=True`). Unit tests that need a fake `dazzle db` connection use `tests/unit/_fake_pg.py` (`FakePgConn` + `scalar_conn`), which implement the psycopg3 cursor protocol — not asyncpg-shaped `conn.fetchval(...)` mocks.
+
 ## [0.81.26] - 2026-06-05
 
 ### Changed

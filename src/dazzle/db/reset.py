@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+from .connection import fetchval
 from .graph import leaves_first
 from .sql import quote_id
 from .virtual import VIRTUAL_ENTITY_NAMES
@@ -50,7 +51,7 @@ async def db_reset_impl(
 
     Args:
         entities: List of EntitySpec objects.
-        conn: asyncpg connection.
+        conn: psycopg3 async connection.
         preserve: Set of entity names to skip (PascalCase).
         dry_run: If True, report what would be truncated without doing it.
 
@@ -82,7 +83,7 @@ async def db_reset_impl(
         truncate_sql = _build_truncate_query(table=table)
 
         try:
-            row_count = await conn.fetchval(count_sql)
+            row_count = await fetchval(conn, count_sql)
         except Exception:
             row_count = 0
 

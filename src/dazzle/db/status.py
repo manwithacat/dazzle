@@ -3,6 +3,7 @@
 
 from typing import Any
 
+from .connection import fetchval
 from .sql import quote_id
 
 
@@ -15,7 +16,7 @@ async def db_status_impl(
 
     Args:
         entities: List of EntitySpec objects.
-        conn: asyncpg connection.
+        conn: psycopg3 async connection.
 
     Returns:
         Dict with entity row counts, totals, and database size.
@@ -26,7 +27,7 @@ async def db_status_impl(
     for entity in entities:
         table = quote_id(entity.name)
         try:
-            count = await conn.fetchval(f"SELECT count(*) FROM {table}")
+            count = await fetchval(conn, f"SELECT count(*) FROM {table}")
             results.append(
                 {"name": entity.name, "table": entity.name, "rows": count, "error": None}
             )
@@ -36,7 +37,9 @@ async def db_status_impl(
 
     # Database size
     try:
-        db_size = await conn.fetchval("SELECT pg_size_pretty(pg_database_size(current_database()))")
+        db_size = await fetchval(
+            conn, "SELECT pg_size_pretty(pg_database_size(current_database()))"
+        )
     except Exception:
         db_size = "unknown"
 

@@ -1,11 +1,11 @@
 # tests/unit/test_db_status.py
 """Tests for dazzle.db.status — row counts and database size."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 
 from dazzle.db.status import db_status_impl
+
+from ._fake_pg import scalar_conn
 
 
 class TestDbStatusImpl:
@@ -15,9 +15,8 @@ class TestDbStatusImpl:
         e2 = make_entity("Task")
         entities = [e1, e2]
 
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(
-            side_effect=[
+        conn = scalar_conn(
+            [
                 12,  # User count
                 150,  # Task count
                 "2.1 MB",  # DB size
@@ -38,9 +37,8 @@ class TestDbStatusImpl:
     @pytest.mark.asyncio
     async def test_handles_missing_table(self, make_entity) -> None:
         e1 = make_entity("Missing")
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(
-            side_effect=[
+        conn = scalar_conn(
+            [
                 Exception("relation does not exist"),
                 "1 MB",
             ]

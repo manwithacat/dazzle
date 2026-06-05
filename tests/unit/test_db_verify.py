@@ -1,10 +1,10 @@
 """Tests for dazzle.db.verify — FK integrity checking."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 
 from dazzle.db.verify import _build_orphan_query, db_verify_impl
+
+from ._fake_pg import scalar_conn
 
 
 class TestBuildOrphanQuery:
@@ -28,8 +28,7 @@ class TestDbVerifyImpl:
         student = make_entity("Student", {"school": "School"})
         entities = [school, student]
 
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(return_value=0)
+        conn = scalar_conn(0)
 
         result = await db_verify_impl(entities=entities, conn=conn)
         assert result["total_issues"] == 0
@@ -42,8 +41,7 @@ class TestDbVerifyImpl:
         student = make_entity("Student", {"school": "School"})
         entities = [school, student]
 
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(return_value=3)
+        conn = scalar_conn(3)
 
         result = await db_verify_impl(entities=entities, conn=conn)
         assert result["total_issues"] == 3
@@ -55,8 +53,7 @@ class TestDbVerifyImpl:
         student = make_entity("Student", {"school": "School"})
         school = make_entity("School")
 
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(side_effect=Exception("relation does not exist"))
+        conn = scalar_conn(Exception("relation does not exist"))
 
         result = await db_verify_impl(entities=[school, student], conn=conn)
         assert result["checks"][0]["status"] == "error"
@@ -69,8 +66,7 @@ class TestDbVerifyImpl:
         student = make_entity("Student", {"school": "School"})
         school = make_entity("School")
 
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(side_effect=Exception("column does not exist"))
+        conn = scalar_conn(Exception("column does not exist"))
 
         result = await db_verify_impl(entities=[school, student], conn=conn)
         assert result["warning_count"] == 1
@@ -81,8 +77,7 @@ class TestDbVerifyImpl:
         school = make_entity("School")
         student = make_entity("Student", {"school": "School"})
 
-        conn = AsyncMock()
-        conn.fetchval = AsyncMock(return_value=0)
+        conn = scalar_conn(0)
 
         result = await db_verify_impl(entities=[school, student], conn=conn)
         assert result["warning_count"] == 0
@@ -96,9 +91,8 @@ class TestDbVerifyImpl:
         student = make_entity("Student", {"school": "School"})
         teacher = make_entity("Teacher", {"school": "School"})
 
-        conn = AsyncMock()
         # School→student: 5 orphans. School→teacher: SQL error (column mismatch).
-        conn.fetchval = AsyncMock(side_effect=[5, Exception("column 'school_id' does not exist")])
+        conn = scalar_conn([5, Exception("column 'school_id' does not exist")])
 
         result = await db_verify_impl(entities=[school, student, teacher], conn=conn)
         assert result["total_issues"] == 5

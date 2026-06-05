@@ -34,6 +34,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .connection import fetchrow
 from .sql import quote_id
 
 
@@ -61,11 +62,11 @@ async def _live_column_type(conn: Any, table: str, column: str) -> str | None:
     Uses ``information_schema`` so it works across schemas without requiring
     the caller to pass one in.
     """
-    row = await conn.fetchrow(
+    row = await fetchrow(
+        conn,
         "SELECT data_type FROM information_schema.columns "
-        "WHERE table_name = $1 AND column_name = $2 LIMIT 1",
-        table,
-        column,
+        "WHERE table_name = %s AND column_name = %s LIMIT 1",
+        (table, column),
     )
     return row["data_type"] if row else None
 
@@ -161,9 +162,10 @@ async def repair_money_drifts(
     the combined SQL — the caller is responsible for executing it manually.
 
     When ``apply=True`` each drift's repair SQL is run on the supplied
-    connection. The caller should wrap the call in a transaction so a
-    partial failure rolls back; this function runs the statements one at a
-    time without opening its own transaction (asyncpg manages that).
+    connection. This function runs the statements one at a time without
+    opening its own transaction; a caller that needs partial-failure rollback
+    must wrap the call in an explicit transaction (the default ``dazzle db``
+    connection is autocommit, so each statement otherwise commits on its own).
     """
     drifts = await detect_money_drifts(conn, entities)
     applied: list[str] = []

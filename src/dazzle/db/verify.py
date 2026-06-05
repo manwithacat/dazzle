@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from .connection import fetchval
 from .graph import get_ref_fields
 from .sql import quote_id
 
@@ -35,7 +36,7 @@ async def db_verify_impl(
 
     Args:
         entities: List of EntitySpec objects.
-        conn: asyncpg connection.
+        conn: psycopg3 async connection.
 
     Returns:
         Dict with check results and total issue count.
@@ -64,7 +65,7 @@ async def db_verify_impl(
             )
 
             try:
-                orphan_count = await conn.fetchval(sql)
+                orphan_count = await fetchval(conn, sql)
                 if orphan_count > 0:
                     checks.append(
                         {

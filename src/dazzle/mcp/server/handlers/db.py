@@ -12,7 +12,7 @@ from .common import extract_progress, load_project_appspec, wrap_async_handler_e
 
 
 async def get_connection(*, project_root: Path) -> Any:
-    """Get asyncpg connection for the project."""
+    """Get a psycopg3 async connection for the project."""
     from dazzle.db.connection import get_connection as _get_conn
 
     return await _get_conn(project_root=project_root)

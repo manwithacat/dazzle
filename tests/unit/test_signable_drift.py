@@ -8,15 +8,20 @@ from types import SimpleNamespace
 from dazzle.core.linker import SIGNABLE_AUTO_FIELD_NAMES
 from dazzle.db.signable_drift import detect_signable_drift, missing_signable_columns
 
+from ._fake_pg import FakePgConn
 
-class _FakeConn:
-    """Minimal asyncpg-like conn: maps table name -> live column set."""
 
-    def __init__(self, tables: dict[str, set[str]]) -> None:
-        self._tables = tables
+def _FakeConn(tables: dict[str, set[str]]) -> FakePgConn:
+    """psycopg3-shaped conn mapping table name -> live column set.
 
-    async def fetch(self, _query: str, table: str) -> list[dict[str, str]]:
-        return [{"column_name": c} for c in self._tables.get(table, set())]
+    ``_live_columns`` binds the table name as the single ``%s`` param.
+    """
+
+    def handler(_sql: str, params: tuple[str, ...]) -> list[dict[str, str]]:
+        (table,) = params
+        return [{"column_name": c} for c in tables.get(table, set())]
+
+    return FakePgConn(handler)
 
 
 class TestSignableColumnNames:

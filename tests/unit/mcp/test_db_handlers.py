@@ -5,9 +5,11 @@ import json
 import sys
 from pathlib import Path
 from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+
+from .._fake_pg import scalar_conn
 
 
 def _import_db_handler():
@@ -92,11 +94,9 @@ class TestDbStatusHandler:
         appspec.domain.entities = [e1]
         mock_load.return_value = appspec
 
-        mock_conn = AsyncMock()
-        mock_conn.fetchval = AsyncMock(side_effect=[10, "1 MB"])
-        mock_conn.close = AsyncMock()
+        mock_conn = scalar_conn([10, "1 MB"])
 
-        async def fake_connect(**kw: object) -> AsyncMock:
+        async def fake_connect(**kw: object) -> object:
             return mock_conn
 
         mock_conn_factory.side_effect = fake_connect
@@ -119,10 +119,9 @@ class TestDbVerifyHandler:
         appspec.domain.entities = []
         mock_load.return_value = appspec
 
-        mock_conn = AsyncMock()
-        mock_conn.close = AsyncMock()
+        mock_conn = scalar_conn([])
 
-        async def fake_connect(**kw: object) -> AsyncMock:
+        async def fake_connect(**kw: object) -> object:
             return mock_conn
 
         mock_conn_factory.side_effect = fake_connect

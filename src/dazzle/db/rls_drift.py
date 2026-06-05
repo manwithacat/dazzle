@@ -31,6 +31,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .connection import fetchall, fetchrow
+
 
 def _live_policy_key(policy: dict[str, Any]) -> tuple[str, str, bool]:
     """Shape key for a live ``pg_policies`` row — ``(name, cmd, permissive)``.
@@ -120,10 +122,11 @@ def _perm(permissive: bool) -> str:
 
 async def _live_table_rls(conn: Any, table: str) -> tuple[bool, bool, bool]:
     """Return ``(table_exists, relrowsecurity, relforcerowsecurity)`` for a table."""
-    row = await conn.fetchrow(
+    row = await fetchrow(
+        conn,
         "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
-        "WHERE relname = $1 AND relnamespace = 'public'::regnamespace",
-        table,
+        "WHERE relname = %s AND relnamespace = 'public'::regnamespace",
+        (table,),
     )
     if row is None:
         return (False, False, False)
@@ -132,10 +135,11 @@ async def _live_table_rls(conn: Any, table: str) -> tuple[bool, bool, bool]:
 
 async def _live_policies(conn: Any, table: str) -> list[dict[str, Any]]:
     """Live ``pg_policies`` rows (policyname, cmd, permissive) for a table."""
-    rows = await conn.fetch(
+    rows = await fetchall(
+        conn,
         "SELECT policyname, cmd, permissive FROM pg_policies "
-        "WHERE schemaname = 'public' AND tablename = $1",
-        table,
+        "WHERE schemaname = 'public' AND tablename = %s",
+        (table,),
     )
     return [dict(r) for r in rows]
 
@@ -160,7 +164,7 @@ async def detect_rls_drift(conn: Any, appspec: Any, entities: list[Any]) -> list
     :func:`detect_signable_drift`).
 
     Args:
-        conn: An asyncpg connection (owned/closed by the caller).
+        conn: A psycopg3 async connection (owned/closed by the caller).
         appspec: The application IR (``.tenancy``, ``.domain.entities``).
         entities: The converted back-spec entities (``convert_entities(...)``).
 

@@ -255,9 +255,11 @@ class TestGenerateEnvTemplate:
 class TestGenerateRequirements:
     """Tests for requirements.txt generation."""
 
-    def test_includes_asyncpg(self) -> None:
+    def test_does_not_pin_asyncpg(self) -> None:
+        # #1341: psycopg3 is the single Postgres driver; asyncpg is no longer a
+        # dependency and must not be re-pinned in the generated requirements.
         result = generate_requirements()
-        assert "asyncpg" in result
+        assert "asyncpg" not in result
 
     def test_includes_aiosqlite(self) -> None:
         result = generate_requirements()

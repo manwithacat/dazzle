@@ -106,7 +106,7 @@ class TestApplyRlsSharedSchema:
     ) -> None:
         # The likeliest prod failure: running as the non-owner dazzle_app role →
         # InsufficientPrivilege. The command must exit non-zero with a clean
-        # owner-role hint, not dump a raw asyncpg traceback.
+        # owner-role hint, not dump a raw driver traceback.
         mock_load.return_value = _shared_schema_appspec()
         mock_resolve.return_value = "postgresql://localhost/db"
         mock_run.side_effect = RuntimeError("permission denied for table Project")

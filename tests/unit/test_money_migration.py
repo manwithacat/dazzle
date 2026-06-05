@@ -10,7 +10,7 @@ live-DB shape as clean / drift / partial.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from typing import Any
 
 import pytest
 
@@ -20,6 +20,31 @@ from dazzle.db.money_migration import (
     detect_money_drifts,
     repair_money_drifts,
 )
+
+from ._fake_pg import FakePgConn
+
+
+def _money_conn(by_column: dict[str, dict[str, Any]]) -> FakePgConn:
+    """conn whose ``_live_column_type`` probe maps the bound column -> a row.
+
+    ``_live_column_type`` binds ``(table, column)`` to the two ``%s`` params and
+    reads ``row["data_type"]``; a column absent from ``by_column`` reads as a
+    non-existent column (no row).
+    """
+
+    def handler(sql: str, params: tuple[Any, ...]) -> list[dict[str, Any]]:
+        if not sql.lstrip().upper().startswith("SELECT"):
+            return []  # repair DDL (ALTER/UPDATE) — recorded, no rows
+        _table, column = params
+        row = by_column.get(column)
+        return [row] if row else []
+
+    return FakePgConn(handler)
+
+
+def _applied_ddl(conn: FakePgConn) -> list[tuple[str, tuple[Any, ...]]]:
+    """Recorded statements that aren't reads — the applied repair DDL."""
+    return [c for c in conn.executed if not c[0].lstrip().upper().startswith("SELECT")]
 
 
 def _money_entity(name: str, field: str, currency: str = "GBP") -> SimpleNamespace:
@@ -71,29 +96,18 @@ class TestDetectMoneyDrifts:
     @pytest.mark.asyncio()
     async def test_clean_db_reports_no_drift(self) -> None:
         # Live DB already has the new shape — no legacy column, has _minor/_currency.
-        async def fetchrow(sql, table, column):
-            if column == "revenue":
-                return None
-            if column == "revenue_minor":
-                return {"data_type": "bigint"}
-            if column == "revenue_currency":
-                return {"data_type": "text"}
-            return None
-
-        conn = AsyncMock()
-        conn.fetchrow = fetchrow
+        conn = _money_conn(
+            {
+                "revenue_minor": {"data_type": "bigint"},
+                "revenue_currency": {"data_type": "text"},
+            }
+        )
         drifts = await detect_money_drifts(conn, [_money_entity("Company", "revenue")])
         assert drifts == []
 
     @pytest.mark.asyncio()
     async def test_legacy_shape_reports_drift(self) -> None:
-        async def fetchrow(sql, table, column):
-            if column == "revenue":
-                return {"data_type": "double precision"}
-            return None
-
-        conn = AsyncMock()
-        conn.fetchrow = fetchrow
+        conn = _money_conn({"revenue": {"data_type": "double precision"}})
         drifts = await detect_money_drifts(conn, [_money_entity("Company", "revenue", "USD")])
         assert len(drifts) == 1
         assert drifts[0]["status"] == "drift"
@@ -107,15 +121,12 @@ class TestDetectMoneyDrifts:
     async def test_partial_migration_flagged(self) -> None:
         """Legacy column + one of the new columns → partial, no repair SQL."""
 
-        async def fetchrow(sql, table, column):
-            if column == "revenue":
-                return {"data_type": "numeric"}
-            if column == "revenue_minor":
-                return {"data_type": "bigint"}
-            return None
-
-        conn = AsyncMock()
-        conn.fetchrow = fetchrow
+        conn = _money_conn(
+            {
+                "revenue": {"data_type": "numeric"},
+                "revenue_minor": {"data_type": "bigint"},
+            }
+        )
         drifts = await detect_money_drifts(conn, [_money_entity("Company", "revenue")])
         assert len(drifts) == 1
         assert drifts[0]["status"] == "partial"
@@ -125,54 +136,33 @@ class TestDetectMoneyDrifts:
     async def test_non_numeric_legacy_column_ignored(self) -> None:
         """If the column exists but isn't numeric, it's an unrelated column — skip."""
 
-        async def fetchrow(sql, table, column):
-            if column == "revenue":
-                return {"data_type": "text"}
-            return None
-
-        conn = AsyncMock()
-        conn.fetchrow = fetchrow
+        conn = _money_conn({"revenue": {"data_type": "text"}})
         drifts = await detect_money_drifts(conn, [_money_entity("Company", "revenue")])
         assert drifts == []
 
     @pytest.mark.asyncio()
     async def test_non_money_entities_skipped(self) -> None:
-        conn = AsyncMock()
-        conn.fetchrow = AsyncMock(return_value=None)
+        conn = _money_conn({})
         drifts = await detect_money_drifts(conn, [_non_money_entity("Article")])
         assert drifts == []
         # No queries emitted since the entity has no money fields.
-        conn.fetchrow.assert_not_called()
+        assert conn.executed == []
 
 
 class TestRepairMoneyDriftsDryRun:
     @pytest.mark.asyncio()
     async def test_dry_run_returns_drifts_without_executing(self) -> None:
-        async def fetchrow(sql, table, column):
-            if column == "revenue":
-                return {"data_type": "double precision"}
-            return None
-
-        conn = AsyncMock()
-        conn.fetchrow = fetchrow
-        conn.execute = AsyncMock()
+        conn = _money_conn({"revenue": {"data_type": "double precision"}})
         result = await repair_money_drifts(conn, [_money_entity("Company", "revenue")], apply=False)
         assert result["drift_count"] == 1
         assert result["applied_count"] == 0
         assert result["errors"] == []
-        conn.execute.assert_not_called()
+        assert _applied_ddl(conn) == []
 
     @pytest.mark.asyncio()
     async def test_apply_runs_four_statements(self) -> None:
-        async def fetchrow(sql, table, column):
-            if column == "revenue":
-                return {"data_type": "double precision"}
-            return None
-
-        conn = AsyncMock()
-        conn.fetchrow = fetchrow
-        conn.execute = AsyncMock()
+        conn = _money_conn({"revenue": {"data_type": "double precision"}})
         result = await repair_money_drifts(conn, [_money_entity("Company", "revenue")], apply=True)
         assert result["drift_count"] == 1
         assert result["applied_count"] == 4
-        assert conn.execute.await_count == 4
+        assert len(_applied_ddl(conn)) == 4

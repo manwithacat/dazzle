@@ -1109,7 +1109,7 @@ def apply_rls_command(
     # RLS apply always targets the shared public schema — no per-tenant
     # search_path. Wrap loud: the likeliest prod failure is running as the
     # non-owner runtime role (dazzle_app) → InsufficientPrivilege; surface a
-    # clean owner-role hint instead of a raw asyncpg traceback (matches the
+    # clean owner-role hint instead of a raw driver traceback (matches the
     # db-upgrade hook's error handling).
     try:
         applied = asyncio.run(_run_with_connection(project_root, url, _run))

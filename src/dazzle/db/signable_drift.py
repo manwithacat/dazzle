@@ -19,6 +19,8 @@ from typing import Any
 
 from dazzle.core.linker import SIGNABLE_AUTO_FIELD_NAMES
 
+from .connection import fetchall
+
 
 def missing_signable_columns(live_columns: set[str]) -> list[str]:
     """Return the signing columns absent from a live signable table, in order.
@@ -31,9 +33,10 @@ def missing_signable_columns(live_columns: set[str]) -> list[str]:
 
 async def _live_columns(conn: Any, table: str) -> set[str]:
     """Live column names for ``table`` via information_schema (empty if absent)."""
-    rows = await conn.fetch(
-        "SELECT column_name FROM information_schema.columns WHERE table_name = $1",
-        table,
+    rows = await fetchall(
+        conn,
+        "SELECT column_name FROM information_schema.columns WHERE table_name = %s",
+        (table,),
     )
     return {row["column_name"] for row in rows}
 

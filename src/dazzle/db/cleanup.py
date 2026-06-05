@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+from .connection import fetchval
 from .graph import get_ref_fields
 from .sql import quote_id
 from .verify import _build_orphan_query
@@ -41,7 +42,7 @@ async def db_cleanup_impl(
 
     Args:
         entities: List of EntitySpec objects.
-        conn: asyncpg connection.
+        conn: psycopg3 async connection.
         dry_run: If True, count orphans without deleting.
 
     Returns:
@@ -71,7 +72,7 @@ async def db_cleanup_impl(
                 pk_column=pk_column,
             )
             try:
-                count = await conn.fetchval(sql)
+                count = await fetchval(conn, sql)
                 if count > 0:
                     findings.append(
                         {
@@ -119,7 +120,7 @@ async def db_cleanup_impl(
                 pk_column=pk_column,
             )
             try:
-                count = await conn.fetchval(count_sql)
+                count = await fetchval(conn, count_sql)
                 if count == 0:
                     continue
 

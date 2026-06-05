@@ -28,17 +28,17 @@ async def apply_rls_policies(conn: Any, appspec: Any, entities: list[Any]) -> in
     """Apply the appspec's RLS policy DDL on ``conn``; return the statement count.
 
     Builds the DDL via :func:`build_all_rls_ddl` and executes each statement on
-    the (asyncpg) connection — matching ``dazzle.cli.db._run_with_connection``'s
-    async contract, where the callback receives an asyncpg connection and runs
-    ``await conn.execute(<raw SQL string>)``.
+    the (psycopg3 async) connection — matching ``dazzle.cli.db._run_with_connection``'s
+    async contract, where the callback receives a psycopg3 ``AsyncConnection`` and
+    runs ``await conn.execute(<raw SQL string>)``.
 
     Returns the number of statements executed; ``0`` (no-op) when the DDL list is
     empty (no row-level tenancy, a non-``shared_schema`` isolation mode, or no
     tenant-scoped entity). Idempotent — safe to re-run.
 
     Args:
-        conn: An asyncpg connection owned/closed by the caller (do NOT close it
-            here). Must connect as a role that OWNS the tenant tables.
+        conn: A psycopg3 ``AsyncConnection`` owned/closed by the caller (do NOT
+            close it here). Must connect as a role that OWNS the tenant tables.
         appspec: The application IR (``.tenancy``, ``.domain.entities``,
             ``.fk_graph``).
         entities: The converted back-spec entities (``convert_entities(...)``).

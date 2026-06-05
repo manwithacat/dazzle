@@ -135,7 +135,7 @@ pydantic>=2.0.0
 
 # Database
 aiosqlite>=0.19.0
-asyncpg>=0.29.0
+# PostgreSQL: psycopg3 is provided transitively by dazzle-dsl[serve] (#1341).
 
 # Optional: Redis (for Celery workers / caching)
 # redis>=5.0.0
