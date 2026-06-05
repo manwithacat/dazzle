@@ -282,3 +282,62 @@ def test_org_context_routes_are_mountable() -> None:
 
     paths = {r.path for r in create_org_context_routes().routes}
     assert {"/auth/select-org", "/auth/switch-org", "/auth/no-orgs"} <= paths
+
+
+# ── Task 11: host-pin activation keystone ────────────────────────────────────
+
+
+def test_host_pin_activates_matching_org_and_403s_on_mismatch(scratch_url: str) -> None:
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.auth.org_activation import (
+        Activated,
+        HostForbidden,
+        activate_session_for_login,
+    )
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="multi@b.test", password="pw123456")
+    store.create_membership(tenant_id="t-A", identity_id=str(user.id), roles=["admin"])
+    store.create_membership(tenant_id="t-B", identity_id=str(user.id), roles=["member"])
+
+    def _req(tenant_id):
+        tenant = SimpleNamespace(id=tenant_id, slug=tenant_id) if tenant_id else None
+        return SimpleNamespace(state=SimpleNamespace(tenant=tenant))
+
+    # Host-pinned to t-B → activates the t-B membership only.
+    out_b = activate_session_for_login(store, user, _req("t-B"))
+    assert isinstance(out_b, Activated)
+    assert store.get_membership(out_b.membership_id).tenant_id == "t-B"
+
+    # Host-pinned to an org the user isn't in → forbidden.
+    assert isinstance(activate_session_for_login(store, user, _req("t-UNKNOWN")), HostForbidden)
+
+
+def test_host_pin_uuid_discriminator_round_trips(scratch_url: str) -> None:
+    """MEDIUM-1 invariant guard (review): the host-pin matches a membership whose
+    `tenant_id` is `str(ResolvedTenant.id)` for a real UUID-shaped org id. This
+    pins the format contract so Plan 1c can't drift `membership.tenant_id` away
+    from `str(tenant_root.id)` undetected."""
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from dazzle.back.runtime.auth.org_activation import (
+        Activated,
+        activate_session_for_login,
+    )
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    org_id = uuid4()  # the tenant-root row id (Organization IS the tenant root)
+    user = store.create_user(email="u@b.test", password="pw123456")
+    m = store.create_membership(tenant_id=str(org_id), identity_id=str(user.id), roles=["admin"])
+
+    # The host resolver yields ResolvedTenant(id=org_id) — psycopg's str(UUID).
+    req = SimpleNamespace(state=SimpleNamespace(tenant=SimpleNamespace(id=org_id, slug="acme")))
+    out = activate_session_for_login(store, user, req)
+    assert isinstance(out, Activated)
+    assert out.membership_id == m.id

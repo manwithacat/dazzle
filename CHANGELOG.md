@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Auth identity model — Plan 1b: two-phase activation + org-context resolution** (second slice; spec §3/§4, plan `docs/superpowers/plans/2026-06-05-auth-plan-1b-two-phase-activation.md`). Login now runs **Phase 2** after proving identity: it resolves the identity's memberships and activates an org context onto the session. Rules (pure resolver in `auth/org_activation.py`): a **host-pin** (`tenant_host` #1289 → `request.state.tenant`) activates the membership whose `tenant_id == str(ResolvedTenant.id)` or returns **403**; otherwise a single active membership auto-activates, multiple → redirect to **`/auth/select-org`** (typed-Fragment org picker), zero → legacy proceed (or **`/auth/no-orgs`** once the app opts in via `app.state.memberships_required`, the Plan 1c gate). Wired into every interactive entry point (password login/signup, magic-link, SSO callback, 2FA-form completion) plus the JSON API login paths. New ownership-checked `AuthStore.set_session_active_membership` backs **`POST /auth/select-org`** and **`POST /auth/switch-org`** (org-switch re-scopes + rotates CSRF without re-auth; the RLS GUC re-binds on the next request). The two org-context POSTs are CSRF-protected via a new `CSRFConfig.protected_paths` anchored override (they live under `/auth/` but are authenticated privilege-changing mutations, not pre-session). Real-PG proof in `tests/integration/test_auth_activation_pg.py`.
+
+### Changed
+
+- **Runtime `permit:` / `scope:` role decisions now source the active membership's roles** (`effective_roles`), not the global `user.roles`. The switchover covers `route_generator` (Cedar runtime context, mutation auth, scoped pre-read, admin-persona bypass, forbidden-detail), `policy.check_entity_op` (the override permit/scope gate), and the atomic-flow `user_role_extractor`. A new membership-first `dazzle.back.runtime.auth.models.effective_roles_of(auth_context)` is the single duck-typed accessor (an active membership wins — even an empty role list, so it never leaks `user.roles`; otherwise the legacy roles, matching the 1a transition). Audit *attribution* still records the actor's global roles (per-membership attribution is Plan 2).
+
+### Agent Guidance
+
+- **Login activates an org context (Phase 2).** Single membership auto-activates; host-pin activates the matching org or **403s**; multiple → `/auth/select-org`; zero → legacy proceed unless `app.state.memberships_required` (Plan 1c) → `/auth/no-orgs`. `session.active_membership_id` is set at login; `POST /auth/switch-org` rotates it (+ CSRF). **Authorization now reads `effective_roles_of(auth_context)`** — if you wrote custom route/policy code that read `auth_context.user.roles` for an authz decision, switch it to `effective_roles_of(...)` (membership-first). Building a `MagicMock` auth context for any authz path: set `active_membership = None` (and `is_authenticated = True` / a real `roles` list) — `effective_roles_of` guards against the MagicMock auto-attr trap but faithful doubles are clearer. New `/auth/`-prefixed **authenticated** POST routes must be added to `CSRFConfig.protected_paths` (exact match) or they inherit the `/auth/` `NA_PREAUTH` CSRF exemption. The host-pin ↔ membership match assumes `membership.tenant_id == str(tenant_root.id)` — Plan 1c must populate it that way (pinned by `test_host_pin_uuid_discriminator_round_trips`).
+
 ## [0.81.28] - 2026-06-05
 
 ### Added

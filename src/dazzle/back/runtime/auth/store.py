@@ -565,7 +565,7 @@ class SessionStoreMixin:
             "UPDATE sessions SET active_membership_id = %s WHERE id = %s AND user_id = %s",
             (membership_id, session_id, identity_id),
         )
-        return rowcount == 1
+        return bool(rowcount == 1)
 
     def validate_session(self, session_id: str) -> AuthContext:
         """

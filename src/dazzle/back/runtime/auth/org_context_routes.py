@@ -11,8 +11,6 @@ the ``dazzle_csrf`` cookie; the RLS GUC re-binds on the next request via 1a's
 ``validate_session`` → ``_bind_rls_tenant_id``.
 """
 
-from __future__ import annotations
-
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Query, Request
