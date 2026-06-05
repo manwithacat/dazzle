@@ -472,14 +472,35 @@ def access_review_cmd(
         raise typer.Exit(code=1)
 
     store = AuthStore(database_url=url)
-    review = build_access_review(
-        store,
-        tenant,
-        as_of=as_of or None,
-        since=since or None,
-        until=until or None,
-        generated_at=datetime.now(UTC).isoformat(),
-    )
+
+    # M4: a typo'd tenant must not silently render as an empty org. Warn if the
+    # org id is unknown to the framework registry (non-fatal — legacy/domain-root
+    # apps may not register it, but an empty pack on a typo is a dangerous false
+    # "no access" negative).
+    if (
+        getattr(store, "get_organization", None) is not None
+        and store.get_organization(tenant) is None
+    ):
+        typer.echo(
+            f"WARNING: no organization with id {tenant!r} in the registry — "
+            "the evidence pack may be empty because the tenant id is wrong.",
+            err=True,
+        )
+
+    try:
+        review = build_access_review(
+            store,
+            tenant,
+            as_of=as_of or None,
+            since=since or None,
+            until=until or None,
+            generated_at=datetime.now(UTC).isoformat(),
+        )
+    except ValueError as exc:
+        # H3: an unparseable / non-UTC --as-of/--since/--until would otherwise
+        # become a silent lexical mis-filter. Fail loud instead.
+        typer.echo(f"Invalid date input: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
     if output_format == "json":
         typer.echo(json.dumps(review.to_dict(), indent=2))
     else:

@@ -145,4 +145,55 @@ def test_render_access_review_markdown_has_sections() -> None:
     assert "## Access Changes (Joiner / Mover / Leaver)" in md
     assert "## Control Coverage" in md
     assert "CC6.2" in md
-    assert "Integrity" in md and "VERIFIED" in md  # chain ok → VERIFIED
+    assert "Integrity" in md and "INTACT" in md  # chain ok → INTACT (honestly scoped)
+    # C1: the attestation must not over-claim — the tail-truncation caveat is present.
+    assert "tail truncation" in md.lower()
+
+
+def test_normalize_instant_rejects_naive_and_garbage_and_normalizes_offset() -> None:
+    import pytest
+
+    from dazzle.rbac.access_evidence import _normalize_instant
+
+    assert _normalize_instant(None) is None
+    # A non-UTC offset is normalized to UTC so the lexical TEXT compare is sound.
+    assert _normalize_instant("2026-03-01T12:00:00+05:00") == "2026-03-01T07:00:00+00:00"
+    # Date-only (naive) is rejected — would silently mis-compare lexically.
+    with pytest.raises(ValueError, match="no timezone"):
+        _normalize_instant("2026-03-01")
+    # Garbage is rejected, not lexically mis-filtered.
+    with pytest.raises(ValueError, match="invalid datetime"):
+        _normalize_instant("not-a-date")
+
+
+def test_render_flags_reconciliation_divergence() -> None:
+    from dazzle.rbac.access_evidence import (
+        AccessReview,
+        ChainAttestation,
+        OrgAccessSnapshot,
+        RosterReconciliation,
+    )
+    from dazzle.rbac.report import render_access_review_markdown
+
+    review = AccessReview(
+        tenant_id="org-1",
+        generated_at="2026-06-05T00:00:00+00:00",
+        snapshot=OrgAccessSnapshot("org-1", None, "current", []),
+        jml=[],
+        period_since=None,
+        period_until=None,
+        chain=ChainAttestation(ok=True, total_rows=0, mismatched_count=0, first_mismatch_id=None),
+        reconciliation=RosterReconciliation(
+            consistent=False, only_in_table=["m9"], only_in_replay=[], role_mismatches=[]
+        ),
+    )
+    md = render_access_review_markdown(review)
+    assert "Roster Reconciliation" in md
+    assert "INCONSISTENT" in md and "m9" in md
+
+
+def test_md_cell_escapes_pipe_and_newline() -> None:
+    from dazzle.rbac.report import _md_cell
+
+    assert _md_cell("a|b") == "a\\|b"
+    assert _md_cell("line1\nline2") == "line1 line2"

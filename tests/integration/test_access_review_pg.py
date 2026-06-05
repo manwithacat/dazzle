@@ -76,6 +76,9 @@ def test_build_access_review_current_and_as_of(store_url: str) -> None:
     assert review.snapshot.members[0].roles == ["member", "approver"]
     assert [j.jml for j in review.jml] == ["joiner", "mover"]
     assert review.chain.ok is True
+    # Reconciliation: the current table agrees with a replay of the event log.
+    assert review.reconciliation is not None
+    assert review.reconciliation.consistent is True
     # JSON round-trips (owner-attestable artifact).
     import json
 
@@ -105,6 +108,28 @@ def test_cli_access_review_json_emits_pack(store_url: str) -> None:
     assert pack["chain"]["ok"] is True
     assert len(pack["snapshot"]["members"]) == 1
     assert pack["jml"][0]["jml"] == "joiner"
+
+
+def test_cli_access_review_rejects_bad_as_of(store_url: str) -> None:
+    from typer.testing import CliRunner
+
+    from dazzle.cli.rbac import rbac_app
+
+    _store(store_url)
+    result = CliRunner().invoke(
+        rbac_app,
+        [
+            "access-review",
+            "--tenant",
+            "org-1",
+            "--as-of",
+            "not-a-date",
+            "--database-url",
+            store_url,
+        ],
+    )
+    assert result.exit_code == 1
+    assert "Invalid date input" in result.output
 
 
 def test_access_review_as_of_excludes_later_changes(store_url: str) -> None:

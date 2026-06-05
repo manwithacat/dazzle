@@ -209,34 +209,42 @@ def generate_report(report: VerificationReport, format: str = "markdown") -> str
     return "\n".join(lines)
 
 
+def _md_cell(value: str) -> str:
+    """Escape a value for a markdown table cell — `|` and newlines would break the
+    table structure of the auditor artifact (L6: roles/reason/ids are data)."""
+    return value.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
 def render_access_review_markdown(review: "AccessReview") -> str:
     """Render an access-review evidence pack to markdown (auth Plan 2b).
 
     Sections: roster (who has access + roles as of the snapshot moment), JML
     access-change stream, control coverage (which SOC 2 / ISO controls the
-    evidence supports), and the tamper-evidence integrity attestation.
+    evidence supports), the table↔log reconciliation, and the tamper-evidence
+    integrity attestation (honestly scoped — see ``ChainAttestation``).
     """
     s = review.snapshot
     as_of = s.as_of or "now (current state)"
     lines: list[str] = [
         "# Access Review",
         "",
-        f"- **Organization**: {review.tenant_id}",
+        f"- **Organization**: {_md_cell(review.tenant_id)}",
         f"- **Generated**: {review.generated_at}",
-        f"- **Snapshot as of**: {as_of} (source: {s.source})",
+        f"- **Snapshot as of**: {_md_cell(as_of)} (source: {s.source})",
         f"- **Change period**: {review.period_since or '—'} → {review.period_until or '—'}",
         "",
         "## Membership Roster",
         "",
-        f"_{len(s.members)} membership(s) with access to {review.tenant_id}._",
+        f"_{len(s.members)} membership(s) with access to {_md_cell(review.tenant_id)}._",
         "",
         "| membership | identity | roles | status | joined |",
         "| --- | --- | --- | --- | --- |",
     ]
     for m in sorted(s.members, key=lambda x: x.identity_id):
-        roles = ", ".join(m.roles) if m.roles else "—"
+        roles = _md_cell(", ".join(m.roles)) if m.roles else "—"
         lines.append(
-            f"| `{m.membership_id}` | {m.identity_id} | {roles} | {m.status} | {m.joined_at or '—'} |"
+            f"| `{_md_cell(m.membership_id)}` | {_md_cell(m.identity_id)} | {roles} | "
+            f"{_md_cell(m.status)} | {m.joined_at or '—'} |"
         )
     lines += [
         "",
@@ -247,16 +255,17 @@ def render_access_review_markdown(review: "AccessReview") -> str:
         lines += ["_No access changes in the period._", ""]
     else:
         lines += [
-            "| when | JML | event | identity | roles before → after | status | actor | controls |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| when | JML | event | identity | roles before → after | status | actor | reason | controls |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for j in review.jml:
-            rb = ", ".join(j.roles_before) if j.roles_before else "—"
-            ra = ", ".join(j.roles_after) if j.roles_after else "—"
+            rb = _md_cell(", ".join(j.roles_before)) if j.roles_before else "—"
+            ra = _md_cell(", ".join(j.roles_after)) if j.roles_after else "—"
             st = f"{j.status_before or '—'} → {j.status_after or '—'}"
             lines.append(
-                f"| {j.at} | {j.jml} | `{j.event_type}` | {j.identity_id} | {rb} → {ra} | "
-                f"{st} | {j.actor_id or '—'} | {', '.join(j.controls)} |"
+                f"| {j.at} | {j.jml} | `{_md_cell(j.event_type)}` | {_md_cell(j.identity_id)} | "
+                f"{rb} → {ra} | {st} | {_md_cell(j.actor_id or '—')} | "
+                f"{_md_cell(j.reason or '—')} | {', '.join(j.controls)} |"
             )
         lines.append("")
     lines += ["## Control Coverage", "", "| control | evidence |", "| --- | --- |"]
@@ -267,16 +276,54 @@ def render_access_review_markdown(review: "AccessReview") -> str:
             control_to_sources.setdefault(c, []).append(source)
     for control in sorted(control_to_sources):
         lines.append(f"| **{control}** | {', '.join(sorted(control_to_sources[control]))} |")
+
+    # Reconciliation (current-state snapshots only): table vs replay-to-now.
+    if review.reconciliation is not None:
+        r = review.reconciliation
+        lines += ["", "## Roster Reconciliation (table vs event log)", ""]
+        if r.consistent:
+            lines.append(
+                "- **Consistent**: the current memberships table matches a replay of the "
+                "event log — every grant is backed by lifecycle events."
+            )
+        else:
+            lines.append(
+                "- **INCONSISTENT**: the current table diverges from the event log "
+                "(a mutation may have bypassed the store / raw SQL):"
+            )
+            if r.only_in_table:
+                lines.append(
+                    f"  - in table but not in the log: {', '.join(f'`{x}`' for x in r.only_in_table)}"
+                )
+            if r.only_in_replay:
+                lines.append(
+                    f"  - in the log but not in the table: "
+                    f"{', '.join(f'`{x}`' for x in r.only_in_replay)}"
+                )
+            if r.role_mismatches:
+                lines.append(f"  - role mismatch: {', '.join(f'`{x}`' for x in r.role_mismatches)}")
+
+    # Integrity attestation — honestly scoped (C1): the chain detects edited /
+    # removed interior events, NOT trailing-event truncation.
+    status = "INTACT" if review.chain.ok else "BROKEN"
     lines += [
         "",
         "## Evidence Integrity",
         "",
         (
-            f"- **Tamper-evidence chain**: {'VERIFIED' if review.chain.ok else 'BROKEN'} "
-            f"({review.chain.total_rows} event(s); {review.chain.mismatched_count} mismatch(es))"
+            f"- **Hash chain (interior integrity)**: {status} "
+            f"({review.chain.total_rows} event(s); {review.chain.mismatched_count} mismatch(es)). "
+            "Detects edited or removed interior events."
+        ),
+        (
+            "- **Scope caveat**: a self-contained chain cannot detect truncation of the most "
+            "recent trailing events (no successor hash to break). A tamper-proof guarantee "
+            "against tail truncation requires an external signed head anchor (not yet implemented)."
         ),
     ]
     if not review.chain.ok:
-        lines.append(f"- **First broken event**: `{review.chain.first_mismatch_id}`")
+        lines.append(
+            f"- **First broken event**: `{_md_cell(review.chain.first_mismatch_id or '')}`"
+        )
     lines.append("")
     return "\n".join(lines)
