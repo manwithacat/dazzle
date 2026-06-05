@@ -164,6 +164,12 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_org_context_routes())
 
+        # auth Plan 3a: org invitations (invite / accept). Authz is fail-closed on
+        # app.state.org_admin_roles; accept enforces the verified-email join rule.
+        from dazzle.back.runtime.auth.invitation_routes import create_invitation_routes
+
+        ctx.app.include_router(create_invitation_routes())
+
         # Phase E.2 — secret-gated contained QA-auth mint (#1339). Self-disabling:
         # the factory returns None unless QA_AUTH_SECRET is set, so prod is off by
         # default with no request-time flag to misconfigure. The mint enforces the

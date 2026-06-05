@@ -124,6 +124,10 @@ class CSRFConfig:
         default_factory=lambda: [
             "/auth/select-org",
             "/auth/switch-org",
+            # auth Plan 3a: authenticated org-member-management POSTs under /auth/
+            # must run the CSRF gate (else swept into NA_PREAUTH by the /auth/ prefix).
+            "/auth/invite",
+            "/auth/accept-invite",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /

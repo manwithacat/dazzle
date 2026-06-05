@@ -1,0 +1,148 @@
+"""Org invitation routes (auth Plan 3a): invite / accept.
+
+``POST /auth/invite``                — an org admin invites email+roles into their
+                                        active org (authz: ``may_manage_members``)
+``GET  /auth/accept-invite/{token}``  — accept page (verified-email gated on POST)
+``POST /auth/accept-invite?token=..`` — redeem token → active membership + activate
+
+Authz: the inviter must have an ACTIVE membership in their active org whose roles
+intersect ``app.state.org_admin_roles`` (fail-closed). The target org is taken
+from the inviter's active membership — never from request input. Accept enforces
+the verified-email join rule in ``invitations.accept_invitation``.
+"""
+
+from typing import Annotated
+
+from fastapi import APIRouter, Form, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+
+def _product_name(request: Request) -> str:
+    sitespec = getattr(request.app.state, "sitespec", None) or {}
+    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
+    return str(brand.get("product_name", "Dazzle"))
+
+
+def create_invitation_routes() -> APIRouter:
+    router = APIRouter(tags=["auth"])
+
+    @router.post("/auth/invite", include_in_schema=False)
+    async def invite(
+        request: Request,
+        email: Annotated[str, Form()] = "",
+        roles: Annotated[str, Form()] = "",  # comma-separated personas
+    ) -> HTMLResponse:
+        from dazzle.back.runtime.auth.invitation_views import build_invite_result_view
+        from dazzle.back.runtime.auth.invitations import create_invitation, may_manage_members
+        from dazzle.back.runtime.auth.mailer import get_invitation_mailer
+        from dazzle.back.runtime.auth.models import effective_roles_of
+        from dazzle.render.fragment.renderer import FragmentRenderer
+
+        store = request.app.state.auth_store
+        session_id = read_session_id(request)
+        ctx = store.validate_session(session_id) if session_id else None
+        if ctx is None or not ctx.is_authenticated or ctx.user is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        # Org context comes from the ACTIVE membership — never request input.
+        if ctx.active_membership is None:
+            return HTMLResponse("Forbidden — no active organization", status_code=403)
+        org_admin_roles = list(getattr(request.app.state, "org_admin_roles", []) or [])
+        if not may_manage_members(list(effective_roles_of(ctx)), org_admin_roles=org_admin_roles):
+            return HTMLResponse(
+                "Forbidden — you cannot manage members of this organization", status_code=403
+            )
+        if not email.strip():
+            return HTMLResponse("Email required", status_code=400)
+
+        org_id = ctx.active_membership.tenant_id
+        role_list = [r.strip() for r in roles.split(",") if r.strip()]
+        token = create_invitation(
+            store, org_id=org_id, email=email, roles=role_list, invited_by=str(ctx.user.id)
+        )
+        org = store.get_organization(org_id)
+        org_name = org.name if org is not None else org_id
+        accept_url = f"{str(request.base_url).rstrip('/')}/auth/accept-invite/{token}"
+        get_invitation_mailer(request.app.state).send_invitation(
+            to_email=email.strip().lower(), accept_url=accept_url, org_name=org_name
+        )
+        return HTMLResponse(
+            FragmentRenderer().render(
+                build_invite_result_view(
+                    product_name=_product_name(request),
+                    message=f"Invitation sent to {email.strip().lower()}.",
+                )
+            )
+        )
+
+    @router.get("/auth/accept-invite/{token}", response_class=HTMLResponse, include_in_schema=False)
+    async def accept_page(request: Request, token: str) -> str:
+        from dazzle.back.runtime.auth.invitation_views import build_accept_invite_view
+        from dazzle.back.runtime.auth.invitations import get_invitation
+        from dazzle.render.fragment.renderer import FragmentRenderer
+
+        store = request.app.state.auth_store
+        inv = get_invitation(store, token)
+        if inv is None or inv.accepted_at is not None:
+            return FragmentRenderer().render(
+                build_accept_invite_view(
+                    product_name=_product_name(request),
+                    org_name="(invalid or already-used invitation)",
+                    roles=[],
+                    token=token,
+                    signed_in_email=None,
+                )
+            )
+        session_id = read_session_id(request)
+        ctx = store.validate_session(session_id) if session_id else None
+        signed_in_email = (
+            ctx.user.email if ctx is not None and ctx.is_authenticated and ctx.user else None
+        )
+        org = store.get_organization(inv.org_id)
+        return FragmentRenderer().render(
+            build_accept_invite_view(
+                product_name=_product_name(request),
+                org_name=org.name if org is not None else inv.org_id,
+                roles=inv.roles,
+                token=token,
+                signed_in_email=signed_in_email,
+            )
+        )
+
+    @router.post("/auth/accept-invite", include_in_schema=False, response_model=None)
+    async def accept_submit(
+        request: Request, token: Annotated[str, Query()] = ""
+    ) -> HTMLResponse | RedirectResponse:
+        from dazzle.back.runtime.auth.crypto import cookie_secure
+        from dazzle.back.runtime.auth.invitations import InvitationError, accept_invitation
+
+        store = request.app.state.auth_store
+        session_id = read_session_id(request)
+        ctx = store.validate_session(session_id) if session_id else None
+        if ctx is None or not ctx.is_authenticated or ctx.user is None:
+            return RedirectResponse(url=f"/login?next=/auth/accept-invite/{token}", status_code=303)
+        try:
+            membership = accept_invitation(
+                store,
+                token,
+                identity_id=str(ctx.user.id),
+                accepting_email=ctx.user.email,
+                email_verified=bool(getattr(ctx.user, "email_verified", False)),
+            )
+        except InvitationError as exc:
+            return HTMLResponse(f"Cannot accept invitation: {exc.reason}", status_code=400)
+        # Activate the new membership (+ CSRF rotation), then land in the app.
+        store.set_session_active_membership(session_id, membership.id, identity_id=str(ctx.user.id))
+        response = RedirectResponse(url="/app", status_code=303)
+        new_secret = store.regenerate_session_csrf(session_id)
+        response.set_cookie(
+            key="dazzle_csrf",
+            value=new_secret,
+            httponly=False,
+            secure=cookie_secure(request),
+            samesite="lax",
+        )
+        return response
+
+    return router

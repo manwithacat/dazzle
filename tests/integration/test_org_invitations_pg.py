@@ -198,6 +198,50 @@ def test_accept_rejects_already_member(store_url: str) -> None:
     assert ei.value.reason == "already_member"
 
 
+def _invite_app(store, org_admin_roles):
+    from fastapi import FastAPI
+
+    from dazzle.back.runtime.auth.invitation_routes import create_invitation_routes
+
+    app = FastAPI()
+    app.state.auth_store = store
+    app.state.org_admin_roles = list(org_admin_roles)
+    app.state.sitespec = {}
+    app.include_router(create_invitation_routes())
+    return app
+
+
+def test_invite_route_authz_gate(store_url: str) -> None:
+    from fastapi.testclient import TestClient
+
+    from dazzle.back.runtime.auth.invitations import list_pending_invitations
+
+    store = _store(store_url)
+    inviter = store.create_user(email="boss@acme.test", password="pw123456", roles=[])
+    org = store.create_organization(slug="acme", name="Acme")
+    membership = store.create_membership(
+        tenant_id=org.id, identity_id=str(inviter.id), roles=["member"]
+    )
+    sid = store.create_session(inviter).id
+    store.set_session_active_membership(sid, membership.id, identity_id=str(inviter.id))
+
+    client = TestClient(_invite_app(store, org_admin_roles=["owner"]), follow_redirects=False)
+    client.cookies.set("dazzle_session", sid)
+
+    # A plain member (role not in org_admin_roles) is denied (fail-closed authz).
+    r = client.post("/auth/invite", data={"email": "new@acme.test", "roles": "member"})
+    assert r.status_code == 403
+    assert list_pending_invitations(store, org.id) == []  # nothing created
+
+    # Promote to an admin role → invite succeeds and creates a pending invitation.
+    store.update_membership_roles(membership.id, ["owner"], actor_id=str(inviter.id))
+    r2 = client.post("/auth/invite", data={"email": "new@acme.test", "roles": "member"})
+    assert r2.status_code == 200
+    pending = list_pending_invitations(store, org.id)
+    assert [p.email for p in pending] == ["new@acme.test"]
+    assert pending[0].invited_by == str(inviter.id)
+
+
 def test_list_pending_invitations_excludes_accepted_and_expired(store_url: str) -> None:
     from dazzle.back.runtime.auth.invitations import (
         accept_invitation,
