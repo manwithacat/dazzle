@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 55 routes across 16 modules
+# Counts: 56 routes across 17 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
@@ -95,6 +95,10 @@ module: locale_routes
 module: qa_routes
   POST | /qa/magic-link
     handler: generate_qa_magic_link(body: MagicLinkRequest, request: Request) -> MagicLinkResponse
+
+module: qa_secure_routes
+  POST | /qa/secure/mint
+    handler: mint(body: MintRequest, request: Request, response: Response) -> dict[str, Any]
 
 module: search_routes
   GET | (root)

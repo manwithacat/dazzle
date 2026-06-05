@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **RLS Phase E.2 — QA-auth + ephemeral provisioning + containment invariant** (#1339, ADR-0035; plan `docs/superpowers/plans/2026-06-05-rls-phase-e2-qa-auth-containment.md`). **Completes RLS Phase E.** A CI/QA harness can provision an ephemeral, isolated test tenant and mint a session into it over a signed channel that — by a DB-enforced containment invariant — can **never** mint into a real tenant. `provision_test_tenant(store, run_id)` creates a `qa-<run_id>`, `is_test=true` framework `organizations` row + an admin identity + membership (the framework org IS the QA tenant; teardown via the E.1 `excise_tenant`). `POST /qa/secure/mint` (in the new, physically-separate `qa_secure_routes.py`, **mounted only when `QA_AUTH_SECRET` is set** — self-disabling) verifies an HMAC-signed `email:run_id:timestamp` token (stdlib `hmac`, constant-time, ~60s replay window — `NA_SIGNATURE` per ADR-0033, CSRF-immune) and **refuses (403) unless** the run-resolved org is `qa-`-namespaced **and** `is_test=true` **and** the target user has an active membership there — resolution from the **DB via the signed `run_id`**, never request input (no confused-deputy). The minted session binds `active_membership.tenant_id`, so RLS (Phase B) structurally fences it. Adversarial real-PG proofs in `tests/integration/test_qa_auth_containment_pg.py` (cannot mint into a non-test org; replay/bad-sig/run-mismatch 403; a user shared across a test+real org is scoped to the test org only) + signer unit tests (tamper/expiry/colon-injection).
+
+### Agent Guidance
+
+- **QA-auth is secret-gated + DB-contained (ADR-0035).** The `/qa/secure/mint` route is mounted only when `QA_AUTH_SECRET` is set (self-disabling; never in prod-by-default). It mints a session ONLY into a `qa-`-namespaced, `is_test=true`, run-matched org the signed user belongs to — the QA secret can never reach a real tenant (`is_test` is an unforgeable column, resolved from the DB via the signed `run_id`, not request input). Provision with `dazzle.back.runtime.auth.qa_provision.provision_test_tenant(store, run_id)`; tear down with `teardown_test_tenant(appspec, org_id, conn=...)` (E.1 excise). Sign tokens with `auth.qa_sign.sign_qa_token(email, run_id, secret=, now=)`. The HMAC channel is `NA_SIGNATURE` — no CSRF token needed. **RLS Phase E is now complete** (#1338 excision + #1339 QA-auth); the auth identity model's Plan 1 + Phase E thread is done — remaining auth work is Plan 1d (app migration) + Plan 2 (compliance evidence).
+
 ## [0.81.31] - 2026-06-05
 
 ### Added

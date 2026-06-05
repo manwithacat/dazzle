@@ -8,8 +8,6 @@ only into a ``qa-``-namespaced, ``is_test=true``, run-matched org the target use
 belongs to — the QA secret can NEVER reach a real tenant.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import time
