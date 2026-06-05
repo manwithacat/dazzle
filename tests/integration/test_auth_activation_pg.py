@@ -197,3 +197,88 @@ def test_password_login_no_membership_redirects_to_no_orgs_when_required(scratch
     )
     assert resp.status_code == 303
     assert resp.headers["location"] == "/auth/no-orgs"
+
+
+# ── Task 7: org-context routes (select / switch / no-orgs) ───────────────────
+
+
+def _app_with_org_routes(store):
+    from fastapi import FastAPI
+
+    from dazzle.back.runtime.auth.org_context_routes import create_org_context_routes
+
+    app = FastAPI()
+    app.state.auth_store = store
+    app.state.auth_password_mode_enabled = True
+    app.include_router(create_org_context_routes())
+    return app
+
+
+def _login_session(store, email: str, n_orgs: int) -> tuple[str, str, list[str]]:
+    """Create a user + n memberships + a session with no active membership."""
+    user = store.create_user(email=email, password="pw123456")
+    mids = [
+        store.create_membership(tenant_id=f"t-{i}", identity_id=str(user.id), roles=["member"]).id
+        for i in range(n_orgs)
+    ]
+    session = store.create_session(user)
+    return session.id, str(user.id), mids
+
+
+def test_select_org_post_activates_owned_membership(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    sid, _uid, mids = _login_session(store, "multi@b.test", 2)
+    client = _client(_app_with_org_routes(store))
+    client.cookies.set("dazzle_session", sid)
+
+    resp = client.post("/auth/select-org", data={"membership_id": mids[1]})
+    assert resp.status_code == 303
+    ctx = store.validate_session(sid)
+    assert ctx.active_membership is not None
+    assert ctx.active_membership.id == mids[1]
+
+
+def test_switch_org_rotates_active_membership_and_csrf(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    sid, uid, mids = _login_session(store, "multi@b.test", 2)
+    assert store.set_session_active_membership(sid, mids[0], identity_id=uid)
+    csrf_before = store.get_session(sid).csrf_secret
+    client = _client(_app_with_org_routes(store))
+    client.cookies.set("dazzle_session", sid)
+
+    resp = client.post("/auth/switch-org", data={"membership_id": mids[1]})
+    assert resp.status_code == 303
+    ctx = store.validate_session(sid)
+    assert ctx.active_membership.id == mids[1]
+    assert store.get_session(sid).csrf_secret != csrf_before  # CSRF rotated
+
+
+def test_select_org_rejects_unowned_membership(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    sid_a, _uid_a, _ = _login_session(store, "a@b.test", 1)
+    _sid_b, _uid_b, mids_b = _login_session(store, "b@b.test", 1)
+    client = _client(_app_with_org_routes(store))
+    client.cookies.set("dazzle_session", sid_a)
+
+    # A tries to activate B's membership → rejected, session A unchanged.
+    resp = client.post("/auth/select-org", data={"membership_id": mids_b[0]})
+    assert resp.status_code in (303, 403)
+    ctx = store.validate_session(sid_a)
+    assert ctx.active_membership is None
+
+
+def test_org_context_routes_are_mountable() -> None:
+    """The router exposes the four Phase-2 paths (no DB needed)."""
+    from dazzle.back.runtime.auth.org_context_routes import create_org_context_routes
+
+    paths = {r.path for r in create_org_context_routes().routes}
+    assert {"/auth/select-org", "/auth/switch-org", "/auth/no-orgs"} <= paths

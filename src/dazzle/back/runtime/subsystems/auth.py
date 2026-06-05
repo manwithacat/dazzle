@@ -138,6 +138,16 @@ class AuthSubsystem:
         password_login_router = create_password_login_routes()
         ctx.app.include_router(password_login_router)
 
+        # Phase-2 org-context routes (auth Plan 1b): /auth/select-org,
+        # /auth/switch-org, /auth/no-orgs. Mounted unconditionally — they
+        # no-op (redirect to /login) for unauthenticated callers and only
+        # matter once an identity has >1 membership.
+        from dazzle.back.runtime.auth.org_context_routes import (
+            create_org_context_routes,
+        )
+
+        ctx.app.include_router(create_org_context_routes())
+
         # Form-encoded 2FA challenge submit routes (Phase 1.D.1,
         # v0.67.35) — the typed challenge view posts here instead of
         # the JSON `/auth/2fa/verify` endpoint, so the form works
