@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Auth Plan 1d — activate the membership model (canonical RLS proof)** (plan `docs/superpowers/plans/2026-06-05-auth-plan-1d-activate-membership-model.md`). The membership model now *fences real domain data* on the canonical RLS-archetype model. New `dazzle.db.provision.provision_single_org(appspec, name, *, conn)`: for an `is_tenant_root` app it creates the framework `organizations` row **and** the domain tenant-root row (e.g. `Workspace`) at a **shared id** (the 1:1 mirror) — so `membership.tenant_id == tenant_root.id == dazzle.tenant_id` and a logged-in member is structurally fenced to their org by Postgres RLS. The org slug is the single id arbiter (org-insert-first, then mirror the winning id into the root via `ON CONFLICT (id) DO NOTHING`) so concurrent first-logins can't split the id; a tenant root with a non-framework-derivable required field raises `ProvisionError` (loud, not a raw `NotNullViolation`). `ensure_single_org_membership(user, *, appspec)` routes through it for archetype apps (rootless apps keep the 1c framework-org path). Proven against real Postgres **as a non-superuser** (`tests/integration/test_membership_rls_activation_pg.py`): a membership-bound session sees only its tenant's rows, an unbound session denies all (fail-closed).
+
+### Changed
+
+- **`current_user.tenant_id` (scope) resolves membership-first** — `_resolve_user_attribute("tenant_id")` returns `active_membership.tenant_id` when present (matching what `_bind_rls_tenant_id` binds for the RLS GUC), falling back to the legacy preferences/domain-user copy for un-migrated sessions (non-breaking). Other `current_user.<attr>` scope refs (school, department, …) are unchanged.
+- **`auto_provision_single_org` is manifest-settable** — `[auth] auto_provision_single_org = true` in `dazzle.toml` flows through `AuthConfig` → `ServerConfig` → `app.state` (default off).
+
+### Agent Guidance
+
+- **The membership model is now activatable per app** via `[auth] auto_provision_single_org = true`. For an `is_tenant_root` app, login lazily provisions the tenant-root row + the framework `organizations` row at a **shared id** (`provision_single_org`); the member's session then binds `dazzle.tenant_id` from the membership and RLS fences it. A tenant root must be **framework-seedable** (only `name`/`title`/`slug`-style required fields, or nullable/defaulted/auto_add) or auto-provision raises `ProvisionError` — provision such tenants explicitly. `current_user.tenant_id` + the RLS GUC are membership-first (prefs fallback retained). **NOT yet done (follow-ups):** `dazzle auth migrate` (backfill existing deployments), create-time `tenant_id` auto-injection, flipping the flag across the example fleet, and removing the preferences fallback. Plan 2 (compliance evidence) now has a live membership substrate to evidence.
+
 ## [0.81.33] - 2026-06-05
 
 ### Fixed
