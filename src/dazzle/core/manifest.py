@@ -158,6 +158,10 @@ class AuthConfig:
     user_entity: str = "User"  # Name of user entity
     require_email_verification: bool = False
     allow_registration: bool = True
+    # auth Plan 1d: opt a single-org app into invisible Phase-2 — login lazily
+    # provisions one org + membership per identity (and, for an is_tenant_root
+    # app, a matching tenant-root row with the shared id). Default off.
+    auto_provision_single_org: bool = False
 
     # Provider-specific config
     session: AuthSessionConfig = field(default_factory=AuthSessionConfig)

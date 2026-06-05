@@ -666,6 +666,7 @@ def build_server_config(
         database_url=database_url,
         enable_auth=enable_auth,
         auth_config=auth_config,
+        auto_provision_single_org=bool(getattr(auth_config, "auto_provision_single_org", False)),
         enable_files=enable_files,
         files_path=files_path or Path(".dazzle/uploads"),
         enable_test_mode=enable_test_mode,
