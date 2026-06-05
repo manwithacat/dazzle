@@ -39,9 +39,11 @@ def test_connection_repr_masks_secrets() -> None:
 
 
 def test_resolve_unregistered_raises() -> None:
+    # A pair nothing registers — robust against other tests registering
+    # (oidc, native) (the native OIDC provider from Plan 4b).
     class _Conn:
-        type = "oidc"
-        provider = "native"
+        type = "bogus"
+        provider = "nope"
 
     with pytest.raises(ConnectionError, match="no provider"):
         resolve_provider(_Conn())

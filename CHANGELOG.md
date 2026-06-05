@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.46] - 2026-06-05
+
+### Added
+
+- **Auth Plan 4b.i — native OIDC ConnectionProvider** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-oidc-provider.md`; spec §5). Fills the empty 4a `ConnectionProvider` registry with `NativeOIDCProvider` (`src/dazzle/back/runtime/auth/oidc_provider.py`) — native enterprise OIDC built on **authlib** (the `[sso]` extra, lazy-imported). It memoizes a per-connection `StarletteOAuth2App` built from the connection's non-secret `config` (issuer / discovery URL / client_id) + the decrypted `client_secret`, and exposes the seam's `initiate` (→ IdP authorize URL, one stable redirect URI `/auth/enterprise/callback` per app) and `callback` (→ `AssertedIdentity`). **id_token validation is delegated to authlib's `authorize_access_token`** (signature/iss/aud/exp/nonce against the discovery `jwks_uri`) — no hand-rolled token crypto. Identity invariants enforced on top: email required + normalized (empty → refuse), explicit `email_verified: false` → refuse (missing tolerated), group claim coerced from `config["groups_claim"]` (default `groups`). The seam's `initiate`/`callback` became `async` (4a's registry was empty — clean break). Adversarially reviewed (silent-failure-hunter, security-sensitive): **no CRITICAL** — token-crypto delegation, empty-email/`email_verified` refusals, per-connection client isolation, and no-secret-leakage all confirmed; the two findings fixed in-slice — (1) the client cache now keys on `connection.updated_at` so a rotated `client_secret`/repointed issuer rebuilds instead of silently reusing stale credentials, and (2) `AssertedIdentity.claims_source` records `id_token` vs `userinfo_endpoint` provenance so 4b.ii's identity-join can apply differential trust to the unsigned UserInfo-endpoint fallback.
+
+### Agent Guidance
+
+- **`NativeOIDCProvider` is the per-org enterprise-OIDC engine** behind the `ConnectionProvider` seam — registered via `register_native_oidc()` (the startup call + the routes that drive it land in **4b.ii**, so it's not yet wired into a live request). It reuses authlib for the OIDC dance (do **not** hand-roll id_token parsing). When you build the identity-join in 4b.ii, consult `AssertedIdentity.claims_source`: trust `id_token`-sourced claims; treat `userinfo_endpoint`-sourced claims (the fallback) as weaker (not signed) — especially for a self-asserted org IdP joining a *global* identity. The provider's client cache rebuilds on `connection.updated_at`, so any connection mutation must bump it (the store does). One stable redirect URI per app (`/auth/enterprise/callback`); carry the connection id in the OAuth `state`.
+
 ## [0.81.45] - 2026-06-05
 
 ### Added

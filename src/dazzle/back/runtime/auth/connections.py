@@ -76,11 +76,19 @@ class ConnectionRecord:
 
 @dataclass(frozen=True)
 class AssertedIdentity:
-    """What a SSO provider's ``callback`` asserts after validating the IdP response."""
+    """What a SSO provider's ``callback`` asserts after validating the IdP response.
+
+    ``claims_source`` records the provenance of the claims so a downstream
+    identity-join can apply differential trust: ``"id_token"`` claims were
+    cryptographically validated (signature/iss/aud/exp/nonce) by the provider's
+    token library, whereas ``"userinfo_endpoint"`` claims were fetched from the
+    UserInfo endpoint with a validated access token but are not themselves signed.
+    """
 
     email: str
     attributes: dict[str, Any] = field(default_factory=dict)
     groups: list[str] = field(default_factory=list)
+    claims_source: str = "id_token"
 
 
 @runtime_checkable
@@ -89,13 +97,16 @@ class ConnectionProvider(Protocol):
 
     Call sites never know who implements it. SSO providers implement
     ``initiate``/``callback``; SCIM providers expose REST handlers (added in 4c).
+
+    Both methods are ``async`` — the native OIDC implementation (4b) drives
+    authlib's async OAuth flow, and SAML (Plan 5) does async metadata fetches.
     """
 
-    def initiate(self, connection: ConnectionRecord, request: Any) -> str:
+    async def initiate(self, connection: ConnectionRecord, request: Any) -> str:
         """Return the redirect URL that starts the IdP login (SSO)."""
         ...
 
-    def callback(self, connection: ConnectionRecord, request: Any) -> AssertedIdentity:
+    async def callback(self, connection: ConnectionRecord, request: Any) -> AssertedIdentity:
         """Validate the IdP response and return the asserted identity (SSO)."""
         ...
 
