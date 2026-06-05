@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.35] - 2026-06-05
+
+### Added
+
+- **`dazzle auth migrate`** (auth Plan 1d follow-up). Backfills an existing deployment onto the membership model: mirrors each domain tenant-root row into the framework `organizations` table at the **same id** (the 1:1 mirror), and creates a membership per auth `users` row — tenant resolved via the domain user entity (`[auth] user_entity`, matched by email → its `tenant_id`), roles copied from the user. Idempotent (`ON CONFLICT` + skip-existing), `--dry-run` previews counts, `--user-entity` overrides the email→tenant entity, and users with no resolvable tenant are reported (not guessed). Engine `dazzle.db.auth_migrate.migrate_to_memberships(appspec, *, conn, dry_run, user_entity)` runs in one transaction on a non-autocommit connection. Real-PG proof in `tests/integration/test_auth_migrate_pg.py` (mirror + per-user membership + idempotent + dry-run + skip-unresolvable).
+
+### Agent Guidance
+
+- **`dazzle auth migrate`** brings a pre-membership deployment onto the model: domain tenant-root rows → `organizations` (shared id), each user → a membership in their tenant (resolved via the domain user entity by email). Run it before flipping `auto_provision_single_org` on for an existing app. Requires an `is_tenant_root` entity (rootless apps use the framework org at signup instead). Still a 1d follow-up: create-time `tenant_id` auto-injection (DB column default), flipping the flag across the example fleet, and removing the preferences fallback.
+
 ## [0.81.34] - 2026-06-05
 
 ### Added
