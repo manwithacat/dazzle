@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.47] - 2026-06-05
+
+### Added
+
+- **Auth Plan 4b.ii — enterprise JIT identity-join kernel** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-ii-enterprise-jit-join.md`; spec §5). `provision_enterprise_login(store, connection, asserted)` (`src/dazzle/back/runtime/auth/enterprise_login.py`) turns a `ConnectionProvider` callback's `AssertedIdentity` into a `(global Identity, org Membership)` pair — the security-critical step where an org IdP's assertion becomes platform access — mirroring the proven `accept_invitation` verified-email→membership path. **Anti-hijack (load-bearing):** the asserted email's domain MUST be in `connection.verified_domains` (an org IdP can only assert identities within domains it has proven it controls — a connection with no verified domains can assert nobody; exact-match, so subdomain/trailing-dot/multi-`@` tricks fail closed). **Differential trust:** a non-`id_token` `claims_source` (the unsigned UserInfo-endpoint fallback from 4b.i) must carry `email_verified=true` (`is not True` → rejects missing/None/truthy-non-True; the validated id_token path tolerates a missing claim). Resolves/creates the global Identity by verified email (passwordless), **marks it `email_verified`** (the IdP vouched within a controlled domain — keeps SSO-proven identities from lingering unverified for downstream gates), reuses an existing membership for (identity, org) or JIT-creates one (gated by `config["jit_provisioning"]`, default `True`) with roles mapped from IdP groups via `connection.group_mapping` (**default-deny** — unmapped groups grant nothing), and re-resolves cleanly on a concurrent-create `UniqueViolation`. No routes/startup wiring yet — that's **4b.iii** (the kernel is reviewed in isolation first). Adversarially reviewed (silent-failure-hunter, account-takeover surface): **no CRITICAL/HIGH** — domain-pinned anti-hijack, differential trust, exact-match identity join, tenant-scoped membership reuse, and default-deny roles all confirmed sound; the email-verification consistency note (M1) folded in.
+
+### Agent Guidance
+
+- **`provision_enterprise_login` is the enterprise-SSO identity-join** — 4b.iii's route calls it after a provider callback and maps `EnterpriseLoginError.reason` (`domain_not_verified` / `no_email` / `unverified_fallback` / `no_membership`) to a user-facing error, then mints the session. Two load-bearing controls live here: (1) an org's connection can only assert emails in its **verified** domains — so verifying a connection's domains is what authorizes its IdP; (2) IdP **groups grant roles only via `connection.group_mapping`** (default-deny — an unmapped group is no privilege). JIT auto-provisions a membership for any verified-domain identity the IdP authenticates (`config["jit_provisioning"]=false` to require a prior invite instead). The kernel lowercases emails before the store lookup; a case-insensitive `users.email` unique index (CITEXT/`LOWER`) is a deferred store-layer hardening (M2) so no path can mint a split identity.
+
 ## [0.81.46] - 2026-06-05
 
 ### Added
