@@ -96,13 +96,29 @@ def memberships_required(request: Any) -> bool:
     return bool(getattr(state, "memberships_required", False))
 
 
+def single_org_auto_provision(request: Any) -> bool:
+    """Whether this app lazily provisions a single default org at activation
+    (Plan 1c). Default False — pre-1c / multi-org apps don't auto-provision."""
+    state = getattr(getattr(request, "app", None), "state", None)
+    return bool(getattr(state, "single_org_auto_provision", False))
+
+
 def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> ActivationOutcome:
-    """Resolve Phase 2 for a just-proven ``user`` on this ``request``."""
+    """Resolve Phase 2 for a just-proven ``user`` on this ``request``.
+
+    Plan 1c: when the app opts into single-org auto-provision and the identity
+    has no membership *and* the request is not host-pinned, lazily ensure a
+    default-org membership first. This makes single-org Phase 2 invisible and
+    backfills pre-1c users on next login. The host-pin guard is load-bearing: a
+    host-pinned request names a specific org, so a missing membership there must
+    stay ``HostForbidden`` (403) — never silently provision a default and admit.
+    """
+    host_tenant_id = host_tenant_id_from_request(request)
     memberships = auth_store.get_memberships_for_identity(str(user.id))
-    return resolve_activation(
-        memberships=memberships,
-        host_tenant_id=host_tenant_id_from_request(request),
-    )
+    if not memberships and host_tenant_id is None and single_org_auto_provision(request):
+        auth_store.ensure_single_org_membership(user)
+        memberships = auth_store.get_memberships_for_identity(str(user.id))
+    return resolve_activation(memberships=memberships, host_tenant_id=host_tenant_id)
 
 
 def _login_redirect_for_outcome(

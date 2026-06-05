@@ -121,3 +121,60 @@ class TestLoginRedirectMapper:
         mid, target = _login_redirect_for_outcome(HostForbidden(), "/app")
         assert mid is None
         assert target == FORBIDDEN_SENTINEL
+
+
+class _ProvisioningStore:
+    """Fake store recording ensure_single_org_membership calls (Plan 1c)."""
+
+    def __init__(self) -> None:
+        self.provisioned: list[str] = []
+        self._memberships: dict[str, list[MembershipRecord]] = {}
+
+    def get_memberships_for_identity(self, identity_id: str) -> list[MembershipRecord]:
+        return list(self._memberships.get(identity_id, []))
+
+    def ensure_single_org_membership(self, user, *, name="Default"):  # noqa: ANN001
+        self.provisioned.append(str(user.id))
+        m = MembershipRecord(id="m-prov", tenant_id="t-default", identity_id=str(user.id))
+        self._memberships[str(user.id)] = [m]
+        return m
+
+
+def _req_with_flag(*, provision: bool, tenant=None) -> SimpleNamespace:  # noqa: ANN001
+    app = SimpleNamespace(state=SimpleNamespace(single_org_auto_provision=provision))
+    return SimpleNamespace(app=app, state=SimpleNamespace(tenant=tenant))
+
+
+class TestLazyProvisioning:
+    def test_provisions_when_flag_on_and_zero_memberships(self) -> None:
+        store = _ProvisioningStore()
+        user = SimpleNamespace(id="u-1")
+        out = activate_session_for_login(store, user, _req_with_flag(provision=True))
+        assert store.provisioned == ["u-1"]
+        assert isinstance(out, Activated)
+        assert out.membership_id == "m-prov"
+
+    def test_does_not_provision_when_flag_off(self) -> None:
+        store = _ProvisioningStore()
+        user = SimpleNamespace(id="u-1")
+        out = activate_session_for_login(store, user, _req_with_flag(provision=False))
+        assert store.provisioned == []
+        assert isinstance(out, NoOrgs)
+
+    def test_does_not_provision_when_membership_already_exists(self) -> None:
+        store = _ProvisioningStore()
+        store._memberships["u-1"] = [MembershipRecord(id="m-x", tenant_id="t-1", identity_id="u-1")]
+        user = SimpleNamespace(id="u-1")
+        out = activate_session_for_login(store, user, _req_with_flag(provision=True))
+        assert store.provisioned == []
+        assert isinstance(out, Activated)
+        assert out.membership_id == "m-x"
+
+    def test_does_not_provision_when_host_pinned(self) -> None:
+        store = _ProvisioningStore()
+        user = SimpleNamespace(id="u-1")
+        out = activate_session_for_login(
+            store, user, _req_with_flag(provision=True, tenant=SimpleNamespace(id="t-pinned"))
+        )
+        assert store.provisioned == []  # host-pin guard: no provision
+        assert isinstance(out, HostForbidden)

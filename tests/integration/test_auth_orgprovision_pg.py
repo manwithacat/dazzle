@@ -145,3 +145,53 @@ def test_ensure_single_org_membership_first_and_second_user(scratch_url: str) ->
     m1_again = store.ensure_single_org_membership(u1, name="Acme")
     assert m1_again.id == m1.id
     assert len(store.get_memberships_for_identity(str(u1.id))) == 1
+
+
+# -- Task 5: lazy provisioning at activation (real PG) -----------------------
+
+
+def test_activation_provisions_and_auto_activates(scratch_url: str) -> None:
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.auth.org_activation import (
+        Activated,
+        activate_session_for_login,
+    )
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="solo@b.test", password="pw123456", roles=["member"])
+
+    app = SimpleNamespace(state=SimpleNamespace(single_org_auto_provision=True))
+    request = SimpleNamespace(app=app, state=SimpleNamespace(tenant=None))
+
+    out = activate_session_for_login(store, user, request)
+    assert isinstance(out, Activated)
+    m = store.get_membership(out.membership_id)
+    assert m.roles == ["member"]
+    assert store.get_organization_by_slug("default").id == m.tenant_id
+
+
+def test_host_pin_does_not_auto_provision(scratch_url: str) -> None:
+    """A host-pinned request to an org the user isn't in stays 403 — provisioning
+    must not paper over it."""
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.auth.org_activation import (
+        HostForbidden,
+        activate_session_for_login,
+    )
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="solo@b.test", password="pw123456", roles=["member"])
+
+    app = SimpleNamespace(state=SimpleNamespace(single_org_auto_provision=True))
+    request = SimpleNamespace(
+        app=app, state=SimpleNamespace(tenant=SimpleNamespace(id="t-pinned", slug="acme"))
+    )
+    out = activate_session_for_login(store, user, request)
+    assert isinstance(out, HostForbidden)
+    assert store.get_organization_by_slug("default") is None
