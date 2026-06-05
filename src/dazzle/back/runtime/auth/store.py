@@ -4,8 +4,14 @@ import logging
 import secrets
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from dazzle.back.runtime.auth.membership_events import (
+        EventChainResult,
+        MembershipEvent,
+    )
 
 try:
     import psycopg
@@ -412,6 +418,8 @@ class SessionStoreMixin:
     _execute: Any
     _execute_one: Any
     _execute_modify: Any
+    _get_connection: Any  # auth Plan 2a — used by _transaction / chain verify
+    _transaction: Any  # auth Plan 2a — atomic mutation + lifecycle event
     _user_entity_table: str  # Set by AuthStore.__init__
 
     # Cross-cutting method provided by UserStoreMixin via AuthStore.
@@ -1122,7 +1130,7 @@ class SessionStoreMixin:
         if appspec is not None and _appspec_has_tenant_root(appspec):
             from dazzle.db.provision import provision_single_org
 
-            with self._get_connection() as conn:  # type: ignore[attr-defined]  # concrete AuthStore provides it
+            with self._get_connection() as conn:  # concrete AuthStore provides it
                 org_id = provision_single_org(appspec, name, conn=conn)
             org = self.get_organization(org_id)
             if org is None:
