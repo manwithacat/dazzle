@@ -66,6 +66,19 @@ class VerificationMailer(Protocol):
     def send_verification_email(self, *, to_email: str, verify_url: str) -> None: ...
 
 
+@runtime_checkable
+class InvitationMailer(Protocol):
+    """Contract for delivering an org-invitation accept URL (auth Plan 3a).
+
+    Semantically distinct from magic-link / verification: the link grants
+    *membership* of an org on accept (after a verified-email check), not a login.
+    Kept as a separate Protocol so magic-link-only mailers don't have to
+    implement it — the invitation route falls back to :class:`LogMailer`.
+    """
+
+    def send_invitation(self, *, to_email: str, accept_url: str, org_name: str) -> None: ...
+
+
 class LogMailer:
     """Default `MagicLinkMailer` impl: writes the link URL to the
     application log at INFO level.
@@ -84,6 +97,18 @@ class LogMailer:
 
     def send_verification_email(self, *, to_email: str, verify_url: str) -> None:
         _logger.info("Email-verification issued for %s: %s", to_email, verify_url)
+
+    def send_invitation(self, *, to_email: str, accept_url: str, org_name: str) -> None:
+        _logger.info("Org-invitation issued for %s to %s: %s", to_email, org_name, accept_url)
+
+
+def get_invitation_mailer(app_state: object) -> InvitationMailer:
+    """Look up an invitation-capable mailer; fall back to LogMailer (dev-safe)."""
+    mailer = getattr(app_state, "magic_link_mailer", None)
+    if mailer is None or not isinstance(mailer, InvitationMailer):
+        return LogMailer()
+    typed: InvitationMailer = mailer
+    return typed
 
 
 def get_mailer(app_state: object) -> MagicLinkMailer:
