@@ -72,6 +72,9 @@ class AuthSubsystem:
         # auth Plan 1d: expose the AppSpec for the activation path's 1:1 org<->
         # tenant-root mirror provisioning (archetype apps).
         ctx.app.state.appspec = ctx.appspec
+        # auth Plan 3c.ii: expose the entity repositories so the /me/profile route
+        # can resolve the profile entity's Repository at request time.
+        ctx.app.state.repositories = ctx.repositories
 
         # Mount the magic link consumer router (general-purpose, production-safe)
         from dazzle.back.runtime.auth.magic_link_routes import create_magic_link_routes
@@ -175,6 +178,12 @@ class AuthSubsystem:
         from dazzle.back.runtime.auth.member_admin_routes import create_member_admin_routes
 
         ctx.app.include_router(create_member_admin_routes())
+
+        # auth Plan 3c.ii: the member's own profile (archetype: profile) — get-or-
+        # create by (active membership tenant, current_user.id), RLS-bound.
+        from dazzle.back.runtime.auth.profile_routes import create_profile_routes
+
+        ctx.app.include_router(create_profile_routes())
 
         # Phase E.2 — secret-gated contained QA-auth mint (#1339). Self-disabling:
         # the factory returns None unless QA_AUTH_SECRET is set, so prod is off by

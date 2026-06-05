@@ -133,6 +133,8 @@ class CSRFConfig:
             "/auth/members/suspend",
             "/auth/members/reactivate",
             "/auth/members/remove",
+            # auth Plan 3c.ii: the member's own profile upsert.
+            "/me/profile",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
