@@ -1,0 +1,222 @@
+"""Durable, tamper-evident membership lifecycle events (auth Plan 2a).
+
+Every membership lifecycle change (provision / role-change / suspend / reactivate
+/ remove) is recorded as one append-only row in ``membership_events`` — the
+"complete by construction" compliance-evidence substrate (spec §6). Each row is
+hash-chained (``row_hash = sha256(prev_hash || canonical_payload)``), mirroring
+``audit_log.py``'s integrity scheme.
+
+Unlike the high-volume ``_dazzle_audit_log`` access trail (async, drop-if-full),
+these events are written **in the same transaction as the mutation** via
+``record_membership_event`` — losing a deprovision event would be a control
+failure, so they must never be dropped. The chain head read + insert are
+serialised by a per-transaction Postgres advisory lock so concurrent mutations
+cannot fork the chain.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import secrets
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any
+
+
+class MembershipEventType:
+    """The five membership JML (joiner/mover/leaver) lifecycle event kinds."""
+
+    PROVISIONED = "provisioned"  # joiner — membership created
+    ROLE_CHANGED = "role_changed"  # mover — roles granted/revoked
+    SUSPENDED = "suspended"  # leaver-ish — access paused
+    REACTIVATED = "reactivated"  # mover — access restored
+    REMOVED = "removed"  # leaver — membership deleted
+
+
+# Per-transaction advisory-lock key serialising chain-head read + insert. A fixed
+# arbitrary 32-bit constant (only the membership_events writer takes this lock).
+MEMBERSHIP_EVENTS_LOCK_KEY = 0x6D656D65  # "meme"
+
+# Columns that feed the canonical hash payload, in stable order. ``seq`` (chain
+# order) and ``row_hash`` are deliberately excluded — seq is assigned by the DB
+# and order is implied by it; row_hash depends on the payload so cannot be an
+# input (mirrors audit_log._AUDIT_ROW_COLUMNS).
+_EVENT_HASH_COLUMNS: tuple[str, ...] = (
+    "id",
+    "event_type",
+    "membership_id",
+    "tenant_id",
+    "identity_id",
+    "actor_id",
+    "roles_before",
+    "roles_after",
+    "status_before",
+    "status_after",
+    "reason",
+    "created_at",
+)
+
+# The full insert column order (adds row_hash; seq is BIGSERIAL, DB-assigned).
+_EVENT_INSERT_COLUMNS: tuple[str, ...] = (*_EVENT_HASH_COLUMNS, "row_hash")
+
+MEMBERSHIP_EVENTS_DDL = """
+CREATE TABLE IF NOT EXISTS membership_events (
+    seq BIGSERIAL UNIQUE,
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    membership_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
+    identity_id TEXT NOT NULL,
+    actor_id TEXT,
+    roles_before TEXT,
+    roles_after TEXT,
+    status_before TEXT,
+    status_after TEXT,
+    reason TEXT,
+    created_at TEXT NOT NULL,
+    row_hash TEXT NOT NULL
+)
+"""
+
+MEMBERSHIP_EVENTS_INDEXES: tuple[str, ...] = (
+    "CREATE INDEX IF NOT EXISTS ix_membership_events_tenant ON membership_events(tenant_id, seq)",
+    "CREATE INDEX IF NOT EXISTS ix_membership_events_identity ON membership_events(identity_id, seq)",
+    "CREATE INDEX IF NOT EXISTS ix_membership_events_membership "
+    "ON membership_events(membership_id, seq)",
+)
+
+
+@dataclass(frozen=True)
+class MembershipEvent:
+    """One recorded membership lifecycle change."""
+
+    id: str
+    event_type: str
+    membership_id: str
+    tenant_id: str
+    identity_id: str
+    actor_id: str | None
+    roles_before: list[str] | None
+    roles_after: list[str] | None
+    status_before: str | None
+    status_after: str | None
+    reason: str | None
+    created_at: datetime
+    seq: int | None = None
+    row_hash: str | None = None
+
+
+def _canonical_event_payload(row: dict[str, Any]) -> str:
+    """Deterministic hash-input string for an event row.
+
+    ``sort_keys=True``, compact separators, ``default=str``. Only
+    ``_EVENT_HASH_COLUMNS`` participate (``seq``/``row_hash`` excluded).
+    """
+    payload = {k: row[k] for k in _EVENT_HASH_COLUMNS if k in row}
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def compute_event_hash(prev_hash: str, row: dict[str, Any]) -> str:
+    """``sha256(prev_hash || canonical_payload(row)).hexdigest()`` — chain integrity."""
+    return hashlib.sha256((prev_hash + _canonical_event_payload(row)).encode("utf-8")).hexdigest()
+
+
+def record_membership_event(
+    cur: Any,
+    *,
+    event_type: str,
+    membership_id: str,
+    tenant_id: str,
+    identity_id: str,
+    actor_id: str | None = None,
+    roles_before: list[str] | None = None,
+    roles_after: list[str] | None = None,
+    status_before: str | None = None,
+    status_after: str | None = None,
+    reason: str | None = None,
+) -> MembershipEvent:
+    """Append one hash-chained event row using ``cur`` (caller's open transaction).
+
+    The caller MUST already hold the membership-events advisory lock in this
+    transaction (``SELECT pg_advisory_xact_lock(MEMBERSHIP_EVENTS_LOCK_KEY)``) so
+    the chain-head read below is serialised. Writing through the caller's cursor
+    makes the event atomic with the mutation — durable, never dropped.
+    """
+    now = datetime.now(UTC)
+    row: dict[str, Any] = {
+        "id": secrets.token_urlsafe(18),
+        "event_type": event_type,
+        "membership_id": membership_id,
+        "tenant_id": tenant_id,
+        "identity_id": identity_id,
+        "actor_id": actor_id,
+        "roles_before": json.dumps(roles_before) if roles_before is not None else None,
+        "roles_after": json.dumps(roles_after) if roles_after is not None else None,
+        "status_before": status_before,
+        "status_after": status_after,
+        "reason": reason,
+        "created_at": now.isoformat(),
+    }
+    cur.execute("SELECT row_hash FROM membership_events ORDER BY seq DESC LIMIT 1")
+    head = cur.fetchone()
+    prev_hash = "" if head is None else (head["row_hash"] if isinstance(head, dict) else head[0])
+    row["row_hash"] = compute_event_hash(prev_hash or "", row)
+
+    cols = ", ".join(_EVENT_INSERT_COLUMNS)
+    placeholders = ", ".join("%s" for _ in _EVENT_INSERT_COLUMNS)
+    # cols/placeholders derive from the fixed _EVENT_INSERT_COLUMNS module
+    # constant (never user input); all values go through %s parameterisation.
+    insert_sql = f"INSERT INTO membership_events ({cols}) VALUES ({placeholders})"
+    # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+    cur.execute(insert_sql, tuple(row[c] for c in _EVENT_INSERT_COLUMNS))
+    return MembershipEvent(
+        id=row["id"],
+        event_type=event_type,
+        membership_id=membership_id,
+        tenant_id=tenant_id,
+        identity_id=identity_id,
+        actor_id=actor_id,
+        roles_before=roles_before,
+        roles_after=roles_after,
+        status_before=status_before,
+        status_after=status_after,
+        reason=reason,
+        created_at=now,
+        row_hash=row["row_hash"],
+    )
+
+
+@dataclass(frozen=True)
+class EventChainResult:
+    """Result of verifying the membership_events hash-chain."""
+
+    ok: bool
+    total_rows: int
+    first_mismatch_id: str | None
+    mismatched_count: int
+
+
+def verify_membership_event_chain(conn: Any) -> EventChainResult:
+    """Recompute the chain in ``seq`` order and compare stored vs recomputed hashes."""
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM membership_events ORDER BY seq ASC")  # full scan; low-volume table
+    rows = cur.fetchall()
+    prev_hash = ""
+    mismatched = 0
+    first_mismatch: str | None = None
+    for row in rows:
+        rowd = dict(row)
+        expected = compute_event_hash(prev_hash, rowd)
+        stored = rowd.get("row_hash")
+        if stored != expected:
+            mismatched += 1
+            if first_mismatch is None:
+                first_mismatch = rowd.get("id")
+        prev_hash = stored or expected
+    return EventChainResult(
+        ok=mismatched == 0,
+        total_rows=len(rows),
+        first_mismatch_id=first_mismatch,
+        mismatched_count=mismatched,
+    )
