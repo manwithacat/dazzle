@@ -153,6 +153,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
 
         auth_ctx = MagicMock()
         auth_ctx.is_authenticated = True
+        auth_ctx.active_membership = None
 
         deps._bind_rls_tenant_id(auth_ctx)
 
@@ -190,6 +191,7 @@ def test_bind_omits_empty_string_value(monkeypatch) -> None:
 
         auth_ctx = MagicMock()
         auth_ctx.is_authenticated = True
+        auth_ctx.active_membership = None
         deps._bind_rls_tenant_id(auth_ctx)
 
         assert "id" not in get_current_rls_user_attrs()
@@ -218,6 +220,7 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
 
     auth_ctx = MagicMock()
     auth_ctx.is_authenticated = True
+    auth_ctx.active_membership = None
     deps._bind_rls_tenant_id(auth_ctx)
 
     assert get_current_rls_user_attrs() == {}
