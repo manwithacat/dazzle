@@ -30,6 +30,15 @@ def would_orphan_org(
     active admin). ``new_roles=[...]`` models a role change. Only blocks when the
     org currently HAS at least one admin and the change drops it to zero — an
     already-admin-less org can't be orphaned further.
+
+    Concurrency caveat: this is a **point-in-time** check over a roster snapshot.
+    The route reads the roster, calls this, then mutates in a separate
+    transaction — so two near-simultaneous admin-on-admin mutations can each pass
+    here and both apply, dropping the org to zero admins (a rare TOCTOU race). It
+    guards the common single-actor case; a concurrently-orphaned org is recoverable
+    out-of-band (platform superuser / DB-level role reassignment). A fully atomic
+    guard (re-checking inside the mutation's advisory-locked transaction) is a
+    deferred hardening — see the 3b plan / CHANGELOG.
     """
     before = active_admins(roster, org_admin_roles)
     if not before:

@@ -7,6 +7,12 @@ Every mutation runs the same gate:
      a membership_id from another org is rejected, never managed);
   3. the change won't leave the org with zero active admins (orphan guard).
 The org is always the caller's active membership's tenant_id — never request input.
+
+Notes: the orphan guard (3) is a point-in-time check (see ``would_orphan_org`` —
+concurrent admin-on-admin mutations can race it; atomic re-check is deferred). A
+non-last admin who demotes/removes themselves keeps their current session's
+active_membership until the next request, when the gate re-validates and locks
+them out — self-demotion takes effect on the next request, which is safe.
 """
 
 from typing import Annotated, Any
