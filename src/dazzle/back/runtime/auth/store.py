@@ -19,7 +19,13 @@ except ImportError:
 from dazzle.core.db_url import normalise_postgres_scheme
 
 from .crypto import hash_password, verify_password
-from .models import AuthContext, MembershipRecord, SessionRecord, UserRecord
+from .models import (
+    AuthContext,
+    MembershipRecord,
+    OrganizationRecord,
+    SessionRecord,
+    UserRecord,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -755,6 +761,107 @@ class SessionStoreMixin:
         )
         return [self._row_to_membership(r) for r in rows]
 
+    # -- Organizations (auth Plan 1c — framework tenant root) ----------------
+
+    DEFAULT_ORG_SLUG = "default"
+
+    def _row_to_organization(self, row: dict[str, Any]) -> OrganizationRecord:
+        return OrganizationRecord(
+            id=row["id"],
+            slug=row["slug"],
+            name=row["name"],
+            status=row["status"],
+            is_test=bool(row["is_test"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+        )
+
+    def create_organization(
+        self, *, slug: str, name: str, is_test: bool = False
+    ) -> OrganizationRecord:
+        """Create an organization (raises on duplicate slug)."""
+        org = OrganizationRecord(
+            id=secrets.token_urlsafe(24), slug=slug, name=name, is_test=is_test
+        )
+        self._execute(
+            """
+            INSERT INTO organizations
+                (id, slug, name, status, is_test, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                org.id,
+                org.slug,
+                org.name,
+                org.status,
+                org.is_test,
+                org.created_at.isoformat(),
+                org.updated_at.isoformat(),
+            ),
+        )
+        return org
+
+    def get_organization_by_slug(self, slug: str) -> OrganizationRecord | None:
+        row = self._execute_one("SELECT * FROM organizations WHERE slug = %s", (slug,))
+        return self._row_to_organization(row) if row else None
+
+    def get_or_create_default_organization(self, *, name: str = "Default") -> OrganizationRecord:
+        """Return the single default org, creating it race-safely if absent.
+
+        Concurrent first-signups converge on one row: the INSERT is a no-op on
+        slug conflict, then we SELECT the winner. The fixed ``DEFAULT_ORG_SLUG``
+        + its UNIQUE constraint is the idempotency key.
+        """
+        now = datetime.now(UTC).isoformat()
+        self._execute(
+            """
+            INSERT INTO organizations
+                (id, slug, name, status, is_test, created_at, updated_at)
+            VALUES (%s, %s, %s, 'active', false, %s, %s)
+            ON CONFLICT (slug) DO NOTHING
+            """,
+            (secrets.token_urlsafe(24), self.DEFAULT_ORG_SLUG, name, now, now),
+        )
+        existing = self.get_organization_by_slug(self.DEFAULT_ORG_SLUG)
+        assert existing is not None  # we just ensured it exists
+        return existing
+
+    def ensure_single_org_membership(
+        self, user: UserRecord, *, name: str = "Default"
+    ) -> MembershipRecord:
+        """Ensure ``user`` has a membership in the single default org (Plan 1c).
+
+        Race-safe: get-or-create the default org, then return the user's existing
+        membership in it (the 1a ``(tenant_id, identity_id)`` unique makes the
+        create idempotent — on a lost race we re-read). The membership's roles
+        mirror the user's signup roles (``user.roles``) so ``effective_roles``
+        equals what the user had before the membership model.
+        """
+        org = self.get_or_create_default_organization(name=name)
+
+        def _existing() -> MembershipRecord | None:
+            for m in self.get_memberships_for_identity(str(user.id)):
+                if m.tenant_id == org.id:
+                    return m
+            return None
+
+        found = _existing()
+        if found is not None:
+            return found
+        try:
+            return self.create_membership(
+                tenant_id=org.id,
+                identity_id=str(user.id),
+                roles=list(user.roles or []),
+            )
+        except Exception:
+            # Lost a concurrent create for the same (tenant_id, identity_id) —
+            # re-read the winner rather than failing the login. We only swallow
+            # the unique-violation path: assert the row now exists (anti-silent).
+            again = _existing()
+            assert again is not None, "membership create failed and no existing row found"
+            return again
+
 
 class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
     """
@@ -890,6 +997,21 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     "Schema migration for sessions.active_membership_id raised — continuing",
                     exc_info=True,
                 )
+            # auth Plan 1c: organizations (framework tenant root). Mirrors alembic
+            # 0008_organizations. organizations.id is the dazzle.tenant_id a
+            # membership carries; single-org apps use the fixed slug "default".
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS organizations (
+                    id TEXT PRIMARY KEY,
+                    slug TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    is_test BOOLEAN NOT NULL DEFAULT false,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    CONSTRAINT uq_organizations_slug UNIQUE (slug)
+                )
+            """)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     token TEXT PRIMARY KEY,
