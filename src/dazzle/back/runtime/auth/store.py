@@ -30,6 +30,17 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def _appspec_has_tenant_root(appspec: Any) -> bool:
+    """True iff the appspec declares an ``is_tenant_root`` / archetype:tenant
+    entity (auth Plan 1d — selects the 1:1 org<->root mirror provisioning)."""
+    for e in getattr(getattr(appspec, "domain", None), "entities", []) or []:
+        if getattr(e, "is_tenant_root", False):
+            return True
+        if getattr(getattr(e, "archetype_kind", None), "name", "") == "TENANT":
+            return True
+    return False
+
+
 class UserStoreMixin:
     """User CRUD, password management, and password reset tokens."""
 
@@ -805,6 +816,10 @@ class SessionStoreMixin:
         row = self._execute_one("SELECT * FROM organizations WHERE slug = %s", (slug,))
         return self._row_to_organization(row) if row else None
 
+    def get_organization(self, org_id: str) -> OrganizationRecord | None:
+        row = self._execute_one("SELECT * FROM organizations WHERE id = %s", (org_id,))
+        return self._row_to_organization(row) if row else None
+
     def get_or_create_default_organization(self, *, name: str = "Default") -> OrganizationRecord:
         """Return the single default org, creating it race-safely if absent.
 
@@ -836,17 +851,31 @@ class SessionStoreMixin:
         return existing
 
     def ensure_single_org_membership(
-        self, user: UserRecord, *, name: str = "Default"
+        self, user: UserRecord, *, name: str = "Default", appspec: Any = None
     ) -> MembershipRecord:
-        """Ensure ``user`` has a membership in the single default org (Plan 1c).
+        """Ensure ``user`` has a membership in the single default org (Plan 1c/1d).
 
         Race-safe: get-or-create the default org, then return the user's existing
         membership in it (the 1a ``(tenant_id, identity_id)`` unique makes the
         create idempotent — on a lost race we re-read). The membership's roles
         mirror the user's signup roles (``user.roles``) so ``effective_roles``
         equals what the user had before the membership model.
+
+        Plan 1d: when ``appspec`` is given and declares an ``is_tenant_root``
+        entity, the org is provisioned with a matching tenant-root row at the
+        SAME id (the 1:1 mirror) so the membership fences the canonical RLS
+        domain rows. Otherwise the framework org IS the tenant (1c behaviour).
         """
-        org = self.get_or_create_default_organization(name=name)
+        if appspec is not None and _appspec_has_tenant_root(appspec):
+            from dazzle.db.provision import provision_single_org
+
+            with self._get_connection() as conn:  # type: ignore[attr-defined]  # concrete AuthStore provides it
+                org_id = provision_single_org(appspec, name, conn=conn)
+            org = self.get_organization(org_id)
+            if org is None:
+                raise LookupError(f"provisioned org {org_id!r} not found after mirror")
+        else:
+            org = self.get_or_create_default_organization(name=name)
 
         def _existing() -> MembershipRecord | None:
             for m in self.get_memberships_for_identity(str(user.id)):

@@ -65,6 +65,9 @@ class AuthSubsystem:
         _auto_provision = bool(getattr(ctx.config, "auto_provision_single_org", False))
         ctx.app.state.single_org_auto_provision = _auto_provision
         ctx.app.state.memberships_required = _auto_provision
+        # auth Plan 1d: expose the AppSpec for the activation path's 1:1 org<->
+        # tenant-root mirror provisioning (archetype apps).
+        ctx.app.state.appspec = ctx.appspec
 
         # Mount the magic link consumer router (general-purpose, production-safe)
         from dazzle.back.runtime.auth.magic_link_routes import create_magic_link_routes

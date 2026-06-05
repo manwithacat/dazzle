@@ -116,7 +116,12 @@ def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> Acti
     host_tenant_id = host_tenant_id_from_request(request)
     memberships = auth_store.get_memberships_for_identity(str(user.id))
     if not memberships and host_tenant_id is None and single_org_auto_provision(request):
-        auth_store.ensure_single_org_membership(user)
+        # Plan 1d: pass the AppSpec so an is_tenant_root app provisions the org
+        # with a matching tenant-root row at the shared id (1:1 mirror); a
+        # rootless app falls back to the framework-org behaviour (appspec=None).
+        app_state = getattr(getattr(request, "app", None), "state", None)
+        appspec = getattr(app_state, "appspec", None)
+        auth_store.ensure_single_org_membership(user, appspec=appspec)
         memberships = auth_store.get_memberships_for_identity(str(user.id))
     return resolve_activation(memberships=memberships, host_tenant_id=host_tenant_id)
 

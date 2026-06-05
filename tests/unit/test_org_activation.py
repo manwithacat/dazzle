@@ -133,7 +133,7 @@ class _ProvisioningStore:
     def get_memberships_for_identity(self, identity_id: str) -> list[MembershipRecord]:
         return list(self._memberships.get(identity_id, []))
 
-    def ensure_single_org_membership(self, user, *, name="Default"):  # noqa: ANN001
+    def ensure_single_org_membership(self, user, *, name="Default", appspec=None):  # noqa: ANN001
         self.provisioned.append(str(user.id))
         m = MembershipRecord(id="m-prov", tenant_id="t-default", identity_id=str(user.id))
         self._memberships[str(user.id)] = [m]
