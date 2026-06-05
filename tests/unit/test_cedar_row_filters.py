@@ -163,6 +163,7 @@ class TestExtractCedarRowFilters:
             roles = ["admin"]
 
         class FakeAuth:
+            is_authenticated = True  # auth Plan 1b: effective_roles needs this
             user = FakeUser()
 
         spec = _make_access_spec(
@@ -184,6 +185,7 @@ class TestExtractCedarRowFilters:
             roles = ["viewer"]
 
         class FakeAuth:
+            is_authenticated = True  # auth Plan 1b: effective_roles needs this
             user = FakeUser()
 
         spec = _make_access_spec(
@@ -257,6 +259,7 @@ class TestExtractCedarRowFilters:
             roles = ["viewer"]
 
         class FakeAuth:
+            is_authenticated = True  # auth Plan 1b: effective_roles needs this
             user = FakeUser()
 
         spec = _make_access_spec(

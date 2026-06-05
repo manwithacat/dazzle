@@ -176,7 +176,12 @@ async def check_entity_op(
     user_id = str(user.id) if getattr(user, "id", None) is not None else None
     if user_id is None:
         raise HTTPException(status_code=401, detail="authentication required")
-    user_roles_raw = list(getattr(user, "roles", []) or [])
+    # auth Plan 1b: the permit/scope gates read the active membership's roles
+    # (effective_roles), falling back to global user roles only when no
+    # membership is active (1a transition).
+    from dazzle.back.runtime.auth.models import effective_roles_of
+
+    user_roles_raw = effective_roles_of(auth_ctx)
 
     info = registry.get(entity_name)
     if info is None or info.cedar_access_spec is None:

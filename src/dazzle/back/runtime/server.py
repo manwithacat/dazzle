@@ -1633,7 +1633,10 @@ class DazzleBackendApp:
             atomic_router = build_atomic_flow_router(
                 list(self._appspec.atomic_flows),
                 self._db_manager,
-                user_role_extractor=lambda user: list(getattr(user, "roles", []) or []),
+                # auth Plan 1b: the atomic-flow router invokes this with the
+                # AuthContext (atomic_flow_routes `auth_context=user`), so read
+                # effective_roles (active membership) — not the global user.roles.
+                user_role_extractor=lambda ac: list(getattr(ac, "effective_roles", None) or []),
                 auth_dep=auth_dep,
                 # #1313 slice 1b/1c — per-step scope enforcement. Same access
                 # specs + FK graph the policy registry uses above.

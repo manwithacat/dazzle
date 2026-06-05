@@ -48,7 +48,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from dazzle.back.runtime.auth import AuthContext
+from dazzle.back.runtime.auth import AuthContext, effective_roles_of
 from dazzle.back.runtime.htmx_response import htmx_trigger_headers
 from dazzle.back.runtime.repository import ConstraintViolationError
 from dazzle.back.specs.endpoint import EndpointSpec, HttpMethod
@@ -856,14 +856,14 @@ def _extract_cedar_row_filters(
     if not permissions:
         return {}
 
-    # Collect roles from auth_context, normalizing role_ prefix
+    # Collect roles from auth_context, normalizing role_ prefix.
+    # auth Plan 1b: source from the active membership (effective_roles), not
+    # the global user.roles.
     user_roles: set[str] = set()
     if auth_context is not None:
-        _user_obj = getattr(auth_context, "user", None)
-        if _user_obj:
-            for r in getattr(_user_obj, "roles", []):
-                name = r if isinstance(r, str) else getattr(r, "name", str(r))
-                user_roles.add(_normalize_role(name))
+        for r in effective_roles_of(auth_context):
+            name = r if isinstance(r, str) else getattr(r, "name", str(r))
+            user_roles.add(_normalize_role(name))
 
     filters: dict[str, Any] = {}
     has_unrestricted_permit = False
@@ -1410,7 +1410,9 @@ def _build_access_context(
     from dazzle.core.access import AccessRuntimeContext
 
     user = auth_context.user if auth_context.is_authenticated else None
-    raw_roles = list(getattr(user, "roles", [])) if user else []
+    # auth Plan 1b: source roles from the active membership (effective_roles),
+    # not the global user.roles. effective_roles returns [] when unauthenticated.
+    raw_roles = list(effective_roles_of(auth_context))
     ctx = AccessRuntimeContext(
         user_id=str(user.id) if user else None,
         roles=[_normalize_role(r) for r in raw_roles],
@@ -1501,6 +1503,9 @@ async def _log_audit_decision(
         policy_effect=policy_effect or "",
         user_id=str(user.id) if user else None,
         user_email=getattr(user, "email", None) if user else None,
+        # Plan 1b: audit attribution stays user-sourced (the actor's global
+        # roles); per-membership audit attribution is Plan 2 (compliance
+        # evidence). Authorization decisions above use effective_roles.
         user_roles=list(getattr(user, "roles", [])) if user else None,
         evaluation_time_us=evaluation_time_us,
         field_changes=field_changes,
@@ -1704,13 +1709,13 @@ def _build_cedar_handler(
                     entity_name=entity_name,
                     operation=operation,
                     cedar_access_spec=cedar_access_spec,
-                    current_roles=list(getattr(user, "roles", [])) if user else [],
+                    current_roles=list(effective_roles_of(auth_context)),  # Plan 1b
                 ),
             )
 
         current_user = str(user.id) if user else None
         _user_email = getattr(user, "email", None) if user else None
-        raw_roles = list(getattr(user, "roles", [])) if user else []
+        raw_roles = list(effective_roles_of(auth_context))  # auth Plan 1b: membership-first
         _is_su = ctx.is_superuser
         result = await core_fn(
             id,
@@ -1797,7 +1802,7 @@ def _build_auth_handler(
         if needs_pre_read and include_field_changes and audit_logger and id is not None:
             existing = await service.execute(operation="read", id=id)
 
-        raw_roles = list(getattr(user, "roles", [])) if user else []
+        raw_roles = list(effective_roles_of(auth_context))  # auth Plan 1b: membership-first
         _is_su = getattr(user, "is_superuser", False) if user else False
         _user_email = getattr(user, "email", None) if user else None
         result = await core_fn(
@@ -2222,9 +2227,11 @@ async def _scoped_pre_read(
         user = getattr(auth_context, "user", None)
         if user is not None:
             user_id = str(user.id) if getattr(user, "id", None) is not None else None
-            for r in getattr(user, "roles", []) or []:
-                r_name = r if isinstance(r, str) else getattr(r, "name", str(r))
-                user_roles.add(_normalize_role(r_name))
+        # auth Plan 1b: roles from the active membership (effective_roles), not
+        # the global user.roles. user_id still comes from the user.
+        for r in effective_roles_of(auth_context):
+            r_name = r if isinstance(r, str) else getattr(r, "name", str(r))
+            user_roles.add(_normalize_role(r_name))
 
     if user_id is None:
         # Unauthenticated path — fall back to unscoped (the permit gate
@@ -2720,7 +2727,8 @@ def _should_bypass_tenant_filter(
         return True
     if not admin_personas:
         return False
-    user_roles = set(getattr(user, "roles", []) or [])
+    # auth Plan 1b: admin bypass keyed on the active membership's roles.
+    user_roles = set(effective_roles_of(auth_context))
     # AuthContext roles may carry the `role_` prefix from the auth
     # backend; predicate compilation works against the bare DSL names.
     normalised = {_normalize_role(r) for r in user_roles}

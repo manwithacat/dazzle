@@ -110,6 +110,40 @@ class AuthContext(BaseModel):
         return list(self.roles)
 
 
+def effective_roles_of(auth_context: object) -> list[str]:
+    """Membership-first effective roles for an ``AuthContext``-shaped object.
+
+    The duck-typed twin of :attr:`AuthContext.effective_roles` (auth Plan 1b),
+    used by the runtime authorization sites (route_generator / policy) that take
+    a loosely-typed ``auth_context``. Identical semantics to the property for a
+    real ``AuthContext``: unauthenticated → ``[]``; an active membership wins
+    (even an empty role list — so a membership with no roles does *not* leak the
+    global ``user.roles``); otherwise the top-level ``roles``. It additionally
+    falls back to the nested ``user.roles`` when no top-level ``roles`` is set,
+    which only matters for partial/legacy auth-context shapes (the runtime always
+    sets ``roles = user.roles`` at ``validate_session``).
+    """
+    if auth_context is None or not getattr(auth_context, "is_authenticated", False):
+        return []
+    membership = getattr(auth_context, "active_membership", None)
+    if membership is not None:
+        m_roles = getattr(membership, "roles", None)
+        # A real MembershipRecord.roles is always a list (default_factory=list).
+        # The isinstance guard also makes this robust to MagicMock auth-context
+        # doubles, whose auto-created `active_membership` is truthy but has a
+        # non-sequence `roles` — those fall through to the legacy roles below
+        # instead of silently resolving to an empty role set (the same MagicMock
+        # trap that requires `active_membership=None` in _bind_rls_tenant_id).
+        if isinstance(m_roles, (list, tuple)):
+            return list(m_roles)
+    roles = getattr(auth_context, "roles", None)
+    if isinstance(roles, (list, tuple)) and roles:
+        return list(roles)
+    user = getattr(auth_context, "user", None)
+    user_roles = getattr(user, "roles", None)
+    return list(user_roles) if isinstance(user_roles, (list, tuple)) else []
+
+
 # =============================================================================
 # Request Models
 # =============================================================================

@@ -83,6 +83,12 @@ def _make_auth_context(user_id="user-1", roles=None, is_superuser=False):
     user.is_superuser = is_superuser
     user.email = f"{user_id}@test.com" if user_id else None
     ctx.user = user if user_id else None
+    # auth Plan 1b: a MagicMock auto-creates truthy `active_membership` / `roles`
+    # attributes, which `effective_roles_of` would misread. Mirror a real
+    # membership-less AuthContext: no active membership, top-level roles = user
+    # roles (as validate_session sets them).
+    ctx.active_membership = None
+    ctx.roles = roles or []
     return ctx
 
 

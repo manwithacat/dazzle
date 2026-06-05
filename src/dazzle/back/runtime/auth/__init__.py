@@ -44,6 +44,7 @@ from .models import (
     TwoFactorSetupRequest,
     TwoFactorVerifyRequest,
     UserRecord,
+    effective_roles_of,
 )
 from .routes import create_auth_routes
 from .routes_2fa import create_2fa_routes
@@ -56,6 +57,7 @@ __all__ = [
     "AUTH_USER_PASSWORD_CHANGED",
     "AUTH_USER_REGISTERED",
     "AuthContext",
+    "effective_roles_of",
     "AuthMiddleware",
     "AuthStore",
     "TwoFactorMixin",
