@@ -541,6 +541,32 @@ class SessionStoreMixin:
             raise LookupError(f"cannot regenerate CSRF secret: no session {session_id!r}")
         return new_secret
 
+    def set_session_active_membership(
+        self, session_id: str, membership_id: str, *, identity_id: str
+    ) -> bool:
+        """Pin (or rotate) a session's active org membership — ownership-checked.
+
+        The membership must belong to ``identity_id`` (the session's user) and be
+        ``status="active"``; otherwise this is a no-op returning False (a user
+        must not activate another identity's org, nor a suspended membership — the
+        Phase-2 IDOR guard). The ``AND user_id = %s`` on the UPDATE is
+        defence-in-depth so a stale/foreign ``session_id`` cannot be repointed.
+        Returns True iff exactly one row moved. The RLS GUC re-binds on the next
+        request via ``validate_session`` → ``_bind_rls_tenant_id`` (Plan 1a).
+        """
+        membership = self.get_membership(membership_id)
+        if (
+            membership is None
+            or membership.identity_id != identity_id
+            or membership.status != "active"
+        ):
+            return False
+        rowcount = self._execute_modify(
+            "UPDATE sessions SET active_membership_id = %s WHERE id = %s AND user_id = %s",
+            (membership_id, session_id, identity_id),
+        )
+        return rowcount == 1
+
     def validate_session(self, session_id: str) -> AuthContext:
         """
         Validate a session and return auth context.
