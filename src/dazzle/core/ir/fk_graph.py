@@ -231,3 +231,16 @@ class FKGraph:
                 # Remaining entities form a cycle — no valid parent-before-child order.
                 return None
         return ordered
+
+    def deletion_order(self, entities: list[str]) -> list[str] | None:
+        """Order *entities* child-before-parent for safe FK-respecting deletion.
+
+        The exact reverse of :meth:`creation_order` — every entity appears
+        *before* the entities it has an FK to (within the set), so deleting in
+        this order never violates a still-present FK reference. Returns ``None``
+        on a cycle (incl. a self-referential FK), exactly when ``creation_order``
+        does — the caller (excision) treats that as "no safe order" and refuses
+        rather than risk a constraint violation or an infinite loop.
+        """
+        created = self.creation_order(entities)
+        return None if created is None else list(reversed(created))
