@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.44] - 2026-06-05
+
+### Added
+
+- **Auth Plan 3c.ii — member profile-resolution route** (plan `docs/superpowers/plans/2026-06-05-auth-plan-3c-ii-profile-resolution.md`; spec §7). Completes `archetype: profile` at runtime: `GET /me/profile` (form) + `POST /me/profile` (upsert) get-or-create **the current member's** profile, keyed by `(active_membership.tenant_id, current_user.id)`. The route resolves the app's `is_profile` entity + its `Repository` (`app.state.repositories`), binds the RLS GUC from the active membership (`_bind_rls_tenant_id`) before any repo op — so create-time `tenant_id` injection (Plan 1d) fills the tenant and RLS fences as defence-in-depth — reads explicitly by `(identity_id, tenant_id)`, and sets `identity_id` server-side (never client input; `id`/`tenant_id`/`identity_id`/auto fields are framework-managed, never editable). End-to-end consumption of the RLS fence + create-injection + the 3c profile schema. Adversarially reviewed — cross-member + cross-tenant isolation confirmed sound (server-sourced identity/tenant, `_MANAGED` filter on create + update, fail-closed injection, CSRF via the origin gate). Real-PG proofs in `tests/integration/test_profile_resolution_pg.py` (create injects tenant_id; update is no-duplicate; identity-scoped; the same identity in two orgs gets the active org's profile; no identity/tenant smuggling). **Scope:** string-valued profile fields (`str`/`text`/`enum`) are editable; typed scalars (int/bool/date) and `file` (avatar) are a documented follow-on (need form→type coercion). `tenancy: multi_org:` remains deferred (YAGNI).
+
+### Agent Guidance
+
+- **`GET/POST /me/profile`** is the runtime entry point for `archetype: profile` — it get-or-creates the *caller's own* profile in their *active* org (identity + tenant are server-sourced; a client cannot target another member or org, nor smuggle `id`/`tenant_id`/`identity_id`). Only string-valued profile fields are editable for now; declare typed scalars/`file` knowing the form won't render/write them yet. The route binds the RLS GUC, so it must run for an authenticated member with an active membership (else 403).
+
 ## [0.81.43] - 2026-06-05
 
 ### Added
