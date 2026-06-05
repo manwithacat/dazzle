@@ -178,3 +178,25 @@ def test_mint_rejects_run_mismatch(scratch_url: str) -> None:
 
     resp = _app(store).post("/qa/secure/mint", json={"token": token})
     assert resp.status_code == 403
+
+
+def test_mint_scopes_to_test_org_for_user_in_both_test_and_real(scratch_url: str) -> None:
+    """A user who belongs to BOTH a test org and a real org: the mint binds the
+    TEST org's membership only — never the real one (containment regression lock)."""
+    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    prov = provision_test_tenant(store, run_id="dual")
+    # The same identity also belongs to a REAL org.
+    real = store.create_organization(slug="acme", name="Acme", is_test=False)
+    store.create_membership(tenant_id=real.id, identity_id=str(prov.admin.id), roles=["admin"])
+    token = sign_qa_token(prov.admin.email, "dual", secret=_SECRET, now=_time.time())
+
+    resp = _app(store).post("/qa/secure/mint", json={"token": token})
+    assert resp.status_code == 200
+    assert resp.json()["tenant_id"] == prov.org.id  # the TEST org, not the real one
+    ctx = store.validate_session(resp.cookies.get("dazzle_session"))
+    assert ctx.active_membership.tenant_id == prov.org.id
+    assert ctx.active_membership.tenant_id != real.id

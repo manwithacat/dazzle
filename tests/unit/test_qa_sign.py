@@ -50,3 +50,11 @@ def test_tampered_payload_rejected() -> None:
     forged = "evil@qa.test:run1:1000.0." + sig
     with pytest.raises(QaTokenError):
         verify_qa_token(forged, secret=_SECRET, now=1010.0)
+
+
+def test_colon_in_claims_does_not_reparse() -> None:
+    """An email containing ':' makes the payload split into >3 parts → rejected,
+    so a forged payload can't re-parse into different valid claims."""
+    tok = sign_qa_token("a:b", "c", secret=_SECRET, now=1000.0)
+    with pytest.raises(QaTokenError, match="malformed payload"):
+        verify_qa_token(tok, secret=_SECRET, now=1010.0)

@@ -55,17 +55,21 @@ def create_qa_secure_routes() -> APIRouter | None:
         # The target org is derived from the SIGNED run_id, never a
         # request-supplied tenant id. It must be reserved-namespaced AND
         # is_test — both unforgeable from the request.
+        # All post-signature refusals return ONE opaque 403 (no client-facing
+        # oracle distinguishing which gate failed); the specific reason is logged
+        # server-side for the operator. (Only reachable by a holder of the QA
+        # secret, but opaque-by-default is cheap.)
+        def _refuse(reason: str) -> HTTPException:
+            logger.warning("[QA-AUTH] refused mint (run_id=%r): %s", claims.run_id, reason)
+            return HTTPException(status_code=403, detail="forbidden")
+
         org = auth_store.get_organization_by_slug(f"{QA_SLUG_PREFIX}{claims.run_id}")
         if org is None or not org.is_test or not org.slug.startswith(QA_SLUG_PREFIX):
-            logger.warning(
-                "[QA-AUTH] refused mint: org for run_id=%r is not a reserved is_test tenant",
-                claims.run_id,
-            )
-            raise HTTPException(status_code=403, detail="not a test tenant")
+            raise _refuse("org for run_id is not a reserved is_test tenant")
 
         user = auth_store.get_user_by_email(claims.email.strip().lower())
         if user is None:
-            raise HTTPException(status_code=403, detail="unknown user")
+            raise _refuse("unknown user")
         membership = next(
             (
                 m
@@ -75,7 +79,7 @@ def create_qa_secure_routes() -> APIRouter | None:
             None,
         )
         if membership is None:
-            raise HTTPException(status_code=403, detail="no membership in test tenant")
+            raise _refuse("no active membership in test tenant")
 
         # Mint a session scoped to the test org's membership (binds dazzle.tenant_id).
         session = auth_store.create_session(user, active_membership_id=membership.id)
