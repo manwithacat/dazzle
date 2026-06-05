@@ -589,6 +589,24 @@ def build_metadata(
         if is_tenant_scoped:
             assert partition_key is not None  # narrowed by is_tenant_scoped
             tenant_args = _tenant_table_args(entity, partition_key, scoped_names, circular_edges)
+            # auth Plan 1d: the DB fills the injected tenant_id from the bound
+            # session GUC on insert, so a scoped create needn't carry it (it's
+            # excluded from the create input). The explicit cast is REQUIRED — PG
+            # rejects a bare text default on a uuid column. An unset GUC →
+            # current_setting(...) NULL → NOT NULL violation (fail-closed).
+            from sqlalchemy.dialects import postgresql
+
+            pk_col = next((c for c in columns if c.name == partition_key), None)
+            if pk_col is not None:
+                pg_type = pk_col.type.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+                if not pg_type:
+                    raise ValueError(
+                        f"cannot derive a cast for {entity.name}.{partition_key} "
+                        "server_default (empty compiled type)"
+                    )
+                pk_col.server_default = sa.DefaultClause(
+                    sa.text(f"current_setting('dazzle.tenant_id', true)::{pg_type}")
+                )
 
         sa.Table(entity.name, metadata, *columns, *index_args, *tenant_args)
 
