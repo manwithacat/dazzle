@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.29] - 2026-06-05
+
 ### Added
 
 - **Auth identity model — Plan 1b: two-phase activation + org-context resolution** (second slice; spec §3/§4, plan `docs/superpowers/plans/2026-06-05-auth-plan-1b-two-phase-activation.md`). Login now runs **Phase 2** after proving identity: it resolves the identity's memberships and activates an org context onto the session. Rules (pure resolver in `auth/org_activation.py`): a **host-pin** (`tenant_host` #1289 → `request.state.tenant`) activates the membership whose `tenant_id == str(ResolvedTenant.id)` or returns **403**; otherwise a single active membership auto-activates, multiple → redirect to **`/auth/select-org`** (typed-Fragment org picker), zero → legacy proceed (or **`/auth/no-orgs`** once the app opts in via `app.state.memberships_required`, the Plan 1c gate). Wired into every interactive entry point (password login/signup, magic-link, SSO callback, 2FA-form completion) plus the JSON API login paths. New ownership-checked `AuthStore.set_session_active_membership` backs **`POST /auth/select-org`** and **`POST /auth/switch-org`** (org-switch re-scopes + rotates CSRF without re-auth; the RLS GUC re-binds on the next request). The two org-context POSTs are CSRF-protected via a new `CSRFConfig.protected_paths` anchored override (they live under `/auth/` but are authenticated privilege-changing mutations, not pre-session). Real-PG proof in `tests/integration/test_auth_activation_pg.py`.
