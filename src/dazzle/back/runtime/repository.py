@@ -712,13 +712,33 @@ class Repository(Generic[T]):
         values = list(db_data.values())
 
         table = quote_identifier(self.table_name)
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+        # auth Plan 1d: columns the entity has but the caller omitted (e.g. the
+        # framework partition key, excluded from create input and filled by a DB
+        # `current_setting('dazzle.tenant_id')` default) — RETURNING them keeps the
+        # response model complete with the server-supplied values.
+        omitted = [c for c in self._field_types if c not in db_data]
+        returning = ""
+        if omitted:
+            returning = " RETURNING " + ", ".join(quote_identifier(c) for c in omitted)
+        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}){returning}"
 
         start = time.perf_counter()
         try:
             with self.db.connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(sql, values)  # nosemgrep
+                if omitted:
+                    returned = cursor.fetchone()
+                    if returned is not None:
+                        row = dict(returned)  # dict_row connection (cf. read())
+                        data = {
+                            **data,
+                            **{
+                                c: _db_to_python(row[c], self._field_types.get(c))
+                                for c in omitted
+                                if c in row
+                            },
+                        }
         except _INTEGRITY_ERRORS as exc:
             raise _translate_integrity_error(exc, self.table_name) from exc
         latency_ms = (time.perf_counter() - start) * 1000
