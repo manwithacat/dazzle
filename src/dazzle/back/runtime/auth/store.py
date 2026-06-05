@@ -1335,6 +1335,16 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             cursor.execute(MEMBERSHIP_EVENTS_DDL)
             for _ix in MEMBERSHIP_EVENTS_INDEXES:
                 cursor.execute(_ix)
+            # auth Plan 3a: org invitation tokens (email-addressed, accept-time
+            # membership creation). Mirrors alembic 0010_invitations.
+            from dazzle.back.runtime.auth.invitations import (
+                INVITATIONS_DDL,
+                INVITATIONS_INDEXES,
+            )
+
+            cursor.execute(INVITATIONS_DDL)
+            for _ix in INVITATIONS_INDEXES:
+                cursor.execute(_ix)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     token TEXT PRIMARY KEY,
