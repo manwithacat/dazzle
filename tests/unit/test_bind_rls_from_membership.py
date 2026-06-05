@@ -1,4 +1,8 @@
-"""_bind_rls_tenant_id sources the fence from the active membership (Plan 1a)."""
+"""_bind_rls_tenant_id sources the fence ONLY from the active membership.
+
+Plan 1a introduced membership-first binding; Plan 1d removed the legacy
+preferences fallback (clean break) — a membership-less session binds nothing and
+the RLS fence denies (fail-closed)."""
 
 from unittest.mock import patch
 
@@ -26,13 +30,16 @@ def test_binds_tenant_id_from_active_membership() -> None:
     set_tid.assert_called_once_with("tenant-xyz")
 
 
-def test_falls_back_to_preferences_when_no_membership() -> None:
+def test_no_membership_binds_nothing_even_with_prefs() -> None:
+    # Plan 1d clean break: the preferences fallback is gone. A membership-less
+    # session leaves dazzle.tenant_id unbound (fail-closed) even if a legacy
+    # tenant_id preference is present.
     with (
         patch("dazzle.back.runtime.tenant_isolation.set_current_tenant_id") as set_tid,
         patch("dazzle.back.runtime.tenant_isolation.get_rls_user_attr_names", return_value=set()),
     ):
         _bind_rls_tenant_id(_ctx(prefs={"tenant_id": "tenant-legacy"}))
-    set_tid.assert_called_once_with("tenant-legacy")
+    set_tid.assert_not_called()
 
 
 def test_unauthenticated_binds_nothing() -> None:

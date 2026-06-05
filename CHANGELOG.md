@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.38] - 2026-06-05
+
+### Changed
+
+- **Tenant id resolves ONLY from the active membership — preferences fallback removed (auth Plan 1d, final follow-up; clean break per ADR-0003).** `current_user.tenant_id` (the app-layer scope-filter source) and the `dazzle.tenant_id` RLS GUC (`_bind_rls_tenant_id`) now resolve solely from `active_membership.tenant_id`. The legacy preferences/domain-user fallback (`_resolve_user_attribute` falling through to `AuthContext.preferences` for `tenant_id`) is gone: a membership-less session resolves `tenant_id` to the deny sentinel, so the scope predicate and the RLS fence **deny (fail-closed)** rather than silently scoping by a preference-derived value. Other `current_user.<attr>` scope refs (school, department, …) are unchanged — they still resolve via the user/preferences path. Apps using `current_user.tenant_id` must now be on the membership model (declare the tenant root `archetype: tenant` + `dazzle auth migrate`); `invoice_ops` and its adversarial isolation harness were updated to provision memberships exactly as a real deployment does.
+
+### Agent Guidance
+
+- **`current_user.tenant_id` is membership-only now.** It (and the RLS GUC) resolve solely from the session's active membership — no preferences fallback. A session without an active membership fails closed on any tenant-scoped query. Any app with `scope: … = current_user.tenant_id` rules (or relying on the RLS fence) must be on the membership model: `archetype: tenant` root + `dazzle auth migrate` to backfill memberships (or auto-provision for single-org apps). Test harnesses that previously seeded a domain user row + a `tenant_id` preference must now also create a membership (run `migrate_to_memberships`, or `create_membership`) — see `tests/integration/invoice_ops_harness.py`. Non-`tenant_id` scope attrs (school, department, …) still use the preferences path.
+
 ## [0.81.37] - 2026-06-05
 
 ### Changed

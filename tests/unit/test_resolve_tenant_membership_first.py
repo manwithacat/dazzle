@@ -1,4 +1,8 @@
-"""current_user.tenant_id resolves from the active membership first (Plan 1d)."""
+"""current_user.tenant_id resolves ONLY from the active membership (Plan 1d).
+
+The legacy preferences/domain-user fallback was removed (clean break): without
+an active membership, tenant_id resolves to the deny sentinel so the scope
+predicate / RLS fence denies (fail-closed)."""
 
 from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
 from dazzle.back.runtime.route_generator import _resolve_user_attribute
@@ -27,9 +31,11 @@ def test_tenant_id_prefers_active_membership() -> None:
     assert val == "tenant-A"
 
 
-def test_tenant_id_falls_back_to_preferences_without_membership() -> None:
+def test_tenant_id_denies_without_membership_ignoring_prefs() -> None:
+    # Plan 1d clean break: no membership → deny sentinel, even with a legacy
+    # tenant_id preference present (the prefs fallback was removed).
     val = _resolve_user_attribute("tenant_id", _ctx(prefs_tid="tenant-LEGACY"))
-    assert val == "tenant-LEGACY"
+    assert val == "__RBAC_DENY__"
 
 
 def test_non_tenant_attr_unaffected_by_membership() -> None:

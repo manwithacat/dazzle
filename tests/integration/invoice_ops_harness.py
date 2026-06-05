@@ -534,6 +534,21 @@ async def _seed(app: _InvoiceOpsApp, auth_store: Any, db_url: str) -> None:
         ]:
             _sql_insert(conn, "SupplierBankAccount", row)
 
+    # --- memberships (auth Plan 1d) --------------------------------------
+    # The clean break removed the preferences tenant_id fallback, so
+    # current_user.tenant_id (and the RLS GUC) now resolve ONLY from an active
+    # membership. Backfill exactly as a real deployment would (`dazzle auth
+    # migrate`): mirror each Tenant -> organizations at the same id + create a
+    # membership per auth user, resolved via the domain User entity by email.
+    # Each user ends up with exactly one membership, which login auto-activates
+    # (Plan 1b) -> the fence resolves to that tenant.
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.db.auth_migrate import migrate_to_memberships
+
+    appspec = load_project_appspec(_PROJECT_ROOT)
+    with psycopg.connect(db_url) as mconn:  # non-autocommit: migrate runs in one txn
+        migrate_to_memberships(appspec, conn=mconn)
+
 
 async def booted_invoice_ops() -> AsyncIterator[_InvoiceOpsApp]:
     """Boot examples/invoice_ops in-process against a disposable DB, seed it,

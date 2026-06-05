@@ -49,14 +49,13 @@ def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
         set_current_tenant_id,
     )
 
-    # auth Plan 1a: prefer the active membership's tenant_id (the hard FK source);
-    # fall back to the preferences-derived attribute for apps not yet on
-    # memberships (transition path, removed in a later slice).
-    if auth_context.active_membership is not None:
-        tenant_id: str = auth_context.active_membership.tenant_id
-    else:
-        tenant_id = _resolve_user_attribute("tenant_id", auth_context)
-    # "__RBAC_DENY__" means the attribute was absent — leave unbound (fail-closed).
+    # auth Plan 1d: tenant_id is bound ONLY from the active membership (the hard
+    # FK source). The legacy preferences/domain-user fallback was removed (clean
+    # break) — `_resolve_user_attribute("tenant_id")` is now itself
+    # membership-only, so this stays consistent with the scope-filter path. A
+    # membership-less session leaves dazzle.tenant_id unbound → the fence denies
+    # (fail-closed). Never empty-string (companion §6.3).
+    tenant_id = _resolve_user_attribute("tenant_id", auth_context)
     if isinstance(tenant_id, str) and tenant_id and tenant_id != "__RBAC_DENY__":
         set_current_tenant_id(tenant_id)
 

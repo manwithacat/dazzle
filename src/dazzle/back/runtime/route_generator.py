@@ -1059,16 +1059,18 @@ def _resolve_user_attribute(attr_name: str, auth_context: "AuthContext | None") 
     if auth_context is None:
         return _RBAC_DENY
 
-    # auth Plan 1d: tenant_id is sourced from the active membership first (the
-    # hard FK source), matching what _bind_rls_tenant_id binds for the RLS GUC.
-    # Only tenant_id is membership-sourced; other current_user.<attr> scope refs
-    # (school, department, …) fall through to the user/preferences resolution
-    # below, and an un-migrated (membership-less) session keeps the legacy
-    # preferences fallback.
+    # auth Plan 1d: tenant_id is sourced ONLY from the active membership (the
+    # hard FK source the RLS fence reads). A membership-less session resolves to
+    # the deny sentinel → the scope predicate / fence denies (fail-closed). The
+    # legacy preferences/domain-user fallback for tenant_id was removed (clean
+    # break) — only the active membership is authoritative now. Other
+    # current_user.<attr> scope refs (school, department, …) still resolve via
+    # the user/preferences path below.
     if attr_name == "tenant_id":
         membership = getattr(auth_context, "active_membership", None)
         if membership is not None and getattr(membership, "tenant_id", None):
             return str(membership.tenant_id)
+        return _RBAC_DENY
 
     user = getattr(auth_context, "user", None)
 
