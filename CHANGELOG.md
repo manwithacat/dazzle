@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.48] - 2026-06-05
+
+### Added
+
+- **Auth Plan 4b.iii — enterprise SSO routes (the flow goes live)** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-iii-enterprise-routes.md`; spec §5). Wires 4a/4b.i/4b.ii into a reachable per-org enterprise-OIDC login: `GET /auth/enterprise/login` resolves the org's connection (explicit `?connection=<id>` · `?email=` via verified-domain routing · host-pinned tenant), stashes the connection id in the signed session, and redirects to the IdP; `GET /auth/enterprise/callback` (one stable redirect URI per app) validates via the provider, runs `provision_enterprise_login` (4b.ii JIT join), and signs in. Mirrors the proven `sso_routes.py` security posture — **session-fixation regeneration** (fresh server-minted session id; the pre-auth cookie is deleted), **redirect-safety** on `?next=` (unsafe → `/app`), **CSRF-cookie binding** to the new session, and error mapping to stable `/login?error=sso_<reason>` codes (never the email/secret; broad exchange/provision exceptions → `sso_failed`, logged, never a 500). The native OIDC provider is registered at startup (`register_native_oidc()`) and the routes mount whenever the **`[sso]` extra** is installed (`authlib` importable) — independent of any global social provider; apps without `[sso]` are wholly unaffected. `SessionMiddleware` is lifted to cover both global-SSO and enterprise (added once, only when needed; sets no cookie until an SSO route writes session state). Adversarially reviewed (silent-failure-hunter): **no CRITICAL/HIGH** — session-fixation, open-redirect, info-leak, broad-except, org-pivot (a forged session connection-id can't pivot orgs — the callback re-loads the connection and the JIT join re-checks the asserted email's verified domain), and the middleware blast radius all confirmed sound. **Plan 4b complete** (provider · JIT kernel · routes); next is the agent-driven `dazzle auth connection doctor`/scaffold + 4c (SCIM).
+
+### Agent Guidance
+
+- **Enterprise OIDC login is now reachable** at `/auth/enterprise/login` (resolve by `?connection=<id>`, `?email=` verified-domain, or host) → `/auth/enterprise/callback` — available whenever the `[sso]` extra is installed (no global social provider required). To activate a connection for an org: create an OIDC `Connection` (issuer/client_id in `config`, `client_secret` in `secrets`, `DAZZLE_CONNECTION_SECRET` set), then **verify its domains** (`set_connection_verified_domains`) — verification is what authorizes the IdP to assert identities and what makes `?email=` routing work. Register exactly one redirect URI with the IdP: `<base_url>/auth/enterprise/callback`. Map IdP groups → app roles via the connection's `group_mapping` (default-deny). Error reasons surface as `/login?error=sso_<reason>` (`no_connection`/`unavailable`/`failed`/`domain_not_verified`/`unverified_fallback`/`no_membership`).
+
 ## [0.81.47] - 2026-06-05
 
 ### Added

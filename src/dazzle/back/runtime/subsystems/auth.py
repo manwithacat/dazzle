@@ -223,14 +223,26 @@ class AuthSubsystem:
 
         configured = load_sso_providers_from_env()
         ctx.app.state.sso_providers = configured
-        if configured:
-            # SessionMiddleware backs Authlib's `state` storage between
-            # the initiate redirect and the callback. The session
-            # cookie is signed (not encrypted) via itsdangerous — fine
-            # for the short-lived state token but DON'T put sensitive
-            # data in `request.session`. The secret defaults to a
-            # random per-process value; production deployments should
-            # set DAZZLE_SESSION_SECRET so the cookie survives restarts.
+
+        # Enterprise (per-org) SSO connections (auth Plan 4b) are a *runtime*
+        # capability — created as DB rows per org, not env-configured — so we can't
+        # know at startup whether any exist. Gate availability on the [sso] extra
+        # (authlib importable): apps that didn't opt into SSO are wholly unaffected
+        # (no extra middleware, no extra routes); apps that did get the enterprise
+        # endpoints whether or not a global social provider is also configured.
+        from importlib.util import find_spec
+
+        enterprise_enabled = find_spec("authlib") is not None
+
+        # SessionMiddleware backs Authlib's `state` storage between the initiate
+        # redirect and the callback (both global-SSO and enterprise need it). The
+        # session cookie is signed (not encrypted) via itsdangerous — fine for the
+        # short-lived state token but DON'T put sensitive data in `request.session`.
+        # The secret defaults to a random per-process value; production deployments
+        # should set DAZZLE_SESSION_SECRET so the cookie survives restarts. Added at
+        # most once, and only when something actually needs it (no blast radius for
+        # non-SSO apps).
+        if configured or enterprise_enabled:
             import os
             import secrets
 
@@ -243,7 +255,24 @@ class AuthSubsystem:
                 same_site="lax",
                 https_only=False,  # cookie_secure() controls per-cookie
             )
+
+        if configured:
             ctx.app.include_router(create_sso_routes())
+
+        if enterprise_enabled:
+            # Register the native OIDC provider for the (oidc, native) seam and mount
+            # the per-org enterprise routes. Registration is idempotent across app
+            # boots: the process-wide registry is keyed by (type, provider), so a
+            # re-call just overwrites with an equivalent stateless provider (its
+            # per-connection authlib clients, keyed by connection id+revision, live
+            # inside the instance — no cross-app collision).
+            from dazzle.back.runtime.auth.enterprise_routes import (
+                create_enterprise_sso_routes,
+            )
+            from dazzle.back.runtime.auth.oidc_provider import register_native_oidc
+
+            register_native_oidc()
+            ctx.app.include_router(create_enterprise_sso_routes())
 
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
