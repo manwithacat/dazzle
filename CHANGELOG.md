@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.43] - 2026-06-05
+
+### Added
+
+- **Auth Plan 3c — `archetype: profile`** (plan `docs/superpowers/plans/2026-06-05-auth-plan-3c-archetype-profile.md`; spec §7/§10). A new semantic archetype for per-member application data linked 1:1 to a membership. `ArchetypeKind.PROFILE` + the `archetype: profile` keyword; the expander injects an `identity_id` (uuid, the auth identity's id — not an IR `ref`, since identity lives in the auth-store) marked `unique`, which the schema generator rewrites to a **tenant-scoped `UNIQUE(tenant_id, identity_id)`** (one profile per member per org — *not* a global unique, so the same person can have a profile in multiple orgs). Resolves the spec §10 linkage open question as **keyed-by-`(tenant_id, identity_id)`** (no cross-world FK to the auth-store membership). Requires `tenancy: mode: shared_schema` (validated — without it there is no injected `tenant_id` and the key can't exist). An `is_profile` flag rides the IR → back `EntitySpec` (mirroring `is_tenant_root`) so a future runtime can resolve the current member's profile by `(active_membership.tenant_id, current_user.id)`. The author declares only the surrogate `id` + app fields; `tenant_id` + `identity_id` + the unique are framework-injected. Adversarially reviewed (linkage invariant verified end-to-end against `fixtures/tenant_rls`). **Staged IR-first:** the runtime profile-resolution route/surface is a follow-on; `tenancy: multi_org:` is slice 3c.ii.
+
+### Agent Guidance
+
+- **Declare per-member app data with `archetype: profile`** — the framework injects `identity_id` + `tenant_id` and the tenant-scoped `UNIQUE(tenant_id, identity_id)`; do **not** hand-declare them. Requires `shared_schema` tenancy. The same person may hold a profile in multiple orgs (the unique is composite, not global). `is_profile` is the back-EntitySpec marker (the converter drops `archetype_kind`). Until the runtime resolution slice lands, the DB unique is the only enforcement — a duplicate insert hits a constraint violation, not a friendly error.
+
 ## [0.81.42] - 2026-06-05
 
 ### Added
