@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Auth identity model — Plan 1a: membership substrate** (first slice of the new global-identity auth model; spec `docs/superpowers/specs/2026-06-05-auth-identity-model-design.md`, plan `docs/superpowers/plans/2026-06-05-auth-plan-1a-membership-substrate.md`). A framework `memberships` table (identity × org × roles) now lives in the auth store; `sessions` gains a nullable `active_membership_id`; `validate_session` resolves the session's active membership onto `AuthContext`; and the RLS tenant fence (`_bind_rls_tenant_id`) sources `dazzle.tenant_id` from `session.active_membership.tenant_id` when present (falling back to the legacy preferences-derived value otherwise). Only an `active`-status membership sources the fence/roles (a suspended/invited one is dropped — fail-safe). Alembic migration 0007 and the dev `_init_db` path create the table identically (no DB FK to `users` — the auth tables aren't in the Alembic chain; `create_membership` guards orphan rows). Real-PG integration proof in `tests/integration/test_auth_membership_pg.py`. No production login path activates a membership yet — that's Plan 1b; this slice is the substrate that closes the auth-store tenant-scoping prerequisite and unblocks RLS Phase E.
+
+### Agent Guidance
+
+- **RLS tenant id now sources from the session's active membership** (`session.active_membership.tenant_id`) when present, else the unchanged preferences fallback. Role gates (`require_roles` / deny dependencies) read `AuthContext.effective_roles` — membership roles when a membership is active, else the legacy global `user.roles`. The Cedar / `permit:` role-source switchover (route_generator) remains **Plan 1b**, so don't assume membership roles flow into `permit:` yet. New auth-store table `memberships` is created by `AuthStore._init_db` and Alembic 0007 identically. Unit tests that build a `MagicMock` auth context for `_bind_rls_tenant_id` must set `active_membership = None` to exercise the legacy path (the real `AuthContext.active_membership` defaults to None).
+
 ## [0.81.27] - 2026-06-05
 
 ### Changed
