@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.31] - 2026-06-05
+
 ### Added
 
 - **RLS Phase E.1 — tenant excision** (#1338; plan `docs/superpowers/plans/2026-06-05-rls-phase-e1-tenant-excision.md`). `dazzle tenant excise <tenant_id>` permanently deletes a tenant's entire footprint in **one transaction**: every tenant-scoped domain row (`DELETE … WHERE tenant_id = X`, children-first via the new `FKGraph.deletion_order`), the tenant-root row (`WHERE id = X`, last), the auth-store `memberships`, the `organizations` row, and the identities orphaned by the removal (with their `sessions`/`password_reset_tokens`/`user_preferences` rows). Cross-tenant isolation is guaranteed (other tenants untouched; a multi-tenant identity is kept), proven against real Postgres (`tests/integration/test_tenant_excision_pg.py`). Engine: `dazzle.db.excision.excise_tenant(appspec, tenant_id, *, conn, dry_run, allow_missing)`. `--dry-run` previews counts (writes nothing); refuses a non-`is_test` org without `--force`; lands on the auth Plan 1a–1c membership model (`membership.tenant_id = organizations.id = dazzle.tenant_id`). `dazzle tenant status` now shows `is_test`. Replaces the superseded FK-closure excision engine with delete-by-discriminator (RLS spec §Phase E).
