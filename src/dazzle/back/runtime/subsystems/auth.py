@@ -157,6 +157,21 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_org_context_routes())
 
+        # Phase E.2 — secret-gated contained QA-auth mint (#1339). Self-disabling:
+        # the factory returns None unless QA_AUTH_SECRET is set, so prod is off by
+        # default with no request-time flag to misconfigure. The mint enforces the
+        # DB containment invariant (ADR-0035) — it can only scope a session into a
+        # qa-namespaced, is_test, run-matched org.
+        from dazzle.back.runtime.qa_secure_routes import create_qa_secure_routes
+
+        _qa_secure = create_qa_secure_routes()
+        if _qa_secure is not None:
+            ctx.app.include_router(_qa_secure)
+            logger.warning(
+                "[QA-AUTH] secret-gated QA mint mounted at /qa/secure/mint "
+                "(QA_AUTH_SECRET set) — ensure this deployment is a test instance"
+            )
+
         # Form-encoded 2FA challenge submit routes (Phase 1.D.1,
         # v0.67.35) — the typed challenge view posts here instead of
         # the JSON `/auth/2fa/verify` endpoint, so the form works

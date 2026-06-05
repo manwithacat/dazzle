@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time as _time
 import uuid
 from collections.abc import Iterator
 
@@ -10,6 +11,8 @@ import psycopg
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+from dazzle.back.runtime.auth.qa_sign import sign_qa_token
 
 pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
 
@@ -98,3 +101,80 @@ def test_teardown_excises_the_qa_tenant(scratch_url: str) -> None:
             c.execute("SELECT count(*) FROM users WHERE id=%s", (str(prov.admin.id),)).fetchone()[0]
             == 0
         )
+
+
+# ── Task 4: contained QA-auth mint (happy path + adversarial) ────────────────
+
+
+def test_mint_happy_path_scopes_session_to_test_org(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    prov = provision_test_tenant(store, run_id="rh", roles=["admin"])
+    token = sign_qa_token(prov.admin.email, "rh", secret=_SECRET, now=_time.time())
+
+    resp = _app(store).post("/qa/secure/mint", json={"token": token})
+    assert resp.status_code == 200
+    assert resp.json()["tenant_id"] == prov.org.id
+    sid = resp.cookies.get("dazzle_session")
+    ctx = store.validate_session(sid)
+    assert ctx.active_membership is not None
+    assert ctx.active_membership.tenant_id == prov.org.id
+
+
+def test_mint_refuses_real_non_test_org(scratch_url: str) -> None:
+    """Containment crux: a validly-signed token cannot mint into a real
+    (is_test=false) org — the DB is_test gate refuses."""
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    real = store.create_organization(slug="qa-realish", name="Real", is_test=False)
+    user = store.create_user(email="victim@real.test", password="pw123456", roles=["admin"])
+    store.create_membership(tenant_id=real.id, identity_id=str(user.id), roles=["admin"])
+    token = sign_qa_token("victim@real.test", "realish", secret=_SECRET, now=_time.time())
+
+    resp = _app(store).post("/qa/secure/mint", json={"token": token})
+    assert resp.status_code == 403
+
+
+def test_mint_rejects_expired_token(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    prov = provision_test_tenant(store, run_id="rx")
+    token = sign_qa_token(prov.admin.email, "rx", secret=_SECRET, now=_time.time() - 120)
+
+    resp = _app(store).post("/qa/secure/mint", json={"token": token})
+    assert resp.status_code == 403
+
+
+def test_mint_rejects_bad_signature(scratch_url: str) -> None:
+    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    prov = provision_test_tenant(store, run_id="rz")
+    token = sign_qa_token(prov.admin.email, "rz", secret="WRONG", now=_time.time())
+
+    resp = _app(store).post("/qa/secure/mint", json={"token": token})
+    assert resp.status_code == 403
+
+
+def test_mint_rejects_run_mismatch(scratch_url: str) -> None:
+    """A token whose run_id doesn't resolve to a provisioned qa- org → 403."""
+    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    prov = provision_test_tenant(store, run_id="rm")
+    token = sign_qa_token(prov.admin.email, "other", secret=_SECRET, now=_time.time())
+
+    resp = _app(store).post("/qa/secure/mint", json={"token": token})
+    assert resp.status_code == 403
