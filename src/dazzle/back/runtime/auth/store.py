@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
+    from dazzle.back.runtime.auth.connections import ConnectionRecord
     from dazzle.back.runtime.auth.membership_events import (
         EventChainResult,
         MembershipEvent,
@@ -1089,6 +1090,123 @@ class SessionStoreMixin:
         row = self._execute_one("SELECT * FROM organizations WHERE id = %s", (org_id,))
         return self._row_to_organization(row) if row else None
 
+    # -- Enterprise connections (auth Plan 4a — per-org OIDC/SAML/SCIM) -------
+
+    def _row_to_connection(self, row: dict[str, Any]) -> "ConnectionRecord":  # noqa: F821
+        import json
+
+        from dazzle.back.runtime.auth.connection_crypto import decrypt_secret
+        from dazzle.back.runtime.auth.connections import ConnectionRecord
+
+        enc = row.get("encrypted_secret")
+        secrets_dict = json.loads(decrypt_secret(enc)) if enc else {}
+        return ConnectionRecord(
+            id=row["id"],
+            tenant_id=row["tenant_id"],
+            type=row["type"],
+            provider=row["provider"],
+            domains=json.loads(row["domains"]) if row.get("domains") else [],
+            verified_domains=(
+                json.loads(row["verified_domains"]) if row.get("verified_domains") else []
+            ),
+            config=json.loads(row["config"]) if row.get("config") else {},
+            secrets=secrets_dict,
+            group_mapping=json.loads(row["group_mapping"]) if row.get("group_mapping") else {},
+            status=row["status"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+        )
+
+    def create_connection(
+        self,
+        *,
+        tenant_id: str,
+        type: str,
+        config: dict[str, Any],
+        secrets: dict[str, Any],
+        domains: list[str],
+        provider: str = "native",
+        group_mapping: dict[str, str] | None = None,
+        status: str = "active",
+    ) -> "ConnectionRecord":  # noqa: F821
+        """Create a per-org connection; secret material is AES-GCM-encrypted at rest."""
+        import json
+        import secrets as _secrets  # the `secrets` param shadows the stdlib module here
+
+        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
+
+        conn_id = _secrets.token_urlsafe(24)
+        now = datetime.now(UTC).isoformat()
+        encrypted = encrypt_secret(json.dumps(secrets)) if secrets else None
+        self._execute_modify(
+            """
+            INSERT INTO connections
+                (id, tenant_id, type, provider, domains, verified_domains, config,
+                 encrypted_secret, group_mapping, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                conn_id,
+                tenant_id,
+                type,
+                provider,
+                json.dumps(domains),
+                json.dumps([]),
+                json.dumps(config),
+                encrypted,
+                json.dumps(group_mapping or {}),
+                status,
+                now,
+                now,
+            ),
+        )
+        created = self.get_connection(conn_id)
+        assert created is not None  # just inserted
+        return created
+
+    def get_connection(self, connection_id: str) -> "ConnectionRecord | None":  # noqa: F821
+        row = self._execute_one("SELECT * FROM connections WHERE id = %s", (connection_id,))
+        return self._row_to_connection(row) if row else None
+
+    def get_connections_for_tenant(self, tenant_id: str) -> list["ConnectionRecord"]:  # noqa: F821
+        rows = self._execute(
+            "SELECT * FROM connections WHERE tenant_id = %s ORDER BY created_at", (tenant_id,)
+        )
+        return [self._row_to_connection(r) for r in rows]
+
+    def get_connection_by_verified_domain(self, domain: str) -> "ConnectionRecord | None":  # noqa: F821
+        """Route an email domain to its org's connection — VERIFIED domains only.
+
+        Matches against ``verified_domains`` (never the unverified ``domains``
+        claim) so org A cannot hijack org B's SSO by claiming its domain (spec §5).
+        Returns the first active match; verified-domain uniqueness is owned by the
+        domain-verification flow (a later slice).
+        """
+        import json
+
+        d = domain.strip().lower()
+        for row in self._execute(
+            "SELECT * FROM connections WHERE status = 'active' ORDER BY created_at"
+        ):
+            verified = [x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")]
+            if d in verified:
+                return self._row_to_connection(row)
+        return None
+
+    def set_connection_verified_domains(self, connection_id: str, verified: list[str]) -> None:
+        """Set the verified-domain list — the output of a domain-ownership check."""
+        import json
+
+        self._execute_modify(
+            "UPDATE connections SET verified_domains = %s, updated_at = %s WHERE id = %s",
+            (json.dumps(verified), datetime.now(UTC).isoformat(), connection_id),
+        )
+
+    def delete_connection(self, connection_id: str) -> bool:
+        return bool(
+            self._execute_modify("DELETE FROM connections WHERE id = %s", (connection_id,)) > 0
+        )
+
     def get_or_create_default_organization(self, *, name: str = "Default") -> OrganizationRecord:
         """Return the single default org, creating it race-safely if absent.
 
@@ -1344,6 +1462,16 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
 
             cursor.execute(INVITATIONS_DDL)
             for _ix in INVITATIONS_INDEXES:
+                cursor.execute(_ix)
+            # auth Plan 4a: per-org enterprise connections (OIDC/SAML/SCIM config;
+            # secrets encrypted at rest). Mirrors alembic 0011_connections.
+            from dazzle.back.runtime.auth.connections import (
+                CONNECTIONS_DDL,
+                CONNECTIONS_INDEXES,
+            )
+
+            cursor.execute(CONNECTIONS_DDL)
+            for _ix in CONNECTIONS_INDEXES:
                 cursor.execute(_ix)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (

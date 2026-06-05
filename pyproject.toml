@@ -135,6 +135,10 @@ sso = [
     # itsdangerous moved to core deps in v0.67.96 (#1054) — required
     # by Starlette's SessionMiddleware whether or not authlib is
     # installed. Kept here for documentation; pip dedupes.
+    # cryptography: AES-GCM secret-at-rest for enterprise Connections
+    # (auth Plan 4a, dazzle.back.runtime.auth.connection_crypto) — lazy-imported,
+    # so core installs without [sso] are unaffected until a connection is used.
+    "cryptography>=41.0.0",
 ]
 signing = [
     # #1283 phase 2: native document signing primitive.
