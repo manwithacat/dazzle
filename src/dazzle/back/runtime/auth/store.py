@@ -784,6 +784,160 @@ class SessionStoreMixin:
             )
         return membership
 
+    def update_membership_roles(
+        self,
+        membership_id: str,
+        roles: list[str],
+        *,
+        actor_id: str | None = None,
+        reason: str | None = None,
+    ) -> MembershipRecord | None:
+        """Grant/revoke roles on a membership (mover) + emit a ROLE_CHANGED event.
+
+        Returns the updated record, or ``None`` if no such membership.
+        """
+        import json
+
+        from dazzle.back.runtime.auth.membership_events import (
+            MEMBERSHIP_EVENTS_LOCK_KEY,
+            MembershipEventType,
+            record_membership_event,
+        )
+
+        now = datetime.now(UTC).isoformat()
+        with self._transaction() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            cur.execute("SELECT * FROM memberships WHERE id = %s", (membership_id,))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            roles_before = json.loads(row["roles"]) if row.get("roles") else []
+            cur.execute(
+                "UPDATE memberships SET roles = %s, updated_at = %s WHERE id = %s",
+                (json.dumps(roles), now, membership_id),
+            )
+            record_membership_event(
+                cur,
+                event_type=MembershipEventType.ROLE_CHANGED,
+                membership_id=membership_id,
+                tenant_id=row["tenant_id"],
+                identity_id=row["identity_id"],
+                actor_id=actor_id,
+                roles_before=roles_before,
+                roles_after=roles,
+                reason=reason,
+            )
+        return self.get_membership(membership_id)
+
+    def _transition_membership_status(
+        self,
+        membership_id: str,
+        *,
+        from_status: str,
+        to_status: str,
+        event_type: str,
+        actor_id: str | None,
+        reason: str | None,
+    ) -> MembershipRecord | None:
+        """Shared suspend/reactivate body: status transition + lifecycle event.
+
+        No-op (no event) when the membership is not in ``from_status`` — keeps the
+        evidence stream free of duplicate/contradictory transitions.
+        """
+        from dazzle.back.runtime.auth.membership_events import (
+            MEMBERSHIP_EVENTS_LOCK_KEY,
+            record_membership_event,
+        )
+
+        now = datetime.now(UTC).isoformat()
+        with self._transaction() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            cur.execute("SELECT * FROM memberships WHERE id = %s", (membership_id,))
+            row = cur.fetchone()
+            if row is None or row["status"] != from_status:
+                return None  # not found, or no transition → no event
+            cur.execute(
+                "UPDATE memberships SET status = %s, updated_at = %s WHERE id = %s",
+                (to_status, now, membership_id),
+            )
+            record_membership_event(
+                cur,
+                event_type=event_type,
+                membership_id=membership_id,
+                tenant_id=row["tenant_id"],
+                identity_id=row["identity_id"],
+                actor_id=actor_id,
+                status_before=from_status,
+                status_after=to_status,
+                reason=reason,
+            )
+        return self.get_membership(membership_id)
+
+    def suspend_membership(
+        self, membership_id: str, *, actor_id: str | None = None, reason: str | None = None
+    ) -> MembershipRecord | None:
+        """Suspend an active membership (leaver-ish) + emit a SUSPENDED event."""
+        from dazzle.back.runtime.auth.membership_events import MembershipEventType
+
+        return self._transition_membership_status(
+            membership_id,
+            from_status="active",
+            to_status="suspended",
+            event_type=MembershipEventType.SUSPENDED,
+            actor_id=actor_id,
+            reason=reason,
+        )
+
+    def reactivate_membership(
+        self, membership_id: str, *, actor_id: str | None = None, reason: str | None = None
+    ) -> MembershipRecord | None:
+        """Reactivate a suspended membership (mover) + emit a REACTIVATED event."""
+        from dazzle.back.runtime.auth.membership_events import MembershipEventType
+
+        return self._transition_membership_status(
+            membership_id,
+            from_status="suspended",
+            to_status="active",
+            event_type=MembershipEventType.REACTIVATED,
+            actor_id=actor_id,
+            reason=reason,
+        )
+
+    def remove_membership(
+        self, membership_id: str, *, actor_id: str | None = None, reason: str | None = None
+    ) -> bool:
+        """Delete a membership (leaver) + emit a REMOVED event.
+
+        The ``memberships`` row is deleted (current-state), but the REMOVED event
+        persists in ``membership_events`` — the leaver evidence survives. Returns
+        ``True`` if a membership was deleted, ``False`` if it did not exist.
+        """
+        from dazzle.back.runtime.auth.membership_events import (
+            MEMBERSHIP_EVENTS_LOCK_KEY,
+            MembershipEventType,
+            record_membership_event,
+        )
+
+        with self._transaction() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            cur.execute("SELECT * FROM memberships WHERE id = %s", (membership_id,))
+            row = cur.fetchone()
+            if row is None:
+                return False
+            cur.execute("DELETE FROM memberships WHERE id = %s", (membership_id,))
+            record_membership_event(
+                cur,
+                event_type=MembershipEventType.REMOVED,
+                membership_id=membership_id,
+                tenant_id=row["tenant_id"],
+                identity_id=row["identity_id"],
+                actor_id=actor_id,
+                status_before=row["status"],
+                status_after="removed",
+                reason=reason,
+            )
+        return True
+
     def get_membership(self, membership_id: str) -> MembershipRecord | None:
         row = self._execute_one("SELECT * FROM memberships WHERE id = %s", (membership_id,))
         return self._row_to_membership(row) if row else None
