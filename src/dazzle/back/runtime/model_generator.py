@@ -313,36 +313,55 @@ def generate_all_entity_models(
 # =============================================================================
 
 
-def _auto_excluded_fields(entity: EntitySpec) -> frozenset[str]:
+def _auto_excluded_fields(
+    entity: EntitySpec,
+    *,
+    partition_key: str | None = None,
+    tenant_scoped: bool = False,
+) -> frozenset[str]:
     """Return the set of field names that should be excluded from create/update schemas.
 
-    Always excludes 'id', plus any fields marked auto_add or auto_update.
+    Always excludes 'id', plus any fields marked auto_add or auto_update. auth
+    Plan 1d: also excludes the framework-injected partition key for tenant-scoped
+    entities — it is server-supplied (the DB default fills it from the bound
+    session GUC), never a client input field.
     """
     excluded = {"id"}
     for field in entity.fields:
         if field.auto_add or field.auto_update:
             excluded.add(field.name)
+    if tenant_scoped and partition_key:
+        excluded.add(partition_key)
     return frozenset(excluded)
 
 
 def generate_create_schema(
     entity: EntitySpec,
     name_suffix: str = "Create",
+    *,
+    partition_key: str | None = None,
+    tenant_scoped: bool = False,
 ) -> type[BaseModel]:
     """
     Generate a Pydantic schema for creating an entity.
 
-    Excludes auto-generated fields like id, created_at, updated_at.
+    Excludes auto-generated fields like id, created_at, updated_at, and (for a
+    tenant-scoped entity) the framework-injected partition key (Plan 1d).
 
     Args:
         entity: Entity specification
         name_suffix: Suffix for the schema name
+        partition_key: The tenant discriminator column name (when tenant_scoped)
+        tenant_scoped: Whether this entity carries the framework partition key
 
     Returns:
         Pydantic model for create operations
     """
-    # Fields to exclude from create schema: id + any auto_add/auto_update fields
-    auto_fields = _auto_excluded_fields(entity)
+    # Fields to exclude from create schema: id + any auto_add/auto_update + the
+    # framework partition key (when tenant-scoped).
+    auto_fields = _auto_excluded_fields(
+        entity, partition_key=partition_key, tenant_scoped=tenant_scoped
+    )
 
     # Build field definitions
     field_definitions: dict[str, Any] = {}
@@ -363,21 +382,30 @@ def generate_create_schema(
 def generate_update_schema(
     entity: EntitySpec,
     name_suffix: str = "Update",
+    *,
+    partition_key: str | None = None,
+    tenant_scoped: bool = False,
 ) -> type[BaseModel]:
     """
     Generate a Pydantic schema for updating an entity.
 
-    All fields are optional to support partial updates.
+    All fields are optional to support partial updates. The framework partition
+    key is excluded for tenant-scoped entities (Plan 1d — server-managed).
 
     Args:
         entity: Entity specification
         name_suffix: Suffix for the schema name
+        partition_key: The tenant discriminator column name (when tenant_scoped)
+        tenant_scoped: Whether this entity carries the framework partition key
 
     Returns:
         Pydantic model for update operations
     """
-    # Fields to exclude from update schema: id + any auto_add/auto_update fields
-    auto_fields = _auto_excluded_fields(entity)
+    # Fields to exclude from update schema: id + any auto_add/auto_update + the
+    # framework partition key (when tenant-scoped).
+    auto_fields = _auto_excluded_fields(
+        entity, partition_key=partition_key, tenant_scoped=tenant_scoped
+    )
 
     # Build field definitions - all optional for updates
     field_definitions: dict[str, Any] = {}

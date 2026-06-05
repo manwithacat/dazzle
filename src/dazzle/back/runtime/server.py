@@ -849,10 +849,27 @@ class DazzleBackendApp:
     def _setup_models(self) -> None:
         """Generate Pydantic models and create/update schemas from the spec."""
         self._models = generate_all_entity_models(self._entities)
+        # auth Plan 1d: under shared_schema, the framework partition key is
+        # server-supplied (DB default from the bound session) — exclude it from
+        # the create/update INPUT schemas for tenant-scoped entities.
+        from dazzle.back.runtime.sa_schema import scoped_entity_names
+        from dazzle.core.ir import TenancyMode
+
+        partition_key: str | None = None
+        scoped: set[str] = set()
+        tenancy = getattr(self._appspec, "tenancy", None) if self._appspec else None
+        if tenancy is not None and tenancy.isolation.mode == TenancyMode.SHARED_SCHEMA:
+            partition_key = tenancy.isolation.partition_key
+            scoped = scoped_entity_names(self._entities, partition_key)
         for entity in self._entities:
+            ts = entity.name in scoped
             self._schemas[entity.name] = {
-                "create": generate_create_schema(entity),
-                "update": generate_update_schema(entity),
+                "create": generate_create_schema(
+                    entity, partition_key=partition_key, tenant_scoped=ts
+                ),
+                "update": generate_update_schema(
+                    entity, partition_key=partition_key, tenant_scoped=ts
+                ),
             }
 
     def _setup_database(self) -> None:
