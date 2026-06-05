@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.45] - 2026-06-05
+
+### Added
+
+- **Auth Plan 4a — enterprise connection substrate** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4a-connection-substrate.md`; spec §5). The foundation for per-org enterprise auth (OIDC/SCIM; SAML is Plan 5): a framework-owned, **org-fenced** `Connection` auth-store record (`type` oidc/saml/scim · `provider` native/vendor · `domains`/`verified_domains` · non-secret `config` · `group_mapping` · `status`) with **secret material encrypted at rest** — AES-256-GCM (`connection_crypto`) under a 32-byte `DAZZLE_CONNECTION_SECRET` env key, **fail-closed** (absent/short/invalid key → raises with an actionable runbook; no plaintext fallback), fresh per-encryption nonce, authenticated (tamper/wrong-key rejected). The plaintext secret is never persisted (only the encrypted blob); `ConnectionRecord.__repr__` masks secret values so a logged/traced record can't leak them. **Verified-domain routing is anti-hijack** — `get_connection_by_verified_domain` matches only `verified_domains`, never the unverified `domains` claim, so org A can't capture org B's SSO by claiming its domain (spec §5). The **`ConnectionProvider` seam** (Protocol + `AssertedIdentity` + a `(type, provider)` registry) is the native-vs-delegated swap point — no live provider in 4a (`resolve_provider` fails loud); **4b** registers `NativeOIDCProvider` (authlib), **4c** `NativeSCIMProvider`. `cryptography` moves into the `[sso]` enterprise extra (lazy-imported — core installs unaffected). Alembic `0011_connections`. Adversarially reviewed (secret-at-rest + anti-hijack confirmed sound; the decrypt-bearing `get_connection` gained an optional `tenant_id` fence). Distinct from `[[auth.oauth_providers]]` global social login (unchanged).
+
+### Agent Guidance
+
+- **Enterprise SSO/SCIM is designed to be agent-driven** (see the design north-star): the human role collapses to a binary requirement ("this org needs Okta SSO") + paying for/provisioning infra; the agent fills the `Connection` config (issuer/client_id from IdP discovery) and either drives the cloud or emits a clear devops runbook. Set `DAZZLE_CONNECTION_SECRET` (32-byte base64) to use connections — the error tells you how to generate it. Connections are **org-fenced** (`get_connections_for_tenant`; pass `tenant_id=` to `get_connection` in any route that serves one by id — it decrypts secrets); secrets are AES-GCM-encrypted at rest (never log `connection.secrets`); domains route **only when verified**. The `ConnectionProvider` registry is empty until 4b/4c — `resolve_provider` raises by design.
+
 ## [0.81.44] - 2026-06-05
 
 ### Added
