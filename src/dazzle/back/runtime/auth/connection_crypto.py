@@ -28,7 +28,11 @@ def _load_key() -> bytes:
     raw = os.environ.get(_ENV_KEY, "").strip()
     if not raw:
         raise ConnectionSecretError(
-            f"{_ENV_KEY} is not set — required to encrypt connection secrets at rest"
+            f"{_ENV_KEY} is not set — required to encrypt enterprise-connection "
+            "secrets at rest. Generate a 32-byte key and set it in the deployment "
+            "environment (Heroku config var / AWS Secrets Manager / Azure Key "
+            'Vault):  python -c "import os,base64;print(base64.b64encode('
+            'os.urandom(32)).decode())"'
         )
     try:
         key = base64.b64decode(raw, validate=True)
