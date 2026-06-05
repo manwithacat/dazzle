@@ -18,8 +18,10 @@ Tamper-evidence scope: the hash chain detects an *edited* field and a *deleted
 middle* row (its successor's stored hash no longer recomputes). It does NOT, on
 its own, detect truncation of the *tail* (deleting the highest-``seq`` rows
 leaves a still-valid prefix) — a self-contained chain has no external head
-anchor. Closing that gap (a signed/attested head or a ``seq``-gap monotonicity
-check) is a Plan 2b concern; ``seq`` is ``UNIQUE`` so gap detection is cheap.
+anchor, and a plain identity ``seq`` cannot reliably distinguish a truncated tail
+from rolled-back inserts. Closing that gap needs an external signed/attested head
+anchor (a future substrate slice). The Plan 2b access-review export surfaces this
+scope honestly (it never claims "tamper-proof") rather than silently over-claiming.
 """
 
 from __future__ import annotations
