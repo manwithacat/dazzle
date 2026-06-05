@@ -79,6 +79,29 @@ class MembershipRecord(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class OrganizationRecord(BaseModel):
+    """A framework-owned Organization — the tenant root in the shared-schema
+    model (auth Plan 1c).
+
+    ``id`` is the value the RLS fence reads as ``dazzle.tenant_id`` (and the
+    ``tenant_id`` a ``MembershipRecord`` carries). Lives in the auth store
+    alongside ``users``/``sessions``/``memberships`` (framework owns
+    Identity/Org/Membership/Session), not the IR-entity pipeline. ``slug`` is
+    unique; single-org apps use the fixed slug ``"default"`` so lazy
+    provisioning is race-safe.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    slug: str
+    name: str
+    status: str = "active"
+    is_test: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class AuthContext(BaseModel):
     """Current authentication context."""
 

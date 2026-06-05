@@ -3,7 +3,12 @@
 import pytest
 from pydantic import ValidationError
 
-from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+from dazzle.back.runtime.auth.models import (
+    AuthContext,
+    MembershipRecord,
+    OrganizationRecord,
+    UserRecord,
+)
 
 
 class TestMembershipRecord:
@@ -56,3 +61,21 @@ class TestAuthContextActiveMembership:
 
     def test_effective_roles_unauthenticated_empty(self) -> None:
         assert AuthContext().effective_roles == []
+
+
+class TestOrganizationRecord:
+    def test_minimal_construction_defaults(self) -> None:
+        o = OrganizationRecord(id="o-1", slug="default", name="Default")
+        assert o.id == "o-1"
+        assert o.slug == "default"
+        assert o.name == "Default"
+        assert o.status == "active"
+        assert o.is_test is False
+
+    def test_is_frozen(self) -> None:
+        import pytest
+        from pydantic import ValidationError
+
+        o = OrganizationRecord(id="o-2", slug="acme", name="Acme")
+        with pytest.raises(ValidationError):
+            o.status = "suspended"  # type: ignore[misc]
