@@ -374,8 +374,35 @@ def _apply_semantic_archetype(
         user_entity = _find_user_entity(all_entities)
         tenant_entity = _find_tenant_entity(all_entities)
         return _expand_user_membership_archetype(entity, user_entity, tenant_entity)
+    elif entity.archetype_kind == ir.ArchetypeKind.PROFILE:
+        return _expand_profile_archetype(entity)
 
     return entity
+
+
+def _expand_profile_archetype(entity: ir.EntitySpec) -> ir.EntitySpec:
+    """Expand the profile archetype (auth Plan 3c).
+
+    A profile holds per-member app data linked 1:1 to a membership. It stays a
+    normal tenant-scoped entity (tenancy Phase A injects ``tenant_id``); here we
+    inject the ``identity_id`` (the auth identity's id — NOT an IR ``ref``, since
+    identity lives in the auth-store, not the IR entity pipeline) marked
+    ``unique`` so the schema generator rewrites it to a tenant-scoped
+    ``UNIQUE(tenant_id, identity_id)`` — one profile per member per org. The
+    ``is_profile`` flag rides to the back EntitySpec so the runtime can resolve
+    the current member's profile by ``(active_membership.tenant_id, current_user.id)``.
+    """
+    existing = {f.name for f in entity.fields}
+    new_fields = list(entity.fields)
+    if "identity_id" not in existing:
+        new_fields.append(
+            ir.FieldSpec(
+                name="identity_id",
+                type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                modifiers=[ir.FieldModifier.REQUIRED, ir.FieldModifier.UNIQUE],
+            )
+        )
+    return entity.model_copy(update={"is_profile": True, "fields": new_fields})
 
 
 def _expand_settings_archetype(entity: ir.EntitySpec) -> ir.EntitySpec:

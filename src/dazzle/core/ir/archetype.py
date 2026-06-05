@@ -31,6 +31,8 @@ class ArchetypeKind(StrEnum):
     TENANT_SETTINGS: Per-tenant settings (scoped to tenant admins)
     USER: Core user entity with auth fields (email, password_hash, OAuth support)
     USER_MEMBERSHIP: User-tenant relationship with per-tenant personas
+    PROFILE: Per-member profile data, 1:1 with a membership, keyed by the
+        framework-injected ``(tenant_id, identity_id)`` (auth Plan 3c)
     """
 
     CUSTOM = "custom"
@@ -39,6 +41,7 @@ class ArchetypeKind(StrEnum):
     TENANT_SETTINGS = "tenant_settings"
     USER = "user"
     USER_MEMBERSHIP = "user_membership"
+    PROFILE = "profile"  # auth Plan 3c — per-member app data linked to the membership
 
 
 class ArchetypeSpec(BaseModel):

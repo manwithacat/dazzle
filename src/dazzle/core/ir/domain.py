@@ -394,6 +394,7 @@ class EntitySpec(BaseModel):
     archetype_kind: ArchetypeKind | None = None
     is_singleton: bool = False
     is_tenant_root: bool = False
+    is_profile: bool = False  # auth Plan 3c — archetype: profile (per-member data)
     fields: list[FieldSpec]
     computed_fields: list[ComputedFieldSpec] = Field(default_factory=list)
     invariants: list[InvariantSpec] = Field(default_factory=list)

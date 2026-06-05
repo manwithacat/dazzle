@@ -1133,6 +1133,7 @@ class EntityParserMixin:
             "tenant_settings": ir.ArchetypeKind.TENANT_SETTINGS,
             "user": ir.ArchetypeKind.USER,
             "user_membership": ir.ArchetypeKind.USER_MEMBERSHIP,
+            "profile": ir.ArchetypeKind.PROFILE,  # auth Plan 3c
         }
         if value in mapping:
             return mapping[value]

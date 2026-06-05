@@ -145,6 +145,29 @@ def is_secret_field_name(name: str) -> bool:
     return False
 
 
+def _validate_profile_archetype(entity: ir.EntitySpec, tenancy: object, errors: list[str]) -> None:
+    """``archetype: profile`` requires ``tenancy: mode: shared_schema`` (Plan 3c).
+
+    A profile is keyed by ``(tenant_id, identity_id)`` — without shared_schema
+    tenancy there is no injected ``tenant_id``, so the key (and the per-member-
+    per-org uniqueness) cannot exist. Fail loud rather than emit a broken global
+    unique on ``identity_id``.
+    """
+    is_profile = getattr(entity, "is_profile", False) or (
+        entity.archetype_kind == ir.ArchetypeKind.PROFILE
+    )
+    if not is_profile:
+        return
+    isolation = getattr(tenancy, "isolation", None)
+    mode = getattr(isolation, "mode", None)
+    if mode != ir.TenancyMode.SHARED_SCHEMA:
+        errors.append(
+            f"Entity '{entity.name}': archetype: profile requires "
+            "tenancy: mode: shared_schema (the profile is keyed by "
+            "(tenant_id, identity_id))"
+        )
+
+
 def _validate_entity_pk(entity: ir.EntitySpec, errors: list[str]) -> None:
     """Check that the entity has a primary key field.
 
@@ -295,6 +318,7 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
     for entity in appspec.domain.entities:
         _validate_entity_pk(entity, errors)
+        _validate_profile_archetype(entity, getattr(appspec, "tenancy", None), errors)
         _validate_reserved_names(entity, errors, warnings)
         _validate_field_duplicates(entity, errors)
         _validate_field_enums(entity, errors)
