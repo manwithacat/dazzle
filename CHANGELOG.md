@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.36] - 2026-06-05
+
+### Added
+
+- **Auth Plan 1d — create-time `tenant_id` injection** (plan `docs/superpowers/plans/2026-06-05-auth-plan-1d-create-time-tenant-injection.md`). A tenant-scoped create no longer carries the framework partition key as client input — the DB fills it from the bound session. For each tenant-scoped entity under `shared_schema`, the injected partition-key column gets a `server_default` of `current_setting('dazzle.tenant_id', true)::<pgtype>` (the explicit cast is **required** — PG rejects a bare text default on a uuid column), and the key is excluded from the generated create/update **input** schemas (`generate_create_schema`/`generate_update_schema` gain `partition_key=`/`tenant_scoped=`; `server.py` `_setup_models` passes them under `TenancyMode.SHARED_SCHEMA`). `Repository.create` now appends `RETURNING` for any **required** column the caller omitted (the server-filled partition key), converts it via `_db_to_python`, and merges it into the response model so the returned entity carries the real `tenant_id`. Proven against real Postgres as a non-superuser (`tests/integration/test_create_time_tenant_injection_pg.py`): an omitted `tenant_id` auto-fills from the bound GUC and lands in-tenant; an unbound session is denied (fail-closed); an explicit foreign `tenant_id` is denied by the RLS `WITH CHECK`.
+
+### Changed
+
+- **An unset `dazzle.tenant_id` fails closed on create** — `current_setting('dazzle.tenant_id', true)` returns NULL when the GUC is unbound, so the NOT NULL partition key (and the RLS `WITH CHECK`) reject the insert. There is no path to a NULL/wrong-tenant row from an unbound session.
+
+### Agent Guidance
+
+- **Don't pass `tenant_id` when creating a tenant-scoped row** — the framework partition key is excluded from create/update input and filled by a DB column default from the bound session (`current_setting('dazzle.tenant_id')`). It comes back on the created model via `INSERT … RETURNING`. A create on an **unbound** session fails closed (NOT NULL / RLS `WITH CHECK`), so always activate a membership (bind the GUC) before scoped writes. This is greenfield-only: the `server_default` is DDL, so existing tables need an Alembic migration (or recreate) to pick it up. `Repository.create` only RETURNINGs **required** omitted columns, so non-scoped entities keep the bare `INSERT` (no behaviour change). Remaining 1d follow-ups: flip `auto_provision_single_org` across the example fleet, remove the preferences-tenant fallback.
+
 ## [0.81.35] - 2026-06-05
 
 ### Added
