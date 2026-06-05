@@ -162,6 +162,9 @@ class AuthConfig:
     # provisions one org + membership per identity (and, for an is_tenant_root
     # app, a matching tenant-root row with the shared id). Default off.
     auto_provision_single_org: bool = False
+    # auth Plan 3a: personas allowed to invite / manage org members. Fail-closed —
+    # empty means nobody can manage members until the app designates admin roles.
+    org_admin_roles: list[str] = field(default_factory=list)
 
     # Provider-specific config
     session: AuthSessionConfig = field(default_factory=AuthSessionConfig)
@@ -853,6 +856,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         user_entity=auth_data.get("user_entity", "User"),
         require_email_verification=auth_data.get("require_email_verification", False),
         allow_registration=auth_data.get("allow_registration", True),
+        org_admin_roles=list(auth_data.get("org_admin_roles", [])),
         session=session_config,
         jwt=jwt_config,
         oauth_providers=oauth_providers,

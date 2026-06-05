@@ -65,6 +65,10 @@ class AuthSubsystem:
         _auto_provision = bool(getattr(ctx.config, "auto_provision_single_org", False))
         ctx.app.state.single_org_auto_provision = _auto_provision
         ctx.app.state.memberships_required = _auto_provision
+        # auth Plan 3a: personas allowed to invite / manage org members
+        # (fail-closed — empty means nobody can invite). Read by the invite route.
+        _auth_cfg = getattr(ctx.config, "auth_config", None)
+        ctx.app.state.org_admin_roles = list(getattr(_auth_cfg, "org_admin_roles", []) or [])
         # auth Plan 1d: expose the AppSpec for the activation path's 1:1 org<->
         # tenant-root mirror provisioning (archetype apps).
         ctx.app.state.appspec = ctx.appspec
