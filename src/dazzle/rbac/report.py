@@ -5,7 +5,12 @@ Cites NIST SP 800-162, Saltzer & Schroeder (1975), and ISO 27001 in the
 methodology section.
 """
 
+from typing import TYPE_CHECKING
+
 from dazzle.rbac.verifier import CellResult, VerificationReport
+
+if TYPE_CHECKING:
+    from dazzle.rbac.access_evidence import AccessReview
 
 # Decision glyphs used in the access matrix table.
 _CELL_GLYPH: dict[CellResult, str] = {
@@ -201,4 +206,77 @@ def generate_report(report: VerificationReport, format: str = "markdown") -> str
     lines.extend(render_csrf_policy(CSRFConfig(enabled=True)))
     lines.extend(_render_methodology())
 
+    return "\n".join(lines)
+
+
+def render_access_review_markdown(review: "AccessReview") -> str:
+    """Render an access-review evidence pack to markdown (auth Plan 2b).
+
+    Sections: roster (who has access + roles as of the snapshot moment), JML
+    access-change stream, control coverage (which SOC 2 / ISO controls the
+    evidence supports), and the tamper-evidence integrity attestation.
+    """
+    s = review.snapshot
+    as_of = s.as_of or "now (current state)"
+    lines: list[str] = [
+        "# Access Review",
+        "",
+        f"- **Organization**: {review.tenant_id}",
+        f"- **Generated**: {review.generated_at}",
+        f"- **Snapshot as of**: {as_of} (source: {s.source})",
+        f"- **Change period**: {review.period_since or '—'} → {review.period_until or '—'}",
+        "",
+        "## Membership Roster",
+        "",
+        f"_{len(s.members)} membership(s) with access to {review.tenant_id}._",
+        "",
+        "| membership | identity | roles | status | joined |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for m in sorted(s.members, key=lambda x: x.identity_id):
+        roles = ", ".join(m.roles) if m.roles else "—"
+        lines.append(
+            f"| `{m.membership_id}` | {m.identity_id} | {roles} | {m.status} | {m.joined_at or '—'} |"
+        )
+    lines += [
+        "",
+        "## Access Changes (Joiner / Mover / Leaver)",
+        "",
+    ]
+    if not review.jml:
+        lines += ["_No access changes in the period._", ""]
+    else:
+        lines += [
+            "| when | JML | event | identity | roles before → after | status | actor | controls |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        ]
+        for j in review.jml:
+            rb = ", ".join(j.roles_before) if j.roles_before else "—"
+            ra = ", ".join(j.roles_after) if j.roles_after else "—"
+            st = f"{j.status_before or '—'} → {j.status_after or '—'}"
+            lines.append(
+                f"| {j.at} | {j.jml} | `{j.event_type}` | {j.identity_id} | {rb} → {ra} | "
+                f"{st} | {j.actor_id or '—'} | {', '.join(j.controls)} |"
+            )
+        lines.append("")
+    lines += ["## Control Coverage", "", "| control | evidence |", "| --- | --- |"]
+    # Invert the control index: control id → the event kinds / roster that evidence it.
+    control_to_sources: dict[str, list[str]] = {}
+    for source, controls in review.control_index.items():
+        for c in controls:
+            control_to_sources.setdefault(c, []).append(source)
+    for control in sorted(control_to_sources):
+        lines.append(f"| **{control}** | {', '.join(sorted(control_to_sources[control]))} |")
+    lines += [
+        "",
+        "## Evidence Integrity",
+        "",
+        (
+            f"- **Tamper-evidence chain**: {'VERIFIED' if review.chain.ok else 'BROKEN'} "
+            f"({review.chain.total_rows} event(s); {review.chain.mismatched_count} mismatch(es))"
+        ),
+    ]
+    if not review.chain.ok:
+        lines.append(f"- **First broken event**: `{review.chain.first_mismatch_id}`")
+    lines.append("")
     return "\n".join(lines)
