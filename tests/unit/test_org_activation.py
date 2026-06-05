@@ -106,8 +106,14 @@ class TestLoginRedirectMapper:
         assert mid is None
         assert target == "/auth/select-org"
 
-    def test_no_orgs_redirects(self) -> None:
+    def test_no_orgs_proceeds_by_default_legacy_transition(self) -> None:
+        # Pre-1c: no app has memberships, so zero-membership login proceeds.
         mid, target = _login_redirect_for_outcome(NoOrgs(), "/app")
+        assert mid is None
+        assert target == "/app"
+
+    def test_no_orgs_redirects_when_memberships_required(self) -> None:
+        mid, target = _login_redirect_for_outcome(NoOrgs(), "/app", memberships_required=True)
         assert mid is None
         assert target == "/auth/no-orgs"
 

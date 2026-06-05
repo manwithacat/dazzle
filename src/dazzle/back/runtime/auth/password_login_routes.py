@@ -25,6 +25,7 @@ from dazzle.back.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     _login_redirect_for_outcome,
     activate_session_for_login,
+    memberships_required,
 )
 from dazzle.back.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
@@ -125,7 +126,9 @@ def create_password_login_routes() -> APIRouter:
         # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
         outcome = activate_session_for_login(auth_store, user, request)
         safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
-        membership_id, redirect_to = _login_redirect_for_outcome(outcome, safe_next)
+        membership_id, redirect_to = _login_redirect_for_outcome(
+            outcome, safe_next, memberships_required=memberships_required(request)
+        )
         if redirect_to == FORBIDDEN_SENTINEL:
             raise HTTPException(status_code=403, detail="no membership for this organization")
         session = auth_store.create_session(user, active_membership_id=membership_id)
@@ -201,7 +204,9 @@ def create_password_login_routes() -> APIRouter:
         # there → 403.
         outcome = activate_session_for_login(auth_store, user, request)
         safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
-        membership_id, redirect_to = _login_redirect_for_outcome(outcome, safe_next)
+        membership_id, redirect_to = _login_redirect_for_outcome(
+            outcome, safe_next, memberships_required=memberships_required(request)
+        )
         if redirect_to == FORBIDDEN_SENTINEL:
             raise HTTPException(status_code=403, detail="no membership for this organization")
         session = auth_store.create_session(user, active_membership_id=membership_id)

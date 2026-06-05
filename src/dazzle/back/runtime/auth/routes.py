@@ -20,9 +20,28 @@ from .models import (
     RegisterRequest,
     ResetPasswordRequest,
 )
+from .org_activation import Activated, HostForbidden, activate_session_for_login
 from .store import AuthStore
 
 logger = logging.getLogger(__name__)
+
+
+def _json_active_membership_id(auth_store: AuthStore, user: Any, request: Any) -> str | None:
+    """Phase-2 activation for the JSON API login paths (auth Plan 1b).
+
+    Returns the membership id to pin when exactly one org resolves (single
+    membership or host-pin match); raises 403 when host-pinned to an org the
+    identity isn't in. For the picker/no-orgs cases there is no HTML redirect to
+    serve, so the session is created membership-less — the RLS fence then denies
+    (1a: no active membership → unbound GUC) until the client picks via
+    ``POST /auth/switch-org``. Fail-safe: an un-activated session sees nothing.
+    """
+    outcome = activate_session_for_login(auth_store, user, request)
+    if isinstance(outcome, HostForbidden):
+        raise HTTPException(status_code=403, detail="no membership for this organization")
+    if isinstance(outcome, Activated):
+        return outcome.membership_id
+    return None
 
 
 # =============================================================================
@@ -110,11 +129,13 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
     # success — invalidate any pre-auth session cookie the client presented
     # so an attacker-planted id can't survive into the authenticated state.
     pre_auth_sid = read_session_id(request, default=deps.cookie_name)
+    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        active_membership_id=membership_id,
     )
     if pre_auth_sid and pre_auth_sid != session.id:
         deps.auth_store.delete_session(pre_auth_sid)
@@ -213,11 +234,13 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
     # client presented so an attacker-planted id can't survive into the
     # newly-authenticated state.
     pre_auth_sid = read_session_id(request, default=deps.cookie_name)
+    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        active_membership_id=membership_id,
     )
     if pre_auth_sid and pre_auth_sid != session.id:
         deps.auth_store.delete_session(pre_auth_sid)
@@ -314,11 +337,13 @@ async def _change_password(
     deps.auth_store.update_password(user.id, data.new_password)
     deps.auth_store.delete_user_sessions(user.id)
 
+    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        active_membership_id=membership_id,
     )
 
     await emit_user_password_changed(user)
@@ -400,11 +425,13 @@ async def _reset_password(
     deps.auth_store.consume_password_reset_token(data.token)
     deps.auth_store.delete_user_sessions(user.id)
 
+    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
     session = deps.auth_store.create_session(
         user,
         expires_in=timedelta(days=deps.session_expires_days),
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        active_membership_id=membership_id,
     )
 
     response = JSONResponse(content={"message": "Password reset successful"})

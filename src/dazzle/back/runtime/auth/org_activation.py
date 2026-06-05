@@ -86,6 +86,16 @@ def host_tenant_id_from_request(request: Any) -> str | None:
     return str(tid) if tid is not None else None
 
 
+def memberships_required(request: Any) -> bool:
+    """Whether this app has opted into the membership model (Plan 1c gate).
+
+    Default False: pre-1c apps have no memberships, so a zero-membership login
+    proceeds with the legacy fence (see ``_login_redirect_for_outcome``).
+    """
+    state = getattr(getattr(request, "app", None), "state", None)
+    return bool(getattr(state, "memberships_required", False))
+
+
 def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> ActivationOutcome:
     """Resolve Phase 2 for a just-proven ``user`` on this ``request``."""
     memberships = auth_store.get_memberships_for_identity(str(user.id))
@@ -96,13 +106,22 @@ def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> Acti
 
 
 def _login_redirect_for_outcome(
-    outcome: ActivationOutcome, next_target: str
+    outcome: ActivationOutcome, next_target: str, *, memberships_required: bool = False
 ) -> tuple[str | None, str]:
     """Map a Phase-2 activation outcome → ``(active_membership_id, redirect_path)``.
 
     ``active_membership_id`` is None unless exactly one org resolved.
     ``HostForbidden`` is signalled by the ``FORBIDDEN_SENTINEL`` redirect, which
     the caller turns into a 403.
+
+    ``memberships_required`` is the transition gate. Until Plan 1c auto-provisions
+    a single-org membership at signup, *no existing app has memberships*, so a
+    zero-membership identity (``NoOrgs``) must keep logging in exactly as before —
+    a membership-less session that falls back to the legacy preferences-sourced
+    fence (1a). Only an app that has opted into the membership model
+    (``app.state.memberships_required``, set by 1c) routes a genuinely org-less
+    user to the "no orgs yet" page. ``NeedsPicker`` (≥2 memberships) always
+    intercepts — a user with multiple orgs is unambiguously membership-based.
     """
     if isinstance(outcome, Activated):
         return outcome.membership_id, next_target
@@ -110,4 +129,7 @@ def _login_redirect_for_outcome(
         return None, "/auth/select-org"
     if isinstance(outcome, HostForbidden):
         return None, FORBIDDEN_SENTINEL
-    return None, "/auth/no-orgs"  # NoOrgs
+    # NoOrgs
+    if memberships_required:
+        return None, "/auth/no-orgs"
+    return None, next_target  # legacy transition: membership-less session, proceed

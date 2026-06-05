@@ -161,7 +161,10 @@ def test_password_login_multi_membership_redirects_to_picker(scratch_url: str) -
     assert ctx.active_membership is None  # not yet chosen
 
 
-def test_password_login_no_membership_redirects_to_no_orgs(scratch_url: str) -> None:
+def test_password_login_no_membership_proceeds_by_default(scratch_url: str) -> None:
+    """Pre-1c transition: a zero-membership identity logs in to a membership-less
+    session and proceeds normally (legacy fence). No /auth/no-orgs interception
+    until the app opts into the membership model."""
     from dazzle.back.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
@@ -169,6 +172,27 @@ def test_password_login_no_membership_redirects_to_no_orgs(scratch_url: str) -> 
     store.create_user(email="orphan@b.test", password="pw123456")
 
     resp = _client(_app_with_store(store)).post(
+        "/auth/login/password", data={"email": "orphan@b.test", "password": "pw123456"}
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/app"
+    sid = resp.cookies.get("dazzle_session")
+    ctx = store.validate_session(sid)
+    assert ctx.active_membership is None
+
+
+def test_password_login_no_membership_redirects_to_no_orgs_when_required(scratch_url: str) -> None:
+    """When the app opts into memberships (Plan 1c gate), a zero-membership
+    identity is routed to the "no orgs yet" page."""
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    store.create_user(email="orphan@b.test", password="pw123456")
+
+    app = _app_with_store(store)
+    app.state.memberships_required = True
+    resp = _client(app).post(
         "/auth/login/password", data={"email": "orphan@b.test", "password": "pw123456"}
     )
     assert resp.status_code == 303

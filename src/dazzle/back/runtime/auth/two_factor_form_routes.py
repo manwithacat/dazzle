@@ -21,10 +21,16 @@ from datetime import timedelta
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.org_activation import (
+    FORBIDDEN_SENTINEL,
+    _login_redirect_for_outcome,
+    activate_session_for_login,
+    memberships_required,
+)
 from dazzle.back.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
@@ -100,16 +106,25 @@ def create_two_factor_form_routes(
         # above) so an attacker-planted id can't survive into the
         # authenticated state.
         pre_auth_sid = request.cookies.get(cookie_name)
+        # Phase 2 (auth Plan 1b): the post-2FA session is the real authenticated
+        # session — activate an org context for the proven identity.
+        safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
+        outcome = activate_session_for_login(auth_store, user, request)
+        membership_id, redirect_to = _login_redirect_for_outcome(
+            outcome, safe_next, memberships_required=memberships_required(request)
+        )
+        if redirect_to == FORBIDDEN_SENTINEL:
+            raise HTTPException(status_code=403, detail="no membership for this organization")
         session = auth_store.create_session(
             user,
             expires_in=timedelta(days=session_expires_days),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
+            active_membership_id=membership_id,
         )
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
 
-        redirect_to = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
         response = RedirectResponse(url=redirect_to, status_code=303)
         response.set_cookie(
             key=cookie_name,

@@ -14,7 +14,7 @@ import logging
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
@@ -23,6 +23,12 @@ from dazzle.back.runtime.auth.magic_link import (
     validate_magic_link,
 )
 from dazzle.back.runtime.auth.mailer import get_mailer
+from dazzle.back.runtime.auth.org_activation import (
+    FORBIDDEN_SENTINEL,
+    _login_redirect_for_outcome,
+    activate_session_for_login,
+    memberships_required,
+)
 from dazzle.back.runtime.auth.redirect_safety import is_safe_redirect_path as _is_safe_redirect_path
 
 _logger = logging.getLogger(__name__)
@@ -94,12 +100,18 @@ def create_magic_link_routes() -> APIRouter:
         # the client presented so an attacker-planted id can't survive into
         # the authenticated state.
         pre_auth_sid = read_session_id(request)
-        session = auth_store.create_session(user)
+        # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
+        # Honour ?next= only when it is a same-origin path.
+        safe_next = next if _is_safe_redirect_path(next) else "/"
+        outcome = activate_session_for_login(auth_store, user, request)
+        membership_id, redirect_to = _login_redirect_for_outcome(
+            outcome, safe_next, memberships_required=memberships_required(request)
+        )
+        if redirect_to == FORBIDDEN_SENTINEL:
+            raise HTTPException(status_code=403, detail="no membership for this organization")
+        session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
-
-        # Honour ?next= only when it is a same-origin path.
-        redirect_to = next if _is_safe_redirect_path(next) else "/"
 
         response = RedirectResponse(url=redirect_to, status_code=303)
         response.set_cookie(

@@ -24,11 +24,17 @@ import logging
 import secrets
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.org_activation import (
+    FORBIDDEN_SENTINEL,
+    _login_redirect_for_outcome,
+    activate_session_for_login,
+    memberships_required,
+)
 from dazzle.back.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
@@ -202,16 +208,23 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         # client presented so an attacker-planted id can't survive into the
         # authenticated state.
         pre_auth_sid = read_session_id(request, default=cookie_name)
-        session = auth_store.create_session(user)
-        if pre_auth_sid and pre_auth_sid != session.id:
-            auth_store.delete_session(pre_auth_sid)
 
         # Pull the next-URL the initiate route stashed in the session.
         next_url = request.session.pop("sso_next", "") if hasattr(request, "session") else ""
-        if next_url and _is_safe_redirect_path(next_url):
-            redirect_to = next_url
-        else:
-            redirect_to = "/app"
+        safe_next = next_url if next_url and _is_safe_redirect_path(next_url) else "/app"
+
+        # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
+        # For Activated the SSO next-URL is honoured; NeedsPicker/NoOrgs override it
+        # to the picker / no-orgs page; HostForbidden → 403.
+        outcome = activate_session_for_login(auth_store, user, request)
+        membership_id, redirect_to = _login_redirect_for_outcome(
+            outcome, safe_next, memberships_required=memberships_required(request)
+        )
+        if redirect_to == FORBIDDEN_SENTINEL:
+            raise HTTPException(status_code=403, detail="no membership for this organization")
+        session = auth_store.create_session(user, active_membership_id=membership_id)
+        if pre_auth_sid and pre_auth_sid != session.id:
+            auth_store.delete_session(pre_auth_sid)
 
         response = RedirectResponse(url=redirect_to, status_code=303)
         response.set_cookie(

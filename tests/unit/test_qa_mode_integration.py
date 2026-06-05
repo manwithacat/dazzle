@@ -46,7 +46,7 @@ def mock_auth_store_with_real_token_flow():
         # One-time use: pop the token
         return tokens.pop(token, None)
 
-    def create_session(user):
+    def create_session(user, *, active_membership_id=None):
         session = MagicMock()
         session.id = f"session-{user.id}"
         return session
@@ -55,6 +55,8 @@ def mock_auth_store_with_real_token_flow():
     store.get_user_by_email = MagicMock(side_effect=get_user_by_email)
     store.get_user_by_id = MagicMock(side_effect=get_user_by_id)
     store.create_session = MagicMock(side_effect=create_session)
+    # auth Plan 1b: the magic-link route now resolves Phase-2 activation.
+    store.get_memberships_for_identity = MagicMock(return_value=[])
 
     # Patch the module-level functions so the routes call our fakes
     with (

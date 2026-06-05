@@ -100,7 +100,12 @@ class _StubAuthStore:
         self.created_users.append((email, password, username))
         return _StubUser(user_id="new-user-999")
 
-    def create_session(self, user: _StubUser) -> _StubSession:
+    def get_memberships_for_identity(self, identity_id: str) -> list:
+        return []  # auth Plan 1b — no memberships in this stub
+
+    def create_session(
+        self, user: _StubUser, *, active_membership_id: str | None = None
+    ) -> _StubSession:
         sid = f"sess-for-{user.id}"
         self.created_sessions.append(sid)
         return _StubSession(session_id=sid)
