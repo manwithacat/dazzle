@@ -57,6 +57,15 @@ class AuthSubsystem:
         # (magic link consumer, qa_routes, etc.)
         ctx.app.state.auth_store = ctx.auth_store
 
+        # auth Plan 1c — single-org auto-provision + the 1b memberships gate.
+        # When on, activation lazily provisions one default org + membership
+        # (invisible single-org), and a genuinely org-less identity routes to
+        # /auth/no-orgs rather than the legacy proceed. Default off → unchanged
+        # 1b behavior for existing apps.
+        _auto_provision = bool(getattr(ctx.config, "auto_provision_single_org", False))
+        ctx.app.state.single_org_auto_provision = _auto_provision
+        ctx.app.state.memberships_required = _auto_provision
+
         # Mount the magic link consumer router (general-purpose, production-safe)
         from dazzle.back.runtime.auth.magic_link_routes import create_magic_link_routes
 

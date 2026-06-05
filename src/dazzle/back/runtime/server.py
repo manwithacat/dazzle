@@ -91,6 +91,11 @@ class ServerConfig:
     # Authentication settings
     enable_auth: bool = False
     auth_config: "AuthConfig | None" = None  # from manifest (for OAuth providers)
+    # auth Plan 1c: lazily provision a single default Organization + one
+    # membership per identity at activation (invisible single-org degradation).
+    # Default False — non-breaking; Plan 1d turns it on for migrated apps and
+    # the new-app scaffolder defaults it on.
+    auto_provision_single_org: bool = False
 
     # File upload settings
     enable_files: bool = False

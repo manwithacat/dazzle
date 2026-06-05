@@ -195,3 +195,77 @@ def test_host_pin_does_not_auto_provision(scratch_url: str) -> None:
     out = activate_session_for_login(store, user, request)
     assert isinstance(out, HostForbidden)
     assert store.get_organization_by_slug("default") is None
+
+
+# -- Task 6: ServerConfig flag default (non-breaking) ------------------------
+
+
+def test_server_config_defaults_auto_provision_off() -> None:
+    """Non-breaking default: existing apps don't auto-provision (no DB needed)."""
+    from dazzle.back.runtime.server import ServerConfig
+
+    assert ServerConfig().auto_provision_single_org is False
+
+
+# -- Task 7: keystone — provisioned membership binds the fence ---------------
+
+
+def test_provisioned_membership_binds_fence(scratch_url: str) -> None:
+    """A provisioned membership's tenant_id binds dazzle.tenant_id; a restrictive
+    fence returns only that org's rows (mirrors the 1a keystone)."""
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.auth.org_activation import activate_session_for_login
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    ddl = [
+        'CREATE TABLE "Note" (tenant_id TEXT NOT NULL, id TEXT PRIMARY KEY, body TEXT)',
+        'ALTER TABLE "Note" ENABLE ROW LEVEL SECURITY',
+        'ALTER TABLE "Note" FORCE ROW LEVEL SECURITY',
+        # Permissive baseline + restrictive fence (the real Phase-B shape): a
+        # restrictive policy alone default-denies (it only ANDs over a permissive
+        # one), so the baseline is required for any row to be visible.
+        'CREATE POLICY tenant_baseline ON "Note" AS PERMISSIVE FOR ALL '
+        "USING (true) WITH CHECK (true)",
+        'CREATE POLICY tenant_fence ON "Note" AS RESTRICTIVE FOR ALL '
+        "USING (tenant_id = current_setting('dazzle.tenant_id', true)) "
+        "WITH CHECK (tenant_id = current_setting('dazzle.tenant_id', true))",
+    ]
+    with psycopg.connect(scratch_url, autocommit=True) as conn:
+        for stmt in ddl:
+            conn.execute(stmt)  # nosemgrep — static test DDL
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="solo@b.test", password="pw123456", roles=["member"])
+    app = SimpleNamespace(state=SimpleNamespace(single_org_auto_provision=True))
+    request = SimpleNamespace(app=app, state=SimpleNamespace(tenant=None))
+    out = activate_session_for_login(store, user, request)
+    org_id = store.get_membership(out.membership_id).tenant_id
+
+    # Seed both tenants' rows + a NOSUPERUSER role to read under — superusers
+    # bypass RLS entirely, so the fence is only observable as a non-superuser
+    # (the real `dazzle_app` model; mirrors test_rls_enforcement_pg.py).
+    role = f"orgfence_{uuid.uuid4().hex[:8]}"
+    with psycopg.connect(scratch_url, autocommit=True) as conn:
+        conn.execute('INSERT INTO "Note" VALUES (%s, %s, %s)', (org_id, "n1", "mine"))
+        conn.execute('INSERT INTO "Note" VALUES (%s, %s, %s)', ("t-other", "n2", "theirs"))
+        conn.execute(f'CREATE ROLE "{role}" NOSUPERUSER')  # nosemgrep — uuid-derived
+        conn.execute(f'GRANT SELECT ON "Note" TO "{role}"')  # nosemgrep
+
+    try:
+        with psycopg.connect(scratch_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f'SET ROLE "{role}"')  # nosemgrep — RLS now applies
+                # session-scoped GUC so it's set regardless of SET ROLE's txn timing
+                cur.execute("SELECT set_config('dazzle.tenant_id', %s, false)", (org_id,))
+                rows = cur.execute('SELECT id FROM "Note"').fetchall()
+                cur.execute("RESET ROLE")
+            conn.rollback()
+    finally:
+        # Roles are cluster-global (not dropped by DROP DATABASE) — drop ours so
+        # it can't leak/collide across runs, even if the assertion below fails.
+        with psycopg.connect(scratch_url, autocommit=True) as conn:
+            conn.execute(f'REVOKE ALL ON "Note" FROM "{role}"')  # nosemgrep
+            conn.execute(f'DROP ROLE IF EXISTS "{role}"')  # nosemgrep
+    assert {r[0] for r in rows} == {"n1"}, "fence must return only the provisioned org's row"
