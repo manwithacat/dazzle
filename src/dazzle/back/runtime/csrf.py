@@ -112,6 +112,20 @@ class CSRFConfig:
             "/_dazzle/i18n/",
         ]
     )
+    # Anchored overrides that force PROTECTED_SESSION even when a path would
+    # otherwise match an exempt prefix above (auth Plan 1b). The org-context
+    # POSTs live under `/auth/` for cohesion with the login views, but unlike the
+    # rest of `/auth/` (pre-session cookie-setters) they are authenticated,
+    # non-idempotent, privilege-changing mutations — they rotate the session's
+    # active org (`active_membership_id`), which moves the RLS fence + role set.
+    # They must run the full origin-primary CSRF gate, not inherit NA_PREAUTH.
+    # Exact-match (not prefix) so nothing deeper silently joins the override.
+    protected_paths: list[str] = field(
+        default_factory=lambda: [
+            "/auth/select-org",
+            "/auth/switch-org",
+        ]
+    )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
     # shared-secret signature IS the control; CSRF is categorically N/A. Moved
     # out of the generic exempt lists so the disposition is explicit + auditable.
@@ -285,6 +299,12 @@ def csrf_disposition(
         if pattern.fullmatch(path):
             return Disposition.NA_SIGNATURE
 
+    # Anchored protected-overrides win over the exempt prefixes below, so an
+    # authenticated privilege-changing route under an otherwise-exempt prefix
+    # (e.g. POST /auth/switch-org under /auth/) is not swept into NA_PREAUTH.
+    if path in config.protected_paths:
+        return Disposition.PROTECTED_SESSION
+
     if path in config.exempt_paths:
         return Disposition.NA_PREAUTH
     for prefix in config.exempt_path_prefixes:
@@ -349,6 +369,8 @@ def render_csrf_policy(config: CSRFConfig) -> list[str]:
         "| Rule | Match | Disposition |",
         "| --- | --- | --- |",
     ]
+    for path in config.protected_paths:
+        lines.append(f"| `{_cell(path)}` | exact | PROTECTED_SESSION (override) |")
     for prefix in config.na_signature_prefixes:
         lines.append(f"| `{_cell(prefix)}` | prefix | NA_SIGNATURE |")
     for rx in config.na_signature_regexes:

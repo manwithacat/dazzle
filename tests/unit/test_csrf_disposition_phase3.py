@@ -99,3 +99,34 @@ class TestCsrfAdmits:
             CFG,
         )
         assert ok is False
+
+
+class TestProtectedPathOverrides:
+    """auth Plan 1b: org-context POSTs under /auth/ must be PROTECTED_SESSION,
+    not swept into the /auth/ NA_PREAUTH prefix exemption."""
+
+    def test_switch_org_is_protected_session(self) -> None:
+        d = csrf_disposition("POST", "/auth/switch-org", _h(), CFG)
+        assert d is Disposition.PROTECTED_SESSION
+
+    def test_select_org_is_protected_session(self) -> None:
+        d = csrf_disposition("POST", "/auth/select-org", _h(), CFG)
+        assert d is Disposition.PROTECTED_SESSION
+
+    def test_other_auth_paths_stay_na_preauth(self) -> None:
+        # The override is exact-match — the rest of /auth/ keeps its exemption.
+        d = csrf_disposition("POST", "/auth/login/password", _h(), CFG)
+        assert d is Disposition.NA_PREAUTH
+
+    def test_switch_org_cross_origin_post_rejected(self) -> None:
+        # Cross-site POST (mismatched Origin) → origin gate rejects.
+        headers = _h(origin="https://evil.example", host="victim.app")
+        assert (
+            csrf_admits(Disposition.PROTECTED_SESSION, headers, "victim.app", "tok", CFG) is False
+        )
+
+    def test_switch_org_same_origin_post_admitted_without_token(self) -> None:
+        # Same-origin form POST (no JS, no X-CSRF-Token header) → origin gate
+        # admits via Origin==Host, so the no-JS picker form still works.
+        headers = _h(origin="https://victim.app", host="victim.app")
+        assert csrf_admits(Disposition.PROTECTED_SESSION, headers, "victim.app", None, CFG) is True
