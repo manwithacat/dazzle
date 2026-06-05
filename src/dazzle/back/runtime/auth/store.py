@@ -587,6 +587,12 @@ class SessionStoreMixin:
         active_membership = None
         if session.active_membership_id:
             active_membership = self.get_membership(session.active_membership_id)
+            # Only an ACTIVE membership sources the fence + roles. A suspended or
+            # still-invited membership must not keep scoping the session to the
+            # org — fail-safe: drop to None → tenant GUC stays unbound → the RLS
+            # fence denies (a suspended user sees nothing until re-auth).
+            if active_membership is not None and active_membership.status != "active":
+                active_membership = None
 
         return AuthContext(
             user=user,
@@ -671,8 +677,17 @@ class SessionStoreMixin:
         status: str = "active",
         invited_by: str | None = None,
     ) -> MembershipRecord:
-        """Create a membership (identity x org x roles)."""
+        """Create a membership (identity x org x roles).
+
+        Raises ``ValueError`` if ``identity_id`` does not name an existing user —
+        there is no DB foreign key (the auth tables are not in the Alembic chain;
+        see migration 0007), so this is the integrity guard against orphan
+        memberships / a mistyped identity.
+        """
         import json
+
+        if self.get_user_by_id(UUID(identity_id)) is None:
+            raise ValueError(f"cannot create membership: no user with id {identity_id!r}")
 
         membership = MembershipRecord(
             id=secrets.token_urlsafe(24),

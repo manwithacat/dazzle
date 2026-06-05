@@ -198,6 +198,36 @@ def test_validate_session_populates_active_membership(scratch_url: str) -> None:
     assert ctx.effective_roles == ["admin"]
 
 
+def test_suspended_membership_does_not_source_the_fence(scratch_url: str) -> None:
+    """A non-active membership must NOT scope the session (security: a suspended
+    user stops seeing the org's data). validate_session drops it to None."""
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    uid = _seed_user(store)
+    user = store.get_user_by_id(uuid.UUID(uid))
+    assert user is not None
+    m = store.create_membership(
+        tenant_id="t-1", identity_id=uid, roles=["admin"], status="suspended"
+    )
+    session = store.create_session(user, active_membership_id=m.id)
+
+    ctx = store.validate_session(session.id)
+    assert ctx.is_authenticated
+    assert ctx.active_membership is None  # suspended → not sourced
+
+
+def test_create_membership_rejects_unknown_identity(scratch_url: str) -> None:
+    """No DB FK to users → create_membership guards against orphan memberships."""
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    with pytest.raises(ValueError, match="no user with id"):
+        store.create_membership(tenant_id="t-1", identity_id=str(uuid.uuid4()), roles=[])
+
+
 def test_validate_session_no_membership_is_backward_compatible(scratch_url: str) -> None:
     """A session with no active membership still authenticates (legacy path)."""
     from dazzle.back.runtime.auth.store import AuthStore

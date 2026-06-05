@@ -127,8 +127,12 @@ def create_auth_dependency(
 
         # Check roles if required.
         # Database roles use "role_" prefix; persona IDs don't — normalize.
+        # auth Plan 1a: read effective_roles (membership roles when a membership
+        # is active, else the legacy user roles) so this gate is correct the
+        # moment sessions activate a membership. The Cedar/permit: evaluation in
+        # route_generator still sources user.roles — that switchover is Plan 1b.
         if require_roles:
-            user_roles = {r.removeprefix("role_") for r in auth_context.roles}
+            user_roles = {r.removeprefix("role_") for r in auth_context.effective_roles}
             required = set(require_roles)
 
             if not required.intersection(user_roles):
@@ -176,9 +180,9 @@ def create_deny_dependency(
         if not auth_context.is_authenticated:
             return auth_context
 
-        # Check deny roles
+        # Check deny roles (effective_roles — membership-aware; see get_current_user)
         if deny_roles:
-            user_roles = set(auth_context.roles)
+            user_roles = set(auth_context.effective_roles)
             denied = set(deny_roles)
             if user_roles.intersection(denied):
                 raise HTTPException(
