@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Auth identity model — Plan 1c: single-org auto-provision + invisible degradation** (third slice; spec §3 graceful degradation + §10, plan `docs/superpowers/plans/2026-06-05-auth-plan-1c-single-org-autoprovision.md`). A framework-owned `organizations` registry (auth-store raw SQL, alembic `0008` + `_init_db` parity) is the tenant root in shared-schema: `membership.tenant_id = organizations.id = dazzle.tenant_id`. When an app sets `ServerConfig.auto_provision_single_org` (default **off**, surfaced as `app.state.single_org_auto_provision` + `memberships_required`), Phase-2 activation lazily provisions: the first identity with zero memberships creates the single default org (fixed slug `default`, race-safe via `UNIQUE` + `INSERT … ON CONFLICT DO NOTHING`) and a membership (roles = the identity's signup roles); subsequent identities join the same org — so single-org Phase 2 is invisible (always exactly one membership → auto-activate) and pre-existing users are backfilled on next login. Provisioning is **skipped under a host pin** (a host-pin mismatch still 403s — never silently provision-and-admit). New store methods `create_organization` / `get_organization_by_slug` / `get_or_create_default_organization` / `ensure_single_org_membership`. Real-PG proof in `tests/integration/test_auth_orgprovision_pg.py` (provision once, idempotent, second user joins same org, host-pin no-provision, fence keystone under a non-superuser role).
+
+### Agent Guidance
+
+- **Single-org apps opt into invisible Phase-2 via `ServerConfig.auto_provision_single_org`** (default off → unchanged 1b behavior). When on, login lazily provisions one framework `organizations` row + one membership per identity (roles mirror `user.roles`), so `/auth/no-orgs` only shows for genuinely org-less identities and the picker never appears. The org id is the `dazzle.tenant_id` discriminator. Auto-provision is **host-pin-guarded** (skipped when `request.state.tenant` is set). New auth-store table `organizations` (alembic `0008`, no DB FK from memberships — mirrors 0007). `ensure_single_org_membership` only swallows `psycopg.errors.UniqueViolation` (the concurrent-create race) and raises everything else (no silent "no orgs" masking). Deferred to **Plan 1d**: 1:1-seeding a domain `archetype: tenant` entity row with the org's shared id, example-app migration + flipping the flag on, and retiring the preferences-tenant fallback.
+
 ## [0.81.29] - 2026-06-05
 
 ### Added
