@@ -664,3 +664,62 @@ def config(
         console.print(f"  Active sessions:  {active_sessions}")
         roles_str = ", ".join(roles_in_use) if roles_in_use else "[dim]none[/dim]"
         console.print(f"  Roles in use:     {roles_str}")
+
+
+@auth_app.command(name="migrate")
+def migrate(
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Report what would change; write nothing.")
+    ] = False,
+    user_entity: Annotated[
+        str,
+        typer.Option(
+            "--user-entity",
+            help="Domain entity linking email->tenant (default: [auth] user_entity).",
+        ),
+    ] = "",
+    database_url: Annotated[str, typer.Option("--database-url", help="Override DB URL.")] = "",
+) -> None:
+    """Backfill an existing deployment onto the membership model (auth Plan 1d).
+
+    Mirrors each domain tenant-root row into the framework `organizations` table
+    at the same id, and creates a membership per auth user (tenant resolved via
+    the domain user entity, matched by email). Idempotent.
+    """
+    from pathlib import Path
+
+    import psycopg
+
+    from dazzle.cli.env import get_active_env
+    from dazzle.cli.utils import load_project_appspec
+    from dazzle.core.manifest import load_manifest, resolve_database_url
+    from dazzle.db.auth_migrate import MigrateError, migrate_to_memberships
+
+    project_root = Path.cwd().resolve()
+    manifest = load_manifest(project_root / "dazzle.toml")
+    url = (
+        database_url
+        or _database_url_override
+        or resolve_database_url(manifest, env_name=get_active_env())
+    )
+    appspec = load_project_appspec(project_root)
+
+    try:
+        with psycopg.connect(url) as conn:  # non-autocommit → one transaction
+            result = migrate_to_memberships(
+                appspec, conn=conn, dry_run=dry_run, user_entity=user_entity or None
+            )
+    except MigrateError as exc:
+        console.print(f"[red]Migration aborted: {exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    verb = "Would migrate" if dry_run else "Migrated"
+    console.print(f"[green]{verb}:[/green]")
+    console.print(f"  organizations mirrored: {result.orgs_mirrored}")
+    console.print(f"  memberships created:    {result.memberships_created}")
+    if result.users_skipped:
+        console.print(
+            f"  [yellow]users skipped (no resolvable tenant):[/yellow] {len(result.users_skipped)}"
+        )
+        for email in result.users_skipped:
+            console.print(f"    - {email}")
