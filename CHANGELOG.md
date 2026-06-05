@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.50] - 2026-06-06
+
+### Added
+
+- **Auth Plan 4b.v — connection doctor (agent-driven activation)** (plan `docs/superpowers/plans/2026-06-06-auth-plan-4b-v-connection-doctor.md`; spec §5). `dazzle auth connection doctor <id>` reports exactly what an enterprise OIDC connection still needs to go live (config-vs-missing) plus an ordered **activation runbook**, with a **`--json`** mode an agent can parse to drive remediation — the embodiment of the agent-driven north-star (human states the binary requirement + pays for infra; the agent fills config or follows the runbook). A pure `diagnose_connection(connection, *, secret_key_ok, sso_extra_ok, dns_extra_ok) -> Diagnosis` (`connection_doctor.py`) returns structured `Check`s — **required** (gate readiness): `secret_key` · `sso_extra` (authlib) · `issuer_or_discovery` · `client_id` · `client_secret` (**presence only — the value is never read or printed**) · `verified_domain` (≥1); **recommended** (warn, don't gate): `dns_extra` (dnspython) · `group_mapping` (else members get no roles) · `claimed_unverified`. It does **no network I/O** (no discovery fetch — deterministic, no SSRF surface). The CLI key-gates (no `DAZZLE_CONNECTION_SECRET` → single remedy, exit 1, before any decrypt), catches a rotated/wrong-key decrypt into a clean exit-1 (JSON-aware), and **exits 0 iff activation-ready** so CI/agents can gate. `dazzle auth connection scaffold` prints the end-to-end create→add-domain→publish-TXT→verify→register-redirect-URI sequence. Reviewed (code-reviewer): **no CRITICAL/HIGH/MEDIUM** — the secret-non-leak guarantee holds across the kernel, the rich table, and `--json`; exit codes correct; the one LOW (JSON parity on the rotated-key branch) fixed in-slice.
+
+### Agent Guidance
+
+- **`dazzle auth connection doctor <id> --json` is the activation oracle** — parse `ready` (bool) + `checks[]` (`name`/`level`/`status`/`remedy`) + `runbook[]` to see exactly what's missing and drive it to green; the process exits 0 iff ready. Required checks gate readiness (secret key, authlib, issuer/discovery, client_id, client_secret presence, ≥1 verified domain); recommended ones (dnspython, group_mapping) only warn. The doctor never reads or prints the client secret value (presence only) and makes no network calls. `dazzle auth connection scaffold` emits the full stand-up command sequence with placeholders. This completes the agent-driven enterprise-OIDC tooling (4a substrate → 4b.i provider → 4b.ii JIT join → 4b.iii routes → 4b.iv verification → 4b.v doctor); next are SCIM (4c) and SAML (Plan 5).
+
 ## [0.81.49] - 2026-06-06
 
 ### Added

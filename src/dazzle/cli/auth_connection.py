@@ -182,3 +182,164 @@ def delete(
     else:
         console.print(f"[red]No connection {connection_id!r}[/red]")
         raise typer.Exit(code=1)
+
+
+def _env_flags() -> tuple[bool, bool, bool]:
+    """(secret_key_ok, sso_extra_ok, dns_extra_ok) for the doctor."""
+    from importlib.util import find_spec
+
+    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError, _load_key
+
+    try:
+        _load_key()
+        secret_key_ok = True
+    except ConnectionSecretError:
+        secret_key_ok = False
+    return secret_key_ok, find_spec("authlib") is not None, find_spec("dns") is not None
+
+
+@connection_app.command("doctor")
+def doctor(
+    connection_id: Annotated[str, typer.Argument(help="Connection id")],
+    json_out: Annotated[
+        bool, typer.Option("--json", help="Emit the diagnosis as JSON (for agents)")
+    ] = False,
+) -> None:
+    """Report what a connection still needs to go live + an activation runbook.
+
+    Exit code is 0 only when the connection is activation-ready, so CI/agents can gate
+    on it. Never prints the client secret value (only whether one is present).
+    """
+    import json as _json
+
+    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
+    from dazzle.back.runtime.auth.connection_doctor import diagnose_connection
+
+    secret_key_ok, sso_extra_ok, dns_extra_ok = _env_flags()
+
+    # The key gates everything: without it the stored secret can't be decrypted, so
+    # there's nothing further to introspect. Report just that and stop.
+    if not secret_key_ok:
+        msg = (
+            "DAZZLE_CONNECTION_SECRET is missing/invalid — set a 32-byte base64 key and "
+            "re-run doctor for the full report. Generate one with: "
+            'python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"'
+        )
+        if json_out:
+            console.print_json(
+                data={
+                    "connection_id": connection_id,
+                    "ready": False,
+                    "blocked": "secret_key",
+                    "remedy": msg,
+                }
+            )
+        else:
+            console.print(f"[red]{msg}[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        conn = _store().get_connection(connection_id)
+    except ConnectionSecretError as exc:
+        # Key is present but the stored secret won't decrypt (rotated/wrong key).
+        detail = (
+            "Cannot decrypt the stored secret with the current key "
+            "(rotated/wrong DAZZLE_CONNECTION_SECRET?)"
+        )
+        if json_out:
+            console.print_json(
+                data={
+                    "connection_id": connection_id,
+                    "ready": False,
+                    "blocked": "secret_decrypt",
+                    "remedy": detail,
+                }
+            )
+        else:
+            console.print(f"[red]{detail}: {exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if conn is None:
+        console.print(f"[red]No connection {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+
+    diag = diagnose_connection(
+        conn, secret_key_ok=secret_key_ok, sso_extra_ok=sso_extra_ok, dns_extra_ok=dns_extra_ok
+    )
+
+    if json_out:
+        console.print(
+            _json.dumps(
+                {
+                    "connection_id": diag.connection_id,
+                    "connection_type": diag.connection_type,
+                    "ready": diag.ready,
+                    "checks": [
+                        {
+                            "name": c.name,
+                            "level": c.level,
+                            "status": c.status,
+                            "detail": c.detail,
+                            "remedy": c.remedy,
+                        }
+                        for c in diag.checks
+                    ],
+                    "runbook": list(diag.runbook),
+                },
+                indent=2,
+            )
+        )
+        if not diag.ready:
+            raise typer.Exit(code=1)
+        return
+
+    _symbol = {"ok": "[green]✓[/green]", "warn": "[yellow]●[/yellow]", "fail": "[red]✗[/red]"}
+    table = Table(title=f"Connection {diag.connection_id} ({diag.connection_type})")
+    for col in ("", "check", "level", "detail"):
+        table.add_column(col)
+    for c in diag.checks:
+        table.add_row(_symbol.get(c.status, "?"), c.name, c.level, c.detail)
+    console.print(table)
+
+    if diag.ready:
+        console.print("[green]Activation-ready.[/green]")
+    else:
+        console.print("[red]Not activation-ready.[/red]")
+    console.print("\n[bold]Activation runbook:[/bold]")
+    for i, step in enumerate(diag.runbook, 1):
+        console.print(f"  {i}. {step}")
+
+    if not diag.ready:
+        raise typer.Exit(code=1)
+
+
+@connection_app.command("scaffold")
+def scaffold() -> None:
+    """Print the end-to-end command sequence to stand up a new OIDC connection."""
+    console.print("[bold]Stand up an enterprise OIDC connection:[/bold]\n")
+    steps = [
+        (
+            "Generate the at-rest key (once per deployment)",
+            "export DAZZLE_CONNECTION_SECRET=\"$(python -c 'import os,base64;"
+            "print(base64.b64encode(os.urandom(32)).decode())')\"",
+        ),
+        (
+            "Create the connection (secret via env, not argv)",
+            "export DAZZLE_OIDC_CLIENT_SECRET=<idp-client-secret>\n"
+            "     dazzle auth connection create --tenant <org-id> "
+            "--issuer https://<idp> --client-id <client-id> "
+            "--group-map <idp-group>=<role>",
+        ),
+        (
+            "Claim a domain (prints the DNS TXT record to publish)",
+            "dazzle auth connection add-domain <connection-id> <domain>",
+        ),
+        (
+            "Publish that TXT record in the domain's DNS, then verify",
+            "dazzle auth connection verify-domain <connection-id> <domain>",
+        ),
+        ("Register the redirect URI with the IdP", "<base_url>/auth/enterprise/callback"),
+        ("Check readiness (exit 0 when live)", "dazzle auth connection doctor <connection-id>"),
+    ]
+    for i, (title, cmd) in enumerate(steps, 1):
+        console.print(f"[bold]{i}. {title}[/bold]")
+        console.print(f"   [cyan]{cmd}[/cyan]\n")

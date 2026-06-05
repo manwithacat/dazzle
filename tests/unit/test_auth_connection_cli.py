@@ -5,6 +5,7 @@ wiring + error paths run without Postgres or real DNS.
 """
 
 import base64
+from datetime import datetime
 
 import pytest
 from typer.testing import CliRunner
@@ -201,3 +202,95 @@ def test_show_verification(monkeypatch) -> None:
     _patch_store(monkeypatch, _Store())
     r = runner.invoke(auth_app, ["connection", "show-verification", "conn-1", "acme.test"])
     assert r.exit_code == 0 and "dazzle-verify=" in r.output
+
+
+# ---- doctor / scaffold (Plan 4b.v) ----
+
+
+def _oidc_conn(**over):
+    from dazzle.back.runtime.auth.connections import ConnectionRecord
+
+    base = {
+        "id": "conn-1",
+        "tenant_id": "org-1",
+        "type": "oidc",
+        "provider": "native",
+        "domains": ["acme.test"],
+        "verified_domains": ["acme.test"],
+        "config": {"issuer": "https://idp.example", "client_id": "cid"},
+        "secrets": {"client_secret": "SUPER-SECRET"},
+        "group_mapping": {"eng": "engineer"},
+        "status": "active",
+        "created_at": datetime(2026, 6, 6),
+        "updated_at": datetime(2026, 6, 6),
+    }
+    base.update(over)
+    return ConnectionRecord(**base)
+
+
+def _patch_doctor(monkeypatch, conn, flags=(True, True, True)):
+    store = _Store(conn=conn)
+    monkeypatch.setattr(auth_connection, "_store", lambda: store)
+    monkeypatch.setattr(auth_connection, "_env_flags", lambda: flags)
+    return store
+
+
+def test_doctor_ready_exit_0(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn())
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1"])
+    assert r.exit_code == 0 and "Activation-ready" in r.output
+
+
+def test_doctor_not_ready_exit_1(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn(verified_domains=[]))
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1"])
+    assert r.exit_code == 1 and "Not activation-ready" in r.output
+
+
+def test_doctor_never_leaks_secret(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn(secrets={"client_secret": "SUPER-SECRET"}))
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1"])
+    assert "SUPER-SECRET" not in r.output
+    r2 = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--json"])
+    assert "SUPER-SECRET" not in r2.output
+
+
+def test_doctor_json_carries_ready(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn())
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--json"])
+    assert r.exit_code == 0 and '"ready"' in r.output and "conn-1" in r.output
+
+
+def test_doctor_no_key_blocks_before_load(monkeypatch) -> None:
+    # secret_key_ok=False → never loads the connection, single remedy, exit 1.
+    _patch_doctor(monkeypatch, _oidc_conn(), flags=(False, True, True))
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1"])
+    assert r.exit_code == 1 and "DAZZLE_CONNECTION_SECRET" in r.output
+
+
+def test_doctor_missing_connection(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, None)
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-x"])
+    assert r.exit_code == 1 and "No connection" in r.output
+
+
+def test_scaffold_prints_sequence(monkeypatch) -> None:
+    r = runner.invoke(auth_app, ["connection", "scaffold"])
+    assert r.exit_code == 0
+    assert "verify-domain" in r.output and "/auth/enterprise/callback" in r.output
+
+
+def test_doctor_rotated_key_json_parity(monkeypatch) -> None:
+    # Key present (flags say so) but get_connection raises ConnectionSecretError
+    # (wrong/rotated key). With --json the agent must still get JSON, not markup.
+    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
+
+    class _RaisingStore:
+        def get_connection(self, cid, *, tenant_id=None):
+            raise ConnectionSecretError("auth failed")
+
+    monkeypatch.setattr(auth_connection, "_store", lambda: _RaisingStore())
+    monkeypatch.setattr(auth_connection, "_env_flags", lambda: (True, True, True))
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--json"])
+    assert r.exit_code == 1
+    assert '"blocked"' in r.output and "secret_decrypt" in r.output
