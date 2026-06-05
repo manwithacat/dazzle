@@ -48,8 +48,18 @@ def _seed_values_for_root(root_entity: Any, org_id: str, name: str) -> dict[str,
         if fname == "slug":
             values[fname] = name.lower().replace(" ", "-")
             continue
-        required = bool(getattr(f, "required", False))
-        has_default = getattr(f, "default", None) is not None or bool(getattr(f, "auto_add", False))
+        # FieldSpec encodes required/auto_add in `modifiers` (exposed via
+        # is_required), NOT bare `.required`/`.auto_add`. A required field with no
+        # framework-derivable default is a loud error (else the INSERT raises a
+        # raw NotNullViolation).
+        from dazzle.core.ir.fields import FieldModifier
+
+        required = f.is_required
+        has_default = (
+            f.default is not None
+            or getattr(f, "default_expr", None) is not None
+            or FieldModifier.AUTO_ADD in f.modifiers
+        )
         if required and not has_default:
             ftype = getattr(getattr(f, "type", None), "kind", None)
             ftype = getattr(ftype, "value", ftype)
@@ -72,46 +82,46 @@ def provision_single_org(appspec: Any, name: str, *, conn: Any) -> str:
         raise ProvisionError("provision_single_org requires a non-autocommit connection")
     now = datetime.now(UTC).isoformat()
     try:
-        # Idempotent: if the default org already exists, reuse its id (serial
-        # single-org path — the default slug is the idempotency key).
-        existing = conn.execute(
-            "SELECT id FROM organizations WHERE slug = %s", (DEFAULT_ORG_SLUG,)
-        ).fetchone()
-        if existing is not None:
-            conn.commit()
-            return str(existing["id"] if isinstance(existing, dict) else existing[0])
-
-        # A UUID id: the framework `organizations.id` is TEXT (accepts it), and
-        # it matches a uuid-typed domain tenant-root pk (the 1:1 mirror target).
-        org_id = str(uuid.uuid4())
-        root = _tenant_root_entity(appspec)
-        if root is not None:
-            # Seed the domain tenant-root row FIRST (scoped FKs reference it), at
-            # the shared id.
-            vals = _seed_values_for_root(root, org_id, name)
-            cols = list(vals.keys())
-            insert_root = sql.SQL("INSERT INTO {tbl} ({cols}) VALUES ({ph})").format(
-                tbl=sql.Identifier(root.name),
-                cols=sql.SQL(", ").join(sql.Identifier(c) for c in cols),
-                ph=sql.SQL(", ").join(sql.Placeholder() for _ in cols),
-            )
-            conn.execute(insert_root, tuple(vals[c] for c in cols))
-
+        # The org slug is the SINGLE id arbiter (avoids a split where a
+        # concurrent caller's root row diverges from the winning org id): insert
+        # the org FIRST (ON CONFLICT DO NOTHING), then read back the winning id,
+        # then mirror THAT id into the tenant-root row idempotently. A UUID id —
+        # `organizations.id` is TEXT (accepts it) and it matches a uuid-typed
+        # domain tenant-root pk (the 1:1 mirror target).
+        candidate_id = str(uuid.uuid4())
         conn.execute(
             """
             INSERT INTO organizations (id, slug, name, status, is_test, created_at, updated_at)
             VALUES (%s, %s, %s, 'active', false, %s, %s)
             ON CONFLICT (slug) DO NOTHING
             """,
-            (org_id, DEFAULT_ORG_SLUG, name, now, now),
+            (candidate_id, DEFAULT_ORG_SLUG, name, now, now),
         )
         row = conn.execute(
             "SELECT id FROM organizations WHERE slug = %s", (DEFAULT_ORG_SLUG,)
         ).fetchone()
         if row is None:
             raise ProvisionError("organization absent after provision insert")
+        org_id = str(row["id"] if isinstance(row, dict) else row[0])
+
+        root = _tenant_root_entity(appspec)
+        if root is not None:
+            # Mirror the WINNING org id into the tenant-root row; ON CONFLICT (id)
+            # DO NOTHING so a lost race (the row already exists at this id) and
+            # re-provision are both idempotent — never a second/orphan root row.
+            vals = _seed_values_for_root(root, org_id, name)
+            cols = list(vals.keys())
+            insert_root = sql.SQL(
+                "INSERT INTO {tbl} ({cols}) VALUES ({ph}) ON CONFLICT (id) DO NOTHING"
+            ).format(
+                tbl=sql.Identifier(root.name),
+                cols=sql.SQL(", ").join(sql.Identifier(c) for c in cols),
+                ph=sql.SQL(", ").join(sql.Placeholder() for _ in cols),
+            )
+            conn.execute(insert_root, tuple(vals[c] for c in cols))
+
         conn.commit()
-        return str(row["id"] if isinstance(row, dict) else row[0])
+        return org_id
     except Exception:
         conn.rollback()
         raise
