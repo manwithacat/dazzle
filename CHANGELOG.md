@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.34] - 2026-06-05
+
 ### Added
 
 - **Auth Plan 1d — activate the membership model (canonical RLS proof)** (plan `docs/superpowers/plans/2026-06-05-auth-plan-1d-activate-membership-model.md`). The membership model now *fences real domain data* on the canonical RLS-archetype model. New `dazzle.db.provision.provision_single_org(appspec, name, *, conn)`: for an `is_tenant_root` app it creates the framework `organizations` row **and** the domain tenant-root row (e.g. `Workspace`) at a **shared id** (the 1:1 mirror) — so `membership.tenant_id == tenant_root.id == dazzle.tenant_id` and a logged-in member is structurally fenced to their org by Postgres RLS. The org slug is the single id arbiter (org-insert-first, then mirror the winning id into the root via `ON CONFLICT (id) DO NOTHING`) so concurrent first-logins can't split the id; a tenant root with a non-framework-derivable required field raises `ProvisionError` (loud, not a raw `NotNullViolation`). `ensure_single_org_membership(user, *, appspec)` routes through it for archetype apps (rootless apps keep the 1c framework-org path). Proven against real Postgres **as a non-superuser** (`tests/integration/test_membership_rls_activation_pg.py`): a membership-bound session sees only its tenant's rows, an unbound session denies all (fail-closed).
