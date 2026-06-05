@@ -19,7 +19,7 @@ except ImportError:
 from dazzle.core.db_url import normalise_postgres_scheme
 
 from .crypto import hash_password, verify_password
-from .models import AuthContext, SessionRecord, UserRecord
+from .models import AuthContext, MembershipRecord, SessionRecord, UserRecord
 
 logger = logging.getLogger(__name__)
 
@@ -446,6 +446,7 @@ class SessionStoreMixin:
         expires_in: timedelta = timedelta(days=7),
         ip_address: str | None = None,
         user_agent: str | None = None,
+        active_membership_id: str | None = None,  # auth Plan 1a
     ) -> SessionRecord:
         """
         Create a new session for a user.
@@ -464,12 +465,15 @@ class SessionStoreMixin:
             expires_at=datetime.now(UTC) + expires_in,
             ip_address=ip_address,
             user_agent=user_agent,
+            active_membership_id=active_membership_id,
         )
 
         self._execute(
             """
-            INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent, csrf_secret)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO sessions
+                (id, user_id, created_at, expires_at, ip_address, user_agent,
+                 csrf_secret, active_membership_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 session.id,
@@ -479,6 +483,7 @@ class SessionStoreMixin:
                 session.ip_address,
                 session.user_agent,
                 session.csrf_secret,
+                session.active_membership_id,
             ),
         )
 
@@ -514,6 +519,7 @@ class SessionStoreMixin:
                 ip_address=row["ip_address"],
                 user_agent=row["user_agent"],
                 csrf_secret=stored_csrf,
+                active_membership_id=row.get("active_membership_id"),  # auth Plan 1a
             )
 
         return None
@@ -575,12 +581,20 @@ class SessionStoreMixin:
         for k, v in domain_attrs.items():
             prefs.setdefault(k, v)  # Explicit preferences take priority
 
+        # auth Plan 1a: resolve the session's active membership (if any). When
+        # present it sources the RLS tenant id + effective roles (see
+        # AuthContext.effective_roles / _bind_rls_tenant_id).
+        active_membership = None
+        if session.active_membership_id:
+            active_membership = self.get_membership(session.active_membership_id)
+
         return AuthContext(
             user=user,
             session=session,
             is_authenticated=True,
             roles=user.roles,
             preferences=prefs,
+            active_membership=active_membership,
         )
 
     def delete_session(self, session_id: str) -> bool:
@@ -628,6 +642,77 @@ class SessionStoreMixin:
     def delete_all_sessions(self) -> int:
         """Delete all sessions for all users. Returns count deleted."""
         return int(self._execute_modify("DELETE FROM sessions"))
+
+    # -- Memberships (auth Plan 1a) -------------------------------------------
+    # Kept on this mixin (not AuthStore) so validate_session above can resolve
+    # self.get_membership; membership is session-adjacent (a session pins one).
+
+    def _row_to_membership(self, row: dict[str, Any]) -> MembershipRecord:
+        import json
+
+        return MembershipRecord(
+            id=row["id"],
+            tenant_id=row["tenant_id"],
+            identity_id=row["identity_id"],
+            roles=json.loads(row["roles"]) if row.get("roles") else [],
+            status=row["status"],
+            invited_by=row.get("invited_by"),
+            joined_at=datetime.fromisoformat(row["joined_at"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+        )
+
+    def create_membership(
+        self,
+        *,
+        tenant_id: str,
+        identity_id: str,
+        roles: list[str] | None = None,
+        status: str = "active",
+        invited_by: str | None = None,
+    ) -> MembershipRecord:
+        """Create a membership (identity x org x roles)."""
+        import json
+
+        membership = MembershipRecord(
+            id=secrets.token_urlsafe(24),
+            tenant_id=tenant_id,
+            identity_id=identity_id,
+            roles=roles or [],
+            status=status,
+            invited_by=invited_by,
+        )
+        self._execute(
+            """
+            INSERT INTO memberships
+                (id, tenant_id, identity_id, roles, status, invited_by,
+                 joined_at, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                membership.id,
+                membership.tenant_id,
+                membership.identity_id,
+                json.dumps(membership.roles),
+                membership.status,
+                membership.invited_by,
+                membership.joined_at.isoformat(),
+                membership.created_at.isoformat(),
+                membership.updated_at.isoformat(),
+            ),
+        )
+        return membership
+
+    def get_membership(self, membership_id: str) -> MembershipRecord | None:
+        row = self._execute_one("SELECT * FROM memberships WHERE id = %s", (membership_id,))
+        return self._row_to_membership(row) if row else None
+
+    def get_memberships_for_identity(self, identity_id: str) -> list[MembershipRecord]:
+        rows = self._execute(
+            "SELECT * FROM memberships WHERE identity_id = %s ORDER BY created_at",
+            (identity_id,),
+        )
+        return [self._row_to_membership(r) for r in rows]
 
 
 class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
@@ -728,6 +813,40 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             except Exception:
                 logger.warning(
                     "Schema migration for sessions.csrf_secret raised — continuing",
+                    exc_info=True,
+                )
+            # auth Plan 1a: memberships (identity x org x roles) — the fenced source
+            # of dazzle.tenant_id. Mirrors alembic 0007_memberships exactly (same
+            # shape, NO users FK — see that migration's docstring). The dev path
+            # doesn't run Alembic; production gets it via the migration too.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS memberships (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    identity_id TEXT NOT NULL,
+                    roles TEXT NOT NULL DEFAULT '[]',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    invited_by TEXT,
+                    joined_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    CONSTRAINT uq_memberships_tenant_identity UNIQUE (tenant_id, identity_id)
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS ix_memberships_identity_id ON memberships(identity_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS ix_memberships_tenant_id ON memberships(tenant_id)"
+            )
+            # sessions.active_membership_id — pins the active org for the session.
+            try:
+                cursor.execute(
+                    "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS active_membership_id TEXT"
+                )
+            except Exception:
+                logger.warning(
+                    "Schema migration for sessions.active_membership_id raised — continuing",
                     exc_info=True,
                 )
             cursor.execute("""
