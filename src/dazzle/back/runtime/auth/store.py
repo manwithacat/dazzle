@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -719,15 +720,24 @@ class SessionStoreMixin:
         roles: list[str] | None = None,
         status: str = "active",
         invited_by: str | None = None,
+        actor_id: str | None = None,
+        reason: str | None = None,
     ) -> MembershipRecord:
-        """Create a membership (identity x org x roles).
+        """Create a membership (identity x org x roles) + emit a PROVISIONED event.
 
         Raises ``ValueError`` if ``identity_id`` does not name an existing user —
         there is no DB foreign key (the auth tables are not in the Alembic chain;
         see migration 0007), so this is the integrity guard against orphan
-        memberships / a mistyped identity.
+        memberships / a mistyped identity. The membership row and its lifecycle
+        event are written in ONE transaction (auth Plan 2a — durable evidence).
         """
         import json
+
+        from dazzle.back.runtime.auth.membership_events import (
+            MEMBERSHIP_EVENTS_LOCK_KEY,
+            MembershipEventType,
+            record_membership_event,
+        )
 
         if self.get_user_by_id(UUID(identity_id)) is None:
             raise ValueError(f"cannot create membership: no user with id {identity_id!r}")
@@ -740,25 +750,38 @@ class SessionStoreMixin:
             status=status,
             invited_by=invited_by,
         )
-        self._execute(
-            """
-            INSERT INTO memberships
-                (id, tenant_id, identity_id, roles, status, invited_by,
-                 joined_at, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                membership.id,
-                membership.tenant_id,
-                membership.identity_id,
-                json.dumps(membership.roles),
-                membership.status,
-                membership.invited_by,
-                membership.joined_at.isoformat(),
-                membership.created_at.isoformat(),
-                membership.updated_at.isoformat(),
-            ),
-        )
+        with self._transaction() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            cur.execute(
+                """
+                INSERT INTO memberships
+                    (id, tenant_id, identity_id, roles, status, invited_by,
+                     joined_at, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    membership.id,
+                    membership.tenant_id,
+                    membership.identity_id,
+                    json.dumps(membership.roles),
+                    membership.status,
+                    membership.invited_by,
+                    membership.joined_at.isoformat(),
+                    membership.created_at.isoformat(),
+                    membership.updated_at.isoformat(),
+                ),
+            )
+            record_membership_event(
+                cur,
+                event_type=MembershipEventType.PROVISIONED,
+                membership_id=membership.id,
+                tenant_id=membership.tenant_id,
+                identity_id=membership.identity_id,
+                actor_id=actor_id,
+                roles_after=membership.roles,
+                status_after=membership.status,
+                reason=reason,
+            )
         return membership
 
     def get_membership(self, membership_id: str) -> MembershipRecord | None:
@@ -771,6 +794,82 @@ class SessionStoreMixin:
             (identity_id,),
         )
         return [self._row_to_membership(r) for r in rows]
+
+    # -- Membership lifecycle events (auth Plan 2a — compliance evidence) -----
+
+    def _row_to_event(self, row: dict[str, Any]) -> "MembershipEvent":  # noqa: F821
+        import json
+
+        from dazzle.back.runtime.auth.membership_events import MembershipEvent
+
+        return MembershipEvent(
+            id=row["id"],
+            event_type=row["event_type"],
+            membership_id=row["membership_id"],
+            tenant_id=row["tenant_id"],
+            identity_id=row["identity_id"],
+            actor_id=row.get("actor_id"),
+            roles_before=json.loads(row["roles_before"]) if row.get("roles_before") else None,
+            roles_after=json.loads(row["roles_after"]) if row.get("roles_after") else None,
+            status_before=row.get("status_before"),
+            status_after=row.get("status_after"),
+            reason=row.get("reason"),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            seq=row.get("seq"),
+            row_hash=row.get("row_hash"),
+        )
+
+    def get_membership_events(
+        self,
+        *,
+        tenant_id: str | None = None,
+        identity_id: str | None = None,
+        membership_id: str | None = None,
+        since: str | None = None,
+        until: str | None = None,
+    ) -> list["MembershipEvent"]:  # noqa: F821
+        """Return the JML event stream, ordered by seq, optionally filtered.
+
+        ``since``/``until`` are ISO-8601 strings compared against ``created_at``
+        (TEXT, ISO-8601 sorts lexically). All filters AND together.
+        """
+        clauses: list[str] = []
+        params: list[object] = []
+        if tenant_id is not None:
+            clauses.append("tenant_id = %s")
+            params.append(tenant_id)
+        if identity_id is not None:
+            clauses.append("identity_id = %s")
+            params.append(identity_id)
+        if membership_id is not None:
+            clauses.append("membership_id = %s")
+            params.append(membership_id)
+        if since is not None:
+            clauses.append("created_at >= %s")
+            params.append(since)
+        if until is not None:
+            clauses.append("created_at <= %s")
+            params.append(until)
+        where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        # Filters are %s-parameterised; the only interpolation is the fixed
+        # clause fragments above (no user-controlled identifiers).
+        rows = self._execute(
+            f"SELECT * FROM membership_events{where} ORDER BY seq ASC",  # nosemgrep: parameterised filters
+            tuple(params),
+        )
+        return [self._row_to_event(r) for r in rows]
+
+    def verify_membership_event_chain(self) -> "EventChainResult":  # noqa: F821
+        """Verify the append-only membership_events hash-chain (tamper-evidence)."""
+        from dazzle.back.runtime.auth.membership_events import (
+            verify_membership_event_chain as _verify,
+        )
+
+        conn = self._get_connection()
+        try:
+            return _verify(conn)
+        finally:
+            conn.close()
 
     # -- Organizations (auth Plan 1c — framework tenant root) ----------------
 
@@ -1056,6 +1155,16 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     CONSTRAINT uq_organizations_slug UNIQUE (slug)
                 )
             """)
+            # auth Plan 2a: append-only, hash-chained membership lifecycle events
+            # (compliance evidence). Mirrors alembic 0009_membership_events.
+            from dazzle.back.runtime.auth.membership_events import (
+                MEMBERSHIP_EVENTS_DDL,
+                MEMBERSHIP_EVENTS_INDEXES,
+            )
+
+            cursor.execute(MEMBERSHIP_EVENTS_DDL)
+            for _ix in MEMBERSHIP_EVENTS_INDEXES:
+                cursor.execute(_ix)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     token TEXT PRIMARY KEY,
@@ -1132,6 +1241,24 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             rowcount: int = cursor.rowcount
             conn.commit()
             return rowcount
+        finally:
+            conn.close()
+
+    @contextmanager
+    def _transaction(self) -> Any:
+        """Yield a cursor in a single transaction; commit on success, rollback on error.
+
+        Used for mutations that must be atomic with their ``membership_events``
+        row (auth Plan 2a) — the mutation and the event INSERT share one commit.
+        """
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            yield cur
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
