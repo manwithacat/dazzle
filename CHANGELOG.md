@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.40] - 2026-06-05
+
+### Added
+
+- **Auth Plan 2b — access-review evidence export** (plan `docs/superpowers/plans/2026-06-05-auth-plan-2b-access-review-export.md`; spec §6). New **`dazzle rbac access-review --tenant <org> [--as-of D] [--since D] [--until D] [--format markdown|json]`** turns the Plan 2a membership lifecycle substrate into auditor-ready evidence: a per-org membership **roster** (current, or point-in-time "as of date D" reconstructed by replaying `membership_events`), the **Joiner/Mover/Leaver** access-change stream over a period, both **mapped to SOC 2 CC6.x / ISO 27001 A.5.15–18** controls, a **table↔event-log reconciliation** cross-check, and an honestly-scoped **tamper-evidence attestation**. New `src/dazzle/rbac/access_evidence.py` (pure replay/JML/control-map/reconciliation builders) + `render_access_review_markdown`; new `AuthStore.get_memberships_for_tenant`. Markdown + JSON (owner-attestable). Adversarially reviewed; hardened pre-ship: date inputs are validated + normalized to a UTC instant (an unparseable/naive/non-UTC `--as-of` fails loud, never a silent lexical mis-filter); a typo'd `--tenant` warns; current-table-vs-log divergence is surfaced; the integrity attestation states its scope (detects edited/removed *interior* events; trailing-event truncation needs a future external head anchor) rather than over-claiming "tamper-proof". Real-PG + pure-replay tests. **Plan 2 (compliance evidence) complete.**
+
+### Agent Guidance
+
+- **`dazzle rbac access-review` is the compliance access-evidence export** (the live-DB sibling of the static `dazzle rbac report`). Point-in-time rosters come from replaying the 2a `membership_events`, so run it after memberships exist; `--as-of/--since/--until` must be full UTC ISO-8601 instants (validated — bad input exits non-zero). A non-zero exit means the evidence's own hash-chain is broken (detected tampering). Control mappings live in `access_evidence.ACCESS_EVIDENCE_CONTROLS` (spec §6), not the taxonomy YAML. The attestation is honestly scoped: it does NOT certify against tail-truncation — don't represent it as tamper-proof.
+
 ## [0.81.39] - 2026-06-05
 
 ### Added
