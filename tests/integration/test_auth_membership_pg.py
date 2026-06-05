@@ -100,7 +100,9 @@ def test_migration_0007_applies_on_a_pre_0007_db(scratch_url: str) -> None:
         "sqlalchemy.url", scratch_url.replace("postgresql://", "postgresql+psycopg://")
     )
     command.stamp(cfg, "0006_tenant_is_test")  # mark the DB as at the prior head
-    command.upgrade(cfg, "head")  # applies only 0007
+    # Target 0007 explicitly (NOT "head") so this test stays pinned to the 0007
+    # migration in isolation as later migrations (0008+) extend the chain.
+    command.upgrade(cfg, "0007_memberships")
 
     mcols = _columns(scratch_url, "memberships")
     assert {"id", "tenant_id", "identity_id", "roles", "status", "invited_by"} <= mcols

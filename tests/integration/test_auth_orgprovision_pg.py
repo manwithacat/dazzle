@@ -91,7 +91,9 @@ def test_migration_0008_applies_on_a_pre_0008_db(scratch_url: str) -> None:
         "sqlalchemy.url", scratch_url.replace("postgresql://", "postgresql+psycopg://")
     )
     command.stamp(cfg, "0007_memberships")  # mark the DB as at the prior head
-    command.upgrade(cfg, "head")  # applies only 0008
+    # Target 0008 explicitly (NOT "head") so this stays pinned to 0008 in
+    # isolation as later migrations extend the chain.
+    command.upgrade(cfg, "0008_organizations")
 
     assert {"id", "slug", "name", "status", "is_test"} <= _columns(scratch_url, "organizations")
 
