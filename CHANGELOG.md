@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.41] - 2026-06-05
+
+### Added
+
+- **Auth Plan 3a — organization invitations** (plan `docs/superpowers/plans/2026-06-05-auth-plan-3a-org-invitations.md`; spec §7/§8/§9). An org admin can invite a person by **email + roles**; the invitee **accepts** to create an active membership. New routes: `POST /auth/invite` (authz-gated), `GET /auth/accept-invite/{token}` (accept page), `POST /auth/accept-invite` (redeem → activate + CSRF rotation). The membership is created at **accept** time (never at invite), and only binds to a logged-in identity whose **verified** email matches the invitation (the verified-email identity-join rule, spec §8 — a stolen link can't grant a different account; an unverified or mismatched email is rejected). Authorization is a **fail-closed** `[auth] org_admin_roles` manifest set: only an active member whose roles intersect it may invite, and the target org is taken from the inviter's **active membership** (never request input). Accept reuses Plan 2a `create_membership` (→ `provisioned` lifecycle event, `invited_by` attributed) and Plan 1b `set_session_active_membership`. New `invitations` token table (mirrors `magic_link`: opaque 256-bit token, TTL, single-use) + Alembic `0010_invitations`; `InvitationMailer` seam (`LogMailer` logs the accept URL in dev). Adversarially reviewed (no CRITICAL/HIGH); concurrent double-accept maps to a clean `already_member`, malformed tokens are rejected fail-closed. Real-PG + route-level tests in `tests/integration/test_org_invitations_pg.py`. **3b** (member-admin UI + in-app org switcher) and **3c** (`tenancy: multi_org:` + `archetype: profile`) follow.
+
+### Agent Guidance
+
+- **Org invitations are email-addressed; the membership is created at accept under a verified-email check.** Configure `[auth] org_admin_roles = ["owner", ...]` or **nobody can invite** (fail-closed). Invites go into the inviter's *active* org only (never a request-supplied org). The dev `LogMailer` logs the accept URL (`Org-invitation issued for …`); register a real `InvitationMailer` on `app.state.magic_link_mailer` for production. Accept requires the invitee to be logged in as the *verified* invited email. `dazzle rbac access-review` shows accepted invites as `provisioned` JML events (`invited_by` attributed).
+
 ## [0.81.40] - 2026-06-05
 
 ### Added
