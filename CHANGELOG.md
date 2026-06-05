@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.42] - 2026-06-05
+
+### Added
+
+- **Auth Plan 3b — member-admin surface** (plan `docs/superpowers/plans/2026-06-05-auth-plan-3b-member-admin.md`; spec §7). A `GET /auth/members` page (roster + pending invitations + invite form) and four mutation routes — `POST /auth/members/roles` (change roles), `/suspend`, `/reactivate`, `/remove` — surfacing the Plan 2a membership mutations. Every mutation runs one shared gate: the caller is a **fail-closed `org_admin_roles`** admin of their **active** org (`may_manage_members` over `effective_roles_of`, membership-sourced); the **target membership must belong to that same org** (cross-org guard — a membership_id from another org → 404, never managed); and the change won't leave the org with zero active admins (last-admin orphan guard → 409). The org is always taken from the caller's active membership, never request input. Action buttons use htmx `hx_post` → `HX-Redirect`; same-origin admitted by the CSRF origin gate (4 paths added to `protected_paths`). Adversarially reviewed — the cross-org guard, fail-closed authz, suspended-admin exclusion, CSRF, and escaping are confirmed sound (no CRITICAL/HIGH). Real-PG route tests cover roster / authz-403 / each mutation / cross-org-404 / last-admin-409.
+
+### Agent Guidance
+
+- **The member-admin surface (`/auth/members`) requires `[auth] org_admin_roles`** (fail-closed — empty = nobody can manage members). Mutations only ever touch the caller's **active** org's members (cross-org targets 404). The last-admin **orphan guard** blocks removing/suspending/demoting the only active admin (409) — note it is a **point-in-time** check: a rare concurrent admin-on-admin race can still orphan an org (recoverable out-of-band; a fully atomic re-check under the mutation's advisory lock is a deferred hardening). Self-demotion takes effect on the next request.
+
 ## [0.81.41] - 2026-06-05
 
 ### Added
