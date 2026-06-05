@@ -1164,8 +1164,23 @@ class SessionStoreMixin:
         assert created is not None  # just inserted
         return created
 
-    def get_connection(self, connection_id: str) -> "ConnectionRecord | None":  # noqa: F821
-        row = self._execute_one("SELECT * FROM connections WHERE id = %s", (connection_id,))
+    def get_connection(
+        self, connection_id: str, *, tenant_id: str | None = None
+    ) -> "ConnectionRecord | None":  # noqa: F821
+        """Fetch a connection (decrypting its secrets).
+
+        Pass ``tenant_id`` to fence the read to one org — a route serving a
+        connection by id MUST pass the caller's active org so an id from another
+        org can't leak its config + decrypted secrets (defense-in-depth; the id is
+        unguessable but the decrypt-bearing read should require tenant context).
+        """
+        if tenant_id is not None:
+            row = self._execute_one(
+                "SELECT * FROM connections WHERE id = %s AND tenant_id = %s",
+                (connection_id, tenant_id),
+            )
+        else:
+            row = self._execute_one("SELECT * FROM connections WHERE id = %s", (connection_id,))
         return self._row_to_connection(row) if row else None
 
     def get_connections_for_tenant(self, tenant_id: str) -> list["ConnectionRecord"]:  # noqa: F821

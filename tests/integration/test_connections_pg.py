@@ -99,6 +99,18 @@ def test_verified_domain_routing_only_matches_verified(store_url: str) -> None:
     assert routed is not None and routed.tenant_id == "org-1"
 
 
+def test_get_connection_tenant_scoped_fences_cross_org(store_url: str) -> None:
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={"client_secret": "s"}, domains=[]
+    )
+    # Same-org read returns it (with decrypted secrets); cross-org read is None.
+    assert store.get_connection(conn.id, tenant_id="org-1") is not None
+    assert store.get_connection(conn.id, tenant_id="org-2") is None  # fenced
+    # Unscoped read still works (internal use), returns the record.
+    assert store.get_connection(conn.id) is not None
+
+
 def test_delete_connection(store_url: str) -> None:
     store = _store(store_url)
     conn = store.create_connection(
