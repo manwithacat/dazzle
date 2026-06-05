@@ -178,6 +178,7 @@
           'intent': None,
           'invariants': list([
           ]),
+          'is_profile': False,
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
@@ -414,6 +415,7 @@
           'intent': 'Live health-check status for each platform component',
           'invariants': list([
           ]),
+          'is_profile': False,
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
@@ -669,6 +671,7 @@
           'intent': 'Time-series platform metrics collected by the runtime',
           'invariants': list([
           ]),
+          'is_profile': False,
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,
@@ -929,6 +932,7 @@
           'intent': 'Immutable record of every deployment with rollback lineage',
           'invariants': list([
           ]),
+          'is_profile': False,
           'is_singleton': False,
           'is_tenant_root': False,
           'lifecycle': None,

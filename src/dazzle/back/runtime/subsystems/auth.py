@@ -74,7 +74,7 @@ class AuthSubsystem:
         ctx.app.state.appspec = ctx.appspec
         # auth Plan 3c.ii: expose the entity repositories so the /me/profile route
         # can resolve the profile entity's Repository at request time.
-        ctx.app.state.repositories = ctx.repositories
+        ctx.app.state.repositories = getattr(ctx, "repositories", {}) or {}
 
         # Mount the magic link consumer router (general-purpose, production-safe)
         from dazzle.back.runtime.auth.magic_link_routes import create_magic_link_routes

@@ -17,15 +17,11 @@ from dazzle.render.fragment import (
 _CSS = ("/static/dist/dazzle.min.css",)
 _JS = ("/static/dist/dazzle.min.js",)
 
-# Map IR/back field kinds → Fragment Field input kinds (scalars only).
+# Map the editable string-valued field kinds → Fragment Field input kinds. (The
+# route only offers str/text/enum until typed-field form coercion lands.)
 _KIND = {
     "str": "text",
     "text": "textarea",
-    "int": "number",
-    "decimal": "number",
-    "bool": "checkbox",
-    "date": "date",
-    "datetime": "datetime-local",
     "enum": "text",
 }
 

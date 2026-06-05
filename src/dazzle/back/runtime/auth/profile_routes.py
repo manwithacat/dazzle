@@ -23,7 +23,13 @@ from dazzle.back.runtime.auth.cookie_name import read_session_id
 
 # Fields the framework manages — never client-editable on a profile.
 _MANAGED = {"id", "tenant_id", "identity_id", "created_at", "updated_at"}
-_SCALAR_KINDS = {"str", "text", "int", "bool", "decimal", "enum", "date", "datetime"}
+# Editable kinds whose form value is a plain string that survives the repo's
+# str-passthrough write unchanged. Typed scalars (int/bool/decimal/date/datetime)
+# would need form→type coercion before the INSERT (the repo does not coerce a
+# str), so they are NOT editable here yet — a documented follow-on. Limiting the
+# set is fail-safe: a typed profile field simply isn't rendered/written rather
+# than 500-ing on save.
+_SCALAR_KINDS = {"str", "text", "enum"}
 
 
 def _find_profile_entity(appspec: Any) -> Any | None:
