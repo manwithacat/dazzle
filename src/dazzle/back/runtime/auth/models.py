@@ -52,6 +52,31 @@ class SessionRecord(BaseModel):
     # minted with the session and rotated only on session lifecycle events
     # (login/logout). See docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
     csrf_secret: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    # auth Plan 1a: pins the session's active organization (membership). Nullable
+    # during the transition — legacy sessions predate memberships.
+    active_membership_id: str | None = None
+
+
+class MembershipRecord(BaseModel):
+    """A user's membership in one organization (auth Plan 1a).
+
+    The fenced join between a global ``Identity`` (a ``users`` row) and an
+    ``Organization`` (tenant root). ``tenant_id`` is the discriminator value the
+    RLS fence reads as ``dazzle.tenant_id``; ``roles`` are the personas this
+    identity holds *in this org* (replacing the global ``users.roles`` source).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    tenant_id: str
+    identity_id: str
+    roles: list[str] = Field(default_factory=list)
+    status: str = "active"
+    invited_by: str | None = None
+    joined_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class AuthContext(BaseModel):
@@ -63,11 +88,26 @@ class AuthContext(BaseModel):
     roles: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
     preferences: dict[str, str] = Field(default_factory=dict)
+    active_membership: MembershipRecord | None = None  # auth Plan 1a
 
     @property
     def user_id(self) -> UUID | None:
         """Get the authenticated user's ID, or None if not authenticated."""
         return self.user.id if self.user else None
+
+    @property
+    def effective_roles(self) -> list[str]:
+        """Roles in effect for this request.
+
+        Sourced from the active membership when present (the new per-org model);
+        otherwise the legacy ``roles`` (global user roles) — the transition
+        fallback until later slices migrate every app onto memberships.
+        """
+        if not self.is_authenticated:
+            return []
+        if self.active_membership is not None:
+            return list(self.active_membership.roles)
+        return list(self.roles)
 
 
 # =============================================================================
