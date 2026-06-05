@@ -257,25 +257,38 @@ async def test_other_tenant_config_denied(app) -> None:
     declared in the tenancy block of app.dsl. There is no dedicated config
     surface route per `dazzle inspect routes --runtime`; the Tenant entity
     read scope enforces `id = current_user.tenant_id`, so a northwind admin
-    reading the contoso Tenant row (which holds the config) must get 404."""
+    reading the contoso Tenant row (which holds the config) must be DENIED.
+
+    Denial form: since `Tenant` became `archetype: tenant` (the framework
+    tenant root, auth Plan 1d), a cross-tenant root read is denied by the
+    permit/scope evaluation (403 Forbidden) rather than the scope-filter
+    "row hidden" path (404). Both deny — the asserted security property is
+    that the config values are NOT returned, regardless of the status code."""
     client = await app.client_as("tenant_admin", "northwind")
     contoso_tenant_id = app.tenant_ids.get("contoso", "")
     if not contoso_tenant_id:
         pytest.skip("contoso tenant_id not seeded — cannot test config isolation")
 
-    # Reading the contoso Tenant row (which is the config container) must 404.
+    # Reading the contoso Tenant row (the config container) must be denied and
+    # must not expose its config values.
     resp = await client.get(f"/tenants/{contoso_tenant_id}")
-    assert resp.status_code == 404, (
-        f"config isolation leak: northwind tenant_admin can read contoso Tenant row "
-        f"(status {resp.status_code}) — approval_threshold / base_currency exposed"
+    assert resp.status_code in (403, 404), (
+        f"config isolation leak: northwind tenant_admin read contoso Tenant row "
+        f"(status {resp.status_code}) — expected a 403/404 denial"
+    )
+    body = resp.text.lower()
+    assert "approval_threshold" not in body and "base_currency" not in body, (
+        "config isolation leak: contoso per-tenant config fields appeared in the "
+        f"cross-tenant response body (status {resp.status_code})"
     )
 
     # Mutating the contoso Tenant row must also be denied. The Tenant surface
     # exposes no create/edit surface, so the only mutating route on
-    # /tenants/{id} is DELETE — a cross-tenant DELETE must 404 (scope hides
-    # the row). A POST/PATCH to the same path is simply not routed (405).
+    # /tenants/{id} is DELETE — a cross-tenant DELETE is denied (403 via the
+    # root permit/scope eval, or 404 when the scope filter hides the row). A
+    # POST/PATCH to the same path is simply not routed (405).
     del_resp = await _csrf_delete(client, f"/tenants/{contoso_tenant_id}")
-    assert del_resp.status_code in (404, 405), (
+    assert del_resp.status_code in (403, 404, 405), (
         f"config write not denied: northwind tenant_admin got {del_resp.status_code} "
         f"attempting to delete contoso Tenant row"
     )

@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.37] - 2026-06-05
+
+### Changed
+
+- **`invoice_ops` migrated onto the auth membership model (Plan 1d follow-up).** The keystone multi-tenant example's `Tenant` entity is now `archetype: tenant`, making it the framework tenant root — so each `Tenant` row mirrors 1:1 into `organizations` at the same id and every user gets a `membership` in their tenant (`membership.tenant_id == Tenant.id == dazzle.tenant_id`, RLS-fenced; `current_user.tenant_id` resolves membership-first). Because invoice_ops is genuinely multi-tenant, it deliberately does **not** use `auto_provision_single_org` (single-org-only — funnels every login into one default org); instead an existing deployment is backfilled with `dazzle auth migrate` (mirror Tenants → organizations + a membership per user, resolved via the domain `User` entity by email). The archetype is a pure `is_tenant_root` flag (no field/access injection) — all hand-declared `tenant_id` FKs and `scope:` rules stay as app-layer defence-in-depth under the DB RLS fence. Real-PG verified end-to-end (auth-migrate mirrors both demo tenants + per-user memberships; the 11-vector cross-tenant isolation suite stays green). README documents the migration; `auth migrate` mechanism remains covered by `tests/integration/test_auth_migrate_pg.py`.
+
+### Fixed
+
+- **invoice_ops cross-tenant config-isolation test** asserts the security property (cross-tenant Tenant-root read is denied AND config fields are not in the body) rather than a hard-coded 404. On the membership model the tenant root denies a cross-tenant read via 403 (the root permit/scope evaluation) instead of 404 (scope-filter row-hiding); both deny with no config leak.
+
+### Agent Guidance
+
+- **Multi-tenant apps use `dazzle auth migrate`, not `auto_provision_single_org`.** The flag is single-org-only (fixed `default` org slug). To put a multi-tenant app on the membership model: declare the tenant root `archetype: tenant`, then `dazzle auth migrate` to backfill seeded tenants → `organizations` (shared id) + per-user memberships. `invoice_ops` is the worked example. `archetype: tenant` is a safe pure `is_tenant_root` flag — adding it does not inject fields or rewrite access, and `tenancy_inject` skips entities that already hand-declare the partition key, so existing `tenant_id` FKs/scope rules are preserved as defence-in-depth.
+
 ## [0.81.36] - 2026-06-05
 
 ### Added

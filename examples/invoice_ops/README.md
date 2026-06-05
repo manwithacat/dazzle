@@ -83,6 +83,19 @@ tenancy:
 
 Every tenant-scoped entity (`User`, `Supplier`, `Invoice`, `LineItem`, `PaymentAttempt`) carries a `tenant_id: ref Tenant required` FK and a matching `scope: tenant_id = current_user.tenant_id` rule on every operation. These scope rules are load-bearing — the runtime enforces them as SQL `WHERE` predicates on every query.
 
+### Membership model (auth Plan 1d)
+
+`Tenant` is declared `archetype: tenant`, so it is the framework **tenant root**. On the auth identity model, each `Tenant` row is mirrored 1:1 into the framework `organizations` table at the **same id**, and every user gets a `membership` in their tenant — so `membership.tenant_id == Tenant.id == dazzle.tenant_id` and a logged-in member is fenced to their tenant by Postgres **RLS** at the database (defence-in-depth *under* the app-layer `scope:` filters above; RLS is only observable when the app runs as a non-superuser DB role). `current_user.tenant_id` resolves membership-first.
+
+This is a **multi-tenant** app, so it does **not** use `auto_provision_single_org` (that flag funnels every login into one default org — for single-org apps only). To bring an existing invoice_ops deployment onto the membership model, backfill it:
+
+```bash
+dazzle auth migrate --dry-run   # preview: orgs mirrored + memberships per user
+dazzle auth migrate             # mirror each Tenant → organizations (shared id) + a membership per user
+```
+
+`auth migrate` resolves each auth user's tenant via the domain `User` entity (matched by email → its `tenant_id`); it is idempotent and reports any user with no resolvable tenant rather than guessing. Tenant-scoped creates no longer take `tenant_id` as input — the DB fills it from the bound session (`current_setting('dazzle.tenant_id')`), so a create on an unbound session fails closed.
+
 The adversarial isolation suite at `tests/integration/test_invoice_ops_tenant_isolation.py` probes **11 cross-tenant vectors** including:
 
 - Cross-tenant list leak (read Tenant B's invoices as a Tenant A user)
@@ -94,7 +107,7 @@ The adversarial isolation suite at `tests/integration/test_invoice_ops_tenant_is
 - Cross-tenant payment attempt
 - `tenant_admin` cross-tenant scope bypass (the `admin_personas` footgun — see friction log)
 
-Result: **9 passed, 2 skipped** (skipped tests require a second tenant row in the seed data for the specific test variant).
+Result: **10 passed, 2 skipped** (skipped tests require a second tenant row in the seed data for the specific test variant). On the membership model the cross-tenant Tenant-root read denies via 403 (the root permit/scope eval) rather than 404 — the isolation suite asserts denial + no config leak, not the exact status code.
 
 ---
 

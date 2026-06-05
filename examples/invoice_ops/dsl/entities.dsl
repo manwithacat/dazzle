@@ -5,6 +5,7 @@ module invoice_ops.entities
 # =============================================================================
 
 entity Tenant "Tenant":
+  archetype: tenant
   intent: "Tenant root — a customer company processing supplier invoices"
 
   id: uuid pk
