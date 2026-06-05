@@ -751,6 +751,7 @@ ir_class: EntitySpec
     - graph_node: GraphNodeSpec | None = None
     - intent: str | None = None
     - invariants: list[InvariantSpec] = []
+    - is_profile: bool = False
     - is_singleton: bool = False
     - is_tenant_root: bool = False
     - lifecycle: LifecycleSpec | None = None
@@ -3420,6 +3421,7 @@ enum: AggregateFunction
 enum: ArchetypeKind
   members:
     - CUSTOM = 'custom'
+    - PROFILE = 'profile'
     - SETTINGS = 'settings'
     - TENANT = 'tenant'
     - TENANT_SETTINGS = 'tenant_settings'

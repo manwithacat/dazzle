@@ -761,6 +761,33 @@ entity User "User":
 
 ---
 
+## Semantic archetypes (`archetype: <kind>`)
+
+Distinct from the reusable-template `archetype <Name>:` form below, the
+`archetype: <kind>` keyword on an entity marks it as a framework-recognised
+semantic role. Supported kinds: `settings` (singleton, admin-only), `tenant`
+(the multi-tenant root — `is_tenant_root`), `tenant_settings`, `user` (auth
+fields injected), `user_membership`, and `profile`.
+
+`archetype: profile` (auth Plan 3c) declares **per-member application data**
+linked 1:1 to a membership. The framework injects an `identity_id` (the auth
+identity's id) plus the uniform `tenant_id`, and emits a tenant-scoped
+`UNIQUE(tenant_id, identity_id)` — one profile per member per org. Requires
+`tenancy: mode: shared_schema` (the profile is keyed by `(tenant_id,
+identity_id)`). The author declares only the surrogate `id` and the app fields:
+
+```dsl
+tenancy:
+  mode: shared_schema
+  partition_key: tenant_id
+
+entity MemberProfile "Member Profile":
+  archetype: profile
+  id: uuid pk
+  display_name: str(120)
+  # tenant_id + identity_id (+ the tenant-scoped unique) are framework-injected
+```
+
 ## Archetype
 
 Reusable template defining common field patterns. Entities can extend archetypes to inherit fields, computed fields, and invariants. Promotes consistency and reduces repetition.
