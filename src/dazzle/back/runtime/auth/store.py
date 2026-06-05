@@ -823,7 +823,16 @@ class SessionStoreMixin:
             (secrets.token_urlsafe(24), self.DEFAULT_ORG_SLUG, name, now, now),
         )
         existing = self.get_organization_by_slug(self.DEFAULT_ORG_SLUG)
-        assert existing is not None  # we just ensured it exists
+        if existing is None:
+            # The INSERT either created the row or was a no-op against an existing
+            # one — a missing row here means a real failure (committed-INSERT not
+            # visible / DDL drift), not a benign race. Raise loudly rather than
+            # assert (asserts are stripped under -O and would 'return None' into
+            # the login path) — anti-silent-failure.
+            raise LookupError(
+                f"default organization (slug={self.DEFAULT_ORG_SLUG!r}) absent after "
+                "get-or-create INSERT"
+            )
         return existing
 
     def ensure_single_org_membership(
@@ -854,12 +863,18 @@ class SessionStoreMixin:
                 identity_id=str(user.id),
                 roles=list(user.roles or []),
             )
-        except Exception:
-            # Lost a concurrent create for the same (tenant_id, identity_id) —
-            # re-read the winner rather than failing the login. We only swallow
-            # the unique-violation path: assert the row now exists (anti-silent).
+        except psycopg.errors.UniqueViolation:
+            # ONLY the concurrent-create race: another request inserted the same
+            # (tenant_id, identity_id) first. Re-read the winner. Any OTHER error
+            # (orphan-user ValueError from create_membership, DB outage, malformed
+            # id) must propagate — swallowing it would mask a real failure as a
+            # benign "no orgs" outcome (anti-silent-failure).
             again = _existing()
-            assert again is not None, "membership create failed and no existing row found"
+            if again is None:
+                raise LookupError(
+                    "membership create hit a unique-violation but no existing row "
+                    f"found for identity={user.id!r} org={org.id!r}"
+                ) from None
             return again
 
 
