@@ -84,6 +84,29 @@ def test_build_access_review_current_and_as_of(store_url: str) -> None:
     assert isinstance(review, AccessReview)
 
 
+def test_cli_access_review_json_emits_pack(store_url: str) -> None:
+    import json
+
+    from typer.testing import CliRunner
+
+    from dazzle.cli.rbac import rbac_app
+
+    store = _store(store_url)
+    u = store.create_user(email="a@b.test", password="pw123456", roles=["worker"])
+    store.create_membership(tenant_id="org-1", identity_id=str(u.id), roles=["admin"])
+
+    result = CliRunner().invoke(
+        rbac_app,
+        ["access-review", "--tenant", "org-1", "--format", "json", "--database-url", store_url],
+    )
+    assert result.exit_code == 0, result.output
+    pack = json.loads(result.stdout)
+    assert pack["tenant_id"] == "org-1"
+    assert pack["chain"]["ok"] is True
+    assert len(pack["snapshot"]["members"]) == 1
+    assert pack["jml"][0]["jml"] == "joiner"
+
+
 def test_access_review_as_of_excludes_later_changes(store_url: str) -> None:
     from dazzle.rbac.access_evidence import build_org_snapshot
 

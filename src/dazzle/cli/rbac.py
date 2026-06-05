@@ -443,6 +443,57 @@ def report_cmd(
     typer.echo(generate_report(report, format=format))
 
 
+@rbac_app.command("access-review")
+def access_review_cmd(
+    tenant: str = typer.Option(..., "--tenant", "-t", help="Organization (tenant) id"),
+    as_of: str = typer.Option("", "--as-of", help="Roster as of ISO-8601 datetime (default: now)"),
+    since: str = typer.Option("", "--since", help="JML change-period start (ISO-8601)"),
+    until: str = typer.Option("", "--until", help="JML change-period end (ISO-8601)"),
+    output_format: str = typer.Option("markdown", "--format", "-f", help="markdown | json"),
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+) -> None:
+    """Generate an access-review evidence pack for an org (auth Plan 2b).
+
+    Reads the live auth store: a membership roster (current, or point-in-time via
+    --as-of), the Joiner/Mover/Leaver change stream over [--since, --until],
+    SOC 2 / ISO 27001 control mappings, and a tamper-evidence attestation.
+    """
+    import json
+    from datetime import UTC, datetime
+
+    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.cli.db import _resolve_url
+    from dazzle.rbac.access_evidence import build_access_review
+    from dazzle.rbac.report import render_access_review_markdown
+
+    url = _resolve_url(database_url)
+    if not url:
+        typer.echo("No database URL — set DATABASE_URL or pass --database-url.", err=True)
+        raise typer.Exit(code=1)
+
+    store = AuthStore(database_url=url)
+    review = build_access_review(
+        store,
+        tenant,
+        as_of=as_of or None,
+        since=since or None,
+        until=until or None,
+        generated_at=datetime.now(UTC).isoformat(),
+    )
+    if output_format == "json":
+        typer.echo(json.dumps(review.to_dict(), indent=2))
+    else:
+        typer.echo(render_access_review_markdown(review))
+    # Non-zero exit if the evidence's own integrity chain is broken (audit signal).
+    if not review.chain.ok:
+        typer.echo(
+            f"WARNING: membership_events tamper-evidence chain BROKEN "
+            f"({review.chain.mismatched_count} mismatch(es))",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
 @rbac_app.command("verify-scope")
 def verify_scope_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
