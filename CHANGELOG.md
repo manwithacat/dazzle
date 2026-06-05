@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.39] - 2026-06-05
+
+### Added
+
+- **Auth Plan 2a — membership lifecycle event substrate (compliance evidence)** (plan `docs/superpowers/plans/2026-06-05-auth-plan-2a-membership-lifecycle-events.md`; spec §6). Every membership lifecycle change (provision / role-change / suspend / reactivate / remove) now writes a typed, durable, hash-chained row to a new append-only `membership_events` table **in the same transaction as the mutation** — the "complete by construction" access-evidence substrate. New `AuthStore` methods `update_membership_roles`, `suspend_membership`, `reactivate_membership`, `remove_membership` (each emits its JML event; `create_membership` emits `provisioned`), a `get_membership_events` JML query (filter by tenant/identity/membership/time), and `verify_membership_event_chain` tamper-evidence check. The chain (`row_hash = sha256(prev_hash ‖ canonical_payload)`, mirroring the audit-log integrity scheme) is computed inline under a per-transaction Postgres advisory lock (taken inside the writer, self-enforcing) so concurrent mutations cannot fork it. Distinct from the high-volume drop-if-full `_dazzle_audit_log` access trail — a deprovision event is never dropped or deferred. A removed membership's row leaves `memberships` but its `removed` event survives in `membership_events` (leaver evidence). Alembic `0009_membership_events`. Real-PG proofs in `tests/integration/test_membership_events_pg.py` (atomic emission, role/status transitions, no-op idempotency, removed-membership evidence survival, JML filtering, tamper detection, migration). Independently adversarially reviewed (no CRITICAL/HIGH). **Tamper-evidence scope:** the chain detects an edited field and a deleted *middle* row, but not *tail* truncation (a self-contained chain has no head anchor) — a Plan 2b concern. **Slice 2b** (per-org membership snapshots + JML export + SOC 2/ISO control mappings + `rbac` report extension) follows.
+
+### Agent Guidance
+
+- **Mutate memberships only through the `AuthStore` methods** (`create_membership` / `update_membership_roles` / `suspend_membership` / `reactivate_membership` / `remove_membership`), never raw SQL — the lifecycle event is emitted atomically inside the mutation (auth Plan 2a). Pass `actor_id=` / `reason=` for who/why attribution. `membership_events` is append-only + hash-chained: **never UPDATE/DELETE it**, and never insert into it except via `record_membership_event` (it self-takes the chain advisory lock). `dazzle auth migrate` / single-org provisioning emit `provisioned` events for free. Query the JML stream with `get_membership_events(...)`; verify integrity with `verify_membership_event_chain()`.
+
 ## [0.81.38] - 2026-06-05
 
 ### Changed
