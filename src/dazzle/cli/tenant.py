@@ -127,6 +127,7 @@ def status_command(
     console.print(f"Display Name: {record.display_name}")
     console.print(f"Schema:       {record.schema_name}")
     console.print(f"Status:       {record.status}")
+    console.print(f"Test tenant:  {getattr(record, 'is_test', False)}")
     console.print(f"Created:      {record.created_at}")
     console.print(f"Updated:      {record.updated_at}")
 
@@ -161,3 +162,70 @@ def activate_command(
     except ValueError as e:
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(1)
+
+
+def _excise_context() -> tuple[Any, str]:
+    """``(appspec, db_url)`` for excision — shared-schema RLS, NOT gated on the
+    schema-isolation ``_check_tenant_enabled`` (excision applies to the
+    shared-schema model)."""
+    from dazzle.cli.env import get_active_env
+    from dazzle.cli.utils import load_project_appspec
+    from dazzle.core.manifest import load_manifest, resolve_database_url
+
+    project_root = Path.cwd().resolve()
+    manifest = load_manifest(project_root / "dazzle.toml")
+    db_url = resolve_database_url(manifest, env_name=get_active_env())
+    appspec = load_project_appspec(project_root)
+    return appspec, db_url
+
+
+@tenant_app.command(name="excise")
+def excise_command(
+    tenant_id: str = typer.Argument(help="The tenant/org id (dazzle.tenant_id) to excise."),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Report what would be deleted; delete nothing."
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Allow exciseing a non-test org / missing org (DANGER)."
+    ),
+    database_url: str = typer.Option(
+        "",
+        "--database-url",
+        help="Override DB URL. MUST be a BYPASSRLS role (dazzle_bypass) in production.",
+    ),
+) -> None:
+    """Permanently delete a tenant: domain rows, memberships, org, orphaned identities.
+
+    Irreversible. Refuses a non-`is_test` org unless --force. Runs in one
+    transaction; connect as `dazzle_bypass` (BYPASSRLS) so the deletes aren't
+    fenced (the dev superuser bypasses RLS already).
+    """
+    import psycopg
+
+    from dazzle.db.excision import ExcisionError, excise_tenant
+
+    appspec, default_url = _excise_context()
+    url = database_url or default_url
+    try:
+        with psycopg.connect(url) as conn:  # non-autocommit → one transaction
+            # Safety guard: refuse a non-test org unless --force.
+            row = conn.execute(
+                "SELECT is_test, slug FROM organizations WHERE id = %s", (tenant_id,)
+            ).fetchone()
+            if row is not None and not bool(row[0]) and not force:
+                console.print(
+                    f"[red]Refusing to excise non-test org {tenant_id!r} "
+                    f"(slug={row[1]!r}). Re-run with --force if you mean it.[/red]"
+                )
+                raise typer.Exit(2)
+            result = excise_tenant(
+                appspec, tenant_id, conn=conn, dry_run=dry_run, allow_missing=force
+            )
+    except ExcisionError as exc:
+        console.print(f"[red]Excision aborted: {exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    verb = "Would delete" if dry_run else "Deleted"
+    console.print(f"[green]{verb} for tenant {tenant_id}[/green] (root={result.root}):")
+    for table, n in sorted(result.deleted.items()):
+        console.print(f"  {table}: {n}")
