@@ -29,6 +29,7 @@ class ExcisionResult:
     tenant_id: str
     dry_run: bool
     deleted: dict[str, int] = field(default_factory=dict)
+    root: str | None = None  # the domain tenant-root entity (None if app has none)
 
 
 def _tenant_root_name(appspec: Any) -> str | None:
@@ -53,14 +54,42 @@ def _count(conn: Any, query: Any, params: tuple[Any, ...]) -> int:
 
 
 def excise_tenant(
-    appspec: Any, tenant_id: str, *, conn: Any, dry_run: bool = False
+    appspec: Any,
+    tenant_id: str,
+    *,
+    conn: Any,
+    dry_run: bool = False,
+    allow_missing: bool = False,
 ) -> ExcisionResult:
     """Excise ``tenant_id`` on ``conn`` (must be a BYPASSRLS role for real RLS).
 
-    ``conn`` is a sync psycopg connection; this function manages a single
-    transaction and commits on success (or rolls back when ``dry_run`` / on
-    error). Returns counts per table (would-delete counts under ``dry_run``).
+    ``conn`` is a sync psycopg connection that **must not be autocommit** — this
+    function owns one explicit transaction and commits on success (or rolls back
+    when ``dry_run`` / on error). An autocommit connection would defeat
+    all-or-nothing excision and silently turn ``dry_run`` into a destructive run,
+    so it is rejected. Returns counts per table (would-delete counts under
+    ``dry_run``).
+
+    Unless ``allow_missing`` is set, the ``organizations`` row for ``tenant_id``
+    must exist — otherwise the excision is a no-op that would falsely report
+    success (a typo'd / already-excised id). ``allow_missing`` is the cleanup
+    escape hatch (e.g. finishing a partially-excised tenant).
     """
+    if getattr(conn, "autocommit", False):
+        raise ExcisionError(
+            "excise_tenant requires a non-autocommit connection — it owns one "
+            "explicit transaction so a mid-excision failure rolls back atomically"
+        )
+
+    if not allow_missing:
+        org_exists = _count(conn, "SELECT count(*) FROM organizations WHERE id = %s", (tenant_id,))
+        if org_exists == 0:
+            raise ExcisionError(
+                f"no organization with id {tenant_id!r} — refusing a no-op excision "
+                "that would falsely report success (pass allow_missing to override "
+                "for partial-cleanup)"
+            )
+
     partition_key = "tenant_id"
     tenancy = getattr(appspec, "tenancy", None)
     isolation = getattr(tenancy, "isolation", None) if tenancy is not None else None
@@ -84,7 +113,7 @@ def excise_tenant(
             )
         order = computed
 
-    result = ExcisionResult(tenant_id=tenant_id, dry_run=dry_run)
+    result = ExcisionResult(tenant_id=tenant_id, dry_run=dry_run, root=root)
     try:
         # Capture identities in this tenant BEFORE deleting its memberships, so we
         # can reap exactly those orphaned by this excision (not a still-membered
@@ -127,6 +156,16 @@ def excise_tenant(
             ).fetchall()
             orphans = [_scalar_of(r, "id") for r in orphan_rows]
             if orphans and not dry_run:
+                # Clear the reaped identities' rows in every auth table that FKs
+                # users(id) (sessions/password_reset_tokens/user_preferences have
+                # NO ON DELETE CASCADE), or the users delete FK-violates and rolls
+                # back the WHOLE excision. These tables are always present
+                # (AuthStore._init_db); user_id is keyed by the orphan id set.
+                for child in ("sessions", "password_reset_tokens", "user_preferences"):
+                    del_child = sql.SQL("DELETE FROM {} WHERE user_id = ANY(%s)").format(
+                        sql.Identifier(child)
+                    )
+                    conn.execute(del_child, (orphans,))
                 conn.execute("DELETE FROM users WHERE id = ANY(%s)", (orphans,))
             reaped = len(orphans)
         result.deleted["users"] = reaped

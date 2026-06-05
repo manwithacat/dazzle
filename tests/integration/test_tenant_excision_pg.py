@@ -112,6 +112,11 @@ def _seed_auth(scratch_url: str, a: str, b: str) -> tuple[str, str]:
     store.create_membership(tenant_id=a, identity_id=str(only_a.id), roles=["worker"])
     store.create_membership(tenant_id=a, identity_id=str(shared.id), roles=["worker"])
     store.create_membership(tenant_id=b, identity_id=str(shared.id), roles=["worker"])
+    # Give only_a a session + a preference so the orphan reap must clear the
+    # users-child tables (FK users(id), no ON DELETE CASCADE) before deleting the
+    # user — else the whole excision FK-violates and rolls back (review Finding 1).
+    store.create_session(only_a)
+    store.set_preference(only_a.id, "theme", "dark")
     return str(only_a.id), str(shared.id)
 
 
@@ -152,9 +157,14 @@ def test_excise_removes_tenant_a_and_leaves_b(scratch_url: str) -> None:
     assert _count(scratch_url, "SELECT count(*) FROM users WHERE id=%s", only_a) == 0
     assert _count(scratch_url, "SELECT count(*) FROM users WHERE id=%s", shared) == 1
     assert result.deleted["Task"] == 1
+    assert result.deleted["Member"] == 1
+    assert result.deleted["Project"] == 1
     assert result.deleted["memberships"] == 2
     assert result.deleted["users"] == 1
     assert result.deleted["organizations"] == 1
+    assert result.root == "Workspace"
+    # The orphaned user's session was cleared too (no FK-violation leftover).
+    assert _count(scratch_url, "SELECT count(*) FROM sessions WHERE user_id=%s", only_a) == 0
 
 
 def test_excise_dry_run_deletes_nothing(scratch_url: str) -> None:
@@ -179,3 +189,21 @@ def test_excise_dry_run_deletes_nothing(scratch_url: str) -> None:
     assert result.dry_run is True
     assert result.deleted["Workspace"] == 1
     assert result.deleted["memberships"] == 2
+
+
+def test_excise_missing_org_refuses(scratch_url: str) -> None:
+    """A nonexistent/typo'd tenant_id is refused (no false-success no-op)."""
+    from dazzle.db.excision import ExcisionError, excise_tenant
+
+    appspec, md = _load_appspec_and_metadata()
+    engine = sa.create_engine(
+        scratch_url.replace("postgresql://", "postgresql+psycopg://"), future=True
+    )
+    md.create_all(engine)
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    AuthStore(database_url=scratch_url)._init_db()  # tables exist, no org rows
+
+    with psycopg.connect(scratch_url) as conn:
+        with pytest.raises(ExcisionError, match="no organization"):
+            excise_tenant(appspec, str(uuid.uuid4()), conn=conn)
