@@ -1,0 +1,47 @@
+"""Member-admin authorization + orphan-guard helpers (auth Plan 3b).
+
+Pure functions over a roster (a list of ``(membership_id, roles, status)``
+tuples) so the last-admin guard is unit-testable without a DB. An org must never
+be left with zero active members holding an ``org_admin_role`` — otherwise nobody
+could manage it.
+"""
+
+from __future__ import annotations
+
+
+def active_admins(
+    roster: list[tuple[str, list[str], str]], org_admin_roles: list[str]
+) -> list[str]:
+    """Membership ids that are ACTIVE and hold at least one admin role."""
+    admin_set = set(org_admin_roles)
+    return [mid for (mid, roles, status) in roster if status == "active" and admin_set & set(roles)]
+
+
+def would_orphan_org(
+    roster: list[tuple[str, list[str], str]],
+    target_id: str,
+    *,
+    new_roles: list[str] | None,
+    org_admin_roles: list[str],
+) -> bool:
+    """True iff applying the change to ``target_id`` leaves the org with no admin.
+
+    ``new_roles=None`` models removal or suspension (the target stops being an
+    active admin). ``new_roles=[...]`` models a role change. Only blocks when the
+    org currently HAS at least one admin and the change drops it to zero — an
+    already-admin-less org can't be orphaned further.
+    """
+    before = active_admins(roster, org_admin_roles)
+    if not before:
+        return False  # nothing to orphan
+    admin_set = set(org_admin_roles)
+    after: list[str] = []
+    for mid, roles, status in roster:
+        if mid == target_id:
+            if new_roles is None:
+                continue  # removed / suspended → no longer an active admin
+            if status == "active" and admin_set & set(new_roles):
+                after.append(mid)
+        elif status == "active" and admin_set & set(roles):
+            after.append(mid)
+    return len(after) == 0
