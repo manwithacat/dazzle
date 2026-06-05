@@ -85,3 +85,17 @@ entity Member "Member":
 
   id: uuid pk
   email: str(200) required unique
+
+# =============================================================================
+# Profile archetype (auth Plan 3c). Per-member app data linked 1:1 to a
+# membership: the framework injects `identity_id` (the auth identity's id) marked
+# unique → tenant-scoped UNIQUE(tenant_id, identity_id), plus the uniform
+# `tenant_id`. The author declares only the surrogate id + the app fields.
+# =============================================================================
+
+entity MemberProfile "Member Profile":
+  archetype: profile
+  intent: "Per-member profile data (display name), linked 1:1 to a membership"
+
+  id: uuid pk
+  display_name: str(120)

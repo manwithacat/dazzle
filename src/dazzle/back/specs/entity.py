@@ -649,6 +649,10 @@ class EntitySpec(BaseModel):
         default=False,
         description="Entity is the tenant root (defines multi-tenant boundary)",
     )
+    is_profile: bool = Field(
+        default=False,
+        description="archetype: profile — per-member data keyed by (tenant_id, identity_id) (Plan 3c)",
+    )
     # #1218: soft-delete keyword. When True the framework's read paths
     # auto-filter `deleted_at IS NULL` and DELETE handlers swap to
     # UPDATE-SET-deleted_at=now(). Threaded from IR by the converter.

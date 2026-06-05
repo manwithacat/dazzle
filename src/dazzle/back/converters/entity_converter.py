@@ -793,6 +793,7 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         access=access,
         is_singleton=dazzle_entity.is_singleton,  # v0.10.3
         is_tenant_root=dazzle_entity.is_tenant_root,  # v0.10.3
+        is_profile=dazzle_entity.is_profile,  # auth Plan 3c
         soft_delete=dazzle_entity.soft_delete,  # #1218
         temporal=dazzle_entity.temporal,  # #1223
         subtype_of=dazzle_entity.subtype_of,  # #1217 3(e)
