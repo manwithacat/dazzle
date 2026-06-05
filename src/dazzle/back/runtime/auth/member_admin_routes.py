@@ -9,7 +9,7 @@ Every mutation runs the same gate:
 The org is always the caller's active membership's tenant_id — never request input.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Form, Query, Request
@@ -38,7 +38,7 @@ def _org_admin_roles(request: Request) -> list[str]:
 def create_member_admin_routes() -> APIRouter:
     router = APIRouter(tags=["auth"])
 
-    def _gate(request: Request):
+    def _gate(request: Request) -> tuple[Any, Any, str] | None:
         """Return (store, ctx, org_id) if the caller may manage members, else None."""
         from dazzle.back.runtime.auth.invitations import may_manage_members
         from dazzle.back.runtime.auth.models import effective_roles_of
@@ -63,7 +63,7 @@ def create_member_admin_routes() -> APIRouter:
             for m in store.get_memberships_for_tenant(org_id)  # type: ignore[attr-defined]
         ]
 
-    def _resolve_target(store: object, org_id: str, membership_id: str):
+    def _resolve_target(store: object, org_id: str, membership_id: str) -> Any | None:
         """The target membership IFF it belongs to ``org_id`` (cross-org guard)."""
         m = store.get_membership(membership_id)  # type: ignore[attr-defined]
         if m is None or m.tenant_id != org_id:

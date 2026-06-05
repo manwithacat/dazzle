@@ -15,6 +15,7 @@ from dazzle.render.fragment import (
     Page,
     Stack,
     Submit,
+    TargetSelector,
     Text,
 )
 
@@ -53,8 +54,8 @@ def _member_block(
             Button(
                 label="Suspend",
                 variant="secondary",
-                hx_post=f"/auth/members/suspend?membership_id={membership_id}",
-                hx_target="body",
+                hx_post=URL(f"/auth/members/suspend?membership_id={membership_id}"),
+                hx_target=TargetSelector("body"),
                 hx_confirm="Suspend this member's access?",
             )
         )
@@ -63,8 +64,8 @@ def _member_block(
             Button(
                 label="Reactivate",
                 variant="secondary",
-                hx_post=f"/auth/members/reactivate?membership_id={membership_id}",
-                hx_target="body",
+                hx_post=URL(f"/auth/members/reactivate?membership_id={membership_id}"),
+                hx_target=TargetSelector("body"),
             )
         )
     # Remove — disabled for the last admin (the server also enforces this).
@@ -73,8 +74,8 @@ def _member_block(
             label="Remove",
             variant="danger",
             visibility="disabled" if is_last_admin else "visible",
-            hx_post=f"/auth/members/remove?membership_id={membership_id}",
-            hx_target="body",
+            hx_post=URL(f"/auth/members/remove?membership_id={membership_id}"),
+            hx_target=TargetSelector("body"),
             hx_confirm="Remove this member from the organization?",
         )
     )
