@@ -128,6 +128,11 @@ class CSRFConfig:
             # must run the CSRF gate (else swept into NA_PREAUTH by the /auth/ prefix).
             "/auth/invite",
             "/auth/accept-invite",
+            # auth Plan 3b: member-admin mutations (membership_id in the query).
+            "/auth/members/roles",
+            "/auth/members/suspend",
+            "/auth/members/reactivate",
+            "/auth/members/remove",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /

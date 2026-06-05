@@ -170,6 +170,12 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_invitation_routes())
 
+        # auth Plan 3b: member-admin surface (roster + role/suspend/remove). Each
+        # mutation is admin-gated, cross-org-guarded, and last-admin-protected.
+        from dazzle.back.runtime.auth.member_admin_routes import create_member_admin_routes
+
+        ctx.app.include_router(create_member_admin_routes())
+
         # Phase E.2 — secret-gated contained QA-auth mint (#1339). Self-disabling:
         # the factory returns None unless QA_AUTH_SECRET is set, so prod is off by
         # default with no request-time flag to misconfigure. The mint enforces the
