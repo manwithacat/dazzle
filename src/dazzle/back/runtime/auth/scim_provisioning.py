@@ -16,6 +16,7 @@ membership AND revokes its sessions, so access is lost immediately.
 from __future__ import annotations
 
 import logging
+import re as _re
 import secrets as _secrets
 from dataclasses import dataclass
 from typing import Any
@@ -23,6 +24,48 @@ from typing import Any
 from dazzle.back.runtime.auth.enterprise_login import map_groups_to_roles
 
 _logger = logging.getLogger(__name__)
+
+_MEMBER_VALUE_FILTER = _re.compile(r'members\[\s*value\s+eq\s+"([^"]+)"\s*\]', _re.IGNORECASE)
+
+
+def parse_group_patch(body: dict[str, Any]) -> list[tuple]:
+    """Parse a SCIM PATCH body into concrete ``(op, arg)`` tuples (#1342).
+
+    Supports the forms Okta/Entra send (not a general SCIM path-filter engine):
+    ``add_members`` (list), ``remove_member`` (one id via ``members[value eq "id"]``),
+    ``replace_members`` (list; ``path:members`` remove-all → empty list), ``rename``
+    (str; ``displayName`` path or the no-path ``value`` dict form). Unknown ops are
+    skipped — the route returns the resource unchanged (SCIM-lenient).
+    """
+    ops: list[tuple] = []
+    for op in body.get("Operations", []) or []:
+        kind = str(op.get("op", "")).lower()
+        path = op.get("path")
+        value = op.get("value")
+        if kind == "add" and path == "members":
+            ops.append(("add_members", [m["value"] for m in (value or []) if "value" in m]))
+        elif kind == "remove" and isinstance(path, str):
+            m = _MEMBER_VALUE_FILTER.fullmatch(path.strip())
+            if m:
+                ops.append(("remove_member", m.group(1)))
+            elif path == "members":
+                ops.append(("replace_members", []))  # remove all
+        elif kind == "replace" and path == "members":
+            ops.append(("replace_members", [m["value"] for m in (value or []) if "value" in m]))
+        elif kind in ("add", "replace") and path == "displayName":
+            ops.append(("rename", str(value)))
+        elif kind in ("add", "replace") and path is None and isinstance(value, dict):
+            if "displayName" in value:
+                ops.append(("rename", str(value["displayName"])))
+            if "members" in value:
+                ops.append(
+                    (
+                        "replace_members",
+                        [m["value"] for m in (value["members"] or []) if "value" in m],
+                    )
+                )
+        # else: unknown op — skip
+    return ops
 
 
 class ScimError(RuntimeError):

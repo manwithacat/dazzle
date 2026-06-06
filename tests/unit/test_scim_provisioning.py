@@ -270,3 +270,46 @@ def test_deprovision_removes_and_revokes() -> None:
 
 def test_deprovision_idempotent_when_absent() -> None:
     assert deprovision_scim_user(_Store(), _conn(), identity_id="ghost") is False
+
+
+def test_parse_group_patch_ops() -> None:
+    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+
+    ops = parse_group_patch(
+        {
+            "Operations": [
+                {"op": "add", "path": "members", "value": [{"value": "m1"}, {"value": "m2"}]},
+                {"op": "remove", "path": 'members[value eq "m3"]'},
+                {"op": "replace", "path": "displayName", "value": "NewName"},
+            ]
+        }
+    )
+    assert ("add_members", ["m1", "m2"]) in ops
+    assert ("remove_member", "m3") in ops
+    assert ("rename", "NewName") in ops
+
+
+def test_parse_group_patch_remove_all_and_replace_members() -> None:
+    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+
+    ops = parse_group_patch(
+        {
+            "Operations": [
+                {"op": "remove", "path": "members"},
+                {"op": "replace", "path": "members", "value": [{"value": "m9"}]},
+                {"op": "replace", "value": {"displayName": "X"}},  # no-path replace form
+            ]
+        }
+    )
+    assert ("replace_members", []) in ops  # remove-all
+    assert ("replace_members", ["m9"]) in ops
+    assert ("rename", "X") in ops
+
+
+def test_parse_group_patch_skips_unknown_ops() -> None:
+    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+
+    assert (
+        parse_group_patch({"Operations": [{"op": "add", "path": "externalId", "value": "x"}]}) == []
+    )
+    assert parse_group_patch({}) == []
