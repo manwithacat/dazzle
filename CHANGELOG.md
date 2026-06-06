@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.68] - 2026-06-06
+
+### Added
+
+- **Implementation plan: capability opt-in model, Phase 1** (`docs/superpowers/plans/2026-06-06-capability-opt-in-phase1.md`) for #1342 — 9 TDD tasks covering the registry/model, manifest `[capabilities]` parsing, boot resolution, `SubsystemContext` threading, the auth route + org-admin-surface gating refactor, the existing-connections boot guard, the `dazzle capability` CLI, and `validate` diagnostics. Plan only; not yet implemented.
+
 ## [0.81.67] - 2026-06-06
 
 ### Added
