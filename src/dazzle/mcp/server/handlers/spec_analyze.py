@@ -980,7 +980,9 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
         return error_response("spec_text is required")
 
     haystack = spec_text.lower()
-    active = active or set()
+    # Active capabilities may arrive via the param (direct call) or the arguments
+    # dict (when routed through handle_spec_analyze, e.g. from bootstrap).
+    active = active or set(arguments.get("active_capabilities") or [])
 
     # Lazy imports — keeps the handler module lightweight for non-bootstrap callers.
     from dazzle.core.capabilities.cognition import enable_suggestion

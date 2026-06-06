@@ -69,7 +69,7 @@ def handle_bootstrap(arguments: dict[str, Any], project_path: Path | None = None
     # Phase 2: Run cognition pass
     # spec_source is always set when spec_text is set
     progress.log_sync("Running cognition pass...")
-    return _run_cognition_pass(spec_text, spec_source or "unknown")
+    return _run_cognition_pass(spec_text, spec_source or "unknown", work_dir)
 
 
 def _find_spec(work_dir: Path, arguments: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -111,8 +111,15 @@ def _is_template_readme(content: str) -> bool:
     return matches >= 3
 
 
-def _run_cognition_pass(spec_text: str, spec_source: str) -> str:
+def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None = None) -> str:
     """Run the full cognition pass and return mission briefing."""
+    # Capabilities this app has opted into (#1342) — gates pattern proposals so a
+    # stated-but-undeclared requirement (e.g. "Okta") surfaces as a "declare the
+    # capability" suggestion rather than full guidance the app can't yet use.
+    from dazzle.core.capabilities.cognition import active_capabilities_for
+
+    active = active_capabilities_for(work_dir) if work_dir is not None else set()
+
     # Run all analysis operations
     entities_raw = handle_spec_analyze({"operation": "discover_entities", "spec_text": spec_text})
     entities_result = json.loads(entities_raw)
@@ -147,7 +154,13 @@ def _run_cognition_pass(spec_text: str, spec_source: str) -> str:
     # spec mentions X; consider declaring `temporal:` on Employment" so
     # the agent picks the canonical idiom on the first try instead of
     # discovering it via compile errors.
-    patterns_raw = handle_spec_analyze({"operation": "propose_patterns", "spec_text": spec_text})
+    patterns_raw = handle_spec_analyze(
+        {
+            "operation": "propose_patterns",
+            "spec_text": spec_text,
+            "active_capabilities": list(active),
+        }
+    )
     patterns_result = json.loads(patterns_raw)
 
     # Build mission briefing
@@ -178,6 +191,10 @@ def _run_cognition_pass(spec_text: str, spec_source: str) -> str:
             # shapes the framework deliberately doesn't support).
             "pattern_proposals": patterns_result.get("pattern_proposals", []),
             "antipattern_flags": patterns_result.get("antipattern_flags", []),
+            # #1342 — when the spec states a requirement gated behind an opt-in
+            # capability the app hasn't declared, surface the enable command +
+            # runbook instead of pushing guidance the app can't use yet.
+            "capability_suggestions": patterns_result.get("capability_suggestions", []),
         },
         "clarification_needed": has_questions,
         "questions": questions,

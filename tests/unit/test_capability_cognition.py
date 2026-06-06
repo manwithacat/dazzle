@@ -159,3 +159,27 @@ def test_propose_patterns_gates_and_suggests(monkeypatch):
     )
     assert out2.get("capability_suggestions", []) == []
     assert any(p["pattern_id"] == "enterprise_sso" for p in out2["pattern_proposals"])
+
+
+def test_bootstrap_surfaces_capability_suggestions(monkeypatch, tmp_path):
+    import dazzle.mcp.server.handlers.bootstrap as bs
+
+    monkeypatch.setattr("dazzle.mcp.semantics_kb.get_dsl_patterns", lambda: _BLOB)
+
+    # No dazzle.toml → nothing declared → a stated Okta requirement becomes a
+    # capability suggestion in the briefing, not a full proposal.
+    out = json.loads(bs._run_cognition_pass("Staff sign in via Okta SSO.", "test", tmp_path))
+    sugg = out["analysis"].get("capability_suggestions", [])
+    assert any(s["capability"] == "auth.enterprise.oidc" for s in sugg)
+    assert out["analysis"]["pattern_proposals"] == []
+
+    # Declare it (available) → the suggestion goes away, the proposal appears.
+    monkeypatch.setattr(reg, "find_spec", lambda name: object())
+    (tmp_path / "dazzle.toml").write_text(
+        '[project]\nname="t"\nversion="0.0.1"\n\n[modules]\npaths=["app"]\n\n'
+        '[capabilities]\nenabled=["auth.enterprise.oidc"]\n',
+        encoding="utf-8",
+    )
+    out2 = json.loads(bs._run_cognition_pass("Okta SSO.", "test", tmp_path))
+    assert out2["analysis"].get("capability_suggestions", []) == []
+    assert any(p["pattern_id"] == "enterprise_sso" for p in out2["analysis"]["pattern_proposals"])
