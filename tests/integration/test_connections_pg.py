@@ -170,6 +170,51 @@ def test_update_connection_secrets_rotates_and_re_encrypts(store_url: str) -> No
     assert store.update_connection_secrets("nonexistent", {"client_secret": "X"}) is False
 
 
+_KEY_A = base64.b64encode(b"a" * 32).decode()
+_KEY_B = base64.b64encode(b"b" * 32).decode()
+
+
+def test_rewrap_all_connection_secrets_rotates_encryption_key(store_url: str, monkeypatch) -> None:
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY_A)
+    store = _store(store_url)
+    c1 = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={"client_secret": "s1"}, domains=[]
+    )
+    c2 = store.create_connection(
+        tenant_id="org-2", type="scim", config={}, secrets={"scim_bearer": "b2"}, domains=[]
+    )
+    # A connection with NO secret is ignored by the rewrap.
+    store.create_connection(tenant_id="org-3", type="saml", config={}, secrets={}, domains=[])
+
+    # Rotate: new key primary, old key as the rotation fallback.
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY_B)
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET_OLD", _KEY_A)
+    res = store.rewrap_all_connection_secrets()
+    assert res.rewrapped == 2 and res.already_current == 0 and res.failed == []
+
+    # Now everything decrypts under ONLY the new key (the old key can be retired).
+    monkeypatch.delenv("DAZZLE_CONNECTION_SECRET_OLD", raising=False)
+    assert store.get_connection(c1.id).secrets["client_secret"] == "s1"
+    assert store.get_connection(c2.id).secrets["scim_bearer"] == "b2"
+
+    # Idempotent — a re-run rewraps nothing (all already on the primary key).
+    res2 = store.rewrap_all_connection_secrets()
+    assert res2.rewrapped == 0 and res2.already_current == 2 and res2.failed == []
+
+
+def test_rewrap_reports_undecryptable_as_failed(store_url: str, monkeypatch) -> None:
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY_A)
+    store = _store(store_url)
+    c = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={"client_secret": "s"}, domains=[]
+    )
+    # Rotate to a new key with NO old key set → the A-encrypted secret can't be decrypted.
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY_B)
+    monkeypatch.delenv("DAZZLE_CONNECTION_SECRET_OLD", raising=False)
+    res = store.rewrap_all_connection_secrets()
+    assert res.failed == [c.id] and res.rewrapped == 0  # surfaced, never dropped
+
+
 def test_get_scim_connection_by_bearer(store_url: str) -> None:
     store = _store(store_url)
     c = store.create_connection(

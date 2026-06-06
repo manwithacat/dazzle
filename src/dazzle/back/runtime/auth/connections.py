@@ -75,6 +75,20 @@ class ConnectionRecord:
 
 
 @dataclass(frozen=True)
+class RewrapResult:
+    """Outcome of an encryption-key rotation rewrap (``rewrap_all_connection_secrets``).
+
+    ``rewrapped`` = secrets moved onto the primary key; ``already_current`` = secrets that
+    were already on it (idempotent skip); ``failed`` = connection ids no configured key
+    could decrypt (the operator must set ``DAZZLE_CONNECTION_SECRET_OLD`` to the right key).
+    """
+
+    rewrapped: int
+    already_current: int
+    failed: list[str]
+
+
+@dataclass(frozen=True)
 class AssertedIdentity:
     """What a SSO provider's ``callback`` asserts after validating the IdP response.
 

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.57] - 2026-06-06
+
+### Added
+
+- **Auth — encryption-key rotation automation** (spec §5). Rotate `DAZZLE_CONNECTION_SECRET` (the AES-256-GCM key encrypting *all* connection secrets at rest) with zero downtime. The crypto layer now supports **two active keys**: decryption tries the primary key (`DAZZLE_CONNECTION_SECRET`) then an optional previous key (`DAZZLE_CONNECTION_SECRET_OLD`), while encryption *always* uses the primary (`connection_crypto.decrypt_secret_with_key_index` reports which key verified). `dazzle auth rotate-encryption-key` calls the new `store.rewrap_all_connection_secrets()` to re-encrypt every connection secret onto the primary key — **idempotent** (a secret already on the primary is left untouched; a re-run rewraps nothing), **lossless** (decrypt→re-encrypt round-trips the exact plaintext, bumps `updated_at`), and **never drops a secret** (one no configured key can decrypt is collected in `failed`, surfaced, and skipped — never overwritten/NULLed; the CLI exits non-zero). The runbook: set the new key as primary + the old key as `..._OLD`, restart, run the command, then remove `..._OLD`; a crash mid-rotation is fully recoverable because both keys still decrypt. Adversarially reviewed (silent-failure-hunter): **no CRITICAL/HIGH** — confirmed **no fail-open** in multi-key decrypt (plaintext returned only on a verified AES-GCM tag; tamper/format/no-key-matches all fail closed) and **no data loss** in rewrap; the MEDIUM (a *malformed* `..._OLD` would break decryption of even valid primary-key ciphertexts) fixed in-slice — a malformed rotation key is now skipped with a logged warning (live traffic stays up; the rewrap `failed` list is the loud signal). Proven against real Postgres (`tests/integration/test_connections_pg.py`: rewrap moves ciphertext onto the new key, decrypts under the new key alone afterward, idempotent re-run, undecryptable → `failed`).
+
+### Agent Guidance
+
+- **Rotate the connection encryption key with `dazzle auth rotate-encryption-key`** (operator/devops): (1) generate a new 32-byte base64 key; (2) set `DAZZLE_CONNECTION_SECRET=<new>` AND `DAZZLE_CONNECTION_SECRET_OLD=<old>` and restart (now decrypts with either, encrypts with the new); (3) run the command — it re-wraps every connection secret onto the new key and **exits non-zero if any couldn't be decrypted** (set the right `..._OLD`); (4) once every instance is rewrapped, remove `..._OLD`. It's idempotent and never loses a secret; a malformed `..._OLD` is ignored (logged) rather than breaking decryption. This is distinct from `rotate-secret` (which rotates a *connection's* secret, not the key that encrypts them).
+
 ## [0.81.56] - 2026-06-06
 
 ### Added

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from dazzle.back.runtime.auth.connections import ConnectionRecord
+    from dazzle.back.runtime.auth.connections import ConnectionRecord, RewrapResult
     from dazzle.back.runtime.auth.membership_events import (
         EventChainResult,
         MembershipEvent,
@@ -1255,6 +1255,50 @@ class SessionStoreMixin:
             "UPDATE connections SET domains = %s, updated_at = %s WHERE id = %s",
             (json.dumps(domains), datetime.now(UTC).isoformat(), connection_id),
         )
+
+    def rewrap_all_connection_secrets(self) -> "RewrapResult":  # noqa: F821
+        """Re-encrypt every connection secret onto the PRIMARY key (encryption-key rotation).
+
+        Decrypts each connection's secret (trying the primary key then the optional
+        ``DAZZLE_CONNECTION_SECRET_OLD`` rotation key) and re-encrypts with the primary,
+        so after the operator sets the new key as primary + the old key as the rotation
+        key, this moves all ciphertext onto the new key. **Idempotent:** a secret already
+        on the primary key is left untouched (counted as ``already_current``); a re-run
+        after a full rotation rewraps nothing. A secret that no configured key can decrypt
+        is collected in ``failed`` (the operator must set the right ``..._OLD`` key) — it
+        is skipped, never dropped, and the rotation continues.
+        """
+        from dazzle.back.runtime.auth.connection_crypto import (
+            ConnectionSecretError,
+            decrypt_secret_with_key_index,
+            encrypt_secret,
+        )
+        from dazzle.back.runtime.auth.connections import RewrapResult
+
+        rewrapped = 0
+        already_current = 0
+        failed: list[str] = []
+        now = datetime.now(UTC).isoformat()
+        for row in self._execute(
+            "SELECT id, encrypted_secret FROM connections WHERE encrypted_secret IS NOT NULL"
+        ):
+            enc = row.get("encrypted_secret")
+            if not enc:
+                continue
+            try:
+                plaintext, key_index = decrypt_secret_with_key_index(enc)
+            except ConnectionSecretError:
+                failed.append(row["id"])
+                continue
+            if key_index == 0:
+                already_current += 1  # already on the primary key — leave it
+                continue
+            self._execute_modify(
+                "UPDATE connections SET encrypted_secret = %s, updated_at = %s WHERE id = %s",
+                (encrypt_secret(plaintext), now, row["id"]),
+            )
+            rewrapped += 1
+        return RewrapResult(rewrapped=rewrapped, already_current=already_current, failed=failed)
 
     def update_connection_secrets(
         self, connection_id: str, secrets: dict[str, Any], *, tenant_id: str | None = None

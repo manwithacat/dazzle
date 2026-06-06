@@ -731,3 +731,52 @@ def migrate(
 from dazzle.cli.auth_connection import connection_app  # noqa: E402
 
 auth_app.add_typer(connection_app, name="connection")
+
+
+@auth_app.command(name="rotate-encryption-key")
+def rotate_encryption_key() -> None:
+    """Re-encrypt all connection secrets onto a new DAZZLE_CONNECTION_SECRET (key rotation).
+
+    Procedure (zero-downtime):
+      1. Generate a NEW 32-byte key.
+      2. Set DAZZLE_CONNECTION_SECRET=<new> AND DAZZLE_CONNECTION_SECRET_OLD=<old>; restart
+         the app(s) (now decrypts with either key, encrypts with the new one).
+      3. Run this command — it rewraps every connection secret onto the new key.
+      4. Once every instance is rewrapped, remove DAZZLE_CONNECTION_SECRET_OLD.
+    """
+    import os
+
+    from dazzle.back.runtime.auth.connection_crypto import (
+        _ENV_KEY_OLD,
+        ConnectionSecretError,
+        _load_key,
+    )
+
+    # The primary (new) key must be valid before we touch anything.
+    try:
+        _load_key()
+    except ConnectionSecretError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    has_old = bool(os.environ.get(_ENV_KEY_OLD, "").strip())
+    result = _get_auth_store()._store.rewrap_all_connection_secrets()
+
+    console.print(
+        f"[green]Rewrapped[/green] {result.rewrapped} connection secret(s) onto the current key; "
+        f"{result.already_current} already current."
+    )
+    if result.failed:
+        console.print(
+            f"[red]{len(result.failed)} could not be decrypted by any configured key[/red] — set "
+            f"{_ENV_KEY_OLD} to the previous key and re-run. Affected: {', '.join(result.failed)}"
+        )
+        raise typer.Exit(code=1)
+    if result.rewrapped and not has_old:
+        console.print(
+            f"[yellow]Note:[/yellow] {_ENV_KEY_OLD} is not set — those rewraps used only the "
+            "primary key."
+        )
+    console.print(
+        f"Done. Once every deployment instance has been rewrapped, remove {_ENV_KEY_OLD}."
+    )
