@@ -182,6 +182,68 @@ def create_saml(
     )
 
 
+@connection_app.command("rotate-secret")
+def rotate_secret(
+    connection_id: Annotated[str, typer.Argument(help="Connection id")],
+    client_secret: Annotated[
+        str,
+        typer.Option(
+            "--client-secret",
+            envvar="DAZZLE_OIDC_CLIENT_SECRET",
+            help="New OIDC client secret (OIDC only; prefer the env var)",
+        ),
+    ] = "",
+) -> None:
+    """Rotate a connection's secret (after a leak / scheduled rotation).
+
+    OIDC: replaces the ``client_secret`` (pass ``--client-secret``; the IdP must already
+    have the new one). SCIM: mints a NEW bearer and prints it once — the previous bearer
+    stops working immediately. SAML has no rotatable secret (the IdP cert is public config;
+    use ``create-saml`` to replace it). Existing user sessions are unaffected.
+    """
+    store = _store()
+    conn = store.get_connection(connection_id)
+    if conn is None:
+        console.print(f"[red]No connection {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+
+    new_bearer: str | None = None
+    if conn.type == "oidc":
+        if not client_secret:
+            console.print(
+                "[red]--client-secret is required for an OIDC connection "
+                "(or set DAZZLE_OIDC_CLIENT_SECRET)[/red]"
+            )
+            raise typer.Exit(code=1)
+        new_secrets: dict[str, str] = {"client_secret": client_secret}
+    elif conn.type == "scim":
+        import secrets as _secrets
+
+        new_bearer = _secrets.token_urlsafe(32)
+        new_secrets = {"scim_bearer": new_bearer}
+    else:
+        console.print(
+            f"[red]Connection {connection_id!r} is type {conn.type!r} — no rotatable secret. "
+            "A SAML IdP cert is public config; recreate the connection to change it.[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    if not store.update_connection_secrets(connection_id, new_secrets):
+        console.print(f"[red]Rotation failed — connection {connection_id!r} not updated[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[green]Rotated[/green] the secret for connection {connection_id}.")
+    if new_bearer is not None:
+        console.print("\n[bold]New SCIM bearer (shown once — update the IdP):[/bold]")
+        console.print(f"  [cyan]{new_bearer}[/cyan]")
+        console.print("The previous bearer is now [bold]invalid[/bold].")
+    else:
+        console.print(
+            "Ensure the IdP has the new client secret — the previous one no longer works "
+            "for new logins. Existing user sessions are unaffected."
+        )
+
+
 @connection_app.command("list")
 def list_connections(
     tenant: Annotated[str, typer.Option("--tenant", help="Organization (tenant) id")],

@@ -1256,6 +1256,36 @@ class SessionStoreMixin:
             (json.dumps(domains), datetime.now(UTC).isoformat(), connection_id),
         )
 
+    def update_connection_secrets(
+        self, connection_id: str, secrets: dict[str, Any], *, tenant_id: str | None = None
+    ) -> bool:
+        """Replace a connection's secret material (rotation), re-encrypting at rest.
+
+        ``secrets`` REPLACES the stored blob (an empty dict clears it). Bumps
+        ``updated_at`` — load-bearing: the OIDC provider's per-connection client cache is
+        keyed on ``updated_at``, so a rotated ``client_secret`` rebuilds the client (the
+        old secret stops working for new logins) without a process restart. Pass
+        ``tenant_id`` to fence the write to one org. Returns ``True`` if a row changed.
+        """
+        import json
+
+        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
+
+        encrypted = encrypt_secret(json.dumps(secrets)) if secrets else None
+        now = datetime.now(UTC).isoformat()
+        if tenant_id is not None:
+            rowcount = self._execute_modify(
+                "UPDATE connections SET encrypted_secret = %s, updated_at = %s "
+                "WHERE id = %s AND tenant_id = %s",
+                (encrypted, now, connection_id, tenant_id),
+            )
+        else:
+            rowcount = self._execute_modify(
+                "UPDATE connections SET encrypted_secret = %s, updated_at = %s WHERE id = %s",
+                (encrypted, now, connection_id),
+            )
+        return bool(rowcount > 0)
+
     def set_connection_verified_domains(self, connection_id: str, verified: list[str]) -> None:
         """Set the verified-domain list — the output of a domain-ownership check.
 

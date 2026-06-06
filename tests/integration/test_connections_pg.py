@@ -144,6 +144,32 @@ def test_claim_verified_domain_unknown_connection(store_url: str) -> None:
     assert store.claim_verified_domain("nonexistent", "acme.test") is False
 
 
+def test_update_connection_secrets_rotates_and_re_encrypts(store_url: str) -> None:
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={"client_secret": "OLD"}, domains=[]
+    )
+    old_updated = store.get_connection(conn.id).updated_at
+    # Rotate the secret.
+    assert store.update_connection_secrets(conn.id, {"client_secret": "NEW"}) is True
+    refreshed = store.get_connection(conn.id)
+    assert refreshed.secrets["client_secret"] == "NEW"  # decrypts the rotated value
+    assert refreshed.updated_at >= old_updated  # bumped → OIDC client cache rebuilds
+    # Neither the old nor the new plaintext is stored in the row.
+    with psycopg.connect(store_url) as c:
+        enc = c.execute(
+            "SELECT encrypted_secret FROM connections WHERE id=%s", (conn.id,)
+        ).fetchone()[0]
+    assert "NEW" not in (enc or "") and "OLD" not in (enc or "")
+    # Tenant fence: a wrong-org write changes nothing.
+    assert (
+        store.update_connection_secrets(conn.id, {"client_secret": "X"}, tenant_id="org-2") is False
+    )
+    assert store.get_connection(conn.id).secrets["client_secret"] == "NEW"
+    # Unknown connection → False.
+    assert store.update_connection_secrets("nonexistent", {"client_secret": "X"}) is False
+
+
 def test_get_scim_connection_by_bearer(store_url: str) -> None:
     store = _store(store_url)
     c = store.create_connection(

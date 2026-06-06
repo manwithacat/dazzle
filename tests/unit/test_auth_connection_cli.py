@@ -22,10 +22,10 @@ def _key(monkeypatch):
 
 
 class _Conn:
-    def __init__(self, cid="conn-1", *, domains=None, verified=None):
+    def __init__(self, cid="conn-1", *, domains=None, verified=None, conn_type="oidc"):
         self.id = cid
         self.tenant_id = "org-1"
-        self.type = "oidc"
+        self.type = conn_type
         self.status = "active"
         self.domains = domains or []
         self.verified_domains = verified or []
@@ -39,6 +39,7 @@ class _Store:
         self.set_domains_calls: list = []
         self.claim_calls: list = []
         self.deleted: list = []
+        self.secret_updates: list = []
 
     def create_connection(self, **kw):
         self.created = kw
@@ -52,6 +53,10 @@ class _Store:
 
     def set_connection_domains(self, cid, domains):
         self.set_domains_calls.append((cid, domains))
+
+    def update_connection_secrets(self, connection_id, secrets, *, tenant_id=None):
+        self.secret_updates.append((connection_id, secrets))
+        return True
 
     def get_connection_by_verified_domain(self, domain):
         return self._owner_of.get(domain.strip().lower())
@@ -347,3 +352,47 @@ def test_create_saml_missing_cert_file(monkeypatch) -> None:
         ],
     )
     assert r.exit_code == 1 and "Cannot read" in r.output
+
+
+# ---- rotate-secret (connection secret rotation) ----
+
+
+def test_rotate_secret_oidc(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="oidc"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(
+        auth_app,
+        ["connection", "rotate-secret", "conn-1", "--client-secret", "new-secret-value"],
+    )
+    assert r.exit_code == 0 and "Rotated" in r.output
+    assert store.secret_updates == [("conn-1", {"client_secret": "new-secret-value"})]
+    assert "new-secret-value" not in r.output  # the secret value is not echoed back
+
+
+def test_rotate_secret_oidc_requires_client_secret(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="oidc")))
+    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-1"])
+    assert r.exit_code == 1 and "--client-secret is required" in r.output
+
+
+def test_rotate_secret_scim_mints_new_bearer(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="scim"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-1"])
+    assert r.exit_code == 0 and "New SCIM bearer" in r.output
+    assert len(store.secret_updates) == 1
+    cid, secrets = store.secret_updates[0]
+    assert cid == "conn-1" and "scim_bearer" in secrets and len(secrets["scim_bearer"]) > 20
+    assert secrets["scim_bearer"] in r.output  # printed once for the operator
+
+
+def test_rotate_secret_saml_refused(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="saml")))
+    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-1"])
+    assert r.exit_code == 1 and "no rotatable secret" in r.output
+
+
+def test_rotate_secret_missing_connection(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=None))
+    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-x", "--client-secret", "s"])
+    assert r.exit_code == 1 and "No connection" in r.output

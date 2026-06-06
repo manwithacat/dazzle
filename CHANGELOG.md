@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.56] - 2026-06-06
+
+### Added
+
+- **Auth — connection secret-rotation CLI** (spec §5). `dazzle auth connection rotate-secret <id>` rotates a connection's secret after a leak or on schedule. **OIDC:** replaces the `client_secret` (`--client-secret`, env-backed via `DAZZLE_OIDC_CLIENT_SECRET`); the value is never echoed. **SCIM:** mints a new `token_urlsafe(32)` bearer and prints it **once** — the previous bearer stops working immediately. **SAML** is refused (the IdP signing cert is public config, not a rotatable secret; recreate to change it). Backed by the new `store.update_connection_secrets(connection_id, secrets, *, tenant_id=None)` — re-encrypts the secret blob at rest (AES-256-GCM, symmetric with `create_connection`/`_row_to_connection`) and **bumps `updated_at`**, which is load-bearing: the OIDC provider's per-connection client cache keys on `updated_at`, so a rotated `client_secret` rebuilds the authlib client (the old secret stops working for new logins) without a process restart. Fail-closed: OIDC with no `--client-secret` exits 1 (never stores an empty secret); a no-row-changed update reports failure (never a false success); an optional `tenant_id` fence is available for route callers. Existing user sessions are intentionally unaffected (the secret is the IdP handshake credential, not session validity). Adversarially reviewed (silent-failure-hunter): **no CRITICAL/HIGH** — the old secret is never read/printed/logged (only the new SCIM bearer, once, by design), re-encryption is symmetric with create/read, and the `updated_at` bump is intact on both branches. Proven against real Postgres (`tests/integration/test_connections_pg.py`: decrypts the rotated value, plaintext never stored, `updated_at` bumped, tenant fence + unknown-connection → False).
+
+### Agent Guidance
+
+- **Rotate a leaked connection secret with `dazzle auth connection rotate-secret <id>`** — OIDC needs `--client-secret <new>` (prefer the `DAZZLE_OIDC_CLIENT_SECRET` env var; ensure the IdP already has it); SCIM prints a new bearer **once** (save it, update the IdP — the old one is immediately invalid); SAML has no rotatable secret. Rotation re-encrypts at rest and bumps `updated_at` so the OIDC client cache rebuilds at once; it does **not** sign users out. To rotate the *encryption key* (`DAZZLE_CONNECTION_SECRET`) itself — a different operation — is not yet automated.
+
 ## [0.81.55] - 2026-06-06
 
 ### Added
