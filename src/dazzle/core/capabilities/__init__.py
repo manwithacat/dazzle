@@ -1,4 +1,32 @@
 """Capability opt-in registry (#1342).
 
-Phase 1 scaffolding — public exports are wired in Task 2 (registry).
+Import side effect: registers the framework's built-in capabilities.
 """
+
+from dazzle.core.capabilities.models import (
+    Capability,
+    CapabilityUnavailableError,
+    ResolvedCapabilities,
+)
+from dazzle.core.capabilities.registry import (
+    all_capabilities,
+    get,
+    is_available,
+    known_capability_ids,
+    register,
+    resolve_capabilities,
+    unknown_capability_ids,
+)
+
+__all__ = [
+    "Capability",
+    "CapabilityUnavailableError",
+    "ResolvedCapabilities",
+    "all_capabilities",
+    "get",
+    "is_available",
+    "known_capability_ids",
+    "register",
+    "resolve_capabilities",
+    "unknown_capability_ids",
+]
