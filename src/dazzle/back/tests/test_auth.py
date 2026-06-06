@@ -43,13 +43,22 @@ def _clean_auth_tables() -> Any:
     from dazzle.back.runtime.pg_backend import PostgresBackend
 
     db = PostgresBackend(database_url)
-    try:
-        with db.connection() as conn:
-            conn.execute("DELETE FROM sessions")
-            conn.execute("DELETE FROM password_reset_tokens")
-            conn.execute("DELETE FROM users")
-    except Exception:
-        pass  # Tables may not exist yet
+
+    def _wipe(stmt: str) -> None:
+        try:
+            with db.connection() as conn:
+                conn.execute(stmt)
+        except Exception:
+            pass  # table may not exist yet
+
+    # FK-safe order: group members → groups → memberships → users (#1342). Each
+    # runs independently so a not-yet-created table doesn't block the rest.
+    _wipe("DELETE FROM scim_group_members")
+    _wipe("DELETE FROM scim_groups")
+    _wipe("DELETE FROM memberships")
+    _wipe("DELETE FROM sessions")
+    _wipe("DELETE FROM password_reset_tokens")
+    _wipe("DELETE FROM users")
     yield
 
 
@@ -1321,3 +1330,45 @@ class TestAuthDependencies:
 
         assert response.status_code == 200
         assert response.json()["admin"] is True
+
+
+@pytest.mark.postgres
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+class TestScimGroupStore:
+    """SCIM /Groups store + provisioning (#1342)."""
+
+    @pytest.fixture
+    def store(self) -> Any:
+        return AuthStore(os.environ["DATABASE_URL"])
+
+    @pytest.fixture
+    def membership(self, store: Any) -> Any:
+        from uuid import uuid4
+
+        user = store.create_user(email=f"m-{uuid4().hex[:8]}@x.test", password="p")
+        return store.create_membership(tenant_id="org-1", identity_id=str(user.id), roles=[])
+
+    def test_create_get_list_rename_delete_group(self, store: Any) -> None:
+        g = store.create_scim_group("conn-1", "Engineering")
+        assert g.id and g.display_name == "Engineering"
+        assert store.get_scim_group(g.id, "conn-1").display_name == "Engineering"
+        assert store.get_scim_group(g.id, "other-conn") is None  # connection-scoped
+        assert [x.display_name for x in store.list_scim_groups("conn-1")] == ["Engineering"]
+        assert [x.id for x in store.list_scim_groups("conn-1", display_name="Engineering")] == [
+            g.id
+        ]
+        store.rename_scim_group(g.id, "conn-1", "Eng")
+        assert store.get_scim_group(g.id, "conn-1").display_name == "Eng"
+        assert store.delete_scim_group(g.id, "conn-1") is True
+        assert store.get_scim_group(g.id, "conn-1") is None
+
+    def test_member_add_remove_replace_and_lookup(self, store: Any, membership: Any) -> None:
+        g = store.create_scim_group("conn-1", "Eng")
+        store.add_group_member(g.id, membership.id)
+        store.add_group_member(g.id, membership.id)  # idempotent
+        assert store.get_group_member_ids(g.id) == [membership.id]
+        assert g.display_name in store.get_member_group_names(membership.id, "conn-1")
+        store.remove_group_member(g.id, membership.id)
+        assert store.get_group_member_ids(g.id) == []
+        store.replace_group_members(g.id, [membership.id])
+        assert store.get_group_member_ids(g.id) == [membership.id]

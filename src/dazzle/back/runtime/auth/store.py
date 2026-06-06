@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         EventChainResult,
         MembershipEvent,
     )
+    from dazzle.back.runtime.auth.models import ScimGroupRecord
 
 try:
     import psycopg
@@ -1509,6 +1510,113 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
 
         self._init_db()
 
+    # ------------------------------------------------------------------ #
+    # SCIM Groups (#1342) — connection-scoped; members link to memberships.
+    # ------------------------------------------------------------------ #
+
+    def create_scim_group(self, connection_id: str, display_name: str) -> "ScimGroupRecord":  # noqa: F821
+        from uuid import uuid4
+
+        from dazzle.back.runtime.auth.models import ScimGroupRecord
+
+        now = datetime.now(UTC).isoformat()
+        gid = str(uuid4())
+        self._execute(
+            "INSERT INTO scim_groups (id, connection_id, display_name, created_at, updated_at) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (gid, connection_id, display_name, now, now),
+        )
+        return ScimGroupRecord(
+            id=gid,
+            connection_id=connection_id,
+            display_name=display_name,
+            created_at=now,
+            updated_at=now,
+        )
+
+    def _row_to_scim_group(self, row: dict[str, Any]) -> "ScimGroupRecord":  # noqa: F821
+        from dazzle.back.runtime.auth.models import ScimGroupRecord
+
+        return ScimGroupRecord(
+            id=row["id"],
+            connection_id=row["connection_id"],
+            display_name=row["display_name"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+    def get_scim_group(self, group_id: str, connection_id: str) -> "ScimGroupRecord | None":  # noqa: F821
+        row = self._execute_one(
+            "SELECT * FROM scim_groups WHERE id = %s AND connection_id = %s",
+            (group_id, connection_id),
+        )
+        return self._row_to_scim_group(row) if row else None
+
+    def list_scim_groups(
+        self, connection_id: str, display_name: str | None = None
+    ) -> "list[ScimGroupRecord]":  # noqa: F821
+        if display_name is not None:
+            rows = self._execute(
+                "SELECT * FROM scim_groups WHERE connection_id = %s AND display_name = %s "
+                "ORDER BY created_at",
+                (connection_id, display_name),
+            )
+        else:
+            rows = self._execute(
+                "SELECT * FROM scim_groups WHERE connection_id = %s ORDER BY created_at",
+                (connection_id,),
+            )
+        return [self._row_to_scim_group(r) for r in rows]
+
+    def rename_scim_group(self, group_id: str, connection_id: str, display_name: str) -> None:
+        self._execute_modify(
+            "UPDATE scim_groups SET display_name = %s, updated_at = %s "
+            "WHERE id = %s AND connection_id = %s",
+            (display_name, datetime.now(UTC).isoformat(), group_id, connection_id),
+        )
+
+    def delete_scim_group(self, group_id: str, connection_id: str) -> bool:
+        n = self._execute_modify(
+            "DELETE FROM scim_groups WHERE id = %s AND connection_id = %s",
+            (group_id, connection_id),
+        )
+        return n > 0
+
+    def get_group_member_ids(self, group_id: str) -> list[str]:
+        rows = self._execute(
+            "SELECT membership_id FROM scim_group_members WHERE group_id = %s "
+            "ORDER BY membership_id",
+            (group_id,),
+        )
+        return [r["membership_id"] for r in rows]
+
+    def add_group_member(self, group_id: str, membership_id: str) -> None:
+        self._execute_modify(
+            "INSERT INTO scim_group_members (group_id, membership_id) VALUES (%s, %s) "
+            "ON CONFLICT DO NOTHING",
+            (group_id, membership_id),
+        )
+
+    def remove_group_member(self, group_id: str, membership_id: str) -> None:
+        self._execute_modify(
+            "DELETE FROM scim_group_members WHERE group_id = %s AND membership_id = %s",
+            (group_id, membership_id),
+        )
+
+    def replace_group_members(self, group_id: str, membership_ids: list[str]) -> None:
+        self._execute_modify("DELETE FROM scim_group_members WHERE group_id = %s", (group_id,))
+        for mid in membership_ids:
+            self.add_group_member(group_id, mid)
+
+    def get_member_group_names(self, membership_id: str, connection_id: str) -> list[str]:
+        rows = self._execute(
+            "SELECT g.display_name AS display_name FROM scim_group_members m "
+            "JOIN scim_groups g ON g.id = m.group_id "
+            "WHERE m.membership_id = %s AND g.connection_id = %s",
+            (membership_id, connection_id),
+        )
+        return [r["display_name"] for r in rows]
+
     def _ensure_email_ci_uniqueness(self) -> None:
         """Enforce case-insensitive email uniqueness on `users` (#1342, M2).
 
@@ -1696,6 +1804,34 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             cursor.execute(CONNECTIONS_DDL)
             for _ix in CONNECTIONS_INDEXES:
                 cursor.execute(_ix)
+
+            # SCIM Groups (#1342). connection_id is code-scoped (no hard FK to
+            # connections — matches the memberships convention); members cascade
+            # from the group and from the referenced membership.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS scim_groups (
+                    id            TEXT PRIMARY KEY,
+                    connection_id TEXT NOT NULL,
+                    display_name  TEXT NOT NULL,
+                    created_at    TEXT NOT NULL,
+                    updated_at    TEXT NOT NULL,
+                    UNIQUE (connection_id, display_name)
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS ix_scim_groups_conn ON scim_groups(connection_id)"
+            )
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS scim_group_members (
+                    group_id      TEXT NOT NULL REFERENCES scim_groups(id) ON DELETE CASCADE,
+                    membership_id TEXT NOT NULL REFERENCES memberships(id) ON DELETE CASCADE,
+                    PRIMARY KEY (group_id, membership_id)
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
+                "ON scim_group_members(membership_id)"
+            )
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     token TEXT PRIMARY KEY,
