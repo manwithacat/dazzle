@@ -67,6 +67,42 @@ def test_every_capability_declares_extras_and_remediation():
     from dazzle.core.capabilities import all_capabilities
 
     for cap in all_capabilities():
-        assert cap.required_extras, f"{cap.id} missing required_extras"
-        assert cap.remediation.strip(), f"{cap.id} missing remediation"
-        assert cap.probe_module, f"{cap.id} missing probe_module"
+        assert cap.id and cap.label, f"{cap.id} missing id/label"
+        # A capability with a probe module can be unavailable, so it MUST carry a
+        # remediation runbook + its extras. An always-available one (probe=None)
+        # needs neither.
+        if cap.probe_module is not None:
+            assert cap.required_extras, f"{cap.id} missing required_extras"
+            assert cap.remediation.strip(), f"{cap.id} missing remediation"
+
+
+def test_scim_is_always_available_without_any_extra(monkeypatch):
+    """auth.enterprise.scim has no import-time dependency (#1342 review): declaring
+    it activates it even when no SSO/SAML package is installed."""
+    import dazzle.core.capabilities.registry as reg
+    from dazzle.core.capabilities import resolve_capabilities
+
+    monkeypatch.setattr(reg, "find_spec", lambda name: None)  # nothing installed
+    resolved = resolve_capabilities(["auth.enterprise.scim"])  # must NOT raise
+    assert resolved.is_active("auth.enterprise.scim")
+
+
+def test_is_available_guards_missing_parent_package(monkeypatch):
+    """is_available returns False (not crash) if find_spec raises ModuleNotFoundError
+    for a dotted probe whose parent is absent."""
+    import dazzle.core.capabilities.registry as reg
+    from dazzle.core.capabilities import is_available
+    from dazzle.core.capabilities.models import Capability
+
+    def boom(name):
+        raise ModuleNotFoundError("no parent")
+
+    monkeypatch.setattr(reg, "find_spec", boom)
+    cap = Capability(
+        id="x",
+        label="X",
+        probe_module="missing.child",
+        required_extras=("x",),
+        remediation="install x",
+    )
+    assert is_available(cap) is False

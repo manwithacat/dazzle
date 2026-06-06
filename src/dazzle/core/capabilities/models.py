@@ -16,16 +16,20 @@ class Capability:
         id: Dotted identifier, e.g. ``auth.enterprise.oidc``.
         label: Human-readable name for CLI/diagnostics.
         probe_module: Importable module whose presence means the capability is
-            *available* in this runtime (e.g. ``authlib``). Probed with
-            ``importlib.util.find_spec``.
+            *available* in this runtime (e.g. ``authlib``), probed with
+            ``importlib.util.find_spec``. ``None`` means the capability has no
+            import-time dependency and is *always available* (e.g. SCIM, which is
+            stateless bearer auth over JSON).
         required_extras: pip extras that install ``probe_module`` (for the
-            remediation runbook), e.g. ``("sso",)``.
+            remediation runbook), e.g. ``("sso",)``. Empty when ``probe_module``
+            is ``None``.
         remediation: Exact, actionable fix shown when declared-but-unavailable.
+            Empty when ``probe_module`` is ``None`` (never unavailable).
     """
 
     id: str
     label: str
-    probe_module: str
+    probe_module: str | None
     required_extras: tuple[str, ...]
     remediation: str
 
@@ -38,12 +42,12 @@ class CapabilityUnavailableError(RuntimeError):
 class ResolvedCapabilities:
     """Boot-time resolution of declared capabilities.
 
-    ``active`` = declared ∧ available. ``unavailable`` = declared ∧ not-installed
-    (each a boot error). ``declared`` is the raw manifest list (for diagnostics).
+    ``active`` = declared ∧ available. ``declared`` is the raw manifest list (for
+    diagnostics). A declared-but-unavailable capability never reaches this object
+    — ``resolve_capabilities`` raises ``CapabilityUnavailableError`` instead.
     """
 
     active: frozenset[str]
-    unavailable: frozenset[str]
     declared: tuple[str, ...]
 
     def is_active(self, capability_id: str) -> bool:

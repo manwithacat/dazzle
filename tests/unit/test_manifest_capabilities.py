@@ -19,6 +19,14 @@ def test_capabilities_default_empty(tmp_path):
     assert m.capabilities.enabled == []
 
 
+def test_non_list_enabled_is_rejected(tmp_path):
+    import pytest
+
+    # A scalar instead of a list must fail loud, not shred into characters.
+    with pytest.raises(ValueError, match="must be a list"):
+        load_manifest(_write(tmp_path, '\n[capabilities]\nenabled = "auth.enterprise.oidc"\n'))
+
+
 def test_capabilities_parsed(tmp_path):
     m = load_manifest(
         _write(

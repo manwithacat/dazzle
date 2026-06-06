@@ -393,21 +393,15 @@ def validate_command(
         # Capability declarations must reference known capabilities (#1342).
         # Checked first so a bad [capabilities] id fails fast and clearly,
         # independent of DSL state.
-        import difflib
-
-        from dazzle.core.capabilities import (
-            known_capability_ids,
-            unknown_capability_ids,
-        )
+        from dazzle.core.capabilities import suggest_capability, unknown_capability_ids
         from dazzle.core.manifest import load_manifest
 
         declared = load_manifest(manifest_path).capabilities.enabled
         bad_caps = unknown_capability_ids(declared)
         if bad_caps:
-            known = sorted(known_capability_ids())
             for cid in bad_caps:
-                hint = difflib.get_close_matches(cid, known, n=1)
-                suffix = f" — did you mean '{hint[0]}'?" if hint else ""
+                hint = suggest_capability(cid)
+                suffix = f" — did you mean '{hint}'?" if hint else ""
                 typer.secho(
                     f"✗ Unknown capability '{cid}' in [capabilities].{suffix}",
                     fg=typer.colors.RED,

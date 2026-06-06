@@ -15,6 +15,7 @@ from dazzle.core.capabilities.registry import (
     known_capability_ids,
     register,
     resolve_capabilities,
+    suggest_capability,
     unknown_capability_ids,
 )
 
@@ -28,5 +29,6 @@ __all__ = [
     "known_capability_ids",
     "register",
     "resolve_capabilities",
+    "suggest_capability",
     "unknown_capability_ids",
 ]

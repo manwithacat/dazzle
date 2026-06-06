@@ -26,7 +26,6 @@ def test_capabilities_defaults_to_none():
 def test_capabilities_field_is_queryable():
     caps = ResolvedCapabilities(
         active=frozenset({"auth.enterprise.oidc"}),
-        unavailable=frozenset(),
         declared=("auth.enterprise.oidc",),
     )
     ctx = _ctx(capabilities=caps)

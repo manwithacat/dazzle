@@ -1019,7 +1019,15 @@ def load_manifest(path: Path) -> ProjectManifest:
 
     # Parse [capabilities] block (#1342 opt-in feature gating)
     cap_data = data.get("capabilities", {}) if isinstance(data.get("capabilities"), dict) else {}
-    capabilities_config = CapabilitiesConfig(enabled=list(cap_data.get("enabled", [])))
+    raw_enabled = cap_data.get("enabled", [])
+    if not isinstance(raw_enabled, list):
+        # Fail loud, not open: a scalar (e.g. enabled = "auth.enterprise.oidc")
+        # would otherwise shred into characters and silently activate nothing.
+        raise ValueError(
+            "[capabilities] enabled must be a list of capability ids, "
+            f"got {type(raw_enabled).__name__}"
+        )
+    capabilities_config = CapabilitiesConfig(enabled=[str(x) for x in raw_enabled])
 
     # Parse [signing] block (#1283 phase 8 — PdfBranding wire-up)
     signing_data = data.get("signing", {}) if isinstance(data.get("signing"), dict) else {}

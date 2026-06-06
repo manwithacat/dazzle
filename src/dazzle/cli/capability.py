@@ -1,6 +1,5 @@
 """`dazzle capability` — manage opt-in feature capabilities (#1342)."""
 
-import difflib
 import re
 import tomllib
 from pathlib import Path
@@ -12,6 +11,7 @@ from dazzle.core.capabilities import (
     get,
     is_available,
     known_capability_ids,
+    suggest_capability,
 )
 
 capability_app = typer.Typer(help="Manage opt-in feature capabilities.")
@@ -31,14 +31,34 @@ def _declared(path: Path) -> list[str]:
 
 
 def _write_enabled(path: Path, enabled: list[str]) -> None:
-    """Rewrite the [capabilities] enabled list, preserving the rest of the file."""
-    text = path.read_text(encoding="utf-8")
+    """Set the ``enabled`` list inside the ``[capabilities]`` table, preserving the
+    rest of the file (comments included).
+
+    Section-aware: only an ``enabled =`` line *within* the ``[capabilities]`` table
+    is touched (never one in another table). If the table exists without an
+    ``enabled`` key, the key is inserted under its header; if the table is absent,
+    it is appended.
+    """
     rendered = "enabled = [" + ", ".join(f'"{c}"' for c in enabled) + "]"
-    if "[capabilities]" in text:
-        text = re.sub(r"enabled\s*=\s*\[[^\]]*\]", rendered, text, count=1)
+    lines = path.read_text(encoding="utf-8").splitlines()
+
+    header = next((i for i, ln in enumerate(lines) if ln.strip() == "[capabilities]"), None)
+    if header is None:
+        text = "\n".join(lines).rstrip() + f"\n\n[capabilities]\n{rendered}\n"
+        path.write_text(text, encoding="utf-8")
+        return
+
+    # Scan the section body (until the next table header or EOF).
+    body_end = header + 1
+    while body_end < len(lines) and not lines[body_end].lstrip().startswith("["):
+        body_end += 1
+    for i in range(header + 1, body_end):
+        if re.match(r"\s*enabled\s*=", lines[i]):
+            lines[i] = rendered  # replace the existing key
+            break
     else:
-        text = text.rstrip() + f"\n\n[capabilities]\n{rendered}\n"
-    path.write_text(text, encoding="utf-8")
+        lines.insert(header + 1, rendered)  # section present, no enabled key
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 @capability_app.command("list")
@@ -63,8 +83,8 @@ def list_capabilities() -> None:
 def enable(capability_id: str) -> None:
     """Enable a capability: append to [capabilities] + print the activation runbook."""
     if capability_id not in known_capability_ids():
-        hint = difflib.get_close_matches(capability_id, sorted(known_capability_ids()), n=1)
-        suffix = f" Did you mean '{hint[0]}'?" if hint else ""
+        hint = suggest_capability(capability_id)
+        suffix = f" Did you mean '{hint}'?" if hint else ""
         typer.secho(f"Unknown capability '{capability_id}'.{suffix}", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 

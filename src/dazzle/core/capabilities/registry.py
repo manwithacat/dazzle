@@ -34,9 +34,29 @@ def unknown_capability_ids(declared: list[str]) -> list[str]:
     return [cid for cid in declared if cid not in known]
 
 
+def suggest_capability(unknown_id: str) -> str | None:
+    """Closest known capability id to a typo'd one, or None (shared by the CLI
+    and `dazzle validate` so the did-you-mean hint stays consistent)."""
+    import difflib
+
+    matches = difflib.get_close_matches(unknown_id, sorted(known_capability_ids()), n=1)
+    return matches[0] if matches else None
+
+
 def is_available(capability: Capability) -> bool:
-    """True iff the capability's probe module is importable in this runtime."""
-    return find_spec(capability.probe_module) is not None
+    """True iff the capability is usable in this runtime.
+
+    A capability with ``probe_module is None`` has no import-time dependency and
+    is always available. Otherwise its probe module must be importable.
+    ``find_spec`` is guarded: a dotted module whose parent package is missing
+    raises ``ModuleNotFoundError`` rather than returning None.
+    """
+    if capability.probe_module is None:
+        return True
+    try:
+        return find_spec(capability.probe_module) is not None
+    except ModuleNotFoundError:
+        return False
 
 
 def resolve_capabilities(declared: list[str]) -> ResolvedCapabilities:
@@ -64,11 +84,7 @@ def resolve_capabilities(declared: list[str]) -> ResolvedCapabilities:
             "are not installed:\n" + "\n".join(lines)
         )
 
-    return ResolvedCapabilities(
-        active=frozenset(active),
-        unavailable=frozenset(unavailable),
-        declared=tuple(declared),
-    )
+    return ResolvedCapabilities(active=frozenset(active), declared=tuple(declared))
 
 
 # --- Enterprise auth capabilities (consumer #1) -----------------------------
@@ -94,8 +110,11 @@ register(
     Capability(
         id="auth.enterprise.scim",
         label="Enterprise SCIM provisioning",
-        probe_module="authlib",
-        required_extras=("sso",),
-        remediation="pip install 'dazzle-dsl[sso]'",
+        # SCIM is stateless bearer auth over JSON with no import-time dependency
+        # (it mounted unconditionally pre-#1342). Always available once declared —
+        # no extra to install, so no probe and no remediation runbook.
+        probe_module=None,
+        required_extras=(),
+        remediation="",
     )
 )
