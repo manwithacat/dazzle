@@ -1394,3 +1394,46 @@ class TestScimGroupStore:
         store.remove_group_member(eng.id, membership.id)
         recompute_membership_roles(store, conn, membership.id)
         assert set(store.get_membership(membership.id).roles) == {"operator"}
+
+    def test_group_domain_ops_recompute(self, store, membership):
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={"Eng": "engineer"})
+        g = sp.create_group(store, conn, "Eng", member_ids=[membership.id])
+        assert set(store.get_membership(membership.id).roles) == {"engineer"}
+
+        sp.remove_group_member(store, conn, g.id, membership.id)
+        assert store.get_membership(membership.id).roles == []
+
+        sp.add_group_members(store, conn, g.id, [membership.id])
+        assert set(store.get_membership(membership.id).roles) == {"engineer"}
+
+        sp.rename_group(store, conn, g.id, "Engineering")  # not in mapping → role drops
+        assert store.get_membership(membership.id).roles == []
+
+        sp.delete_group(store, conn, g.id)
+        assert store.get_scim_group(g.id, "conn-1") is None
+
+    def test_cross_org_member_rejected(self, store):
+        from types import SimpleNamespace
+        from uuid import uuid4
+
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={})
+        other = store.create_user(email=f"o-{uuid4().hex[:8]}@x.test", password="p")
+        other_m = store.create_membership(tenant_id="org-2", identity_id=str(other.id), roles=[])
+        with pytest.raises(sp.SCIMGroupError):
+            sp.create_group(store, conn, "Eng", member_ids=[other_m.id])
+
+    def test_duplicate_group_name_rejected(self, store):
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={})
+        sp.create_group(store, conn, "Eng", member_ids=[])
+        with pytest.raises(sp.SCIMGroupError):
+            sp.create_group(store, conn, "Eng", member_ids=[])

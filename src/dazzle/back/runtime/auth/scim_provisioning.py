@@ -46,6 +46,94 @@ def recompute_membership_roles(store: Any, connection: Any, membership_id: str) 
         store.update_membership_roles(membership_id, roles, reason="SCIM group sync")
 
 
+class SCIMGroupError(Exception):
+    """A SCIM Group op error → mapped to a SCIM HTTP status by the route.
+
+    ``status`` is the HTTP code (400 invalid, 404 not-found, 409 uniqueness).
+    """
+
+    def __init__(self, reason: str, message: str = "", status: int = 400) -> None:
+        self.reason = reason
+        self.status = status
+        super().__init__(message or reason)
+
+
+def _require_member_in_org(store: Any, connection: Any, membership_id: str) -> Any:
+    """A membership by id, but only if it's in this connection's org (else raise)."""
+    m = store.get_membership(membership_id)
+    if m is None or m.tenant_id != connection.tenant_id:
+        raise SCIMGroupError("invalid_member", f"member {membership_id!r} not in this org", 400)
+    return m
+
+
+def create_group(store: Any, connection: Any, display_name: str, member_ids: list[str]) -> Any:
+    if not display_name:
+        raise SCIMGroupError("invalid_value", "displayName is required", 400)
+    for mid in member_ids:
+        _require_member_in_org(store, connection, mid)
+    if store.list_scim_groups(connection.id, display_name=display_name):
+        raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409)
+    group = store.create_scim_group(connection.id, display_name)
+    for mid in member_ids:
+        store.add_group_member(group.id, mid)
+        recompute_membership_roles(store, connection, mid)
+    return group
+
+
+def get_group(store: Any, connection: Any, group_id: str) -> Any:
+    group = store.get_scim_group(group_id, connection.id)
+    if group is None:
+        raise SCIMGroupError("not_found", f"no group {group_id!r}", 404)
+    return group
+
+
+def list_groups(store: Any, connection: Any, display_name: str | None = None) -> Any:
+    return store.list_scim_groups(connection.id, display_name=display_name)
+
+
+def rename_group(store: Any, connection: Any, group_id: str, display_name: str) -> Any:
+    group = get_group(store, connection, group_id)
+    if display_name and display_name != group.display_name:
+        if store.list_scim_groups(connection.id, display_name=display_name):
+            raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409)
+        store.rename_scim_group(group_id, connection.id, display_name)
+        for mid in store.get_group_member_ids(group_id):
+            recompute_membership_roles(store, connection, mid)
+    return store.get_scim_group(group_id, connection.id)
+
+
+def delete_group(store: Any, connection: Any, group_id: str) -> None:
+    get_group(store, connection, group_id)  # 404 if absent / wrong org
+    member_ids = store.get_group_member_ids(group_id)
+    store.delete_scim_group(group_id, connection.id)  # cascades scim_group_members
+    for mid in member_ids:
+        recompute_membership_roles(store, connection, mid)
+
+
+def set_group_members(store: Any, connection: Any, group_id: str, member_ids: list[str]) -> None:
+    get_group(store, connection, group_id)
+    for mid in member_ids:
+        _require_member_in_org(store, connection, mid)
+    affected = set(store.get_group_member_ids(group_id)) | set(member_ids)
+    store.replace_group_members(group_id, member_ids)
+    for mid in affected:
+        recompute_membership_roles(store, connection, mid)
+
+
+def add_group_members(store: Any, connection: Any, group_id: str, member_ids: list[str]) -> None:
+    get_group(store, connection, group_id)
+    for mid in member_ids:
+        _require_member_in_org(store, connection, mid)
+        store.add_group_member(group_id, mid)
+        recompute_membership_roles(store, connection, mid)
+
+
+def remove_group_member(store: Any, connection: Any, group_id: str, member_id: str) -> None:
+    get_group(store, connection, group_id)
+    store.remove_group_member(group_id, member_id)
+    recompute_membership_roles(store, connection, member_id)
+
+
 @dataclass(frozen=True)
 class ScimResult:
     """Outcome of a provision/update — the resolved identity + membership + state."""
