@@ -294,3 +294,56 @@ def test_doctor_rotated_key_json_parity(monkeypatch) -> None:
     r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--json"])
     assert r.exit_code == 1
     assert '"blocked"' in r.output and "secret_decrypt" in r.output
+
+
+# ---- create-saml (Plan 5.ii) ----
+
+
+def test_create_saml(monkeypatch, tmp_path) -> None:
+    store = _Store()
+    _patch_store(monkeypatch, store)
+    cert = tmp_path / "idp.pem"
+    cert.write_text("-----BEGIN CERTIFICATE-----\nMIIBfake\n-----END CERTIFICATE-----\n")
+    r = runner.invoke(
+        auth_app,
+        [
+            "connection",
+            "create-saml",
+            "--tenant",
+            "org-1",
+            "--idp-entity-id",
+            "https://idp/entity",
+            "--idp-sso-url",
+            "https://idp/sso",
+            "--idp-cert-file",
+            str(cert),
+            "--group-map",
+            "eng=engineer",
+        ],
+    )
+    assert r.exit_code == 0 and "conn-new" in r.output and "/auth/saml/acs" in r.output
+    assert store.created["type"] == "saml"
+    assert store.created["config"]["idp_entity_id"] == "https://idp/entity"
+    assert "MIIBfake" in store.created["config"]["idp_x509_cert"]
+    assert store.created["secrets"] == {}  # SAML has no shared secret
+    assert store.created["group_mapping"] == {"eng": "engineer"}
+
+
+def test_create_saml_missing_cert_file(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store())
+    r = runner.invoke(
+        auth_app,
+        [
+            "connection",
+            "create-saml",
+            "--tenant",
+            "org-1",
+            "--idp-entity-id",
+            "e",
+            "--idp-sso-url",
+            "s",
+            "--idp-cert-file",
+            "/nonexistent/idp.pem",
+        ],
+    )
+    assert r.exit_code == 1 and "Cannot read" in r.output

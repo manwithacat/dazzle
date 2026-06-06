@@ -117,6 +117,71 @@ def create_scim(
     )
 
 
+@connection_app.command("create-saml")
+def create_saml(
+    tenant: Annotated[str, typer.Option("--tenant", help="Organization (tenant) id")],
+    idp_entity_id: Annotated[str, typer.Option("--idp-entity-id", help="IdP entity id (issuer)")],
+    idp_sso_url: Annotated[str, typer.Option("--idp-sso-url", help="IdP SSO redirect URL")],
+    idp_cert_file: Annotated[
+        str,
+        typer.Option("--idp-cert-file", help="Path to the IdP's X.509 signing cert (PEM)"),
+    ],
+    email_attribute: Annotated[
+        str, typer.Option("--email-attribute", help="SAML attr holding email (else NameID)")
+    ] = "",
+    groups_attribute: Annotated[
+        str, typer.Option("--groups-attribute", help="SAML attr holding groups (default 'groups')")
+    ] = "",
+    group_map: Annotated[
+        list[str] | None,
+        typer.Option("--group-map", help="IdP group→role, e.g. --group-map eng=engineer"),
+    ] = None,
+) -> None:
+    """Create a SAML connection from the IdP's metadata (entity id, SSO URL, signing cert).
+
+    The IdP signing cert is PUBLIC (stored in config, not secrets). After creating, give the
+    IdP the ACS URL + SP entity id below, then verify a domain — SAML is SP-initiated only.
+    """
+    from pathlib import Path
+
+    try:
+        cert = Path(idp_cert_file).read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        console.print(f"[red]Cannot read --idp-cert-file {idp_cert_file!r}: {exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if not cert:
+        console.print(f"[red]--idp-cert-file {idp_cert_file!r} is empty[/red]")
+        raise typer.Exit(code=1)
+
+    config: dict[str, str] = {
+        "idp_entity_id": idp_entity_id,
+        "idp_sso_url": idp_sso_url,
+        "idp_x509_cert": cert,
+    }
+    if email_attribute:
+        config["email_attribute"] = email_attribute
+    if groups_attribute:
+        config["groups_attribute"] = groups_attribute
+
+    conn = _store().create_connection(
+        tenant_id=tenant,
+        type="saml",
+        config=config,
+        secrets={},
+        domains=[],
+        group_mapping=_parse_group_map(group_map or []),
+    )
+    console.print(f"[green]Created SAML connection[/green] [bold]{conn.id}[/bold] for org {tenant}")
+    console.print("\n[bold]Configure these in the IdP:[/bold]")
+    console.print("  ACS (Reply) URL:  [cyan]<base_url>/auth/saml/acs[/cyan]")
+    console.print("  SP Entity ID:     [cyan]<base_url>/auth/saml/acs[/cyan] (default)")
+    console.print("  NameID format:    [cyan]emailAddress[/cyan]")
+    console.print(
+        "\nSAML is [bold]SP-initiated only[/bold] (IdP-initiated is refused). Then verify a "
+        "domain ([cyan]add-domain[/cyan] → publish TXT → [cyan]verify-domain[/cyan])."
+    )
+
+
 @connection_app.command("list")
 def list_connections(
     tenant: Annotated[str, typer.Option("--tenant", help="Organization (tenant) id")],

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.54] - 2026-06-06
+
+### Added
+
+- **Auth Plan 5.ii — SAML routes (SSO goes live) + conformance matrix** (plan `docs/superpowers/plans/2026-06-06-auth-plan-5i-saml-provider.md`; spec §5). Wires 5.i into a reachable SP-initiated SAML login: `GET /auth/saml/login` resolves the org's SAML connection (explicit `?connection=<id>` · `?email=` verified-domain · host-pinned), stashes the connection id in the session, and `provider.initiate` redirects to the IdP; `POST /auth/saml/acs` (the Assertion Consumer Service) validates the IdP's Response via the provider, runs `provision_enterprise_login` (the JIT join), and signs in. The ACS lives under the `/auth/` **CSRF-exempt** prefix — correct, because a SAML ACS is an intentional cross-origin IdP POST whose integrity is the signed assertion + InResponseTo (validated in 5.i), not a CSRF token; no session is mintable on the ACS without a validated assertion. The OIDC and SAML callbacks now share one **`finish_login_session`** helper (`sso_session.py`) — single source of truth for session-fixation regeneration + cookie minting (the OIDC route was refactored onto it with no behavior change). The native SAML provider is registered at startup and the routes + `SessionMiddleware` mount whenever the **`[saml]` extra** is installed (`onelogin` importable), independent of OIDC. `dazzle auth connection create-saml --tenant <org> --idp-entity-id … --idp-sso-url … --idp-cert-file …` creates a SAML connection (the IdP signing cert is public → config, not secrets) and prints the ACS URL + SP entity id to register with the IdP. A **SAML conformance matrix** ships in `docs/reference/enterprise-sso.md` (SP-initiated only; IdP-initiated/unsolicited refused by design; signature + InResponseTo + audience enforced; encrypted assertions / SLO / SP-signed AuthnRequests deferred). Adversarially reviewed (silent-failure-hunter): **no CRITICAL/HIGH** — the shared-helper refactor is behavior-preserving (no OIDC regression), session-fixation holds on the ACS, no session-mint without a validated assertion, no cross-org pivot via a forged session connection-id, error mapping leaks nothing, and the middleware blast radius is safe; a defense-in-depth re-assert of `type`/`status` at the ACS was added. **Enterprise auth (OIDC + SAML + SCIM) is now reachable end-to-end.**
+
+### Agent Guidance
+
+- **SAML SSO is now reachable** at `/auth/saml/login` → `/auth/saml/acs` (SP-initiated only) when the `[saml]` extra (python3-saml + native libxmlsec1) is installed. Create a connection with `dazzle auth connection create-saml` (give the IdP the printed ACS URL `<base>/auth/saml/acs`, SP entity id, NameID `emailAddress`), then verify a domain (4b.iv) — SAML only asserts identities in the connection's verified domains. The full enterprise-auth surface (OIDC `/auth/enterprise/*`, SAML `/auth/saml/*`, SCIM `/scim/v2/*`) shares the connection substrate, domain-verification gate, JIT join (verified-email + default-deny group→role), and the `doctor`. See `docs/reference/enterprise-sso.md` for the setup table + SAML conformance matrix. The OIDC + SAML callbacks share `sso_session.finish_login_session` — change session-fixation/cookie logic there once, not per-route.
+
 ## [0.81.53] - 2026-06-06
 
 ### Added

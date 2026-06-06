@@ -233,16 +233,20 @@ class AuthSubsystem:
         from importlib.util import find_spec
 
         enterprise_enabled = find_spec("authlib") is not None
+        # SAML (Plan 5) is a SEPARATE [saml] extra (needs native libxmlsec1) — gated on
+        # python3-saml being importable, independent of OIDC.
+        saml_enabled = find_spec("onelogin") is not None
 
         # SessionMiddleware backs Authlib's `state` storage between the initiate
-        # redirect and the callback (both global-SSO and enterprise need it). The
+        # redirect and the callback (global-SSO + OIDC enterprise + SAML all need it —
+        # SAML stashes the connection id + AuthnRequest id there for InResponseTo). The
         # session cookie is signed (not encrypted) via itsdangerous — fine for the
         # short-lived state token but DON'T put sensitive data in `request.session`.
         # The secret defaults to a random per-process value; production deployments
         # should set DAZZLE_SESSION_SECRET so the cookie survives restarts. Added at
         # most once, and only when something actually needs it (no blast radius for
         # non-SSO apps).
-        if configured or enterprise_enabled:
+        if configured or enterprise_enabled or saml_enabled:
             import os
             import secrets
 
@@ -273,6 +277,17 @@ class AuthSubsystem:
 
             register_native_oidc()
             ctx.app.include_router(create_enterprise_sso_routes())
+
+        if saml_enabled:
+            # Register the native SAML provider for (saml, native) + mount the SAML
+            # routes (gated on the [saml] extra / libxmlsec1). The ACS POST lives under
+            # the /auth/ CSRF-exempt prefix — correct, as its integrity is the signed
+            # assertion + InResponseTo, not a CSRF token.
+            from dazzle.back.runtime.auth.saml_provider import register_native_saml
+            from dazzle.back.runtime.auth.saml_routes import create_saml_routes
+
+            register_native_saml()
+            ctx.app.include_router(create_saml_routes())
 
         # SCIM 2.0 provisioning endpoints (auth Plan 4c). Mounted unconditionally —
         # SCIM is stateless bearer auth over JSON (no authlib / no SessionMiddleware);
