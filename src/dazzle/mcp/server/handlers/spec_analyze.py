@@ -981,8 +981,9 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
 
     haystack = spec_text.lower()
     # Active capabilities may arrive via the param (direct call) or the arguments
-    # dict (when routed through handle_spec_analyze, e.g. from bootstrap).
-    active = active or set(arguments.get("active_capabilities") or [])
+    # dict (when routed through handle_spec_analyze, e.g. from bootstrap). Explicit
+    # None → fall back to the dict; an explicit empty set means "nothing active".
+    active = active if active is not None else set(arguments.get("active_capabilities") or [])
 
     # Lazy imports — keeps the handler module lightweight for non-bootstrap callers.
     from dazzle.core.capabilities.cognition import enable_suggestion
@@ -994,7 +995,7 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
     # guidance; instead, a matched trigger becomes a "declare this capability"
     # suggestion (the binary-requirement→config north-star).
     capability_suggestions: list[dict[str, Any]] = []
-    suggested_caps: set[str] = set()
+    suggestions_by_cap: dict[str, dict[str, Any]] = {}  # capability id → suggestion
     patterns_blob = get_dsl_patterns().get("patterns", {})
     for pattern_id, entry in patterns_blob.items():
         triggers = entry.get("triggers") or []
@@ -1003,15 +1004,20 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
             continue
         gate = entry.get("capability")
         if gate and gate not in active:
-            if gate not in suggested_caps:
+            # Gated + inactive → suggest enabling, don't push full guidance. Union
+            # matched triggers across every pattern sharing this capability so the
+            # suggestion's evidence is complete, not first-pattern-wins.
+            existing = suggestions_by_cap.get(gate)
+            if existing is None:
                 suggestion = enable_suggestion(gate)
-                suggestion["matched_triggers"] = matched
-                suggestion["because"] = (
-                    f"your spec mentions {', '.join(matched)} — an opt-in capability"
-                )
+                suggestion["matched_triggers"] = list(matched)
+                suggestions_by_cap[gate] = suggestion
                 capability_suggestions.append(suggestion)
-                suggested_caps.add(gate)
-            continue  # gated + inactive → suggest enabling, don't push full guidance
+            else:
+                for t in matched:
+                    if t not in existing["matched_triggers"]:
+                        existing["matched_triggers"].append(t)
+            continue
         pattern_proposals.append(
             {
                 "pattern_id": pattern_id,
@@ -1024,6 +1030,11 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
                 ),
             }
         )
+
+    # Human-readable "why" from the final (unioned) trigger set per suggestion.
+    for suggestion in capability_suggestions:
+        triggers_text = ", ".join(suggestion["matched_triggers"])
+        suggestion["because"] = f"your spec mentions {triggers_text} — an opt-in capability"
 
     # --- Negative flags (docs/counter-priors/*.md) ---
     antipattern_flags: list[dict[str, Any]] = []

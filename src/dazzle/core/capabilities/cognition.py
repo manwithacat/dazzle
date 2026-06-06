@@ -8,11 +8,14 @@ Pull surfaces (the ``knowledge`` MCP tool) do NOT use these — direct queries
 always return content regardless of declared capabilities.
 """
 
+import logging
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any, TypeVar
 
 from dazzle.core.capabilities.registry import active_capability_ids, get
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -31,7 +34,10 @@ def active_capabilities_for(project_root: Path | str) -> set[str]:
 
         return active_capability_ids(load_manifest(path).capabilities.enabled)
     except Exception:
-        return set()  # malformed manifest must not break cognition
+        # Malformed manifest must not break an advisory cognition read — but a
+        # real bug shouldn't be fully invisible, so leave a breadcrumb.
+        logger.debug("active_capabilities_for(%s) failed; treating as none", path, exc_info=True)
+        return set()
 
 
 def partition_by_capability(

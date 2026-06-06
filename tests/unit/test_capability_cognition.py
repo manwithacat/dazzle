@@ -263,3 +263,22 @@ def test_enterprise_sso_pattern_is_gated_end_to_end(monkeypatch, tmp_path):
     analysis2 = out2["analysis"]
     assert not analysis2.get("capability_suggestions")
     assert any(p["pattern_id"] == "enterprise_sso" for p in analysis2["pattern_proposals"])
+
+
+def test_pattern_capability_round_trips_through_kg():
+    # #1265-class regression: the `capability` gate MUST survive the KG seed
+    # round-trip. Before the seed.py fix, _propose_patterns saw capability=None
+    # under a seeded KG (full-suite/production) and the gate silently no-op'd —
+    # while passing in isolation via the TOML fallback. Seed an in-memory KG and
+    # assert the field is stashed.
+    from dazzle.mcp.knowledge_graph.seed import seed_framework_knowledge
+    from dazzle.mcp.knowledge_graph.store import KnowledgeGraph
+
+    graph = KnowledgeGraph(":memory:")
+    seed_framework_knowledge(graph)
+    entity = next(
+        e
+        for e in graph.list_entities(entity_type="pattern", limit=500)
+        if e.name == "enterprise_sso"
+    )
+    assert entity.metadata.get("capability") == "auth.enterprise.oidc"
