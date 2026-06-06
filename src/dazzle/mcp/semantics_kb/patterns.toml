@@ -7,7 +7,7 @@ pattern_count = 34
 
 [patterns.enterprise_sso]
 category = "Auth"
-doc_page = "enterprise-sso"
+doc_page = "patterns"
 # Opt-in capability gate (#1342): this pattern is surfaced as full guidance only
 # when the app has declared auth.enterprise.oidc. Otherwise a matched trigger
 # becomes a `dazzle capability enable` suggestion instead.
