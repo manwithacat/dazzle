@@ -8,7 +8,7 @@ A real-time operations monitoring dashboard demonstrating the **COMMAND_CENTER**
 
 ```bash
 cd examples/ops_dashboard
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000
@@ -124,7 +124,7 @@ ux:
 dazzle validate
 
 # Run API tests
-dazzle dnr test
+dazzle test run
 ```
 
 ## Learning Path

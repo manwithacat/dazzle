@@ -1,6 +1,6 @@
 # Dazzle Developer Docs
 
-**DAZZLE** is a DSL-first toolkit for building apps from high-level specifications.
+**DAZZLE** is a DSL-first toolkit for building SaaS apps from high-level specifications.
 
 ```bash
 # Get started in seconds
@@ -10,11 +10,14 @@ cd examples/simple_task && dazzle serve
 
 ## What is Dazzle?
 
-Dazzle transforms domain specifications written in a human-readable DSL into working applications. Define your entities, surfaces, and workspaces once - get a full-stack app with:
+Dazzle transforms domain specifications written in a human-readable DSL into working applications. Define your entities, surfaces, workspaces, roles, and row-level rules once; the runtime executes the resulting AppSpec IR directly. The important claim is not just "less code" but inspectable cause and effect:
 
 - **FastAPI backend** with automatic CRUD, validation, and OpenAPI docs
-- **HTMX frontend** with server-rendered templates and vanilla JS interactions
-- **Docker deployment** ready out of the box
+- **Server-rendered UI** using typed Fragments, HTMX, and narrowly-scoped Alpine.js
+- **Static and runtime authorization checks** from the same `permit:` / `scope:` model
+- **Compliance evidence and API surface inventories** generated from the same IR
+
+If you are evaluating whether to trust that model, start with the skeptical walkthrough rather than the reference docs.
 
 ## Quick Navigation
 
@@ -27,6 +30,14 @@ Dazzle transforms domain specifications written in a human-readable DSL into wor
     Install Dazzle and build your first app in minutes.
 
     [:octicons-arrow-right-24: Installation](getting-started/installation.md)
+
+-   :material-shield-check: **Evaluate Dazzle**
+
+    ---
+
+    Verify the core claims with copy-pasteable commands and known gaps.
+
+    [:octicons-arrow-right-24: Skeptical Evaluation](evaluation/evaluation.md)
 
 -   :material-book-open-variant: **DSL Reference**
 
@@ -114,11 +125,13 @@ surface task_list "Tasks":
 
 Dazzle is built for the AI era:
 
-- **Deterministic generation** - Same input always produces same output
-- **Semantic clarity** - DSL constructs map directly to implementation
-- **MCP server** - AI agents can introspect and modify Dazzle projects
+- **Deterministic generation** - same input should produce the same IR-derived artifacts
+- **Semantic clarity** - DSL constructs map to inspectable IR, routes, policies, and UI fragments
+- **MCP server** - AI agents can introspect and modify Dazzle projects through structured tools
 
-See [llms.txt](llms.txt) for an agent-oriented overview. For the end-to-end authoring loop (spec change → agent edit → validate → tests → human review → deploy), see the [Agent Workflow Guide](guides/agent-workflow.md). For watching a running application (health probes, event subsystem, jobs, metrics), see the [Observability Guide](guides/observability.md). For the framework's threat model, the framework-vs-app security responsibility matrix, and the app-developer security checklist, see the [Security Guide](guides/security.md). For where the runtime is fast, where it degrades with data size, and the reproducible benchmark behind those numbers, see the [Performance Envelope](reference/performance-envelope.md).
+For a human-first trust path, read [Evaluating Dazzle](evaluation/evaluation.md) and [Security Claims](evaluation/security-claims.md). For the end-to-end authoring loop (spec change → agent edit → validate → tests → human review → deploy), see the [Agent Workflow Guide](guides/agent-workflow.md).
+
+See [Developer Outreach Strategy](evaluation/developer-outreach.md) for the communication model behind these docs. See [llms.txt](llms.txt) for an agent-oriented overview. For watching a running application (health probes, event subsystem, jobs, metrics), see the [Observability Guide](guides/observability.md). For the framework's threat model, the framework-vs-app security responsibility matrix, and the app-developer security checklist, see the [Security Guide](guides/security.md). For where the runtime is fast, where it degrades with data size, and the reproducible benchmark behind those numbers, see the [Performance Envelope](reference/performance-envelope.md).
 
 ## Getting Help
 

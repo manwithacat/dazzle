@@ -9,7 +9,7 @@ DAZZLE uses Cedar-style access rules with three layers: entity-level permit/forb
 
 ## Access Rules
 
-Inline access control rules on entities. Cedar-style syntax uses two separate blocks: permit: (WHO may access — role checks only) and scope: (WHAT they can see — row-level field conditions with for: clauses). Scope rules compile to a formal predicate algebra with static FK graph validation. Legacy access: blocks are still supported. Evaluation order: FORBID > PERMIT > default-deny. Field conditions in permit: are a parser error — they must live in scope: blocks.
+Inline access control rules on entities. Cedar-style syntax uses two separate blocks: permit: (WHO may access — role checks only) and scope: (WHAT they can see — row-level field conditions with as: clauses). Scope rules compile to a formal predicate algebra with static FK graph validation. Legacy access: blocks are still supported. Evaluation order: FORBID > PERMIT > default-deny. Field conditions in permit: are a parser error — they must live in scope: blocks.
 
 ### Syntax
 
@@ -20,9 +20,9 @@ permit:
 
 scope:
   <action>: <field-condition>   # WHAT — row-level filter
-    for: <role>, <role>         # which roles this filter applies to
+    as: <role>, <role>          # which roles this filter applies to
   <action>: all                 # 'all' means no filter (full table access)
-    for: <role>
+    as: <role>
 
 # forbid: and audit: blocks
 forbid:
@@ -75,24 +75,24 @@ entity Shape "Shape":
   forbid:
     delete: role(forgemaster)
 
-  # WHAT they can see — row-level filters with for: clauses
+  # WHAT they can see — row-level filters with as: clauses
   scope:
     list: all                              # oracle sees everything
-      for: oracle
+      as: oracle
     read: all
-      for: oracle
+      as: oracle
     create: all
-      for: oracle
+      as: oracle
     create: realm = current_user.realm     # forgemaster scoped to their realm
-      for: forgemaster
+      as: forgemaster
     update: all
-      for: oracle
+      as: oracle
     delete: all
-      for: oracle
+      as: oracle
     list: realm = current_user.realm or creator = current_user
-      for: forgemaster
+      as: forgemaster
     read: realm = current_user.realm or creator = current_user
-      for: forgemaster
+      as: forgemaster
 
 # Cedar-style fine-grained RBAC with forbid: and audit:
 entity Prescription "Prescription":
@@ -129,9 +129,9 @@ entity Document "Document":
 - Use = for equality (not ==)
 - Start with restrictive rules, expand as needed
 - permit: contains role checks only — field conditions belong in scope:
-- scope: rules use for: clauses to bind row-level filters to specific roles
+- scope: rules use as: clauses to bind row-level filters to specific roles
 - Use 'all' in scope: for roles that should see the full table (e.g., admins)
-- Use for: * in scope: to apply a filter to all permitted roles
+- Use as: * in scope: to apply a filter to all permitted roles
 - Cedar evaluation order: FORBID > PERMIT > default-deny
 - Use audit: blocks for compliance logging of sensitive actions
 - Use forbid: for separation-of-duty constraints (e.g., prescriber cannot dispense)
@@ -162,17 +162,17 @@ entity ReadingProgress "Reading Progress":
 
   scope:
     read: user_id = current_user
-      for: reader, author
+      as: reader, author
     update: user_id = current_user
-      for: reader, author
+      as: reader, author
     read: all
-      for: admin
+      as: admin
 ```
 
 ### Best Practices
 
 - Always pair ownership permit: rules with a scope: block that filters by the owner field
-- Use 'all for: admin' in scope: to give admins visibility to all rows
+- Use 'all as: admin' in scope: to give admins visibility to all rows
 - Name the ownership field explicitly (user_id, not just 'user') for clarity
 - Add a ref constraint on the ownership field to link to the User entity
 
@@ -350,17 +350,32 @@ workspace team_board "Team Board":
 
 ## Authentication
 
-Session-based authentication system in Dazzle. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project.
+Session-based authentication system in Dazzle. Uses cookie-based sessions backed by the configured PostgreSQL database. Auth is optional and can be enabled/disabled per project.
 
 ### Example
 
 ```dsl
 # In DSL, use personas to define role-based access:
-ux:
-  for admin:
-    scope: all
-  for member:
-    scope: owner = current_user
+persona admin "Admin":
+  role: admin
+
+persona member "Member":
+  role: member
+
+entity Task "Task":
+  owner: ref User required
+
+  permit:
+    read: role(admin) or role(member)
+    update: role(admin) or role(member)
+
+  scope:
+    read: all
+      as: admin
+    read: owner = current_user
+      as: member
+    update: owner = current_user
+      as: member
 
 # API login:
 POST /auth/login

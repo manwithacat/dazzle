@@ -1,6 +1,6 @@
 # Evaluating Dazzle — a skeptical evaluator's guide
 
-<!-- Root GitHub copy. MkDocs-adapted copy lives at docs/evaluation/evaluation.md; update both together. -->
+<!-- MkDocs copy adapted from ../../EVALUATION.md; update both files together. -->
 
 *Last reviewed against v0.71.101 (2026-05-21).*
 
@@ -9,9 +9,12 @@ assumes you are skeptical, short on time (~30 minutes), and want to see claims
 *demonstrated*, not asserted. Every command below is copy-pasteable and the
 expected output shape is shown.
 
-It pairs with [`SECURITY_CLAIMS.md`](SECURITY_CLAIMS.md) (the precise
+It pairs with [`security-claims.md`](security-claims.md) (the precise
 claim-by-claim inventory). Where this guide says "this proves claim C3", that
 refers to the claims in that document.
+
+For the communication strategy behind this trust-first path, see
+[`developer-outreach.md`](developer-outreach.md).
 
 ---
 
@@ -202,7 +205,7 @@ compliant. The reference doc `docs/reference/compliance.md` states this plainly.
 
 ## Q5 · Per-subsystem maturity
 
-Ratings use the rubric in [`SECURITY_CLAIMS.md`](SECURITY_CLAIMS.md#maturity-rubric)
+Ratings use the rubric in [`security-claims.md`](security-claims.md#maturity-rubric)
 (Stable / Beta / Alpha). They are evidence-based assessments, open to revision.
 
 | Subsystem | Maturity | One-line basis |

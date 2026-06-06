@@ -105,11 +105,11 @@ v0_5_changes = "NEW in v0.5"
 category = "Extensibility (v0.10.3)"
 doc_page = "entities"
 doc_order = 17
-definition = "Built-in archetype kinds (settings, tenant, tenant_settings) that trigger automatic behavior like singleton enforcement, tenant FK injection, and admin surface generation. Different from custom archetypes which only provide field inheritance."
+definition = "Built-in archetype kinds (settings, tenant, tenant_settings, user, user_membership, profile) that trigger automatic behavior like singleton enforcement, tenant FK injection, auth-field injection, membership wiring, and admin surface generation. Different from custom archetypes which only provide field inheritance."
 syntax = '''
 # Semantic archetypes use archetype: declaration in entity body
 entity <EntityName> "<Title>":
-    archetype: <settings|tenant|tenant_settings>
+    archetype: <settings|tenant|tenant_settings|user|user_membership|profile>
     <fields...>
 
 # Custom archetypes use extends: for field inheritance only
@@ -139,6 +139,13 @@ entity CompanySettings "Company Settings":
     company: ref Company
     timezone: timezone
 
+# Semantic archetype: profile (per-member app data)
+entity MemberProfile "Member Profile":
+    archetype: profile
+    id: uuid pk
+    display_name: str(120)
+    # tenant_id + identity_id (+ tenant-scoped unique) are framework-injected
+
 # Custom archetype: field inheritance only (no automatic behavior)
 archetype Timestamped:
     created_at: datetime auto_add
@@ -156,8 +163,14 @@ v0_10_3_changes = "NEW in v0.10.3"
 settings = "System-wide configuration singleton. Sets is_singleton=true, adds admin-only access, auto-generates settings surface."
 tenant = "Multi-tenant root entity. Sets is_tenant_root=true, auto-injects tenant FK into other entities, auto-generates tenant admin surface."
 tenant_settings = "Per-tenant configuration singleton. Sets is_singleton=true (per tenant), adds tenant admin access, auto-generates settings surface."
+user = "Application user archetype. Injects auth-aligned fields and admin-only user-management surfaces."
+user_membership = "Tenant membership archetype. Injects user and tenant refs plus role/persona membership fields for shared-schema tenancy."
+profile = "Per-member application profile. Injects tenant_id and identity_id and enforces one profile per member per tenant."
 
 [concepts.semantic_archetype.automatic_behaviors]
 settings = ["Entity becomes singleton (only one record)", "Admin-only visibility and permissions", "Auto-generated admin settings surface", "Excluded from tenant FK injection"]
 tenant = ["Entity marked as tenant root", "All other entities get tenant FK auto-injected (except settings)", "Auto-generated tenant admin surface (list mode)", "Tenant FK uses lowercase entity name (Company -> company)"]
 tenant_settings = ["Entity becomes singleton (per tenant)", "Admin access rules", "Auto-generated settings surface (edit mode)", "Gets tenant FK like other entities"]
+user = ["Auth fields are injected", "Admin CRUD surfaces are generated", "OAuth/provider wiring can target the entity"]
+user_membership = ["User and tenant refs are injected", "Persona/role membership is represented consistently", "Invitation and membership lifecycle fields are available"]
+profile = ["tenant_id and identity_id are injected", "UNIQUE(tenant_id, identity_id) is emitted", "Requires shared-schema tenancy so the profile is keyed per member per org"]

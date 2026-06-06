@@ -141,7 +141,7 @@ def ui_url() -> str:
 
     Priority:
     1. DAZZLE_UI_URL environment variable
-    2. .dazzle/runtime.json (written by `dazzle dnr serve`)
+    2. .dazzle/runtime.json (written by `dazzle serve`)
     3. Default localhost:3000
     """
     if "DAZZLE_UI_URL" in os.environ:
@@ -156,7 +156,7 @@ def api_url() -> str:
 
     Priority:
     1. DAZZLE_BASE_URL environment variable
-    2. .dazzle/runtime.json (written by `dazzle dnr serve`)
+    2. .dazzle/runtime.json (written by `dazzle serve`)
     3. Default localhost:8000
     """
     if "DAZZLE_BASE_URL" in os.environ:

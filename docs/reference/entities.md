@@ -761,33 +761,6 @@ entity User "User":
 
 ---
 
-## Semantic archetypes (`archetype: <kind>`)
-
-Distinct from the reusable-template `archetype <Name>:` form below, the
-`archetype: <kind>` keyword on an entity marks it as a framework-recognised
-semantic role. Supported kinds: `settings` (singleton, admin-only), `tenant`
-(the multi-tenant root — `is_tenant_root`), `tenant_settings`, `user` (auth
-fields injected), `user_membership`, and `profile`.
-
-`archetype: profile` (auth Plan 3c) declares **per-member application data**
-linked 1:1 to a membership. The framework injects an `identity_id` (the auth
-identity's id) plus the uniform `tenant_id`, and emits a tenant-scoped
-`UNIQUE(tenant_id, identity_id)` — one profile per member per org. Requires
-`tenancy: mode: shared_schema` (the profile is keyed by `(tenant_id,
-identity_id)`). The author declares only the surrogate `id` and the app fields:
-
-```dsl
-tenancy:
-  mode: shared_schema
-  partition_key: tenant_id
-
-entity MemberProfile "Member Profile":
-  archetype: profile
-  id: uuid pk
-  display_name: str(120)
-  # tenant_id + identity_id (+ the tenant-scoped unique) are framework-injected
-```
-
 ## Archetype
 
 Reusable template defining common field patterns. Entities can extend archetypes to inherit fields, computed fields, and invariants. Promotes consistency and reduces repetition.
@@ -883,14 +856,14 @@ entity Order "Order":
 
 ## Semantic Archetype
 
-Built-in archetype kinds (settings, tenant, tenant_settings) that trigger automatic behavior like singleton enforcement, tenant FK injection, and admin surface generation. Different from custom archetypes which only provide field inheritance.
+Built-in archetype kinds (settings, tenant, tenant_settings, user, user_membership, profile) that trigger automatic behavior like singleton enforcement, tenant FK injection, auth-field injection, membership wiring, and admin surface generation. Different from custom archetypes which only provide field inheritance.
 
 ### Syntax
 
 ```dsl
 # Semantic archetypes use archetype: declaration in entity body
 entity <EntityName> "<Title>":
-    archetype: <settings|tenant|tenant_settings>
+    archetype: <settings|tenant|tenant_settings|user|user_membership|profile>
     <fields...>
 
 # Custom archetypes use extends: for field inheritance only
@@ -922,6 +895,13 @@ entity CompanySettings "Company Settings":
     id: uuid pk
     company: ref Company
     timezone: timezone
+
+# Semantic archetype: profile (per-member app data)
+entity MemberProfile "Member Profile":
+    archetype: profile
+    id: uuid pk
+    display_name: str(120)
+    # tenant_id + identity_id (+ tenant-scoped unique) are framework-injected
 
 # Custom archetype: field inheritance only (no automatic behavior)
 archetype Timestamped:

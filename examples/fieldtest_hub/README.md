@@ -8,7 +8,7 @@ A distributed beta testing platform for hardware field testing. This is the most
 
 ```bash
 cd examples/fieldtest_hub
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000
@@ -184,7 +184,7 @@ attention notice:
 dazzle validate
 
 # Run API tests
-dazzle dnr test
+dazzle test run
 ```
 
 ## Learning Path
@@ -217,7 +217,7 @@ dazzle dnr test
 
 ## API Endpoints
 
-With 6 entities, DNR generates 24 CRUD endpoints:
+With 6 entities, Dazzle generates 24 CRUD endpoints:
 
 | Entity | Count |
 |--------|-------|

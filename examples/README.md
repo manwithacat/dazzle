@@ -6,7 +6,7 @@ A curated collection of example projects demonstrating DAZZLE's capabilities, or
 
 ```bash
 cd examples/simple_task
-dazzle dnr serve
+dazzle serve
 ```
 
 Open http://localhost:3000 to see the running app.
@@ -59,7 +59,7 @@ A personal task management app - the recommended starting point for learning DAZ
 
 **Quick Start**:
 ```bash
-cd simple_task && dazzle dnr serve
+cd simple_task && dazzle serve
 ```
 
 ---
@@ -77,7 +77,7 @@ A contacts application demonstrating the list+detail pattern.
 
 **Quick Start**:
 ```bash
-cd contact_manager && dazzle dnr serve
+cd contact_manager && dazzle serve
 ```
 
 ---
@@ -97,7 +97,7 @@ A multi-entity support system with user, ticket, and comment relationships.
 
 **Quick Start**:
 ```bash
-cd support_tickets && dazzle dnr serve
+cd support_tickets && dazzle serve
 ```
 
 ---
@@ -116,7 +116,7 @@ A real-time operations monitoring dashboard for DevOps teams.
 
 **Quick Start**:
 ```bash
-cd ops_dashboard && dazzle dnr serve
+cd ops_dashboard && dazzle serve
 ```
 
 ---
@@ -136,7 +136,7 @@ A complex hardware field testing platform with multiple user roles.
 
 **Quick Start**:
 ```bash
-cd fieldtest_hub && dazzle dnr serve
+cd fieldtest_hub && dazzle serve
 ```
 
 ---
@@ -162,7 +162,7 @@ SPEC.md          →  Human-readable requirements
     ↓                (refined through LLM collaboration)
 dsl/app.dsl      →  DAZZLE DSL implementation
     ↓                (declarative, stack-agnostic)
-DNR Runtime      →  Live application
+Dazzle Runtime      →  Live application
     ↓                (no code generation needed)
 E2E Tests        →  Automated validation
                      (generated from spec)
@@ -175,7 +175,7 @@ E2E Tests        →  Automated validation
 ### Start an Example
 ```bash
 cd examples/<name>
-dazzle dnr serve
+dazzle serve
 ```
 
 ### Validate DSL
@@ -270,7 +270,7 @@ vim dsl/app.dsl
 dazzle validate
 
 # Run
-dazzle dnr serve
+dazzle serve
 ```
 
 ---

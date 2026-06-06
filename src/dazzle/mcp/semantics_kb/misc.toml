@@ -9,14 +9,29 @@ concept_count = 26
 category = "Dazzle Runtime"
 doc_page = "access-control"
 doc_order = 10
-definition = "Session-based authentication system in Dazzle. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project."
+definition = "Session-based authentication system in Dazzle. Uses cookie-based sessions backed by the configured PostgreSQL database. Auth is optional and can be enabled/disabled per project."
 example = '''
 # In DSL, use personas to define role-based access:
-ux:
-  for admin:
-    scope: all
-  for member:
-    scope: owner = current_user
+persona admin "Admin":
+  role: admin
+
+persona member "Member":
+  role: member
+
+entity Task "Task":
+  owner: ref User required
+
+  permit:
+    read: role(admin) or role(member)
+    update: role(admin) or role(member)
+
+  scope:
+    read: all
+      as: admin
+    read: owner = current_user
+      as: member
+    update: owner = current_user
+      as: member
 
 # API login:
 POST /auth/login

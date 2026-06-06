@@ -8,7 +8,7 @@ A personal contact management app demonstrating the **DUAL_PANE_FLOW** archetype
 
 ```bash
 cd examples/contact_manager
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000
@@ -126,7 +126,7 @@ workspace contacts "Contacts":
 dazzle validate
 
 # Run API tests
-dazzle dnr test
+dazzle test run
 ```
 
 ## Learning Path

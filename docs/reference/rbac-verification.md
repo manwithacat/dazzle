@@ -66,7 +66,7 @@ Example output:
 | Shape    | delete | PERMIT  | PERMIT_SCOPED  | DENY           | DENY           | DENY     |
 ```
 
-Where `PERMIT_SCOPED` means the role has a matching `scope: for role(X):` entry. The legacy `FILTERED` label is replaced by `PERMIT_SCOPED` to distinguish it from the old pattern where field conditions appeared inside `permit:` blocks.
+Where `PERMIT_SCOPED` means the role has a matching `scope: ... as: X` entry. The legacy `FILTERED` label is replaced by `PERMIT_SCOPED` to distinguish it from the old pattern where field conditions appeared inside `permit:` blocks.
 
 The matrix also emits static warnings: unrestricted entities (no rules), orphan roles (no permits), and redundant forbids.
 
@@ -106,7 +106,7 @@ Every call to `evaluate_permission()` emits a structured `AccessDecisionRecord`:
 }
 ```
 
-The audit sink is pluggable: `NullAuditSink` in production (zero overhead), `InMemoryAuditSink` during verification (for cross-referencing), `JsonFileAuditSink` for persistent logging (`dazzle serve --audit-access`).
+The verification-layer audit sink is pluggable: `InMemoryAuditSink` during verification for cross-referencing, `JsonFileAuditSink` for local persistent logging, and `NullAuditSink` when the verifier does not need records. The production runtime trail is the PostgreSQL-backed `AuditLogger` used for `audit:`-declared entities.
 
 ## The Shapes Validation App
 
@@ -116,12 +116,12 @@ The domain is geometric: Shapes have a form, colour, and material, and belong to
 
 | Persona | RBAC Pattern | scope: entry | What They Prove |
 |---------|-------------|--------------|-----------------|
-| **Oracle** | Platform admin (RBAC0) | `for role(oracle): all` | Unrestricted cross-tenant access |
-| **Sovereign** | Tenant admin | `for role(sovereign): realm = current_user.realm` | Everything in own realm, nothing outside |
-| **Architect** | Scope filter (ABAC) | `for role(architect): realm = current_user.realm` | Row-level filtering by realm via `scope:` |
-| **Chromat** | Attribute filter (ABAC) | `for role(chromat): colour = current_user.preferred_colour` | Row-level filtering by colour via `scope:` |
-| **Forgemaster** | Forbid override (RBAC2) | `for role(forgemaster): material != shadow` | Separation of duty — `forbid:` overrides `permit:` |
-| **Witness** | Mixed OR condition | `for role(witness): realm = current_user.realm` | Composite `permit:` rules with scoped row access |
+| **Oracle** | Platform admin (RBAC0) | `all as: oracle` | Unrestricted cross-tenant access |
+| **Sovereign** | Tenant admin | `realm = current_user.realm as: sovereign` | Everything in own realm, nothing outside |
+| **Architect** | Scope filter (ABAC) | `realm = current_user.realm as: architect` | Row-level filtering by realm via `scope:` |
+| **Chromat** | Attribute filter (ABAC) | `colour = current_user.preferred_colour as: chromat` | Row-level filtering by colour via `scope:` |
+| **Forgemaster** | Forbid override (RBAC2) | `material != shadow as: forgemaster` | Separation of duty — `forbid:` overrides `permit:` |
+| **Witness** | Mixed OR condition | `realm = current_user.realm as: witness` | Composite `permit:` rules with scoped row access |
 | **Outsider** | Deny-all baseline | *(no permit entry)* | Complete mediation — gate rejects before scope is reached |
 
 The golden-master seed is deterministic and uniform: expected row counts per role are pure arithmetic. Two Sovereigns (in different realms) prove multi-tenancy isolation: both are admins, neither sees the other's data.
@@ -157,22 +157,22 @@ This means you can write permissive rules and then constrain them with targeted 
 
 ```dsl
 entity Shape "Shape":
-  # Forgemaster sees metal and stone
+  # Pharmacists may dispense
   permit:
-    list: material = metal or material = stone
+    dispense: role(pharmacist) or role(doctor)
 
-  # But never shadow material (even if metal or stone)
+  # But doctors may not dispense, even though the broad rule includes them
   forbid:
-    list: material = shadow
+    dispense: role(doctor)
 ```
 
 ## Two-Tier Enforcement
 
-Access rules evaluate in two tiers at runtime (see also [Access Control Reference](access-control.md#runtime-evaluation-model)):
+Access rules evaluate in two tiers at runtime (see also [RBAC Scope Rules](rbac-scope.md#runtime-behaviour)):
 
 **Tier 1 (Gate)**: Before any database query, check if the user's role has permission for this operation on this entity. `permit:` blocks contain only `role()` checks and are evaluated here. Field conditions are not allowed in `permit:` — they are a parser error. If denied, return 403 immediately.
 
-**Tier 2 (Row Filter)**: `scope:` blocks contain `for role(<name>): <condition>` clauses that are converted to SQL WHERE clauses and applied at query time. This ensures only authorized rows are returned. A role with no matching `scope:` entry sees zero rows (default-deny at the row level).
+**Tier 2 (Row Filter)**: `scope:` blocks contain `<condition> as: <persona>` clauses that are converted to SQL WHERE clauses and applied at query time. This ensures only authorized rows are returned. A role with no matching `scope:` entry sees zero rows (default-deny at the row level).
 
 The verification framework tests both tiers: Tier 1 failures produce 403 (caught by the `DENY` comparison), Tier 2 failures produce incorrect row counts (caught by the `PERMIT_SCOPED` / `PERMIT_FILTERED` comparison).
 

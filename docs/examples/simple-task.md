@@ -1,6 +1,6 @@
 # Simple Task Manager
 
-> The "Hello World" of DAZZLE - a minimal CRUD application demonstrating core DSL concepts.
+> The "Hello World" of DAZZLE - a compact team task app demonstrating core DSL concepts.
 
 ## Quick Start
 
@@ -17,7 +17,7 @@ dazzle serve
 |-----------|-------|
 | **Complexity** | Beginner |
 | **CI Priority** | P0 (blocks PRs) |
-| **Entities** | Task |
+| **Entities** | User, Task, TaskComment |
 | **Surfaces** | list, view, create, edit |
 | **Workspaces** | dashboard, my_work |
 
@@ -32,10 +32,11 @@ entity Task "Task":
   id: uuid pk
   title: str(200) required
   description: text
-  status: enum[todo,in_progress,done]=todo
-  priority: enum[low,medium,high]=medium
+  status: enum[todo,in_progress,review,done]=todo
+  priority: enum[low,medium,high,urgent]=medium
   due_date: date
-  assigned_to: str(100)
+  assigned_to: ref User
+  created_by: ref User
   created_at: datetime auto_add
   updated_at: datetime auto_update
 ```

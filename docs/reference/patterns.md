@@ -495,7 +495,7 @@ System for converting diverse external API errors into a consistent format for G
 ### Syntax
 
 ```dsl
-from dazzle_dnr_back.graphql.adapters import (
+from dazzle.back.graphql.adapters import (
     normalize_error,
     NormalizedError,
     ErrorCategory,
@@ -508,7 +508,7 @@ normalized = normalize_error(error, service_name="hmrc")
 ### Example
 
 ```dsl
-from dazzle_dnr_back.graphql.adapters import (
+from dazzle.back.graphql.adapters import (
     normalize_error,
     ErrorCategory,
     ErrorSeverity,
@@ -578,7 +578,7 @@ Abstract base class for integrating with external APIs (HMRC, banks, payment pro
 ### Syntax
 
 ```dsl
-from dazzle_dnr_back.graphql.adapters import (
+from dazzle.back.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     AdapterResult,
@@ -592,7 +592,7 @@ class MyServiceAdapter(BaseExternalAdapter[AdapterConfig]):
 ### Example
 
 ```dsl
-from dazzle_dnr_back.graphql.adapters import (
+from dazzle.back.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     RetryConfig,
@@ -637,11 +637,11 @@ Backend-for-Frontend using GraphQL as the API layer between UI and backend servi
 # GraphQL schema is auto-generated from your entities:
 # entity Task → GraphQL type Task with Query/Mutation
 
-# Inspect the generated schema:
-# $ dazzle dnr inspect --schema
+# Enable the GraphQL endpoint while serving:
+# $ dazzle serve --graphql
 
 # Mount GraphQL endpoint in your app:
-from dazzle_dnr_back.graphql import mount_graphql
+from dazzle.back.graphql import mount_graphql
 mount_graphql(app, backend_spec)
 
 # Query example:
@@ -666,46 +666,44 @@ mutation {
 
 ## Graphql Schema Inspection
 
-CLI command to inspect the auto-generated GraphQL schema from entity specs.
+Ways to inspect generated API contracts from entity specs. GraphQL can be enabled at runtime, while OpenAPI and route inspection provide the primary CLI contract checks.
 
 ### Syntax
 
 ```dsl
-# Display GraphQL SDL
-dazzle dnr inspect --schema
+# Emit the generated OpenAPI contract
+dazzle specs openapi
 
-# Get schema info as JSON
-dazzle dnr inspect --schema --format json
+# Emit OpenAPI as JSON for tooling
+dazzle specs openapi -f json
+
+# Boot the runtime and inspect mounted routes
+dazzle inspect routes --runtime
+
+# Serve with the optional GraphQL endpoint
+dazzle serve --graphql
 ```
 
 ### Example
 
 ```dsl
-$ dazzle dnr inspect --schema
-📊 GraphQL Schema
-
-type Query {
-  task(id: ID!): Task
-  tasks(status: String, limit: Int): [Task!]!
+$ dazzle specs openapi -f json
+{
+  "openapi": "3.1.0",
+  "paths": {
+    "/tasks": {
+      "get": {
+        "summary": "List Task"
+      },
+      "post": {
+        "summary": "Create Task"
+      }
+    }
+  }
 }
 
-type Mutation {
-  createTask(input: TaskInput!): Task!
-  updateTask(id: ID!, input: TaskInput!): Task!
-  deleteTask(id: ID!): Boolean!
-}
-
-type Task {
-  id: ID!
-  title: String!
-  status: String!
-  createdAt: DateTime!
-}
-
-input TaskInput {
-  title: String!
-  status: String
-}
+$ dazzle serve --graphql
+# GraphQL available at /graphql when strawberry-graphql is installed
 ```
 
 **Related:** [Graphql Bff Pattern](patterns.md#graphql-bff-pattern), [External Adapter](patterns.md#external-adapter)

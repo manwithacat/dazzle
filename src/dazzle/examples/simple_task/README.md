@@ -1,8 +1,8 @@
 # Simple Task Manager
 
-> **Complexity**: Beginner | **Entities**: 1 | **DSL Lines**: ~160
+> **Complexity**: Beginner | **Entities**: 3 | **DSL Lines**: ~680
 
-A personal task management application demonstrating DAZZLE's core features. This is the recommended starting point for learning the DSL.
+A team task management application demonstrating DAZZLE's core SaaS patterns. This is the recommended starting point for learning the DSL because it includes entities, relationships, access rules, workspaces, and generated runtime contracts in one small project.
 
 ## Quick Start
 
@@ -20,7 +20,7 @@ dazzle serve
 
 | Feature | Usage |
 |---------|-------|
-| **Entity Definition** | Single `Task` entity with various field types |
+| **Entity Definition** | `User`, `Task`, and `TaskComment` entities |
 | **Field Types** | `uuid`, `str(n)`, `text`, `enum`, `date`, `datetime` |
 | **Field Modifiers** | `required`, `pk`, `auto_add`, `auto_update`, defaults |
 | **Surfaces** | All 4 CRUD modes: `list`, `view`, `create`, `edit` |
@@ -35,7 +35,7 @@ SPEC.md          →  Human-readable requirements
     ↓
 dsl/app.dsl      →  DAZZLE DSL implementation
     ↓
-DNR Runtime      →  Live application (no code generation)
+Dazzle Runtime  →  Live application (no code generation)
     ↓
 E2E Tests        →  Automated validation
 ```
@@ -69,14 +69,16 @@ The `SPEC.md` represents a refined product specification - what a founder might 
 
 ### 2. DSL - The Implementation
 
-The `dsl/app.dsl` translates the spec into DAZZLE's declarative syntax:
+The `dsl/app.dsl` translates the spec into DAZZLE's declarative syntax. This excerpt shows the core `Task` entity:
 
 ```dsl
 entity Task "Task":
   id: uuid pk
   title: str(200) required
-  status: enum[todo,in_progress,done]=todo
-  priority: enum[low,medium,high]=medium
+  status: enum[todo,in_progress,review,done]=todo
+  priority: enum[low,medium,high,urgent]=medium
+  assigned_to: ref User
+  created_by: ref User
   ...
 
 surface task_list "Task List":
@@ -91,9 +93,9 @@ surface task_list "Task List":
 ### 3. Running App - The Result
 
 `dazzle serve` starts a fully functional application:
-- **Backend**: FastAPI with SQLite persistence
-- **Frontend**: Signals-based reactive UI
-- **Features**: Full CRUD, filtering, search, attention signals
+- **Backend**: FastAPI with PostgreSQL persistence
+- **Frontend**: Server-rendered typed Fragments with HTMX behavior
+- **Features**: Full CRUD, filtering, search, attention signals, access rules
 
 ## User Stories
 

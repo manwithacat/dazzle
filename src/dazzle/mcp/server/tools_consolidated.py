@@ -749,7 +749,7 @@ def _tool_user_management() -> Tool:
         description=(
             "User management operations: list, create, get, update, "
             "reset_password, deactivate, list_sessions, revoke_session, config. "
-            "Manage auth users and sessions in SQLite or PostgreSQL."
+            "Manage auth users and sessions in PostgreSQL."
         ),
         inputSchema={
             "type": "object",

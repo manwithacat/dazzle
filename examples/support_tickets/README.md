@@ -8,7 +8,7 @@ A multi-entity support ticket application demonstrating entity relationships and
 
 ```bash
 cd examples/support_tickets
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000
@@ -115,7 +115,7 @@ entity Comment "Comment":
 dazzle validate
 
 # Run API tests
-dazzle dnr test
+dazzle test run
 ```
 
 ## Learning Path
@@ -145,7 +145,7 @@ dazzle dnr test
 
 ## API Endpoints
 
-With 3 entities, DNR generates 12 CRUD endpoints:
+With 3 entities, Dazzle generates 12 CRUD endpoints:
 
 | Entity | Endpoints |
 |--------|-----------|

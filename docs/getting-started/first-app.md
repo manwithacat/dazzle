@@ -114,7 +114,7 @@ workspace dashboard "Dashboard":
 
 ## Step 5: Validate
 
-Check your DSL for errors:
+Check your DSL for parse, link, and semantic errors:
 
 ```bash
 dazzle validate
@@ -128,7 +128,28 @@ Validating my_tasks...
 All valid!
 ```
 
-## Step 6: Run
+Validation is the first trust boundary: Dazzle has parsed the DSL into an AppSpec, resolved references, and confirmed that the surfaces point at real entities and fields.
+
+## Step 6: Inspect What Dazzle Understood
+
+Before running the app, inspect the model Dazzle derived from your DSL:
+
+```bash
+dazzle inspect project --entity Task
+dazzle specs openapi -f json
+```
+
+The first command shows the entity as Dazzle sees it after parsing and linking. The second emits the OpenAPI contract derived from the same AppSpec. This is the basic cause-and-effect loop: edit DSL, validate, inspect the derived model, then run.
+
+For apps with personas and access rules, also run:
+
+```bash
+dazzle rbac matrix --format table
+```
+
+This tutorial app has no access-control rules yet, so any `PERMIT_UNPROTECTED` output is expected. In a real app, treat that as a finding to fix before production.
+
+## Step 7: Run
 
 Start the development server:
 
@@ -141,7 +162,7 @@ Open your browser:
 - **UI**: http://localhost:3000
 - **API Docs**: http://localhost:8000/docs
 
-## Step 7: Test the API
+## Step 8: Test the API
 
 Try creating a task via the API:
 
@@ -210,8 +231,10 @@ workspace dashboard "Dashboard":
 ## Next Steps
 
 - Add [relationships](../reference/entities.md) between entities
-- Create [personas](../reference/workspaces.md) for different user roles
+- Add [personas and access rules](../reference/access-control.md), then review the RBAC matrix
+- Organize role-specific dashboards with [workspaces](../reference/workspaces.md)
 - Set up [services](../reference/services.md) for business logic
+- Follow the [skeptical evaluation guide](../evaluation/evaluation.md) to verify RBAC, compliance evidence, and runtime behavior
 - Explore [examples](../examples/index.md) for more complex patterns
 
 ## Troubleshooting

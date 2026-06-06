@@ -9,6 +9,7 @@ Welcome to Dazzle! This section will help you install Dazzle and build your firs
 | [Installation](installation.md) | Install Dazzle on your system |
 | [Quickstart](quickstart.md) | Get a working app in 5 minutes |
 | [Your First App](first-app.md) | Step-by-step tutorial |
+| [Skeptical Evaluation](../evaluation/evaluation.md) | Verify the core runtime, RBAC, and compliance claims |
 
 ## Prerequisites
 
@@ -34,4 +35,5 @@ After getting started:
 
 - Explore the [DSL Reference](../reference/index.md) for syntax details
 - Check out [Examples](../examples/index.md) for more complex projects
+- Run the [Skeptical Evaluation](../evaluation/evaluation.md) if you are deciding whether to trust the framework
 - Read about the [Architecture](../architecture/overview.md) to understand how it works

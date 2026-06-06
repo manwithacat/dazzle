@@ -26,6 +26,12 @@ cd examples/simple_task && dazzle serve
 # API: http://localhost:8000/docs
 ```
 
+If you are evaluating Dazzle rather than just trying it, start with the
+[skeptical evaluator's guide](EVALUATION.md) and the
+[security claims inventory](SECURITY_CLAIMS.md). They show the DSL -> IR ->
+runtime path, RBAC matrix, runtime verifier, and compliance evidence with
+copy-pasteable commands and explicit limits.
+
 ---
 
 ## The thesis

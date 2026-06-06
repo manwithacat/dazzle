@@ -69,7 +69,7 @@ All streams are classified into exactly one RecordKind:
 ```bash
 cd examples/pra
 dazzle validate    # Validate DSL
-dazzle dnr serve   # Run the app
+dazzle serve   # Run the app
 ```
 
 ## Metrics (to be implemented)

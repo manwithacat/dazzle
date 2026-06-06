@@ -553,7 +553,7 @@ Query persisted test result history. Operations: summary (recent runs overview),
 
 ### `user_management`
 
-User management operations: list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config. Manage auth users and sessions in SQLite or PostgreSQL.
+User management operations: list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config. Manage auth users and sessions in PostgreSQL.
 
 **Operations (9):** `list`, `create`, `get`, `update`, `reset_password`, `deactivate`, `list_sessions`, `revoke_session`, `config`
 

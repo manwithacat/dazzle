@@ -36,6 +36,10 @@ theme:
 
 nav:
   - Start Here: index.md
+  - Evaluate Dazzle:
+      - Skeptical Evaluation: evaluation/evaluation.md
+      - Security Claims: evaluation/security-claims.md
+      - Developer Outreach: evaluation/developer-outreach.md
   - Getting Started:
       - Overview: getting-started/index.md
       - Installation: getting-started/installation.md
@@ -43,6 +47,7 @@ nav:
       - Your First App: getting-started/first-app.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Dazzle by Design: philosophy.md
       - Event Semantics: architecture/event-semantics.md
       - HLESS Deep Dive: architecture/hless-deep-dive.md
       - DSL to AppSpec: architecture/dsl-to-appspec.md
@@ -66,6 +71,7 @@ nav:
       - Compliance: reference/compliance.md
       - RBAC Verification: reference/rbac-verification.md
       - Enterprise SSO (OIDC/SAML/SCIM): reference/enterprise-sso.md
+      - RBAC Scope Rules: reference/rbac-scope.md
       - Testing: reference/testing.md
       - Frontend & Templates: reference/frontend.md
       - Messaging: reference/messaging.md
@@ -75,7 +81,9 @@ nav:
       - Runtime Capabilities: reference/runtime-capabilities.md
       - HTMX Templates: reference/htmx-templates.md
       - Databases: reference/databases.md
+      - Migrations: reference/migrations.md
       - Deployment: reference/deployment.md
+      - Security Profiles: reference/security-profiles.md
       - Islands: reference/islands.md
       - Document Signing: reference/document-signing.md
       - Multi-Tenant Hosts: reference/tenant-hosts.md
@@ -101,9 +109,6 @@ nav:
       - Dev Setup: contributing/dev-setup.md
       - Testing: contributing/testing.md
       - Adding a Feature: contributing/adding-a-feature.md
-  - API Reference:
-      - Overview: api-reference/index.md
-      - dazzle: api-reference/modules/dazzle.md
   - Counter-Priors:
       - Index: counter-priors/INDEX.md
   - ADRs:

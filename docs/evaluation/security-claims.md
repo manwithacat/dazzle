@@ -1,6 +1,6 @@
 # Dazzle — Security & Compliance Claims Inventory
 
-<!-- Root GitHub copy. MkDocs-adapted copy lives at docs/evaluation/security-claims.md; update both together. -->
+<!-- MkDocs copy adapted from ../../SECURITY_CLAIMS.md; update both files together. -->
 
 *Last reviewed against v0.71.101 (2026-05-21).*
 
@@ -15,8 +15,8 @@ that enforces it *and* an automated test that exercises it. Where a capability
 is partial, the partiality is stated. If something here drifts from the code,
 the code wins — file an issue.
 
-> This is a companion to [`EVALUATION.md`](EVALUATION.md) (the hands-on
-> walkthrough) and the reference docs under [`docs/reference/`](docs/reference/).
+> This is a companion to [`evaluation.md`](evaluation.md) (the hands-on
+> walkthrough) and the reference docs under [`../reference/index.md`](../reference/index.md).
 > The maturity ratings below are evidence-based assessments, not marketing
 > grades; they are open to maintainer revision.
 
@@ -188,7 +188,7 @@ Things Dazzle is sometimes assumed to do, and does **not**:
 
 ## How to verify these claims yourself
 
-See [`EVALUATION.md`](EVALUATION.md) for a ~30-minute hands-on walkthrough with
+See [`evaluation.md`](evaluation.md) for a ~30-minute hands-on walkthrough with
 copy-pasteable commands and expected output. The short version:
 
 ```bash
