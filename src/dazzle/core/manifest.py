@@ -418,6 +418,21 @@ class I18nConfig:
 
 
 @dataclass
+class CapabilitiesConfig:
+    """Opt-in capability declarations (#1342).
+
+    Reads ``[capabilities]`` from dazzle.toml:
+
+        [capabilities]
+        enabled = ["auth.enterprise.oidc"]
+
+    Default empty → a greenfield app activates no gated capability.
+    """
+
+    enabled: list[str] = field(default_factory=list)
+
+
+@dataclass
 class SpecConfig:
     """Spec-drift guard configuration (#1106 Proposal 3).
 
@@ -595,6 +610,9 @@ class ProjectManifest:
     i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)  # #952
     spec: SpecConfig = field(default_factory=SpecConfig)  # #1106 Prop 3
+    capabilities: CapabilitiesConfig = field(
+        default_factory=CapabilitiesConfig
+    )  # #1342 opt-in feature gating
     signing: SigningConfig = field(default_factory=SigningConfig)  # #1283 phase 8
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
@@ -999,6 +1017,10 @@ def load_manifest(path: Path) -> ProjectManifest:
     spec_data = data.get("spec", {}) if isinstance(data.get("spec"), dict) else {}
     spec_config = SpecConfig(strict=bool(spec_data.get("strict", False)))
 
+    # Parse [capabilities] block (#1342 opt-in feature gating)
+    cap_data = data.get("capabilities", {}) if isinstance(data.get("capabilities"), dict) else {}
+    capabilities_config = CapabilitiesConfig(enabled=list(cap_data.get("enabled", [])))
+
     # Parse [signing] block (#1283 phase 8 — PdfBranding wire-up)
     signing_data = data.get("signing", {}) if isinstance(data.get("signing"), dict) else {}
     signing_config = SigningConfig(
@@ -1026,6 +1048,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         i18n=i18n_config,
         notifications=notifications_config,
         spec=spec_config,
+        capabilities=capabilities_config,
         signing=signing_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
