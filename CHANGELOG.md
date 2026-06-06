@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.60] - 2026-06-06
+
+### Fixed
+
+- **`dazzle db` Alembic config: no more `version_locations` path-separator deprecation** (`src/dazzle/cli/db.py`). The framework + project version directories were joined with a single space (`f"{fw} {proj}"`), which Alembic flagged (`No path_separator found … falling back to legacy splitting on spaces/commas`) and which would **break if a project path contained a space**. Now sets `path_separator = os` and joins with `os.pathsep` — non-deprecated and path-robust. Dual-lineage migration discovery (framework `versions/` + project `.dazzle/migrations/versions/`) is unchanged.
+
+### Agent Guidance
+
+- **Deprecation-warning audit (2026-06-06):** a full-suite sweep found three. (1) The Alembic `version_locations` one — fixed here (runtime-relevant: it fires during `dazzle db`). (2) `__package__ != __spec__.parent` (×35 across `dazzle.mcp.server.handlers.*`) is a **pytest-only** artifact (default `prepend` import mode + the handlers being `importlib.import_module`'d *and* pytest-collected) — confirmed it does NOT fire at runtime, so it's test-noise, not in app logs; a real fix would mean switching pytest `importmode = importlib` (deferred — broad/risky). (3) Starlette `TestClient` per-request `cookies=` is test-only hygiene. The earlier `on_event` deprecation (v0.81.59) was the only one that was an actual latent bug.
+
 ## [0.81.59] - 2026-06-06
 
 ### Fixed

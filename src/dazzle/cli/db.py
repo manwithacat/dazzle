@@ -63,14 +63,21 @@ def _get_alembic_cfg() -> Any:
     framework_dir = _get_framework_alembic_dir()
     ini_path = framework_dir / "alembic.ini"
 
+    import os
+
     cfg = AlembicConfig(str(ini_path))
     cfg.set_main_option("script_location", str(framework_dir))
 
     # Chain framework + project version directories so upgrade/downgrade
-    # discovers migrations from both locations
+    # discovers migrations from both locations. ``path_separator = os`` joins them
+    # with ``os.pathsep`` — the non-deprecated splitter (Alembic warns on the legacy
+    # space/comma fallback) and robust to a project path that contains a space.
+    cfg.set_main_option("path_separator", "os")
     framework_versions = str(framework_dir / "versions")
     project_versions = str(_get_project_versions_dir())
-    cfg.set_main_option("version_locations", f"{framework_versions} {project_versions}")
+    cfg.set_main_option(
+        "version_locations", os.pathsep.join([framework_versions, project_versions])
+    )
 
     # Override sqlalchemy.url from resolved database URL
     url = _resolve_url("")
