@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.52] - 2026-06-06
+
+### Added
+
+- **Auth Plan 4c.ii — SCIM 2.0 REST endpoints + bearer-mint CLI** (plan `docs/superpowers/plans/2026-06-06-auth-plan-4c-i-scim-kernel.md`; spec §5). The wire layer over the 4c.i kernel — an IdP (Okta / Entra ID) presents a per-connection bearer and pushes user lifecycle: `POST`/`GET`/`PUT`/`PATCH`/`DELETE /scim/v2/Users` (+ `GET /scim/v2/Users?filter=userName eq "…"` and `GET /scim/v2/ServiceProviderConfig`). **A SCIM User resource is a membership** (the identity-in-this-org): SCIM `id` = membership id, `userName` = email, `active` = membership status. **Bearer auth is the first statement in every handler** (`get_scim_connection_by_bearer` → 401, fail-closed) and pins the org; every `{id}` op resolves through `_membership_in_org(store, id, conn.tenant_id)` and returns **404 (not 403)** for another org — so a bearer for org A can't read/toggle/replace/delete org B's membership by id, and the cross-org 404 is indistinguishable from a genuine miss. PUT pins the identity by URL id (ignores any body `userName` — no identity-swap); create/PUT/PATCH provision into the bearer's org only; PATCH handles the `active` toggle in both standard and Entra (`{"value":{"active":"False"}}`) shapes; deactivate flows through to suspend+revoke (4c.i). Mounted unconditionally (stateless bearer over JSON — no authlib/SessionMiddleware; inert until a SCIM connection exists). `dazzle auth connection create-scim` mints a `token_urlsafe(32)` bearer (≈256 bits), stores it encrypted, and prints it **once** with the SCIM base URL. Adversarially reviewed (silent-failure-hunter): **no CRITICAL/HIGH** — bearer-auth-on-every-endpoint, cross-org isolation (route + kernel defense-in-depth), identity-pin-on-PUT, and no-info-leak all confirmed; the one LOW (malformed body → 500) fixed in-slice (now a SCIM 400 `invalidSyntax`). **Plan 4c complete** (SCIM kernel + REST). SCIM is JSON — no XML/defusedxml (that's SAML, Plan 5).
+
+### Agent Guidance
+
+- **SCIM provisioning is now reachable** at `/scim/v2/Users` (Okta/Entra "SCIM 2.0, header bearer token"). Stand it up with `dazzle auth connection create-scim --tenant <org> [--group-map g=role]` → it prints the bearer **once** (save it) + the SCIM base URL `<base_url>/scim/v2`; then verify a domain (4b.iv) — SCIM only provisions users in the connection's **verified** domains. Each SCIM User's `id` is its Dazzle membership id; the bearer scopes every op to that one org (cross-org access is a 404). `active:false`/DELETE suspend/remove + revoke that org's sessions immediately. Group→role is `connection.group_mapping` (default-deny), fully synced per push including to zero. The SCIM Groups endpoint, Schemas discovery, and bearer rotation are deferred.
+
 ## [0.81.51] - 2026-06-06
 
 ### Added

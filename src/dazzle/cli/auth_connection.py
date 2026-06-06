@@ -82,6 +82,41 @@ def create(
     )
 
 
+@connection_app.command("create-scim")
+def create_scim(
+    tenant: Annotated[str, typer.Option("--tenant", help="Organization (tenant) id")],
+    group_map: Annotated[
+        list[str] | None,
+        typer.Option("--group-map", help="IdP group→role, e.g. --group-map eng=engineer"),
+    ] = None,
+) -> None:
+    """Create a SCIM connection, mint its bearer token, and print it ONCE.
+
+    The bearer is stored encrypted at rest; it is shown here only at creation — save
+    it and configure it in the IdP. The IdP must also be given the SCIM base URL.
+    """
+    import secrets as _secrets
+
+    bearer = _secrets.token_urlsafe(32)
+    store = _store()
+    conn = store.create_connection(
+        tenant_id=tenant,
+        type="scim",
+        config={},
+        secrets={"scim_bearer": bearer},
+        domains=[],
+        group_mapping=_parse_group_map(group_map or []),
+    )
+    console.print(f"[green]Created SCIM connection[/green] [bold]{conn.id}[/bold] for org {tenant}")
+    console.print("\n[bold]Configure these in the IdP (the bearer is shown only once):[/bold]")
+    console.print("  SCIM base URL:  [cyan]<base_url>/scim/v2[/cyan]")
+    console.print(f"  Bearer token:   [cyan]{bearer}[/cyan]")
+    console.print(
+        "\nThen verify a domain ([cyan]add-domain[/cyan] → publish TXT → [cyan]verify-domain"
+        "[/cyan]) — SCIM only provisions users in this connection's verified domains."
+    )
+
+
 @connection_app.command("list")
 def list_connections(
     tenant: Annotated[str, typer.Option("--tenant", help="Organization (tenant) id")],

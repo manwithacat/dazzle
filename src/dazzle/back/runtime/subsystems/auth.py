@@ -274,6 +274,14 @@ class AuthSubsystem:
             register_native_oidc()
             ctx.app.include_router(create_enterprise_sso_routes())
 
+        # SCIM 2.0 provisioning endpoints (auth Plan 4c). Mounted unconditionally —
+        # SCIM is stateless bearer auth over JSON (no authlib / no SessionMiddleware);
+        # every request is authenticated by its per-connection bearer and returns 401
+        # without a valid one, so the endpoints are inert until a SCIM connection exists.
+        from dazzle.back.runtime.auth.scim_routes import create_scim_routes
+
+        ctx.app.include_router(create_scim_routes())
+
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
         # time (#838). When no SecurityConfig is present on the AppSpec, the
