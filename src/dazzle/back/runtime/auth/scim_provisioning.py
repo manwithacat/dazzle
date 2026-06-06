@@ -28,7 +28,7 @@ _logger = logging.getLogger(__name__)
 _MEMBER_VALUE_FILTER = _re.compile(r'members\[\s*value\s+eq\s+"([^"]+)"\s*\]', _re.IGNORECASE)
 
 
-def parse_group_patch(body: dict[str, Any]) -> list[tuple]:
+def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
     """Parse a SCIM PATCH body into concrete ``(op, arg)`` tuples (#1342).
 
     Supports the forms Okta/Entra send (not a general SCIM path-filter engine):
@@ -37,7 +37,7 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple]:
     (str; ``displayName`` path or the no-path ``value`` dict form). Unknown ops are
     skipped — the route returns the resource unchanged (SCIM-lenient).
     """
-    ops: list[tuple] = []
+    ops: list[tuple[str, Any]] = []
     for op in body.get("Operations", []) or []:
         kind = str(op.get("op", "")).lower()
         path = op.get("path")
