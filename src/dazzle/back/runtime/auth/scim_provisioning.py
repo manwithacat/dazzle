@@ -32,6 +32,20 @@ class ScimError(RuntimeError):
         self.reason = reason
 
 
+def recompute_membership_roles(store: Any, connection: Any, membership_id: str) -> None:
+    """Set a membership's roles to ``map_groups_to_roles`` over the union of ALL
+    its (this-connection) SCIM groups — the single source of truth for
+    group-derived roles (#1342). Idempotent; correct for multi-group de-escalation
+    (a role granted by another group survives removal from one)."""
+    names = store.get_member_group_names(membership_id, connection.id)
+    roles = map_groups_to_roles(names, connection.group_mapping or {})
+    membership = store.get_membership(membership_id)
+    if membership is None:
+        return
+    if set(roles) != set(membership.roles or []):
+        store.update_membership_roles(membership_id, roles, reason="SCIM group sync")
+
+
 @dataclass(frozen=True)
 class ScimResult:
     """Outcome of a provision/update — the resolved identity + membership + state."""

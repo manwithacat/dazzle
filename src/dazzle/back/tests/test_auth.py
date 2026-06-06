@@ -1372,3 +1372,25 @@ class TestScimGroupStore:
         assert store.get_group_member_ids(g.id) == []
         store.replace_group_members(g.id, [membership.id])
         assert store.get_group_member_ids(g.id) == [membership.id]
+
+    def test_recompute_unions_roles_across_groups(self, store, membership):
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+
+        conn = SimpleNamespace(
+            id="conn-1",
+            tenant_id="org-1",
+            group_mapping={"Eng": "engineer", "Ops": "operator"},
+        )
+        eng = store.create_scim_group("conn-1", "Eng")
+        ops = store.create_scim_group("conn-1", "Ops")
+        store.add_group_member(eng.id, membership.id)
+        store.add_group_member(ops.id, membership.id)
+        recompute_membership_roles(store, conn, membership.id)
+        assert set(store.get_membership(membership.id).roles) == {"engineer", "operator"}
+
+        # Remove from one group: the other group's role MUST persist (de-escalation).
+        store.remove_group_member(eng.id, membership.id)
+        recompute_membership_roles(store, conn, membership.id)
+        assert set(store.get_membership(membership.id).roles) == {"operator"}
