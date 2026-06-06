@@ -1,5 +1,7 @@
 """Capability cognition gating (#1342 Phase 2)."""
 
+import json
+
 import dazzle.core.capabilities.registry as reg
 from dazzle.core.capabilities import active_capability_ids
 
@@ -123,3 +125,37 @@ def test_lint_appspec_forwards_active_capabilities(monkeypatch, tmp_path):
     monkeypatch.setattr(lint, "suggest_capabilities", spy)
     lint.lint_appspec(appspec, active_capabilities={"auth.enterprise.oidc"})
     assert captured["active"] == {"auth.enterprise.oidc"}
+
+
+_BLOB = {
+    "patterns": {
+        "enterprise_sso": {
+            "name": "Enterprise SSO",
+            "category": "Auth",
+            "capability": "auth.enterprise.oidc",
+            "triggers": ["okta", "sso"],
+        }
+    }
+}
+
+
+def test_propose_patterns_gates_and_suggests(monkeypatch):
+    import dazzle.mcp.server.handlers.spec_analyze as sa
+
+    monkeypatch.setattr("dazzle.mcp.semantics_kb.get_dsl_patterns", lambda: _BLOB)
+
+    # Not active → an enable-suggestion, NOT a full proposal.
+    out = json.loads(
+        sa._propose_patterns({"spec_text": "Staff sign in via Okta SSO."}, active=set())
+    )
+    assert any(
+        s["capability"] == "auth.enterprise.oidc" for s in out.get("capability_suggestions", [])
+    )
+    assert out["pattern_proposals"] == []
+
+    # Active → a normal proposal, no suggestion.
+    out2 = json.loads(
+        sa._propose_patterns({"spec_text": "Okta SSO."}, active={"auth.enterprise.oidc"})
+    )
+    assert out2.get("capability_suggestions", []) == []
+    assert any(p["pattern_id"] == "enterprise_sso" for p in out2["pattern_proposals"])

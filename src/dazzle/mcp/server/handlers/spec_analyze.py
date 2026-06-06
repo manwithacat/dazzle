@@ -961,7 +961,7 @@ def _load_counter_priors_for_flagging() -> list[Any]:
 # entities + personas + lifecycles in the cognition pass output.
 
 
-def _propose_patterns(arguments: dict[str, Any]) -> str:
+def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None) -> str:
     """Match spec_text against patterns.toml + inference_kb triggers.
 
     Returns a structured list of `pattern_proposals` (positive) and
@@ -980,18 +980,36 @@ def _propose_patterns(arguments: dict[str, Any]) -> str:
         return error_response("spec_text is required")
 
     haystack = spec_text.lower()
+    active = active or set()
 
     # Lazy imports — keeps the handler module lightweight for non-bootstrap callers.
+    from dazzle.core.capabilities.cognition import enable_suggestion
     from dazzle.mcp.semantics_kb import get_dsl_patterns
 
     # --- Positive proposals (patterns.toml) ---
     pattern_proposals: list[dict[str, Any]] = []
+    # A pattern gated by an inactive capability (#1342) is NOT surfaced as full
+    # guidance; instead, a matched trigger becomes a "declare this capability"
+    # suggestion (the binary-requirement→config north-star).
+    capability_suggestions: list[dict[str, Any]] = []
+    suggested_caps: set[str] = set()
     patterns_blob = get_dsl_patterns().get("patterns", {})
     for pattern_id, entry in patterns_blob.items():
         triggers = entry.get("triggers") or []
         matched = [t for t in triggers if isinstance(t, str) and t.lower() in haystack]
         if not matched:
             continue
+        gate = entry.get("capability")
+        if gate and gate not in active:
+            if gate not in suggested_caps:
+                suggestion = enable_suggestion(gate)
+                suggestion["matched_triggers"] = matched
+                suggestion["because"] = (
+                    f"your spec mentions {', '.join(matched)} — an opt-in capability"
+                )
+                capability_suggestions.append(suggestion)
+                suggested_caps.add(gate)
+            continue  # gated + inactive → suggest enabling, don't push full guidance
         pattern_proposals.append(
             {
                 "pattern_id": pattern_id,
@@ -1031,9 +1049,11 @@ def _propose_patterns(arguments: dict[str, Any]) -> str:
         {
             "pattern_proposals": pattern_proposals,
             "antipattern_flags": antipattern_flags,
+            "capability_suggestions": capability_suggestions,
             "summary": (
                 f"{len(pattern_proposals)} pattern(s) matched, "
-                f"{len(antipattern_flags)} anti-pattern flag(s)"
+                f"{len(antipattern_flags)} anti-pattern flag(s), "
+                f"{len(capability_suggestions)} capability suggestion(s)"
             ),
         },
         indent=2,
