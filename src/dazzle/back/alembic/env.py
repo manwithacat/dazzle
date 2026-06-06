@@ -27,8 +27,12 @@ logger = logging.getLogger(__name__)
 config = context.config
 
 # Interpret the config file for Python logging (if present).
+# disable_existing_loggers=False is load-bearing: fileConfig defaults to True, which
+# would silence every already-configured app logger (e.g. dazzle.back.runtime.auth.store)
+# whenever a migration runs in-process — running `dazzle db upgrade` must not nuke the
+# host app's logging, and it broke caplog-based tests downstream of a migration.
 if config.config_file_name and os.path.exists(config.config_file_name):
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # ---------------------------------------------------------------------------
 # Target metadata — built from DSL EntitySpecs

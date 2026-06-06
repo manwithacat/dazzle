@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.58] - 2026-06-06
+
+### Fixed
+
+- **Alembic migrations no longer silence the host app's loggers** (`src/dazzle/back/alembic/env.py`). `fileConfig(config.config_file_name)` defaulted to `disable_existing_loggers=True`, so running a migration in-process disabled every already-configured logger (e.g. `dazzle.back.runtime.auth.store`). Now passes `disable_existing_loggers=False`. This was a real bug for any in-process `dazzle db upgrade`, and it turned CI red: the `-m postgres` job runs many test files in one process, and a migration test (running Alembic) silenced the store logger so a *later* caplog-based session test (`test_get_session_warns_on_null_csrf_secret`) saw no warning and failed (`assert False`). The 315-test PostgreSQL job is green again.
+
+### Agent Guidance
+
+- **Pre-ship scope gap (process):** `pytest tests/ -m "not e2e"` (the local pre-ship slice) does **not** run `src/dazzle/back/tests/` nor the CI `-m "postgres"` selection — a migration-vs-caplog cross-file pollution only surfaced in CI. When a change touches Alembic/migrations, logging config, or anything a `-m postgres` test exercises, also run `DATABASE_URL=… pytest -m "postgres"` locally before pushing.
+
 ## [0.81.57] - 2026-06-06
 
 ### Added
