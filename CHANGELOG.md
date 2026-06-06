@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.74] - 2026-06-06
+
+### Added
+
+- **Design spec: SCIM /Groups** (`docs/superpowers/specs/2026-06-06-scim-groups-design.md`) for #1342. A persisted SCIM 2.0 Group resource (`scim_groups` + `scim_group_members` tables) with full CRUD + RFC-7644 member PATCH; a membership's group-derived roles are recomputed as the union of `map_groups_to_roles` over ALL its groups (faithful multi-group de-escalation). `/Groups` becomes authoritative for group→role; the `User.groups` attribute write-path is dropped to informational (RFC-correct, clean-break). Spec only; not yet implemented.
+
 ## [0.81.73] - 2026-06-06
 
 ### Added
