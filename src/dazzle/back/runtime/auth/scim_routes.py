@@ -74,9 +74,11 @@ def _email_for(store: Any, identity_id: str) -> str:
     return getattr(user, "email", "") if user is not None else ""
 
 
-def _render_user(request: Request, store: Any, membership: Any) -> dict[str, Any]:
+def _render_user(
+    request: Request, store: Any, membership: Any, connection: Any = None
+) -> dict[str, Any]:
     base = str(request.base_url).rstrip("/")
-    return {
+    out: dict[str, Any] = {
         "schemas": [_USER_SCHEMA],
         "id": membership.id,
         "userName": _email_for(store, membership.identity_id),
@@ -86,6 +88,13 @@ def _render_user(request: Request, store: Any, membership: Any) -> dict[str, Any
             "location": f"{base}/scim/v2/Users/{membership.id}",
         },
     }
+    # #1342: read-only reflection of the membership's persisted SCIM group
+    # memberships (RFC: User.groups is server-managed). Only when we have the
+    # connection scope to resolve them.
+    if connection is not None:
+        names = store.get_member_group_names(membership.id, connection.id)
+        out["groups"] = [{"value": n, "display": n, "type": "direct"} for n in names]
+    return out
 
 
 def _coerce_active(value: Any) -> bool | None:
@@ -220,7 +229,7 @@ def create_scim_routes() -> APIRouter:
         membership = _membership_in_org(store, membership_id, conn.tenant_id)
         if membership is None:
             return _error(404, "user not found")
-        return JSONResponse(_render_user(request, store, membership), media_type=_SCIM_MEDIA)
+        return JSONResponse(_render_user(request, store, membership, conn), media_type=_SCIM_MEDIA)
 
     @router.get("/scim/v2/Users")
     async def list_users(request: Request, filter: Annotated[str, Query()] = "") -> JSONResponse:

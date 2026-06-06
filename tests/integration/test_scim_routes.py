@@ -465,3 +465,15 @@ def test_group_duplicate_name_409() -> None:
 def test_groups_require_bearer() -> None:
     s, _ = _group_store()
     assert _client(s).get("/scim/v2/Groups").status_code == 401
+
+
+def test_user_get_echoes_group_memberships() -> None:
+    # #1342: GET /Users/{id} reflects the membership's actual persisted group
+    # memberships as a read-only `groups` array (RFC: server-managed).
+    s, m = _group_store()
+    g = s.create_scim_group("c1", "Eng")
+    s.add_group_member(g.id, m.id)
+    r = _client(s).get(f"/scim/v2/Users/{m.id}", headers=_auth("tok1"))
+    assert r.status_code == 200
+    groups = r.json().get("groups", [])
+    assert any(grp.get("value") == "Eng" or grp.get("display") == "Eng" for grp in groups)
