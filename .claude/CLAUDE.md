@@ -59,6 +59,18 @@ Warning sign: wiring an LLM call that *writes* DSL. Right shape: LLM call return
 
 Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell), call `knowledge counter_prior code_shape="<one-sentence description>"` to check `docs/counter-priors/` for matching pathologies (exceptions-as-control-flow, n+1, raw-sql, shell-strict, polymorphic-associations, …); use `query="<excerpt>"` for spec-driven structural choices. Bootstrap already surfaces these flags — the explicit call is for everything outside that moment. Full list: `docs/counter-priors/INDEX.md`.
 
+## Model-Driven Failure Modes (review rule)
+
+`dev_docs/model-driven-failure-modes.md` catalogues the 14 historical 4GL/MDE/CASE failure modes Dazzle is structurally exposed to and scores residual risk per mode. When proposing a new DSL construct, runtime subsystem, escape hatch, or QA harness, answer these five questions before selling it as a safe pattern:
+
+1. Which failure mode does this risk increasing?
+2. Which detector dimension catches it if we're wrong?
+3. Is that detector *live* in the normal workflow, or merely documented?
+4. Can a competent engineer trace the runtime behaviour back to DSL/AppSpec?
+5. Does the abstraction preserve Postgres/auth/workflow/UI semantics, or push them into side code?
+
+If those can't be answered, the change isn't blocked, but it carries an explicit risk note and must not be marketed as a new safe pattern yet.
+
 ## Commands
 
 ### Dev Setup
@@ -335,4 +347,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.81.60 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.81.61 | **Python**: 3.12+ | **Status**: Production Ready

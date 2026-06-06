@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.61] - 2026-06-06
+
+### Added
+
+- **Model-driven failure-mode review rule** (`dev_docs/model-driven-failure-modes.md`, `.claude/CLAUDE.md`). The doc treating 4GL/CASE/MDE history as a threat model for Dazzle now carries a corrected scoring model and a self-application section, and CLAUDE.md gains a "Model-Driven Failure Modes (review rule)" section with the five operating-rule questions to ask when proposing a new construct, runtime subsystem, escape hatch, or QA harness.
+
+### Changed
+
+- **Corrected the residual-risk scoring math** in `dev_docs/model-driven-failure-modes.md`: clamped the `risk` formula so it can no longer exceed 100 (the `agent_multiplier` previously allowed up to 130); made `detection_gap` efficacy-weighted (a "live" detector that a real finding slipped past loses credit, coupling MDF-12's `correlated_green_failures` back into every mode) with a 0.05 floor so a detected mode never reads as zero residual risk; and replaced the degenerate `overall = max(max_risk, mean(top_3))` (which always equals `max_risk`) with one that penalises multiple simultaneously-high modes. Seed register numbers are marked hand-set, not computed.
+
+#### Agent Guidance
+
+- When proposing a new DSL construct, runtime subsystem, escape hatch, or QA harness, answer the five questions in CLAUDE.md's "Model-Driven Failure Modes (review rule)" section. A change that can't answer them isn't blocked, but carries an explicit risk note and must not be marketed as a new safe pattern.
+
 ## [0.81.60] - 2026-06-06
 
 ### Fixed
