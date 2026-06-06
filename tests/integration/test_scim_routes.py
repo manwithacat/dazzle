@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
@@ -18,7 +19,7 @@ from dazzle.back.runtime.auth.connections import ConnectionRecord
 from dazzle.back.runtime.auth.scim_routes import create_scim_routes
 
 
-def _conn(cid, tenant, bearer, *, verified=("acme.test",)) -> ConnectionRecord:
+def _conn(cid, tenant, bearer, *, verified=("acme.test",), group_mapping=None) -> ConnectionRecord:
     return ConnectionRecord(
         id=cid,
         tenant_id=tenant,
@@ -28,7 +29,7 @@ def _conn(cid, tenant, bearer, *, verified=("acme.test",)) -> ConnectionRecord:
         verified_domains=list(verified),
         config={},
         secrets={"scim_bearer": bearer},
-        group_mapping={},
+        group_mapping=group_mapping or {},
         status="active",
         created_at=datetime(2026, 6, 6),
         updated_at=datetime(2026, 6, 6),
@@ -127,6 +128,86 @@ class _Store:
     def delete_sessions_for_membership(self, membership_id):
         self.revoked.append(membership_id)
         return 1
+
+    # SCIM groups (#1342) — in-memory
+    def _ensure_group_state(self):
+        if not hasattr(self, "_groups"):
+            self._groups: dict[str, Any] = {}  # gid -> SimpleNamespace
+            self._gmembers: dict[str, list[str]] = {}  # gid -> [membership_id]
+
+    def create_scim_group(self, connection_id, display_name):
+        from types import SimpleNamespace
+        from uuid import uuid4
+
+        self._ensure_group_state()
+        gid = str(uuid4())
+        g = SimpleNamespace(
+            id=gid,
+            connection_id=connection_id,
+            display_name=display_name,
+            created_at="t",
+            updated_at="t",
+        )
+        self._groups[gid] = g
+        self._gmembers[gid] = []
+        return g
+
+    def get_scim_group(self, group_id, connection_id):
+        self._ensure_group_state()
+        g = self._groups.get(group_id)
+        return g if g and g.connection_id == connection_id else None
+
+    def list_scim_groups(self, connection_id, display_name=None):
+        self._ensure_group_state()
+        return [
+            g
+            for g in self._groups.values()
+            if g.connection_id == connection_id
+            and (display_name is None or g.display_name == display_name)
+        ]
+
+    def rename_scim_group(self, group_id, connection_id, display_name):
+        self._ensure_group_state()
+        g = self._groups.get(group_id)
+        if g and g.connection_id == connection_id:
+            g.display_name = display_name
+
+    def delete_scim_group(self, group_id, connection_id):
+        self._ensure_group_state()
+        g = self._groups.get(group_id)
+        if g and g.connection_id == connection_id:
+            del self._groups[group_id]
+            self._gmembers.pop(group_id, None)
+            return True
+        return False
+
+    def get_group_member_ids(self, group_id):
+        self._ensure_group_state()
+        return list(self._gmembers.get(group_id, []))
+
+    def add_group_member(self, group_id, membership_id):
+        self._ensure_group_state()
+        members = self._gmembers.setdefault(group_id, [])
+        if membership_id not in members:
+            members.append(membership_id)
+
+    def remove_group_member(self, group_id, membership_id):
+        self._ensure_group_state()
+        members = self._gmembers.get(group_id, [])
+        if membership_id in members:
+            members.remove(membership_id)
+
+    def replace_group_members(self, group_id, membership_ids):
+        self._ensure_group_state()
+        self._gmembers[group_id] = list(membership_ids)
+
+    def get_member_group_names(self, membership_id, connection_id):
+        self._ensure_group_state()
+        return [
+            g.display_name
+            for gid, g in self._groups.items()
+            if g.connection_id == connection_id and membership_id in self._gmembers.get(gid, [])
+        ]
 
 
 def _client(store) -> TestClient:
@@ -299,3 +380,88 @@ def test_malformed_json_body_is_400(store) -> None:
         headers={**_auth("tok1"), "Content-Type": "application/json"},
     )
     assert r.status_code == 400
+
+
+# ---- Groups (#1342) ----
+
+
+def _group_store():
+    s = _Store([_conn("c1", "org-1", "tok1", group_mapping={"Eng": "engineer"})])
+    m = s.create_membership(tenant_id="org-1", identity_id="id-1", roles=[])
+    return s, m
+
+
+def test_group_create_get_list() -> None:
+    s, m = _group_store()
+    client = _client(s)
+    r = client.post(
+        "/scim/v2/Groups",
+        json={"displayName": "Eng", "members": [{"value": m.id}]},
+        headers=_auth("tok1"),
+    )
+    assert r.status_code == 201
+    body = r.json()
+    gid = body["id"]
+    assert body["displayName"] == "Eng"
+    assert s.get_membership(m.id).roles == ["engineer"]  # recompute on create
+    assert client.get(f"/scim/v2/Groups/{gid}", headers=_auth("tok1")).status_code == 200
+    lr = client.get('/scim/v2/Groups?filter=displayName eq "Eng"', headers=_auth("tok1"))
+    assert lr.json()["totalResults"] == 1
+
+
+def test_group_patch_add_remove_member_recomputes() -> None:
+    s, m = _group_store()
+    client = _client(s)
+    gid = client.post("/scim/v2/Groups", json={"displayName": "Eng"}, headers=_auth("tok1")).json()[
+        "id"
+    ]
+    client.patch(
+        f"/scim/v2/Groups/{gid}",
+        json={"Operations": [{"op": "add", "path": "members", "value": [{"value": m.id}]}]},
+        headers=_auth("tok1"),
+    )
+    assert s.get_membership(m.id).roles == ["engineer"]
+    client.patch(
+        f"/scim/v2/Groups/{gid}",
+        json={"Operations": [{"op": "remove", "path": f'members[value eq "{m.id}"]'}]},
+        headers=_auth("tok1"),
+    )
+    assert s.get_membership(m.id).roles == []
+
+
+def test_group_delete_recomputes_and_404() -> None:
+    s, m = _group_store()
+    client = _client(s)
+    gid = client.post(
+        "/scim/v2/Groups",
+        json={"displayName": "Eng", "members": [{"value": m.id}]},
+        headers=_auth("tok1"),
+    ).json()["id"]
+    assert s.get_membership(m.id).roles == ["engineer"]
+    assert client.delete(f"/scim/v2/Groups/{gid}", headers=_auth("tok1")).status_code == 204
+    assert s.get_membership(m.id).roles == []
+    assert client.get(f"/scim/v2/Groups/{gid}", headers=_auth("tok1")).status_code == 404
+
+
+def test_group_cross_org_member_400() -> None:
+    s, _ = _group_store()
+    other_m = s.create_membership(tenant_id="org-2", identity_id="id-2", roles=[])
+    r = _client(s).post(
+        "/scim/v2/Groups",
+        json={"displayName": "Eng", "members": [{"value": other_m.id}]},
+        headers=_auth("tok1"),
+    )
+    assert r.status_code == 400
+
+
+def test_group_duplicate_name_409() -> None:
+    s, _ = _group_store()
+    client = _client(s)
+    client.post("/scim/v2/Groups", json={"displayName": "Eng"}, headers=_auth("tok1"))
+    r = client.post("/scim/v2/Groups", json={"displayName": "Eng"}, headers=_auth("tok1"))
+    assert r.status_code == 409
+
+
+def test_groups_require_bearer() -> None:
+    s, _ = _group_store()
+    assert _client(s).get("/scim/v2/Groups").status_code == 401

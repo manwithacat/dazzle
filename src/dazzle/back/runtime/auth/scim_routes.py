@@ -300,4 +300,124 @@ def create_scim_routes() -> APIRouter:
         deprovision_scim_user(store, conn, identity_id=membership.identity_id)
         return Response(status_code=204)
 
+    # ------------------------------------------------------------------ #
+    # SCIM Groups (#1342) — persisted, org-scoped; member changes recompute roles.
+    # ------------------------------------------------------------------ #
+
+    def _group_to_scim(group: Any, member_ids: list[str], base: str) -> dict[str, Any]:
+        return {
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+            "id": group.id,
+            "displayName": group.display_name,
+            "members": [
+                {"value": mid, "$ref": f"{base}/scim/v2/Users/{mid}"} for mid in member_ids
+            ],
+            "meta": {
+                "resourceType": "Group",
+                "location": f"{base}/scim/v2/Groups/{group.id}",
+            },
+        }
+
+    @router.post("/scim/v2/Groups", status_code=201)
+    async def scim_create_group(request: Request) -> Any:
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = _require_scim_connection(request)
+        store = request.app.state.auth_store
+        body = await request.json()
+        member_ids = [m["value"] for m in (body.get("members") or []) if "value" in m]
+        try:
+            group = sp.create_group(store, conn, body.get("displayName", ""), member_ids)
+        except sp.SCIMGroupError as e:
+            return _error(e.status, str(e))
+        base = str(request.base_url).rstrip("/")
+        return _group_to_scim(group, store.get_group_member_ids(group.id), base)
+
+    @router.get("/scim/v2/Groups/{group_id}")
+    async def scim_get_group(group_id: str, request: Request) -> Any:
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = _require_scim_connection(request)
+        store = request.app.state.auth_store
+        try:
+            group = sp.get_group(store, conn, group_id)
+        except sp.SCIMGroupError as e:
+            return _error(e.status, str(e))
+        base = str(request.base_url).rstrip("/")
+        return _group_to_scim(group, store.get_group_member_ids(group_id), base)
+
+    @router.get("/scim/v2/Groups")
+    async def scim_list_groups(request: Request) -> Any:
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = _require_scim_connection(request)
+        store = request.app.state.auth_store
+        flt = request.query_params.get("filter", "")
+        match = re.search(r'displayName\s+eq\s+"([^"]+)"', flt)
+        name = match.group(1) if match else None
+        groups = sp.list_groups(store, conn, display_name=name)
+        base = str(request.base_url).rstrip("/")
+        resources = [_group_to_scim(g, store.get_group_member_ids(g.id), base) for g in groups]
+        return {
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+            "totalResults": len(resources),
+            "Resources": resources,
+            "itemsPerPage": len(resources),
+            "startIndex": 1,
+        }
+
+    @router.put("/scim/v2/Groups/{group_id}")
+    async def scim_put_group(group_id: str, request: Request) -> Any:
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = _require_scim_connection(request)
+        store = request.app.state.auth_store
+        body = await request.json()
+        try:
+            if body.get("displayName"):
+                sp.rename_group(store, conn, group_id, body["displayName"])
+            member_ids = [m["value"] for m in (body.get("members") or []) if "value" in m]
+            sp.set_group_members(store, conn, group_id, member_ids)
+            group = sp.get_group(store, conn, group_id)
+        except sp.SCIMGroupError as e:
+            return _error(e.status, str(e))
+        base = str(request.base_url).rstrip("/")
+        return _group_to_scim(group, store.get_group_member_ids(group_id), base)
+
+    @router.patch("/scim/v2/Groups/{group_id}")
+    async def scim_patch_group(group_id: str, request: Request) -> Any:
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = _require_scim_connection(request)
+        store = request.app.state.auth_store
+        body = await request.json()
+        try:
+            sp.get_group(store, conn, group_id)  # 404 if absent / wrong org
+            for kind, arg in sp.parse_group_patch(body):
+                if kind == "add_members":
+                    sp.add_group_members(store, conn, group_id, arg)
+                elif kind == "remove_member":
+                    sp.remove_group_member(store, conn, group_id, arg)
+                elif kind == "replace_members":
+                    sp.set_group_members(store, conn, group_id, arg)
+                elif kind == "rename":
+                    sp.rename_group(store, conn, group_id, arg)
+            group = sp.get_group(store, conn, group_id)
+        except sp.SCIMGroupError as e:
+            return _error(e.status, str(e))
+        base = str(request.base_url).rstrip("/")
+        return _group_to_scim(group, store.get_group_member_ids(group_id), base)
+
+    @router.delete("/scim/v2/Groups/{group_id}")
+    async def scim_delete_group(group_id: str, request: Request) -> Response:
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = _require_scim_connection(request)
+        store = request.app.state.auth_store
+        try:
+            sp.delete_group(store, conn, group_id)
+        except sp.SCIMGroupError as e:
+            return _error(e.status, str(e))
+        return Response(status_code=204)
+
     return router
