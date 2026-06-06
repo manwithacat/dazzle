@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.71] - 2026-06-06
+
+### Added
+
+- **Capability cognition gating (#1342, Phase 2).** Proactive agent-facing surfaces now gate on declared capabilities (`active = requested ∧ available`, resolved non-raising from the manifest): `dsl(lint)` relevance suggestions (`Relevance.gated_by`), `spec_analyze` pattern proposals + counter-prior antipattern flags (optional `capability` gate), and `bootstrap`. When a spec states a requirement behind an undeclared capability (e.g. "staff sign in via Okta"), bootstrap surfaces a `dazzle capability enable …` suggestion + runbook instead of pushing guidance the app can't use; once declared, the full pattern is pushed. The `knowledge` pull path stays **ungated** — direct queries always return content. New gated `enterprise_sso` pattern exercises the mechanism end-to-end. Helpers live in `dazzle.core.capabilities.cognition` (`active_capabilities_for`, `partition_by_capability`, `enable_suggestion`) + `active_capability_ids` (non-raising).
+
+#### Agent Guidance
+
+- To gate guidance behind a capability so it isn't pushed at greenfield apps: set `gated_by` on a discovery `Relevance`, or `capability` on a `patterns.toml` entry / counter-prior. A gated **pattern** whose trigger matches but capability is inactive auto-converts to an enable-suggestion; a gated **counter-prior** is suppressed when inactive (no false warnings); both surface normally once the capability is active. Proactive surfaces gate; the `knowledge` tool (pull) never does.
+
 ## [0.81.70] - 2026-06-06
 
 ### Added

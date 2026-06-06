@@ -14,6 +14,12 @@ one org, and gated by **domain verification**.
     `auth.enterprise.oidc`, `auth.enterprise.saml`, `auth.enterprise.scim`. See the
     capability model in `docs/superpowers/specs/2026-06-06-capability-opt-in-model-design.md`.
 
+    **Cognition (Phase 2):** the agent won't *proactively* suggest enterprise SSO
+    while building a simple app. If your spec states the need ("staff sign in via
+    Okta"), `bootstrap` surfaces a one-line `dazzle capability enable …` suggestion
+    instead of full guidance; once declared, the full `enterprise_sso` pattern is
+    pushed. Direct `knowledge` queries always return this content regardless.
+
 ## The model
 
 A **`Connection`** is a framework-owned, org-fenced record (`type` = `oidc` / `saml` / `scim`).
