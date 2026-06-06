@@ -61,13 +61,15 @@ class SLASubsystem:
                     service.on_updated(_on_updated)
                     wired_count += 1
 
-            @ctx.app.on_event("startup")
+            from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
             async def _startup_sla() -> None:
                 await sla_manager.start()
 
-            @ctx.app.on_event("shutdown")
             async def _shutdown_sla() -> None:
                 await sla_manager.shutdown()
+
+            register_lifespan_hook(ctx.app, startup=_startup_sla, shutdown=_shutdown_sla)
 
             logger.info(
                 "SLA manager initialized — %d SLA(s), wired to %d service(s)",
@@ -79,4 +81,4 @@ class SLASubsystem:
             logger.warning("Failed to init SLA manager: %s", exc)
 
     def shutdown(self) -> None:
-        pass  # handled by FastAPI on_event("shutdown")
+        pass  # teardown runs via the registered lifespan shutdown hook

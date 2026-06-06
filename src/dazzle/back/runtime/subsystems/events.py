@@ -54,13 +54,15 @@ class EventsSubsystem:
         # Wire lifecycle
         framework = self._framework
 
-        @ctx.app.on_event("startup")
+        from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
         async def _start_events() -> None:
             await framework.start()
 
-        @ctx.app.on_event("shutdown")
         async def _stop_events() -> None:
             await framework.stop()
+
+        register_lifespan_hook(ctx.app, startup=_start_events, shutdown=_stop_events)
 
         # Wire EventEmittingMixin on services
         for service in ctx.services.values():
@@ -68,4 +70,4 @@ class EventsSubsystem:
                 service.set_event_framework(self._framework)
 
     def shutdown(self) -> None:
-        pass  # handled by FastAPI on_event("shutdown") registered in startup
+        pass  # teardown runs via the registered lifespan shutdown hook

@@ -56,16 +56,18 @@ class LLMQueueSubsystem:
 
             _queue = queue
 
-            @ctx.app.on_event("startup")
+            from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
             async def _startup_llm() -> None:
                 await _queue.start()
 
-            @ctx.app.on_event("shutdown")
             async def _shutdown_llm() -> None:
                 await _queue.shutdown()
+
+            register_lifespan_hook(ctx.app, startup=_startup_llm, shutdown=_shutdown_llm)
 
         except Exception as exc:
             logger.warning("Failed to init LLM queue subsystem: %s", exc)
 
     def shutdown(self) -> None:
-        pass  # handled by FastAPI on_event("shutdown")
+        pass  # teardown runs via the registered lifespan shutdown hook

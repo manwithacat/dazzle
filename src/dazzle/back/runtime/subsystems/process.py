@@ -78,14 +78,18 @@ class ProcessSubsystem:
             process_adapter = self._adapter
             process_manager = self._manager
 
-            @ctx.app.on_event("startup")
+            from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
             async def _startup_processes() -> None:
                 await process_adapter.initialize()
                 await process_manager.initialize()
 
-            @ctx.app.on_event("shutdown")
             async def _shutdown_processes() -> None:
                 await process_manager.shutdown()
+
+            register_lifespan_hook(
+                ctx.app, startup=_startup_processes, shutdown=_shutdown_processes
+            )
 
             logger.info("Process manager initialized")
 
@@ -165,4 +169,4 @@ class ProcessSubsystem:
         logger.info("Wired process SEND steps to ChannelManager")
 
     def shutdown(self) -> None:
-        pass  # handled by FastAPI on_event("shutdown")
+        pass  # teardown runs via the registered lifespan shutdown hook

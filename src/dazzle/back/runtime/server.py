@@ -531,15 +531,22 @@ class DazzleBackendApp:
         Shutdown: stop the audit logger (if configured), then close the pool —
         mirroring the previous ordering (pool opens first, closes last).
         """
+        from dazzle.back.runtime.lifespan_hooks import run_shutdown_hooks, run_startup_hooks
+
         pool_min = int(os.environ.get("DAZZLE_DB_POOL_MIN", "2"))
         pool_max = int(os.environ.get("DAZZLE_DB_POOL_MAX", "10"))
         assert self._db_manager is not None
         self._db_manager.open_pool(min_size=pool_min, max_size=pool_max)
         if self._audit_logger is not None:
             self._audit_logger.start()
+        # Subsystem startup hooks (seed/events/queues/sla/process/channels/…) run after the
+        # pool is open so they can use the DB. Replaces the @on_event hooks a custom lifespan
+        # silently dropped.
+        await run_startup_hooks(app)
         try:
             yield
         finally:
+            await run_shutdown_hooks(app)
             if self._audit_logger is not None:
                 await self._audit_logger.stop()
             self._db_manager.close_pool()
@@ -553,6 +560,11 @@ class DazzleBackendApp:
             version=self._appspec.version,
             lifespan=self._lifespan,
         )
+        # Subsystems register startup/shutdown work here (replacing @app.on_event, which
+        # a custom lifespan silently ignores). Initialised before _run_subsystems runs.
+        from dazzle.back.runtime.lifespan_hooks import init_lifespan_registry
+
+        init_lifespan_registry(self._app)
         _maybe_instrument_for_perf(self._app)
 
         # Attach runtime service container (v0.49.0, #673)

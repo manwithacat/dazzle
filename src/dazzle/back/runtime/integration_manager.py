@@ -145,14 +145,16 @@ class IntegrationManager:
 
         channel_manager = self.channel_manager  # Capture for closures
 
-        @self._app.on_event("startup")
+        from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
         async def startup_channels() -> None:
             await channel_manager.initialize()
             await channel_manager.start_processor()
 
-        @self._app.on_event("shutdown")
         async def shutdown_channels() -> None:
             await channel_manager.shutdown()
+
+        register_lifespan_hook(self._app, startup=startup_channels, shutdown=shutdown_channels)
 
         @self._app.get("/_dazzle/channels", tags=["Channels"])
         async def list_channels() -> dict[str, Any]:

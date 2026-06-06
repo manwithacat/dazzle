@@ -60,14 +60,16 @@ class ChannelsSubsystem:
 
             channel_mgr = channel_manager
 
-            @ctx.app.on_event("startup")
+            from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
             async def _startup_channels() -> None:
                 await channel_mgr.initialize()
                 await channel_mgr.start_processor()
 
-            @ctx.app.on_event("shutdown")
             async def _shutdown_channels() -> None:
                 await channel_mgr.shutdown()
+
+            register_lifespan_hook(ctx.app, startup=_startup_channels, shutdown=_shutdown_channels)
 
         except ImportError:
             pass
@@ -223,4 +225,4 @@ class ChannelsSubsystem:
             logger.info("Wired entity events to channel sends for %d entities", wired)
 
     def shutdown(self) -> None:
-        pass  # FastAPI on_event("shutdown") handles cleanup
+        pass  # teardown runs via the registered lifespan shutdown hook

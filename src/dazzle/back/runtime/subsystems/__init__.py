@@ -94,10 +94,11 @@ class SubsystemPlugin(Protocol):
     """Protocol implemented by every subsystem module.
 
     ``name`` is used only for logging.  ``startup()`` is called once during
-    ``DazzleBackendApp.build()`` (synchronously — it may register async FastAPI
-    ``on_event`` handlers but must not itself be a coroutine).  ``shutdown()``
-    is available for explicit teardown; most plugins prefer registering an
-    ``on_event("shutdown")`` handler instead.
+    ``DazzleBackendApp.build()`` (synchronously — it must not be a coroutine). For
+    async startup/shutdown WORK that runs when the server boots, register via
+    ``lifespan_hooks.register_lifespan_hook(ctx.app, startup=…, shutdown=…)`` — NOT
+    the deprecated ``on_event`` decorator, which FastAPI silently ignores under the
+    server's custom lifespan.  ``shutdown()`` is the sync subsystem teardown.
     """
 
     name: str
@@ -107,7 +108,7 @@ class SubsystemPlugin(Protocol):
         ...
 
     def shutdown(self) -> None:
-        """Tear down this subsystem (optional — prefer on_event handlers)."""
+        """Tear down this subsystem (optional — prefer a registered lifespan hook)."""
         ...
 
 

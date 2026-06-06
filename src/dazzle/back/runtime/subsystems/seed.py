@@ -22,7 +22,8 @@ class SeedSubsystem:
         appspec = ctx.appspec
         repositories = ctx.repositories
 
-        @ctx.app.on_event("startup")
+        from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
         async def _run_seeds() -> None:
             try:
                 from dazzle.back.runtime.seed_runner import run_seed_templates
@@ -32,6 +33,8 @@ class SeedSubsystem:
                     logger.info("Seed runner: %d reference data row(s) ensured", count)
             except Exception:
                 logger.warning("Seed runner failed", exc_info=True)
+
+        register_lifespan_hook(ctx.app, startup=_run_seeds)
 
     def shutdown(self) -> None:
         pass

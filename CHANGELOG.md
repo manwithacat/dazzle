@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.59] - 2026-06-06
+
+### Fixed
+
+- **Subsystem startup/shutdown hooks were silently dead** (the `on_event` deprecation was the symptom of a real bug). `DazzleServer` builds the app with a custom `lifespan`, and FastAPI/Starlette **ignore `@app.on_event` handlers entirely when a custom lifespan is set** (confirmed on FastAPI 0.122) — so the runtime startup/shutdown work registered by the seed, events, llm_queue, sla, process, and channels subsystems (start the event framework, the LLM queue worker, SLA monitors, process schedulers, channel processors; run seed templates) **never ran at server boot**. New `dazzle.back.runtime.lifespan_hooks` registry: subsystems call `register_lifespan_hook(ctx.app, startup=…, shutdown=…)` and the server's `_lifespan` runs them (startup after the DB pool opens; shutdown in reverse order before the pool closes). Hooks are resilient — a failing/misconfigured hook is logged and skipped, never aborting boot (these were dead until now, so restoring them must not turn a working deploy into a crash loop). All `@on_event` call sites migrated; the `on_event` deprecation warnings are gone. Reviewed (code-reviewer): no CRITICAL/HIGH — ordering, resilience, and the 1:1 migration confirmed sound.
+
+### Agent Guidance
+
+- **Register app startup/shutdown work via `lifespan_hooks.register_lifespan_hook(app, startup=…, shutdown=…)`, never `@app.on_event(...)`** — the server's custom lifespan silently drops `on_event` handlers (FastAPI 0.122+). Hooks may be sync or async; startup runs after the DB pool opens, shutdown in reverse order before it closes; a hook raising is logged and skipped (not fatal). A drift guard (`tests/unit/test_lifespan_hooks.py::test_no_on_event_calls_remain_in_runtime_source`) bans `.on_event(` in `back/runtime`. **Why this wasn't caught:** the integration suite boots via in-process ASGITransport, which doesn't fire lifespan events (see the `test_invoice_ops_*` skips), and no test asserted the hooks fire — now covered by `test_lifespan_hooks.py`.
+
 ## [0.81.58] - 2026-06-06
 
 ### Fixed

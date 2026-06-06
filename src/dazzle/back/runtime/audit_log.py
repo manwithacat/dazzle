@@ -260,8 +260,8 @@ class AuditLogger:
     def start(self) -> None:
         """Start the background flush task.
 
-        Must be called from within a running event loop — typically a
-        FastAPI ``@app.on_event("startup")`` handler. Calling from a
+        Must be called from within a running event loop — typically the
+        app lifespan startup (see ``DazzleServer._lifespan``). Calling from a
         sync context with no running loop raises ``RuntimeError`` on
         Py3.12+ (#1214); the previous ``asyncio.ensure_future`` path
         silently relied on the deprecated implicit loop acquisition.

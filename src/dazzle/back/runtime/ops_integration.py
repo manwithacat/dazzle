@@ -438,13 +438,11 @@ def mount_ops_platform(
         app = FastAPI()
         ops = mount_ops_platform(app, event_bus=my_event_bus)
 
-        @app.on_event("startup")
-        async def startup():
-            await ops.start()
+        # Run start/stop in the app lifespan (not @app.on_event, which a custom
+        # lifespan silently ignores).
+        from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
 
-        @app.on_event("shutdown")
-        async def shutdown():
-            await ops.stop()
+        register_lifespan_hook(app, startup=ops.start, shutdown=ops.stop)
         ```
     """
     platform = OpsPlatform(config)
