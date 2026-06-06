@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.70] - 2026-06-06
+
+### Added
+
+- **Implementation plan: capability opt-in model, Phase 2 (cognition gating)** (`docs/superpowers/plans/2026-06-06-capability-opt-in-phase2-cognition.md`) for #1342 — 10 TDD tasks: a non-raising cognition resolver + `partition_by_capability` helper, a `gated_by`/`capability` gate on discovery `Relevance` / pattern proposals / counter-priors, active-capability filtering at the proactive surfaces (bootstrap, `dsl(lint)` relevance, `spec_analyze`), spec-driven `dazzle capability enable` suggestions, and a guard that the `knowledge` pull path stays ungated. Investigation note: no enterprise-auth content is surfaced proactively today, so Task 9 wires one real gated `enterprise_sso` pattern to exercise the mechanism end-to-end. Plan only; not yet implemented.
+
 ## [0.81.69] - 2026-06-06
 
 ### Added
