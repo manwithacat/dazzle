@@ -3,6 +3,11 @@
 Import side effect: registers the framework's built-in capabilities.
 """
 
+from dazzle.core.capabilities.cognition import (
+    active_capabilities_for,
+    enable_suggestion,
+    partition_by_capability,
+)
 from dazzle.core.capabilities.models import (
     Capability,
     CapabilityUnavailableError,
@@ -24,8 +29,11 @@ __all__ = [
     "Capability",
     "CapabilityUnavailableError",
     "ResolvedCapabilities",
+    "active_capabilities_for",
     "active_capability_ids",
     "all_capabilities",
+    "enable_suggestion",
+    "partition_by_capability",
     "get",
     "is_available",
     "known_capability_ids",
