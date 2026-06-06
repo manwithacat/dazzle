@@ -211,3 +211,25 @@ def test_counter_prior_gate_suppresses_when_inactive(monkeypatch):
         sa._propose_patterns({"spec_text": "widget soup"}, active={"auth.enterprise.saml"})
     )
     assert any(f["guidance_id"] == "saml_pathology" for f in out2["antipattern_flags"])
+
+
+def test_knowledge_pull_path_is_ungated(monkeypatch):
+    # Push/pull contract: a direct `knowledge counter_prior` query returns a
+    # capability-gated entry regardless of what's active. Only PROACTIVE surfaces
+    # gate; pull queries never do.
+    import dazzle.mcp.server.handlers.knowledge as kn
+    from dazzle.mcp.semantics_kb.counter_priors import CounterPrior
+
+    cp = CounterPrior(
+        id="gated_cp",
+        name="Gated",
+        layer="inference",
+        summary="s",
+        triggers_text=["t"],
+        file_path="x",
+        body="...",
+        capability="auth.enterprise.saml",
+    )
+    monkeypatch.setattr(kn, "load_all_counter_priors", lambda: [cp])
+    out = kn.counter_prior_handler({"id": "gated_cp"})
+    assert "gated_cp" in out  # returned even though nothing is active
