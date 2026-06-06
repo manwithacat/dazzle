@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.69] - 2026-06-06
+
+### Added
+
+- **Capability opt-in model (#1342, Phase 1).** A general `[capabilities]` manifest registry (`src/dazzle/core/capabilities/`) gating framework features on declared per-app intent: `active = requested ∧ available`, default-empty. `dazzle capability list/enable/disable` — `enable` appends to `[capabilities]` and prints the activation runbook; `validate` rejects unknown ids with a did-you-mean. A capability declared but whose package isn't installed is a loud boot error (`CapabilityUnavailableError`). New heavy/advanced framework features should register a `Capability` and gate on `ctx.capabilities.is_active(...)`.
+
+### Changed
+
+- **Enterprise auth (OIDC/SAML/SCIM) now requires an explicit capability** (`auth.enterprise.{oidc,saml,scim}` in `[capabilities]`). Routes — and the `/auth/connections` org-admin surface — no longer mount on mere `[sso]`/`[saml]` pip-extra presence; a greenfield app sees none of it even with the extras installed. **SCIM is no longer mounted unconditionally.** **Migration:** existing enterprise deployments must add the capability (or run `dazzle capability enable auth.enterprise.oidc`) — an IdP pushing to `/scim/v2/*` or using `/auth/enterprise/login` will get 404 until declared. OIDC/SAML gate on their pip extra; SCIM has no import-time dependency (always available once declared).
+
+#### Agent Guidance
+
+- Gate any new heavy/advanced framework feature behind a `Capability` (register in `src/dazzle/core/capabilities/registry.py`) so it stays opt-in and invisible to greenfield apps. Query `ctx.capabilities.is_active("…")` at mount time; declare `probe_module=None` for a feature with no import-time dependency.
+- **Deferred (follow-up):** a hard "existing-connections boot guard" (loud error when connection rows exist for an undeclared capability) is *not* in Phase 1 — the route gating already makes such deployments safe (routes don't mount), and a correct guard needs careful sync-store/async-pool/lifespan-timing design. Cognition gating (KG/bootstrap push-vs-pull) is Phase 2; the #1342 SAML/SCIM backlog items are Phase 3 and inherit their capability's gate.
+
 ## [0.81.68] - 2026-06-06
 
 ### Added

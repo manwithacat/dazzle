@@ -5,6 +5,15 @@ Microsoft Entra ID, Google, Ping, …) drives sign-in and user lifecycle. Connec
 **runtime data**, not DSL — created and managed with `dazzle auth connection …`, fenced to
 one org, and gated by **domain verification**.
 
+!!! note "Opt-in capability (#1342)"
+    Enterprise SSO/SCIM is **off by default**. An app must declare it in `dazzle.toml`
+    (`[capabilities] enabled = ["auth.enterprise.oidc", …]`) — or run
+    `dazzle capability enable auth.enterprise.oidc` — before any enterprise route or the
+    `/auth/connections` admin surface mounts. A greenfield app sees none of this, even if
+    the `[sso]`/`[saml]` extras happen to be installed. Capability ids:
+    `auth.enterprise.oidc`, `auth.enterprise.saml`, `auth.enterprise.scim`. See the
+    capability model in `docs/superpowers/specs/2026-06-06-capability-opt-in-model-design.md`.
+
 ## The model
 
 A **`Connection`** is a framework-owned, org-fenced record (`type` = `oidc` / `saml` / `scim`).
