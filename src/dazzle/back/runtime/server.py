@@ -454,11 +454,38 @@ class DazzleBackendApp:
             SystemRoutesSubsystem(),
         ]
 
+    def _resolve_capabilities(self) -> Any:
+        """Resolve opt-in capabilities from the project manifest (#1342).
+
+        Returns a ``ResolvedCapabilities`` (active = declared ∧ available), or
+        ``None`` when there is no manifest to read. Raises
+        ``CapabilityUnavailableError`` if a capability is declared but its
+        package isn't installed — a loud boot failure with the install runbook.
+        """
+        from dazzle.core.capabilities import resolve_capabilities
+
+        if self._project_root is None:
+            return resolve_capabilities([])
+        manifest_path = self._project_root / "dazzle.toml"
+        if not manifest_path.is_file():
+            return resolve_capabilities([])
+
+        from dazzle.core.manifest import load_manifest
+
+        declared = load_manifest(manifest_path).capabilities.enabled
+        return resolve_capabilities(list(declared))
+
     def _build_subsystem_context(self, auth_dep: Any = None, optional_auth_dep: Any = None) -> Any:
         """Build SubsystemContext from current DazzleBackendApp state."""
         from dazzle.back.runtime.subsystems import SubsystemContext
 
         assert self._app is not None
+
+        # Resolve opt-in capabilities (#1342) from the project manifest. Raises
+        # CapabilityUnavailableError (loud boot failure with the install runbook)
+        # if a capability is declared but its package isn't installed.
+        resolved_capabilities = self._resolve_capabilities()
+
         return SubsystemContext(
             app=self._app,
             appspec=self._appspec,
@@ -478,6 +505,7 @@ class DazzleBackendApp:
             database_url=self._database_url or "",
             security_profile=self._security_profile,
             project_root=self._project_root,
+            capabilities=resolved_capabilities,
             extra_static_dirs=list(self._extra_static_dirs),
             last_migration=self._last_migration,
             # Resolved instance vars (may differ from config when passed as constructor kwargs)

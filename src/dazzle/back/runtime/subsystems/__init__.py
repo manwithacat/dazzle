@@ -82,6 +82,11 @@ class SubsystemContext:
     security_profile: str = "basic"
     project_root: Any | None = None
 
+    # Resolved opt-in capabilities (#1342) — set by DazzleBackendApp before
+    # subsystem startup. A `ResolvedCapabilities`; query with
+    # `.is_active("auth.enterprise.oidc")`. None when no manifest was resolved.
+    capabilities: Any = None
+
     # Extra static directories to prepend to the framework's /static mount.
     # Consumer apps that mount their own /static AFTER .build() used to be
     # silently shadowed by the framework's /static mount (issue #793).
