@@ -305,7 +305,7 @@ dazzle contribution templates|create|validate|examples
 See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
 - **No SQLite in the app runtime** — `src/dazzle_back/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB and `core/process/version_manager.py` are outside that scope and may use SQLite.
-- **No SPA frameworks** — server-side Jinja2 + HTMX (ADR-0011)
+- **No SPA frameworks** — server-side rendering + HTMX (ADR-0011); rendering is the typed Fragment substrate since #1042 (ADR-0023), not Jinja2
 - **No field conditions in `permit:`** — use `scope:` with `as:` (ADR-0010; `as:` formerly `for:`, renamed in #998)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
 - **All schema changes via Alembic** — including framework entities (FeedbackReport, AIJob, admin entities). No raw ALTER TABLE. Use `dazzle db revision -m "description"` then `dazzle db upgrade` (ADR-0017)
@@ -322,7 +322,7 @@ Command playbooks that fan out subagents: pin `model: "claude-haiku-4-5-20251001
 
 ## UI Invariants
 
-- **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them and `tests/unit/test_card_safety_invariants.py` pins each invariant to a named test. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
+- **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them, and the composite gate `tests/unit/test_htmx_workspace_composite.py` runs them on the stitched post-HTMX DOM. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
 
 ## Reports & Charts
 
@@ -347,4 +347,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.81.64 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.81.65 | **Python**: 3.12+ | **Status**: Production Ready

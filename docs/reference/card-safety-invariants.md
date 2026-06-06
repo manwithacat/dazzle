@@ -11,6 +11,20 @@ new fragment primitive that violates an invariant here is a
 regression — CI will fail. When you're tempted to change one of
 these rules, update this doc first and make the reasoning explicit.
 
+!!! note "Enforcement moved to the typed Fragment substrate (post-#1042)"
+    The invariants below are unchanged and load-bearing. But several **Enforcement**
+    bullets were written for the Jinja era and name artefacts that no longer exist —
+    `src/dazzle/ui/templates/.../*.html`, the `region_card` macro, `_fetch_region_html`
+    in `workspace_rendering.py`, and the `test_template_html.py` /
+    `TestDashboardRegionCompositeShapes` test classes. Jinja2 was retired in #1042
+    (v0.67.92, [ADR-0023](../adr/0023-template-emission-patterns.md)); rendering now goes
+    through the typed Fragment substrate. The **current** gate is:
+    `src/dazzle/testing/ux/contract_checker.py` (the scanners) run on the stitched
+    post-HTMX composite by `tests/unit/test_htmx_workspace_composite.py`, with
+    `HtmxClient.get_workspace_composite()` driving `dazzle ux verify --contracts`.
+    Read the Jinja-era specifics below as the historical shape of the gate, not current
+    file paths.
+
 ---
 
 ## Background: the #794 class of risk
@@ -86,7 +100,7 @@ both have the same rounded + bordered + filled edge.
 - Applied during `check_contract()` for `WorkspaceContract` and
   `DetailViewContract`.
 - Tests: `test_ux_contract_checker.py::TestFindNestedChromes::*`
-- Composite test: `test_template_html.py::TestDashboardRegionCompositeShapes::test_composite_has_no_nested_chrome`
+- Composite test: the nested-chrome scanner runs on the stitched composite in `tests/unit/test_htmx_workspace_composite.py`.
 
 **Bad shape** (pre-v0.57.36):
 ```html
@@ -122,7 +136,7 @@ shape is a card with its header text showing twice.
 - Scanner: `find_duplicate_titles_in_cards(html)` in
   `contract_checker.py`.
 - Tests: `test_ux_contract_checker.py::TestFindDuplicateTitlesInCards::*`
-- Composite test: `test_template_html.py::TestDashboardRegionCompositeShapes::test_composite_has_no_duplicate_titles`
+- Composite test: the duplicate-title scanner runs on the stitched composite in `tests/unit/test_htmx_workspace_composite.py`.
 
 **Bad shape**:
 ```html
@@ -207,18 +221,15 @@ which already owns chrome. Any chrome a region adds is necessarily
 nested chrome. This is the root cause of three-out-of-three
 pre-v0.57.37 follow-ups to #794.
 
-**Enforcement**:
-- Single render site verification: regions are rendered ONLY via
-  `_fetch_region_html()` in `src/dazzle/back/runtime/
-  workspace_rendering.py:879`. If a new render site is added,
-  re-validate the invariant there.
-- Jinja test: `test_template_html.py::TestWorkspaceRegionRendering::
-  test_grid_region_does_not_nest_card_chrome`.
-- Composite test (all regions × sample contexts):
-  `TestDashboardRegionCompositeShapes::test_composite_has_no_nested_chrome`.
-- Macro gate: `TestDashboardRegionCompositeShapes::
-  test_bare_region_card_macro_stays_bare` pins that `region_card`'s
-  source file contains none of the banned class strings.
+**Enforcement** (current — see the status note above; Jinja-era specifics retired):
+- Single render path: regions are emitted through the typed Fragment
+  renderer (`src/dazzle/render/fragment/`). If a new render site is
+  added, re-validate the invariant there.
+- Scanner gate: the shape-nesting scanner in
+  `src/dazzle/testing/ux/contract_checker.py` runs on the stitched
+  post-HTMX composite via `tests/unit/test_htmx_workspace_composite.py`.
+- Primitive gate: the region container primitive emits no card chrome —
+  covered by `tests/unit/render/fragment/test_container_primitives.py`.
 
 ---
 
@@ -234,10 +245,11 @@ renders the card title from Alpine state. A region that also
 renders the title produces the three-copies-in-DOM symptom.
 
 **Enforcement**:
-- Composite test: `TestDashboardRegionCompositeShapes::
-  test_composite_has_no_duplicate_titles`.
-- Manual grep: `grep "{{ title }}" src/dazzle/ui/templates/workspace/
-  regions/*.html` should return empty.
+- Composite test: the duplicate-title scanner runs on the stitched
+  composite in `tests/unit/test_htmx_workspace_composite.py`.
+- Primitive check: region primitives never emit the card title (the
+  dashboard slot owns it) — there is no template title binding to grep
+  for, since rendering no longer goes through Jinja templates.
 
 ---
 
@@ -254,9 +266,9 @@ Isolated-template tests are useful for regressing sub-invariants,
 but the gate of record is the composite.
 
 **Enforcement**:
-- Jinja-level: `TestDashboardRegionCompositeShapes` renders the
-  dashboard-slot shell + each region template and runs both
-  scanners on the composite.
+- Composite-level: the typed Fragment renderer emits the
+  dashboard-slot shell + each region, and both scanners run on the
+  stitched composite (`tests/unit/test_htmx_workspace_composite.py`).
 - HTTP-level: `HtmxClient.get_workspace_composite(path)` in
   `htmx_client.py` follows the HTMX boot sequence and returns the
   real post-hydration DOM. Used by `dazzle ux verify --contracts`
@@ -329,8 +341,7 @@ If you find a new class of card-safety regression:
 2. Add a named test that reproduces the bad shape and verifies the
    fix. Prefer a regression test inside
    `tests/unit/test_ux_contract_checker.py` (scanner-level) or
-   `tests/unit/test_template_html.py::
-   TestDashboardRegionCompositeShapes` (composite-level).
+   `tests/unit/test_htmx_workspace_composite.py` (composite-level).
 3. Update the relevant scanner in
    `src/dazzle/testing/ux/contract_checker.py`.
 4. Ship.

@@ -138,7 +138,7 @@ All three have been root-cause patterns; `explain-aggregate` lets authors diagno
 
 ## What NOT to do
 
-- **Don't compute aggregates in templates.** Jinja arithmetic like `{{ rows | sum(attribute='amount') }}` loads every row into RAM, ignores scope, and breaks at scale. Use `aggregate:` with measures.
+- **Don't compute aggregates in the view layer.** Summing rows in the rendered output instead of in SQL loads every row into RAM, ignores scope, and breaks at scale. Use `aggregate:` with measures.
 - **Don't group on high-cardinality columns without a limit.** `group_by: created_at` with a million rows returns a million buckets. Use `bucket(created_at, day|week|month)` or `limit:` explicitly.
 - **Don't mix `group_by:` and `group_by_dims:`.** They're mutually exclusive; `group_by_dims` wins when both are set but the DSL intent is confusing. Pick one form per region.
 - **Don't use `count(OtherEntity where field = current_bucket)` if the source-same path works.** The sentinel-based slow path is for cross-entity measures only — same-entity counts should use `count(<source>)` and get the fast path automatically.

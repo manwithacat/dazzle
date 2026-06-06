@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.65] - 2026-06-06
+
+### Changed
+
+- **Purged outdated Jinja references from live docs, ADRs, and governance.** A sweep of `docs/` (excluding the intentional `history/` archive + site-excluded `superpowers/`/`proposals/` planning archives), the ADRs, and memory found several places presenting the retired Jinja2 engine as current (#1042/ADR-0023 removed it). Fixes: `typed-fragment-pilot-guide.md` (status note + dropped the "both paths cohabit / legacy Jinja path" present-tense claim); `reference/project-layout.md` (removed the dead `templates/` Jinja-override dir from the recommended layout); `reference/pii-privacy.md` (analytics providers are inline-Python emitters, not Jinja snippets); `reference/reports.md` (de-Jinja'd the aggregate anti-pattern example); `reference/card-safety-invariants.md` (status note + replaced dead `test_template_html.py` / `TestDashboardRegionCompositeShapes` / `_fetch_region_html` / `region_card` references with the live `contract_checker.py` + `test_htmx_workspace_composite.py` gate); CLAUDE.md (card-safety test pointer + the ADR-0011 one-liner now reflects typed Fragments). ADR-0011/0023 bodies were left intact (correct ADR practice — superseded by status notes). Memory was already clean.
+
+### Added
+
+- **Promoted the Jinja2 retirement postmortem to the historical archive** (`docs/history/2026-05-12-jinja2-retirement-postmortem.md`, banner-stamped, linked from ADR-0023 + Project Evolution). It was previously an untracked `dev_docs/` file that ADR-0023 referenced but the site couldn't reach.
+
 ## [0.81.64] - 2026-06-06
 
 ### Added

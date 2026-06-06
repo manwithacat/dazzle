@@ -30,7 +30,6 @@ my-app/
     surfaces.dsl
     stories.dsl
   routes/                  # Custom FastAPI route overrides
-  templates/               # Custom Jinja2 template overrides (see dz:// docs)
   static/                  # Project static assets (shadows framework assets)
   app/                     # Custom application code
     __init__.py
@@ -61,7 +60,6 @@ my-app/
 |-----------|---------|----------|
 | `dsl/` | DSL source files | Entity definitions, surfaces, stories |
 | `routes/` | Custom FastAPI route handlers | Override or extend generated API |
-| `templates/` | Jinja2 template overrides | Custom `base.html` via `dz://` |
 | `static/` | Project static assets | Images, custom CSS/JS |
 | `app/` | Production application code | Services, integrations, generators |
 | `app/db/` | Database operations | Snapshots, data fixups, seed scripts |

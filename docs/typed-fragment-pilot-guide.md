@@ -7,9 +7,16 @@ This guide lives in the Dazzle repo so it tracks the framework's actual capabili
 
 ---
 
+!!! note "Status (2026-06-06): the migration is complete"
+    When this guide was written, fragment and Jinja rendering cohabited during the
+    flip. That migration is **done** — Jinja2 was fully retired in #1042 (v0.67.92)
+    and is no longer a dependency ([ADR-0023](adr/0023-template-emission-patterns.md)).
+    The typed Fragment substrate is the only rendering path; references below to a
+    "legacy Jinja path" are migration-era context, not a path that still exists.
+
 ## What's being piloted
 
-The Dazzle UI runtime has a **typed Fragment substrate** for HTML rendering — a frozen-dataclass primitive tree that replaces implicit Jinja-as-compiler templates. Surfaces opt in via `render: fragment` in DSL; the rest stay on the legacy Jinja path. Both paths cohabit the same runtime.
+The Dazzle UI runtime has a **typed Fragment substrate** for HTML rendering — a frozen-dataclass primitive tree that replaces implicit Jinja-as-compiler templates. Surfaces declare `render: fragment` in DSL. (Historically, un-flipped surfaces stayed on a legacy Jinja path during the migration; that path no longer exists — see the status note above.)
 
 **The substrate has 5 components you'll touch:**
 

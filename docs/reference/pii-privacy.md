@@ -217,8 +217,10 @@ Shipped in v0.61.0:
 
 Adding a provider: define a `ProviderDefinition` in
 `src/dazzle/compliance/analytics/providers/registry.py`, add the matching
-Jinja snippet templates, and update the `linked_subprocessor_name` to point
-at the matching subprocessor declaration.
+inline-Python HTML emitter in `provider_html.py` (these were Jinja snippet
+templates pre-#1044; now plain Python with `html.escape`, no Jinja env), and
+update the `linked_subprocessor_name` to point at the matching subprocessor
+declaration.
 
 ## Client event vocabulary (Phase 4)
 

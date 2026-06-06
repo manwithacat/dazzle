@@ -77,6 +77,7 @@ Synthesised output of the `/ux-cycle` → `/improve` loop, in cycle order:
 
 ### Snapshots, briefings & retrospectives
 
+- [Jinja2 Retirement — Postmortem & Hypothesis Evaluation (2026-05-12)](../history/2026-05-12-jinja2-retirement-postmortem.md)
 - [Framework Maturity Assessment — 2026-04-15](../history/framework-maturity-2026-04-15.md)
 - [Frontier Agent Briefing — v0.55.47](../history/frontier-agent-briefing-v0.55.47.md)
 - [/ux-cycle Session Retrospective — 2026-04-21](../history/ux-session-retro-2026-04-21.md)
