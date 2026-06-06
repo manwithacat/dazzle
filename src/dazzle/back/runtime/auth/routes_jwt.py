@@ -32,9 +32,9 @@ class _JwtDeps:
 
 async def _login_for_token(
     deps: _JwtDeps,
+    request: FastAPIRequest,
     form_data: Any = None,
     credentials: TokenRequest | None = None,
-    request: "FastAPIRequest | None" = None,
 ) -> Any:
     """OAuth2 compatible token endpoint.
 
@@ -64,8 +64,8 @@ async def _login_for_token(
     # Store refresh token
     deps.token_store.create_token(
         user,
-        ip_address=request.client.host if request and request.client else None,
-        user_agent=request.headers.get("user-agent") if request else None,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
 
     return TokenResponse(
@@ -79,7 +79,7 @@ async def _login_for_token(
 async def _refresh_access_token(
     deps: _JwtDeps,
     data: RefreshTokenRequest,
-    request: "FastAPIRequest | None" = None,
+    request: FastAPIRequest,
 ) -> Any:
     """Exchange refresh token for new token pair.
 
@@ -102,8 +102,8 @@ async def _refresh_access_token(
     new_refresh_token = deps.token_store.rotate_token(
         data.refresh_token,
         user,
-        ip_address=request.client.host if request and request.client else None,
-        user_agent=request.headers.get("user-agent") if request else None,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
 
     if not new_refresh_token:

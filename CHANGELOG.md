@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.66] - 2026-06-06
+
+### Fixed
+
+- **`auth_routes` subsystem no longer crashes on boot — JWT token endpoints mount (#1343).** Two handlers in `src/dazzle/back/runtime/auth/routes_jwt.py` annotated their request param as the union `request: "FastAPIRequest | None" = None`. FastAPI only injects the request when the annotation is *exactly* `Request`; the union defeats that special-casing, so FastAPI tried to build a Pydantic field for `starlette.requests.Request` and raised `Invalid args for response field!` at route registration — aborting the `auth_routes` subsystem (so `/auth/token`, `/auth/token/refresh` 404'd). Latent since v0.67.123 (`37a43e34` string-wrapped the annotation), surfaced by v0.81.59 (`6c92db5`) reviving subsystem `on_event` hooks under custom lifespan. Fix: bare `request: FastAPIRequest` (reordered ahead of defaulted params in `_login_for_token`; simplified the now-redundant `if request` guards). Added a version-independent regression guard in `test_auth_subsystem_jwt_wiring.py` that fails if any handler param resolves to a Request union/Optional rather than exactly `Request` — the prior wiring tests mocked the route factory and never exercised FastAPI's field analysis.
+
 ## [0.81.65] - 2026-06-06
 
 ### Changed

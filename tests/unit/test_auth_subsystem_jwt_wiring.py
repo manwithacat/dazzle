@@ -38,6 +38,73 @@ def _make_ctx(*, database_url: str | None, oauth_providers: list[object] | None 
     )
 
 
+def test_jwt_routes_build_and_mount() -> None:
+    """The real factory (not a mock) builds and mounts the JWT routes.
+
+    The other wiring tests below mock ``create_jwt_auth_routes``, so they never
+    exercise FastAPI's per-route field analysis. This one builds for real.
+    """
+    from fastapi import FastAPI
+
+    from dazzle.back.runtime.auth.routes_jwt import create_jwt_auth_routes
+
+    router = create_jwt_auth_routes(
+        auth_store=MagicMock(name="auth_store"),
+        jwt_service=MagicMock(name="jwt_service"),
+        token_store=MagicMock(name="token_store"),
+    )
+
+    app = FastAPI()
+    app.include_router(router)
+
+    paths = {getattr(route, "path", None) for route in app.routes}
+    assert {"/auth/token", "/auth/token/refresh", "/auth/token/revoke"} <= paths
+
+
+def test_no_handler_param_uses_optional_request_annotation() -> None:
+    """#1343 regression (version-independent guard).
+
+    FastAPI only injects a parameter when its annotation is *exactly*
+    ``starlette.requests.Request``. A union like ``Request | None`` /
+    ``Optional[Request]`` defeats that special-casing, so FastAPI tries to build
+    a Pydantic field for ``Request`` and raises ``Invalid args for response
+    field!`` at route registration — which aborted the ``auth_routes`` subsystem
+    on boot (latent since v0.67.123, surfaced by the v0.81.59 lifespan-hook fix).
+
+    Whether that raises is FastAPI-version- and ``functools.partial``-dependent,
+    so this pins the underlying invariant directly: any handler param that
+    mentions ``Request`` must resolve to exactly ``Request``.
+    """
+    import inspect
+    import typing
+
+    from starlette.requests import Request as StarletteRequest
+
+    from dazzle.back.runtime.auth import routes_jwt as m
+
+    handlers = [
+        obj
+        for name, obj in vars(m).items()
+        if name.startswith("_") and inspect.iscoroutinefunction(obj)
+    ]
+    assert handlers, "no handler coroutines found — test wiring broke"
+
+    offenders = []
+    for func in handlers:
+        for pname, ann in typing.get_type_hints(func).items():
+            if pname == "return" or ann is StarletteRequest:
+                continue  # absent or the exact, injectable type — fine
+            # The footgun: Request wrapped in a union/Optional. Identity check on
+            # union members (not substring — `TokenRequest` etc. also contain it).
+            if StarletteRequest in typing.get_args(ann):
+                offenders.append(f"{func.__name__}({pname}: {ann})")
+
+    assert not offenders, (
+        "FastAPI Request params must be exactly `Request`, not a union/Optional "
+        f"(defeats request injection → mount crash): {', '.join(offenders)}"
+    )
+
+
 def test_register_jwt_routes_mounts_when_database_url_set() -> None:
     """Standalone JWT path: no OAuth, DB URL present → routes mount."""
     sub = AuthSubsystem()
