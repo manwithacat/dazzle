@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.76] - 2026-06-06
+
+### Added
+
+- **SCIM `/scim/v2/Groups` (#1342 Phase 3).** A persisted, org-scoped SCIM 2.0 Group resource (`scim_groups` + `scim_group_members` tables) with full CRUD + RFC-7644 member PATCH (`add` / `remove members[value eq "id"]` / `replace` / `displayName` rename). Group membership drives roles: a membership's roles are recomputed as `map_groups_to_roles` over the union of **all** its groups (default-deny), so multi-group de-escalation is exact. Members are org-contained; bearer-authed; mounted only when `auth.enterprise.scim` is active. `GET /Users/{id}` echoes a read-only `groups` array.
+
+### Changed
+
+- **`User.groups` attribute no longer assigns SCIM roles (clean-break).** Per RFC 7643, `User.groups` is server-managed/read-only; group→role is now owned by `/scim/v2/Groups`. A `User` POST/PUT with a `groups` array no longer adds/removes roles (it's logged as informational). **Migration:** drive group membership through the Groups endpoint; a connection relying on the old `User.groups` write-path must configure group push to `/Groups`.
+
+### Security
+
+- **Cross-org role-zeroing via SCIM Group PATCH (caught in pre-ship review).** A PATCH `remove members[value eq "<id>"]` op carries a caller-chosen membership id; the role recompute would then zero the roles of a membership in *another* org. Fixed at the chokepoint: `recompute_membership_roles` now refuses to touch any membership outside the connection's org, defending every call path (remove / replace / rename / delete), not just the one path the bug surfaced on. Regression tests at the route and store level.
+
+### Fixed
+
+- **SCIM Group routes harden malformed input** — POST/PUT/PATCH `/Groups` now parse the body via the shared `_json_body` helper, returning a SCIM 400 `invalidSyntax` instead of an unhandled 500. PUT enforces `displayName` as required (full-replace semantics, matching create).
+- **Atomic group-member replace** — `replace_group_members` runs its DELETE + re-INSERTs in one transaction, so a concurrent recompute can't observe an empty member set mid-replace and transiently drop roles.
+- **Concurrent group create/rename returns 409, not 500** — a unique-constraint hit from a racing IdP push (the check-then-insert window) is translated to a SCIM 409 `uniqueness`.
+- **Group rename role-loss is logged** — renaming a group to a name absent from `group_mapping` strips the mapped role from all members (correct, but now logged at WARNING; pair the rename with a `group_mapping` update to retain it).
+- **No orphan group rows on membership delete** — `scim_group_members` has no DB FK to `memberships` (it would block the migration that recreates that table); `delete_membership` now clears the member's group rows in-transaction instead.
+
+#### Agent Guidance
+
+- SCIM group→role is owned by `/scim/v2/Groups` (persisted membership), recomputed as the union of a member's groups via `connection.group_mapping` (default-deny). Don't reintroduce role assignment from the `User.groups` attribute.
+
 ## [0.81.75] - 2026-06-06
 
 ### Added

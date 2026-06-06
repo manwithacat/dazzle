@@ -83,11 +83,16 @@ def recompute_membership_roles(store: Any, connection: Any, membership_id: str) 
     its (this-connection) SCIM groups — the single source of truth for
     group-derived roles (#1342). Idempotent; correct for multi-group de-escalation
     (a role granted by another group survives removal from one)."""
+    membership = store.get_membership(membership_id)
+    # Org-containment chokepoint: NEVER touch a membership outside this
+    # connection's org. This is the single defense for every caller — a PATCH
+    # `remove`/`replace` op can carry an attacker-chosen membership id, and
+    # without this guard recompute would zero a cross-org member's roles
+    # (get_member_group_names returns [] for a foreign membership → roles []).
+    if membership is None or membership.tenant_id != connection.tenant_id:
+        return
     names = store.get_member_group_names(membership_id, connection.id)
     roles = map_groups_to_roles(names, connection.group_mapping or {})
-    membership = store.get_membership(membership_id)
-    if membership is None:
-        return
     if set(roles) != set(membership.roles or []):
         store.update_membership_roles(membership_id, roles, reason="SCIM group sync")
 
@@ -102,6 +107,21 @@ class SCIMGroupError(Exception):
         self.reason = reason
         self.status = status
         super().__init__(message or reason)
+
+
+def _raise_if_duplicate(exc: Exception, display_name: str) -> None:
+    """Translate a DB unique-constraint hit into a 409 SCIMGroupError.
+
+    The list_scim_groups pre-check is not atomic with the INSERT/UPDATE, so two
+    concurrent IdP pushes (Okta/Entra parallelise group sync) can both pass the
+    check and the loser then trips the ``UNIQUE (connection_id, display_name)``
+    constraint. Map that to a SCIM 409 instead of letting psycopg's
+    UniqueViolation propagate as an unhandled 500.
+    """
+    import psycopg
+
+    if isinstance(exc, psycopg.errors.UniqueViolation):
+        raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409) from exc
 
 
 def _require_member_in_org(store: Any, connection: Any, membership_id: str) -> Any:
@@ -119,7 +139,11 @@ def create_group(store: Any, connection: Any, display_name: str, member_ids: lis
         _require_member_in_org(store, connection, mid)
     if store.list_scim_groups(connection.id, display_name=display_name):
         raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409)
-    group = store.create_scim_group(connection.id, display_name)
+    try:
+        group = store.create_scim_group(connection.id, display_name)
+    except Exception as exc:
+        _raise_if_duplicate(exc, display_name)
+        raise
     for mid in member_ids:
         store.add_group_member(group.id, mid)
         recompute_membership_roles(store, connection, mid)
@@ -142,7 +166,25 @@ def rename_group(store: Any, connection: Any, group_id: str, display_name: str) 
     if display_name and display_name != group.display_name:
         if store.list_scim_groups(connection.id, display_name=display_name):
             raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409)
-        store.rename_scim_group(group_id, connection.id, display_name)
+        mapping = connection.group_mapping or {}
+        # Roles are keyed by display_name, so a rename re-derives every member's
+        # roles from the NEW name. If the new name isn't in the mapping but the
+        # old one was, the rename will strip the mapped role from every member —
+        # correct (the mapping is stale) but worth a loud warning, since an
+        # operator-driven rename should be paired with a group_mapping update.
+        if group.display_name in mapping and display_name not in mapping:
+            _logger.warning(
+                "SCIM group rename %r -> %r drops mapped role %r for all members "
+                "(update connection.group_mapping to the new name to retain it)",
+                group.display_name,
+                display_name,
+                mapping[group.display_name],
+            )
+        try:
+            store.rename_scim_group(group_id, connection.id, display_name)
+        except Exception as exc:
+            _raise_if_duplicate(exc, display_name)
+            raise
         for mid in store.get_group_member_ids(group_id):
             recompute_membership_roles(store, connection, mid)
     return store.get_scim_group(group_id, connection.id)

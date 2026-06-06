@@ -333,7 +333,10 @@ def create_scim_routes() -> APIRouter:
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
-        body = await request.json()
+        body, err = await _json_body(request)
+        if err is not None:
+            return err
+        assert body is not None
         member_ids = [m["value"] for m in (body.get("members") or []) if "value" in m]
         try:
             group = sp.create_group(store, conn, body.get("displayName", ""), member_ids)
@@ -381,10 +384,16 @@ def create_scim_routes() -> APIRouter:
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
-        body = await request.json()
+        body, err = await _json_body(request)
+        if err is not None:
+            return err
+        assert body is not None
+        # PUT is a full replace — displayName is a required Group attribute, so a
+        # missing/empty one is a 400 (matches create), not a silent no-op rename.
+        if not body.get("displayName"):
+            return _error(400, "displayName is required", scim_type="invalidValue")
         try:
-            if body.get("displayName"):
-                sp.rename_group(store, conn, group_id, body["displayName"])
+            sp.rename_group(store, conn, group_id, body["displayName"])
             member_ids = [m["value"] for m in (body.get("members") or []) if "value" in m]
             sp.set_group_members(store, conn, group_id, member_ids)
             group = sp.get_group(store, conn, group_id)
@@ -399,7 +408,10 @@ def create_scim_routes() -> APIRouter:
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
-        body = await request.json()
+        body, err = await _json_body(request)
+        if err is not None:
+            return err
+        assert body is not None
         try:
             sp.get_group(store, conn, group_id)  # 404 if absent / wrong org
             for kind, arg in sp.parse_group_patch(body):

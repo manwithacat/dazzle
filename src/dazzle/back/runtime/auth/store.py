@@ -948,6 +948,9 @@ class SessionStoreMixin:
             if row is None:
                 return False
             cur.execute("DELETE FROM memberships WHERE id = %s", (membership_id,))
+            # scim_group_members has no FK to memberships (see _init_db) — clear
+            # the deleted membership's group rows here so no orphans survive.
+            cur.execute("DELETE FROM scim_group_members WHERE membership_id = %s", (membership_id,))
             record_membership_event(
                 cur,
                 event_type=MembershipEventType.REMOVED,
@@ -1604,9 +1607,17 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         )
 
     def replace_group_members(self, group_id: str, membership_ids: list[str]) -> None:
-        self._execute_modify("DELETE FROM scim_group_members WHERE group_id = %s", (group_id,))
-        for mid in membership_ids:
-            self.add_group_member(group_id, mid)
+        # Atomic: the DELETE + re-INSERTs share one commit so the group never
+        # observes an empty member set mid-replace (a concurrent recompute would
+        # otherwise read the gap and transiently zero roles).
+        with self._transaction() as cur:
+            cur.execute("DELETE FROM scim_group_members WHERE group_id = %s", (group_id,))
+            for mid in membership_ids:
+                cur.execute(
+                    "INSERT INTO scim_group_members (group_id, membership_id) "
+                    "VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (group_id, mid),
+                )
 
     def get_member_group_names(self, membership_id: str, connection_id: str) -> list[str]:
         rows = self._execute(
@@ -1805,9 +1816,11 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             for _ix in CONNECTIONS_INDEXES:
                 cursor.execute(_ix)
 
-            # SCIM Groups (#1342). connection_id is code-scoped (no hard FK to
-            # connections — matches the memberships convention); members cascade
-            # from the group and from the referenced membership.
+            # SCIM Groups (#1342). connection_id AND membership_id are code-scoped
+            # (no hard FK to connections/memberships) — matches the memberships
+            # convention, and a memberships FK would block the migration path that
+            # drops/recreates the memberships table. Group deletion cascades its
+            # member rows; membership deletion is cleaned up in code (deprovision).
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS scim_groups (
                     id            TEXT PRIMARY KEY,
@@ -1824,7 +1837,7 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS scim_group_members (
                     group_id      TEXT NOT NULL REFERENCES scim_groups(id) ON DELETE CASCADE,
-                    membership_id TEXT NOT NULL REFERENCES memberships(id) ON DELETE CASCADE,
+                    membership_id TEXT NOT NULL,
                     PRIMARY KEY (group_id, membership_id)
                 )
             """)

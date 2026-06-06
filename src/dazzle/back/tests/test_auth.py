@@ -1373,7 +1373,7 @@ class TestScimGroupStore:
         store.replace_group_members(g.id, [membership.id])
         assert store.get_group_member_ids(g.id) == [membership.id]
 
-    def test_recompute_unions_roles_across_groups(self, store, membership):
+    def test_recompute_unions_roles_across_groups(self, store: Any, membership: Any) -> None:
         from types import SimpleNamespace
 
         from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
@@ -1395,7 +1395,7 @@ class TestScimGroupStore:
         recompute_membership_roles(store, conn, membership.id)
         assert set(store.get_membership(membership.id).roles) == {"operator"}
 
-    def test_group_domain_ops_recompute(self, store, membership):
+    def test_group_domain_ops_recompute(self, store: Any, membership: Any) -> None:
         from types import SimpleNamespace
 
         from dazzle.back.runtime.auth import scim_provisioning as sp
@@ -1416,7 +1416,7 @@ class TestScimGroupStore:
         sp.delete_group(store, conn, g.id)
         assert store.get_scim_group(g.id, "conn-1") is None
 
-    def test_cross_org_member_rejected(self, store):
+    def test_cross_org_member_rejected(self, store: Any) -> None:
         from types import SimpleNamespace
         from uuid import uuid4
 
@@ -1428,7 +1428,24 @@ class TestScimGroupStore:
         with pytest.raises(sp.SCIMGroupError):
             sp.create_group(store, conn, "Eng", member_ids=[other_m.id])
 
-    def test_duplicate_group_name_rejected(self, store):
+    def test_recompute_refuses_cross_org_membership(self, store: Any) -> None:
+        # SECURITY (review #1342): recompute is the chokepoint — it must never
+        # touch a membership outside the connection's org, even when called
+        # directly with a foreign id (the PATCH `remove` attack surface).
+        from types import SimpleNamespace
+        from uuid import uuid4
+
+        from dazzle.back.runtime.auth import scim_provisioning as sp
+
+        conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={"Eng": "engineer"})
+        victim = store.create_user(email=f"v-{uuid4().hex[:8]}@x.test", password="p")
+        victim_m = store.create_membership(
+            tenant_id="org-2", identity_id=str(victim.id), roles=["admin"]
+        )
+        sp.recompute_membership_roles(store, conn, victim_m.id)
+        assert store.get_membership(victim_m.id).roles == ["admin"]  # untouched
+
+    def test_duplicate_group_name_rejected(self, store: Any) -> None:
         from types import SimpleNamespace
 
         from dazzle.back.runtime.auth import scim_provisioning as sp
@@ -1438,7 +1455,7 @@ class TestScimGroupStore:
         with pytest.raises(sp.SCIMGroupError):
             sp.create_group(store, conn, "Eng", member_ids=[])
 
-    def test_user_groups_attribute_no_longer_drives_roles(self, store):
+    def test_user_groups_attribute_no_longer_drives_roles(self, store: Any) -> None:
         from types import SimpleNamespace
 
         from dazzle.back.runtime.auth.scim_provisioning import provision_scim_user

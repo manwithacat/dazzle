@@ -467,6 +467,69 @@ def test_groups_require_bearer() -> None:
     assert _client(s).get("/scim/v2/Groups").status_code == 401
 
 
+def test_group_patch_remove_foreign_member_cannot_zero_roles() -> None:
+    # SECURITY (review #1342): a PATCH `remove` op carries an attacker-chosen
+    # membership id in the path filter. recompute must refuse to touch a
+    # membership outside the connection's org, so a bearer for org-1 cannot
+    # zero an org-2 member's roles. Without the org-containment chokepoint in
+    # recompute_membership_roles this drops the victim's roles to [].
+    s = _Store(
+        [
+            _conn("c1", "org-1", "tok1", group_mapping={"Eng": "engineer"}),
+            _conn("c2", "org-2", "tok2", group_mapping={"Eng": "engineer"}),
+        ]
+    )
+    victim = s.create_membership(tenant_id="org-2", identity_id="id-victim", roles=["admin"])
+    client = _client(s)
+    gid = client.post("/scim/v2/Groups", json={"displayName": "Eng"}, headers=_auth("tok1")).json()[
+        "id"
+    ]
+    r = client.patch(
+        f"/scim/v2/Groups/{gid}",
+        json={"Operations": [{"op": "remove", "path": f'members[value eq "{victim.id}"]'}]},
+        headers=_auth("tok1"),
+    )
+    assert r.status_code == 200
+    assert s.get_membership(victim.id).roles == ["admin"]  # untouched
+
+
+def test_group_put_requires_displayname_400() -> None:
+    s, m = _group_store()
+    gid = (
+        _client(s)
+        .post("/scim/v2/Groups", json={"displayName": "Eng"}, headers=_auth("tok1"))
+        .json()["id"]
+    )
+    r = _client(s).put(f"/scim/v2/Groups/{gid}", json={"members": []}, headers=_auth("tok1"))
+    assert r.status_code == 400
+
+
+def test_group_put_replaces_members() -> None:
+    s, m = _group_store()
+    client = _client(s)
+    gid = client.post("/scim/v2/Groups", json={"displayName": "Eng"}, headers=_auth("tok1")).json()[
+        "id"
+    ]
+    r = client.put(
+        f"/scim/v2/Groups/{gid}",
+        json={"displayName": "Eng", "members": [{"value": m.id}]},
+        headers=_auth("tok1"),
+    )
+    assert r.status_code == 200
+    assert s.get_membership(m.id).roles == ["engineer"]
+
+
+def test_group_routes_malformed_json_is_400() -> None:
+    s, _ = _group_store()
+    client = _client(s)
+    r = client.post(
+        "/scim/v2/Groups",
+        content="not json",
+        headers={**_auth("tok1"), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 400
+
+
 def test_user_get_echoes_group_memberships() -> None:
     # #1342: GET /Users/{id} reflects the membership's actual persisted group
     # memberships as a read-only `groups` array (RFC: server-managed).

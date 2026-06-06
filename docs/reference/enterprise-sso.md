@@ -94,11 +94,35 @@ The verified-domain anti-hijack applies to *all* sources.
 ## SCIM lifecycle
 
 A SCIM `User` resource is a **membership**. `active:false` / `DELETE` suspend/remove the
-membership **and revoke that org's sessions immediately** (other orgs' sessions survive). Roles
-are fully re-synced on every push, including down to zero when a user leaves all mapped groups.
+membership **and revoke that org's sessions immediately** (other orgs' sessions survive).
+
+## SCIM Groups (#1342)
+
+`/scim/v2/Groups` is the authoritative path for **group → role** assignment. Groups are
+persisted, org-scoped resources with full CRUD + RFC-7644 member PATCH (`add` / `remove`
+`members[value eq "id"]` / `replace` / `displayName` rename). A member references a SCIM
+`User` (= a membership) by id, and must belong to the connection's org.
+
+A membership's roles are recomputed as `map_groups_to_roles` over the union of **all** its
+groups' display names (**default-deny**), so multi-group de-escalation is exact — removing a
+user from one group keeps a role still granted by another. The recompute is **org-fenced**: it
+only ever touches a membership in the connection's own org, so a SCIM bearer can't perturb
+another org's members (member ids are caller-supplied in PATCH `remove`). `GET /Users/{id}`
+echoes the membership's group memberships as a read-only `groups` array.
+
+Because `group_mapping` is keyed by **display name**, renaming a group re-derives its members'
+roles from the *new* name. If the new name isn't in `group_mapping`, the mapped role is dropped
+for every member (correct — the mapping is now stale — and logged at WARNING). Pair an
+IdP-driven group rename with a `group_mapping` update to retain the role.
+
+!!! warning "Clean-break: `User.groups` no longer assigns roles"
+    Per RFC 7643, `User.groups` is server-managed/read-only. The `groups` attribute on a
+    `User` POST/PUT is now **informational** — it does not add or remove roles. Drive roles
+    through `/scim/v2/Groups`. A connection that previously relied on the `User.groups`
+    write-path must configure group push to the Groups endpoint.
 
 ## Deferred
 
 SAML SLO, encrypted assertions, SP-signed AuthnRequests, IdP-initiated opt-in, IdP-metadata
-auto-import; the SCIM Groups endpoint + Schemas discovery; connection secret rotation; an in-app
+auto-import; SCIM `/Schemas` + `/ResourceTypes` discovery; connection secret rotation; an in-app
 org-admin connection surface.
