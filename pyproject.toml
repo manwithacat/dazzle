@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.81.52"
+version = "0.81.53"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -143,6 +143,16 @@ sso = [
     # (auth Plan 4b.iv, dazzle.back.runtime.auth.domain_verification) — lazy-imported
     # inside DnspythonResolver, so core installs are unaffected until verify-domain runs.
     "dnspython>=2.0",
+]
+saml = [
+    # python3-saml drives SP-initiated SAML 2.0 (auth Plan 5, dazzle.back.runtime.auth.
+    # saml_provider) — it owns all XML parsing + signature validation (XXE / signature-
+    # wrapping defenses), imported lazily inside NativeSAMLProvider._build_auth.
+    # SEPARATE from [sso] because it needs the native libxmlsec1 (python-xmlsec / lxml):
+    # keeping it out of [sso] means OIDC/SCIM installs stay pure-pip. Install the system
+    # lib first (e.g. apt-get install libxmlsec1-dev pkg-config) then
+    # `pip install 'dazzle-dsl[saml]'`.
+    "python3-saml>=1.15",
 ]
 signing = [
     # #1283 phase 2: native document signing primitive.

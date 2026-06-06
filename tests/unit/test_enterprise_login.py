@@ -304,3 +304,12 @@ def test_uses_connection_record_not_namespace() -> None:
     # passes a frozen ConnectionRecord.
     assert isinstance(_conn(), ConnectionRecord)
     assert not isinstance(_conn(), SimpleNamespace)
+
+
+def test_saml_assertion_source_is_trusted_without_email_verified() -> None:
+    # A signature-validated SAML assertion is a trusted source (like an id_token) — the
+    # join must NOT require email_verified for it (Plan 5.i trust-model generalization).
+    store = _FakeStore()
+    asserted = _asserted("jane@acme.test", claims_source="saml_assertion")  # no email_verified
+    user, mid = provision_enterprise_login(store, _conn(), asserted)
+    assert user.email == "jane@acme.test" and mid

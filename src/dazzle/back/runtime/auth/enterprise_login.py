@@ -22,6 +22,13 @@ from psycopg.errors import UniqueViolation as _UniqueViolation
 
 from dazzle.back.runtime.auth.connections import AssertedIdentity, ConnectionRecord
 
+# Claims sources whose email is cryptographically validated by the provider and may be
+# trusted directly: an OIDC ``id_token`` (authlib-verified signature/iss/aud/exp/nonce) and
+# a SAML ``saml_assertion`` (python3-saml-verified XML signature against the IdP cert). The
+# OIDC UserInfo-endpoint fallback (``userinfo_endpoint``) is NOT here — its claims aren't
+# signed, so they additionally require an explicit ``email_verified=true``.
+_VALIDATED_CLAIMS_SOURCES = frozenset({"id_token", "saml_assertion"})
+
 
 class EnterpriseLoginError(RuntimeError):
     """An enterprise SSO assertion cannot be turned into a membership.
@@ -95,10 +102,10 @@ def provision_enterprise_login(
         )
 
     # (2) Differential trust on the weaker (unsigned) UserInfo-endpoint claims path.
-    # The id_token path was cryptographically validated by authlib; the endpoint
-    # fallback was not, so there we require an explicit email_verified=true.
+    # A cryptographically-validated source (OIDC id_token / SAML assertion) is trusted;
+    # the OIDC endpoint fallback is not signed, so there we require email_verified=true.
     if (
-        asserted.claims_source != "id_token"
+        asserted.claims_source not in _VALIDATED_CLAIMS_SOURCES
         and asserted.attributes.get("email_verified") is not True
     ):
         raise EnterpriseLoginError(
