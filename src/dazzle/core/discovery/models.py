@@ -22,3 +22,7 @@ class Relevance:
     category: str
     examples: list[ExampleRef]
     kg_entity: str
+    # Opt-in capability id required to surface this proactively (#1342 Phase 2).
+    # None = ungated (always surfaced). When set and the capability isn't active,
+    # the proactive surface drops the item (still discoverable via direct query).
+    gated_by: str | None = None

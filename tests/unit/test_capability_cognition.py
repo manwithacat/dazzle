@@ -62,3 +62,42 @@ def test_enable_suggestion_carries_runbook():
     assert s["capability"] == "auth.enterprise.oidc"
     assert s["enable"] == "dazzle capability enable auth.enterprise.oidc"
     assert "dazzle-dsl[sso]" in s["remediation"]
+
+
+def test_engine_filters_gated_relevance(monkeypatch):
+    from types import SimpleNamespace
+
+    import dazzle.core.discovery.engine as eng
+    from dazzle.core.discovery.models import Relevance
+
+    gated = Relevance(
+        context="c",
+        capability="cap",
+        category="cat",
+        examples=[],
+        kg_entity="k",
+        gated_by="auth.enterprise.oidc",
+    )
+    ungated = Relevance(
+        context="c2", capability="cap2", category="cat2", examples=[], kg_entity="k2"
+    )
+    monkeypatch.setattr(eng, "check_widget_relevance", lambda *a: [gated, ungated])
+    monkeypatch.setattr(eng, "check_layout_relevance", lambda *a: [])
+    monkeypatch.setattr(eng, "check_component_relevance", lambda *a: [])
+    monkeypatch.setattr(eng, "check_completeness_relevance", lambda *a: [])
+    appspec = SimpleNamespace(domain=SimpleNamespace(entities=[]), surfaces=[], workspaces=[])
+
+    # Not active → the gated item is dropped (gated_by preserved through enrich).
+    out = eng.suggest_capabilities(appspec, active=set())
+    keys = {r.kg_entity for r in out}
+    assert "k2" in keys and "k" not in keys
+
+    # Active → the gated item surfaces.
+    out2 = eng.suggest_capabilities(appspec, active={"auth.enterprise.oidc"})
+    assert {"k", "k2"} <= {r.kg_entity for r in out2}
+
+    # Default (no active arg) → behaviour unchanged for existing callers: nothing
+    # is gated unless a rule sets gated_by AND active excludes it. Here gated_by IS
+    # set, so default-empty active drops it — matching the not-active case.
+    out3 = eng.suggest_capabilities(appspec)
+    assert "k" not in {r.kg_entity for r in out3}

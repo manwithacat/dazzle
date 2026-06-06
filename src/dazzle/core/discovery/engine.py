@@ -28,6 +28,7 @@ def suggest_capabilities(
     *,
     examples_dir: Path | None = None,
     suppress: bool = False,
+    active: set[str] | None = None,
 ) -> list[Relevance]:
     """Return enriched Relevance items for capabilities applicable to *appspec*.
 
@@ -88,10 +89,19 @@ def suggest_capabilities(
                 category=item.category,
                 examples=refs,
                 kg_entity=item.kg_entity,
+                gated_by=item.gated_by,
             )
         )
 
-    return enriched
+    # Drop relevance gated by a capability that isn't active (#1342 Phase 2).
+    # Default-empty active set keeps every existing caller unchanged, since no
+    # rule sets gated_by yet — nothing is filtered until one does.
+    from dazzle.core.capabilities.cognition import partition_by_capability
+
+    surfaced, _gated = partition_by_capability(
+        enriched, active or set(), capability_of=lambda r: r.gated_by
+    )
+    return surfaced
 
 
 # ---------------------------------------------------------------------------
