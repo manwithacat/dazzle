@@ -102,6 +102,22 @@ class OrganizationRecord(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ScimGroupRecord(BaseModel):
+    """A SCIM 2.0 Group, connection-scoped (#1342).
+
+    Members are tracked separately in ``scim_group_members`` and fetched on
+    demand; this record carries only the group's own fields.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    connection_id: str
+    display_name: str
+    created_at: str
+    updated_at: str
+
+
 class AuthContext(BaseModel):
     """Current authentication context."""
 

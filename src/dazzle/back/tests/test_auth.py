@@ -112,6 +112,21 @@ class TestPasswordHashing:
 # =============================================================================
 
 
+def test_scim_group_record_fields() -> None:
+    from dazzle.back.runtime.auth.models import ScimGroupRecord
+
+    g = ScimGroupRecord(
+        id="g1",
+        connection_id="c1",
+        display_name="Engineering",
+        created_at="2026-06-06T00:00:00",
+        updated_at="2026-06-06T00:00:00",
+    )
+    assert g.id == "g1"
+    assert g.connection_id == "c1"
+    assert g.display_name == "Engineering"
+
+
 @pytest.mark.postgres
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthStore:
