@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.75] - 2026-06-06
+
+### Added
+
+- **Implementation plan: SCIM /Groups** (`docs/superpowers/plans/2026-06-06-scim-groups.md`) for #1342 — 9 TDD tasks: the `scim_groups`/`scim_group_members` schema + store methods, `recompute_membership_roles` (union over a member's groups), group CRUD + member domain ops, the `provision_scim_user` clean-break, the RFC-7644 PATCH parser, the `/scim/v2/Groups` REST endpoints + Group JSON, and the read-only `User.groups` echo. Plan only; not yet implemented.
+
 ## [0.81.74] - 2026-06-06
 
 ### Added
