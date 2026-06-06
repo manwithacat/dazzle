@@ -34,6 +34,17 @@ def unknown_capability_ids(declared: list[str]) -> list[str]:
     return [cid for cid in declared if cid not in known]
 
 
+def active_capability_ids(declared: list[str]) -> set[str]:
+    """The subset of declared ids that are registered AND available.
+
+    Non-raising (unlike :func:`resolve_capabilities`): for advisory/cognition
+    surfaces (bootstrap, lint relevance, spec-analyze) that must never crash on an
+    unavailable or unknown declared capability — those are simply omitted from the
+    active set rather than raising a boot error.
+    """
+    return {cid for cid in declared if (cap := get(cid)) is not None and is_available(cap)}
+
+
 def suggest_capability(unknown_id: str) -> str | None:
     """Closest known capability id to a typo'd one, or None (shared by the CLI
     and `dazzle validate` so the did-you-mean hint stays consistent)."""

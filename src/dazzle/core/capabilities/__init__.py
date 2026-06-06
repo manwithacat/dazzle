@@ -9,6 +9,7 @@ from dazzle.core.capabilities.models import (
     ResolvedCapabilities,
 )
 from dazzle.core.capabilities.registry import (
+    active_capability_ids,
     all_capabilities,
     get,
     is_available,
@@ -23,6 +24,7 @@ __all__ = [
     "Capability",
     "CapabilityUnavailableError",
     "ResolvedCapabilities",
+    "active_capability_ids",
     "all_capabilities",
     "get",
     "is_available",
