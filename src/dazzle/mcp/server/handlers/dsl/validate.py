@@ -79,7 +79,14 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     app_spec = load_project_appspec(project_root)
 
     progress.log_sync("Running lint checks...")
-    errors, warnings, relevance = lint_appspec(app_spec, extended=extended)
+    # Gate capability-tagged relevance on what this project has opted into (#1342).
+    from dazzle.core.capabilities.cognition import active_capabilities_for
+
+    errors, warnings, relevance = lint_appspec(
+        app_spec,
+        extended=extended,
+        active_capabilities=active_capabilities_for(project_root),
+    )
 
     if args.get("suppress_relevance"):
         relevance = []

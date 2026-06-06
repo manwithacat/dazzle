@@ -101,3 +101,25 @@ def test_engine_filters_gated_relevance(monkeypatch):
     # set, so default-empty active drops it — matching the not-active case.
     out3 = eng.suggest_capabilities(appspec)
     assert "k" not in {r.kg_entity for r in out3}
+
+
+def test_lint_appspec_forwards_active_capabilities(monkeypatch, tmp_path):
+    import dazzle.core.lint as lint
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.parser import parse_modules
+
+    src = 'module t\napp s "S"\n\nentity Task "Task":\n  id: uuid pk\n  title: str(200)\n'
+    p = tmp_path / "m.dsl"
+    p.write_text(src, encoding="utf-8")
+    appspec = build_appspec(parse_modules([p]), root_module_name="t")
+
+    captured = {}
+    real = lint.suggest_capabilities
+
+    def spy(a, **kw):
+        captured["active"] = kw.get("active")
+        return real(a, **kw)
+
+    monkeypatch.setattr(lint, "suggest_capabilities", spy)
+    lint.lint_appspec(appspec, active_capabilities={"auth.enterprise.oidc"})
+    assert captured["active"] == {"auth.enterprise.oidc"}

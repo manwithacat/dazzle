@@ -39,7 +39,11 @@ from .validator import (
 
 
 def lint_appspec(
-    appspec: ir.AppSpec, extended: bool = False, *, suggest: bool = True
+    appspec: ir.AppSpec,
+    extended: bool = False,
+    *,
+    suggest: bool = True,
+    active_capabilities: set[str] | None = None,
 ) -> tuple[list[str], list[str], list[Relevance]]:
     """
     Validate AppSpec for semantic errors and warnings.
@@ -239,6 +243,6 @@ def lint_appspec(
     # content. Skipped when `suggest=False`: the suggestion pass parses
     # every bundled example app's DSL, which is pure overhead for callers
     # (like `dazzle serve`) that only consume `errors`.
-    relevance = suggest_capabilities(appspec) if suggest else []
+    relevance = suggest_capabilities(appspec, active=active_capabilities) if suggest else []
 
     return all_errors, all_warnings, relevance
