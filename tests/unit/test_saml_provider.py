@@ -281,3 +281,51 @@ def test_register_native_saml_resolves() -> None:
         assert isinstance(impl, NativeSAMLProvider)
     finally:
         _PROVIDERS.pop(("saml", "native"), None)
+
+
+class TestSPMetadata:
+    """SP-metadata generation (#1342) — library-free via the _build_sp_settings seam."""
+
+    def test_sp_only_settings_shape(self):
+        s = NativeSAMLProvider()._sp_only_settings(_FakeRequest())
+        acs = "https://app.test/auth/saml/acs"
+        assert s["sp"]["entityId"] == acs
+        assert s["sp"]["assertionConsumerService"]["url"] == acs
+        assert s["sp"]["assertionConsumerService"]["binding"].endswith("HTTP-POST")
+        assert s["sp"]["NameIDFormat"].endswith("emailAddress")
+        assert "idp" not in s  # SP-only — no IdP config needed for metadata
+
+    def test_sp_metadata_decodes_and_returns(self, monkeypatch):
+        provider = NativeSAMLProvider()
+
+        class _FakeSettings:
+            def get_sp_metadata(self):
+                return b"<md:EntityDescriptor entityID='x'/>"
+
+            def validate_metadata(self, md):
+                return []
+
+        monkeypatch.setattr(provider, "_build_sp_settings", lambda settings: _FakeSettings())
+        assert provider.sp_metadata(_FakeRequest()) == "<md:EntityDescriptor entityID='x'/>"
+
+    def test_sp_metadata_raises_on_invalid(self, monkeypatch):
+        provider = NativeSAMLProvider()
+
+        class _BadSettings:
+            def get_sp_metadata(self):
+                return b"<bad/>"
+
+            def validate_metadata(self, md):
+                return ["error: not a valid EntityDescriptor"]
+
+        monkeypatch.setattr(provider, "_build_sp_settings", lambda settings: _BadSettings())
+        with pytest.raises(RuntimeError, match="validation"):
+            provider.sp_metadata(_FakeRequest())
+
+    def test_sp_metadata_real_when_saml_installed(self):
+        # End-to-end against real python3-saml when the [saml] extra is present;
+        # skipped otherwise (matches the rest of the SAML suite's library handling).
+        pytest.importorskip("onelogin")
+        xml = NativeSAMLProvider().sp_metadata(_FakeRequest())
+        assert "EntityDescriptor" in xml
+        assert "https://app.test/auth/saml/acs" in xml

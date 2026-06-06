@@ -66,9 +66,18 @@ to **python3-saml** (`strict=True`); Dazzle never hand-rolls XML.
 | NameID → email | ✅ | `emailAddress` format; or a configured `email_attribute` |
 | Group attribute → roles | ✅ | `groups_attribute` (default `groups`) → `group_mapping`, default-deny |
 | Encrypted assertions | ❌ | Deferred — assertions must be signed, not encrypted |
+| SP metadata endpoint | ✅ | `GET /auth/saml/metadata` serves the SP metadata XML so an IdP can import the ACS URL / entityId / NameID instead of hand-config (#1342) |
 | Single Logout (SLO) | ❌ | Deferred |
 | SP-signed AuthnRequests | ❌ | Deferred (the Response signature is the trust anchor) |
 | IdP metadata auto-import | ❌ | Provide entity id / SSO URL / cert explicitly (`create-saml`) |
+
+**SP metadata** (`GET /auth/saml/metadata`, public, unauthenticated — IdPs fetch it
+anonymously): serves the **default app-level** SP identity (entityId = ACS URL, NameID
+`emailAddress`). It contains nothing secret. Two notes: a connection that pins a custom
+`sp_entity_id` is not reflected (configure that value IdP-side directly); and the
+entityId/ACS URL derive from the request's base URL (Host header) — front SAML
+deployments with a trusted-host / canonical base URL so the advertised ACS can't be
+Host-spoofed (this applies to the live login/ACS path too, not just metadata).
 
 A malformed or invalid Response never yields a session — it is logged and redirected to
 `/login?error=sso_failed`. Error reasons surface as `/login?error=sso_<reason>`

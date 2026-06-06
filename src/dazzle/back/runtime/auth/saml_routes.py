@@ -18,7 +18,7 @@ ADR-0014: no ``from __future__ import annotations`` in FastAPI route files.
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from dazzle.back.runtime.auth.connections import ConnectionError, resolve_provider
@@ -132,5 +132,27 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         return finish_login_session(
             request, store, user, membership_id, cookie_name=cookie_name, safe_next=safe_next
         )
+
+    @router.get("/auth/saml/metadata")
+    async def saml_metadata(request: Request) -> Response:
+        """Serve this SP's SAML metadata XML so an IdP can import it instead of an
+        operator hand-configuring the ACS URL / entityId / NameID (#1342).
+
+        SP-only + app-level — no connection or IdP config needed; the SP identity
+        is the same registered with every IdP. Only mounted when the
+        ``auth.enterprise.saml`` capability is active.
+        """
+        from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+
+        try:
+            xml = NativeSAMLProvider().sp_metadata(request)
+        except Exception as exc:  # noqa: BLE001 — never 500-leak a stack trace
+            _logger.warning("SAML metadata generation failed: %s", exc)  # nosemgrep
+            return Response(
+                content="SAML SP metadata unavailable",
+                status_code=503,
+                media_type="text/plain",
+            )
+        return Response(content=xml, media_type="application/samlmetadata+xml")
 
     return router

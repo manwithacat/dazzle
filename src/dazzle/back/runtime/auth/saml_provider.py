@@ -131,6 +131,54 @@ class NativeSAMLProvider:
 
         return OneLogin_Saml2_Auth(request_data, old_settings=settings)
 
+    def _sp_only_settings(self, request: Any) -> dict[str, Any]:
+        """SP-only settings for metadata generation (#1342).
+
+        No IdP section or connection needed — the SP identity (ACS URL, entityId,
+        NameID) is app-level, the same one registered with every IdP. entityId
+        defaults to the ACS URL (a stable, unique SP identifier).
+        """
+        acs = self._acs_url(request)
+        return {
+            "strict": True,
+            "sp": {
+                "entityId": acs,
+                "assertionConsumerService": {"url": acs, "binding": _BINDING_POST},
+                "NameIDFormat": _NAMEID_EMAIL,
+            },
+        }
+
+    def _build_sp_settings(self, settings: dict[str, Any]) -> Any:
+        """Construct the python3-saml Settings object in SP-validation-only mode
+        (lazy import — [saml] extra). Isolated so tests can fake it without
+        installing libxmlsec1, mirroring ``_build_auth``."""
+        from onelogin.saml2.settings import OneLogin_Saml2_Settings
+
+        return OneLogin_Saml2_Settings(settings, sp_validation_only=True)
+
+    def sp_metadata(self, request: Any) -> str:
+        """Generate this SP's SAML metadata XML for IdP import (#1342).
+
+        The IdP imports this instead of an operator hand-configuring the ACS URL /
+        entityId / NameID. SP-only generation (no IdP config), validated before
+        return so we never serve malformed metadata. Contains nothing secret —
+        only the public SP identity (entityId, ACS URL, NameID).
+
+        Two deliberate limitations:
+        - Serves the **default, app-level** SP identity (entityId = ACS URL). A
+          connection that pins a custom ``sp_entity_id`` is not reflected here; its
+          IdP must be configured with that pinned value directly.
+        - entityId/ACS derive from ``request.base_url`` (Host header), exactly like
+          the live login/ACS path. Front SAML deployments with a trusted-host /
+          canonical base URL so the advertised ACS can't be Host-spoofed.
+        """
+        settings = self._build_sp_settings(self._sp_only_settings(request))
+        metadata = settings.get_sp_metadata()
+        errors = settings.validate_metadata(metadata)
+        if errors:
+            raise RuntimeError(f"generated SP metadata failed validation: {errors}")
+        return metadata.decode("utf-8") if isinstance(metadata, bytes) else metadata
+
     async def initiate(self, connection: ConnectionRecord, request: Any) -> str:
         """Begin SP-initiated SSO — return the IdP redirect URL (carrying the
         AuthnRequest). Stashes the request id in the session for InResponseTo checking."""

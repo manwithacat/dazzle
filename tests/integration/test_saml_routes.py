@@ -242,3 +242,34 @@ def test_acs_session_fixation_deletes_pre_auth_sid(saml_provider) -> None:
     r = client.post("/auth/saml/acs", data={"SAMLResponse": "x"}, follow_redirects=False)
     assert r.status_code == 303
     assert "attacker-planted-sid" in store.deleted_sessions
+
+
+# ---- SP metadata (#1342) ----
+
+
+def test_metadata_serves_sp_xml(monkeypatch) -> None:
+    """GET /auth/saml/metadata returns the SP metadata XML with the SAML metadata
+    content type (the IdP imports this)."""
+    import dazzle.back.runtime.auth.saml_provider as sp
+
+    monkeypatch.setattr(
+        sp.NativeSAMLProvider,
+        "sp_metadata",
+        lambda self, request: "<md:EntityDescriptor entityID='https://app.test/auth/saml/acs'/>",
+    )
+    resp = _client(_Store()).get("/auth/saml/metadata")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/samlmetadata+xml")
+    assert "EntityDescriptor" in resp.text
+
+
+def test_metadata_503_when_generation_fails(monkeypatch) -> None:
+    """Generation failure (e.g. [saml] extra absent) → 503, never a 500 stack leak."""
+    import dazzle.back.runtime.auth.saml_provider as sp
+
+    def _boom(self, request):
+        raise RuntimeError("python3-saml not installed")
+
+    monkeypatch.setattr(sp.NativeSAMLProvider, "sp_metadata", _boom)
+    resp = _client(_Store()).get("/auth/saml/metadata")
+    assert resp.status_code == 503

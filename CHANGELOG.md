@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.73] - 2026-06-06
+
+### Added
+
+- **SAML SP-metadata endpoint (#1342 Phase 3).** `GET /auth/saml/metadata` serves the Service Provider's SAML metadata XML (entityId, ACS URL, NameID) so an IdP can import it instead of an operator hand-configuring those values. SP-only generation via python3-saml (`OneLogin_Saml2_Settings(..., sp_validation_only=True).get_sp_metadata()`, validated before serving — never hand-rolled XML); contains nothing secret. Public/unauthenticated (IdPs fetch it anonymously), mounted only when the `auth.enterprise.saml` capability is active, and returns 503 (never a 500 leak) if generation fails. Serves the default app-level SP identity (a connection's pinned `sp_entity_id` is configured IdP-side); entityId/ACS derive from the request base URL — front SAML deployments with a trusted host (noted in `docs/reference/enterprise-sso.md`).
+
 ## [0.81.72] - 2026-06-06
 
 ### Fixed
