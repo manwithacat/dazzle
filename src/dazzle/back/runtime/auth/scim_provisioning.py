@@ -15,11 +15,14 @@ membership AND revokes its sessions, so access is lost immediately.
 
 from __future__ import annotations
 
+import logging
 import secrets as _secrets
 from dataclasses import dataclass
 from typing import Any
 
 from dazzle.back.runtime.auth.enterprise_login import map_groups_to_roles
+
+_logger = logging.getLogger(__name__)
 
 
 class ScimError(RuntimeError):
@@ -193,26 +196,30 @@ def provision_scim_user(
         store.mark_email_verified(str(user.id))
 
     identity_id = str(user.id)
-    roles = map_groups_to_roles(groups or [], connection.group_mapping or {})
+    # #1342: group→role is owned by the /Groups endpoint (RFC 7643 treats
+    # User.groups as server-managed/read-only). The `groups` arg is accepted for
+    # compatibility but no longer drives roles — group-derived roles come solely
+    # from persisted SCIM group memberships (recompute_membership_roles).
+    if groups:
+        _logger.debug(
+            "SCIM User `groups` attribute is informational (use /Groups for roles): %s",
+            groups,
+        )
     membership = _membership_in_org(store, identity_id, connection.tenant_id)
 
     if membership is None:
         membership = store.create_membership(
             tenant_id=connection.tenant_id,
             identity_id=identity_id,
-            roles=roles,
+            roles=[],  # /Groups assigns group-derived roles
             reason="SCIM provision",
         )
         if not active:
             store.suspend_membership(membership.id, reason="SCIM provisioned inactive")
         return ScimResult(identity_id, membership.id, active)
 
-    # Existing membership — sync roles + active state. The IdP is authoritative, so an
-    # empty target set (the user was removed from all mapped groups) MUST revoke the
-    # last roles — do NOT guard on `roles` being truthy, or de-escalation-to-zero would
-    # silently leave the old (possibly admin) roles in place.
-    if set(roles) != set(membership.roles or []):
-        store.update_membership_roles(membership.id, roles, reason="SCIM role sync")
+    # Existing membership — sync only active state. Roles are owned by the /Groups
+    # endpoint; do NOT overwrite them from the (informational) `groups` attribute.
     if active and membership.status == "suspended":
         store.reactivate_membership(membership.id, reason="SCIM reactivate")
     elif not active and membership.status == "active":

@@ -157,7 +157,9 @@ def test_provision_creates_identity_and_active_membership() -> None:
     )
     assert res.active is True and res.identity_id and res.membership_id
     m = store._memberships[-1]
-    assert m.tenant_id == "org-1" and m.status == "active" and m.roles == ["engineer"]
+    # #1342: the `groups` attribute is informational — roles are owned by /Groups,
+    # so a SCIM User create no longer derives roles from `groups`.
+    assert m.tenant_id == "org-1" and m.status == "active" and m.roles == []
     assert store.marked_verified == [res.identity_id]  # SSO/SCIM-vouched email
 
 
@@ -178,26 +180,18 @@ def test_provision_reuses_existing_identity() -> None:
 # ---- update / sync ----
 
 
-def test_provision_syncs_roles_on_existing_membership() -> None:
+def test_provision_does_not_sync_roles_from_groups_attribute() -> None:
+    # #1342 clean-break: roles are owned by the /Groups endpoint (RFC: User.groups
+    # is server-managed). A User push with a `groups` attribute does NOT add/remove
+    # roles on the membership — de-escalation now happens via /Groups membership.
     u = _User("uid-1", "jane@acme.test", verified=True)
-    m = _Membership("mem-1", "org-1", "uid-1", roles=["old"])
+    m = _Membership("mem-1", "org-1", "uid-1", roles=["existing"])
     store = _Store(users={"jane@acme.test": u}, memberships=[m])
     provision_scim_user(
         store, _conn(group_mapping={"eng": "engineer"}), email="jane@acme.test", groups=["eng"]
     )
-    assert store.role_updates == [("mem-1", ["engineer"])]
-
-
-def test_provision_revokes_last_roles_when_groups_emptied() -> None:
-    # The IdP removed the user from all mapped groups → roles must drop to []. A
-    # truthiness guard on `roles` would silently retain the old (admin) roles.
-    u = _User("uid-1", "jane@acme.test", verified=True)
-    m = _Membership("mem-1", "org-1", "uid-1", roles=["admin"])
-    store = _Store(users={"jane@acme.test": u}, memberships=[m])
-    provision_scim_user(
-        store, _conn(group_mapping={"admins": "admin"}), email="jane@acme.test", groups=[]
-    )  # no groups now
-    assert store.role_updates == [("mem-1", [])]  # de-escalated to zero
+    assert store.role_updates == []  # roles untouched — /Groups owns them
+    assert m.roles == ["existing"]
 
 
 def test_provision_reactivates_suspended_on_active_true() -> None:

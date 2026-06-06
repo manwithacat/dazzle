@@ -1437,3 +1437,18 @@ class TestScimGroupStore:
         sp.create_group(store, conn, "Eng", member_ids=[])
         with pytest.raises(sp.SCIMGroupError):
             sp.create_group(store, conn, "Eng", member_ids=[])
+
+    def test_user_groups_attribute_no_longer_drives_roles(self, store):
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.auth.scim_provisioning import provision_scim_user
+
+        conn = SimpleNamespace(
+            id="conn-1",
+            tenant_id="org-1",
+            group_mapping={"Eng": "engineer"},
+            verified_domains=["x.test"],
+        )
+        result = provision_scim_user(store, conn, email="ann@x.test", active=True, groups=["Eng"])
+        membership = store.get_membership(result.membership_id)
+        assert membership.roles == []  # groups attribute is informational; /Groups owns roles
