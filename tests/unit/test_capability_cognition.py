@@ -183,3 +183,31 @@ def test_bootstrap_surfaces_capability_suggestions(monkeypatch, tmp_path):
     out2 = json.loads(bs._run_cognition_pass("Okta SSO.", "test", tmp_path))
     assert out2["analysis"].get("capability_suggestions", []) == []
     assert any(p["pattern_id"] == "enterprise_sso" for p in out2["analysis"]["pattern_proposals"])
+
+
+def test_counter_prior_gate_suppresses_when_inactive(monkeypatch):
+    import dazzle.mcp.server.handlers.spec_analyze as sa
+    from dazzle.mcp.semantics_kb.counter_priors import CounterPrior
+
+    cp = CounterPrior(
+        id="saml_pathology",
+        name="SAML pathology",
+        layer="inference",
+        summary="don't do the SAML thing",
+        triggers_text=["widget soup"],
+        file_path="x",
+        body="...",
+        capability="auth.enterprise.saml",
+    )
+    monkeypatch.setattr(sa, "_load_counter_priors_for_flagging", lambda: [cp])
+    monkeypatch.setattr("dazzle.mcp.semantics_kb.get_dsl_patterns", lambda: {"patterns": {}})
+
+    # Not active → the gated antipattern is suppressed (irrelevant to this app).
+    out = json.loads(sa._propose_patterns({"spec_text": "lots of widget soup"}, active=set()))
+    assert out["antipattern_flags"] == []
+
+    # Active → the antipattern is flagged.
+    out2 = json.loads(
+        sa._propose_patterns({"spec_text": "widget soup"}, active={"auth.enterprise.saml"})
+    )
+    assert any(f["guidance_id"] == "saml_pathology" for f in out2["antipattern_flags"])

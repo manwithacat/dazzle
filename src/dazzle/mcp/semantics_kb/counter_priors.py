@@ -67,6 +67,10 @@ class CounterPrior(BaseModel):
     triggers_code: list[str] = Field(default_factory=list)
     refs: CounterPriorRefs = Field(default_factory=CounterPriorRefs)
     detectors: list[DetectorRef] = Field(default_factory=list)
+    # Opt-in capability this antipattern is scoped to (#1342). None = always
+    # relevant. When set, the proactive flag is suppressed unless the capability
+    # is active — don't warn about a SAML pathology in a non-SAML app.
+    capability: str | None = None
 
     file_path: str
     body: str

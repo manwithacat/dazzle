@@ -1032,6 +1032,12 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
         matched = [t for t in entry.triggers_text if isinstance(t, str) and t.lower() in haystack]
         if not matched:
             continue
+        # A capability-scoped antipattern is only relevant when that capability is
+        # active (#1342) — suppress it otherwise (no false warnings for features
+        # the app doesn't use).
+        gate = getattr(entry, "capability", None)
+        if gate and gate not in active:
+            continue
         antipattern_flags.append(
             {
                 # `guidance_id` kept for back-compat with #1249 test consumers;
