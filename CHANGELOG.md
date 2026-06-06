@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.67] - 2026-06-06
+
+### Added
+
+- **Design spec: capability opt-in model** (`docs/superpowers/specs/2026-06-06-capability-opt-in-model-design.md`) for #1342. A general `[capabilities]` manifest registry that gates framework features (routes, surfaces, *and* agent/docs surfacing) on declared per-app intent — `active = requested ∧ available`, default-empty, hard-fail on requested-but-unavailable. Enterprise auth (OIDC/SAML/SCIM) is consumer #1: it stops mounting on mere pip-extra presence, closing the leak where a greenfield app sprouts enterprise routes. Push/pull cognition rule keeps enterprise auth invisible to a simple-app author until declared. Phased: foundation + auth gating → cognition → the #1342 backlog items inherit the gate. Not yet implemented.
+
 ## [0.81.66] - 2026-06-06
 
 ### Fixed
