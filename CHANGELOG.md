@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.72] - 2026-06-06
+
+### Fixed
+
+- **Case-insensitive email uniqueness — no more split identities (#1342 Phase 3, store hardening M2).** The auth `users` table had only a case-*sensitive* `email UNIQUE`, so `Foo@x.com` and `foo@x.com` could coexist as two identities if any create-path forgot to lowercase (an unenforced convention). `AuthStore` now ensures a functional unique index on `LOWER(email)` (`users_email_lower_key`) — structural, no CITEXT extension needed. It runs in its own transaction after the base schema commits, with a pre-flight that fails loud with an actionable message (names the colliding emails) rather than an opaque duplicate-key, and can't tear down the rest of schema init. Verified against real PostgreSQL (the case-variant insert is rejected; the pre-flight reports collisions). The read-side `get_user_by_email` remains case-sensitive (callers lowercase) — a separate, deferred enhancement.
+
 ## [0.81.71] - 2026-06-06
 
 ### Added

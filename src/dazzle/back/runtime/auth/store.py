@@ -1509,6 +1509,44 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
 
         self._init_db()
 
+    def _ensure_email_ci_uniqueness(self) -> None:
+        """Enforce case-insensitive email uniqueness on `users` (#1342, M2).
+
+        A plain `email TEXT UNIQUE` is case-SENSITIVE, so "Foo@x.com" and
+        "foo@x.com" could coexist — a *split identity* an out-of-convention
+        create-path could mint. A functional unique index on LOWER(email) closes
+        that structurally (no CITEXT extension needed).
+
+        Runs in its OWN transaction, *after* `_init_db` has committed the base
+        schema — so if pre-existing case-duplicate rows block the index, the
+        failure is isolated (the rest of the schema is already in place) and we
+        raise a clear, actionable error rather than an opaque duplicate-key that
+        also tore down the other table creation. Fails loud by design: you cannot
+        silently boot with the split-identity hole open.
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT LOWER(email) AS k, COUNT(*) AS n FROM users "
+                "GROUP BY LOWER(email) HAVING COUNT(*) > 1 LIMIT 5"
+            )
+            collisions = cursor.fetchall()
+            if collisions:
+                examples = ", ".join(f"{r['k']} (x{r['n']})" for r in collisions)
+                raise RuntimeError(
+                    "Cannot enforce case-insensitive email uniqueness (#1342): "
+                    f"the users table has rows that collide on LOWER(email): {examples}. "
+                    "Merge the duplicate user rows (one identity per lowercased email), "
+                    "then restart."
+                )
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_key ON users (LOWER(email))"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
     def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
         """Get a PostgreSQL database connection."""
         return psycopg.connect(self._database_url, row_factory=dict_row)
@@ -1706,6 +1744,13 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             conn.commit()
         finally:
             conn.close()
+
+        # Case-insensitive email uniqueness (#1342, M2) runs AFTER the base schema
+        # is committed and its connection closed — in its own transaction (see the
+        # method docstring) so a pre-existing case-dup failure can't tear down the
+        # rest of schema init. Folded into _init_db (not __init__) so a test that
+        # patches _init_db skips this DB work too.
+        self._ensure_email_ci_uniqueness()
 
     def _execute(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, Any]]:
         """Execute a query and return results as list of dicts."""

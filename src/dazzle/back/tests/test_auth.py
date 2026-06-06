@@ -112,6 +112,7 @@ class TestPasswordHashing:
 # =============================================================================
 
 
+@pytest.mark.postgres
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthStore:
     """Tests for AuthStore class."""
@@ -162,6 +163,50 @@ class TestAuthStore:
         """Test getting non-existent user by email."""
         user = auth_store.get_user_by_email("nonexistent@example.com")
         assert user is None
+
+    def test_email_case_insensitive_uniqueness(self, auth_store: Any) -> None:
+        """No auth path can mint a *split* identity via case variation (#1342).
+
+        A case-insensitive unique index on users(LOWER(email)) structurally
+        rejects a second row that differs only by case, regardless of whether the
+        calling path remembered to lowercase.
+        """
+        auth_store.create_user(email="split@example.com", password="pass")
+        with pytest.raises(Exception) as exc:
+            auth_store.create_user(email="SPLIT@example.com", password="pass")
+        # Assert the *case-insensitive* index fired (users_email_lower_key), not the
+        # pre-existing case-sensitive `email UNIQUE` (users_email_key) — otherwise a
+        # same-case dup would pass this test and give false confidence.
+        msg = str(exc.value).lower()
+        assert "users_email_lower_key" in msg, (
+            f"expected the LOWER(email) unique index to fire, got: {exc.value!r}"
+        )
+
+    def test_email_ci_uniqueness_preflight_reports_collisions(self, auth_store: Any) -> None:
+        """Pre-existing case-dup rows surface an actionable error (not an opaque
+        duplicate-key), and the index creation is isolated so it can't tear down
+        the rest of the schema (#1342 review)."""
+        from uuid import uuid4
+
+        from dazzle.back.runtime.pg_backend import PostgresBackend
+
+        db = PostgresBackend(os.environ["DATABASE_URL"])
+        now = datetime.now(UTC).isoformat()
+        with db.connection() as conn:
+            conn.execute("DROP INDEX IF EXISTS users_email_lower_key")
+            for email in ("Dup@example.com", "dup@example.com"):
+                conn.execute(
+                    "INSERT INTO users (id, email, password_hash, username, is_active, "
+                    "is_superuser, roles, created_at, updated_at) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (str(uuid4()), email, "x", None, True, False, "[]", now, now),
+                )
+
+        # Constructing the store runs the pre-flight, which must raise clearly.
+        with pytest.raises(RuntimeError) as exc:
+            AuthStore(os.environ["DATABASE_URL"])
+        assert "collide on LOWER(email)" in str(exc.value)
+        assert "dup@example.com" in str(exc.value)
 
     def test_get_user_by_id(self, auth_store: Any) -> None:
         """Test getting user by ID."""

@@ -144,6 +144,9 @@ class TestPostgresTableInit:
 
     def _make_store_with_mock_conn(self, mock_cursor):
         """Create an AuthStore with a mocked connection."""
+        # The email-CI-uniqueness pre-flight (#1342) runs at the tail of _init_db
+        # and reads fetchall() for case-dup rows; a freshly-created table has none.
+        mock_cursor.fetchall.return_value = []
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
