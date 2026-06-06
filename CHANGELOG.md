@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.62] - 2026-06-06
+
+### Changed
+
+- **`user_management` MCP tool description corrected** (`src/dazzle/mcp/server/tools_consolidated.py`) — dropped the false "SQLite or PostgreSQL" claim; the auth runtime is PostgreSQL-only (ADR-0008). Regenerated the `docs/api-surface/mcp-tools.txt` baseline to match (the `docs: improve developer onboarding trust path` commit changed the description but didn't refresh the baseline, leaving the `test_api_surface_drift[mcp_tools]` gate red). Bundles that onboarding-docs commit's release.
+
 ## [0.81.61] - 2026-06-06
 
 ### Added

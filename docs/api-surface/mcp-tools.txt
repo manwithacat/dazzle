@@ -1497,8 +1497,8 @@ tool: test_intelligence
   }
 
 tool: user_management
-  description_hash: 9bd3ba65df22
-  description_len: 177
+  description_hash: a2457c47e598
+  description_len: 167
   {
     "properties": {
       "active_only": {
