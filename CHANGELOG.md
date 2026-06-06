@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.63] - 2026-06-06
+
+### Changed
+
+- **Relocated the model-driven failure-mode catalogue from `dev_docs/` to `docs/architecture/model-driven-failure-modes.md`** and added it to the published site nav under Architecture. It's referenced as canonical from CLAUDE.md, so it belongs in the built docs rather than gitignored `dev_docs/` (which required a force-add). Updated the CLAUDE.md "Model-Driven Failure Modes (review rule)" pointer to the new path; `mkdocs build --strict` passes clean.
+
 ## [0.81.62] - 2026-06-06
 
 ### Changed

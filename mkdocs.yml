@@ -52,6 +52,7 @@ nav:
       - HLESS Deep Dive: architecture/hless-deep-dive.md
       - DSL to AppSpec: architecture/dsl-to-appspec.md
       - MCP Server: architecture/mcp-server.md
+      - Model-Driven Failure Modes: architecture/model-driven-failure-modes.md
   - DSL Reference:
       - Overview: reference/index.md
       - Entities: reference/entities.md

@@ -61,7 +61,7 @@ Before emitting non-trivial user-app code (Python in `app/`, raw SQL, shell), ca
 
 ## Model-Driven Failure Modes (review rule)
 
-`dev_docs/model-driven-failure-modes.md` catalogues the 14 historical 4GL/MDE/CASE failure modes Dazzle is structurally exposed to and scores residual risk per mode. When proposing a new DSL construct, runtime subsystem, escape hatch, or QA harness, answer these five questions before selling it as a safe pattern:
+`docs/architecture/model-driven-failure-modes.md` catalogues the 14 historical 4GL/MDE/CASE failure modes Dazzle is structurally exposed to and scores residual risk per mode. When proposing a new DSL construct, runtime subsystem, escape hatch, or QA harness, answer these five questions before selling it as a safe pattern:
 
 1. Which failure mode does this risk increasing?
 2. Which detector dimension catches it if we're wrong?
@@ -347,4 +347,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.81.62 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.81.63 | **Python**: 3.12+ | **Status**: Production Ready
