@@ -181,12 +181,14 @@ class AuthSubsystem:
 
         # Org-admin connection surface: an org admin manages their org's connections'
         # domains (claim + DNS-TXT verify) in-app, RBAC-gated + org-scoped + secret-free.
-        # Inert if the org has no connections; creation stays in the operator CLI.
-        from dazzle.back.runtime.auth.connection_admin_routes import (
-            create_connection_admin_routes,
-        )
+        # Gated on an active enterprise capability (#1342) — no enterprise capability
+        # declared → no admin surface. Creation stays in the operator CLI.
+        if self._any_enterprise_active(ctx):
+            from dazzle.back.runtime.auth.connection_admin_routes import (
+                create_connection_admin_routes,
+            )
 
-        ctx.app.include_router(create_connection_admin_routes())
+            ctx.app.include_router(create_connection_admin_routes())
 
         # auth Plan 3c.ii: the member's own profile (archetype: profile) — get-or-
         # create by (active membership tenant, current_user.id), RLS-bound.
@@ -233,18 +235,12 @@ class AuthSubsystem:
         configured = load_sso_providers_from_env()
         ctx.app.state.sso_providers = configured
 
-        # Enterprise (per-org) SSO connections (auth Plan 4b) are a *runtime*
-        # capability — created as DB rows per org, not env-configured — so we can't
-        # know at startup whether any exist. Gate availability on the [sso] extra
-        # (authlib importable): apps that didn't opt into SSO are wholly unaffected
-        # (no extra middleware, no extra routes); apps that did get the enterprise
-        # endpoints whether or not a global social provider is also configured.
-        from importlib.util import find_spec
-
-        enterprise_enabled = find_spec("authlib") is not None
-        # SAML (Plan 5) is a SEPARATE [saml] extra (needs native libxmlsec1) — gated on
-        # python3-saml being importable, independent of OIDC.
-        saml_enabled = find_spec("onelogin") is not None
+        # Enterprise (per-org) SSO connections (auth Plans 4b/4c/5) are gated on
+        # declared opt-in capabilities (#1342): a route group mounts only when its
+        # capability is *active* (declared in [capabilities] AND its extra installed).
+        # A greenfield app declares nothing → no enterprise routes, even if the [sso]
+        # extra happens to be installed. SCIM is included — no longer unconditional.
+        any_enterprise = self._any_enterprise_active(ctx)
 
         # SessionMiddleware backs Authlib's `state` storage between the initiate
         # redirect and the callback (global-SSO + OIDC enterprise + SAML all need it —
@@ -255,7 +251,7 @@ class AuthSubsystem:
         # should set DAZZLE_SESSION_SECRET so the cookie survives restarts. Added at
         # most once, and only when something actually needs it (no blast radius for
         # non-SSO apps).
-        if configured or enterprise_enabled or saml_enabled:
+        if configured or any_enterprise:
             import os
             import secrets
 
@@ -272,39 +268,7 @@ class AuthSubsystem:
         if configured:
             ctx.app.include_router(create_sso_routes())
 
-        if enterprise_enabled:
-            # Register the native OIDC provider for the (oidc, native) seam and mount
-            # the per-org enterprise routes. Registration is idempotent across app
-            # boots: the process-wide registry is keyed by (type, provider), so a
-            # re-call just overwrites with an equivalent stateless provider (its
-            # per-connection authlib clients, keyed by connection id+revision, live
-            # inside the instance — no cross-app collision).
-            from dazzle.back.runtime.auth.enterprise_routes import (
-                create_enterprise_sso_routes,
-            )
-            from dazzle.back.runtime.auth.oidc_provider import register_native_oidc
-
-            register_native_oidc()
-            ctx.app.include_router(create_enterprise_sso_routes())
-
-        if saml_enabled:
-            # Register the native SAML provider for (saml, native) + mount the SAML
-            # routes (gated on the [saml] extra / libxmlsec1). The ACS POST lives under
-            # the /auth/ CSRF-exempt prefix — correct, as its integrity is the signed
-            # assertion + InResponseTo, not a CSRF token.
-            from dazzle.back.runtime.auth.saml_provider import register_native_saml
-            from dazzle.back.runtime.auth.saml_routes import create_saml_routes
-
-            register_native_saml()
-            ctx.app.include_router(create_saml_routes())
-
-        # SCIM 2.0 provisioning endpoints (auth Plan 4c). Mounted unconditionally —
-        # SCIM is stateless bearer auth over JSON (no authlib / no SessionMiddleware);
-        # every request is authenticated by its per-connection bearer and returns 401
-        # without a valid one, so the endpoints are inert until a SCIM connection exists.
-        from dazzle.back.runtime.auth.scim_routes import create_scim_routes
-
-        ctx.app.include_router(create_scim_routes())
+        self._mount_enterprise_capabilities(ctx)
 
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
@@ -327,6 +291,65 @@ class AuthSubsystem:
             register_ses_webhook(ctx.app)
         except Exception:
             logger.info("SES webhooks not available, skipping registration")
+
+    # Enterprise auth capability ids gated by the opt-in model (#1342).
+    _ENTERPRISE_CAPABILITY_IDS = (
+        "auth.enterprise.oidc",
+        "auth.enterprise.saml",
+        "auth.enterprise.scim",
+    )
+
+    def _any_enterprise_active(self, ctx: SubsystemContext) -> bool:
+        """True iff any enterprise auth capability is active for this app (#1342)."""
+        caps = getattr(ctx, "capabilities", None)
+        return caps is not None and any(
+            caps.is_active(cid) for cid in self._ENTERPRISE_CAPABILITY_IDS
+        )
+
+    def _mount_enterprise_capabilities(self, ctx: SubsystemContext) -> None:
+        """Mount each enterprise auth route group gated on its capability (#1342)."""
+        caps = getattr(ctx, "capabilities", None)
+        if caps is None:
+            return
+        if caps.is_active("auth.enterprise.oidc"):
+            self._mount_enterprise_sso(ctx)
+        if caps.is_active("auth.enterprise.saml"):
+            self._mount_saml(ctx)
+        if caps.is_active("auth.enterprise.scim"):
+            self._mount_scim(ctx)
+
+    def _mount_enterprise_sso(self, ctx: SubsystemContext) -> None:
+        """Register the native OIDC provider + mount the per-org enterprise routes.
+
+        Registration is idempotent across app boots: the process-wide registry is
+        keyed by (type, provider); per-connection authlib clients live inside the
+        provider instance (keyed by connection id+revision), so no cross-app collision.
+        """
+        from dazzle.back.runtime.auth.enterprise_routes import (
+            create_enterprise_sso_routes,
+        )
+        from dazzle.back.runtime.auth.oidc_provider import register_native_oidc
+
+        register_native_oidc()
+        ctx.app.include_router(create_enterprise_sso_routes())
+
+    def _mount_saml(self, ctx: SubsystemContext) -> None:
+        """Register the native SAML provider + mount the SAML routes.
+
+        The ACS POST lives under the /auth/ CSRF-exempt prefix — correct, as its
+        integrity is the signed assertion + InResponseTo, not a CSRF token.
+        """
+        from dazzle.back.runtime.auth.saml_provider import register_native_saml
+        from dazzle.back.runtime.auth.saml_routes import create_saml_routes
+
+        register_native_saml()
+        ctx.app.include_router(create_saml_routes())
+
+    def _mount_scim(self, ctx: SubsystemContext) -> None:
+        """Mount the SCIM 2.0 provisioning endpoints (stateless bearer auth)."""
+        from dazzle.back.runtime.auth.scim_routes import create_scim_routes
+
+        ctx.app.include_router(create_scim_routes())
 
     def _ensure_jwt_service(self, ctx: SubsystemContext) -> bool:
         """Build (or reuse) JWTService + TokenStore, idempotently.
