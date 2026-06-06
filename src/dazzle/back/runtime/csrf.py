@@ -135,6 +135,10 @@ class CSRFConfig:
             "/auth/members/remove",
             # auth Plan 3c.ii: the member's own profile upsert.
             "/me/profile",
+            # org-admin connection surface: authenticated domain-management mutations
+            # (NOT the cross-origin SAML ACS — those stay NA_PREAUTH under /auth/).
+            "/auth/connections/add-domain",
+            "/auth/connections/verify-domain",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /

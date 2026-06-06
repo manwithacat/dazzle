@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.55] - 2026-06-06
+
+### Added
+
+- **Auth — org-admin connection surface** (spec §5). The in-app, RBAC-gated counterpart to the operator `dazzle auth connection` CLI: an authenticated **org admin** manages *their own org's* enterprise connections through the web UI. `GET /auth/connections` lists the active org's connections with status + verified/claimed domains + the DNS-TXT record to publish for each pending domain; `POST /auth/connections/add-domain` claims a domain; `POST /auth/connections/verify-domain` re-runs the DNS-TXT check. Every route runs the same gate as the member-admin surface (3b) — an **active** membership whose roles intersect `app.state.org_admin_roles` (fail-closed `may_manage_members`) — and the org is always the caller's active membership's `tenant_id`, never request input; a `connection_id` from another org resolves to a 404 via the 4a fenced `get_connection(id, tenant_id=org)`. **Secret-free by construction:** the page is built from only `id`/`type`/`status`/`domains`/TXT-record (the route never reads `connection.secrets` or `config` into the view) — an org admin can never read back a stored `client_secret`/`scim_bearer`. The two POST actions are **CSRF-protected** (added to `protected_paths` — authenticated same-origin mutations, unlike the cross-origin SAML ACS). Connection *creation* (which needs IdP secrets) stays CLI-only. Adversarially reviewed (silent-failure-hunter): **no CRITICAL/HIGH** — the secret-non-exposure guarantee holds across the Fragment tree, the gate is fail-closed on all three routes, org-scoping is fenced, both POSTs are CSRF-protected, and verify-domain is constrained to the caller's own connection; the one MEDIUM (a malformed domain could wedge the page render → self-DoS) fixed in-slice with a hostname validator returning 400.
+
+### Agent Guidance
+
+- **`/auth/connections` is the in-app org-admin view** of an org's enterprise connections — visible only to a member whose active-org roles intersect `[auth] org_admin_roles` (configure it, or nobody can manage). Org admins **manage domains** here (claim + DNS-TXT verify, the in-app path to activating a connection) but **cannot create connections or read secrets** — creation + secret entry stay in the operator CLI (`dazzle auth connection create…`). Everything is scoped to the caller's active org; a connection from another org is a 404. The domain-management POSTs run the full CSRF gate (they're in `protected_paths`); the cross-origin SAML ACS stays exempt.
+
 ## [0.81.54] - 2026-06-06
 
 ### Added

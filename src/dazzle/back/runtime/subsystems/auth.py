@@ -179,6 +179,15 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_member_admin_routes())
 
+        # Org-admin connection surface: an org admin manages their org's connections'
+        # domains (claim + DNS-TXT verify) in-app, RBAC-gated + org-scoped + secret-free.
+        # Inert if the org has no connections; creation stays in the operator CLI.
+        from dazzle.back.runtime.auth.connection_admin_routes import (
+            create_connection_admin_routes,
+        )
+
+        ctx.app.include_router(create_connection_admin_routes())
+
         # auth Plan 3c.ii: the member's own profile (archetype: profile) — get-or-
         # create by (active membership tenant, current_user.id), RLS-bound.
         from dazzle.back.runtime.auth.profile_routes import create_profile_routes
