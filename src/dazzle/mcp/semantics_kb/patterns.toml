@@ -2,7 +2,47 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 33
+pattern_count = 34
+
+
+[patterns.enterprise_sso]
+category = "Auth"
+doc_page = "enterprise-sso"
+# Opt-in capability gate (#1342): this pattern is surfaced as full guidance only
+# when the app has declared auth.enterprise.oidc. Otherwise a matched trigger
+# becomes a `dazzle capability enable` suggestion instead.
+capability = "auth.enterprise.oidc"
+triggers = [
+    "okta",
+    "entra",
+    "azure ad",
+    "ping identity",
+    "enterprise sso",
+    "single sign-on",
+    "oidc",
+    "openid connect",
+    "identity provider",
+]
+definition = "Per-org enterprise SSO via OIDC connections — an opt-in capability. Connections are runtime data (dazzle auth connection ...), fenced per org and gated by domain verification. SAML and SCIM are sibling capabilities (auth.enterprise.saml / .scim)."
+syntax = '''
+# 1. Opt in (declares the capability + prints the runbook):
+dazzle capability enable auth.enterprise.oidc
+# 2. Create a per-org connection (runtime data, not DSL):
+dazzle auth connection create --tenant <org> --issuer <url> \
+    --client-id <id> --client-secret <secret>
+# 3. Verify the org's email domain (DNS-TXT), then sign in at /auth/enterprise/login.
+'''
+example = '''
+# dazzle.toml
+[capabilities]
+enabled = ["auth.enterprise.oidc"]
+
+# Per org (CLI, runtime — secrets never in DSL):
+$ dazzle auth connection create --tenant acme --issuer https://acme.okta.com \
+    --client-id ... --client-secret ...
+$ dazzle auth connection add-domain <id> acme.com   # publish the printed TXT record
+$ dazzle auth connection verify-domain <id> acme.com
+'''
 
 
 [patterns.adapter_result]

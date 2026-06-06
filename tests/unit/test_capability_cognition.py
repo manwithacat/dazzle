@@ -233,3 +233,33 @@ def test_knowledge_pull_path_is_ungated(monkeypatch):
     monkeypatch.setattr(kn, "load_all_counter_priors", lambda: [cp])
     out = kn.counter_prior_handler({"id": "gated_cp"})
     assert "gated_cp" in out  # returned even though nothing is active
+
+
+def test_enterprise_sso_pattern_is_gated_end_to_end(monkeypatch, tmp_path):
+    # End-to-end against the REAL patterns.toml (no monkeypatched blob): the
+    # enterprise_sso pattern (Task 9) is gated by auth.enterprise.oidc.
+    import dazzle.mcp.server.handlers.bootstrap as bs
+
+    # No capability declared → an Okta spec yields the enable suggestion, and the
+    # full enterprise_sso proposal is withheld.
+    out = json.loads(
+        bs._run_cognition_pass("Staff sign in via Okta (OpenID Connect).", "t", tmp_path)
+    )
+    analysis = out["analysis"]
+    assert any(
+        s["capability"] == "auth.enterprise.oidc"
+        for s in analysis.get("capability_suggestions", [])
+    )
+    assert not any(p["pattern_id"] == "enterprise_sso" for p in analysis["pattern_proposals"])
+
+    # Declared (+available) → the proposal surfaces, the suggestion is gone.
+    monkeypatch.setattr(reg, "find_spec", lambda name: object())
+    (tmp_path / "dazzle.toml").write_text(
+        '[project]\nname="t"\nversion="0.0.1"\n\n[modules]\npaths=["app"]\n\n'
+        '[capabilities]\nenabled=["auth.enterprise.oidc"]\n',
+        encoding="utf-8",
+    )
+    out2 = json.loads(bs._run_cognition_pass("We use Okta SSO.", "t", tmp_path))
+    analysis2 = out2["analysis"]
+    assert not analysis2.get("capability_suggestions")
+    assert any(p["pattern_id"] == "enterprise_sso" for p in analysis2["pattern_proposals"])
