@@ -1,5 +1,12 @@
 # Framework Gap — Persona-Unaware Affordances
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-15** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Status:** RESOLVED (4 of 4 axes closed as of cycle 256 — workspace nav in 226, bulk-action bars in 228, empty-state CTAs verified-false-positive in 234, create-form field visibility in 256)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
 **Refreshed:** Cycle 230 (v2), Cycle 235 (v3), Cycle 258 (v4 — final close)

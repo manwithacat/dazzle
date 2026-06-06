@@ -1,5 +1,12 @@
 # Component Menagerie Roadmap
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-15** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Status:** Open (strategic direction doc, not a gap)
 **Synthesized:** Cycle 237 (framework_gap_analysis)
 **Scope:** Prioritise expansion of Dazzle's canonical HTMX + Alpine component set so DSL authors land on high-quality, consistent affordances without hand-rolling.

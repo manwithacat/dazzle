@@ -1,5 +1,12 @@
 # DaisyUI Residuals in Uncontracted Templates
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-19** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Date:** 2026-04-19
 **Synthesis cycle:** ux-cycle 271
 **Theme slug:** `daisyui-residuals-in-uncontracted-templates`

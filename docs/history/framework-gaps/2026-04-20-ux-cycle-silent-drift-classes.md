@@ -1,5 +1,12 @@
 # Silent-Drift Classes in the `/ux-cycle` Loop
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-20** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Date:** 2026-04-20 (cycle 317 framework_gap_analysis)
 **Class:** Framework loop-discipline completeness
 **Status:** Partially addressed — 4 of 6 identified classes now have automated gates; 2 remain manual-inspection-only

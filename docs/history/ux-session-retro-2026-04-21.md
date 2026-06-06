@@ -1,5 +1,12 @@
 # /ux-cycle session retrospective — 2026-04-21
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-21** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../index.md),
+    or see [Project Evolution](../architecture/evolution.md) for how these fit together.
+
+
 **Window:** cycle 366 (last idle tick) → cycle 372 (this retro). One session,
 7 cycles, 4 productive. Wrote as the budget counter approached the 100-soft-cap
 so the operator gets a clean handoff.

@@ -1,5 +1,12 @@
 # Framework Gap — Error-Page Navigation Dead-End (v0.55.31 #776 Regression)
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-15** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Status:** RESOLVED (cycle 225 + cycle 258 retrospective confirmation)
 **Synthesized:** Cycle 224 (framework_gap_analysis)
 **Contributing cycles:** 223 (observation), 225 (fix shipped), 258 (retrospective)

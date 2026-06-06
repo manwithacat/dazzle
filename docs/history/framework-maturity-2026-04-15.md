@@ -1,5 +1,12 @@
 # Dazzle framework maturity assessment — 2026-04-15
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-15** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../index.md),
+    or see [Project Evolution](../architecture/evolution.md) for how these fit together.
+
+
 **Session scope:** ~4 hours of autonomous `/ux-cycle` loop + targeted investigation and fixes. Covers cycles 199-219 on the new subagent-driven substrate. Shipped v0.55.6 → v0.55.31 (26 patch releases, zero rollbacks, worktree clean throughout).
 
 This is not a full framework audit. It is what the autonomous loop revealed about the state of Dazzle-as-seen-through-its-example-apps, written at a natural pause point where the loop has surfaced enough signal to be worth synthesising.

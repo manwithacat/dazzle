@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.64] - 2026-06-06
+
+### Added
+
+- **Project Evolution page + searchable historical archive** (`docs/architecture/evolution.md`, `docs/history/`). Promoted 20 finished dated artifacts out of gitignored `dev_docs/` into a public, *searchable-but-not-in-nav* archive under `docs/history/` (16 framework-gap analyses from the `/ux-cycle`→`/improve` cycles + 4 maturity/briefing/retro snapshots). Each carries a "📜 Historical snapshot — not current docs" banner so a since-closed gap can't be mistaken for current behaviour. A single curated **Project Evolution** page (in nav under Architecture) is the front door, narrating the arc and linking into the archive. Live runtime logs (`dev_docs/ux-log.md`, `dev_docs/ux-loop-state.md`) deliberately stay in `dev_docs/` — the `/improve` loop still writes them.
+
+### Changed
+
+- Updated the `test_external_resource_lint.py` provenance comment to point at the relocated `docs/history/framework-gaps/2026-04-20-external-resource-integrity.md`.
+
 ## [0.81.63] - 2026-06-06
 
 ### Changed

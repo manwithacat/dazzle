@@ -1,5 +1,12 @@
 # Frontier Agent Briefing — Dazzle v0.55.47
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-16** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../index.md),
+    or see [Project Evolution](../architecture/evolution.md) for how these fit together.
+
+
 **For:** Agents operating dev environments for Penny Dreadful, Aegismark, Cyfuture
 **As of:** 2026-04-16
 **Covers:** v0.55.35 → v0.55.47 (12 patch releases, 30 commits, 15 cycles of autonomous UX work)

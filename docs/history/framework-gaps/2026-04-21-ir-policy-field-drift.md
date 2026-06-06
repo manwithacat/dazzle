@@ -1,5 +1,12 @@
 # IR policy-field drift: DSL vocabulary ahead of runtime
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-21** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Surfaced:** cycle 368 (2026-04-21) via the IR-field-reader-parity ratchet lint
 shipped cycle 367 (`tests/unit/test_ir_field_reader_parity.py`) + Heuristic 1
 raw-layer verification.

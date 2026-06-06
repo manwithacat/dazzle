@@ -1,5 +1,12 @@
 # Resumed /ux-cycle Arc — Closing Retrospective (Cycles 220-235)
 
+!!! info "📜 Historical snapshot — not current docs"
+    Captured **2026-04-15** during Dazzle's autonomous-improvement cycles. It records the
+    framework as it was then and the gap being worked at the time; **it may not
+    describe current behaviour.** Start from the [documentation home](../../index.md),
+    or see [Project Evolution](../../architecture/evolution.md) for how these fit together.
+
+
 **Arc dates:** 2026-04-15 (~16 hours of continuous operation, self-paced cycles)
 **Total cycles:** 16 (220 through 235)
 **Cycle types exercised:** edge_cases (2), missing_contracts (1), framework_gap_analysis (3), finding_investigation (8), verification_sweep (1), housekeeping (1)
