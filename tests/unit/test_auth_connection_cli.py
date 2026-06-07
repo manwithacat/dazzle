@@ -491,3 +491,85 @@ def test_environment_flags_reports_key_presence(monkeypatch) -> None:
     monkeypatch.delenv("DAZZLE_CONNECTION_SECRET", raising=False)
     secret_ok2, _sso2, _dns2 = environment_flags()
     assert secret_ok2 is False
+
+
+# ---- create-saml metadata import (#1342) ----
+
+_SAML_IDP_METADATA = """<?xml version="1.0"?>
+<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example/idp">
+  <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <KeyDescriptor use="signing">
+      <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <X509Data><X509Certificate>MIIBfakecertdata</X509Certificate></X509Data>
+      </KeyInfo>
+    </KeyDescriptor>
+    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+      Location="https://idp.example/sso"/>
+  </IDPSSODescriptor>
+</EntityDescriptor>"""
+
+
+def test_create_saml_requires_metadata_or_flags(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store())
+    r = runner.invoke(auth_app, ["connection", "create-saml", "--tenant", "org-1"])
+    assert r.exit_code == 1 and "metadata" in r.output.lower()
+
+
+def test_create_saml_metadata_url_and_file_mutually_exclusive(monkeypatch, tmp_path) -> None:
+    _patch_store(monkeypatch, _Store())
+    f = tmp_path / "idp.xml"
+    f.write_text("<xml/>")
+    r = runner.invoke(
+        auth_app,
+        [
+            "connection",
+            "create-saml",
+            "--tenant",
+            "org-1",
+            "--idp-metadata-url",
+            "https://idp/x",
+            "--idp-metadata-file",
+            str(f),
+        ],
+    )
+    assert r.exit_code == 1 and "exclusive" in r.output.lower()
+
+
+def test_create_saml_metadata_file_fills_config(monkeypatch, tmp_path) -> None:
+    pytest.importorskip("onelogin")
+    store = _Store()
+    _patch_store(monkeypatch, store)
+    f = tmp_path / "idp.xml"
+    f.write_text(_SAML_IDP_METADATA)
+    r = runner.invoke(
+        auth_app,
+        ["connection", "create-saml", "--tenant", "org-1", "--idp-metadata-file", str(f)],
+    )
+    assert r.exit_code == 0
+    cfg = store.created["config"]
+    assert cfg["idp_entity_id"] == "https://idp.example/idp"
+    assert cfg["idp_sso_url"] == "https://idp.example/sso"
+    assert "MIIBfakecertdata" in cfg["idp_x509_cert"]
+
+
+def test_create_saml_explicit_flag_overrides_metadata(monkeypatch, tmp_path) -> None:
+    pytest.importorskip("onelogin")
+    store = _Store()
+    _patch_store(monkeypatch, store)
+    f = tmp_path / "idp.xml"
+    f.write_text(_SAML_IDP_METADATA)
+    r = runner.invoke(
+        auth_app,
+        [
+            "connection",
+            "create-saml",
+            "--tenant",
+            "org-1",
+            "--idp-metadata-file",
+            str(f),
+            "--idp-entity-id",
+            "https://override/idp",
+        ],
+    )
+    assert r.exit_code == 0
+    assert store.created["config"]["idp_entity_id"] == "https://override/idp"

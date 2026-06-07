@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.80] - 2026-06-07
+
+### Added
+
+- **SAML IdP-metadata auto-import (#1342, SAML cluster 1/4).** `dazzle auth connection create-saml` gains `--idp-metadata-url <https>` and `--idp-metadata-file <path>`, which parse the IdP's published SAML metadata into the connection config (`idp_entity_id` / `idp_sso_url` / `idp_x509_cert`, plus `idp_slo_url` when present) instead of three hand-transcribed flags. The three `--idp-*` flags are now optional and override the parsed values. The URL fetch is **SSRF-guarded** (https-only; host must resolve to public IPs — private/loopback/link-local/reserved/multicast/unspecified rejected; `follow_redirects=False`; bounded timeout; 1 MiB cap; the validator runs before any network call). XML parsing is delegated to python3-saml's `OneLogin_Saml2_IdPMetadataParser` (no hand-rolled XML — XXE safety). New module `src/dazzle/back/runtime/auth/saml_metadata.py`.
+
+#### Agent Guidance
+
+- An agent can now create a SAML connection from an IdP metadata URL/file (`create-saml --idp-metadata-url/--idp-metadata-file`) rather than transcribing entity-id/SSO-URL/cert. The URL fetch is https-only + private-IP-blocked + no-redirect + size-capped; the safest path is `--idp-metadata-file` (no fetch). Keep IdP-metadata XML parsing delegated to python3-saml — never hand-roll XML.
+
 ## [0.81.79] - 2026-06-07
 
 ### Added

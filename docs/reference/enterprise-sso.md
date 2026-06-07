@@ -40,7 +40,7 @@ Verify a domain with DNS-TXT: `add-domain` → publish the printed `dazzle-verif
 | Protocol | Create | IdP configures | Entry point |
 |----------|--------|----------------|-------------|
 | **OIDC** | `dazzle auth connection create --tenant <org> --issuer … --client-id … --client-secret …` | Redirect URI `<base>/auth/enterprise/callback` | `GET /auth/enterprise/login` |
-| **SAML** | `dazzle auth connection create-saml --tenant <org> --idp-entity-id … --idp-sso-url … --idp-cert-file …` | ACS URL `<base>/auth/saml/acs`; SP entity id `<base>/auth/saml/acs`; NameID `emailAddress` | `GET /auth/saml/login` |
+| **SAML** | `dazzle auth connection create-saml --tenant <org>` + either `--idp-metadata-url <https>` / `--idp-metadata-file <path>` (auto-fills entity id / SSO URL / cert) **or** the explicit `--idp-entity-id … --idp-sso-url … --idp-cert-file …` | ACS URL `<base>/auth/saml/acs`; SP entity id `<base>/auth/saml/acs`; NameID `emailAddress` | `GET /auth/saml/login` |
 | **SCIM** | `dazzle auth connection create-scim --tenant <org>` (prints the bearer once) | SCIM base URL `<base>/scim/v2`; header bearer token | `POST /scim/v2/Users` (IdP push) |
 
 Check readiness with `dazzle auth connection doctor <id> [--json]` (exits 0 iff activation-ready).
@@ -69,7 +69,7 @@ to **python3-saml** (`strict=True`); Dazzle never hand-rolls XML.
 | SP metadata endpoint | ✅ | `GET /auth/saml/metadata` serves the SP metadata XML so an IdP can import the ACS URL / entityId / NameID instead of hand-config (#1342) |
 | Single Logout (SLO) | ❌ | Deferred |
 | SP-signed AuthnRequests | ❌ | Deferred (the Response signature is the trust anchor) |
-| IdP metadata auto-import | ❌ | Provide entity id / SSO URL / cert explicitly (`create-saml`) |
+| IdP metadata auto-import | ✅ | `create-saml --idp-metadata-url <https>` (SSRF-guarded fetch) or `--idp-metadata-file <path>` parses the IdP's metadata into entity id / SSO URL / cert (+ SLO URL); explicit `--idp-*` flags override |
 
 **SP metadata** (`GET /auth/saml/metadata`, public, unauthenticated — IdPs fetch it
 anonymously): serves the **default app-level** SP identity (entityId = ACS URL, NameID

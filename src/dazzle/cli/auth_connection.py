@@ -120,12 +120,32 @@ def create_scim(
 @connection_app.command("create-saml")
 def create_saml(
     tenant: Annotated[str, typer.Option("--tenant", help="Organization (tenant) id")],
-    idp_entity_id: Annotated[str, typer.Option("--idp-entity-id", help="IdP entity id (issuer)")],
-    idp_sso_url: Annotated[str, typer.Option("--idp-sso-url", help="IdP SSO redirect URL")],
+    idp_entity_id: Annotated[
+        str,
+        typer.Option("--idp-entity-id", help="IdP entity id (issuer); from metadata if omitted"),
+    ] = "",
+    idp_sso_url: Annotated[
+        str,
+        typer.Option("--idp-sso-url", help="IdP SSO redirect URL; from metadata if omitted"),
+    ] = "",
     idp_cert_file: Annotated[
         str,
-        typer.Option("--idp-cert-file", help="Path to the IdP's X.509 signing cert (PEM)"),
-    ],
+        typer.Option(
+            "--idp-cert-file", help="IdP X.509 signing cert (PEM); from metadata if omitted"
+        ),
+    ] = "",
+    idp_metadata_url: Annotated[
+        str,
+        typer.Option(
+            "--idp-metadata-url", help="Fetch IdP metadata from this https URL (auto-fill)"
+        ),
+    ] = "",
+    idp_metadata_file: Annotated[
+        str,
+        typer.Option(
+            "--idp-metadata-file", help="Read IdP metadata from this local file (auto-fill)"
+        ),
+    ] = "",
     email_attribute: Annotated[
         str, typer.Option("--email-attribute", help="SAML attr holding email (else NameID)")
     ] = "",
@@ -139,25 +159,78 @@ def create_saml(
 ) -> None:
     """Create a SAML connection from the IdP's metadata (entity id, SSO URL, signing cert).
 
-    The IdP signing cert is PUBLIC (stored in config, not secrets). After creating, give the
-    IdP the ACS URL + SP entity id below, then verify a domain — SAML is SP-initiated only.
+    Provide the three values explicitly, or auto-fill them from the IdP's metadata with
+    ``--idp-metadata-url`` (https, SSRF-guarded fetch) or ``--idp-metadata-file`` (local).
+    Explicit flags override metadata. The IdP signing cert is PUBLIC (config, not secrets).
+    After creating, give the IdP the ACS URL + SP entity id below, then verify a domain —
+    SAML is SP-initiated only.
     """
     from pathlib import Path
 
-    try:
-        cert = Path(idp_cert_file).read_text(encoding="utf-8").strip()
-    except OSError as exc:
-        console.print(f"[red]Cannot read --idp-cert-file {idp_cert_file!r}: {exc}[/red]")
-        raise typer.Exit(code=1) from exc
-    if not cert:
-        console.print(f"[red]--idp-cert-file {idp_cert_file!r} is empty[/red]")
+    from dazzle.back.runtime.auth.saml_metadata import (
+        SamlMetadataError,
+        fetch_idp_metadata,
+        parse_idp_metadata_xml,
+    )
+
+    if idp_metadata_url and idp_metadata_file:
+        console.print(
+            "[red]--idp-metadata-url and --idp-metadata-file are mutually exclusive[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    parsed: dict[str, str] = {}
+    if idp_metadata_url or idp_metadata_file:
+        try:
+            if idp_metadata_url:
+                xml = fetch_idp_metadata(idp_metadata_url)
+            else:
+                xml = Path(idp_metadata_file).read_text(encoding="utf-8")
+            parsed = parse_idp_metadata_xml(xml)
+        except SamlMetadataError as exc:
+            console.print(f"[red]IdP metadata import failed ({exc.reason}): {exc}[/red]")
+            raise typer.Exit(code=1) from exc
+        except OSError as exc:
+            console.print(
+                f"[red]Cannot read --idp-metadata-file {idp_metadata_file!r}: {exc}[/red]"
+            )
+            raise typer.Exit(code=1) from exc
+
+    cert = ""
+    if idp_cert_file:
+        try:
+            cert = Path(idp_cert_file).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            console.print(f"[red]Cannot read --idp-cert-file {idp_cert_file!r}: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
+    # Explicit flags override metadata.
+    entity_id = idp_entity_id or parsed.get("idp_entity_id", "")
+    sso_url = idp_sso_url or parsed.get("idp_sso_url", "")
+    cert = cert or parsed.get("idp_x509_cert", "")
+
+    missing = [
+        name
+        for name, val in (
+            ("entity id", entity_id),
+            ("SSO URL", sso_url),
+            ("signing cert", cert),
+        )
+        if not val
+    ]
+    if missing:
+        console.print(
+            f"[red]Missing IdP {', '.join(missing)}. Provide --idp-metadata-url/"
+            "--idp-metadata-file, or pass --idp-entity-id/--idp-sso-url/--idp-cert-file.[/red]"
+        )
         raise typer.Exit(code=1)
 
     config: dict[str, str] = {
-        "idp_entity_id": idp_entity_id,
-        "idp_sso_url": idp_sso_url,
+        "idp_entity_id": entity_id,
+        "idp_sso_url": sso_url,
         "idp_x509_cert": cert,
     }
+    if parsed.get("idp_slo_url"):
+        config["idp_slo_url"] = parsed["idp_slo_url"]
     if email_attribute:
         config["email_attribute"] = email_attribute
     if groups_attribute:
