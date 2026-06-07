@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.87] - 2026-06-07
+
+### Added
+
+- **Property/fuzz tests for the small input-boundary parsers (#1342 fuzz-leverage #3).** New `tests/unit/test_fuzz_small_parsers.py` opens five fuzz surfaces the leverage evaluation identified — `parse_grace_duration`, `parse_group_patch`, `connection_crypto` encrypt/decrypt round-trip + tamper-detection, `validate_metadata_url` (SSRF guard, DNS-stubbed), and `parse_idp_metadata_xml` — each asserting the contract invariant (arbitrary input → a documented exception OR a valid result, never a raw crash/hang). The crypto round-trip/tamper, URL-guard, and metadata-parse invariants held; the two below did not.
+
+### Fixed
+
+- **`parse_grace_duration` raised `OverflowError` on a huge duration (fuzz-found).** A well-formed but astronomically large grace window (e.g. `999999999999999w`) overflowed `timedelta`'s C int, escaping as `OverflowError` instead of the documented `ValueError` — and the `rotate-secret --grace` CLI only catches `ValueError`, so it would crash the operator. Now converted to `ValueError`.
+- **`parse_group_patch` crashed on a malformed/hostile SCIM PATCH (fuzz-found).** A non-object operation (`AttributeError` on `op.get`), a non-list `Operations` (iterated a string), or a non-dict `members` entry (`TypeError` on `"value" in m`) crashed the parser instead of being skipped — contradicting its documented SCIM-lenient "unknown ops are skipped" contract (a malformed PATCH → 500). Now guarded via a `_member_ids` helper + isinstance checks; malformed ops are skipped.
+
 ## [0.81.86] - 2026-06-07
 
 ### Fixed

@@ -34,7 +34,12 @@ def parse_grace_duration(text: str) -> timedelta:
     if match is None:
         raise ValueError(f"invalid grace duration {text!r} — use <positive int><m|h|d|w>, e.g. 24h")
     amount = int(match.group(1))
-    return timedelta(**{_GRACE_UNITS[match.group(2)]: amount})
+    try:
+        return timedelta(**{_GRACE_UNITS[match.group(2)]: amount})
+    except OverflowError as exc:
+        # An astronomically large but well-formed duration overflows timedelta's C int —
+        # honor the documented ValueError contract (callers only catch ValueError).
+        raise ValueError(f"grace duration {text!r} is too large") from exc
 
 
 CONNECTION_SECRET_EVENTS_DDL = """

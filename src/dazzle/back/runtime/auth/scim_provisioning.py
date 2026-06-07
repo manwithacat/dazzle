@@ -28,6 +28,14 @@ _logger = logging.getLogger(__name__)
 _MEMBER_VALUE_FILTER = _re.compile(r'members\[\s*value\s+eq\s+"([^"]+)"\s*\]', _re.IGNORECASE)
 
 
+def _member_ids(value: Any) -> list[Any]:
+    """Member ids from a SCIM ``members`` value — lenient: a non-list, or non-dict /
+    value-less members, are skipped rather than crashing (hostile/malformed PATCH)."""
+    if not isinstance(value, list):
+        return []
+    return [m["value"] for m in value if isinstance(m, dict) and "value" in m]
+
+
 def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
     """Parse a SCIM PATCH body into concrete ``(op, arg)`` tuples (#1342).
 
@@ -38,12 +46,17 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
     skipped — the route returns the resource unchanged (SCIM-lenient).
     """
     ops: list[tuple[str, Any]] = []
-    for op in body.get("Operations", []) or []:
+    operations = body.get("Operations")
+    if not isinstance(operations, list):
+        return ops  # SCIM-lenient: a malformed/absent Operations is a no-op, not a crash
+    for op in operations:
+        if not isinstance(op, dict):
+            continue  # skip a non-object operation rather than crashing on op.get(...)
         kind = str(op.get("op", "")).lower()
         path = op.get("path")
         value = op.get("value")
         if kind == "add" and path == "members":
-            ops.append(("add_members", [m["value"] for m in (value or []) if "value" in m]))
+            ops.append(("add_members", _member_ids(value)))
         elif kind == "remove" and isinstance(path, str):
             m = _MEMBER_VALUE_FILTER.fullmatch(path.strip())
             if m:
@@ -51,19 +64,14 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
             elif path == "members":
                 ops.append(("replace_members", []))  # remove all
         elif kind == "replace" and path == "members":
-            ops.append(("replace_members", [m["value"] for m in (value or []) if "value" in m]))
+            ops.append(("replace_members", _member_ids(value)))
         elif kind in ("add", "replace") and path == "displayName":
             ops.append(("rename", str(value)))
         elif kind in ("add", "replace") and path is None and isinstance(value, dict):
             if "displayName" in value:
                 ops.append(("rename", str(value["displayName"])))
             if "members" in value:
-                ops.append(
-                    (
-                        "replace_members",
-                        [m["value"] for m in (value["members"] or []) if "value" in m],
-                    )
-                )
+                ops.append(("replace_members", _member_ids(value["members"])))
         # else: unknown op — skip
     return ops
 
