@@ -80,15 +80,15 @@ where the next bugs are.
   `recommended_form` per cluster in `redundancy.json`. This turns the existing 2,175-test
   backlog into a *ranked worklist of fuzz-target candidates*.
 
-### 2. Strengthen the parser oracle — *medium leverage, low cost, dogfoods the kit*
-Today's property is "never a non-`ParseError`." Add invariants that catch *wrong* behaviour,
-not just crashes:
-- **Round-trip stability:** for valid corpus DSL, `parse → emit → parse` is structurally
-  stable (where an emitter exists).
-- **Error well-formedness:** every `ParseError` carries a line/column and a non-empty message
-  (the bug we fixed produced a *raw* exception precisely because this wasn't enforced as a
-  property).
-- **Idempotent validation:** `dazzle validate` on the same input is deterministic.
+### 2. Strengthen the parser oracle — ✅ DONE (v0.81.88)
+Today's property was "never a non-`ParseError`." Added invariants that catch *wrong*
+behaviour, not just crashes:
+- **Error well-formedness:** ✅ `_safe_parse` now asserts every `ParseError` carries a
+  line/column AND a non-empty message. Immediately caught **41 location-less errors** from the
+  leaf `parse_duration` helper → fixed by threading the parser through (9 sites).
+- **Determinism:** ✅ `TestParserDeterminism` — parse twice → same outcome.
+- **Round-trip stability:** ❌ not feasible — Dazzle has no IR→DSL emitter (DSL→IR only), so
+  `parse → emit → parse` can't be expressed. (Would require building a DSL serializer first.)
 
 ### 3. Open new fuzz surfaces — the small, strong-invariant parsers we *just wrote* — *high leverage*
 Each is self-contained, has a crisp invariant, and currently has only example tests. These are
