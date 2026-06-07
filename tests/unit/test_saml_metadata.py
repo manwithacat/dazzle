@@ -179,7 +179,11 @@ def test_parse_incomplete_raises() -> None:
         parse_idp_metadata_xml,
     )
 
-    no_cert = _IDP_METADATA_XML.replace('use="signing"', 'use="encryption"')
+    # Genuinely incomplete: strip the whole KeyDescriptor so no cert is present (the
+    # parser extracts a cert from any KeyDescriptor, so just flipping use= isn't enough).
+    start = _IDP_METADATA_XML.index("<KeyDescriptor")
+    end = _IDP_METADATA_XML.index("</KeyDescriptor>") + len("</KeyDescriptor>")
+    no_cert = _IDP_METADATA_XML[:start] + _IDP_METADATA_XML[end:]
     with pytest.raises(_Err):
         parse_idp_metadata_xml(no_cert)
 

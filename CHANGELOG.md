@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.81] - 2026-06-07
+
+### Fixed
+
+- **SAML IdP-metadata parser test assumption (#1342).** `test_parse_incomplete_raises` made metadata "incomplete" by flipping `KeyDescriptor use="signing"`→`"encryption"`, but python3-saml's parser extracts a cert from *any* KeyDescriptor, so it didn't raise. Fixed the test to strip the whole KeyDescriptor (genuinely no cert). The v0.81.80 `parse_idp_metadata_xml` implementation was correct — verified locally against python3-saml (the full SAML suite, 28+ tests, passes with the `[saml]` extra installed; CI skips them as the extra isn't installed there).
+
 ## [0.81.80] - 2026-06-07
 
 ### Added
