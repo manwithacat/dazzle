@@ -255,6 +255,60 @@ def create_saml(
     )
 
 
+@connection_app.command("enable-request-signing")
+def enable_request_signing(
+    connection_id: Annotated[str, typer.Argument(help="SAML connection id")],
+) -> None:
+    """Generate an SP keypair and sign this connection's AuthnRequests (SAML only).
+
+    Re-import the connection's metadata at the IdP afterwards (printed URL) so it trusts the
+    SP signing cert. The Response signature is still the trust anchor. Rotate the key by
+    running disable-request-signing then this again.
+    """
+    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+
+    store = _store()
+    conn = store.get_connection(connection_id)
+    if conn is None:
+        console.print(f"[red]No connection {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+    if conn.type != "saml":
+        console.print(
+            f"[red]Connection {connection_id!r} is {conn.type!r} — request signing is SAML-only[/red]"
+        )
+        raise typer.Exit(code=1)
+    if (conn.config or {}).get("sign_requests"):
+        console.print(
+            f"[yellow]Request signing already enabled[/yellow] for {connection_id} "
+            "(disable-request-signing then enable to rotate the key)."
+        )
+        raise typer.Exit(code=0)
+    common_name = (conn.config or {}).get("sp_entity_id") or connection_id
+    key_pem, cert_pem = generate_sp_keypair(common_name)
+    if not store.enable_connection_request_signing(
+        connection_id, sp_cert=cert_pem, sp_private_key=key_pem
+    ):
+        console.print(f"[red]Failed to enable request signing for {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Request signing enabled[/green] for connection {connection_id}.")
+    console.print(
+        "Re-import this connection's SP metadata at the IdP so it trusts the signing cert:"
+    )
+    console.print(f"  [cyan]<base_url>/auth/saml/metadata?connection={connection_id}[/cyan]")
+
+
+@connection_app.command("disable-request-signing")
+def disable_request_signing(
+    connection_id: Annotated[str, typer.Argument(help="SAML connection id")],
+) -> None:
+    """Stop signing this connection's AuthnRequests and drop its SP keypair."""
+    store = _store()
+    if store.disable_connection_request_signing(connection_id):
+        console.print(f"[green]Request signing disabled[/green] for connection {connection_id}.")
+    else:
+        console.print(f"[yellow]Request signing was not enabled[/yellow] for {connection_id}.")
+
+
 @connection_app.command("rotate-secret")
 def rotate_secret(
     connection_id: Annotated[str, typer.Argument(help="Connection id")],

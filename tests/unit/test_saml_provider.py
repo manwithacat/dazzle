@@ -329,3 +329,67 @@ class TestSPMetadata:
         xml = NativeSAMLProvider().sp_metadata(_FakeRequest())
         assert "EntityDescriptor" in xml
         assert "https://app.test/auth/saml/acs" in xml
+
+
+# ---- SP-signed AuthnRequests (#1342, feature C) ----
+
+
+def test_settings_signs_requests_when_enabled() -> None:
+    conn = _conn(
+        config={
+            "idp_entity_id": "https://idp.example/entity",
+            "idp_sso_url": "https://idp.example/sso",
+            "idp_x509_cert": "MIIB...fake-cert...",
+            "sign_requests": "true",
+            "sp_cert": "SPCERT",
+        },
+        secrets={"sp_private_key": "SPKEY"},
+    )
+    s = NativeSAMLProvider()._settings(conn, _FakeRequest())
+    assert s["security"]["authnRequestsSigned"] is True
+    assert s["sp"]["x509cert"] == "SPCERT"
+    assert s["sp"]["privateKey"] == "SPKEY"
+    assert "rsa-sha256" in s["security"]["signatureAlgorithm"]
+    # Response-signature trust anchor is unchanged.
+    assert s["security"]["wantAssertionsSigned"] is True
+    assert s["security"]["rejectUnsolicitedResponsesWithInResponseTo"] is True
+
+
+def test_settings_no_signing_by_default() -> None:
+    s = NativeSAMLProvider()._settings(_conn(), _FakeRequest())
+    assert "authnRequestsSigned" not in s["security"]
+    assert "privateKey" not in s["sp"]
+    assert "x509cert" not in s["sp"]
+
+
+def test_settings_signing_ignored_without_keypair() -> None:
+    # sign_requests set but no stored key/cert → must NOT enable signing.
+    conn = _conn(
+        config={
+            "idp_entity_id": "https://idp.example/entity",
+            "idp_sso_url": "https://idp.example/sso",
+            "idp_x509_cert": "MIIB...fake-cert...",
+            "sign_requests": "true",
+        },
+        secrets={},
+    )
+    s = NativeSAMLProvider()._settings(conn, _FakeRequest())
+    assert "authnRequestsSigned" not in s["security"]
+
+
+def test_metadata_advertises_signing_cert() -> None:
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+
+    key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
+    conn = _conn(config={"sign_requests": "true", "sp_cert": cert}, secrets={"sp_private_key": key})
+    xml = NativeSAMLProvider().sp_metadata(_FakeRequest(), conn)
+    assert 'use="signing"' in xml
+    # The metadata advertises only the PUBLIC cert — never the private key.
+    assert "PRIVATE KEY" not in xml
+
+
+def test_metadata_no_signing_cert_app_level() -> None:
+    pytest.importorskip("onelogin")
+    xml = NativeSAMLProvider().sp_metadata(_FakeRequest())
+    assert 'use="signing"' not in xml

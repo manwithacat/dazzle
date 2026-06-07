@@ -151,12 +151,15 @@ def saml_provider():
         _PROVIDERS.pop(("saml", "native"), None)
 
 
-def _client(store: _Store) -> TestClient:
+def _client(store: _Store, *, base_url: str = "http://testserver") -> TestClient:
     app = FastAPI()
     app.add_middleware(SessionMiddleware, secret_key="test-secret", same_site="lax")
     app.include_router(create_saml_routes())
     app.state.auth_store = store
-    return TestClient(app)
+    # A valid base_url matters for real metadata generation: onelogin rejects an ACS URL
+    # whose host has no TLD (the default "testserver"). Tests that build real SP metadata
+    # pass a routable host.
+    return TestClient(app, base_url=base_url)
 
 
 def _asserted(email: str) -> AssertedIdentity:
@@ -255,7 +258,9 @@ def test_metadata_serves_sp_xml(monkeypatch) -> None:
     monkeypatch.setattr(
         sp.NativeSAMLProvider,
         "sp_metadata",
-        lambda self, request: "<md:EntityDescriptor entityID='https://app.test/auth/saml/acs'/>",
+        lambda self, request, connection=None: (
+            "<md:EntityDescriptor entityID='https://app.test/auth/saml/acs'/>"
+        ),
     )
     resp = _client(_Store()).get("/auth/saml/metadata")
     assert resp.status_code == 200
@@ -267,9 +272,39 @@ def test_metadata_503_when_generation_fails(monkeypatch) -> None:
     """Generation failure (e.g. [saml] extra absent) → 503, never a 500 stack leak."""
     import dazzle.back.runtime.auth.saml_provider as sp
 
-    def _boom(self, request):
+    def _boom(self, request, connection=None):
         raise RuntimeError("python3-saml not installed")
 
     monkeypatch.setattr(sp.NativeSAMLProvider, "sp_metadata", _boom)
     resp = _client(_Store()).get("/auth/saml/metadata")
     assert resp.status_code == 503
+
+
+def test_metadata_connection_param_advertises_signing_cert() -> None:
+    """?connection=<id> with request signing on → metadata carries the signing cert."""
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+
+    key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
+    conn = _conn(
+        id="c-sign",
+        config={
+            "idp_entity_id": "https://idp/e",
+            "idp_sso_url": "https://idp/sso",
+            "idp_x509_cert": "x",
+            "sign_requests": "true",
+            "sp_cert": cert,
+        },
+        secrets={"sp_private_key": key},
+    )
+    resp = _client(_Store(connections=[conn]), base_url="https://app.test").get(
+        "/auth/saml/metadata?connection=c-sign"
+    )
+    assert resp.status_code == 200 and 'use="signing"' in resp.text
+    assert "PRIVATE KEY" not in resp.text  # never the private key
+
+
+def test_metadata_unknown_connection_falls_back_to_app_level() -> None:
+    pytest.importorskip("onelogin")
+    resp = _client(_Store(), base_url="https://app.test").get("/auth/saml/metadata?connection=nope")
+    assert resp.status_code == 200 and 'use="signing"' not in resp.text

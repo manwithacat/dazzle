@@ -66,9 +66,9 @@ to **python3-saml** (`strict=True`); Dazzle never hand-rolls XML.
 | NameID → email | ✅ | `emailAddress` format; or a configured `email_attribute` |
 | Group attribute → roles | ✅ | `groups_attribute` (default `groups`) → `group_mapping`, default-deny |
 | Encrypted assertions | ❌ | Deferred — assertions must be signed, not encrypted |
-| SP metadata endpoint | ✅ | `GET /auth/saml/metadata` serves the SP metadata XML so an IdP can import the ACS URL / entityId / NameID instead of hand-config (#1342) |
+| SP metadata endpoint | ✅ | `GET /auth/saml/metadata` serves the SP metadata XML so an IdP can import the ACS URL / entityId / NameID instead of hand-config (#1342). `?connection=<id>` includes the connection's SP signing cert when request signing is on |
 | Single Logout (SLO) | ❌ | Deferred |
-| SP-signed AuthnRequests | ❌ | Deferred (the Response signature is the trust anchor) |
+| SP-signed AuthnRequests | ✅ | Per-connection SP keypair via `dazzle auth connection enable-request-signing <id>` (RSA-2048, self-signed; private key encrypted at rest). Re-import `?connection=<id>` metadata at the IdP. The Response signature remains the trust anchor — this is additive |
 | IdP metadata auto-import | ✅ | `create-saml --idp-metadata-url <https>` (SSRF-guarded fetch) or `--idp-metadata-file <path>` parses the IdP's metadata into entity id / SSO URL / cert (+ SLO URL); explicit `--idp-*` flags override |
 
 **SP metadata** (`GET /auth/saml/metadata`, public, unauthenticated — IdPs fetch it

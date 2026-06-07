@@ -82,7 +82,7 @@ class NativeSAMLProvider:
             raise ConnectionError(
                 f"SAML connection {connection.id!r}: missing required config {missing}"
             )
-        return {
+        settings: dict[str, Any] = {
             # strict=True is load-bearing: python3-saml only enforces signature +
             # condition validation in strict mode.
             "strict": True,
@@ -110,6 +110,22 @@ class NativeSAMLProvider:
                 "rejectUnsolicitedResponsesWithInResponseTo": True,
             },
         }
+        # SP-signed AuthnRequests (#1342, feature C): when this connection has a stored SP
+        # keypair + the sign_requests flag, give python3-saml the key/cert and ask it to
+        # sign the AuthnRequest. This is ADDITIVE — the assertion-signature requirement
+        # (wantAssertionsSigned) and unsolicited-response rejection above are unchanged, so
+        # the Response signature remains the trust anchor.
+        sp_cert = cfg.get("sp_cert")
+        sp_key = (connection.secrets or {}).get("sp_private_key")
+        if cfg.get("sign_requests") and sp_cert and sp_key:
+            settings["sp"]["x509cert"] = sp_cert
+            settings["sp"]["privateKey"] = sp_key
+            settings["security"]["authnRequestsSigned"] = True
+            settings["security"]["signatureAlgorithm"] = (
+                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+            )
+            settings["security"]["digestAlgorithm"] = "http://www.w3.org/2001/04/xmlenc#sha256"
+        return settings
 
     def _request_data(
         self, request: Any, *, post_data: dict[str, Any] | None = None
@@ -131,22 +147,39 @@ class NativeSAMLProvider:
 
         return OneLogin_Saml2_Auth(request_data, old_settings=settings)
 
-    def _sp_only_settings(self, request: Any) -> dict[str, Any]:
+    def _sp_only_settings(
+        self, request: Any, connection: ConnectionRecord | None = None
+    ) -> dict[str, Any]:
         """SP-only settings for metadata generation (#1342).
 
-        No IdP section or connection needed — the SP identity (ACS URL, entityId,
-        NameID) is app-level, the same one registered with every IdP. entityId
-        defaults to the ACS URL (a stable, unique SP identifier).
+        No IdP section needed — the SP identity (ACS URL, entityId, NameID) is app-level,
+        the same one registered with every IdP. entityId defaults to the ACS URL. When a
+        ``connection`` with request-signing enabled is given, the metadata advertises its
+        signing cert (public only) via a KeyDescriptor so the IdP can verify SP-signed
+        AuthnRequests.
         """
         acs = self._acs_url(request)
-        return {
+        entity = self._sp_entity_id(connection, request) if connection is not None else acs
+        settings: dict[str, Any] = {
             "strict": True,
             "sp": {
-                "entityId": acs,
+                "entityId": entity,
                 "assertionConsumerService": {"url": acs, "binding": _BINDING_POST},
                 "NameIDFormat": _NAMEID_EMAIL,
             },
         }
+        if connection is not None:
+            cfg = connection.config or {}
+            sp_key = (connection.secrets or {}).get("sp_private_key")
+            if cfg.get("sign_requests") and cfg.get("sp_cert") and sp_key:
+                # python3-saml requires BOTH cert + key in the settings to validate an
+                # authnRequestsSigned SP — but the generated metadata XML carries only the
+                # public cert (a signing KeyDescriptor); the private key never appears in
+                # the output. The route loads the connection with secrets decrypted.
+                settings["sp"]["x509cert"] = cfg["sp_cert"]
+                settings["sp"]["privateKey"] = sp_key
+                settings["security"] = {"authnRequestsSigned": True}
+        return settings
 
     def _build_sp_settings(self, settings: dict[str, Any]) -> Any:
         """Construct the python3-saml Settings object in SP-validation-only mode
@@ -156,8 +189,11 @@ class NativeSAMLProvider:
 
         return OneLogin_Saml2_Settings(settings, sp_validation_only=True)
 
-    def sp_metadata(self, request: Any) -> str:
+    def sp_metadata(self, request: Any, connection: ConnectionRecord | None = None) -> str:
         """Generate this SP's SAML metadata XML for IdP import (#1342).
+
+        When ``connection`` has request-signing enabled, the metadata advertises its
+        signing KeyDescriptor (public cert only — never the private key).
 
         The IdP imports this instead of an operator hand-configuring the ACS URL /
         entityId / NameID. SP-only generation (no IdP config), validated before
@@ -172,7 +208,7 @@ class NativeSAMLProvider:
           the live login/ACS path. Front SAML deployments with a trusted-host /
           canonical base URL so the advertised ACS can't be Host-spoofed.
         """
-        settings = self._build_sp_settings(self._sp_only_settings(request))
+        settings = self._build_sp_settings(self._sp_only_settings(request, connection))
         metadata = settings.get_sp_metadata()
         errors = settings.validate_metadata(metadata)
         if errors:

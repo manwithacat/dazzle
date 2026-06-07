@@ -1429,6 +1429,117 @@ class SessionStoreMixin:
             )
         return bool(rowcount > 0)
 
+    def _load_config_secrets(
+        self, cur: Any, connection_id: str, tenant_id: str | None
+    ) -> tuple[dict[str, Any] | None, dict[str, Any], str | None, str | None]:
+        """(config, secrets, tenant_id, type) for a connection inside a tx, or
+        (None, {}, None, None) if absent (tenant-fenced when tenant_id given)."""
+        import json
+
+        from dazzle.back.runtime.auth.connection_crypto import decrypt_secret
+
+        if tenant_id is not None:
+            cur.execute(
+                "SELECT config, encrypted_secret, tenant_id, type FROM connections "
+                "WHERE id = %s AND tenant_id = %s",
+                (connection_id, tenant_id),
+            )
+        else:
+            cur.execute(
+                "SELECT config, encrypted_secret, tenant_id, type FROM connections WHERE id = %s",
+                (connection_id,),
+            )
+        row = cur.fetchone()
+        if row is None:
+            return None, {}, None, None
+        config = json.loads(row["config"]) if row["config"] else {}
+        enc = row["encrypted_secret"]
+        secrets = json.loads(decrypt_secret(enc)) if enc else {}
+        return config, secrets, row["tenant_id"], row["type"]
+
+    def _write_connection_config_and_secrets(
+        self, cur: Any, connection_id: str, config: dict[str, Any], secrets: dict[str, Any]
+    ) -> None:
+        import json
+
+        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
+
+        encrypted = encrypt_secret(json.dumps(secrets)) if secrets else None
+        cur.execute(
+            "UPDATE connections SET config = %s, encrypted_secret = %s, updated_at = %s "
+            "WHERE id = %s",
+            (json.dumps(config), encrypted, datetime.now(UTC).isoformat(), connection_id),
+        )
+
+    def enable_connection_request_signing(
+        self,
+        connection_id: str,
+        *,
+        sp_cert: str,
+        sp_private_key: str,
+        tenant_id: str | None = None,
+    ) -> bool:
+        """Persist SAML SP request-signing material in one transaction (#1342): merge
+        ``sp_cert`` + ``sign_requests='true'`` into config and ``sp_private_key`` into the
+        encrypted secrets blob. Returns True if a row changed. Tenant-fenced when given."""
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_SIGNING_ENABLED
+
+        with self._transaction() as cur:
+            config, secrets, ten, conn_type = self._load_config_secrets(
+                cur, connection_id, tenant_id
+            )
+            if config is None:
+                return False
+            # SAML-only at the store layer too (the CLI guards, but a future caller
+            # mustn't write an SP key onto an OIDC/SCIM connection — a later rotate-secret
+            # would silently destroy it).
+            if conn_type != "saml":
+                raise ValueError(
+                    f"request signing is SAML-only (connection {connection_id!r} is {conn_type!r})"
+                )
+            config["sp_cert"] = sp_cert
+            config["sign_requests"] = "true"
+            secrets["sp_private_key"] = sp_private_key
+            self._write_connection_config_and_secrets(cur, connection_id, config, secrets)
+            self._write_secret_event(
+                cur,
+                connection_id=connection_id,
+                tenant_id=ten or "",
+                event=SECRET_EVENT_SIGNING_ENABLED,
+                actor="cli",
+                detail={"type": conn_type},
+                at=datetime.now(UTC).isoformat(),
+            )
+        return True
+
+    def disable_connection_request_signing(
+        self, connection_id: str, *, tenant_id: str | None = None
+    ) -> bool:
+        """Remove ``sp_cert`` + ``sign_requests`` from config and ``sp_private_key`` from
+        secrets (one transaction). Returns True iff signing was on."""
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_SIGNING_DISABLED
+
+        with self._transaction() as cur:
+            config, secrets, ten, conn_type = self._load_config_secrets(
+                cur, connection_id, tenant_id
+            )
+            if config is None or not config.get("sign_requests"):
+                return False
+            config.pop("sp_cert", None)
+            config.pop("sign_requests", None)
+            secrets.pop("sp_private_key", None)
+            self._write_connection_config_and_secrets(cur, connection_id, config, secrets)
+            self._write_secret_event(
+                cur,
+                connection_id=connection_id,
+                tenant_id=ten or "",
+                event=SECRET_EVENT_SIGNING_DISABLED,
+                actor="cli",
+                detail={"type": conn_type},
+                at=datetime.now(UTC).isoformat(),
+            )
+        return True
+
     def _write_secret_event(
         self,
         cur: Any,

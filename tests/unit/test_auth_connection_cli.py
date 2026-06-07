@@ -22,13 +22,14 @@ def _key(monkeypatch):
 
 
 class _Conn:
-    def __init__(self, cid="conn-1", *, domains=None, verified=None, conn_type="oidc"):
+    def __init__(self, cid="conn-1", *, domains=None, verified=None, conn_type="oidc", config=None):
         self.id = cid
         self.tenant_id = "org-1"
         self.type = conn_type
         self.status = "active"
         self.domains = domains or []
         self.verified_domains = verified or []
+        self.config = config or {}
 
 
 class _Store:
@@ -53,6 +54,15 @@ class _Store:
 
     def set_connection_domains(self, cid, domains):
         self.set_domains_calls.append((cid, domains))
+
+    def enable_connection_request_signing(self, cid, *, sp_cert, sp_private_key, tenant_id=None):
+        assert sp_cert and sp_private_key  # both PEMs must be non-empty
+        self.signing_enabled = cid
+        return self._conn is not None and self._conn.id == cid
+
+    def disable_connection_request_signing(self, cid, *, tenant_id=None):
+        self.signing_disabled = cid
+        return True
 
     def update_connection_secrets(self, connection_id, secrets, *, tenant_id=None):
         self.secret_updates.append((connection_id, secrets))
@@ -573,3 +583,41 @@ def test_create_saml_explicit_flag_overrides_metadata(monkeypatch, tmp_path) -> 
     )
     assert r.exit_code == 0
     assert store.created["config"]["idp_entity_id"] == "https://override/idp"
+
+
+# ---- enable/disable-request-signing (#1342 SAML cluster 2/4) ----
+
+
+def test_enable_request_signing_saml(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="saml"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "enable-request-signing", "c1"])
+    assert r.exit_code == 0 and "signing" in r.output.lower()
+    assert store.signing_enabled == "c1"
+    assert "metadata?connection=c1" in r.output  # re-import hint
+
+
+def test_enable_request_signing_rejects_oidc(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=_Conn("c1", conn_type="oidc")))
+    r = runner.invoke(auth_app, ["connection", "enable-request-signing", "c1"])
+    assert r.exit_code == 1 and "saml" in r.output.lower()
+
+
+def test_enable_request_signing_missing(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=None))
+    r = runner.invoke(auth_app, ["connection", "enable-request-signing", "cx"])
+    assert r.exit_code == 1 and "No connection" in r.output
+
+
+def test_enable_request_signing_already_on(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="saml", config={"sign_requests": "true"}))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "enable-request-signing", "c1"])
+    assert r.exit_code == 0 and "already" in r.output.lower()
+
+
+def test_disable_request_signing(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="saml"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "disable-request-signing", "c1"])
+    assert r.exit_code == 0 and store.signing_disabled == "c1"

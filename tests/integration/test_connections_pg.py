@@ -427,6 +427,70 @@ def test_secret_reads_are_tenant_fenced(store_url: str) -> None:
     assert store.get_connection_grace_status(conn.id, tenant_id="org-2") == (False, None)
 
 
+def _make_saml_connection(store):
+    return store.create_connection(
+        tenant_id="org-1",
+        type="saml",
+        config={"idp_entity_id": "i", "idp_sso_url": "u", "idp_x509_cert": "c"},
+        secrets={},
+        domains=[],
+    )
+
+
+def test_enable_request_signing_persists_encrypted(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_saml_connection(store)
+    assert store.enable_connection_request_signing(
+        conn.id, sp_cert="CERTPEM", sp_private_key="KEYPEM"
+    )
+    got = store.get_connection(conn.id)
+    assert got.config["sp_cert"] == "CERTPEM"
+    assert got.config["sign_requests"] == "true"
+    assert got.secrets["sp_private_key"] == "KEYPEM"
+    assert "KEYPEM" not in repr(got)  # masked
+    with psycopg.connect(store_url) as c:
+        row = c.execute(
+            "SELECT config, encrypted_secret FROM connections WHERE id=%s", (conn.id,)
+        ).fetchone()
+    assert "KEYPEM" not in (row[0] or "") and "KEYPEM" not in (row[1] or "")  # never plaintext
+    # Key-lifecycle is audited (review #1342).
+    assert "sp_signing_enabled" in {e.event for e in store.get_connection_secret_events(conn.id)}
+
+
+def test_disable_request_signing_clears(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_saml_connection(store)
+    store.enable_connection_request_signing(conn.id, sp_cert="CERT", sp_private_key="KEY")
+    assert store.disable_connection_request_signing(conn.id) is True
+    got = store.get_connection(conn.id)
+    assert "sp_cert" not in got.config and "sign_requests" not in got.config
+    assert "sp_private_key" not in (got.secrets or {})
+    assert "sp_signing_disabled" in {e.event for e in store.get_connection_secret_events(conn.id)}
+    assert store.disable_connection_request_signing(conn.id) is False  # idempotent
+
+
+def test_enable_request_signing_rejects_non_saml(store_url: str) -> None:
+    import pytest as _pytest
+
+    store = _store(store_url)
+    oidc = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={"client_secret": "s"}, domains=[]
+    )
+    with _pytest.raises(ValueError):
+        store.enable_connection_request_signing(oidc.id, sp_cert="C", sp_private_key="K")
+
+
+def test_enable_request_signing_tenant_fenced(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_saml_connection(store)
+    assert (
+        store.enable_connection_request_signing(
+            conn.id, sp_cert="C", sp_private_key="K", tenant_id="org-2"
+        )
+        is False
+    )
+
+
 def test_migration_0012_adds_grace_and_audit(store_url: str) -> None:
     from alembic import command
     from alembic.config import Config

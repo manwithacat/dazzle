@@ -134,18 +134,23 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         )
 
     @router.get("/auth/saml/metadata")
-    async def saml_metadata(request: Request) -> Response:
+    async def saml_metadata(request: Request, connection: str = "") -> Response:
         """Serve this SP's SAML metadata XML so an IdP can import it instead of an
         operator hand-configuring the ACS URL / entityId / NameID (#1342).
 
-        SP-only + app-level — no connection or IdP config needed; the SP identity
-        is the same registered with every IdP. Only mounted when the
-        ``auth.enterprise.saml`` capability is active.
+        SP-only + app-level by default. Pass ``?connection=<id>`` to get that connection's
+        metadata including its SP signing KeyDescriptor (public cert only) when request
+        signing is enabled — re-imported at the IdP so it trusts SP-signed AuthnRequests.
+        An unknown id falls back to the app-level metadata (no id-enumeration signal). Only
+        mounted when the ``auth.enterprise.saml`` capability is active.
         """
         from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
 
+        conn = None
+        if connection:
+            conn = request.app.state.auth_store.get_connection(connection)
         try:
-            xml = NativeSAMLProvider().sp_metadata(request)
+            xml = NativeSAMLProvider().sp_metadata(request, conn)
         except Exception as exc:  # noqa: BLE001 — never 500-leak a stack trace
             _logger.warning("SAML metadata generation failed: %s", exc)  # nosemgrep
             return Response(

@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.83] - 2026-06-07
+
+### Added
+
+- **SAML SP-signed AuthnRequests (#1342, SAML cluster 2/4).** `dazzle auth connection enable-request-signing <id>` generates a per-connection SP RSA-2048 keypair (self-signed cert), stores the private key **encrypted at rest** in the connection secrets and the public cert + `sign_requests` flag in config, and turns on `authnRequestsSigned` (rsa-sha256) so python3-saml signs outbound AuthnRequests. `disable-request-signing <id>` reverts (rotate = disable→enable). `GET /auth/saml/metadata?connection=<id>` now advertises the connection's signing `KeyDescriptor` (public cert only — the private key never appears in metadata, logs, or CLI output) for the IdP to import. New module `saml_sp_keys.py` (`generate_sp_keypair`) + store `enable_/disable_connection_request_signing` (SAML-only at the store layer; key-lifecycle is audited as `sp_signing_enabled` / `sp_signing_disabled` rows in `connection_secret_events`). **The Response/assertion signature remains the trust anchor — request signing is additive; `wantAssertionsSigned` and unsolicited-response rejection are unchanged.**
+
+### Fixed
+
+- **Parser: invalid `foreign_model` constraint kind now raises `ParseError`, not a raw `ValueError` (fuzz-found).** `parse_foreign_model` passed the token value straight into the `ForeignConstraintKind` enum, which raised an unhandled `ValueError` on an unknown kind (e.g. a mutated `constraint webhook_url`) — surfaced by the `test_parser_fuzz` Hypothesis suite. Now wrapped to raise a clean `ParseError` listing the valid kinds, matching the `DomainServiceKind` path. Pre-existing; unrelated to the SAML work in this release.
+
+#### Agent Guidance
+
+- SAML request signing is **per-connection** (`enable-request-signing`): the SP private key lives only in the encrypted connection secrets — never render it (config/metadata/logs/CLI carry the public cert only). After enabling, re-import the connection's metadata (`/auth/saml/metadata?connection=<id>`) at the IdP. Don't weaken response validation when adding request signing — the assertion signature is the trust anchor.
+
 ## [0.81.82] - 2026-06-07
 
 ### Changed
