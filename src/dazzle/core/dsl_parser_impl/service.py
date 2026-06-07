@@ -351,7 +351,17 @@ class ServiceParserMixin:
                 self.advance()
 
                 constraint_kind_token = self.expect(TokenType.IDENTIFIER)
-                constraint_kind = ir.ForeignConstraintKind(constraint_kind_token.value)
+                try:
+                    constraint_kind = ir.ForeignConstraintKind(constraint_kind_token.value)
+                except ValueError as exc:
+                    valid = ", ".join(k.value for k in ir.ForeignConstraintKind)
+                    raise make_parse_error(
+                        f"Invalid foreign constraint kind '{constraint_kind_token.value}'. "
+                        f"Valid kinds: {valid}.",
+                        self.file,
+                        constraint_kind_token.line,
+                        constraint_kind_token.column,
+                    ) from exc
 
                 # Parse options (key=value pairs)
                 options = {}

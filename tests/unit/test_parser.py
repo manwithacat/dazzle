@@ -3427,6 +3427,24 @@ entity Thing "Thing":
         with pytest.raises(ParseError, match=r"Unknown type: 'foobar'"):
             parse_dsl(dsl, Path("test.dsl"))
 
+    def test_invalid_foreign_constraint_kind_raises_parse_error(self):
+        """An unknown foreign_model `constraint <kind>` must raise ParseError, not a raw
+        ValueError from the enum constructor (fuzz-found, service.py)."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = """\
+module test.core
+app test_app "Test"
+
+foreign_model Thing from stripe "Thing":
+  key: thing_id
+  constraint not_a_real_kind
+"""
+        with pytest.raises(ParseError, match=r"Invalid foreign constraint kind"):
+            parse_dsl(dsl, Path("test.dsl"))
+
 
 class TestSurfaceSectionInfiniteLoop:
     """Regression tests for #731 — parser must not hang on unsupported syntax."""
