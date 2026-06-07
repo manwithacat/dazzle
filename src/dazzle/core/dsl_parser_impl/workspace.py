@@ -2918,7 +2918,7 @@ def _kw_limit(parser: Any, state: _WorkspaceRegionState) -> None:
 def _kw_display(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
-    state.display = ir.DisplayMode(parser.expect_identifier_or_keyword().value)
+    state.display = parser.enum_from_token(ir.DisplayMode, parser.expect_identifier_or_keyword())
     parser.skip_newlines()
 
 

@@ -4,12 +4,15 @@ Base parser class for DAZZLE DSL.
 Provides common token manipulation and utility methods used by all parser mixins.
 """
 
+import enum as _enum
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, NoReturn, Protocol, TypeVar, runtime_checkable
 
 from ..errors import make_parse_error
 from ..ir.location import SourceLocation
 from ..lexer import Token, TokenType
+
+_E = TypeVar("_E", bound=_enum.Enum)
 
 if TYPE_CHECKING:
     from .. import ir
@@ -33,6 +36,9 @@ class ParserProtocol(Protocol):
     def peek_token(self, offset: int = 1) -> Token: ...
     def advance(self) -> Token: ...
     def expect(self, token_type: TokenType) -> Token: ...
+    def enum_from_token(
+        self, enum_cls: type[_E], token: Token, *, label: str | None = None
+    ) -> _E: ...
     def _source_location(self, token: Token | None = None) -> SourceLocation: ...
     def expect_identifier_or_keyword(self) -> Token: ...
     def match(self, *token_types: TokenType) -> bool: ...
@@ -140,6 +146,27 @@ class BaseParser:
                 token.column,
             )
         return self.advance()
+
+    def enum_from_token(self, enum_cls: type[_E], token: Token, *, label: str | None = None) -> _E:
+        """Build an IR enum member from a token's value, raising a clean ``ParseError``
+        (never a raw ``ValueError``) on an unknown value.
+
+        The single guarded path for "token → enum". Constructing ``ir.SomeKind(token.value)``
+        inline leaks the enum's ``ValueError`` out of the parser, which only promises
+        ``ParseError`` — a fuzz-discoverable crash class (see #1342 / the parser-fuzz catch).
+        Use this instead: ``kind = self.enum_from_token(ir.SomeKind, kind_token)``.
+        """
+        try:
+            return enum_cls(token.value)
+        except ValueError as exc:
+            name = label or enum_cls.__name__
+            valid = ", ".join(str(m.value) for m in enum_cls)
+            raise make_parse_error(
+                f"Invalid {name} {token.value!r}. Valid values: {valid}.",
+                self.file,
+                token.line,
+                token.column,
+            ) from exc
 
     def expect_identifier_or_keyword(self) -> Token:
         """

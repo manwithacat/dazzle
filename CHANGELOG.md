@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.86] - 2026-06-07
+
+### Fixed
+
+- **20 latent parser crashes: `ir.<Enum>(token.value)` now raises `ParseError`, not `ValueError` (#1342 fuzz-leverage #4).** An audit (prompted by the fuzz catch) found **20 unguarded** token→enum constructions across the parser surface (service/surface/view/entity/notification/messaging/workspace) — each a fuzz-discoverable crash of the class that surfaced in v0.81.83. Fixed structurally with a shared `BaseParser.enum_from_token(ir.<Enum>, token)` helper (one try/except → `make_parse_error` listing valid values); all 20 sites migrated to it. New gate `tests/unit/test_no_unguarded_enum_from_token.py` fails on any new unguarded site — **allowlist-free** (the migration drained it to zero). The 7 pre-existing guarded sites keep their hand-tuned messages.
+
+#### Agent Guidance
+
+- In the DSL parser, build an IR enum from a token with `self.enum_from_token(ir.<Enum>, token)` (or `parser.enum_from_token(...)` in dispatch handlers) — **never** `ir.<Enum>(token.value)` inline (it leaks `ValueError`; the parser promises only `ParseError`). The `test_no_unguarded_enum_from_token` gate enforces this.
+
 ## [0.81.85] - 2026-06-07
 
 ### Added

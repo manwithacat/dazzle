@@ -21,6 +21,7 @@ class ServiceParserMixin:
 
     if TYPE_CHECKING:
         expect: Any
+        enum_from_token: Any
         advance: Any
         match: Any
         current_token: Any
@@ -216,7 +217,7 @@ class ServiceParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 lang_token = self.expect(TokenType.IDENTIFIER)
-                stub_language = ir.StubLanguage(lang_token.value)
+                stub_language = self.enum_from_token(ir.StubLanguage, lang_token)
                 self.skip_newlines()
 
             else:
@@ -441,7 +442,7 @@ class ServiceParserMixin:
             self.advance()
             self.expect(TokenType.COLON)
             priority_token = self.expect_identifier_or_keyword()
-            priority = ir.BusinessPriority(priority_token.value)
+            priority = self.enum_from_token(ir.BusinessPriority, priority_token)
             self.skip_newlines()
 
         # start at step StepName
@@ -547,7 +548,7 @@ class ServiceParserMixin:
         self.expect(TokenType.KIND)
         self.expect(TokenType.COLON)
         kind_token = self.expect_identifier_or_keyword()
-        state.kind = ir.StepKind(kind_token.value)
+        state.kind = self.enum_from_token(ir.StepKind, kind_token)
         self.skip_newlines()
 
         if state.kind == ir.StepKind.SURFACE:

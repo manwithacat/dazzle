@@ -30,6 +30,7 @@ class ViewParserMixin:
 
     if TYPE_CHECKING:
         expect: Any
+        enum_from_token: Any
         advance: Any
         match: Any
         skip_newlines: Any
@@ -101,7 +102,7 @@ class ViewParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 bucket_token = self.expect_identifier_or_keyword()
-                time_bucket = ir.TimeBucket(bucket_token.value)
+                time_bucket = self.enum_from_token(ir.TimeBucket, bucket_token)
                 self.skip_newlines()
 
             elif self.match(TokenType.FIELD):

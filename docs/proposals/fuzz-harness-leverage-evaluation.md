@@ -104,11 +104,14 @@ the cheapest new surfaces and several are security-relevant:
   detection never false-negative.
 - the **scope predicate algebra** — arbitrary predicate string → compiles or raises cleanly.
 
-### 4. Pre-empt the *specific* bug class — *low cost, mechanical*
+### 4. Pre-empt the *specific* bug class — *low cost, mechanical* — ✅ DONE (v0.81.86)
 The catch was the **second** `ir.<Enum>(token.value)` site to leak `ValueError` (after
-`DomainServiceKind`). Add a small parser-surface audit/lint (in the spirit of
-`test_no_regex_in_parser`) that flags `ir.<Enum>(<token>.value)` not wrapped in a
-try/except → `make_parse_error`. Catches the third occurrence before a fuzzer has to.
+`DomainServiceKind`). An audit found **20 unguarded sites** (only 7 of 27 were guarded) —
+each a latent fuzz-discoverable crash. Resolved structurally (the "altitude" fix):
+a shared `BaseParser.enum_from_token(ir.<Enum>, token)` helper does the try/except →
+`make_parse_error` once; all 20 unguarded sites migrated to it; and a gate
+(`tests/unit/test_no_unguarded_enum_from_token.py`) fails on any new unguarded
+`ir.<Enum>(token.value)` — allowlist-free (the migration drained it to zero).
 
 ### 5. Make the fuzz signal compound — *medium cost*
 - Run the existing `fuzzer` campaign in CI on a schedule (not just the inline Hypothesis 50),

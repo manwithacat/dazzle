@@ -82,6 +82,7 @@ class EntityParserMixin:
     # Type stubs for methods provided by BaseParser and other mixins
     if TYPE_CHECKING:
         expect: Any
+        enum_from_token: Any
         advance: Any
         match: Any
         skip_newlines: Any
@@ -1720,7 +1721,7 @@ class EntityParserMixin:
                 self.expect(TokenType.LBRACKET)
                 while not self.match(TokenType.RBRACKET):
                     fmt_token = self.expect_identifier_or_keyword()
-                    formats.append(ir.BulkFormat(fmt_token.value))
+                    formats.append(self.enum_from_token(ir.BulkFormat, fmt_token))
                     if self.match(TokenType.COMMA):
                         self.advance()
                 self.expect(TokenType.RBRACKET)

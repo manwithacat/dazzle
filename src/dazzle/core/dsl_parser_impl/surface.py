@@ -23,6 +23,7 @@ class SurfaceParserMixin:
 
     if TYPE_CHECKING:
         expect: Any
+        enum_from_token: Any
         advance: Any
         match: Any
         current_token: Any
@@ -91,7 +92,7 @@ class SurfaceParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 mode_token = self.expect_identifier_or_keyword()
-                display = ir.RelatedDisplayMode(mode_token.value)
+                display = self.enum_from_token(ir.RelatedDisplayMode, mode_token)
                 self.skip_newlines()
             elif token.value == "show":
                 self.advance()
@@ -555,7 +556,7 @@ class SurfaceParserMixin:
         # on submit|click|auto -> outcome
         self.expect(TokenType.ON)
         trigger_token = self.expect_identifier_or_keyword()
-        trigger = ir.SurfaceTrigger(trigger_token.value)
+        trigger = self.enum_from_token(ir.SurfaceTrigger, trigger_token)
 
         self.expect(TokenType.ARROW)
 
@@ -675,7 +676,7 @@ def _kw_mode(parser: Any, state: _SurfaceState) -> None:
     """``mode: view|create|edit|list|custom``"""
     parser.advance()
     parser.expect(TokenType.COLON)
-    state.mode = ir.SurfaceMode(parser.expect_identifier_or_keyword().value)
+    state.mode = parser.enum_from_token(ir.SurfaceMode, parser.expect_identifier_or_keyword())
     parser.skip_newlines()
 
 
@@ -710,7 +711,9 @@ def _kw_priority(parser: Any, state: _SurfaceState) -> None:
     """``priority: critical|high|medium|low``"""
     parser.advance()
     parser.expect(TokenType.COLON)
-    state.priority = ir.BusinessPriority(parser.expect_identifier_or_keyword().value)
+    state.priority = parser.enum_from_token(
+        ir.BusinessPriority, parser.expect_identifier_or_keyword()
+    )
     parser.skip_newlines()
 
 

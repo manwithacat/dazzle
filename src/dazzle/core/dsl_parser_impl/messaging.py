@@ -28,6 +28,7 @@ class MessagingParserMixin:
 
     if TYPE_CHECKING:
         expect: Any
+        enum_from_token: Any
         advance: Any
         match: Any
         current_token: Any
@@ -239,7 +240,7 @@ class MessagingParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 kind_token = self.expect_identifier_or_keyword()
-                kind = ir.ChannelKind(kind_token.value)
+                kind = self.enum_from_token(ir.ChannelKind, kind_token)
                 self.skip_newlines()
 
             # provider: auto | mailpit | sendgrid | ...
@@ -412,7 +413,7 @@ class MessagingParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 mode_token = self.expect_identifier_or_keyword()
-                delivery_mode = ir.DeliveryMode(mode_token.value)
+                delivery_mode = self.enum_from_token(ir.DeliveryMode, mode_token)
                 self.skip_newlines()
 
             # mapping: block
@@ -483,7 +484,7 @@ class MessagingParserMixin:
                 return ir.SendTriggerSpec(
                     kind=ir.SendTriggerKind.ENTITY_EVENT,
                     entity_name=entity_name,
-                    event=ir.EntityEvent(token.value),
+                    event=self.enum_from_token(ir.EntityEvent, token),
                 )
 
             # status -> state
@@ -645,7 +646,7 @@ class MessagingParserMixin:
             scope = ir.ThrottleScope.PER_CHANNEL
         elif self.match(TokenType.IDENTIFIER):
             scope_token = self.advance()
-            scope = ir.ThrottleScope(scope_token.value)
+            scope = self.enum_from_token(ir.ThrottleScope, scope_token)
 
         self.expect(TokenType.COLON)
         self.skip_newlines()
@@ -676,7 +677,7 @@ class MessagingParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 action_token = self.expect_identifier_or_keyword()
-                on_exceed = ir.ThrottleExceedAction(action_token.value)
+                on_exceed = self.enum_from_token(ir.ThrottleExceedAction, action_token)
                 self.skip_newlines()
 
             else:
@@ -961,7 +962,7 @@ class MessagingParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 kind_token = self.expect_identifier_or_keyword()
-                kind = ir.AssetKind(kind_token.value)
+                kind = self.enum_from_token(ir.AssetKind, kind_token)
                 self.skip_newlines()
 
             elif self.match(TokenType.PATH):
@@ -1029,7 +1030,7 @@ class MessagingParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 format_token = self.expect(TokenType.IDENTIFIER)
-                format_type = ir.DocumentFormat(format_token.value)
+                format_type = self.enum_from_token(ir.DocumentFormat, format_token)
                 self.skip_newlines()
 
             elif self.match(TokenType.LAYOUT):

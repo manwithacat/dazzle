@@ -42,6 +42,7 @@ class NotificationParserMixin:
 
     if TYPE_CHECKING:
         expect: Any
+        enum_from_token: Any
         advance: Any
         match: Any
         skip_newlines: Any
@@ -122,7 +123,7 @@ class NotificationParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 pref_token = self.expect_identifier_or_keyword()
-                preference = ir.NotificationPreference(pref_token.value)
+                preference = self.enum_from_token(ir.NotificationPreference, pref_token)
                 self.skip_newlines()
 
             else:
@@ -225,13 +226,13 @@ class NotificationParserMixin:
             self.advance()
             while not self.match(TokenType.RBRACKET):
                 ch_token = self.expect_identifier_or_keyword()
-                channels.append(ir.NotificationChannel(ch_token.value))
+                channels.append(self.enum_from_token(ir.NotificationChannel, ch_token))
                 if self.match(TokenType.COMMA):
                     self.advance()
             self.expect(TokenType.RBRACKET)
         else:
             ch_token = self.expect_identifier_or_keyword()
-            channels.append(ir.NotificationChannel(ch_token.value))
+            channels.append(self.enum_from_token(ir.NotificationChannel, ch_token))
 
         return channels
 
