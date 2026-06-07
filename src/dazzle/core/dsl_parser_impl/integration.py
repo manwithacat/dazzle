@@ -845,7 +845,7 @@ def _m_kw_cache(parser: Any, state: _MappingState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     duration_tok = parser.expect(TokenType.STRING)
-    state.cache_ttl = parse_duration(duration_tok.value)
+    state.cache_ttl = parse_duration(duration_tok.value, parser=parser)
     parser.skip_newlines()
 
 

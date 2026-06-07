@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.88] - 2026-06-08
+
+### Added
+
+- **Stronger parser-fuzz oracles (#1342 fuzz-leverage #2).** The fuzz harness no longer only checks "didn't crash / didn't hang" — `_safe_parse` now asserts every `ParseError` is **well-formed** (carries a non-empty message AND a source location, line ≥ 1), and a new `TestParserDeterminism` asserts parsing the same input twice yields the same outcome. The catch-quality oracle immediately found a bug class (below); the "no-crash" oracle had been blind to it.
+
+### Fixed
+
+- **41 location-less `ParseError`s from `parse_duration` (oracle-found).** An invalid duration (e.g. a fuzz-mutated `timeout: 30x`) raised a `ParseError` with **no line/column** — a diagnostic the user can't locate — because the leaf `parse_duration` helper lacked parser context. It now accepts the parser and raises a *located* error via `make_parse_error`; all 9 call sites thread it through. Every parser diagnostic now carries a source location.
+
 ## [0.81.87] - 2026-06-07
 
 ### Added

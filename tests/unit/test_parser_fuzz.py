@@ -42,14 +42,27 @@ def _alarm_handler(signum: int, frame: object) -> None:
     raise _ParseTimeout()
 
 
+def _assert_well_formed(err: ParseError, text: str) -> None:
+    """Oracle: a ParseError must carry a non-empty message AND a source location
+    (line ≥ 1) — a context-less error gives the user a diagnostic with no location.
+    Strengthened oracle (#1342 fuzz-leverage #2): catches the *quality* of the error, not
+    just that the parser didn't crash. Found 41 location-less duration errors when added."""
+    assert (err.message or "").strip(), f"ParseError with empty message on {text[:120]!r}"
+    ctx = getattr(err, "context", None)
+    assert ctx is not None and getattr(ctx, "line", 0) >= 1, (
+        f"ParseError lacks a source location (context={ctx}) on {text[:120]!r}: {err.message!r}"
+    )
+
+
 def _safe_parse(text: str) -> None:
-    """Parse DSL with a signal-based timeout. Skips on hang."""
+    """Parse DSL with a signal-based timeout. Skips on hang. A ParseError is the expected
+    outcome for bad input, but it must be *well-formed* (located + messaged)."""
     old_handler = signal.signal(signal.SIGALRM, _alarm_handler)
     signal.alarm(_PARSE_TIMEOUT)
     try:
         parse_dsl(text, Path("fuzz.dsl"))
-    except ParseError:
-        pass  # Expected
+    except ParseError as err:
+        _assert_well_formed(err, text)  # expected — but it must point at a location
     except _ParseTimeout:
         pytest.fail(f"Parser hung on input (>{_PARSE_TIMEOUT}s): {text[:200]!r}")
     finally:
@@ -131,3 +144,29 @@ class TestMutatedCorpusNeverCrashes:
         source = corpus[seed % len(corpus)]
         mutated = inject_near_miss(source, seed=seed)
         _safe_parse(mutated)
+
+
+class TestParserDeterminism:
+    """Parsing the same input twice must yield the same outcome (#1342 fuzz-leverage #2).
+
+    Catches nondeterminism in the parser/lexer (dict-ordering, hidden state, randomness)
+    that a single-shot 'no-crash' oracle can't see."""
+
+    @given(st.integers(min_value=0, max_value=5000))
+    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+    def test_mutation_parse_is_deterministic(self, seed: int) -> None:
+        corpus = _get_corpus()
+        if not corpus:
+            pytest.skip("No corpus available")
+        src = insert_keyword(corpus[seed % len(corpus)], seed=seed)
+
+        def outcome() -> tuple[str, str]:
+            try:
+                spec = parse_dsl(src, Path("fuzz.dsl"))
+                return ("ok", type(spec).__name__)
+            except ParseError as e:
+                return ("error", e.message or "")
+            except Exception as e:  # noqa: BLE001 — record non-ParseError too (still must be stable)
+                return ("crash", type(e).__name__)
+
+        assert outcome() == outcome()

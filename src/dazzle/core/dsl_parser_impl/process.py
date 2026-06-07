@@ -79,21 +79,29 @@ class _ScheduleParseContext:
     events: ir.ProcessEventEmission = field(default_factory=ir.ProcessEventEmission)
 
 
-def parse_duration(s: str) -> int:
+def parse_duration(s: str, *, parser: Any = None) -> int:
     """
     Parse duration string to seconds.
 
     Examples: "30s", "5m", "2h", "7d", "24h"
+
+    Pass ``parser`` so an invalid duration raises a *located* ``ParseError`` (line/column
+    from the parser's current token) rather than a context-less one — the parser promises
+    every diagnostic carries a source location.
     """
     from ._lexical import short_duration_seconds
 
     seconds = short_duration_seconds(s)
     if seconds is None:
+        msg = f"Invalid duration format: '{s}' — expected format like '30s', '5m', '2h', '7d'"
+        if parser is not None:
+            from dazzle.core.errors import make_parse_error
+
+            tok = parser.current_token()
+            raise make_parse_error(msg, parser.file, tok.line, tok.column)
         from dazzle.core.errors import ParseError
 
-        raise ParseError(
-            f"Invalid duration format: '{s}' — expected format like '30s', '5m', '2h', '7d'"
-        )
+        raise ParseError(msg)
     return seconds
 
 
@@ -248,7 +256,7 @@ class ProcessParserMixin:
             self.advance()
             self.expect(TokenType.COLON)
             timeout_str = self._parse_duration_value()
-            ctx.timeout_seconds = parse_duration(timeout_str)
+            ctx.timeout_seconds = parse_duration(timeout_str, parser=self)
             self.skip_newlines()
         elif self.match(TokenType.OVERLAP):
             self.advance()
@@ -315,7 +323,7 @@ class ProcessParserMixin:
             self.advance()
             self.expect(TokenType.COLON)
             interval_str = self._parse_duration_value()
-            ctx.interval_seconds = parse_duration(interval_str)
+            ctx.interval_seconds = parse_duration(interval_str, parser=self)
             self.skip_newlines()
         elif self.match(TokenType.TIMEZONE):
             self.advance()
@@ -364,7 +372,7 @@ class ProcessParserMixin:
             ctx.timeout_seconds = ir.ParamRef(key=ref_key, param_type="int", default=3600)
         else:
             timeout_str = self._parse_duration_value()
-            ctx.timeout_seconds = parse_duration(timeout_str)
+            ctx.timeout_seconds = parse_duration(timeout_str, parser=self)
         self.skip_newlines()
 
     def _parse_process_identifier_list(self) -> list[str]:
@@ -887,7 +895,7 @@ class ProcessParserMixin:
         self.advance()
         self.expect(TokenType.COLON)
         timeout_str = self._parse_duration_value()
-        f.timeout_seconds = parse_duration(timeout_str)
+        f.timeout_seconds = parse_duration(timeout_str, parser=self)
         self.skip_newlines()
 
     def _parse_step_retry_field(self, f: _StepFields) -> None:
@@ -1025,7 +1033,7 @@ class ProcessParserMixin:
                     self.advance()
                     self.expect(TokenType.COLON)
                     timeout_str = self._parse_duration_value()
-                    timeout_seconds = parse_duration(timeout_str)
+                    timeout_seconds = parse_duration(timeout_str, parser=self)
                     self.skip_newlines()
 
                 elif self.match(TokenType.INPUTS):
@@ -1127,7 +1135,7 @@ class ProcessParserMixin:
             self.advance()
             self.expect(TokenType.COLON)
             timeout_str = self._parse_duration_value()
-            timeout_seconds = parse_duration(timeout_str)
+            timeout_seconds = parse_duration(timeout_str, parser=self)
             self.skip_newlines()
         elif self.match(TokenType.OUTCOMES):
             self.advance()
@@ -1452,7 +1460,7 @@ class ProcessParserMixin:
                     self.advance()
                     self.expect(TokenType.COLON)
                     interval_str = self._parse_duration_value()
-                    initial_interval_seconds = parse_duration(interval_str)
+                    initial_interval_seconds = parse_duration(interval_str, parser=self)
                     self.skip_newlines()
 
                 else:
@@ -1536,7 +1544,7 @@ class ProcessParserMixin:
 
         if is_short_duration_token(val):
             self.advance()
-            return parse_duration(val)
+            return parse_duration(val, parser=self)
 
         # Otherwise treat as signal name
         self.advance()
