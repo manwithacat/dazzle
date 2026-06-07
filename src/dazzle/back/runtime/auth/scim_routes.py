@@ -10,6 +10,8 @@ a per-connection bearer token and pushes user lifecycle:
   PATCH  /scim/v2/Users/{id}      — partial update (the `active` toggle)
   DELETE /scim/v2/Users/{id}      — deprovision
   GET    /scim/v2/ServiceProviderConfig — capability discovery
+  GET    /scim/v2/ResourceTypes[/{id}]  — resource-type discovery (User, Group)
+  GET    /scim/v2/Schemas[/{id}]        — schema discovery (faithful subset)
 
 **A SCIM User resource is a membership** (the identity-in-this-org): its SCIM `id` is
 the membership id, `userName` the email, `active` the membership status.
@@ -29,6 +31,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 
+from dazzle.back.runtime.auth import scim_discovery
 from dazzle.back.runtime.auth.scim_provisioning import (
     ScimError,
     deprovision_scim_user,
@@ -198,6 +201,56 @@ def create_scim_routes() -> APIRouter:
             },
             media_type=_SCIM_MEDIA,
         )
+
+    @router.get("/scim/v2/ResourceTypes")
+    async def resource_types(request: Request) -> JSONResponse:
+        _require_scim_connection(request)
+        base = str(request.base_url).rstrip("/")
+        resources = scim_discovery.resource_types(base)
+        return JSONResponse(
+            {
+                "schemas": [_LIST_SCHEMA],
+                "totalResults": len(resources),
+                "Resources": resources,
+                "itemsPerPage": len(resources),
+                "startIndex": 1,
+            },
+            media_type=_SCIM_MEDIA,
+        )
+
+    @router.get("/scim/v2/ResourceTypes/{type_id}")
+    async def resource_type(type_id: str, request: Request) -> JSONResponse:
+        _require_scim_connection(request)
+        base = str(request.base_url).rstrip("/")
+        rt = scim_discovery.resource_type_by_id(type_id, base)
+        if rt is None:
+            return _error(404, f"no ResourceType {type_id!r}")
+        return JSONResponse(rt, media_type=_SCIM_MEDIA)
+
+    @router.get("/scim/v2/Schemas")
+    async def schemas(request: Request) -> JSONResponse:
+        _require_scim_connection(request)
+        base = str(request.base_url).rstrip("/")
+        resources = scim_discovery.all_schemas(base)
+        return JSONResponse(
+            {
+                "schemas": [_LIST_SCHEMA],
+                "totalResults": len(resources),
+                "Resources": resources,
+                "itemsPerPage": len(resources),
+                "startIndex": 1,
+            },
+            media_type=_SCIM_MEDIA,
+        )
+
+    @router.get("/scim/v2/Schemas/{schema_id}")
+    async def schema(schema_id: str, request: Request) -> JSONResponse:
+        _require_scim_connection(request)
+        base = str(request.base_url).rstrip("/")
+        doc = scim_discovery.schema_by_id(schema_id, base)
+        if doc is None:
+            return _error(404, f"no Schema {schema_id!r}")
+        return JSONResponse(doc, media_type=_SCIM_MEDIA)
 
     @router.post("/scim/v2/Users")
     async def create_user(request: Request) -> JSONResponse:

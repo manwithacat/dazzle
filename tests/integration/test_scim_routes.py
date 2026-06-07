@@ -530,6 +530,50 @@ def test_group_routes_malformed_json_is_400() -> None:
     assert r.status_code == 400
 
 
+def test_resource_types_requires_bearer() -> None:
+    s, _ = _group_store()
+    assert _client(s).get("/scim/v2/ResourceTypes").status_code == 401
+    assert _client(s).get("/scim/v2/Schemas").status_code == 401
+
+
+def test_resource_types_list_and_single() -> None:
+    s, _ = _group_store()
+    client = _client(s)
+    lr = client.get("/scim/v2/ResourceTypes", headers=_auth("tok1"))
+    assert lr.status_code == 200
+    body = lr.json()
+    assert body["totalResults"] == 2
+    ids = {r["id"] for r in body["Resources"]}
+    assert ids == {"User", "Group"}
+    one = client.get("/scim/v2/ResourceTypes/Group", headers=_auth("tok1"))
+    assert one.status_code == 200
+    assert one.json()["endpoint"] == "/Groups"
+    assert client.get("/scim/v2/ResourceTypes/Nope", headers=_auth("tok1")).status_code == 404
+
+
+def test_schemas_list_and_single() -> None:
+    s, _ = _group_store()
+    client = _client(s)
+    lr = client.get("/scim/v2/Schemas", headers=_auth("tok1"))
+    assert lr.status_code == 200
+    ids = {r["id"] for r in lr.json()["Resources"]}
+    assert ids == {
+        "urn:ietf:params:scim:schemas:core:2.0:User",
+        "urn:ietf:params:scim:schemas:core:2.0:Group",
+    }
+    one = client.get(
+        "/scim/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", headers=_auth("tok1")
+    )
+    assert one.status_code == 200
+    assert {a["name"] for a in one.json()["attributes"]} == {
+        "userName",
+        "active",
+        "emails",
+        "groups",
+    }
+    assert client.get("/scim/v2/Schemas/urn:bogus", headers=_auth("tok1")).status_code == 404
+
+
 def test_user_get_echoes_group_memberships() -> None:
     # #1342: GET /Users/{id} reflects the membership's actual persisted group
     # memberships as a read-only `groups` array (RFC: server-managed).

@@ -121,8 +121,22 @@ IdP-driven group rename with a `group_mapping` update to retain the role.
     through `/scim/v2/Groups`. A connection that previously relied on the `User.groups`
     write-path must configure group push to the Groups endpoint.
 
+## SCIM discovery (#1342)
+
+An IdP can self-configure from three bearer-authenticated discovery endpoints (RFC 7643/7644):
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /scim/v2/ServiceProviderConfig` | supported features (patch ✅, filter ✅, bulk ❌, …) |
+| `GET /scim/v2/ResourceTypes[/{id}]` | the `User` + `Group` resource types (endpoint + schema URN) |
+| `GET /scim/v2/Schemas[/{id}]` | the `User` + `Group` schema definitions |
+
+The published schemas are a **faithful subset** — they advertise only the attributes Dazzle
+actually honors (`User`: `userName`, `active`, `emails` (readOnly), `groups` (readOnly);
+`Group`: `displayName`, `members`), so discovery never promises an attribute the runtime
+ignores. A single-fetch `/{id}` for an unknown id returns a SCIM 404.
+
 ## Deferred
 
 SAML SLO, encrypted assertions, SP-signed AuthnRequests, IdP-initiated opt-in, IdP-metadata
-auto-import; SCIM `/Schemas` + `/ResourceTypes` discovery; connection secret rotation; an in-app
-org-admin connection surface.
+auto-import; connection secret rotation; an in-app org-admin connection surface.

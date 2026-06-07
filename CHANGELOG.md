@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.77] - 2026-06-07
+
+### Added
+
+- **SCIM discovery — `/scim/v2/ResourceTypes` + `/scim/v2/Schemas` (#1342 Phase 3).** Bearer-authenticated, capability-gated (`auth.enterprise.scim`) discovery so an IdP can self-configure (RFC 7643 §6–7): list + single-fetch for both `ResourceTypes` (User, Group) and `Schemas`, with a SCIM 404 on unknown id. The published schemas are a **faithful subset** — they advertise only the attributes Dazzle honors (`User`: userName/active/emails(readOnly)/groups(readOnly); `Group`: displayName/members), never an attribute the runtime ignores. Static content lives in the new pure module `src/dazzle/back/runtime/auth/scim_discovery.py`.
+
+#### Agent Guidance
+
+- SCIM discovery docs (`/Schemas`, `/ResourceTypes`) are a **faithful subset** by design — when adding a SCIM attribute Dazzle actually reads, add it to `scim_discovery.py` so discovery stays truthful; don't pad it with unhandled RFC attributes.
+
 ## [0.81.76] - 2026-06-06
 
 ### Added
