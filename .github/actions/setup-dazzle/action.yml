@@ -32,7 +32,10 @@ inputs:
     # `perf` is in the default set because `dazzle.cli` imports
     # `dazzle.perf` at module load (tracer init at CLI entry, #1158), so
     # opentelemetry must be present for the test suite to even collect.
-    default: dev,llm,mcp,mobile,postgres,perf
+    # `saml` (python3-saml; prebuilt xmlsec wheel on linux, no apt needed) is in
+    # the default so the SAML provider + IdP-metadata tests run in CI instead of
+    # skipping on a missing `onelogin` import (#1345).
+    default: dev,llm,mcp,mobile,postgres,perf,saml
   optional-pip:
     description: |
       Space-separated package list installed best-effort after the editable

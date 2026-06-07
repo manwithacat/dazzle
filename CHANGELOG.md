@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.82] - 2026-06-07
+
+### Changed
+
+- **CI now installs the `[saml]` extra (#1345).** The `setup-dazzle` action default and the `integration` job gained `saml`, so the SAML provider, route, and IdP-metadata tests (`test_saml_provider`, `test_saml_routes`, `test_saml_metadata`, the `onelogin` `create-saml` CLI tests) **run in CI** instead of skipping on a missing `onelogin` import. python3-saml installs from the prebuilt `xmlsec` manylinux wheel — no `apt` libxmlsec1 step needed. Closes the gap found while shipping SAML IdP-metadata import (v0.81.80): SAML code was previously verified nowhere in CI. De-risks the rest of the #1342 SAML cluster (SP-signed AuthnRequests, encrypted assertions, SLO).
+
 ## [0.81.81] - 2026-06-07
 
 ### Fixed

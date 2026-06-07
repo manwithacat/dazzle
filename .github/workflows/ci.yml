@@ -301,7 +301,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,perf
+        extras: dev,llm,mcp,mobile,perf,saml  # +saml: run test_saml_routes in CI (#1345)
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.* are gitignored — built here for tests.
