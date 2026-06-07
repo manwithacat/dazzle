@@ -20,6 +20,24 @@ CheckLevel = Literal["required", "recommended"]
 CheckStatus = Literal["ok", "warn", "fail"]
 
 
+def environment_flags() -> tuple[bool, bool, bool]:
+    """(secret_key_ok, sso_extra_ok, dns_extra_ok) — the doctor's environment inputs.
+
+    Shared by the CLI ``doctor`` and the org-admin readiness panel so the two can't
+    drift. ``secret_key_ok`` = DAZZLE_CONNECTION_SECRET is a loadable 32-byte key.
+    """
+    from importlib.util import find_spec
+
+    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError, _load_key
+
+    try:
+        _load_key()
+        secret_key_ok = True
+    except ConnectionSecretError:
+        secret_key_ok = False
+    return secret_key_ok, find_spec("authlib") is not None, find_spec("dns") is not None
+
+
 @dataclass(frozen=True)
 class Check:
     """One diagnostic result. ``remedy`` is the concrete next action when not ``ok``."""

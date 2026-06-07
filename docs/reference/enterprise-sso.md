@@ -159,7 +159,24 @@ previous bearer is rejected; there's no background reaper). A subsequent hard-sw
 a `connection_secret_events` row (`rotated` / `revoked_previous` / `encryption_key_rewrapped`)
 with non-secret detail (connection type, grace flag + expiry) — a secret value is never stored.
 
+## Org-admin surface (`/auth/connections`)
+
+An org admin (a role in `org_admin_roles`) gets an in-app page at `GET /auth/connections`
+— mounted only when an enterprise capability is active, fenced to their own org, CSRF-protected.
+It is **read + domains only, and deliberately secret-free**: creating connections, rotating
+secrets, and revoking a grace window stay in the operator CLI (they involve secret I/O). Per
+connection the page shows:
+
+- **Domain lifecycle** — claim a domain, see its DNS-TXT record, and Verify it (the in-app
+  counterpart to `add-domain` / `verify-domain`).
+- **Activation readiness** — the same diagnosis `dazzle auth connection doctor` reports (shared
+  `diagnose_connection`), as ✓/✗ required checks plus a "what's left" list. Presence and
+  remedies only — never a secret value.
+- **Secret-rotation history** — a read-only view of the `connection_secret_events` audit trail
+  (event names + timestamps + a grace-until note), and a "Grace window active until …" badge
+  when a SCIM bearer overlap is open. No secret value is rendered.
+
 ## Deferred
 
 SAML SLO, encrypted assertions, SP-signed AuthnRequests, IdP-initiated opt-in, IdP-metadata
-auto-import; an in-app org-admin connection surface.
+auto-import.

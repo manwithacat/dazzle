@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.79] - 2026-06-07
+
+### Added
+
+- **Org-admin connection page shows activation readiness + secret-rotation history (#1342).** The in-app `/auth/connections` surface (org-admin, secret-free) now renders, per connection: an **activation-readiness panel** reusing the same `diagnose_connection` the CLI `doctor` reports (✓/✗ required checks + a "what's left" list, presence/remedies only — no secret value); a **read-only rotation-history view** of the `connection_secret_events` audit (event names + timestamps); and a **"Grace window active until …"** badge when a SCIM-bearer overlap is open. New `connection_doctor.environment_flags()` (shared by the CLI + the page so they can't drift) and `AuthStore.get_connection_grace_status()` (a secret-free timestamp read). No new route, RBAC, or capability change; creating/rotating/revoking secrets stay in the operator CLI.
+
+#### Agent Guidance
+
+- The org-admin `/auth/connections` page is **read + domains only, and secret-free** — the readiness panel reuses `connection_doctor.diagnose_connection` (keep them sharing it; don't fork the logic), and the rotation-history view is read-only over `connection_secret_events`. Never render a secret value; rotation/revoke/create stay CLI-side.
+
 ## [0.81.78] - 2026-06-07
 
 ### Added

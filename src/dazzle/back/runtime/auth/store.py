@@ -1573,16 +1573,29 @@ class SessionStoreMixin:
             )
         return True
 
-    def get_connection_secret_events(self, connection_id: str) -> "list[ConnectionSecretEvent]":  # noqa: F821
-        """The append-only rotation history for one connection, newest first."""
+    def get_connection_secret_events(
+        self, connection_id: str, *, tenant_id: str | None = None
+    ) -> "list[ConnectionSecretEvent]":  # noqa: F821
+        """The append-only rotation history for one connection, newest first.
+
+        Pass ``tenant_id`` to fence the read to one org (mirrors ``get_connection``'s fenced
+        getter) — a cross-org ``connection_id`` then returns ``[]`` instead of leaking the
+        other org's history. The events table carries ``tenant_id`` for exactly this."""
         import json
 
         from dazzle.back.runtime.auth.connections import ConnectionSecretEvent
 
-        rows = self._execute(
-            "SELECT * FROM connection_secret_events WHERE connection_id = %s ORDER BY seq DESC",
-            (connection_id,),
-        )
+        if tenant_id is not None:
+            rows = self._execute(
+                "SELECT * FROM connection_secret_events "
+                "WHERE connection_id = %s AND tenant_id = %s ORDER BY seq DESC",
+                (connection_id, tenant_id),
+            )
+        else:
+            rows = self._execute(
+                "SELECT * FROM connection_secret_events WHERE connection_id = %s ORDER BY seq DESC",
+                (connection_id,),
+            )
         return [
             ConnectionSecretEvent(
                 id=r["id"],
@@ -1595,6 +1608,33 @@ class SessionStoreMixin:
             )
             for r in rows
         ]
+
+    def get_connection_grace_status(
+        self, connection_id: str, *, tenant_id: str | None = None
+    ) -> tuple[bool, str | None]:
+        """(grace_active, expires_at_iso) for a connection's SCIM-bearer overlap window
+        (#1342). A timestamp, not a secret — safe for the secret-free org-admin surface.
+        (False, None) when there's no grace secret or the window has lapsed. Pass
+        ``tenant_id`` to fence to one org (cross-org → (False, None)). Read-only —
+        revoking stays in the CLI."""
+        if tenant_id is not None:
+            row = self._execute_one(
+                "SELECT previous_secret_expires_at FROM connections "
+                "WHERE id = %s AND tenant_id = %s",
+                (connection_id, tenant_id),
+            )
+        else:
+            row = self._execute_one(
+                "SELECT previous_secret_expires_at FROM connections WHERE id = %s",
+                (connection_id,),
+            )
+        exp = row["previous_secret_expires_at"] if row else None
+        if not exp:
+            return (False, None)
+        try:
+            return (datetime.fromisoformat(exp) > datetime.now(UTC), exp)
+        except ValueError:
+            return (False, None)
 
     def set_connection_verified_domains(self, connection_id: str, verified: list[str]) -> None:
         """Set the verified-domain list — the output of a domain-ownership check.

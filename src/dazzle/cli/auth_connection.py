@@ -416,17 +416,11 @@ def delete(
 
 
 def _env_flags() -> tuple[bool, bool, bool]:
-    """(secret_key_ok, sso_extra_ok, dns_extra_ok) for the doctor."""
-    from importlib.util import find_spec
+    """(secret_key_ok, sso_extra_ok, dns_extra_ok) for the doctor — shared with the
+    org-admin readiness panel via the runtime helper (single source of truth)."""
+    from dazzle.back.runtime.auth.connection_doctor import environment_flags
 
-    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError, _load_key
-
-    try:
-        _load_key()
-        secret_key_ok = True
-    except ConnectionSecretError:
-        secret_key_ok = False
-    return secret_key_ok, find_spec("authlib") is not None, find_spec("dns") is not None
+    return environment_flags()
 
 
 @connection_app.command("doctor")

@@ -398,6 +398,35 @@ def test_rotate_grace_on_non_scim_rejected_at_store(store_url: str) -> None:
         )
 
 
+def test_get_connection_grace_status(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "b1")
+    assert store.get_connection_grace_status(conn.id) == (False, None)
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "b2"}, grace=timedelta(days=1), actor="cli"
+    )
+    active, exp = store.get_connection_grace_status(conn.id)
+    assert active is True and exp is not None
+    store.revoke_previous_connection_secret(conn.id, actor="cli")
+    assert store.get_connection_grace_status(conn.id) == (False, None)
+
+
+def test_secret_reads_are_tenant_fenced(store_url: str) -> None:
+    # Review #1342: get_connection_secret_events / get_connection_grace_status accept a
+    # tenant_id fence (mirrors get_connection) — a cross-org id returns []/(False,None).
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "b1")  # tenant org-1
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "b2"}, grace=timedelta(days=1), actor="cli"
+    )
+    # Same-org reads see the data.
+    assert store.get_connection_secret_events(conn.id, tenant_id="org-1")
+    assert store.get_connection_grace_status(conn.id, tenant_id="org-1")[0] is True
+    # Cross-org reads are fenced.
+    assert store.get_connection_secret_events(conn.id, tenant_id="org-2") == []
+    assert store.get_connection_grace_status(conn.id, tenant_id="org-2") == (False, None)
+
+
 def test_migration_0012_adds_grace_and_audit(store_url: str) -> None:
     from alembic import command
     from alembic.config import Config

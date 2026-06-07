@@ -93,6 +93,10 @@ def create_connection_admin_routes() -> APIRouter:
     async def connections_page(request: Request) -> HTMLResponse:
         from dazzle.back.runtime.auth.connection_admin_views import build_connections_view
         from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
+        from dazzle.back.runtime.auth.connection_doctor import (
+            diagnose_connection,
+            environment_flags,
+        )
         from dazzle.back.runtime.auth.domain_verification import txt_record
         from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -101,7 +105,10 @@ def create_connection_admin_routes() -> APIRouter:
             return HTMLResponse("Forbidden", status_code=403)
         store, _ctx, org_id = gated
 
+        flags = environment_flags()
         connections: list[dict[str, Any]] = []
+        # Only the caller's-org connections are iterated, so every per-connection read
+        # below (readiness / events / grace) is org-fenced for free — no cross-org leak.
         for conn in store.get_connections_for_tenant(org_id):
             verified = {d.strip().lower() for d in (conn.verified_domains or [])}
             unverified = []
@@ -114,6 +121,48 @@ def create_connection_admin_routes() -> APIRouter:
                 except ConnectionSecretError:
                     txt = "(set DAZZLE_CONNECTION_SECRET to compute the record)"
                 unverified.append({"domain": norm, "txt": txt})
+            # Activation readiness — the SAME diagnosis the CLI `doctor` reports (no drift).
+            # Secret-free: checks carry presence/detail/remedy, never a secret value.
+            try:
+                diag = diagnose_connection(
+                    conn,
+                    secret_key_ok=flags[0],
+                    sso_extra_ok=flags[1],
+                    dns_extra_ok=flags[2],
+                )
+                readiness = {
+                    "ready": diag.ready,
+                    "checks": [
+                        {"name": c.name, "ok": c.status == "ok", "detail": c.detail}
+                        for c in diag.checks
+                        if c.level == "required"
+                    ],
+                    # Just the failing required remedies (not the full runbook's always-on
+                    # OIDC test/redirect steps) — the org admin's "what's left".
+                    "next_steps": [
+                        c.remedy
+                        for c in diag.checks
+                        if c.level == "required" and c.status != "ok" and c.remedy
+                    ],
+                }
+            except ConnectionSecretError:
+                readiness = {
+                    "ready": False,
+                    "checks": [],
+                    "next_steps": [
+                        "The operator must set DAZZLE_CONNECTION_SECRET to assess readiness."
+                    ],
+                }
+            events = [
+                {
+                    "at": e.at.isoformat() if hasattr(e.at, "isoformat") else str(e.at),
+                    "event": e.event,
+                    "actor": e.actor or "-",
+                    "grace_until": (e.detail or {}).get("grace_until"),
+                }
+                for e in store.get_connection_secret_events(conn.id, tenant_id=org_id)[:5]
+            ]
+            grace_active, grace_exp = store.get_connection_grace_status(conn.id, tenant_id=org_id)
             connections.append(
                 {
                     "id": conn.id,
@@ -122,6 +171,9 @@ def create_connection_admin_routes() -> APIRouter:
                     "verified": sorted(verified),
                     "unverified": unverified,
                     "active_for_sso": bool(verified),
+                    "readiness": readiness,
+                    "events": events,
+                    "grace": {"active": grace_active, "expires_at": grace_exp},
                 }
             )
 

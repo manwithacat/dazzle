@@ -478,3 +478,16 @@ def test_secret_history_empty(monkeypatch) -> None:
     _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="scim")))
     r = runner.invoke(auth_app, ["connection", "secret-history", "conn-1"])
     assert r.exit_code == 0 and "No secret-rotation events" in r.output
+
+
+def test_environment_flags_reports_key_presence(monkeypatch) -> None:
+    import base64
+
+    from dazzle.back.runtime.auth.connection_doctor import environment_flags
+
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", base64.b64encode(b"k" * 32).decode())
+    secret_ok, _sso, _dns = environment_flags()
+    assert secret_ok is True
+    monkeypatch.delenv("DAZZLE_CONNECTION_SECRET", raising=False)
+    secret_ok2, _sso2, _dns2 = environment_flags()
+    assert secret_ok2 is False

@@ -85,6 +85,12 @@ class _Store:
     def set_connection_verified_domains(self, connection_id, verified):
         pass
 
+    def get_connection_secret_events(self, connection_id, *, tenant_id=None):
+        return getattr(self, "_events", {}).get(connection_id, [])
+
+    def get_connection_grace_status(self, connection_id, *, tenant_id=None):
+        return getattr(self, "_grace", {}).get(connection_id, (False, None))
+
     def get_organization(self, org_id):
         return SimpleNamespace(name="Acme Inc")
 
@@ -141,6 +147,64 @@ def test_page_only_shows_active_orgs_connections() -> None:
     store = _Store(connections=[_conn("c1", "org-1"), _conn("c2", "org-2")])
     r = _client(store).get("/auth/connections")
     assert "c1" in r.text and "c2" not in r.text
+
+
+# ---- readiness panel + rotation audit (#1342) ----
+
+
+def test_page_shows_readiness() -> None:
+    store = _Store(connections=[_conn()])
+    r = _client(store).get("/auth/connections")
+    assert r.status_code == 200
+    assert "ready" in r.text.lower()  # the readiness panel renders
+
+
+def test_page_shows_rotation_history() -> None:
+    store = _Store(connections=[_conn()])
+    store._events = {
+        "conn-1": [
+            SimpleNamespace(
+                at=datetime(2026, 6, 7),
+                event="rotated",
+                actor="cli",
+                detail={"grace_until": "2026-06-08T00:00:00+00:00"},
+            )
+        ]
+    }
+    r = _client(store).get("/auth/connections")
+    assert r.status_code == 200 and "rotated" in r.text and "2026-06-07" in r.text
+
+
+def test_page_shows_grace_window_when_active() -> None:
+    store = _Store(connections=[_conn()])
+    store._grace = {"conn-1": (True, "2026-06-08T00:00:00+00:00")}
+    r = _client(store).get("/auth/connections")
+    assert r.status_code == 200 and "Grace window active" in r.text
+
+
+def test_readiness_and_audit_never_leak_secret() -> None:
+    store = _Store(connections=[_conn(secrets={"client_secret": "SUPER-SECRET"})])
+    store._events = {
+        "conn-1": [
+            SimpleNamespace(at=datetime(2026, 6, 7), event="rotated", actor="cli", detail={})
+        ]
+    }
+    store._grace = {"conn-1": (True, "2026-06-08T00:00:00+00:00")}
+    r = _client(store).get("/auth/connections")
+    assert r.status_code == 200
+    assert "SUPER-SECRET" not in r.text  # no secret via any new path
+
+
+def test_audit_is_org_scoped() -> None:
+    # Admin of org-1; a second-org connection's events must never be fetched/rendered.
+    store = _Store(connections=[_conn("conn-1", "org-1"), _conn("conn-2", "org-2")])
+    store._events = {
+        "conn-2": [
+            SimpleNamespace(at=datetime(2026, 6, 7), event="rotated", actor="cli", detail={})
+        ]
+    }
+    r = _client(store).get("/auth/connections")
+    assert r.status_code == 200 and "conn-2" not in r.text
 
 
 # ---- add-domain ----
