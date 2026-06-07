@@ -18,6 +18,49 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "tests" / "audit"
 
+# Path substrings that mark a test's subject as an input-boundary surface — a cluster of
+# same-shape example tests over such a surface is a candidate to collapse into ONE property
+# test (an input space + an invariant), which is then a fuzz target. (#1342 fuzz leverage.)
+# DSL-text surfaces get the existing corpus+mutator kit ("fuzz"); other arbitrary-input
+# surfaces get a Hypothesis property ("property"). Everything else stays "parametrise".
+_FUZZ_PATH_HINTS = ("parser", "lexer", "grammar", "_dsl", "dsl_", "tokeniz", "expression_lang")
+_PROPERTY_PATH_HINTS = (
+    "saml",
+    "scim",
+    "metadata",
+    "crypto",
+    "jwt",
+    "url",
+    "validat",
+    "sanitiz",
+    "duration",
+    "scope",
+    "secret_rotation",
+    "predicate",
+    "token",
+)
+
+
+def recommend_form(file: str, assertion_shape: str) -> tuple[str, str]:
+    """(recommended_form, rationale) for collapsing a same-shape cluster.
+
+    A path-based hint, not ground truth: it flags clusters whose subject is an
+    input-boundary parser/validator so a human/agent can decide whether to collapse them
+    into a fuzzable property test rather than a fixed ``@pytest.mark.parametrize`` list.
+    """
+    low = file.lower()
+    if any(h in low for h in _FUZZ_PATH_HINTS):
+        return (
+            "fuzz",
+            "DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators)",
+        )
+    if any(h in low for h in _PROPERTY_PATH_HINTS):
+        return (
+            "property",
+            "input-boundary surface — collapse to a Hypothesis property (input space → invariant)",
+        )
+    return "parametrise", "enumerable cases — collapse to @pytest.mark.parametrize"
+
 
 def main() -> None:
     records = json.load((OUT_DIR / "classification.json").open())
@@ -48,6 +91,7 @@ def main() -> None:
     # Write JSON
     cluster_records = []
     for (file, cls, shape), members in by_size:
+        form, form_rationale = recommend_form(file, shape)
         cluster_records.append(
             {
                 "file": file,
@@ -60,6 +104,8 @@ def main() -> None:
                     if len(members) >= 5
                     else "review (could parametrise or be intentional independent cases)"
                 ),
+                "recommended_form": form,
+                "form_rationale": form_rationale,
             }
         )
     (OUT_DIR / "redundancy.json").write_text(json.dumps(cluster_records, indent=2))
@@ -135,6 +181,31 @@ def main() -> None:
     lines.append("|---|---:|")
     for f, n in file_pressure.most_common(10):
         lines.append(f"| `{f}` | {n} |")
+    lines.append("")
+
+    # Fuzz-target worklist: clusters on input-boundary surfaces are candidates to collapse
+    # into a property/fuzz test (not just a parametrize list). This is the #1342 lever —
+    # turning the redundancy backlog into a ranked list of new fuzz surfaces.
+    fuzzable = [c for c in cluster_records if c["recommended_form"] in ("property", "fuzz")]
+    fuzzable.sort(key=lambda c: -c["size"])
+    lines.append("## Fuzz-target worklist (property/fuzz-candidate clusters)")
+    lines.append("")
+    lines.append(
+        "Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). "
+        "Each is a candidate to collapse into ONE property test (input space → invariant) — "
+        "which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` "
+        "list. Path-based hint; confirm by reading the cluster. (#1342)"
+    )
+    lines.append("")
+    lines.append(f"- **Property/fuzz-candidate clusters**: {len(fuzzable):,}")
+    lines.append("")
+    lines.append("| File | Class | Size | Form | Why |")
+    lines.append("|---|---|---:|---|---|")
+    for c in fuzzable[:30]:
+        lines.append(
+            f"| `{c['file']}` | `{c['class']}` | {c['size']} | {c['recommended_form']} | "
+            f"{c['form_rationale']} |"
+        )
     lines.append("")
 
     lines.append("## How to act on this")

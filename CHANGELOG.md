@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.85] - 2026-06-07
+
+### Added
+
+- **Test-distillation now names fuzzable tests (fuzz-leverage 1a + 1b).** Following the parser bug the fuzz suite caught (see `docs/proposals/fuzz-harness-leverage-evaluation.md`): `scripts/distill/classify.py` gains a `property_based` archetype (detects `@given`, ranked above `parametric_cluster`) so the suite's property-vs-example ratio is finally **measurable** — currently **54** property-based tests of 15,383. `scripts/distill/cluster.py` annotates every redundancy cluster with a `recommended_form` (parametrise / property / fuzz, path-heuristic) and the redundancy report gains a **"Fuzz-target worklist"** — the input-boundary clusters (parser/validator/crypto/…) that are candidates to collapse into a property/fuzz test rather than a fixed `@pytest.mark.parametrize` list (currently **102** candidate clusters). This closes the *distillation → property test → fuzz target* loop the evaluation identified.
+
 ## [0.81.83] - 2026-06-07
 
 ### Added

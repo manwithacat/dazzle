@@ -30,6 +30,7 @@ class TestMetrics:
     n_mocks: int = 0  # MagicMock, AsyncMock, patch
     n_fixtures: int = 0
     parametrize_n: int = 0  # number of parametrize cases declared
+    has_given: bool = False  # @given(...) — Hypothesis property test
     imports_private: list[str] = field(
         default_factory=list
     )  # underscore-prefixed callables imported
@@ -137,6 +138,21 @@ def _parametrize_n(decorators: list[ast.expr]) -> int:
     return 0
 
 
+def _has_given(decorators: list[ast.expr]) -> bool:
+    """True if the test carries a Hypothesis ``@given(...)`` decorator.
+
+    Matches both ``@given(...)`` (``from hypothesis import given``) and
+    ``@hypothesis.given(...)`` / ``@st.given`` attribute forms."""
+    for dec in decorators:
+        call = dec if isinstance(dec, ast.Call) else None
+        target = call.func if call is not None else dec
+        if isinstance(target, ast.Name) and target.id == "given":
+            return True
+        if isinstance(target, ast.Attribute) and target.attr == "given":
+            return True
+    return False
+
+
 def _has_issue_ref(name: str, docstring: str | None) -> bool:
     text = (docstring or "") + " " + name
     return bool(re.search(r"#\d{3,5}|issue \d+|PR \d+|closes #\d+", text, re.I))
@@ -165,6 +181,16 @@ def _classify(metrics: TestMetrics, name: str, file_path: str) -> tuple[str, flo
     # 1. Snapshot — has snapshot assert
     if metrics.has_snapshot:
         return "snapshot", 0.95, "uses syrupy/snapshot fixture"
+
+    # 1b. Property-based — @given (Hypothesis). The strongest "already fuzzable" signal:
+    # an input space + an invariant. Ranked above parametric_cluster (a @given test that
+    # also carries @parametrize is still fundamentally a property test).
+    if metrics.has_given:
+        return (
+            "property_based",
+            0.95,
+            "@given (Hypothesis) — input space + invariant; already a fuzz target",
+        )
 
     # 2. Parametric cluster — explicit parametrize (these are GOOD; flag for keep, not collapse)
     if metrics.parametrize_n >= 2:
@@ -226,6 +252,7 @@ def _process_test_function(
     metrics.imports_public = public_imports_in_file
     if hasattr(fn, "decorator_list"):
         metrics.parametrize_n = _parametrize_n(fn.decorator_list)
+        metrics.has_given = _has_given(fn.decorator_list)
     docstring = (
         ast.get_docstring(fn) if isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef) else None
     )
@@ -375,11 +402,16 @@ def write_outputs(records: list[TestRecord]) -> None:
     )
     keep = sum(
         by_archetype[k]
-        for k in ("contract", "regression_pin", "parametric_cluster", "snapshot")
+        for k in ("contract", "regression_pin", "parametric_cluster", "snapshot", "property_based")
         if by_archetype[k]
     )
     lines.append(
-        f"- **Definitely keep**: {keep:,} (contract + regression_pin + parametric + snapshot)"
+        f"- **Definitely keep**: {keep:,} "
+        "(contract + regression_pin + parametric + snapshot + property_based)"
+    )
+    lines.append(
+        f"- **Property-based (fuzzable; the target archetype)**: "
+        f"{by_archetype.get('property_based', 0):,}"
     )
     lines.append(
         f"- **Review for collapse/rewrite**: {review_candidates:,} (implementation_mirror + belt_and_braces)"
