@@ -58,6 +58,20 @@ class _Store:
         self.secret_updates.append((connection_id, secrets))
         return True
 
+    def rotate_connection_secret(self, cid, secrets, *, grace=None, actor=None, tenant_id=None):
+        if self._conn is None or self._conn.id != cid:
+            return False
+        self.secret_updates.append((cid, secrets))
+        self.rotate_grace = grace
+        return True
+
+    def revoke_previous_connection_secret(self, cid, *, actor=None, tenant_id=None):
+        self.revoked = cid
+        return getattr(self, "_has_prev", False)
+
+    def get_connection_secret_events(self, cid):
+        return getattr(self, "_events", [])
+
     def get_connection_by_verified_domain(self, domain):
         return self._owner_of.get(domain.strip().lower())
 
@@ -396,3 +410,71 @@ def test_rotate_secret_missing_connection(monkeypatch) -> None:
     _patch_store(monkeypatch, _Store(conn=None))
     r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-x", "--client-secret", "s"])
     assert r.exit_code == 1 and "No connection" in r.output
+
+
+# ---- #1342 grace window + audit ----
+
+
+def test_rotate_secret_scim_grace_reports_window(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="scim"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-1", "--grace", "24h"])
+    assert r.exit_code == 0
+    assert store.rotate_grace is not None  # grace passed through to the store
+    assert "previous" in r.output.lower()  # the overlap window is communicated
+
+
+def test_rotate_secret_grace_refused_for_oidc(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="oidc")))
+    r = runner.invoke(
+        auth_app,
+        ["connection", "rotate-secret", "conn-1", "--client-secret", "s", "--grace", "24h"],
+    )
+    assert r.exit_code == 1 and "grace" in r.output.lower()
+
+
+def test_rotate_secret_grace_bad_duration(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="scim")))
+    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-1", "--grace", "soon"])
+    assert r.exit_code == 1 and "grace" in r.output.lower()
+
+
+def test_revoke_previous_secret(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="scim"))
+    store._has_prev = True
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "revoke-previous-secret", "conn-1"])
+    assert r.exit_code == 0 and store.revoked == "conn-1" and "Revoked" in r.output
+
+
+def test_revoke_previous_secret_none_active(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="scim"))  # _has_prev defaults False
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "revoke-previous-secret", "conn-1"])
+    assert r.exit_code == 0 and "nothing to revoke" in r.output.lower()
+
+
+def test_secret_history_lists_events(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    store = _Store(conn=_Conn("conn-1", conn_type="scim"))
+    store._events = [
+        SimpleNamespace(
+            at="2026-06-07T00:00:00Z", event="rotated", actor="cli", detail={"grace": True}
+        )
+    ]
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "secret-history", "conn-1"])
+    assert r.exit_code == 0 and "rotated" in r.output
+
+
+def test_revoke_previous_secret_missing_connection(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=None))
+    r = runner.invoke(auth_app, ["connection", "revoke-previous-secret", "conn-x"])
+    assert r.exit_code == 1 and "No connection" in r.output
+
+
+def test_secret_history_empty(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="scim")))
+    r = runner.invoke(auth_app, ["connection", "secret-history", "conn-1"])
+    assert r.exit_code == 0 and "No secret-rotation events" in r.output

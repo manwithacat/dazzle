@@ -6,6 +6,7 @@ import base64
 import os
 import uuid
 from collections.abc import Iterator
+from datetime import timedelta
 
 import psycopg
 import pytest
@@ -264,3 +265,170 @@ def test_migration_0011_creates_connections(store_url: str) -> None:
         ver = c.execute("SELECT version_num FROM alembic_version").fetchone()
     assert ok is True
     assert ver is not None and ver[0] == "0011_connections"
+
+
+# ---- #1342 SCIM bearer grace window + rotation audit ----
+
+
+def _make_scim_connection(store, bearer: str):
+    return store.create_connection(
+        tenant_id="org-1", type="scim", config={}, secrets={"scim_bearer": bearer}, domains=[]
+    )
+
+
+def test_scim_bearer_grace_window(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "old-bearer-xyz")
+    assert store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "new-bearer-abc"}, grace=timedelta(hours=24), actor="cli"
+    )
+    # Both old and new authenticate during the window.
+    assert store.get_scim_connection_by_bearer("new-bearer-abc").id == conn.id
+    assert store.get_scim_connection_by_bearer("old-bearer-xyz").id == conn.id
+    events = store.get_connection_secret_events(conn.id)
+    assert events[0].event == "rotated" and events[0].detail["grace"] is True
+
+
+def test_grace_expiry_rejects_old_bearer(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "old-b")
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "new-b"}, grace=timedelta(hours=1), actor="cli"
+    )
+    with psycopg.connect(store_url) as c:
+        c.execute(
+            "UPDATE connections SET previous_secret_expires_at=%s WHERE id=%s",
+            ("2000-01-01T00:00:00+00:00", conn.id),
+        )
+        c.commit()
+    assert store.get_scim_connection_by_bearer("new-b").id == conn.id
+    assert store.get_scim_connection_by_bearer("old-b") is None  # expired
+
+
+def test_revoke_previous_kills_old_bearer(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "old-b")
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "new-b"}, grace=timedelta(days=1), actor="cli"
+    )
+    assert store.revoke_previous_connection_secret(conn.id, actor="cli") is True
+    assert store.get_scim_connection_by_bearer("old-b") is None
+    assert store.get_scim_connection_by_bearer("new-b").id == conn.id
+    # Idempotent: nothing left to revoke.
+    assert store.revoke_previous_connection_secret(conn.id, actor="cli") is False
+    assert {e.event for e in store.get_connection_secret_events(conn.id)} >= {
+        "rotated",
+        "revoked_previous",
+    }
+
+
+def test_hard_swap_clears_previous_and_audits(store_url: str) -> None:
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "b1")
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "b2"}, grace=timedelta(days=1), actor="cli"
+    )
+    # A subsequent hard swap (no grace) must clear the grace secret.
+    store.rotate_connection_secret(conn.id, {"scim_bearer": "b3"}, grace=None, actor="cli")
+    assert store.get_scim_connection_by_bearer("b1") is None
+    assert store.get_scim_connection_by_bearer("b2") is None
+    assert store.get_scim_connection_by_bearer("b3").id == conn.id
+
+
+def test_rewrap_covers_grace_blob(store_url: str, monkeypatch) -> None:
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "b1")
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "b2"}, grace=timedelta(days=1), actor="cli"
+    )
+    # Rotate the master key: the old key becomes the rotation key, the new is primary.
+    old_key = base64.b64encode(b"k" * 32).decode()
+    new_key = base64.b64encode(b"j" * 32).decode()
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", new_key)
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET_OLD", old_key)
+    result = store.rewrap_all_connection_secrets()
+    assert result.failed == []
+    # Both bearers still authenticate — the grace blob was re-encrypted too.
+    assert store.get_scim_connection_by_bearer("b2").id == conn.id
+    assert store.get_scim_connection_by_bearer("b1").id == conn.id
+    assert "encryption_key_rewrapped" in {
+        e.event for e in store.get_connection_secret_events(conn.id)
+    }
+
+
+def test_rewrap_rewraps_live_even_if_grace_blob_unreadable(store_url: str, monkeypatch) -> None:
+    # Review #1342: a grace blob the rewrap can't decrypt must NOT strand the live
+    # secret — the live blob still moves onto the new key (the bad grace blob is
+    # reported in `failed`, not allowed to abandon the row).
+    store = _store(store_url)
+    conn = _make_scim_connection(store, "b1")
+    store.rotate_connection_secret(
+        conn.id, {"scim_bearer": "b2"}, grace=timedelta(days=1), actor="cli"
+    )
+    # Corrupt the grace blob so no key can decrypt it.
+    with psycopg.connect(store_url) as c:
+        c.execute(
+            "UPDATE connections SET previous_encrypted_secret=%s WHERE id=%s",
+            ("not-a-valid-blob", conn.id),
+        )
+        c.commit()
+    old_key = base64.b64encode(b"k" * 32).decode()
+    new_key = base64.b64encode(b"j" * 32).decode()
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", new_key)
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET_OLD", old_key)
+    result = store.rewrap_all_connection_secrets()
+    assert conn.id in result.failed  # the bad grace blob is reported
+    # The live secret was still rewrapped — it authenticates with ONLY the new key.
+    monkeypatch.delenv("DAZZLE_CONNECTION_SECRET_OLD")
+    assert store.get_scim_connection_by_bearer("b2").id == conn.id
+
+
+def test_rotate_grace_on_non_scim_rejected_at_store(store_url: str) -> None:
+    # Review #1342: the SCIM-only grace contract is enforced in the store, not just
+    # the CLI, so a future non-CLI caller can't store a useless grace blob.
+    import pytest as _pytest
+
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={"client_secret": "s"}, domains=[]
+    )
+    with _pytest.raises(ValueError):
+        store.rotate_connection_secret(
+            conn.id, {"client_secret": "s2"}, grace=timedelta(hours=1), actor="cli"
+        )
+
+
+def test_migration_0012_adds_grace_and_audit(store_url: str) -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    from dazzle.cli.db import _get_framework_alembic_dir
+
+    _store(store_url)
+    with psycopg.connect(store_url, autocommit=True) as c:
+        c.execute("DROP TABLE IF EXISTS connection_secret_events")
+        c.execute("ALTER TABLE connections DROP COLUMN IF EXISTS previous_encrypted_secret")
+        c.execute("ALTER TABLE connections DROP COLUMN IF EXISTS previous_secret_expires_at")
+    fw = _get_framework_alembic_dir()
+    cfg = Config(str(fw / "alembic.ini"))
+    cfg.set_main_option("script_location", str(fw))
+    cfg.set_main_option("version_locations", str(fw / "versions"))
+    cfg.set_main_option(
+        "sqlalchemy.url", store_url.replace("postgresql://", "postgresql+psycopg://")
+    )
+    command.stamp(cfg, "0011_connections")
+    command.upgrade(cfg, "0012_connection_grace_secret")
+    with psycopg.connect(store_url) as c:
+        tbl = c.execute(
+            "SELECT to_regclass('public.connection_secret_events') IS NOT NULL"
+        ).fetchone()[0]
+        cols = {
+            r[0]
+            for r in c.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='connections'"
+            ).fetchall()
+        }
+        ver = c.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    assert tbl is True
+    assert {"previous_encrypted_secret", "previous_secret_expires_at"} <= cols
+    assert ver == "0012_connection_grace_secret"

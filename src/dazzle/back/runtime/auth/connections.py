@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS connections (
     verified_domains TEXT NOT NULL DEFAULT '[]',
     config TEXT NOT NULL DEFAULT '{}',
     encrypted_secret TEXT,
+    previous_encrypted_secret TEXT,
+    previous_secret_expires_at TEXT,
     group_mapping TEXT NOT NULL DEFAULT '{}',
     status TEXT NOT NULL DEFAULT 'active',
     created_at TEXT NOT NULL,
@@ -86,6 +88,20 @@ class RewrapResult:
     rewrapped: int
     already_current: int
     failed: list[str]
+
+
+@dataclass(frozen=True)
+class ConnectionSecretEvent:
+    """One append-only rotation-audit row (#1342). ``detail`` is non-secret JSON
+    context (connection type, grace flag/expiry) — a secret value never appears here."""
+
+    id: str
+    connection_id: str
+    tenant_id: str
+    event: str  # rotated | revoked_previous | encryption_key_rewrapped
+    actor: str | None
+    detail: dict[str, Any]
+    at: datetime
 
 
 @dataclass(frozen=True)

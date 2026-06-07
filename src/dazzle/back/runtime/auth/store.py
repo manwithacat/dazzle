@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from dazzle.back.runtime.auth.connections import ConnectionRecord, RewrapResult
+    from dazzle.back.runtime.auth.connections import (
+        ConnectionRecord,
+        ConnectionSecretEvent,
+        RewrapResult,
+    )
     from dazzle.back.runtime.auth.membership_events import (
         EventChainResult,
         MembershipEvent,
@@ -1234,11 +1238,18 @@ class SessionStoreMixin:
         token byte-by-byte. Fail-closed: an empty token, or a connection with no stored
         bearer, never matches. The bearer is high-entropy, so the small per-connection
         timing signal (how many candidates were compared) can't help forge it.
+
+        Grace window (#1342): a non-expired ``previous_encrypted_secret`` bearer also
+        authenticates, so a ``rotate-secret --grace`` overlap lets the IdP migrate without
+        a provisioning outage. An expired or absent previous secret is ignored; the read
+        path stays read-only (no lazy cleanup — that's ``revoke-previous-secret``).
         """
         import hmac
+        import json
 
         if not token:
             return None
+        now = datetime.now(UTC)
         match: ConnectionRecord | None = None
         for row in self._execute(
             "SELECT * FROM connections WHERE status = 'active' AND type = 'scim'"
@@ -1247,8 +1258,42 @@ class SessionStoreMixin:
             stored = (conn.secrets or {}).get("scim_bearer") or ""
             # Compare as bytes so a non-ASCII presented token fails closed (no match)
             # instead of raising in compare_digest.
-            if stored and hmac.compare_digest(str(stored).encode("utf-8"), token.encode("utf-8")):
-                match = conn  # don't break — compare all candidates (uniform work)
+            # Don't break — compare all candidates (uniform work); record only the
+            # FIRST match (the compares still all run, so timing stays uniform).
+            if (
+                stored
+                and hmac.compare_digest(str(stored).encode("utf-8"), token.encode("utf-8"))
+                and match is None
+            ):
+                match = conn
+            # Grace: a non-expired PREVIOUS bearer also authenticates.
+            prev_blob = row.get("previous_encrypted_secret")
+            prev_exp = row.get("previous_secret_expires_at")
+            if prev_blob and prev_exp:
+                from dazzle.back.runtime.auth.connection_crypto import (
+                    ConnectionSecretError,
+                    decrypt_secret,
+                )
+
+                try:
+                    if datetime.fromisoformat(prev_exp) > now:
+                        prev_bearer = (json.loads(decrypt_secret(prev_blob)) or {}).get(
+                            "scim_bearer"
+                        ) or ""
+                        if (
+                            prev_bearer
+                            and hmac.compare_digest(
+                                str(prev_bearer).encode("utf-8"), token.encode("utf-8")
+                            )
+                            and match is None
+                        ):
+                            match = conn
+                except (ConnectionSecretError, ValueError):
+                    # Undecryptable/malformed previous → ignore (fail-closed). Narrow,
+                    # not a bare `except: pass`; the current bearer still governs. WARNING
+                    # (not debug) so a stranded grace blob — which silently fails the old
+                    # bearer mid-window — is visible to the operator.
+                    logger.warning("ignoring an unreadable grace blob for connection %s", conn.id)
         return match
 
     def set_connection_domains(self, connection_id: str, domains: list[str]) -> None:
@@ -1271,6 +1316,11 @@ class SessionStoreMixin:
         after a full rotation rewraps nothing. A secret that no configured key can decrypt
         is collected in ``failed`` (the operator must set the right ``..._OLD`` key) — it
         is skipped, never dropped, and the rotation continues.
+
+        Covers BOTH the live ``encrypted_secret`` and the ``previous_encrypted_secret``
+        grace blob (#1342) — a grace blob left on the old key would silently stop the
+        in-window old bearer from authenticating after a master-key rotation. A connection
+        that is actually rewrapped also gets an ``encryption_key_rewrapped`` audit event.
         """
         from dazzle.back.runtime.auth.connection_crypto import (
             ConnectionSecretError,
@@ -1278,29 +1328,74 @@ class SessionStoreMixin:
             encrypt_secret,
         )
         from dazzle.back.runtime.auth.connections import RewrapResult
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_KEY_REWRAPPED
 
         rewrapped = 0
         already_current = 0
         failed: list[str] = []
         now = datetime.now(UTC).isoformat()
         for row in self._execute(
-            "SELECT id, encrypted_secret FROM connections WHERE encrypted_secret IS NOT NULL"
+            "SELECT id, tenant_id, encrypted_secret, previous_encrypted_secret "
+            "FROM connections "
+            "WHERE encrypted_secret IS NOT NULL OR previous_encrypted_secret IS NOT NULL"
         ):
-            enc = row.get("encrypted_secret")
-            if not enc:
-                continue
-            try:
-                plaintext, key_index = decrypt_secret_with_key_index(enc)
-            except ConnectionSecretError:
+            updates: dict[str, str] = {}
+            had_failure = False
+            for col in ("encrypted_secret", "previous_encrypted_secret"):
+                enc = row.get(col)
+                if not enc:
+                    continue
+                try:
+                    plaintext, key_index = decrypt_secret_with_key_index(enc)
+                except ConnectionSecretError:
+                    # This blob can't be moved — report it, but DON'T abandon a
+                    # sibling blob that CAN move. Breaking here would strand the
+                    # live secret when only the grace blob is undecryptable.
+                    had_failure = True
+                    continue
+                if key_index != 0:  # on the rotation key — move it onto the primary
+                    updates[col] = encrypt_secret(plaintext)
+            if had_failure:
                 failed.append(row["id"])
+            if not updates:
+                if not had_failure:
+                    already_current += 1  # all present blobs already on the primary key
                 continue
-            if key_index == 0:
-                already_current += 1  # already on the primary key — leave it
-                continue
-            self._execute_modify(
-                "UPDATE connections SET encrypted_secret = %s, updated_at = %s WHERE id = %s",
-                (encrypt_secret(plaintext), now, row["id"]),
-            )
+            # Only the two fixed column names are ever set here (never user input);
+            # values are bound via %s — so this stays parameterised/injection-safe.
+            if "encrypted_secret" in updates and "previous_encrypted_secret" in updates:
+                update_sql = (
+                    "UPDATE connections SET encrypted_secret = %s, "
+                    "previous_encrypted_secret = %s, updated_at = %s WHERE id = %s"
+                )
+                params: tuple[Any, ...] = (
+                    updates["encrypted_secret"],
+                    updates["previous_encrypted_secret"],
+                    now,
+                    row["id"],
+                )
+            elif "encrypted_secret" in updates:
+                update_sql = (
+                    "UPDATE connections SET encrypted_secret = %s, updated_at = %s WHERE id = %s"
+                )
+                params = (updates["encrypted_secret"], now, row["id"])
+            else:
+                update_sql = (
+                    "UPDATE connections SET previous_encrypted_secret = %s, "
+                    "updated_at = %s WHERE id = %s"
+                )
+                params = (updates["previous_encrypted_secret"], now, row["id"])
+            with self._transaction() as cur:
+                cur.execute(update_sql, params)
+                self._write_secret_event(
+                    cur,
+                    connection_id=row["id"],
+                    tenant_id=row["tenant_id"],
+                    event=SECRET_EVENT_KEY_REWRAPPED,
+                    actor="system",
+                    detail={"from_key": "old"},
+                    at=now,
+                )
             rewrapped += 1
         return RewrapResult(rewrapped=rewrapped, already_current=already_current, failed=failed)
 
@@ -1333,6 +1428,173 @@ class SessionStoreMixin:
                 (encrypted, now, connection_id),
             )
         return bool(rowcount > 0)
+
+    def _write_secret_event(
+        self,
+        cur: Any,
+        *,
+        connection_id: str,
+        tenant_id: str,
+        event: str,
+        actor: str | None,
+        detail: dict[str, Any],
+        at: str,
+    ) -> None:
+        """Append one connection_secret_events row (#1342). ``detail`` is non-secret JSON."""
+        import json
+        import uuid
+
+        cur.execute(
+            "INSERT INTO connection_secret_events "
+            "(id, connection_id, tenant_id, event, actor, detail, at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (uuid.uuid4().hex, connection_id, tenant_id, event, actor, json.dumps(detail), at),
+        )
+
+    def rotate_connection_secret(
+        self,
+        connection_id: str,
+        new_secrets: dict[str, Any],
+        *,
+        grace: "timedelta | None" = None,  # noqa: F821
+        actor: str | None = None,
+        tenant_id: str | None = None,
+    ) -> bool:
+        """Rotate a connection's secret, optionally keeping the OLD one valid for ``grace``.
+
+        One transaction: writes the new ``encrypted_secret``, sets-or-clears the grace
+        columns (``previous_encrypted_secret`` / ``previous_secret_expires_at``), bumps
+        ``updated_at`` (the OIDC client-cache key), and appends a ``rotated`` audit event
+        with non-secret detail. With ``grace`` the old blob stays valid until
+        ``now + grace`` (SCIM-bearer overlap; see ``get_scim_connection_by_bearer``);
+        without it the rotation is a hard swap that clears any prior grace secret. Returns
+        ``True`` if a row changed. ``tenant_id`` fences the write to one org.
+        """
+        import json
+
+        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ROTATED
+
+        now_dt = datetime.now(UTC)
+        now = now_dt.isoformat()
+        encrypted_new = encrypt_secret(json.dumps(new_secrets)) if new_secrets else None
+        with self._transaction() as cur:
+            if tenant_id is not None:
+                cur.execute(
+                    "SELECT encrypted_secret, tenant_id, type FROM connections "
+                    "WHERE id = %s AND tenant_id = %s",
+                    (connection_id, tenant_id),
+                )
+            else:
+                cur.execute(
+                    "SELECT encrypted_secret, tenant_id, type FROM connections WHERE id = %s",
+                    (connection_id,),
+                )
+            row = cur.fetchone()
+            if row is None:
+                return False
+            ten = row["tenant_id"]
+            # Grace is SCIM-bearer-ONLY (an OIDC client_secret is arbitrated by the IdP,
+            # so an overlap window is meaningless). Enforce here too, not just in the CLI,
+            # so a future route / MCP / programmatic caller can't store a useless grace
+            # blob + a misleading grace=True audit event on a non-SCIM connection.
+            if grace is not None and row["type"] != "scim":
+                raise ValueError(
+                    f"grace window is SCIM-only (connection {connection_id!r} is {row['type']!r})"
+                )
+            if grace is not None:
+                expires = (now_dt + grace).isoformat()
+                cur.execute(
+                    "UPDATE connections SET encrypted_secret = %s, "
+                    "previous_encrypted_secret = %s, previous_secret_expires_at = %s, "
+                    "updated_at = %s WHERE id = %s",
+                    (encrypted_new, row["encrypted_secret"], expires, now, connection_id),
+                )
+                detail: dict[str, Any] = {
+                    "type": row["type"],
+                    "grace": True,
+                    "grace_until": expires,
+                }
+            else:
+                cur.execute(
+                    "UPDATE connections SET encrypted_secret = %s, "
+                    "previous_encrypted_secret = NULL, previous_secret_expires_at = NULL, "
+                    "updated_at = %s WHERE id = %s",
+                    (encrypted_new, now, connection_id),
+                )
+                detail = {"type": row["type"], "grace": False}
+            self._write_secret_event(
+                cur,
+                connection_id=connection_id,
+                tenant_id=ten,
+                event=SECRET_EVENT_ROTATED,
+                actor=actor,
+                detail=detail,
+                at=now,
+            )
+        return True
+
+    def revoke_previous_connection_secret(
+        self, connection_id: str, *, actor: str | None = None, tenant_id: str | None = None
+    ) -> bool:
+        """Clear the grace (previous) secret immediately + audit. Returns ``True`` iff a
+        previous secret was present (idempotent: ``False`` when there's nothing to revoke)."""
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_REVOKED_PREVIOUS
+
+        now = datetime.now(UTC).isoformat()
+        with self._transaction() as cur:
+            if tenant_id is not None:
+                cur.execute(
+                    "SELECT tenant_id, previous_encrypted_secret FROM connections "
+                    "WHERE id = %s AND tenant_id = %s",
+                    (connection_id, tenant_id),
+                )
+            else:
+                cur.execute(
+                    "SELECT tenant_id, previous_encrypted_secret FROM connections WHERE id = %s",
+                    (connection_id,),
+                )
+            row = cur.fetchone()
+            if row is None or not row["previous_encrypted_secret"]:
+                return False
+            cur.execute(
+                "UPDATE connections SET previous_encrypted_secret = NULL, "
+                "previous_secret_expires_at = NULL, updated_at = %s WHERE id = %s",
+                (now, connection_id),
+            )
+            self._write_secret_event(
+                cur,
+                connection_id=connection_id,
+                tenant_id=row["tenant_id"],
+                event=SECRET_EVENT_REVOKED_PREVIOUS,
+                actor=actor,
+                detail={},
+                at=now,
+            )
+        return True
+
+    def get_connection_secret_events(self, connection_id: str) -> "list[ConnectionSecretEvent]":  # noqa: F821
+        """The append-only rotation history for one connection, newest first."""
+        import json
+
+        from dazzle.back.runtime.auth.connections import ConnectionSecretEvent
+
+        rows = self._execute(
+            "SELECT * FROM connection_secret_events WHERE connection_id = %s ORDER BY seq DESC",
+            (connection_id,),
+        )
+        return [
+            ConnectionSecretEvent(
+                id=r["id"],
+                connection_id=r["connection_id"],
+                tenant_id=r["tenant_id"],
+                event=r["event"],
+                actor=r["actor"],
+                detail=json.loads(r["detail"]),
+                at=datetime.fromisoformat(r["at"]),
+            )
+            for r in rows
+        ]
 
     def set_connection_verified_domains(self, connection_id: str, verified: list[str]) -> None:
         """Set the verified-domain list — the output of a domain-ownership check.
@@ -1814,6 +2076,32 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
 
             cursor.execute(CONNECTIONS_DDL)
             for _ix in CONNECTIONS_INDEXES:
+                cursor.execute(_ix)
+
+            # #1342 grace window: keep the OLD SCIM bearer valid for an overlap
+            # window. Idempotent adds for pre-existing connections tables (dev
+            # path; prod gets these via alembic 0012). Mirrors the sessions ALTERs.
+            # Literal statements (no interpolation) so the SQL-injection scanner
+            # stays satisfied.
+            for _alter in (
+                "ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_encrypted_secret TEXT",
+                "ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_secret_expires_at TEXT",
+            ):
+                try:
+                    cursor.execute(_alter)
+                except Exception:
+                    logger.warning(
+                        "Schema migration for a connections grace column raised — continuing",
+                        exc_info=True,
+                    )
+            # #1342 rotation audit (append-only). Mirrors alembic 0012.
+            from dazzle.back.runtime.auth.secret_rotation import (
+                CONNECTION_SECRET_EVENTS_DDL,
+                CONNECTION_SECRET_EVENTS_INDEXES,
+            )
+
+            cursor.execute(CONNECTION_SECRET_EVENTS_DDL)
+            for _ix in CONNECTION_SECRET_EVENTS_INDEXES:
                 cursor.execute(_ix)
 
             # SCIM Groups (#1342). connection_id AND membership_id are code-scoped

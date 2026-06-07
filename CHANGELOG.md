@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.78] - 2026-06-07
+
+### Added
+
+- **SCIM bearer rotation grace window + rotation audit (#1342).** `dazzle auth connection rotate-secret <id> --grace <24h|7d|…>` mints a new SCIM bearer while keeping the OLD one valid for the window, so the IdP migrates without a provisioning outage (default is still a hard swap — right for a leak). `revoke-previous-secret <id>` ends a window early; `secret-history <id>` prints the new append-only `connection_secret_events` audit trail (`rotated` / `revoked_previous` / `encryption_key_rewrapped`, non-secret detail only). `get_scim_connection_by_bearer` honors a non-expired previous bearer (constant-time); expiry is enforced at verification (no reaper). Grace is SCIM-only — an OIDC `client_secret` is arbitrated by the IdP. Schema: alembic `0012` (two nullable `connections` columns + the audit table), mirrored in `_init_db`.
+
+### Changed
+
+- **Encryption-key rewrap now also re-encrypts the grace blob (#1342).** `rotate_connection_secret`/`rewrap_all_connection_secrets` cover `previous_encrypted_secret` too, so `dazzle auth rotate-encryption-key` can't silently strand an in-window old bearer on the old key. `rotate-secret` now also writes a `rotated` audit event (previously it only bumped `updated_at`).
+
+#### Agent Guidance
+
+- Connection secret rotation is **audited** (`connection_secret_events`, append-only) and the grace/overlap window is **SCIM-bearer-only**. An expired previous bearer is rejected at verification time — there's no background expiry job. When touching rotation, keep `rewrap_all_connection_secrets` covering BOTH the live secret and the grace blob, and never put a secret value in an audit `detail`.
+
 ## [0.81.77] - 2026-06-07
 
 ### Added

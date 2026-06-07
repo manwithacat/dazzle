@@ -136,7 +136,30 @@ actually honors (`User`: `userName`, `active`, `emails` (readOnly), `groups` (re
 `Group`: `displayName`, `members`), so discovery never promises an attribute the runtime
 ignores. A single-fetch `/{id}` for an unknown id returns a SCIM 404.
 
+## Secret rotation (#1342)
+
+Two layers of rotation, both CLI/devops-only (the org-admin UI is deliberately secret-free):
+
+| Command | Rotates |
+|---------|---------|
+| `dazzle auth connection rotate-secret <id>` | one connection's credential — OIDC `client_secret` (`--client-secret`, never echoed) or a freshly-minted SCIM bearer (printed once). SAML refused. |
+| `dazzle auth connection rotate-secret <id> --grace 24h` | **SCIM only** — mints the new bearer but keeps the OLD one valid for the window, so the IdP migrates without a provisioning outage. |
+| `dazzle auth connection revoke-previous-secret <id>` | ends a grace window early — the old bearer stops working immediately. |
+| `dazzle auth connection secret-history <id>` | the append-only rotation audit trail. |
+| `dazzle auth rotate-encryption-key` | the AES master key (`DAZZLE_CONNECTION_SECRET`) — re-wraps every stored secret (and any grace blob) onto the new key with a two-key (`…_OLD`) window. |
+
+**Grace semantics.** Without `--grace`, rotation is a **hard swap** (the old secret dies
+immediately — right for a leak). `--grace <m|h|d|w>` is **SCIM-bearer-only**: an OIDC
+`client_secret` is arbitrated by the IdP, so Dazzle holding two can't help. The old bearer is
+honored only while its window is open — **expiry is enforced at verification time** (an expired
+previous bearer is rejected; there's no background reaper). A subsequent hard-swap rotation, or
+`revoke-previous-secret`, clears the grace bearer at once.
+
+**Audit.** `rotate-secret`, `revoke-previous-secret`, and the encryption-key rewrap each append
+a `connection_secret_events` row (`rotated` / `revoked_previous` / `encryption_key_rewrapped`)
+with non-secret detail (connection type, grace flag + expiry) — a secret value is never stored.
+
 ## Deferred
 
 SAML SLO, encrypted assertions, SP-signed AuthnRequests, IdP-initiated opt-in, IdP-metadata
-auto-import; connection secret rotation; an in-app org-admin connection surface.
+auto-import; an in-app org-admin connection surface.
