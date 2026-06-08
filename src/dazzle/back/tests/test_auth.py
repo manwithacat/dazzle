@@ -188,21 +188,38 @@ class TestAuthStore:
         user = auth_store.get_user_by_email("nonexistent@example.com")
         assert user is None
 
-    def test_email_case_insensitive_uniqueness(self, auth_store: Any) -> None:
-        """No auth path can mint a *split* identity via case variation (#1342).
+    def test_email_normalized_on_create_and_lookup(self, auth_store: Any) -> None:
+        """The store is the normalization chokepoint (#1342 M2): create_user stores the
+        canonical (trimmed + lowercased) email, and get_user_by_email resolves any-case input
+        to the same identity — so the invariant holds even if a caller forgets to lowercase."""
+        created = auth_store.create_user(email="  Mixed.Case@Example.COM ", password="pass")
+        assert created.email == "mixed.case@example.com"  # stored canonical-lowercase
+        # any-case lookup finds the one identity
+        assert auth_store.get_user_by_email("mixed.case@example.com").id == created.id
+        assert auth_store.get_user_by_email("MIXED.CASE@EXAMPLE.COM").id == created.id
+        assert auth_store.get_user_by_email(" Mixed.Case@Example.com ").id == created.id
 
-        A case-insensitive unique index on users(LOWER(email)) structurally
-        rejects a second row that differs only by case, regardless of whether the
-        calling path remembered to lowercase.
-        """
+    def test_email_ci_index_rejects_raw_mixed_case_insert(self, auth_store: Any) -> None:
+        """The functional index is the structural backstop for raw-SQL paths that BYPASS the
+        store's normalization (#1342). A mixed-case duplicate inserted directly must be rejected
+        by users_email_lower_key — not the case-sensitive `email UNIQUE` (users_email_key),
+        which a same-case dup would also trip (false confidence)."""
+        from uuid import uuid4
+
+        from dazzle.back.runtime.pg_backend import PostgresBackend
+
         auth_store.create_user(email="split@example.com", password="pass")
-        with pytest.raises(Exception) as exc:
-            auth_store.create_user(email="SPLIT@example.com", password="pass")
-        # Assert the *case-insensitive* index fired (users_email_lower_key), not the
-        # pre-existing case-sensitive `email UNIQUE` (users_email_key) — otherwise a
-        # same-case dup would pass this test and give false confidence.
-        msg = str(exc.value).lower()
-        assert "users_email_lower_key" in msg, (
+        db = PostgresBackend(os.environ["DATABASE_URL"])
+        now = datetime.now(UTC).isoformat()
+        with pytest.raises(Exception) as exc:  # noqa: PT011 — asserting on the index name below
+            with db.connection() as conn:
+                conn.execute(
+                    "INSERT INTO users (id, email, password_hash, username, is_active, "
+                    "is_superuser, roles, created_at, updated_at) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (str(uuid4()), "SPLIT@example.com", "x", None, True, False, "[]", now, now),
+                )
+        assert "users_email_lower_key" in str(exc.value).lower(), (
             f"expected the LOWER(email) unique index to fire, got: {exc.value!r}"
         )
 

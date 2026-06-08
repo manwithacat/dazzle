@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.101] - 2026-06-08
+
+### Added
+- **Case-insensitive `users.email` — M2 completion (#1342).** The functional unique index
+  `users_email_lower_key ON users (LOWER(email))` (which already prevented split identities) is
+  now **mirrored into the Alembic chain** (migration `0015`, guarded, same loud collision
+  pre-check as `_init_db`) so the auth schema stays dual-written. The auth store is now the
+  **normalization chokepoint**: `create_user` stores the canonical (trimmed + lowercased) email
+  and `get_user_by_email` resolves any-case input to the same identity — the case-insensitive
+  identity invariant now holds regardless of whether a caller remembered to lowercase, with the
+  functional index as the structural backstop for raw-SQL paths.
+
+### Agent Guidance
+- Auth identity emails are normalized (trim + lowercase) at the store boundary
+  (`create_user` / `get_user_by_email`). Treat `users.email` as canonical-lowercase; don't add
+  a parallel email-write path that bypasses the store, and don't rely on case-sensitive email
+  matching against the auth `users` table.
+
 ## [0.81.100] - 2026-06-08
 
 ### Added

@@ -43,6 +43,16 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def _normalize_email(email: str) -> str:
+    """Canonical form for an auth identity email: trimmed + lowercased (#1342 M2).
+
+    The store is the single normalization chokepoint so the case-insensitive identity
+    invariant holds regardless of whether a caller remembered to lowercase. The
+    ``users_email_lower_key`` functional index is the structural backstop for raw-SQL
+    paths that bypass these methods."""
+    return (email or "").strip().lower()
+
+
 def _appspec_has_tenant_root(appspec: Any) -> bool:
     """True iff the appspec declares an ``is_tenant_root`` / archetype:tenant
     entity (auth Plan 1d — selects the 1:1 org<->root mirror provisioning)."""
@@ -86,7 +96,7 @@ class UserStoreMixin:
         import json
 
         user = UserRecord(
-            email=email,
+            email=_normalize_email(email),  # canonical-lowercase storage (#1342 M2)
             password_hash=hash_password(password),
             username=username,
             is_superuser=is_superuser,
@@ -136,8 +146,9 @@ class UserStoreMixin:
         )
 
     def get_user_by_email(self, email: str) -> UserRecord | None:
-        """Get user by email."""
-        row = self._execute_one("SELECT * FROM users WHERE email = %s", (email,))
+        """Get user by email. Case-insensitive: the argument is normalized to the canonical
+        (trimmed + lowercased) form so any-case input resolves the same identity (#1342 M2)."""
+        row = self._execute_one("SELECT * FROM users WHERE email = %s", (_normalize_email(email),))
         return self._row_to_user(row) if row else None
 
     def get_user_by_id(self, user_id: UUID) -> UserRecord | None:
