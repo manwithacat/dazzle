@@ -50,6 +50,31 @@ SAML `idp_sso_url`/`idp_slo_url`) on top of the network-free config audit — SS
 code, which stays bound to config-readiness). The `[sso]` extra (authlib + dnspython) covers
 OIDC/SCIM; **SAML needs the separate `[saml]` extra** (python3-saml + native `libxmlsec1`).
 
+## Admin capabilities (who manages what)
+
+The framework's org-admin surfaces are gated by named **admin capabilities**, so a multi-tenant app
+can distinguish a business administrator from an IT/technical admin:
+
+- `manage_members` — invite / list / change-role / remove members (the business administrator).
+- `manage_connections` — enterprise-connection CRUD, domain claim/verify, secret rotation, and
+  connection security (the IT/technical admin). The `/auth/connections` surface gates on this.
+
+Bind each capability to your DSL personas in the manifest (default-deny, fail-closed):
+
+```toml
+[auth]
+org_admin_roles = ["org_admin"]        # the default for any capability you don't list below
+
+[auth.admin_capabilities]              # optional
+manage_members     = ["business_admin"]
+manage_connections = ["it_admin"]
+```
+
+If `[auth.admin_capabilities]` is omitted, **every** capability falls back to `org_admin_roles` — so
+existing apps are unchanged. A capability you don't list also falls back to `org_admin_roles` (it is
+never silently locked out). A persona referenced here that isn't a declared persona logs a boot
+warning (it would grant nobody).
+
 After any login, the asserted identity is joined to a global Identity by **verified email**, and
 a **membership** is created/reused in the connection's org; IdP **groups map to roles** via the
 connection's `group_mapping` (**default-deny** — an unmapped group grants nothing).

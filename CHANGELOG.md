@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.104] - 2026-06-09
+
+### Added
+- **Admin-capability authorization for org-admin surfaces.** The framework's own org-admin surfaces
+  (members, connections) now gate on named **capabilities** — `manage_members` and
+  `manage_connections` — instead of a single flat `org_admin_roles` list, so a multi-tenant app can
+  distinguish a business administrator from an IT/technical admin. Bind capabilities to personas via
+  `[auth.admin_capabilities]` in the manifest (default-deny, fail-closed). `org_admin_roles` is the
+  default for any unlisted capability, so **apps that set only `org_admin_roles` are unchanged.** New
+  `auth/admin_policy.py` (`AdminPolicy`, `request_policy`); a boot warning flags personas referenced
+  in the map that aren't declared.
+
+### Changed
+- The `/auth/connections` org-admin surface now gates on **`manage_connections`** (the technical-admin
+  capability), re-tiered off the member-management gate. Behavior is identical to before unless an app
+  declares distinct persona sets in `[auth.admin_capabilities]`.
+
+### Removed
+- `auth/invitations.py::may_manage_members` (clean break, ADR-0003). The manage-members authorization
+  predicate is now `AdminPolicy.may("manage_members", roles)`.
+
+### Agent Guidance
+- Org-admin surfaces gate on named capabilities via `app.state.admin_policy` — use
+  `request_policy(request).may("manage_members" | "manage_connections", effective_roles)`, not the
+  removed `may_manage_members`. `org_admin_roles` is the back-compat default for every capability.
+  Add a capability by extending `CAPABILITIES` in `auth/admin_policy.py` AND wiring a surface to it
+  (the `test_admin_capability_drift` gate fails on an orphan capability). This is the framework's
+  org-admin plane only — separate from the app-domain `permit:`/`scope:`/`grant_schema` plane.
+
 ## [0.81.103] - 2026-06-08
 
 ### Added

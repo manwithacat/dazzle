@@ -6,8 +6,8 @@
 ``POST /auth/accept-invite?token=..`` — redeem token → active membership + activate
 
 Authz: the inviter must have an ACTIVE membership in their active org whose roles
-intersect ``app.state.org_admin_roles`` (fail-closed). The target org is taken
-from the inviter's active membership — never from request input. Accept enforces
+satisfy the ``manage_members`` capability (``app.state.admin_policy``; fail-closed). The
+target org is taken from the inviter's active membership — never from request input. Accept enforces
 the verified-email join rule in ``invitations.accept_invitation``.
 """
 
