@@ -1497,9 +1497,8 @@ class SessionStoreMixin:
                 raise ValueError(
                     f"request signing is SAML-only (connection {connection_id!r} is {conn_type!r})"
                 )
-            config["sp_cert"] = sp_cert
             config["sign_requests"] = "true"
-            secrets["sp_private_key"] = sp_private_key
+            self._ensure_sp_keypair(config, secrets, sp_cert=sp_cert, sp_private_key=sp_private_key)
             self._write_connection_config_and_secrets(cur, connection_id, config, secrets)
             self._write_secret_event(
                 cur,
@@ -1525,15 +1524,101 @@ class SessionStoreMixin:
             )
             if config is None or not config.get("sign_requests"):
                 return False
-            config.pop("sp_cert", None)
             config.pop("sign_requests", None)
-            secrets.pop("sp_private_key", None)
+            self._maybe_remove_sp_keypair(config, secrets)
             self._write_connection_config_and_secrets(cur, connection_id, config, secrets)
             self._write_secret_event(
                 cur,
                 connection_id=connection_id,
                 tenant_id=ten or "",
                 event=SECRET_EVENT_SIGNING_DISABLED,
+                actor="cli",
+                detail={"type": conn_type},
+                at=datetime.now(UTC).isoformat(),
+            )
+        return True
+
+    @staticmethod
+    def _ensure_sp_keypair(
+        config: dict[str, Any],
+        secrets: dict[str, Any],
+        *,
+        sp_cert: str,
+        sp_private_key: str,
+    ) -> None:
+        """Write the shared SP keypair only if absent — never clobber an existing key, so
+        enabling the second feature (sign/encrypt) keeps the first feature's key. Rotation
+        stays explicit (disable both features, then re-enable)."""
+        config.setdefault("sp_cert", sp_cert)
+        secrets.setdefault("sp_private_key", sp_private_key)
+
+    @staticmethod
+    def _maybe_remove_sp_keypair(config: dict[str, Any], secrets: dict[str, Any]) -> None:
+        """Drop the shared SP keypair iff NEITHER request-signing nor assertion-encryption
+        uses it any more."""
+        if not config.get("sign_requests") and not config.get("encrypt_assertions"):
+            config.pop("sp_cert", None)
+            secrets.pop("sp_private_key", None)
+
+    def enable_connection_assertion_encryption(
+        self,
+        connection_id: str,
+        *,
+        sp_cert: str,
+        sp_private_key: str,
+        tenant_id: str | None = None,
+    ) -> bool:
+        """Persist SAML assertion-encryption material (#1342 feature B): set
+        ``encrypt_assertions='true'`` and ensure the shared SP keypair. Returns True if a
+        row changed. SAML-only at the store layer; tenant-fenced when given."""
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_ENABLED
+
+        with self._transaction() as cur:
+            config, secrets, ten, conn_type = self._load_config_secrets(
+                cur, connection_id, tenant_id
+            )
+            if config is None:
+                return False
+            if conn_type != "saml":
+                raise ValueError(
+                    f"assertion encryption is SAML-only (connection {connection_id!r} "
+                    f"is {conn_type!r})"
+                )
+            config["encrypt_assertions"] = "true"
+            self._ensure_sp_keypair(config, secrets, sp_cert=sp_cert, sp_private_key=sp_private_key)
+            self._write_connection_config_and_secrets(cur, connection_id, config, secrets)
+            self._write_secret_event(
+                cur,
+                connection_id=connection_id,
+                tenant_id=ten or "",
+                event=SECRET_EVENT_ENCRYPTION_ENABLED,
+                actor="cli",
+                detail={"type": conn_type},
+                at=datetime.now(UTC).isoformat(),
+            )
+        return True
+
+    def disable_connection_assertion_encryption(
+        self, connection_id: str, *, tenant_id: str | None = None
+    ) -> bool:
+        """Remove ``encrypt_assertions`` and drop the shared SP keypair iff request-signing
+        is also off (one transaction). Returns True iff encryption was on."""
+        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_DISABLED
+
+        with self._transaction() as cur:
+            config, secrets, ten, conn_type = self._load_config_secrets(
+                cur, connection_id, tenant_id
+            )
+            if config is None or not config.get("encrypt_assertions"):
+                return False
+            config.pop("encrypt_assertions", None)
+            self._maybe_remove_sp_keypair(config, secrets)
+            self._write_connection_config_and_secrets(cur, connection_id, config, secrets)
+            self._write_secret_event(
+                cur,
+                connection_id=connection_id,
+                tenant_id=ten or "",
+                event=SECRET_EVENT_ENCRYPTION_DISABLED,
                 actor="cli",
                 detail={"type": conn_type},
                 at=datetime.now(UTC).isoformat(),

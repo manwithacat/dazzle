@@ -525,3 +525,59 @@ def test_migration_0012_adds_grace_and_audit(store_url: str) -> None:
     assert tbl is True
     assert {"previous_encrypted_secret", "previous_secret_expires_at"} <= cols
     assert ver == "0012_connection_grace_secret"
+
+
+def test_encryption_and_signing_share_one_keypair(store_url: str) -> None:
+    # The SP keypair is shared by request-signing and assertion-encryption; it must survive
+    # disabling one feature and be removed only when BOTH are off (the lifecycle decouple).
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-enc",
+        type="saml",
+        config={"idp_entity_id": "x", "idp_sso_url": "y", "idp_x509_cert": "z"},
+        secrets={},
+        domains=[],
+    )
+    # Enable signing → keypair written.
+    assert store.enable_connection_request_signing(conn.id, sp_cert="CERT", sp_private_key="KEY")
+    # Enable encryption → reuses the SAME keypair (never clobbers), sets the flag.
+    assert store.enable_connection_assertion_encryption(
+        conn.id, sp_cert="CERT2", sp_private_key="KEY2"
+    )
+    got = store.get_connection(conn.id)
+    assert got.config["encrypt_assertions"] == "true"
+    assert got.config["sign_requests"] == "true"
+    assert got.config["sp_cert"] == "CERT"  # NOT clobbered by the 2nd enable
+    assert got.secrets["sp_private_key"] == "KEY"
+
+    # Disable signing → keypair SURVIVES (encryption still on).
+    assert store.disable_connection_request_signing(conn.id)
+    got = store.get_connection(conn.id)
+    assert "sign_requests" not in got.config
+    assert got.config.get("sp_cert") == "CERT"  # kept for encryption
+    assert got.secrets.get("sp_private_key") == "KEY"
+
+    # Disable encryption → now both off → keypair removed.
+    assert store.disable_connection_assertion_encryption(conn.id)
+    got = store.get_connection(conn.id)
+    assert "encrypt_assertions" not in got.config
+    assert "sp_cert" not in got.config
+    assert "sp_private_key" not in got.secrets
+
+    # Audit trail recorded all four feature toggles.
+    events = {e.event for e in store.get_connection_secret_events(conn.id)}
+    assert {
+        "sp_signing_enabled",
+        "sp_signing_disabled",
+        "sp_encryption_enabled",
+        "sp_encryption_disabled",
+    } <= events
+
+
+def test_assertion_encryption_is_saml_only(store_url: str) -> None:
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-1", type="oidc", config={"issuer": "x"}, secrets={}, domains=[]
+    )
+    with pytest.raises(ValueError, match="SAML-only"):
+        store.enable_connection_assertion_encryption(conn.id, sp_cert="C", sp_private_key="K")

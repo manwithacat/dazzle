@@ -393,3 +393,81 @@ def test_metadata_no_signing_cert_app_level() -> None:
     pytest.importorskip("onelogin")
     xml = NativeSAMLProvider().sp_metadata(_FakeRequest())
     assert 'use="signing"' not in xml
+
+
+# ---- encrypted assertions (#1342 feature B) ----
+
+
+def test_encrypt_assertions_sets_want_encrypted() -> None:
+    conn = _conn(
+        config={
+            "idp_entity_id": "x",
+            "idp_sso_url": "y",
+            "idp_x509_cert": "z",
+            "encrypt_assertions": "true",
+            "sp_cert": "CERT",
+        },
+        secrets={"sp_private_key": "KEY"},
+    )
+    s = NativeSAMLProvider()._settings(conn, _FakeRequest())
+    assert s["security"]["wantAssertionsEncrypted"] is True
+    assert s["sp"]["x509cert"] == "CERT"
+    assert s["sp"]["privateKey"] == "KEY"
+
+
+def test_no_encrypt_flag_leaves_want_encrypted_unset() -> None:
+    s = NativeSAMLProvider()._settings(_conn(), _FakeRequest())
+    assert "wantAssertionsEncrypted" not in s["security"]
+
+
+def test_encrypt_and_sign_compose_on_shared_keypair() -> None:
+    conn = _conn(
+        config={
+            "idp_entity_id": "x",
+            "idp_sso_url": "y",
+            "idp_x509_cert": "z",
+            "sign_requests": "true",
+            "encrypt_assertions": "true",
+            "sp_cert": "CERT",
+        },
+        secrets={"sp_private_key": "KEY"},
+    )
+    s = NativeSAMLProvider()._settings(conn, _FakeRequest())
+    assert s["security"]["authnRequestsSigned"] is True
+    assert s["security"]["wantAssertionsEncrypted"] is True
+
+
+def test_metadata_advertises_encryption_cert_for_encryption_only() -> None:
+    # End-to-end: an encryption-only connection (no signing) emits a use="encryption"
+    # KeyDescriptor in the real metadata XML, and never the private key.
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+
+    key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
+    conn = _conn(
+        config={"encrypt_assertions": "true", "sp_cert": cert},
+        secrets={"sp_private_key": key},
+    )
+    xml = NativeSAMLProvider().sp_metadata(_FakeRequest(), conn)
+    assert 'use="encryption"' in xml
+    assert "PRIVATE KEY" not in xml
+
+
+def test_sp_only_settings_advertises_cert_for_encryption_only() -> None:
+    # Encryption-only (no signing) must still put the cert in settings so the metadata
+    # carries the use="encryption" KeyDescriptor; authnRequestsSigned stays unset.
+    conn = _conn(
+        config={
+            "idp_entity_id": "x",
+            "idp_sso_url": "y",
+            "idp_x509_cert": "z",
+            "encrypt_assertions": "true",
+            "sp_cert": "CERT",
+        },
+        secrets={"sp_private_key": "KEY"},
+    )
+    s = NativeSAMLProvider()._sp_only_settings(_FakeRequest(), conn)
+    assert s["sp"]["x509cert"] == "CERT"
+    assert s["sp"]["privateKey"] == "KEY"
+    assert s["security"]["wantAssertionsEncrypted"] is True
+    assert "authnRequestsSigned" not in s["security"]

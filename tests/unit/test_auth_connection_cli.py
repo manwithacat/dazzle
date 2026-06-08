@@ -22,7 +22,16 @@ def _key(monkeypatch):
 
 
 class _Conn:
-    def __init__(self, cid="conn-1", *, domains=None, verified=None, conn_type="oidc", config=None):
+    def __init__(
+        self,
+        cid="conn-1",
+        *,
+        domains=None,
+        verified=None,
+        conn_type="oidc",
+        config=None,
+        secrets=None,
+    ):
         self.id = cid
         self.tenant_id = "org-1"
         self.type = conn_type
@@ -30,6 +39,7 @@ class _Conn:
         self.domains = domains or []
         self.verified_domains = verified or []
         self.config = config or {}
+        self.secrets = secrets or {}
 
 
 class _Store:
@@ -62,6 +72,17 @@ class _Store:
 
     def disable_connection_request_signing(self, cid, *, tenant_id=None):
         self.signing_disabled = cid
+        return True
+
+    def enable_connection_assertion_encryption(
+        self, cid, *, sp_cert, sp_private_key, tenant_id=None
+    ):
+        assert sp_cert and sp_private_key
+        self.encryption_enabled = cid
+        return self._conn is not None and self._conn.id == cid
+
+    def disable_connection_assertion_encryption(self, cid, *, tenant_id=None):
+        self.encryption_disabled = cid
         return True
 
     def update_connection_secrets(self, connection_id, secrets, *, tenant_id=None):
@@ -621,3 +642,66 @@ def test_disable_request_signing(monkeypatch) -> None:
     _patch_store(monkeypatch, store)
     r = runner.invoke(auth_app, ["connection", "disable-request-signing", "c1"])
     assert r.exit_code == 0 and store.signing_disabled == "c1"
+
+
+# ---- SAML assertion encryption (#1342 feature B) ----
+
+
+def test_enable_assertion_encryption(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="saml"))
+    _patch_store(monkeypatch, store)
+    result = runner.invoke(auth_connection.connection_app, ["enable-assertion-encryption", "c1"])
+    assert result.exit_code == 0
+    assert store.encryption_enabled == "c1"
+    assert "metadata?connection=c1" in result.output  # IdP re-import hint
+    assert "plaintext" in result.output.lower()  # strict-posture warning
+
+
+def test_enable_assertion_encryption_rejects_non_saml(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="oidc"))
+    _patch_store(monkeypatch, store)
+    result = runner.invoke(auth_connection.connection_app, ["enable-assertion-encryption", "c1"])
+    assert result.exit_code == 1
+    assert getattr(store, "encryption_enabled", None) is None
+
+
+def test_enable_assertion_encryption_already_on_is_noop(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="saml", config={"encrypt_assertions": "true"}))
+    _patch_store(monkeypatch, store)
+    result = runner.invoke(auth_connection.connection_app, ["enable-assertion-encryption", "c1"])
+    assert result.exit_code == 0
+    assert getattr(store, "encryption_enabled", None) is None  # store not touched
+    assert "already enabled" in result.output.lower()
+
+
+def test_enable_assertion_encryption_reuses_existing_keypair(monkeypatch) -> None:
+    # When request-signing already created a keypair, encryption must reuse it (the store
+    # gets the SAME cert/key), not generate a new one.
+    conn = _Conn(
+        "c1",
+        conn_type="saml",
+        config={"sign_requests": "true", "sp_cert": "EXISTING-CERT"},
+        secrets={"sp_private_key": "EXISTING-KEY"},
+    )
+    store = _Store(conn=conn)
+    captured: dict = {}
+
+    def _enable(cid, *, sp_cert, sp_private_key, tenant_id=None):
+        captured["cert"] = sp_cert
+        captured["key"] = sp_private_key
+        store.encryption_enabled = cid
+        return True
+
+    store.enable_connection_assertion_encryption = _enable
+    _patch_store(monkeypatch, store)
+    result = runner.invoke(auth_connection.connection_app, ["enable-assertion-encryption", "c1"])
+    assert result.exit_code == 0
+    assert captured == {"cert": "EXISTING-CERT", "key": "EXISTING-KEY"}
+
+
+def test_disable_assertion_encryption(monkeypatch) -> None:
+    store = _Store(conn=_Conn("c1", conn_type="saml"))
+    _patch_store(monkeypatch, store)
+    result = runner.invoke(auth_connection.connection_app, ["disable-assertion-encryption", "c1"])
+    assert result.exit_code == 0
+    assert store.encryption_disabled == "c1"

@@ -309,6 +309,66 @@ def disable_request_signing(
         console.print(f"[yellow]Request signing was not enabled[/yellow] for {connection_id}.")
 
 
+@connection_app.command("enable-assertion-encryption")
+def enable_assertion_encryption(
+    connection_id: Annotated[str, typer.Argument(help="SAML connection id")],
+) -> None:
+    """Require + decrypt encrypted SAML assertions on this connection (SAML only).
+
+    Reuses the SP keypair if request-signing already created one, else generates it. After
+    enabling, configure the IdP to ENCRYPT assertions and re-import this connection's SP
+    metadata (printed URL) so it has the SP encryption cert. WARNING: once on, a response
+    carrying a plaintext (unencrypted) assertion is rejected — enable the IdP side first.
+    """
+    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+
+    store = _store()
+    conn = store.get_connection(connection_id)
+    if conn is None:
+        console.print(f"[red]No connection {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+    if conn.type != "saml":
+        console.print(
+            f"[red]Connection {connection_id!r} is {conn.type!r} — assertion encryption is "
+            "SAML-only[/red]"
+        )
+        raise typer.Exit(code=1)
+    if (conn.config or {}).get("encrypt_assertions"):
+        console.print(f"[yellow]Assertion encryption already enabled[/yellow] for {connection_id}.")
+        raise typer.Exit(code=0)
+    cfg = conn.config or {}
+    sp_cert = cfg.get("sp_cert")
+    sp_key = (conn.secrets or {}).get("sp_private_key")
+    if not (sp_cert and sp_key):
+        common_name = cfg.get("sp_entity_id") or connection_id
+        sp_key, sp_cert = generate_sp_keypair(common_name)
+    if not store.enable_connection_assertion_encryption(
+        connection_id, sp_cert=sp_cert, sp_private_key=sp_key
+    ):
+        console.print(f"[red]Failed to enable assertion encryption for {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Assertion encryption enabled[/green] for connection {connection_id}.")
+    console.print(
+        "[yellow]Configure the IdP to encrypt assertions, then re-import this connection's "
+        "SP metadata[/yellow] (a plaintext assertion is now rejected):"
+    )
+    console.print(f"  [cyan]<base_url>/auth/saml/metadata?connection={connection_id}[/cyan]")
+
+
+@connection_app.command("disable-assertion-encryption")
+def disable_assertion_encryption(
+    connection_id: Annotated[str, typer.Argument(help="SAML connection id")],
+) -> None:
+    """Stop requiring encrypted assertions (drops the SP keypair iff signing is also off)."""
+    store = _store()
+    if store.disable_connection_assertion_encryption(connection_id):
+        console.print(
+            f"[green]Assertion encryption disabled[/green] for connection {connection_id}."
+        )
+    else:
+        console.print(f"[yellow]Assertion encryption was not enabled[/yellow] for {connection_id}.")
+
+
 @connection_app.command("rotate-secret")
 def rotate_secret(
     connection_id: Annotated[str, typer.Argument(help="Connection id")],

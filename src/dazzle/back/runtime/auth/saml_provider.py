@@ -125,6 +125,15 @@ class NativeSAMLProvider:
                 "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
             )
             settings["security"]["digestAlgorithm"] = "http://www.w3.org/2001/04/xmlenc#sha256"
+        # Encrypted assertions (#1342, feature B): when enabled + keypair present, require
+        # the assertion to be encrypted and give python3-saml the key to decrypt it. Shares
+        # the keypair the sign_requests block may already have installed (set idempotently).
+        # A plaintext assertion is then rejected — strict by design (operator enables the
+        # IdP-side encryption first; the CLI warns).
+        if cfg.get("encrypt_assertions") and sp_cert and sp_key:
+            settings["sp"]["x509cert"] = sp_cert
+            settings["sp"]["privateKey"] = sp_key
+            settings["security"]["wantAssertionsEncrypted"] = True
         return settings
 
     def _request_data(
@@ -171,14 +180,24 @@ class NativeSAMLProvider:
         if connection is not None:
             cfg = connection.config or {}
             sp_key = (connection.secrets or {}).get("sp_private_key")
-            if cfg.get("sign_requests") and cfg.get("sp_cert") and sp_key:
-                # python3-saml requires BOTH cert + key in the settings to validate an
-                # authnRequestsSigned SP — but the generated metadata XML carries only the
-                # public cert (a signing KeyDescriptor); the private key never appears in
-                # the output. The route loads the connection with secrets decrypted.
+            wants_key = cfg.get("sign_requests") or cfg.get("encrypt_assertions")
+            if wants_key and cfg.get("sp_cert") and sp_key:
+                # python3-saml requires BOTH cert + key in the settings; the generated
+                # metadata XML carries only the public cert (never the private key).
                 settings["sp"]["x509cert"] = cfg["sp_cert"]
                 settings["sp"]["privateKey"] = sp_key
-                settings["security"] = {"authnRequestsSigned": True}
+                security: dict[str, Any] = {}
+                # authnRequestsSigned drives the AuthnRequestsSigned metadata attr + signing
+                # KeyDescriptor; only when signing is actually on.
+                if cfg.get("sign_requests"):
+                    security["authnRequestsSigned"] = True
+                # get_sp_metadata adds the use="encryption" KeyDescriptor ONLY when
+                # wantAssertionsEncrypted (or wantNameIdEncrypted) is set — the cert alone
+                # is not enough — so set it to advertise the SP encryption cert to the IdP.
+                if cfg.get("encrypt_assertions"):
+                    security["wantAssertionsEncrypted"] = True
+                if security:
+                    settings["security"] = security
         return settings
 
     def _build_sp_settings(self, settings: dict[str, Any]) -> Any:

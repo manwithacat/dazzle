@@ -17,6 +17,8 @@ SECRET_EVENT_REVOKED_PREVIOUS = "revoked_previous"
 SECRET_EVENT_KEY_REWRAPPED = "encryption_key_rewrapped"
 SECRET_EVENT_SIGNING_ENABLED = "sp_signing_enabled"
 SECRET_EVENT_SIGNING_DISABLED = "sp_signing_disabled"
+SECRET_EVENT_ENCRYPTION_ENABLED = "sp_encryption_enabled"
+SECRET_EVENT_ENCRYPTION_DISABLED = "sp_encryption_disabled"
 
 _GRACE_UNITS = {"m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
 # A single positive integer (no leading zero) + one unit suffix.

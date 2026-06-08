@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.94] - 2026-06-08
+
+### Added
+- **SAML encrypted assertions (#1342, SAML cluster feature B).**
+  `dazzle auth connection enable-/disable-assertion-encryption <id>` opts a SAML connection
+  into `wantAssertionsEncrypted` — the IdP encrypts the assertion to the SP cert and Dazzle
+  decrypts it with the SP private key. Reuses feature C's per-connection SP keypair (one
+  keypair serves both signing and decryption — python3-saml's model); the keypair's
+  lifecycle is now decoupled from any single feature (it survives while *either*
+  request-signing or assertion-encryption is on, removed only when both are off). The SP
+  metadata advertises a `use="encryption"` KeyDescriptor (public cert only). Audited as
+  `sp_encryption_enabled/disabled` in `connection_secret_events`. **Strict posture:** once
+  on, a plaintext (unencrypted) assertion is rejected, so the CLI warns the operator to
+  configure the IdP to encrypt first. Remaining SAML cluster: A (SLO).
+
+### Agent Guidance
+- A SAML connection's SP keypair (`sp_cert`/`sp_private_key`) is now shared by request
+  signing and assertion encryption. When touching either, route keypair writes/removals
+  through `AuthStore._ensure_sp_keypair` / `_maybe_remove_sp_keypair` (never clobber an
+  existing key; remove only when neither feature uses it) — don't pop the keypair on a
+  single feature's disable.
+
 ## [0.81.93] - 2026-06-08
 
 ### Added
