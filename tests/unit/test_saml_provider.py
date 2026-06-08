@@ -471,3 +471,76 @@ def test_sp_only_settings_advertises_cert_for_encryption_only() -> None:
     assert s["sp"]["privateKey"] == "KEY"
     assert s["security"]["wantAssertionsEncrypted"] is True
     assert "authnRequestsSigned" not in s["security"]
+
+
+# ---- Single Logout (#1342 feature A) ----
+
+
+def test_slo_settings_require_signed_messages_and_urls() -> None:
+    conn = _conn(
+        config={
+            "idp_entity_id": "e",
+            "idp_sso_url": "s",
+            "idp_x509_cert": "c",
+            "idp_slo_url": "https://idp.example/slo",
+        }
+    )
+    s = NativeSAMLProvider()._slo_settings(conn, _FakeRequest())
+    assert s["security"]["wantMessagesSigned"] is True  # reject unsigned LogoutRequests
+    assert s["sp"]["singleLogoutService"]["url"].endswith("/auth/saml/sls")
+    assert s["idp"]["singleLogoutService"]["url"] == "https://idp.example/slo"
+
+
+def test_slo_settings_sign_logout_response_when_signing_on() -> None:
+    conn = _conn(
+        config={
+            "idp_entity_id": "e",
+            "idp_sso_url": "s",
+            "idp_x509_cert": "c",
+            "idp_slo_url": "https://idp.example/slo",
+            "sign_requests": "true",
+            "sp_cert": "CERT",
+        },
+        secrets={"sp_private_key": "KEY"},
+    )
+    s = NativeSAMLProvider()._slo_settings(conn, _FakeRequest())
+    assert s["security"]["logoutResponseSigned"] is True
+    assert s["sp"]["x509cert"] == "CERT" and s["sp"]["privateKey"] == "KEY"
+
+
+def test_process_logout_returns_nameid_and_redirect() -> None:
+    p = NativeSAMLProvider()
+    p._build_auth = lambda rd, s: SimpleNamespace(  # type: ignore[method-assign]
+        process_slo=lambda keep_local_session=False: "https://idp.example/slo?SAMLResponse=x",
+        get_errors=lambda: [],
+    )
+    p._logout_request_nameid = lambda saml_request: "Jane@Acme.test"  # type: ignore[method-assign]
+    conn = _conn(
+        config={
+            "idp_entity_id": "e",
+            "idp_sso_url": "s",
+            "idp_x509_cert": "c",
+            "idp_slo_url": "https://idp.example/slo",
+        }
+    )
+    out = p.process_logout(conn, _FakeRequest())
+    assert out.name_id == "jane@acme.test"  # normalized
+    assert out.redirect_url == "https://idp.example/slo?SAMLResponse=x"
+
+
+def test_process_logout_raises_on_validation_error() -> None:
+    p = NativeSAMLProvider()
+    p._build_auth = lambda rd, s: SimpleNamespace(  # type: ignore[method-assign]
+        process_slo=lambda keep_local_session=False: None,
+        get_errors=lambda: ["invalid_logout_request_signature"],
+    )
+    conn = _conn(config={"idp_entity_id": "e", "idp_sso_url": "s", "idp_x509_cert": "c"})
+    with pytest.raises(ConnectionError, match="logout"):
+        p.process_logout(conn, _FakeRequest())
+
+
+def test_metadata_advertises_single_logout_service() -> None:
+    pytest.importorskip("onelogin")
+    xml = NativeSAMLProvider().sp_metadata(_FakeRequest())
+    assert "SingleLogoutService" in xml
+    assert "/auth/saml/sls" in xml

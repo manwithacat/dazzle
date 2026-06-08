@@ -73,6 +73,7 @@ class _Store:
         self._memberships: list[_Membership] = []
         self.created_sessions: list[str] = []
         self.deleted_sessions: list[str] = []
+        self.killed_memberships: list[str] = []
         self._n = 0
 
     def get_connection(self, connection_id, *, tenant_id=None):
@@ -117,13 +118,23 @@ class _Store:
     def delete_session(self, sid):
         self.deleted_sessions.append(sid)
 
+    def delete_sessions_for_membership(self, membership_id):
+        self.killed_memberships.append(membership_id)
+
 
 class _FakeProvider:
     def __init__(
-        self, *, asserted: AssertedIdentity | None = None, callback_error: Exception | None = None
+        self,
+        *,
+        asserted: AssertedIdentity | None = None,
+        callback_error: Exception | None = None,
+        logout=None,
+        logout_error: Exception | None = None,
     ):
         self._asserted = asserted
         self._callback_error = callback_error
+        self._logout = logout
+        self._logout_error = logout_error
 
     async def initiate(self, connection, request):
         # A real provider stashes the AuthnRequest id; the route stashes the connection id.
@@ -136,6 +147,11 @@ class _FakeProvider:
         return self._asserted or AssertedIdentity(
             email="jane@acme.test", claims_source="saml_assertion"
         )
+
+    def process_logout(self, connection, request):
+        if self._logout_error is not None:
+            raise self._logout_error
+        return self._logout
 
 
 @pytest.fixture
@@ -308,3 +324,99 @@ def test_metadata_unknown_connection_falls_back_to_app_level() -> None:
     pytest.importorskip("onelogin")
     resp = _client(_Store(), base_url="https://app.test").get("/auth/saml/metadata?connection=nope")
     assert resp.status_code == 200 and 'use="signing"' not in resp.text
+
+
+# ---- Single Logout / SLS (#1342 feature A) ----
+
+
+def _seed_user_in_two_orgs(store: _Store) -> _User:
+    # A user with memberships in org-1 (the SAML conn's org) AND org-2 (a foreign org).
+    user = store.create_user(email="jane@acme.test", password="x")
+    store._memberships.append(_Membership("mem-org1", "org-1", user.id))
+    store._memberships.append(_Membership("mem-org2", "org-2", user.id))
+    return user
+
+
+def test_sls_kills_only_the_connections_org_sessions(saml_provider) -> None:
+    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+
+    store = _Store(connections=[_conn()])  # conn-1 is in org-1
+    _seed_user_in_two_orgs(store)
+    saml_provider(
+        _FakeProvider(
+            logout=SamlLogout(name_id="jane@acme.test", redirect_url="https://idp.example/slo?x")
+        )
+    )
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLRequest=abc", follow_redirects=False
+    )
+    assert r.status_code == 303
+    # Org-scoped: only the org-1 membership's sessions are killed, NOT the foreign org-2 one.
+    assert store.killed_memberships == ["mem-org1"]
+
+
+def test_sls_validation_error_kills_nothing(saml_provider) -> None:
+    store = _Store(connections=[_conn()])
+    _seed_user_in_two_orgs(store)
+    saml_provider(_FakeProvider(logout_error=ConnectionError("forged logout request")))
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLRequest=forged", follow_redirects=False
+    )
+    assert r.status_code == 400
+    assert store.killed_memberships == []  # fail-closed: a bad signature touches nothing
+
+
+def test_sls_no_redirect_returns_200(saml_provider) -> None:
+    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+
+    store = _Store(connections=[_conn()])
+    _seed_user_in_two_orgs(store)
+    saml_provider(_FakeProvider(logout=SamlLogout(name_id="jane@acme.test", redirect_url=None)))
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLRequest=abc", follow_redirects=False
+    )
+    assert r.status_code == 200
+    assert store.killed_memberships == ["mem-org1"]
+
+
+def test_sls_unresolvable_connection_is_400(saml_provider) -> None:
+    store = _Store(connections=[_conn()])
+    saml_provider(_FakeProvider())
+    r = _client(store).get("/auth/saml/sls?connection=nope&SAMLRequest=abc", follow_redirects=False)
+    assert r.status_code == 400
+
+
+def test_sls_unknown_email_kills_nothing(saml_provider) -> None:
+    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+
+    store = _Store(connections=[_conn()])  # no users seeded
+    saml_provider(_FakeProvider(logout=SamlLogout(name_id="ghost@acme.test", redirect_url=None)))
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLRequest=abc", follow_redirects=False
+    )
+    assert r.status_code == 200  # idempotent no-op, no enumeration signal
+    assert store.killed_memberships == []
+
+
+def test_sls_oversized_saml_request_is_rejected_before_processing(saml_provider) -> None:
+    # A huge SAMLRequest is rejected by the length gate BEFORE python3-saml decompresses it
+    # (zip-bomb DoS guard) — the provider is never even called.
+    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+
+    store = _Store(connections=[_conn()])
+    _seed_user_in_two_orgs(store)
+    called: list = []
+
+    class _SpyProvider(_FakeProvider):
+        def process_logout(self, connection, request):
+            called.append(1)
+            return SamlLogout(name_id="jane@acme.test", redirect_url=None)
+
+    saml_provider(_SpyProvider())
+    huge = "A" * 20000  # > _MAX_SAML_REQUEST_B64 (16384)
+    r = _client(store).get(
+        f"/auth/saml/sls?connection=conn-1&SAMLRequest={huge}", follow_redirects=False
+    )
+    assert r.status_code == 400
+    assert called == []  # never reached the provider / decompress
+    assert store.killed_memberships == []

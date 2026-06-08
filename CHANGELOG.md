@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.95] - 2026-06-08
+
+### Added
+- **SAML Single Logout — IdP-initiated (#1342, SAML cluster feature A — completes the
+  cluster).** New `GET /auth/saml/sls` endpoint: when an org's IdP logs a user out (or
+  deprovisions them) it sends a signed `LogoutRequest`; the SP **verifies the IdP signature**
+  (`wantMessagesSigned=True`, fail-closed — a forged/unsigned request kills nothing) and
+  then kills that user's app sessions **in that org only** (NameID → user → memberships
+  filtered to `connection.tenant_id` → `delete_sessions_for_membership`; can't reach another
+  org's sessions). The SP metadata advertises a `<SingleLogoutService>` so the IdP knows
+  where to send. Reuses `idp_slo_url` (captured by metadata import) and C's keypair to sign
+  the `LogoutResponse`. No schema change. Independent security review hardened it: a
+  zip-bomb guard caps the `SAMLRequest` before python3-saml's unbounded decompress, and the
+  user lookup runs uniformly (no email-existence timing oracle). SP-initiated SLO (app
+  logout → IdP) remains a deferred follow-on.
+
+### Agent Guidance
+- The SLS NameID is trustworthy ONLY after `process_logout`/`process_slo` validates the IdP
+  signature — never act on a SAML `LogoutRequest`'s subject before validation. Untrusted
+  SAML redirect payloads (`SAMLRequest`) must be length-capped before any
+  decode/decompress (python3-saml inflates pre-validation).
+
 ## [0.81.94] - 2026-06-08
 
 ### Added

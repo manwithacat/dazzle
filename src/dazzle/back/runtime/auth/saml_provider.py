@@ -20,6 +20,7 @@ unsolicited/replayed Response is rejected (InResponseTo).
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from dazzle.back.runtime.auth.connections import (
@@ -33,8 +34,19 @@ _logger = logging.getLogger(__name__)
 
 # One stable ACS (Assertion Consumer Service) URL per app — registered with the IdP.
 _ACS_PATH = "/auth/saml/acs"
+# One stable SLS (Single Logout Service) URL per app — for IdP-initiated SLO (#1342 A).
+_SLS_PATH = "/auth/saml/sls"
 # Session key carrying the AuthnRequest id across the IdP round-trip (InResponseTo).
 _SESSION_REQUEST_ID = "saml_request_id"
+
+
+@dataclass(frozen=True)
+class SamlLogout:
+    """Outcome of processing an IdP ``LogoutRequest`` at the SLS (#1342 A)."""
+
+    name_id: str | None  # subject NameID (email, lowercased) — trustworthy only post-validation
+    redirect_url: str | None  # LogoutResponse redirect back to the IdP, or None
+
 
 _NAMEID_EMAIL = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
 _BINDING_POST = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
@@ -174,6 +186,12 @@ class NativeSAMLProvider:
             "sp": {
                 "entityId": entity,
                 "assertionConsumerService": {"url": acs, "binding": _BINDING_POST},
+                # Advertise the SLS so an importing IdP knows where to send LogoutRequests
+                # (IdP-initiated SLO, #1342 A). App-level + single-stable-URL, like the ACS.
+                "singleLogoutService": {
+                    "url": self._sls_url(request),
+                    "binding": _BINDING_REDIRECT,
+                },
                 "NameIDFormat": _NAMEID_EMAIL,
             },
         }
@@ -319,6 +337,79 @@ class NativeSAMLProvider:
         if isinstance(raw, (list, tuple)):
             return [str(g).strip() for g in raw if g is not None and str(g).strip()]
         return [str(raw).strip()] if str(raw).strip() else []
+
+    # ---- Single Logout (IdP-initiated, #1342 feature A) ----
+
+    def _sls_url(self, request: Any) -> str:
+        return f"{str(request.base_url).rstrip('/')}{_SLS_PATH}"
+
+    def _slo_settings(self, connection: ConnectionRecord, request: Any) -> dict[str, Any]:
+        """Settings for processing an IdP ``LogoutRequest``: the standard SP/IdP blocks plus
+        the SLS endpoints and ``wantMessagesSigned`` (reject an unsigned/forged
+        LogoutRequest — the load-bearing anti-forgery control; python3-saml validates the
+        signature against ``idp.x509cert``). Signs the LogoutResponse when this connection
+        has request-signing enabled (reuses feature C's SP keypair)."""
+        settings = self._settings(connection, request)
+        cfg = connection.config or {}
+        settings["sp"]["singleLogoutService"] = {
+            "url": self._sls_url(request),
+            "binding": _BINDING_REDIRECT,
+        }
+        if cfg.get("idp_slo_url"):
+            settings["idp"]["singleLogoutService"] = {
+                "url": cfg["idp_slo_url"],
+                "binding": _BINDING_REDIRECT,
+            }
+        settings["security"]["wantMessagesSigned"] = True
+        sp_cert = cfg.get("sp_cert")
+        sp_key = (connection.secrets or {}).get("sp_private_key")
+        if cfg.get("sign_requests") and sp_cert and sp_key:
+            settings["sp"]["x509cert"] = sp_cert
+            settings["sp"]["privateKey"] = sp_key
+            settings["security"]["logoutRequestSigned"] = True
+            settings["security"]["logoutResponseSigned"] = True
+        return settings
+
+    def _logout_request_nameid(self, saml_request: str) -> str | None:
+        """Extract the subject NameID from a Redirect-binding ``LogoutRequest``. Isolated as
+        a seam (like ``_build_auth``) so tests can fake it without real signed XML. ONLY the
+        caller's post-validation use makes this trustworthy — never act on it before
+        ``process_slo`` reports no errors."""
+        if not saml_request:
+            return None
+        from onelogin.saml2.logout_request import OneLogin_Saml2_Logout_Request
+        from onelogin.saml2.utils import OneLogin_Saml2_Utils
+
+        xml = OneLogin_Saml2_Utils.decode_base64_and_inflate(saml_request)
+        nameid: str | None = OneLogin_Saml2_Logout_Request.get_nameid(xml)
+        return nameid
+
+    def process_logout(self, connection: ConnectionRecord, request: Any) -> SamlLogout:
+        """Validate an IdP ``LogoutRequest`` (signature, via ``process_slo``) and return the
+        subject NameID + the LogoutResponse redirect. Raises ``ConnectionError`` on ANY
+        validation error — fail-closed; the caller must not touch a session in that case."""
+        settings = self._slo_settings(connection, request)
+        request_data = self._request_data(request)
+        auth = self._build_auth(request_data, settings)
+        try:
+            redirect_url = auth.process_slo(keep_local_session=True)
+            errors = auth.get_errors()
+        except ConnectionError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — any library failure ⇒ refuse, never act
+            raise ConnectionError(
+                f"SAML connection {connection.id!r}: logout validation failed ({exc})"
+            ) from exc
+        if errors:
+            raise ConnectionError(
+                f"SAML connection {connection.id!r}: logout validation failed ({errors})"
+            )
+        # The NameID is trustworthy ONLY now — after process_slo verified the signature.
+        saml_request = (request_data.get("get_data") or {}).get("SAMLRequest", "")
+        name_id = self._logout_request_nameid(saml_request)
+        return SamlLogout(
+            name_id=(name_id or "").strip().lower() or None, redirect_url=redirect_url
+        )
 
 
 def register_native_saml() -> None:
