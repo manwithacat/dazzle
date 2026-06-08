@@ -44,8 +44,11 @@ Verify a domain with DNS-TXT: `add-domain` → publish the printed `dazzle-verif
 | **SCIM** | `dazzle auth connection create-scim --tenant <org>` (prints the bearer once) | SCIM base URL `<base>/scim/v2`; header bearer token | `POST /scim/v2/Users` (IdP push) |
 
 Check readiness with `dazzle auth connection doctor <id> [--json]` (exits 0 iff activation-ready).
-The `[sso]` extra (authlib + dnspython) covers OIDC/SCIM; **SAML needs the separate `[saml]`
-extra** (python3-saml + native `libxmlsec1`).
+Add `--probe` for an opt-in **live reachability** check of the IdP endpoints (OIDC discovery doc;
+SAML `idp_sso_url`/`idp_slo_url`) on top of the network-free config audit — SSRF-guarded
+(https-only, public-IP-only, no redirects), and informational only (it never changes the exit
+code, which stays bound to config-readiness). The `[sso]` extra (authlib + dnspython) covers
+OIDC/SCIM; **SAML needs the separate `[saml]` extra** (python3-saml + native `libxmlsec1`).
 
 After any login, the asserted identity is joined to a global Identity by **verified email**, and
 a **membership** is created/reused in the connection's org; IdP **groups map to roles** via the

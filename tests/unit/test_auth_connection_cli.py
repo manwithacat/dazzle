@@ -324,6 +324,74 @@ def test_doctor_missing_connection(monkeypatch) -> None:
     assert r.exit_code == 1 and "No connection" in r.output
 
 
+def _stub_probe(monkeypatch, checks):
+    """Stub connection_probe.probe_connection (the CLI does a call-time local import, so
+    patching the module attribute is picked up) + record whether it was invoked."""
+    from dazzle.back.runtime.auth import connection_probe
+
+    seen = {"called": False}
+
+    def _probe(conn, **_):
+        seen["called"] = True
+        return tuple(checks)
+
+    monkeypatch.setattr(connection_probe, "probe_connection", _probe)
+    return seen
+
+
+def _probe_check(status="ok", name="idp_sso_reachable", detail="reachable (HTTP 200)"):
+    from dazzle.back.runtime.auth.connection_doctor import Check
+
+    return Check(name=name, level="recommended", status=status, detail=detail)
+
+
+def test_doctor_probe_renders_section(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn())
+    seen = _stub_probe(monkeypatch, [_probe_check()])
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--probe"])
+    assert r.exit_code == 0 and seen["called"]
+    assert "Live probe (network)" in r.output and "idp_sso_reachable" in r.output
+
+
+def test_doctor_without_probe_does_no_network(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn())
+    seen = _stub_probe(monkeypatch, [_probe_check()])
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1"])
+    assert r.exit_code == 0 and seen["called"] is False  # opt-in: no probe unless --probe
+    assert "Live probe" not in r.output
+
+
+def test_doctor_probe_does_not_change_exit_code(monkeypatch) -> None:
+    # config not ready + a passing probe → still exit 1 (exit is config-readiness, not reachability)
+    _patch_doctor(monkeypatch, _oidc_conn(verified_domains=[]))
+    _stub_probe(monkeypatch, [_probe_check()])
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--probe"])
+    assert r.exit_code == 1
+    # config ready + a FAILING probe → still exit 0
+    _patch_doctor(monkeypatch, _oidc_conn())
+    _stub_probe(
+        monkeypatch, [_probe_check(status="warn", detail="unreachable (unreachable): boom")]
+    )
+    r2 = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--probe"])
+    assert r2.exit_code == 0 and "Live probe (network)" in r2.output
+
+
+def test_doctor_probe_json_carries_probe_key(monkeypatch) -> None:
+    # Rich wraps/colorizes console output, so assert on substrings (as test_doctor_json_carries_ready
+    # does) rather than json.loads — the `probe` key + check name must be present.
+    _patch_doctor(monkeypatch, _oidc_conn())
+    _stub_probe(monkeypatch, [_probe_check()])
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--probe", "--json"])
+    assert r.exit_code == 0 and '"probe"' in r.output and "idp_sso_reachable" in r.output
+
+
+def test_doctor_json_without_probe_omits_probe_key(monkeypatch) -> None:
+    _patch_doctor(monkeypatch, _oidc_conn())
+    _stub_probe(monkeypatch, [_probe_check()])
+    r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--json"])
+    assert r.exit_code == 0 and '"probe"' not in r.output
+
+
 def test_scaffold_prints_sequence(monkeypatch) -> None:
     r = runner.invoke(auth_app, ["connection", "scaffold"])
     assert r.exit_code == 0

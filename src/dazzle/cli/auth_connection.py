@@ -616,11 +616,22 @@ def doctor(
     json_out: Annotated[
         bool, typer.Option("--json", help="Emit the diagnosis as JSON (for agents)")
     ] = False,
+    probe: Annotated[
+        bool,
+        typer.Option(
+            "--probe",
+            help="Also run a live reachability probe of the IdP endpoints (network I/O, "
+            "SSRF-guarded). Opt-in; does not affect the exit code.",
+        ),
+    ] = False,
 ) -> None:
     """Report what a connection still needs to go live + an activation runbook.
 
-    Exit code is 0 only when the connection is activation-ready, so CI/agents can gate
-    on it. Never prints the client secret value (only whether one is present).
+    Exit code is 0 only when the connection is activation-ready (config completeness), so
+    CI/agents can gate on it. ``--probe`` adds an opt-in live reachability check of the IdP
+    endpoints on top of the network-free audit — informational only (a transient IdP outage
+    must not flip the gate), so it never changes the exit code. Never prints the client
+    secret value (only whether one is present).
     """
     import json as _json
 
@@ -678,28 +689,37 @@ def doctor(
         conn, secret_key_ok=secret_key_ok, sso_extra_ok=sso_extra_ok, dns_extra_ok=dns_extra_ok
     )
 
+    # Opt-in live reachability probe (network I/O, SSRF-guarded). Informational only — never
+    # affects the exit code, which stays bound to config-readiness (diag.ready).
+    probe_checks: tuple[Any, ...] = ()
+    if probe:
+        from dazzle.back.runtime.auth.connection_probe import probe_connection
+
+        probe_checks = probe_connection(conn)
+
     if json_out:
-        console.print(
-            _json.dumps(
+        payload: dict[str, Any] = {
+            "connection_id": diag.connection_id,
+            "connection_type": diag.connection_type,
+            "ready": diag.ready,
+            "checks": [
                 {
-                    "connection_id": diag.connection_id,
-                    "connection_type": diag.connection_type,
-                    "ready": diag.ready,
-                    "checks": [
-                        {
-                            "name": c.name,
-                            "level": c.level,
-                            "status": c.status,
-                            "detail": c.detail,
-                            "remedy": c.remedy,
-                        }
-                        for c in diag.checks
-                    ],
-                    "runbook": list(diag.runbook),
-                },
-                indent=2,
-            )
-        )
+                    "name": c.name,
+                    "level": c.level,
+                    "status": c.status,
+                    "detail": c.detail,
+                    "remedy": c.remedy,
+                }
+                for c in diag.checks
+            ],
+            "runbook": list(diag.runbook),
+        }
+        if probe:
+            payload["probe"] = [
+                {"name": c.name, "level": c.level, "status": c.status, "detail": c.detail}
+                for c in probe_checks
+            ]
+        console.print(_json.dumps(payload, indent=2))
         if not diag.ready:
             raise typer.Exit(code=1)
         return
@@ -719,6 +739,15 @@ def doctor(
     console.print("\n[bold]Activation runbook:[/bold]")
     for i, step in enumerate(diag.runbook, 1):
         console.print(f"  {i}. {step}")
+
+    if probe:
+        probe_table = Table(title="Live probe (network)")
+        for col in ("", "check", "detail"):
+            probe_table.add_column(col)
+        for c in probe_checks:
+            probe_table.add_row(_symbol.get(c.status, "?"), c.name, c.detail)
+        console.print()
+        console.print(probe_table)
 
     if not diag.ready:
         raise typer.Exit(code=1)

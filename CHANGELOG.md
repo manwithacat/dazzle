@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.102] - 2026-06-08
+
+### Added
+- **`dazzle auth connection doctor --probe` — live IdP reachability (#1342).** An opt-in,
+  CLI-only network probe layered on top of the network-free config audit: OIDC fetches the
+  discovery doc (`discovery_url` or `{issuer}/.well-known/openid-configuration`) and validates
+  it carries `authorization_endpoint` + `token_endpoint`; SAML checks `idp_sso_url` (+ `idp_slo_url`)
+  reachability (any HTTP status = serving); SCIM is informational (inbound). The SSRF gate is
+  **reused** from the IdP-metadata-import path (`validate_metadata_url`: https-only, public-IP-only
+  via `not is_global`, no redirects, size-capped). Probe results are **informational** — they never
+  change the exit code (which stays bound to config-readiness) and the probe is deliberately NOT
+  wired into the org-admin web panel (no request-path SSRF surface). New module
+  `auth/connection_probe.py`; `connection_doctor.py` stays pure + network-free.
+
+### Agent Guidance
+- `doctor --probe` is the only network-touching path in connection diagnostics; everything else
+  (`diagnose_connection`, the web readiness panel) is network-free by design. Any new live check
+  must go through the SSRF-guarded `connection_probe._default_http_get` (reusing
+  `validate_metadata_url`) and stay opt-in + CLI-only — never on a request path.
+
 ## [0.81.101] - 2026-06-08
 
 ### Added
