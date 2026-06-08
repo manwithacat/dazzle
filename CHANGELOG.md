@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.91] - 2026-06-08
+
+### Added
+- **Mutation-audit of security-critical modules** (test *strength*, not coverage —
+  follow-on to the fuzz-leverage track). Ran `scripts/mutation_poc.py` over
+  `connection_crypto`, `predicate_compiler`, `rls_schema`, `rbac/matrix`, `csrf`.
+  Findings + per-module kill-rates in `docs/proposals/mutation-audit-findings.md`.
+  Headline: unit-only kill-rate badly understates code pinned by the Postgres enforcement
+  suite (rls_schema 7%→60%, predicate_compiler 35%→45% once the PG tests are included).
+
+### Fixed
+- **`connection_crypto` test strength (50%→83%).** No test asserted the key/token base64
+  decoders reject non-alphabet characters (`validate=True`); a regression dropping it would
+  silently accept mangled keys. Added two tests pinning it. (The rotation-key decoder's
+  `validate=False` is intentional and proven equivalent.)
+- **`rbac/matrix` security inversions.** Pinned the `deny_all` guard (a flip turns
+  `permit: x: false` into a permit) and the recursive `or` in compound role gates (a flip
+  silently denies a `role(a) or role(b)` gate to everyone).
+
+### Agent Guidance
+- Mutation kill-rate for the SQL-generation modules (`rls_schema`, `predicate_compiler`)
+  MUST be measured with the Postgres enforcement tests included — unit tests alone
+  understate them by ~5-8×. See `docs/proposals/mutation-audit-findings.md`.
+
 ## [0.81.90] - 2026-06-08
 
 ### Fixed

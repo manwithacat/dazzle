@@ -275,6 +275,60 @@ def test_forbid_override_combined() -> None:
     assert m3.get("editor", "Task", "read") == PolicyDecision.DENY
 
 
+def test_deny_all_rule_denies_every_role() -> None:
+    """`permit: <op>: false` (deny_all) must DENY for every role — no role may "match" a
+    deny_all rule. Pins matrix._rule_matches_role's deny_all guard (a mutation-audit
+    survivor where flipping the guard to True would invert the explicit denial into a
+    permit, since the rule's effect is PERMIT)."""
+    from dazzle.core.ir.domain import PermissionRule, PolicyEffect
+
+    access = AccessSpec(
+        permissions=[
+            PermissionRule(
+                operation=PermissionKind.UPDATE,
+                effect=PolicyEffect.PERMIT,
+                personas=[],
+                condition=None,
+                deny_all=True,
+            ),
+        ]
+    )
+    matrix = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=access)],
+            [_make_persona("admin"), _make_persona("guest")],
+        )
+    )
+    assert matrix.get("admin", "Task", "update") == PolicyDecision.DENY
+    assert matrix.get("guest", "Task", "update") == PolicyDecision.DENY
+
+
+def test_compound_role_gate_matches_either_branch() -> None:
+    """A pure-role gate `role(admin) or role(editor)` (empty personas) must PERMIT BOTH
+    admin and editor. Pins _condition_matches_role's recursive OR (a mutation-audit
+    survivor where or→and would demand a single role be in BOTH branches — impossible for
+    distinct roles, silently denying everyone the gate should admit)."""
+    from dazzle.core.ir.conditions import LogicalOperator
+
+    cond = ConditionExpr(
+        left=_role_cond("admin"),
+        operator=LogicalOperator.OR,
+        right=_role_cond("editor"),
+    )
+    access = AccessSpec(
+        permissions=[_permit_rule(PermissionKind.READ, personas=[], condition=cond)]
+    )
+    matrix = generate_access_matrix(
+        _make_appspec(
+            [_make_entity("Task", access=access)],
+            [_make_persona("admin"), _make_persona("editor"), _make_persona("guest")],
+        )
+    )
+    assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT
+    assert matrix.get("editor", "Task", "read") == PolicyDecision.PERMIT
+    assert matrix.get("guest", "Task", "read") == PolicyDecision.DENY
+
+
 # ---------------------------------------------------------------------------
 # Test: mixed OR condition (role + field)
 # ---------------------------------------------------------------------------

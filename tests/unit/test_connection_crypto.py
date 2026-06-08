@@ -109,3 +109,24 @@ def test_malformed_old_key_is_skipped_not_fatal(monkeypatch) -> None:
     token = encrypt_secret("primary-secret")  # on the primary key
     monkeypatch.setenv("DAZZLE_CONNECTION_SECRET_OLD", "not-valid-base64!!!")
     assert decrypt_secret(token) == "primary-secret"  # primary still decrypts
+
+
+def test_primary_key_with_non_base64_chars_is_rejected(monkeypatch) -> None:
+    # A primary key string carrying a non-alphabet char (here a newline) that would
+    # decode to a valid 32-byte key under lax base64 must still be rejected — pins
+    # `validate=True` on the primary-key decode (a mutation-audit survivor, #1342 #5).
+    # Under validate=False the char is silently discarded and the bad config "works".
+    bad_key = _KEY[:4] + "\n" + _KEY[4:]
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", bad_key)
+    with pytest.raises(ConnectionSecretError, match="not valid base64"):
+        encrypt_secret("x")
+
+
+def test_token_with_non_base64_chars_is_rejected(monkeypatch) -> None:
+    # Same for the ciphertext decode path: a token with a non-alphabet char must be
+    # rejected as bad base64, not silently de-mangled and decrypted.
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY)
+    token = encrypt_secret("x")
+    bad_token = token[:4] + "\n" + token[4:]
+    with pytest.raises(ConnectionSecretError, match="not valid base64"):
+        decrypt_secret(bad_token)
