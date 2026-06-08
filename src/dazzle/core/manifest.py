@@ -165,6 +165,9 @@ class AuthConfig:
     # auth Plan 3a: personas allowed to invite / manage org members. Fail-closed —
     # empty means nobody can manage members until the app designates admin roles.
     org_admin_roles: list[str] = field(default_factory=list)
+    # Capability -> personas map for the framework's org-admin surfaces. Empty = every capability
+    # falls back to org_admin_roles (back-compat). See auth/admin_policy.py CAPABILITIES.
+    admin_capabilities: dict[str, list[str]] = field(default_factory=dict)
 
     # Provider-specific config
     session: AuthSessionConfig = field(default_factory=AuthSessionConfig)
@@ -875,6 +878,10 @@ def load_manifest(path: Path) -> ProjectManifest:
         require_email_verification=auth_data.get("require_email_verification", False),
         allow_registration=auth_data.get("allow_registration", True),
         org_admin_roles=list(auth_data.get("org_admin_roles", [])),
+        admin_capabilities={
+            str(k): [str(r) for r in (v or [])]
+            for k, v in (auth_data.get("admin_capabilities", {}) or {}).items()
+        },
         session=session_config,
         jwt=jwt_config,
         oauth_providers=oauth_providers,
