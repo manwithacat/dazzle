@@ -179,10 +179,11 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_member_admin_routes())
 
-        # Org-admin connection surface: an org admin manages their org's connections'
-        # domains (claim + DNS-TXT verify) in-app, RBAC-gated + org-scoped + secret-free.
-        # Gated on an active enterprise capability (#1342) — no enterprise capability
-        # declared → no admin surface. Creation stays in the operator CLI.
+        # Org-admin connection surface: an org admin manages their org's connections in-app
+        # (create OIDC/SCIM/SAML, claim + DNS-TXT verify domains), RBAC-gated + org-scoped.
+        # Read surface is secret-free; creation accepts secrets (encrypted at rest) and shows a
+        # minted SCIM bearer once. Gated on an active enterprise capability (#1342) — no
+        # enterprise capability declared → no admin surface.
         if self._any_enterprise_active(ctx):
             from dazzle.back.runtime.auth.connection_admin_routes import (
                 create_connection_admin_routes,

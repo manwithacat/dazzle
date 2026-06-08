@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.103] - 2026-06-08
+
+### Added
+- **In-app enterprise connection creation (OIDC + SCIM + SAML) (#1342).** Org admins can now
+  create connections from `/auth/connections`, not just manage domains — closing the last
+  in-app/CLI gap. `?new=<type>` renders a type-specific form; `POST /auth/connections/create`
+  (CSRF-protected, RBAC-gated, **org-fenced** — tenant_id is always the caller's active org, never
+  request input) creates it. **OIDC** takes a `client_secret` (password field → AES-GCM-encrypted
+  at rest by `create_connection`, never echoed); **SCIM** mints a bearer shown **exactly once**
+  (inline render, no redirect, never re-rendered or stored plaintext); **SAML** takes explicit
+  entity-id/SSO-URL/cert or an `idp_metadata_url` fetched via the existing SSRF-guarded
+  `fetch_idp_metadata` (https-only, public-IP-only, no redirects, size-capped, offloaded to a
+  thread). OIDC/SCIM require `DAZZLE_CONNECTION_SECRET`; SAML (no secret) does not. New pure
+  helpers in `auth/connection_create_form.py`; the read surface stays secret-free.
+
+### Agent Guidance
+- In-app connection creation is org-admin-gated + org-fenced; the created `tenant_id` is always the
+  caller's active membership, never a form/query value. Secrets go straight to
+  `create_connection` (encrypted at rest) — never render a stored secret; the SCIM bearer is the
+  only secret ever shown, and only once at creation. The SAML metadata-URL fetch is the one
+  request-path network call — it must stay behind `fetch_idp_metadata`'s SSRF gate. Error responses
+  that can echo user input (the metadata URL) are `text/plain`, never HTML.
+
 ## [0.81.102] - 2026-06-08
 
 ### Added

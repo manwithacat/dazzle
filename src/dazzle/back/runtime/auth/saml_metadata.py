@@ -37,8 +37,13 @@ def validate_metadata_url(url: str) -> None:
     the CVE-2023-24329 split class).
 
     SSRF-RESIDUAL: this validates the resolution *now*; httpx re-resolves at connect time,
-    so a DNS-rebinding window exists. Acceptable for an operator-run CLI with a trusted
-    resolver; revisit (pin the resolved IP) if this ever moves onto a request path.
+    so a DNS-rebinding window exists. Two callers, both accepted:
+    - the operator CLI (`create-saml --idp-metadata-url`) — trusted resolver;
+    - the in-app org-admin create surface (`POST /auth/connections/create`, #1342) — an
+      authenticated, RBAC-gated, privileged caller; the fetch is https-only, public-IP-only,
+      redirect-free, and time/size-capped. This is a deliberate, accepted request-path exposure.
+    If the exposure ever widens to a less-privileged caller, pin the resolved IP (resolve once,
+    connect to that IP with the original Host header + SNI) to close the rebinding window.
     """
     if "\\" in url:
         raise SamlMetadataError("userinfo", "IdP metadata URL must not contain a backslash")

@@ -62,6 +62,36 @@ def _is_valid_domain(domain: str) -> bool:
     return all(lbl and not lbl.startswith("-") and not lbl.endswith("-") for lbl in labels)
 
 
+_NO_KEY_MSG = (
+    "Creating an OIDC or SCIM connection needs DAZZLE_CONNECTION_SECRET set (the at-rest key "
+    "for the encrypted secret). Ask your operator to set it, then retry."
+)
+
+
+def _fetch_saml_metadata(metadata_url: str) -> dict[str, str] | None:
+    """Fetch + parse IdP metadata from an operator-supplied https URL, or None if none given.
+
+    Reuses the SSRF-guarded ``saml_metadata.fetch_idp_metadata`` (https-only, public-IP-only via
+    ``not ip.is_global``, no redirects, size-capped) — the SAME gate the CLI ``create-saml`` uses.
+    This IS network I/O on a request path, but it is org-admin-gated and the fetch is SSRF-validated;
+    a bad/blocked URL becomes a user-facing 400 (``CreateFormError``), never a 500 or an internal hit.
+    """
+    from dazzle.back.runtime.auth.connection_create_form import CreateFormError
+
+    if not metadata_url:
+        return None
+    from dazzle.back.runtime.auth.saml_metadata import (
+        SamlMetadataError,
+        fetch_idp_metadata,
+        parse_idp_metadata_xml,
+    )
+
+    try:
+        return parse_idp_metadata_xml(fetch_idp_metadata(metadata_url))
+    except SamlMetadataError as exc:
+        raise CreateFormError(f"IdP metadata import failed ({exc.reason}): {exc}") from exc
+
+
 def create_connection_admin_routes() -> APIRouter:
     router = APIRouter(tags=["auth"])
 
@@ -89,8 +119,16 @@ def create_connection_admin_routes() -> APIRouter:
             return None
         return store.get_connection(connection_id, tenant_id=org_id)
 
-    @router.get("/auth/connections", response_class=HTMLResponse, include_in_schema=False)
-    async def connections_page(request: Request) -> HTMLResponse:
+    def _render_page(
+        request: Request,
+        store: Any,
+        org_id: str,
+        *,
+        new_form: str = "",
+        scim_bearer_once: str = "",
+    ) -> HTMLResponse:
+        """Build the org's connections page. Shared by the GET route and the SCIM-create
+        response (which renders the minted bearer once). Secret-free except the one-time bearer."""
         from dazzle.back.runtime.auth.connection_admin_views import build_connections_view
         from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
         from dazzle.back.runtime.auth.connection_doctor import (
@@ -99,11 +137,6 @@ def create_connection_admin_routes() -> APIRouter:
         )
         from dazzle.back.runtime.auth.domain_verification import txt_record
         from dazzle.render.fragment.renderer import FragmentRenderer
-
-        gated = _gate(request)
-        if gated is None:
-            return HTMLResponse("Forbidden", status_code=403)
-        store, _ctx, org_id = gated
 
         flags = environment_flags()
         connections: list[dict[str, Any]] = []
@@ -182,8 +215,105 @@ def create_connection_admin_routes() -> APIRouter:
             product_name=_product_name(request),
             org_name=org.name if org is not None else org_id,
             connections=connections,
+            new_form=new_form if new_form in ("oidc", "scim", "saml") else "",
+            secret_key_ok=flags[0],
+            scim_bearer_once=scim_bearer_once,
+            base_url=str(request.base_url).rstrip("/"),
         )
         return HTMLResponse(FragmentRenderer().render(page))
+
+    @router.get("/auth/connections", response_class=HTMLResponse, include_in_schema=False)
+    async def connections_page(request: Request, new: Annotated[str, Query()] = "") -> HTMLResponse:
+        gated = _gate(request)
+        if gated is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        store, _ctx, org_id = gated
+        return _render_page(request, store, org_id, new_form=new)
+
+    @router.post("/auth/connections/create", include_in_schema=False)
+    async def create_connection_action(
+        request: Request, type: Annotated[str, Query()] = ""
+    ) -> Response:
+        """Create an OIDC/SCIM/SAML connection for the caller's org. Org-fenced (tenant_id is the
+        caller's active membership, never input), CSRF-protected, secrets encrypted at rest by
+        ``create_connection``. The SCIM bearer is minted here and shown exactly once."""
+        import secrets as _secrets
+
+        from dazzle.back.runtime.auth.connection_create_form import (
+            CONNECTION_TYPES,
+            CreateFormError,
+            assemble_saml_config,
+            plan_oidc,
+            plan_saml,
+            plan_scim,
+        )
+        from dazzle.back.runtime.auth.connection_doctor import environment_flags
+
+        gated = _gate(request)
+        if gated is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        store, _ctx, org_id = gated
+        if type not in CONNECTION_TYPES:
+            return HTMLResponse("Unknown connection type", status_code=400)
+
+        form = await request.form()
+        secret_key_ok = environment_flags()[0]
+        bearer = ""
+        try:
+            if type == "oidc":
+                if not secret_key_ok:
+                    return HTMLResponse(_NO_KEY_MSG, status_code=400)
+                plan = plan_oidc(
+                    issuer=str(form.get("issuer", "")),
+                    client_id=str(form.get("client_id", "")),
+                    group_map=str(form.get("group_map", "")),
+                )
+                client_secret = str(form.get("client_secret", "")).strip()
+                if not client_secret:
+                    raise CreateFormError("Client secret is required")
+                secrets_payload: dict[str, Any] = {"client_secret": client_secret}
+            elif type == "scim":
+                if not secret_key_ok:
+                    return HTMLResponse(_NO_KEY_MSG, status_code=400)
+                plan = plan_scim(group_map=str(form.get("group_map", "")))
+                bearer = _secrets.token_urlsafe(32)
+                secrets_payload = {"scim_bearer": bearer}
+            else:  # saml — no secret (the IdP signing cert is public)
+                # Offload the (bounded, SSRF-guarded) metadata fetch to a thread so a slow IdP
+                # can't block the event loop for the full timeout on this async handler.
+                from starlette.concurrency import run_in_threadpool
+
+                metadata = await run_in_threadpool(
+                    _fetch_saml_metadata, str(form.get("idp_metadata_url", "")).strip()
+                )
+                config = assemble_saml_config(
+                    metadata=metadata,
+                    idp_entity_id=str(form.get("idp_entity_id", "")),
+                    idp_sso_url=str(form.get("idp_sso_url", "")),
+                    idp_x509_cert=str(form.get("idp_x509_cert", "")),
+                    email_attribute=str(form.get("email_attribute", "")),
+                    groups_attribute=str(form.get("groups_attribute", "")),
+                )
+                plan = plan_saml(config=config, group_map=str(form.get("group_map", "")))
+                secrets_payload = {}
+        except CreateFormError as exc:
+            # text/plain, not HTML: the message can echo user-supplied input (e.g. a SAML
+            # metadata URL/host from the SSRF-reject path) — never reflect it as HTML.
+            return Response(str(exc), status_code=400, media_type="text/plain")
+
+        store.create_connection(
+            tenant_id=org_id,
+            type=plan.type,
+            config=plan.config,
+            secrets=secrets_payload,
+            domains=[],
+            group_mapping=plan.group_mapping,
+        )
+        if plan.show_bearer_once:
+            # Render the minted bearer exactly once — no redirect (would lose it), never stored
+            # plaintext, never put in a URL.
+            return _render_page(request, store, org_id, scim_bearer_once=bearer)
+        return _back(request)
 
     @router.post("/auth/connections/add-domain", include_in_schema=False)
     async def add_domain(

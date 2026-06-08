@@ -94,6 +94,10 @@ class _Store:
     def get_organization(self, org_id):
         return SimpleNamespace(name="Acme Inc")
 
+    def create_connection(self, **kw):
+        self.created = kw
+        return _conn("conn-new", kw.get("tenant_id", "org-1"), type=kw.get("type", "oidc"))
+
 
 def _client(store, *, org_admin_roles=("admin",), authed=True) -> TestClient:
     app = FastAPI()
@@ -283,3 +287,198 @@ def test_add_domain_rejects_malformed() -> None:
     )
     assert r.status_code == 400
     assert store.set_domains_calls == []
+
+
+# ---- in-app connection creation (#1342) ----
+
+
+def test_new_oidc_renders_form() -> None:
+    r = _client(_Store()).get("/auth/connections?new=oidc")
+    assert r.status_code == 200
+    assert "Create OIDC connection" in r.text
+    assert "/auth/connections/create?type=oidc" in r.text
+    assert 'type="password"' in r.text  # the client_secret field is a password input
+
+
+def test_no_new_param_shows_links_not_a_form() -> None:
+    r = _client(_Store()).get("/auth/connections")
+    assert r.status_code == 200
+    assert "Add a connection" in r.text and "Add OIDC" in r.text
+    assert "Create OIDC connection" not in r.text  # no form until ?new=oidc
+
+
+def test_create_oidc_persists_secret_and_redirects() -> None:
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=oidc",
+        data={
+            "issuer": "https://idp.test",
+            "client_id": "cid",
+            "client_secret": "TOPSECRET",
+            "group_map": "eng=engineer",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code in (204, 303)
+    assert "TOPSECRET" not in r.text  # the secret is never echoed in the response
+    assert store.created["type"] == "oidc"
+    assert store.created["tenant_id"] == "org-1"  # org-fenced (caller's org, not input)
+    assert store.created["config"] == {"issuer": "https://idp.test", "client_id": "cid"}
+    assert store.created["secrets"] == {"client_secret": "TOPSECRET"}
+    assert store.created["group_mapping"] == {"eng": "engineer"}
+
+
+def test_create_oidc_requires_https_issuer() -> None:
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=oidc",
+        data={"issuer": "http://idp.test", "client_id": "cid", "client_secret": "s"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 400 and "https" in r.text
+    assert not hasattr(store, "created")
+
+
+def test_create_oidc_missing_client_secret_400() -> None:
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=oidc",
+        data={"issuer": "https://idp.test", "client_id": "cid", "client_secret": "  "},
+        follow_redirects=False,
+    )
+    assert r.status_code == 400 and "Client secret" in r.text
+    assert not hasattr(store, "created")
+
+
+def test_create_scim_shows_bearer_once() -> None:
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=scim", data={"group_map": ""}, follow_redirects=False
+    )
+    assert r.status_code == 200  # inline render (not a redirect) so the bearer can be shown once
+    assert "save the bearer now" in r.text.lower()
+    minted = store.created["secrets"]["scim_bearer"]
+    assert minted and minted in r.text  # shown exactly once, here
+    # a plain re-render of the list must NOT contain the bearer
+    r2 = _client(store).get("/auth/connections")
+    assert minted not in r2.text
+
+
+def test_create_saml_explicit_fields() -> None:
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=saml",
+        data={
+            "idp_entity_id": "https://idp/meta",
+            "idp_sso_url": "https://idp/sso",
+            "idp_x509_cert": "CERTPEM",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code in (204, 303)
+    assert store.created["type"] == "saml" and store.created["secrets"] == {}
+    assert store.created["config"]["idp_entity_id"] == "https://idp/meta"
+    assert store.created["config"]["idp_x509_cert"] == "CERTPEM"
+
+
+def test_create_saml_metadata_url_fetched(monkeypatch) -> None:
+    from dazzle.back.runtime.auth import connection_admin_routes as car
+
+    monkeypatch.setattr(
+        car,
+        "_fetch_saml_metadata",
+        lambda url: {
+            "idp_entity_id": "https://meta/entity",
+            "idp_sso_url": "https://meta/sso",
+            "idp_x509_cert": "META_CERT",
+        },
+    )
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=saml",
+        data={"idp_metadata_url": "https://idp.test/metadata"},
+        follow_redirects=False,
+    )
+    assert r.status_code in (204, 303)
+    assert store.created["config"]["idp_sso_url"] == "https://meta/sso"
+
+
+def test_create_saml_metadata_error_is_400(monkeypatch) -> None:
+    from dazzle.back.runtime.auth import connection_admin_routes as car
+    from dazzle.back.runtime.auth.connection_create_form import CreateFormError
+
+    def _boom(url):
+        raise CreateFormError("IdP metadata import failed (private_ip): blocked")
+
+    monkeypatch.setattr(car, "_fetch_saml_metadata", _boom)
+    r = _client(_Store()).post(
+        "/auth/connections/create?type=saml",
+        data={"idp_metadata_url": "https://internal.local/meta"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 400 and "private_ip" in r.text
+
+
+def test_create_saml_missing_fields_400() -> None:
+    store = _Store()
+    r = _client(store).post("/auth/connections/create?type=saml", data={}, follow_redirects=False)
+    assert r.status_code == 400 and "Missing IdP" in r.text
+    assert not hasattr(store, "created")
+
+
+def test_create_unknown_type_400() -> None:
+    r = _client(_Store()).post("/auth/connections/create?type=ldap", data={})
+    assert r.status_code == 400
+
+
+def test_create_forbidden_without_session() -> None:
+    store = _Store()
+    r = _client(store, authed=False).post(
+        "/auth/connections/create?type=oidc",
+        data={"issuer": "https://idp.test", "client_id": "c", "client_secret": "s"},
+    )
+    assert r.status_code == 403 and not hasattr(store, "created")
+
+
+def test_create_forbidden_for_non_admin() -> None:
+    store = _Store(roles=("member",))
+    r = _client(store).post(
+        "/auth/connections/create?type=oidc",
+        data={"issuer": "https://idp.test", "client_id": "c", "client_secret": "s"},
+    )
+    assert r.status_code == 403 and not hasattr(store, "created")
+
+
+def test_create_oidc_without_at_rest_key_400(monkeypatch) -> None:
+    # OIDC stores an encrypted secret → needs DAZZLE_CONNECTION_SECRET; without it, a clear 400.
+    monkeypatch.delenv("DAZZLE_CONNECTION_SECRET", raising=False)
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=oidc",
+        data={"issuer": "https://idp.test", "client_id": "c", "client_secret": "s"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 400 and "DAZZLE_CONNECTION_SECRET" in r.text
+    assert not hasattr(store, "created")
+
+
+def test_create_saml_works_without_at_rest_key(monkeypatch) -> None:
+    # SAML has no secret → creation does not require the at-rest key.
+    monkeypatch.delenv("DAZZLE_CONNECTION_SECRET", raising=False)
+    store = _Store()
+    r = _client(store).post(
+        "/auth/connections/create?type=saml",
+        data={
+            "idp_entity_id": "https://idp/meta",
+            "idp_sso_url": "https://idp/sso",
+            "idp_x509_cert": "CERTPEM",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code in (204, 303) and store.created["type"] == "saml"
+
+
+def test_create_path_is_csrf_protected() -> None:
+    from dazzle.back.runtime.csrf import CSRFConfig
+
+    assert "/auth/connections/create" in CSRFConfig().protected_paths

@@ -131,22 +131,106 @@ def _connection_block(conn: dict[str, Any]) -> Stack:
     return Stack(children=tuple(children))
 
 
+_OIDC_FIELDS = (
+    Field(name="issuer", label="Issuer URL (https://…)", kind="url", required=True),
+    Field(name="client_id", label="Client id", kind="text", required=True),
+    Field(name="client_secret", label="Client secret", kind="password", required=True),
+    Field(name="group_map", label="Group→role map (eng=engineer, …)", kind="text"),
+)
+_SCIM_FIELDS = (Field(name="group_map", label="Group→role map (eng=engineer, …)", kind="text"),)
+_SAML_FIELDS = (
+    Field(name="idp_metadata_url", label="IdP metadata URL (https; auto-fills below)", kind="url"),
+    Field(name="idp_entity_id", label="IdP entity id (or via metadata URL)", kind="text"),
+    Field(name="idp_sso_url", label="IdP SSO URL (or via metadata URL)", kind="url"),
+    Field(
+        name="idp_x509_cert", label="IdP signing cert PEM (or via metadata URL)", kind="textarea"
+    ),
+    Field(name="email_attribute", label="Email attribute (optional)", kind="text"),
+    Field(name="groups_attribute", label="Groups attribute (optional)", kind="text"),
+    Field(name="group_map", label="Group→role map (eng=engineer, …)", kind="text"),
+)
+_CREATE_FORMS = {
+    "oidc": ("Create OIDC connection", _OIDC_FIELDS),
+    "scim": ("Create SCIM connection", _SCIM_FIELDS),
+    "saml": ("Create SAML connection", _SAML_FIELDS),
+}
+
+
+def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
+    """The 'Add a connection' chooser links, plus the active type's create form (one at a time)."""
+    out: list[Any] = [Heading(body="Add a connection", level=2)]
+    out.append(
+        Stack(
+            children=(
+                Link(label="Add OIDC", href=URL("/auth/connections?new=oidc")),
+                Link(label="Add SCIM", href=URL("/auth/connections?new=scim")),
+                Link(label="Add SAML", href=URL("/auth/connections?new=saml")),
+            )
+        )
+    )
+    if new_form not in _CREATE_FORMS:
+        return out
+    # OIDC/SCIM store an encrypted secret, so they need the at-rest key; SAML has no secret.
+    if new_form in ("oidc", "scim") and not secret_key_ok:
+        out.append(
+            Text(
+                body="Creating an OIDC or SCIM connection needs DAZZLE_CONNECTION_SECRET set "
+                "(the at-rest key for the encrypted secret). Ask your operator to set it.",
+                tone="muted",
+            )
+        )
+        return out
+    label, fields = _CREATE_FORMS[new_form]
+    if new_form == "scim":
+        out.append(
+            Text(body="A SCIM bearer token is generated and shown once on creation.", tone="muted")
+        )
+    out.append(
+        FormStack(
+            action=URL(f"/auth/connections/create?type={new_form}"),
+            method="POST",
+            fields=fields,
+            submit=Submit(label=label, variant="primary"),
+        )
+    )
+    return out
+
+
+def _scim_bearer_banner(bearer: str, base_url: str) -> Stack:
+    """One-time display of a freshly-minted SCIM bearer — shown once, never re-rendered/stored."""
+    scim_url = f"{base_url.rstrip('/')}/scim/v2" if base_url else "<base_url>/scim/v2"
+    return Stack(
+        children=(
+            Heading(body="SCIM connection created — save the bearer now", level=2),
+            Text(body="This token is shown only once. Configure it in your IdP:", tone="muted"),
+            Text(body=f"SCIM base URL:  {scim_url}"),
+            Text(body=f"Bearer token:   {bearer}"),
+        )
+    )
+
+
 def build_connections_view(
     *,
     product_name: str,
     org_name: str,
     connections: list[dict[str, Any]],
+    new_form: str = "",
+    secret_key_ok: bool = True,
+    scim_bearer_once: str = "",
+    base_url: str = "",
 ) -> Page:
     body: list[Any] = [
         Link(label=product_name, href=URL("/")),
         Heading(body=f"SSO connections for {org_name}", level=1),
         Text(
             body="Verify a domain to activate a connection: claim it, publish the DNS TXT "
-            "record, then Verify. Creating connections (with IdP secrets) is done by your "
-            "operator with the dazzle CLI.",
+            "record, then Verify. You can create a connection below, or with the dazzle CLI.",
             tone="muted",
         ),
     ]
+    if scim_bearer_once:
+        body.append(_scim_bearer_banner(scim_bearer_once, base_url))
+    body.extend(_create_area(new_form, secret_key_ok))
     if not connections:
         body.append(Text(body="No connections for this organization yet.", tone="muted"))
     else:

@@ -139,6 +139,7 @@ class CSRFConfig:
             # (NOT the cross-origin SAML ACS — those stay NA_PREAUTH under /auth/).
             "/auth/connections/add-domain",
             "/auth/connections/verify-domain",
+            "/auth/connections/create",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
