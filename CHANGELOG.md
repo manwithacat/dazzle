@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.93] - 2026-06-08
+
+### Added
+- **Closed the scope/RLS compiler mutation residuals.** Direct unit tests now pin the
+  branches the Postgres enforcement suite executed but didn't constrain, lifting two
+  security-critical SQL compilers' mutation kill-rate:
+  - `rls_schema.py` **60% → 93%** — the orchestrators `build_all_rls_ddl` /
+    `describe_rls_policies` are pinned via lightweight stubs: the tenancy gate
+    (`tenancy is None` no-crash, `mode != SHARED_SCHEMA` emit-vs-not), the scoped-vs-flat
+    `has_scopes` split, and the no-scope-rules `ValueError` guard.
+  - `predicate_compiler.py` **45% → 77%** — scalar type-map, null-target `IS NULL`,
+    `current_user`→`id` GUC-ref collection, the policy-mode non-dotted-binding guard,
+    2-/3-segment dotted-junction expansion, and the create-probe `payload_mode`.
+  - Mutation-gate floors raised accordingly (`rls_schema` ≥90, `predicate_compiler` ≥72);
+    remaining survivors in both are equivalent mutants (frozen-dataclass, error strings,
+    a correlated-condition guard). See `docs/proposals/mutation-audit-findings.md`.
+
 ## [0.81.92] - 2026-06-08
 
 ### Added

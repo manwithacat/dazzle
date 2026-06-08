@@ -16,8 +16,8 @@ alone badly understates code whose real safety net is the Postgres enforcement s
 
 | Module | Unit-only | With PG suite | Notes |
 |--------|-----------|---------------|-------|
-| `back/runtime/rls_schema.py` | **7%** | **60%** | RLS DDL generation — the PG suite does the pinning |
-| `back/runtime/predicate_compiler.py` | **35%** | **45%** | scope→SQL compiler |
+| `back/runtime/rls_schema.py` | **7%** | **60% → 93%** | RLS DDL generation; residuals closed 2026-06-08 |
+| `back/runtime/predicate_compiler.py` | **35%** | **45% → 77%** | scope→SQL compiler; residuals closed 2026-06-08 |
 | `rbac/matrix.py` | 65% | n/a (pure) | static RBAC matrix |
 | `back/runtime/csrf.py` | 84% | n/a (pure) | CSRF middleware |
 | `back/runtime/auth/connection_crypto.py` | 50% → **83%** | n/a (pure) | secret-at-rest (fixed this round) |
@@ -45,17 +45,28 @@ the Unicode tail. The remaining survivors are either:
 
 - **Equivalent mutants** (no observable behaviour change): all `@dataclass(frozen=True)
   → frozen=False` (testing Python's immutability, not our logic); error-string formatting
-  (`predicate_compiler` L274 "Available FKs" `or`→`and`); assert-message boundary
-  (`L668 >=`→`>`).
-- **Genuine but lower-value residual gaps** worth a dedicated follow-up, concentrated in
-  the scope/RLS compilers even *with* the PG suite:
-  - `predicate_compiler` L813 (null-target guard), L833 (`op == "="`), L1105
-    (`target == "current_user"`), L690/692 (FK-hop iteration direction/index).
-  - `rls_schema` L116/L251 (shared-schema tenancy guard `or`/`!=`), L142/L262/L476
-    (`has_scopes` / `access.scopes` boolean logic).
-  These flip real SQL semantics; that they survive the PG suite means the enforcement
-  tests don't exercise the specific branch (e.g. a non-shared-schema tenancy, or a
-  dotted-FK path of depth ≥ 3). Candidates for targeted PG tests if/when we harden these.
+  (`predicate_compiler` L274 "Available FKs" `or`→`and`); and the two `L813`
+  boolean-precedence flips on the dotted null-target guard — `value_sql is None` ⟺
+  `target == "null"` there, so the combinations the mutants would diverge on are
+  unreachable.
+
+### Scope/RLS compiler residuals — CLOSED (2026-06-08)
+
+The genuine residual gaps in the two SQL compilers are now pinned by direct unit tests
+that exercise each branch (the PG suite executed them end-to-end but didn't constrain the
+specific operator):
+
+- **`rls_schema` 60% → 93%** (`tests/unit/test_rls_schema.py`): the orchestrators
+  `build_all_rls_ddl` / `describe_rls_policies` were only run end-to-end. New stub-driven
+  tests pin the tenancy gate (`tenancy is None` no-crash; `mode != SHARED_SCHEMA` → emit
+  vs not), the scoped-vs-flat `has_scopes` split, and the no-scopes `ValueError` guard. The
+  one survivor is an equivalent frozen-dataclass mutant.
+- **`predicate_compiler` 45% → 77%** (`tests/unit/test_predicate_compiler.py`): new tests
+  pin the scalar type-map (`kind == "scalar"`), the null-target `IS NULL` op, the
+  `current_user`→`id` GUC-ref collection, the policy-mode non-dotted-binding guard, the
+  2- and 3-segment dotted-junction expansion (depth + tail→head hop iteration), and the
+  create-probe `payload_mode`. The 7 survivors are all equivalent/effectively-equivalent
+  (frozen-dataclass ×4, error-string, correlated-guard ×2).
 
 ## Productionised (done)
 
@@ -65,8 +76,5 @@ The five modules above + their floors are registered in
 security`, run nightly by `.github/workflows/mutation-nightly.yml` (with a Postgres service
 so the SQL-gen modules are measured with their enforcement suite). Floors are set a few
 points below the measured baseline so a drop in test *strength* — not just coverage —
-turns the job red. Per-module floors: crypto ≥80, matrix ≥65, csrf ≥80, rls_schema ≥55
-(PG), predicate_compiler ≥40 (PG).
-
-Remaining work (optional): close the genuine residual survivors in the scope/RLS compilers
-(listed above) with targeted PG tests, raising those floors over time.
+turns the job red. Per-module floors: crypto ≥80, matrix ≥65, csrf ≥80, rls_schema ≥90
+(PG), predicate_compiler ≥72 (PG).

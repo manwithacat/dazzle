@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
-from dazzle.back.runtime.rls_schema import build_rls_policy_ddl, build_rls_role_ddl
+from types import SimpleNamespace
+
+import pytest
+
+from dazzle.back.runtime.rls_schema import (
+    build_all_rls_ddl,
+    build_rls_policy_ddl,
+    build_rls_role_ddl,
+    build_rls_scope_policy_ddl,
+    describe_rls_policies,
+)
+from dazzle.core.ir import TenancyMode
 
 
 def test_fence_is_restrictive_with_missing_ok_current_setting() -> None:
@@ -85,3 +96,85 @@ def test_role_ddl_three_roles_idempotent_no_bypass_on_app() -> None:
     # PG15+ (CVE-2022-2625): schema USAGE must be granted or the LOGIN roles
     # cannot resolve any object in public and the table grants are inert.
     assert "GRANT USAGE ON SCHEMA public" in ddl
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator branch coverage (mutation-audit residuals, 2026-06-08).
+# build_all_rls_ddl / describe_rls_policies were exercised only end-to-end by
+# the PG suite; these pin the tenancy-gate and scoped-vs-flat branches directly
+# with lightweight stubs (scoped_entity_names only checks for a `tenant_id`
+# field; the type resolver is lazy, so no real schema is needed).
+# ---------------------------------------------------------------------------
+
+
+def _field(name: str):
+    return SimpleNamespace(name=name, type=None)
+
+
+def _stub_appspec(entities: list, *, mode: TenancyMode = TenancyMode.SHARED_SCHEMA):
+    domain = SimpleNamespace(
+        entities=[SimpleNamespace(name=e.name, fields=e.fields) for e in entities]
+    )
+    return SimpleNamespace(
+        tenancy=SimpleNamespace(isolation=SimpleNamespace(mode=mode, partition_key="tenant_id")),
+        domain=domain,
+        fk_graph=None,
+    )
+
+
+def _flat_scoped_entity(name: str = "Flat", *, access):
+    # Tenant-scoped (has a tenant_id field) entity with the given `access` object.
+    return SimpleNamespace(name=name, fields=[_field("tenant_id"), _field("id")], access=access)
+
+
+def test_no_tenancy_emits_nothing_without_crashing() -> None:
+    # tenancy is None → empty, and the guard must short-circuit BEFORE touching
+    # `tenancy.isolation` (an `or`→`and` mutation would dereference None and crash).
+    none_app = SimpleNamespace(tenancy=None)
+    assert build_all_rls_ddl(none_app, []) == []
+    assert describe_rls_policies(none_app, []) == []
+
+
+def test_shared_schema_with_scoped_entity_emits_policies() -> None:
+    # A shared_schema app with a tenant-scoped entity MUST emit RLS — inverting the
+    # `mode != SHARED_SCHEMA` guard (`!=`→`==`) would silently emit nothing (no tenant
+    # isolation at all), the worst possible RLS regression.
+    flat = _flat_scoped_entity(access=None)
+    app = _stub_appspec([flat])
+    assert build_all_rls_ddl(app, [flat]) != []
+    assert describe_rls_policies(app, [flat]) != []
+
+
+def test_non_shared_schema_emits_nothing() -> None:
+    flat = _flat_scoped_entity(access=None)
+    app = _stub_appspec([flat], mode=TenancyMode.SCHEMA_PER_TENANT)
+    assert build_all_rls_ddl(app, [flat]) == []
+    assert describe_rls_policies(app, [flat]) == []
+
+
+def test_access_without_scope_rules_is_tenant_flat() -> None:
+    # An entity with an `access` block but NO scope rules is tenant-FLAT → it gets the
+    # permissive baseline, not a per-verb scope policy. `has_scopes` is
+    # `access is not None AND bool(scopes)`; an `and`→`or` mutation would mis-route it to
+    # the scope path (build_all_rls_ddl would then raise ValueError; describe would drop
+    # the baseline). access present + empty scopes is the only input that distinguishes them.
+    flat = _flat_scoped_entity(access=SimpleNamespace(scopes=[]))
+    app = _stub_appspec([flat])
+
+    ddl = build_all_rls_ddl(app, [flat])  # must NOT raise
+    assert ddl
+    descs = describe_rls_policies(app, [flat])
+    assert any(d.entity == "Flat" and d.name == "tenant_baseline" and d.permissive for d in descs)
+
+
+def test_scope_policy_ddl_requires_scope_rules() -> None:
+    # build_rls_scope_policy_ddl is for scoped entities only; on a no-scopes entity it must
+    # raise ValueError (not proceed). `access is None OR not access.scopes` → an `or`→`and`
+    # mutation would dereference None / skip the guard.
+    no_access = SimpleNamespace(name="X", access=None)
+    with pytest.raises(ValueError):
+        build_rls_scope_policy_ddl(no_access, None, None, partition_key="tenant_id")
+
+    empty_scopes = SimpleNamespace(name="X", access=SimpleNamespace(scopes=[]))
+    with pytest.raises(ValueError):
+        build_rls_scope_policy_ddl(empty_scopes, None, None, partition_key="tenant_id")
