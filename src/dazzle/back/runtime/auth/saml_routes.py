@@ -179,13 +179,31 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
 
     @router.get("/auth/saml/sls")
     async def saml_sls(request: Request, connection: Annotated[str, Query()] = "") -> Response:
-        """SAML Single Logout Service (#1342 A) — process an IdP ``LogoutRequest``
-        (signature-verified by the provider) and kill the named user's sessions in the
-        connection's org. IdP-initiated SLO; fail-closed — a forged/unsigned request kills
-        nothing. Only mounted when the ``auth.enterprise.saml`` capability is active.
+        """SAML Single Logout Service (#1342) — handles both directions:
+
+        - inbound ``SAMLRequest`` (IdP-initiated): signature-verified, then kill the named
+          user's sessions in the connection's org; a forged/unsigned request kills nothing (400).
+        - inbound ``SAMLResponse`` (SP-initiated completion): the user is ALREADY locally logged
+          out (cleared at /logout), so this is post-logout cosmetic — validate for hygiene, then
+          land logged-out; a validation error does NOT 400 the returning user.
+
+        Only mounted when the ``auth.enterprise.saml`` capability is active.
         """
         store = request.app.state.auth_store
-        if len(request.query_params.get("SAMLRequest", "")) > _MAX_SAML_REQUEST_B64:
+        qp = request.query_params
+        has_request, has_response = "SAMLRequest" in qp, "SAMLResponse" in qp
+        # A legitimate SLO message is EITHER a LogoutRequest OR a LogoutResponse, never both.
+        # Reject the ambiguous both-present case outright rather than relying on python3-saml's
+        # internal key precedence (which could let a forged LogoutRequest ride a trivial
+        # SAMLResponse down the lenient path on a future library change).
+        if has_request and has_response:
+            return Response(content="invalid SAML logout", status_code=400, media_type="text/plain")
+        is_response = has_response  # SP-initiated completion vs IdP-initiated request
+        # Zip-bomb guard: cap the deflated message BEFORE python3-saml's unbounded decompress.
+        if (
+            max(len(qp.get("SAMLRequest", "")), len(qp.get("SAMLResponse", "")))
+            > _MAX_SAML_REQUEST_B64
+        ):
             return Response(content="invalid SAML logout", status_code=400, media_type="text/plain")
         conn = _resolve_saml_connection(store, request, connection_id=connection, email="")
         if conn is None or conn.type != "saml" or conn.status != "active":
@@ -193,11 +211,14 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         try:
             provider = cast(_SamlLogoutProvider, resolve_provider(conn))
             result = provider.process_logout(conn, request)
-        except ConnectionError as exc:
-            _logger.warning("SAML SLS: logout validation failed: %s", exc)  # nosemgrep
-            return Response(content="invalid SAML logout", status_code=400, media_type="text/plain")
         except Exception as exc:  # noqa: BLE001 — surface in logs, never 500-leak
-            _logger.warning("SAML SLS: logout error: %s", exc)  # nosemgrep
+            _logger.warning(
+                "SAML SLS: logout %s failed: %s", "response" if is_response else "request", exc
+            )  # nosemgrep
+            if is_response:
+                # The returning user is already locally logged out — land them on a
+                # logged-out page rather than 400'ing. (A forged inbound LogoutRequest still 400s.)
+                return _logged_out_response(request, cookie_name)
             return Response(content="invalid SAML logout", status_code=400, media_type="text/plain")
 
         # Org-scoped kill: every session the NameID's user holds in THIS connection's org
@@ -211,13 +232,26 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
                 store.delete_sessions_for_membership(m.id)
 
         if result.redirect_url:
+            # Intentionally cross-origin: process_slo builds this from the operator-configured
+            # idp_slo_url (the LogoutResponse back to the IdP), NOT from attacker input — so a
+            # same-origin guard would be wrong here. Do NOT thread request data into this URL.
             response: Response = RedirectResponse(url=result.redirect_url, status_code=303)
-        else:
-            response = Response(content="logged out", status_code=200, media_type="text/plain")
-        # Clear this browser's auth + CSRF cookies (best-effort for the carrier browser).
-        for name in names_to_clear(request, default=cookie_name):
-            response.delete_cookie(name)
-        response.delete_cookie("dazzle_csrf")
-        return response
+            _clear_session_cookies(response, request, cookie_name)
+            return response
+        return _logged_out_response(request, cookie_name)
 
     return router
+
+
+def _clear_session_cookies(response: Response, request: Request, cookie_name: str) -> None:
+    """Clear this browser's auth + CSRF cookies (best-effort for the carrier browser)."""
+    for name in names_to_clear(request, default=cookie_name):
+        response.delete_cookie(name)
+    response.delete_cookie("dazzle_csrf")
+
+
+def _logged_out_response(request: Request, cookie_name: str) -> Response:
+    """A plain 200 logged-out response with the session cookies cleared."""
+    response = Response(content="logged out", status_code=200, media_type="text/plain")
+    _clear_session_cookies(response, request, cookie_name)
+    return response

@@ -544,3 +544,33 @@ def test_metadata_advertises_single_logout_service() -> None:
     xml = NativeSAMLProvider().sp_metadata(_FakeRequest())
     assert "SingleLogoutService" in xml
     assert "/auth/saml/sls" in xml
+
+
+# ---- SP-initiated SLO (#1342) ----
+
+
+def test_initiate_logout_returns_idp_slo_redirect() -> None:
+    p = NativeSAMLProvider()
+    p._build_auth = lambda rd, s: SimpleNamespace(  # type: ignore[method-assign]
+        logout=lambda name_id=None, return_to=None: (
+            f"https://idp.example/slo?SAMLRequest=x&n={name_id}"
+        )
+    )
+    conn = _conn(
+        config={
+            "idp_entity_id": "e",
+            "idp_sso_url": "s",
+            "idp_x509_cert": "c",
+            "idp_slo_url": "https://idp.example/slo",
+        }
+    )
+    url = p.initiate_logout(conn, _FakeRequest(), name_id="jane@acme.test")
+    assert url.startswith("https://idp.example/slo?SAMLRequest=")
+    assert "jane@acme.test" in url
+
+
+def test_initiate_logout_without_idp_slo_url_raises() -> None:
+    p = NativeSAMLProvider()
+    conn = _conn(config={"idp_entity_id": "e", "idp_sso_url": "s", "idp_x509_cert": "c"})
+    with pytest.raises(ConnectionError, match="logout"):
+        p.initiate_logout(conn, _FakeRequest(), name_id="jane@acme.test")

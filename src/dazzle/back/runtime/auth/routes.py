@@ -190,19 +190,30 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
     """
     session_id = read_session_id(request, default=deps.cookie_name)
 
+    # SP-initiated SAML SLO (#1342): resolve the IdP logout redirect BEFORE deleting the
+    # session (it needs the session→connection). Local logout below is unconditional and
+    # happens regardless — a broken IdP can never keep a session alive.
+    slo_url: str | None = None
     if session_id:
+        from dazzle.back.runtime.auth.saml_logout import saml_slo_redirect_url
+
+        slo_url = saml_slo_redirect_url(deps.auth_store, request, session_id=session_id)
         deps.auth_store.delete_session(session_id)
 
     accept = request.headers.get("accept", "")
     is_htmx = request.headers.get("hx-request") == "true"
     is_browser = "text/html" in accept and "application/json" not in accept
 
+    # `slo_url` (when set) is intentionally cross-origin — the operator-configured IdP SLO URL
+    # built server-side by initiate_logout, NOT attacker input — so no same-origin guard here.
     response: Response
     if is_htmx:
-        response = Response(status_code=200, headers={"HX-Redirect": "/"})
+        # SP-SLO is a browser flow; HTMX callers get the IdP redirect via HX-Redirect.
+        response = Response(status_code=200, headers={"HX-Redirect": slo_url or "/"})
     elif is_browser:
-        response = RedirectResponse(url="/", status_code=303)
+        response = RedirectResponse(url=slo_url or "/", status_code=303)
     else:
+        # JSON/API callers stay local (no browser to follow the IdP round-trip).
         response = JSONResponse(content={"message": "Logout successful"})
     for name in names_to_clear(request, default=deps.cookie_name):
         response.delete_cookie(name)

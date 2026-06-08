@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.97] - 2026-06-08
+
+### Added
+- **SAML SP-initiated Single Logout (#1342) — SLO is now bidirectional.** Logging out of a
+  SAML session also ends the IdP session: `/logout` clears the local session + cookies first
+  (always — a broken IdP can never leave a live session), then redirects the browser to the
+  IdP's SLO URL carrying a signed `LogoutRequest`; the IdP returns to `/auth/saml/sls` with a
+  `LogoutResponse`, which lands the (already-locally-logged-out) user on a logged-out page.
+  `provider.initiate_logout` + a lazy `saml_logout.saml_slo_redirect_url` helper (keeps SAML
+  out of generic auth; never raises — any failure falls back to plain local logout). The SLS
+  handles both directions: a forged inbound `LogoutRequest` still 400s and kills nothing,
+  while a returning `LogoutResponse` is lenient (no 400). NameID-only / no schema change.
+
+### Agent Guidance
+- **Reusable real-crypto SAML test harness:** `tests/integration/saml_idp_double.py`
+  (`SamlIdpDouble`) mints GENUINELY-signed Redirect-binding `LogoutRequest`/`LogoutResponse`
+  with a throwaway keypair, so the SP's real `process_slo` signature validation runs
+  end-to-end with **zero IdP infrastructure**. Use it for any SAML logout/SLO test that needs
+  to exercise (not fake) the signature path — incl. tamper-rejection. It also covers feature
+  A's IdP-initiated kill with real crypto.
+
 ## [0.81.96] - 2026-06-08
 
 ### Added

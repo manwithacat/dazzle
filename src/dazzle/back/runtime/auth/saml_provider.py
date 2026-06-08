@@ -411,6 +411,22 @@ class NativeSAMLProvider:
             name_id=(name_id or "").strip().lower() or None, redirect_url=redirect_url
         )
 
+    def _post_logout_url(self, request: Any) -> str:
+        return f"{str(request.base_url).rstrip('/')}/"
+
+    def initiate_logout(self, connection: ConnectionRecord, request: Any, *, name_id: str) -> str:
+        """Build an SP-initiated ``LogoutRequest`` and return the redirect to the IdP SLO
+        (#1342 SP-SLO). Signs the request when request-signing is on (reuses ``_slo_settings``
+        / feature C's keypair). Raises ``ConnectionError`` when the connection has no
+        ``idp_slo_url`` — the caller falls back to plain local logout."""
+        if not (connection.config or {}).get("idp_slo_url"):
+            raise ConnectionError(
+                f"SAML connection {connection.id!r}: no idp_slo_url — cannot SP-initiate logout"
+            )
+        settings = self._slo_settings(connection, request)
+        auth = self._build_auth(self._request_data(request), settings)
+        return str(auth.logout(name_id=name_id, return_to=self._post_logout_url(request)))
+
 
 def register_native_saml() -> None:
     """Register the native SAML provider for ``(saml, native)`` (called at startup)."""

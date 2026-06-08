@@ -420,3 +420,155 @@ def test_sls_oversized_saml_request_is_rejected_before_processing(saml_provider)
     assert r.status_code == 400
     assert called == []  # never reached the provider / decompress
     assert store.killed_memberships == []
+
+
+# ---- SP-initiated completion: inbound LogoutResponse (#1342) ----
+
+
+def test_sls_logout_response_completes_without_kill(saml_provider) -> None:
+    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+
+    store = _Store(connections=[_conn()])
+    _seed_user_in_two_orgs(store)
+    # A LogoutResponse carries no NameID → no kill; just land logged-out.
+    saml_provider(_FakeProvider(logout=SamlLogout(name_id=None, redirect_url=None)))
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLResponse=abc", follow_redirects=False
+    )
+    assert r.status_code == 200
+    assert store.killed_memberships == []
+
+
+def test_sls_logout_response_error_does_not_400_the_returning_user(saml_provider) -> None:
+    # The user is already locally logged out; a response-validation error must NOT 400 them.
+    store = _Store(connections=[_conn()])
+    saml_provider(_FakeProvider(logout_error=ConnectionError("bad logout response")))
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLResponse=abc", follow_redirects=False
+    )
+    assert r.status_code == 200  # lenient on a returning LogoutResponse
+    assert store.killed_memberships == []
+
+
+def test_sls_forged_logout_request_still_400s(saml_provider) -> None:
+    # Symmetry check: an inbound LogoutRequest (not response) that errors is STILL a 400.
+    store = _Store(connections=[_conn()])
+    _seed_user_in_two_orgs(store)
+    saml_provider(_FakeProvider(logout_error=ConnectionError("forged request")))
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLRequest=forged", follow_redirects=False
+    )
+    assert r.status_code == 400
+    assert store.killed_memberships == []
+
+
+def test_sls_oversized_logout_response_is_rejected(saml_provider) -> None:
+    store = _Store(connections=[_conn()])
+    saml_provider(_FakeProvider())
+    huge = "A" * 20000
+    r = _client(store).get(
+        f"/auth/saml/sls?connection=conn-1&SAMLResponse={huge}", follow_redirects=False
+    )
+    assert r.status_code == 400
+
+
+# ---- Tier 2: real-crypto IdP double (no infra; exercises the actual signature path) ----
+
+
+def _idp_double_conn(idp):
+    return _conn(
+        config={
+            "idp_entity_id": idp.entity_id,
+            "idp_sso_url": "https://idp.example/sso",
+            "idp_x509_cert": idp.idp_cert,
+            "idp_slo_url": idp.slo_url,
+        }
+    )
+
+
+def test_idp_double_message_validates_against_real_process_slo() -> None:
+    # Foundational proof: a double-minted SIGNED LogoutRequest passes the SP's REAL process_slo
+    # (signature validated for real). Pins the double's Redirect-binding encoding.
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from tests.integration.saml_idp_double import FakeSlsRequest, SamlIdpDouble
+
+    sls = "https://app.test/auth/saml/sls"
+    idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")
+    conn = _idp_double_conn(idp)
+    req = FakeSlsRequest(
+        idp.signed_logout_request(name_id="jane@acme.test", sp_sls_url=sls),
+        base_url="https://app.test/",
+    )
+    out = NativeSAMLProvider().process_logout(conn, req)
+    assert out.name_id == "jane@acme.test"
+
+
+def test_idp_double_tampered_signature_is_rejected() -> None:
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from tests.integration.saml_idp_double import FakeSlsRequest, SamlIdpDouble
+
+    sls = "https://app.test/auth/saml/sls"
+    idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")
+    conn = _idp_double_conn(idp)
+    p = idp.signed_logout_request(name_id="jane@acme.test", sp_sls_url=sls)
+    p["Signature"] = ("B" if p["Signature"][0] != "B" else "C") + p["Signature"][1:]  # flip a byte
+    with pytest.raises(ConnectionError):
+        NativeSAMLProvider().process_logout(conn, FakeSlsRequest(p, base_url="https://app.test/"))
+
+
+def test_sls_real_signed_logout_request_kills_org_sessions(saml_provider) -> None:
+    # Retro-hardens feature A: a GENUINELY-signed IdP LogoutRequest through the real route +
+    # real provider → org-scoped kill fires (the seam-faked A tests can't prove the crypto).
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from tests.integration.saml_idp_double import SamlIdpDouble
+
+    idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")
+    store = _Store(connections=[_idp_double_conn(idp)])
+    _seed_user_in_two_orgs(store)
+    saml_provider(NativeSAMLProvider())  # the REAL provider, not a fake
+    client = _client(store, base_url="https://app.test")
+    params = idp.signed_logout_request(
+        name_id="jane@acme.test", sp_sls_url="https://app.test/auth/saml/sls"
+    )
+    r = client.get(
+        "/auth/saml/sls", params={"connection": "conn-1", **params}, follow_redirects=False
+    )
+    assert r.status_code in (200, 303)
+    assert store.killed_memberships == ["mem-org1"]  # only the connection's org
+
+
+def test_sls_real_signed_logout_response_completes_no_kill(saml_provider) -> None:
+    pytest.importorskip("onelogin")
+    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from tests.integration.saml_idp_double import SamlIdpDouble
+
+    idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")
+    store = _Store(connections=[_idp_double_conn(idp)])
+    _seed_user_in_two_orgs(store)
+    saml_provider(NativeSAMLProvider())
+    client = _client(store, base_url="https://app.test")
+    params = idp.signed_logout_response(
+        in_response_to="_req123", sp_sls_url="https://app.test/auth/saml/sls"
+    )
+    r = client.get(
+        "/auth/saml/sls", params={"connection": "conn-1", **params}, follow_redirects=False
+    )
+    assert r.status_code in (200, 303)
+    assert store.killed_memberships == []  # a response performs no kill
+
+
+def test_sls_both_request_and_response_is_rejected(saml_provider) -> None:
+    # Ambiguous: a legit SLO message is never both. Reject outright (don't rely on library
+    # precedence) — and a forged LogoutRequest hidden behind a SAMLResponse kills nothing.
+    store = _Store(connections=[_conn()])
+    _seed_user_in_two_orgs(store)
+    saml_provider(_FakeProvider())  # must never be reached
+    r = _client(store).get(
+        "/auth/saml/sls?connection=conn-1&SAMLRequest=forged&SAMLResponse=x",
+        follow_redirects=False,
+    )
+    assert r.status_code == 400
+    assert store.killed_memberships == []
