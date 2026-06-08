@@ -52,9 +52,11 @@ def split_duration_token(value: str) -> tuple[int, str] | None:
     """
     if not value:
         return None
-    # Find the digit/letter boundary.
+    # Find the digit/letter boundary. ASCII digits only: ``str.isdigit()`` is True for
+    # Unicode super/subscripts ("²") that ``int()`` then rejects — guarding here keeps the
+    # documented "return None on shape mismatch" contract instead of leaking a ValueError.
     digit_end = 0
-    while digit_end < len(value) and value[digit_end].isdigit():
+    while digit_end < len(value) and value[digit_end].isascii() and value[digit_end].isdigit():
         digit_end += 1
     if digit_end == 0 or digit_end == len(value):
         return None
@@ -75,8 +77,14 @@ def short_duration_seconds(value: str) -> int | None:
     stripped = value.strip()
     if not stripped:
         return None
+    # ASCII digits only — see split_duration_token (Unicode super/subscripts pass
+    # str.isdigit() but crash int()).
     digit_end = 0
-    while digit_end < len(stripped) and stripped[digit_end].isdigit():
+    while (
+        digit_end < len(stripped)
+        and stripped[digit_end].isascii()
+        and stripped[digit_end].isdigit()
+    ):
         digit_end += 1
     if digit_end == 0 or digit_end != len(stripped) - 1:
         return None

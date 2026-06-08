@@ -78,38 +78,46 @@ class SLATimer:
 def parse_schedule(schedule: str) -> tuple[set[int], tuple[int, int], tuple[int, int]]:
     """Parse ``"Mon-Fri 09:00-17:00"`` into (weekdays, start_hm, end_hm).
 
+    Total by contract: any malformed/unparseable schedule (missing fields, a time
+    component without ``HH:MM``, non-numeric hours, etc.) falls back to the default
+    Mon-Fri 09:00-17:00 rather than raising — callers (``business_seconds``) treat a
+    bad schedule as "use defaults", never as an error.
+
     Returns:
         (weekday_set, (start_hour, start_min), (end_hour, end_min))
     """
     parts = schedule.strip().split()
     if len(parts) < 2:
-        # Fallback: Mon-Fri 09:00-17:00
         return ({0, 1, 2, 3, 4}, (9, 0), (17, 0))
 
     day_part, time_part = parts[0], parts[1]
-
-    # Parse days: "Mon-Fri" or "Mon,Tue,Wed"
-    weekdays: set[int] = set()
-    if "-" in day_part:
-        start_day, end_day = day_part.lower().split("-", 1)
-        s = _DAY_MAP.get(start_day[:3], 0)
-        e = _DAY_MAP.get(end_day[:3], 4)
-        for d in range(s, e + 1):
-            weekdays.add(d)
-    else:
-        for day_name in day_part.lower().split(","):
-            weekdays.add(_DAY_MAP.get(day_name.strip()[:3], 0))
-
-    # Parse times: "09:00-17:00"
-    t_start, t_end = "09:00", "17:00"
-    if "-" in time_part:
-        t_start, t_end = time_part.split("-", 1)
 
     def _hm(t: str) -> tuple[int, int]:
         h, m = t.split(":")
         return (int(h), int(m))
 
-    return (weekdays, _hm(t_start), _hm(t_end))
+    try:
+        # Parse days: "Mon-Fri" or "Mon,Tue,Wed"
+        weekdays: set[int] = set()
+        if "-" in day_part:
+            start_day, end_day = day_part.lower().split("-", 1)
+            s = _DAY_MAP.get(start_day[:3], 0)
+            e = _DAY_MAP.get(end_day[:3], 4)
+            for d in range(s, e + 1):
+                weekdays.add(d)
+        else:
+            for day_name in day_part.lower().split(","):
+                weekdays.add(_DAY_MAP.get(day_name.strip()[:3], 0))
+
+        # Parse times: "09:00-17:00"
+        t_start, t_end = "09:00", "17:00"
+        if "-" in time_part:
+            t_start, t_end = time_part.split("-", 1)
+
+        return (weekdays, _hm(t_start), _hm(t_end))
+    except (ValueError, TypeError):
+        # Malformed component (e.g. a time without ``:``) → documented fallback.
+        return ({0, 1, 2, 3, 4}, (9, 0), (17, 0))
 
 
 def business_seconds(

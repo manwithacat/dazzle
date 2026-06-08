@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.90] - 2026-06-08
+
+### Fixed
+- **Three crashes found by a targeted fuzz sweep** (extends the #1342 fuzz-leverage
+  coverage to new surfaces):
+  - **Unicode-digit lexer crash (bug class).** `str.isdigit()` is `True` for Unicode
+    super/subscripts and other-script digits (`²`, `٣`) but `int()` rejects them, so the
+    DSL lexer emitted NUMBER/DURATION tokens whose values crashed every downstream `int()`
+    with a raw `ValueError` instead of a located `ParseError` (e.g. `n: int = ²`). Fixed at
+    the root in `core/lexer.py` (number tokenization is now ASCII-digit-only — such chars
+    route to the existing "Unexpected character" located error) + defensively in
+    `_lexical.py` (`split_duration_token` / `short_duration_seconds` now honour their
+    "return None on shape mismatch" contract).
+  - **`parse_aggregate_where` recursion DoS.** A report WHERE clause with deeply nested
+    parens raised an undocumented `RecursionError`; now capped at 50 levels → the documented
+    `ValueError` (≈200 stack frames, safe under any ASGI middleware stack).
+  - **`parse_schedule` non-total.** A malformed SLA schedule (e.g. a time without `HH:MM`)
+    leaked an unpack `ValueError` that `business_seconds` didn't catch; `parse_schedule` is
+    now total — any unparseable schedule falls back to Mon-Fri 09:00-17:00.
+
+### Added
+- Property/fuzz tests for the three surfaces above + a `tests/unit/fuzz_seeds/` regression
+  seed for the Unicode-digit lexer crash.
+
+### Agent Guidance
+- New `int()`/`float()` conversions gated by `str.isdigit()`/`isnumeric()` must also check
+  `.isascii()` (or restrict to `"0123456789"`) — bare `.isdigit()` admits Unicode digits
+  that crash `int()`. `back/runtime/rate_limit.py` is the canonical guarded example.
+
 ## [0.81.89] - 2026-06-08
 
 ### Added

@@ -184,3 +184,93 @@ class TestParseIdpMetadataXml:
         except SamlMetadataError:
             return  # documented outcome (parse/incomplete/no_saml_extra)
         assert isinstance(result, dict) and "idp_entity_id" in result
+
+
+# Unicode-aware text: includes super/subscripts and other-script digits that pass
+# str.isdigit() but crash int() — the bug class found in the 2026-06-08 fuzz sweep.
+_UNICODE_TEXT = st.text(max_size=60) | st.text(
+    alphabet=st.characters(min_codepoint=0, max_codepoint=0x2FFF), max_size=40
+)
+
+
+# ---- split_duration_token / short_duration_seconds: any str → result OR None, never raise ----
+
+
+class TestDurationLexHelpers:
+    @given(_UNICODE_TEXT)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_split_duration_token_never_raises(self, s: str) -> None:
+        from dazzle.core.dsl_parser_impl._lexical import split_duration_token
+
+        # Contract: returns (int, suffix) or None — NEVER a raw exception. str.isdigit()
+        # is True for "²"/"٣" but int("²") raises; the parser must not leak that.
+        result = split_duration_token(s)
+        assert result is None or (isinstance(result, tuple) and isinstance(result[0], int))
+
+    @given(_UNICODE_TEXT)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_short_duration_seconds_never_raises(self, s: str) -> None:
+        from dazzle.core.dsl_parser_impl._lexical import short_duration_seconds
+
+        result = short_duration_seconds(s)
+        assert result is None or isinstance(result, int)
+
+    @pytest.mark.parametrize("text", ["²h", "⁵d", "¹m", "²s", "٣h"])
+    def test_unicode_digits_return_none_not_crash(self, text: str) -> None:
+        from dazzle.core.dsl_parser_impl._lexical import (
+            short_duration_seconds,
+            split_duration_token,
+        )
+
+        assert split_duration_token(text) is None
+        assert short_duration_seconds(text) is None
+
+
+# ---- parse_aggregate_where: any clause → ScopePredicate OR ValueError, never RecursionError ----
+
+
+class TestParseAggregateWhere:
+    @given(_UNICODE_TEXT)
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_arbitrary_clause(self, s: str) -> None:
+        from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
+
+        try:
+            parse_aggregate_where(s)
+        except ValueError:
+            pass  # documented outcome
+
+    @given(st.integers(min_value=0, max_value=4000))
+    @settings(max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    def test_deep_nesting_is_value_error_not_recursion_error(self, k: int) -> None:
+        # A clause with k nested parens must raise the documented ValueError (depth cap),
+        # never an undocumented RecursionError (a DoS on the report WHERE path).
+        from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
+
+        clause = "(" * k + "a = 1" + ")" * k
+        try:
+            parse_aggregate_where(clause)
+        except ValueError:
+            pass
+
+
+# ---- parse_schedule: TOTAL — any str → a (weekdays, start, end) tuple, never raises ----
+
+
+class TestParseSchedule:
+    @given(_UNICODE_TEXT)
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_total_never_raises(self, s: str) -> None:
+        from dazzle.back.runtime.sla_manager import parse_schedule
+
+        weekdays, start_hm, end_hm = parse_schedule(s)
+        assert isinstance(weekdays, set)
+        assert isinstance(start_hm, tuple) and len(start_hm) == 2
+        assert isinstance(end_hm, tuple) and len(end_hm) == 2
+
+    def test_valid_schedule_still_parses(self) -> None:
+        from dazzle.back.runtime.sla_manager import parse_schedule
+
+        weekdays, start_hm, end_hm = parse_schedule("Mon-Fri 09:00-17:00")
+        assert weekdays == {0, 1, 2, 3, 4}
+        assert start_hm == (9, 0) and end_hm == (17, 0)

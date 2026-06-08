@@ -121,11 +121,21 @@ def _tokenise(text: str) -> list[_Token]:
 # ---------------------------------------------------------------------------
 
 
+# Cap on parenthesis nesting. Recursive descent recurses once per "(", so an
+# unbounded-depth clause from an external report/API would hit Python's recursion
+# limit and raise RecursionError (an undocumented crash) instead of the documented
+# ValueError. Each paren level costs ~4 stack frames (_parse_or/_and/_not/_atom), so
+# 50 levels ≈ 200 frames — far beyond any hand-written clause, and leaves >650 frames
+# of headroom below the default 1000 limit even under a deep ASGI middleware stack.
+_MAX_PAREN_DEPTH = 50
+
+
 class _Parser:
     def __init__(self, tokens: list[_Token], known_columns: frozenset[str]) -> None:
         self._tokens = tokens
         self._pos = 0
         self._known_columns = known_columns
+        self._depth = 0
 
     def _peek(self) -> _Token:
         return self._tokens[self._pos]
@@ -176,9 +186,13 @@ class _Parser:
 
     def _parse_atom(self) -> ScopePredicate:
         if self._peek().kind == "LPAREN":
+            self._depth += 1
+            if self._depth > _MAX_PAREN_DEPTH:
+                raise ValueError(f"parentheses nested too deeply (max {_MAX_PAREN_DEPTH})")
             self._advance()
             inner = self._parse_or()
             self._expect("RPAREN")
+            self._depth -= 1
             return inner
         return self._parse_comparison()
 

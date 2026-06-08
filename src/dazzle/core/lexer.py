@@ -846,7 +846,12 @@ class Lexer:
         """
         chars = []
         current = self.current_char()
-        while current and (current.isdigit() or current == "."):
+        # ASCII digits only: ``str.isdigit()`` is True for Unicode super/subscripts
+        # and other-script digits (e.g. "²", "٣"), but ``int()`` rejects many of them —
+        # admitting them here makes a non-ASCII-digit number token whose value crashes
+        # every downstream ``int(token.value)`` with a raw ValueError instead of a located
+        # ParseError. Restricting to ASCII routes such chars to "Unexpected character".
+        while current and ((current.isascii() and current.isdigit()) or current == "."):
             chars.append(current)
             self.advance()
             current = self.current_char()
@@ -1084,7 +1089,7 @@ class Lexer:
                 at_line_start = True
             elif ch in ('"', "'"):
                 self._tokenize_string(token_line, token_col)
-            elif ch.isdigit():
+            elif ch.isascii() and ch.isdigit():  # ASCII digits only — see _read_number
                 self._tokenize_number(token_line, token_col)
             elif ch.isalpha() or ch == "_":
                 self._tokenize_identifier(token_line, token_col)
