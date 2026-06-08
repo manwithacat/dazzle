@@ -1,8 +1,8 @@
 """Member-admin routes (auth Plan 3b): roster + role/suspend/reactivate/remove.
 
 Every mutation runs the same gate:
-  1. the caller has an ACTIVE membership in their active org whose roles intersect
-     ``app.state.org_admin_roles`` (fail-closed ``may_manage_members``);
+  1. the caller has an ACTIVE membership in their active org whose roles satisfy the
+     ``manage_members`` capability (``app.state.admin_policy``; fail-closed);
   2. the TARGET membership belongs to the caller's active org (cross-org guard —
      a membership_id from another org is rejected, never managed);
   3. the change won't leave the org with zero active admins (orphan guard).
@@ -37,16 +37,19 @@ def _back_to_members(request: Request) -> Response:
     return RedirectResponse(url="/auth/members", status_code=303)
 
 
-def _org_admin_roles(request: Request) -> list[str]:
-    return list(getattr(request.app.state, "org_admin_roles", []) or [])
+def _manage_members_roles(request: Request) -> frozenset[str]:
+    """The resolved ``manage_members`` capability persona set (the orphan-guard's admin set)."""
+    from dazzle.back.runtime.auth.admin_policy import request_policy
+
+    return request_policy(request).roles_for("manage_members")
 
 
 def create_member_admin_routes() -> APIRouter:
     router = APIRouter(tags=["auth"])
 
     def _gate(request: Request) -> tuple[Any, Any, str] | None:
-        """Return (store, ctx, org_id) if the caller may manage members, else None."""
-        from dazzle.back.runtime.auth.invitations import may_manage_members
+        """Return (store, ctx, org_id) if the caller holds the ``manage_members`` capability."""
+        from dazzle.back.runtime.auth.admin_policy import request_policy
         from dazzle.back.runtime.auth.models import effective_roles_of
 
         store = request.app.state.auth_store
@@ -56,9 +59,7 @@ def create_member_admin_routes() -> APIRouter:
             return None
         if ctx.active_membership is None:
             return None
-        if not may_manage_members(
-            list(effective_roles_of(ctx)), org_admin_roles=_org_admin_roles(request)
-        ):
+        if not request_policy(request).may("manage_members", list(effective_roles_of(ctx))):
             return None
         return store, ctx, ctx.active_membership.tenant_id
 
@@ -88,7 +89,7 @@ def create_member_admin_routes() -> APIRouter:
             return HTMLResponse("Forbidden", status_code=403)
         store, _ctx, org_id = gated
         roster = _roster_rows(store, org_id)
-        admins = set(active_admins(roster, _org_admin_roles(request)))
+        admins = set(active_admins(roster, _manage_members_roles(request)))
         last_admin = next(iter(admins)) if len(admins) == 1 else None
 
         members = []
@@ -134,7 +135,7 @@ def create_member_admin_routes() -> APIRouter:
             _roster_rows(store, org_id),
             membership_id,
             new_roles=new_roles,
-            org_admin_roles=_org_admin_roles(request),
+            admin_roles=_manage_members_roles(request),
         ):
             return HTMLResponse("Cannot demote the last admin", status_code=409)
         store.update_membership_roles(membership_id, new_roles, actor_id=str(ctx.user.id))
@@ -154,7 +155,7 @@ def create_member_admin_routes() -> APIRouter:
             _roster_rows(store, org_id),
             membership_id,
             new_roles=None,
-            org_admin_roles=_org_admin_roles(request),
+            admin_roles=_manage_members_roles(request),
         ):
             return HTMLResponse("Cannot suspend the last admin", status_code=409)
         store.suspend_membership(membership_id, actor_id=str(ctx.user.id))
@@ -185,7 +186,7 @@ def create_member_admin_routes() -> APIRouter:
             _roster_rows(store, org_id),
             membership_id,
             new_roles=None,
-            org_admin_roles=_org_admin_roles(request),
+            admin_roles=_manage_members_roles(request),
         ):
             return HTMLResponse("Cannot remove the last admin", status_code=409)
         store.remove_membership(membership_id, actor_id=str(ctx.user.id))

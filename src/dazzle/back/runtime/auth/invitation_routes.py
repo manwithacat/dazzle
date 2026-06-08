@@ -1,7 +1,7 @@
 """Org invitation routes (auth Plan 3a): invite / accept.
 
 ``POST /auth/invite``                — an org admin invites email+roles into their
-                                        active org (authz: ``may_manage_members``)
+                                        active org (authz: ``manage_members`` capability)
 ``GET  /auth/accept-invite/{token}``  — accept page (verified-email gated on POST)
 ``POST /auth/accept-invite?token=..`` — redeem token → active membership + activate
 
@@ -44,8 +44,9 @@ def create_invitation_routes() -> APIRouter:
         email: Annotated[str, Form()] = "",
         roles: Annotated[str, Form()] = "",  # comma-separated personas
     ) -> HTMLResponse:
+        from dazzle.back.runtime.auth.admin_policy import request_policy
         from dazzle.back.runtime.auth.invitation_views import build_invite_result_view
-        from dazzle.back.runtime.auth.invitations import create_invitation, may_manage_members
+        from dazzle.back.runtime.auth.invitations import create_invitation
         from dazzle.back.runtime.auth.mailer import get_invitation_mailer
         from dazzle.back.runtime.auth.models import effective_roles_of
         from dazzle.render.fragment.renderer import FragmentRenderer
@@ -58,8 +59,7 @@ def create_invitation_routes() -> APIRouter:
         # Org context comes from the ACTIVE membership — never request input.
         if ctx.active_membership is None:
             return HTMLResponse("Forbidden — no active organization", status_code=403)
-        org_admin_roles = list(getattr(request.app.state, "org_admin_roles", []) or [])
-        if not may_manage_members(list(effective_roles_of(ctx)), org_admin_roles=org_admin_roles):
+        if not request_policy(request).may("manage_members", list(effective_roles_of(ctx))):
             return HTMLResponse(
                 "Forbidden — you cannot manage members of this organization", status_code=403
             )

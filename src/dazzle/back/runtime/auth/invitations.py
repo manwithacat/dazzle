@@ -54,18 +54,6 @@ class InvitationError(RuntimeError):
         self.reason = reason
 
 
-def may_manage_members(effective_roles: list[str], *, org_admin_roles: list[str]) -> bool:
-    """True iff a member with ``effective_roles`` may invite / manage members.
-
-    Fail-closed: when no ``org_admin_roles`` are configured, nobody may manage
-    members (the app must explicitly designate admin personas). Otherwise the
-    member's roles must intersect the configured admin set.
-    """
-    if not org_admin_roles:
-        return False
-    return bool(set(effective_roles) & set(org_admin_roles))
-
-
 @dataclass(frozen=True)
 class InvitationRecord:
     token: str

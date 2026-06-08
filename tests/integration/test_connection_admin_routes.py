@@ -482,3 +482,68 @@ def test_create_path_is_csrf_protected() -> None:
     from dazzle.back.runtime.csrf import CSRFConfig
 
     assert "/auth/connections/create" in CSRFConfig().protected_paths
+
+
+# ---- capability gating: connection surface is manage_connections (admin-authz) ----
+
+
+def _client_with_policy(store, *, manage_connections, manage_members=("admin",)) -> TestClient:
+    from dazzle.back.runtime.auth.admin_policy import AdminPolicy
+
+    app = FastAPI()
+    app.include_router(create_connection_admin_routes())
+    app.state.auth_store = store
+    app.state.org_admin_roles = ["admin"]
+    app.state.admin_policy = AdminPolicy.from_config(
+        org_admin_roles=["admin"],
+        admin_capabilities={
+            "manage_connections": list(manage_connections),
+            "manage_members": list(manage_members),
+        },
+    )
+    app.state.sitespec = {"brand": {"product_name": "Acme"}}
+    c = TestClient(app)
+    c.cookies.set("dazzle_session", "good-sid")
+    return c
+
+
+def test_connection_surface_gated_on_manage_connections() -> None:
+    # the session's role is "admin"; map manage_connections to a DIFFERENT persona → 403.
+    store = _Store(connections=[_conn()])
+    r = _client_with_policy(store, manage_connections=("it_admin",)).get("/auth/connections")
+    assert r.status_code == 403
+
+
+def test_connection_surface_allows_mapped_persona() -> None:
+    store = _Store(connections=[_conn()], roles=("it_admin",))
+    r = _client_with_policy(store, manage_connections=("it_admin",)).get("/auth/connections")
+    assert r.status_code == 200
+
+
+def test_business_admin_cannot_reach_connections_but_it_admin_can() -> None:
+    # separation: manage_members=business_admin, manage_connections=it_admin.
+    biz = _Store(connections=[_conn()], roles=("business_admin",))
+    assert (
+        _client_with_policy(
+            biz, manage_connections=("it_admin",), manage_members=("business_admin",)
+        )
+        .get("/auth/connections")
+        .status_code
+        == 403
+    )
+    it = _Store(connections=[_conn()], roles=("it_admin",))
+    assert (
+        _client_with_policy(
+            it, manage_connections=("it_admin",), manage_members=("business_admin",)
+        )
+        .get("/auth/connections")
+        .status_code
+        == 200
+    )
+
+
+def test_backcompat_org_admin_roles_only_still_authorizes() -> None:
+    # no admin_policy on app.state → request_policy falls back to org_admin_roles (the _client
+    # helper sets only org_admin_roles=["admin"]); the admin role still reaches the surface.
+    store = _Store(connections=[_conn()])
+    assert _client(store).get("/auth/connections").status_code == 200

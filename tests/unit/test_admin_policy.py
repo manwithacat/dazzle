@@ -60,6 +60,31 @@ def test_empty_role_list_in_map_falls_back_not_locks_out():
     assert p.may("manage_members", ["org_admin"]) is True
 
 
+def test_request_policy_uses_wired_policy_when_present():
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.auth.admin_policy import request_policy
+
+    wired = AdminPolicy.from_config(org_admin_roles=["x"], admin_capabilities={})
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(admin_policy=wired)))
+    assert request_policy(request) is wired
+
+
+def test_request_policy_falls_back_to_org_admin_roles():
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.auth.admin_policy import request_policy
+
+    # only org_admin_roles exposed (no admin_policy) → back-compat fallback
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(org_admin_roles=["org_admin"]))
+    )
+    p = request_policy(request)
+    assert p.may("manage_members", ["org_admin"]) is True
+    assert p.may("manage_connections", ["org_admin"]) is True
+    assert p.may("manage_members", ["member"]) is False
+
+
 def test_unknown_admin_personas_flags_typos():
     declared = {"org_admin", "it_admin", "business_admin"}
     caps = {"manage_connections": ["it_admin", "typo_admin"], "manage_members": ["business_admin"]}

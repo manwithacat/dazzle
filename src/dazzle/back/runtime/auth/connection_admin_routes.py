@@ -3,9 +3,10 @@
 The in-app, RBAC-gated counterpart to the operator `dazzle auth connection` CLI: an
 authenticated org admin manages *their own org's* enterprise connections through the web UI.
 
-Every request runs the same gate as the member-admin surface (3b):
-  1. the caller has an ACTIVE membership in their active org whose roles intersect
-     ``app.state.org_admin_roles`` (fail-closed ``may_manage_members``);
+Every request runs the gate:
+  1. the caller has an ACTIVE membership in their active org whose roles satisfy the
+     ``manage_connections`` capability (``app.state.admin_policy``; fail-closed). This is the
+     technical/IT-admin concern, distinct from ``manage_members``.
   2. the target connection belongs to the caller's active org (cross-org guard — the 4a
      fenced ``get_connection(id, tenant_id=org)`` returns None for another org → 404).
 The org is always the caller's active membership's tenant_id — never request input.
@@ -30,10 +31,6 @@ def _product_name(request: Request) -> str:
     sitespec = getattr(request.app.state, "sitespec", None) or {}
     brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
     return str(brand.get("product_name", "Dazzle"))
-
-
-def _org_admin_roles(request: Request) -> list[str]:
-    return list(getattr(request.app.state, "org_admin_roles", []) or [])
 
 
 def _back(request: Request) -> Response:
@@ -96,8 +93,10 @@ def create_connection_admin_routes() -> APIRouter:
     router = APIRouter(tags=["auth"])
 
     def _gate(request: Request) -> tuple[Any, Any, str] | None:
-        """Return (store, ctx, org_id) if the caller may manage the org, else None."""
-        from dazzle.back.runtime.auth.invitations import may_manage_members
+        """Return (store, ctx, org_id) if the caller holds the ``manage_connections`` capability,
+        else None. Connection management is the technical/IT-admin concern — distinct from member
+        management (``manage_members``)."""
+        from dazzle.back.runtime.auth.admin_policy import request_policy
         from dazzle.back.runtime.auth.models import effective_roles_of
 
         store = request.app.state.auth_store
@@ -107,9 +106,7 @@ def create_connection_admin_routes() -> APIRouter:
             return None
         if ctx.active_membership is None:
             return None
-        if not may_manage_members(
-            list(effective_roles_of(ctx)), org_admin_roles=_org_admin_roles(request)
-        ):
+        if not request_policy(request).may("manage_connections", list(effective_roles_of(ctx))):
             return None
         return store, ctx, ctx.active_membership.tenant_id
 

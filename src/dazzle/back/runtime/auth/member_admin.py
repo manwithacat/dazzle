@@ -8,12 +8,15 @@ could manage it.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 
 def active_admins(
-    roster: list[tuple[str, list[str], str]], org_admin_roles: list[str]
+    roster: list[tuple[str, list[str], str]], admin_roles: Iterable[str]
 ) -> list[str]:
-    """Membership ids that are ACTIVE and hold at least one admin role."""
-    admin_set = set(org_admin_roles)
+    """Membership ids that are ACTIVE and hold at least one persona in ``admin_roles`` (the
+    resolved ``manage_members`` capability set)."""
+    admin_set = set(admin_roles)
     return [mid for (mid, roles, status) in roster if status == "active" and admin_set & set(roles)]
 
 
@@ -22,9 +25,10 @@ def would_orphan_org(
     target_id: str,
     *,
     new_roles: list[str] | None,
-    org_admin_roles: list[str],
+    admin_roles: Iterable[str],
 ) -> bool:
-    """True iff applying the change to ``target_id`` leaves the org with no admin.
+    """True iff applying the change to ``target_id`` leaves the org with no member holding the
+    ``manage_members`` capability.
 
     ``new_roles=None`` models removal or suspension (the target stops being an
     active admin). ``new_roles=[...]`` models a role change. Only blocks when the
@@ -40,10 +44,10 @@ def would_orphan_org(
     guard (re-checking inside the mutation's advisory-locked transaction) is a
     deferred hardening — see the 3b plan / CHANGELOG.
     """
-    before = active_admins(roster, org_admin_roles)
+    before = active_admins(roster, admin_roles)
     if not before:
         return False  # nothing to orphan
-    admin_set = set(org_admin_roles)
+    admin_set = set(admin_roles)
     after: list[str] = []
     for mid, roles, status in roster:
         if mid == target_id:

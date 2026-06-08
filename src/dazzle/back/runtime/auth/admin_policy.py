@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from typing import Any
 
 #: The framework-defined admin capabilities. The single source of truth (tests + drift gate
 #: assert against this). Add a name here (and wire a surface to it) to introduce a capability.
@@ -54,6 +55,22 @@ class AdminPolicy:
     def roles_for(self, capability: str) -> frozenset[str]:
         """The resolved persona set for ``capability`` (empty for an unknown capability)."""
         return self._by_capability.get(capability, frozenset())
+
+
+def request_policy(request: Any) -> AdminPolicy:
+    """The app's ``AdminPolicy`` from ``request.app.state.admin_policy``, falling back to an
+    ``org_admin_roles``-only policy when not wired.
+
+    The fallback IS the back-compat default — an app (or a test) that exposes only
+    ``app.state.org_admin_roles`` behaves exactly as before. Pure attribute reads, no I/O; the
+    single source of this fallback so the three org-admin route modules can't drift."""
+    policy: AdminPolicy | None = getattr(request.app.state, "admin_policy", None)
+    if policy is not None:
+        return policy
+    return AdminPolicy.from_config(
+        org_admin_roles=list(getattr(request.app.state, "org_admin_roles", []) or []),
+        admin_capabilities={},
+    )
 
 
 def unknown_admin_personas(
