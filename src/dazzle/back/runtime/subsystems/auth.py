@@ -69,6 +69,26 @@ class AuthSubsystem:
         # (fail-closed — empty means nobody can invite). Read by the invite route.
         _auth_cfg = getattr(ctx.config, "auth_config", None)
         ctx.app.state.org_admin_roles = list(getattr(_auth_cfg, "org_admin_roles", []) or [])
+        # Admin-capability policy (manage_members / manage_connections). org_admin_roles is the
+        # default for any unlisted capability, so apps that set only org_admin_roles are unchanged.
+        from dazzle.back.runtime.auth.admin_policy import AdminPolicy, unknown_admin_personas
+
+        _admin_caps = dict(getattr(_auth_cfg, "admin_capabilities", {}) or {})
+        ctx.app.state.admin_policy = AdminPolicy.from_config(
+            org_admin_roles=ctx.app.state.org_admin_roles,
+            admin_capabilities=_admin_caps,
+        )
+        # Warn (don't fail) on personas referenced in the map that aren't declared — a typo would
+        # silently grant nobody. ctx.config.personas is the declared-persona source (id-keyed).
+        _declared = {p["id"] for p in (getattr(ctx.config, "personas", None) or []) if "id" in p}
+        _unknown = unknown_admin_personas(_admin_caps, _declared)
+        if _unknown:
+            logger.warning(
+                "auth.admin_capabilities references undeclared personas %s — those entries grant "
+                "nobody. Declared personas: %s",
+                sorted(_unknown),
+                sorted(_declared),
+            )
         # auth Plan 1d: expose the AppSpec for the activation path's 1:1 org<->
         # tenant-root mirror provisioning (archetype apps).
         ctx.app.state.appspec = ctx.appspec
