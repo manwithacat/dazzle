@@ -269,6 +269,7 @@ class AuthSubsystem:
             ctx.app.include_router(create_sso_routes())
 
         self._mount_enterprise_capabilities(ctx)
+        self._register_capability_boot_guard(ctx)
 
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
@@ -305,6 +306,29 @@ class AuthSubsystem:
         return caps is not None and any(
             caps.is_active(cid) for cid in self._ENTERPRISE_CAPABILITY_IDS
         )
+
+    def _register_capability_boot_guard(self, ctx: SubsystemContext) -> None:
+        """Loud-log at startup if connection rows exist for a protocol whose enterprise
+        capability isn't active (#1344) — their routes silently don't mount (SSO/SCIM 404).
+
+        A startup hook (not build-time) because the DB pool only opens at lifespan startup;
+        loud-log only (the lifespan registry swallows hook exceptions, and the mismatch is
+        SAFE — aborting would crash-loop a safe deploy). Registered unconditionally: the whole
+        point is to fire when a capability is *absent*."""
+        from dazzle.back.runtime.auth.capability_guard import capability_boot_warnings
+        from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
+        store = getattr(ctx, "auth_store", None)
+        if store is None:
+            return
+        caps = getattr(ctx, "capabilities", None)
+
+        def _startup() -> None:
+            is_active = caps.is_active if caps is not None else (lambda _cid: False)
+            for msg in capability_boot_warnings(store.connection_type_counts(), is_active):
+                logger.error("Capability boot guard: %s", msg)
+
+        register_lifespan_hook(ctx.app, startup=_startup)
 
     def _mount_enterprise_capabilities(self, ctx: SubsystemContext) -> None:
         """Mount each enterprise auth route group gated on its capability (#1342)."""

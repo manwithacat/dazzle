@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.96] - 2026-06-08
+
+### Added
+- **Capability boot guard (#1344, closes the #1342 Phase-1 follow-up).** A lifespan startup
+  hook logs a loud, actionable `ERROR` when `connections` rows exist for a protocol whose
+  `auth.enterprise.{oidc,saml,scim}` capability isn't active — those routes silently don't
+  mount (SSO/SCIM 404), which was safe but quiet. Message names the count, the capability,
+  and the remedy (`dazzle capability enable …`). Loud-log only — never aborts boot (the
+  mismatch is safe; the lifespan registry swallows hook exceptions by design). New
+  `AuthStore.connection_type_counts()` (returns `{}` on any failure — can't break boot) +
+  pure `auth/capability_guard.py` for the testable mapping/warning logic.
+
 ## [0.81.95] - 2026-06-08
 
 ### Added

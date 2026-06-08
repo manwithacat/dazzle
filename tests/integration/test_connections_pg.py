@@ -581,3 +581,19 @@ def test_assertion_encryption_is_saml_only(store_url: str) -> None:
     )
     with pytest.raises(ValueError, match="SAML-only"):
         store.enable_connection_assertion_encryption(conn.id, sp_cert="C", sp_private_key="K")
+
+
+def test_connection_type_counts(store_url: str) -> None:
+    store = _store(store_url)
+    store.create_connection(tenant_id="o", type="oidc", config={}, secrets={}, domains=[])
+    store.create_connection(tenant_id="o", type="oidc", config={}, secrets={}, domains=[])
+    store.create_connection(tenant_id="o", type="saml", config={}, secrets={}, domains=[])
+    assert store.connection_type_counts() == {"oidc": 2, "saml": 1}
+
+
+def test_connection_type_counts_missing_table_returns_empty(store_url: str) -> None:
+    # A store whose schema was never initialised must not break boot — return {}.
+    from dazzle.back.runtime.auth.store import AuthStore
+
+    bare = AuthStore(database_url=store_url)  # no _init_db()
+    assert bare.connection_type_counts() == {}

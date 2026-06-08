@@ -1210,6 +1210,17 @@ class SessionStoreMixin:
         )
         return [self._row_to_connection(r) for r in rows]
 
+    def connection_type_counts(self) -> dict[str, int]:
+        """``{connection.type: count}`` for the capability boot guard (#1344). Defensive:
+        returns ``{}`` on ANY failure (missing ``connections`` table on a fresh/unmigrated
+        DB, query error) — a boot guard must never break boot."""
+        try:
+            rows = self._execute("SELECT type, COUNT(*) AS n FROM connections GROUP BY type")
+        except Exception:  # noqa: BLE001 — advisory guard; a read failure must not abort boot
+            logger.debug("connection_type_counts: read failed (benign at boot)", exc_info=True)
+            return {}
+        return {str(r["type"]): int(r["n"]) for r in rows}
+
     def get_connection_by_verified_domain(self, domain: str) -> "ConnectionRecord | None":  # noqa: F821
         """Route an email domain to its org's connection — VERIFIED domains only.
 
