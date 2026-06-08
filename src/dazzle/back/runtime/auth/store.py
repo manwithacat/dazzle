@@ -734,6 +734,7 @@ class SessionStoreMixin:
             roles=json.loads(row["roles"]) if row.get("roles") else [],
             status=row["status"],
             invited_by=row.get("invited_by"),
+            external_id=row.get("external_id"),
             joined_at=datetime.fromisoformat(row["joined_at"]),
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
@@ -747,6 +748,7 @@ class SessionStoreMixin:
         roles: list[str] | None = None,
         status: str = "active",
         invited_by: str | None = None,
+        external_id: str | None = None,
         actor_id: str | None = None,
         reason: str | None = None,
     ) -> MembershipRecord:
@@ -776,15 +778,16 @@ class SessionStoreMixin:
             roles=roles or [],
             status=status,
             invited_by=invited_by,
+            external_id=external_id,
         )
         with self._transaction() as cur:
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
             cur.execute(
                 """
                 INSERT INTO memberships
-                    (id, tenant_id, identity_id, roles, status, invited_by,
+                    (id, tenant_id, identity_id, roles, status, invited_by, external_id,
                      joined_at, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     membership.id,
@@ -793,6 +796,7 @@ class SessionStoreMixin:
                     json.dumps(membership.roles),
                     membership.status,
                     membership.invited_by,
+                    membership.external_id,
                     membership.joined_at.isoformat(),
                     membership.created_at.isoformat(),
                     membership.updated_at.isoformat(),
@@ -986,6 +990,39 @@ class SessionStoreMixin:
             (tenant_id,),
         )
         return [self._row_to_membership(r) for r in rows]
+
+    def get_membership_by_external_id(
+        self, tenant_id: str, external_id: str
+    ) -> MembershipRecord | None:
+        """Resolve the membership an IdP `externalId` (Entra user GUID) names in an org.
+
+        The dedup chokepoint for SCIM provisioning (#1342 gap 1): lets a re-push under a
+        changed email find the existing membership instead of forking a duplicate. Scoped
+        to ``tenant_id`` (one org's SCIM connection is authoritative only for its own org).
+        """
+        row = self._execute_one(
+            "SELECT * FROM memberships WHERE tenant_id = %s AND external_id = %s",
+            (tenant_id, external_id),
+        )
+        return self._row_to_membership(row) if row else None
+
+    def update_membership_external_id(
+        self, membership_id: str, external_id: str | None
+    ) -> MembershipRecord | None:
+        """Persist (or backfill) the IdP `externalId` on a membership. Returns the updated
+        record, or ``None`` if no such membership. No lifecycle event — externalId is an
+        IdP correlation key, not an access change."""
+        with self._transaction() as cur:
+            cur.execute(
+                "UPDATE memberships SET external_id = %s, updated_at = %s WHERE id = %s",
+                (external_id, datetime.now(UTC).isoformat(), membership_id),
+            )
+            updated = cur.rowcount
+            cur.execute("SELECT * FROM memberships WHERE id = %s", (membership_id,))
+            row = cur.fetchone()
+        if not updated or row is None:
+            return None
+        return self._row_to_membership(row)
 
     # -- Membership lifecycle events (auth Plan 2a — compliance evidence) -----
 
@@ -2412,6 +2449,14 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             # can key on it instead of mutable email/displayName. See the SCIM/SAML gaps.
             cursor.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS external_id TEXT")
             cursor.execute("ALTER TABLE scim_groups ADD COLUMN IF NOT EXISTS external_id TEXT")
+            # Dedup guarantee for SCIM provisioning (#1342 gap 1): one membership per
+            # (org, IdP user GUID). Partial so non-SCIM / pre-existing NULL external_ids
+            # are unconstrained. Closes the concurrent double-POST race lookup-first dedup
+            # alone can't (two provisions for the same externalId → two rows).
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_memberships_tenant_external "
+                "ON memberships(tenant_id, external_id) WHERE external_id IS NOT NULL"
+            )
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
                 "ON scim_group_members(membership_id)"

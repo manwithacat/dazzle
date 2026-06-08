@@ -61,7 +61,7 @@ def _alembic_head(url: str) -> None:
 def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
     # The real prod order: _init_db builds the base schema, then alembic upgrade head runs as
     # guarded ALTERs/creates. This must succeed (no "column already exists" / no missing table)
-    # — proving the mirror migrations (incl. the new 0013) are correctly guarded.
+    # — proving the mirror migrations (incl. 0013/0014) are correctly guarded.
     from dazzle.back.runtime.auth.store import AuthStore
 
     AuthStore(database_url=scratch_url)  # _init_db
@@ -71,12 +71,15 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
     try:
         insp = sa.inspect(eng)
         # alembic head recorded, and the new tables/columns are present (from _init_db, and
-        # 0013 no-ops over them) — schema intact after both ran.
+        # 0013/0014 no-op over them) — schema intact after both ran.
         version = eng.connect().execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0013_scim_groups_and_external_ids"
+        assert version == "0014_memberships_external_id_unique"
         assert "external_id" in {c["name"] for c in insp.get_columns("memberships")}
         assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
         assert insp.has_table("scim_group_members")
+        # the partial unique index 0014 mirrors must exist (from _init_db; 0014 no-ops over it)
+        index_names = {ix["name"] for ix in insp.get_indexes("memberships")}
+        assert "uq_memberships_tenant_external" in index_names
     finally:
         eng.dispose()
 

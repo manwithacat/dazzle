@@ -91,6 +91,10 @@ def _render_user(
             "location": f"{base}/scim/v2/Users/{membership.id}",
         },
     }
+    # #1342 gap 1: round-trip the IdP's stable user id (Entra correlates its directory
+    # object to this resource by the externalId it sent).
+    if getattr(membership, "external_id", None):
+        out["externalId"] = membership.external_id
     # #1342: read-only reflection of the membership's persisted SCIM group
     # memberships (RFC: User.groups is server-managed). Only when we have the
     # connection scope to resolve them.
@@ -265,7 +269,12 @@ def create_scim_routes() -> APIRouter:
         active = _coerce_active(active) if not isinstance(active, bool) else active
         try:
             result = provision_scim_user(
-                store, conn, email=email, active=bool(active), groups=_groups_from_body(body)
+                store,
+                conn,
+                email=email,
+                active=bool(active),
+                groups=_groups_from_body(body),
+                external_id=body.get("externalId"),
             )
         except ScimError as exc:
             status = 400 if exc.reason in ("no_email", "domain_not_verified") else 409
@@ -323,7 +332,12 @@ def create_scim_routes() -> APIRouter:
         active = _coerce_active(active) if not isinstance(active, bool) else active
         try:
             provision_scim_user(
-                store, conn, email=email, active=bool(active), groups=_groups_from_body(body)
+                store,
+                conn,
+                email=email,
+                active=bool(active),
+                groups=_groups_from_body(body),
+                external_id=body.get("externalId"),
             )
         except ScimError as exc:
             return _error(400, str(exc), scim_type="invalidValue")

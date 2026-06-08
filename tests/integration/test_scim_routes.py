@@ -44,12 +44,15 @@ class _User:
 
 
 class _Membership:
-    def __init__(self, mid, tenant_id, identity_id, *, roles=None, status="active"):
+    def __init__(
+        self, mid, tenant_id, identity_id, *, roles=None, status="active", external_id=None
+    ):
         self.id = mid
         self.tenant_id = tenant_id
         self.identity_id = identity_id
         self.roles = roles or []
         self.status = status
+        self.external_id = external_id
 
 
 class _Store:
@@ -96,10 +99,30 @@ class _Store:
     def get_memberships_for_tenant(self, tenant_id):
         return [m for m in self._memberships if m.tenant_id == tenant_id]
 
-    def create_membership(self, *, tenant_id, identity_id, roles=None, reason=None):
+    def get_membership_by_external_id(self, tenant_id, external_id):
+        return next(
+            (
+                m
+                for m in self._memberships
+                if m.tenant_id == tenant_id and getattr(m, "external_id", None) == external_id
+            ),
+            None,
+        )
+
+    def create_membership(
+        self, *, tenant_id, identity_id, roles=None, external_id=None, reason=None
+    ):
         self._n += 1
-        m = _Membership(f"mem-{self._n}", tenant_id, identity_id, roles=roles)
+        m = _Membership(
+            f"mem-{self._n}", tenant_id, identity_id, roles=roles, external_id=external_id
+        )
         self._memberships.append(m)
+        return m
+
+    def update_membership_external_id(self, membership_id, external_id):
+        m = self.get_membership(membership_id)
+        if m:
+            m.external_id = external_id
         return m
 
     def suspend_membership(self, membership_id, *, reason=None):
@@ -283,6 +306,44 @@ def test_create_user_unverified_domain_is_400(store) -> None:
         "/scim/v2/Users", json={"userName": "x@evil.test"}, headers=_auth("tok1")
     )
     assert r.status_code == 400
+
+
+def test_create_user_captures_and_echoes_external_id(store) -> None:
+    # #1342 gap 1: Entra sends externalId (its user objectId GUID) and expects it round-tripped.
+    c = _client(store)
+    r = c.post(
+        "/scim/v2/Users",
+        json={"userName": "jane@acme.test", "externalId": "entra-guid-1"},
+        headers=_auth("tok1"),
+    )
+    assert r.status_code == 201 and r.json()["externalId"] == "entra-guid-1"
+    mid = r.json()["id"]
+    # echoed on subsequent reads too
+    assert (
+        c.get(f"/scim/v2/Users/{mid}", headers=_auth("tok1")).json()["externalId"] == "entra-guid-1"
+    )
+
+
+def test_repush_under_changed_email_dedupes_by_external_id(store) -> None:
+    # The IdP renamed the user's email and re-pushed the same externalId. We must update the
+    # existing membership, not fork a duplicate identity.
+    c = _client(store)
+    first = c.post(
+        "/scim/v2/Users",
+        json={"userName": "old@acme.test", "externalId": "entra-guid-1"},
+        headers=_auth("tok1"),
+    ).json()
+    second = c.post(
+        "/scim/v2/Users",
+        json={"userName": "new@acme.test", "externalId": "entra-guid-1"},
+        headers=_auth("tok1"),
+    )
+    assert second.status_code == 201
+    assert second.json()["id"] == first["id"]  # same membership
+    assert len(store._memberships) == 1  # no duplicate
+    # the global identity email is NOT rewritten from the SCIM push (loud-log, no auto-rename)
+    assert store.get_user_by_email("old@acme.test") is not None
+    assert store.get_user_by_email("new@acme.test") is None
 
 
 # ---- read / filter ----

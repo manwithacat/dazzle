@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.100] - 2026-06-08
+
+### Added
+- **SCIM User externalId echo + dedup (#1342 gap 1 — the final schools-engagement gap).**
+  SCIM user provisioning now persists the IdP's stable user id (`externalId`, Entra = user
+  objectId GUID) on the membership and **echoes** it in the SCIM User resource (Entra expects
+  it round-tripped to correlate its directory object). Resolution is now **externalId-first**:
+  a re-push under a *changed email* (common in schools — surname change, role move) updates the
+  existing membership instead of forking a duplicate identity. `external_id` is backfilled onto
+  an email-matched membership on first sight. A partial unique index
+  `uq_memberships_tenant_external` on `memberships(tenant_id, external_id)` (in both `_init_db`
+  and Alembic `0014`) makes the dedup race-safe; a concurrent double-POST collision **converges**
+  on the winning membership (idempotent) rather than surfacing a 500.
+
+### Changed
+- On an externalId match with a **different** email, the provisioner keeps the existing
+  membership and logs a loud `WARNING` — it does **not** rewrite the global identity's email
+  (a `users` row may be shared across orgs, so one org's SCIM push is not authoritative over the
+  global mailbox). Operator reconciliation is surfaced, not silently applied.
+
+### Agent Guidance
+- SCIM user identity resolution is now **externalId-first, email-fallback**. When reasoning
+  about SCIM provisioning, treat `memberships.external_id` (the IdP user GUID) as the stable
+  join key; email is mutable and a changed-email re-push will NOT fork a new identity when an
+  externalId is supplied. The global `users.email` is never rewritten from a SCIM push.
+
 ## [0.81.99] - 2026-06-08
 
 ### Added

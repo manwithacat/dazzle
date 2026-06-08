@@ -135,6 +135,26 @@ def _raise_if_duplicate(exc: Exception, display_name: str) -> None:
         raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409) from exc
 
 
+def _converge_on_external_id(
+    store: Any, connection: Any, external_id: str | None, exc: Exception
+) -> Any:
+    """Recover from a ``(tenant_id, external_id)`` unique-index collision by re-resolving the
+    membership the externalId now names (the concurrent winner / existing holder).
+
+    The lookup→write in ``provision_scim_user`` is not atomic, so two parallel IdP pushes for
+    the same externalId can both miss the lookup and the loser trips ``uq_memberships_tenant_external``.
+    Re-reads converge on the winning row so SCIM stays idempotent instead of 500-ing. Re-raises
+    the original error if it wasn't a uniqueness hit, or if the row genuinely can't be found
+    (so a real failure isn't swallowed)."""
+    import psycopg
+
+    if external_id is not None and isinstance(exc, psycopg.errors.UniqueViolation):
+        winner = store.get_membership_by_external_id(connection.tenant_id, external_id)
+        if winner is not None:
+            return winner
+    raise exc
+
+
 def _require_member_in_org(store: Any, connection: Any, membership_id: str) -> Any:
     """A membership by id, but only if it's in this connection's org (else raise)."""
     m = store.get_membership(membership_id)
@@ -273,6 +293,28 @@ def _membership_in_org(store: Any, identity_id: str, tenant_id: str) -> Any:
     return None
 
 
+def _identity_email(store: Any, identity_id: str) -> str:
+    """The global identity's current email, or ``""`` if it can't be resolved. Used only
+    to detect (and loud-log) an externalId-matched re-push under a changed email."""
+    from uuid import UUID
+
+    try:
+        user = store.get_user_by_id(UUID(str(identity_id)))
+    except (ValueError, TypeError):
+        return ""
+    return getattr(user, "email", "") if user is not None else ""
+
+
+def _sync_membership_active(store: Any, membership: Any, active: bool) -> None:
+    """Apply the SCIM ``active`` flag to an existing membership. Roles are owned by the
+    /Groups endpoint, so this touches status only. Deactivation revokes live sessions."""
+    if active and membership.status == "suspended":
+        store.reactivate_membership(membership.id, reason="SCIM reactivate")
+    elif not active and membership.status == "active":
+        store.suspend_membership(membership.id, reason="SCIM deactivate")
+        store.delete_sessions_for_membership(membership.id)
+
+
 def provision_scim_user(
     store: Any,
     connection: Any,
@@ -280,17 +322,44 @@ def provision_scim_user(
     email: str,
     active: bool = True,
     groups: list[str] | None = None,
+    external_id: str | None = None,
 ) -> ScimResult:
     """Create-or-update a user pushed by the IdP (SCIM POST/PUT/PATCH).
 
-    Resolves/creates the global identity by verified email, then ensures a membership
-    in the connection's org reflecting ``active`` + the group→role mapping. Idempotent:
-    a re-push syncs roles and the active flag without duplicating.
+    Resolution order (#1342 gap 1): if the IdP supplied a stable ``external_id`` (Entra
+    user objectId GUID) and this org already has a membership for it, that membership IS
+    this user — even if the pushed email differs (the IdP renamed the mailbox); we keep it
+    and loud-log the mismatch rather than forking a duplicate identity. Otherwise resolve
+    (or create) the global identity by verified email. Idempotent: a re-push syncs the
+    active flag, backfills a newly-seen externalId, and never duplicates.
     """
     email = (email or "").strip().lower()
+    external_id = (external_id or "").strip() or None
     if not email:
         raise ScimError("no_email", "the SCIM payload carried no email/userName")
     _require_verified_domain(connection, email)
+
+    # Dedup-first: a stable externalId match wins over email. A re-push under a changed
+    # email updates the existing membership instead of forking. On an email mismatch we
+    # do NOT rewrite the global identity's email — it may be shared across orgs, and one
+    # org's IdP push is not authoritative over the global mailbox (loud-log for operator).
+    if external_id is not None:
+        existing = store.get_membership_by_external_id(connection.tenant_id, external_id)
+        if existing is not None:
+            current_email = (_identity_email(store, existing.identity_id) or "").lower()
+            if current_email and current_email != email:
+                _logger.warning(  # nosemgrep
+                    "SCIM connection %s: externalId %s pushed with email %r but the linked "
+                    "identity's email is %r — keeping the existing membership; NOT rewriting "
+                    "the global identity email (it may be shared across orgs). Operator "
+                    "reconciliation may be needed.",
+                    connection.id,
+                    external_id,
+                    email,
+                    current_email,
+                )
+            _sync_membership_active(store, existing, active)
+            return ScimResult(existing.identity_id, existing.id, active)
 
     user = store.get_user_by_email(email)
     if user is None:
@@ -312,23 +381,49 @@ def provision_scim_user(
     membership = _membership_in_org(store, identity_id, connection.tenant_id)
 
     if membership is None:
-        membership = store.create_membership(
-            tenant_id=connection.tenant_id,
-            identity_id=identity_id,
-            roles=[],  # /Groups assigns group-derived roles
-            reason="SCIM provision",
-        )
+        try:
+            membership = store.create_membership(
+                tenant_id=connection.tenant_id,
+                identity_id=identity_id,
+                roles=[],  # /Groups assigns group-derived roles
+                external_id=external_id,
+                reason="SCIM provision",
+            )
+        except Exception as exc:
+            # A concurrent provision won the (tenant_id, external_id) race (IdPs parallelise
+            # user sync). The unique index blocked the duplicate row; converge on the winner
+            # idempotently rather than surfacing a 500 (SCIM POST is idempotent on externalId).
+            converged = _converge_on_external_id(store, connection, external_id, exc)
+            _sync_membership_active(store, converged, active)
+            return ScimResult(converged.identity_id, converged.id, active)
         if not active:
             store.suspend_membership(membership.id, reason="SCIM provisioned inactive")
         return ScimResult(identity_id, membership.id, active)
 
-    # Existing membership — sync only active state. Roles are owned by the /Groups
-    # endpoint; do NOT overwrite them from the (informational) `groups` attribute.
-    if active and membership.status == "suspended":
-        store.reactivate_membership(membership.id, reason="SCIM reactivate")
-    elif not active and membership.status == "active":
-        store.suspend_membership(membership.id, reason="SCIM deactivate")
-        store.delete_sessions_for_membership(membership.id)
+    # Existing membership found by email. Backfill the externalId on first sight so future
+    # re-pushes (under a possibly-changed email) resolve via the stable id above.
+    if external_id is not None and getattr(membership, "external_id", None) != external_id:
+        try:
+            store.update_membership_external_id(membership.id, external_id)
+        except Exception as exc:
+            # Another membership in this org already holds this externalId (concurrent race
+            # or a pre-existing split identity). The stable id wins — converge on it, loud-log.
+            winner = _converge_on_external_id(store, connection, external_id, exc)
+            if winner.id != membership.id:
+                _logger.warning(  # nosemgrep
+                    "SCIM connection %s: externalId %s collided on backfill — email %r "
+                    "resolved to membership %s but the externalId already names membership "
+                    "%s; converging on the externalId's membership. Operator reconciliation "
+                    "may be needed.",
+                    connection.id,
+                    external_id,
+                    email,
+                    membership.id,
+                    winner.id,
+                )
+            _sync_membership_active(store, winner, active)
+            return ScimResult(winner.identity_id, winner.id, active)
+    _sync_membership_active(store, membership, active)
     return ScimResult(identity_id, membership.id, active)
 
 
