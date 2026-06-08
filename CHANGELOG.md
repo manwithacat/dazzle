@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.98] - 2026-06-08
+
+### Added
+- **Auth-store ↔ Alembic parity (foundation for the SCIM/SAML streamlining gaps, #1342).**
+  The auth store's `scim_groups` / `scim_group_members` are now mirrored into the alembic
+  chain (migration `0013`, guarded — same safety-net pattern as 0007), and `external_id` is
+  added to `memberships` + `scim_groups` (in both `_init_db` and `0013`) so SCIM group→role and
+  identity joins can key on the IdP's stable id instead of mutable email/displayName.
+- **Auth-schema drift gate** (two parts): a fast static check
+  (`test_authstore_alembic_mirror_completeness`) that every table `_init_db` creates inline is
+  mirrored by an alembic `op.create_table` (a known allowlist names the four not-yet-mirrored
+  primary tables; a new un-mirrored table fails), plus a PG coexistence check
+  (`test_authstore_alembic_parity_pg`) that `_init_db` then `alembic upgrade head` on the same
+  DB succeeds to head `0013` — the real prod order. Closes the latent split where `scim_groups`
+  was raw-only and nothing enforced mirror parity.
+
+### Agent Guidance
+- **Auth schema changes go in BOTH `_init_db` (primary creator) AND a guarded alembic
+  migration** (the mirror); the drift gate enforces it. The alembic auth chain is NOT
+  standalone (0005/0007 ALTER `sessions`, created only by `_init_db`) — it runs as guarded
+  ALTERs after `_init_db`. Making it standalone (retire `_init_db`'s schema role) is a deferred
+  consolidation, not yet done.
+
 ## [0.81.97] - 2026-06-08
 
 ### Added

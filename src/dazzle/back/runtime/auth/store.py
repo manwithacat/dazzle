@@ -2376,6 +2376,11 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     PRIMARY KEY (group_id, membership_id)
                 )
             """)
+            # #1342 schools-gap: the IdP's stable id for the user (membership) / group — the
+            # SCIM externalId (Entra objectId GUID). Persisted so group→role + identity joins
+            # can key on it instead of mutable email/displayName. See the SCIM/SAML gaps.
+            cursor.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS external_id TEXT")
+            cursor.execute("ALTER TABLE scim_groups ADD COLUMN IF NOT EXISTS external_id TEXT")
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
                 "ON scim_group_members(membership_id)"

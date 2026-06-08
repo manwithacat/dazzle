@@ -597,3 +597,17 @@ def test_connection_type_counts_missing_table_returns_empty(store_url: str) -> N
 
     bare = AuthStore(database_url=store_url)  # no _init_db()
     assert bare.connection_type_counts() == {}
+
+
+def test_external_id_columns_present(store_url: str) -> None:
+    # #1342 schools-gap foundation: external_id storage exists on memberships + scim_groups.
+    import sqlalchemy as sa
+
+    _store(store_url)  # runs _init_db
+    eng = sa.create_engine(store_url.replace("postgresql://", "postgresql+psycopg://", 1))
+    try:
+        insp = sa.inspect(eng)
+        assert "external_id" in {c["name"] for c in insp.get_columns("memberships")}
+        assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
+    finally:
+        eng.dispose()
