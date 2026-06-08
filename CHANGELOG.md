@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.89] - 2026-06-08
+
+### Added
+- **Fuzz signal compounding (#1342 fuzz-leverage #5).** The parser fuzz campaign now leaves
+  permanent artifacts behind:
+  - `dazzle sentinel fuzz --save-seeds <dir>` persists every CRASH/HANG input as a
+    content-hash-deduped `.dsl` file (via new `fuzzer.report.write_seed_files`).
+  - `.github/workflows/fuzz-nightly.yml` runs the heavier mutate-layer campaign nightly
+    (05:00 UTC) + on demand, goes RED on any catch, and uploads the report + offending seeds
+    as a build artifact. It does not write back to the repo.
+  - `tests/unit/fuzz_seeds/` is a committed regression corpus replayed by
+    `test_fuzz_seed_regressions.py` — every seed must raise a *well-formed* located
+    `ParseError`, never a raw crash. Operators promote worthwhile nightly catches into it.
+  - `scripts/mutation_poc.py` — a dependency-free, token-level mutation-testing harness
+    (mutmut 3.x is incompatible with this repo's pytest config). Reports kill-rate +
+    survivors for a module. Scored 86% on `saml_metadata.py`; a survivor flagged the
+    untested metadata size-cap boundary, now pinned by
+    `test_fetch_at_exactly_the_cap_is_allowed`.
+
+### Agent Guidance
+- When the nightly fuzz job goes red, download its artifact and promote each genuine catch
+  into `tests/unit/fuzz_seeds/` (one `.dsl` per input) — do **not** rely on the nightly run
+  alone; only the committed corpus is a permanent regression. To gauge whether a module's
+  tests *pin* behaviour (not just cover it), run `python scripts/mutation_poc.py <module> --
+  <pytest args>`; a survivor names an untested boundary/fallback worth a test.
+
 ## [0.81.88] - 2026-06-08
 
 ### Added

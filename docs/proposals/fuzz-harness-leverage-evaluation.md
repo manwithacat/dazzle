@@ -90,9 +90,11 @@ behaviour, not just crashes:
 - **Round-trip stability:** ❌ not feasible — Dazzle has no IR→DSL emitter (DSL→IR only), so
   `parse → emit → parse` can't be expressed. (Would require building a DSL serializer first.)
 
-### 3. Open new fuzz surfaces — the small, strong-invariant parsers we *just wrote* — *high leverage*
+### 3. Open new fuzz surfaces — the small, strong-invariant parsers we *just wrote* — ✅ DONE (v0.81.87)
 Each is self-contained, has a crisp invariant, and currently has only example tests. These are
-the cheapest new surfaces and several are security-relevant:
+the cheapest new surfaces and several are security-relevant. **All six now have Hypothesis
+property tests** (`tests/unit/test_fuzz_small_parsers.py`); fuzzing them found and fixed a
+`parse_grace_duration` `OverflowError` leak and three `parse_group_patch` crashes:
 - `saml_metadata.parse_idp_metadata_xml` — arbitrary XML → dict or `SamlMetadataError`, **never
   a raw exception, never a hang** (XXE/oversize already delegated, but the property pins it).
 - `saml_metadata.validate_metadata_url` — arbitrary URL → the SSRF invariant holds (no private
@@ -113,13 +115,24 @@ a shared `BaseParser.enum_from_token(ir.<Enum>, token)` helper does the try/exce
 (`tests/unit/test_no_unguarded_enum_from_token.py`) fails on any new unguarded
 `ir.<Enum>(token.value)` — allowlist-free (the migration drained it to zero).
 
-### 5. Make the fuzz signal compound — *medium cost*
-- Run the existing `fuzzer` campaign in CI on a schedule (not just the inline Hypothesis 50),
-  persisting newly-found failing inputs back into a committed corpus so each catch becomes a
-  permanent regression seed (the `report.py`/`oracle.py` plumbing already exists).
-- Track **mutation kill-rate per CPU-second** (the strategy doc's headline metric) so we can
-  show distillation *reducing* count while *increasing* protection — and so a fuzz target's
-  worth is measured, not assumed.
+### 5. Make the fuzz signal compound — ✅ DONE (v0.81.89)
+- **Scheduled campaign + regression corpus.** `report.write_seed_files` persists every
+  CRASH/HANG input (content-hash-deduped) and `dazzle sentinel fuzz --save-seeds <dir>`
+  exposes it. A nightly workflow (`.github/workflows/fuzz-nightly.yml`, 05:00 UTC +
+  `workflow_dispatch`) runs the mutate-layer campaign, goes RED on a catch, and uploads the
+  report + seeds as an artifact (it deliberately does **not** write back to the repo). An
+  operator promotes worthwhile seeds into `tests/unit/fuzz_seeds/`, replayed on every CI run
+  by `test_fuzz_seed_regressions.py` (each must raise a *well-formed* located `ParseError`,
+  never a raw crash) — so each catch becomes a permanent regression.
+- **Mutation kill-rate.** `scripts/mutation_poc.py` is a dependency-free, token-level
+  mutation harness (mutmut 3.x's `mutants/`-dir pytest invocation is incompatible with this
+  repo's config/conftest — `BadTestExecutionCommandsException`). It swaps operators/keywords
+  at the *token* level (strings/docstrings/comments never mutated) and reports killed /
+  survived / kill-rate. On `saml_metadata.py` it scored **86%** (12/14) — and the run *paid
+  for itself*: a survivor flagged the untested size-cap boundary (`>` vs `>=`), which we
+  pinned with a new test, lifting the rate from 79% → 86%. The 2 remaining survivors are a
+  cosmetic error-message fallback and an untested explicit-port path. This is the strategy
+  doc's headline metric, now measurable on demand.
 
 ## Suggested first slice
 

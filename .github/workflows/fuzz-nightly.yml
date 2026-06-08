@@ -1,0 +1,63 @@
+name: Nightly Parser Fuzz
+
+# #1342 fuzz-leverage #5: run the parser fuzz campaign on a schedule so the signal
+# compounds over time (per-push CI already runs the inline Hypothesis fuzz with 50
+# examples; this is the heavier `dazzle sentinel fuzz` campaign with many more samples).
+#
+# Mutate-layer only — no ANTHROPIC_API_KEY needed (the LLM layer is skipped). On a
+# CRASH/HANG the `sentinel fuzz` command exits non-zero → the job goes RED (visible in the
+# Actions tab) and the report + offending seed inputs are uploaded as artifacts. An
+# operator/agent reviews the artifact and promotes worthwhile seeds into
+# tests/unit/fuzz_seeds/ (the committed regression corpus replayed by every CI run). The
+# job deliberately does NOT write back to the repo.
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # 05:00 UTC daily (after the 04:00 coverage-nightly)
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Samples per layer
+        required: false
+        default: '500'
+
+permissions:
+  contents: read
+
+jobs:
+  parser-fuzz:
+    name: Parser Fuzz Campaign (mutate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+    - uses: ./.github/actions/setup-dazzle
+      with:
+        optional-pip: ""
+
+    - name: Run fuzz campaign (mutate layer)
+      env:
+        # Route the (user-controlled) dispatch input through an env var, never inline
+        # ${{ }} in run: — and validate it's a plain integer before use.
+        SAMPLES: ${{ github.event.inputs.samples || '500' }}
+      run: |
+        case "$SAMPLES" in
+          ''|*[!0-9]*) echo "samples must be a positive integer" >&2; exit 2 ;;
+        esac
+        mkdir -p fuzz-out/seeds
+        dazzle sentinel fuzz \
+          --layer mutate \
+          --samples "$SAMPLES" \
+          --output fuzz-out/report.md \
+          --save-seeds fuzz-out/seeds
+
+    - name: Upload fuzz report + any found seeds
+      if: always()   # upload even when the campaign failed (that's when we want them)
+      uses: actions/upload-artifact@v4
+      with:
+        name: parser-fuzz-${{ github.run_id }}
+        path: fuzz-out/
+        if-no-files-found: warn
+        retention-days: 30

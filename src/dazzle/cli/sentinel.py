@@ -189,9 +189,13 @@ def sentinel_fuzz(
     dry_run: bool = typer.Option(False, "--dry-run", help="Generate inputs without classifying"),
     timeout: float = typer.Option(5.0, "--timeout", "-t", help="Parser timeout in seconds"),
     output: str = typer.Option(None, "--output", "-o", help="Save report to file"),
+    save_seeds: str = typer.Option(
+        None, "--save-seeds", help="Dir to persist CRASH/HANG inputs as .dsl regression seeds"
+    ),
 ) -> None:
     """Run parser fuzz campaign to discover error surface gaps."""
     from dazzle.testing.fuzzer import Classification, generate_report, run_campaign
+    from dazzle.testing.fuzzer.report import write_seed_files
 
     # Find examples directory
     examples_dir = Path.cwd() / "examples"
@@ -232,6 +236,10 @@ def sentinel_fuzz(
 
     # Exit with error code if bugs found
     bugs = [r for r in results if r.classification in (Classification.HANG, Classification.CRASH)]
+    if save_seeds:
+        seeds = write_seed_files(results, Path(save_seeds))
+        if seeds:
+            typer.echo(f"\nPersisted {len(seeds)} regression seed(s) to {save_seeds}")
     if bugs:
         raise typer.Exit(code=1)
 

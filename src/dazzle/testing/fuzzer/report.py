@@ -2,9 +2,37 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections import Counter
+from pathlib import Path
 
 from dazzle.testing.fuzzer.oracle import Classification, FuzzResult
+
+# Classifications that represent a real bug worth keeping as a permanent regression seed.
+_BUG_CLASSES = (Classification.CRASH, Classification.HANG)
+
+
+def write_seed_files(results: list[FuzzResult], out_dir: Path) -> list[Path]:
+    """Persist each CRASH/HANG input as a ``.dsl`` regression seed under ``out_dir`` so a
+    campaign catch becomes a permanent test input (#1342 fuzz-leverage #5).
+
+    Filenames are ``<classification>-<sha8>.dsl`` (content-hashed → identical inputs dedup).
+    Returns the paths written. VALID/CLEAN_ERROR/BAD_ERROR inputs are not persisted.
+    """
+    out_dir = Path(out_dir)
+    written: dict[str, Path] = {}
+    for r in results:
+        if r.classification not in _BUG_CLASSES:
+            continue
+        digest = hashlib.sha256(r.dsl_input.encode("utf-8")).hexdigest()[:8]
+        name = f"{r.classification.value}-{digest}.dsl"
+        if name in written:
+            continue  # dedup identical inputs
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / name
+        path.write_text(r.dsl_input, encoding="utf-8")
+        written[name] = path
+    return list(written.values())
 
 
 def generate_report(results: list[FuzzResult]) -> str:

@@ -115,6 +115,18 @@ def test_fetch_size_capped(monkeypatch) -> None:
     assert ei.value.reason == "too_large"
 
 
+def test_fetch_at_exactly_the_cap_is_allowed(monkeypatch) -> None:
+    # Boundary: a body of EXACTLY the cap is OK; only > cap is rejected. (Pins the `>` vs
+    # `>=` boundary — a mutation-testing survivor, #1342 fuzz-leverage #5.)
+    from dazzle.back.runtime.auth.saml_metadata import _MAX_METADATA_BYTES
+
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: _addrinfo("93.184.216.34"))
+    import httpx
+
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: _FakeStream(b"x" * _MAX_METADATA_BYTES))
+    assert fetch_idp_metadata("https://idp.example/metadata") == "x" * _MAX_METADATA_BYTES
+
+
 def test_fetch_passes_no_redirects(monkeypatch) -> None:
     monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: _addrinfo("93.184.216.34"))
     seen: dict = {}
