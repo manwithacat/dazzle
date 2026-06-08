@@ -124,9 +124,11 @@ a shared `BaseParser.enum_from_token(ir.<Enum>, token)` helper does the try/exce
   operator promotes worthwhile seeds into `tests/unit/fuzz_seeds/`, replayed on every CI run
   by `test_fuzz_seed_regressions.py` (each must raise a *well-formed* located `ParseError`,
   never a raw crash) — so each catch becomes a permanent regression.
-- **Mutation kill-rate.** `scripts/mutation_poc.py` is a dependency-free, token-level
-  mutation harness (mutmut 3.x's `mutants/`-dir pytest invocation is incompatible with this
-  repo's config/conftest — `BadTestExecutionCommandsException`). It swaps operators/keywords
+- **Mutation kill-rate.** Started as `scripts/mutation_poc.py`, now graduated to
+  `dazzle sentinel mutate` (engine `src/dazzle/testing/mutation/`) with an enforced
+  `--suite security` gate — see `docs/proposals/mutation-audit-findings.md`. A dependency-free,
+  token-level mutation harness (mutmut 3.x's `mutants/`-dir pytest invocation is incompatible
+  with this repo's config/conftest — `BadTestExecutionCommandsException`). It swaps operators/keywords
   at the *token* level (strings/docstrings/comments never mutated) and reports killed /
   survived / kill-rate. On `saml_metadata.py` it scored **86%** (12/14) — and the run *paid
   for itself*: a survivor flagged the untested size-cap boundary (`>` vs `>=`), which we

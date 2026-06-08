@@ -4,8 +4,10 @@ Follow-on to the fuzz-harness leverage track. Where fuzzing asks *"does any inpu
 this?"*, mutation testing asks *"do our tests actually pin this behaviour, or merely
 execute it?"* — it injects a small bug (mutant) and checks whether a test fails. A
 **surviving** mutant is behaviour no test constrains; a low **kill-rate** means coverage
-without strength. Tool: `scripts/mutation_poc.py` (token-level, dependency-free; mutmut 3.x
-is incompatible with this repo's pytest config).
+without strength. Tool: `dazzle sentinel mutate` (engine in `src/dazzle/testing/mutation/`;
+token-level, dependency-free — mutmut 3.x is incompatible with this repo's pytest config).
+Run a single module with `dazzle sentinel mutate <module> -t <pytest target>`; run the
+enforced security gate with `dazzle sentinel mutate --suite security`.
 
 ## Headline
 
@@ -55,10 +57,16 @@ the Unicode tail. The remaining survivors are either:
   tests don't exercise the specific branch (e.g. a non-shared-schema tenancy, or a
   dotted-FK path of depth ≥ 3). Candidates for targeted PG tests if/when we harden these.
 
-## Recommended next step
+## Productionised (done)
 
-Productionise the POC as `dazzle sentinel mutate <module>` and add a **kill-rate floor
-gate** on the security-critical modules (with the PG suite wired in for the SQL-gen ones),
-so the numbers above become a tracked baseline and a regression in test *strength* — not
-just coverage — fails CI. Design decision (threshold, fail-vs-warn, CI runtime budget)
-pending.
+The POC graduated to `dazzle sentinel mutate` (engine: `src/dazzle/testing/mutation/`).
+The five modules above + their floors are registered in
+`src/dazzle/testing/mutation/targets.py` and enforced by `dazzle sentinel mutate --suite
+security`, run nightly by `.github/workflows/mutation-nightly.yml` (with a Postgres service
+so the SQL-gen modules are measured with their enforcement suite). Floors are set a few
+points below the measured baseline so a drop in test *strength* — not just coverage —
+turns the job red. Per-module floors: crypto ≥80, matrix ≥65, csrf ≥80, rls_schema ≥55
+(PG), predicate_compiler ≥40 (PG).
+
+Remaining work (optional): close the genuine residual survivors in the scope/RLS compilers
+(listed above) with targeted PG tests, raising those floors over time.

@@ -1,0 +1,57 @@
+name: Nightly Mutation Gate
+
+# Mutation testing measures test STRENGTH (does a test fail when the code is subtly
+# broken?), the complement to coverage and fuzzing. `dazzle sentinel mutate --suite
+# security` mutates the security-critical modules and fails if any falls below its
+# registered kill-rate floor (src/dazzle/testing/mutation/targets.py). A floor breach means
+# a regression in test strength — a place a future bug could slip past CI silently.
+#
+# Nightly (not per-PR) because a full sweep with the Postgres enforcement suite takes ~10
+# min. DATABASE_URL is set so the SQL-generation modules (rls_schema, predicate_compiler)
+# are measured against their PG enforcement tests — unit tests alone understate them ~5-8×.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily (after fuzz-nightly at 05:00)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation-gate:
+    name: Mutation Gate (security modules)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dazzle
+          POSTGRES_PASSWORD: dazzle_test
+          POSTGRES_DB: dazzle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dazzle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+    - uses: ./.github/actions/setup-dazzle
+      with:
+        extras: dev,llm,mcp,postgres,saml,sso
+
+    - name: Build asset bundles
+      run: python scripts/build_dist.py
+
+    - name: Run mutation gate (security suite)
+      env:
+        DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+        TEST_DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+      run: |
+        dazzle sentinel mutate --suite security

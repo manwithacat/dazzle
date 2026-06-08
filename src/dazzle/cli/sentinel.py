@@ -263,3 +263,121 @@ def sentinel_history(
         raise typer.Exit(code=1)
 
     typer.echo(format_output(result, as_json=as_json))
+
+
+@sentinel_app.command("mutate")
+def sentinel_mutate(
+    module: str = typer.Argument(None, help="Module path to mutate (omit when using --suite)."),
+    test: list[str] = typer.Option(
+        [], "--test", "-t", help="pytest target(s) that pin the module (repeatable)."
+    ),
+    suite: str = typer.Option(
+        None, "--suite", help="Run a registered suite instead of a single module: 'security'."
+    ),
+    min_kill_rate: int = typer.Option(
+        None,
+        "--min-kill-rate",
+        help="Fail if kill-rate is below this percent (single-module mode).",
+    ),
+) -> None:
+    """Mutation-test a module: measure how many injected bugs ('mutants') the tests KILL.
+
+    Measures test *strength*, not coverage. Single-module:
+        dazzle sentinel mutate src/dazzle/foo.py -t tests/unit/test_foo.py
+
+    Registered security gate (run from the framework repo root; set DATABASE_URL so the PG
+    enforcement tests run for the SQL-gen modules):
+        dazzle sentinel mutate --suite security
+    """
+    import os
+
+    from dazzle.testing.mutation import (
+        SECURITY_TARGETS,
+        BaselineError,
+        run_mutation,
+    )
+    from dazzle.testing.mutation.targets import SuiteOutcome
+
+    if suite:
+        if suite != "security":
+            typer.echo(f"Unknown suite {suite!r} (known: security)", err=True)
+            raise typer.Exit(code=2)
+        has_db = bool(os.environ.get("DATABASE_URL"))
+        outcomes: list[SuiteOutcome] = []
+        for tgt in SECURITY_TARGETS:
+            mod_path = Path(tgt.module)
+            if not mod_path.exists():
+                typer.echo(f"  module not found: {tgt.module} (run from repo root?)", err=True)
+                raise typer.Exit(code=2)
+            if tgt.needs_pg and not has_db:
+                typer.echo(f"⊘ {tgt.module} — SKIPPED (needs DATABASE_URL for PG tests)")
+                outcomes.append(SuiteOutcome(tgt, 0.0, tgt.floor, passed=True, skipped=True))
+                continue
+            try:
+                res = run_mutation(mod_path, list(tgt.tests))
+            except BaselineError as exc:
+                typer.echo(f"✗ {tgt.module} — BASELINE FAILED: {exc}", err=True)
+                raise typer.Exit(code=1)
+            passed = res.kill_rate >= tgt.floor
+            mark = "✓" if passed else "✗"
+            typer.echo(
+                f"{mark} {tgt.module} — {res.kill_rate:.0f}% "
+                f"(floor {tgt.floor}%, {res.killed}/{res.total})"
+            )
+            outcomes.append(
+                SuiteOutcome(tgt, res.kill_rate, tgt.floor, passed=passed, survivors=res.survivors)
+            )
+
+        from dazzle.testing.mutation.targets import (
+            GATE_FLOOR_BREACH,
+            GATE_INCOMPLETE,
+            suite_exit_code,
+        )
+
+        failed = [o for o in outcomes if not o.passed and not o.skipped]
+        for o in failed:
+            typer.echo(f"\n  ▼ {o.target.module} survivors below floor:", err=True)
+            for s in o.survivors[:10]:
+                typer.echo(f"      L{s.line_no}: {s.before!r} → {s.after!r}", err=True)
+
+        code = suite_exit_code(outcomes)
+        if code == GATE_FLOOR_BREACH:
+            typer.echo(f"\n{len(failed)} module(s) below kill-rate floor.", err=True)
+            raise typer.Exit(code=GATE_FLOOR_BREACH)
+        if code == GATE_INCOMPLETE:
+            skipped = [o.target.module for o in outcomes if o.skipped]
+            typer.echo(
+                f"\nGATE INCOMPLETE — {len(skipped)} module(s) NOT measured "
+                f"(set DATABASE_URL to run their PG tests): {', '.join(skipped)}",
+                err=True,
+            )
+            raise typer.Exit(code=GATE_INCOMPLETE)
+        typer.echo("\nAll security modules meet their kill-rate floor.")
+        return
+
+    # Single-module mode.
+    if not module or not test:
+        typer.echo("Provide MODULE and at least one --test, or use --suite security.", err=True)
+        raise typer.Exit(code=2)
+    mod_path = Path(module)
+    if not mod_path.exists():
+        typer.echo(f"Module not found: {module}", err=True)
+        raise typer.Exit(code=2)
+    try:
+        res = run_mutation(mod_path, list(test))
+    except BaselineError as exc:
+        typer.echo(f"BASELINE FAILED: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"\nModule: {res.module}")
+    typer.echo(f"Mutants: {res.total}  Killed: {res.killed}  Survived: {len(res.survivors)}")
+    typer.echo(f"Kill rate: {res.kill_rate:.0f}%")
+    if res.survivors:
+        typer.echo("\nSurvivors (tests did NOT catch these mutations):")
+        for s in res.survivors:
+            typer.echo(f"  L{s.line_no}: {s.before!r} → {s.after!r}")
+    if min_kill_rate is not None and res.kill_rate < min_kill_rate:
+        typer.echo(
+            f"\nKill rate {res.kill_rate:.0f}% below --min-kill-rate {min_kill_rate}%.", err=True
+        )
+        raise typer.Exit(code=1)

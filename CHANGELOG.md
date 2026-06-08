@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.92] - 2026-06-08
+
+### Added
+- **`dazzle sentinel mutate` + a nightly mutation gate.** The mutation-testing POC graduated
+  into a first-class command + an enforced CI gate (engine: `src/dazzle/testing/mutation/`).
+  - `dazzle sentinel mutate <module> -t <pytest target>` — ad-hoc kill-rate for one module.
+  - `dazzle sentinel mutate --suite security` — runs the registry
+    (`src/dazzle/testing/mutation/targets.py`: connection_crypto ≥80, rbac/matrix ≥65,
+    csrf ≥80, rls_schema ≥55, predicate_compiler ≥40) and fails if any module drops below
+    its kill-rate floor. SQL-gen modules are measured with their PG enforcement tests
+    (require `DATABASE_URL`); a skipped target exits **2** (incomplete), never a silent 0.
+  - `.github/workflows/mutation-nightly.yml` runs the gate nightly with a Postgres service.
+  - `scripts/mutation_poc.py` removed (graduated; clean break).
+
+### Agent Guidance
+- A regression in *test strength* (not just coverage) on the security-critical modules now
+  turns the nightly mutation gate red. If you legitimately remove tests, re-measure with
+  `dazzle sentinel mutate --suite security` (set `DATABASE_URL`) and adjust the floor in
+  `src/dazzle/testing/mutation/targets.py` in the same commit, with a note.
+
 ## [0.81.91] - 2026-06-08
 
 ### Added
