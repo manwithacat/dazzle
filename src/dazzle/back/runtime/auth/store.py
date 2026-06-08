@@ -2026,7 +2026,9 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
     # SCIM Groups (#1342) — connection-scoped; members link to memberships.
     # ------------------------------------------------------------------ #
 
-    def create_scim_group(self, connection_id: str, display_name: str) -> "ScimGroupRecord":  # noqa: F821
+    def create_scim_group(
+        self, connection_id: str, display_name: str, external_id: str | None = None
+    ) -> "ScimGroupRecord":  # noqa: F821
         from uuid import uuid4
 
         from dazzle.back.runtime.auth.models import ScimGroupRecord
@@ -2034,17 +2036,45 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         now = datetime.now(UTC).isoformat()
         gid = str(uuid4())
         self._execute(
-            "INSERT INTO scim_groups (id, connection_id, display_name, created_at, updated_at) "
-            "VALUES (%s, %s, %s, %s, %s)",
-            (gid, connection_id, display_name, now, now),
+            "INSERT INTO scim_groups (id, connection_id, display_name, external_id, "
+            "created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)",
+            (gid, connection_id, display_name, external_id, now, now),
         )
         return ScimGroupRecord(
             id=gid,
             connection_id=connection_id,
             display_name=display_name,
+            external_id=external_id,
             created_at=now,
             updated_at=now,
         )
+
+    def update_scim_group_external_id(
+        self, group_id: str, connection_id: str, external_id: str | None
+    ) -> None:
+        """Set/refresh a SCIM group's IdP stable id (#1342) — e.g. a PUT replace carrying it."""
+        self._execute(
+            "UPDATE scim_groups SET external_id = %s, updated_at = %s "
+            "WHERE id = %s AND connection_id = %s",
+            (external_id, datetime.now(UTC).isoformat(), group_id, connection_id),
+        )
+
+    def get_member_group_keys(self, membership_id: str, connection_id: str) -> list[str]:
+        """Role-mapping candidate keys for a member's SCIM groups: each group's display_name
+        AND its external_id (GUID) when set, so a ``group_mapping`` keyed by EITHER (Entra GUID
+        / Google name) matches (#1342 schools gap 2). Connection-scoped (org containment)."""
+        rows = self._execute(
+            "SELECT g.display_name AS display_name, g.external_id AS external_id "
+            "FROM scim_group_members m JOIN scim_groups g ON g.id = m.group_id "
+            "WHERE m.membership_id = %s AND g.connection_id = %s",
+            (membership_id, connection_id),
+        )
+        keys: list[str] = []
+        for r in rows:
+            keys.append(r["display_name"])
+            if r.get("external_id"):
+                keys.append(r["external_id"])
+        return keys
 
     def _row_to_scim_group(self, row: dict[str, Any]) -> "ScimGroupRecord":  # noqa: F821
         from dazzle.back.runtime.auth.models import ScimGroupRecord
@@ -2053,6 +2083,7 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             id=row["id"],
             connection_id=row["connection_id"],
             display_name=row["display_name"],
+            external_id=row.get("external_id"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

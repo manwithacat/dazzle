@@ -367,7 +367,7 @@ def create_scim_routes() -> APIRouter:
     # ------------------------------------------------------------------ #
 
     def _group_to_scim(group: Any, member_ids: list[str], base: str) -> dict[str, Any]:
-        return {
+        resource = {
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
             "id": group.id,
             "displayName": group.display_name,
@@ -379,6 +379,10 @@ def create_scim_routes() -> APIRouter:
                 "location": f"{base}/scim/v2/Groups/{group.id}",
             },
         }
+        # Echo the IdP's stable group id (#1342) — Entra reconciles its objectId against it.
+        if getattr(group, "external_id", None):
+            resource["externalId"] = group.external_id
+        return resource
 
     @router.post("/scim/v2/Groups", status_code=201)
     async def scim_create_group(request: Request) -> Any:
@@ -392,7 +396,13 @@ def create_scim_routes() -> APIRouter:
         assert body is not None
         member_ids = [m["value"] for m in (body.get("members") or []) if "value" in m]
         try:
-            group = sp.create_group(store, conn, body.get("displayName", ""), member_ids)
+            group = sp.create_group(
+                store,
+                conn,
+                body.get("displayName", ""),
+                member_ids,
+                external_id=body.get("externalId"),  # the Entra group objectId GUID
+            )
         except sp.SCIMGroupError as e:
             return _error(e.status, str(e))
         base = str(request.base_url).rstrip("/")
@@ -447,6 +457,8 @@ def create_scim_routes() -> APIRouter:
             return _error(400, "displayName is required", scim_type="invalidValue")
         try:
             sp.rename_group(store, conn, group_id, body["displayName"])
+            if "externalId" in body:  # #1342: keep the IdP's stable group id fresh on replace
+                store.update_scim_group_external_id(group_id, conn.id, body.get("externalId"))
             member_ids = [m["value"] for m in (body.get("members") or []) if "value" in m]
             sp.set_group_members(store, conn, group_id, member_ids)
             group = sp.get_group(store, conn, group_id)

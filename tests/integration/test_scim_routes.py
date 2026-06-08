@@ -135,7 +135,7 @@ class _Store:
             self._groups: dict[str, Any] = {}  # gid -> SimpleNamespace
             self._gmembers: dict[str, list[str]] = {}  # gid -> [membership_id]
 
-    def create_scim_group(self, connection_id, display_name):
+    def create_scim_group(self, connection_id, display_name, external_id=None):
         from types import SimpleNamespace
         from uuid import uuid4
 
@@ -145,12 +145,29 @@ class _Store:
             id=gid,
             connection_id=connection_id,
             display_name=display_name,
+            external_id=external_id,
             created_at="t",
             updated_at="t",
         )
         self._groups[gid] = g
         self._gmembers[gid] = []
         return g
+
+    def update_scim_group_external_id(self, group_id, connection_id, external_id):
+        self._ensure_group_state()
+        g = self._groups.get(group_id)
+        if g and g.connection_id == connection_id:
+            g.external_id = external_id
+
+    def get_member_group_keys(self, membership_id, connection_id):
+        self._ensure_group_state()
+        keys = []
+        for gid, g in self._groups.items():
+            if g.connection_id == connection_id and membership_id in self._gmembers.get(gid, []):
+                keys.append(g.display_name)
+                if getattr(g, "external_id", None):
+                    keys.append(g.external_id)
+        return keys
 
     def get_scim_group(self, group_id, connection_id):
         self._ensure_group_state()
@@ -407,6 +424,22 @@ def test_group_create_get_list() -> None:
     assert client.get(f"/scim/v2/Groups/{gid}", headers=_auth("tok1")).status_code == 200
     lr = client.get('/scim/v2/Groups?filter=displayName eq "Eng"', headers=_auth("tok1"))
     assert lr.json()["totalResults"] == 1
+
+
+def test_group_create_captures_and_echoes_external_id() -> None:
+    # #1342 gap 2: the Entra group objectId GUID is captured + echoed so the IdP reconciles.
+    s, m = _group_store()
+    client = _client(s)
+    r = client.post(
+        "/scim/v2/Groups",
+        json={"displayName": "Eng", "externalId": "guid-1234"},
+        headers=_auth("tok1"),
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["externalId"] == "guid-1234"
+    got = client.get(f"/scim/v2/Groups/{body['id']}", headers=_auth("tok1")).json()
+    assert got["externalId"] == "guid-1234"
 
 
 def test_group_patch_add_remove_member_recomputes() -> None:

@@ -114,6 +114,7 @@ class ScimGroupRecord(BaseModel):
     id: str
     connection_id: str
     display_name: str
+    external_id: str | None = None  # the IdP's stable group id (Entra objectId GUID) — #1342
     created_at: str
     updated_at: str
 

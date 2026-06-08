@@ -611,3 +611,52 @@ def test_external_id_columns_present(store_url: str) -> None:
         assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
     finally:
         eng.dispose()
+
+
+def test_scim_group_external_id_drives_roles(store_url: str) -> None:
+    # #1342 gap 2: a GUID-keyed group_mapping (as a school's Entra connection would carry, since
+    # the SAML claim sends GUIDs) assigns the role via the group's captured external_id, even
+    # though SCIM only knows the group by display_name.
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="orgG",
+        type="scim",
+        config={},
+        secrets={},
+        domains=[],
+        group_mapping={"99999999-aaaa": "teacher"},  # Entra group GUID → role
+    )
+    user = store.create_user(email="t@school.test", password="x")
+    m = store.create_membership(tenant_id="orgG", identity_id=str(user.id), roles=[])
+    g = store.create_scim_group(conn.id, "Year 7 Teachers", "99999999-aaaa")
+    store.add_group_member(g.id, m.id)
+
+    from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+
+    recompute_membership_roles(store, conn, m.id)
+    assert "teacher" in store.get_membership(m.id).roles  # matched by GUID, not display_name
+
+    keys = store.get_member_group_keys(m.id, conn.id)
+    assert "99999999-aaaa" in keys and "Year 7 Teachers" in keys
+    assert store.get_scim_group(g.id, conn.id).external_id == "99999999-aaaa"
+
+
+def test_scim_group_role_by_display_name_still_works(store_url: str) -> None:
+    # Backward-compat: a name-keyed group_mapping (Google sends names) still matches.
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="orgN",
+        type="scim",
+        config={},
+        secrets={},
+        domains=[],
+        group_mapping={"SLT": "leader"},
+    )
+    user = store.create_user(email="h@school.test", password="x")
+    m = store.create_membership(tenant_id="orgN", identity_id=str(user.id), roles=[])
+    g = store.create_scim_group(conn.id, "SLT", None)  # no external_id (Google-style)
+    store.add_group_member(g.id, m.id)
+    from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+
+    recompute_membership_roles(store, conn, m.id)
+    assert "leader" in store.get_membership(m.id).roles

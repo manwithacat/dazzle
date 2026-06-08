@@ -574,3 +574,23 @@ def test_initiate_logout_without_idp_slo_url_raises() -> None:
     conn = _conn(config={"idp_entity_id": "e", "idp_sso_url": "s", "idp_x509_cert": "c"})
     with pytest.raises(ConnectionError, match="logout"):
         p.initiate_logout(conn, _FakeRequest(), name_id="jane@acme.test")
+
+
+# ---- Gap 3: SAML group overage fail-safe (#1342) ----
+
+
+def test_extract_groups_warns_on_overage(caplog) -> None:
+    p = NativeSAMLProvider()
+    attrs = {"http://schemas.microsoft.com/claims/groups.link": ["https://graph/link"]}
+    with caplog.at_level("WARNING"):
+        groups = p._extract_groups(_conn(), attrs)
+    assert groups == []  # real groups truncated by the IdP
+    assert any("overage" in r.getMessage().lower() for r in caplog.records)
+
+
+def test_extract_groups_no_warning_on_normal_claim(caplog) -> None:
+    p = NativeSAMLProvider()
+    with caplog.at_level("WARNING"):
+        groups = p._extract_groups(_conn(), {"groups": ["g1", "g2"]})
+    assert groups == ["g1", "g2"]
+    assert not [r for r in caplog.records if "overage" in r.getMessage().lower()]

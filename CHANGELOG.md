@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.99] - 2026-06-08
+
+### Added
+- **SCIM/SAML stable-ID gaps (#1342, schools-engagement hardening).**
+  - **Gap 3 — SAML group overage fail-safe.** When an IdP truncates the SAML groups claim
+    (Entra caps at 150 groups, emitting a `…groups.link` overage indicator instead), the
+    provider now logs a loud `WARNING` rather than silently leaving a member with no
+    group-derived roles. Still returns whatever groups are present.
+  - **Gap 2 — group→role by stable ID.** SCIM groups capture the IdP's `externalId` (Entra
+    group objectId GUID); the SCIM Group resource echoes it (Entra reconciles on it). Role
+    derivation now matches a connection's `group_mapping` on **either** the group's
+    `display_name` **or** its `external_id`, so a single GUID-keyed mapping works for both the
+    SAML groups claim (GUIDs) and SCIM, and a name-keyed mapping keeps working (Google sends
+    names). `external_id` added to `memberships` + `scim_groups` (v0.81.98 foundation).
+
+### Agent Guidance
+- A connection's `group_mapping` keys may be IdP group GUIDs (Entra) **or** group names
+  (Google) — both now match for SCIM-provisioned groups (the group's `external_id` and
+  `display_name` are both offered as candidate keys). Still default-deny: a group grants a role
+  only if its name or GUID is an explicit mapping key.
+
 ## [0.81.98] - 2026-06-08
 
 ### Added

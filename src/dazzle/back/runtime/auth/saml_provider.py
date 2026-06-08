@@ -332,6 +332,17 @@ class NativeSAMLProvider:
     def _extract_groups(
         self, connection: ConnectionRecord, attributes: dict[str, Any]
     ) -> list[str]:
+        # Group overage (#1342 schools-gap): when a user is in too many groups (Entra caps the
+        # SAML groups claim at 150) the IdP OMITS the groups and emits a `…groups.link` overage
+        # indicator pointing at Graph instead. The member then arrives with no groups → no
+        # group-derived roles, silently. Log loudly rather than under-grant without a signal.
+        if any(str(k).lower().endswith("groups.link") for k in attributes):
+            _logger.warning(  # nosemgrep
+                "SAML connection %s: group overage — the IdP truncated the groups claim "
+                "(too many groups); this member's group-derived roles may be incomplete. Use "
+                "IdP app-role assignment or reduce the group count for this app.",
+                connection.id,
+            )
         attr = (connection.config or {}).get("groups_attribute") or _DEFAULT_GROUPS_ATTR
         raw = attributes.get(attr) or []
         if isinstance(raw, (list, tuple)):

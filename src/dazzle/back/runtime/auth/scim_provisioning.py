@@ -99,8 +99,11 @@ def recompute_membership_roles(store: Any, connection: Any, membership_id: str) 
     # (get_member_group_names returns [] for a foreign membership → roles []).
     if membership is None or membership.tenant_id != connection.tenant_id:
         return
-    names = store.get_member_group_names(membership_id, connection.id)
-    roles = map_groups_to_roles(names, connection.group_mapping or {})
+    # #1342 schools-gap 2: match group_mapping on EITHER the group's display_name OR its
+    # external_id (Entra group GUID) — so one GUID-keyed mapping works for SAML (claim=GUIDs)
+    # and SCIM alike; name-keyed configs keep matching (display_name is always a key).
+    keys = store.get_member_group_keys(membership_id, connection.id)
+    roles = map_groups_to_roles(keys, connection.group_mapping or {})
     if set(roles) != set(membership.roles or []):
         store.update_membership_roles(membership_id, roles, reason="SCIM group sync")
 
@@ -140,7 +143,14 @@ def _require_member_in_org(store: Any, connection: Any, membership_id: str) -> A
     return m
 
 
-def create_group(store: Any, connection: Any, display_name: str, member_ids: list[str]) -> Any:
+def create_group(
+    store: Any,
+    connection: Any,
+    display_name: str,
+    member_ids: list[str],
+    *,
+    external_id: str | None = None,
+) -> Any:
     if not display_name:
         raise SCIMGroupError("invalid_value", "displayName is required", 400)
     for mid in member_ids:
@@ -148,7 +158,7 @@ def create_group(store: Any, connection: Any, display_name: str, member_ids: lis
     if store.list_scim_groups(connection.id, display_name=display_name):
         raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409)
     try:
-        group = store.create_scim_group(connection.id, display_name)
+        group = store.create_scim_group(connection.id, display_name, external_id)
     except Exception as exc:
         _raise_if_duplicate(exc, display_name)
         raise
@@ -175,12 +185,13 @@ def rename_group(store: Any, connection: Any, group_id: str, display_name: str) 
         if store.list_scim_groups(connection.id, display_name=display_name):
             raise SCIMGroupError("uniqueness", f"group {display_name!r} already exists", 409)
         mapping = connection.group_mapping or {}
-        # Roles are keyed by display_name, so a rename re-derives every member's
-        # roles from the NEW name. If the new name isn't in the mapping but the
-        # old one was, the rename will strip the mapped role from every member —
-        # correct (the mapping is stale) but worth a loud warning, since an
-        # operator-driven rename should be paired with a group_mapping update.
-        if group.display_name in mapping and display_name not in mapping:
+        # A rename re-derives every member's roles from the NEW name. If the new name isn't in
+        # the mapping but the old one was, the rename strips the mapped role — correct (stale
+        # mapping) but worth a loud warning. EXCEPT when the mapping is keyed by this group's
+        # external_id (Entra GUID, #1342 gap 2): the GUID is unchanged by a rename, so the role
+        # survives — don't warn (the display_name key was never load-bearing).
+        guid_mapped = bool(getattr(group, "external_id", None) and group.external_id in mapping)
+        if group.display_name in mapping and display_name not in mapping and not guid_mapped:
             _logger.warning(
                 "SCIM group rename %r -> %r drops mapped role %r for all members "
                 "(update connection.group_mapping to the new name to retain it)",
