@@ -13,14 +13,12 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
 
 from ..progress import ProgressContext
 from ..progress import noop as _noop_progress
-
-_T = TypeVar("_T")
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -105,14 +103,14 @@ def wrap_async_handler_errors(
 _timeout_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="mcp-timeout")
 
 
-def run_with_timeout(
-    fn: Callable[..., _T],
+def run_with_timeout[T](
+    fn: Callable[..., T],
     args: tuple[Any, ...] = (),
     kwargs: dict[str, Any] | None = None,
     *,
     timeout: float = DEFAULT_STEP_TIMEOUT,
     label: str = "",
-) -> _T:
+) -> T:
     """Run *fn* in a worker thread with a wall-clock timeout.
 
     If the function does not return within *timeout* seconds, raises

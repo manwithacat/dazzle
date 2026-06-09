@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Adopted PEP 695 native type-parameter syntax across the 18 deferred sites** (`UP040/UP046/UP047`, the
+  #1175 deferral). Generic classes/functions now use `class C[T]` / `def fn[T]()` and type aliases use
+  `type X = …` (7 files: `result`, `cli_ui`, `mcp/server/handlers/common`, `back/runtime/repository`,
+  `back/runtime/service_generator`, `back/events/service_mixin`, `back/graphql/adapters/base`). The three ruff
+  ignores are removed, so the modernization is enforced going forward. Behaviour-preserving: no
+  explicit-variance TypeVars were involved (none exist in `src/dazzle`); bounds carried over as `[T: Bound]`;
+  now-dead module-level TypeVars + their `Generic`/`TypeVar`/`TypeAlias` imports were removed — except
+  `service_generator.T`, kept because the non-generic `CustomService(BaseService[T])` still consumes it. mypy
+  2.1 (1305 files) + the full suite + the api-surface drift gate (`No drift`) all green. **Floor stays
+  `>=3.12`** — PEP 695 is floor-independent; this is *not* the floor move (still deferred). Spec/plan under
+  `docs/superpowers/`.
+
 ## [0.82.6] - 2026-06-09
 
 ### Changed

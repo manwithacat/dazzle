@@ -13,7 +13,7 @@ import re
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Generic, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -532,8 +532,6 @@ if TYPE_CHECKING:
 # Type Variables
 # =============================================================================
 
-T = TypeVar("T", bound=BaseModel)
-
 
 # =============================================================================
 # Database Value Conversion (PostgreSQL)
@@ -585,7 +583,7 @@ def _db_to_python(value: Any, field_type: FieldType | None = None) -> Any:
 # =============================================================================
 
 
-class Repository(Generic[T]):
+class Repository[T: BaseModel]:
     """
     Repository for a single entity type.
 
@@ -1641,10 +1639,10 @@ class Repository(Generic[T]):
 try:
     from dazzle.back.runtime.pg_backend import PostgresBackend
 
-    DatabaseManager: TypeAlias = PostgresBackend
+    type DatabaseManager = PostgresBackend
 except ImportError:
     PostgresBackend = None  # type: ignore[assignment,misc]
-    DatabaseManager: TypeAlias = Any  # type: ignore[no-redef,misc]
+    type DatabaseManager = Any  # type: ignore[no-redef]
 """Deprecated — use :class:`~dazzle_back.runtime.pg_backend.PostgresBackend`."""
 
 

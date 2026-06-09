@@ -13,7 +13,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -33,8 +33,6 @@ logger = logging.getLogger("dazzle.service")
 # =============================================================================
 
 T = TypeVar("T", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
-UpdateT = TypeVar("UpdateT", bound=BaseModel)
 
 
 # =============================================================================
@@ -42,7 +40,7 @@ UpdateT = TypeVar("UpdateT", bound=BaseModel)
 # =============================================================================
 
 
-class BaseService(ABC, Generic[T]):
+class BaseService[T: BaseModel](ABC):
     """
     Abstract base service class.
 
@@ -68,7 +66,7 @@ EntityEventCallback = Callable[
 ]
 
 
-class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
+class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseService[T]):
     """
     Generic CRUD service implementation.
 

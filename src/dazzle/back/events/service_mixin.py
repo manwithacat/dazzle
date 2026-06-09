@@ -13,7 +13,7 @@ Usage:
 """
 
 import logging
-from typing import Any, Generic, TypeVar
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -22,12 +22,8 @@ from dazzle.back.events.envelope import EventEnvelope
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
-UpdateT = TypeVar("UpdateT", bound=BaseModel)
 
-
-class EventEmittingMixin(Generic[T]):
+class EventEmittingMixin[T: BaseModel]:
     """
     Mixin that adds event emission to CRUD services.
 
@@ -229,7 +225,9 @@ class EventEmittingMixin(Generic[T]):
         await self._emit_event("deleted", entity_id, {"id": str(entity_id)})
 
 
-class EventEmittingCRUDService(EventEmittingMixin[T], Generic[T, CreateT, UpdateT]):
+class EventEmittingCRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](
+    EventEmittingMixin[T]
+):
     """
     CRUD service with automatic event emission.
 

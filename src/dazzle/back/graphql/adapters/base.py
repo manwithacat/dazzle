@@ -37,7 +37,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -105,20 +105,13 @@ class AdapterConfig:
     auth_type: str = "bearer"
 
 
-# Type variable for adapter configuration
-ConfigT = TypeVar("ConfigT", bound=AdapterConfig)
-
-# Type variable for response data
-T = TypeVar("T")
-
-
 # =============================================================================
 # Response Types
 # =============================================================================
 
 
 @dataclass
-class AdapterResponse(Generic[T]):
+class AdapterResponse[T]:
     """Successful response from an external API.
 
     Attributes:
@@ -137,7 +130,7 @@ class AdapterResponse(Generic[T]):
 
 
 @dataclass
-class PaginatedResponse(Generic[T]):
+class PaginatedResponse[T]:
     """Paginated response from an external API.
 
     Attributes:
@@ -249,7 +242,7 @@ class AdapterResultStatus(Enum):
 
 
 @dataclass
-class AdapterResult(Generic[T]):
+class AdapterResult[T]:
     """Result of an adapter operation.
 
     Uses a Result pattern to represent success or failure without
@@ -338,7 +331,7 @@ class AdapterResult(Generic[T]):
 # =============================================================================
 
 
-class BaseExternalAdapter(ABC, Generic[ConfigT]):
+class BaseExternalAdapter[ConfigT: AdapterConfig](ABC):
     """Base class for external API adapters.
 
     Subclasses should implement:

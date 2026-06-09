@@ -21,14 +21,11 @@ single-branch checks. Match handles composition.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, NoReturn, TypeVar
-
-T = TypeVar("T")
-E = TypeVar("E")
+from typing import NoReturn
 
 
 @dataclass(frozen=True, slots=True)
-class Ok(Generic[T]):
+class Ok[T]:
     """Successful Result carrying a value."""
 
     value: T
@@ -49,7 +46,7 @@ class Ok(Generic[T]):
 
 
 @dataclass(frozen=True, slots=True)
-class Err(Generic[E]):
+class Err[E]:
     """Failed Result carrying an error value."""
 
     error: E

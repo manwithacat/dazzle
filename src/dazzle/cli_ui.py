@@ -6,7 +6,7 @@ Provides cursor-navigable selection menus with colors and styling.
 
 import sys
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from rich import box
 from rich.console import Console
@@ -20,11 +20,9 @@ IS_TTY = sys.stdin.isatty() and sys.stdout.isatty()
 
 console = Console()
 
-T = TypeVar("T")
-
 
 @dataclass
-class SelectOption(Generic[T]):
+class SelectOption[T]:
     """An option in a selection menu."""
 
     value: T
@@ -81,7 +79,7 @@ def print_info(message: str) -> None:
     console.print(Text(f"ℹ {message}", style=STYLES["info"]))
 
 
-def select_interactive(
+def select_interactive[T](
     options: list[SelectOption[T]],
     title: str = "Select an option",
     subtitle: str = "",
@@ -114,7 +112,7 @@ def select_interactive(
         return _select_simple(options, title, subtitle)
 
 
-def _select_with_keyboard(
+def _select_with_keyboard[T](
     options: list[SelectOption[T]],
     title: str,
     subtitle: str,
@@ -200,7 +198,7 @@ def _select_with_keyboard(
         return None
 
 
-def _select_simple(
+def _select_simple[T](
     options: list[SelectOption[T]],
     title: str,
     subtitle: str,
