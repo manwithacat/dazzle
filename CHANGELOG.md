@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.7] - 2026-06-09
+
 ### Changed
 - **Adopted PEP 695 native type-parameter syntax across the 18 deferred sites** (`UP040/UP046/UP047`, the
   #1175 deferral). Generic classes/functions now use `class C[T]` / `def fn[T]()` and type aliases use
