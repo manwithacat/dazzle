@@ -18,14 +18,14 @@ class TestGenerateProductionDockerfile:
     @pytest.mark.parametrize(
         "expected",
         [
-            "FROM python:3.12-slim",
+            "FROM python:3.14-slim",
             "HEALTHCHECK",
             'dazzle", "serve", "--production"',
             "EXPOSE 8000",
             "COPY requirements.txt",
         ],
         ids=[
-            "test_uses_python_312_slim",
+            "test_uses_python_314_slim",
             "test_includes_healthcheck",
             "test_cmd_is_dazzle_serve_production",
             "test_exposes_port_8000",
@@ -44,13 +44,13 @@ class TestGenerateHerokuFiles:
         "index,expected",
         [
             (0, "dazzle serve --production"),
-            (1, "python-3.12"),
+            (1, "python-3.14"),
             (2, "dazzle-dsl[serve]==0.46.2"),
             (2, "psycopg[binary]"),
         ],
         ids=[
             "test_procfile_uses_production_flag",
-            "test_runtime_is_python_312",
+            "test_runtime_is_python_314",
             "test_requirements_pins_dazzle_serve_version",
             "test_requirements_includes_psycopg",
         ],
@@ -85,7 +85,7 @@ class TestGenerateHerokuUvFiles:
         assert expected in result
 
     def test_python_version_file_is_floor(self) -> None:
-        assert generate_python_version_file() == "3.12\n"
+        assert generate_python_version_file() == "3.14\n"
 
     @pytest.mark.parametrize(
         "dirname,expected",

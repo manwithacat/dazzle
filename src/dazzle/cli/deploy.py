@@ -616,7 +616,7 @@ def deploy_preflight(
 
 def generate_production_dockerfile() -> str:
     """Generate a production Dockerfile using dazzle serve --production."""
-    return """FROM python:3.12-slim
+    return """FROM python:3.14-slim
 WORKDIR /app
 
 COPY requirements.txt .
@@ -652,7 +652,7 @@ def generate_heroku_files(version: str) -> tuple[str, str, str]:
         (procfile, runtime_txt, requirements_txt)
     """
     procfile = "web: dazzle serve --production\n"
-    runtime = "python-3.12\n"
+    runtime = "python-3.14\n"
     requirements = generate_deploy_requirements(version)
     return procfile, runtime, requirements
 
@@ -688,7 +688,7 @@ package = false
 
 def generate_python_version_file() -> str:
     """Generate the ``.python-version`` file Heroku's uv path reads (and uv locally)."""
-    return "3.12\n"
+    return "3.14\n"
 
 
 def _heroku_app_name(output_path: Path) -> str:

@@ -101,6 +101,13 @@ def _format_annotation(annotation: typing.Any) -> str:
             return "None"
         if isinstance(annotation, type):
             return annotation.__name__
+        if isinstance(annotation, typing.ForwardRef):
+            # Render from __forward_arg__ for a stable, interpreter-independent
+            # form. CPython 3.14 changed ForwardRef's repr to include `is_class=`,
+            # which would drift this floor-pinned baseline; the forward-arg form
+            # matches the pre-3.14 `ForwardRef('X')` output on every interpreter,
+            # so the committed baseline needs no regeneration.
+            return f"ForwardRef({annotation.__forward_arg__!r})"
         return str(annotation)
 
     if origin is typing.Union or origin is types.UnionType:

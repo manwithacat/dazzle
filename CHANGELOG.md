@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Python 3.14 is now the primary deploy/runtime target, and a hard-required CI cell (floor stays `>=3.12`).**
+  After an empirical + sourced evaluation (`docs/python-3.14-primary-target.md`): 3.14 runs Dazzle's parse→IR
+  path **~6–12% faster** via the uv tail-call interpreter, it's [Heroku's default since Dec 2025](https://devcenter.heroku.com/changelog-items/3505),
+  and 3.14.5 reverted the incremental-GC memory regression. The CI `python-tests` matrix is now
+  `["3.12","3.13","3.14"]`, **all hard-required** (3.14 promoted from its allow-failure cell). Deploy/runtime
+  defaults move to 3.14 — repo `runtime.txt` + `.python-version`; the Docker base images in `core/manifest.py`,
+  `cli/runtime_impl/docker.py`, and `dazzle deploy dockerfile`; and `dazzle deploy heroku`'s `runtime.txt` (pip)
+  + `.python-version` (uv) outputs. The **floor stays 3.12** — `requires-python`, ruff `target-version`, mypy
+  `python_version`, and the generated Heroku `pyproject.toml`'s `requires-python` are unchanged. Added the 3.14
+  trove classifier and `scripts/bench_interp.py`. **Caveat:** the tail-call speedup exists only in uv/
+  python-build-standalone interpreters, not the GCC-built `python:3.14-slim` Docker image.
+
+### Fixed
+- **Two CPython-3.14 compatibility reds cleared so 3.14 is hard-green — with no api-surface baseline change.**
+  (1) The LSP import test (`tests/unit/test_lsp.py`) scope-ignores pygls' use of the 3.14-deprecated
+  `asyncio.iscoroutinefunction` (removal in 3.16), so its `-W error` gate still catches *our* import-time
+  RuntimeWarnings (our own code already uses `inspect.iscoroutinefunction`). (2) `_format_annotation`
+  (`api_surface/dsl_constructs.py`) now renders `typing.ForwardRef` from `__forward_arg__`, reproducing the
+  pre-3.14 `ForwardRef('X')` form on every interpreter — CPython 3.14 added `is_class=` to the repr, which had
+  drifted the floor-pinned `docs/api-surface/ir-types.txt` baseline. Verified `No drift` on both 3.12 and 3.14.
+
 ## [0.82.5] - 2026-06-09
 
 ### Changed

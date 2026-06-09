@@ -46,28 +46,21 @@ jobs:
   python-tests:
     name: Python Tests (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    # 3.14 is an allow-failure (experimental) cell — its failure must not fail
-    # the workflow / block the required 3.12 + 3.13 checks. matrix.experimental
-    # is unset (→ false) for the hard cells.
-    continue-on-error: ${{ matrix.experimental || false }}
     strategy:
       fail-fast: false
       matrix:
-        # Support matrix. 3.12 = floor (hard). 3.13 = hard-required, added after
-        # a full local suite validated clean (slice 3). uv provisions each via
-        # the composite's `--python`. lint/type-check stay 3.12-pinned — they
-        # govern which syntax the floor permits, not which interpreter runs.
-        python-version: ["3.12", "3.13"]
-        include:
-          # 3.14 = allow-failure experimental cell (slice 5): all deps install
-          # on 3.14.5 and 17,592 tests pass locally. Two known non-Dazzle
-          # failures keep it red for now: (1) pygls calls the 3.14-deprecated
-          # `asyncio.iscoroutinefunction`, which the `-W error` LSP-import test
-          # turns into an error; (2) CPython 3.14's `typing.ForwardRef` repr
-          # gained `is_class=`, drifting the floor-pinned api-surface baseline.
-          # Revisit when pygls ships a 3.14 fix and/or at the floor move.
-          - python-version: "3.14"
-            experimental: true
+        # Full support matrix, all hard-required. 3.12 = floor; 3.14 = the
+        # primary deploy/runtime target (Heroku's default; ~5% faster on the
+        # CPU/parse path via the uv tail-call interpreter — see
+        # docs/python-3.14-primary-target.md). 3.14 was promoted from an
+        # allow-failure cell once its two non-Dazzle reds were cleared: the
+        # pygls `asyncio.iscoroutinefunction` deprecation is scope-ignored in
+        # the LSP import test, and `typing.ForwardRef` rendering is normalised
+        # via `__forward_arg__` so the api-surface baseline is interpreter-
+        # stable. uv provisions each interpreter via the composite `--python`.
+        # lint/type-check stay 3.12-pinned — they govern which syntax the floor
+        # permits, not which interpreter runs.
+        python-version: ["3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6

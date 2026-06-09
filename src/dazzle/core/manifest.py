@@ -24,7 +24,7 @@ class DockerConfig:
 
     variant: str = "compose"  # "compose" or "dockerfile"
     image_name: str | None = None
-    base_image: str = "python:3.12-slim"
+    base_image: str = "python:3.14-slim"
     port: int = 8000
 
 
@@ -759,7 +759,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         docker_config = DockerConfig(
             variant=docker_data.get("variant", "compose"),
             image_name=docker_data.get("image_name"),
-            base_image=docker_data.get("base_image", "python:3.12-slim"),
+            base_image=docker_data.get("base_image", "python:3.14-slim"),
             port=docker_data.get("port", 8000),
         )
 

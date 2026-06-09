@@ -25,7 +25,19 @@ class TestLspModuleLoading:
         """Verify 'python -m dazzle.lsp' doesn't produce RuntimeWarnings."""
         # Run the module with a short timeout - we just want to check startup
         result = subprocess.run(
-            [sys.executable, "-W", "error", "-c", "import dazzle.lsp"],
+            [
+                sys.executable,
+                "-W",
+                "error",
+                # pygls (third-party) calls asyncio.iscoroutinefunction, which
+                # CPython 3.14 deprecates (removal in 3.16). Scope-ignore that one
+                # upstream message so -W error still catches OUR import-time
+                # RuntimeWarnings. No-op on <3.14, where the warning doesn't fire.
+                "-W",
+                "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning",
+                "-c",
+                "import dazzle.lsp",
+            ],
             capture_output=True,
             text=True,
             timeout=5,
