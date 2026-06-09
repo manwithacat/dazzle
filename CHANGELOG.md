@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.0] - 2026-06-09
+
+### Changed
+- **Docs: `enterprise-sso.md` refreshed for the complete #1342 feature set.** The SAML conformance
+  matrix now reflects shipped reality — IdP-initiated SSO is **opt-in** (not "❌ by design"),
+  encrypted assertions and bidirectional SLO are **✅**, and the phantom `rejectUnsolicited*` setting
+  reference is gone. Added an *IdP-initiated SSO (opt-in)* section (enable/disable CLI + the
+  assertion replay cache), a *Live reachability check* (`doctor --probe`) section, documented in-app
+  connection **creation** + `manage_connections` gating on the org-admin surface, the SCIM
+  externalId-first identity + stable-id group→role matching + SAML group-overage warning, and
+  replaced the now-empty *Deferred* section with a *Status: backlog complete* summary. No code change.
+
 ## [0.81.106] - 2026-06-09
 
 ### Changed
