@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.106] - 2026-06-09
+
+### Changed
+- **CodeQL hygiene:** tightened two SAML/enterprise login-redirect test assertions from a
+  `location.startswith("https://idp.example")` substring check to a host-exact
+  `urlparse(...).hostname == "idp.example"` check — stricter, and clears the
+  `py/incomplete-url-substring-sanitization` false positives. The remaining open CodeQL alerts were
+  triaged as by-design (the `dazzle_csrf` double-submit cookie is intentionally JS-readable, ADR-0033)
+  or false positives (redirect targets validated by `is_safe_redirect_path`/`_is_wellformed_token`;
+  error responses return typed domain-error messages, not stack traces) and dismissed with reasons.
+
 ## [0.81.105] - 2026-06-09
 
 ### Added

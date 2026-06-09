@@ -10,6 +10,7 @@ covered in test_saml_provider.py).
 from __future__ import annotations
 
 from datetime import datetime
+from urllib.parse import urlparse
 
 import pytest
 from fastapi import FastAPI
@@ -205,7 +206,9 @@ def test_login_resolves_by_verified_email_domain(saml_provider) -> None:
     saml_provider(_FakeProvider())
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     r = _client(store).get("/auth/saml/login?email=jane@acme.test", follow_redirects=False)
-    assert r.status_code == 303 and r.headers["location"].startswith("https://idp.example")
+    assert r.status_code == 303
+    # host-exact check (not a substring) — the redirect must target the IdP origin
+    assert urlparse(r.headers["location"]).hostname == "idp.example"
 
 
 # ---- ACS ----
