@@ -11,13 +11,11 @@ always return content regardless of declared capabilities.
 import logging
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 from dazzle.core.capabilities.registry import active_capability_ids, get
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 def active_capabilities_for(project_root: Path | str) -> set[str]:
@@ -40,7 +38,7 @@ def active_capabilities_for(project_root: Path | str) -> set[str]:
         return set()
 
 
-def partition_by_capability(
+def partition_by_capability[T](
     items: Iterable[T],
     active: set[str],
     capability_of: Callable[[T], str | None],

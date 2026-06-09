@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **PEP 695: two more `UP047` sites the newer ruff flags** (`core/capabilities/cognition.py:partition_by_capability`,
+  `core/dsl_parser_impl/dispatch.py:parse_block_with_dispatch`). v0.82.7's lint job went red because CI's
+  lockfile-pinned **ruff 0.15.16** detects these generic functions while the older local ruff (0.15.0) did not —
+  the interpreter cells (3.12/3.13/3.14) were green, only lint failed. Converted both to `def fn[T]()`; removed
+  `cognition`'s now-dead module `T`, kept `dispatch`'s `StateT` (its module-level `KeywordParser` alias still
+  uses it). Verified clean under ruff 0.15.16.
+
+### Agent Guidance
+- **Pre-ship lint with the *locked* ruff, not the pyenv/global one.** CI's `setup-dazzle` installs ruff from
+  `uv.lock`; a newer locked ruff can surface lints (esp. `UP0xx`) an older local ruff misses. Before shipping a
+  lint-affecting change, run `uvx ruff@<locked-version> check src/ tests/` (or `uv run ruff …`) — find the locked
+  version with `grep -A2 'name = "ruff"' uv.lock`.
+
 ## [0.82.7] - 2026-06-09
 
 ### Changed

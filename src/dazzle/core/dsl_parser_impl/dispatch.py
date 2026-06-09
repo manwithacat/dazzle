@@ -73,7 +73,7 @@ class _ParserLike(Protocol):
 KeywordParser = Callable[[_ParserLike, StateT], None]
 
 
-def parse_block_with_dispatch(
+def parse_block_with_dispatch[StateT](
     parser: _ParserLike,
     *,
     first_class_keywords: dict[TokenType, KeywordParser[StateT]],
