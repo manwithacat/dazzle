@@ -1597,6 +1597,61 @@ class SessionStoreMixin:
             )
         return True
 
+    def set_connection_idp_initiated(
+        self, connection_id: str, allowed: bool, *, tenant_id: str | None = None
+    ) -> bool:
+        """Toggle the per-connection ``allow_idp_initiated`` flag (SAML #1342). When on, the ACS
+        accepts unsolicited (IdP-initiated) Responses — replay-protected by one-time assertion
+        consumption (``record_consumed_assertion``). SAML-only; raises on another type so a flag
+        can't be written onto an OIDC/SCIM connection. Returns True if a row changed."""
+        import json
+
+        with self._transaction() as cur:
+            config, secrets, _ten, conn_type = self._load_config_secrets(
+                cur, connection_id, tenant_id
+            )
+            if config is None:
+                return False
+            if conn_type != "saml":
+                raise ValueError(
+                    f"IdP-initiated is SAML-only (connection {connection_id!r} is {conn_type!r})"
+                )
+            if allowed:
+                config["allow_idp_initiated"] = "true"
+            else:
+                config.pop("allow_idp_initiated", None)
+            cur.execute(
+                "UPDATE connections SET config = %s, updated_at = %s WHERE id = %s",
+                (json.dumps(config), datetime.now(UTC).isoformat(), connection_id),
+            )
+        return True
+
+    def record_consumed_assertion(
+        self,
+        assertion_id: str,
+        *,
+        connection_id: str,
+        tenant_id: str | None,
+        expires_at: str,
+    ) -> bool:
+        """One-time-use guard for an IdP-initiated SAML assertion (#1342 replay defense).
+
+        Returns True if ``assertion_id`` was newly recorded (fresh — proceed), False if it was
+        already consumed (replay — refuse). The ``INSERT ... ON CONFLICT DO NOTHING`` is the
+        atomic, race-safe check (two concurrent replays can't both win). Expired rows (past their
+        assertion ``NotOnOrAfter``) are purged first to bound growth."""
+        now = datetime.now(UTC).isoformat()
+        with self._transaction() as cur:
+            cur.execute("DELETE FROM saml_consumed_assertions WHERE expires_at < %s", (now,))
+            cur.execute(
+                "INSERT INTO saml_consumed_assertions "
+                "(assertion_id, connection_id, tenant_id, expires_at, created_at) "
+                "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (assertion_id) DO NOTHING",
+                (assertion_id, connection_id, tenant_id, expires_at, now),
+            )
+            inserted = cur.rowcount
+        return bool(inserted)
+
     @staticmethod
     def _ensure_sp_keypair(
         config: dict[str, Any],
@@ -2472,6 +2527,19 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                 "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
                 "ON scim_group_members(membership_id)"
             )
+            # SAML IdP-initiated replay cache (#1342): one-time consumption of an assertion id, so a
+            # captured unsolicited Response can't be replayed within its NotOnOrAfter window. Only
+            # written on the IdP-initiated path (SP-initiated is replay-safe via the session request
+            # id). Rows are purged once expired.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS saml_consumed_assertions (
+                    assertion_id  TEXT PRIMARY KEY,
+                    connection_id TEXT NOT NULL,
+                    tenant_id     TEXT,
+                    expires_at    TEXT NOT NULL,
+                    created_at    TEXT NOT NULL
+                )
+            """)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     token TEXT PRIMARY KEY,

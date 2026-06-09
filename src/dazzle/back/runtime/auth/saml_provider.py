@@ -12,15 +12,19 @@ and comment-truncation are the library's concern, not hand-rolled here.
 
 python3-saml needs the native ``libxmlsec1`` and lives in the ``[saml]`` extra; it is
 imported lazily inside ``_build_auth`` so the rest of the framework is unaffected until a
-SAML connection is actually exercised. Replay protection: ``initiate`` stashes the
-AuthnRequest id in the session and ``callback`` passes it to ``process_response`` so an
-unsolicited/replayed Response is rejected (InResponseTo).
+SAML connection is actually exercised. Replay protection: SP-initiated flows stash the
+AuthnRequest id in the session and ``callback`` passes it to ``process_response``, which
+enforces the InResponseTo↔request-id match (one-time, since the id is popped). The opt-in
+IdP-initiated path (``allow_idp_initiated``) has no such binding, so it enforces one-time
+assertion consumption instead (the ``saml_consumed_assertions`` cache). There is NO library
+"reject unsolicited" setting — python3-saml only checks InResponseTo when given a request id.
 """
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from dazzle.back.runtime.auth.connections import (
@@ -116,17 +120,17 @@ class NativeSAMLProvider:
                 "wantAssertionsSigned": True,
                 "wantNameId": True,
                 "requestedAuthnContext": False,
-                # Reject a Response that omits InResponseTo (an unsolicited / IdP-initiated
-                # response) — we only accept SP-initiated flows we started, so a replayed
-                # or attacker-crafted unsolicited assertion can't be consumed.
-                "rejectUnsolicitedResponsesWithInResponseTo": True,
             },
         }
+        # Replay protection is NOT a python3-saml setting (the library only enforces the
+        # InResponseTo↔request_id match when we pass a non-None request_id — response.py).
+        # So the SP side owns it: SP-initiated flows pin InResponseTo to the one-time
+        # session-stashed AuthnRequest id (callback), and the opt-in IdP-initiated path
+        # enforces one-time assertion consumption (the saml_consumed_assertions cache).
         # SP-signed AuthnRequests (#1342, feature C): when this connection has a stored SP
         # keypair + the sign_requests flag, give python3-saml the key/cert and ask it to
         # sign the AuthnRequest. This is ADDITIVE — the assertion-signature requirement
-        # (wantAssertionsSigned) and unsolicited-response rejection above are unchanged, so
-        # the Response signature remains the trust anchor.
+        # (wantAssertionsSigned) is unchanged, so the Response signature remains the trust anchor.
         sp_cert = cfg.get("sp_cert")
         sp_key = (connection.secrets or {}).get("sp_private_key")
         if cfg.get("sign_requests") and sp_cert and sp_key:
@@ -280,19 +284,28 @@ class NativeSAMLProvider:
         request_id = (
             request.session.pop(_SESSION_REQUEST_ID, None) if hasattr(request, "session") else None
         )
-        if not request_id:
-            # No stashed AuthnRequest id → this is an unsolicited / replayed / lost-session
-            # response. Passing request_id=None would make python3-saml SKIP the
-            # InResponseTo check (not enforce it), so we refuse SP-side: only a flow we
-            # started (with its id in the session) is accepted.
+        allow_idp_initiated = (
+            str((connection.config or {}).get("allow_idp_initiated", "")).lower() == "true"
+        )
+        if not request_id and not allow_idp_initiated:
+            # No stashed AuthnRequest id and this connection has NOT opted into IdP-initiated →
+            # unsolicited / replayed / lost-session response. Passing request_id=None would make
+            # python3-saml SKIP the InResponseTo check, so we refuse: only a flow we started
+            # (its id in the session) is accepted.
             raise ConnectionError(
                 f"SAML connection {connection.id!r}: no AuthnRequest id in session — "
                 "only SP-initiated flows are accepted (unsolicited/replayed responses refused)"
             )
+        idp_initiated = not request_id  # implies allow_idp_initiated (guarded above)
 
-        # request_id pins InResponseTo. Library validation failures are recorded in
-        # get_errors(); malformed input (bad base64/XML) can RAISE — normalize either to
-        # a clean refusal so a bad response never yields an identity or a 500 stack trace.
+        # request_id pins InResponseTo (None on the opted-in IdP-initiated path). python3-saml
+        # only enforces the InResponseTo↔request_id match when request_id is non-None, so on the
+        # IdP-initiated path that binding is intentionally absent — signature/audience/recipient/
+        # conditions are STILL enforced, and replay is closed by one-time assertion consumption
+        # below (NOT by any library "reject unsolicited" setting — that isn't a real python3-saml
+        # option). Library validation failures are recorded in get_errors(); malformed input (bad
+        # base64/XML) can RAISE — normalize either to a clean refusal so a bad response never
+        # yields an identity or a 500 stack trace.
         try:
             auth.process_response(request_id=request_id)
             errors = auth.get_errors()
@@ -308,6 +321,12 @@ class NativeSAMLProvider:
                 f"SAML connection {connection.id!r}: response validation failed ({errors})"
             )
 
+        if idp_initiated:
+            # The IdP-initiated path lacks the one-time session request-id replay defense, so
+            # enforce one-time assertion consumption instead. The assertion's other guarantees
+            # (signature/audience/conditions) were validated by process_response above.
+            self._enforce_idp_initiated_replay(connection, request, auth)
+
         attributes = auth.get_attributes() or {}
         email = self._extract_email(connection, auth, attributes)
         if not email:
@@ -318,6 +337,35 @@ class NativeSAMLProvider:
         return AssertedIdentity(
             email=email, attributes=attributes, groups=groups, claims_source="saml_assertion"
         )
+
+    def _enforce_idp_initiated_replay(
+        self, connection: ConnectionRecord, request: Any, auth: Any
+    ) -> None:
+        """One-time-use guard for an IdP-initiated assertion: reject if its id was already consumed
+        within its validity window (replay). Refuses if the assertion carries no id (can't protect)."""
+        assertion_id = auth.get_last_assertion_id()
+        if not assertion_id:
+            raise ConnectionError(
+                f"SAML connection {connection.id!r}: IdP-initiated assertion had no id — "
+                "cannot replay-protect, refusing"
+            )
+        # The assertion's NotOnOrAfter bounds the replay window; fall back to a short window if the
+        # IdP omitted it (process_response already validated conditions, so this is belt-and-braces).
+        expires_at = (
+            auth.get_last_assertion_not_on_or_after()
+            or (datetime.now(UTC) + timedelta(minutes=10)).isoformat()
+        )
+        store = request.app.state.auth_store
+        if not store.record_consumed_assertion(
+            str(assertion_id),
+            connection_id=connection.id,
+            tenant_id=connection.tenant_id,
+            expires_at=str(expires_at),
+        ):
+            raise ConnectionError(
+                f"SAML connection {connection.id!r}: SAML assertion already consumed "
+                "(IdP-initiated replay refused)"
+            )
 
     def _extract_email(
         self, connection: ConnectionRecord, auth: Any, attributes: dict[str, Any]

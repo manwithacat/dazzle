@@ -660,3 +660,51 @@ def test_scim_group_role_by_display_name_still_works(store_url: str) -> None:
 
     recompute_membership_roles(store, conn, m.id)
     assert "leader" in store.get_membership(m.id).roles
+
+
+# ---- IdP-initiated opt-in flag + assertion replay cache (#1342) ----
+
+
+def test_set_connection_idp_initiated_toggles_flag(store_url: str) -> None:
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-1", type="saml", config={"idp_entity_id": "e"}, secrets={}, domains=[]
+    )
+    assert store.set_connection_idp_initiated(conn.id, True) is True
+    assert store.get_connection(conn.id).config.get("allow_idp_initiated") == "true"
+    assert store.set_connection_idp_initiated(conn.id, False) is True
+    assert "allow_idp_initiated" not in store.get_connection(conn.id).config
+
+
+def test_set_connection_idp_initiated_saml_only(store_url: str) -> None:
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="org-1", type="oidc", config={}, secrets={}, domains=[]
+    )
+    with pytest.raises(ValueError, match="SAML-only"):
+        store.set_connection_idp_initiated(conn.id, True)
+
+
+def test_record_consumed_assertion_one_time_use(store_url: str) -> None:
+    store = _store(store_url)
+    args = {"connection_id": "c1", "tenant_id": "org-1", "expires_at": "2099-01-01T00:00:00+00:00"}
+    # first sighting → fresh (True); second identical id → replay (False)
+    assert store.record_consumed_assertion("assert-1", **args) is True
+    assert store.record_consumed_assertion("assert-1", **args) is False
+    # a different id is independent
+    assert store.record_consumed_assertion("assert-2", **args) is True
+
+
+def test_record_consumed_assertion_purges_expired(store_url: str) -> None:
+    store = _store(store_url)
+    # an already-expired assertion is recorded, then purged on the next call, so its id is reusable
+    store.record_consumed_assertion(
+        "old", connection_id="c1", tenant_id="org-1", expires_at="2000-01-01T00:00:00+00:00"
+    )
+    # next call purges expired rows first; recording "old" again now succeeds (the stale row is gone)
+    assert (
+        store.record_consumed_assertion(
+            "old", connection_id="c1", tenant_id="org-1", expires_at="2099-01-01T00:00:00+00:00"
+        )
+        is True
+    )

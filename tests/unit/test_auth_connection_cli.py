@@ -74,6 +74,10 @@ class _Store:
         self.signing_disabled = cid
         return True
 
+    def set_connection_idp_initiated(self, cid, allowed, *, tenant_id=None):
+        self.idp_initiated = (cid, allowed)
+        return True
+
     def enable_connection_assertion_encryption(
         self, cid, *, sp_cert, sp_private_key, tenant_id=None
     ):
@@ -773,3 +777,44 @@ def test_disable_assertion_encryption(monkeypatch) -> None:
     result = runner.invoke(auth_connection.connection_app, ["disable-assertion-encryption", "c1"])
     assert result.exit_code == 0
     assert store.encryption_disabled == "c1"
+
+
+# ---- enable/disable-idp-initiated (#1342) ----
+
+
+def test_enable_idp_initiated_saml(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="saml"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "enable-idp-initiated", "conn-1"])
+    assert r.exit_code == 0 and "enabled" in r.output.lower()
+    assert store.idp_initiated == ("conn-1", True)
+
+
+def test_enable_idp_initiated_non_saml_refused(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="oidc"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "enable-idp-initiated", "conn-1"])
+    assert r.exit_code == 1 and "SAML-only" in r.output
+    assert not hasattr(store, "idp_initiated")
+
+
+def test_enable_idp_initiated_already_on_is_noop(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="saml", config={"allow_idp_initiated": "true"}))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "enable-idp-initiated", "conn-1"])
+    assert r.exit_code == 0 and "already enabled" in r.output
+    assert not hasattr(store, "idp_initiated")  # no write
+
+
+def test_disable_idp_initiated_saml(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="saml", config={"allow_idp_initiated": "true"}))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "disable-idp-initiated", "conn-1"])
+    assert r.exit_code == 0 and "disabled" in r.output.lower()
+    assert store.idp_initiated == ("conn-1", False)
+
+
+def test_enable_idp_initiated_missing_connection(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=None))
+    r = runner.invoke(auth_app, ["connection", "enable-idp-initiated", "conn-x"])
+    assert r.exit_code == 1 and "No connection" in r.output

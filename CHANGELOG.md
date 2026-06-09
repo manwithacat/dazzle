@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.81.105] - 2026-06-09
+
+### Added
+- **SAML IdP-initiated SSO opt-in + assertion replay cache (#1342 — final backlog item).** SAML was
+  SP-initiated only (a deliberate refusal). A connection can now opt into accepting IdP-initiated
+  (unsolicited) Responses via `dazzle auth connection enable-idp-initiated <id>` (SAML-only,
+  default-off; `disable-idp-initiated` reverts). Because unsolicited Responses lack the one-time
+  session AuthnRequest-id binding that protects SP-initiated flows from replay, the opt-in path
+  instead enforces **one-time assertion consumption**: each IdP-initiated assertion id is recorded in
+  a new `saml_consumed_assertions` table (dual-written `_init_db` + Alembic `0016`, expiring at the
+  assertion's `NotOnOrAfter`) via an atomic `INSERT … ON CONFLICT DO NOTHING`; a second sighting is
+  refused as a replay. python3-saml still validates signature/audience/recipient/conditions. The
+  replay cache runs only on the IdP-initiated path — SP-initiated logins are unchanged.
+
+### Fixed
+- **SAML settings advertised a non-existent replay control.** `rejectUnsolicitedResponsesWithInResponseTo`
+  is not a python3-saml option (the library only checks InResponseTo when given a request id) — it was
+  a silent no-op, and comments claimed a library-level rejection that never happened. Removed the
+  phantom setting and corrected the docs: replay protection is SP-side (one-time session request id for
+  SP-initiated; the assertion replay cache for IdP-initiated). No behavior change — the real defenses
+  were always the request-id binding and (now) the replay cache. Caught by adversarial review.
+
+### Agent Guidance
+- SAML IdP-initiated SSO is opt-in per connection (`config["allow_idp_initiated"]`, set via CLI) and
+  default-off. Its replay defense is the `saml_consumed_assertions` one-time-use cache, not any
+  library setting — do not reintroduce `rejectUnsolicited*` (it does nothing). Whoever should be able
+  to flip this maps to the `manage_connections` admin capability (see the admin-capability model).
+
 ## [0.81.104] - 2026-06-09
 
 ### Added

@@ -57,7 +57,7 @@ class _FakeForm(dict):
 
 
 class _FakeRequest:
-    def __init__(self, *, form=None, request_id="req-stashed"):
+    def __init__(self, *, form=None, request_id="req-stashed", store=None):
         self.base_url = "https://app.test/"
         self.url = _FakeUrl()
         self.query_params = {}
@@ -67,6 +67,8 @@ class _FakeRequest:
         if request_id is not None:
             self.session["saml_request_id"] = request_id
         self._form = form or {}
+        # the IdP-initiated replay cache reads request.app.state.auth_store
+        self.app = SimpleNamespace(state=SimpleNamespace(auth_store=store))
 
     async def form(self):
         return _FakeForm(self._form)
@@ -84,6 +86,8 @@ class _FakeAuth:
         authenticated=True,
         nameid="jane@acme.test",
         attributes=None,
+        assertion_id="assert-1",
+        assertion_not_on_or_after="2099-01-01T00:00:00+00:00",
     ):
         self._login_url = login_url
         self._request_id = request_id
@@ -91,6 +95,8 @@ class _FakeAuth:
         self._authenticated = authenticated
         self._nameid = nameid
         self._attributes = attributes or {}
+        self._assertion_id = assertion_id
+        self._assertion_noa = assertion_not_on_or_after
         self.process_called_with = None
 
     def login(self):
@@ -113,6 +119,24 @@ class _FakeAuth:
 
     def get_attributes(self):
         return self._attributes
+
+    def get_last_assertion_id(self):
+        return self._assertion_id
+
+    def get_last_assertion_not_on_or_after(self):
+        return self._assertion_noa
+
+
+class _FakeReplayStore:
+    """Records record_consumed_assertion calls; ``fresh`` controls the return (False = replay)."""
+
+    def __init__(self, *, fresh=True):
+        self._fresh = fresh
+        self.calls: list = []
+
+    def record_consumed_assertion(self, assertion_id, *, connection_id, tenant_id, expires_at):
+        self.calls.append((assertion_id, connection_id, tenant_id, expires_at))
+        return self._fresh
 
 
 def _provider_with(auth: _FakeAuth) -> NativeSAMLProvider:
@@ -142,12 +166,14 @@ def test_settings_missing_config_raises() -> None:
         p._settings(conn, _FakeRequest())
 
 
-def test_settings_reject_unsolicited_and_signed() -> None:
+def test_settings_require_signed_assertions() -> None:
     s = NativeSAMLProvider()._settings(_conn(), _FakeRequest())
     sec = s["security"]
-    # The two replay/forgery controls must be on.
+    # Assertion signature is the trust anchor. Replay protection is NOT a python3-saml setting
+    # (no `rejectUnsolicited*` option exists in the library) — it's enforced SP-side via the
+    # one-time session request id (SP-initiated) + the assertion replay cache (IdP-initiated).
     assert sec["wantAssertionsSigned"] is True
-    assert sec["rejectUnsolicitedResponsesWithInResponseTo"] is True
+    assert "rejectUnsolicitedResponsesWithInResponseTo" not in sec
 
 
 # ---- initiate ----
@@ -218,14 +244,82 @@ async def test_callback_empty_email_refuses() -> None:
 
 
 async def test_callback_missing_request_id_refuses() -> None:
-    # No stashed AuthnRequest id (lost session / unsolicited response) → refuse before
-    # validation, since request_id=None would skip the InResponseTo check.
+    # No stashed AuthnRequest id (lost session / unsolicited response) + connection has NOT opted
+    # into IdP-initiated → refuse before validation, since request_id=None would skip InResponseTo.
     auth = _FakeAuth()
     p = _provider_with(auth)
     req = _FakeRequest(form={"SAMLResponse": "x"}, request_id=None)
     with pytest.raises(ConnectionError, match="only SP-initiated flows"):
         await p.callback(_conn(), req)
     assert auth.process_called_with is None  # never even validated
+
+
+# ---- IdP-initiated opt-in + assertion replay cache (#1342) ----
+
+
+def _idp_conn(**over):
+    cfg = {
+        "idp_entity_id": "https://idp.example/entity",
+        "idp_sso_url": "https://idp.example/sso",
+        "idp_x509_cert": "MIIB...fake-cert...",
+        "allow_idp_initiated": "true",
+    }
+    return _conn(config=cfg, **over)
+
+
+async def test_callback_idp_initiated_fresh_assertion_accepts() -> None:
+    auth = _FakeAuth(
+        assertion_id="assert-xyz", assertion_not_on_or_after="2099-01-01T00:00:00+00:00"
+    )
+    p = _provider_with(auth)
+    store = _FakeReplayStore(fresh=True)
+    req = _FakeRequest(form={"SAMLResponse": "x"}, request_id=None, store=store)
+    asserted = await p.callback(_idp_conn(), req)
+    assert isinstance(asserted, AssertedIdentity)
+    assert auth.process_called_with is None  # request_id=None on the IdP-initiated path
+    # the assertion id + its NotOnOrAfter were recorded for one-time use
+    assert store.calls == [("assert-xyz", "conn-1", "org-1", "2099-01-01T00:00:00+00:00")]
+
+
+async def test_callback_idp_initiated_replay_refused() -> None:
+    auth = _FakeAuth(assertion_id="assert-xyz")
+    p = _provider_with(auth)
+    store = _FakeReplayStore(fresh=False)  # already consumed → replay
+    req = _FakeRequest(form={"SAMLResponse": "x"}, request_id=None, store=store)
+    with pytest.raises(ConnectionError, match="already consumed"):
+        await p.callback(_idp_conn(), req)
+
+
+async def test_callback_idp_initiated_no_assertion_id_refuses() -> None:
+    auth = _FakeAuth(assertion_id="")  # no id → cannot replay-protect
+    p = _provider_with(auth)
+    store = _FakeReplayStore(fresh=True)
+    req = _FakeRequest(form={"SAMLResponse": "x"}, request_id=None, store=store)
+    with pytest.raises(ConnectionError, match="no id"):
+        await p.callback(_idp_conn(), req)
+    assert store.calls == []  # never recorded
+
+
+async def test_callback_idp_initiated_off_still_refuses_unsolicited() -> None:
+    # default connection (no allow_idp_initiated) + no request id → refuse, store untouched
+    auth = _FakeAuth()
+    p = _provider_with(auth)
+    store = _FakeReplayStore(fresh=True)
+    req = _FakeRequest(form={"SAMLResponse": "x"}, request_id=None, store=store)
+    with pytest.raises(ConnectionError, match="only SP-initiated flows"):
+        await p.callback(_conn(), req)
+    assert store.calls == []
+
+
+async def test_callback_sp_initiated_does_not_touch_replay_store() -> None:
+    # a normal SP-initiated login (request id present) must NOT consult the replay cache.
+    auth = _FakeAuth()
+    p = _provider_with(auth)
+    store = _FakeReplayStore(fresh=True)
+    req = _FakeRequest(form={"SAMLResponse": "x"}, request_id="req-9", store=store)
+    await p.callback(_idp_conn(), req)
+    assert auth.process_called_with == "req-9"  # InResponseTo enforced
+    assert store.calls == []  # SP-initiated is already replay-safe
 
 
 async def test_callback_no_session_refuses() -> None:
@@ -352,7 +446,6 @@ def test_settings_signs_requests_when_enabled() -> None:
     assert "rsa-sha256" in s["security"]["signatureAlgorithm"]
     # Response-signature trust anchor is unchanged.
     assert s["security"]["wantAssertionsSigned"] is True
-    assert s["security"]["rejectUnsolicitedResponsesWithInResponseTo"] is True
 
 
 def test_settings_no_signing_by_default() -> None:

@@ -73,7 +73,8 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         # alembic head recorded, and the new tables/columns are present (from _init_db, and
         # 0013/0014/0015 no-op over them) — schema intact after both ran.
         version = eng.connect().execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0015_users_email_ci_unique"
+        assert version == "0016_saml_consumed_assertions"
+        assert insp.has_table("saml_consumed_assertions")
         assert "external_id" in {c["name"] for c in insp.get_columns("memberships")}
         assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
         assert insp.has_table("scim_group_members")
