@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.1] - 2026-06-09
+
 ### Changed
 - **PEP 686 readiness: explicit `encoding="utf-8"` on text-mode file I/O (Python version-support, slice 2).**
   Backfilled an explicit UTF-8 encoding across ~278 `open()` / `Path.read_text()` / `Path.write_text()`
