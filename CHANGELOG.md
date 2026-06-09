@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.6] - 2026-06-09
+
 ### Changed
 - **Python 3.14 is now the primary deploy/runtime target, and a hard-required CI cell (floor stays `>=3.12`).**
   After an empirical + sourced evaluation (`docs/python-3.14-primary-target.md`): 3.14 runs Dazzle's parse→IR
