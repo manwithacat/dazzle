@@ -632,16 +632,21 @@ CMD ["dazzle", "serve", "--production"]
 
 
 def generate_deploy_requirements(version: str) -> str:
-    """Generate requirements.txt pinned to the current dazzle-dsl version."""
-    return f"""dazzle-dsl=={version}
-psycopg[binary]>=3.1
+    """Generate requirements.txt pinned to the current dazzle-dsl version.
+
+    Uses the ``[serve]`` extra: a deployed app runs ``dazzle serve --production``,
+    which needs uvicorn — that lives in ``[serve]``, not the core deps, so a bare
+    ``dazzle-dsl`` pin can't actually start the server.
+    """
+    return f"""dazzle-dsl[serve]=={version}
+psycopg[binary]>=3.2
 redis>=5.0
 httpx>=0.24
 """
 
 
 def generate_heroku_files(version: str) -> tuple[str, str, str]:
-    """Generate Heroku deployment files.
+    """Generate the legacy pip-based Heroku deployment files.
 
     Returns:
         (procfile, runtime_txt, requirements_txt)
@@ -650,6 +655,73 @@ def generate_heroku_files(version: str) -> tuple[str, str, str]:
     runtime = "python-3.12\n"
     requirements = generate_deploy_requirements(version)
     return procfile, runtime, requirements
+
+
+def generate_heroku_pyproject(app_name: str, version: str) -> str:
+    """Generate a minimal ``pyproject.toml`` for Heroku's uv buildpack.
+
+    A deployed Dazzle app is DSL files + ``dazzle.toml``; its only Python
+    dependency is ``dazzle-dsl[serve]`` (which provides ``dazzle serve``).
+    ``[tool.uv] package = false`` marks this a non-packaged (virtual) project so
+    uv installs the dependencies without trying to build the app itself.
+
+    Heroku's uv path activates when ``pyproject.toml`` + ``uv.lock`` +
+    ``.python-version`` are present and ``requirements.txt``/``runtime.txt`` are
+    absent — see ``dazzle deploy heroku`` and ``docs/guides/heroku.md``.
+    """
+    return f'''[project]
+name = "{app_name}"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "dazzle-dsl[serve]=={version}",
+    "psycopg[binary]>=3.2",
+    "redis>=5.0",
+    "httpx>=0.24",
+]
+
+[tool.uv]
+# DSL app, not a Python package — install deps only, don't build a wheel.
+package = false
+'''
+
+
+def generate_python_version_file() -> str:
+    """Generate the ``.python-version`` file Heroku's uv path reads (and uv locally)."""
+    return "3.12\n"
+
+
+def _heroku_app_name(output_path: Path) -> str:
+    """Derive a PEP 508-valid project name from the output directory name."""
+    import re
+
+    raw = output_path.resolve().name or "dazzle-app"
+    name = re.sub(r"[^a-zA-Z0-9._-]+", "-", raw).strip("-._").lower()
+    return name or "dazzle-app"
+
+
+def _run_uv_lock(output_path: Path) -> bool:
+    """Run ``uv lock`` in *output_path* to produce ``uv.lock``.
+
+    Best-effort: returns ``False`` (without raising) when uv is unavailable or the
+    resolution fails, so the caller can fall back to printing manual instructions.
+    """
+    import shutil
+    import subprocess
+
+    if shutil.which("uv") is None:
+        return False
+    try:
+        result = subprocess.run(
+            ["uv", "lock"],
+            cwd=str(output_path),
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
 
 
 def generate_compose_yaml() -> str:
@@ -736,30 +808,78 @@ def deploy_heroku_cmd(
         Path,
         typer.Option("--output", "-o", help="Directory to write Heroku files"),
     ] = Path("."),
+    pip: Annotated[
+        bool,
+        typer.Option(
+            "--pip",
+            help="Emit the legacy pip path (requirements.txt + runtime.txt) instead of uv.",
+        ),
+    ] = False,
 ) -> None:
-    """Generate Heroku deployment files (Procfile, runtime.txt, requirements.txt).
+    """Generate Heroku deployment files.
+
+    Defaults to Heroku's uv buildpack (``pyproject.toml`` + ``uv.lock`` +
+    ``.python-version`` + ``Procfile``), which gives reproducible, hash-pinned
+    builds. Pass ``--pip`` for the legacy ``requirements.txt`` + ``runtime.txt``
+    path. See ``docs/guides/heroku.md``.
 
     Example:
         dazzle deploy heroku
-        git push heroku main
+        git add Procfile pyproject.toml uv.lock .python-version
+        git commit -m "deploy config" && git push heroku main
     """
     version = _get_dazzle_version()
     output_path = Path(output_dir).resolve()
 
-    procfile, runtime, requirements = generate_heroku_files(version)
+    if pip:
+        procfile, runtime, requirements = generate_heroku_files(version)
+        (output_path / "Procfile").write_text(procfile, encoding="utf-8")
+        (output_path / "runtime.txt").write_text(runtime, encoding="utf-8")
+        (output_path / "requirements.txt").write_text(requirements, encoding="utf-8")
+        console.print(f"Generated {output_path / 'Procfile'}")
+        console.print(f"Generated {output_path / 'runtime.txt'}")
+        console.print(f"Generated {output_path / 'requirements.txt'}")
+    else:
+        app_name = _heroku_app_name(output_path)
+        (output_path / "Procfile").write_text("web: dazzle serve --production\n", encoding="utf-8")
+        (output_path / "pyproject.toml").write_text(
+            generate_heroku_pyproject(app_name, version), encoding="utf-8"
+        )
+        (output_path / ".python-version").write_text(
+            generate_python_version_file(), encoding="utf-8"
+        )
+        console.print(f"Generated {output_path / 'Procfile'}")
+        console.print(f"Generated {output_path / 'pyproject.toml'}")
+        console.print(f"Generated {output_path / '.python-version'}")
 
-    (output_path / "Procfile").write_text(procfile, encoding="utf-8")
-    (output_path / "runtime.txt").write_text(runtime, encoding="utf-8")
-    (output_path / "requirements.txt").write_text(requirements, encoding="utf-8")
+        # Heroku's uv path needs uv.lock present; generate it now if uv is around.
+        if _run_uv_lock(output_path):
+            console.print(f"Generated {output_path / 'uv.lock'}")
+        else:
+            console.print(
+                "[yellow]Could not run `uv lock` (uv not found or offline). "
+                "Run `uv lock` in this directory before deploying.[/yellow]"
+            )
 
-    console.print(f"Generated {output_path / 'Procfile'}")
-    console.print(f"Generated {output_path / 'runtime.txt'}")
-    console.print(f"Generated {output_path / 'requirements.txt'}")
+        # Heroku's uv path is rejected if a competing package-manager file exists.
+        stale = [
+            f
+            for f in ("requirements.txt", "runtime.txt", "Pipfile", "poetry.lock")
+            if (output_path / f).exists()
+        ]
+        if stale:
+            console.print(
+                f"[yellow]Heroku's uv buildpack requires these be removed first: "
+                f"{', '.join(stale)}[/yellow]"
+            )
+
     console.print()
     console.print("[bold]Next steps:[/bold]")
     console.print("  heroku create myapp")
     console.print("  heroku addons:create heroku-postgresql")
     console.print("  heroku addons:create heroku-redis")
+    if not pip:
+        console.print("  git add Procfile pyproject.toml uv.lock .python-version")
     console.print("  git push heroku main")
 
 

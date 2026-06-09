@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`dazzle deploy heroku` scaffolds Heroku's uv buildpack by default (Python version-support, slice 4b).**
+  Emits `pyproject.toml` (`dazzle-dsl[serve]` pinned + `requires-python = ">=3.12"` + `[tool.uv] package = false`
+  for a non-packaged DSL app), `.python-version` (`3.12`), a `Procfile`, and runs `uv lock` to produce `uv.lock`
+  — hash-pinned, reproducible Heroku builds (Heroku has supported uv since May 2025) instead of re-resolving on
+  every deploy. The command warns if competing `requirements.txt`/`runtime.txt`/`Pipfile`/`poetry.lock` are
+  present (Heroku's uv path rejects them), and `uv lock` is best-effort (prints manual instructions if uv is
+  absent/offline). `--pip` keeps the legacy `requirements.txt` + `runtime.txt` path. `docs/guides/heroku.md`
+  gains a *Deploy Files (uv buildpack)* section.
+
+### Fixed
+- **Heroku/Docker deploy deps pin `dazzle-dsl[serve]`, not bare `dazzle-dsl`.** A deployed app runs
+  `dazzle serve --production`, which needs `uvicorn` — that lives in the `[serve]` extra, not the core deps, so
+  the previous bare pin (in `generate_deploy_requirements`, used by both the Heroku and Dockerfile scaffolds)
+  couldn't actually boot the server. Now pins `dazzle-dsl[serve]==<version>`.
+
 ## [0.82.4] - 2026-06-09
 
 ### Added
