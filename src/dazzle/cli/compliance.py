@@ -32,10 +32,10 @@ def compile_cmd(
     out_dir = project_root / ".dazzle" / "compliance" / "output" / framework
     out_dir.mkdir(parents=True, exist_ok=True)
     auditspec_path = out_dir / "auditspec.json"
-    auditspec_path.write_text(json.dumps(auditspec.model_dump(), indent=2))
+    auditspec_path.write_text(json.dumps(auditspec.model_dump(), indent=2), encoding="utf-8")
 
     if output:
-        Path(output).write_text(json.dumps(auditspec.model_dump(), indent=2))
+        Path(output).write_text(json.dumps(auditspec.model_dump(), indent=2), encoding="utf-8")
 
     # Display summary
     console.print(f"\n[bold]Compliance: {auditspec.framework_name}[/bold]")
@@ -199,15 +199,15 @@ def privacy_cmd(
     privacy_path = target_dir / "privacy_policy.md"
     if regenerate_facts and privacy_path.exists():
         merged = merge_regenerated_into_existing(
-            privacy_path.read_text(),
+            privacy_path.read_text(encoding="utf-8"),
             artefacts.privacy_policy,
         )
-        privacy_path.write_text(merged)
+        privacy_path.write_text(merged, encoding="utf-8")
     else:
-        privacy_path.write_text(artefacts.privacy_policy)
+        privacy_path.write_text(artefacts.privacy_policy, encoding="utf-8")
 
-    (target_dir / "cookie_policy.md").write_text(artefacts.cookie_policy)
-    (target_dir / "ropa.md").write_text(artefacts.ropa)
+    (target_dir / "cookie_policy.md").write_text(artefacts.cookie_policy, encoding="utf-8")
+    (target_dir / "ropa.md").write_text(artefacts.ropa, encoding="utf-8")
 
     console.print(
         f"[green]Generated compliance artefacts at[/green] {target_dir}\n"
@@ -232,7 +232,7 @@ def validate_citations_cmd(
     project_root = Path.cwd().resolve()
     auditspec = compile_full_pipeline(project_root, framework=framework)
 
-    text = markdown_path.read_text()
+    text = markdown_path.read_text(encoding="utf-8")
     issues = validate_citations(text, auditspec.model_dump())
 
     if not issues:

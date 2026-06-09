@@ -192,7 +192,7 @@ class ActivityLog:
         with self._lock:
             self._close()
             if self._path.exists():
-                self._path.write_text("")
+                self._path.write_text("", encoding="utf-8")
             self._seq = 0
             self._epoch += 1
             self._entry_count = 0

@@ -195,5 +195,5 @@ def write_section_overrides_readme(project_root: Path) -> Path | None:
     readme = plugin_dir / "README.md"
     if readme.exists():
         return None
-    readme.write_text(_README_CONTENT)
+    readme.write_text(_README_CONTENT, encoding="utf-8")
     return readme

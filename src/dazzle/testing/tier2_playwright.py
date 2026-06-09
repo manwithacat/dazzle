@@ -802,7 +802,7 @@ def generate_tier2_test_file(
 
     tests = generate_tier2_tests(appspec, default_scenario)
     content = generate_test_module(tests, appspec.name)
-    output_path.write_text(content)
+    output_path.write_text(content, encoding="utf-8")
 
     return output_path
 

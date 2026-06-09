@@ -95,7 +95,7 @@ def _load_from_directory(
     parts: list[str] = []
     for md_file in md_files:
         relative_path = md_file.relative_to(project_root)
-        content = md_file.read_text().strip()
+        content = md_file.read_text(encoding="utf-8").strip()
 
         if include_sources:
             parts.append(f"<!-- Source: {relative_path} -->")
@@ -122,7 +122,7 @@ def _load_from_file(
     """Load single SPEC.md file."""
     logger.info("Loading spec from %s", spec_file)
 
-    content = spec_file.read_text().strip()
+    content = spec_file.read_text(encoding="utf-8").strip()
 
     if include_sources:
         relative_path = spec_file.relative_to(project_root)

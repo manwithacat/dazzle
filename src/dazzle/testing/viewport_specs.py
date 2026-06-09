@@ -83,7 +83,7 @@ def load_custom_viewport_specs(project_root: Path) -> list[ViewportSpecEntry]:
         path = path_fn(project_root)
         if path.exists():
             try:
-                data = json.loads(path.read_text())
+                data = json.loads(path.read_text(encoding="utf-8"))
                 container = ViewportSpecsContainer(**data)
                 return container.specs
             except Exception:
@@ -122,7 +122,7 @@ def save_custom_viewport_specs(
         specs=specs,
         updated_at=_utcnow(),
     )
-    path.write_text(container.model_dump_json(indent=2))
+    path.write_text(container.model_dump_json(indent=2), encoding="utf-8")
     return path
 
 

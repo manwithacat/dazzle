@@ -384,7 +384,7 @@ def save_generated_tests(project_path: Path, tests: dict[str, Any]) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = output_dir / "generated_tests.json"
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(tests, f, indent=2, default=str)
 
     print(f"Saved {len(tests.get('designs', []))} tests to {output_file}")

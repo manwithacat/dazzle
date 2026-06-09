@@ -9,7 +9,7 @@ def get_version() -> str:
     """Get version from pyproject.toml (editable) or importlib.metadata (installed)."""
     pyproject = Path(__file__).parent.parent.parent / "pyproject.toml"
     if pyproject.exists():
-        content = pyproject.read_text()
+        content = pyproject.read_text(encoding="utf-8")
         if match := re.search(r'^version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE):
             return match.group(1)
     try:

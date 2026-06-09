@@ -154,7 +154,7 @@ class VocabExpander:
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         # Read input
-        text = input_path.read_text()
+        text = input_path.read_text(encoding="utf-8")
 
         # Expand
         expanded = self.expand_text(text)
@@ -162,7 +162,7 @@ class VocabExpander:
         # Write output if requested
         if output_path:
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(expanded)
+            output_path.write_text(expanded, encoding="utf-8")
 
         return expanded
 

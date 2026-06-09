@@ -186,7 +186,7 @@ def docs_update(
     applied = 0
     for patch in plan.patches:
         path = Path(patch.file_path)
-        path.write_text(patch.proposed)
+        path.write_text(patch.proposed, encoding="utf-8")
         typer.secho(f"  Updated: {path}", fg=typer.colors.GREEN)
         applied += 1
 

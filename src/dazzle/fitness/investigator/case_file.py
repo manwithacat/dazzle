@@ -393,7 +393,7 @@ def _load_locus(
         return None
 
     try:
-        content = resolved.read_text()
+        content = resolved.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
 

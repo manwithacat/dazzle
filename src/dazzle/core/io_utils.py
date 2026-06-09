@@ -28,7 +28,7 @@ def load_json_or(path: Path | str, default: Any) -> Any:
       path, then ``default`` is returned.
     """
     try:
-        return json.loads(Path(path).read_text())
+        return json.loads(Path(path).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return default
     except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:

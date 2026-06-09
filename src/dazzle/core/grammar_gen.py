@@ -150,7 +150,7 @@ def get_keyword_groups() -> dict[str, list[str]]:
     Returns a dict of group_label -> list[keyword_value].
     """
     source_path = Path(__file__).parent / "lexer.py"
-    source = source_path.read_text()
+    source = source_path.read_text(encoding="utf-8")
 
     groups: dict[str, list[str]] = {}
     current_group = "Core Keywords"
@@ -1847,7 +1847,7 @@ def write_grammar(output_path: Path | None = None) -> Path:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     content = generate_grammar()
-    output_path.write_text(content)
+    output_path.write_text(content, encoding="utf-8")
     return output_path
 
 

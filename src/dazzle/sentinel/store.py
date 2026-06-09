@@ -31,7 +31,7 @@ class FindingStore:
         self._ensure_dir()
         filename = f"sentinel_{int(time.time())}_{result.scan_id}.json"
         path = self._dir / filename
-        path.write_text(json.dumps(result.model_dump(), indent=2))
+        path.write_text(json.dumps(result.model_dump(), indent=2), encoding="utf-8")
         return path
 
     # ------------------------------------------------------------------
@@ -101,7 +101,7 @@ class FindingStore:
                 break
 
         if mutated:
-            path.write_text(json.dumps(data, indent=2))
+            path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return mutated
 
     # ------------------------------------------------------------------
@@ -110,7 +110,7 @@ class FindingStore:
 
     def _read_json(self, path: Path) -> dict | None:  # type: ignore[type-arg]
         try:
-            result: dict[str, Any] = json.loads(path.read_text())
+            result: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
             return result
         except (json.JSONDecodeError, OSError):
             return None

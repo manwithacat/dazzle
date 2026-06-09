@@ -459,8 +459,8 @@ def _generate_api_pack(
         toml_path = out_path / f"{safe_name}.toml"
         md_path = out_path / f"{safe_name}_CONTRIBUTION.md"
 
-        toml_path.write_text(toml_content)
-        md_path.write_text(markdown)
+        toml_path.write_text(toml_content, encoding="utf-8")
+        md_path.write_text(markdown, encoding="utf-8")
 
         result["written_to"] = [str(toml_path), str(md_path)]
 
@@ -529,7 +529,7 @@ def _generate_bug_fix(
         out_path.mkdir(parents=True, exist_ok=True)
         safe_title = title.lower().replace(" ", "-")[:50]
         md_path = out_path / f"bug-fix-{safe_title}.md"
-        md_path.write_text(markdown)
+        md_path.write_text(markdown, encoding="utf-8")
         result["written_to"] = str(md_path)
 
     return result
@@ -587,7 +587,7 @@ def _generate_ui_pattern(
         out_path.mkdir(parents=True, exist_ok=True)
         safe_title = title.lower().replace(" ", "-")[:50]
         md_path = out_path / f"ui-pattern-{safe_title}.md"
-        md_path.write_text(markdown)
+        md_path.write_text(markdown, encoding="utf-8")
         result["written_to"] = str(md_path)
 
     return result
@@ -644,7 +644,7 @@ def _generate_dsl_pattern(
         out_path.mkdir(parents=True, exist_ok=True)
         safe_title = title.lower().replace(" ", "-")[:50]
         md_path = out_path / f"dsl-pattern-{safe_title}.md"
-        md_path.write_text(markdown)
+        md_path.write_text(markdown, encoding="utf-8")
         result["written_to"] = str(md_path)
 
     return result
@@ -696,7 +696,7 @@ def _generate_feature_request(
         out_path.mkdir(parents=True, exist_ok=True)
         safe_title = title.lower().replace(" ", "-")[:50]
         md_path = out_path / f"feature-request-{safe_title}.md"
-        md_path.write_text(markdown)
+        md_path.write_text(markdown, encoding="utf-8")
         result["written_to"] = str(md_path)
 
     return result

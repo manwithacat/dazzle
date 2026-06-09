@@ -64,7 +64,7 @@ def load_profile(path: Path | None = None) -> UserProfile:
     p = path or PROFILE_PATH
     if p.exists():
         try:
-            data = json.loads(p.read_text())
+            data = json.loads(p.read_text(encoding="utf-8"))
             return UserProfile(**data)
         except Exception as e:
             logger.warning("Could not load user profile: %s", e)
@@ -76,7 +76,7 @@ def save_profile(profile: UserProfile, path: Path | None = None) -> None:
     p = path or PROFILE_PATH
     p.parent.mkdir(parents=True, exist_ok=True)
     profile.updated_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    p.write_text(json.dumps(profile.model_dump(), indent=2))
+    p.write_text(json.dumps(profile.model_dump(), indent=2), encoding="utf-8")
 
 
 def reset_profile(path: Path | None = None) -> UserProfile:

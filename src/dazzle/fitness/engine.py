@@ -198,7 +198,7 @@ class FitnessEngine:
         log_path = self._project_root / "dev_docs" / "fitness-log.md"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         if not log_path.exists():
-            log_path.write_text("# Fitness Log\n\n")
+            log_path.write_text("# Fitness Log\n\n", encoding="utf-8")
         line = (
             f"- {now.isoformat()} run={run_id} "
             f"independence_jaccard={jaccard:.3f} "

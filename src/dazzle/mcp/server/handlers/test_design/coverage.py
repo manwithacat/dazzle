@@ -331,7 +331,7 @@ def test_design_runtime_gaps_impl(
             else [str(coverage_path)],
         }
 
-    with open(report_path) as f:
+    with open(report_path, encoding="utf-8") as f:
         coverage = json.load(f)
 
     actions: list[dict[str, Any]] = []
@@ -450,7 +450,7 @@ def test_design_save_runtime_impl(
     tests_dir.mkdir(parents=True, exist_ok=True)
 
     output_path = tests_dir / "runtime_coverage.json"
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(coverage_data, f, indent=2)
 
     return {

@@ -137,7 +137,7 @@ def build_api_command(
     if format == "json":
         spec_file = output_dir / "appspec.json"
         typer.echo(f"\nWriting AppSpec → {spec_file}")
-        spec_file.write_text(appspec.model_dump_json(indent=2))
+        spec_file.write_text(appspec.model_dump_json(indent=2), encoding="utf-8")
         typer.echo(f"  ✓ Written {spec_file.stat().st_size} bytes")
 
     elif format == "python":
@@ -168,11 +168,11 @@ except ImportError as e:
     print("Install with: pip install fastapi uvicorn")
     app = None
 '''
-        stub_file.write_text(stub_content)
+        stub_file.write_text(stub_content, encoding="utf-8")
 
         # Also write the JSON spec
         spec_file = output_dir / "appspec.json"
-        spec_file.write_text(appspec.model_dump_json(indent=2))
+        spec_file.write_text(appspec.model_dump_json(indent=2), encoding="utf-8")
 
         typer.echo("  ✓ Generated stub and spec")
         typer.echo("\nTo run:")
@@ -384,7 +384,7 @@ def build_command(
     backend_dir = output_dir / "backend"
     backend_dir.mkdir(exist_ok=True)
     spec_file = backend_dir / "appspec.json"
-    spec_file.write_text(appspec.model_dump_json(indent=2))
+    spec_file.write_text(appspec.model_dump_json(indent=2), encoding="utf-8")
 
     # 2. Generate Frontend (optional)
     if frontend:
@@ -399,30 +399,30 @@ def build_command(
     typer.echo("\n[3/5] Generating entry point...")
     main_content = generate_production_main(appspec.name, frontend)
     main_file = output_dir / "main.py"
-    main_file.write_text(main_content)
+    main_file.write_text(main_content, encoding="utf-8")
     typer.echo(f"  ✓ {main_file.name}")
 
     # 4. Generate requirements.txt
     requirements = generate_requirements()
     req_file = output_dir / "requirements.txt"
-    req_file.write_text(requirements)
+    req_file.write_text(requirements, encoding="utf-8")
     typer.echo(f"  ✓ {req_file.name}")
 
     # 5. Generate Dockerfile (optional)
     if docker:
         typer.echo("\n[4/5] Generating Dockerfile...")
         dockerfile = generate_dockerfile(appspec.name, frontend)
-        (output_dir / "Dockerfile").write_text(dockerfile)
+        (output_dir / "Dockerfile").write_text(dockerfile, encoding="utf-8")
         typer.echo("  ✓ Dockerfile")
 
         # Docker-compose for development/local deployment
         compose = generate_docker_compose(appspec.name)
-        (output_dir / "docker-compose.yml").write_text(compose)
+        (output_dir / "docker-compose.yml").write_text(compose, encoding="utf-8")
         typer.echo("  ✓ docker-compose.yml")
 
         # Local backing services (Postgres + Redis)
         local_compose = generate_local_compose(appspec.name)
-        (output_dir / "docker-compose.local.yml").write_text(local_compose)
+        (output_dir / "docker-compose.local.yml").write_text(local_compose, encoding="utf-8")
         typer.echo("  ✓ docker-compose.local.yml (Postgres + Redis)")
 
         # Local dev run script
@@ -430,7 +430,7 @@ def build_command(
         scripts_dir.mkdir(exist_ok=True)
         run_script = generate_local_run_script(appspec.name)
         run_script_path = scripts_dir / "run_local.sh"
-        run_script_path.write_text(run_script)
+        run_script_path.write_text(run_script, encoding="utf-8")
         run_script_path.chmod(0o755)
         typer.echo("  ✓ scripts/run_local.sh")
     else:
@@ -440,7 +440,7 @@ def build_command(
     if env_template:
         typer.echo("\n[5/5] Generating environment template...")
         env = generate_env_template(appspec.name)
-        (output_dir / ".env.example").write_text(env)
+        (output_dir / ".env.example").write_text(env, encoding="utf-8")
         typer.echo("  ✓ .env.example")
     else:
         typer.echo("\n[5/5] Skipping environment template (--no-env)")
@@ -531,7 +531,7 @@ def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
 
     sql_content = "\n".join(lines)
     sql_file = output_dir / "schema.sql"
-    sql_file.write_text(sql_content)
+    sql_file.write_text(sql_content, encoding="utf-8")
     typer.echo(f"  SQL schema -> {sql_file} ({len(entities)} tables)")
 
 
@@ -546,10 +546,10 @@ def _generate_openapi_target(appspec: Any, output_dir: Path) -> None:
     openapi = generate_openapi(appspec)
 
     yaml_file = output_dir / "openapi.yaml"
-    yaml_file.write_text(openapi_to_yaml(openapi))
+    yaml_file.write_text(openapi_to_yaml(openapi), encoding="utf-8")
 
     json_file = output_dir / "openapi.json"
-    json_file.write_text(openapi_to_json(openapi))
+    json_file.write_text(openapi_to_json(openapi), encoding="utf-8")
 
     typer.echo(f"  OpenAPI -> {yaml_file}, {json_file}")
 
@@ -565,10 +565,10 @@ def _generate_asyncapi_target(appspec: Any, output_dir: Path) -> None:
     asyncapi = generate_asyncapi(appspec)
 
     yaml_file = output_dir / "asyncapi.yaml"
-    yaml_file.write_text(asyncapi_to_yaml(asyncapi))
+    yaml_file.write_text(asyncapi_to_yaml(asyncapi), encoding="utf-8")
 
     json_file = output_dir / "asyncapi.json"
-    json_file.write_text(asyncapi_to_json(asyncapi))
+    json_file.write_text(asyncapi_to_json(asyncapi), encoding="utf-8")
 
     typer.echo(f"  AsyncAPI -> {yaml_file}, {json_file}")
 

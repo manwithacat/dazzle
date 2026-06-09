@@ -11,7 +11,7 @@ def read_maturity(project_root: Path) -> MaturityLevel:
     if not pyproject.exists():
         return "mvp"
 
-    data = tomllib.loads(pyproject.read_text())
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     level = data.get("dazzle", {}).get("maturity", {}).get("level", "mvp")
 
     if level not in _VALID:

@@ -79,7 +79,8 @@ class LockFile:
                     "started_at": _iso_now(),
                     "log_file": str(log_path),
                 }
-            )
+            ),
+            encoding="utf-8",
         )
 
     def release(self) -> None:
@@ -94,7 +95,7 @@ class LockFile:
         if not self.path.exists():
             return None
         try:
-            result: dict[str, Any] = json.loads(self.path.read_text())
+            result: dict[str, Any] = json.loads(self.path.read_text(encoding="utf-8"))
             return result
         except (OSError, json.JSONDecodeError):
             return None

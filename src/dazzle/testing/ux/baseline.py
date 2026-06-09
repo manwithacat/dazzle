@@ -25,14 +25,14 @@ class Baseline:
             "failed": self.failed,
             "contracts": self.contracts,
         }
-        path.write_text(json.dumps(data, indent=2))
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     @classmethod
     def load(cls, path: Path) -> Baseline:
         if not path.exists():
             return cls()
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
             return cls(
                 total=data.get("total", 0),
                 passed=data.get("passed", 0),

@@ -122,7 +122,7 @@ def _module_label(path: Path) -> str:
 
 def _walk_module(path: Path) -> list[dict[str, str]]:
     """Extract every decorated route from a module file."""
-    tree = ast.parse(path.read_text(), filename=str(path))
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     routes: list[dict[str, str]] = []
     label = _module_label(path)
     for node in ast.walk(tree):
@@ -210,7 +210,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
         snapshot = snapshot_runtime_urls()
     if not BASELINE_PATH.exists():
         return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api runtime-urls --write`)\n"
-    baseline = BASELINE_PATH.read_text()
+    baseline = BASELINE_PATH.read_text(encoding="utf-8")
     if baseline == snapshot:
         return ""
     diff = difflib.unified_diff(

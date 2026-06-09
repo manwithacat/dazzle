@@ -326,7 +326,7 @@ def _provision_signing_env(
         return None
     env = mint_ephemeral_cert_env(tmp_root, project_name=project_name)
     inbox_path = tmp_root / "mock_inbox.json"
-    inbox_path.write_text("[]")
+    inbox_path.write_text("[]", encoding="utf-8")
     return SigningSeedContext(env=env, inbox_path=inbox_path, seeded_docs=[])
 
 
@@ -942,7 +942,7 @@ def qa_trial(
         raise typer.Exit(code=2)
 
     try:
-        trial_cfg = tomllib.loads(trial_path.read_text())
+        trial_cfg = tomllib.loads(trial_path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
         typer.echo(f"trial.toml parse failed: {exc}", err=True)
         raise typer.Exit(code=2) from exc
@@ -1218,7 +1218,7 @@ def qa_trial(
     else:
         output.parent.mkdir(parents=True, exist_ok=True)
 
-    output.write_text(rendered)
+    output.write_text(rendered, encoding="utf-8")
     typer.echo(
         f"\nTrial complete. {len(friction)} friction observation(s) recorded. Report: {output}",
         file=sys.stdout,

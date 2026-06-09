@@ -259,28 +259,28 @@ async def read_resource(uri: str) -> str:
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         quick_ref = docs_dir / "DAZZLE_DSL_QUICK_REFERENCE.md"
         if quick_ref.exists():
-            return quick_ref.read_text()
+            return quick_ref.read_text(encoding="utf-8")
         return "Quick reference not found"
 
     elif uri == "dazzle://docs/dsl-reference":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         dsl_ref = docs_dir / "v0.2" / "DAZZLE_DSL_REFERENCE.md"
         if dsl_ref.exists():
-            return dsl_ref.read_text()
+            return dsl_ref.read_text(encoding="utf-8")
         return "DSL reference not found"
 
     elif uri == "dazzle://docs/htmx-templates":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         htmx_spec = docs_dir / "reference" / "htmx-templates.md"
         if htmx_spec.exists():
-            return htmx_spec.read_text()
+            return htmx_spec.read_text(encoding="utf-8")
         return "HTMX template specification not found"
 
     elif uri == "dazzle://docs/runtime-capabilities":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         rt_caps = docs_dir / "reference" / "runtime-capabilities.md"
         if rt_caps.exists():
-            return rt_caps.read_text()
+            return rt_caps.read_text(encoding="utf-8")
         return "Runtime capabilities specification not found"
 
     # Semantic resources
@@ -332,7 +332,7 @@ async def read_resource(uri: str) -> str:
         if uri == "dazzle://project/manifest":
             manifest_path = project_path / "dazzle.toml"
             if manifest_path.exists():
-                return manifest_path.read_text()
+                return manifest_path.read_text(encoding="utf-8")
             return "Manifest not found"
 
         elif uri == "dazzle://modules":
@@ -353,7 +353,7 @@ async def read_resource(uri: str) -> str:
         file_path = uri.replace("dazzle://dsl/", "")
         dsl_file = project_path / file_path
         if dsl_file.exists():
-            return dsl_file.read_text()
+            return dsl_file.read_text(encoding="utf-8")
         return f"DSL file not found: {file_path}"
 
     return f"Unknown resource: {uri}"

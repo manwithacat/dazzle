@@ -149,7 +149,7 @@ def backup_command(
             "format": fmt,
             "has_uploads": has_uploads,
         }
-        (tmp / "metadata.json").write_text(json.dumps(metadata, indent=2))
+        (tmp / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
         # Package into tar.gz
         if output:
@@ -202,7 +202,7 @@ def restore_command(
             typer.echo("ERROR: Invalid backup archive (missing metadata.json)", err=True)
             raise typer.Exit(code=1)
 
-        metadata = json.loads(meta_path.read_text())
+        metadata = json.loads(meta_path.read_text(encoding="utf-8"))
 
         if dry_run:
             typer.echo("Restore dry run:")

@@ -43,7 +43,7 @@ def load_persona_cookies(
         return []
 
     try:
-        data = json.loads(session_file.read_text())
+        data = json.loads(session_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         logger.warning("Could not read session for '%s': %s", persona_id, exc)
         return []
@@ -91,7 +91,7 @@ def ensure_session_exists(
     if not session_file.exists():
         return False
     try:
-        data = json.loads(session_file.read_text())
+        data = json.loads(session_file.read_text(encoding="utf-8"))
         return bool(data.get("session_token"))
     except (json.JSONDecodeError, OSError):
         return False

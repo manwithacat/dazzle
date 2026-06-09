@@ -75,7 +75,7 @@ class TigerBeetleStage(PreflightStage):
         manifest_file = synth_dir / "manifest.json"
         if manifest_file.exists():
             try:
-                with open(manifest_file) as f:
+                with open(manifest_file, encoding="utf-8") as f:
                     manifest = json.load(f)
                 for artifact in manifest.get("artifacts", {}).values():
                     if "tigerbeetle" in artifact.get("displayName", "").lower():
@@ -114,7 +114,7 @@ class TigerBeetleStage(PreflightStage):
         for template_file in synth_dir.glob("*.template.json"):
             if "tigerbeetle" in template_file.name.lower():
                 try:
-                    with open(template_file) as f:
+                    with open(template_file, encoding="utf-8") as f:
                         data: dict[str, Any] = json.load(f)
                         return data
                 except json.JSONDecodeError:

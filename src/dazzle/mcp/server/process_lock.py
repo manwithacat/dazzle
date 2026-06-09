@@ -83,9 +83,9 @@ class ProcessLock:
 
         # Open in r+ if exists, else w+. Keep fd open for the process lifetime.
         try:
-            fd = open(self.lock_path, "r+")
+            fd = open(self.lock_path, "r+", encoding="utf-8")
         except FileNotFoundError:
-            fd = open(self.lock_path, "w+")
+            fd = open(self.lock_path, "w+", encoding="utf-8")
 
         try:
             fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -129,7 +129,7 @@ class ProcessLock:
         except FileNotFoundError:
             pass
 
-        fd = open(self.lock_path, "w+")
+        fd = open(self.lock_path, "w+", encoding="utf-8")
         try:
             fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as e:

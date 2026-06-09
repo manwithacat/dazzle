@@ -224,7 +224,7 @@ class AgentTranscript:
             output_path
             / f"agent_report_{self.mission_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         )
-        report_file.write_text(html)
+        report_file.write_text(html, encoding="utf-8")
         return report_file
 
 

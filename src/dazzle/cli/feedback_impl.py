@@ -25,7 +25,7 @@ def _get_server_url(project_root: Path | None = None) -> str:
     runtime_file = root / ".dazzle" / "runtime.json"
     if runtime_file.exists():
         try:
-            data = json.loads(runtime_file.read_text())
+            data = json.loads(runtime_file.read_text(encoding="utf-8"))
             if "api_url" in data:
                 return str(data["api_url"])
             port = data.get("api_port", data.get("ui_port", 3000))
@@ -41,7 +41,7 @@ def _auth_cookies(project_root: Path | None = None) -> dict[str, Any]:
     session_file = root / ".dazzle" / "session.json"
     if session_file.exists():
         try:
-            return dict(json.loads(session_file.read_text()))
+            return dict(json.loads(session_file.read_text(encoding="utf-8")))
         except (json.JSONDecodeError, KeyError):
             pass
     return {}

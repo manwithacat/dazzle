@@ -353,7 +353,7 @@ def check_command(
     if output:
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json_module.dumps(results, indent=2))
+        output_path.write_text(json_module.dumps(results, indent=2), encoding="utf-8")
         typer.echo(f"Results saved to {output_path}")
 
     if total_failed > 0:

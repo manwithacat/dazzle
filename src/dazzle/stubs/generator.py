@@ -106,7 +106,7 @@ class StubGenerator:
         Returns:
             Updated stub file content
         """
-        existing_content = existing_path.read_text()
+        existing_content = existing_path.read_text(encoding="utf-8")
         language = "typescript" if existing_path.suffix == ".ts" else "python"
 
         # Find where implementation begins
@@ -403,5 +403,5 @@ def generate_stub_file(
         # Generate fresh stub
         content = generator.generate_stub(service, language)
 
-    stub_path.write_text(content)
+    stub_path.write_text(content, encoding="utf-8")
     return stub_path

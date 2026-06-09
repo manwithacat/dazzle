@@ -359,7 +359,7 @@ agent-driven iteration. Two affordances ship with Dazzle to catch it:
   the DSL alone doesn't capture. Linked from the Domain map above.
 """
 
-    spec_path.write_text(spec_content)
+    spec_path.write_text(spec_content, encoding="utf-8")
 
 
 _DOCS_SPECS_README = """# Per-feature design docs
@@ -415,4 +415,4 @@ def create_specs_scaffold(target_dir: Path) -> None:
     specs_dir.mkdir(parents=True, exist_ok=True)
     readme = specs_dir / "README.md"
     if not readme.exists():
-        readme.write_text(_DOCS_SPECS_README)
+        readme.write_text(_DOCS_SPECS_README, encoding="utf-8")

@@ -63,7 +63,7 @@ def _load_static(name: str) -> str:
     """
     from importlib.resources import files
 
-    return (files("dazzle.render.fragment.static") / name).read_text()
+    return (files("dazzle.render.fragment.static") / name).read_text(encoding="utf-8")
 
 
 if TYPE_CHECKING:

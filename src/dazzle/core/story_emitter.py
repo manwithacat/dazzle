@@ -110,11 +110,11 @@ def append_stories_to_dsl(project_root: Path, stories: list[StorySpec]) -> Path:
     new_text = "\n\n".join(blocks) + "\n"
 
     if stories_file.exists():
-        existing = stories_file.read_text()
+        existing = stories_file.read_text(encoding="utf-8")
         if existing and not existing.endswith("\n"):
             existing += "\n"
-        stories_file.write_text(existing + "\n" + new_text)
+        stories_file.write_text(existing + "\n" + new_text, encoding="utf-8")
     else:
-        stories_file.write_text(new_text)
+        stories_file.write_text(new_text, encoding="utf-8")
 
     return stories_file

@@ -69,7 +69,7 @@ def register_mcp_server(force: bool = False) -> bool:
     # Load existing config
     if config_path.exists():
         try:
-            existing = json.loads(config_path.read_text())
+            existing = json.loads(config_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             existing = {"mcpServers": {}}
 
@@ -86,7 +86,7 @@ def register_mcp_server(force: bool = False) -> bool:
 
     # Write back
     try:
-        config_path.write_text(json.dumps(existing, indent=2))
+        config_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
         return True
     except (OSError, PermissionError) as e:
         print(f"Error writing config: {e}", file=sys.stderr)
@@ -119,7 +119,7 @@ def check_mcp_server() -> dict[str, Any]:
         return status
 
     try:
-        config = json.loads(config_path.read_text())
+        config = json.loads(config_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         status["status"] = "error"
         status["error"] = "Invalid JSON in config file"

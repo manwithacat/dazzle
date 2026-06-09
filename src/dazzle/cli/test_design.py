@@ -71,7 +71,7 @@ def save_designs(
         raise typer.Exit(code=1)
 
     try:
-        designs_data = json.loads(file_path.read_text())
+        designs_data = json.loads(file_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
         typer.echo(f"Error reading JSON file: {e}", err=True)
         raise typer.Exit(code=1)
@@ -164,7 +164,7 @@ def save_runtime(
         raise typer.Exit(code=1)
 
     try:
-        coverage_data = json.loads(file_path.read_text())
+        coverage_data = json.loads(file_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
         typer.echo(f"Error reading JSON file: {e}", err=True)
         raise typer.Exit(code=1)

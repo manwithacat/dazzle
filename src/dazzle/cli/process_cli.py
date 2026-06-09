@@ -72,7 +72,7 @@ def process_save(
         raise typer.Exit(code=1)
 
     try:
-        raw_processes = json.loads(file_path.read_text())
+        raw_processes = json.loads(file_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
         typer.echo(f"Error reading JSON file: {e}", err=True)
         raise typer.Exit(code=1)

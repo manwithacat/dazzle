@@ -43,7 +43,7 @@ class ReportGenerator:
 
         if path:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json_str)
+            path.write_text(json_str, encoding="utf-8")
 
         return json_str
 
@@ -201,7 +201,7 @@ class ReportGenerator:
 
         if path:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(markdown)
+            path.write_text(markdown, encoding="utf-8")
 
         return markdown
 

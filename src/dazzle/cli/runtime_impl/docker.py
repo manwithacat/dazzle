@@ -492,7 +492,8 @@ def write_dev_compose(
     compose_file = dev_compose_path(project_root)
     compose_file.parent.mkdir(parents=True, exist_ok=True)
     compose_file.write_text(
-        generate_dev_compose(project_name, pg_port=pg_port, redis_port=redis_port)
+        generate_dev_compose(project_name, pg_port=pg_port, redis_port=redis_port),
+        encoding="utf-8",
     )
     return compose_file
 

@@ -78,7 +78,7 @@ async def _launch(state_dir: Path, timeout_ms: int) -> tuple[Any, Any, Any, Any]
     pw = await async_playwright().start()
     browser = await pw.chromium.launch(headless=True)
 
-    base_url = base_url_path.read_text().strip() if base_url_path.exists() else None
+    base_url = base_url_path.read_text(encoding="utf-8").strip() if base_url_path.exists() else None
     ctx_kwargs: dict[str, Any] = {}
     if base_url:
         ctx_kwargs["base_url"] = base_url
@@ -92,7 +92,7 @@ async def _launch(state_dir: Path, timeout_ms: int) -> tuple[Any, Any, Any, Any]
     # they left off. First-call (post-login) case: last_url_path holds
     # the URL set by login(); every subsequent call reads it.
     if last_url_path.exists():
-        last = last_url_path.read_text().strip()
+        last = last_url_path.read_text(encoding="utf-8").strip()
         if last:
             # Stale URL — leave page at default if nav fails (#smells-1.1)
             with suppress(Exception):
@@ -119,7 +119,7 @@ async def _teardown(
         with suppress(Exception):
             await ctx.storage_state(path=str(state_path))
         with suppress(Exception):
-            last_url_path.write_text(page.url)
+            last_url_path.write_text(page.url, encoding="utf-8")
     await ctx.close()
     await browser.close()
     await pw.stop()
@@ -133,7 +133,7 @@ async def action_login(
 
     state_path, base_url_path, last_url_path = _paths(state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
-    base_url_path.write_text(api_url)
+    base_url_path.write_text(api_url, encoding="utf-8")
 
     pw = await async_playwright().start()
     browser = await pw.chromium.launch(headless=True)
@@ -169,7 +169,7 @@ async def action_login(
             }
 
         await ctx.storage_state(path=str(state_path))
-        last_url_path.write_text(page.url)
+        last_url_path.write_text(page.url, encoding="utf-8")
         return {"status": "logged_in", "url": page.url, "persona": persona_id}
     finally:
         await ctx.close()
@@ -221,7 +221,9 @@ async def action_navigate(target: str, state_dir: Path, timeout_ms: int) -> dict
         if target.startswith("http"):
             dest = target
         else:
-            base = base_url_path.read_text().strip() if base_url_path.exists() else ""
+            base = (
+                base_url_path.read_text(encoding="utf-8").strip() if base_url_path.exists() else ""
+            )
             dest = base.rstrip("/") + (target if target.startswith("/") else f"/{target}")
         await page.goto(dest)
         # networkidle is best-effort — pages with long-poll connections
@@ -384,7 +386,7 @@ async def action_form_submit(
         if url.startswith("http"):
             target = url
         elif base_url_path.exists():
-            base = base_url_path.read_text().strip()
+            base = base_url_path.read_text(encoding="utf-8").strip()
             target = base.rstrip("/") + url if url.startswith("/") else base + "/" + url
         else:
             return {

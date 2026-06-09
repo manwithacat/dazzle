@@ -64,7 +64,7 @@ def _status_for(project_root: Path) -> dict[str, Any]:
     runtime_data: dict[str, Any] | None = None
     if runtime_path.exists():
         try:
-            runtime_data = json.loads(runtime_path.read_text())
+            runtime_data = json.loads(runtime_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             pass
 
@@ -75,7 +75,7 @@ def _status_for(project_root: Path) -> dict[str, Any]:
         if logs:
             last_log = logs[-1]
             try:
-                text = last_log.read_text(errors="replace").splitlines()
+                text = last_log.read_text(encoding="utf-8", errors="replace").splitlines()
                 last_log_tail = text[-20:]
             except OSError:
                 last_log_tail = []

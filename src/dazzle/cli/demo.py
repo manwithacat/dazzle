@@ -441,7 +441,7 @@ def save_command(
         raise typer.Exit(code=1)
 
     try:
-        blueprint_data = json.loads(blueprint_path.read_text())
+        blueprint_data = json.loads(blueprint_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
         typer.echo(f"Error reading blueprint file: {e}", err=True)
         raise typer.Exit(code=1)

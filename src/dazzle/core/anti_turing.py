@@ -190,7 +190,7 @@ class AntiTuringValidator:
         Returns:
             List of violations found
         """
-        content = path.read_text()
+        content = path.read_text(encoding="utf-8")
         return self.validate(content, str(path))
 
     # DSL-specific patterns that look like banned keywords but are allowed

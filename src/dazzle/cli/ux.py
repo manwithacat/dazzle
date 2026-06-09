@@ -44,7 +44,7 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
     if runtime_json.exists():
         # Malformed/partial runtime.json falls through to env/manifest defaults (#smells-1.1).
         with suppress(Exception):
-            data = _json.loads(runtime_json.read_text())
+            data = _json.loads(runtime_json.read_text(encoding="utf-8"))
             site = data.get("ui_url", "")
             if site:
                 # the Dazzle runtime serves UI + API on the same port; api_url in

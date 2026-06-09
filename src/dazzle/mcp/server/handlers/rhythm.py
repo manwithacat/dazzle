@@ -281,7 +281,7 @@ def _submit_scores(project_root: Path, rhythm_name: str, scores_data: list[dict[
         "timestamp": ts,
         "evaluations": [e.model_dump() for e in evaluations],
     }
-    path.write_text(json.dumps(data, indent=2))
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     return json.dumps({"stored": str(path), "count": len(evaluations)})
 
@@ -294,7 +294,7 @@ def _load_latest_scores(project_root: Path, rhythm_name: str) -> list[dict[str, 
 
     files = sorted(eval_dir.glob("eval-*.json"), reverse=True)
     for f in files:
-        data = json.loads(f.read_text())
+        data = json.loads(f.read_text(encoding="utf-8"))
         if data.get("rhythm") == rhythm_name:
             evals: list[dict[str, Any]] | None = data.get("evaluations")
             return evals
@@ -827,7 +827,7 @@ def rhythm_gaps_impl(project_root: Path) -> dict[str, Any]:
     eval_dir = project_root / ".dazzle" / "evaluations"
     eval_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
-    (eval_dir / f"gaps-{ts}.json").write_text(json.dumps(result, indent=2))
+    (eval_dir / f"gaps-{ts}.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
 
     return result
 
@@ -895,7 +895,7 @@ def _layer_evaluated_gaps(project_root: Path, gaps: list[dict[str, Any]]) -> Non
         return
 
     # Use the most recent evaluation file
-    data = json.loads(files[0].read_text())
+    data = json.loads(files[0].read_text(encoding="utf-8"))
     evaluations = data.get("evaluations", [])
     rhythm_name = data.get("rhythm", "")
 

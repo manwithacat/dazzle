@@ -80,7 +80,7 @@ class JsonFileAuditSink:
     def __init__(self, path: Path | str) -> None:
         self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._file = open(self._path, "a")  # noqa: SIM115
+        self._file = open(self._path, "a", encoding="utf-8")  # noqa: SIM115
         self._lock = threading.Lock()
 
     def emit(self, record: AccessDecisionRecord) -> None:

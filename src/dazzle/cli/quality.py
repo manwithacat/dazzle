@@ -58,12 +58,12 @@ def init_command() -> None:
 
     written = []
     for template_file in sorted(templates_dir.glob("*.md")):
-        content = template_file.read_text()
+        content = template_file.read_text(encoding="utf-8")
         for key, value in placeholders.items():
             content = content.replace("{" + key + "}", value)
 
         output_path = output_dir / template_file.name
-        output_path.write_text(content)
+        output_path.write_text(content, encoding="utf-8")
         written.append(template_file.name)
 
     # 4. Report

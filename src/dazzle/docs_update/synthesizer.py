@@ -227,7 +227,7 @@ def _patch_changelog(
     if not changelog_path.exists():
         return None
 
-    original = changelog_path.read_text()
+    original = changelog_path.read_text(encoding="utf-8")
     content = ensure_unreleased_section(original)
 
     # Build deterministic entries as a fallback / seed
@@ -287,7 +287,7 @@ def _patch_readme(
     if not readme_issues:
         return []
 
-    original = readme_path.read_text()
+    original = readme_path.read_text(encoding="utf-8")
 
     user_prompt = (
         f"Current README.md:\n{original[:4000]}\n\n"
@@ -389,7 +389,7 @@ def _patch_mkdocs(
             logger.info("Skipping non-existent mkdocs page: %s", page_path)
             continue
 
-        original = page_path.read_text()
+        original = page_path.read_text(encoding="utf-8")
         change_summary = item.get("summary", "")
 
         page_prompt = (

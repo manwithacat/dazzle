@@ -82,7 +82,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
         snapshot = snapshot_mcp_tools()
     if not BASELINE_PATH.exists():
         return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api mcp-tools --write`)\n"
-    baseline = BASELINE_PATH.read_text()
+    baseline = BASELINE_PATH.read_text(encoding="utf-8")
     if baseline == snapshot:
         return ""
     diff = difflib.unified_diff(

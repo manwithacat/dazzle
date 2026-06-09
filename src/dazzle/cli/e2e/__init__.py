@@ -484,7 +484,7 @@ def e2e_save_viewport_specs(
         raise typer.Exit(code=1)
 
     try:
-        specs = json.loads(specs_file.read_text())
+        specs = json.loads(specs_file.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         typer.echo(f"Invalid JSON in specs file: {e}", err=True)
         raise typer.Exit(code=1)

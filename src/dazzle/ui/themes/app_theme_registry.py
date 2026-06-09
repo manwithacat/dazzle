@@ -91,7 +91,7 @@ def _parse_manifest(
     """Parse a theme manifest TOML, or synthesise defaults when absent."""
     name = css_path.stem
     if toml_path and toml_path.is_file():
-        data = tomllib.loads(toml_path.read_text())
+        data = tomllib.loads(toml_path.read_text(encoding="utf-8"))
         scheme = data.get("default_color_scheme", "auto")
         if scheme not in _VALID_SCHEMES:
             raise ValueError(

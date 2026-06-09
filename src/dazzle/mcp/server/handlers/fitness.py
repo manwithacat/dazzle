@@ -21,7 +21,7 @@ _HEADER_RAW_RE = re.compile(r"^\*\*Raw findings:\*\*\s*(\d+)", re.MULTILINE)
 def _parse_raw_findings(queue_file: Path) -> int:
     """Extract the 'Raw findings' count from the queue file header."""
     try:
-        text = queue_file.read_text()
+        text = queue_file.read_text(encoding="utf-8")
     except OSError:
         return 0
     m = _HEADER_RAW_RE.search(text)

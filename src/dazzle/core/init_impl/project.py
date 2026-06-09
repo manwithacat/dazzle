@@ -122,7 +122,7 @@ def create_mcp_config(project_dir: Path) -> None:
     }
 
     mcp_path = project_dir / ".mcp.json"
-    with open(mcp_path, "w") as f:
+    with open(mcp_path, "w", encoding="utf-8") as f:
         json.dump(mcp_config, f, indent=2)
         f.write("\n")
 
@@ -276,7 +276,7 @@ def _init_git_repository(target_dir: Path, log: Callable[[str], None]) -> None:
         gitignore_path = target_dir / ".gitignore"
         if not gitignore_path.exists():
             log("  Creating .gitignore...")
-            gitignore_path.write_text(_GITIGNORE_TEMPLATE)
+            gitignore_path.write_text(_GITIGNORE_TEMPLATE, encoding="utf-8")
 
         # Make initial commit (optional - only if we have content)
         # Check if we have files to commit

@@ -55,13 +55,13 @@ def load_brandspec(path: Path | None = None, project_path: Path | None = None) -
     Falls back to DEFAULT_BRANDSPEC if not found.
     """
     if path and path.exists():
-        result: dict[str, Any] = yaml.safe_load(path.read_text())
+        result: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8"))
         return result
 
     if project_path:
         candidate = project_path / ".dazzle" / "compliance" / "brandspec.yaml"
         if candidate.exists():
-            result = yaml.safe_load(candidate.read_text())
+            result = yaml.safe_load(candidate.read_text(encoding="utf-8"))
             return result
 
     return DEFAULT_BRANDSPEC
@@ -94,7 +94,7 @@ def render_document(
     compliance = brand.get("compliance", {})
     doc_control = compliance.get("document_control", {})
 
-    md_text = markdown_path.read_text()
+    md_text = markdown_path.read_text(encoding="utf-8")
     content_html = markdown.markdown(
         md_text,
         extensions=["tables", "toc", "fenced_code"],
@@ -105,7 +105,7 @@ def render_document(
     if not CSS_PATH.exists():
         raise FileNotFoundError(f"CSS not found: {CSS_PATH}")
 
-    template = Template(TEMPLATE_PATH.read_text())
+    template = Template(TEMPLATE_PATH.read_text(encoding="utf-8"))
     html_str = template.substitute(
         content=content_html,
         document_title=document_title,

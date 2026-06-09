@@ -70,7 +70,7 @@ class ExperienceProgressStore:
         self._dir.mkdir(parents=True, exist_ok=True)
         progress = progress.model_copy(update={"last_activity": time.time()})
         path = self._progress_path(progress.experience_name, progress.user_email)
-        path.write_text(progress.model_dump_json(indent=2))
+        path.write_text(progress.model_dump_json(indent=2), encoding="utf-8")
         logger.debug("Saved experience progress: %s", path.name)
 
     def load(self, experience_name: str, user_email: str = "") -> ExperienceProgress | None:
@@ -84,7 +84,7 @@ class ExperienceProgressStore:
             return None
 
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
             progress = ExperienceProgress.model_validate(data)
         except Exception:
             logger.warning("Corrupt experience progress file: %s", path.name)

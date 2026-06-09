@@ -82,14 +82,14 @@ def _find_spec(work_dir: Path, arguments: dict[str, Any]) -> tuple[str | None, s
     if spec_path := arguments.get("spec_path"):
         path = Path(spec_path)
         if path.exists():
-            return path.read_text(), str(path)
+            return path.read_text(encoding="utf-8"), str(path)
         return None, None
 
     # Scan for spec files
     for candidate in SPEC_FILE_CANDIDATES:
         path = work_dir / candidate
         if path.exists():
-            content = path.read_text().strip()
+            content = path.read_text(encoding="utf-8").strip()
             # Skip near-empty files or template READMEs
             if len(content) > 100 and not _is_template_readme(content):
                 return content, str(path)

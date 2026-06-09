@@ -328,14 +328,14 @@ def ingest_visual_findings(
         reinforced and any warnings.
     """
     result = VisualTier2IngestResult()
-    raw_findings = json.loads(findings_path.read_text())
+    raw_findings = json.loads(findings_path.read_text(encoding="utf-8"))
     if not isinstance(raw_findings, list):
         result.warnings.append(
             f"findings file {findings_path} did not contain a JSON array — skipping"
         )
         return result
 
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     # Build screenshot lookup keyed by (app, persona, workspace).
     screenshot_index: dict[tuple[str, str, str], str] = {}
     for app_entry in manifest.get("apps", []):
@@ -354,7 +354,7 @@ def ingest_visual_findings(
         )
     )
 
-    backlog_text = backlog_path.read_text()
+    backlog_text = backlog_path.read_text(encoding="utf-8")
     before, section, after = _split_backlog_around_lane(backlog_text)
 
     next_id = _next_row_id(section)
@@ -411,7 +411,7 @@ def ingest_visual_findings(
         next_id += 1
 
     if not new_rows:
-        backlog_path.write_text(before + section + after)
+        backlog_path.write_text(before + section + after, encoding="utf-8")
         return result
 
     # Append new rows. The section ends with a blank line followed by `---\n`
@@ -428,6 +428,6 @@ def ingest_visual_findings(
     new_section = (
         "".join(section_lines[:insert_at]) + "".join(new_rows) + "".join(section_lines[insert_at:])
     )
-    backlog_path.write_text(before + new_section + after)
+    backlog_path.write_text(before + new_section + after, encoding="utf-8")
     result.rows_added = len(new_rows)
     return result

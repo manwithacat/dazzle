@@ -91,6 +91,7 @@ def write_mock_inbox(tmpdir: Path, docs: list[SeededDoc]) -> Path:
                 for d in docs
             ],
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     return inbox_path

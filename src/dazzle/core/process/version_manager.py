@@ -405,7 +405,7 @@ class VersionManager:
         hasher = sha256()
         for path in sorted(dsl_files):
             if path.exists():
-                content = path.read_text()
+                content = path.read_text(encoding="utf-8")
                 hasher.update(f"{path.name}:{content}".encode())
         return hasher.hexdigest()[:16]
 

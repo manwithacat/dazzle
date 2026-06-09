@@ -163,7 +163,7 @@ def pitch_update(
     patch_file = patch_file.resolve()
 
     try:
-        patch = json.loads(patch_file.read_text())
+        patch = json.loads(patch_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
         typer.echo(f"Error reading patch file: {e}", err=True)
         raise typer.Exit(1)

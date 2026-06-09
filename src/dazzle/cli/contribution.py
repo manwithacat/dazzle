@@ -65,7 +65,7 @@ def create(
     content: dict[str, Any] | None = None
     if content_file is not None:
         try:
-            content = json.loads(content_file.read_text())
+            content = json.loads(content_file.read_text(encoding="utf-8"))
         except Exception as e:
             typer.echo(f"Error reading content file: {e}", err=True)
             raise typer.Exit(code=1)
@@ -132,7 +132,7 @@ def validate(
     content: dict[str, Any] | None = None
     if content_file is not None:
         try:
-            content = json.loads(content_file.read_text())
+            content = json.loads(content_file.read_text(encoding="utf-8"))
         except Exception as e:
             typer.echo(f"Error reading content file: {e}", err=True)
             raise typer.Exit(code=1)

@@ -233,7 +233,7 @@ class SessionManager:
         if not session_file.exists():
             return None
         try:
-            data = json.loads(session_file.read_text())
+            data = json.loads(session_file.read_text(encoding="utf-8"))
             return PersonaSession(**data)
         except Exception as e:
             logger.warning("Could not load session for '%s': %s", persona_id, e)
@@ -244,7 +244,7 @@ class SessionManager:
         if not self.manifest_path.exists():
             return None
         try:
-            data = json.loads(self.manifest_path.read_text())
+            data = json.loads(self.manifest_path.read_text(encoding="utf-8"))
             return SessionManifest(**data)
         except Exception as e:
             logger.warning("Could not load manifest: %s", e)
@@ -441,7 +441,7 @@ class SessionManager:
         creds_path = self.project_path / ".dazzle" / "test_credentials.json"
         if creds_path.exists():
             try:
-                creds = json.loads(creds_path.read_text())
+                creds = json.loads(creds_path.read_text(encoding="utf-8"))
                 personas = creds.get("personas", {})
                 if persona_id in personas:
                     email = personas[persona_id].get("email")
@@ -496,9 +496,9 @@ class SessionManager:
         """Save a session to disk."""
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
         session_file = self.sessions_dir / f"{session.persona_id}.json"
-        session_file.write_text(session.model_dump_json(indent=2))
+        session_file.write_text(session.model_dump_json(indent=2), encoding="utf-8")
 
     def _save_manifest(self, manifest: SessionManifest) -> None:
         """Save the manifest to disk."""
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
-        self.manifest_path.write_text(manifest.model_dump_json(indent=2))
+        self.manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")

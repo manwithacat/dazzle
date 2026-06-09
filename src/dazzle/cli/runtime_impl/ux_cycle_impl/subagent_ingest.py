@@ -234,7 +234,7 @@ def ingest_findings(
     ``component_name``. Does NOT dedup observations — edge-case findings
     are inherently per-run and per-persona.
     """
-    text = backlog_path.read_text()
+    text = backlog_path.read_text(encoding="utf-8")
     lines = text.splitlines(keepends=True)
 
     next_prop = _next_prop_id(text)
@@ -297,7 +297,7 @@ def ingest_findings(
     if ex_rows:
         updated = _insert_rows_after_table(updated, _EXPLORATION_FINDINGS_HEADING, "EX", ex_rows)
 
-    backlog_path.write_text("".join(updated))
+    backlog_path.write_text("".join(updated), encoding="utf-8")
     result.prop_rows_added = len(prop_rows)
     result.ex_rows_added = len(ex_rows)
     return result

@@ -1419,7 +1419,7 @@ def save_generated_tests(project_path: Path, suite: GeneratedTestSuite) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = output_dir / "dsl_generated_tests.json"
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(suite.to_dict(), f, indent=2, default=str)
 
     print(f"Generated {len(suite.designs)} tests from DSL")

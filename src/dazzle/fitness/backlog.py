@@ -66,7 +66,7 @@ def read_backlog(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
     rows: list[dict[str, str]] = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         m = _ROW_RE.match(line.strip())
         if m:
             rows.append({k: v.strip() for k, v in m.groupdict().items()})
@@ -83,9 +83,9 @@ def upsert_findings(path: Path, findings: list[Finding]) -> None:
         return
 
     if not path.exists():
-        path.write_text(_HEADER)
+        path.write_text(_HEADER, encoding="utf-8")
 
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     # Split into table + envelope sections
     if _EVIDENCE_HEADER.strip() in text:
         table_part, envelope_part = text.split(_EVIDENCE_HEADER, 1)
@@ -98,7 +98,7 @@ def upsert_findings(path: Path, findings: list[Finding]) -> None:
         table_part = table_part.rstrip("\n") + "\n" + _finding_to_row(f) + "\n"
         envelope_part = envelope_part.rstrip("\n") + "\n\n" + _finding_envelope(f)
 
-    path.write_text(table_part + "\n" + envelope_part.lstrip("\n"))
+    path.write_text(table_part + "\n" + envelope_part.lstrip("\n"), encoding="utf-8")
 
 
 _ENVELOPE_BLOCK_RE = re.compile(
@@ -118,7 +118,7 @@ def read_backlog_findings(path: Path) -> list[Finding]:
     if not path.exists():
         return []
 
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     findings: list[Finding] = []
     for m in _ENVELOPE_BLOCK_RE.finditer(text):
         try:

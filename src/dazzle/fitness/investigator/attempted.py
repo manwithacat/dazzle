@@ -45,7 +45,7 @@ def load_attempted(dazzle_root: Path) -> AttemptedIndex:
     if not path.exists():
         return rebuild_attempted(dazzle_root)
     try:
-        raw = json.loads(path.read_text())
+        raw = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return rebuild_attempted(dazzle_root)
     if not isinstance(raw, dict):

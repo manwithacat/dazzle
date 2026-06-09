@@ -126,7 +126,7 @@ def scaffold(
     openapi_spec: dict[str, Any] | None = None
     if openapi_file is not None:
         try:
-            openapi_spec = json.loads(openapi_file.read_text())
+            openapi_spec = json.loads(openapi_file.read_text(encoding="utf-8"))
         except Exception as e:
             typer.echo(f"Error reading OpenAPI file: {e}", err=True)
             raise typer.Exit(code=1)

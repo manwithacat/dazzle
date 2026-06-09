@@ -42,7 +42,7 @@ def discovery_report_impl(
         report_file = report_dir / f"{session_id}.json"
         if not report_file.exists():
             raise FileNotFoundError(f"Report not found: {session_id}")
-        result: dict[str, Any] = json.loads(report_file.read_text())
+        result: dict[str, Any] = json.loads(report_file.read_text(encoding="utf-8"))
         return result
 
     if not report_dir.exists():
@@ -55,7 +55,7 @@ def discovery_report_impl(
     report_summaries = []
     for report_file in reports[:10]:
         try:
-            data = json.loads(report_file.read_text())
+            data = json.loads(report_file.read_text(encoding="utf-8"))
             report_summaries.append(
                 {
                     "session_id": report_file.stem,

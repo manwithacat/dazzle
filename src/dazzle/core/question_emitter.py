@@ -64,11 +64,11 @@ def append_questions_to_dsl(project_root: Path, questions: list[QuestionSpec]) -
     new_text = "\n\n".join(blocks) + "\n"
 
     if questions_file.exists():
-        existing = questions_file.read_text()
+        existing = questions_file.read_text(encoding="utf-8")
         if existing and not existing.endswith("\n"):
             existing += "\n"
-        questions_file.write_text(existing + "\n" + new_text)
+        questions_file.write_text(existing + "\n" + new_text, encoding="utf-8")
     else:
-        questions_file.write_text(new_text)
+        questions_file.write_text(new_text, encoding="utf-8")
 
     return questions_file

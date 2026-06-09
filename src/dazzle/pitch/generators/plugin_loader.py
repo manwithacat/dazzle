@@ -97,7 +97,7 @@ def generate_plugin_readme(project_root: Path) -> Path:
 
     readme_path = plugin_dir / "README.md"
     content = _readme_content()
-    readme_path.write_text(content)
+    readme_path.write_text(content, encoding="utf-8")
     return readme_path
 
 

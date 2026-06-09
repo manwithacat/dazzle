@@ -55,7 +55,7 @@ def extract_spec_capabilities(spec_path: Path, llm: _LlmClient) -> list[Capabili
     Malformed JSON, non-list responses, and items missing required fields
     are silently dropped; the caller treats empty output as "no signal".
     """
-    user_prompt = spec_path.read_text()
+    user_prompt = spec_path.read_text(encoding="utf-8")
     response = llm.complete(
         system_prompt=_SYSTEM_PROMPT,
         user_prompt=user_prompt,

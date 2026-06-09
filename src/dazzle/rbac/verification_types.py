@@ -164,12 +164,12 @@ class VerificationReport:
     def save(self, path: Path) -> None:
         """Serialise the report to *path* as JSON."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.to_json(), indent=2, default=str))
+        path.write_text(json.dumps(self.to_json(), indent=2, default=str), encoding="utf-8")
 
     @classmethod
     def load(cls, path: Path) -> VerificationReport:
         """Deserialise a report previously saved with `.save()`."""
-        raw = json.loads(path.read_text())
+        raw = json.loads(path.read_text(encoding="utf-8"))
 
         # Reconstruct AccessMatrix if present.
         matrix: AccessMatrix | None = None

@@ -191,5 +191,5 @@ def write_security_md(app_spec: AppSpec, output_path: str = ".dazzle/SECURITY.md
     content = generate_security_md(app_spec)
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
     return str(path)

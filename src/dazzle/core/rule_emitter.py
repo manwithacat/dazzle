@@ -69,11 +69,11 @@ def append_rules_to_dsl(project_root: Path, rules: list[RuleSpec]) -> Path:
     new_text = "\n\n".join(blocks) + "\n"
 
     if rules_file.exists():
-        existing = rules_file.read_text()
+        existing = rules_file.read_text(encoding="utf-8")
         if existing and not existing.endswith("\n"):
             existing += "\n"
-        rules_file.write_text(existing + "\n" + new_text)
+        rules_file.write_text(existing + "\n" + new_text, encoding="utf-8")
     else:
-        rules_file.write_text(new_text)
+        rules_file.write_text(new_text, encoding="utf-8")
 
     return rules_file

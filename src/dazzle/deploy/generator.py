@@ -110,7 +110,7 @@ class CDKGenerator(ABC):
     def _write_file(self, path: Path, content: str) -> None:
         """Write content to a file."""
         self._ensure_dir(path.parent)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8")
 
     def _get_app_name(self) -> str:
         """Get sanitized application name."""

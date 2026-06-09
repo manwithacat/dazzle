@@ -109,7 +109,7 @@ def vocab_init(
     created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     content = EXAMPLE_MANIFEST.format(app_id=app_id, created_at=created_at)
 
-    manifest_path.write_text(content)
+    manifest_path.write_text(content, encoding="utf-8")
     typer.echo(f"✓ Created vocabulary manifest: {manifest_path}")
     typer.echo("")
     typer.echo("Example entries included:")

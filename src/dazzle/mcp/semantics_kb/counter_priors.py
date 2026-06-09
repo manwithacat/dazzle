@@ -104,7 +104,7 @@ def counter_priors_dir() -> Path:
 
 def load_counter_prior(path: Path) -> CounterPrior:
     """Parse one counter-prior markdown file."""
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise CounterPriorParseError(f"{path}: no YAML frontmatter")
     end = text.find("\n---\n", 4)

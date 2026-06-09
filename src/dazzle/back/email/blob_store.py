@@ -209,7 +209,8 @@ class LocalBlobStore(BlobStore):
                     "metadata": blob_meta.metadata,
                 },
                 indent=2,
-            )
+            ),
+            encoding="utf-8",
         )
 
         logger.debug("Stored blob: %s (%s bytes)", pointer, blob_meta.size_bytes)
@@ -248,7 +249,7 @@ class LocalBlobStore(BlobStore):
             return None
 
         try:
-            data = json.loads(meta_path.read_text())
+            data = json.loads(meta_path.read_text(encoding="utf-8"))
             return BlobMetadata(
                 pointer=data["pointer"],
                 sha256=data["sha256"],

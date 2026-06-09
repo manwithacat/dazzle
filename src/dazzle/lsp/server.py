@@ -1575,7 +1575,7 @@ def _find_definition_in_file(file_path: Path, word: str) -> Location | None:
     set of DSL keywords (entity, surface, view, process, ledger, etc.).
     """
     try:
-        content = file_path.read_text()
+        content = file_path.read_text(encoding="utf-8")
         lines = content.split("\n")
 
         for line_no, line in enumerate(lines):

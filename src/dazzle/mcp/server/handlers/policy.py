@@ -94,7 +94,7 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
             return json.dumps({"status": "no_report", "message": "Run `dazzle rbac verify` first"})
         import json as _json
 
-        report_data = _json.loads(report_path.read_text())
+        report_data = _json.loads(report_path.read_text(encoding="utf-8"))
         return json.dumps(
             {
                 "status": "ok",

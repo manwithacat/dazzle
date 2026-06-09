@@ -262,7 +262,7 @@ def _load_env_file(project_path: Path) -> None:
     for env_path in search_paths:
         if env_path.exists():
             logger.debug("Loading environment from %s", env_path)
-            with open(env_path) as f:
+            with open(env_path, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
@@ -319,7 +319,7 @@ async def run_agent_tests(
 
         import json
 
-        with open(designs_path) as f:
+        with open(designs_path, encoding="utf-8") as f:
             data = json.load(f)
 
         def is_tier3_test(test: dict[str, Any]) -> bool:
@@ -489,7 +489,7 @@ def generate_html_report(
 """
 
     report_file = output_path / f"agent_e2e_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-    report_file.write_text(html)
+    report_file.write_text(html, encoding="utf-8")
     return report_file
 
 

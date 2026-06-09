@@ -564,9 +564,9 @@ def write_privacy_artefacts(
     cookie_path = out / "cookie_policy.md"
     ropa_path = out / "ropa.md"
 
-    privacy_path.write_text(artefacts.privacy_policy)
-    cookie_path.write_text(artefacts.cookie_policy)
-    ropa_path.write_text(artefacts.ropa)
+    privacy_path.write_text(artefacts.privacy_policy, encoding="utf-8")
+    cookie_path.write_text(artefacts.cookie_policy, encoding="utf-8")
+    ropa_path.write_text(artefacts.ropa, encoding="utf-8")
 
     return {
         "privacy_policy": privacy_path,

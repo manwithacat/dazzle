@@ -209,7 +209,7 @@ def propose_stories(
             for s in stories
         ]
 
-        output_path.write_text(json.dumps({"stories": stories_data}, indent=2))
+        output_path.write_text(json.dumps({"stories": stories_data}, indent=2), encoding="utf-8")
         typer.echo(f"JSON output saved to {output_path}")
 
     # Guidance for next steps
@@ -452,7 +452,9 @@ def generate_tests(
             for td in test_designs
         ]
 
-        output_path.write_text(json.dumps({"test_designs": designs_data}, indent=2))
+        output_path.write_text(
+            json.dumps({"test_designs": designs_data}, indent=2), encoding="utf-8"
+        )
         typer.echo(f"JSON output saved to {output_path}")
 
     typer.echo()

@@ -476,7 +476,7 @@ def parse_component_contract(path: Path) -> ComponentContract:
     if not path.exists():
         raise FileNotFoundError(f"Component contract not found: {path}")
 
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8")
     component_name = path.stem
 
     # Quality Gates (required)

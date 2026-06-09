@@ -218,7 +218,7 @@ def _detect_dev_environment(root: Path) -> bool:
         try:
             import tomllib
 
-            data = tomllib.loads(pyproject_path.read_text())
+            data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
             project_name = data.get("project", {}).get("name", "")
             has_pyproject = "dazzle" in project_name.lower()
         except Exception:

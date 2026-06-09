@@ -240,7 +240,7 @@ class UnifiedTestRunner:
             return False
 
         try:
-            with open(self.cache_path) as f:
+            with open(self.cache_path, encoding="utf-8") as f:
                 cache = json.load(f)
             return bool(cache.get("dsl_hash") == current_hash)
         except Exception:
@@ -251,7 +251,7 @@ class UnifiedTestRunner:
         """Load test suite from cache."""
         from .dsl_test_generator import GeneratedTestSuite, TestCoverage
 
-        with open(self.designs_path) as f:
+        with open(self.designs_path, encoding="utf-8") as f:
             data = json.load(f)
 
         coverage = TestCoverage()
@@ -275,7 +275,7 @@ class UnifiedTestRunner:
     def _save_cache(self, suite: GeneratedTestSuite) -> None:
         """Save test suite metadata to cache."""
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.cache_path, "w") as f:
+        with open(self.cache_path, "w", encoding="utf-8") as f:
             json.dump(
                 {
                     "dsl_hash": suite.dsl_hash,
@@ -435,7 +435,7 @@ class UnifiedTestRunner:
         existing_path = self.project_path / "dsl" / "tests" / "designs.json"
         if existing_path.exists():
             try:
-                with open(existing_path) as f:
+                with open(existing_path, encoding="utf-8") as f:
                     existing = json.load(f)
                     existing_designs = existing.get("designs", [])
                     # Add existing tests that aren't duplicates

@@ -164,7 +164,9 @@ def _read_all_dsl(app_dir: Path) -> str:
     dsl_dir = app_dir / "dsl"
     if not dsl_dir.is_dir():
         return ""
-    return "\n".join(_strip_dsl_comments(p.read_text()) for p in dsl_dir.glob("*.dsl"))
+    return "\n".join(
+        _strip_dsl_comments(p.read_text(encoding="utf-8")) for p in dsl_dir.glob("*.dsl")
+    )
 
 
 def _display_mode_coverage(repo_root: Path) -> CategoryCoverage:
@@ -275,7 +277,7 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
                 if path == registry_path:
                     continue
                 try:
-                    if include_pattern.search(path.read_text()):
+                    if include_pattern.search(path.read_text(encoding="utf-8")):
                         cat.coverage[frag].append(path.relative_to(repo_root).as_posix())
                         found = True
                         break

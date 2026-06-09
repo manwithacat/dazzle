@@ -62,7 +62,7 @@ def generate_command(
         return
 
     content = generator.generate_stub(demo_service, language)
-    stub_path.write_text(content)
+    stub_path.write_text(content, encoding="utf-8")
     typer.echo(f"Generated: {stub_path}")
 
     # Show what was generated

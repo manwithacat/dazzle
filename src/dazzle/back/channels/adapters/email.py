@@ -384,7 +384,7 @@ class FileEmailAdapter(EmailAdapter):
 
             # Save to file
             filepath = self._mail_dir / "messages" / filename
-            filepath.write_text(msg.as_string())
+            filepath.write_text(msg.as_string(), encoding="utf-8")
 
             # Update index
             await self._update_index(message, email_data, filename)
@@ -419,7 +419,7 @@ class FileEmailAdapter(EmailAdapter):
         # Load existing index
         if index_path.exists():
             try:
-                index = json.loads(index_path.read_text())
+                index = json.loads(index_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 index = {"messages": []}
         else:
@@ -444,7 +444,7 @@ class FileEmailAdapter(EmailAdapter):
         index["messages"] = index["messages"][:1000]
 
         # Save index
-        index_path.write_text(json.dumps(index, indent=2))
+        index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
 
     async def health_check(self) -> bool:
         """File adapter is always healthy."""
@@ -465,7 +465,7 @@ class FileEmailAdapter(EmailAdapter):
             return []
 
         try:
-            index = json.loads(index_path.read_text())
+            index = json.loads(index_path.read_text(encoding="utf-8"))
             messages: list[dict[str, Any]] = index.get("messages", [])[:limit]
             return messages
         except json.JSONDecodeError:
@@ -486,12 +486,12 @@ class FileEmailAdapter(EmailAdapter):
             return None
 
         try:
-            index = json.loads(index_path.read_text())
+            index = json.loads(index_path.read_text(encoding="utf-8"))
             for entry in index.get("messages", []):
                 if entry["id"] == message_id:
                     filepath = self._mail_dir / "messages" / entry["filename"]
                     if filepath.exists():
-                        content: str = filepath.read_text()
+                        content: str = filepath.read_text(encoding="utf-8")
                         return content
         except (json.JSONDecodeError, KeyError) as exc:
             logger.warning("Failed to read message %s: %s", message_id, exc)

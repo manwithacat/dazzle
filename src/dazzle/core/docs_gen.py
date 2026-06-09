@@ -56,7 +56,7 @@ def load_concepts(kb_dir: Path | None = None) -> dict[str, dict[str, Any]]:
     for path in sorted(kb.glob("*.toml")):
         if path.name == "doc_pages.toml":
             continue
-        data = tomllib.loads(path.read_text())
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
         for name, info in data.get("concepts", {}).items():
             result[name] = dict(info)
         for name, info in data.get("patterns", {}).items():
@@ -72,7 +72,7 @@ def load_page_metadata(pages_path: Path | None = None) -> dict[str, dict[str, An
     Returns dict of slug -> {title, slug, order, intro}.
     """
     path = pages_path or (_KB_DIR / "doc_pages.toml")
-    data = tomllib.loads(path.read_text())
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
     result: dict[str, dict[str, Any]] = {}
     for slug, page in data.get("pages", {}).items():
         result[slug] = dict(page)
@@ -117,7 +117,7 @@ def write_reference_docs(output_dir: Path | None = None) -> list[Path]:
     paths: list[Path] = []
     for slug, content in docs.items():
         p = out / f"{slug}.md"
-        p.write_text(content)
+        p.write_text(content, encoding="utf-8")
         paths.append(p)
     return paths
 
@@ -185,7 +185,7 @@ def inject_readme_feature_table(readme_path: Path | None = None) -> bool:
     path = readme_path or _project_readme_path()
     if not path.exists():
         return False
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     begin = "<!-- BEGIN FEATURE TABLE -->"
     end = "<!-- END FEATURE TABLE -->"
     i_begin = text.find(begin)
@@ -197,7 +197,7 @@ def inject_readme_feature_table(readme_path: Path | None = None) -> bool:
     table = _render_feature_table(pages)
     new_text = text[: i_begin + len(begin)] + "\n" + table + "\n" + text[i_end:]
     if new_text != text:
-        path.write_text(new_text)
+        path.write_text(new_text, encoding="utf-8")
     return True
 
 

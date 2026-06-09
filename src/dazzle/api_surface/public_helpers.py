@@ -164,7 +164,7 @@ def diff_against_baseline(snapshot: str | None = None) -> str:
         return (
             f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api public-helpers --write`)\n"
         )
-    baseline = BASELINE_PATH.read_text()
+    baseline = BASELINE_PATH.read_text(encoding="utf-8")
     if baseline == snapshot:
         return ""
     diff = difflib.unified_diff(

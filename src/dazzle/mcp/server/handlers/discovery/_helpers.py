@@ -151,7 +151,7 @@ def load_report_data(
         return error_response(f"Report not found: {session_id}")
 
     try:
-        data = json.loads(report_file.read_text())
+        data = json.loads(report_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
         return error_response(f"Could not read report: {e}")
 
@@ -191,6 +191,6 @@ def save_discovery_report(project_path: Path, transcript_json: dict[str, Any]) -
 
     session_id = f"discovery_{int(time.time())}"
     report_file = report_dir / f"{session_id}.json"
-    report_file.write_text(json.dumps(transcript_json, indent=2))
+    report_file.write_text(json.dumps(transcript_json, indent=2), encoding="utf-8")
 
     return report_file

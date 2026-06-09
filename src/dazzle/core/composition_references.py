@@ -107,7 +107,7 @@ def load_references(
             continue
 
         try:
-            manifest = json.loads(manifest_path.read_text())
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("Failed to read manifest for %s: %s", sec_type, e)
             continue
@@ -171,7 +171,7 @@ def save_manifest(
         "references": [r.to_manifest_entry() for r in references],
     }
     manifest_path = section_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest_path
 
 

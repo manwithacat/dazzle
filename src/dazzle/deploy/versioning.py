@@ -194,7 +194,7 @@ def save_version_file(version: InfraVersion, output_dir: Path) -> Path:
         Path to the saved version file
     """
     version_file = output_dir / ".dazzle-infra-version.json"
-    with open(version_file, "w") as f:
+    with open(version_file, "w", encoding="utf-8") as f:
         json.dump(version.to_dict(), f, indent=2)
     return version_file
 
@@ -213,7 +213,7 @@ def load_version_file(output_dir: Path) -> InfraVersion | None:
     if not version_file.exists():
         return None
 
-    with open(version_file) as f:
+    with open(version_file, encoding="utf-8") as f:
         data = json.load(f)
     return InfraVersion.from_dict(data)
 

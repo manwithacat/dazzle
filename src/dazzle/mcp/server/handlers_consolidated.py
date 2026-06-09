@@ -825,7 +825,7 @@ def _handle_graph_import(graph: Any, arguments: dict[str, Any]) -> str:
     file_path = arguments.get("file_path")
     if import_data is None and file_path:
         try:
-            with open(file_path) as f:
+            with open(file_path, encoding="utf-8") as f:
                 import_data = json.load(f)
         except Exception as e:
             return error_response(f"Failed to read file: {e}")

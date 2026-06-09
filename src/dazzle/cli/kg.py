@@ -40,7 +40,7 @@ def export_kg(
 
     data["project_path"] = str(project_dir.resolve())
 
-    output.write_text(json.dumps(data, indent=2))
+    output.write_text(json.dumps(data, indent=2), encoding="utf-8")
     entity_count = len(data["entities"])
     relation_count = len(data["relations"])
     typer.echo(f"Exported {entity_count} entities and {relation_count} relations to {output}")
@@ -58,7 +58,7 @@ def import_kg(
         raise typer.Exit(code=1)
 
     try:
-        data = json.loads(input_file.read_text())
+        data = json.loads(input_file.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         typer.echo(f"Error: Invalid JSON: {e}", err=True)
         raise typer.Exit(code=1)

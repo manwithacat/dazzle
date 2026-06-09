@@ -76,7 +76,7 @@ def specs_openapi(
             content = openapi_to_yaml(openapi)
 
     if output:
-        output.write_text(content)
+        output.write_text(content, encoding="utf-8")
         typer.echo(f"OpenAPI specification written to {output}")
     else:
         typer.echo(content)
@@ -138,7 +138,7 @@ def specs_asyncapi(
             content = asyncapi_to_yaml(asyncapi)
 
     if output:
-        output.write_text(content)
+        output.write_text(content, encoding="utf-8")
         typer.echo(f"AsyncAPI specification written to {output}")
     else:
         typer.echo(content)

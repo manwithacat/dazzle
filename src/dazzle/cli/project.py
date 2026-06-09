@@ -223,13 +223,13 @@ def _scaffold_app_directory(
         dir_path.mkdir(parents=True, exist_ok=True)
         init_file = dir_path / "__init__.py"
         if subdir != "scripts" and not init_file.exists():
-            init_file.write_text(f'"""{purpose}."""\n')
+            init_file.write_text(f'"""{purpose}."""\n', encoding="utf-8")
         log(f"  Created {subdir}/")
 
     # .gitkeep for scripts/ so it's tracked even when empty
     gitkeep = target / "scripts" / ".gitkeep"
     if not gitkeep.exists():
-        gitkeep.write_text("")
+        gitkeep.write_text("", encoding="utf-8")
 
 
 def init_command(
@@ -482,7 +482,7 @@ def lint_command(
             all_violations = []
 
             for dsl_file in dsl_files:
-                content = dsl_file.read_text()
+                content = dsl_file.read_text(encoding="utf-8")
                 violations = validator.validate(content, str(dsl_file))
                 all_violations.extend(violations)
 
@@ -678,7 +678,7 @@ def analyze_spec_command(
             spec_content = spec_result.content
             spec_display = f"{spec_file}/ ({spec_result.file_count} files)"
         else:
-            spec_content = spec_path.read_text()
+            spec_content = spec_path.read_text(encoding="utf-8")
             spec_display = spec_file
     else:
         # Auto-detect from current directory
@@ -807,7 +807,7 @@ def example_command(
         # Try to get description from README.md
         description = ""
         if readme_file.exists():
-            with open(readme_file) as f:
+            with open(readme_file, encoding="utf-8") as f:
                 lines = f.readlines()
                 in_overview = False
                 for line in lines:

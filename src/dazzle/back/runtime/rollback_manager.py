@@ -61,7 +61,8 @@ class RollbackManager:
 
         # Save manifest
         (snapshot_dir / "manifest.json").write_text(
-            json.dumps({"files": manifest, "version_id": version_id})
+            json.dumps({"files": manifest, "version_id": version_id}),
+            encoding="utf-8",
         )
         logger.info("Saved DSL snapshot for version %s: %s files", version_id, len(manifest))
 
@@ -93,7 +94,7 @@ class RollbackManager:
                 "message": "DSL file snapshot not available for this version. Only spec data is stored.",
             }
 
-        manifest = json.loads(manifest_file.read_text())
+        manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
         files = manifest.get("files", [])
 
         # Restore files

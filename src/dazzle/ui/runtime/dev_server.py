@@ -268,7 +268,7 @@ def run_dev_server_from_json(
         host: Host to bind to
         port: Port to bind to
     """
-    spec_dict = json.loads(Path(json_path).read_text())
+    spec_dict = json.loads(Path(json_path).read_text(encoding="utf-8"))
     run_dev_server_from_dict(spec_dict, host, port)
 
 

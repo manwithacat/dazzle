@@ -188,7 +188,7 @@ class SynthStage(PreflightStage):
         # Load each template
         for template_file in template_files:
             try:
-                with open(template_file) as f:
+                with open(template_file, encoding="utf-8") as f:
                     template = json.load(f)
 
                 # Store by stack name (derived from filename)

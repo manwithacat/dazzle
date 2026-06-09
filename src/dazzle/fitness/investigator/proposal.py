@@ -165,7 +165,7 @@ def save_proposal(
     )
 
     try:
-        target.write_text(body)
+        target.write_text(body, encoding="utf-8")
     except OSError as e:
         raise ProposalWriteError(f"failed to write {target}: {e}") from e
     return target
@@ -224,7 +224,7 @@ def load_proposal(path: Path) -> Proposal:
 
     Reads only the frontmatter; ignores the markdown body.
     """
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise ProposalParseError(f"no frontmatter: {path}")
     end = text.find("\n---\n", 4)
@@ -316,5 +316,5 @@ def write_blocked_artefact(
         f"{transcript.rstrip()}\n"
         "```\n"
     )
-    path.write_text(body)
+    path.write_text(body, encoding="utf-8")
     return path

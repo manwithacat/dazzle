@@ -692,7 +692,7 @@ def _emit_api_snapshot(snapshot: str, baseline_path: Path, write: bool, diff: bo
     module (which now just re-exports for compat-shim-free clean break)."""
     if write:
         baseline_path.parent.mkdir(parents=True, exist_ok=True)
-        baseline_path.write_text(snapshot)
+        baseline_path.write_text(snapshot, encoding="utf-8")
         typer.echo(f"Wrote {baseline_path.relative_to(baseline_path.parents[2])}")
         return
 
@@ -700,7 +700,7 @@ def _emit_api_snapshot(snapshot: str, baseline_path: Path, write: bool, diff: bo
         if not baseline_path.exists():
             typer.echo(f"(no baseline at {baseline_path} — run with --write)")
             sys.exit(1)
-        baseline = baseline_path.read_text()
+        baseline = baseline_path.read_text(encoding="utf-8")
         if baseline == snapshot:
             typer.echo("No drift.")
             return

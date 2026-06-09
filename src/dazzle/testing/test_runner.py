@@ -387,7 +387,7 @@ class DazzleClient:
             creds_path = Path(".dazzle/test_credentials.json")
             if creds_path.exists():
                 try:
-                    creds = json.loads(creds_path.read_text())
+                    creds = json.loads(creds_path.read_text(encoding="utf-8"))
                     personas = creds.get("personas", {})
                     persona_creds = personas.get(persona, {})
                     email = email or persona_creds.get("email")
@@ -953,7 +953,7 @@ class TestRunner:
         if not self.designs_path.exists():
             return []
 
-        with open(self.designs_path) as f:
+        with open(self.designs_path, encoding="utf-8") as f:
             data = json.load(f)
             return list(data.get("designs", []))
 
@@ -2466,7 +2466,7 @@ class TestRunner:
         creds_path = Path(".dazzle/test_credentials.json")
         if creds_path.exists():
             try:
-                creds = json.loads(creds_path.read_text())
+                creds = json.loads(creds_path.read_text(encoding="utf-8"))
                 personas = creds.get("personas", {})
                 persona_creds = personas.get(persona, {})
                 val = persona_creds.get(field)
@@ -2675,7 +2675,7 @@ def main() -> None:
 
     # Write to file if specified
     if args.output:
-        with open(args.output, "w") as f:
+        with open(args.output, "w", encoding="utf-8") as f:
             f.write(report)
         print(f"\nReport written to: {args.output}")
 

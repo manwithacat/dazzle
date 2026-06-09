@@ -141,7 +141,7 @@ def env_status(
         runtime_data = None
         if runtime_path.exists():
             try:
-                runtime_data = json.loads(runtime_path.read_text())
+                runtime_data = json.loads(runtime_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 pass
 
@@ -225,7 +225,7 @@ def env_logs(
         return
 
     latest = logs[-1]
-    text = latest.read_text(errors="replace")
+    text = latest.read_text(errors="replace", encoding="utf-8")
     lines = text.splitlines()
     typer.echo(f"--- {latest.name} (last {tail} lines) ---")
     for line in lines[-tail:]:

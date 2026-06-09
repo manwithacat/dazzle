@@ -175,7 +175,7 @@ def write_manifest(
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
 
     if manifest_path.exists():
-        data = json.loads(manifest_path.read_text())
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
     else:
         data = {"timestamp": datetime.now(UTC).isoformat(), "apps": []}
 
@@ -196,7 +196,7 @@ def write_manifest(
         }
     )
 
-    manifest_path.write_text(json.dumps(data, indent=2) + "\n")
+    manifest_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
 async def _capture_one(

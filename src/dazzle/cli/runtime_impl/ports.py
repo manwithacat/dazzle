@@ -204,7 +204,7 @@ def write_runtime_file(
     if test_secret:
         runtime_data["test_secret"] = test_secret
 
-    runtime_file.write_text(json.dumps(runtime_data, indent=2))
+    runtime_file.write_text(json.dumps(runtime_data, indent=2), encoding="utf-8")
     return runtime_file
 
 
@@ -218,7 +218,7 @@ def read_runtime_test_secret(project_root: Path) -> str | None:
     if not runtime_file.exists():
         return None
     try:
-        data = json.loads(runtime_file.read_text())
+        data = json.loads(runtime_file.read_text(encoding="utf-8"))
         secret = data.get("test_secret")
         return secret if isinstance(secret, str) and secret else None
     except (json.JSONDecodeError, OSError):
@@ -240,7 +240,7 @@ def read_runtime_file(project_root: Path) -> PortAllocation | None:
         return None
 
     try:
-        data = json.loads(runtime_file.read_text())
+        data = json.loads(runtime_file.read_text(encoding="utf-8"))
         return PortAllocation(
             ui_port=data["ui_port"],
             api_port=data["api_port"],

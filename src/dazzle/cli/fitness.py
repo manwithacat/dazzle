@@ -162,7 +162,7 @@ def queue_command(
 
 def _header_int(queue_file: Path, field: str) -> int:
     """Extract an integer field from the queue file header."""
-    for line in queue_file.read_text().splitlines():
+    for line in queue_file.read_text(encoding="utf-8").splitlines():
         if line.startswith(f"**{field}:**"):
             try:
                 return int(line.split(":**", 1)[1].strip())

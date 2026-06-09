@@ -138,7 +138,7 @@ def test_generate(
     if output:
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(content)
+        output_path.write_text(content, encoding="utf-8")
         typer.echo(f"  → Saved to {output_path}", err=True)
     else:
         typer.echo(content)
@@ -314,7 +314,7 @@ def _run_auto_server_tests(
 
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(result.to_dict(), indent=2))
+        output_path.write_text(json.dumps(result.to_dict(), indent=2), encoding="utf-8")
         typer.echo(f"Results saved to {output_path}")
 
     # Exit with appropriate code
@@ -478,7 +478,7 @@ def _run_legacy_tests(
 
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(results, indent=2))
+        output_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
         typer.echo(f"Results saved to {output_path}")
 
     # Exit with error code if any failures
@@ -1689,7 +1689,7 @@ def dsl_run(
         if output:
             output_path = Path(output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(json.dumps(result.to_dict(), indent=2))
+            output_path.write_text(json.dumps(result.to_dict(), indent=2), encoding="utf-8")
             if not json_mode:
                 typer.echo(f"Results saved to {output_path}")
 
@@ -2528,7 +2528,7 @@ def test_run_all(
     if output:
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(results, indent=2))
+        output_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
         if not json_mode:
             typer.echo(f"Results saved to {output_path}")
 

@@ -24,7 +24,7 @@ def load_fitness_config(project_root: Path) -> FitnessConfig:
     if not pyproject.exists():
         return FitnessConfig()
 
-    data = tomllib.loads(pyproject.read_text())
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     section = data.get("dazzle", {}).get("fitness", {})
     mech = section.get("independence_mechanism", {})
     mechanism = mech.get("primary", "prompt_plus_model_family")

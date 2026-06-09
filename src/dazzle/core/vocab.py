@@ -252,7 +252,7 @@ def load_manifest(path: Path) -> VocabManifest:
     if not path.exists():
         raise FileNotFoundError(f"Manifest not found: {path}")
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     if not data:
@@ -276,7 +276,7 @@ def save_manifest(manifest: VocabManifest, path: Path) -> None:
     data = manifest.model_dump(mode="json")
 
     # Write YAML
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 

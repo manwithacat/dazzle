@@ -46,7 +46,7 @@ def dsl_test_generate_impl(
             output_dir = project_root / "dsl" / "tests"
             output_dir.mkdir(parents=True, exist_ok=True)
             output_file = output_dir / "smoke_test.sh"
-            output_file.write_text(script)
+            output_file.write_text(script, encoding="utf-8")
             output_file.chmod(0o755)
             return {
                 "format": "bash",
@@ -611,7 +611,7 @@ def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
         output_dir = project_root / "dsl" / "tests"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "smoke_test.sh"
-        output_file.write_text(script)
+        output_file.write_text(script, encoding="utf-8")
         output_file.chmod(0o755)
         return json.dumps(
             {

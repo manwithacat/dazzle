@@ -509,7 +509,9 @@ def _serve_ui_only(ctx: _ServeContext) -> None:
         preview_files = generate_preview_files(ctx.appspec, tmpdir)
         if preview_files:
             first = preview_files[0]
-            (Path(tmpdir) / "index.html").write_text(first.read_text())
+            (Path(tmpdir) / "index.html").write_text(
+                first.read_text(encoding="utf-8"), encoding="utf-8"
+            )
 
         os.chdir(tmpdir)
         handler = http.server.SimpleHTTPRequestHandler

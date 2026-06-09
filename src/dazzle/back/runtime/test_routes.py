@@ -237,7 +237,7 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
         creds_path = deps.project_root / ".dazzle" / "test_credentials.json"
         if creds_path.exists():
             try:
-                creds = json.loads(creds_path.read_text())
+                creds = json.loads(creds_path.read_text(encoding="utf-8"))
                 creds_personas = creds.get("personas", {})
             except Exception:
                 logger.debug("Could not load test_credentials.json", exc_info=True)

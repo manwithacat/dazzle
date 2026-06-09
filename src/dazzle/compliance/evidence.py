@@ -58,7 +58,7 @@ def extract_evidence_from_project(project_root: Path) -> EvidenceMap:
     if manifest_path.exists():
         manifest = load_manifest(manifest_path)
         dsl_files = discover_dsl_files(project_root, manifest)
-        content = "".join(f.read_text() for f in sorted(dsl_files))
+        content = "".join(f.read_text(encoding="utf-8") for f in sorted(dsl_files))
         evidence.dsl_hash = f"sha256:{hashlib.sha256(content.encode()).hexdigest()[:16]}"
 
     return evidence

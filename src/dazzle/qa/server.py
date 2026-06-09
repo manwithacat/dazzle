@@ -47,7 +47,7 @@ class AppConnection:
         runtime_path = project_root / ".dazzle" / "runtime.json"
         if not runtime_path.exists():
             raise FileNotFoundError(f"{runtime_path} not found — dazzle serve may not be running")
-        data = json.loads(runtime_path.read_text())
+        data = json.loads(runtime_path.read_text(encoding="utf-8"))
         return cls(site_url=data["ui_url"], api_url=data["api_url"], process=None)
 
     def stop(self) -> None:

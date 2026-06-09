@@ -717,8 +717,10 @@ def deploy_dockerfile_cmd(
     version = _get_dazzle_version()
     output_path = Path(output_dir).resolve()
 
-    (output_path / "Dockerfile").write_text(generate_production_dockerfile())
-    (output_path / "requirements.txt").write_text(generate_deploy_requirements(version))
+    (output_path / "Dockerfile").write_text(generate_production_dockerfile(), encoding="utf-8")
+    (output_path / "requirements.txt").write_text(
+        generate_deploy_requirements(version), encoding="utf-8"
+    )
 
     console.print(f"Generated {output_path / 'Dockerfile'}")
     console.print(f"Generated {output_path / 'requirements.txt'}")
@@ -746,9 +748,9 @@ def deploy_heroku_cmd(
 
     procfile, runtime, requirements = generate_heroku_files(version)
 
-    (output_path / "Procfile").write_text(procfile)
-    (output_path / "runtime.txt").write_text(runtime)
-    (output_path / "requirements.txt").write_text(requirements)
+    (output_path / "Procfile").write_text(procfile, encoding="utf-8")
+    (output_path / "runtime.txt").write_text(runtime, encoding="utf-8")
+    (output_path / "requirements.txt").write_text(requirements, encoding="utf-8")
 
     console.print(f"Generated {output_path / 'Procfile'}")
     console.print(f"Generated {output_path / 'runtime.txt'}")
@@ -785,7 +787,7 @@ def deploy_compose_cmd(
             "[yellow]Warning: No Dockerfile found. Run 'dazzle deploy dockerfile' first.[/yellow]"
         )
 
-    compose_path.write_text(generate_compose_yaml())
+    compose_path.write_text(generate_compose_yaml(), encoding="utf-8")
 
     console.print(f"Generated {compose_path}")
     console.print()

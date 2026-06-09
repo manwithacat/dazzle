@@ -49,7 +49,7 @@ class SQLiteSpanExporter(SpanExporter):
         self._command_line = command_line
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self._db_path, isolation_level=None, check_same_thread=False)
-        self._conn.executescript(_SCHEMA_PATH.read_text())
+        self._conn.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
         self._ensure_run_row()
 
     def _ensure_run_row(self) -> None:

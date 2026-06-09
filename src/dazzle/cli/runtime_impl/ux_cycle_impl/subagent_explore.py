@@ -211,7 +211,9 @@ def init_explore_run(
 
     findings_path = state_dir / "findings.json"
     if not findings_path.exists():
-        findings_path.write_text(json.dumps({"proposals": [], "observations": []}, indent=2) + "\n")
+        findings_path.write_text(
+            json.dumps({"proposals": [], "observations": []}, indent=2) + "\n", encoding="utf-8"
+        )
 
     conn_path = state_dir / "conn.json"
     runner_script_path = state_dir / "runner.py"
@@ -250,7 +252,7 @@ def write_runner_script(ctx: ExploreRunContext) -> Path:
         persona_id=repr(ctx.persona_id),
         conn_path=repr(str(ctx.conn_path)),
     )
-    ctx.runner_script_path.write_text(script)
+    ctx.runner_script_path.write_text(script, encoding="utf-8")
     return ctx.runner_script_path
 
 
@@ -265,7 +267,7 @@ def read_findings(ctx: ExploreRunContext) -> SubagentExploreFindings:
     """
     if not ctx.findings_path.exists():
         raise FileNotFoundError(f"findings not found at {ctx.findings_path}")
-    raw = json.loads(ctx.findings_path.read_text())
+    raw = json.loads(ctx.findings_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError(f"findings top-level must be a dict, got {type(raw).__name__}")
     return SubagentExploreFindings.from_dict(raw)

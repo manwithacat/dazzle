@@ -124,7 +124,9 @@ def run_cmd(
     # Output
     if output:
         output_path = Path(output)
-        output_path.write_text(json.dumps(result.to_dict(), indent=2, default=str))
+        output_path.write_text(
+            json.dumps(result.to_dict(), indent=2, default=str), encoding="utf-8"
+        )
         click.echo(f"\nResults saved to: {output_path}")
 
     click.echo("\n" + report)
@@ -132,7 +134,7 @@ def run_cmd(
     # Compare if requested
     if compare:
         compare_path = Path(compare)
-        baseline = json.loads(compare_path.read_text())
+        baseline = json.loads(compare_path.read_text(encoding="utf-8"))
         comparison = compare_results(result.to_dict(), baseline)
         click.echo("\n" + format_comparison(comparison))
 
@@ -165,8 +167,8 @@ def compare_cmd(file1: str, file2: str, format: str) -> None:
 
         dazzle pra compare baseline.json current.json
     """
-    baseline = json.loads(Path(file1).read_text())
-    current = json.loads(Path(file2).read_text())
+    baseline = json.loads(Path(file1).read_text(encoding="utf-8"))
+    current = json.loads(Path(file2).read_text(encoding="utf-8"))
 
     comparison = compare_results(current, baseline)
 
@@ -196,7 +198,7 @@ def report_cmd(file: str, format: str) -> None:
 
         dazzle pra report results.json --format markdown
     """
-    data = json.loads(Path(file).read_text())
+    data = json.loads(Path(file).read_text(encoding="utf-8"))
 
     if format == "json":
         click.echo(json.dumps(data, indent=2))
@@ -634,7 +636,9 @@ def tb_run_cmd(
     # Output
     if output:
         output_path = Path(output)
-        output_path.write_text(json.dumps(result.to_dict(), indent=2, default=str))
+        output_path.write_text(
+            json.dumps(result.to_dict(), indent=2, default=str), encoding="utf-8"
+        )
         click.echo(f"\nResults saved to: {output_path}")
 
     click.echo("\n" + report)

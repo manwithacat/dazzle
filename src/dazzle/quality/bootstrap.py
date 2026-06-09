@@ -21,7 +21,7 @@ def _template_dir() -> Path:
 def _load_template_ruff_tables() -> dict[str, Any]:
     """Read the Dazzle-managed [tool.ruff*] tables out of the blank template."""
     template = _template_dir() / "pyproject.toml"
-    return tomllib.loads(template.read_text())
+    return tomllib.loads(template.read_text(encoding="utf-8"))
 
 
 def quality_bootstrap(project_dir: Path) -> list[Path]:
@@ -57,7 +57,7 @@ def _bootstrap_pyproject(project_dir: Path) -> list[Path]:
     template_tables = _load_template_ruff_tables()
 
     if target.exists():
-        existing = tomllib.loads(target.read_text())
+        existing = tomllib.loads(target.read_text(encoding="utf-8"))
     else:
         existing = {}
 
@@ -65,14 +65,14 @@ def _bootstrap_pyproject(project_dir: Path) -> list[Path]:
     tool = existing.setdefault("tool", {})
     tool["ruff"] = template_tables["tool"]["ruff"]
 
-    target.write_text(tomli_w.dumps(existing))
+    target.write_text(tomli_w.dumps(existing), encoding="utf-8")
     return [target]
 
 
 def _bootstrap_pyright(project_dir: Path) -> list[Path]:
     target = project_dir / "pyrightconfig.json"
     src = _template_dir() / "pyrightconfig.json"
-    target.write_text(src.read_text())
+    target.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return [target]
 
 
@@ -81,5 +81,5 @@ def _bootstrap_precommit(project_dir: Path) -> list[Path]:
     if target.exists():
         return []  # don't overwrite a user-customised pre-commit config
     src = _template_dir() / ".pre-commit-config.yaml"
-    target.write_text(src.read_text())
+    target.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return [target]

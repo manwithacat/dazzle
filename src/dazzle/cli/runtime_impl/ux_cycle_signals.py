@@ -53,7 +53,7 @@ def emit(source: str, kind: str, payload: dict[str, Any]) -> None:
         "payload": payload,
         "timestamp": timestamp,
     }
-    (_SIGNALS_DIR / filename).write_text(json.dumps(data, indent=2))
+    (_SIGNALS_DIR / filename).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def mark_run(source: str) -> None:
@@ -64,7 +64,7 @@ def mark_run(source: str) -> None:
     """
     _ensure_dir()
     timestamp = time.time()
-    _marker_path(source).write_text(json.dumps({"timestamp": timestamp}))
+    _marker_path(source).write_text(json.dumps({"timestamp": timestamp}), encoding="utf-8")
 
 
 def since_last_run(source: str, kind: str | None = None) -> list[Signal]:
@@ -82,7 +82,7 @@ def since_last_run(source: str, kind: str | None = None) -> list[Signal]:
     last_run = 0.0
     if marker.exists():
         try:
-            last_run = json.loads(marker.read_text())["timestamp"]
+            last_run = json.loads(marker.read_text(encoding="utf-8"))["timestamp"]
         except (json.JSONDecodeError, KeyError):
             last_run = 0.0
 
@@ -91,7 +91,7 @@ def since_last_run(source: str, kind: str | None = None) -> list[Signal]:
         if f.name.startswith(".mark-"):
             continue
         try:
-            data = json.loads(f.read_text())
+            data = json.loads(f.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             continue
         if data.get("source") == source:

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **PEP 686 readiness: explicit `encoding="utf-8"` on text-mode file I/O (Python version-support, slice 2).**
+  Backfilled an explicit UTF-8 encoding across ~278 `open()` / `Path.read_text()` / `Path.write_text()`
+  call sites in `src/dazzle/` that previously relied on the platform default text encoding. The change is
+  portable to every supported interpreter (3.12+) and removes a class of latent failures when Python 3.15
+  switches the default text encoding to UTF-8 (PEP 686). Binary-mode opens, `os.open`, `tomllib`/hashing
+  reads, and non-pathlib receivers (e.g. `importlib.metadata.Distribution.read_text`) were correctly
+  excluded; the diff is encoding-kwarg-only (full unit suite + mypy + ruff green). See
+  `docs/migration-findings.md` §5. *No regression guard yet — new default-encoding I/O can still slip in.*
+
 ### Fixed
 - **Deploy/runtime Python pins reconciled to the `>=3.12` floor (Python version-support initiative, slice 1).**
   Several deploy-artifact generators still pinned Python 3.11, which can't `pip install dazzle-dsl`

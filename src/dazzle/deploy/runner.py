@@ -359,7 +359,7 @@ app.synth()
 '''
 
         app_path = self.output_dir / "app.py"
-        app_path.write_text(code)
+        app_path.write_text(code, encoding="utf-8")
         result.add_file(app_path)
 
         return result
@@ -376,7 +376,7 @@ app.synth()
 constructs>=10.0.0
 """
         req_path = self.output_dir / "requirements.txt"
-        req_path.write_text(requirements)
+        req_path.write_text(requirements, encoding="utf-8")
         result.add_file(req_path)
 
         # cdk.json
@@ -404,14 +404,14 @@ constructs>=10.0.0
 }
 """
         cdk_path = self.output_dir / "cdk.json"
-        cdk_path.write_text(cdk_json)
+        cdk_path.write_text(cdk_json, encoding="utf-8")
         result.add_file(cdk_path)
 
         # stacks/__init__.py
         stacks_init = '''"""CDK stacks for the application."""
 '''
         stacks_init_path = self.output_dir / "stacks" / "__init__.py"
-        stacks_init_path.write_text(stacks_init)
+        stacks_init_path.write_text(stacks_init, encoding="utf-8")
         result.add_file(stacks_init_path)
 
         # README.md
@@ -496,7 +496,7 @@ aws ssm get-parameters-by-path --path "/{app_name}/{env}/tigerbeetle/nodes" --qu
 ```
 """
         readme_path = self.output_dir / "README.md"
-        readme_path.write_text(readme)
+        readme_path.write_text(readme, encoding="utf-8")
         result.add_file(readme_path)
 
         return result
@@ -509,7 +509,7 @@ aws ssm get-parameters-by-path --path "/{app_name}/{env}/tigerbeetle/nodes" --qu
         ]
 
         for py_file in self.output_dir.rglob("*.py"):
-            content = py_file.read_text()
+            content = py_file.read_text(encoding="utf-8")
             for pattern in forbidden_patterns:
                 if pattern in content:
                     return False

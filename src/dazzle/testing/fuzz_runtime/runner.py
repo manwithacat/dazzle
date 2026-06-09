@@ -81,7 +81,7 @@ def _booted_app(project_root: Path) -> Iterator[tuple[str, str]]:
         while time.time() < deadline:
             if runtime_path.exists():
                 with contextlib.suppress(Exception):
-                    rt = json.loads(runtime_path.read_text())
+                    rt = json.loads(runtime_path.read_text(encoding="utf-8"))
                     secret = rt.get("test_secret", "")
                     base = rt.get("ui_url", "")
                     if secret and base:

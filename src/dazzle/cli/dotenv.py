@@ -32,7 +32,7 @@ def load_project_dotenv(project_root: Path) -> list[str]:
         return []
 
     try:
-        content = env_file.read_text()
+        content = env_file.read_text(encoding="utf-8")
     except OSError:
         return []
 

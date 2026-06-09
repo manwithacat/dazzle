@@ -74,7 +74,7 @@ def _read_file_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) ->
             return {"error": "binary file; not readable"}
 
         try:
-            content = target_resolved.read_text()
+            content = target_resolved.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
             return {"error": f"decode failed: {e}"}
 
@@ -594,7 +594,7 @@ def _python_search(query: str, roots: list[Path], dazzle_root: Path) -> list[dic
     for root in roots:
         for md_file in root.rglob("*.md"):
             try:
-                lines = md_file.read_text().splitlines()
+                lines = md_file.read_text(encoding="utf-8").splitlines()
             except (OSError, UnicodeDecodeError):
                 continue
             for i, line in enumerate(lines, start=1):

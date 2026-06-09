@@ -182,7 +182,7 @@ def analyze_spec_file(  # type: ignore[no-untyped-def]  # kwargs forwarded to Sp
     if not spec_path.exists():
         raise FileNotFoundError(f"Specification file not found: {spec_path}")
 
-    spec_content = spec_path.read_text()
+    spec_content = spec_path.read_text(encoding="utf-8")
 
     analyzer = SpecAnalyzer(provider=provider, **kwargs)
     return analyzer.analyze(spec_content, str(spec_path))

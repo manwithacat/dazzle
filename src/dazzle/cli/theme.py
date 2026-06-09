@@ -156,7 +156,7 @@ def init_command(
 
     # Copy CSS verbatim — the override layer is identical, just the
     # values differ. User edits to taste.
-    target_css.write_text(source.css_path.read_text())
+    target_css.write_text(source.css_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     # Boilerplate TOML — user owns the metadata; we just give them the
     # right keys.
@@ -166,7 +166,8 @@ def init_command(
         f'inspired_by = "{source.inspired_by or inspired_by}"\n'
         f'default_color_scheme = "{source.default_color_scheme}"\n'
         f"font_preconnect = []\n"
-        f'tags = ["project-local"]\n'
+        f'tags = ["project-local"]\n',
+        encoding="utf-8",
     )
 
     typer.echo(f"Created theme {name!r}:")

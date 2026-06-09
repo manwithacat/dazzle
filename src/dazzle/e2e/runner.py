@@ -67,7 +67,7 @@ def _tail_log(log_path: Path | None, n: int = LOG_TAIL_LINES) -> list[str]:
     if log_path is None or not log_path.exists():
         return []
     try:
-        text = log_path.read_text(errors="replace")
+        text = log_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
     lines = text.splitlines()
@@ -268,7 +268,7 @@ class ModeRunner:
         while loop.time() < deadline:
             if path.exists():
                 try:
-                    data: dict[str, Any] = json.loads(path.read_text())
+                    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
                     return data
                 except (OSError, json.JSONDecodeError):
                     pass
