@@ -1,10 +1,14 @@
-# Phase 0 — Python Version Support: Reconnaissance Findings
+# Python Version Support: Reconnaissance Findings + Outcomes
 
-**Status:** read-only recon, no code changed.
-**Date:** 2026-06-09 · **Repo floor:** `requires-python = ">=3.12"` · **Local interpreter:** 3.12.11 (pyenv `dazzle-dev`)
+**Status:** **COMPLETE — shipped v0.82.1 → v0.82.8** (the recon below, §1–§8, is preserved as the original
+Phase-0 read-only snapshot; the *Outcomes* section that follows records what actually shipped and where reality
+diverged from the recon's predictions).
+**Date:** recon 2026-06-09; outcomes appended 2026-06-09 · **Floor:** `requires-python = ">=3.12"` (unchanged) ·
+**Primary target:** Python 3.14
 **Source plan:** `/Users/james/Desktop/python-version-support-plan.md`
 
-> Location: `docs/migration-findings.md` — tracked, committed as the Phase-0 gate artifact future phases reference.
+> Location: `docs/migration-findings.md` — tracked. Companion reports: `docs/python-3.14-primary-target.md`
+> (perf/primary-target), `docs/superpowers/specs|plans/2026-06-09-pep695-adoption*` (PEP 695).
 
 ---
 
@@ -22,6 +26,49 @@ language-compat risk surface (PEP 594 / 649 / 686) is **small to moderate**.
    local dev, but it is exactly the file Heroku's uv path needs to hold a real version. → §6, §7.
 4. PEP 594 removed-module exposure is **zero**. PEP 649 surface is **8 sites, all writes**. PEP 686 surface is
    real but portable (~55 non-test `open()` + 306 `read_text/write_text` without `encoding=`). → §3–5.
+
+---
+
+## Outcomes — what shipped (v0.82.1 → v0.82.8, all green on a 3.12/3.13/3.14 hard matrix)
+
+The initiative completed across eight releases. Sequencing was reordered from the recon's §8 (uv was pulled
+ahead of the interpreter cells, on the rationale that it makes multi-interpreter testing trivial), and a
+perf-driven **3.14-primary-target** promotion was added beyond the original plan.
+
+| Slice | Shipped | Result |
+|---|---|---|
+| Deploy/floor pin reconciliation (`runtime.txt` 3.11→3.12; Docker bases) | **v0.82.1** | fixed the live discrepancy from §0/§6 |
+| PEP 686 `encoding=` backfill (~278 sites, 6 parallel agents) | **v0.82.1** | §5 surface closed; portable, floor-independent |
+| **uv = canonical toolchain** (`uv.lock`, `setup-dazzle` composite → `uv sync --frozen`, `uv pip` for in-job tools, `pygls`→`lsp` extra) | **v0.82.2** | §7 executed; reproducible builds; the §7c work items (CI rewrites, the `\|\| true` hack) all resolved |
+| 3.13 CI cell (hard-required) | **v0.82.3** | clean; all native deps incl. xmlsec have 3.13 wheels |
+| 3.14 CI cell (allow-failure → then promoted) | **v0.82.4** | see correction ① below |
+| `dazzle deploy heroku` uv-buildpack scaffolding (`pyproject.toml`+`uv.lock`+`.python-version`; `--pip` fallback) | **v0.82.5** | §7a downstream story delivered; also fixed deploy deps to `dazzle-dsl[serve]` |
+| **3.14 promoted to PRIMARY target + hard CI cell** | **v0.82.6** | new vs recon; see ① and ② |
+| **PEP 695 adoption** (18→20 sites, ruff ignores removed) | **v0.82.7 / .8** | §1/§8 lever pulled; see correction ③ |
+
+**Where reality diverged from the recon's predictions:**
+
+- ① **The §2 "most likely 3.14 dependency blocker" (`python-xmlsec`/`lxml`) did NOT materialize.** On CPython
+  3.14.5 every dependency — xmlsec included — installs from wheels; the full suite is green on 3.14. The
+  recon's caution was correct to flag it, but the gate passed cleanly. 3.14 went from allow-failure to
+  hard-required once two *non-Dazzle* reds were cleared (a pygls `asyncio.iscoroutinefunction` deprecation and
+  CPython 3.14's `ForwardRef` repr change — both fixed portably, no api-surface baseline regen).
+- ② **3.14 is now the *primary* target, not just supported** — a perf-driven addition beyond the plan. Measured
+  ~6–12% faster on Dazzle's parse→IR path via the uv tail-call interpreter (`Py_TAIL_CALL_INTERP=1` in uv/pbs
+  builds only, *not* GCC `python:3.14-slim`). Full analysis + caveats: `docs/python-3.14-primary-target.md`.
+- ③ **The floor was NOT moved, and PEP 695 was decoupled from it.** Key insight (refines §4/§8): PEP 695 syntax
+  is legal since 3.12 — it is *floor-independent* and shipped now at `>=3.12`. Only the
+  `from __future__ import annotations` cleanup (§4) is genuinely gated on a 3.14 floor (PEP 649). So the floor
+  stays `>=3.12` with full 3.12/3.13/3.14 support; **the floor move is the one remaining deferred item** (a
+  product decision, revisit when there's concrete reason to drop 3.12 — EOL Oct 2028).
+
+**Still deferred (intentionally):** the floor move (`>=3.13`/`>=3.14`) + the 669-file `__future__`-annotations
+cleanup (§4, ADR-0014-aware, needs a 3.14 floor); rebasing the Docker default onto a uv/pbs interpreter to
+capture the tail-call speedup in containers (per `docs/python-3.14-primary-target.md`).
+
+**Process note (§7-adjacent):** a uv-specific footgun surfaced — CI lints with the `uv.lock`-pinned ruff, which
+can be newer than the local pyenv ruff and flag more sites; v0.82.7 shipped a red `lint` job for exactly this
+and was fixed in v0.82.8. Pre-ship lint now uses `uvx ruff@<locked>`.
 
 ---
 
@@ -59,6 +106,9 @@ on 3.13/3.14 support and any future free-threaded build):
 
 > Per the plan's guardrail 7 and §6.2: if `python-xmlsec`/`lxml` lacks a 3.14 wheel at remediation time, **stop and
 > report** — do not fork/pin a pre-release. 3.13 should be clean across the board.
+>
+> **OUTCOME:** wheels existed for **both 3.13 and 3.14** — `xmlsec==1.3.17` installs cleanly on CPython 3.14.5.
+> No blocker materialized; the full suite is green on all three interpreters. (See Outcomes ①.)
 
 ## 3. PEP 594 removed-module exposure (plan step 3)
 
@@ -197,13 +247,16 @@ before/after on a CI runner to put a real number on §7b before committing.
 | Toolchain (uv/pyright/lock) | pip/mypy/no-lock | assumed present | **false** — reskin before executing |
 | Heroku/runtime pins | 3.11.11 vs >=3.12 | guardrail only | live discrepancy to fix now |
 
-**Recommended order (Dazzle-accurate):**
-1. **This report** (gate) + reconcile `runtime.txt`/`.python-version` vs the 3.12 floor.
-2. **PEP 686 `encoding=` backfill** — portable, ships on 3.12 today, independent of everything else.
-3. **Add a 3.13 CI cell** (mypy/ruff stay at py312) — expected near-green.
-4. **uv migration** as its own slice (reproducible Heroku builds + faster CI; measure the gain).
-5. **3.14 cell** with the `[saml]`/xmlsec wheel check as the explicit gate.
-6. **Floor move + PEP 695 + future-annotations** — deferred, explicit product decision; ADR-0014-aware.
+**Recommended order (Dazzle-accurate) — annotated with what actually shipped:**
+1. ✅ **This report** (gate) + reconcile `runtime.txt`/`.python-version` vs the 3.12 floor → **v0.82.1**.
+2. ✅ **PEP 686 `encoding=` backfill** → **v0.82.1** (~278 sites).
+3. ↪ **uv migration** — *reordered ahead of the cells* (it makes multi-interpreter testing trivial) → **v0.82.2**;
+   downstream Heroku scaffolding → **v0.82.5**.
+4. ✅ **3.13 CI cell** → **v0.82.3** (hard-required).
+5. ✅ **3.14 cell** → **v0.82.4** (allow-fail) → **v0.82.6** (promoted to **primary + hard**); the `[saml]`/xmlsec
+   gate passed cleanly (Outcomes ①).
+6. ↪ **PEP 695** — *split out and shipped at the current floor* (it's floor-independent) → **v0.82.7/.8**. The
+   **floor move + `__future__`-annotations cleanup remain deferred** (product decision; Outcomes ③).
 
-**Gate satisfied:** this findings report exists. Do not proceed to Phase 1 changes without sign-off on the
-resequencing above.
+**Initiative complete.** Floor stays `>=3.12`; 3.14 is the primary target; the only open item is the floor move
+itself, intentionally deferred.
