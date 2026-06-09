@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.5] - 2026-06-09
+
 ### Changed
 - **`dazzle deploy heroku` scaffolds Heroku's uv buildpack by default (Python version-support, slice 4b).**
   Emits `pyproject.toml` (`dazzle-dsl[serve]` pinned + `requires-python = ">=3.12"` + `[tool.uv] package = false`
