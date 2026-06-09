@@ -51,7 +51,7 @@ jobs:
         python-version: ["3.12"]
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -191,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -279,7 +279,7 @@ jobs:
     # + `warn_unused_ignores` flags fire on functions that wrap them.
     # Matching the dev-install superset keeps the type-check env
     # identical to local mypy.
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -297,7 +297,7 @@ jobs:
     needs: [python-tests, lint, security-tests]
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -334,7 +334,7 @@ jobs:
     needs: [python-tests, lint]
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -404,7 +404,7 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
 
@@ -455,7 +455,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -551,7 +551,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -698,7 +698,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -738,7 +738,7 @@ jobs:
     runs-on: macos-14  # Need macOS for brew commands
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
     - name: Extract expected version
       id: version
