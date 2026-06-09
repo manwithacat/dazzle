@@ -15,12 +15,10 @@ Set up a local development environment for contributing to Dazzle.
 git clone https://github.com/manwithacat/dazzle.git
 cd dazzle
 
-# Create virtual environment
-python -m venv .venv
+# Create the venv + editable install from uv.lock (uv is the canonical toolchain)
+uv sync --extra dev
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install in development mode
-pip install -e ".[dev]"
+# (pip alternative: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]")
 
 # Install Node dependencies
 npm install

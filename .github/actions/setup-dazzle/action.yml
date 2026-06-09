@@ -1,69 +1,88 @@
 name: Setup Dazzle
 description: |
-  Set up Python with pip cache and install Dazzle editable with the
-  requested extras. Centralises the 8× duplication previously in
-  ci.yml so that drift between jobs (missing `mcp` extra in one place,
-  missing `mobile` in another) can't happen.
+  Install uv, provision the requested Python, and sync Dazzle (editable)
+  with the requested extras from the committed uv.lock. Centralises the
+  install across jobs so extras can't drift between workflows (the 8×
+  duplication this replaced let `mcp`/`mobile` go missing per-job).
 
-  IMPORTANT: this is a *local* composite action, so the calling job
-  MUST check out the repo before invoking it — otherwise the runner
-  can't find this action.yml file (the chicken-and-egg gotcha for
-  every local composite):
+  IMPORTANT: this is a *local* composite action, so the calling job MUST
+  check out the repo before invoking it — otherwise the runner can't find
+  this action.yml file (the chicken-and-egg gotcha for every local
+  composite):
 
     steps:
       - uses: actions/checkout@<sha>  # v6 — required FIRST (see note above)
       - uses: ./.github/actions/setup-dazzle
 
+  The sync runs with `--frozen`, so uv.lock must stay in step with
+  pyproject.toml. After changing dependencies in pyproject.toml, run
+  `uv lock` and commit the updated uv.lock in the SAME change, or every
+  job using this action fails the frozen check.
+
+  The synced venv (`.venv`) is put on PATH, so downstream steps keep using
+  bare `python`/`pytest`/`ruff`/`mypy` unchanged. Note a uv venv has NO
+  `pip` — steps that install extra tooling must use `uv pip install`.
+
   Override extras when a job needs a different superset:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport
-        optional-pip: pygls bleach
+        extras: dev,tigerbeetle
 
 inputs:
   python-version:
-    description: Python version passed to actions/setup-python
+    description: Python version uv provisions and syncs against.
     required: false
     default: "3.12"
   extras:
-    description: Comma-separated pip extras for `pip install -e ".[<extras>]"`
+    description: Comma-separated optional-dependency extras to sync.
     required: false
     # `perf` is in the default set because `dazzle.cli` imports
     # `dazzle.perf` at module load (tracer init at CLI entry, #1158), so
     # opentelemetry must be present for the test suite to even collect.
-    # `saml` (python3-saml; prebuilt xmlsec wheel on linux, no apt needed) is in
-    # the default so the SAML provider + IdP-metadata tests run in CI instead of
-    # skipping on a missing `onelogin` import (#1345).
-    default: dev,llm,mcp,mobile,postgres,perf,saml
+    # `saml` (python3-saml; prebuilt xmlsec wheel) is in the default so the
+    # SAML provider + IdP-metadata tests run in CI instead of skipping on a
+    # missing `onelogin` import (#1345).
+    # `lsp` (pygls/lsprotocol) is in the default so the LSP tests run from
+    # the lock — replaces the old best-effort `pip install pygls || true`
+    # optional-pip hack, which installed outside the lockfile.
+    default: dev,llm,mcp,mobile,postgres,perf,saml,lsp
   optional-pip:
     description: |
-      Space-separated package list installed best-effort after the editable
-      install (failures swallowed via `|| true`). Used for packages that
-      aren't in any extra (e.g. pygls for the LSP). Pass an empty string
-      to skip.
+      DEPRECATED — retained only for call-site compatibility. Space-separated
+      packages installed best-effort via `uv pip install … || true` for
+      tooling that isn't in any extra. These install OUTSIDE the lockfile, so
+      prefer adding a real extra + `uv lock` instead. Pass "" to skip.
     required: false
-    default: pygls
+    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+    - name: Install uv
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
       with:
-        python-version: ${{ inputs.python-version }}
-        cache: pip
-        cache-dependency-path: pyproject.toml
+        enable-cache: true
+        cache-dependency-glob: uv.lock
 
-    - name: Install Dazzle (extras=${{ inputs.extras }})
+    - name: Sync Dazzle (python=${{ inputs.python-version }}, extras=${{ inputs.extras }})
       shell: bash
       env:
         EXTRAS: ${{ inputs.extras }}
         OPTIONAL_PIP: ${{ inputs.optional-pip }}
+        PYVER: ${{ inputs.python-version }}
       run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[${EXTRAS}]"
+        EXTRA_FLAGS=""
+        IFS=',' read -ra _extras <<< "$EXTRAS"
+        for e in "${_extras[@]}"; do
+          [ -n "$e" ] && EXTRA_FLAGS="$EXTRA_FLAGS --extra $e"
+        done
+        uv sync --python "$PYVER" --frozen $EXTRA_FLAGS
+        # Put the synced venv on PATH so subsequent bare `python`/`pytest`
+        # steps resolve to it without needing `uv run` everywhere.
+        echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+        echo "VIRTUAL_ENV=$PWD/.venv" >> "$GITHUB_ENV"
         if [ -n "$OPTIONAL_PIP" ]; then
-          # Best-effort: never fail the build on optional tooling.
-          pip install $OPTIONAL_PIP || true
+          # Best-effort, outside the lock (deprecated — see input docs).
+          uv pip install $OPTIONAL_PIP || true
         fi

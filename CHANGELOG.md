@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **uv is now the canonical Python toolchain (Python version-support, slice 4 — framework).**
+  Generated and committed `uv.lock` (221 packages, universal resolution across all extras, zero
+  conflicts) and migrated the framework's own dev + CI install from pip to uv:
+  - The `setup-dazzle` composite installs uv (`astral-sh/setup-uv` pinned to v8.2.0) and runs
+    `uv sync --frozen`, putting `.venv` on `$GITHUB_PATH` + `VIRTUAL_ENV` so every existing bare
+    `python`/`pytest`/`ruff`/`mypy` step works unchanged. Shared by ci / coverage-nightly /
+    tigerbeetle / fuzz-nightly / mutation-nightly.
+  - In-job tool installs that assumed pip (bandit, pip-audit, playwright, aws-cdk) now use
+    `uv pip install` (a uv venv has no `pip`); `pip freeze` → `uv pip freeze`.
+  - `pygls` moved from the best-effort `optional-pip … || true` hack into the `lsp` extra, so the LSP +
+    mypy jobs resolve it from the lock. The `optional-pip` composite input is retained but deprecated.
+  - `.python-version` set to `3.12` (was the pyenv venv name `dazzle-dev`, which uv warned on).
+  - Dev-setup docs (`.claude/CLAUDE.md`, `CONTRIBUTING.md`, `docs/contributing/dev-setup.md`) now lead
+    with `uv sync`; pip remains supported as a fallback. Several stale "Python 3.11" mentions corrected
+    to 3.12.
+  Downstream user-project scaffolding (`dazzle deploy` Heroku files, `heroku.md`) deliberately stays on
+  pip — that's the follow-up slice 4b. Adversarial CI review: no blockers. See `docs/migration-findings.md` §7.
+
+### Agent Guidance
+- **uv toolchain.** After changing deps in `pyproject.toml`, run `uv lock` and commit the updated
+  `uv.lock` in the SAME change — CI's `setup-dazzle` syncs with `--frozen` and fails on lock drift. A uv
+  `.venv` has no `pip`; use `uv pip install <tool>` for one-off CI tooling. Local dev: `uv sync --extra dev …`.
+
 ## [0.82.1] - 2026-06-09
 
 ### Changed

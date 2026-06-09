@@ -213,8 +213,8 @@ jobs:
       run: |
         cd /tmp/test-project/infra || exit 0
         if [ -f app.py ]; then
-          # Install CDK dependencies
-          pip install aws-cdk-lib constructs
+          # Install CDK dependencies (uv venv from setup-dazzle has no pip)
+          uv pip install aws-cdk-lib constructs
 
           # Synthesize (validates the CDK code)
           cdk synth --no-staging 2>&1 || echo "Note: CDK synth may have dependency warnings"

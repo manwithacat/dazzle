@@ -75,8 +75,13 @@ If those can't be answered, the change isn't blocked, but it carries an explicit
 
 ### Dev Setup
 ```bash
-pip install -e ".[dev,llm,mcp]"    # Editable install with all extras
+uv sync --extra dev --extra llm --extra mcp   # Create .venv + editable install from uv.lock
+# then: source .venv/bin/activate   (or prefix commands with `uv run`)
+# pip still works if you prefer: pip install -e ".[dev,llm,mcp]"
 ```
+**uv is the canonical toolchain.** After changing deps in `pyproject.toml`, run
+`uv lock` and commit the updated `uv.lock` in the same change — CI syncs with `--frozen` and
+fails on lock drift. A uv `.venv` has no `pip`; use `uv pip install <tool>` for one-off tooling.
 
 ```bash
 # Run app

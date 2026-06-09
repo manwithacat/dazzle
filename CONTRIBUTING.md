@@ -26,14 +26,15 @@ We welcome all kinds of contributions:
 
 2. **Set Up Python Environment**
    ```bash
-   # We recommend Python 3.11 or 3.12
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   # Requires Python 3.12+ (uv provisions it automatically).
+   uv sync --extra dev        # creates .venv + editable install from uv.lock
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
-3. **Install Development Dependencies**
+3. **Development Dependencies**
+   `uv sync` (above) already installed them from `uv.lock`. Prefer pip instead?
    ```bash
-   pip install -e ".[dev]"
+   python3 -m venv venv && source venv/bin/activate && pip install -e ".[dev]"
    ```
 
 4. **Install Pre-commit Hooks** (recommended)

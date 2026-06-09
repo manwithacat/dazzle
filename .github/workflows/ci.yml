@@ -142,18 +142,19 @@ jobs:
 
     - name: Run bandit security scanner
       run: |
-        pip install bandit[toml]
+        uv pip install bandit[toml]
         bandit -c pyproject.toml -r src/dazzle_back/runtime/ --severity-level medium
 
     - name: Run pip-audit (hard-fail on findings)
       # Hard-fails the build on any known vulnerability in the resolved
       # dependency tree (closes #1200; was advisory-only with `|| true` +
-      # `continue-on-error: true`). The `setup-dazzle` composite upgrades
-      # pip to latest before install, so pip's own CVEs (CVE-2025-8869,
-      # CVE-2026-1703, CVE-2026-3219, CVE-2026-6357 — all in pip <26.1)
-      # don't surface here.
+      # `continue-on-error: true`). The `setup-dazzle` composite syncs into
+      # a uv venv that has NO `pip` installed, so pip's own CVEs
+      # (CVE-2025-8869, CVE-2026-1703, CVE-2026-3219, CVE-2026-6357 — all in
+      # pip <26.1) don't surface here at all. `uv pip freeze` reads the
+      # synced tree without needing pip in the environment.
       #
-      # We audit a `pip freeze --exclude-editable` snapshot with
+      # We audit a `uv pip freeze --exclude-editable` snapshot with
       # `--no-deps --disable-pip` rather than the live env: pip-audit
       # 2.10.0 errors out on the editable `dazzle-dsl` install itself
       # (cannot resolve editable distributions on PyPI), and its
@@ -181,8 +182,8 @@ jobs:
       # fastar. Remove this suppression if/when Inspector retracts
       # the advisory.
       run: |
-        pip install pip-audit
-        pip freeze --exclude-editable > /tmp/audit-reqs.txt
+        uv pip install pip-audit
+        uv pip freeze --exclude-editable > /tmp/audit-reqs.txt
         pip-audit --strict --desc --no-deps --disable-pip \
           --ignore-vuln MAL-2026-4750 \
           -r /tmp/audit-reqs.txt
@@ -213,7 +214,7 @@ jobs:
 
     - name: Run bandit security check
       run: |
-        pip install bandit[toml]
+        uv pip install bandit[toml]
         bandit -c pyproject.toml -r src/ --severity-level medium
 
     # NOTE: the former "Check DSL files (strict mode)" step was removed in
@@ -283,8 +284,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf
-        optional-pip: pygls bleach
+        extras: dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf,lsp
 
     - name: Run mypy
       # #1056 (v0.67.99): full mypy check across the merged dazzle/
@@ -564,7 +564,7 @@ jobs:
       # Pin at least 1.40 for the sync API shape we use in
       # dazzle/cli/ux_interactions.py.
       run: |
-        pip install "playwright>=1.40"
+        uv pip install "playwright>=1.40"
         # Capture the resolved playwright version so the cache key
         # invalidates whenever the wheel pin moves. Coming from a
         # python package metadata read, not external user input.
