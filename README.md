@@ -145,13 +145,16 @@ That's a todo app. The same language scales to 39-entity accountancy platforms w
 | **Access Control** | Cedar-style permit/forbid rules, scope predicates | Provable RBAC — auditors can verify mechanically |
 | **Grant Schemas** | Delegated, time-bounded access with approval | Four-eyes authorization, SOC 2-ready |
 | **Processes** | Multi-step workflows with saga patterns | Durable business operations |
+| **Atomic Transactions** | Multi-entity writes in one scope-guarded transaction (`atomic`) | No partial writes; every touched entity scope-checked, fail-closed (ADR-0029) |
 | **Experiences** | Onboarding wizards, checkout flows | Guided multi-step user journeys |
 | **Ledgers** | TigerBeetle-backed double-entry accounting | Financial-grade transaction integrity |
 | **Graphs** | Entity relationships with CTE traversal and algorithms | Network analysis, shortest paths, community detection |
 | **HLESS Events** | Intent/Fact/Observation/Derivation event semantics | Replay correctness, audit lineage, no "events as a vague bucket" |
 | **Fragments** | Constrained custom rendering inside generated surfaces | Differentiated UX without losing semantic integrity |
+| **Islands** | Self-contained interactive JS components mounted into server-rendered pages | Charts, editors, drag-and-drop without adopting an SPA framework |
 | **Integrations** | Declarative API bindings with triggers and mappings | Connect to Stripe, HMRC, Xero, and more |
 | **LLM Jobs** | Classification, extraction, generation tasks | AI capabilities without prompt engineering sprawl |
+| **Services** | Custom business logic declared in DSL, implemented in typed Python/TS stubs | A bounded escape hatch for domain logic that keeps the declarative boundary |
 | **Compliance** | Maps DSL constructs to ISO 27001 and SOC 2 controls | Control-coverage evidence, gaps flagged |
 
 For the full DSL reference, see [docs/reference/index.md](docs/reference/index.md).
