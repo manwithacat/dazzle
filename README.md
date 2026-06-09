@@ -4,7 +4,7 @@
 **Model your business. Ship your product. Pass your audit.**
 
 <!-- Versions & Compatibility -->
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![Python 3.12 to 3.14](https://img.shields.io/badge/python-3.12_to_3.14-blue)](https://www.python.org/)
 [![Homebrew](https://img.shields.io/badge/homebrew-manwithacat%2Ftap-orange)](https://github.com/manwithacat/homebrew-tap)
 
 <!-- Build & Quality -->
@@ -206,6 +206,14 @@ dazzle rbac report    # Compliance report for auditors
 
 See [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](docs/reference/compliance.md) for details.
 
+### Enterprise authentication & identity (opt-in)
+
+For apps that need it, Dazzle ships native, per-organization enterprise identity — **OIDC, SAML 2.0, and SCIM provisioning** — so a customer's IdP (Okta, Microsoft Entra ID, Google, Ping) drives sign-in and user lifecycle. Connections are framework-owned runtime data (not DSL), fenced to one org, and gated by **DNS-verified domain ownership**; secret material is AES-256-GCM encrypted at rest. SAML covers IdP-metadata import, SP-signed AuthnRequests, encrypted assertions, and bidirectional Single Logout; SCIM covers user/group provisioning with group→role mapping.
+
+It is **off by default** — a greenfield app sees none of it until you opt in (`dazzle capability enable auth.enterprise.oidc`), so the simple path stays simple. Identity is modelled as **global Identity + Organization + fenced Membership + Session**, so one person can belong to many orgs with tenant isolation enforced at the data layer, not bolted on.
+
+See **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** and [multi-tenant hosting](docs/reference/tenant-hosts.md).
+
 ---
 
 ## What Dazzle is *not* for
@@ -237,7 +245,7 @@ dazzle serve
 # Open http://localhost:8000/docs for the API
 ```
 
-**Supported runtime:** Python **3.12+** · PostgreSQL · macOS / Linux. CI exercises Python 3.12 — the project's single supported minor version.
+**Supported runtime:** Python **3.12 – 3.14** · PostgreSQL · macOS / Linux. The floor is **3.12**; CI runs the full suite on **3.12, 3.13, and 3.14** (all hard-required) on every change, and **3.14 is the primary deploy target** (Heroku's default; faster on the parse path via the uv tail-call interpreter — see [`docs/python-3.14-primary-target.md`](docs/python-3.14-primary-target.md)). Development and deploys use **uv** (`uv sync`; Heroku via the native uv buildpack).
 
 ---
 
@@ -330,6 +338,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
+- **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
 - **[Autonomous Harness](docs/autonomous-harness.md)** — Claude Code slash commands + methodology
 - **[ADRs](docs/adr/INDEX.md)** — architectural decisions, defended
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
