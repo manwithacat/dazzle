@@ -47,8 +47,13 @@ jobs:
     name: Python Tests (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        # Support matrix. 3.12 = floor. 3.13 added after a full local suite
+        # validated clean (Python version-support slice 3; uv provisions both
+        # via the composite's `--python`). lint/type-check stay 3.12-pinned —
+        # they govern which syntax the floor permits, not which interpreter runs.
+        python-version: ["3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6

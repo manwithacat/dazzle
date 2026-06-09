@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Python 3.13 added to the support matrix (Python version-support, slice 3).** The CI `python-tests`
+  job now runs on `["3.12", "3.13"]` (`fail-fast: false`), and `Programming Language :: Python :: 3.13`
+  is declared in the trove classifiers. Validated by a full local suite on CPython 3.13.13: all native
+  deps (psycopg, cryptography, lxml/xmlsec, pydantic-core, Pillow) have 3.13 wheels and import cleanly,
+  and **17,515 tests pass** — the only 3.13 deltas were two signing integration tests that need the
+  `signing` extra locally (they skip on CI when `DATABASE_URL` is absent) and pass once it's synced. The
+  floor stays `>=3.12`; ruff `target-version` and mypy `python_version` remain 3.12 (they govern the
+  syntax the floor permits, not the runtime). uv provisions both interpreters via the composite `--python`.
+
+### Agent Guidance
+- **Re-lock after a version bump.** `/bump` changes the project version in `pyproject.toml`, which makes
+  `uv.lock`'s workspace-root version stale (`uv lock --check` flags it; `uv sync --frozen` tolerates it,
+  so CI stays green). Run `uv lock` after bumping and commit the updated `uv.lock` in the bump commit.
+
 ## [0.82.2] - 2026-06-09
 
 ### Changed
