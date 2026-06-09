@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.8] - 2026-06-09
+
 ### Fixed
 - **PEP 695: two more `UP047` sites the newer ruff flags** (`core/capabilities/cognition.py:partition_by_capability`,
   `core/dsl_parser_impl/dispatch.py:parse_block_with_dispatch`). v0.82.7's lint job went red because CI's
