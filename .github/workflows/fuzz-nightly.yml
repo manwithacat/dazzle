@@ -55,7 +55,7 @@ jobs:
 
     - name: Upload fuzz report + any found seeds
       if: always()   # upload even when the campaign failed (that's when we want them)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: parser-fuzz-${{ github.run_id }}
         path: fuzz-out/
