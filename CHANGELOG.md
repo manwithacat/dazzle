@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.3] - 2026-06-09
+
 ### Added
 - **Python 3.13 added to the support matrix (Python version-support, slice 3).** The CI `python-tests`
   job now runs on `["3.12", "3.13"]` (`fail-fast: false`), and `Programming Language :: Python :: 3.13`
