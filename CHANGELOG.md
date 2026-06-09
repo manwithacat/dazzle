@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.2] - 2026-06-09
+
 ### Changed
 - **uv is now the canonical Python toolchain (Python version-support, slice 4 — framework).**
   Generated and committed `uv.lock` (221 packages, universal resolution across all extras, zero
