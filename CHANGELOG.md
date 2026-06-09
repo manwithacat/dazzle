@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.4] - 2026-06-09
+
 ### Added
 - **Python 3.14 added as an allow-failure CI cell (Python version-support, slice 5).** The `python-tests`
   matrix gains an experimental `3.14` cell via `continue-on-error: ${{ matrix.experimental }}`, so its
