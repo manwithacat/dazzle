@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Python 3.14 added as an allow-failure CI cell (Python version-support, slice 5).** The `python-tests`
+  matrix gains an experimental `3.14` cell via `continue-on-error: ${{ matrix.experimental }}`, so its
+  result never blocks the required 3.12/3.13 checks or the workflow. Feasibility is strong: on CPython
+  3.14.5 every dependency installs from wheels — including the `lxml`/`python-xmlsec` pair feared as the
+  blocker, plus psycopg/cryptography/pydantic-core/Pillow/fpdf2 — and **17,592 tests pass**. Two known
+  failures keep the cell red, neither a Dazzle defect:
+  - `pygls` calls `asyncio.iscoroutinefunction`, deprecated in 3.14 (removal slated for 3.16); the
+    `-W error` LSP-import test (`tests/unit/test_lsp.py`) turns the upstream `DeprecationWarning` into an
+    error. Clears when pygls ships a 3.14-clean release.
+  - CPython 3.14's `typing.ForwardRef` repr gained `is_class=`, so the floor-pinned api-surface baseline
+    (`docs/api-surface/ir-types.txt`, generated on 3.12) drifts under 3.14 introspection. Inherent to a
+    floor-pinned baseline; revisit at the floor move. No 3.14 trove classifier yet (cell isn't green).
+  The floor stays `>=3.12`.
+
 ## [0.82.3] - 2026-06-09
 
 ### Added
