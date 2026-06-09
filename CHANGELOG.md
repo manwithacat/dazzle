@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Deploy/runtime Python pins reconciled to the `>=3.12` floor (Python version-support initiative, slice 1).**
+  Several deploy-artifact generators still pinned Python 3.11, which can't `pip install dazzle-dsl`
+  (`requires-python = ">=3.12"`): the framework's own `runtime.txt` (`python-3.11.11` → `python-3.12`),
+  the `DockerConfig.base_image` default + TOML fallback in `core/manifest.py` (`python:3.11-slim` →
+  `python:3.12-slim`), the generated backend `Dockerfile` in `cli/runtime_impl/docker.py`, and the
+  deploy README prerequisite in `deploy/runner.py`. `cli/deploy.py` already emitted `python-3.12`, so
+  the scaffolding is now internally consistent. The committed `.python-version` (`dazzle-dev`, a local
+  pyenv venv name) is intentionally left for the uv-migration slice, where Heroku's uv path requires it
+  to hold a real version and `runtime.txt` to be removed. Phase 0 recon: `docs/migration-findings.md`.
+
 ## [0.82.0] - 2026-06-09
 
 ### Changed
