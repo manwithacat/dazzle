@@ -42,6 +42,15 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+# #1363: serializes auth-store boot DDL across uvicorn workers. Postgres's
+# `CREATE INDEX IF NOT EXISTS` existence-check and the pg_class catalog
+# insert are not atomic across sessions, so concurrently cold-booting
+# workers can both pass the check and the loser dies with
+# `UniqueViolation: pg_class_relname_nsp_index`. Same hex-named
+# advisory-lock convention as MEMBERSHIP_EVENTS_LOCK_KEY /
+# CONNECTION_DOMAIN_LOCK_KEY. ("dzdl" = dazzle DDL.)
+AUTH_DDL_LOCK_KEY = 0x647A646C
+
 
 def _normalize_email(email: str) -> str:
     """Canonical form for an auth identity email: trimmed + lowercased (#1342 M2).
@@ -2289,6 +2298,8 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
+            # #1363: serialize across workers — released at commit/close.
+            cursor.execute("SELECT pg_advisory_xact_lock(%s)", (AUTH_DDL_LOCK_KEY,))
             cursor.execute(
                 "SELECT LOWER(email) AS k, COUNT(*) AS n FROM users "
                 "GROUP BY LOWER(email) HAVING COUNT(*) > 1 LIMIT 5"
@@ -2314,10 +2325,17 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def _init_db(self) -> None:
-        """Initialize database tables."""
+        """Initialize database tables.
+
+        #1363: the whole DDL transaction runs under an advisory lock —
+        every uvicorn worker executes this at boot, and Postgres's
+        ``IF NOT EXISTS`` checks are not concurrency-safe at the catalog
+        level. The lock releases at commit.
+        """
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
+            cursor.execute("SELECT pg_advisory_xact_lock(%s)", (AUTH_DDL_LOCK_KEY,))
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,

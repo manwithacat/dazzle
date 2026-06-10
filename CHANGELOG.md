@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.20] - 2026-06-10
+
+### Fixed
+- **Multi-worker boot race in auth-store DDL** (#1363). `_ensure_email_ci_uniqueness`'s
+  `CREATE UNIQUE INDEX IF NOT EXISTS` (and the rest of `_init_db`'s boot DDL) ran in every uvicorn worker
+  with no cross-worker serialization — Postgres's `IF NOT EXISTS` existence-check and the `pg_class`
+  catalog insert are not atomic across sessions, so concurrently cold-booting workers collided and the
+  loser crashed with `UniqueViolation: pg_class_relname_nsp_index`. Both boot-DDL transactions now take
+  `pg_advisory_xact_lock(AUTH_DDL_LOCK_KEY)` as their first statement (released at commit), following the
+  file's existing MEMBERSHIP_EVENTS/CONNECTION_DOMAIN lock-key convention. The fail-loud duplicate-email
+  check is unchanged — only the race-on-non-problem crash is gone. Verified against real Postgres
+  (361 `-m postgres` tests).
+
 ## [0.82.19] - 2026-06-10
 
 ### Added
