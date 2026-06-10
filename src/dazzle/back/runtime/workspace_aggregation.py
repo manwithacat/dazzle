@@ -915,7 +915,7 @@ async def _compute_bucketed_aggregates(
     parsed_aggs: list[tuple[str, str, str, str | None, Any]] = []
     for name, ref in aggregates.items():
         if not isinstance(ref, AggregateRef):
-            continue
+            continue  # DerivedMetric entries are evaluated post-query (#1359 slice 2)
         arg = ref.entity or "" if ref.func == "count" else ref.column or ""
         where_str = condition_expr_to_legacy_where(ref.where)
         parsed_aggs.append((name, ref.func, arg, where_str, ref.where))
@@ -972,7 +972,7 @@ async def _compute_bucketed_aggregates(
                 fk_target = None
                 if not is_bucket_ref:
                     fk_target = _resolve_fk_target_spec(agg_repo, group_by, repositories)
-                return await _aggregate_via_groupby(
+                rows = await _aggregate_via_groupby(
                     agg_repo,
                     measures=measures,
                     group_by=group_by,
@@ -981,6 +981,8 @@ async def _compute_bucketed_aggregates(
                     source_entity_spec=getattr(agg_repo, "entity_spec", None),
                     fk_target_spec=fk_target,
                 )
+                _apply_derived_to_bucket_rows(aggregates, rows)
+                return rows
             except Exception:
                 logger.warning(
                     "GROUP BY aggregate failed for %s.%r — falling back to N+1",
@@ -1122,6 +1124,9 @@ async def _compute_bucketed_aggregates(
                 "metrics": {metric_name: value},
             }
         )
+    # #1359 slice 2: derived metrics over each bucket's metrics (a derived
+    # over a single slow-path measure is degenerate but stays consistent).
+    _apply_derived_to_bucket_rows(aggregates, out)
     return out
 
 
@@ -1195,6 +1200,36 @@ def _evaluate_derived_expr(expr: Any, values: dict[str, Any]) -> float | int:
         return 0 if args[0] == args[1] else args[0]
     # coalesce — first non-zero arg (None never survives evaluation here).
     return next((a for a in args if a), 0)
+
+
+def _apply_derived_to_bucket_rows(
+    aggregates: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> None:
+    """Evaluate DerivedMetric entries per bucket row (#1359 slice 2).
+
+    Grouped-chart rows carry ``metrics: {name: value}`` from the single
+    GROUP BY query; derived metrics compute over each bucket's own values
+    in declaration order (so a derived metric may reference an earlier
+    derived one), mutating the row's metrics dict in place. The primary
+    ``value`` stays the first *aggregate* metric — derived values ride in
+    ``metrics`` for multi-series templates.
+    """
+    from dazzle.core.ir import DerivedMetric
+
+    derived = [(n, ref) for n, ref in aggregates.items() if isinstance(ref, DerivedMetric)]
+    if not derived:
+        return
+    for row in rows:
+        metrics = row.get("metrics")
+        if not isinstance(metrics, dict):
+            continue
+        for name, ref in derived:
+            try:
+                metrics[name] = _evaluate_derived_expr(ref.expression, metrics)
+            except Exception:  # defensive — a bad tree must not kill the chart
+                logger.warning("Derived metric %r evaluation failed", name, exc_info=True)
+                metrics[name] = 0
 
 
 def _evaluate_derived_metrics(

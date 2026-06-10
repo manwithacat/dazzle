@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.25] - 2026-06-10
+
+### Added
+- **Derived metrics slice 2: per-bucket evaluation in grouped charts + live explain detector** (#1359,
+  completing the feature). Derived metrics now compute **per bucket** in `group_by:` charts
+  (bar/line/area/pivot — both the fast GROUP BY path and the slow per-bucket path): each bucket's derived
+  values evaluate over that bucket's own metric values, in declaration order, division by zero → 0.
+  `dazzle db explain-aggregate` accepts derived expressions in `--measures`
+  (`-m 'total=count,done=count,rate=done/total*100'`) and prints them as the Python post-aggregation step —
+  the failure-modes detector for this construct is live, not merely documented. The KB `dashboard` pattern
+  regains the `completion_rate` ratio that #1358 had to drop (parse-gate-verified;
+  `SEED_SCHEMA_VERSION` → 26); reports.md updated.
+
 ## [0.82.24] - 2026-06-10
 
 ### Fixed

@@ -1473,13 +1473,23 @@ def explain_aggregate_command(
         )
 
     # Parse measures: 'n=count,avg_score=avg:score' → {'n': 'count', 'avg_score': 'avg:score'}
+    # #1359 slice 2: anything that is NOT a recognised aggregate spec is
+    # treated as a derived-metric expression (e.g. 'rate=done/total*100') and
+    # shown as the Python post-aggregation step — keeping this detector live
+    # for the derived-metrics path, not merely documented.
+    _AGG_SPECS = ("count", "sum:", "avg:", "min:", "max:")
     measure_dict: dict[str, str] = {}
+    derived_dict: dict[str, str] = {}
     for pair in measures.split(","):
         pair = pair.strip()
         if not pair or "=" not in pair:
             continue
         name, _, expr = pair.partition("=")
-        measure_dict[name.strip()] = expr.strip()
+        expr = expr.strip()
+        if expr == "count" or expr.startswith(_AGG_SPECS[1:]):
+            measure_dict[name.strip()] = expr
+        else:
+            derived_dict[name.strip()] = expr
 
     sql, params = build_aggregate_sql(
         table_name=src_entity.name,
@@ -1506,3 +1516,11 @@ def explain_aggregate_command(
         console.print(f"FROM {parts[1]}")
     console.print("")
     console.print(f"[bold]Params:[/bold] {params}")
+    if derived_dict:
+        console.print(
+            "\n[bold]Post-aggregation (Python, #1359)[/bold] "
+            "([dim]evaluated per bucket over the metric values above — "
+            "zero extra queries; division by zero → 0[/dim])"
+        )
+        for name, expr in derived_dict.items():
+            console.print(f"  {name} = {expr}")

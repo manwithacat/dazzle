@@ -163,3 +163,72 @@ class TestEvaluation:
         _evaluate_derived_metrics(aggregates, results, ["half", "quarter"])
         assert results["half"] == 50
         assert results["quarter"] == 25
+
+
+class TestPerBucketEvaluation:
+    """#1359 slice 2: derived metrics in grouped charts evaluate per bucket."""
+
+    def test_derived_applied_to_each_bucket_row(self) -> None:
+        from dazzle.back.runtime.workspace_aggregation import _apply_derived_to_bucket_rows
+
+        aggregates = {
+            "total": object(),  # stands in for AggregateRef — only DerivedMetric is read
+            "done": object(),
+            "rate": DerivedMetric(
+                expression=DerivedMetricExpr(
+                    function_name="round",
+                    function_args=(
+                        DerivedMetricExpr(
+                            binary_op="*",
+                            binary_left=DerivedMetricExpr(
+                                binary_op="/",
+                                binary_left=DerivedMetricExpr(metric_name="done"),
+                                binary_right=DerivedMetricExpr(metric_name="total"),
+                            ),
+                            binary_right=DerivedMetricExpr(number_literal=100),
+                        ),
+                    ),
+                )
+            ),
+        }
+        rows = [
+            {"label": "alpha", "value": 4, "metrics": {"total": 4, "done": 3}},
+            {"label": "beta", "value": 10, "metrics": {"total": 10, "done": 0}},
+            {"label": "empty", "value": 0, "metrics": {"total": 0, "done": 0}},
+        ]
+        _apply_derived_to_bucket_rows(aggregates, rows)
+        assert rows[0]["metrics"]["rate"] == 75
+        assert rows[1]["metrics"]["rate"] == 0
+        assert rows[2]["metrics"]["rate"] == 0  # division by zero → 0, per bucket
+
+    def test_no_derived_entries_is_a_noop(self) -> None:
+        from dazzle.back.runtime.workspace_aggregation import _apply_derived_to_bucket_rows
+
+        rows = [{"label": "a", "value": 1, "metrics": {"n": 1}}]
+        _apply_derived_to_bucket_rows({"n": object()}, rows)
+        assert rows == [{"label": "a", "value": 1, "metrics": {"n": 1}}]
+
+    def test_chained_derived_per_bucket(self) -> None:
+        from dazzle.back.runtime.workspace_aggregation import _apply_derived_to_bucket_rows
+
+        aggregates = {
+            "total": object(),
+            "half": DerivedMetric(
+                expression=DerivedMetricExpr(
+                    binary_op="/",
+                    binary_left=DerivedMetricExpr(metric_name="total"),
+                    binary_right=DerivedMetricExpr(number_literal=2),
+                )
+            ),
+            "quarter": DerivedMetric(
+                expression=DerivedMetricExpr(
+                    binary_op="/",
+                    binary_left=DerivedMetricExpr(metric_name="half"),
+                    binary_right=DerivedMetricExpr(number_literal=2),
+                )
+            ),
+        }
+        rows = [{"label": "a", "value": 100, "metrics": {"total": 100}}]
+        _apply_derived_to_bucket_rows(aggregates, rows)
+        assert rows[0]["metrics"]["half"] == 50
+        assert rows[0]["metrics"]["quarter"] == 25

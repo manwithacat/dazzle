@@ -127,7 +127,7 @@ aggregate:
 
 Operators `+ - * /`, parentheses, number literals, and the functions `round`, `abs`, `nullif`, `coalesce`. References resolve strictly to *earlier* names in the block (forward references are a parse error naming what *is* declared); a derived metric may reference another derived metric. Evaluation happens **in Python after the scope-filtered aggregate queries return** — zero extra queries, so the scope-safety contract above is untouched. Division by zero yields 0 (a ratio over an empty set reads as 0%, not an error).
 
-Slice 1 covers KPI tiles (`display: metrics`/`summary`); per-bucket derived metrics in grouped charts (`group_by:` + `display: bar_chart` etc.) are the #1359 slice-2 follow-up.
+Derived metrics work on KPI tiles (`display: metrics`/`summary`) **and** per bucket in grouped charts (`group_by:` + `display: bar_chart` etc.) — each bucket's derived values compute over that bucket's own metric values. `dazzle db explain-aggregate` shows derived expressions as the Python post-aggregation step (pass them in `--measures`, e.g. `-m 'total=count,done=count,rate=done/total*100'`).
 
 ## Scope
 
