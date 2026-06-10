@@ -585,6 +585,24 @@ def build_metadata(
                 continue
             index_args.append(sa.Index(index_name, scope_col, sort_col))
 
+        # #1357: entity-level `unique a, b` / `index x` constraints from the
+        # DSL. Previously dropped at the converter boundary, so they reached
+        # neither create_all nor alembic autogenerate. Deterministic names
+        # (`uq_<table>_<cols>` / `ix_<table>_<cols>`) keep autogenerate stable.
+        constraint_args: list[Any] = []
+        for constraint in getattr(entity, "constraints", []) or []:
+            if not all(f in column_names for f in constraint.fields):
+                # Same soft-skip policy as list indexes above: the validator
+                # lints bad field refs; schema build shouldn't crash on them.
+                continue
+            cols = "_".join(constraint.fields)
+            if constraint.kind.value == "unique":
+                constraint_args.append(
+                    sa.UniqueConstraint(*constraint.fields, name=f"uq_{entity.name}_{cols}")
+                )
+            else:  # index
+                constraint_args.append(sa.Index(f"ix_{entity.name}_{cols}", *constraint.fields))
+
         tenant_args: list[Any] = []
         if is_tenant_scoped:
             assert partition_key is not None  # narrowed by is_tenant_scoped
@@ -608,7 +626,7 @@ def build_metadata(
                     sa.text(f"current_setting('dazzle.tenant_id', true)::{pg_type}")
                 )
 
-        sa.Table(entity.name, metadata, *columns, *index_args, *tenant_args)
+        sa.Table(entity.name, metadata, *columns, *index_args, *constraint_args, *tenant_args)
 
     return metadata
 

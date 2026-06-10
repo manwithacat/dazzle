@@ -798,6 +798,7 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         temporal=dazzle_entity.temporal,  # #1223
         subtype_of=dazzle_entity.subtype_of,  # #1217 3(e)
         subtype_children=dazzle_entity.subtype_children,  # #1217 3(e)
+        constraints=list(dazzle_entity.constraints),  # #1357: was dropped in conversion
         metadata=metadata,
     )
 

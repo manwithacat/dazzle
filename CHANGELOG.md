@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.18] - 2026-06-10
+
+### Fixed
+- **`dazzle db revision --autogenerate` no longer proposes dropping the framework's own tables** (#1357).
+  env.py's exclusion list held exactly one table (`_dazzle_params`, the #1188 fix) while the auth store and
+  runtime DDL create ~25 more (users, sessions, memberships, organizations, `_dazzle_audit_log`, grants,
+  files, SCIM/SAML tables, …) — all absent from the DSL-derived metadata, so autogenerate against a live DB
+  emitted a destructive drop for every one. A canonical registry
+  (`src/dazzle/back/alembic/framework_tables.py`: explicit names + `_dazzle_`/`_grant`/`_ops_` prefixes +
+  `alembic_version`) now drives `include_object`, with a drift gate that scrapes every
+  `CREATE TABLE IF NOT EXISTS` in `src/dazzle/back/` and fails when a new runtime table isn't registered.
+  Reflected-only runtime-managed indexes (`idx_` prefix — FTS GIN indexes, framework-table indexes) are
+  skipped too; metadata-emitted `ix_*` indexes still diff normally. `compare_type` stays on — real DSL type
+  changes still autogenerate (residual VARCHAR/NUMERIC-equivalence churn is a possible follow-up).
+- **Entity-level `unique a, b` / `index x` constraints now reach the database** (#1357). They parsed into IR
+  and were validated — then silently dropped at the converter boundary (the #1302 bug class): the back
+  `EntitySpec` had no constraints field and `build_metadata` never emitted them, so they reached neither
+  `create_all` nor alembic autogenerate. The converter now carries them through, and `build_metadata` emits
+  deterministically named `uq_<table>_<cols>` / `ix_<table>_<cols>` objects (covered end-to-end from DSL
+  text in the new test).
+
 ## [0.82.17] - 2026-06-10
 
 ### Fixed

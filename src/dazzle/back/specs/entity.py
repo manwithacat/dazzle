@@ -680,6 +680,13 @@ class EntitySpec(BaseModel):
         default=(),
         description="Names of child subtypes (linker-populated back-pointer on base)",
     )
+    # #1357: entity-level `unique a, b` / `index x` constraints. Previously
+    # dropped at the converter boundary (the #1302 bug class), so they reached
+    # neither create_all nor alembic autogenerate.
+    constraints: list[ir_domain.Constraint] = Field(
+        default_factory=list,
+        description="Entity-level unique/index constraints from the DSL",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     model_config = ConfigDict(frozen=True)

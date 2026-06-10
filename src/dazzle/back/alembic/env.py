@@ -132,24 +132,10 @@ def _process_revision_directives(context: Any, revision: Any, directives: list[A
 # Migration runners
 # ---------------------------------------------------------------------------
 
-# Framework-owned tables created at runtime, absent from the DSL-derived
-# metadata — autogenerate must not propose dropping them (#1188).
-_FRAMEWORK_TABLES = {"_dazzle_params"}
-
-
-def _include_object(
-    obj: Any, name: str | None, type_: str, reflected: bool, compare_to: Any
-) -> bool:
-    """Exclude objects autogenerate would otherwise churn on every run (#1188).
-
-    Framework-owned tables are not in the DSL metadata; unnamed unique
-    constraints cannot be reconciled by name, so Alembic re-emits them.
-    """
-    if type_ == "table" and name in _FRAMEWORK_TABLES:
-        return False
-    if type_ == "unique_constraint" and name is None:
-        return False
-    return True
+# #1188/#1357: exclusion rules live in the importable registry module —
+# env.py executes only under the alembic context and cannot be imported by
+# tests. See framework_tables.include_object for the full rationale.
+from dazzle.back.alembic.framework_tables import include_object as _include_object  # noqa: E402
 
 
 def run_migrations_offline() -> None:
