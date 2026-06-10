@@ -182,7 +182,9 @@ def counter_prior_handler(args: dict[str, Any]) -> str:
     Modes:
       - id="<id>"            — fetch one entry (returns full body)
       - query="<sentence>"   — match against triggers_text (returns summaries)
-      - code_shape="<text>"  — match against triggers_code regexes
+      - code_shape="<text>"  — match triggers_code regexes, falling back to
+                               triggers_text (a "description of code about to
+                               be written" is prose, so both channels apply)
       - list_all=true        — return the full index (summaries only)
       - layer="<layer>"      — narrow list_all to one layer
 
@@ -219,7 +221,13 @@ def counter_prior_handler(args: dict[str, Any]) -> str:
         )
 
     if code_shape:
-        hits = match_code_triggers(entries, code_shape)
+        # Code regexes hit pasted source; text triggers hit prose descriptions
+        # of the code about to be written (#1351 — the documented call shape).
+        # Union both so the caller never needs to know the trigger taxonomy.
+        code_hits = match_code_triggers(entries, code_shape)
+        matched_ids = {e.id for e in code_hits}
+        text_hits = [e for e in match_text_triggers(entries, code_shape) if e.id not in matched_ids]
+        hits = code_hits + text_hits
         return json.dumps(
             {
                 "code_shape": code_shape,

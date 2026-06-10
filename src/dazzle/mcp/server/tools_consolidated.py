@@ -707,7 +707,7 @@ def _tool_knowledge() -> Tool:
                 },
                 "code_shape": {
                     "type": "string",
-                    "description": "Description of code about to be written, matched against triggers_code regexes (for counter_prior)",
+                    "description": "Description of code about to be written, or a code fragment — matched against triggers_code regexes with triggers_text fallback (for counter_prior)",
                 },
                 "layer": {
                     "type": "string",

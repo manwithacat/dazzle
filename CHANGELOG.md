@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.9] - 2026-06-10
+
+### Fixed
+- **`knowledge counter_prior code_shape=` now falls back to text triggers** (#1351). The CLAUDE.md-documented
+  call passes a one-sentence *description* of the code about to be written, but the handler matched it only
+  against `triggers_code` regexes (literal Python shapes) — so the documented invocation almost always returned
+  `match_count: 0` and the agent proceeded unwarned. `code_shape` now unions code-regex hits (ranked first)
+  with `triggers_text` matches, deduped by entry id. `query=` is unchanged. Found in Fable 5's first-look
+  agent-experience review: a textbook N+1 description returned zero matches via the documented param.
+
 ## [0.82.8] - 2026-06-09
 
 ### Fixed
