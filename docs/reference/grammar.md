@@ -1,6 +1,6 @@
 # DSL Grammar Specification
 
-Formal EBNF grammar for DAZZLE DSL v0.61.0rc5.
+Formal EBNF grammar for DAZZLE DSL v0.82.9.
 
 > **Auto-generated** from parser source code by `grammar_gen.py`. Do not edit manually; run `dazzle grammar` to regenerate.
 
@@ -38,13 +38,11 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Access Control Keywords**: `anonymous`, `permissions`, `access`, `read`, `write`, `permit`, `forbid`, `audit`
 
-**UX Semantic Layer Keywords**: `ux`, `purpose`, `show`, `sort`, `empty`, `attention`, `critical`, `warning`, `notice`, `info`, `message`, `for`, `scope`, `hide`, `show_aggregate`, `action_primary`, `read_only`, `search_first`, `all`, `workspace`, `source`, `limit`, `display`, `aggregate`, `list`, `grid`, `timeline`, `detail`
+**UX Semantic Layer Keywords**: `ux`, `purpose`, `show`, `sort`, `empty`, `attention`, `critical`, `warning`, `notice`, `info`, `message`, `for`, `scope`, `hide`, `show_aggregate`, `action_primary`, `read_only`, `search_first`, `all`, `workspace`, `source`, `limit`, `display`, `aggregate`, `delta`, `reference_lines`, `reference_bands`, `overlay_series`, `bins`, `show_outliers`, `bullet_label`, `bullet_actual`, `bullet_target`, `class`, `track_max`, `track_format`, `actions`, `tone`, `count_aggregate`, `avatar_field`, `primary`, `secondary`, `stats`, `facts`, `caption`, `eyebrow`, `width`, `help`, `tones`, `entries`, `state`, `confirmations`, `state_field`, `revoke`, `list`, `grid`, `timeline`, `detail`
 
 **Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`, `filter_map`
 
-**v0.34.0 Platform Capability Keywords**: `soft_delete`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
-
-**#1333 Entity lifecycle marker**: `managed_by`
+**v0.34.0 Platform Capability Keywords**: `soft_delete`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `managed_by`, `temporal`, `subtype_of`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
 
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
@@ -62,11 +60,11 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Invariant Keywords**: `invariant`, `code`
 
-**v0.9.5 App Config Keywords**: `description`, `multi_tenant`, `audit_trail`, `security_profile`
+**v0.9.5 App Config Keywords**: `description`, `multi_tenant`, `audit_trail`, `security_profile`, `theme`
 
 **v0.9.5 Field Type Keywords**: `money`, `file`, `via`
 
-**v0.7.1 LLM Cognition Keywords**: `intent`, `examples`, `domain`, `patterns`, `extends`, `archetype`, `has_many`, `has_one`, `embeds`, `belongs_to`, `cascade`, `restrict`, `nullify`, `readonly`, `deny`, `scenarios`, `given`, `then`
+**v0.7.1 LLM Cognition Keywords**: `intent`, `examples`, `domain`, `patterns`, `extends`, `archetype`, `has_many`, `has_one`, `embeds`, `belongs_to`, `latest_one`, `descendants_of`, `ancestors_of`, `cascade`, `restrict`, `nullify`, `readonly`, `deny`, `scenarios`, `given`, `then`
 
 **Persona & Scenario Keywords**: `scenario`, `demo`, `persona`, `goals`, `proficiency`, `seed`, `seed_script`, `start_route`
 
@@ -84,21 +82,19 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `effects`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`
 
-**v0.18.0 Event-First Architecture Keywords**: `event_model`, `publish`, `subscribe`, `project`, `topic`, `retention`
+**v0.18.0 Event-First Architecture Keywords**: `event_model`, `publish`, `subscribe`, `projection`, `topic`, `retention`
 
-**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `interfaces`, `data_products`, `classify`, `erasure`, `data_product`
-
-**v0.19.0 HLESS (High-Level Event Semantics) Keywords**: `FACT`, `OBSERVATION`, `DERIVATION`
+**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `interfaces`, `data_products`, `classify`, `erasure`, `data_product`, `FACT`, `OBSERVATION`, `DERIVATION`
 
 **Stream specification keywords**: `partition_key`, `ordering_scope`, `idempotency`, `outcomes`, `derives_from`, `emits`, `side_effects`, `allowed`, `schema`, `note`, `t_event`, `t_log`, `t_process`, `hless`, `strict`, `warn`, `off`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`, `default_provider`, `budget_alert_usd`, `vision`
 
-**v0.9.0 Messaging Channel Keywords**: `channel`, `send`, `receive`, `provider`, `config`, `provider_config`, `delivery_mode`, `outbox`, `direct`, `throttle`, `per_recipient`, `per_entity`, `per_channel`, `window`, `max_messages`, `on_exceed`, `drop`, `log`, `queue`, `stream`, `email`, `asset`, `document`, `template`, `subject`, `body`, `html_body`, `attachments`, `asset_ref`, `document_ref`, `entity_arg`, `filename`, `for_entity`, `format`, `layout`, `path`, `changed`, `to`, `succeeded`, `failed`, `every`, `cron`, `upsert`, `regex`
+**v0.9.0 Messaging Channel Keywords**: `channel`, `send`, `receive`, `provider`, `config`, `provider_config`, `delivery_mode`, `outbox`, `direct`, `throttle`, `per_recipient`, `per_entity`, `per_channel`, `window`, `max_messages`, `on_exceed`, `drop`, `log`, `queue`, `stream`, `email`, `asset`, `document`, `template`, `subject`, `body`, `html_body`, `attachments`, `asset_ref`, `document_ref`, `entity_arg`, `filename`, `for_entity`, `format`, `layout`, `render`, `path`, `changed`, `to`, `succeeded`, `failed`, `every`, `cron`, `upsert`, `regex`
 
-**Flow/E2E Test Keywords (v0.3.2)**: `flow`, `steps`, `navigate`, `click`, `fill`, `wait`, `snapshot`, `preconditions`, `authenticated`, `public`, `user_role`, `fixtures`, `view`, `entity_exists`, `entity_not_exists`, `validation_error`, `visible`, `not_visible`, `text_contains`, `redirects_to`, `field_value`, `tags`
+**Flow/E2E Test Keywords (v0.3.2)**: `flow`, `atomic`, `steps`, `navigate`, `click`, `fill`, `wait`, `snapshot`, `preconditions`, `authenticated`, `public`, `user_role`, `fixtures`, `view`, `entity_exists`, `entity_not_exists`, `validation_error`, `visible`, `not_visible`, `text_contains`, `redirects_to`, `field_value`, `tags`
 
-**v0.38.0 Workspace Navigation Keywords**: `nav_group`, `icon`, `collapsed`, `context_selector`, `on_transition`, `lifecycle`, `fitness`, `external`, `param`, `feedback_widget`, `subprocessor`, `analytics`
+**v0.38.0 Workspace Navigation Keywords**: `nav_group`, `icon`, `collapsed`, `context_selector`, `nav`, `group`, `companion`, `position`, `below_section`, `on_transition`, `lifecycle`, `fitness`, `external`, `param`, `feedback_widget`, `guide`, `subprocessor`, `analytics`
 
-**v0.46.0 Graph Semantics Keywords (#619)**: `graph_edge`, `graph_node`, `target`, `weight`, `directed`, `acyclic`, `edges`, `in`, `not`, `is`, `and`, `or`, `asc`, `desc`, `$`
+**v0.46.0 Graph Semantics Keywords (#619)**: `graph_edge`, `graph_node`, `target`, `weight`, `directed`, `acyclic`, `edges`, `in`, `not`, `is`, `and`, `or`, `asc`, `desc`, `$`, `|`
 
 ## Field Types
 
@@ -126,12 +122,15 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
 - `has_one`
 - `embeds`
 - `belongs_to`
+- `latest_one`
+- `descendants_of`
+- `ancestors_of`
 
 ## Full Grammar
 
 ```ebnf
 (*
-  DAZZLE DSL v0.61.0rc5 -- EBNF Grammar
+  DAZZLE DSL v0.82.9 -- EBNF Grammar
   ======================================
   Auto-generated by grammar_gen.py from parser source code.
   Do not edit manually; run `dazzle grammar` to regenerate.
@@ -243,7 +242,10 @@ scalar_type   ::= "str" "(" NUMBER ")"
                 | "money" ( "(" CURRENCY_CODE ")" )?
                 | "file"
                 | "url"
-                | "timezone" ;
+                | "timezone"
+                | "latest_one"
+                | "descendants_of"
+                | "ancestors_of" ;
 
 enum_type     ::= "enum" "[" IDENT ("," IDENT)* "]" ;
 
@@ -275,6 +277,7 @@ entity_decl   ::= "entity" IDENT STRING? ":" NEWLINE
                     access_block?
                     permit_block?
                     forbid_block?
+                    scope_block?
                     audit_directive?
                     examples_block?
                     publish_directive*
@@ -284,6 +287,7 @@ entity_metadata ::= "intent" ":" STRING NEWLINE
                   | "domain" ":" IDENT NEWLINE
                   | "patterns" ":" IDENT ("," IDENT)* NEWLINE
                   | "extends" ":" IDENT ("," IDENT)* NEWLINE
+                  | "subtype_of" ":" IDENT NEWLINE
                   | "archetype" ":" IDENT NEWLINE ;
 
 field_line    ::= IDENT ":" field_def NEWLINE ;
@@ -396,6 +400,23 @@ forbid_block  ::= "forbid" ":" NEWLINE
                   DEDENT ;
 
 policy_rule   ::= ("create" | "read" | "update" | "delete" | "list") ":" condition_expr NEWLINE ;
+
+scope_block   ::= "scope" ":" NEWLINE
+                  INDENT
+                    scope_rule+
+                  DEDENT ;
+
+scope_rule    ::= ("create" | "read" | "update" | "delete" | "list") ":" scope_filter NEWLINE
+                  INDENT
+                    "as" ":" ("*" | IDENT ("," IDENT)*) NEWLINE
+                  DEDENT ;
+
+scope_filter  ::= "all"
+                | "via" IDENT "(" via_binding ("," via_binding)* ")"
+                | "not" "via" IDENT "(" via_binding ("," via_binding)* ")"
+                | condition_expr ;
+
+via_binding   ::= IDENT "=" (IDENT ("." IDENT)* | "id") ;
 
 audit_directive
               ::= "audit" ":" ("all" | BOOLEAN | "[" IDENT ("," IDENT)* "]") NEWLINE ;
@@ -523,7 +544,7 @@ attention_block
 
 signal_level  ::= "critical" | "warning" | "notice" | "info" ;
 
-persona_block ::= "for" IDENT ":" NEWLINE
+persona_block ::= "as" IDENT ":" NEWLINE
                   INDENT
                     persona_directive+
                   DEDENT ;
@@ -535,7 +556,16 @@ persona_directive
                 | "hide" ":" field_list NEWLINE
                 | "show_aggregate" ":" IDENT ("," IDENT)* NEWLINE
                 | "action_primary" ":" IDENT NEWLINE
-                | "read_only" ":" BOOLEAN NEWLINE ;
+                | "read_only" ":" BOOLEAN NEWLINE
+                | "focus" ":" field_list NEWLINE
+                | "empty" ":" STRING NEWLINE
+                | defaults_block ;
+
+defaults_block
+              ::= "defaults" ":" NEWLINE
+                  INDENT
+                    (IDENT ":" (STRING | IDENT ("." IDENT)*) NEWLINE)+
+                  DEDENT ;
 
 scope_expr    ::= "all" | comparison (("and" | "or") comparison)* ;
 
@@ -547,31 +577,9 @@ workspace_decl ::= "workspace" IDENT STRING? ":" NEWLINE
                    INDENT
                      ("purpose" ":" STRING NEWLINE)?
                      ("access" ":" IDENT NEWLINE)?
-                     primary_actions_block?
                      workspace_region+
                      ux_block?
                    DEDENT ;
-
-(* #1324 FR-5: declarative heading CTA buttons. Each action references a
-   declared surface or workspace by name (validated at lint time). Authored
-   actions render AFTER the auto-inferred create-surface CTAs (#827). *)
-primary_actions_block
-              ::= "primary_actions" ":" NEWLINE
-                  INDENT
-                    ("action" STRING "->" ("surface" | "workspace") IDENT NEWLINE)+
-                  DEDENT ;
-
-(* Navigation: a top-level `nav <name>:` def (or a workspace `nav_group`) lists
-   ONE bare entity-or-workspace name per line — there is NO `item` keyword
-   (#1328: `item Contact` is a parse error; write `Contact`). Each line and the
-   group header may carry an optional `icon=` and a render-time VISIBILITY
-   `when: <condition>` clause (#1324 FR-4). *)
-nav_group_block
-              ::= ("nav_group" | "group") STRING
-                  ("icon" "=" IDENT)? "collapsed"? ("when" ":" condition)? ":" NEWLINE
-                  INDENT
-                    (IDENT ("icon" "=" IDENT)? ("when" ":" condition)? NEWLINE)+
-                  DEDENT ;
 
 workspace_region
               ::= IDENT ":" NEWLINE
@@ -1046,7 +1054,7 @@ subscribe_decl
                   DEDENT ;
 
 projection_decl
-              ::= "project" IDENT ":" NEWLINE
+              ::= "projection" IDENT ":" NEWLINE
                   INDENT
                     ("from" ":" IDENT NEWLINE)?
                     ("into" ":" IDENT NEWLINE)?

@@ -125,12 +125,12 @@ Signals with an `action:` link to the referenced surface for quick resolution.
 
 ```dsl
 ux:
-  for admin:
+  as admin:
     scope: all
     purpose: "Manage all tasks"
     action_primary: task_create
 
-  for member:
+  as member:
     scope: assigned_to = current_user
     purpose: "View my tasks"
     read_only: true

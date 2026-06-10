@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.10] - 2026-06-10
+
+### Fixed
+- **KB + docs no longer teach the removed `for:` persona binding** (#1350). `knowledge(concept)` — the
+  channel bootstrap tells agents to trust for syntax — still served `for <persona>:` examples, a hard parse
+  error since #998 renamed the binding to `as`. Swept all 29 stale sites across `semantics_kb/*.toml`,
+  `glossary.py`, `cli_help.py`, `grammar_gen.py`, and hand-written docs (`runtime-capabilities.md`,
+  `docs/examples/{fieldtest-hub,ops-dashboard}.md`); rewrote the `scope` KB concept to lead with the
+  canonical entity-level `scope:`/`permit:`/`as:` shape (ADR-0010), with the surface `ux:` variant second —
+  the new example is parse-verified against the real parser. Bumped `SEED_SCHEMA_VERSION` to 24 so the KG
+  re-ingests. New drift gate `tests/unit/test_kb_persona_binding_drift_1350.py` (95 param cases) greps every
+  agent-facing knowledge source for the dead shape.
+- **`docs/reference/grammar.md` regenerated for the first time since v0.61.0rc5** (#1350). The committed file
+  predated `as:` entirely (`persona_block ::= "for" IDENT`) and had drifted ~280 lines from the live keyword
+  inventory. The regen also exposed that hand-written sections (Entity Constructs: `subtype_of`/`managed_by`/
+  `subtype_panel`/`tenant_host`; the keyword-dispatch parser guide) had been appended to the "do not edit
+  manually" file — they now live as constants in `grammar_gen.py`, so `dazzle grammar` is idempotent and
+  preserves them. Added the previously missing entity-level `scope_block`/`scope_rule` EBNF productions
+  (`as:` clause, `via`/`not via` junction forms) and the persona-variant `defaults`/`focus`/`empty`
+  directives. Also regenerated the KB-derived reference docs (`dazzle docs generate`).
+
+### Agent Guidance
+- **Persona/scope binding is `as`, never `for`** (#998, re-affirmed by #1350): entity scope rules take an
+  indented `as: <personas>` clause; surface `ux:` persona variants open with `as <persona>:`. The KB
+  (`knowledge concept term=scope`) and `docs/reference/grammar.md` are now correct sources for this.
+- **Never hand-edit `docs/reference/grammar.md`** — edit the EBNF/section constants in
+  `src/dazzle/core/grammar_gen.py` and run `dazzle grammar`. Hand-edits are destroyed by the next regen
+  (that's how the 21-version drift happened).
+
 ## [0.82.9] - 2026-06-10
 
 ### Fixed

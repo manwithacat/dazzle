@@ -432,6 +432,7 @@ entity_decl   ::= "entity" IDENT STRING? ":" NEWLINE
                     access_block?
                     permit_block?
                     forbid_block?
+                    scope_block?
                     audit_directive?
                     examples_block?
                     publish_directive*
@@ -554,6 +555,23 @@ forbid_block  ::= "forbid" ":" NEWLINE
                   DEDENT ;
 
 policy_rule   ::= ("create" | "read" | "update" | "delete" | "list") ":" condition_expr NEWLINE ;
+
+scope_block   ::= "scope" ":" NEWLINE
+                  INDENT
+                    scope_rule+
+                  DEDENT ;
+
+scope_rule    ::= ("create" | "read" | "update" | "delete" | "list") ":" scope_filter NEWLINE
+                  INDENT
+                    "as" ":" ("*" | IDENT ("," IDENT)*) NEWLINE
+                  DEDENT ;
+
+scope_filter  ::= "all"
+                | "via" IDENT "(" via_binding ("," via_binding)* ")"
+                | "not" "via" IDENT "(" via_binding ("," via_binding)* ")"
+                | condition_expr ;
+
+via_binding   ::= IDENT "=" (IDENT ("." IDENT)* | "id") ;
 
 audit_directive
               ::= "audit" ":" ("all" | BOOLEAN | "[" IDENT ("," IDENT)* "]") NEWLINE ;
@@ -681,7 +699,7 @@ attention_block
 
 signal_level  ::= "critical" | "warning" | "notice" | "info" ;
 
-persona_block ::= "for" IDENT ":" NEWLINE
+persona_block ::= "as" IDENT ":" NEWLINE
                   INDENT
                     persona_directive+
                   DEDENT ;
@@ -693,7 +711,16 @@ persona_directive
                 | "hide" ":" field_list NEWLINE
                 | "show_aggregate" ":" IDENT ("," IDENT)* NEWLINE
                 | "action_primary" ":" IDENT NEWLINE
-                | "read_only" ":" BOOLEAN NEWLINE ;
+                | "read_only" ":" BOOLEAN NEWLINE
+                | "focus" ":" field_list NEWLINE
+                | "empty" ":" STRING NEWLINE
+                | defaults_block ;
+
+defaults_block
+              ::= "defaults" ":" NEWLINE
+                  INDENT
+                    (IDENT ":" (STRING | IDENT ("." IDENT)*) NEWLINE)+
+                  DEDENT ;
 
 scope_expr    ::= "all" | comparison (("and" | "or") comparison)* ;
 """
@@ -1508,7 +1535,7 @@ surface task_list "Tasks":
       message: "Task due soon"
       action: task_detail
 
-    for manager:
+    as manager:
       scope: all
       show: title, status, assigned_to
       action_primary: task_detail
@@ -1738,6 +1765,210 @@ llm_intent classify_ticket "Classify Support Ticket":
 
 
 # ---------------------------------------------------------------------------
+# Hand-authored documentation sections (#1350)
+#
+# grammar.md is auto-generated and says "do not edit manually" — but these
+# construct guides were hand-appended to the output file over time, so any
+# regeneration silently destroyed them. They live here now: edit THESE
+# constants, then run `dazzle grammar`.
+# ---------------------------------------------------------------------------
+
+_ENTITY_CONSTRUCTS_SECTION = """\
+## Entity Constructs
+
+### `subtype_of:` (v0.71.180, #1217 Phase 3e)
+
+Declares an IS-A relationship to a base entity (table-per-type polymorphism).
+The child shares the base's primary key via a shared-PK FK; the framework
+auto-adds a `kind` enum on the base. **Escape hatch — see ADR-0026 and the
+inference KB for guidance on when NOT to reach for this.**
+
+```dsl
+entity Vehicle "Vehicle":
+  subtype_of: Asset
+  wheels: int required
+```
+
+Multiple inheritance is not supported (one identifier only). Multi-level
+hierarchies (A subtype_of B subtype_of C) are rejected at linker time.
+
+### `managed_by:` (#1333)
+
+Marks an entity whose lifecycle is owned **outside** the workspace/nav
+graph — reachable only via a custom route, a pipeline/job, a multi-step
+wizard, or an external system. One of `route | pipeline | wizard | external`.
+
+```dsl
+entity OnboardingProgress "Onboarding Progress":
+  managed_by: route
+  id: uuid pk
+  stage: str(40) required
+```
+
+Its sole effect is to **exempt the entity and its CRUD surfaces from the
+dead-construct lint** — they are intentionally absent from any workspace or
+`nav` reference, but are not dead code. It is deliberately orthogonal to
+`domain:`: unlike `domain: platform`, `managed_by:` does **not** reclassify
+the entity's business domain, mark it framework-injected, or skip
+modeling/fitness rules. Use `domain: platform` for framework-synthetic
+entities; use `managed_by:` for your own route/pipeline/wizard-driven ones.
+
+### `subtype_panel:` (v0.71.184, #1217 Phase 3e.v)
+
+Inside a surface section, dispatches inline rendering by `row.kind`. Each
+branch names a snake_case discriminator value and the per-subtype surface
+to include. Valid only on surfaces whose entity is a polymorphic base
+(linker rule 9).
+
+```dsl
+surface asset_card "Asset Card":
+  uses entity Asset
+  mode: view
+  section main:
+    field acquired_at "Acquired"
+    subtype_panel:
+      when kind = vehicle: include surface vehicle_detail
+      when kind = building: include surface building_detail
+```
+
+Unknown discriminator values raise `E_SUBTYPE_PANEL_UNKNOWN_KIND`. Omitting
+a known subtype emits `W_SUBTYPE_PANEL_INCOMPLETE` in
+`AppSpec.metadata['link_warnings']`.
+
+### `tenant_host:` (v0.80.X, #1289)
+
+Declares Host-header tenant routing for an entity. When present, the framework
+auto-mounts `TenantResolutionMiddleware` that strips `<base_suffix>` from the
+incoming `Host` header, looks up the tenant by slug, and attaches a typed
+`ResolvedTenant` to `request.state.tenant`.
+
+```dsl
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+    canonical_hosts: [www.example.com, example.com]
+    cookie_scope: host
+    super_admin_role: super_admin
+    history_entity: TrustSlugHistory
+    not_found_template: pipeline.tenant.templates:render_404
+    expired_template: pipeline.tenant.templates:render_410
+    order: 1
+```
+
+Sub-fields: `domain:` (required), `slug_field:` (required, must reference a
+`slug:`-typed field on the same entity), `canonical_hosts:`, `cookie_scope:`
+(`host` | `apex`, default `host`), `super_admin_role:` (default
+`super_admin`), `history_entity:`, `not_found_template:` (dotted-path
+callable), `expired_template:` (dotted-path callable), `order:` (required
+when 2+ entities share a `domain:`).
+
+See the full design in
+[`docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md`](../superpowers/specs/2026-05-28-tenant-host-keyword-design.md).
+
+```ebnf
+entity_tenant_host_block = "tenant_host" ":" NEWLINE INDENT
+    tenant_host_field+
+    DEDENT ;
+
+tenant_host_field =
+    "domain"             ":" string  NEWLINE
+  | "slug_field"         ":" IDENT   NEWLINE
+  | "canonical_hosts"    ":" "[" host_list "]" NEWLINE
+  | "cookie_scope"       ":" ("host" | "apex") NEWLINE
+  | "super_admin_role"   ":" IDENT   NEWLINE
+  | "history_entity"     ":" IDENT   NEWLINE
+  | "not_found_template" ":" dotted_callable NEWLINE
+  | "expired_template"   ":" dotted_callable NEWLINE
+  | "order"              ":" NUMBER  NEWLINE ;
+```
+"""
+
+_DISPATCH_GUIDE_SECTION = '''\
+## Writing a Keyword-Dispatch Parser (post-#1088a)
+
+The `dsl_parser_impl/` family has historically used a `while not self.match(TokenType.DEDENT): if … elif self.match(TokenType.X): … elif self.match(TokenType.Y): …` chain to parse INDENT-bounded blocks. For blocks with more than ~5 keywords this produced hard-to-read monoliths — the worst case (`parse_workspace_region`) reached 859 lines / 52-branch elif chain before #1088a landed.
+
+New parsers — and refactors of existing ones — should use the **keyword-dispatch helper** in `src/dazzle/core/dsl_parser_impl/dispatch.py`:
+
+```python
+from dataclasses import dataclass, field
+from dazzle.core.dsl_parser_impl.dispatch import (
+    KeywordParser,
+    parse_block_with_dispatch,
+)
+from dazzle.core.lexer import TokenType
+
+
+@dataclass
+class _PersonaState:
+    """Accumulator — one field per legal keyword in the block."""
+    description: str | None = None
+    goals: list[str] = field(default_factory=list)
+    proficiency: str = "intermediate"
+    # ...
+
+
+def _kw_description(parser, state: _PersonaState) -> None:
+    parser.advance()                                  # consume `description`
+    parser.expect(TokenType.COLON)
+    state.description = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_goals(parser, state: _PersonaState) -> None:
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.goals = parser._parse_string_list()
+    parser.skip_newlines()
+
+
+_PERSONA_KEYWORDS: dict[TokenType, KeywordParser] = {
+    TokenType.DESCRIPTION: _kw_description,
+    TokenType.GOALS:       _kw_goals,
+}
+_PERSONA_IDENT_KEYWORDS: dict[str, KeywordParser] = {
+    "default_workspace":   _kw_default_workspace,
+    "backed_by":           _kw_backed_by,
+    # ...
+}
+
+
+class ScenarioParserMixin:
+    def parse_persona(self) -> ir.PersonaSpec:
+        persona_id, label, _ = self._parse_construct_header(
+            TokenType.PERSONA, allow_keyword_name=True,
+        )
+        state = _PersonaState()
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_PERSONA_KEYWORDS,
+            ident_keywords=_PERSONA_IDENT_KEYWORDS,
+            state=state,
+        )
+        self.expect(TokenType.DEDENT)
+        return _build_persona(persona_id, label or persona_id, state)
+```
+
+### Rules of thumb
+
+1. **One accumulator dataclass per block.** Field names match the keyword names; defaults match what an absent keyword should mean.
+2. **One keyword-parser function per keyword.** Module-private (`_kw_*` prefix). Takes `(parser, state)`, mutates `state`, advances the parser past its value tokens.
+3. **Two dispatch tables.** `first_class_keywords` for keywords with their own `TokenType` (e.g. `TokenType.DESCRIPTION`). `ident_keywords` for keywords matched as plain `IDENTIFIER` tokens (e.g. `"backed_by"`).
+4. **Caller owns the header and the closing DEDENT.** The helper handles only the body — that keeps `_parse_construct_header` and the final IR-build under direct caller control.
+5. **`on_unknown=...` for custom recovery.** The default raises `"Unknown keyword in block: 'foo'"`. Override when the block has a renamed-keyword diagnostic, an `extra_attrs` catch-all, or other bespoke recovery.
+
+### When *not* to use the dispatch helper
+
+- Blocks with ≤3 keywords. The dispatch indirection costs more than the elif chain saves.
+- Parsers that need positional argument order (rare in Dazzle DSL but possible — most state machines need this).
+- Parsers where the keyword-parser logic needs information from earlier keywords mid-block (rare — usually the accumulator-then-build pattern handles this fine, but if you need conditional sub-grammars based on `display:` for instance, that's still handled by the accumulator + a post-loop dispatch on `state.display`).
+'''
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -1809,6 +2040,10 @@ def generate_grammar() -> str:
 
     parts.append("```\n")
 
+    # Hand-authored construct guides (preserved across regeneration, #1350)
+    parts.append(_ENTITY_CONSTRUCTS_SECTION.rstrip())
+    parts.append("")
+
     # DSL examples by category
     parts.append("## DSL Examples\n")
     for cat in _CATEGORY_ORDER:
@@ -1827,6 +2062,10 @@ def generate_grammar() -> str:
     for mod_name, _title, category in _MIXIN_SECTIONS:
         cls_name = class_names.get(mod_name, "-")
         parts.append(f"| `{mod_name}.py` | `{cls_name}` | {category} |")
+    parts.append("")
+
+    # Hand-authored contributor guide (preserved across regeneration, #1350)
+    parts.append(_DISPATCH_GUIDE_SECTION.rstrip())
     parts.append("")
 
     return "\n".join(parts) + "\n"

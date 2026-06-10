@@ -304,7 +304,7 @@ Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, c
 - `list_all` *(boolean)* — List all triggers (for inference / counter_prior)
 - `since` *(string)* — Version filter (for changelog, e.g. '0.48.0')
 - `id` *(string)* — Counter-prior id (for counter_prior direct fetch — returns full body)
-- `code_shape` *(string)* — Description of code about to be written, matched against triggers_code regexes (for counter_prior)
+- `code_shape` *(string)* — Description of code about to be written, or a code fragment — matched against triggers_code regexes with triggers_text fallback (for counter_prior)
 - `layer` *(string)* — Substrate layer filter for list_all (for counter_prior)
 
 ---

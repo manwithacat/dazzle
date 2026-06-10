@@ -45,7 +45,7 @@ workspace <workspace_name> "<Display Name>":
       <metric_name>: <expression>
 
   [ux:]
-    [for <persona>: ...]
+    [as <persona>: ...]
 
 # Aggregate expressions:
 #   count(Entity)                        → total entity count

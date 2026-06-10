@@ -84,12 +84,12 @@ surface device_list "Device Dashboard":
   mode: list
 
   ux:
-    for engineer:
+    as engineer:
       scope: all
       purpose: "Manage all devices across batches"
       action_primary: device_create
 
-    for tester:
+    as tester:
       scope: assigned_tester_id = current_user
       purpose: "Your assigned devices"
       show: name, model, firmware_version, status
@@ -103,7 +103,7 @@ surface issue_report_create "Report Issue":
   mode: create
 
   ux:
-    for tester:
+    as tester:
       defaults:
         reported_by_id: current_user
         severity: medium

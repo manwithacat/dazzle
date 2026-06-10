@@ -14,7 +14,7 @@ A role-based variant that adapts surfaces or workspaces for different user types
 ### Syntax
 
 ```dsl
-for <persona_name>:
+as <persona_name>:
   scope: <filter_expression>
   purpose: "<persona-specific purpose>"
   [show: <field1>, <field2>, ...]
@@ -27,19 +27,19 @@ for <persona_name>:
 ### Example
 
 ```dsl
-for admin:
+as admin:
   scope: all
   purpose: "Full user management"
   show_aggregate: total_users, active_count
   action_primary: user_create
 
-for manager:
+as manager:
   scope: department = current_user.department
   purpose: "Manage department users"
   hide: salary, ssn
   action_primary: user_invite
 
-for member:
+as member:
   scope: id = current_user.id
   purpose: "View own profile"
   read_only: true
@@ -123,41 +123,64 @@ attention warning:
 
 ## Scope
 
-Filter expression defining what data a persona can see. Must be either 'all' or a comparison expression.
+Row filter defining what data a persona can see or write. Two layers: (1) the entity-level scope: block — the canonical RBAC row filter, paired with permit: (ADR-0010) — and (2) a display-layer scope: inside a surface ux 'as <persona>:' variant. Filters are 'all' or a comparison expression; each entity-level rule binds to personas via an 'as:' clause.
 
 ### Syntax
 
 ```dsl
-scope: all
-scope: <field> = current_user
-scope: <field> = current_user.<attribute>
-scope: <field> = <value>
-scope: <expr1> and <expr2>
-scope: <expr1> or <expr2>
+# Entity-level (canonical RBAC — every entity needs permit: AND scope:)
+scope:
+  <create|read|update|delete|list>: all | <expr> | via Junction(<bindings>) | not via Junction(<bindings>)
+    as: <persona>(, <persona>)* | *
+
+# Filter expression forms
+<field> = current_user
+<field> = current_user.<attribute>
+<fk_path>.<field> = current_user.<attribute>
+<field> = <value>
+<expr1> and <expr2>
+<expr1> or <expr2>
+not (<expr>)
+
+# Surface ux variant (display-layer narrowing)
+ux:
+  as <persona>:
+    scope: all | <expr>
 ```
 
 ### Example
 
 ```dsl
-# Full access for admins
-for admin:
-  scope: all
+# Entity-level scope: block — pairs with permit:
+entity Ticket "Support Ticket":
+  id: uuid pk
+  created_by: ref User required
+  assigned_to: ref User
 
-# Personal data - matches current user
-for member:
-  scope: owner_id = current_user
+  permit:
+    list: role(customer) or role(agent)
+    read: role(customer) or role(agent)
+    update: role(agent)
 
-# Team-scoped data
-for manager:
-  scope: team_id = current_user.team_id
+  scope:
+    list: created_by = current_user
+      as: customer
+    list: all
+      as: agent
+    read: created_by = current_user
+      as: customer
+    read: all
+      as: agent
+    update: assigned_to = current_user
+      as: agent
 
-# Combined ownership - "my tasks"
-for member:
-  scope: assigned_to = current_user or created_by = current_user
-
-# Status-filtered with ownership
-for agent:
-  scope: status = open and assigned_to = current_user
+# Surface ux variant — display-layer scope
+surface ticket_list "Tickets":
+  uses entity Ticket
+  mode: list
+  ux:
+    as agent:
+      scope: status = open and assigned_to = current_user
 ```
 
 **Related:** [Persona](ux.md#persona), [Conditions](entities.md#conditions), Scope Runtime
@@ -190,7 +213,7 @@ Default field values for a persona in create/edit forms. Pre-populates fields ba
 
 ```dsl
 ux:
-  for <persona_name>:
+  as <persona_name>:
     defaults:
       <field>: <value>
       <field>: current_user
@@ -212,13 +235,13 @@ surface ticket_create "New Ticket":
   ux:
     purpose: "Create new support ticket"
 
-    for customer:
+    as customer:
       defaults:
         created_by: current_user
         status: open
         priority: medium
 
-    for agent:
+    as agent:
       defaults:
         created_by: current_user
         status: open
@@ -229,7 +252,7 @@ surface order_create "New Order":
   mode: create
 
   ux:
-    for sales_rep:
+    as sales_rep:
       defaults:
         created_by: current_user
         status: draft
@@ -261,7 +284,7 @@ ux:
     message: "<user message>"
     [action: <surface_name>]
 
-  [for <persona>:]
+  [as <persona>:]
     [scope: <filter_expression>]
     [purpose: "<persona purpose>"]
     [show: <fields>]
@@ -285,11 +308,11 @@ ux:
     when: days_since(last_login) > 90
     message: "Inactive account"
 
-  for admin:
+  as admin:
     scope: all
     action_primary: user_create
 
-  for member:
+  as member:
     scope: id = current_user.id
     read_only: true
 ```

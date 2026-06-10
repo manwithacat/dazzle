@@ -3,7 +3,7 @@
 
 [meta]
 category = "Core Constructs"
-version = "0.82.9"
+version = "0.82.10"
 
 [concepts.entity]
 category = "Core Construct"
@@ -205,7 +205,7 @@ workspace <workspace_name> "<Display Name>":
       <metric_name>: <expression>
 
   [ux:]
-    [for <persona>: ...]
+    [as <persona>: ...]
 
 # Aggregate expressions:
 #   count(Entity)                        → total entity count

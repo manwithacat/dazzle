@@ -451,6 +451,37 @@ generated/
 
 ---
 
+## Enterprise Sso
+
+Per-org enterprise SSO via OIDC connections — an opt-in capability. Connections are runtime data (dazzle auth connection ...), fenced per org and gated by domain verification. SAML and SCIM are sibling capabilities (auth.enterprise.saml / .scim).
+
+### Syntax
+
+```dsl
+# 1. Opt in (declares the capability + prints the runbook):
+dazzle capability enable auth.enterprise.oidc
+# 2. Create a per-org connection (runtime data, not DSL):
+dazzle auth connection create --tenant <org> --issuer <url> \
+    --client-id <id> --client-secret <secret>
+# 3. Verify the org's email domain (DNS-TXT), then sign in at /auth/enterprise/login.
+```
+
+### Example
+
+```dsl
+# dazzle.toml
+[capabilities]
+enabled = ["auth.enterprise.oidc"]
+
+# Per org (CLI, runtime — secrets never in DSL):
+$ dazzle auth connection create --tenant acme --issuer https://acme.okta.com \
+    --client-id ... --client-secret ...
+$ dazzle auth connection add-domain <id> acme.com   # publish the printed TXT record
+$ dazzle auth connection verify-domain <id> acme.com
+```
+
+---
+
 ## Error Category
 
 High-level error categories for routing and handling decisions in the GraphQL layer.
@@ -1056,18 +1087,18 @@ surface ticket_list "Support Tickets":
     purpose: "Manage support tickets by role"
 
     # Admins see everything, can reassign
-    for admin:
+    as admin:
       scope: all
       action_primary: ticket_assign
       show_aggregate: total, open, resolved_today
 
     # Agents see assigned + unassigned
-    for agent:
+    as agent:
       scope: assigned_to = current_user or assigned_to = null
       action_primary: ticket_respond
 
     # Customers see only their tickets
-    for customer:
+    as customer:
       scope: created_by = current_user
       hide: internal_notes, assigned_to
       read_only: true

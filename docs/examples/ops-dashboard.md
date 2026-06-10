@@ -92,7 +92,7 @@ workspace command_center "Command Center":
       avg_response_time: avg(response_time_ms)
 
   ux:
-    for ops_engineer:
+    as ops_engineer:
       scope: all
       purpose: "Full visibility into all systems and alerts"
 ```

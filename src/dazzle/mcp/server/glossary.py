@@ -156,12 +156,12 @@ A role-based variant that adapts surfaces or workspaces for different user types
 **Example:**
 ```dsl
 ux:
-  for admin:
+  as admin:
     scope: all
     purpose: "Full task management"
     action_primary: task_create
 
-  for member:
+  as member:
     scope: assigned_to = current_user
     purpose: "Your personal tasks"
     read_only: true
@@ -176,7 +176,7 @@ Optional metadata on surfaces and workspaces expressing WHY they exist and WHAT 
 - `purpose` - Single-line explanation of semantic intent
 - `show`, `sort`, `filter`, `search` - Information needs
 - `attention` - Data-driven alerts (critical, warning, notice, info)
-- `for {persona}` - Role-based variants
+- `as {persona}` - Role-based variants
 
 **Example:**
 ```dsl
@@ -191,9 +191,9 @@ ux:
     when: days_since(last_login) > 90
     message: "Inactive account"
 
-  for admin:
+  as admin:
     scope: all
-  for member:
+  as member:
     scope: id = current_user.id
     read_only: true
 ```

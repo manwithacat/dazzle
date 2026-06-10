@@ -880,18 +880,18 @@ surface ticket_list "Support Tickets":
     purpose: "Manage support tickets by role"
 
     # Admins see everything, can reassign
-    for admin:
+    as admin:
       scope: all
       action_primary: ticket_assign
       show_aggregate: total, open, resolved_today
 
     # Agents see assigned + unassigned
-    for agent:
+    as agent:
       scope: assigned_to = current_user or assigned_to = null
       action_primary: ticket_respond
 
     # Customers see only their tickets
-    for customer:
+    as customer:
       scope: created_by = current_user
       hide: internal_notes, assigned_to
       read_only: true

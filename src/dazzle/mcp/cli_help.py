@@ -771,19 +771,19 @@ Use: get_workflow_guide('add_personas') for step-by-step instructions.
     purpose: "Manage user accounts"
 
     # Admin sees everything
-    for admin:
+    as admin:
       scope: all
       action_primary: user_create
       show_aggregate: total_users, active_count
 
     # Manager sees their department
-    for manager:
+    as manager:
       scope: department = current_user.department
       hide: salary, ssn
       action_primary: user_invite
 
     # Regular users see only themselves
-    for member:
+    as member:
       scope: id = current_user.id
       read_only: true""",
                 },
@@ -797,11 +797,11 @@ Use: get_workflow_guide('add_personas') for step-by-step instructions.
     source: Task
 
   ux:
-    for admin:
+    as admin:
       scope: all
       purpose: "Full system visibility"
 
-    for member:
+    as member:
       scope: assigned_to = current_user
       purpose: "Your personal tasks" """,
                 },
