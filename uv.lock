@@ -993,7 +993,7 @@ wheels = [
 
 [[package]]
 name = "dazzle-dsl"
-version = "0.82.10"
+version = "0.82.20"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
@@ -1005,6 +1005,7 @@ dependencies = [
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
     { name = "pydantic" },
+    { name = "pyjwt" },
     { name = "pyyaml" },
     { name = "segno" },
     { name = "slowapi" },
@@ -1206,6 +1207,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pygls", marker = "extra == 'lsp'", specifier = ">=1.0.0" },
     { name = "pyhanko", marker = "extra == 'signing'", specifier = ">=0.25.0" },
+    { name = "pyjwt", specifier = ">=2.8.0" },
     { name = "pyjwt", marker = "extra == 'mobile'", specifier = ">=2.8.0" },
     { name = "pyjwt", marker = "extra == 'mobile-full'", specifier = ">=2.8.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4" },

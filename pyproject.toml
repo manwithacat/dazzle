@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.82.20"
+version = "0.82.21"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -82,6 +82,13 @@ dependencies = [
     # promoted to core to make the SSO flow + its tests work out of
     # the box.
     "itsdangerous>=2.1",
+    # PyJWT backs the default-mounted bearer-token routes (/auth/token et
+    # al., #1105). It lived only in the [mobile] extras while jwt_auth.py
+    # deferred `import jwt` into method bodies — so on a clean install the
+    # routes mounted at boot and 500'd at request time on a public
+    # endpoint (#1362). Default-on feature's deps belong in the default
+    # install; pure-Python, no transitive deps beyond typing.
+    "PyJWT>=2.8.0",
     # fastapi was historically in the [serve] extras, but dazzle.core
     # transitively imports dazzle.back.runtime (via appspec_loader →
     # back.runtime.renderers.init → back.runtime/server.py → file_routes,

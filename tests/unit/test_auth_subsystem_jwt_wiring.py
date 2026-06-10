@@ -11,6 +11,7 @@ This file pins the wiring contract:
 - Missing DATABASE_URL gates the mount (TokenStore is Postgres-only).
 """
 
+import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -228,3 +229,53 @@ def test_startup_gates(enable_auth: bool, auth_store_set: bool, expect_call: boo
         register_jwt.assert_called_once()
     else:
         register_jwt.assert_not_called()
+
+
+def test_ensure_jwt_service_fails_loud_without_pyjwt() -> None:
+    """#1362: a missing PyJWT must mean routes don't mount at boot (with a
+    loud warning), never a 500 at request time on a public endpoint."""
+    import builtins
+
+    sub = AuthSubsystem()
+    ctx = _make_ctx(database_url="postgresql://localhost/test")
+
+    real_import = builtins.__import__
+
+    def _no_jwt(name, *args, **kwargs):
+        if name == "jwt":
+            raise ImportError("No module named 'jwt'")
+        return real_import(name, *args, **kwargs)
+
+    with (
+        patch("builtins.__import__", side_effect=_no_jwt),
+        patch.dict(sys.modules) as mods,
+    ):
+        mods.pop("jwt", None)
+        assert sub._ensure_jwt_service(ctx) is False  # type: ignore[arg-type]
+    assert sub._jwt_service is None
+
+
+def test_register_jwt_routes_skipped_without_pyjwt() -> None:
+    """#1362 end-to-end: the route factory is never invoked without PyJWT."""
+    import builtins
+
+    sub = AuthSubsystem()
+    ctx = _make_ctx(database_url="postgresql://localhost/test")
+
+    real_import = builtins.__import__
+
+    def _no_jwt(name, *args, **kwargs):
+        if name == "jwt":
+            raise ImportError("No module named 'jwt'")
+        return real_import(name, *args, **kwargs)
+
+    with (
+        patch("dazzle.back.runtime.auth.create_jwt_auth_routes") as factory,
+        patch("builtins.__import__", side_effect=_no_jwt),
+        patch.dict(sys.modules) as mods,
+    ):
+        mods.pop("jwt", None)
+        sub._register_jwt_routes(ctx)  # type: ignore[arg-type]
+
+    factory.assert_not_called()
+    ctx.app.include_router.assert_not_called()  # type: ignore[attr-defined]

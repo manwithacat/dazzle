@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.21] - 2026-06-10
+
+### Fixed
+- **JWT routes can no longer mount without PyJWT and 500 at request time** (#1362). PyJWT lived only in
+  the `[mobile]` extras while the bearer-token routes (`/auth/token` et al., #1105) mount by default, and
+  `jwt_auth.py` defers `import jwt` into method bodies — so a clean `pip install dazzle-dsl` booted fine
+  and threw 500s on a public endpoint. Two-part fix: **PyJWT promoted to core dependencies** (the
+  default-on-feature precedent of faker/segno/bleach/itsdangerous; `uv.lock` regenerated), and
+  `_ensure_jwt_service` now probes `import jwt` directly so any future packaging regression fails loud at
+  boot — routes not mounted plus an explicit warning — never at request time.
+
 ## [0.82.20] - 2026-06-10
 
 ### Fixed

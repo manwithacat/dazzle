@@ -419,10 +419,22 @@ class AuthSubsystem:
         import os
 
         try:
+            # #1362: jwt_auth.py defers `import jwt` into method bodies, so
+            # importing the module succeeds without PyJWT and the mounted
+            # routes 500 at request time on a public endpoint. Probe the
+            # real dependency here so a packaging regression fails loud at
+            # boot (routes not mounted + warning) instead.
+            import jwt  # noqa: F401
+
             from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
             from dazzle.back.runtime.token_store import TokenStore
         except ImportError as e:
-            logger.warning("JWT auth dependencies not available: %s", e)
+            logger.warning(
+                "JWT auth routes NOT mounted — dependency missing: %s. "
+                "PyJWT is a core dependency as of v0.82.21 (#1362); this "
+                "indicates a broken install.",
+                e,
+            )
             return False
 
         jwt_cfg = getattr(ctx.auth_config, "jwt", None)
