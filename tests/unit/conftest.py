@@ -188,9 +188,17 @@ def make_entity():
     """Factory for mock EntitySpec objects with ref fields (for dazzle.db tests)."""
     from unittest.mock import MagicMock
 
-    def _make(name: str, refs: dict[str, str] | None = None) -> MagicMock:
+    def _make(
+        name: str,
+        refs: dict[str, str] | None = None,
+        *,
+        required_refs: set[str] | None = None,
+    ) -> MagicMock:
         entity = MagicMock()
         entity.name = name
+        # #1364: real EntitySpec attributes the db layer reads — a bare
+        # MagicMock would be truthy/non-iterable here and corrupt tests.
+        entity.invariants = []
         fields = []
         # PK field
         pk = MagicMock()
@@ -198,6 +206,7 @@ def make_entity():
         pk.type = MagicMock()
         pk.type.kind = "uuid"
         pk.type.ref_entity = None
+        pk.is_required = False
         fields.append(pk)
         # Ref fields (FieldTypeKind.REF — the only kind with FK columns on this entity)
         if refs:
@@ -207,6 +216,7 @@ def make_entity():
                 f.type = MagicMock()
                 f.type.kind = "ref"
                 f.type.ref_entity = ref_entity
+                f.is_required = field_name in (required_refs or set())
                 fields.append(f)
         entity.fields = fields
         return entity

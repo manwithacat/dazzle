@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.22] - 2026-06-10
+
+### Added
+- **DSL-derived ref-integrity audit: required-ref NULLs + unanchored rows** (#1364). Refs compile to soft
+  columns and `required`/invariants are app-write-time contracts, so out-of-convention writes could violate
+  them invisibly — `dazzle db verify` already audited orphans but missed the other two classes the DSL
+  knows about. `verify` now also reports **required-ref NULL counts** and **unanchored rows** (entities
+  whose `invariant: a != null or b != null` anchor set is all-NULL — the statically translatable invariant
+  shape; others stay app-layer contracts), counting both toward the non-zero exit. `dazzle db cleanup`
+  gains an opt-in `--unanchored` sweep riding inside the existing iterative children-aware loop (deleting
+  unanchored rows can orphan their children; the next pass reaps them). Shaped per the decision on #1364:
+  extend the battle-tested `verify`/`cleanup` pair rather than add a third overlapping command;
+  `docs/reference/migrations.md` now documents the pair as the canonical integrity audit.
+
 ## [0.82.21] - 2026-06-10
 
 ### Fixed

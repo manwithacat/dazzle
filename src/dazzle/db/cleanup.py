@@ -6,11 +6,26 @@ from typing import Any
 from .connection import fetchval
 from .graph import get_ref_fields
 from .sql import quote_id
-from .verify import _build_orphan_query
+from .verify import _build_orphan_query, unanchored_invariant_fields
 
 logger = logging.getLogger(__name__)
 
 MAX_ITERATIONS = 10
+
+
+def _unanchored_checks(entities: list[Any]) -> list[tuple[str, list[str]]]:
+    """(entity_name, anchor_fields) pairs for at-least-one-anchor invariants (#1364)."""
+    out: list[tuple[str, list[str]]] = []
+    for entity in entities:
+        for invariant in getattr(entity, "invariants", []) or []:
+            fields = unanchored_invariant_fields(invariant)
+            if fields is not None:
+                out.append((entity.name, fields))
+    return out
+
+
+def _unanchored_where(anchor_fields: list[str]) -> str:
+    return " AND ".join(f"{quote_id(f)} IS NULL" for f in anchor_fields)
 
 
 def _build_delete_orphans_query(
@@ -35,6 +50,7 @@ async def db_cleanup_impl(
     entities: list[Any],
     conn: Any,
     dry_run: bool = False,
+    unanchored: bool = False,
 ) -> dict[str, Any]:
     """Find and remove FK orphans iteratively.
 
@@ -44,6 +60,10 @@ async def db_cleanup_impl(
         entities: List of EntitySpec objects.
         conn: psycopg3 async connection.
         dry_run: If True, count orphans without deleting.
+        unanchored: #1364 opt-in — also sweep rows violating an
+            at-least-one-anchor invariant (`a != null or b != null`).
+            Off by default: unlike orphans (rows pointing at nothing),
+            unanchored rows may be mid-flow data a user intends to anchor.
 
     Returns:
         Dict with cleanup results.
@@ -56,6 +76,8 @@ async def db_cleanup_impl(
         for field in get_ref_fields(entity):
             if field.type.ref_entity in entity_map:
                 checks.append((entity.name, field, field.type.ref_entity))
+
+    unanchored_checks = _unanchored_checks(entities) if unanchored else []
 
     if dry_run:
         total_would_delete = 0
@@ -86,6 +108,26 @@ async def db_cleanup_impl(
             except Exception as e:
                 logger.warning("Error checking %s.%s: %s", entity_name, field.name, e)
 
+        for entity_name, anchor_fields in unanchored_checks:
+            sql = (
+                f"SELECT count(*) FROM {quote_id(entity_name)} "
+                f"WHERE {_unanchored_where(anchor_fields)}"
+            )
+            try:
+                count = await fetchval(conn, sql)
+                if count > 0:
+                    findings.append(
+                        {
+                            "entity": entity_name,
+                            "field": " / ".join(anchor_fields),
+                            "ref": None,
+                            "unanchored_count": count,
+                        }
+                    )
+                    total_would_delete += count
+            except Exception as e:
+                logger.warning("Error checking unanchored %s: %s", entity_name, e)
+
         return {
             "dry_run": True,
             "would_delete": total_would_delete,
@@ -97,7 +139,7 @@ async def db_cleanup_impl(
     iteration = 0  # Initialize before loop to avoid UnboundLocalError when checks is empty
     all_deletions: list[dict[str, Any]] = []
 
-    if not checks:
+    if not checks and not unanchored_checks:
         return {
             "total_deleted": 0,
             "iterations": 0,
@@ -143,6 +185,31 @@ async def db_cleanup_impl(
                 )
             except Exception as e:
                 logger.warning("Error cleaning %s.%s: %s", entity_name, field.name, e)
+
+        # #1364: unanchored sweep rides inside the same iterative loop —
+        # deleting unanchored rows can orphan THEIR children, which the
+        # next iteration's orphan pass then reaps.
+        for entity_name, anchor_fields in unanchored_checks:
+            where = _unanchored_where(anchor_fields)
+            count_sql = f"SELECT count(*) FROM {quote_id(entity_name)} WHERE {where}"
+            try:
+                count = await fetchval(conn, count_sql)
+                if count == 0:
+                    continue
+                await conn.execute(f"DELETE FROM {quote_id(entity_name)} WHERE {where}")
+                round_deleted += count
+                all_deletions.append(
+                    {
+                        "entity": entity_name,
+                        "field": " / ".join(anchor_fields),
+                        "ref": None,
+                        "deleted": count,
+                        "iteration": iteration,
+                        "kind": "unanchored",
+                    }
+                )
+            except Exception as e:
+                logger.warning("Error sweeping unanchored %s: %s", entity_name, e)
 
         total_deleted += round_deleted
         if round_deleted == 0:

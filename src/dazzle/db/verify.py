@@ -7,6 +7,45 @@ from .graph import get_ref_fields
 from .sql import quote_id
 
 
+def unanchored_invariant_fields(invariant: Any) -> list[str] | None:
+    """Recognise the at-least-one-anchor invariant shape (#1364).
+
+    ``invariant: case_ref != null or matter_ref != null`` parses to an
+    OR-tree of ``BinaryExpr(op=NE, left=FieldRef, right=Literal(None))``
+    nodes in ``invariant_expr``. That narrow shape translates statically to
+    one SQL ``WHERE a IS NULL AND b IS NULL`` count; anything else returns
+    None (not statically checkable — invariants are enforced at app
+    write-time only, so out-of-convention writes can violate them).
+    """
+    expr = getattr(invariant, "invariant_expr", None)
+    if expr is None:
+        return None
+
+    fields: list[str] = []
+
+    def _walk(node: Any) -> bool:
+        op = getattr(node, "op", None)
+        op_value = getattr(op, "value", op)
+        if op_value == "or":
+            return _walk(node.left) and _walk(node.right)
+        if op_value == "!=":
+            path = getattr(node.left, "path", None)
+            right = node.right
+            if (
+                path is not None
+                and len(path) == 1
+                and hasattr(right, "value")
+                and right.value is None
+            ):
+                fields.append(path[0])
+                return True
+        return False
+
+    if _walk(expr) and len(fields) >= 2:
+        return fields
+    return None
+
+
 def _build_orphan_query(
     *,
     child_table: str,
@@ -93,6 +132,76 @@ async def db_verify_impl(
                         "entity": entity.name,
                         "field": field.name,
                         "ref": ref_name,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
+                warning_count += 1
+
+    # #1364: required-ref NULL counts. Refs compile to soft (un-constrained)
+    # columns by design; `required` is enforced at the app layer only, so
+    # out-of-convention writes can leave NULLs the DSL forbids.
+    for entity in entities:
+        for field in get_ref_fields(entity):
+            if not getattr(field, "is_required", False):
+                continue
+            sql = (
+                f"SELECT count(*) FROM {quote_id(entity.name)} WHERE {quote_id(field.name)} IS NULL"
+            )
+            try:
+                null_count = await fetchval(conn, sql)
+                checks.append(
+                    {
+                        "entity": entity.name,
+                        "field": field.name,
+                        "ref": field.type.ref_entity,
+                        "status": "required_null" if null_count > 0 else "ok",
+                        "null_count": null_count,
+                    }
+                )
+                total_issues += null_count
+            except Exception as e:
+                checks.append(
+                    {
+                        "entity": entity.name,
+                        "field": field.name,
+                        "ref": field.type.ref_entity,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
+                warning_count += 1
+
+    # #1364: unanchored rows — entities whose at-least-one-anchor invariant
+    # (`a != null or b != null`) is violated. Only that statically
+    # translatable shape is checked; other invariants are app-write-time
+    # contracts the DB cannot see.
+    for entity in entities:
+        for invariant in getattr(entity, "invariants", []) or []:
+            anchor_fields = unanchored_invariant_fields(invariant)
+            if anchor_fields is None:
+                continue
+            null_conds = " AND ".join(f"{quote_id(f)} IS NULL" for f in anchor_fields)
+            sql = f"SELECT count(*) FROM {quote_id(entity.name)} WHERE {null_conds}"
+            try:
+                unanchored = await fetchval(conn, sql)
+                checks.append(
+                    {
+                        "entity": entity.name,
+                        "field": " / ".join(anchor_fields),
+                        "ref": None,
+                        "status": "unanchored" if unanchored > 0 else "ok",
+                        "unanchored_count": unanchored,
+                        "anchor_fields": anchor_fields,
+                    }
+                )
+                total_issues += unanchored
+            except Exception as e:
+                checks.append(
+                    {
+                        "entity": entity.name,
+                        "field": " / ".join(anchor_fields),
+                        "ref": None,
                         "status": "error",
                         "error": str(e),
                     }

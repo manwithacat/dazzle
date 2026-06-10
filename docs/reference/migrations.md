@@ -337,15 +337,30 @@ dazzle db downgrade -2
 
 Note: the target revision is a positional argument. `dazzle db downgrade` with no arguments steps back one revision. Passing a negative integer like `-1` as a flag (e.g. `dazzle db downgrade --target -1`) does not work — use the positional form.
 
-### Verify FK integrity
+### Verify ref integrity
 
-After applying a migration that creates or drops FK relationships, verify the database state:
+After applying a migration that creates or drops FK relationships — or as a periodic audit of a long-lived database — verify the database state against the DSL:
 
 ```bash
-dazzle db verify
+dazzle db verify            # human-readable report; non-zero exit on findings
+dazzle db verify --json     # machine-readable, for CI/cron gating
 ```
 
-This checks foreign-key integrity and flags orphaned rows or broken constraints.
+Refs compile to **soft (un-constrained) columns** by design, and `required` + invariants are enforced at the app layer only — so out-of-convention writes (manual SQL, sweeps, old bugs) can violate what the DSL declares without the database objecting. `verify` is the DSL-derived audit (#1364):
+
+- **Orphans** — ref columns pointing at a missing parent row.
+- **Required-ref NULLs** — `ref X required` columns containing NULL.
+- **Unanchored rows** — entities declaring an at-least-one-anchor invariant (`invariant: case_ref != null or matter_ref != null`) where every anchor is NULL. Only that statically translatable invariant shape is checked; other invariants remain app-write-time contracts.
+
+To remove the bad rows:
+
+```bash
+dazzle db cleanup --dry-run               # preview the orphan sweep
+dazzle db cleanup                          # iterative, children-aware orphan deletion
+dazzle db cleanup --unanchored --dry-run   # also preview unanchored-row deletions (#1364)
+```
+
+The `--unanchored` sweep is opt-in: unlike orphans (rows pointing at nothing), unanchored rows may be mid-flow data a user still intends to anchor. Deleting unanchored rows can orphan *their* children — the sweep runs inside the same iterative loop, so the next pass reaps them.
 
 ### Snapshot and restore
 
