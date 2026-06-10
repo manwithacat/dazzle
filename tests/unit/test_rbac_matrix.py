@@ -887,3 +887,105 @@ def test_atomic_flow_without_invariant_empty_tuple() -> None:
     m = generate_access_matrix(appspec)
     assert m.atomic_flows[0].invariants == ()
     assert m.to_json()["atomic_flows"][0]["invariants"] == []
+
+
+# ---------------------------------------------------------------------------
+# Test: dead scope rules (#1352)
+# ---------------------------------------------------------------------------
+
+
+def _scope_rule(
+    operation: PermissionKind,
+    personas: list[str],
+    condition: ConditionExpr | None = None,
+) -> ScopeRule:
+    return ScopeRule(operation=operation, condition=condition, personas=personas)
+
+
+def test_unknown_scope_persona_warns() -> None:
+    """A scope rule binding `as:` to an undeclared persona/role is flagged (#1352)."""
+    access = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, condition=_role_cond("admin")),
+        ],
+        scopes=[
+            _scope_rule(PermissionKind.LIST, ["admin"]),
+            _scope_rule(PermissionKind.DELETE, ["accountant"]),  # typo'd persona
+        ],
+    )
+    appspec = _make_appspec([_make_entity("Invoice", access)], [_make_persona("admin")])
+    m = generate_access_matrix(appspec)
+    unknown = [w for w in m.warnings if w.kind == "unknown_scope_persona"]
+    assert len(unknown) == 1
+    assert unknown[0].role == "accountant"
+    assert unknown[0].operation == "delete"
+    # The fully-unknown rule must NOT additionally fire scope_without_permit.
+    assert not [w for w in m.warnings if w.kind == "scope_without_permit"]
+
+
+def test_scope_without_permit_warns() -> None:
+    """A scope rule whose personas never pass permit is unreachable (#1352)."""
+    access = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, condition=_role_cond("admin")),
+            _permit_rule(PermissionKind.DELETE, condition=_role_cond("admin")),
+        ],
+        scopes=[
+            _scope_rule(PermissionKind.LIST, ["admin"]),
+            _scope_rule(PermissionKind.DELETE, ["admin"]),
+            # member never passes permit for delete → dead rule.
+            _scope_rule(PermissionKind.DELETE, ["member"]),
+        ],
+    )
+    appspec = _make_appspec(
+        [_make_entity("Invoice", access)],
+        [_make_persona("admin"), _make_persona("member")],
+    )
+    m = generate_access_matrix(appspec)
+    dead = [w for w in m.warnings if w.kind == "scope_without_permit"]
+    assert len(dead) == 1
+    assert dead[0].operation == "delete"
+    assert "member" in dead[0].role
+
+
+def test_paired_scope_and_permit_no_new_warnings() -> None:
+    """Properly paired permit/scope rules emit neither #1352 warning."""
+    access = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, condition=_role_cond("member")),
+        ],
+        scopes=[_scope_rule(PermissionKind.LIST, ["member"], condition=_field_cond())],
+    )
+    appspec = _make_appspec([_make_entity("Task", access)], [_make_persona("member")])
+    m = generate_access_matrix(appspec)
+    kinds = {w.kind for w in m.warnings}
+    assert "unknown_scope_persona" not in kinds
+    assert "scope_without_permit" not in kinds
+
+
+def test_list_scope_serving_read_permit_is_reachable() -> None:
+    """A LIST scope rule also serves READ (fallback), so a read-only permit keeps it alive."""
+    access = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.READ, condition=_role_cond("member")),
+        ],
+        scopes=[_scope_rule(PermissionKind.LIST, ["member"], condition=_field_cond())],
+    )
+    appspec = _make_appspec([_make_entity("Task", access)], [_make_persona("member")])
+    m = generate_access_matrix(appspec)
+    assert not [w for w in m.warnings if w.kind == "scope_without_permit"]
+
+
+def test_wildcard_scope_persona_not_unknown() -> None:
+    """`as: *` is a legal wildcard binding, never flagged as unknown."""
+    access = AccessSpec(
+        permissions=[
+            _permit_rule(PermissionKind.LIST, condition=_role_cond("admin")),
+        ],
+        scopes=[_scope_rule(PermissionKind.LIST, ["*"])],
+    )
+    appspec = _make_appspec([_make_entity("Doc", access)], [_make_persona("admin")])
+    m = generate_access_matrix(appspec)
+    kinds = {w.kind for w in m.warnings}
+    assert "unknown_scope_persona" not in kinds
+    assert "scope_without_permit" not in kinds

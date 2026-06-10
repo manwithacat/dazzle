@@ -43,7 +43,7 @@ entity Task "Task":
 
   scope:
     list: all
-      as: authenticated
+      as: *
 
   fitness:
     repr_fields: [title, status]

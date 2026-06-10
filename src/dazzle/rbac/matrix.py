@@ -635,6 +635,62 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
                         )
                     )
 
+        # #1352: dead scope rules. Both shapes fail closed at runtime (safe),
+        # but the author gets no signal that the rule they wrote is inert —
+        # the inverse of the no_scope_rule warning above.
+        known_bindings = set(roles) | set(persona_roles) | referenced_roles
+        for scope in access.scopes:
+            scope_op = scope.operation.value
+            unknown = [b for b in scope.personas if b != "*" and b not in known_bindings]
+            for binding in unknown:
+                warnings.append(
+                    PolicyWarning(
+                        kind="unknown_scope_persona",
+                        entity=entity_name,
+                        role=binding,
+                        operation=scope_op,
+                        message=(
+                            f"scope rule for {entity_name}.{scope_op} binds "
+                            f"'as: {binding}' but no such persona or role is declared "
+                            "— the rule can never match (likely a typo)"
+                        ),
+                    )
+                )
+
+            # Reachability: does any bound, known persona pass permit for the
+            # rule's operation? A LIST scope also serves READ (fallback in
+            # _find_scope_for_role), so check both before calling it dead.
+            if "*" in scope.personas:
+                bound_roles = list(roles)
+            else:
+                bound_roles = [persona_roles.get(b, b) for b in scope.personas if b not in unknown]
+            if not bound_roles:
+                continue  # fully covered by unknown_scope_persona above
+            served_ops = [scope_op]
+            if scope.operation == PermissionKind.LIST:
+                served_ops.append(PermissionKind.READ.value)
+            reachable = any(
+                _resolve_decision(access, r, o) != PolicyDecision.DENY
+                for r in bound_roles
+                for o in served_ops
+            )
+            if not reachable:
+                warnings.append(
+                    PolicyWarning(
+                        kind="scope_without_permit",
+                        entity=entity_name,
+                        role=", ".join(scope.personas),
+                        operation=scope_op,
+                        message=(
+                            f"scope rule for {entity_name}.{scope_op} "
+                            f"(as: {', '.join(scope.personas)}) has no matching "
+                            f"permit — default-deny makes the rule unreachable "
+                            f"(add `permit: {scope_op}:` for these roles or "
+                            "remove the scope rule)"
+                        ),
+                    )
+                )
+
     # #1147: warn about roles defined in personas but never referenced
     # in any rule. The diff is now over *role names* (resolved via
     # PersonaSpec.effective_role), so a persona named ``commercial``

@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.11] - 2026-06-10
+
+### Added
+- **Dead scope rules now warn: `[RBAC unknown_scope_persona]` + `[RBAC scope_without_permit]`** (#1352).
+  Two silent false-negatives in the RBAC validators: a `scope:` rule binding `as:` to an undeclared
+  persona/role (unconditionally a typo — the rule can never match), and a scope rule whose personas never
+  pass `permit:` for that operation (default-deny makes it unreachable; CLAUDE.md documented the pairing
+  contract but nothing enforced it). Both fail *closed* at runtime, so these are warnings, not errors —
+  mirrors of the existing `no_scope_rule` warning on the opposite side. A `list:` scope rule also serving
+  the `read` fallback is correctly treated as reachable; `as: *` is never flagged. Emitted from
+  `generate_access_matrix` (`src/dazzle/rbac/matrix.py`), surfaced through `dazzle validate`/`lint` via the
+  existing `[RBAC …]` diagnostics channel. Found in Fable 5's first-look review: a planted unknown persona
+  survived the full validate+lint gauntlet. Fleet precision check: zero hits across all 13 example apps +
+  `fixtures/rbac_validation`; the only specimens are real — `tests/unit/test_cli.py`'s fixture bound
+  `as: authenticated` (an auth-context keyword, never a role — fixed to `as: *`), and 8 dead rules in
+  `fixtures/shapes_validation`'s Shape entity where the docstring-documented PERMIT_FILTERED cells are
+  actually DENY (intent drift, filed as #1355; warning floor updated with rationale).
+
+### Fixed
+- **CI: regenerated the `mcp-tools` API-surface baseline for v0.82.9's `code_shape` description change**.
+  v0.82.9 updated the `knowledge` tool's `code_shape` schema description (#1351) without running
+  `dazzle inspect api mcp-tools --write`, so `test_api_surface_drift.py` failed all three CI interpreter
+  cells on main (v0.82.9 + v0.82.10). Baseline now matches; the surface change is the one-line description
+  documented under v0.82.9.
+
+### Agent Guidance
+- **Any edit to an MCP tool schema — including description text — drifts `docs/api-surface/mcp-tools.txt`.**
+  Run `dazzle inspect api mcp-tools --write` in the same commit and note the drift in the CHANGELOG (#961
+  gate). Also: don't trust a piped pre-ship test command — `pytest … | tail` reports tail's exit code, which
+  masked a local collection failure this cycle; preserve the pytest status (`set -o pipefail`) and sync the
+  CI test extras (`dev,llm,mcp,mobile,perf,saml`) before believing a local green.
+
 ## [0.82.10] - 2026-06-10
 
 ### Fixed

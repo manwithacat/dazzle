@@ -681,7 +681,7 @@ tool: knowledge
   {
     "properties": {
       "code_shape": {
-        "description": "Description of code about to be written, matched against triggers_code regexes (for counter_prior)",
+        "description": "Description of code about to be written, or a code fragment \u2014 matched against triggers_code regexes with triggers_text fallback (for counter_prior)",
         "type": "string"
       },
       "command": {

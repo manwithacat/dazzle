@@ -74,7 +74,8 @@
     },
     "fixtures/shapes_validation": {
       "expected_errors": 0,
-      "expected_warnings_min": 11
+      "expected_warnings_min": 19,
+      "rationale": "11 pre-#1352 warnings + 8 [RBAC scope_without_permit] on Shape: the fixture's non-oracle scope rules (sovereign/architect/chromat/forgemaster/witness list/read, sovereign update/delete) have no matching permits and an explicit blanket forbid, so they are dead — test_tenant_personas_use_scoped_permits's docstring expects PERMIT_FILTERED but the cells are DENY (assertion passes vacuously). Tracked in the #1352 follow-up issue; fixing the fixture's permits is deliberate scope for that issue, not baseline noise."
     }
   }
 }
