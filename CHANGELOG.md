@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.23] - 2026-06-10
+
+### Fixed
+- **`/_dazzle/metrics` no longer 500s `/openapi.json` + `/docs` app-wide** (#1365). An ADR-0014 violation
+  that slipped the decorator-only conformance gate: the metrics module combined
+  `from __future__ import annotations` with a `functools.partial` endpoint registered via `add_api_route`
+  — a partial has no `__globals__`, so the stringified `-> Response` annotation stayed an unresolvable
+  ForwardRef and poisoned pydantic's TypeAdapter during OpenAPI schema generation. Fixed belt-and-braces
+  (future import removed; `include_in_schema=False` + `response_class=Response` — scrape plumbing doesn't
+  belong in OpenAPI). The ADR-0014 gate now also classifies imperative `.add_api_route(` registration as
+  runtime-introspected, which flagged the same latent combination in `debug_routes.py` and
+  `event_explorer.py` — both brought into compliance before they could bite.
+
 ## [0.82.22] - 2026-06-10
 
 ### Added

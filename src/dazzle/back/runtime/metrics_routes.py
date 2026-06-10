@@ -20,8 +20,10 @@ Prometheus document (a single comment line, status 200) rather than a
 500. Scrape tooling will read the empty document cleanly.
 """
 
-from __future__ import annotations
-
+# NO `from __future__ import annotations` here — ADR-0014. This module
+# registers a functools.partial endpoint via add_api_route; a partial has no
+# __globals__, so stringified annotations stay ForwardRef('Response') and
+# poison OpenAPI schema generation app-wide (#1365).
 import logging
 from functools import partial
 from typing import Any
@@ -87,5 +89,10 @@ def create_metrics_routes(collector: Any | None) -> APIRouter:
         "/metrics",
         partial(_render_metrics, collector),
         methods=["GET"],
+        # #1365: Prometheus scrape plumbing doesn't belong in OpenAPI, and
+        # an explicit response_class spares FastAPI from introspecting the
+        # partial's (unresolvable) annotations.
+        include_in_schema=False,
+        response_class=Response,
     )
     return router

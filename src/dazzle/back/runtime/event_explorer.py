@@ -7,7 +7,8 @@ including topics, events, consumers, and outbox status.
 These endpoints are always available in development mode (localhost).
 """
 
-from __future__ import annotations
+# NO `from __future__ import annotations` — ADR-0014 (#1365). TYPE_CHECKING
+# imports below are referenced via string-literal annotations instead.
 
 import json
 import logging
@@ -42,7 +43,7 @@ class EventBusExplorer(Protocol):
         from_offset: int | None = None,
         to_offset: int | None = None,
         key_filter: str | None = None,
-    ) -> AsyncIterator[EventEnvelope]: ...
+    ) -> "AsyncIterator[EventEnvelope]": ...
     async def get_event(self, event_id: str) -> Any: ...
     async def get_consumer_info(self, group_id: str, topic: str) -> dict[str, Any]: ...
     async def get_dlq_count(self, topic: str | None = None) -> int: ...
@@ -191,7 +192,7 @@ class EventSystemStatus(BaseModel):
 # =============================================================================
 
 
-async def _event_system_status(framework: EventFramework | None) -> EventSystemStatus:
+async def _event_system_status(framework: "EventFramework | None") -> EventSystemStatus:
     """
     Get event system status.
 
@@ -223,7 +224,7 @@ async def _event_system_status(framework: EventFramework | None) -> EventSystemS
     )
 
 
-async def _list_topics(framework: EventFramework | None) -> TopicsResponse:
+async def _list_topics(framework: "EventFramework | None") -> TopicsResponse:
     """
     List all event topics.
 
@@ -254,7 +255,7 @@ async def _list_topics(framework: EventFramework | None) -> TopicsResponse:
 
 
 async def _list_events(
-    framework: EventFramework | None,
+    framework: "EventFramework | None",
     topic: str,
     offset: int = Query(default=0, ge=0, description="Number of events to skip"),
     limit: int = Query(default=20, ge=1, le=100, description="Maximum events to return"),
@@ -312,7 +313,7 @@ async def _list_events(
 
 
 async def _get_event(
-    framework: EventFramework | None,
+    framework: "EventFramework | None",
     event_id: str,
 ) -> EventDetail | None:
     """
@@ -344,7 +345,7 @@ async def _get_event(
     )
 
 
-async def _list_consumers(framework: EventFramework | None) -> ConsumersResponse:
+async def _list_consumers(framework: "EventFramework | None") -> ConsumersResponse:
     """
     List all consumer groups.
 
@@ -371,7 +372,7 @@ async def _list_consumers(framework: EventFramework | None) -> ConsumersResponse
     return ConsumersResponse(consumers=consumers)
 
 
-async def _outbox_status(framework: EventFramework | None) -> OutboxResponse:
+async def _outbox_status(framework: "EventFramework | None") -> OutboxResponse:
     """
     Get outbox status.
 
@@ -424,7 +425,7 @@ async def _outbox_status(framework: EventFramework | None) -> OutboxResponse:
 
 
 async def _dlq_list(
-    framework: EventFramework | None,
+    framework: "EventFramework | None",
     topic: str | None = Query(default=None, description="Filter by topic"),
     limit: int = Query(default=20, ge=1, le=100, description="Maximum entries to return"),
 ) -> DLQResponse:
@@ -459,7 +460,7 @@ async def _dlq_list(
 
 
 async def _replay_dlq_event(
-    framework: EventFramework | None,
+    framework: "EventFramework | None",
     event_id: str,
     group_id: str = Query(..., description="Consumer group to replay to"),
 ) -> dict[str, Any]:
@@ -488,7 +489,7 @@ async def _replay_dlq_event(
 # =============================================================================
 
 
-def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
+def create_event_explorer_routes(framework: "EventFramework | None") -> APIRouter:
     """
     Create event explorer routes for runtime inspection.
 

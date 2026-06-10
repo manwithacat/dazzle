@@ -7,7 +7,9 @@ recent actions, and system health.
 These endpoints are always available in development mode (localhost).
 """
 
-from __future__ import annotations  # required: forward reference
+# NO `from __future__ import annotations` — ADR-0014 (#1365): this module
+# registers partial endpoints via add_api_route; deferred annotations stay
+# ForwardRefs FastAPI cannot resolve when building the OpenAPI schema.
 
 import logging
 from dataclasses import dataclass

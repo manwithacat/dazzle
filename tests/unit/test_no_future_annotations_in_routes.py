@@ -49,16 +49,21 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_DIR = REPO_ROOT / "src" / "dazzle" / "back" / "runtime"
 
 # Patterns that mark a file as runtime-introspected by FastAPI. A file
-# triggers ADR-0014 if it has either:
+# triggers ADR-0014 if it has any of:
 #  - a ``Depends(`` call site (FastAPI dependency injection — TypeAdapter
 #    resolves the annotated parameter types), OR
-#  - a route-handler decorator on a router or app.
+#  - a route-handler decorator on a router or app, OR
+#  - an imperative ``.add_api_route(`` registration (#1365 — the metrics
+#    route slipped past the decorator-only gate; a functools.partial
+#    endpoint has no __globals__, so a stringified annotation stays a
+#    ForwardRef and 500s /openapi.json app-wide).
 _DEPENDS_PATTERN = re.compile(r"\bDepends\s*\(")
 _ROUTE_DECORATOR_PATTERN = re.compile(
     r"^\s*@(?:[a-z_][a-z_0-9]*\.)+"
     r"(?:get|post|put|patch|delete|head|options|websocket|api_route|middleware)\s*\(",
     re.MULTILINE,
 )
+_ADD_API_ROUTE_PATTERN = re.compile(r"\.add_api_route\s*\(")
 
 
 def _is_runtime_introspected(path: Path) -> bool:
@@ -70,6 +75,8 @@ def _is_runtime_introspected(path: Path) -> bool:
     if _DEPENDS_PATTERN.search(text):
         return True
     if _ROUTE_DECORATOR_PATTERN.search(text):
+        return True
+    if _ADD_API_ROUTE_PATTERN.search(text):
         return True
     return False
 
