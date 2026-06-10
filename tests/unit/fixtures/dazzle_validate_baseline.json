@@ -74,8 +74,8 @@
     },
     "fixtures/shapes_validation": {
       "expected_errors": 0,
-      "expected_warnings_min": 19,
-      "rationale": "11 pre-#1352 warnings + 8 [RBAC scope_without_permit] on Shape: the fixture's non-oracle scope rules (sovereign/architect/chromat/forgemaster/witness list/read, sovereign update/delete) have no matching permits and an explicit blanket forbid, so they are dead — test_tenant_personas_use_scoped_permits's docstring expects PERMIT_FILTERED but the cells are DENY (assertion passes vacuously). Tracked in the #1352 follow-up issue; fixing the fixture's permits is deliberate scope for that issue, not baseline noise."
+      "expected_warnings_min": 20,
+      "rationale": "#1355 fixed Shape's dead non-oracle scope rules (permits added, blanket forbid removed, material != shadow conjuncts express the documented intent) — the 8 [RBAC scope_without_permit] warnings are gone. Current 20 = fitness/nav advisories + oracle no_scope_rule create/update/delete probes + 1 [RBAC orphan_role] on 'outsider', which is deliberate: outsider is the deny-all baseline persona and now relies purely on default-deny (re-adding a forbid for it would just trade orphan_role for redundant_forbid)."
     }
   }
 }

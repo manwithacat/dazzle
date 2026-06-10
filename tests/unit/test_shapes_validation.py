@@ -132,16 +132,21 @@ class TestAccessMatrixCoverage:
                 )
 
     def test_tenant_personas_use_scoped_permits(self, access_matrix: AccessMatrix) -> None:
-        """Tenant-scoped roles' list/read on Shape must be PERMIT_FILTERED, not PERMIT.
+        """Tenant-scoped roles' list/read on Shape must be PERMIT_SCOPED.
 
         A bare PERMIT here would mean cross-realm data leak: a `sovereign`
-        from realm A could enumerate shapes from realm B. The expected
-        shape is PERMIT_FILTERED (a scope predicate applies at query time).
+        from realm A could enumerate shapes from realm B. PERMIT_SCOPED is
+        the scope-block-path decision (a scope predicate applies at query
+        time; PERMIT_FILTERED is the legacy no-scope-blocks path).
+
+        #1355: this previously asserted only `!= PERMIT`, which the cells'
+        actual value — DENY, because the permits were missing entirely —
+        satisfied vacuously for months. Assert the exact intended decision.
         """
         for persona in ("sovereign", "architect", "chromat", "forgemaster", "witness"):
             for op in ("list", "read"):
                 decision = access_matrix.get(persona, "Shape", op)
-                assert decision != PolicyDecision.PERMIT, (
-                    f"{persona}.{op} on Shape = PERMIT (unscoped) — must be "
-                    f"PERMIT_FILTERED to prevent cross-realm enumeration"
+                assert decision == PolicyDecision.PERMIT_SCOPED, (
+                    f"{persona}.{op} on Shape = {decision} — must be "
+                    f"PERMIT_SCOPED (realm/colour predicate at query time)"
                 )

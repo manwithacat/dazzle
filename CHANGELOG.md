@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.17] - 2026-06-10
+
+### Fixed
+- **shapes_validation: Shape's non-oracle scope rules are live again** (#1355). The fixture's documented
+  intent ("Sovereign can see/edit shapes in their realm"; tenant personas realm/colour-scoped) was dead
+  DSL: permits were oracle-only plus a blanket non-oracle forbid, so all 8 tenant scope rules were
+  unreachable and `test_tenant_personas_use_scoped_permits`'s `!= PERMIT` assertion passed vacuously on
+  DENY cells. Permits added for the five tenant personas (list/read; sovereign also update/delete), the
+  blanket forbid removed (the separation-of-duty `forbid: delete: role(forgemaster)` probe stays live),
+  and the "no shadow material" comment is now *expressed* as `and material != shadow` conjuncts in every
+  non-oracle scope predicate. The test now asserts `== PERMIT_SCOPED` exactly (also fixing its docstring's
+  PERMIT_FILTERED confusion — that's the legacy no-scope-blocks enum). 12 Shape matrix cells flip
+  DENY → PERMIT_SCOPED; validate baseline floor 19 → 20 (the 8 dead-rule warnings are gone; one honest
+  `[RBAC orphan_role]` on the deliberately default-deny `outsider` persona appears).
+
 ## [0.82.16] - 2026-06-10
 
 ### Fixed

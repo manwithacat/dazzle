@@ -57,16 +57,19 @@ entity Shape "Shape":
     update: role(oracle)
     delete: role(oracle)
 
-  # Sovereign can create shapes, and see/edit shapes in their realm
+  # Tenant personas see realm/colour-scoped shapes; sovereign also creates
+  # and edits within their realm (#1355 — these permits were missing, making
+  # every non-oracle scope rule below unreachable behind default-deny).
   permit:
     create: role(sovereign)
+    list: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness)
+    read: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness)
+    update: role(sovereign)
+    delete: role(sovereign)
 
-  # Shadow material is forbidden for non-oracle roles
-  forbid:
-    list: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness) or role(outsider)
-    read: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness) or role(outsider)
-
-  # Row-level filters: oracle sees all, others are realm/colour-scoped
+  # Row-level filters: oracle sees all; non-oracle roles are realm/colour
+  # scoped AND never see shadow material (the intent the old blanket forbid
+  # claimed but could not express — forbid carries role conditions only).
   scope:
     list: all
       as: oracle
@@ -78,21 +81,21 @@ entity Shape "Shape":
       as: oracle
     delete: all
       as: oracle
-    list: realm = current_user.realm
+    list: realm = current_user.realm and material != shadow
       as: sovereign, architect
-    read: realm = current_user.realm
+    read: realm = current_user.realm and material != shadow
       as: sovereign, architect
-    update: realm = current_user.realm
+    update: realm = current_user.realm and material != shadow
       as: sovereign
-    delete: realm = current_user.realm
+    delete: realm = current_user.realm and material != shadow
       as: sovereign
-    list: colour = current_user.colour
+    list: colour = current_user.colour and material != shadow
       as: chromat
-    read: colour = current_user.colour
+    read: colour = current_user.colour and material != shadow
       as: chromat
-    list: realm = current_user.realm or creator = current_user
+    list: (realm = current_user.realm or creator = current_user) and material != shadow
       as: forgemaster, witness
-    read: realm = current_user.realm or creator = current_user
+    read: (realm = current_user.realm or creator = current_user) and material != shadow
       as: forgemaster, witness
 
 # --- Junction-Table Scope Example (#530) ---
