@@ -18,6 +18,7 @@ from dazzle.sentinel.models import (
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 
+from dazzle.core.ir.domain import ConstraintKind
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.governance import DataClassification
 
@@ -247,15 +248,28 @@ class DataIntegrityAgent(DetectionAgent):
         title="Unique-worthy field without UNIQUE constraint",
     )
     def check_missing_unique_constraint(self, appspec: AppSpec) -> list[Finding]:
-        """Flag fields whose name suggests uniqueness but lack a UNIQUE modifier."""
+        """Flag fields whose name suggests uniqueness but lack a UNIQUE modifier.
+
+        #1356: a field covered by an entity-level composite ``unique a, b``
+        constraint is already unique-protected (in any position, not just
+        leading); and framework-injected entities (``domain: platform``,
+        e.g. SessionInfo) are not amendable from project DSL, so flagging
+        them produces unfixable findings.
+        """
         findings: list[Finding] = []
 
         for entity in appspec.domain.entities:
+            if entity.domain == "platform":
+                continue  # framework-injected — no DSL the project could fix
+            constraint_unique_fields: set[str] = {
+                f for c in entity.constraints if c.kind == ConstraintKind.UNIQUE for f in c.fields
+            }
             for field in entity.fields:
                 if (
                     field.name in _UNIQUE_WORTHY_NAMES
                     and not field.is_unique
                     and not field.is_primary_key
+                    and field.name not in constraint_unique_fields
                 ):
                     findings.append(
                         Finding(

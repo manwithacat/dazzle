@@ -383,3 +383,73 @@ class TestBusinessLogicAgentRun:
         surface = _surface("task_list", entity_ref="Task")
         result = agent.run(make_appspec([entity], surfaces=[surface]))
         assert result.errors == []
+
+
+def _sm_entity(name: str, *, role_guarded: bool) -> MagicMock:
+    """Entity mock with a one-transition state machine, optionally role-guarded."""
+    guard = MagicMock()
+    guard.is_role_guard = role_guarded
+    transition = MagicMock()
+    transition.guards = [guard]
+    sm = MagicMock()
+    sm.transitions = [transition]
+    return mock_entity(name, state_machine=sm)
+
+
+class TestBL02Issue1356:
+    """#1356: role-guarded state machines implement status_changed stories."""
+
+    def _scoped_story(self, scope: list[str]) -> MagicMock:
+        s = MagicMock()
+        s.story_id = "ST-001"
+        s.actor = "admin"
+        s.trigger = StoryTrigger.STATUS_CHANGED
+        s.title = "ST-001"
+        s.scope = scope
+        return s
+
+    def test_role_guarded_state_machine_suppresses(self, agent: BusinessLogicAgent) -> None:
+        entity = _sm_entity("Order", role_guarded=True)
+        story = self._scoped_story(["Order"])
+        assert agent.check_story_trigger_mismatch(make_appspec([entity], stories=[story])) == []
+
+    def test_unguarded_state_machine_downgrades(self, agent: BusinessLogicAgent) -> None:
+        from dazzle.sentinel.models import Confidence
+
+        entity = _sm_entity("Order", role_guarded=False)
+        story = self._scoped_story(["Order"])
+        findings = agent.check_story_trigger_mismatch(make_appspec([entity], stories=[story]))
+        assert len(findings) == 1
+        assert findings[0].confidence == Confidence.POSSIBLE
+
+    def test_no_state_machine_stays_likely(self, agent: BusinessLogicAgent) -> None:
+        from dazzle.sentinel.models import Confidence
+
+        entity = make_entity("Order")
+        story = self._scoped_story(["Order"])
+        findings = agent.check_story_trigger_mismatch(make_appspec([entity], stories=[story]))
+        assert len(findings) == 1
+        assert findings[0].confidence == Confidence.LIKELY
+
+    def test_out_of_scope_machine_does_not_suppress(self, agent: BusinessLogicAgent) -> None:
+        # The guarded machine is on an entity OUTSIDE the story's scope.
+        guarded = _sm_entity("Invoice", role_guarded=True)
+        plain = make_entity("Order")
+        story = self._scoped_story(["Order"])
+        findings = agent.check_story_trigger_mismatch(
+            make_appspec([guarded, plain], stories=[story])
+        )
+        assert len(findings) == 1
+
+
+class TestBL07ManagedBy1356:
+    def test_managed_by_entity_not_flagged(self, agent: BusinessLogicAgent) -> None:
+        # #1333 marker: lifecycle owned outside the surface graph.
+        entity = mock_entity("OnboardingProgress")
+        entity.managed_by = "route"
+        assert agent.check_entity_without_surface(make_appspec([entity])) == []
+
+    def test_unmarked_entity_still_flagged(self, agent: BusinessLogicAgent) -> None:
+        entity = make_entity("Orphan")
+        findings = agent.check_entity_without_surface(make_appspec([entity]))
+        assert len(findings) == 1

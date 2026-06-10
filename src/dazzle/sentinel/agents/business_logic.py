@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
@@ -95,7 +95,14 @@ class BusinessLogicAgent(DetectionAgent):
     )
     def check_story_trigger_mismatch(self, appspec: AppSpec) -> list[Finding]:
         """Flag stories with a status_changed trigger that have no corresponding
-        process with an entity_status_transition trigger."""
+        process with an entity_status_transition trigger.
+
+        #1356: a role-guarded state machine on a story-scoped entity is a
+        legitimate *human-actioned* implementation of a status_changed story —
+        no process is needed. Suppress in that case; when a scoped entity has
+        an unguarded state machine, keep the finding but downgrade it (the
+        transitions exist, only the automated/guarded handling is in doubt).
+        """
         findings: list[Finding] = []
 
         has_status_transition_process = any(
@@ -103,56 +110,96 @@ class BusinessLogicAgent(DetectionAgent):
             for p in appspec.processes
         )
 
+        def _scoped_entities(story_scope: list[str]) -> list[Any]:
+            if story_scope:
+                scoped = [e for e in appspec.domain.entities if e.name in story_scope]
+                if scoped:
+                    return scoped
+            return list(appspec.domain.entities)
+
         for story in appspec.stories:
-            if story.trigger == StoryTrigger.STATUS_CHANGED and not has_status_transition_process:
-                findings.append(
-                    Finding(
-                        agent=AgentId.BL,
-                        heuristic_id="BL-02",
-                        category="business_logic",
-                        subcategory="trigger_mismatch",
-                        severity=Severity.MEDIUM,
-                        confidence=Confidence.LIKELY,
-                        title=(
-                            f"Story '{story.story_id}' uses status_changed but "
-                            f"no process handles status transitions"
-                        ),
-                        description=(
-                            f"Story '{story.story_id}' ('{story.title}') declares "
-                            f"a 'status_changed' trigger, but no process in the "
-                            f"specification has an 'entity_status_transition' "
-                            f"trigger. The behaviour described by this story "
-                            f"will not be executed automatically."
-                        ),
-                        construct_type="story",
-                        evidence=[
-                            Evidence(
-                                evidence_type="ir_pattern",
-                                location=f"story.{story.story_id}",
-                                context=(
-                                    f"trigger={story.trigger.value}, "
-                                    f"process_status_transition_triggers=0"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                "Create a process with an "
-                                "'entity_status_transition' trigger that "
-                                "implements this story."
-                            ),
-                            effort=RemediationEffort.MEDIUM,
-                            dsl_example=(
-                                f"process handle_{story.story_id.lower().replace('-', '_')}:\n"
-                                f"  implements: [{story.story_id}]\n"
-                                f"  trigger:\n"
-                                f"    kind: entity_status_transition\n"
-                                f"    entity: <EntityName>\n"
-                                f"    to_status: <target_status>"
-                            ),
-                        ),
-                    )
+            if story.trigger != StoryTrigger.STATUS_CHANGED or has_status_transition_process:
+                continue
+
+            machines = [
+                e.state_machine
+                for e in _scoped_entities(story.scope)
+                if e.state_machine is not None
+            ]
+            has_role_guarded_transition = any(
+                guard.is_role_guard
+                for sm in machines
+                for transition in sm.transitions
+                for guard in transition.guards
+            )
+            if has_role_guarded_transition:
+                continue  # human-actioned, role-guarded implementation exists
+
+            if machines:
+                confidence = Confidence.POSSIBLE
+                description = (
+                    f"Story '{story.story_id}' ('{story.title}') declares a "
+                    f"'status_changed' trigger. A state machine exists on the "
+                    f"scoped entity, but none of its transitions carries a "
+                    f"role guard, and no process has an "
+                    f"'entity_status_transition' trigger — verify the story's "
+                    f"behaviour is actually actioned by someone or something."
                 )
+            else:
+                confidence = Confidence.LIKELY
+                description = (
+                    f"Story '{story.story_id}' ('{story.title}') declares "
+                    f"a 'status_changed' trigger, but no process in the "
+                    f"specification has an 'entity_status_transition' "
+                    f"trigger. The behaviour described by this story "
+                    f"will not be executed automatically."
+                )
+
+            findings.append(
+                Finding(
+                    agent=AgentId.BL,
+                    heuristic_id="BL-02",
+                    category="business_logic",
+                    subcategory="trigger_mismatch",
+                    severity=Severity.MEDIUM,
+                    confidence=confidence,
+                    title=(
+                        f"Story '{story.story_id}' uses status_changed but "
+                        f"no process handles status transitions"
+                    ),
+                    description=description,
+                    construct_type="story",
+                    evidence=[
+                        Evidence(
+                            evidence_type="ir_pattern",
+                            location=f"story.{story.story_id}",
+                            context=(
+                                f"trigger={story.trigger.value}, "
+                                f"process_status_transition_triggers=0, "
+                                f"scoped_state_machines={len(machines)}"
+                            ),
+                        )
+                    ],
+                    remediation=Remediation(
+                        summary=(
+                            "Create a process with an "
+                            "'entity_status_transition' trigger that "
+                            "implements this story — or add role-guarded "
+                            "transitions to the entity's state machine if the "
+                            "story is human-actioned."
+                        ),
+                        effort=RemediationEffort.MEDIUM,
+                        dsl_example=(
+                            f"process handle_{story.story_id.lower().replace('-', '_')}:\n"
+                            f"  implements: [{story.story_id}]\n"
+                            f"  trigger:\n"
+                            f"    kind: entity_status_transition\n"
+                            f"    entity: <EntityName>\n"
+                            f"    to_status: <target_status>"
+                        ),
+                    ),
+                )
+            )
 
         return findings
 
@@ -494,12 +541,20 @@ class BusinessLogicAgent(DetectionAgent):
         title="Entity not referenced by any surface",
     )
     def check_entity_without_surface(self, appspec: AppSpec) -> list[Finding]:
-        """Flag entities that are not referenced by any surface's entity_ref."""
+        """Flag entities that are not referenced by any surface's entity_ref.
+
+        #1356: ``managed_by:`` (#1333) marks an entity whose lifecycle is
+        deliberately owned outside the surface/nav graph (route, pipeline,
+        wizard, external system) — the dead-construct lint already exempts
+        it (v0.81.11), and BL-07 must too.
+        """
         findings: list[Finding] = []
 
         surface_entities = {s.entity_ref for s in appspec.surfaces if s.entity_ref}
 
         for entity in appspec.domain.entities:
+            if getattr(entity, "managed_by", None) is not None:
+                continue
             if entity.name not in surface_entities:
                 findings.append(
                     Finding(

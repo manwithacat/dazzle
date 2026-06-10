@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.16] - 2026-06-10
+
+### Fixed
+- **sentinel signal-to-noise: PR-07, DI-04, BL-02, BL-07** (#1356). Four scanner false-positive classes:
+  PR-07 now counts surfaces *beyond* one-per-mode (the framework's standard list/view/create/edit quartet
+  used to trip the old absolute threshold of 4 on every fully-CRUDed entity); DI-04 honours entity-level
+  composite `unique a, b` constraints (any column position) and skips framework-injected
+  `domain: platform` entities (SessionInfo-style findings were unfixable from project DSL); BL-02
+  recognises a role-guarded state machine on a story-scoped entity as a legitimate human-actioned
+  implementation of a `status_changed` story (suppressed; an unguarded machine downgrades the finding to
+  POSSIBLE with reworded text); BL-07 exempts `managed_by:` entities (#1333) exactly as the
+  dead-construct lint has since v0.81.11.
+
 ## [0.82.15] - 2026-06-10
 
 ### Fixed

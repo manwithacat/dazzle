@@ -27,8 +27,10 @@ _N_PLUS_1_THRESHOLD = 3
 # Threshold: entity with this many total fields is "large".
 _LARGE_ENTITY_FIELDS = 10
 
-# Threshold: surface references beyond this count is "hot entity".
-_HOT_ENTITY_SURFACES = 4
+# Threshold: surfaces beyond the one-per-mode CRUD baseline before an entity
+# counts as "hot" (#1356 — the standard list/view/create/edit quartet used to
+# trip the old absolute threshold of 4 on every fully-CRUDed entity).
+_HOT_ENTITY_EXCESS_SURFACES = 2
 
 
 class PerformanceResourceAgent(DetectionAgent):
@@ -413,16 +415,27 @@ class PerformanceResourceAgent(DetectionAgent):
         title="Heavily surfaced entity",
     )
     def heavily_surfaced_entity(self, appspec: AppSpec) -> list[Finding]:
-        """Flag entities referenced by many surfaces."""
+        """Flag entities referenced by many surfaces.
+
+        #1356: one surface per distinct mode (the framework's standard
+        list/view/create/edit quartet) is the baseline shape for every
+        entity, not a hot-path signal — only surfaces *beyond* one-per-mode
+        count toward the threshold.
+        """
         findings: list[Finding] = []
-        entity_surface_count: dict[str, int] = {}
+        entity_surfaces: dict[str, list[object]] = {}
         for surface in appspec.surfaces:
             entity_name = getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
             if entity_name:
-                entity_surface_count[entity_name] = entity_surface_count.get(entity_name, 0) + 1
+                entity_surfaces.setdefault(entity_name, []).append(surface)
 
-        for entity_name, count in sorted(entity_surface_count.items()):
-            if count < _HOT_ENTITY_SURFACES:
+        for entity_name, surfaces in sorted(entity_surfaces.items()):
+            count = len(surfaces)
+            distinct_modes = len(
+                {str(getattr(s, "mode", None)) for s in surfaces if getattr(s, "mode", None)}
+            )
+            excess = count - distinct_modes
+            if excess < _HOT_ENTITY_EXCESS_SURFACES:
                 continue
             findings.append(
                 Finding(
@@ -435,7 +448,8 @@ class PerformanceResourceAgent(DetectionAgent):
                     title=(f"Entity '{entity_name}' is referenced by {count} surfaces"),
                     description=(
                         f"Entity '{entity_name}' is referenced by {count} "
-                        f"surfaces, making it a hot-path entity. Ensure "
+                        f"surfaces ({excess} beyond the one-per-mode CRUD "
+                        f"baseline), making it a hot-path entity. Ensure "
                         f"proper indexing, caching, and query optimization "
                         f"for this entity."
                     ),
@@ -443,7 +457,10 @@ class PerformanceResourceAgent(DetectionAgent):
                         Evidence(
                             evidence_type="ir_pattern",
                             location=f"entity:{entity_name}",
-                            context=f"Referenced by {count} surfaces",
+                            context=(
+                                f"Referenced by {count} surfaces across "
+                                f"{distinct_modes} modes ({excess} beyond baseline)"
+                            ),
                         ),
                     ],
                     remediation=Remediation(

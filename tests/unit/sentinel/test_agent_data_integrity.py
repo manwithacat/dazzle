@@ -366,3 +366,31 @@ class TestDataIntegrityAgentRun:
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
         result = agent.run(make_appspec([entity]))
         assert result.errors == []
+
+
+class TestDI04Issue1356:
+    """#1356: composite uniques satisfy DI-04; injected entities are skipped."""
+
+    def test_composite_unique_satisfies_any_position(self, agent: DataIntegrityAgent) -> None:
+        from dazzle.core.ir.domain import Constraint, ConstraintKind, EntitySpec
+
+        # `code` is the SECOND column of the composite unique — still covered.
+        entity = EntitySpec(
+            name="Product",
+            title="Product",
+            fields=[pk_field(), str_field("code")],
+            constraints=[Constraint(kind=ConstraintKind.UNIQUE, fields=["tenant", "code"])],
+        )
+        assert agent.check_missing_unique_constraint(make_appspec([entity])) == []
+
+    def test_platform_injected_entity_skipped(self, agent: DataIntegrityAgent) -> None:
+        from dazzle.core.ir.domain import EntitySpec
+
+        # SessionInfo-style framework entity: project DSL cannot amend it.
+        entity = EntitySpec(
+            name="SessionInfo",
+            title="Session Info",
+            fields=[pk_field(), str_field("email")],
+            domain="platform",
+        )
+        assert agent.check_missing_unique_constraint(make_appspec([entity])) == []

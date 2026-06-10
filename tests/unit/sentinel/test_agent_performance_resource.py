@@ -377,40 +377,62 @@ class TestPR06SyncTransaction:
 
 
 class TestPR07HeavilySurfacedEntity:
-    def _surface(self, name: str, entity_ref: str) -> MagicMock:
+    def _surface(self, name: str, entity_ref: str, mode: str = "list") -> MagicMock:
         surface = MagicMock()
         surface.name = name
         surface.entity_ref = entity_ref
+        surface.mode = mode
         return surface
 
-    @pytest.mark.parametrize("count", [4, 5], ids=["four_surfaces", "five_surfaces"])
-    def test_flags_entity_with_many_surfaces(
-        self, agent: PerformanceResourceAgent, count: int
-    ) -> None:
-        surfaces = [self._surface(f"task_view_{i}", "Task") for i in range(count)]
+    def test_crud_quartet_not_flagged(self, agent: PerformanceResourceAgent) -> None:
+        # #1356: one surface per mode is the framework baseline, not a hot path.
+        surfaces = [
+            self._surface("task_list", "Task", "list"),
+            self._surface("task_detail", "Task", "view"),
+            self._surface("task_create", "Task", "create"),
+            self._surface("task_edit", "Task", "edit"),
+        ]
+        assert agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces)) == []
+
+    def test_flags_surfaces_beyond_mode_baseline(self, agent: PerformanceResourceAgent) -> None:
+        # CRUD quartet + two extra list views → excess 2 → hot.
+        surfaces = [
+            self._surface("task_list", "Task", "list"),
+            self._surface("task_detail", "Task", "view"),
+            self._surface("task_create", "Task", "create"),
+            self._surface("task_edit", "Task", "edit"),
+            self._surface("task_board", "Task", "list"),
+            self._surface("task_archive", "Task", "list"),
+        ]
         findings = agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces))
         assert len(findings) == 1
         assert findings[0].heuristic_id == "PR-07"
         assert findings[0].severity == Severity.MEDIUM
         assert "Task" in findings[0].title
-        assert str(count) in findings[0].title
+        assert "6" in findings[0].title
+
+    def test_flags_many_same_mode_surfaces(self, agent: PerformanceResourceAgent) -> None:
+        # Five list views of the same entity: excess 4 → hot.
+        surfaces = [self._surface(f"task_view_{i}", "Task", "list") for i in range(5)]
+        findings = agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces))
+        assert len(findings) == 1
 
     def test_passes_entity_with_3_surfaces(self, agent: PerformanceResourceAgent) -> None:
         surfaces = [
-            self._surface("task_list", "Task"),
-            self._surface("task_detail", "Task"),
-            self._surface("task_edit", "Task"),
+            self._surface("task_list", "Task", "list"),
+            self._surface("task_detail", "Task", "view"),
+            self._surface("task_edit", "Task", "edit"),
         ]
         assert agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces)) == []
 
     def test_multiple_entities_only_hot_flagged(self, agent: PerformanceResourceAgent) -> None:
         surfaces = [
-            self._surface("task_list", "Task"),
-            self._surface("task_board", "Task"),
-            self._surface("task_kanban", "Task"),
-            self._surface("task_timeline", "Task"),
-            self._surface("user_list", "User"),
-            self._surface("user_detail", "User"),
+            self._surface("task_list", "Task", "list"),
+            self._surface("task_board", "Task", "list"),
+            self._surface("task_kanban", "Task", "list"),
+            self._surface("task_timeline", "Task", "list"),
+            self._surface("user_list", "User", "list"),
+            self._surface("user_detail", "User", "view"),
         ]
         findings = agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces))
         assert len(findings) == 1
