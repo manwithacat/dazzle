@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.26] - 2026-06-11
+
+### Changed
+- **validator.py decomposed into `dazzle.core.validation/`** (#1361 validator half). The 4,101-line god
+  module is now 15 cohesive modules (`entities`, `surfaces`, `integrations`, `ux`, `conditions` [shared
+  helpers], `financial`, `events`, `extended` [the lint family], `flows`, `governance`, `rbac`, `graphs`,
+  `tenancy`, `appspec_checks`) — pure mechanical moves, AST-verified byte-identical for all 88 top-level
+  definitions (one unavoidable relative-import depth fix in `_validate_predicate_node`). `validator.py`
+  stays as the 185-line stable import seam re-exporting every name (lint.py, server.py, and the ~26
+  test-imported names all resolve unchanged; zero mock-patch strings target the module). Debugging a
+  validation pass is now a targeted few-hundred-line read instead of a 4K-line scan. route_generator.py
+  slices follow.
+
 ## [0.82.25] - 2026-06-10
 
 ### Added
